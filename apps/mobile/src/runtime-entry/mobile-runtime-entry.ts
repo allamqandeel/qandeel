@@ -41,6 +41,8 @@ import { InteractionPreferencesApiClient } from './interaction-preferences-api';
 import { IntroductionsApiClient } from './introductions-api';
 import { IntroductionProposalsApiClient } from './introduction-proposals-api';
 import { IntroductionWorldsApiClient } from './introduction-worlds-api';
+import { IntroductionSharingApiClient, type IntroductionSharingFetch } from './introduction-sharing-api';
+import { IntroductionContinuationApiClient } from './introduction-continuation-api';
 import { PushApiClient } from './push-api';
 import { SharedWorldApiClient } from './shared-world-api';
 import { PublicWorldApiClient } from './public-world-api';
@@ -159,6 +161,13 @@ export interface MobileRuntimeEntry {
    * is refused before it is issued.
    */
   introductionWorldsFor(bundle: CanonicalRuntimeBundle): IntroductionWorldsApiClient;
+  /**
+   * S6-06 — the Introduction sharing client (text shares, the three-stage photo, the display-name consent and the reader's
+   * own shares) for a bundle this coordinator produced, on the same AC-01 seam bound to the bundle's own auth generation.
+   */
+  introductionSharingFor(bundle: CanonicalRuntimeBundle): IntroductionSharingApiClient;
+  /** S6-06 — SUCCESS and resuming Introductions, on the same AC-01 seam bound to the bundle's own auth generation. */
+  introductionContinuationFor(bundle: CanonicalRuntimeBundle): IntroductionContinuationApiClient;
   /**
    * A3-02 — the device-registration client for a bundle this coordinator produced, on the same AC-01 seam bound to the
    * bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -345,6 +354,14 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     introductionWorldsFor(bundle) {
       return new IntroductionWorldsApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    introductionSharingFor(bundle) {
+      // The same seam: it only sets the bearer and passes the request and the platform's response through untouched, so
+      // a photo's raw bytes go out, and a rendition's come back, exactly as the platform fetch carries them.
+      return new IntroductionSharingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) as unknown as IntroductionSharingFetch });
+    },
+    introductionContinuationFor(bundle) {
+      return new IntroductionContinuationApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     pushFor(bundle) {
       return new PushApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

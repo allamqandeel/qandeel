@@ -1,4 +1,5 @@
-import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import { TelemetryService } from '../observability/telemetry.service';
 import { IntroductionDisclosureRepository } from './introduction-disclosure.repository';
 import { INTRODUCTION_MEDIA_STORE } from './introduction-disclosure.service';
 import type { IntroductionMediaObjectStore } from './introduction-media.store';
@@ -27,6 +28,10 @@ const RECONCILE_GRACE_MS = 10 * 60_000;
  *
  * One cycle at a time, a timer that never keeps the process alive, off under tests and whenever the object store or
  * the server authority is not configured. It reads nothing but keys, and logs and reports nothing of content.
+ *
+ * S6-06 (CP2) — every step's outcome is VISIBLE as content-free telemetry (`INTRODUCTION_MEDIA_ERASURE` / sweep, erase,
+ * reconcile; finite outcome classes only — never a key, handle, World, person or count as a label), so an erasure the
+ * worker defers and retries is never silent. Telemetry is fail-soft: it can never fail or delay an erasure.
  */
 @Injectable()
 export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDestroy {
@@ -37,6 +42,7 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
   constructor(
     private readonly repository: IntroductionDisclosureRepository,
     @Inject(INTRODUCTION_MEDIA_STORE) private readonly store: IntroductionMediaObjectStore,
+    @Optional() private readonly telemetry?: TelemetryService,
   ) {}
 
   get enabled(): boolean {
@@ -66,22 +72,27 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
       try {
         const [swept] = await this.repository.sweep(SWEEP_LIMIT);
         result.swept = Number(swept?.swept_series ?? 0);
+        this.signal('sweep', 'success');
       } catch {
         // The next cycle sweeps again; nothing was changed by a failed sweep.
+        this.signal('sweep', 'transport_failure');
       }
       let claims: Array<{ storage_key: string; lease_id: string }> = [];
       try {
         claims = await this.repository.claimErasures(CLAIM_LIMIT, LEASE_SECONDS);
       } catch {
         claims = [];
+        this.signal('erase', 'transport_failure');
       }
       for (const claim of claims) {
         if (await this.erase(claim.storage_key)) {
           try {
             await this.repository.confirmErased(claim.storage_key, claim.lease_id);
             result.erased += 1;
+            this.signal('erase', 'success');
           } catch {
             // The lease expires and the key is claimed again; deleting a missing object is idempotent.
+            this.signal('erase', 'transport_failure');
           }
         } else {
           try {
@@ -90,6 +101,7 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
             // Likewise: an unexpired lease simply lapses.
           }
           result.deferred += 1;
+          this.signal('erase', 'deferred');
         }
       }
       if (this.cycle % RECONCILE_EVERY === 1) result.enqueued = await this.reconcile();
@@ -122,9 +134,20 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
         }
         continuation = page.next;
       } while (continuation !== null);
+      this.signal('reconcile', 'success');
     } catch {
       // A failed listing is retried on the next reconciliation; the queue already holds every key the database released.
+      this.signal('reconcile', 'transport_failure');
     }
     return enqueued;
+  }
+
+  /** One content-free outcome; a telemetry failure never reaches the erasure. */
+  private signal(operation: 'sweep' | 'erase' | 'reconcile', outcome: 'success' | 'deferred' | 'transport_failure'): void {
+    try {
+      this.telemetry?.recordOperationalOutcome('INTRODUCTION_MEDIA_ERASURE', operation, outcome);
+    } catch {
+      // Observability is best-effort.
+    }
   }
 }

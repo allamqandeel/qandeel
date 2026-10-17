@@ -601,6 +601,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               insets={{ ...edges, bottom: 0 }}
               activity={{ controller: runtime.attention, onOpen: openActivity, focus: returnedFromActivity && !activityShown }}
               introductions={runtime.introductionWorlds}
+              introductionSharing={runtime.introductionSharing}
             />
           </View>
         ) : null}
@@ -640,7 +641,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} interactionPreferences={runtime.interactionPreferences} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} introductionShares={runtime.introductionShares} interactionPreferences={runtime.interactionPreferences} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
@@ -656,13 +657,14 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             importantForAccessibility={proposalsShown ? 'no-hide-descendants' : 'auto'}
           >
             <IntroductionsSurface controller={runtime.introductions} language={locale.language} insets={edges} onBack={closeIntroductions}
-              proposals={runtime.introductionProposals} onOpenProposals={openProposals} focusProposals={returnedFromProposals && !proposalsShown} />
+              proposals={runtime.introductionProposals} onOpenProposals={openProposals} focusProposals={returnedFromProposals && !proposalsShown}
+              participation={runtime.introductionParticipation} />
           </View>
         ) : null}
         {introductionsShown && proposalsShown && depth === 'CONVERSATION' && onSignOut !== undefined && runtime.introductionProposals !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
             <ProposalsSurface controller={runtime.introductionProposals} language={locale.language} insets={edges} onBack={closeProposals}
-              worlds={runtime.introductionWorlds} />
+              worlds={runtime.introductionWorlds} sharing={runtime.introductionSharing} />
           </View>
         ) : null}
         {/*

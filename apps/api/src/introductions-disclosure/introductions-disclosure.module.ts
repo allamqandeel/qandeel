@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ObservabilityModule } from '../observability/observability.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
@@ -15,6 +16,8 @@ import { S3IntroductionMediaStore } from './introduction-media.store';
  * Introductions module.
  */
 @Module({
+  // S6-06 (CP2): the erasure worker's content-free operational outcomes (PROD-OPS-01's telemetry).
+  imports: [ObservabilityModule],
   controllers: [IntroductionDisclosureController],
   providers: [
     SupabaseAuthService,

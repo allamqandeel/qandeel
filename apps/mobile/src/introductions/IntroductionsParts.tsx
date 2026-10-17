@@ -257,15 +257,19 @@ export function Choice({ ctx, label, selected, onPress, testID, multiple = false
   );
 }
 
-export function Field({ ctx, label, value, onChange, testID, maxLength, numeric = false, multiline = false, direction }: {
+export function Field({ ctx, label, value, onChange, testID, maxLength, numeric = false, multiline = false, direction, showLabel = true, invalid = false }: {
   readonly ctx: PartContext; readonly label: string; readonly value: string; readonly onChange: (text: string) => void; readonly testID: string;
   readonly maxLength: number; readonly numeric?: boolean; readonly multiline?: boolean; readonly direction?: 'rtl' | 'ltr';
+  /** S6-06: false when the screen's own title already names the field — the label is then its accessible name only. */
+  readonly showLabel?: boolean;
+  /** S6-06: the server refused what is written here; the words below the field say why (never colour alone). */
+  readonly invalid?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const writing = direction ?? ctx.writing;
   return (
     <View style={{ paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 6 }}>
-      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingBottom: 4, writingDirection: ctx.writing }}>{label}</Text>
+      {showLabel ? <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingBottom: 4, writingDirection: ctx.writing }}>{label}</Text> : null}
       <TextInput
         testID={testID}
         value={value}
@@ -293,7 +297,7 @@ export function Field({ ctx, label, value, onChange, testID, maxLength, numeric 
           paddingHorizontal: 14,
           paddingVertical: 9,
           borderWidth: ctx.palette.focusThickness,
-          borderColor: focused ? ctx.palette.focusIndicator : ctx.onSheet ? ctx.palette.tertiary : ctx.palette.field,
+          borderColor: invalid ? ctx.palette.error : focused ? ctx.palette.focusIndicator : ctx.onSheet ? ctx.palette.tertiary : ctx.palette.field,
           textAlign: writing === 'rtl' ? 'right' : 'left',
           textAlignVertical: multiline ? 'top' : 'center',
           writingDirection: writing,

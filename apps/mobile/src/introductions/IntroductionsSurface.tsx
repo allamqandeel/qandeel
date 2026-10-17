@@ -33,6 +33,8 @@ import { ASSISTANCE_CONSENT_TEXT, MONTHS, WORK_FIELD_NAMES, introductionsCopy, t
 import type { IntroductionsController } from './introductions-controller';
 import type { ProposalsController } from './proposals-controller';
 import { ProposalsCue } from './ProposalsSurface';
+import { IntroductionsStatusLine } from './IntroductionsStatusLine';
+import type { ParticipationController } from './participation-controller';
 import { Action, ActionRow, Choice, Field, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
 import { LivingPortrait, OpenBand, type PortraitGroup } from './Portrait';
 import { MARITAL, arrivals, factTitle, factValue, portraitIsEmpty, projectPortrait, requirementWords, type Portrait } from './portrait-projection';
@@ -50,6 +52,8 @@ export interface IntroductionsSurfaceProps {
   readonly onOpenProposals?: () => void;
   /** Put the screen reader back on the way into the proposals once, when the human returns from them. */
   readonly focusProposals?: boolean;
+  /** S6-06 (P13) — the reader's own Introductions status and its one explicit resume. Absent: nothing is drawn. */
+  readonly participation?: ParticipationController;
 }
 
 const HEADER_MIN_HEIGHT = 48;
@@ -262,7 +266,7 @@ function PartDetails({ ctx, copy, draft, group, onEdit }: {
 
 // ------------------------------------------------------------------------------------------------------------------
 
-export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals, focusProposals = false }: IntroductionsSurfaceProps) {
+export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals, focusProposals = false, participation }: IntroductionsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
@@ -639,6 +643,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
         contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
         <View ref={contentRef} style={{ flexGrow: 1 }}>
+          {participation === undefined ? null : <IntroductionsStatusLine ctx={ctx} controller={participation} />}
           {world}
           {/* The sheet rests at the bottom of a short page; a long one simply scrolls. */}
           <View style={{ flexGrow: 1, minHeight: act === null ? 0 : 16 }} />

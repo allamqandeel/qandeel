@@ -38,3 +38,21 @@ export { INTRODUCTION_WORLD_COPY_GATE, INTRODUCTION_WORLD_COPY_ROWS, introductio
 export type { IntroductionWorldSurfaceProps } from './IntroductionWorldSurface';
 export { INTRODUCTION_WORLD_TEST_ID, IntroductionWorldSurface } from './IntroductionWorldSurface';
 export { IntroductionWorldCards } from './IntroductionWorldCards';
+// S6-06 — progressive disclosure, the three-stage photo, the display-name consent, SUCCESS and resuming Introductions.
+export type {
+  IntroductionMediaState, IntroductionShareDeletionTransport, IntroductionSharingAct, IntroductionSharingController, IntroductionSharingControllerOptions,
+  IntroductionSharingState, IntroductionSharingTransport, IntroductionSharingView, IntroductionSuccessTransport, IntroductionSuccessView, MyPhotoProgress,
+  SharingOutcome,
+} from './introduction-sharing-controller';
+export { createIntroductionSharingController, handlesOf, myPhotoOf, theirPhotoOf } from './introduction-sharing-controller';
+export type { IntroductionSharingCopy, IntroductionSharingCopyKey } from './introduction-sharing-copy';
+export { INTRODUCTION_SHARING_COPY_GATE, INTRODUCTION_SHARING_COPY_ROWS, fillSharing, introductionSharingCopy } from './introduction-sharing-copy';
+export type { IntroductionSharingPanelProps } from './IntroductionSharingPanel';
+export { INTRODUCTION_SHARING_TEST_ID, IntroductionSharingPanel } from './IntroductionSharingPanel';
+export type { PhotoChoice, PhotoSource } from './photo-source';
+export { createDevicePhotoSource, photoTypeOf } from './photo-source';
+export { releaseIntroductionRenditions } from './rendition-release';
+export type {
+  IntroductionParticipationTransport, ParticipationController, ParticipationControllerOptions, ParticipationLine, ParticipationState,
+} from './participation-controller';
+export { createParticipationController, participationLine } from './participation-controller';

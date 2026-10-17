@@ -77,6 +77,9 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],
  // A3-02: the platform dispatcher (migration 0137). Finite outcome classes only - never a user, item, device, token,
  // sentence or provider body. Accepted is the provider's acceptance, never delivery (I-08N-01 D41, D56).
+ // S6-06 (CP2): the Introduction photo erasure worker (migration 0162) - sweep, erase (DELETE proven by HEAD, or deferred
+ // and never dropped) and the listing reconciliation. Outcome classes only - never a key, handle, World, person or byte count.
+ ['INTRODUCTION_MEDIA_ERASURE',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','deferred',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])]])],
  ['PUSH_DELIVERY',new Map([
   ['plan',new Set(['success',...OPERATION_FAILURES])],
   ['claim',new Set(['success',...OPERATION_FAILURES])],

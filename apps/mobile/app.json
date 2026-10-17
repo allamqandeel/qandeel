@@ -19,7 +19,11 @@
       }
     },
     "android": {
-      "package": "com.qandeel.mobile"
+      "package": "com.qandeel.mobile",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -30,7 +34,19 @@
         {
           "mode": "production"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "QANDEEL uses only the photo you choose, to share it in your introduction.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
-    ]
+    ],
+    "locales": {
+      "ar": "./locales/ar.json",
+      "en": "./locales/en.json"
+    }
   }
 }

@@ -41,6 +41,7 @@ import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, useConversationTypef
 import type { ChromeLanguage } from '../orientation-chrome';
 import { IntroductionWorldCards } from '../introductions/IntroductionWorldCards';
 import type { IntroductionWorldsController, IntroductionWorldsState } from '../introductions/introduction-world-controller';
+import type { IntroductionSharingController } from '../introductions/introduction-sharing-controller';
 import { introductionWorldCopy } from '../introductions/introduction-world-copy';
 import { IntroductionWorldSurface } from '../introductions/IntroductionWorldSurface';
 import { fill, sharedCopy, worldLabel, type SharedCopy } from './copy';
@@ -70,9 +71,11 @@ export interface SharedWorldAreaProps {
   readonly activity?: { readonly controller: ActivityAttentionController; readonly onOpen: () => void; readonly focus: boolean };
   /** S6-05: the reader's own Introduction Worlds — the «التعارف» section and the Introduction surface. */
   readonly introductions?: IntroductionWorldsController;
+  /** S6-06: sharing, the display-name consent and SUCCESS inside the Introduction World. */
+  readonly introductionSharing?: IntroductionSharingController;
 }
 
-export function SharedWorldArea({ controller, language, insets, activity, introductions }: SharedWorldAreaProps) {
+export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing }: SharedWorldAreaProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = sharedCopy(language);
@@ -156,7 +159,10 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
     // S6-05: the Introduction World on its own surface; Back returns to this root.
     return (
       <View testID={SHARED_AREA_TEST_ID} accessibilityLanguage={language} style={{ flex: 1, backgroundColor: palette.world }}>
-        <IntroductionWorldSurface controller={introductions} worldId={introduction} language={language} insets={insets} onBack={() => setIntroduction(null)} />
+        <IntroductionWorldSurface controller={introductions} worldId={introduction} language={language} insets={insets} onBack={() => setIntroduction(null)}
+          sharing={introductionSharing}
+          // S6-06 (P12): after SUCCESS the same World opens in the existing Shared World screen.
+          onOpenSharedWorld={(worldId) => { setIntroduction(null); controller.openWorld(worldId); }} />
       </View>
     );
   }

@@ -94,17 +94,20 @@ import {
   createAccountIdentityController,
   createPrivacyDataController,
   createFormerSharedMaterialController,
+  createIntroductionSharesController,
   createPublicIdController,
   type AccountIdentityController,
   type FormerSharedMaterialController,
+  type IntroductionSharesController,
   type PrivacyDataController,
   type PublicIdController,
 } from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import { createInteractionPreferencesController, type InteractionPreferencesController } from '../../settings';
 import {
-  createIntroductionWorldsController, createIntroductionsController, createProposalsController, type IntroductionWorldsController, type IntroductionsController,
-  type ProposalsController,
+  createDevicePhotoSource, createIntroductionSharingController, createIntroductionWorldsController, createIntroductionsController,
+  createParticipationController, createProposalsController, type IntroductionSharingController, type IntroductionWorldsController, type IntroductionsController,
+  releaseIntroductionRenditions, type ParticipationController, type ProposalsController,
 } from '../../introductions';
 import {
   createActivityAttentionController,
@@ -261,6 +264,16 @@ export interface IntegrationSessionRuntime {
    * runtime entry's ONE foreground signal and is retired with the generation, so no word of one account reaches the next.
    */
   readonly introductionWorlds: IntroductionWorldsController;
+  /**
+   * S6-06: what this identity shares in the Introduction World open now (text, the three-stage photo, the display-name
+   * consent) and SUCCESS, on the transports bound to it; a text share is deleted through the same identity-bound Shared
+   * transport. Renditions are held in memory for the open World only; retired with the generation.
+   */
+  readonly introductionSharing: IntroductionSharingController;
+  /** S6-06: the reader's own Introductions status line and its one explicit resume (P13). */
+  readonly introductionParticipation: ParticipationController;
+  /** S6-06: «ما شاركته في التعارف» in Privacy & Data (P16): the reader's own shares in every Introduction. */
+  readonly introductionShares: IntroductionSharesController;
   /**
    * A3-01: the reader's Activity attention (the presence mark and the one Attention Strip), feed and Notifications &
    * Activity preferences, for THIS identity, on the Activity transport bound to it. Attention follows the runtime entry's
@@ -447,6 +460,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.introductions.retire();
     session.introductionProposals.retire();
     session.introductionWorlds.retire();
+    session.introductionSharing.retire();
+    session.introductionParticipation.retire();
+    session.introductionShares.retire();
     session.attention.retire();
     session.activityFeed.retire();
     session.activityPreferences.retire();
@@ -507,6 +523,12 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
 
     const activity = entry.activityFor(bundle);
     const shared = entry.sharedWorldsFor(bundle);
+    // S6-06: the Introduction sharing and continuation transports, and the device photo source (an in-memory ledger only).
+    const sharing = entry.introductionSharingFor(bundle);
+    const continuation = entry.introductionContinuationFor(bundle);
+    const photos = createDevicePhotoSource();
+    // Whatever the picker left in this app's cache from an earlier run goes now, before anything else is chosen.
+    void photos.sweep();
     const publicTransport = entry.publicWorldFor(bundle);
     const push = createPushController({
       port: pushPlatform, store: pushDeviceStore, transport: entry.pushFor(bundle), foreground: entry.foreground, isCurrent,
@@ -566,6 +588,13 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       introductionProposals: createProposalsController({ transport: entry.introductionProposalsFor(bundle), isCurrent }),
       // S6-05: the Introduction Worlds; deletion is the existing Shared owner deletion on the Shared transport (R-5).
       introductionWorlds: createIntroductionWorldsController({ transport: entry.introductionWorldsFor(bundle), deletion: shared, isCurrent, foreground: entry.foreground }),
+      // S6-06: sharing, photos, the display-name consent and SUCCESS; the reader's status line; and their Settings page.
+      introductionSharing: createIntroductionSharingController({
+        transport: sharing, success: continuation, deletion: shared, photos, isCurrent, foreground: entry.foreground,
+        clearImageMemory: releaseIntroductionRenditions,
+      }),
+      introductionParticipation: createParticipationController({ transport: continuation, isCurrent, foreground: entry.foreground }),
+      introductionShares: createIntroductionSharesController({ transport: sharing, deletion: shared, isCurrent }),
       // A3-01: Activity, on the Activity transport bound to this identity. Attention re-reads when a row is seen or opened.
       attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent }),
       activityFeed: createActivityFeedController({ transport: activity, isCurrent, onAttentionChanged: () => built.attention.refresh() }),
