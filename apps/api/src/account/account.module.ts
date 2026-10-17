@@ -10,6 +10,7 @@ import { IntroductionsPreparationModule } from '../introductions-preparation/int
 import { IntroductionsProposalsModule } from '../introductions-proposals/introductions-proposals.module';
 import { IntroductionsWorldModule } from '../introductions-world/introductions-world.module';
 import { ObservabilityModule } from '../observability/observability.module';
+import { AccountErasureRecoveryWorker } from './account-erasure-recovery.worker';
 import { AccountIdentityRepository } from './account-identity.repository';
 import { AccountSecurityController } from './account-security.controller';
 import { AccountSecurityService } from './account-security.service';
@@ -59,6 +60,10 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * S6-06 (CP1) composes sharing, photos and the display-name consent (IntroductionsDisclosureModule) and SUCCESS and the
  * explicit resume (IntroductionsContinuationModule) here for the same reason. Neither shares anything with these
  * providers or the other Introductions modules, and neither imports an AI runtime.
+ *
+ * ACCT-DEL-01 (CP1) moves the Privacy & Data pass onto the database's ONE governed account erasure (migration 0164:
+ * Matching / Introductions plus the unchanged Personal erasure) and adds its recovery and visibility pass
+ * (AccountErasureRecoveryWorker) beside it, on the same server channel.
  */
 @Module({
   imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,
@@ -81,6 +86,7 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
     PrivacyMaintenanceRepository,
     ProviderAccountRemovalService,
     PrivacyMaintenanceWorker,
+    AccountErasureRecoveryWorker,
   ],
 })
 export class AccountModule {}

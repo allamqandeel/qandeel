@@ -307,7 +307,9 @@ describe('PrivacyMaintenanceRepository — the server channel’s answers, decod
     await expect(repositoryAnswering('3').repository.prepareExports(10)).rejects.toBeInstanceOf(PrivacyMaintenanceAnswerError);
     const { serviceApi, repository } = repositoryAnswering('ERASED');
     await repository.erase(D1);
-    expect(serviceApi.rpc).toHaveBeenCalledWith('server_erase_personal_account_v1', { p_deletion_id: D1 });
+    // RE-ANCHORED by ACCT-DEL-01 (migration 0164): the pass now calls the ONE governed account erasure (Matching /
+    // Introductions plus the unchanged Personal erasure, one transaction), under its own call bound.
+    expect(serviceApi.rpc).toHaveBeenCalledWith('server_erase_account_v1', { p_deletion_id: D1 }, { timeoutMs: 60_000 });
   });
 });
 
