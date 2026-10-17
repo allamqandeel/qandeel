@@ -155,7 +155,7 @@ export function createS606ProofIntroductionSharing(language: ChromeLanguage): S6
         return json(200, { outcome: 'READY', state: 'PAUSED', pauseReason: 'POST_INTRODUCTION', expectedEventId: EVENT });
       }
       if (path === '/introductions/participation/resume' && method === 'POST') {
-        return replay((body as Json)?.commandId, () => ({ outcome: 'NOT_AVAILABLE_NOW', participation_state: null }));
+        return replay((body as Json)?.commandId, () => ({ outcome: 'NOT_AVAILABLE_NOW' }));
       }
       if (world === null || (world[1] !== W_LIVE && world[1] !== W_ENDED)) return undefined;
       const [, worldId, route] = world;
