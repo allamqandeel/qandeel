@@ -313,7 +313,10 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
   guards('writes-only-into-generated-project', pluginText, writesOnlyIntoGeneratedProject, "fs.writeFileSync(path.join(modConfig.modRequest.projectRoot, 'src', 'x.ts'), '');");
   // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
   // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
-  assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]]);
+  // S6-06 RE-ANCHOR (D-03, WP0 correction 4): Expo's first-party expo-image-picker, last, with the camera and the microphone
+  // OFF and the app's own approved Photos purpose string (PD-83); typed mods only, no dangerous mod, no generated project.
+  assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
+    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: false }]]);
   // Exactly two dangerous mods: one Android install, one iOS install. Everything else is a typed mod.
   const dangerousCount = (text) => (code(text).match(/withDangerousMod\(config,/gu) ?? []).length;
   assert.equal(dangerousCount(pluginText), 2);

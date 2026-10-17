@@ -260,6 +260,25 @@ describe('S6-06 IntroductionMediaErasureWorker (correction 2, conditions 1 and 2
   it('is off under tests', () => {
     expect(new IntroductionMediaErasureWorker(repo(), fakeStore()).enabled).toBe(false);
   });
+
+  it('S6-06 CP2: every step\'s outcome is one content-free signal; a telemetry failure never reaches the erasure', async () => {
+    const recordOperationalOutcome = jest.fn();
+    const telemetry = { recordOperationalOutcome } as unknown as ConstructorParameters<typeof IntroductionMediaErasureWorker>[2];
+    const ok = repo({ claimErasures: jest.fn().mockResolvedValue([claim]) });
+    await new IntroductionMediaErasureWorker(ok, fakeStore(), telemetry).runOnce();
+    const deferred = repo({ claimErasures: jest.fn().mockResolvedValue([claim]) });
+    await new IntroductionMediaErasureWorker(deferred, fakeStore({ exists: async () => true }), telemetry).runOnce();
+    expect(recordOperationalOutcome.mock.calls).toEqual([
+      ['INTRODUCTION_MEDIA_ERASURE', 'sweep', 'success'], ['INTRODUCTION_MEDIA_ERASURE', 'erase', 'success'], ['INTRODUCTION_MEDIA_ERASURE', 'reconcile', 'success'],
+      ['INTRODUCTION_MEDIA_ERASURE', 'sweep', 'success'], ['INTRODUCTION_MEDIA_ERASURE', 'erase', 'deferred'], ['INTRODUCTION_MEDIA_ERASURE', 'reconcile', 'success'],
+    ]);
+    // Only the three closed labels: no key, handle, World or person.
+    expect(JSON.stringify(recordOperationalOutcome.mock.calls)).not.toContain(claim.storage_key);
+    const failing = { recordOperationalOutcome: () => { throw new Error('meter down'); } } as unknown as ConstructorParameters<typeof IntroductionMediaErasureWorker>[2];
+    const r = repo({ claimErasures: jest.fn().mockResolvedValue([claim]) });
+    expect(await new IntroductionMediaErasureWorker(r, fakeStore(), failing).runOnce()).toMatchObject({ erased: 1, deferred: 0 });
+    expect(r.confirmErased).toHaveBeenCalledWith(claim.storage_key, C);
+  });
 });
 
 describe('S6-06 isolation of the sharing module', () => {

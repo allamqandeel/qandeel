@@ -74,8 +74,11 @@ test('4 — the Global Switcher carries the S4-01 destinations (and, since S5-01
   const props = [...area.matchAll(/^\s+(\w+)=/gmu)].map((m) => m[1]);
   // RE-ANCHORED by S6-05 CP5 (2026-10-16): the area is also handed the reader's own Introduction Worlds (its «التعارف»
   // section) — still nothing of the Personal world.
-  assert.deepEqual(props, ['controller', 'language', 'insets', 'activity', 'introductions'], 'no store, Session, camera, focus or time is handed over');
+  // RE-ANCHORED by S6-06 CP2 (2026-10-17): and the Introduction sharing controller for the World it opens (P0 – P15) —
+  // still nothing of the Personal world.
+  assert.deepEqual(props, ['controller', 'language', 'insets', 'activity', 'introductions', 'introductionSharing'], 'no store, Session, camera, focus or time is handed over');
   assert.match(area, /introductions=\{runtime\.introductionWorlds\}/u);
+  assert.match(area, /introductionSharing=\{runtime\.introductionSharing\}/u);
   assert.doesNotMatch(area, /runtime\.(?:store|conversation|projection|presentation|preview|journey)/u);
   assert.match(depth, /const personalReachable = reachable && !activityShown && area === 'MY_WORLD';/u, 'the Personal world stays mounted and out of reach beneath');
   assert.deepEqual(readdirSync(new URL(`${MOBILE}/app`, root)).sort(), ['_layout.tsx', 'index.tsx'], 'switching is not a route');

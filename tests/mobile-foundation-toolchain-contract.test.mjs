@@ -60,6 +60,12 @@ const expectedDependencies = {
   // (Expo SDK 57's bundled module), so declaring it direct changes no installed version, adds no
   // native module and needs no config plugin: the app config's plugin list is unchanged.
   'expo-font': '~57.0.3',
+  // S6-06 (D-03, approved by the Product Owner 2026-10-16): Expo SDK 57's first-party image renderer and system photo
+  // picker, at their bundled versions (`expo/bundledNativeModules.json`). expo-image draws an Introduction rendition from an
+  // in-memory data: URI with its cache OFF; expo-image-picker opens the system picker for one photo (no camera, microphone
+  // or storage permission — the S6-06 native photo-permission gate proves the generated projects).
+  'expo-image': '~57.0.4',
+  'expo-image-picker': '~57.0.16',
   'expo-linking': '~57.0.9',
   // A3-02: native Push, OS notification permission, channels and taps — Expo SDK 57's first-party module at its bundled
   // version (A3-02 record §5). It talks to APNs / FCM natively; Expo's push relay is never used.
@@ -168,7 +174,10 @@ test('app config carries provisional technical identifiers only and no architect
   assert.deepEqual(expo.platforms, ['ios', 'android']);
   // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
   // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
-  assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]]);
+  // S6-06 RE-ANCHOR (D-03, WP0 correction 4): Expo's first-party expo-image-picker plugin, last, with the camera and the
+  // microphone OFF and the app's own approved Photos purpose string (PD-83); typed mods only, no dangerous mod.
+  assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
+    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: false }]]);
   assert.equal('newArchEnabled' in expo, false, 'New Architecture is structural on this SDK line; no toggle may be reintroduced');
   assert.equal('extra' in expo, false);
   assert.match(bootSmoke, /^appId: com\.qandeel\.mobile$/mu);

@@ -217,3 +217,26 @@ jest.mock('expo-notifications', () => {
     scheduleNotificationAsync: async () => 'jest',
   };
 });
+
+// S6-06 — `expo-image` draws a native view Jest does not have. The stand-in is a plain View carrying exactly the props the
+// app hands the image engine (its `source` and `cachePolicy`), so a test can read them; its memory cache is a mock the
+// tests count. `prefetch` is never used by the app, so the stand-in refuses it.
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Image = React.forwardRef((props, ref) => React.createElement(View, { ...props, ref }));
+  Image.displayName = 'ExpoImageStandIn';
+  Image.clearMemoryCache = jest.fn(async () => true);
+  Image.clearDiskCache = jest.fn(async () => true);
+  Image.prefetch = jest.fn(async () => { throw new Error('the app never prefetches an Introduction rendition'); });
+  return { Image };
+});
+
+// S6-06 — `expo-image-picker` needs the system picker. The honest stand-in is a picker the person always cancels; a test
+// that chooses a photo uses its own PhotoSource (or overrides `launchImageLibraryAsync`).
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
+  launchCameraAsync: jest.fn(async () => { throw new Error('the app never opens the camera'); }),
+  getPendingResultAsync: jest.fn(async () => null),
+  UIImagePickerPreferredAssetRepresentationMode: { Automatic: 'automatic', Compatible: 'compatible', Current: 'current' },
+}));

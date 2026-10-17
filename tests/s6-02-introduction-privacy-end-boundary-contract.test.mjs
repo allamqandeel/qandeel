@@ -196,9 +196,13 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
     'integration/__validation__/s605-proof-introduction-world.ts'];
+  // RE-ANCHORED by S6-06 CP2 (2026-10-17): the S6-06 sharing and continuation clients (and their suite) name the
+  // Introduction World routes for disclosure, photos and SUCCESS — and never the END, which stays the S6-05 client's.
+  const sharing = ['runtime-entry/introduction-sharing-api.ts', 'runtime-entry/introduction-continuation-api.ts', 'runtime-entry/__tests__/introduction-sharing-api.test.ts'];
+  for (const file of sharing) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/end\b|end_own_introduction/u, `mobile ${file} wires no END`);
   for (const file of mobile('apps/mobile/src/').map((f) => String(f).replace(/\\/gu, '/'))) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction/u, `mobile ${file} names no database function`);
-    if (!client.includes(file)) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds\//u, `mobile ${file} wires no END outside the S6-05 client`);
+    if (!client.includes(file) && !sharing.includes(file)) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds\//u, `mobile ${file} wires no END outside the S6-05 client`);
   }
 });
 

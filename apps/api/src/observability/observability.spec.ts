@@ -171,8 +171,11 @@ const OPERATIONAL_LEGAL:ReadonlyArray<readonly [string,string,string]>=Object.fr
  ['ACCOUNT_DELETION','provider_remove','success'],['ACCOUNT_DELETION','provider_remove','provider_unavailable'],
  ['UNDERSTANDING_CONFIDENCE','confidence_reevaluate','success'],
  ...['success','transport_failure','integrity_failure'].map(o=>['AI_USAGE_ACCOUNTING','operations_scan',o] as const),
+ // S6-06 (CP2): the Introduction photo erasure worker.
+ ...['success','transport_failure','integrity_failure'].flatMap(o=>[['INTRODUCTION_MEDIA_ERASURE','sweep',o],['INTRODUCTION_MEDIA_ERASURE','reconcile',o]] as const),
+ ...['success','deferred','transport_failure','integrity_failure'].map(o=>['INTRODUCTION_MEDIA_ERASURE','erase',o] as const),
 ] as const);
-const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE','AI_USAGE_ACCOUNTING'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan','operations_scan'],OUTCOMES=['success','retry_pending','terminal_failure','blocked_expected','superseded_expected','provider_unavailable','transport_failure','integrity_failure'];
+const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE','AI_USAGE_ACCOUNTING','INTRODUCTION_MEDIA_ERASURE'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan','operations_scan','sweep','reconcile'],OUTCOMES=['success','retry_pending','terminal_failure','blocked_expected','superseded_expected','provider_unavailable','transport_failure','integrity_failure','deferred'];
 describe('PROD-OPS-01 operational telemetry',()=>{
  const harness=()=>{const t=new TelemetryService(new CorrelationService()),add=jest.fn(),state=jest.fn(),age=jest.fn(),failures=jest.fn();Object.assign(t as any,{operationalOutcomes:{add},privacyOperationStateCounts:{record:state},privacyOperationOldestAges:{record:age},privacyExportRecentFailures:{record:failures}});return{t,add,state,age,failures};};
  it('emits exactly the legal domain/operation/outcome relation and drops every other combination',()=>{const{t,add}=harness();

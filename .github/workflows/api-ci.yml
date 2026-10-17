@@ -143,6 +143,7 @@ jobs:
       - {name: "Verify S6-05 closed Introduction history static contract (one STABLE reader over the frozen entitlement, END and owner deletion reused, no AI or Activity)", run: npm run test:s6-05-introduction-closed-history-contract}
       - {name: "Verify S6-05 mobile Introduction experience static contract (approved copy word for word, one strict client of the existing routes, IW-35 only on the server ENDED, V-1 structural, no AI or Activity)", run: npm run test:s6-05-introduction-mobile-contract}
       - {name: "Verify S6-06 Introduction sharing, photos and continuation static contract (shells over the frozen cores, private object store, erasure from database truth, no service_role Matching path, pinned rclone)", run: npm run test:s6-06-introduction-disclosure-contract}
+      - {name: "Verify S6-06 mobile sharing experience static contract (approved copy word for word, one strict client of the CP1 routes, renditions from memory only with no image cache, picker copies deleted, no camera / microphone / storage permission, V-1 kept)", run: npm run test:s6-06-introduction-mobile-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
