@@ -282,3 +282,57 @@ ACCT-DEL-01 owns no open item from its merge.
 PostgreSQL and mobile proofs were not repeated (no behaviour changed). The mandatory CI runs on the final head.
 
 **Not done, by instruction:** no merge, no deployment, no gate opened, S6-07 not started, CP1's code not reopened.
+
+## 9. CI infrastructure correction (same pull request)
+
+API CI failed twice on CP2's head `d30bd4e8`, in run [`39040365464`](https://github.com/allamqandeel/qandeel/actions/runs/39040365464), attempts 1 and 2. Both attempts
+stopped at "Initialize containers": Amazon ECR Public refused the pinned `postgres:17` service image with
+`toomanyrequests: Data limit exceeded` (three pull attempts in attempt 2). No test started, and nothing in ACCT-DEL-01 failed.
+Mobile CI ([`39040365472`](https://github.com/allamqandeel/qandeel/actions/runs/39040365472)) passed on the same head.
+
+The Product Owner reviewed the logs independently and authorized a limited, durable correction in this pull request
+(«PR #345 — CI Infrastructure Correction Only»). It changes `.github/workflows/api-ci.yml` (job `verify-api` only):
+
+- **No service containers.** PostgreSQL and Redis are no longer pulled from any image registry. Docker Hub's anonymous
+  pull limit refused them earlier, and now ECR Public's anonymous data quota has too.
+- **Official signed apt repositories, exact versions.** The versions are the ones the images carried:
+
+  | Server | Package | Repository | Signing key (fingerprint pinned) |
+  |---|---|---|---|
+  | PostgreSQL 17.11 | `postgresql-17=17.11-1.pgdg24.04+2` | the PostgreSQL project's PGDG, suite `noble-pgdg-archive` (keeps every published build, so the pin does not disappear at the next minor) | `B97B0AFC AA1A47F0 44F244A0 7FCC7D46 ACCC4CF8` |
+  | Redis 7.4.11 | `redis-server=6:7.4.11-1rl1~noble1` | Redis Ltd.'s `packages.redis.io`, suite `noble` | `54318FA4 052D1E61 A6B6F7BB 5F4349D6 BF53AA0C` |
+
+  A key file is refused unless it holds exactly one primary key and that key is the pinned one. apt then refuses any
+  index or package that key did not sign; no signature check is waived. The installed versions are re-read from `dpkg`
+  and must equal the pins.
+- **The runner is pinned to `ubuntu-24.04`,** the release those packages are built for, instead of `ubuntu-latest`.
+- **Started explicitly, checked before any test.** No packaged cluster or service is started. One step starts both
+  servers itself:
+  - PostgreSQL is initialized as the official image did: superuser `postgres` with the same password, UTF8 with
+    `en_US.UTF-8`, UTC, `trust` on the local socket, `scram-sha-256` over TCP.
+  - The step creates the database `DATABASE_URL` names.
+  - Before the first test it proves three things: each server answers at `DATABASE_URL` / `REDIS_URL`, PostgreSQL
+    reports the installed 17.x and Redis the installed 7.4.x, and ports 5432 and 6379 were free beforehand.
+
+  Each failure carries its own `::error` message naming the cause, and prints the server log where there is one.
+- **Unchanged:** `DATABASE_URL`, `REDIS_URL`, `PGPASSWORD`, the database name, the roles the bootstrap creates, and
+  every test step, in its order.
+- **Deliberately not used:** PostgreSQL 16, image pulls with repeated retries, images of unknown origin. apt's own
+  transport retry (`Acquire::Retries=3`) covers a dropped connection; it is not a registry quota workaround.
+
+**Contract re-anchored (required by this change, narrowest form):** `tests/toolchain.test.mjs` pinned the two ECR
+Public image digests.
+- **What it pins now:** the same truth (PostgreSQL 17 and Redis 7 at exact, verified versions) in the new form: no
+  `services`, `ubuntu-24.04`, the exact package pins, the two key fingerprints, `signed-by` on both sources, no waived
+  signature check, the version and readiness checks, and `DATABASE_URL` / `REDIS_URL` unchanged.
+- **Why it changed:** the commented reason is in the test.
+
+**Not changed:** migration `0164`, the API, mobile and every product contract. The focused database gate
+(`focused-database-verification.yml`, manual dispatch, not a required check) keeps its own image.
+
+**Verification:**
+- Locally, every contract that reads `api-ci.yml` passed, 1945 / 1945. In the first parallel run the forward-safety
+  contract failed once; it then passed alone (35 / 35) and in the rerun.
+- The key and fingerprint logic was exercised against both real keys and against a wrong key and a two-key file, both
+  refused. The PGDG archive and Redis `InRelease` files verified against the pinned keys.
+- The binding proof is API CI on this pull request's new head.

@@ -92,9 +92,30 @@ test('keeps preflight and diagnostics privacy-safe', () => {
 });
 
 test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () => {
-  const services = YAML.parse(apiCi).jobs['verify-api'].services;
-  assert.match(services.postgres.image, /^public\.ecr\.aws\/docker\/library\/postgres:17@sha256:[0-9a-f]{64}$/u);
-  assert.match(services.redis.image, /^public\.ecr\.aws\/docker\/library\/redis:7@sha256:[0-9a-f]{64}$/u);
+  // RE-ANCHORED (ACCT-DEL-01, CI infrastructure correction): this pinned the two service images to digests on Amazon
+  // ECR Public, whose anonymous data quota refused them before any step ran. The truth it protects is unchanged -
+  // PostgreSQL 17 and Redis 7 at exact, verified versions - now as packages from each project's signed apt repository.
+  const verifyApi = YAML.parse(apiCi).jobs['verify-api'];
+  assert.equal(verifyApi.services, undefined, 'no service container: no registry pull can fail the job before it starts');
+  assert.equal(verifyApi['runs-on'], 'ubuntu-24.04', 'the runner the pinned noble packages are built for');
+  const [install, start] = verifyApi.steps.slice(1, 3);
+  assert.match(install.env.PG_PACKAGE_VERSION, /^17\.\d+-\d+\.pgdg24\.04\+\d+$/u);
+  assert.match(install.env.REDIS_PACKAGE_VERSION, /^\d+:7\.4\.\d+-\d+rl\d+~noble\d+$/u);
+  assert.equal(install.env.PG_KEY_FINGERPRINT, 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8', 'the PostgreSQL Debian Repository key');
+  assert.equal(install.env.REDIS_KEY_FINGERPRINT, '54318FA4052D1E61A6B6F7BB5F4349D6BF53AA0C', 'the Redis package signing key');
+  assert.match(install.run, /signed-by=\/etc\/apt\/keyrings\/qandeel-ci-pgdg\.asc/u);
+  assert.match(install.run, /signed-by=\/etc\/apt\/keyrings\/qandeel-ci-redis\.asc/u);
+  assert.match(install.run, /"postgresql-17=\$PG_PACKAGE_VERSION"/u);
+  assert.match(install.run, /"redis-server=\$REDIS_PACKAGE_VERSION"/u);
+  assert.doesNotMatch(install.run, /trusted=yes|allow-unauthenticated|allow-insecure/u, 'no signature check is waived');
+  assert.match(start.run, /SHOW server_version/u);
+  assert.match(start.run, /17\.\*\) ;;/u);
+  assert.match(start.run, /7\.4\.\*\) ;;/u);
+  assert.match(start.run, /redis-cli -u "\$REDIS_URL" ping/u);
+  assert.deepEqual(
+    { DATABASE_URL: verifyApi.env.DATABASE_URL, REDIS_URL: verifyApi.env.REDIS_URL },
+    { DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/qandeel_test', REDIS_URL: 'redis://localhost:6379' },
+  );
   assert.match(apiCi, /run: npm run test:toolchain/u);
   assert.match(apiCi, /paths: \[[^\n]*'tests\/\*\*'[^\n]*'package-lock\.json'/u);
   for (const command of [
