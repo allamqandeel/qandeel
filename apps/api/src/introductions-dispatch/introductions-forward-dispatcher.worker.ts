@@ -10,12 +10,15 @@ export const FORWARD_ATTEMPTS_PER_CYCLE = 10;
 const RECONCILE_LIMIT = 50;
 
 /**
- * The Activity side of a delivery (CP3): publishes the "a new proposal reached you" item to the delivery's recipient,
- * idempotently by its candidate key. S6-07 CP2 provides NO implementation - the INTRODUCTIONS Activity producer, its copy
- * and its capability truth are CP3 - so until one is bound the worker forwards and never publishes.
+ * The Activity side of the Introductions (CP3): publishes the "a new proposal reached you" item to a delivery's
+ * recipient, and every other Introductions event a recipient has not been told yet (migration 0167), idempotently by
+ * each event's own candidate key. CP3 binds the IntroductionsActivityProducer; with no notifier bound the worker forwards
+ * and never publishes.
  */
 export interface IntroductionsDeliveryNotifier {
   publishDelivered(delivery: UnpublishedDelivery): Promise<void>;
+  /** At most `limit` other events; counts only. A failed one stays listed for the next cycle. */
+  publishPendingEvents(limit: number): Promise<{ readonly published: number; readonly failed: number }>;
 }
 export const INTRODUCTIONS_DELIVERY_NOTIFIER = Symbol('INTRODUCTIONS_DELIVERY_NOTIFIER');
 
@@ -53,8 +56,9 @@ const SIGNAL: Readonly<Record<Exclude<ForwardOutcome, 'NONE_DUE'>, DispatchSigna
  *                human decision is the next cycle's, never a tight loop) and at any failure. A proposal that is not ready
  *                waits its own backoff in the database, so it cannot starve the others.
  *   2. RECONCILE only when an Activity notifier is bound (CP3): every committed delivery whose recipient has no Activity
- *                member yet is published, idempotently. Publication is never part of the forward transaction, so a
- *                worker that dies after a committed forward finds the delivery again on its next cycle.
+ *                member yet is published, idempotently, and then every other Introductions event not told yet (0167).
+ *                Publication is never part of the forward transaction, so a worker that dies after a committed forward
+ *                (or after any committed Introductions fact) finds it again on its next cycle.
  *
  * It decides nothing a human or the frozen core decides, takes no client input, and logs nothing: telemetry is
  * content-free finite labels only (`INTRODUCTIONS_FORWARD` / dispatch, reconcile) - never a person, proposal, view or
@@ -142,6 +146,15 @@ export class IntroductionsForwardDispatcherWorker implements OnModuleInit, OnMod
         summary.publishFailed += 1;
         failure ??= failureOutcome(error);
       }
+    }
+    // CP3: every other Introductions event a recipient has not been told yet, the same way.
+    try {
+      const events = await notifier.publishPendingEvents(RECONCILE_LIMIT);
+      summary.published += events.published;
+      summary.publishFailed += events.failed;
+      if (events.failed > 0) failure ??= 'integrity_failure';
+    } catch (error) {
+      failure ??= failureOutcome(error);
     }
     this.signal('reconcile', failure ?? 'success');
   }

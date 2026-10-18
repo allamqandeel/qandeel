@@ -55,6 +55,16 @@ export class PushRepository {
     return rows.map((row) => row.claim);
   }
 
+  /**
+   * S6-07 — the Introductions capability truth of these readers (migration 0167), on the server channel. Read for the
+   * readers of claimed INTRODUCTIONS items only; it answers a boolean per reader and nothing else.
+   */
+  async introductionsEntered(userIds: readonly string[]): Promise<ReadonlyMap<string, boolean>> {
+    const rows = await this.server.rpc<{ readonly user_id: string; readonly entered: boolean }[]>('server_read_introductions_capability_v1', { p_user_ids: userIds });
+    if (!Array.isArray(rows) || rows.some((r) => typeof r?.user_id !== 'string' || typeof r.entered !== 'boolean')) throw new Error('PUSH_CAPABILITY_MALFORMED');
+    return new Map(rows.map((r) => [r.user_id, r.entered]));
+  }
+
   /** Server channel only. */
   record(attemptId: string, claimToken: string, state: AttemptState, reason: string | null, nextAttemptAt: string | null,
     disclosureLevel: string | null, counted: boolean): Promise<{ readonly outcome: string }[]> {

@@ -31,6 +31,8 @@ function repository(overrides: Partial<Record<keyof ActivityRepository, jest.Moc
     preferences: jest.fn().mockResolvedValue([]), mutes: jest.fn().mockResolvedValue([]), markSeen: jest.fn().mockResolvedValue([{ seen: 1 }]),
     open: jest.fn(), recordStrip: jest.fn().mockResolvedValue([{ presented: 1, settled: 0 }]), savePreferences: jest.fn().mockResolvedValue([{ outcome: 'SAVED' }]),
     setSnooze: jest.fn().mockResolvedValue([{ outcome: 'SNOOZED' }]), setMute: jest.fn(), publish: jest.fn(), withdraw: jest.fn(),
+    // S6-07 (CP3): the caller's own Introductions capability truth and the two Introductions reads Direct Entry asks.
+    introductionsEntered: jest.fn().mockResolvedValue(false), ownIntroductionWorlds: jest.fn().mockResolvedValue([]), ownProposal: jest.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as jest.Mocked<ActivityRepository>;
 }
@@ -156,10 +158,10 @@ describe('A3-01 ActivityService — attention state never resolves anything; Dir
     await expect(open(opened('GENERAL_SETTINGS', 'SECURITY', 'ACCOUNT'))).resolves.toEqual({ outcome: 'ENTER', destination: { kind: 'GENERAL_SETTINGS', section: 'SECURITY' } });
   });
 
-  it('Stage 6–8 destinations (and Replay, Stage 7) stay typed but fail closed', async () => {
-    for (const destination of ['INTRODUCTIONS', 'REPLAY']) {
-      await expect(open(opened(destination, 'ref', 'SHARED_WORLD'))).resolves.toEqual({ outcome: 'UNAVAILABLE', fallback: null });
-    }
+  // RE-ANCHORED by S6-07 (CP3): Introductions (Stage 6) now opens, revalidated (activity-introductions.spec.ts); Replay
+  // (Stage 7) stays typed and fails closed.
+  it('the Replay destination (Stage 7) stays typed but fails closed', async () => {
+    await expect(open(opened('REPLAY', 'ref', 'SHARED_WORLD'))).resolves.toEqual({ outcome: 'UNAVAILABLE', fallback: null });
   });
 
   it('a stale target gets no guessed destination — only a safe act into its own originating context (D39)', async () => {

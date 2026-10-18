@@ -34,6 +34,8 @@ describe('S6-07 CP1 — IntroductionsEnrollmentService', () => {
     repository = {
       read: jest.fn().mockResolvedValue(viewAnswer()),
       act: jest.fn().mockResolvedValue([{ outcome: 'NOT_AVAILABLE_NOW', participation_state: null, matchable: null }]),
+      // RE-ANCHORED by S6-07 (CP3): the one-consent withdrawal (its own spec).
+      setup: jest.fn(), revoke: jest.fn(),
     };
     service = new IntroductionsEnrollmentService(repository as unknown as IntroductionsEnrollmentRepository);
   });
@@ -131,7 +133,10 @@ describe('S6-07 CP1 — IntroductionsEnrollmentService', () => {
       expect(source).not.toMatch(/ServiceRole|service_role'|SUPABASE_SERVICE_ROLE|ModelRouter|model-router|conversation\.module|memory/u);
     }
     const repositorySource = readFileSync(join(__dirname, 'introductions-enrollment.repository.ts'), 'utf8');
+    // RE-ANCHORED by S6-07 (CP3): the frozen self-inspection, and exactly the three retained 0109 withdrawal commands.
     expect([...repositorySource.matchAll(/'rpc\/([a-z0-9_]+)'/gu)].map((m) => m[1]).sort())
-      .toEqual(['enroll_my_matching_setup_v1', 'read_my_matching_enrollment_v1']);
+      .toEqual(['enroll_my_matching_setup_v1', 'get_my_matching_setup_v1', 'read_my_matching_enrollment_v1']);
+    expect([...repositorySource.matchAll(/: \['([a-z0-9_]+_v1)', 'p_expected_[a-z_]+'\]/gu)].map((m) => m[1]).sort())
+      .toEqual(['revoke_matching_context_v1', 'revoke_pre_match_disclosure_authority_v1', 'turn_off_matching_participation_v1']);
   });
 });

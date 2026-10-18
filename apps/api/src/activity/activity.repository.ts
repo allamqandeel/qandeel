@@ -162,6 +162,26 @@ export class ActivityRepository {
     });
   }
 
+  /** S6-07 — has the CALLER entered Introductions? Migration 0167's own-truth reader, on the caller's token (a boolean). */
+  introductionsEntered(token: string): Promise<unknown> {
+    return this.dataApi.request<unknown>(token, 'rpc/read_my_introductions_capability_v1', { method: 'POST', body: JSON.stringify({}) });
+  }
+
+  /**
+   * S6-07 — the caller's own Introduction Worlds (the S6-05 discovery read, 0160 as 0164 restates it: ACTIVE, ENDED and
+   * retained), on the CALLER'S token. Activity reads no Introductions table.
+   */
+  ownIntroductionWorlds(token: string): Promise<{ readonly world_id: string }[]> {
+    return this.dataApi.request<{ readonly world_id: string }[]>(token, 'rpc/list_my_introduction_worlds_v1', { method: 'POST', body: JSON.stringify({}) });
+  }
+
+  /** S6-07 — one of the caller's own delivered proposals (the S6-04 reader, migration 0158), or no row, on the CALLER'S token. */
+  ownProposal(token: string, proposalId: string): Promise<{ readonly matching_proposal_id: string }[]> {
+    return this.dataApi.request<{ readonly matching_proposal_id: string }[]>(token, 'rpc/get_my_matching_proposal_v1', {
+      method: 'POST', body: JSON.stringify({ p_proposal_id: proposalId }),
+    });
+  }
+
   setMute(token: string, contextRef: string, muted: boolean): Promise<{ readonly outcome: string }[]> {
     return this.dataApi.request<{ readonly outcome: string }[]>(token, 'rpc/set_own_activity_context_mute_v1', {
       method: 'POST', body: JSON.stringify({ p_context_ref: contextRef, p_muted: muted }),

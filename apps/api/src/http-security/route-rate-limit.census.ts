@@ -131,6 +131,11 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // S6-07 (CP1): the governed enrollment - the read, and the act that carries the human's three consents.
   'GET /introductions/enrollment': 'AUTHENTICATED',
   'POST /introductions/enrollment': 'SECURITY_SENSITIVE',
+  // S6-07 (CP3): withdrawing ONE consent is a privacy act - never throttled like a credential act; and the
+  // per-Introduction alerts (0167), ordinary acts like the Shared ones.
+  'POST /introductions/enrollment/revocation': 'AUTHENTICATED',
+  'GET /introductions/alerts': 'AUTHENTICATED',
+  'PUT /introductions/worlds/:worldId/alerts': 'AUTHENTICATED',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

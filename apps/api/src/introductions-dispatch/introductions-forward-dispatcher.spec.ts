@@ -137,6 +137,9 @@ describe('S6-07 CP2 — content-free telemetry', () => {
   });
 });
 
+// RE-ANCHORED by S6-07 (CP3): the notifier also publishes the other Introductions events (0167); none here.
+const NO_EVENTS = () => jest.fn().mockResolvedValue({ published: 0, failed: 0 });
+
 describe('S6-07 CP2 — the Activity recovery path (the notifier itself is CP3)', () => {
   it('without a bound notifier it never lists or publishes anything', async () => {
     const r = repo(['FORWARDED'], () => [delivery()]);
@@ -153,6 +156,7 @@ describe('S6-07 CP2 — the Activity recovery path (the notifier itself is CP3)'
         if (down) throw new ServiceUnavailableException('activity down');
         published.add(d.candidateKey);
       }),
+      publishPendingEvents: NO_EVENTS(),
     };
     const { telemetry, recordOperationalOutcome } = recorder();
     const w = worker(repo(['FORWARDED'], pending), telemetry, notifier);
@@ -170,7 +174,7 @@ describe('S6-07 CP2 — the Activity recovery path (the notifier itself is CP3)'
     const r = repo([]);
     r.listUnpublishedDeliveries.mockRejectedValueOnce(new IntroductionsForwardAnswerError());
     const { telemetry, recordOperationalOutcome } = recorder();
-    await expect(worker(r, telemetry, { publishDelivered: jest.fn() }).runOnce()).resolves.toMatchObject({ published: 0 });
+    await expect(worker(r, telemetry, { publishDelivered: jest.fn(), publishPendingEvents: NO_EVENTS() }).runOnce()).resolves.toMatchObject({ published: 0 });
     expect(recordOperationalOutcome).toHaveBeenCalledWith('INTRODUCTIONS_FORWARD', 'reconcile', 'integrity_failure');
   });
 });

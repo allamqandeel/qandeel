@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
-import { IntroductionsEnrollmentRepository, type EnrollmentKind } from './introductions-enrollment.repository';
+import { IntroductionsEnrollmentRepository, type ConsentKind, type EnrollmentKind } from './introductions-enrollment.repository';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const CONSENT_VERSION = /^[A-Z][A-Z0-9_]{2,63}$/u;
@@ -40,6 +40,16 @@ export interface EnrollmentView {
   };
 }
 export interface EnrollmentActAnswer { readonly outcome: EnrollmentOutcome; readonly view: EnrollmentView }
+
+export const CONSENT_KINDS: readonly ConsentKind[] = ['participation', 'contextGrant', 'disclosureAuthority'];
+/**
+ * S6-07 (CP3) — what withdrawing ONE consent can answer: REVOKED (now, or the retry of this command), NOT_ACTIVE (there is
+ * nothing to withdraw - it was never given or is already withdrawn), CHANGED (it changed since the setup read: read
+ * again) or COMMAND_CONFLICT (the command id names another act).
+ */
+export const REVOCATION_OUTCOMES = ['REVOKED', 'NOT_ACTIVE', 'CHANGED', 'COMMAND_CONFLICT'] as const;
+export type RevocationOutcome = typeof REVOCATION_OUTCOMES[number];
+export interface RevocationAnswer { readonly outcome: RevocationOutcome; readonly view: EnrollmentView }
 
 type Json = Record<string, unknown>;
 const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -136,6 +146,41 @@ export class IntroductionsEnrollmentService {
           || !(row.participation_state === null || oneOf(PARTICIPATION_STATES, row.participation_state))
           || !(row.matchable === null || typeof row.matchable === 'boolean')) integrity();
       return row.outcome as EnrollmentOutcome;
+    });
+    return { outcome, view: await this.read(token) };
+  }
+
+  /**
+   * S6-07 (CP3) — withdraw ONE of the three consents, independently of the other two (Q8(A)), through its own retained
+   * frozen 0109 command on the caller's token. The identity it withdraws is the one the caller's own setup read names now;
+   * no other consent, no proposal, no Introduction and no gate is touched by this route. Always available: a withdrawal
+   * is never refused for a closed gate or a pending account deletion.
+   */
+  async revoke(token: string, body: unknown): Promise<RevocationAnswer> {
+    const b = exactKeys(body, ['commandId', 'consent']);
+    const commandId = typeof b.commandId === 'string' && UUID.test(b.commandId) ? b.commandId.toLowerCase() : invalid();
+    const consent = oneOf(CONSENT_KINDS, b.consent) ? b.consent : invalid();
+    const outcome = await this.guard(async (): Promise<RevocationOutcome> => {
+      const rows = await this.repository.setup(token);
+      const s = Array.isArray(rows) && rows.length === 1 && isRecord(rows[0]) ? rows[0] : integrity();
+      const current = consent === 'participation' ? (s.participation_state === 'OFF' ? null : s.participation_event_id)
+        : consent === 'contextGrant' ? s.matching_context_grant_id : s.pre_match_disclosure_authority_id;
+      if (current === null || current === undefined) return 'NOT_ACTIVE';
+      if (typeof current !== 'string' || !UUID.test(current)) integrity();
+      try {
+        const answer = await this.repository.revoke(token, consent, commandId, current as string);
+        if (!Array.isArray(answer) || answer.length !== 1 || !isRecord(answer[0])) integrity();
+        return 'REVOKED';
+      } catch (error) {
+        if (!(error instanceof DataApiError)) throw error;
+        const code = readDataApiUpstreamIdentity(error).databaseCode;
+        // The frozen command's own refusals: a stale identity (0109 40001, answered as PT409 by 0150), a command id that
+        // names another act (23505), and nothing left to withdraw (55000 / P0002).
+        if (error.status === 409 && code !== '23505') return 'CHANGED';
+        if (code === '23505') return 'COMMAND_CONFLICT';
+        if (code === '55000' || code === 'P0002') return 'NOT_ACTIVE';
+        throw error;
+      }
     });
     return { outcome, view: await this.read(token) };
   }

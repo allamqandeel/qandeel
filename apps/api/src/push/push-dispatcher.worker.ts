@@ -90,11 +90,22 @@ export class PushDispatcherWorker implements OnModuleInit, OnModuleDestroy {
         (error: unknown): ClaimedAttempt[] => { this.signal('claim', failureOutcome(error)); return []; },
       );
       const byUser = new Map<string, ClaimedAttempt[]>();
-      for (const claim of claimed) byUser.set(claim.userId, [...(byUser.get(claim.userId) ?? []), claim]);
+      for (const claim of await this.withIntroductionsCapability(claimed)) byUser.set(claim.userId, [...(byUser.get(claim.userId) ?? []), claim]);
       for (const claims of byUser.values()) await this.passFor(claims, claimToken);
     } finally {
       this.running = false;
     }
+  }
+
+  /**
+   * D26 / S6-07: an INTRODUCTIONS intent is revalidated against its reader's CURRENT capability truth (0167). A failed
+   * read is never a guess: the reader counts as not entered, so the intent is suppressed, never sent.
+   */
+  private async withIntroductionsCapability(claimed: readonly ClaimedAttempt[]): Promise<ClaimedAttempt[]> {
+    const readers = [...new Set(claimed.filter((c) => c.item.category === 'INTRODUCTIONS').map((c) => c.userId))];
+    if (readers.length === 0) return [...claimed];
+    const entered = await this.repository.introductionsEntered(readers).catch(() => new Map<string, boolean>());
+    return claimed.map((c) => (c.item.category === 'INTRODUCTIONS' ? { ...c, introductionsEntered: entered.get(c.userId) === true } : c));
   }
 
   /** One reader's intents in this pass. The P3 §14 ceilings see this pass's own acceptances (one per item). */
