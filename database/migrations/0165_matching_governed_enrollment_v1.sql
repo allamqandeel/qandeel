@@ -2,9 +2,11 @@
 --
 -- Product authority: the Product Owner's S6-07 Final Task Contract, the CP0 report and its review addendum as approved
 -- on 2026-10-18 ("S6-07 - CP0 Approved / Start CP1": Q1, Q2(b), Q3-A, Q4', Q5', Q6, Q7' / Q7'', Q8(A), Q9, Q10) and the
--- Controlled Amendments they approve: CA-01-impl, CA-R5-impl, CA-08-impl, CA-10-impl and CA-GATE. The execution record is
--- docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md; the runtime amendment is docs/matching-introduction-runtime-v1.md
--- §50. This migration is that task's CP1 database part, and nothing more.
+-- Controlled Amendments they approve: CA-01-impl, CA-R5-impl, CA-08-impl, CA-10-impl and CA-GATE; and the Product Owner's
+-- CP1 correction decision D-CP1-1 = B (2026-10-18, "S6-07 - CP1 Correction: Empty Introduction Profile") with its
+-- Controlled Amendment CA-D-CP1-1-impl. The execution record is docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md; the
+-- runtime amendment is docs/matching-introduction-runtime-v1.md §50 (CA-D-CP1-1-impl among it). This migration is that task's CP1
+-- database part, and nothing more.
 --
 -- ## What is added (schema matching_enrollment_private, not exposed through the Data API)
 --
@@ -20,10 +22,13 @@
 --      boundary, bound to the exact consent versions it exercised and to the exact I-07 events it created.
 --   4. `command_ledger`: each committed boundary command once, by its command id; a retry answers the first result and a
 --      reused id with a different request changes nothing.
---   5. Two internal cores, executable by NO role and called only by the boundary:
+--   5. Three internal cores, executable by NO role and called only by the boundary:
 --        public.set_empty_matching_requirements_core_v1                  (CA-10-impl, Q4')  a requirement version with
 --            zero items - "no additional hard dealbreaker" and "no soft preference" as the ABSENCE of items, never a
 --            sentinel (CW2-06B-04 §9); 0109 still refuses an empty set, unchanged
+--        public.set_empty_introduction_profile_core_v1                    (CA-D-CP1-1-impl, D-CP1-1 = B) an Introduction
+--            Profile version with ZERO field rows - both optional S6-01 fields left empty is the reviewed draft's own
+--            answer, so no optional field is ever required to enroll; 0109 still refuses an empty set, unchanged
 --        public.grant_zero_field_pre_match_disclosure_authority_core_v1  (CA-08-impl, Q3-A) a Pre-Match Disclosure
 --            Authority over the exact current profile version that approves ZERO profile fields (CW2-06B-06): no field is
 --            disclosed before a Mutual Match; only the Product-permitted bounded conclusion may be
@@ -71,8 +76,8 @@
 --   ENROLLED | CORRECTED | RESUMED | RECONFIRMED          committed (with the resulting participation state and matchable)
 --   NOT_AVAILABLE_NOW   the gate is not open                DELETION_PENDING   the account is being deleted
 --   CHANGED             the draft moved, or a stale state  INCOMPLETE         the draft is not reviewed, a fact is not
---                       (40001 / PT409 absorbed)                               confirmed, no profile field exists, or a
---                                                                              value cannot be promoted
+--                       (40001 / PT409 absorbed)                               confirmed, or a value cannot be promoted
+--                                                                              (an empty profile is NOT incomplete)
 --   CONSENT_OUTDATED    a consent version is not the current text of its purpose (or one the act needs is missing)
 --   ALREADY_ENROLLED    ENROLL while participating         NOT_ENROLLED       another act before any enrollment, or OFF
 --   NOT_RESUMABLE       a pause this act may not lift      NO_CHANGE          CORRECTION with nothing to change
@@ -461,6 +466,63 @@ BEGIN
   RETURN QUERY SELECT p_command_id, p_expected_current_version_id, 0;
 END$$;
 
+-- CA-D-CP1-1-impl (D-CP1-1 = B): an Introduction Profile version with ZERO field rows. short_introduction and work_field
+-- are optional (S6-01); a reviewed draft with neither is represented by the absence of field rows, never by a sentinel
+-- value, and is a real immutable version in the same chain, so the zero-field disclosure authority binds it like any other.
+-- The frozen set_introduction_profile_v1 keeps refusing an empty set and still writes every non-empty one.
+CREATE FUNCTION public.set_empty_introduction_profile_core_v1(
+  p_command_id uuid, p_owner_user_id uuid, p_expected_current_version_id uuid
+) RETURNS TABLE(introduction_profile_version_id uuid, superseded_version_id uuid, field_count integer)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  locked uuid;
+  committed public.introduction_profile_versions;
+  current_id uuid;
+BEGIN
+  IF p_command_id IS NULL OR p_owner_user_id IS NULL THEN
+    RAISE EXCEPTION 'MATCHING_COMMAND_INVALID' USING ERRCODE = '22023';
+  END IF;
+  IF p_expected_current_version_id IS NOT NULL AND p_expected_current_version_id = p_command_id THEN
+    RAISE EXCEPTION 'MATCHING_VERSION_ID_INVALID' USING ERRCODE = '22023';
+  END IF;
+
+  INSERT INTO public.matching_setup_locks AS l (user_id) VALUES (p_owner_user_id)
+  ON CONFLICT (user_id) DO UPDATE SET created_at = l.created_at
+  RETURNING l.user_id INTO locked;
+
+  SELECT * INTO committed FROM public.introduction_profile_versions v WHERE v.id = p_command_id;
+  IF FOUND THEN
+    IF committed.owner_user_id = p_owner_user_id
+       AND committed.prior_profile_version_id IS NOT DISTINCT FROM p_expected_current_version_id
+       AND NOT EXISTS (SELECT 1 FROM public.introduction_profile_field_values f WHERE f.profile_version_id = p_command_id) THEN
+      RETURN QUERY SELECT committed.id, committed.prior_profile_version_id, 0;
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'MATCHING_COMMAND_ID_CONFLICT' USING ERRCODE = '23505';
+  END IF;
+
+  SELECT s.current_profile_version_id INTO current_id
+    FROM public.introduction_profile_state s WHERE s.owner_user_id = p_owner_user_id FOR UPDATE;
+  IF current_id IS DISTINCT FROM p_expected_current_version_id THEN
+    RAISE EXCEPTION 'MATCHING_STALE_STATE' USING ERRCODE = '40001';
+  END IF;
+
+  INSERT INTO public.introduction_profile_versions (id, owner_user_id, prior_profile_version_id)
+  VALUES (p_command_id, p_owner_user_id, p_expected_current_version_id);
+
+  IF p_expected_current_version_id IS NULL THEN
+    INSERT INTO public.introduction_profile_state (owner_user_id, current_profile_version_id)
+    VALUES (p_owner_user_id, p_command_id);
+  ELSE
+    UPDATE public.introduction_profile_state s
+       SET current_profile_version_id = p_command_id, updated_at = CURRENT_TIMESTAMP
+     WHERE s.owner_user_id = p_owner_user_id AND s.current_profile_version_id = p_expected_current_version_id;
+    IF NOT FOUND THEN RAISE EXCEPTION 'MATCHING_STALE_STATE' USING ERRCODE = '40001'; END IF;
+  END IF;
+
+  RETURN QUERY SELECT p_command_id, p_expected_current_version_id, 0;
+END$$;
+
 -- CA-08-impl (Q3-A): a Pre-Match Disclosure Authority over the exact current profile version that approves ZERO fields.
 -- It binds the version the owner is looking at, reads the profile family read-only and in the 0109 order, revokes the
 -- active authority it supersedes (RECONFIRMED, a NEW identity), and writes no field row.
@@ -727,10 +789,7 @@ BEGIN
          OR v_facts.first_name_state IS DISTINCT FROM 'CONFIRMED' OR v_facts.sex_state IS DISTINCT FROM 'CONFIRMED'
          OR v_facts.birth_state IS DISTINCT FROM 'CONFIRMED' OR v_facts.area_state IS DISTINCT FROM 'CONFIRMED'
          OR v_facts.marital_state IS DISTINCT FROM 'CONFIRMED'
-         OR v_draft.hard_answer IS NULL OR v_draft.soft_answer IS NULL
-         -- The frozen profile command refuses an empty field set and the authority binds a profile version; a draft
-         -- with neither optional field is not promoted (no field is invented). Product decision recorded in §50.
-         OR cardinality(v_profile_keys) = 0 THEN
+         OR v_draft.hard_answer IS NULL OR v_draft.soft_answer IS NULL THEN
         v_refusal := 'INCOMPLETE';
         RAISE EXCEPTION 'MATCHING_ENROLLMENT_REFUSED' USING ERRCODE = 'QS001';
       END IF;
@@ -765,14 +824,22 @@ BEGIN
         v_fact_moved := true;
       END IF;
 
-      -- Profile: a new version only when the field set differs from the current one.
+      -- Profile: a new version only when the field set differs from the current one - through the frozen command when
+      -- the draft carries a field, through the empty-profile core when it carries neither (CA-D-CP1-1-impl). No field is
+      -- invented and no optional field is required.
       IF v_profile IS NULL OR (SELECT coalesce(array_agg(f.field_key || '=' || f.field_value ORDER BY f.field_key), '{}')
                                  FROM public.introduction_profile_field_values f WHERE f.profile_version_id = v_profile)
                               IS DISTINCT FROM (SELECT coalesce(array_agg(p.k || '=' || p.v ORDER BY p.k), '{}')
                                                   FROM unnest(v_profile_keys, v_profile_values) AS p(k, v)) THEN
-        SELECT r.introduction_profile_version_id INTO v_profile FROM public.set_introduction_profile_v1(
-          matching_enrollment_private.derive_identity_v1('PROFILE_VERSION', u, p_command_id),
-          v_profile_keys, v_profile_values, v_setup.introduction_profile_version_id) r;
+        IF cardinality(v_profile_keys) = 0 THEN
+          SELECT r.introduction_profile_version_id INTO v_profile FROM public.set_empty_introduction_profile_core_v1(
+            matching_enrollment_private.derive_identity_v1('PROFILE_VERSION', u, p_command_id), u,
+            v_setup.introduction_profile_version_id) r;
+        ELSE
+          SELECT r.introduction_profile_version_id INTO v_profile FROM public.set_introduction_profile_v1(
+            matching_enrollment_private.derive_identity_v1('PROFILE_VERSION', u, p_command_id),
+            v_profile_keys, v_profile_values, v_setup.introduction_profile_version_id) r;
+        END IF;
         v_profile_moved := true;
       END IF;
 
@@ -960,6 +1027,7 @@ BEGIN
   END LOOP;
   FOREACH fn IN ARRAY ARRAY[
     'public.set_empty_matching_requirements_core_v1(uuid,uuid,uuid)',
+    'public.set_empty_introduction_profile_core_v1(uuid,uuid,uuid)',
     'public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid,uuid,uuid,uuid,uuid)',
     'public.resolve_matching_confirmed_facts_v1(uuid)',
     'public.enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)',
@@ -981,6 +1049,7 @@ BEGIN
     END LOOP;
     FOREACH fn IN ARRAY ARRAY[
       'public.set_empty_matching_requirements_core_v1(uuid,uuid,uuid)',
+      'public.set_empty_introduction_profile_core_v1(uuid,uuid,uuid)',
       'public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid,uuid,uuid,uuid,uuid)',
       'public.resolve_matching_confirmed_facts_v1(uuid)',
       'public.enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)',
@@ -1005,6 +1074,9 @@ COMMENT ON FUNCTION public.read_my_matching_enrollment_v1() IS
 COMMENT ON FUNCTION public.set_empty_matching_requirements_core_v1(uuid, uuid, uuid) IS
   'S6-07 (CA-10-impl, Q4''): a requirement version with zero items, under the frozen I-07A durability law. Executable by '
   'no role; the governed enrollment boundary is its only caller.';
+COMMENT ON FUNCTION public.set_empty_introduction_profile_core_v1(uuid, uuid, uuid) IS
+  'S6-07 (CA-D-CP1-1-impl, D-CP1-1 = B): an Introduction Profile version with zero field rows, under the frozen I-07A '
+  'durability law. Executable by no role; the governed enrollment boundary is its only caller.';
 COMMENT ON FUNCTION public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid, uuid, uuid, uuid, uuid) IS
   'S6-07 (CA-08-impl, Q3-A): a Pre-Match Disclosure Authority over the exact current profile version approving zero '
   'fields, under the frozen I-07A durability law. Executable by no role; the governed enrollment boundary is its only caller.';
@@ -1018,6 +1090,7 @@ DECLARE
   reader text := 'public.read_my_matching_enrollment_v1()';
   hidden text[] := ARRAY[
     'public.set_empty_matching_requirements_core_v1(uuid,uuid,uuid)',
+    'public.set_empty_introduction_profile_core_v1(uuid,uuid,uuid)',
     'public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid,uuid,uuid,uuid,uuid)',
     'public.resolve_matching_confirmed_facts_v1(uuid)',
     'public.record_matching_confirmed_facts_core_v1(uuid,uuid,uuid,text,timestamptz,text,timestamptz,integer,integer,timestamptz,text,text,timestamptz,text,timestamptz)',
@@ -1078,8 +1151,8 @@ BEGIN
     RAISE EXCEPTION 'S6-07: % absorbs 40001 / PT409, raises neither, re-raises nothing and runs no dynamic SQL', boundary;
   END IF;
   IF src !~ 'auth\.uid\(\)' THEN RAISE EXCEPTION 'S6-07: % derives its human from auth.uid()', boundary; END IF;
-  -- The two cores name none of the six and take no session identity.
-  FOREACH fn IN ARRAY hidden[1:2] LOOP
+  -- The three cores name none of the six and take no session identity.
+  FOREACH fn IN ARRAY hidden[1:3] LOOP
     SELECT p.prosrc INTO src FROM pg_proc p WHERE p.oid = fn::regprocedure;
     IF src ~ '(activate_matching_participation_v1|resume_matching_participation_v1|grant_matching_context_v1|set_introduction_profile_v1|set_matching_requirements_v1|grant_pre_match_disclosure_authority_v1|auth\.uid)' THEN
       RAISE EXCEPTION 'S6-07: % names no suspended command and reads no session identity', fn;

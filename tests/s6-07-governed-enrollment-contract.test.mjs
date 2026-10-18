@@ -19,6 +19,9 @@ const M0165 = '0165_matching_governed_enrollment_v1.sql';
 const SIX = ['activate_matching_participation_v1', 'resume_matching_participation_v1', 'grant_matching_context_v1',
   'set_introduction_profile_v1', 'set_matching_requirements_v1', 'grant_pre_match_disclosure_authority_v1'];
 const API = 'apps/api/src/introductions-enrollment';
+// The three no-role cores (CA-10-impl, CA-D-CP1-1-impl, CA-08-impl).
+const CORES = ['public.set_empty_matching_requirements_core_v1', 'public.set_empty_introduction_profile_core_v1',
+  'public.grant_zero_field_pre_match_disclosure_authority_core_v1'];
 
 const shipped = () => ({
   migration: read(`${MIGRATIONS}/${M0165}`),
@@ -79,10 +82,20 @@ function migrationViolations(w) {
   if (!/JOIN matching_enrollment_private\.fact_promotions p\s+ON p\.fact_version_id = f\.id AND p\.user_id = f\.owner_user_id/u.test(fns['public.resolve_matching_confirmed_facts_v1'] ?? '')) {
     out.push('the canonical facts reader requires the promotion record (CW2-06B-02 §5)');
   }
-  for (const core of ['public.set_empty_matching_requirements_core_v1', 'public.grant_zero_field_pre_match_disclosure_authority_core_v1']) {
-    if (/auth\.uid|INSERT INTO public\.pre_match_disclosure_authority_fields|INSERT INTO public\.matching_requirement_items/u.test(fns[core] ?? 'missing')) {
+  for (const core of CORES) {
+    if (/auth\.uid|INSERT INTO public\.(?:pre_match_disclosure_authority_fields|matching_requirement_items|introduction_profile_field_values)/u.test(fns[core] ?? 'missing')) {
       out.push(`${core} reads no session identity and writes no field or item row`);
     }
+    // Executable by no role: absent from the one GRANT (checked above), revoked from every role, and in the terminal
+    // self-assertion's hidden list.
+    if ((w.migration.match(new RegExp(`'${core.replace('.', '\\.')}\\(uuid,uuid,uuid(?:,uuid,uuid)?\\)',`, 'gu')) ?? []).length !== 3) {
+      out.push(`${core} is revoked from every application role and asserted executable by none`);
+    }
+  }
+  // D-CP1-1 = B: an empty profile is never refused; it is the empty-profile core, a field-bearing one the frozen command.
+  if (/cardinality\(v_profile_keys\) = 0 THEN\s+v_refusal/u.test(boundary) || /OR cardinality\(v_profile_keys\) = 0/u.test(boundary)
+     || !/IF cardinality\(v_profile_keys\) = 0 THEN\s+SELECT r\.introduction_profile_version_id INTO v_profile FROM public\.set_empty_introduction_profile_core_v1\(\s+matching_enrollment_private\.derive_identity_v1\('PROFILE_VERSION', u, p_command_id\), u,\s+v_setup\.introduction_profile_version_id\) r;\s+ELSE\s+SELECT r\.introduction_profile_version_id INTO v_profile FROM public\.set_introduction_profile_v1\(/u.test(boundary)) {
+    out.push('an empty profile enrolls through the empty-profile core; a non-empty one through the frozen command (D-CP1-1 = B)');
   }
   if (!/\('matching_enrollment_private\.command_ledger', 'ACCOUNT_CASCADE'\),\n {2}\('matching_enrollment_private\.enrollment_acts', 'ACCOUNT_CASCADE'\),\n {2}\('matching_enrollment_private\.fact_promotions', 'ACCOUNT_CASCADE'\);/u.test(w.migration)) {
     out.push('the three evidence relations are registered ACCOUNT_CASCADE for the governed erasure');
@@ -102,6 +115,9 @@ function censusViolations(w) {
     'f15 the census refuses the enrollment boundary granted beyond authenticated',
     'f16 the census refuses a client-executable wrapper around the 0156 facts writer',
     'f17 the census refuses an internal enrollment core granted to a client role']) if (!w.verify0149.includes(probe)) out.push(`0149 probe: ${probe}`);
+  if (!/pristine: `REVOKE EXECUTE ON FUNCTION public\.set_empty_matching_requirements_core_v1\(uuid, uuid, uuid\),\s+public\.set_empty_introduction_profile_core_v1\(uuid, uuid, uuid\),\s+public\.grant_zero_field_pre_match_disclosure_authority_core_v1/u.test(w.verify0149)) {
+    out.push('0149 f17 probes every one of the three cores');
+  }
   if (!/ {2}'enroll_my_matching_setup_v1',\n\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the boundary');
   if (!w.verify0156.includes("['enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)']")) out.push('0156 A02 admits exactly the boundary as the writer\'s one wrapper');
   return out;
@@ -161,6 +177,14 @@ test('2 - every detector catches a planted defect', () => {
       "INSERT INTO matching_enrollment_private.consent_texts (consent_version, purpose, text_ar, text_en, sha256_ar, sha256_en, is_current) VALUES ('X_V1', 'MATCHING_PARTICIPATION', 'a', 'b', 'c', 'd', true);\n-- 9. DELETION COVERAGE")],
     ['an account reference that restricts', 'migrationViolations', () => plant('migration', 'CONSTRAINT fact_promotions_user_fk FOREIGN KEY (user_id) REFERENCES public.users (id) ON DELETE CASCADE',
       'CONSTRAINT fact_promotions_user_fk FOREIGN KEY (user_id) REFERENCES public.users (id) ON DELETE RESTRICT')],
+    ['the empty-profile refusal restored', 'migrationViolations', () => plant('migration', '         OR v_draft.hard_answer IS NULL OR v_draft.soft_answer IS NULL THEN',
+      '         OR v_draft.hard_answer IS NULL OR v_draft.soft_answer IS NULL\n         OR cardinality(v_profile_keys) = 0 THEN')],
+    ['the empty-profile core writing a field row', 'migrationViolations', () => plant('migration',
+      '  INSERT INTO public.introduction_profile_versions (id, owner_user_id, prior_profile_version_id)\n  VALUES (p_command_id, p_owner_user_id, p_expected_current_version_id);',
+      "  INSERT INTO public.introduction_profile_versions (id, owner_user_id, prior_profile_version_id)\n  VALUES (p_command_id, p_owner_user_id, p_expected_current_version_id);\n  INSERT INTO public.introduction_profile_field_values (profile_version_id, field_key, field_value) VALUES (p_command_id, 'work_field', 'NONE');")],
+    ['the empty-profile core left executable by service_role', 'migrationViolations', () => plant('migration',
+      "      'public.set_empty_introduction_profile_core_v1(uuid,uuid,uuid)',\n      'public.grant_zero_field", "      'public.grant_zero_field")],
+    ['f17 no longer probing the empty-profile core', 'censusViolations', () => plant('verify0149', '                   public.set_empty_introduction_profile_core_v1(uuid, uuid, uuid),\n', '')],
     ['the census exception generalized', 'censusViolations', () => plant('verify0149', 'f.proname !== nameOf(S6_07_GOVERNED_ENROLLMENT)', "!f.proname.startsWith('enroll_')")],
     ['the absorber dropped', 'censusViolations', () => plant('verify0150', "  'enroll_my_matching_setup_v1',\n];", '];')],
     ['a third route', 'apiViolations', () => plant('controller', "  @Post('enrollment')", "  @Post('enrollment/admin')\n  admin() { return null; }\n\n  @Post('enrollment')")],

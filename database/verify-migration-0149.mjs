@@ -732,7 +732,9 @@ async function verifyForwardSafety(report, humans) {
     });
 
     await report.probe('f17 the census refuses an internal enrollment core granted to a client role', {
+      // D-CP1-1 = B (2026-10-18) adds the empty-profile core: every one of the three no-role cores is probed.
       pristine: `REVOKE EXECUTE ON FUNCTION public.set_empty_matching_requirements_core_v1(uuid, uuid, uuid),
+                   public.set_empty_introduction_profile_core_v1(uuid, uuid, uuid),
                    public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid, uuid, uuid, uuid, uuid) FROM authenticated`,
       mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM authenticated', ' TO authenticated'),
       marker: 'TO authenticated',

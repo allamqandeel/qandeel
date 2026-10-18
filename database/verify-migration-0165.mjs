@@ -30,6 +30,10 @@ const ENROLL = 'public.enroll_my_matching_setup_v1(uuid,text,bigint,text,text,te
 const READ = 'public.read_my_matching_enrollment_v1()';
 const EMPTY_CORE = 'public.set_empty_matching_requirements_core_v1(uuid,uuid,uuid)';
 const ZERO_CORE = 'public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid,uuid,uuid,uuid,uuid)';
+// CA-D-CP1-1-impl (D-CP1-1 = B, 2026-10-18): a real Introduction Profile version with zero field rows.
+const PROFILE_CORE = 'public.set_empty_introduction_profile_core_v1(uuid,uuid,uuid)';
+const CORES = [EMPTY_CORE, PROFILE_CORE, ZERO_CORE];
+const call = (fn) => fn.slice(0, fn.indexOf('('));
 const FACTS = 'public.resolve_matching_confirmed_facts_v1(uuid)';
 const WRITER = 'public.record_matching_confirmed_facts_core_v1(uuid,uuid,uuid,text,timestamptz,text,timestamptz,integer,integer,timestamptz,text,text,timestamptz,text,timestamptz)';
 const TABLES = ['command_ledger', 'consent_texts', 'enrollment_acts', 'fact_promotions', 'gate_events', 'gate_states'];
@@ -178,10 +182,10 @@ async function verifyCatalog(report) {
     }
   });
 
-  await report.section('A02 the function set: two authenticated entry points, two no-role cores, the redefined reader and private helpers', async () => {
+  await report.section('A02 the function set: two authenticated entry points, three no-role cores, the redefined reader and private helpers', async () => {
     const functions = await rows(`SELECT p.proname FROM pg_proc p WHERE p.pronamespace = '${S}'::regnamespace ORDER BY 1`);
     assert.deepEqual(functions.map((f) => f.proname), INTERNAL, 'A02 exactly the private helpers');
-    for (const fn of [ENROLL, READ, EMPTY_CORE, ZERO_CORE, FACTS,
+    for (const fn of [ENROLL, READ, ...CORES, FACTS,
       ...(await rows(`SELECT p.oid::regprocedure::text fn FROM pg_proc p WHERE p.pronamespace = '${S}'::regnamespace`)).map((r) => r.fn)]) {
       const p = await rt.functionPosture(fn);
       assert.equal(p.owner, 'postgres', `A02 ${fn} is postgres-owned`);
@@ -191,7 +195,7 @@ async function verifyCatalog(report) {
         assert.equal(await rt.canExecute(role, fn), entry && role === 'authenticated', `A02 ${role} EXECUTE ${fn}`);
       }
     }
-    for (const fn of [ENROLL, READ, EMPTY_CORE, ZERO_CORE, FACTS]) {
+    for (const fn of [ENROLL, READ, ...CORES, FACTS]) {
       assert.equal((await rt.functionPosture(fn)).secdef, true, `A02 ${fn} is SECURITY DEFINER`);
     }
     assert.equal((await rt.functionPosture(FACTS)).volatility, 's', 'A02 the facts reader is still STABLE');
@@ -207,7 +211,7 @@ async function verifyCatalog(report) {
     }
     const src = (await rt.functionPosture(ENROLL)).prosrc;
     assert.doesNotMatch(src, /grant_pre_match_disclosure_authority_v1/u, 'A03 the boundary never names the field-bearing disclosure grant');
-    for (const core of [EMPTY_CORE, ZERO_CORE]) {
+    for (const core of CORES) {
       const body = (await rt.functionPosture(core)).prosrc;
       for (const fn of SEC_MATCH_00_SUSPENDED) {
         const name = fn.slice('public.'.length, fn.indexOf('('));
@@ -215,6 +219,8 @@ async function verifyCatalog(report) {
       }
       assert.doesNotMatch(body, /auth\.uid/u, `A03 ${core} reads no session identity`);
     }
+    assert.doesNotMatch((await rt.functionPosture(PROFILE_CORE)).prosrc, /INSERT INTO public\.introduction_profile_field_values/u,
+      'A03 the empty-profile core writes no field row');
   });
 
   await report.section('A04 nothing is configured at rest: no gate row; 0165 installs no consent text', async () => {
@@ -395,7 +401,7 @@ async function verifyBehaviour(report) {
         [h, randomUUID(), authority.id]), ['40001'], /MATCHING_PROFILE_VERSION_NOT_CURRENT/u);
     });
 
-    await report.isolated('B07 every refusal writes NOTHING: stale draft, unreviewed draft, unconfirmed fact, no profile field, consent versions', async () => {
+    await report.isolated('B07 every refusal writes NOTHING: stale draft, unreviewed draft, unconfirmed fact, consent versions', async () => {
       await openGate();
       await installTexts();
       const h = await human();
@@ -411,12 +417,9 @@ async function verifyBehaviour(report) {
       const unconfirmed = await human();
       const unconfirmedDraft = await reviewedDraft(unconfirmed, { confirm: ['INTRODUCTION_FIRST_NAME', 'SEX', 'BIRTH_YEAR_MONTH', 'BROAD_AREA'], review: false });
       assert.equal((await enroll(unconfirmed, unconfirmedDraft)).outcome, 'INCOMPLETE', 'B07 a fact not confirmed');
-      const bare = await human();
-      const bareDraft = await reviewedDraft(bare, { profile: null });
-      assert.equal((await enroll(bare, bareDraft)).outcome, 'INCOMPLETE', 'B07 a reviewed draft with neither optional profile field is not promoted');
       const none = await human();
       assert.equal((await enroll(none, 1)).outcome, 'CHANGED', 'B07 no draft at all');
-      for (const who of [h, unconfirmed, bare, none]) assert.deepEqual(await footprint(who), ZERO, 'B07 nothing at all was written');
+      for (const who of [h, unconfirmed, none]) assert.deepEqual(await footprint(who), ZERO, 'B07 nothing at all was written');
       // Every act carries exactly what it exercises: anything else is not a request (22023) and writes nothing.
       for (const [kind, version, consents] of [['ENROLL', draft, { p: V.P, c: V.C }], ['ENROLL', null, ALL], ['RESUME', draft, { p: V.P }],
         ['RESUME', null, { p: V.P, c: V.C }], ['CORRECTION', draft, { p: V.P, d: V.D }], ['RECONFIRM_CONSENT', null, {}],
@@ -701,6 +704,163 @@ async function verifyBehaviour(report) {
 }
 
 // ------------------------------------------------------------------ C. races
+// ------------------------------------------------------------------ B19-B20. D-CP1-1 = B (CA-D-CP1-1-impl)
+const fieldsOf = (version) => rows('SELECT field_key, field_value FROM public.introduction_profile_field_values WHERE profile_version_id = $1 ORDER BY 1', [version]);
+const profileVersion = async (version) => (await rows('SELECT * FROM public.introduction_profile_versions WHERE id = $1', [version]))[0];
+const authorityOf = async (id) => (await rows('SELECT * FROM public.pre_match_disclosure_authorities WHERE id = $1', [id]))[0];
+const fieldCount = async (sql, id) => Number((await rows(sql, [id]))[0].n);
+const NO_PROFILE = { shortIntroduction: null, workField: null };
+
+async function verifyEmptyProfile(report) {
+  await owner();
+  await q('BEGIN');
+  try {
+    await openPreparation();
+
+    await report.isolated('B19 D-CP1-1 = B: neither optional field enrolls with a REAL zero-field profile version, the zero-field authority bound to it', async () => {
+      await openGate();
+      await installTexts();
+      const h = await human();
+      const draft = await reviewedDraft(h, { profile: null });
+      const command = randomUUID();
+      assert.deepEqual(await enroll(h, draft, ALL, command), { outcome: 'ENROLLED', participation_state: 'ACTIVE', matchable: true },
+        'B19 no optional field is required to enroll');
+      const setup = await setupOf(h);
+      const version = await profileVersion(setup.introduction_profile_version_id);
+      assert.deepEqual([version.id, version.owner_user_id, version.prior_profile_version_id],
+        [await derived('PROFILE_VERSION', h, command), h, null], 'B19 a real immutable version of this human, the first of the chain');
+      assert.deepEqual(await fieldsOf(version.id), [], 'B19 with zero field rows: no field and no sentinel is invented');
+      const [a] = await actsOf(h);
+      assert.deepEqual([a.profile_version_id, a.participation_consent_version, a.context_consent_version, a.disclosure_consent_version],
+        [version.id, V.P, V.C, V.D], 'B19 the act binds the empty version and the three exact consent versions');
+      const authority = await authorityOf(setup.pre_match_disclosure_authority_id);
+      assert.deepEqual([authority.introduction_profile_version_id, authority.status], [version.id, 'ACTIVE'],
+        'B19 the zero-field authority binds the exact empty version');
+      assert.equal(await fieldCount('SELECT count(*) n FROM public.pre_match_disclosure_authority_fields WHERE authority_id = $1', authority.id), 0,
+        'B19 and approves zero fields');
+      assert.equal((await rows('SELECT event_type FROM public.pre_match_disclosure_authority_events WHERE id = $1', [a.authority_event_id]))[0].event_type,
+        'GRANTED', 'B19 a real GRANTED authority event, its own consent');
+      const mine = await retained(h, 'SELECT * FROM public.get_my_matching_setup_v1()', []);
+      assert.deepEqual([mine.participation_state, mine.approved_field_count], ['ACTIVE', 0], 'B19 self-inspection reads it');
+      // Idempotency: the same command answers the committed act and writes no second version; the id with another
+      // request is COMMAND_CONFLICT.
+      const before = await footprint(h);
+      assert.deepEqual(await enroll(h, draft, ALL, command), { outcome: 'ENROLLED', participation_state: 'ACTIVE', matchable: true });
+      assert.deepEqual(await footprint(h), before, 'B19 a retry writes nothing');
+      assert.equal(before.profiles, 1, 'B19 exactly one profile version');
+      assert.equal((await enroll(h, draft, { ...ALL, d: 'S6_07_OTHER_V1' }, command)).outcome, 'COMMAND_CONFLICT', 'B19 an old id with other content');
+      assert.deepEqual(await footprint(h), before);
+      // The frozen 0109 command still refuses an empty set and is still executable by no application role.
+      await actAs(h);
+      await rejected(() => q("SELECT * FROM public.set_introduction_profile_v1(gen_random_uuid(), '{}'::text[], '{}'::text[], $1)",
+        [version.id]), ['22023'], /MATCHING_FIELD_SET_INVALID/u);
+      await owner();
+      // The core's own durability law: replay, conflict (another prior, or an id a field-bearing version holds), CAS.
+      const core = call(PROFILE_CORE);
+      assert.deepEqual((await rows(`SELECT * FROM ${core}($1, $2, NULL)`, [version.id, h]))[0],
+        { introduction_profile_version_id: version.id, superseded_version_id: null, field_count: 0 }, 'B19 an equivalent retry answers the committed version');
+      await rejected(() => q(`SELECT * FROM ${core}($1, $2, $3)`, [version.id, h, randomUUID()]), ['23505'], /MATCHING_COMMAND_ID_CONFLICT/u);
+      await rejected(async () => q(`SELECT * FROM ${core}($1, $2, NULL)`, [version.id, await human()]), ['23505'], /MATCHING_COMMAND_ID_CONFLICT/u);
+      await rejected(() => q(`SELECT * FROM ${core}($1, $2, NULL)`, [randomUUID(), h]), ['40001'], /MATCHING_STALE_STATE/u);
+      await rejected(() => q(`SELECT * FROM ${core}($1, $2, $1)`, [version.id, h]), ['22023'], /MATCHING_VERSION_ID_INVALID/u);
+      await rejected(() => q(`SELECT * FROM ${core}(NULL, $1, NULL)`, [h]), ['22023'], /MATCHING_COMMAND_INVALID/u);
+      assert.deepEqual(await footprint(h), before, 'B19 the refused core calls wrote nothing');
+      // No application role executes the core directly.
+      for (const role of APP_ROLES) {
+        await asRole(role, h);
+        await rejected(() => q(`SELECT * FROM ${core}(gen_random_uuid(), $1, $2)`, [h, version.id]), ['42501'], PERMISSION_DENIED);
+        await owner();
+      }
+      // The three consents stay independent and revocable on their own.
+      await retained(h, 'SELECT * FROM public.revoke_pre_match_disclosure_authority_v1($1, $2)', [randomUUID(), authority.id]);
+      let now = await setupOf(h);
+      assert.deepEqual([now.pre_match_disclosure_authority_id, now.matching_context_grant_id, now.participation_state, now.introduction_profile_version_id],
+        [null, setup.matching_context_grant_id, 'ACTIVE', version.id], 'B19 revoking the authority leaves the grant, participation and the profile');
+      assert.equal((await act(h, 'RECONFIRM_CONSENT', null, { d: V.D })).outcome, 'RECONFIRMED');
+      now = await setupOf(h);
+      assert.equal((await authorityOf(now.pre_match_disclosure_authority_id)).introduction_profile_version_id, version.id,
+        'B19 a re-granted authority binds the same empty version');
+      await retained(h, 'SELECT * FROM public.revoke_matching_context_v1($1, $2)', [randomUUID(), now.matching_context_grant_id]);
+      now = await setupOf(h);
+      assert.deepEqual([now.matching_context_grant_id, now.pre_match_disclosure_authority_id !== null, now.matchable], [null, true, false],
+        'B19 revoking the grant leaves the authority; not matchable');
+      // A deleting account with an empty profile is refused like any other, with nothing written.
+      const deleting = await human();
+      const deletingDraft = await reviewedDraft(deleting, { profile: null });
+      await q(`INSERT INTO personal_data_private.account_deletions (user_id, command_id, status, requested_at, final_at)
+        VALUES ($1, gen_random_uuid(), 'SCHEDULED', clock_timestamp(), clock_timestamp() + interval '7 days')`, [deleting]);
+      assert.equal((await enroll(deleting, deletingDraft)).outcome, 'DELETION_PENDING');
+      assert.deepEqual(await footprint(deleting), ZERO, 'B19 nothing for a deleting account');
+      // A stale or unreviewed empty draft writes nothing either.
+      const stale = await human();
+      const staleDraft = await reviewedDraft(stale, { profile: null });
+      assert.equal((await enroll(stale, staleDraft - 1)).outcome, 'CHANGED');
+      await prep(stale, 'SET_PROFILE', NO_PROFILE);
+      assert.equal((await enroll(stale, await draftVersion(stale))).outcome, 'INCOMPLETE', 'B19 changed since review');
+      assert.deepEqual(await footprint(stale), ZERO, 'B19 nothing for a stale or unreviewed empty draft');
+    });
+
+    await report.isolated('B20 one or two fields keep the frozen command; CORRECTION moves empty -> fields -> empty along one chain', async () => {
+      await openGate();
+      await installTexts();
+      const one = await human();
+      assert.equal((await enroll(one, await reviewedDraft(one, { profile: { shortIntroduction: null, workField: 'HEALTH' } }))).outcome, 'ENROLLED');
+      assert.deepEqual(await fieldsOf((await setupOf(one)).introduction_profile_version_id), [{ field_key: 'work_field', field_value: 'HEALTH' }],
+        'B20 one field: the frozen set_introduction_profile_v1 wrote exactly it');
+      const h = await human();
+      assert.equal((await enroll(h, await reviewedDraft(h, { profile: null }))).outcome, 'ENROLLED');
+      const v0 = (await setupOf(h)).introduction_profile_version_id;
+      // empty -> one field: the authority's basis moves, so a fresh disclosure consent is needed.
+      await prep(h, 'SET_PROFILE', { shortIntroduction: 'I like quiet mornings and long conversations.', workField: null });
+      await prep(h, 'CONFIRM_REVIEW', {});
+      const withField = await draftVersion(h);
+      const foot = await footprint(h);
+      assert.equal((await act(h, 'CORRECTION', withField, {})).outcome, 'CONSENT_OUTDATED', 'B20 the authority must move: a fresh consent is required');
+      assert.deepEqual(await footprint(h), foot, 'B20 refused: nothing written');
+      const c1 = randomUUID();
+      assert.deepEqual(await act(h, 'CORRECTION', withField, { d: V.D }, c1), { outcome: 'CORRECTED', participation_state: 'ACTIVE', matchable: true });
+      const s1 = await setupOf(h);
+      assert.equal((await profileVersion(s1.introduction_profile_version_id)).prior_profile_version_id, v0, 'B20 the new version supersedes the empty one');
+      assert.deepEqual(await fieldsOf(s1.introduction_profile_version_id),
+        [{ field_key: 'short_introduction', field_value: 'I like quiet mornings and long conversations.' }], 'B20 through the frozen command');
+      assert.equal((await authorityOf(s1.pre_match_disclosure_authority_id)).introduction_profile_version_id, s1.introduction_profile_version_id,
+        'B20 the re-granted zero-field authority binds the new version');
+      // two fields -> empty: back to a real zero-field version, the next in the chain.
+      await prep(h, 'SET_PROFILE', { shortIntroduction: 'I like quiet mornings and long conversations.', workField: 'HEALTH' });
+      await prep(h, 'CONFIRM_REVIEW', {});
+      assert.equal((await act(h, 'CORRECTION', await draftVersion(h), { d: V.D })).outcome, 'CORRECTED');
+      const s2 = await setupOf(h);
+      assert.equal((await fieldsOf(s2.introduction_profile_version_id)).length, 2, 'B20 two fields');
+      await prep(h, 'SET_PROFILE', NO_PROFILE);
+      await prep(h, 'CONFIRM_REVIEW', {});
+      const empty = await draftVersion(h);
+      const c3 = randomUUID();
+      assert.equal((await act(h, 'CORRECTION', empty, { d: V.D }, c3)).outcome, 'CORRECTED');
+      const s3 = await setupOf(h);
+      const v3 = await profileVersion(s3.introduction_profile_version_id);
+      assert.deepEqual([v3.id, v3.prior_profile_version_id], [await derived('PROFILE_VERSION', h, c3), s2.introduction_profile_version_id],
+        'B20 fields -> empty is the next version of the same chain');
+      assert.deepEqual(await fieldsOf(v3.id), [], 'B20 with zero field rows');
+      const auth3 = await authorityOf(s3.pre_match_disclosure_authority_id);
+      assert.deepEqual([auth3.introduction_profile_version_id, auth3.status], [v3.id, 'ACTIVE'], 'B20 the authority binds the empty version');
+      assert.equal((await authorityOf(s2.pre_match_disclosure_authority_id)).status, 'REVOKED', 'B20 the one it supersedes is revoked');
+      // The retry of that correction writes nothing; empty == empty is NO_CHANGE.
+      const after = await footprint(h);
+      assert.equal((await act(h, 'CORRECTION', empty, { d: V.D }, c3)).outcome, 'CORRECTED', 'B20 a retry answers the committed act');
+      assert.deepEqual(await footprint(h), after, 'B20 and writes no second version');
+      assert.equal(after.profiles, 4, 'B20 four versions: empty, one field, two fields, empty');
+      assert.equal((await act(h, 'CORRECTION', empty, { d: V.D })).outcome, 'NO_CHANGE', 'B20 an empty profile equals an empty profile');
+      assert.deepEqual(await footprint(h), after);
+      // Participation, the grant and the requirements never moved.
+      assert.deepEqual([s3.participation_event_id, s3.matching_context_grant_id, s3.matching_requirement_version_id],
+        [s1.participation_event_id, s1.matching_context_grant_id, s1.matching_requirement_version_id], 'B20 only the profile and its authority moved');
+    });
+  } finally {
+    await q('ROLLBACK');
+    await owner();
+  }
+}
+
 async function verifyRaces(report, created) {
   await owner();
   const { q2, close } = await rt.openSecondary();
@@ -859,6 +1019,43 @@ async function verifyRaces(report, created) {
       assert.deepEqual(await footprint(h), ZERO);
       assert.equal((await committed(() => enroll(h, draft, { ...ALL, p: 'S6_07_FIXTURE_PARTICIPATION_V2' }))).outcome, 'ENROLLED');
     });
+    await race('C08 D-CP1-1: an empty-profile draft edited in flight answers CHANGED with nothing written; two acts at once make one empty version', async () => {
+      // C07 superseded the participation text: the human consents to the CURRENT one.
+      const NOW = { ...ALL, p: 'S6_07_FIXTURE_PARTICIPATION_V2' };
+      const commitBare = async () => {
+        await q('BEGIN');
+        const h = await fresh();
+        const draft = await reviewedDraft(h, { profile: null });
+        await q('COMMIT');
+        return { h, draft };
+      };
+      const { h, draft } = await commitBare();
+      await q('BEGIN');
+      await asOn(q, h);
+      const edited = (await q('SELECT public.apply_own_matching_preparation_command_v1($1, $2, $3, $4) AS a',
+        [randomUUID(), draft, 'SET_PROFILE', { shortIntroduction: null, workField: 'HEALTH' }])).rows[0].a;
+      await ownerOn(q);
+      assert.equal(edited.outcome, 'APPLIED', `C08 the edit applies: ${JSON.stringify(edited)}`);
+      await q2('BEGIN');
+      const waiting = enroll(h, draft, NOW, randomUUID(), q2);
+      assert.equal(await rt.stillPending(waiting), true, 'C08 the act waits for the edit');
+      await q('COMMIT');
+      assert.equal((await waiting).outcome, 'CHANGED', 'C08 nothing stale is promoted');
+      await q2('COMMIT');
+      assert.deepEqual(await footprint(h), ZERO, 'C08 no partial enrollment: not even the lock row');
+      const { h: h2, draft: d2 } = await commitBare();
+      await q('BEGIN');
+      assert.equal((await enroll(h2, d2, NOW)).outcome, 'ENROLLED');
+      await q2('BEGIN');
+      const contender = enroll(h2, d2, NOW, randomUUID(), q2);
+      assert.equal(await rt.stillPending(contender), true, 'C08 the second act waits on the lock row');
+      await q('COMMIT');
+      assert.equal((await contender).outcome, 'ALREADY_ENROLLED');
+      await q2('COMMIT');
+      const foot = await footprint(h2);
+      assert.deepEqual([foot.acts, foot.profiles, foot.authorities], [1, 1, 1], 'C08 one act, one empty profile version, one authority');
+      assert.deepEqual(await fieldsOf((await setupOf(h2)).introduction_profile_version_id), []);
+    });
   } finally {
     await close();
     await pause(50);
@@ -902,6 +1099,8 @@ await runVerifier('0165', async (stage) => {
     await verifyCatalog(report);
     stage('behaviour');
     await verifyBehaviour(report);
+    stage('empty profile');
+    await verifyEmptyProfile(report);
     stage('races');
     await verifyRaces(report, created);
   } finally {

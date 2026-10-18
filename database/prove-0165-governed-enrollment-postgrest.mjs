@@ -11,7 +11,8 @@
 //     the same command id with another consent version COMMAND_CONFLICT;
 //   * a 40001 and a PT409 underneath the act (a committed fixture trigger) are each answered ONCE, HTTP 200, CHANGED, on
 //     every line - including the lines before v16 that re-run a 40001 transaction without bound - and nothing moves;
-//   * the six 0149 commands are still refused on the wire with the gate open.
+//   * the six 0149 commands are still refused on the wire with the gate open;
+//   * the three no-role cores - including the D-CP1-1 empty-profile core - are callable by no token.
 //
 // Every fixture is removed afterwards: the humans and everything they own, the fixture gate, texts and trigger.
 //
@@ -166,6 +167,19 @@ async function main() {
     assertNotCallable(await rpc(tokenOf(bea), 'set_matching_requirements_v1', { p_command_id: randomUUID(), p_requirement_keys: ['age_range_v1'],
       p_requirement_strengths: ['HARD_DEALBREAKER'], p_requirement_values: ['min=20;max=30'], p_expected_current_version_id: null }), 'requirements');
 
+    stage = 'the three no-role cores (CA-10-impl, CA-D-CP1-1-impl, CA-08-impl) are callable by no token';
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const token = jwt({ sub: bea, role });
+      assertNotCallable(await rpc(token, 'set_empty_matching_requirements_core_v1',
+        { p_command_id: randomUUID(), p_owner_user_id: bea, p_expected_current_version_id: null }), `${role} empty requirements core`);
+      assertNotCallable(await rpc(token, 'set_empty_introduction_profile_core_v1',
+        { p_command_id: randomUUID(), p_owner_user_id: bea, p_expected_current_version_id: null }), `${role} empty profile core`);
+      assertNotCallable(await rpc(token, 'grant_zero_field_pre_match_disclosure_authority_core_v1',
+        { p_command_id: randomUUID(), p_owner_user_id: bea, p_new_authority_id: randomUUID(), p_profile_version_id: randomUUID(),
+          p_expected_active_authority_id: null }), `${role} zero-field authority core`);
+    }
+    assert.equal(await footprint(bea), 0, 'the refused core calls wrote nothing');
+
     stage = 'a 40001 and a PT409 underneath the act are answered ONCE, HTTP 200 CHANGED, on this line';
     for (const [code, who, draft] of [['40001', bea, draftB], ['PT409', carla, draftC]]) {
       await q(`CREATE FUNCTION public.s6_07_wire_stale_v1() RETURNS trigger LANGUAGE plpgsql AS $probe$
@@ -183,7 +197,7 @@ async function main() {
       assert.equal(answerOf(await rpc(tokenOf(who), ENROLL, enrollBody(randomUUID(), draft)), `${code} gone`).outcome, 'ENROLLED',
         'the same act succeeds once nothing is stale');
     }
-    console.log(`prove-0165 PostgREST ${version}: closed gate NOT_AVAILABLE_NOW; ENROLLED / replay / COMMAND_CONFLICT; 40001 and PT409 answered once as CHANGED; the six refused; anon and service_role refused`);
+    console.log(`prove-0165 PostgREST ${version}: closed gate NOT_AVAILABLE_NOW; ENROLLED / replay / COMMAND_CONFLICT; 40001 and PT409 answered once as CHANGED; the six and the three cores refused; anon and service_role refused`);
   } catch (error) {
     failure = error;
   }
