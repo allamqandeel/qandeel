@@ -79,10 +79,18 @@ export type DirectEntryDestination =
    * S5-04: the exact Public context, already re-authorized at open — one Experience's discussion, or the relation
    * management of the reader's own Experience. The device opens it through the Public entry authority.
    */
-  | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget };
+  | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget }
+  /**
+   * S6-07: the exact Introductions context, already re-authorized at open — one of the reader's own Introduction Worlds,
+   * or one of their own delivered proposals. The device opens it through the Introductions surfaces, which read again.
+   */
+  | { readonly kind: 'INTRODUCTIONS'; readonly target: IntroductionsEntryTarget };
 
 /** S5-04 — what a Public item opens. */
 export type PublicEntryTarget = { readonly kind: 'DISCUSSION' | 'RELATIONS'; readonly experienceId: string };
+
+/** S6-07 — what an Introductions item opens. */
+export type IntroductionsEntryTarget = { readonly kind: 'WORLD'; readonly worldId: string } | { readonly kind: 'PROPOSAL'; readonly proposalId: string };
 
 export type ActivityOpenOutcome =
   | { readonly kind: 'ENTER'; readonly destination: DirectEntryDestination }
@@ -201,6 +209,16 @@ function decodeDestination(value: unknown): DirectEntryDestination | null | unde
   if (value.kind === 'PUBLIC_WORLD' && hasExactly(value, ['kind', 'target']) && isRecord(value.target) && hasExactly(value.target, ['kind', 'experienceId'])
     && (value.target.kind === 'DISCUSSION' || value.target.kind === 'RELATIONS') && typeof value.target.experienceId === 'string' && UUID.test(value.target.experienceId)) {
     return { kind: 'PUBLIC_WORLD', target: { kind: value.target.kind, experienceId: value.target.experienceId } };
+  }
+  if (value.kind === 'INTRODUCTIONS' && hasExactly(value, ['kind', 'target']) && isRecord(value.target)) {
+    const t = value.target;
+    if (t.kind === 'WORLD' && hasExactly(t, ['kind', 'worldId']) && typeof t.worldId === 'string' && UUID.test(t.worldId)) {
+      return { kind: 'INTRODUCTIONS', target: { kind: 'WORLD', worldId: t.worldId } };
+    }
+    if (t.kind === 'PROPOSAL' && hasExactly(t, ['kind', 'proposalId']) && typeof t.proposalId === 'string' && UUID.test(t.proposalId)) {
+      return { kind: 'INTRODUCTIONS', target: { kind: 'PROPOSAL', proposalId: t.proposalId } };
+    }
+    return undefined;
   }
   if (value.kind === 'GENERAL_SETTINGS' && hasExactly(value, ['kind', 'section']) && ['SECURITY', 'ACCOUNT', 'NOTIFICATIONS'].includes(value.section as string)) {
     return { kind: 'GENERAL_SETTINGS', section: value.section as SettingsSection };

@@ -41,6 +41,7 @@ import { InteractionPreferencesApiClient } from './interaction-preferences-api';
 import { IntroductionsApiClient } from './introductions-api';
 import { IntroductionProposalsApiClient } from './introduction-proposals-api';
 import { IntroductionWorldsApiClient } from './introduction-worlds-api';
+import { IntroductionAlertsApiClient } from './introduction-alerts-api';
 import { IntroductionSharingApiClient, type IntroductionSharingFetch } from './introduction-sharing-api';
 import { IntroductionContinuationApiClient } from './introduction-continuation-api';
 import { PushApiClient } from './push-api';
@@ -161,6 +162,8 @@ export interface MobileRuntimeEntry {
    * is refused before it is issued.
    */
   introductionWorldsFor(bundle: CanonicalRuntimeBundle): IntroductionWorldsApiClient;
+  /** S6-07 — the per-Introduction alerts client (0167), on the same AC-01 seam bound to the bundle's own auth generation. */
+  introductionAlertsFor(bundle: CanonicalRuntimeBundle): IntroductionAlertsApiClient;
   /**
    * S6-06 — the Introduction sharing client (text shares, the three-stage photo, the display-name consent and the reader's
    * own shares) for a bundle this coordinator produced, on the same AC-01 seam bound to the bundle's own auth generation.
@@ -354,6 +357,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     introductionWorldsFor(bundle) {
       return new IntroductionWorldsApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    introductionAlertsFor(bundle) {
+      return new IntroductionAlertsApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     introductionSharingFor(bundle) {
       // The same seam: it only sets the bearer and passes the request and the platform's response through untouched, so

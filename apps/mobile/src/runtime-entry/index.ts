@@ -172,6 +172,10 @@ export type {
 } from './introduction-worlds-api';
 export { IntroductionWorldsApiClient } from './introduction-worlds-api';
 export type {
+  IntroductionAlertsApiConfig, IntroductionAlertsResult, IntroductionSetAlertsResult, IntroductionWorldAlert,
+} from './introduction-alerts-api';
+export { IntroductionAlertsApiClient } from './introduction-alerts-api';
+export type {
   IntroductionDiscloseResult, IntroductionDisclosures, IntroductionDisclosuresRead, IntroductionGrantResult, IntroductionImageRefusal, IntroductionMediaRead,
   IntroductionMyPhoto, IntroductionOwnShare, IntroductionPersonalKey, IntroductionRemoveResult, IntroductionRevokeResult, IntroductionShare,
   IntroductionShareState, IntroductionSharesRead, IntroductionSharesWorld, IntroductionSharingApiConfig, IntroductionSharingFetch, IntroductionStage,

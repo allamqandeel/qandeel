@@ -38,6 +38,8 @@ export { INTRODUCTION_WORLD_COPY_GATE, INTRODUCTION_WORLD_COPY_ROWS, introductio
 export type { IntroductionWorldSurfaceProps } from './IntroductionWorldSurface';
 export { INTRODUCTION_WORLD_TEST_ID, IntroductionWorldSurface } from './IntroductionWorldSurface';
 export { IntroductionWorldCards } from './IntroductionWorldCards';
+export type { IntroductionAlertsController, IntroductionAlertsState, IntroductionAlertsTransport } from './introduction-alerts-controller';
+export { createIntroductionAlertsController } from './introduction-alerts-controller';
 // S6-06 — progressive disclosure, the three-stage photo, the display-name consent, SUCCESS and resuming Introductions.
 export type {
   IntroductionMediaState, IntroductionShareDeletionTransport, IntroductionSharingAct, IntroductionSharingController, IntroductionSharingControllerOptions,

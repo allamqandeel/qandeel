@@ -73,9 +73,14 @@ export interface SharedWorldAreaProps {
   readonly introductions?: IntroductionWorldsController;
   /** S6-06: sharing, the display-name consent and SUCCESS inside the Introduction World. */
   readonly introductionSharing?: IntroductionSharingController;
+  /**
+   * S6-07: a revalidated Direct Entry into ONE Introduction World (an Activity item or a notification). Each new value
+   * opens that World's own surface, which reads the server again before drawing anything.
+   */
+  readonly introductionEntry?: { readonly worldId: string; readonly n: number } | null;
 }
 
-export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing }: SharedWorldAreaProps) {
+export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing, introductionEntry }: SharedWorldAreaProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = sharedCopy(language);
@@ -103,6 +108,10 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
   useEffect(() => {
     introductions?.refresh();
   }, [introductions]);
+  // S6-07: a Direct Entry names the exact World; nothing else is chosen in its place.
+  useEffect(() => {
+    if (introductionEntry != null && introductions !== undefined) setIntroduction(introductionEntry.worldId);
+  }, [introductionEntry, introductions]);
 
   // Local Back: from a World to the area's root. At the root nothing is registered — Back is local-only and never
   // silently returns to the Personal world (I-08A4 §4).

@@ -35,6 +35,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // S6-06 added exactly two: IntroductionSharingApiClient (sharing, the three-stage photo, the display-name consent) and
   // IntroductionContinuationApiClient (SUCCESS and resuming), both plain classes on the same identity-bound fetch, and the
   // five server bounds of a share (the text, home town and photo limits, the photo types and the personal keys) as constants.
+  // S6-07 (CP3) added exactly one: IntroductionAlertsApiClient, the per-Introduction alerts transport (a plain class).
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
@@ -48,6 +49,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'INTRODUCTION_PERSONAL_KEYS',
     'INTRODUCTION_TEXT_MAX_LENGTH',
     'InteractionPreferencesApiClient',
+    'IntroductionAlertsApiClient',
     'IntroductionContinuationApiClient',
     'IntroductionProposalsApiClient',
     'IntroductionSharingApiClient',
@@ -100,7 +102,7 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // W3-MEGA-U's Understanding transport is a plain class too, and so are A3-01's Activity and A3-02's push transports,
     // and S4-01's Shared World transport, and S5-01's Public World transport, and S5-02's Public authoring transport.
     // S6-05's Introduction World transport is a plain class too, and so are S6-06's sharing and continuation transports.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient'].includes(name)) continue;
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

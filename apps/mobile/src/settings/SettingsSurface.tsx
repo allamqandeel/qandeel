@@ -80,6 +80,7 @@ import type { FormerSharedMaterialController } from './former-shared-material-co
 import { IntroductionSharesPage, IntroductionSharesRow } from './IntroductionSharesSection';
 import type { IntroductionSharesController } from './introduction-shares-controller';
 import type { SharedAlertsController, SharedIdController } from '../shared-world';
+import type { IntroductionAlertsController } from '../introductions';
 import type { PublicDisplayController } from './public-display-controller';
 import { PublicDisplaySection } from './PublicDisplaySection';
 import type { InteractionPreferencesController } from './interaction-preferences-controller';
@@ -110,6 +111,8 @@ export interface SettingsSurfaceProps {
   readonly introductionShares?: IntroductionSharesController;
   /** S4-04 — the per-World Shared mute rows of Notifications & Activity. */
   readonly sharedAlerts?: SharedAlertsController;
+  /** S6-07: the per-Introduction mute rows (Notifications & Activity). */
+  readonly introductionAlerts?: IntroductionAlertsController;
   /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
   readonly notifications?: ActivityPreferencesController;
   /** A3-02 — the device's OS permission and the education, shown in Notifications & Activity. */
@@ -227,7 +230,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, introductionShares, sharedAlerts, notifications, push, interactionPreferences, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, introductionShares, sharedAlerts, introductionAlerts, notifications, push, interactionPreferences, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -454,7 +457,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
   }
 
   if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
-    change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} sharedWorlds={sharedAlerts} />;
+    change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} sharedWorlds={sharedAlerts} introductionWorlds={introductionAlerts} />;
   }
 
   const publicIdReady = publicIdState.status === 'READY' && publicIdState.publicId !== null;

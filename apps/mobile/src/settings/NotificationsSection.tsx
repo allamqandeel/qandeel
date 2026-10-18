@@ -36,6 +36,7 @@ import { DISCLOSURE_LEVELS, LOCK_SUBJECTS } from '../activity/vocabulary';
 import type { ActivityPreferences, DisclosureLevel, LockSubject, ProactiveChoice } from '../runtime-entry';
 import { pushCopy, type PushController, type PushState } from '../push';
 import { labelOfWorld, sharedCopy, type SharedAlertsController, type SharedAlertsState } from '../shared-world';
+import { introductionTitle, introductionWorldCopy, type IntroductionAlertsController, type IntroductionAlertsState } from '../introductions';
 
 const ROW_START = 24;
 const ROW_END = 20;
@@ -142,6 +143,8 @@ export interface NotificationsSettingsProps {
   readonly push?: PushController;
   /** S4-04 — the reader's current Shared Worlds, each with its own mute; absent where no Shared boundary exists. */
   readonly sharedWorlds?: SharedAlertsController;
+  /** S6-07 — the reader's own Introduction Worlds, each with its own mute; absent where no Introductions boundary exists. */
+  readonly introductionWorlds?: IntroductionAlertsController;
 }
 
 const NO_WORLDS = { subscribe: () => () => undefined, getState: (): SharedAlertsState | null => null, start: () => undefined };
@@ -196,11 +199,66 @@ function SharedWorldRows({ controller, palette, language, words }: {
   );
 }
 
+const NO_INTRODUCTIONS = { subscribe: () => () => undefined, getState: (): IntroductionAlertsState | null => null, start: () => undefined };
+
+/**
+ * S6-07 — one row per Introduction World of the reader's own (D34), the S4-04 Shared rows' law: its approved title
+ * (IW-11 with the first name the server presented, or IW-11b) and whether its alerts are on or muted. Nothing else.
+ */
+function IntroductionWorldRows({ controller, palette, language, words }: {
+  readonly controller?: IntroductionAlertsController; readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly words: NotificationsCopy;
+}) {
+  const source = controller ?? NO_INTRODUCTIONS;
+  const state = useSyncExternalStore(source.subscribe, source.getState);
+  useEffect(() => {
+    source.start();
+  }, [source]);
+  if (state === null || state.status !== 'READY' || state.worlds.length === 0) return null;
+  const titles = introductionWorldCopy(language);
+  const writing = language === 'ar' ? 'rtl' : 'ltr';
+  return (
+    <View testID="qandeel-notifications-introduction-worlds">
+      {state.failed ? (
+        <Text accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingStart: ROW_START, paddingEnd: ROW_END, writingDirection: writing }}>
+          {words.gate.saveFailed}
+        </Text>
+      ) : null}
+      {state.worlds.map((world) => {
+        const on = !world.muted;
+        const label = introductionTitle(titles, world.otherFirstName);
+        const busy = state.busy !== null;
+        const testID = `qandeel-notifications-introduction-world-${world.worldId}`;
+        return (
+          <Control
+            key={world.worldId}
+            palette={palette}
+            language={language}
+            accessibilityRole="togglebutton"
+            accessibilityLabel={on ? label : `${label}${language === 'ar' ? '، ' : ', '}${words.mutedWorld}`}
+            accessibilityState={{ checked: on, busy: state.busy === world.worldId, disabled: busy }}
+            onPress={() => void controller?.setMuted(world.worldId, on)}
+            testID={testID}
+            style={{ minHeight: 52, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, justifyContent: 'center' }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 12 }}>
+              <Text style={{ ...typeStyle('body'), color: palette.primary, flex: 1, writingDirection: writing }}>{label}</Text>
+              <Text testID={`${testID}-state`} style={{ ...typeStyle('metadata'), color: palette.secondary }}>{on ? words.on : words.mutedWorld}</Text>
+              <View testID={`${testID}-track`} style={{ width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, borderWidth: palette.markerThickness, borderColor: on ? palette.selectedInk : palette.restInk, backgroundColor: on ? palette.selectedInk : 'transparent', justifyContent: 'center', alignItems: on ? 'flex-end' : 'flex-start', paddingHorizontal: 1 }}>
+                <View style={{ width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: on ? palette.world : palette.restInk }} />
+              </View>
+            </View>
+          </Control>
+        );
+      })}
+    </View>
+  );
+}
+
 const NO_PUSH = { subscribe: () => () => undefined, getState: (): PushState | null => null };
 
 type Open = { readonly kind: 'QUIET'; readonly edge: 'start' | 'end' } | { readonly kind: 'LOCK'; readonly subject: LockSubject } | { readonly kind: 'SNOOZE_CUSTOM' } | null;
 
-export function NotificationsSettings({ controller, language, palette, push, sharedWorlds }: NotificationsSettingsProps) {
+export function NotificationsSettings({ controller, language, palette, push, sharedWorlds, introductionWorlds }: NotificationsSettingsProps) {
   const words = notificationsCopy(language);
   const pushWords = pushCopy(language);
   const device: PushState | null = useSyncExternalStore(push?.subscribe ?? NO_PUSH.subscribe, push?.getState ?? NO_PUSH.getState);
@@ -282,6 +340,7 @@ export function NotificationsSettings({ controller, language, palette, push, sha
           <Heading text={words.introductions} palette={palette} language={language} />
           <SwitchRow label={words.introductionsAlerts} on={p.introductions.alerts} busy={busy} words={words} palette={palette} language={language} testID="qandeel-notifications-introductions-alerts"
             onToggle={() => save((c) => ({ ...c, introductions: { alerts: !c.introductions.alerts } }))} />
+          <IntroductionWorldRows controller={introductionWorlds} palette={palette} language={language} words={words} />
           <Help text={words.introductionsHelp} palette={palette} writing={writing} />
         </View>
       ) : null}
