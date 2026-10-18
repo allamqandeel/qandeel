@@ -50,6 +50,9 @@
 //   f14..f17 S6-07 (CP1, migration 0165): the one enrollment boundary is a named exception, not a rule - a second
 //          client-executable wrapper around it, the boundary granted to service_role, a client-executable wrapper around the
 //          0156 facts writer, and either internal enrollment core granted to a client are all refused
+//   f18..f19 S6-07 (CP2, CA-SYS-02, migration 0166): the one forward dispatcher is the census's SECOND named service_role
+//          SYSTEM exception, not a rule - a second service_role wrapper around it and the dispatcher granted to a client
+//          role are both refused
 //
 // Behaviour that needs Matching state from BEFORE 0149 is reached the only honest way on a database where 0149 is
 // already applied: as the owner with the exact human's claims, inside a transaction that rolls back. Every probe of a
@@ -117,6 +120,17 @@ const ACCT_DEL_01_ACCOUNT_ERASURE = 'public.server_erase_account_v1(uuid)';
 // and exact signature to the census AND to the "no function body names a suspended boundary" rule; the six stay
 // executable by no application role, and probes f14 .. f17 refuse every other shape.
 const S6_07_GOVERNED_ENROLLMENT = 'public.enroll_my_matching_setup_v1(uuid, text, bigint, text, text, text)';
+// RE-ANCHORED by S6-07 (CP2, Controlled Amendment CA-SYS-02 approved by the Product Owner on 2026-10-18 under Q5',
+// migration 0166): the SECOND service_role SYSTEM exception. The forward dispatcher reaches a Matching setup write only
+// through the canonical pair lock - lock_matching_pair_humans_v1 upserts both humans' matching_setup_locks rows - which it
+// takes first, before the frozen forward core takes it again. It is admitted by name and exact signature, for service_role
+// ONLY (never anon, authenticated or PUBLIC); its ledger is readable by nobody and its read-only reconciliation lister
+// reaches no write, so neither is an exception; and probes f18 / f19 refuse a second service_role wrapper around the
+// dispatcher and the dispatcher granted to a client role. "No service_role Matching writer" stays a rule for every other
+// function.
+const S6_07_FORWARD_DISPATCH = 'public.server_forward_approved_matching_proposals_v1(integer)';
+/** The named service_role SYSTEM exceptions, each held apart and proven exactly. */
+const SYSTEM_EXCEPTIONS = [ACCT_DEL_01_ACCOUNT_ERASURE, S6_07_FORWARD_DISPATCH];
 // RE-ANCHORED by S6-07 (CP1, migration 0165): the enrollment evidence relations reference the account ON DELETE CASCADE by
 // design - registered ACCOUNT_CASCADE in the ACCT-DEL-01 coverage registry, so the governed erasure removes them with the
 // account row. The RESTRICT baseline below is the I-07 family's and is unchanged for every other relation.
@@ -216,9 +230,10 @@ async function verifyNoBackdoor() {
   }
   // RE-ANCHORED by ACCT-DEL-01: the one service_role SYSTEM exception is held apart and proven exactly below; the census
   // of every other application-executable route is the one it was, unchanged.
+  // RE-ANCHORED by S6-07 CP2 (CA-SYS-02): so is the second, the forward dispatcher - and nothing else is held apart.
   const erasureEntry = functions.filter((f) => reach.has(f.proname) && f.proname === nameOf(ACCT_DEL_01_ACCOUNT_ERASURE));
   const executable = functions.filter((f) => reach.has(f.proname) && (f.public || f.anon || f.authenticated || f.service_role)
-    && f.proname !== nameOf(ACCT_DEL_01_ACCOUNT_ERASURE));
+    && !SYSTEM_EXCEPTIONS.map(nameOf).includes(f.proname));
   const retainedWriters = SEC_MATCH_00_RETAINED.filter((fn) => fn !== MFN.SETUP).map(nameOf).sort();
   assert.deepEqual(executable.map((f) => f.proname).sort(),
     [...retainedWriters, nameOf(S6_02_INTRODUCTION_END), ...S6_04_PROPOSAL_DECISIONS.map(nameOf), nameOf(S6_05_MUTUAL_MATCH_ACCEPT),
@@ -232,6 +247,18 @@ async function verifyNoBackdoor() {
   assert.deepEqual(erasure, { overloads: 1, exact: true }, `NO_BACKDOOR the ACCT-DEL-01 exception is exactly ${ACCT_DEL_01_ACCOUNT_ERASURE}, with no overload`);
   assert.deepEqual([erasureEntry[0].public, erasureEntry[0].anon, erasureEntry[0].authenticated, erasureEntry[0].service_role], [false, false, false, true],
     'NO_BACKDOOR the account erasure is service_role-only');
+  // RE-ANCHORED by S6-07 CP2 (CA-SYS-02): the second system exception, exactly - one function, one overload, service_role
+  // only, reached by the census through the pair lock and nothing else.
+  const dispatchEntry = functions.filter((f) => reach.has(f.proname) && f.proname === nameOf(S6_07_FORWARD_DISPATCH));
+  assert.equal(dispatchEntry.length, 1, `NO_BACKDOOR the S6-07 exception ${S6_07_FORWARD_DISPATCH} exists once and reaches a Matching write`);
+  const [dispatch] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
+  [S6_07_FORWARD_DISPATCH, nameOf(S6_07_FORWARD_DISPATCH)]);
+  assert.deepEqual(dispatch, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-07 exception is exactly ${S6_07_FORWARD_DISPATCH}, with no overload`);
+  assert.deepEqual([dispatchEntry[0].public, dispatchEntry[0].anon, dispatchEntry[0].authenticated, dispatchEntry[0].service_role], [false, false, false, true],
+    'NO_BACKDOOR the forward dispatcher is service_role-only');
+  assert.ok(/\block_matching_pair_humans_v1\s*\(/u.test(dispatchEntry[0].prosrc) && !WRITES_MATCHING.test(dispatchEntry[0].prosrc),
+    'NO_BACKDOOR the forward dispatcher reaches Matching setup state only through the pair lock, never by a write of its own');
   const [end] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
   [S6_02_INTRODUCTION_END, nameOf(S6_02_INTRODUCTION_END)]);
@@ -736,6 +763,28 @@ async function verifyForwardSafety(report, humans) {
       pristine: `REVOKE EXECUTE ON FUNCTION public.set_empty_matching_requirements_core_v1(uuid, uuid, uuid),
                    public.set_empty_introduction_profile_core_v1(uuid, uuid, uuid),
                    public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid, uuid, uuid, uuid, uuid) FROM authenticated`,
+      mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM authenticated', ' TO authenticated'),
+      marker: 'TO authenticated',
+      apply: (text) => q(text),
+      reject: () => verifyNoBackdoor(),
+    });
+
+    // RE-ANCHORED by S6-07 CP2 (CA-SYS-02): the one forward dispatcher is a named exception, not a rule that a
+    // service_role proposal producer is fine.
+    await report.probe('f18 the census refuses a second service_role wrapper around the forward dispatcher', {
+      pristine: `CREATE FUNCTION public.s6_07_probe_forward_wrapper_v1() RETURNS SETOF text
+                 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $probe$ SELECT 'NONE_DUE'::text $probe$`,
+      mutate: (text) => text.replace("SELECT 'NONE_DUE'::text", 'SELECT outcome FROM public.server_forward_approved_matching_proposals_v1(1)'),
+      marker: 'server_forward_approved_matching_proposals_v1',
+      apply: async (text) => {
+        await q(text);
+        await q('GRANT EXECUTE ON FUNCTION public.s6_07_probe_forward_wrapper_v1() TO service_role');
+      },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f19 the census refuses the forward dispatcher granted to a client role', {
+      pristine: `REVOKE EXECUTE ON FUNCTION ${S6_07_FORWARD_DISPATCH} FROM authenticated`,
       mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM authenticated', ' TO authenticated'),
       marker: 'TO authenticated',
       apply: (text) => q(text),

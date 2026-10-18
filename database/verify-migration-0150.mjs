@@ -136,6 +136,10 @@ const ABSORBED = [
   // 0156 writer and its two internal cores, all of which answer a stale state with 40001; it absorbs every one into the
   // bounded CHANGED answer, naming PT409 too, and raises neither itself.
   'enroll_my_matching_setup_v1',
+  // RE-ANCHORED by S6-07 CP2 (migration 0166, CA-SYS-02): the ONE service_role forward dispatcher reaches the frozen
+  // forward core's 40001 no-longer-valid and stale refusals; it absorbs every one into the bounded SKIPPED_STALE answer,
+  // naming PT409 too, and raises neither itself.
+  'server_forward_approved_matching_proposals_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1'];
