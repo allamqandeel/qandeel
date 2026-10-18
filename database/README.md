@@ -5042,3 +5042,42 @@ The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its beh
 transaction with fixture gates and fixture consent texts (never Product copy); its races commit their own fresh humans and
 remove them, with every fixture gate, text and trigger, afterwards. The wire proof also needs `POSTGREST_URL` and
 `POSTGREST_JWT_SECRET` (CI-only, throwaway).
+
+## S6-07 - The forward dispatcher (migration 0166, CP2)
+
+`0166_matching_forward_dispatch_v1.sql` adds the ONE server-side producer of the step after the first recipient's forward
+approval (`QAN-BL-MATCH-06`): a `service_role` dispatcher over the frozen `forward_matching_proposal_to_second_core_v1`
+(Controlled Amendment CA-SYS-02, `docs/matching-introduction-runtime-v1.md` §50). Record:
+`docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md` §10.
+
+```text
+server_forward_approved_matching_proposals_v1(p_max = 1)          service_role only; one attempt per transaction; one word:
+                                                                  FORWARDED | SKIPPED_MOVED | SKIPPED_NO_CONCLUSION |
+                                                                  SKIPPED_NOT_CLEARED | SKIPPED_NOT_READY | SKIPPED_STALE |
+                                                                  HELD_INTEGRITY | BUSY | NONE_DUE
+server_list_proposal_delivery_activity_reconciliation_v1(limit)   service_role only, read-only: committed deliveries whose
+                                                                  recipient has no Activity member yet (CP3 publishes)
+matching_forward_private.proposal_forward_attempts                the ledger: ids minted once, backoff; no application role
+```
+
+- **Lock order.** The proposal is selected with no row lock; the canonical pair lock is taken FIRST (`lock_timeout` 2 s ->
+  `BUSY`); the proposal is re-read under it; then the ledger; then the frozen core, which takes the same lock again.
+- **Idempotent.** The forward command id and the candidate view id are minted once in the ledger and reused by every
+  attempt: a retry, restart or crashed worker is the core's committed answer, never a second delivery.
+- **Nothing invented, nothing opened.** Exactly one permitted conclusion of the proposal's own snapshot, or nothing; the
+  core's revalidation and CW2-08 seam decide (`NOT_EVALUATED` in production: every attempt is `SKIPPED_NOT_CLEARED` with
+  only a ledger row).
+- **Fair.** One not-ready proposal waits its own backoff (1 min doubling, capped at 6 h, never past the deadline); a held
+  pair is deferred 30 s; a reused-id integrity refusal is held, never retried and never raised.
+- **Deletion.** The ledger cascades with its proposal and is registered `MATCHING_INTRODUCTIONS`.
+- **The worker** is `apps/api/src/introductions-dispatch/` (no route; `INTRODUCTIONS_FORWARD_DISPATCH_DISABLED`).
+
+```sh
+npm run verify:matching-forward-dispatch:integration
+npm run prove:forward-dispatch:postgrest
+npm run test:s6-07-forward-dispatch-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its behaviour sections roll back, its races
+commit fresh humans and remove them, and the CW2-08 seam is restored byte for byte. The wire proof also needs
+`POSTGREST_URL`, `POSTGREST_JWT_SECRET` (CI-only, throwaway) and a built API (`apps/api/dist`).

@@ -1534,12 +1534,13 @@ controlled amendment, not a reopening of Product scope.
 ## 50. `S6-07` — controlled forward amendment for the governed Matching enrollment
 
 **Lifecycle:** CP1 implemented on `s6/s6-07-activity-direct-entry-final-integration` from `main` at `1861df43` (the merge
-of PR #345, ACCT-DEL-01); awaiting the Product Owner's CP1 review. Not merged, not deployed. Record:
+of PR #345, ACCT-DEL-01) and closed by the Product Owner (2026-10-18); CP2 implemented on the same branch, awaiting the
+Product Owner's CP2 review. Not merged, not deployed. Record:
 [S6-07 implementation record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved these
 amendments with the S6-07 CP0 design (2026-10-18): **CA-01-impl** (Q1), **CA-R5-impl**, **CA-08-impl** (Q3-A),
 **CA-10-impl** (Q4′) and **CA-GATE** (Q2(b)); and, as a CP1 correction, **CA-D-CP1-1-impl** under the Product Owner's
-decision D-CP1-1 = B (2026-10-18). CP2 … CP4 of the same task add the forward dispatcher (CA-SYS-02),
-Activity / Direct Entry and the export (CA-EXP); each will extend this section when it lands.
+decision D-CP1-1 = B (2026-10-18); and, in CP2, **CA-SYS-02-impl** (Q5′, «S6-07 — CP1 CLOSED / Start CP2», 2026-10-18).
+CP3 and CP4 add Activity / Direct Entry and the export (CA-EXP); each will extend this section when it lands.
 
 SEC-MATCH-00 (§47) closed the six widening `I-07A` commands and said a reviewed Stage 6 launch path must amend it
 (`QAN-BL-MATCH-01`). Forward migration `0165_matching_governed_enrollment_v1.sql` is that path. It amends the frozen
@@ -1587,7 +1588,22 @@ surface in exactly these places, and nowhere else:
   evidence relations cascade with the account row and are registered `ACCOUNT_CASCADE` in the ACCT-DEL-01 coverage
   registry, so the governed erasure (§49) removes an enrolled account's enrollment with everything else.
 
-What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156` and `0164`; every seam
+- **The forward producer (CA-SYS-02-impl, CP2, migration `0166`; also the CW2-06 §16 / §35 implementation note).** ONE
+  `service_role` dispatcher, `server_forward_approved_matching_proposals_v1(p_max = 1)`, is the only caller of the frozen
+  `forward_matching_proposal_to_second_core_v1` and the census's SECOND named SYSTEM exception: it reaches Setup state only
+  through the canonical pair lock, which it takes FIRST, before re-reading the proposal (never locked before it) and before
+  the core takes the lock again. One attempt per transaction under a 2 s `lock_timeout` (a longer wait is `BUSY`); the
+  forward command id and the candidate view id are minted once in a ledger no application role can read, so a retry,
+  restart or crashed worker is the core's committed answer and never a second delivery; exactly one permitted conclusion
+  of the proposal's own snapshot, never invented; the first recipient's approval still bound to their current exact view;
+  the core's revalidation and CW2-08 seam (last) decide, and its `40001` is absorbed. The candidate's independent
+  proposal still exists only after the first party's forward approval and only once the delivery binding commits; the
+  dispatcher is not a human's decision. A read-only lister answers the committed deliveries whose Activity member does not
+  exist yet (the recovery path for a publish lost after a committed forward; the producer is CP3). The ledger cascades with
+  its proposal and is registered for the governed erasure (§49).
+
+What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156` and `0164`; the forward core, the
+materializer, the transition writer, the S6-04 decisions and the `0157` sweeper (CP2); every seam
 (`NOT_EVALUATED`); CW2-08; every other `I-07` body. A refused act writes nothing, not even the lock row; the cores' `40001`
 is absorbed into one bounded `CHANGED` and never reaches PostgREST.
 
@@ -1597,5 +1613,8 @@ is absorbed into one bounded `CHANGED` and never reaches PostgREST.
 the evidence relations' cascade, probes f14 – f17, f17 over all three cores), `verify-migration-0150.mjs` (the boundary is an absorber),
 `verify-migration-0156.mjs` (A02: exactly the boundary wraps the writer; its fixtures carry fixture promotion records), the
 shared proposal-verifier fixture (likewise) and the SEC-MATCH-00 static contract (amended as its header required).
-`QAN-BL-MATCH-01` stays open until S6-07's closing change. `I-07` and its slices remain **CLOSED / FROZEN**; this is a
+CP2: `verify-migration-0166.mjs` (real PostgreSQL, six races on real connections) and
+`prove-0166-forward-dispatch-postgrest.mjs` (live PostgREST, the compiled worker); re-anchored: `verify-migration-0149.mjs`
+(two named SYSTEM exceptions, probes f18 / f19) and `verify-migration-0150.mjs` (the dispatcher is an absorber).
+`QAN-BL-MATCH-01` and `QAN-BL-MATCH-06` stay open until S6-07's closing change. `I-07` and its slices remain **CLOSED / FROZEN**; this is a
 controlled amendment, not a reopening of Product scope.

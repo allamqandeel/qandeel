@@ -2661,6 +2661,17 @@ implementation authorization, after the anti-duplication check above. Nothing he
   (S6-07's own scope); the conclusion producer (`QAN-BL-MATCH-03`); launch clearance and policies (Stage 9 / CW2-08).
 - **Status:** `DEFERRED — OWNED`
 
+**S6-07 CP2 note (2026-10-18; the S6-07 pull request, not merged).** Under the Product Owner's Q5′ and CA-SYS-02
+(«S6-07 — CP1 CLOSED / Start CP2»), migration `0166` delivers the producer this item asked for: ONE `service_role`
+dispatcher, `server_forward_approved_matching_proposals_v1`, the only caller of the frozen forward core, for a proposal in
+`FIRST_FORWARD_APPROVED` whose first-recipient approval is still bound to their current exact view, through the existing
+core and its one writer, under the same revalidation and launch seam, idempotently (the ids are minted once in its
+ledger), and never as a human's decision; it reveals nothing beyond the neutral projection. It is dormant: the CW2-08 seam
+answers `NOT_EVALUATED`, so nothing is forwarded in production (`verify-migration-0166`, `prove-0166`). The item is
+**not** tombstoned at CP2: its required property "composes with the S6-07 notifications" is CP3's, and it is dispositioned
+at S6-07's closing change, under BG-08 ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §10,
+[I-07 runtime §50](matching-introduction-runtime-v1.md)). Owner, severity and status unchanged.
+
 Admitted under BG-06 / BG-08 by S6-05 at CP2 (2026-10-16), at the Product Owner's R-4 decision, after the
 anti-duplication check above. Nothing here authorizes implementation (BG-07).
 

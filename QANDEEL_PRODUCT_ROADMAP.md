@@ -348,7 +348,7 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - `S6-04` — Private Proposal Review and Decisions;
   - `S6-05` — Mutual Match & Introduction World;
   - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15; 2026-10-17: CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.16)*;
-  - `S6-07` — Activity, Direct Entry and Final Integration; *(2026-10-18: CP0 approved; CP1 Governed Enrollment delivered, not merged, §6.19)*.
+  - `S6-07` — Activity, Direct Entry and Final Integration; *(2026-10-18: CP0 approved; CP1 Governed Enrollment delivered, not merged, §6.19; CP1 closed and CP2 Forward Dispatcher delivered, not merged, §6.20)*.
   - *(Product Owner, 2026-10-17:)* `ACCT-DEL-01` — Account Deletion Across Matching / Introductions, before S6-07 (`QAN-BL-MATCH-01`'s dependency); CP1 delivered, §6.17; CP1 approved and CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.18; merged through PR #345 as `1861df43` (2026-10-17), §6.19.
 
   The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
@@ -637,3 +637,16 @@ stay as written.
 - **Decided (CP1 correction):** D-CP1-1 = B — no optional field is required to enroll; a reviewed draft with neither
   optional profile field enrolls with a real profile version that has no field rows (CA-D-CP1-1-impl), applied inside CP1.
 - **Next:** the Product Owner's CP1 review. CP2 (the forward dispatcher) only after its approval; no merge without «ادمج».
+
+### 6.20 Execution note — 2026-10-18 (S6-07 CP1 closed; CP2 delivered)
+**Recorded:** 2026-10-18 by S6-07 CP2, in the S6-07 pull request (not merged). This is a status note only; §6.9 … §6.19
+stay as written.
+- **Decided:** the Product Owner closed CP1, the D-CP1-1 correction included, after API CI and Mobile CI were green on
+  `05cc2cbc`, and authorized CP2 (the forward dispatcher, Q5′, CA-SYS-02); not CP3, a merge, a deployment or a gate.
+- **Delivered (CP2):** migration `0166` — the ONE server-side producer of the forward step over the frozen core, with the
+  pair lock first, one attempt per transaction, a ledger whose ids make every retry the committed answer, and a read-only
+  lister for the Activity recovery path — its real-PostgreSQL verifier (six races), a live PostgREST proof with the
+  compiled worker, a static contract and a server worker with no route ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §10).
+- **Still closed:** CW2-08 (`NOT_EVALUATED`), so nothing is forwarded in production; no conclusion producer (Stage 8A); no
+  notification of a delivered proposal before CP3. The dispatcher makes neither Stage 8A nor Matching production ready.
+- **Next:** the Product Owner's CP2 review. CP3 (Activity, Direct Entry) only after its approval; no merge without «ادمج».

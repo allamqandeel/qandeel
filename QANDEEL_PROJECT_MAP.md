@@ -170,8 +170,9 @@ This is a **locator note, not a new Product authority**. ACCT-DEL-01 merged thro
 design, its review addendum and their Controlled Amendments (2026-10-18), and started **S6-07 — Activity, Direct Entry
 and Final Integration** as the current implementation task. It owns `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and
 `QAN-BL-PRIV-04`, and closes A3-01 G-17. Evidence: the [S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md).
-- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW — NOT MERGED / NOT
-  DEPLOYED**, on `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4).
+- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED — AWAITING THE PRODUCT OWNER'S
+  CP2 REVIEW — NOT MERGED / NOT DEPLOYED**, on `s6/s6-07-activity-direct-entry-final-integration` (one pull request for
+  CP1 … CP4).
 - CP1: migration `0165` (the ONE governed enrollment boundary `enroll_my_matching_setup_v1`, `authenticated` only, over
   five of the six frozen `0109` commands; the closed `ENROLLMENT` gate; the empty consent-text catalogue; the promotion
   record and the evidence precondition on the canonical facts reader; the zero-item requirement and zero-field
@@ -179,11 +180,17 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   `GET` / `POST /introductions/enrollment`. *(CP1 correction, 2026-10-18:)* D-CP1-1 = B — the third no-role core
   `set_empty_introduction_profile_core_v1` (CA-D-CP1-1-impl) makes a reviewed draft with neither optional profile field a
   real zero-field profile version; no CP1 Product decision is pending.
+- CP2: migration `0166` (the ONE `service_role` forward dispatcher `server_forward_approved_matching_proposals_v1` over the
+  frozen forward core, the pair lock first, its ledger in `matching_forward_private`, and the read-only reconciliation
+  lister; CA-SYS-02-impl, the census's second named SYSTEM exception), `verify-migration-0166`, `prove-0166` with the
+  compiled worker on live PostgREST, the static contract, and the server worker `apps/api/src/introductions-dispatch`
+  (no route).
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
   controlled amendment to the frozen `I-07` surface is
   [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.
 - Still closed: no gate row and no consent text exist, so nothing can be enrolled in production; the six commands stay
-  executable by no application role; CW2-08 and every launch gate stay closed. CP2 … CP4 are not started.
+  executable by no application role; CW2-08 and every launch gate stay closed, so the dispatcher forwards nothing in
+  production. CP3 and CP4 are not started.
 
 ### ACCT-DEL-01 — 2026-10-17 (historical: ACCT-DEL-01 merged as PR #345)
 
@@ -577,7 +584,7 @@ contradiction.
 | **8B — Voice Runtime** | **LATER** (runtime / provider-gated) | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
 | **9 — Economy + Launch Closure** | **LATER.** The AI-COST-01 accounting foundation is DONE (PR #303). The final Product economy and provider selection are not | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work, including AI-COST-01's ledger, Price Cards and inactive Credit Policy contract; this stage closes release-specific gaps rather than reopening Product foundations |
 
-> **CURRENT IMPLEMENTATION TASK: S6-07 — Activity, Direct Entry and Final Integration** (owned `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and `QAN-BL-PRIV-04`; closes A3-01 G-17) from `1861df43943a8695a761edec7aa42f5e18f018ec` (the merge of PR #345, ACCT-DEL-01), under the Product Owner's approval of the CP0 design, its review addendum and the Controlled Amendments CA-01-impl, CA-R5-impl, CA-08-impl, CA-10-impl and CA-GATE (2026-10-18) — **ACTIVE — CP1 (GOVERNED ENROLLMENT) DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW — NOT MERGED / NOT DEPLOYED** on `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4). CP1: migration `0165` (one named `authenticated` enrollment boundary over five of the six frozen commands, closed by default: no gate row, no consent text), its verifier, live PostgREST proof and static contract, and two owner-only API routes. Nothing can be enrolled in production; no gate is opened ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md)).
+> **CURRENT IMPLEMENTATION TASK: S6-07 — Activity, Direct Entry and Final Integration** (owned `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and `QAN-BL-PRIV-04`; closes A3-01 G-17) from `1861df43943a8695a761edec7aa42f5e18f018ec` (the merge of PR #345, ACCT-DEL-01), under the Product Owner's approval of the CP0 design, its review addendum and the Controlled Amendments CA-01-impl, CA-R5-impl, CA-08-impl, CA-10-impl and CA-GATE (2026-10-18) — **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED — AWAITING THE PRODUCT OWNER'S CP2 REVIEW — NOT MERGED / NOT DEPLOYED** on `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4). CP1: migration `0165` (one named `authenticated` enrollment boundary over five of the six frozen commands, closed by default: no gate row, no consent text), its verifier, live PostgREST proof and static contract, and two owner-only API routes. CP2: migration `0166` (one `service_role` forward dispatcher over the frozen forward core, CA-SYS-02-impl), its verifier, live PostgREST proof and static contract, and a server worker with no route. Nothing can be enrolled or forwarded in production; no gate is opened ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md)).
 >
 > *(Previous, ACCT-DEL-01, as written at its closing change:)* **CURRENT IMPLEMENTATION TASK: ACCT-DEL-01 — Account Deletion Across Matching / Introductions** (owned `QAN-BL-ACCT-01` from its CP1; its closing change re-owns the item, still open, to `ACCT-DEL-02`) from `4233c06739149fb19b441db782837497815d8be6` (the merge of PR #344, S6-06), under the Product Owner's approval of the WP0 v1 / review addendum v1.1 and decisions P-1 … P-4 (2026-10-17) — **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 APPROVED, CP2 (CLOSURE) DELIVERED — NOT MERGED / NOT DEPLOYED** on `acct/acct-del-01-account-erasure` (one pull request, #345; CP1 approved by the Product Owner on `90681312`, API CI and Mobile CI green). CP1: migration `0164` (the ONE governed account erasure over the account's Matching / Introductions footprint and the unchanged `0130` Personal erasure, in one transaction or nothing; the counterpart's retained view and Matching lineage; residue classes, recovery and two-level photo erasure), its verifier and static contract, and the API pass on it. Shared `STANDARD`, Public and Replay are not covered (P-1: `ACCT-DEL-02`, Stage 7); no gate is opened. CP2 (the closure, documentation and governance only): `QAN-BL-ACCT-01` re-owned to `ACCT-DEL-02`; `QAN-BL-ACCT-02` (Replay, Stage 7) and `QAN-BL-PROD-09` (`HOSTED-DEPLOY-01`'s mandatory account-deletion coverage check before any World opens in production) admitted; `QAN-BL-MATCH-01`'s dependency met in engineering. S6-07 is not started ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
 >

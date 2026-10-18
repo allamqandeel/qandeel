@@ -6,16 +6,19 @@
 **Product authority:** the S6-07 Final Task Contract; the CP0 report and its review addendum, approved by the Product Owner
 on 2026-10-18 («S6-07 — CP0 Approved / Start CP1»), with the Controlled Amendments they name; and the Product Owner's
 CP1 correction decision D-CP1-1 = B (2026-10-18, «S6-07 — CP1 Correction: Empty Introduction Profile»), with
-CA-D-CP1-1-impl. No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW —
-CP2 … CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The D-CP1-1 correction (§4) is applied inside CP1; no
-Product decision of CP1 is pending.  
+CA-D-CP1-1-impl; and «S6-07 — CP1 CLOSED / Start CP2» (2026-10-18), under Q5′ and CA-SYS-02 (CA-SYS-02-impl, §10). No merge
+or deployment without the Product Owner's explicit «ادمج».  
+**Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED — AWAITING
+THE PRODUCT OWNER'S CP2 REVIEW — CP3 / CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1,
+the D-CP1-1 correction (§4) included, on the green head `05cc2cbc`; CP2 is §10.  
 **Base:** `main` = merged PR #345 (ACCT-DEL-01) at `1861df43943a8695a761edec7aa42f5e18f018ec`, re-verified before the branch.  
 **Branch:** `s6/s6-07-activity-direct-entry-final-integration` (one pull request for the whole task: CP1 … CP4).  
-**Migration:** `0165_matching_governed_enrollment_v1.sql` (the number was free).
+**Migrations:** `0165_matching_governed_enrollment_v1.sql` (CP1) and `0166_matching_forward_dispatch_v1.sql` (CP2); both
+numbers were free.
 
 `MERGED ≠ DEPLOYED ≠ LAUNCH-READY`. The hosted environment is `NOT_DEPLOYED`. CP1 opens no gate: the `ENROLLMENT` gate has
 no row and the consent catalogue no text, so nothing can be enrolled in production; CW2-08 and every launch gate stay closed.
+CP2 opens none either: in production every forward attempt stops at the CW2-08 seam.
 
 ## 1. The Product Owner's decisions (binding; not to be reopened)
 
@@ -35,7 +38,8 @@ no row and the consent catalogue no text, so nothing can be enrolled in producti
 
 Authorization limits: CP1 only, on one branch and one pull request; no LIVE or Production deployment; no Launch Gate; no
 change to a frozen contract beyond the approved Controlled Amendments; CP2 not before the CP1 review; no merge without
-«ادمج».
+«ادمج». *(CP2, 2026-10-18:)* CP2 only, on the same branch and pull request; no CP3, merge, deployment or Launch Gate, and no
+other task or pull request.
 
 ## 2. CP1 — what was built
 
@@ -208,7 +212,8 @@ What the new proofs show:
 
 ## 7. Deliberately not in CP1, and owned
 
-- **CP2:** the forward dispatcher (`QAN-BL-MATCH-06`, CA-SYS-02) with its lock-order and concurrency proofs.
+- **CP2:** the forward dispatcher (`QAN-BL-MATCH-06`, CA-SYS-02) with its lock-order and concurrency proofs — delivered,
+  §10.
 - **CP3:** Activity, Push and Direct Entry (A3-01 G-17), Introduction World mutes, `WORLD_BORN`; the Copy Gate for every
   new sentence, including the three consent texts and the enrollment surface; the mobile closing step and the revocation
   controls (the retained `0109` commands already revoke each consent on its own at the database).
@@ -226,4 +231,155 @@ unchanged.
 
 CP1 is delivered on this branch in one pull request (see the pull request for the head and its CI), with the D-CP1-1 = B
 correction applied (§4, §5.2); no Product decision of CP1 is pending. The Product Owner reviews CP1 next; CP2 starts only
-after that approval. No merge without «ادمج».
+after that approval. No merge without «ادمج». *(2026-10-18:)* the Product Owner closed CP1 after API CI and Mobile CI were
+green on `05cc2cbc3ebbce53ac75752938a7b406aa06c0e9`, and started CP2 (§10).
+
+## 10. CP2 — the forward dispatcher (`QAN-BL-MATCH-06`, Q5′, CA-SYS-02)
+
+**Authorization:** «S6-07 — CP1 CLOSED / Start CP2» (Product Owner, 2026-10-18), after API CI and Mobile CI were green on
+`05cc2cbc3ebbce53ac75752938a7b406aa06c0e9`: CP1 closed (D-CP1-1 = B included); CP2 on the same branch and pull request;
+the review addendum's Q5′ (§2) is the design wherever it differs from the CP0 report. Not authorized: CP3, a merge, a
+deployment, any Launch Gate, another task or pull request.
+
+### 10.1 What was built
+
+**Migration `0166_matching_forward_dispatch_v1.sql`** (the number was free):
+
+- **`matching_forward_private.proposal_forward_attempts`** — the durable ledger, one row per proposal: the forward command
+  id and the candidate view id, each minted ONCE and reused by every attempt; the attempt count, the last outcome, the
+  SQLSTATE of a held integrity refusal (nothing else of it), and the next instant the proposal is due. Readable and
+  writable by no application role, RLS on; it references only its proposal, `ON DELETE CASCADE`; registered
+  `MATCHING_INTRODUCTIONS` in the ACCT-DEL-01 coverage registry.
+- **`public.server_forward_approved_matching_proposals_v1(p_max)`** — THE dispatcher. `service_role` only, `SECURITY
+  DEFINER`, `lock_timeout` 2 s, `p_max` must be 1 (one attempt per transaction, the `0157` sweeper discipline):
+  1. the one due proposal, read with NO row lock (`FIRST_FORWARD_APPROVED`, before its deadline, no ledger row or a due
+     one; the oldest due first) — none: `NONE_DUE`;
+  2. the canonical pair lock FIRST, the same first lock every core and every human decision takes; a wait past the
+     timeout is `BUSY`, with nothing of the proposal touched;
+  3. the proposal re-read under the lock: moved or expired → `SKIPPED_MOVED`; the first recipient's forward approval no
+     longer bound to their current exact view → `SKIPPED_STALE`;
+  4. the ledger row (the ids minted once) and its row lock;
+  5. the candidate's permitted conclusion for the proposal's own snapshot, about the first recipient: exactly one, or
+     `SKIPPED_NO_CONCLUSION` — nothing is invented;
+  6. the frozen `forward_matching_proposal_to_second_core_v1` with the ledger's ids, in an inner block: `FORWARDED`; the
+     CW2-08 seam's `55000` → `SKIPPED_NOT_CLEARED`; any other `55000` → `SKIPPED_NOT_READY`; `40001` / `PT409` →
+     `SKIPPED_STALE`; a lock wait → `BUSY`; anything else → `HELD_INTEGRITY`;
+  7. the ledger: `FORWARDED`, `SKIPPED_MOVED` and `HELD_INTEGRITY` are terminal; every other outcome is due again after
+     1 min doubling, capped at 6 h and never past the deadline (`BUSY`: 30 s, not counted as an attempt).
+  It answers one word and no identity.
+- **`public.server_list_proposal_delivery_activity_reconciliation_v1(p_limit)`** — read-only, `STABLE`, `service_role`
+  only: every proposal delivery that is still its proposal's current state, before its deadline, whose recipient has no
+  Activity member under `introductions:proposal-delivered:<delivery transition>` (`0136`). It reaches no write.
+
+**API — `apps/api/src/introductions-dispatch/`**, one module composed through `AccountModule`, with NO controller and no
+route: `IntroductionsForwardDispatchRepository` (the two `service_role` calls, strictly decoded; `p_max: 1` only) and
+`IntroductionsForwardDispatcherWorker` (the push-dispatcher / media-erasure pattern: one cycle at a time on a timer that
+never keeps the process alive, off under tests and without the server channel, `INTRODUCTIONS_FORWARD_DISPATCH_DISABLED`):
+up to 10 single-proposal attempts per cycle, ending at `NONE_DUE`, at `BUSY` and at any failure; then, only when an
+Activity notifier is bound, the reconciliation. CP2 binds none (the producer, its copy and its capability truth are CP3),
+so CP2 publishes nothing. Telemetry is content-free: `INTRODUCTIONS_FORWARD` / `dispatch`, `reconcile`, with the
+existing outcome words only.
+
+### 10.2 CA-SYS-02-impl — the Controlled Amendment (recorded in [I-07 runtime §50](../matching-introduction-runtime-v1.md))
+
+`NO_BACKDOOR` gains its SECOND named `service_role` SYSTEM exception, and nothing else: the dispatcher, by exact signature
+`public.server_forward_approved_matching_proposals_v1(integer)`, reaches a Matching setup write only through the pair lock
+(`lock_matching_pair_humans_v1` upserts both humans' `matching_setup_locks` rows). `verify-migration-0149` holds exactly
+two system exceptions apart (the ACCT-DEL-01 erasure and this one), proves each `service_role`-only with no overload, and
+its probes f18 / f19 refuse a second `service_role` wrapper around the dispatcher and the dispatcher granted to a client.
+The ledger and the lister are not exceptions. This is also the CW2-06 §16 / §35 implementation note the addendum names:
+the second recipient still receives an independent proposal only after the first party's forward approval, through the
+frozen core, and the dispatcher is not a human's decision.
+
+The implementation follows addendum §2.2. Eight refinements, each with its reason; none changes a Product rule:
+
+1. **Its own schema, `matching_forward_private`** (the addendum wrote `matching_enrollment_private`): the ledger is no
+   enrollment evidence, and the CP1 schema's invariants (every relation `ACCOUNT_CASCADE`, nothing outside references it)
+   and their verifier stay unchanged.
+2. **`ON DELETE CASCADE` from its proposal**, instead of `RESTRICT` and an explicit delete in the erasure module: the
+   governed erasure (`0164`) deletes the account's proposals and the ledger rows go with them, while the frozen erasure
+   body stays byte-unchanged. The ledger is bookkeeping, never evidence (`verify-0164` A04 passes; `verify-0166` C07).
+3. **`BUSY` may defer the proposal in the ledger** (30 s, with at most a 100 ms wait for the ledger itself) — never anything
+   of the proposal. Without it a long-held pair would be selected first on every call. While a human decision holds the
+   proposal row itself the deferral is skipped (the ledger is then not even touched, as the addendum says) and the worker
+   ends its cycle, so nothing loops.
+4. **A reused-id `23505`, and any other unexpected refusal of the core, is `HELD_INTEGRITY`** — terminal in the ledger with
+   its SQLSTATE, never retried automatically, reported as `integrity_failure` — instead of being raised. A raised refusal
+   rolls the ledger back, so the same proposal would be selected first forever and starve every other.
+5. **`SKIPPED_NOT_READY`** for a `55000` that is not the CW2-08 seam (the deadline at the real instant, an unconfigured
+   policy, an unresolved first name, a refused disclosure), so `SKIPPED_NOT_CLEARED` means exactly the seam.
+6. **The first recipient's forward approval must still be bound to their current exact view**, under the pair lock
+   (`QAN-BL-MATCH-06`'s required property), or the attempt is `SKIPPED_STALE`.
+7. **Exactly one permitted conclusion.** None, or more than one, is `SKIPPED_NO_CONCLUSION`: choosing among several would be
+   a selection no Product rule makes.
+8. **The lister answers `PUBLISH` only**, with the proposal, the candidate key and the delivery instant, so the CP3 producer
+   needs no other read. The withdrawal of a delivery that left the live set, the producer and its copy are CP3.
+
+Unchanged: the bodies of the forward core, the materializer, the transition writer, the pair lock, the validity reader, the
+CW2-08 seam (`NOT_EVALUATED`), the S6-04 decisions, the `0157` sweeper and the `0164` erasure (`verify-0166` A03 compares
+each with its last definition byte for byte); every grant of an earlier function; every launch gate.
+
+### 10.3 What the proofs show (lock order, concurrency, recovery)
+
+| Property | Proof |
+|---|---|
+| No lock inversion, no deadlock, bounded waiting | D01: a human withdrawal holding the pair lock → the dispatcher is `BUSY` within its 2 s timeout (measured), no `40P01`, nothing written — the human's decision stands. D02: the dispatcher first → the human waits one dispatcher transaction, then answers `RECORDED` from `FORWARDED_TO_SECOND` |
+| Two workers | D03: one forward, one binding, one view; the second re-reads under the lock and answers `SKIPPED_MOVED`; the terminal ledger row is not reopened |
+| Expiry or change during processing | D04: a deadline that passes while the dispatcher waits → `SKIPPED_MOVED`, nothing delivered. C03: a revoked first-recipient authority → `SKIPPED_STALE`; an expired proposal is never due |
+| Retry without repetition | C01: a second call is `NONE_DUE`; the core re-called with the ledger's ids is its committed answer (nothing written); another view under the same command id is `23505`. B02: after a refused attempt the next one reuses the SAME ids, and once the seam clears those exact ids deliver |
+| Worker crash and restart | D05: a worker killed by the server with an uncommitted forward leaves nothing, not even a ledger row; the restart forwards once |
+| Activity recovery | C06 / D05: a committed delivery is listed until its Activity member exists; a fixture publication is `PUBLISHED` once, its replay `DUPLICATE`, a third cycle lists nothing; a withdrawn delivery is never listed; the first recipient gets nothing at forward time |
+| No `permitted conclusion` | C02: none, or two, → `SKIPPED_NO_CONCLUSION`; no conclusion or candidate is written |
+| Gates stay closed | B02 / B03: with the real seam a realistic fixture (conclusion present) ends `SKIPPED_NOT_CLEARED` with only a ledger row; the proposal and pair seams answer `NOT_EVALUATED`, the producer seam `UNAVAILABLE`, the `ENROLLMENT` gate has no row and no consent text exists |
+| No disclosure before the binding | B02 / C01: the candidate's own readers answer nothing before the delivery binding and exactly the neutral row after it; on the wire the same with the candidate's token |
+| Fair backoff, no starvation | C04: one not-ready proposal and two ready ones → three cycles, three distinct proposals; the backoff doubles, is capped at 6 h and is cut at the deadline. C05: a held integrity refusal starves nobody. D06: a held pair answers `BUSY`, the next proposal is forwarded at once, the held one waits 30 s |
+| Role refusal | A01 / A04: `anon` and `authenticated` are `42501` on both functions; every application role is `42501` on the ledger and on the frozen core; `p_max` other than 1 is `22023`. On the wire: `anon` / `authenticated` tokens refused, the ledger not exposed |
+| The governed erasure | C07: erasing the candidate deletes the proposal and its ledger row; the dispatcher then finds nothing |
+
+### 10.4 Verification (local: real PostgreSQL 17.10, live PostgREST v12.2.9)
+
+| Proof | Result |
+|---|---|
+| `verify-migration-0166` (new) | 21 / 21: A01–A04 posture; B01–B04 production closed; C01–C07 behaviour; D01–D06 races on real connections |
+| `prove-0166` on live PostgREST v12.2.9 (new), driving the COMPILED worker | pass, fixture-clean: `anon` / `authenticated` refused, the ledger not exposed; `NONE_DUE`; `SKIPPED_NOT_CLEARED` behind the real seam; a 40001 and a PT409 underneath each answered once as `SKIPPED_STALE`; one forward; a failed publication recovered exactly once |
+| `verify-migration-0149` (re-anchored) / `0150` (re-anchored) | 36 / 36 (f18, f19 new) / 28 / 28 |
+| The verifiers whose catalog censuses read the new functions, each on a fresh clone | `0110` 25, `0111` 23, `0112` 22, `0113` 17, `0114` 35, `0120` 27, `0156` 31, `0157` 33, `0158` 25, `0159` 24, `0164` 29, `0165` 33 — all pass |
+| API: `tsc --noEmit`, Jest | pass; 259 suites, 6063 tests (the worker spec and the telemetry relation included) |
+| `test:s6-07-forward-dispatch-contract` (new) | 3 / 3; every one of its 21 planted defects is caught |
+| Root static contracts / `test:database` / `test:task-closure-governance-contract` | 1449 / 1449 / 1310 / 1310 / 24 / 24; after the documentation change, the 31 contracts and 10 database tests that read the edited documents again: 487 / 487 and 644 / 644 |
+
+### 10.5 Contracts and verifiers re-anchored (only where `0166` changes their truth)
+
+| File | What moves, and why |
+|---|---|
+| `database/verify-migration-0149.mjs` | `NO_BACKDOOR`: two named SYSTEM exceptions held apart, each proven exactly; the dispatcher reaches Setup state only through the pair lock; probes f18 / f19 |
+| `database/verify-migration-0150.mjs` | the dispatcher joins the `ABSORBED` entry points (it absorbs the core's `40001`, naming `PT409`) |
+| `apps/api/src/observability/observability.spec.ts` | the legal telemetry relation gains `INTRODUCTIONS_FORWARD` (existing outcome words only) |
+| `tests/s6-02-…`, `s6-04-…`, `s6-05-…` (two), `s6-06-…`, `s6-07-governed-enrollment-contract.test.mjs` | the `AccountModule` and `ABSORBED` pins: the CP2 entries are appended after the CP1 ones |
+
+### 10.6 Residual risks and what is still not proven
+
+- **Not deployed.** The hosted environment is `NOT_DEPLOYED` (last recorded at `0074`); `0166` is on this branch only.
+- **Dormant in production.** The CW2-08 seam answers `NOT_EVALUATED` and no conclusion producer exists (Stage 8A), so in
+  production every attempt would stop at `SKIPPED_NOT_CLEARED` and nothing is forwarded; `FORWARDED` is proven on
+  fixtures only. The dispatcher's existence makes neither Stage 8A nor Matching production ready.
+- **Product question, not decided here:** no rule refuses forwarding while either human has a live account deletion
+  request (the S6-04 decisions do not refuse either); the governed erasure itself removes the proposal and its ledger.
+- **Performance:** `matching_proposals` has no index on its state, so the selection reads the live proposals (none exist in
+  production). An index is a change to a frozen relation and waits until there is volume.
+- **Activity:** until CP3 no one is notified of a delivered proposal; the producer, the withdrawal of a stale item, the
+  `INTRODUCTIONS` capability truth and the copy are CP3.
+- The exact-head CI run is the deciding proof.
+
+### 10.7 Backlog (BG-08 at CP2)
+
+CP2 admits nothing, re-owns nothing and closes nothing. It adds a dated CP2 note on `QAN-BL-MATCH-06` (backlog §5): the
+producer exists and is dormant behind the CW2-08 seam; the item stays open, because its required property "composes with
+the S6-07 notifications" is CP3's, and it is dispositioned at S6-07's closing change. 74 items; 37 / 4 / 9 / 24; 42 / 30 /
+2, unchanged.
+
+### 10.8 Final status (CP2)
+
+CP2 is delivered on this branch in the same pull request (see the pull request for the head and its CI). It opens no gate
+and changes no frozen body. The Product Owner reviews CP2 next; CP3 starts only after that approval. No merge without
+«ادمج».
