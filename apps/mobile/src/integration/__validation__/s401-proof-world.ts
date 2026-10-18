@@ -100,6 +100,7 @@ import { createS601ProofIntroductions } from './s601-proof-introductions';
 import { createS604ProofProposals } from './s604-proof-proposals';
 import { createS605ProofIntroductionWorld } from './s605-proof-introduction-world';
 import { createS606ProofIntroductionSharing } from './s606-proof-introduction-sharing';
+import { createS607ProofEnrollment, type S607ProofAction } from './s607-proof-enrollment';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 /** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
@@ -239,6 +240,8 @@ export interface S401ProofWorld {
   introductionWorld(action: 'seed-match' | 'peer-end' | 'offline'): void;
   /** S6-06: the SYNTHETIC shares, photo stages, display name, SUCCESS and resume (`s606-proof-introduction-sharing.ts`). */
   introductionSharing(action: 'seed-sharing' | 'sharing-closed' | 'sharing-open' | 'sharing-more' | 'sharing-success' | 'sharing-complete'): void;
+  /** S6-07: the governed enrollment step and the three consents (`s607-proof-enrollment.ts`). */
+  introductionEnrollment(action: S607ProofAction): void;
   /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
   relationAccept(): void;
   /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
@@ -258,6 +261,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const introductionWorld = createS605ProofIntroductionWorld(language, { delayMs: 2500 });
   // S6-06: answers nothing until seeded, likewise.
   const introductionSharing = createS606ProofIntroductionSharing(language);
+  // S6-07: answers nothing until seeded, likewise.
+  const introductionEnrollment = createS607ProofEnrollment();
   const held = new Set<string>();
   let releases: (() => void)[] = [];
   // S5-01: the held Public World entries, and the reader's Public display mode.
@@ -777,6 +782,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     if (introductionWorldAnswer !== undefined) return introductionWorldAnswer;
     const proposalsAnswer = privateProposals.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     if (proposalsAnswer !== undefined) return proposalsAnswer;
+    const enrollmentAnswer = introductionEnrollment.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
+    if (enrollmentAnswer !== undefined) return enrollmentAnswer;
     const introductionsAnswer = introductions.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     if (introductionsAnswer !== undefined) return introductionsAnswer;
     if (path === '/shared' || path.startsWith('/shared/')) {
@@ -888,6 +895,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       else if (action === 'peer-end') introductionWorld.peerEnd();
       else introductionWorld.offline();
     },
+    introductionEnrollment: (action) => introductionEnrollment.seed(action),
     introductionSharing: (action) => {
       if (action === 'seed-sharing') introductionSharing.seed();
       else if (action === 'sharing-closed') introductionSharing.closeGate();

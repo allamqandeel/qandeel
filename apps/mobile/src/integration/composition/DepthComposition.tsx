@@ -683,7 +683,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           >
             <IntroductionsSurface controller={runtime.introductions} language={locale.language} insets={edges} onBack={closeIntroductions}
               proposals={runtime.introductionProposals} onOpenProposals={openProposals} focusProposals={returnedFromProposals && !proposalsShown}
-              participation={runtime.introductionParticipation} />
+              participation={runtime.introductionParticipation} enrollment={runtime.introductionEnrollment} />
           </View>
         ) : null}
         {introductionsShown && proposalsShown && depth === 'CONVERSATION' && onSignOut !== undefined && runtime.introductionProposals !== undefined ? (

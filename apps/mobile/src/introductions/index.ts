@@ -40,6 +40,12 @@ export { INTRODUCTION_WORLD_TEST_ID, IntroductionWorldSurface } from './Introduc
 export { IntroductionWorldCards } from './IntroductionWorldCards';
 export type { IntroductionAlertsController, IntroductionAlertsState, IntroductionAlertsTransport } from './introduction-alerts-controller';
 export { createIntroductionAlertsController } from './introduction-alerts-controller';
+// S6-07 (CP3) — the governed enrollment and the three independent consents (the closing step of the preparation).
+export type { EnrollmentController, EnrollmentControllerOptions, EnrollmentNotice, EnrollmentOffer, EnrollmentState, EnrollmentTransport } from './enrollment-controller';
+export { consentInForce, createEnrollmentController, enrollmentOffer, hasConsentControls } from './enrollment-controller';
+export type { EnrollmentCopy, EnrollmentCopyKey } from './enrollment-copy';
+export { ENROLLMENT_COPY_GATE, ENROLLMENT_COPY_ROWS, enrollmentCopy } from './enrollment-copy';
+export { ConsentControls, EnrollmentAvailabilityLine, EnrollmentStep, enrollmentAvailabilityLine } from './IntroductionsEnrollment';
 // S6-06 — progressive disclosure, the three-stage photo, the display-name consent, SUCCESS and resuming Introductions.
 export type {
   IntroductionMediaState, IntroductionShareDeletionTransport, IntroductionSharingAct, IntroductionSharingController, IntroductionSharingControllerOptions,

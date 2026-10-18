@@ -176,6 +176,11 @@ export type {
 } from './introduction-alerts-api';
 export { IntroductionAlertsApiClient } from './introduction-alerts-api';
 export type {
+  EnrollmentActKind, EnrollmentActResult, EnrollmentConsentKind, EnrollmentConsentText, EnrollmentOutcome, EnrollmentRead, EnrollmentRevocationOutcome,
+  EnrollmentRevocationResult, EnrollmentView, IntroductionsEnrollmentApiConfig,
+} from './introductions-enrollment-api';
+export { IntroductionsEnrollmentApiClient } from './introductions-enrollment-api';
+export type {
   IntroductionDiscloseResult, IntroductionDisclosures, IntroductionDisclosuresRead, IntroductionGrantResult, IntroductionImageRefusal, IntroductionMediaRead,
   IntroductionMyPhoto, IntroductionOwnShare, IntroductionPersonalKey, IntroductionRemoveResult, IntroductionRevokeResult, IntroductionShare,
   IntroductionShareState, IntroductionSharesRead, IntroductionSharesWorld, IntroductionSharingApiConfig, IntroductionSharingFetch, IntroductionStage,

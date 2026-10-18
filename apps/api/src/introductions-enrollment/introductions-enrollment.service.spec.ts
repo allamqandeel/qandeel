@@ -57,6 +57,19 @@ describe('S6-07 CP1 — IntroductionsEnrollmentService', () => {
     });
   });
 
+  it('S6-07 CP3: the APPROVED consent texts (version 1) pass through byte for byte, each with its exact version', async () => {
+    // The one source of the approved texts is the operator module the installer reads; nothing in the API holds them.
+    const module = readFileSync(join(__dirname, '../../../../database/matching-consent-texts-v1.mjs'), 'utf8');
+    const approved = [...module.matchAll(/version: '([A-Z_0-9]+)',\n\s+textAr: '([^']+)',\n\s+textEn: '([^']+)'/gu)]
+      .map(([, version, textAr, textEn]) => ({ version, textAr, textEn }));
+    expect(approved.map((t) => t.version)).toEqual(['MATCHING_PARTICIPATION_V1', 'MATCHING_CONTEXT_GRANT_V1', 'PRE_MATCH_DISCLOSURE_AUTHORITY_V1']);
+    const [participation, contextGrant, disclosureAuthority] = approved;
+    repository.read.mockResolvedValue(viewAnswer({ available: false, consents: { participation, contextGrant, disclosureAuthority } }));
+    const view = await service.read(TOKEN);
+    expect(view.consents).toEqual({ participation, contextGrant, disclosureAuthority });
+    expect(view.available).toBe(false);
+  });
+
   it.each([
     ['a missing field', { available: true }],
     ['an unknown participation state', viewAnswer({ setup: { participationState: 'MAYBE', pauseReason: null, contextGrant: false, disclosureAuthority: false, matchable: false } })],
