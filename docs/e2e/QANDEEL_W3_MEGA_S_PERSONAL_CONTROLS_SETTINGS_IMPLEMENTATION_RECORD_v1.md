@@ -203,6 +203,10 @@ Journey: Export my data → the export promise (★, approved, §9) → the pass
 (replay-safe) → «جارٍ تجهيز…» / "Preparing…" (re-read every 15 s while shown and on every return to Settings) → "Ready to
 download until {date}" + Download → the system folder picker → one JSON file written where the reader chose → expired →
 not downloadable, a new copy can be requested. The package is built by the server, never by the app; it is not emailed.
+*(S6-07 CP4, 2026-10-18; PR #346, not merged; effective from its merge:)* with the reader's own Introductions photos the
+download saves ONE folder `qandeel-data-YYYY-MM-DD/` instead of one file — the photo files, the server's photo manifest
+and the package written last, the folder removed on any failure; without a photo, the one JSON file exactly as here
+([S6-07 record](QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §12).
 
 | Category | In the package |
 |---|---|
@@ -239,7 +243,8 @@ is listed in §9.
 
 ### 8.1 API — `apps/api/src/account/` (inside the existing `AccountModule`; `app.module.ts` is untouched)
 `privacy-data.controller.ts` — five guarded routes under `/account/privacy` (`GET` state, `POST export`, `GET
-export/download`, `POST deletion`, `POST deletion/cancel`); exact bodies (`{ commandId, password }` or `{}`); 400 / 503
+export/download`, `POST deletion`, `POST deletion/cancel`) *(seven from S6-07 CP4: `GET export/download/bundle` and
+`GET export/download/bundle/files/:fileName`, owner-only and additive; the five unchanged)*; exact bodies (`{ commandId, password }` or `{}`); 400 / 503
 otherwise. `privacy-data.service.ts` — re-authentication reused exactly as W3-MEGA-A does it (the owner's own Email, the
 provider's password grant, the request on the PROOF token, the proof session always ended); the download adds the owner's
 Email from the owner's own provider session. Nothing is logged.
@@ -367,6 +372,8 @@ Expo module; documented host fact) and are left to CI.
   never for an UPDATE.
 - The export holds no internal id, secret, token, score, reasoning or other person's material; it is downloadable only by
   its owner, only while available; the artifact is discarded at expiry. No payload is logged.
+  *(S6-07 CP4:)* the package is one JSON document **plus** its listed photo files, which are never stored: each is the
+  reader's own rendition, re-authorized on the reader's token at every download.
 - Races: account-row-then-request locking; leases; replay-safe commands; lost answers reconciled by reading (client) or
   by re-judging committed state (server).
 - Stale sessions after final deletion: the provider's refresh tokens and sessions are destroyed with the account; a live

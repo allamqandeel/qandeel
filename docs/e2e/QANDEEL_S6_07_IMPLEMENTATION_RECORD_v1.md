@@ -8,16 +8,19 @@ on 2026-10-18 («S6-07 — CP0 Approved / Start CP1»), with the Controlled Amen
 CP1 correction decision D-CP1-1 = B (2026-10-18, «S6-07 — CP1 Correction: Empty Introduction Profile»), with
 CA-D-CP1-1-impl; and «S6-07 — CP1 CLOSED / Start CP2» (2026-10-18), under Q5′ and CA-SYS-02 (CA-SYS-02-impl, §10); and the Product Owner's
 CP2 correction «S6-07 — CP2 Targeted Correction: Account Deletion Guard» (2026-10-18, §10.9); and «S6-07 — CP2 CLOSED / Start
-CP3» (2026-10-18, §11); and «S6-07 — CP3 Copy Gate APPROVED / Resume Implementation» (2026-10-18, §11.5, §11.10). No merge
+CP3» (2026-10-18, §11); and «S6-07 — CP3 Copy Gate APPROVED / Resume Implementation» (2026-10-18, §11.5, §11.10); and the
+Product Owner's CP3 review correction (2026-10-18, §11.11); and «S6-07 — CP3 CLOSED / Start CP4» (2026-10-18, §12). No merge
 or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER, WITH THE
-ACCOUNT-DELETION GUARD) CLOSED, CP3 (ACTIVITY, PUSH, DIRECT ENTRY, ENROLLMENT & CONSENT UX) DELIVERED — CP3 PRODUCT COPY
-GATE CLOSED (§11.5) — AWAITING THE PRODUCT OWNER'S CP3 REVIEW — CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1, the D-CP1-1 correction (§4)
-included, on the green head `05cc2cbc`; CP2 is §10, closed on the green head `ad1e4138`; CP3 is §11.  
+**Status:** **S6-07 CLOSED / READY FOR THE PRODUCT OWNER'S REVIEW AND MERGE DECISION — CP1, CP2 AND CP3 CLOSED BY THE
+PRODUCT OWNER; CP4 (EXPORT MY DATA & FINAL INTEGRATION) DELIVERED, THE TASK'S CLOSING CHANGE (BG-08 / BG-09, §12.9) — NOT
+MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1, the D-CP1-1 correction (§4) included, on the green head
+`05cc2cbc`; CP2 (§10) on `ad1e4138`; CP3 (§11) on `3aaad0fd`. CP4 is §12; CA-EXP′ (§12.2) awaits the Product Owner's
+decision at this review.  
 **Base:** `main` = merged PR #345 (ACCT-DEL-01) at `1861df43943a8695a761edec7aa42f5e18f018ec`, re-verified before the branch.  
 **Branch:** `s6/s6-07-activity-direct-entry-final-integration` (one pull request for the whole task: CP1 … CP4).  
 **Migrations:** `0165_matching_governed_enrollment_v1.sql` (CP1), `0166_matching_forward_dispatch_v1.sql` (CP2) and
-`0167_introductions_activity_direct_entry_v1.sql` (CP3); every number was free.
+`0167_introductions_activity_direct_entry_v1.sql` (CP3) and `0168_personal_export_matching_introductions_v1.sql` (CP4); every
+number was free.
 
 `MERGED ≠ DEPLOYED ≠ LAUNCH-READY`. The hosted environment is `NOT_DEPLOYED`. CP1 opens no gate: the `ENROLLMENT` gate has
 no row and the consent catalogue no text, so nothing can be enrolled in production; CW2-08 and every launch gate stay closed.
@@ -877,3 +880,169 @@ CP3 admits nothing, re-owns nothing and closes nothing. `QAN-BL-MATCH-06` gains 
 property ("composes with the S6-07 notifications") is delivered; it is dispositioned at S6-07's closing change. A3-01
 G-17 (the capability truth, publication through the boundary, L0 kept) is delivered here and closed at CP4 with the task. *(After the Copy Gate, §11.10:)* still nothing is admitted, re-owned or closed; `QAN-BL-MATCH-01` gains a dated CP3 note (the enrollment step, the three independent consents and the governed loopback-only install of the approved texts; the item stays open until the closing change).
 74 items; counts unchanged.
+
+## 12. CP4 — Export My Data for Matching / Introductions (`QAN-BL-PRIV-04`) and the final integration (2026-10-18)
+
+**Authority:** «S6-07 — CP3 CLOSED / Start CP4» (2026-10-18; CP3 closed on `3aaad0fd`, API CI and Mobile CI green); the
+CP0 report §6 and its review addendum §3, §4, §9 and §10 with CA-EXP; the decisions Q7′ / Q7″ (every derived photo
+rendition the reader may still retrieve, blurred and clear; the 32 MiB bound a technical guard only, a safe path beyond
+it inside S6-07) and Q9 (a proposal's arrival is not exported). Limits kept: the same task, branch and pull request; no
+frozen core changed; no Launch Gate, CW2-08 seam or `ENROLLMENT` gate opened; no hosted install or deployment; no merge;
+no Stage 7.
+
+### 12.1 What was built
+
+| Layer | Change |
+|---|---|
+| Database | `0168_personal_export_matching_introductions_v1.sql`: `build_personal_export_v1` re-stated — the `0153` body byte for byte plus ONE section `matchingAndIntroductions` (§12.3), and `notYetIncluded` = `shared`, `public`, `replay`; the builder keeps its posture (INVOKER, STABLE, `search_path ''`, owner postgres, executable by no application role). ONE owner-only STABLE reader `list_my_introduction_photo_renditions_v1()` (`authenticated` only): the caller's own photo renditions that still exist (series `READY` / `DISCLOSING` / `RETIRED`), each with the instant its Introduction started, its stage, its handle and whether it is shared now. No table, column, trigger, policy, gate or registry row. |
+| API | `GET /account/privacy/export/download` unchanged. `GET …/export/download/bundle`: exactly that route's package, the photo manifest beside it (`qandeel.personal-data-export.photos.v1`: each file's name, stage, shared, the Introduction's start instant as the package prints it, `derivedRendition`; `notIncluded` with `NO_LONGER_AVAILABLE`), the leading photo files inline (base64) while they fit 32 MiB, and a manifest token. `GET …/export/download/bundle/files/:fileName` (header `x-qandeel-export-manifest`): one listed file the answer did not carry; `409 CHANGED` when the reader's photos are no longer the ones the manifest names, the export is no longer the same READY one, or the file is no longer the reader's to download. Every photo is authorized on the reader's own token by the media route's own decision (`authorize_my_introduction_media_v1`) immediately before its key is read; a store without the object for a live key, and any transport failure, is `503` — never a partial answer. Telemetry `PRIVACY_EXPORT` / `bundle`, `bundle_file` (outcome classes only). Route census: the bundle `SECURITY_SENSITIVE` (the whole record, like the download), the file route `AUTHENTICATED` (one own rendition, like the media route — a large export's one request per photo is never refused for its number). |
+| Mobile | `account-api.ts`: the bundle and file transports with a fail-closed decoder (shape, names, order, decoded length = `bytes`, the inline total within 32 MiB). `privacy-data-controller.ts`: Download takes the bundle; each remaining photo is fetched by name under the token on this runtime generation only; both bounded on the controller's own injectable timer (120 s, 60 s). `export-file.ts` `saveExportBundle`: one fresh folder `qandeel-data-YYYY-MM-DD/` in the place the reader picks — the photo files first, each checked on disk (exists, exactly its length) before the next, the server's manifest `qandeel-photos-YYYY-MM-DD.json` next, the package `qandeel-data-YYYY-MM-DD.json` LAST; any failure removes the folder and is `FAILED`. Without a photo and with nothing to say about one, exactly today's single file. The three existing sentences (`exportSaved`, `exportSaveFailed`, `network`) say everything: no new copy, so no Copy Gate. |
+
+### 12.2 How the approved design is implemented, and the three places it had to be completed
+
+1. **CA-EXP′ — one owner-only reader (for the Product Owner's decision).** CA-EXP said "no new SQL function, grant or
+   table". The approved manifest (§10.3) joins each photo file to its Introduction by "the same instant the package prints
+   for that Introduction". No existing reader gives a World's start instant to its human (the World list, the disclosure
+   reader and the shares list carry none), and an order-only join breaks when an Introduction began after the package
+   was prepared or continued as a Shared World. CP4 therefore adds ONE reader, `authenticated` only, over the caller's
+   OWN renditions. It grants no authority: every photo of every request is still authorized by
+   `authorize_my_introduction_media_v1` on the reader's token, and only then mapped to a key. No `0162` object changes.
+   *Proposed:* CA-EXP′ = CA-EXP plus this reader. If the Product Owner declines it, the manifest would join by stage only
+   (no Introduction instant), which is weaker; the rest stands.
+2. **Q7″ — the safe path beyond 32 MiB.** Addendum §10.8 answered a total above 32 MiB with `503 capacity_exceeded`. The
+   binding condition forbids that: the guard now bounds ONE answer, and every file after the first that does not fit
+   travels by the per-photo file route, one rendition per request, each re-authorized. A single photo larger than the
+   guard is exported the same way. No export is ever refused for its size.
+3. **The manifest's `bytes`.** The store reports no size (0122: nothing the provider computes about an object is read
+   back), so a photo's length is known only by reading it. The manifest therefore lists names and facts; each delivered
+   file carries its own `bytes`, and the device checks each written file against it. (§10.3 had `bytes` in the manifest.)
+
+The rest is the approved design: the old route and its answer unchanged (its package deep-equals the bundle's); the
+manifest beside the package, never inside it; handles only from the reader's own rows; no handle, key, World id or URL in
+any answer (the token is a one-way digest of the manifest's internal identities); facts in the stored package, bytes only
+at delivery and never stored (`QAN-BL-PROD-05` untouched); the device folder written photos-first, package-last.
+
+### 12.3 The section, field by field (reader = `p_subject`; withheld = never exported)
+
+| Sub-section | The reader's own data | Withheld |
+|---|---|---|
+| `preparation` | the draft (short introduction, work field, requirement / preference answers and items, skipped steps, reviewed / started / changed instants), declared facts with state and confirmation instant, notes (kind, origin, text), earlier-understanding decisions (decision, instant), assistance consents (version, given, withdrawn) | the Memory ids behind notes and decisions; the command ledger |
+| `enrollment` | each act (enrolled / corrected / resumed / consent given again, instant, the reviewed draft version, **the three consent versions it named** — GATE-17); participation events (act, state, pause reason, entry); context-grant and disclosure-authority events (with the approved fields); Introduction Profile versions (fields); requirement versions (items, required / preferred) | lock rows, ledger ids, fingerprints |
+| `confirmedFacts` | every confirmed fact version (values, confirmation instants, recorded) | snapshot fact bindings |
+| `proposals` | only a proposal DELIVERED to the reader: `outcome`, exactly the reader's own screen word (the `0158`/`0159` presentation mapping over `resolve_matching_proposal_neutral_outcome_v1`, a live one past its deadline or no longer valid included), and `yourDecisions` (approved / declined / withdrawn / accepted, instant) | the arrival instant (Q9), the other human, a conclusion, a field, a role, a state, a reason, a deadline, any pair relation |
+| `introductions` | per Introduction: started, state (active / ended / continued as a shared world), ended (and `endedByYou`) or continued instant; `yourMessages` (Introduction era only); `yourShares` (text); `yourPhotos` (state live / shared / removed; each existing rendition's stage, shared, shared at); `yourNameDisplay`; `yourContinuationApprovals` | the other human's words, shares, photo and name; who ended it when the reader did not; owner-deleted material and any digest |
+| `keptIntroductions` | after the other human's erasure: started, kept at, the reader's own retained words | anything of the erased human |
+| `resumedAfterIntroductions` | the reader's own reactivations and releases | — |
+
+Labels are readable words, as every earlier section's are (W3-MEGA-S §7.3, IP-IMP-01); they are data labels of the
+document, not a sentence the app shows.
+
+### 12.4 The final integration journey (real PostgreSQL, the human boundaries)
+
+`database/verify-s6-07-final-journey.mjs`, on the real pipeline, with the Product Owner's journey mapped step by step:
+Enrollment (the governed CP1 boundary, fixture gate and texts) → Proposal (the fixture producer: no production conclusion
+producer exists, `QAN-BL-MATCH-03`) → First Approval (S6-04, the first recipient's token) → Forward (the CP2 dispatcher)
+→ Second Approval = Mutual Match (S6-05, the candidate's token) → Introduction World (the 0160 messages) → Activity
+sources and Direct Entry (CP3: the delivery source and `WORLD_BORN` / `HUMAN_TEXT` / `ENDED` name the legitimate recipient
+only; `proposal:<id>` and `world:<id>` re-read on the recipient's own token; an outsider reads nothing; the capability
+truth) → Export (requested on a password-proof token, prepared by the `0130` server pass, read by its owner).
+
+| Scenario | What it proves |
+|---|---|
+| J01 | production stays closed: with the real `ENROLLMENT` gate nothing enrolls and nothing is written; with the real CW2-08 seam the proposal cannot even be offered; nothing is forwarded and nobody is reached |
+| J02 | the whole journey, and each human's export of it (enrollment with its consent versions, `matched` with the reader's own decision, the reader's own words only, no identifier) |
+| J03 | the first recipient declines: nothing is due, the candidate is never reached and exports no proposal (CW2-06 §53) |
+| J04 | the candidate declines: no World; `no longer available` for the first recipient (never "declined"), `closed by you` for the candidate — each the screen's own word |
+| J05 | the deadline passes after the forward: the acceptance is refused; the words are the screens' |
+| J06 | a consent withdrawn before the forward (the candidate's Matching Context Grant, the CP3 route's frozen `0109` command): nothing is forwarded; the withdrawal is in the candidate's own export |
+| J07 | a pending account deletion holds the forward; once cancelled the same proposal is forwarded; END tells the other human only; the erasure leaves the reader only their own words (`keptIntroductions`) and nothing of the erased human |
+
+The published Activity items, push and the mobile Direct Entry were proven in CP3 and are unchanged (`verify-0167`,
+`prove-0166` with the real producer, `s6-07-introductions-direct-entry.test.tsx`); this journey proves the recipient
+truth they consume.
+
+### 12.5 Verification (local; GitHub CI on the final head is the deciding proof)
+
+| Proof | Result |
+|---|---|
+| `verify-migration-0168` (real PostgreSQL 17.10, fresh clone at `0168`) | 13 / 13, three runs; a planted leak (the other human's messages) is caught by B02, B03 and B05 |
+| `verify-s6-07-final-journey` | 7 / 7, three runs |
+| `prove-0168-export-bundle-postgrest` (compiled API, PostgREST v12.2.9, `rclone serve s3` v1.75.1) | X01 – X07 passed; X04: 36 MiB of photos — two inline, the third (12 MiB) by the file route, byte for byte |
+| affected verifiers (`0130`, `0132`, `0149`, `0152`, `0153`, `0154`, `0156`, `0162`, `0164`, `0165`, `0167`) | all passed (`0130` / `0153` re-anchored, §12.7) |
+| API `tsc`; specs (`privacy-export-bundle.spec.ts` new: 11; `src/account`, `introductions-disclosure`, `observability`, `http-security`) | clean; 261 / 261 |
+| Mobile `tsc`; `src/settings`, the W3-MEGA-S integration test (4, one new) | clean; 180 / 180 |
+| Mobile `settings`, `integration`, `runtime-entry`, `introductions` | 974 / 980 — the 6 are the known local baseline (`depth`, `w2-account-access`), unchanged |
+| Device (emulator, SAF; §12.6) | 2 / 2 legs; every file byte-exact on disk; the rollback removed the failed folder |
+| Mobile lint (changed folders) | 0 errors (23 warnings, all in files CP4 did not touch) |
+| `tests/s6-07-export-final-integration-contract.test.mjs` (new) | 2 / 2; every one of its 21 planted defects caught |
+| Root static contracts | 1456 / 1456 |
+| `test:database` | 1310 / 1310 |
+
+### 12.6 Device proof (emulator, validation only)
+
+`.s6-07-reports/cp4-device-proof/` (not committed). The S4-01 proof build at `87a6e72e` (APK `28470a3f…`) with a
+validation-only stand-in applied in the proof worktree only and restored after the build (`stand-in.patch`, kept beside
+the evidence): a READY export answering the three export routes in the API's own shapes, with three synthetic photo
+renditions (7 737, 50 571 and 518 326 bytes) - stages 1 and 2 inline, stage 3 by the per-photo route under the token; the
+per-photo route answers `CHANGED` from its second request on. API 36 x86_64 emulator, 1080 × 2400 @ 420 dpi; two legs,
+English / Light and Arabic / Dark, each a clean install, an empty `Download/QandeelProof`, and one Maestro journey
+(`scripts/s6-07-export-save.yaml`) through Android's own folder picker (the Storage Access Framework: "Use this folder",
+"Allow"):
+
+| Step | Result (both legs) |
+|---|---|
+| X01 | the export READY row and Download |
+| X02 – X03 | the real picker; the save writes ONE folder `qandeel-data-2026-10-18/`; the approved «تم حفظ الملف.» / "File saved." |
+| folder read back by `adb` | the three photos byte for byte (SHA-256 equal to the stand-in's, the 518 KB stage 3 fetched by the file route), the manifest `qandeel-photos-2026-10-18.json` and the package `qandeel-data-2026-10-18.json` |
+| X04 | a second download whose third photo is answered `CHANGED`: the approved «تعذّر حفظ الملف.» / "The file couldn't be saved."; afterwards the place holds only the first folder - the second, with its two photos already written, was removed again through SAF |
+
+This proves addendum §10.5 items (a) a SAF sub-folder created and deleted and (b) the size of a SAF document after a
+base64 write. Not proven here (`QAN-BL-LAUNCH-06`): (c) iOS, (d) a read-only or offline provider, a physical device and
+a rollback that itself fails. The first Arabic run is kept as it happened: its last text assertion failed because the
+harness garbled the shadda of «تعذّر» on its way from Git Bash to Maestro (the screenshot shows the app's sentence intact);
+the matcher was changed to skip that one character and the re-run passed.
+
+### 12.7 Contracts and verifiers re-anchored (only where CP4 changes their truth)
+
+- `verify-migration-0130` / `verify-0153`: `notYetIncluded` → shared, public, replay; `verify-0153`'s "the live builder is
+  the 0153 body" → the live builder is the 0168 re-statement containing the 0153 body byte for byte (the same slice proof,
+  now also verify-0168 A02).
+- `privacy-data.spec.ts` and `tests/w3-mega-s-personal-controls-settings-contract.test.mjs`: five routes → seven, the
+  `no-store` count five → seven (addendum §10.4, Q7″).
+- `observability.spec.ts`, `tests/prod-ops-01-…-contract.test.mjs`: the `PRIVACY_EXPORT` registry gains `bundle` and
+  `bundle_file` (deliberate widening, outcome classes only).
+- `route-rate-limit.census.ts`: the two routes classified (PROD-SEC-01's detector requires it).
+- `tests/sec-match-00-…-contract.test.mjs`: the `QAN-BL-MATCH-01` index row → `CLOSED — TOMBSTONE` (§12.9).
+- The mobile tests' transports: the controller now names the bundle transport; the W3-MEGA-S integration test runs the
+  REAL save over a stood-in file system instead of replacing the save as a whole. The HTTP double records request
+  headers.
+
+### 12.8 Residual risks and what is not proven
+
+- A photo object lost from the store while its key is live blocks that reader's bundle with a visible `503` (and
+  `integrity_failure` telemetry) until the integrity defect is repaired — honest, never a thinner export
+  (`QAN-BL-PROD-10`, admitted).
+- The device save on iOS (security-scoped folder access) and on physical Android devices / read-only providers, and a
+  rollback that itself fails (it leaves a folder WITHOUT the package, visibly incomplete), are not proven here
+  (`QAN-BL-LAUNCH-06`, admitted).
+- The package is a dated snapshot (prepared up to 7 days earlier); the photos are re-authorized at download, so a photo
+  removed since is not exported, and one uploaded since is not in the manifest — by design (addendum §9.5).
+- Hosted: nothing is deployed; the consent texts are not installed and every gate stays closed.
+
+### 12.9 Backlog (BG-08 / BG-09 at S6-07's closure)
+
+- **Inherited (BG-05): `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06`, `QAN-BL-PRIV-04` → `CLOSED — TOMBSTONE`**, each with its
+  disposition on the item. A3-01 G-17 is closed (its Exit Gate — real capability truth, publication through the
+  boundary, L0 kept — delivered in CP3, proven by `verify-0167` / `prove-0166`, and composed into the journey here).
+- **Admitted (BG-06 / BG-08):** `QAN-BL-PROD-10` (the lost-object residue the approved addendum §9.9 designated) and
+  `QAN-BL-LAUNCH-06` (the device-save proofs the approved addendum §10.5 named, beyond what the emulator proves).
+- **Checked and not admitted (BG-06):** the Shared / Public / Replay categories (`QAN-BL-PRIV-05`, unchanged); the
+  conclusion producer (`QAN-BL-MATCH-03`); opening the `ENROLLMENT` gate, installing the consent texts on the hosted
+  environment and clearing CW2-08 (Stage 9 launch acts, owned there); CA-EXP′ (a Product Owner decision in this report,
+  not an obligation).
+- The record's banner moves to its final state in this change (BG-09).
+
+### 12.10 Status
+
+**S6-07 CLOSED / READY FOR THE PRODUCT OWNER'S REVIEW AND MERGE DECISION — NOT MERGED / NOT DEPLOYED** (2026-10-18).
+CA-EXP′ (§12.2.1) awaits the Product Owner's decision at that review.

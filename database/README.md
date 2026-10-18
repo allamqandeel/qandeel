@@ -5142,3 +5142,33 @@ npm run test:s6-07-enrollment-consent-surface-contract
 - **Loopback only.** Any host but `localhost`, `127.0.0.1` or `::1` is refused before connecting: installing on a hosted
   environment is a separate, later authorization.
 - The verifier runs on a FULLY migrated database and rolls everything back.
+
+## S6-07 - Export My Data for Matching / Introductions (migration 0168, CP4)
+
+`0168_personal_export_matching_introductions_v1.sql` re-states `personal_data_private.build_personal_export_v1` - the
+`0153` body byte for byte plus ONE section, `matchingAndIntroductions` - and adds ONE owner-only reader. It creates no
+relation (the erasure census is unchanged). Record: `docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md` §12.
+
+```text
+build_personal_export_v1(subject)            no role (run by prepare_data_exports_v1): the reader's own preparation,
+                                             enrollment (with consent versions), confirmed facts, delivered proposals
+                                             (the screen's word, the reader's decisions, no arrival instant),
+                                             Introductions (own messages, shares, photo facts, acts), kept words,
+                                             reactivations; notYetIncluded = shared, public, replay
+list_my_introduction_photo_renditions_v1()   authenticated: the caller's own photo renditions that still exist, each
+                                             with its Introduction's start instant, stage, handle and shared flag - for
+                                             the export download, which still authorizes every photo on the token
+```
+
+```sh
+npm run verify:personal-export-matching-introductions:integration
+npm run verify:s6-07-final-journey:integration
+npm run prove:export-bundle:postgrest        # needs POSTGREST_URL / _JWT_SECRET, the QANDEEL_MEDIA_S3_* values, RCLONE_LOG_FILE, a built API
+npm run test:s6-07-export-final-integration-contract
+```
+
+The verifiers need `DATABASE_URL` pointing at a FULLY migrated database; their behaviour sections roll back, and the
+CW2-08 and I-07D seams are restored byte for byte. The journey (`verify-s6-07-final-journey.mjs`) runs enrollment ->
+proposal -> first approval -> forward -> acceptance -> World -> Activity / entry truth -> export on the human boundaries,
+with production closed first (J01) and a decline on each side, an expiry, a consent withdrawn, a pending deletion, END and
+the real erasure.

@@ -199,6 +199,8 @@ reaches a disclosure relation or function.
   conformance (owner `HOSTED-DEPLOY-01`, `HIGH`, `DEFERRED — OWNED`).
 - **Dated notes:** `QAN-BL-ACCT-01` (the new relations and the stored photo objects join the Connected Worlds deletion
   footprint) and `QAN-BL-PRIV-04` (the reader's own shares, photos and display-consent acts join the export scope).
+  *(S6-07 CP4, 2026-10-18:)* delivered — the facts in Export My Data (`0168`) and the photo bytes beside the package on
+  the export bundle ([S6-07 record](QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §12).
 
 ## 9. Deliberately not in CP1
 

@@ -170,9 +170,8 @@ This is a **locator note, not a new Product authority**. ACCT-DEL-01 merged thro
 design, its review addendum and their Controlled Amendments (2026-10-18), and started **S6-07 — Activity, Direct Entry
 and Final Integration** as the current implementation task. It owns `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and
 `QAN-BL-PRIV-04`, and closes A3-01 G-17. Evidence: the [S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md).
-- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) CLOSED, CP3 (ACTIVITY, PUSH, DIRECT
-  ENTRY, ENROLLMENT & CONSENT UX) DELIVERED — CP3 PRODUCT COPY GATE CLOSED — AWAITING THE PRODUCT OWNER'S CP3 REVIEW — NOT
-  MERGED / NOT DEPLOYED**, on
+- S6-07 is **CLOSED / READY FOR THE PRODUCT OWNER'S REVIEW AND MERGE DECISION — CP1, CP2, CP3 CLOSED; CP4 (EXPORT MY DATA
+  & FINAL INTEGRATION) DELIVERED — NOT MERGED / NOT DEPLOYED**, on
   `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4).
 - CP1: migration `0165` (the ONE governed enrollment boundary `enroll_my_matching_setup_v1`, `authenticated` only, over
   five of the six frozen `0109` commands; the closed `ENROLLMENT` gate; the empty consent-text catalogue; the promotion
@@ -198,6 +197,12 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   the transport `runtime-entry/introductions-enrollment-api.ts`), the approved consent texts in the one pinned module
   `database/matching-consent-texts-v1.mjs` with the loopback-only installer `database/install-matching-consent-texts.mjs`
   and `verify-matching-consent-texts`, the static contract `tests/s6-07-enrollment-consent-surface-contract.test.mjs`.
+- CP4: migration `0168` (Export My Data's `matchingAndIntroductions` section and the owner-only reader
+  `list_my_introduction_photo_renditions_v1`), `verify-migration-0168`, the journey `database/verify-s6-07-final-journey.mjs`,
+  the wire proof `database/prove-0168-export-bundle-postgrest.mjs`, the static contract
+  `tests/s6-07-export-final-integration-contract.test.mjs`; the API bundle and per-photo routes in
+  `apps/api/src/account/privacy-data.service.ts` over the sharing module's export reads; the mobile bundle transport
+  (`runtime-entry/account/account-api.ts`) and folder save (`settings/export-file.ts`). Record §12.
   The CP3 review correction (record §11.11): RECONFIRM_CONSENT reads the approved «تأكيد»; EN-19 only after
   `CONSENT_OUTDATED`.
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the

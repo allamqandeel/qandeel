@@ -348,7 +348,7 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - `S6-04` — Private Proposal Review and Decisions;
   - `S6-05` — Mutual Match & Introduction World;
   - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15; 2026-10-17: CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.16)*;
-  - `S6-07` — Activity, Direct Entry and Final Integration; *(2026-10-18: CP0 approved; CP1 Governed Enrollment delivered, not merged, §6.19; CP1 closed and CP2 Forward Dispatcher delivered, not merged, §6.20)*.
+  - `S6-07` — Activity, Direct Entry and Final Integration; *(2026-10-18: CP0 approved; CP1 Governed Enrollment delivered, not merged, §6.19; CP1 closed and CP2 Forward Dispatcher delivered, not merged, §6.20; CP2 and CP3 closed, CP4 delivered — S6-07 closed and ready for the Product Owner's review and merge decision, not merged, §6.21)*.
   - *(Product Owner, 2026-10-17:)* `ACCT-DEL-01` — Account Deletion Across Matching / Introductions, before S6-07 (`QAN-BL-MATCH-01`'s dependency); CP1 delivered, §6.17; CP1 approved and CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.18; merged through PR #345 as `1861df43` (2026-10-17), §6.19.
 
   The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
@@ -650,3 +650,17 @@ stay as written.
 - **Still closed:** CW2-08 (`NOT_EVALUATED`), so nothing is forwarded in production; no conclusion producer (Stage 8A); no
   notification of a delivered proposal before CP3. The dispatcher makes neither Stage 8A nor Matching production ready.
 - **Next:** the Product Owner's CP2 review. CP3 (Activity, Direct Entry) only after its approval; no merge without «ادمج».
+
+### 6.21 Execution note — 2026-10-18 (S6-07 CP3 closed; CP4 delivered; S6-07 closed, not merged)
+**Recorded:** 2026-10-18 by S6-07 CP4, in the S6-07 pull request (not merged). This is a status note only; §6.9 … §6.20
+stay as written.
+- **Decided:** the Product Owner closed CP2 (`ad1e4138`) and CP3 (`3aaad0fd`, with its review correction), each after API
+  CI and Mobile CI were green, and authorized CP4 — Export My Data & Final Integration, the last checkpoint.
+- **Delivered (CP4):** migration `0168` (the reader's own Matching / Introductions data in Export My Data), the export
+  bundle with every photo the reader may download (the 32 MiB guard bounding one answer, never the export), the device
+  folder save, and the final integration journey on the human boundaries from enrollment to export
+  ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §12). S6-07 is closed and ready for the Product
+  Owner's review and merge decision; CA-EXP′ awaits that decision.
+- **Still closed:** the `ENROLLMENT` gate and every launch gate, CW2-08 (`NOT_EVALUATED`), the hosted environment (no
+  consent texts installed, nothing deployed). Stage 6 is not launch-ready.
+- **Next:** the Product Owner's review of S6-07; no merge without «ادمج»; Stage 7 is not started.
