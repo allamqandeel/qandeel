@@ -164,7 +164,8 @@ export function createEnrollmentController({ transport, isCurrent, newCommandId 
     },
     open() {
       const mine = ++reads;
-      set({ status: state.view === null ? 'LOADING' : state.status });
+      // A fresh read starts clean: an earlier answer never stands beside a state it no longer describes.
+      set({ status: state.view === null ? 'LOADING' : state.status, notice: null });
       void transport.read().then((answer) => {
         if (mine !== reads) return;
         // A failed read shows nothing it cannot vouch for: no act, no consent state.

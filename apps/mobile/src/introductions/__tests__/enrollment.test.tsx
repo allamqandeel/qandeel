@@ -368,6 +368,18 @@ describe('the acts and their answers (Arabic)', () => {
     expect(textOf(view, 'qandeel-introductions-enrollment-unavailable')).toBe(introductionsCopy('ar').reviewed);
     expect(view.queryByTestId(/qandeel-enrollment-/u)).toBeNull();
   });
+  it('a fresh read clears an earlier answer (found on the device: EN-13 stood beside a later closed state)', async () => {
+    const fake = enrollmentServer(openView());
+    fake.answerAct({ kind: 'ANSWERED', outcome: 'CONSENT_OUTDATED', view: openView() });
+    const { view, enrollment } = await surface('ar', preparationOf(reviewedDraft(7)), fake);
+    for (const consent of ['participation', 'contextGrant', 'disclosureAuthority'] as const) await press(view, `qandeel-enrollment-agree-${consent}`);
+    await press(view, 'qandeel-enrollment-act-ENROLL');
+    expect(view.getByTestId('qandeel-enrollment-notice-consentOutdated')).toBeTruthy();
+    fake.set(enrolledView({ available: false, consents: { participation: null, contextGrant: null, disclosureAuthority: null } }));
+    await act(async () => { enrollment.open(); await flush(); });
+    expect(view.queryByTestId(/qandeel-enrollment-notice-/u)).toBeNull();
+    expect(view.getByTestId('qandeel-enrollment-closed')).toBeTruthy();
+  });
   it('the controller refuses an act whose consents were not all agreed, and never calls the server', async () => {
     const fake = enrollmentServer(openView());
     const controller = createEnrollmentController({ transport: fake.transport, isCurrent: () => true });
