@@ -5019,7 +5019,9 @@ read_my_matching_enrollment_v1()                                       authentic
   operator function `set_gate_v1` (Stage 9). Every act answers `NOT_AVAILABLE_NOW` in production.
 - **The six stay closed.** The boundary calls five of them with their frozen bodies; none is granted, re-created or
   re-owned, and a direct call is still `42501`. The field-bearing disclosure grant is never called: the authority is the
-  zero-field core's (CA-08-impl); an empty requirement set is the zero-item core's (CA-10-impl).
+  zero-field core's (CA-08-impl); an empty requirement set is the zero-item core's (CA-10-impl); a reviewed draft with
+  neither optional profile field is a real profile version with no field rows, the empty-profile core's (CA-D-CP1-1-impl,
+  the Product Owner's D-CP1-1 = B): no optional field is ever required to enroll.
 - **Evidence.** `fact_promotions` (the fact version, the reviewed draft version, the act) and `enrollment_acts` (every
   committed act with the exact version of each consent it exercised and the events it created). The canonical facts
   reader answers only for a promoted version. A verifier fixture that writes a fact version through the raw writer adds a

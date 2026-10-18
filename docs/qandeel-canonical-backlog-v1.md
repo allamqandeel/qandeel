@@ -1328,8 +1328,11 @@ the six with their frozen bodies under a closed-by-default operator gate (no gat
 enrolled in production). The required future property holds as amended: no plain grant, no re-created command, no
 `service_role` path, and no wrapper other than that one named, gated, `auth.uid()`-derived boundary (`verify-migration-0149`
 `NO_BACKDOOR` and probes f14 – f17; the SEC-MATCH-00 static contract). Correction and resume run through the same boundary.
-The item is **not** tombstoned at CP1: it is dispositioned at S6-07's closing change, under BG-08, with the rest of the
-task ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md), [I-07 runtime §50](matching-introduction-runtime-v1.md)).
+*(CP1 correction, 2026-10-18:)* under the Product Owner's D-CP1-1 = B, enrollment requires no optional profile field: a
+third core executable by no role (`set_empty_introduction_profile_core_v1`, CA-D-CP1-1-impl) writes a real zero-field
+profile version, reached only through the same boundary; the required future property is unchanged (`verify-migration-0149`
+f17 probes all three cores). The item is **not** tombstoned at CP1: it is dispositioned at S6-07's closing change, under
+BG-08, with the rest of the task ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md), [I-07 runtime §50](matching-introduction-runtime-v1.md)).
 Owner, severity and status unchanged.
 
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: it is a canonical record's explicit deferral to a named future task. The

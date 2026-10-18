@@ -176,7 +176,9 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   five of the six frozen `0109` commands; the closed `ENROLLMENT` gate; the empty consent-text catalogue; the promotion
   record and the evidence precondition on the canonical facts reader; the zero-item requirement and zero-field
   authority cores), `verify-migration-0165`, `prove-0165` on live PostgREST, the static contract, and the API routes
-  `GET` / `POST /introductions/enrollment`.
+  `GET` / `POST /introductions/enrollment`. *(CP1 correction, 2026-10-18:)* D-CP1-1 = B — the third no-role core
+  `set_empty_introduction_profile_core_v1` (CA-D-CP1-1-impl) makes a reviewed draft with neither optional profile field a
+  real zero-field profile version; no CP1 Product decision is pending.
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
   controlled amendment to the frozen `I-07` surface is
   [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.

@@ -4,10 +4,12 @@
 **Owned:** `QAN-BL-MATCH-01` (Matching setup enrollment), `QAN-BL-MATCH-06` (the forward producer), `QAN-BL-PRIV-04`
 (Export My Data for Matching / Introductions); closes A3-01 G-17. Each is dispositioned at the task's closing change (CP4).  
 **Product authority:** the S6-07 Final Task Contract; the CP0 report and its review addendum, approved by the Product Owner
-on 2026-10-18 («S6-07 — CP0 Approved / Start CP1»), with the Controlled Amendments they name. No merge or deployment
-without the Product Owner's explicit «ادمج».  
+on 2026-10-18 («S6-07 — CP0 Approved / Start CP1»), with the Controlled Amendments they name; and the Product Owner's
+CP1 correction decision D-CP1-1 = B (2026-10-18, «S6-07 — CP1 Correction: Empty Introduction Profile»), with
+CA-D-CP1-1-impl. No merge or deployment without the Product Owner's explicit «ادمج».  
 **Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW —
-CP2 … CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18).  
+CP2 … CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The D-CP1-1 correction (§4) is applied inside CP1; no
+Product decision of CP1 is pending.  
 **Base:** `main` = merged PR #345 (ACCT-DEL-01) at `1861df43943a8695a761edec7aa42f5e18f018ec`, re-verified before the branch.  
 **Branch:** `s6/s6-07-activity-direct-entry-final-integration` (one pull request for the whole task: CP1 … CP4).  
 **Migration:** `0165_matching_governed_enrollment_v1.sql` (the number was free).
@@ -28,6 +30,7 @@ no row and the consent catalogue no text, so nothing can be enrolled in producti
 | Q7′ / Q7″ | Export every derived photo rendition the user is still authorized to retrieve, blurred and clear, under the corrected download contract (CP4). **Binding condition:** the 32 MiB bound is a technical guard only, never a limit on the right to export; a safe path for photos beyond it is delivered inside S6-07, and `QAN-BL-PRIV-04` is not declared complete while any photo the user may download cannot be exported. |
 | Q8(A) | One enrollment confirmation, with three independent consents, each revocable on its own. |
 | Q9 | The proposal's arrival time is not exported. |
+| D-CP1-1 = B | *(CP1 correction, 2026-10-18.)* No optional field is ever required to enroll: a reviewed draft with neither optional profile field enrolls with a real Introduction Profile version that has no field rows (CA-D-CP1-1-impl, §4). |
 | Q10 | `HUMAN_TEXT` stays Class 4, in Activity only (no native push). |
 
 Authorization limits: CP1 only, on one branch and one pull request; no LIVE or Production deployment; no Launch Gate; no
@@ -48,7 +51,8 @@ change to a frozen contract beyond the approved Controlled Amendments; CP2 not b
   `RESUME`, `RECONFIRM_CONSENT`), the reviewed draft version it promotes, and the version of each consent it agrees to —
   nothing else. It calls five of the six `0149` commands with their frozen bodies and the `0156` facts writer; never the
   field-bearing disclosure grant.
-- **Two internal cores, executable by no role:** `set_empty_matching_requirements_core_v1` (CA-10-impl) and
+- **Three internal cores, executable by no role:** `set_empty_matching_requirements_core_v1` (CA-10-impl),
+  `set_empty_introduction_profile_core_v1` (CA-D-CP1-1-impl, §4) and
   `grant_zero_field_pre_match_disclosure_authority_core_v1` (CA-08-impl). Each repeats the frozen `0109` lock, replay,
   compare-and-swap and history rules exactly, with the owner passed by its only caller.
 - **`public.read_my_matching_enrollment_v1`** — the caller's availability (the gate AND a current text of each consent),
@@ -101,33 +105,55 @@ Refinements inside the approved design — none changes a Product rule:
 4. **The promotion record is its own relation** (`fact_promotions`), so the canonical reader's precondition is one join and
    a verifier fixture can give a synthetic version a fixture record beside it.
 
-## 4. A Product decision CP1 surfaced (needs the Product Owner)
+## 4. The Product decision CP1 surfaced — D-CP1-1, DECIDED (B) and applied
 
 **D-CP1-1 — a reviewed draft with neither optional profile field.** S6-01 made the short introduction and the work field
 optional, but the frozen `0109` profile command refuses an empty field set, `matchable` needs a current profile version, and
-the authority (Q3-A) binds one. CP1 therefore refuses such a draft as `INCOMPLETE` and invents no field. Options:
+the authority (Q3-A) binds one. CP1 as first delivered (`b5f18fe7`) refused such a draft as `INCOMPLETE`, which made the
+optional data required in practice. Options were (a) keep that refusal, (b) a zero-field profile core, (c) enroll without a
+profile (not `matchable`).
 
-- **(a) keep** — enrollment needs at least one of the two optional fields (a Product rule the Copy Gate would explain);
-- **(b) a zero-field profile core** — a new Controlled Amendment, the CA-10-impl pattern, so a profile version may hold no
-  field (it would be bound by the zero-field authority and disclose nothing);
-- **(c) enroll without a profile** — participation and the grant only, not `matchable`, until a profile field exists.
+**Decision (Product Owner, 2026-10-18, «S6-07 — CP1 Correction: Empty Introduction Profile»): B — APPROVED.** Binding
+product rule: no optional field may be required of the user to enroll in Matching.
 
-**Recommendation: (b)** if the Product Owner wants the optional fields to stay truly optional; otherwise (a). Nothing
-depends on it before the gate opens.
+**CA-D-CP1-1-impl — the empty Introduction Profile version** (a Controlled Amendment of the frozen `I-07A` surface, recorded
+in [I-07 runtime §50](../matching-introduction-runtime-v1.md)):
+
+- ONE internal core, `public.set_empty_introduction_profile_core_v1(command, owner, expected current version)`, writes a
+  real, immutable `introduction_profile_versions` row in the owner's same chain with NO field rows — the absence of fields,
+  never a sentinel value. It repeats the frozen `set_introduction_profile_v1` law exactly: the caller's own
+  `matching_setup_locks` row first; the command id IS the version id, an equivalent retry answers the committed version,
+  a reused id with any other request (another owner, another prior, or a version that holds fields) is `23505`; any
+  current version other than the expected one is `40001` with nothing applied.
+- Executable by NO role (`anon`, `authenticated`, `service_role`, `PUBLIC`): revoked explicitly and asserted by the
+  migration's terminal self-assertion; it names none of the six and reads no session identity. Its only caller is
+  `enroll_my_matching_setup_v1`.
+- The boundary chooses by the reviewed draft alone: one or two fields → the frozen `set_introduction_profile_v1`,
+  unchanged; neither field → the empty-profile core. A new version is written only when the field set differs from the
+  current one, so empty → fields, fields → empty and fields → other fields are each one new version along one chain, and
+  empty → empty is `NO_CHANGE`.
+- The zero-field disclosure authority binds the exact empty version like any other (no field, no token consent). A
+  correction that moves the profile still needs a fresh disclosure consent; the three consents stay independent.
+- Unchanged: the six `0109` bodies (`set_introduction_profile_v1` still refuses an empty set); `matchable` and the Match
+  eligibility rules (`matchable` already needs only a current profile version — `0111`
+  `resolve_matching_setup_state_v1`); every lock, CAS, idempotency and deletion rule; the closed `ENROLLMENT` gate.
+- **Precondition checked, not assumed:** `0165` is on this branch only (not on `main`), no workflow applies migrations to
+  a hosted database, and the hosted environment was last recorded at `0074` (`NOT_DEPLOYED`); so `0165` was corrected
+  in place in the same pull request rather than by a forward migration.
 
 ## 5. Verification (local: real PostgreSQL 17.10, live PostgREST v12.2.9)
 
 | Proof | Result |
 |---|---|
-| `verify-migration-0165` (new) | 30 / 30 scenarios: A01–A05 posture; B01–B18 behaviour; C01–C07 races on two real connections |
-| `prove-0165` on live PostgREST v12.2.9 (new) | pass, twice (the cleanup leaves nothing): anon / service_role refused; closed gate `NOT_AVAILABLE_NOW`; ENROLLED, replay, `COMMAND_CONFLICT`; a 40001 and a PT409 underneath each answered once as `CHANGED`; the six refused |
+| `verify-migration-0165` (new) | 33 / 33 scenarios: A01–A05 posture; B01–B20 behaviour (B19 / B20: D-CP1-1); C01–C08 races on two real connections (C08: D-CP1-1) |
+| `prove-0165` on live PostgREST v12.2.9 (new) | pass (the cleanup leaves nothing): anon / service_role refused; closed gate `NOT_AVAILABLE_NOW`; ENROLLED, replay, `COMMAND_CONFLICT`; a 40001 and a PT409 underneath each answered once as `CHANGED`; the six refused; the three no-role cores refused to every token |
 | `prove-0149` on the same PostgREST | pass |
 | Every database verifier of the repository on a fresh clone each | 162 / 165 pass; the 3 others are local-environment only (§5.1) |
 | API: `tsc --noEmit`, Jest | pass; 258 suites, 6048 tests |
 | Root static contracts (`node --test tests/*.test.mjs`) | 1446 / 1446 |
 | Database static tests (`test:database`) | 1310 / 1310 |
 | `test:task-closure-governance-contract` | 24 / 24 |
-| `test:s6-07-governed-enrollment-contract` (new) | 3 / 3; every one of its 12 planted defects is caught |
+| `test:s6-07-governed-enrollment-contract` (new) | 3 / 3; every one of its 16 planted defects is caught |
 
 The three races that matter most for Q8(A) and the deletion rule: an act waiting behind an in-flight deletion request
 answers `DELETION_PENDING` and writes nothing; an act waiting behind a draft edit answers `CHANGED` (nothing stale is
@@ -143,11 +169,35 @@ All 158 `verify-migration-*` and 7 other database verifiers ran, each on its own
 
 The re-anchored verifiers `0149` (34 / 34), `0150` (28 / 28) and `0156` (31 / 31) pass, and so does every verifier that reads confirmed facts through the shared fixture (`0110` … `0164`).
 
+### 5.2 The D-CP1-1 correction (focused runs only)
+
+The correction changes one function body and adds one no-role core, so only what reads them was run again, each on a fresh
+clone of a database migrated 0001 → 0165 (corrected): `verify-migration-0165` 33 / 33, `0149` 34 / 34, `0150` 28 / 28,
+`0156` 31 / 31, `0108` 26 / 26, `0109` 39 / 39; `prove-0165` on live PostgREST v12.2.9; and the eight static contracts
+that read `0165` (`s6-07`, `sec-match-00`, `acct-del-01`, `s6-02`, `s6-04`, `s6-05`, `s6-06`, conversation-focus) 68 / 68.
+The API is unchanged (`INCOMPLETE` stays an outcome for an unreviewed draft, an unconfirmed fact or a refused value).
+What the new proofs show:
+
+- **B19:** a reviewed draft with neither field is `ENROLLED` and `matchable`, with a real version of that human (the
+  derived id, no prior) and zero field rows; the act binds it with the three exact consent versions; the zero-field
+  authority (its own `GRANTED` event) binds that exact version; a retry writes nothing and an old id with other content is
+  `COMMAND_CONFLICT`; `0109` still refuses an empty set; the core's replay, `23505` (other prior, other owner),
+  `40001` and `22023` refusals write nothing; `anon`, `authenticated` and `service_role` are refused `42501`; revoking
+  the authority or the grant leaves the others, and a re-granted authority binds the same empty version; a deleting account
+  is `DELETION_PENDING` and a stale or unreviewed empty draft `CHANGED` / `INCOMPLETE`, all with nothing written.
+- **B20:** one field goes through the frozen command (exactly its row); empty → one field → two fields → empty is four
+  versions along one chain, each move of the authority's basis needing a fresh disclosure consent (`CONSENT_OUTDATED`
+  without it, nothing written), the authority always bound to the current version and the superseded one `REVOKED`; the
+  retry of the last correction writes nothing; empty → empty is `NO_CHANGE`; participation, the grant and the requirements
+  never move.
+- **C08:** an empty draft edited in flight: the act waits and answers `CHANGED`, with no row at all (not even the lock
+  row); two enrollments at once: one `ENROLLED`, the other `ALREADY_ENROLLED`, one empty version, one authority.
+
 ## 6. Contracts and verifiers re-anchored (only where `0165` changes their truth)
 
 | File | What moves, and why |
 |---|---|
-| `database/verify-migration-0149.mjs` | `NO_BACKDOOR`: the ONE named exception (exact signature, `authenticated` only); the "no function body names a suspended boundary" rule admits exactly it, and it names exactly five of the six; `DELETION_BASELINE_UNCHANGED`: the three evidence relations cascade by design (registered `ACCOUNT_CASCADE`), every other reference stays `RESTRICT`; probes f14 – f17 refuse a second wrapper, a `service_role` grant, a wrapper of the facts writer and a grant of either core |
+| `database/verify-migration-0149.mjs` | `NO_BACKDOOR`: the ONE named exception (exact signature, `authenticated` only); the "no function body names a suspended boundary" rule admits exactly it, and it names exactly five of the six; `DELETION_BASELINE_UNCHANGED`: the three evidence relations cascade by design (registered `ACCOUNT_CASCADE`), every other reference stays `RESTRICT`; probes f14 – f17 refuse a second wrapper, a `service_role` grant, a wrapper of the facts writer and a grant of any core (f17 probes all three since D-CP1-1) |
 | `database/verify-migration-0150.mjs` | the boundary joins the `ABSORBED` entry points (it absorbs the cores' `40001`, naming `PT409`) |
 | `database/verify-migration-0156.mjs` | A02: exactly the boundary wraps the writer (CW2-06B-02 §3 named it the one intended caller); its own writer helper gives each fixture version a fixture promotion record |
 | `database/matching-proposal-verifier-support.mjs` | `recordFacts` gives each fixture version a fixture promotion record (every verifier from `0110` on reads facts through the one reader) |
@@ -174,4 +224,6 @@ unchanged.
 
 ## 9. Final status (CP1)
 
-CP1 is delivered on this branch in one pull request (see the pull request for the head and its CI). The Product Owner reviews CP1 next; CP2 starts only after that approval. No merge without «ادمج».
+CP1 is delivered on this branch in one pull request (see the pull request for the head and its CI), with the D-CP1-1 = B
+correction applied (§4, §5.2); no Product decision of CP1 is pending. The Product Owner reviews CP1 next; CP2 starts only
+after that approval. No merge without «ادمج».

@@ -634,4 +634,6 @@ stay as written.
   real-PostgreSQL verifier, live PostgREST proof, static contract and two owner-only API routes ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md)).
 - **Still closed:** the `ENROLLMENT` gate (no row) and the consent texts (none; Copy Gate in CP3), so nothing can be
   enrolled in production; the six commands for every application role; CW2-08 and every launch gate.
+- **Decided (CP1 correction):** D-CP1-1 = B — no optional field is required to enroll; a reviewed draft with neither
+  optional profile field enrolls with a real profile version that has no field rows (CA-D-CP1-1-impl), applied inside CP1.
 - **Next:** the Product Owner's CP1 review. CP2 (the forward dispatcher) only after its approval; no merge without «ادمج».

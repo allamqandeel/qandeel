@@ -1537,7 +1537,8 @@ controlled amendment, not a reopening of Product scope.
 of PR #345, ACCT-DEL-01); awaiting the Product Owner's CP1 review. Not merged, not deployed. Record:
 [S6-07 implementation record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved these
 amendments with the S6-07 CP0 design (2026-10-18): **CA-01-impl** (Q1), **CA-R5-impl**, **CA-08-impl** (Q3-A),
-**CA-10-impl** (Q4′) and **CA-GATE** (Q2(b)). CP2 … CP4 of the same task add the forward dispatcher (CA-SYS-02),
+**CA-10-impl** (Q4′) and **CA-GATE** (Q2(b)); and, as a CP1 correction, **CA-D-CP1-1-impl** under the Product Owner's
+decision D-CP1-1 = B (2026-10-18). CP2 … CP4 of the same task add the forward dispatcher (CA-SYS-02),
 Activity / Direct Entry and the export (CA-EXP); each will extend this section when it lands.
 
 SEC-MATCH-00 (§47) closed the six widening `I-07A` commands and said a reviewed Stage 6 launch path must amend it
@@ -1568,6 +1569,14 @@ surface in exactly these places, and nowhere else:
   profile fields (CW2-06B-06). Each repeats the frozen `0109` lock, replay, compare-and-swap and history rules exactly,
   with the owner passed by its only caller. `0109` itself is byte-identical and still refuses an empty requirement set and
   an empty approved-field set.
+- **The empty Introduction Profile version (CA-D-CP1-1-impl; D-CP1-1 = B, 2026-10-18).** No optional field may be required
+  to enroll. A third core executable by no role, `set_empty_introduction_profile_core_v1`, writes a real immutable profile
+  version in the owner's chain with NO field rows (the absence of fields, never a sentinel), under the same frozen
+  `set_introduction_profile_v1` lock, replay, compare-and-swap and history law. The boundary is its only caller and
+  chooses by the reviewed draft: one or two fields → the frozen `set_introduction_profile_v1`, unchanged (it still refuses
+  an empty set); neither → the core. Empty ↔ fields corrections are new versions along the same chain; the zero-field
+  authority binds an empty version exactly as any other. `matchable` and the eligibility rules are unchanged (`matchable`
+  already needs only a current version).
 - **Three independent consents, each bound to its exact version (Q8(A)):** ENROLL is one transaction or nothing and
   creates three distinct consent events (participation, the Matching Context Grant, the disclosure authority); every act
   records the exact consent-text version of each consent it exercised. Each is revoked on its own through the retained
@@ -1582,10 +1591,10 @@ What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156
 (`NOT_EVALUATED`); CW2-08; every other `I-07` body. A refused act writes nothing, not even the lock row; the cores' `40001`
 is absorbed into one bounded `CHANGED` and never reaches PostgREST.
 
-**Verification.** `verify-migration-0165.mjs` (real PostgreSQL, real `SET ROLE`, seven races on two real connections) and
+**Verification.** `verify-migration-0165.mjs` (real PostgreSQL, real `SET ROLE`, eight races on two real connections) and
 `prove-0165-governed-enrollment-postgrest.mjs` (live PostgREST); re-anchored, with reasons in place:
 `verify-migration-0149.mjs` (`NO_BACKDOOR` names the exception, the "names a suspended boundary" rule admits exactly it,
-the evidence relations' cascade, probes f14 – f17), `verify-migration-0150.mjs` (the boundary is an absorber),
+the evidence relations' cascade, probes f14 – f17, f17 over all three cores), `verify-migration-0150.mjs` (the boundary is an absorber),
 `verify-migration-0156.mjs` (A02: exactly the boundary wraps the writer; its fixtures carry fixture promotion records), the
 shared proposal-verifier fixture (likewise) and the SEC-MATCH-00 static contract (amended as its header required).
 `QAN-BL-MATCH-01` stays open until S6-07's closing change. `I-07` and its slices remain **CLOSED / FROZEN**; this is a
