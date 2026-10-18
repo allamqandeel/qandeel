@@ -108,10 +108,13 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
   useEffect(() => {
     introductions?.refresh();
   }, [introductions]);
-  // S6-07: a Direct Entry names the exact World; nothing else is chosen in its place.
-  useEffect(() => {
-    if (introductionEntry != null && introductions !== undefined) setIntroduction(introductionEntry.worldId);
-  }, [introductionEntry, introductions]);
+  // S6-07: a Direct Entry names the exact World; nothing else is chosen in its place. Each new entry is taken ONCE, while
+  // rendering (React's "adjusting state when a prop changes"), and only once the Introduction surface exists to open it.
+  const [takenEntry, setTakenEntry] = useState<SharedWorldAreaProps['introductionEntry']>(null);
+  if (introductionEntry != null && introductions !== undefined && introductionEntry !== takenEntry) {
+    setTakenEntry(introductionEntry);
+    setIntroduction(introductionEntry.worldId);
+  }
 
   // Local Back: from a World to the area's root. At the root nothing is registered — Back is local-only and never
   // silently returns to the Personal world (I-08A4 §4).

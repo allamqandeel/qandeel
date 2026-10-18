@@ -154,7 +154,9 @@ function mobileViolations(w) {
   const entry = w.composition.slice(w.composition.indexOf("if (destination.kind === 'INTRODUCTIONS') {"), w.composition.indexOf("setArea('MY_WORLD');\n    if (destination.kind === 'PERSONAL_CONVERSATION')"));
   if (!/setIntroductionEntry\(\{ worldId: destination\.target\.worldId, n: introductionEntries\.current \}\);\n\s+setArea\('SHARED_WORLD'\);/u.test(entry)
       || !/setProposalsShown\(true\);/u.test(entry)) out.push('the device opens the exact target through the existing Introductions surfaces');
-  if (!/if \(introductionEntry != null && introductions !== undefined\) setIntroduction\(introductionEntry\.worldId\);/u.test(w.sharedArea)) out.push('the Shared area opens exactly the named Introduction World');
+  if (!/if \(introductionEntry != null && introductions !== undefined && introductionEntry !== takenEntry\) \{\n\s+setTakenEntry\(introductionEntry\);\n\s+setIntroduction\(introductionEntry\.worldId\);\n\s+\}/u.test(w.sharedArea)) out.push('the Shared area opens exactly the named Introduction World, once per entry');
+  // CP3 R1: the entry is taken while rendering, never by a synchronous setState inside an effect (react-hooks/set-state-in-effect).
+  if (/useEffect\(\(\) => \{\n\s+if \(introductionEntry/u.test(w.sharedArea)) out.push('the Direct Entry is not taken by a setState inside an effect');
   return out;
 }
 
