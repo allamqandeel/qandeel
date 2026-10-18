@@ -24,8 +24,10 @@
 //                              migration 0159) - the ONE named acceptance boundary over the frozen 0114 Mutual Match core,
 //                              authenticated-only, through the pair lock; and - S6-06 (Task Contract v1.0, CP1, migration
 //                              0163) - the TWO named continuation boundaries over the frozen 0116 SUCCESS commit and the
-//                              frozen 0117 reactivation core, authenticated-only; nothing wraps the six; no relation exposes
-//                              Matching state
+//                              frozen 0117 reactivation core, authenticated-only; and - S6-07 (CP1, CA-01-impl, migration
+//                              0165) - the ONE named governed enrollment boundary, authenticated-only, the only function
+//                              besides the six themselves that names one of them; nothing else wraps the six; no relation
+//                              exposes Matching state
 //   DELETION_BASELINE_UNCHANGED  every Matching reference to an account is still RESTRICT; an existing footprint still
 //                              holds one, so 0149 erases nothing and QAN-BL-ACCT-01 stays open
 //   HOSTED_DEFAULT_PRIVILEGES  re-applying 0149 over the hosted Supabase posture (every client role granted, plus an
@@ -45,6 +47,9 @@
 //          wrapper around the SUCCESS commit and a continuation boundary granted to service_role are both refused
 //   f12..f13 ACCT-DEL-01 (P-4, migration 0164): the one service_role account erasure is a named SYSTEM exception, not a
 //          rule - a second service_role wrapper around its coordinator and the entry granted to a client are both refused
+//   f14..f17 S6-07 (CP1, migration 0165): the one enrollment boundary is a named exception, not a rule - a second
+//          client-executable wrapper around it, the boundary granted to service_role, a client-executable wrapper around the
+//          0156 facts writer, and either internal enrollment core granted to a client are all refused
 //
 // Behaviour that needs Matching state from BEFORE 0149 is reached the only honest way on a database where 0149 is
 // already applied: as the owner with the exact human's claims, inside a transaction that rolls back. Every probe of a
@@ -105,6 +110,19 @@ const S6_06_INTRODUCTION_CONTINUATION = [
 // second service_role wrapper and this entry granted to a client role. The rule "no service_role Matching writer" stays a
 // rule for every other function.
 const ACCT_DEL_01_ACCOUNT_ERASURE = 'public.server_erase_account_v1(uuid)';
+// RE-ANCHORED by S6-07 (CP1, Controlled Amendment CA-01-impl approved by the Product Owner on 2026-10-18, migration 0165):
+// the ONE authenticated governed enrollment boundary. It calls five of the six suspended commands with their frozen bodies
+// (the sixth, the field-bearing disclosure grant, is replaced by the zero-field core of CA-08-impl), the 0156 facts writer
+// and the two internal cores, under a closed-by-default operator gate, the human from auth.uid(). It is admitted by name
+// and exact signature to the census AND to the "no function body names a suspended boundary" rule; the six stay
+// executable by no application role, and probes f14 .. f17 refuse every other shape.
+const S6_07_GOVERNED_ENROLLMENT = 'public.enroll_my_matching_setup_v1(uuid, text, bigint, text, text, text)';
+// RE-ANCHORED by S6-07 (CP1, migration 0165): the enrollment evidence relations reference the account ON DELETE CASCADE by
+// design - registered ACCOUNT_CASCADE in the ACCT-DEL-01 coverage registry, so the governed erasure removes them with the
+// account row. The RESTRICT baseline below is the I-07 family's and is unchanged for every other relation.
+const S6_07_ENROLLMENT_EVIDENCE = [
+  'matching_enrollment_private.command_ledger', 'matching_enrollment_private.enrollment_acts',
+  'matching_enrollment_private.fact_promotions'];
 
 /** The 0149 body with its own transaction control removed, so it can be re-applied inside a scenario that rolls back. */
 function migrationBody() {
@@ -204,8 +222,8 @@ async function verifyNoBackdoor() {
   const retainedWriters = SEC_MATCH_00_RETAINED.filter((fn) => fn !== MFN.SETUP).map(nameOf).sort();
   assert.deepEqual(executable.map((f) => f.proname).sort(),
     [...retainedWriters, nameOf(S6_02_INTRODUCTION_END), ...S6_04_PROPOSAL_DECISIONS.map(nameOf), nameOf(S6_05_MUTUAL_MATCH_ACCEPT),
-      ...S6_06_INTRODUCTION_CONTINUATION.map(nameOf)].sort(),
-    'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands, the one S6-02 END boundary, the three S6-04 decision boundaries, the one S6-05 acceptance and the two S6-06 continuation boundaries');
+      ...S6_06_INTRODUCTION_CONTINUATION.map(nameOf), nameOf(S6_07_GOVERNED_ENROLLMENT)].sort(),
+    'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands, the one S6-02 END boundary, the three S6-04 decision boundaries, the one S6-05 acceptance, the two S6-06 continuation boundaries and the one S6-07 enrollment boundary');
   // RE-ANCHORED by ACCT-DEL-01: the one system exception, exactly - one function, one overload, service_role only.
   assert.equal(erasureEntry.length, 1, `NO_BACKDOOR the ACCT-DEL-01 exception ${ACCT_DEL_01_ACCOUNT_ERASURE} exists once and reaches a Matching write`);
   const [erasure] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
@@ -219,21 +237,30 @@ async function verifyNoBackdoor() {
   [S6_02_INTRODUCTION_END, nameOf(S6_02_INTRODUCTION_END)]);
   assert.deepEqual(end, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-02 exception is exactly ${S6_02_INTRODUCTION_END}, with no overload`);
   assert.equal(await rt.canExecute('authenticated', S6_02_INTRODUCTION_END), true, 'NO_BACKDOOR authenticated executes the one END boundary');
-  for (const decision of [...S6_04_PROPOSAL_DECISIONS, S6_05_MUTUAL_MATCH_ACCEPT, ...S6_06_INTRODUCTION_CONTINUATION]) {
+  for (const decision of [...S6_04_PROPOSAL_DECISIONS, S6_05_MUTUAL_MATCH_ACCEPT, ...S6_06_INTRODUCTION_CONTINUATION,
+    S6_07_GOVERNED_ENROLLMENT]) {
     const [one] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
     [decision, nameOf(decision)]);
-    assert.deepEqual(one, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-04 / S6-05 / S6-06 exception is exactly ${decision}, with no overload`);
+    assert.deepEqual(one, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-04 / S6-05 / S6-06 / S6-07 exception is exactly ${decision}, with no overload`);
     assert.equal(await rt.canExecute('authenticated', decision), true, `NO_BACKDOOR authenticated executes ${decision}`);
   }
   for (const f of executable) {
     assert.deepEqual([f.public, f.anon, f.service_role], [false, false, false], `NO_BACKDOOR ${f.proname} is authenticated-only`);
   }
   // Nothing outside the eleven names a suspended boundary at all: no wrapper, no dynamic hand-off.
+  // RE-ANCHORED by S6-07 (CA-01-impl): except the ONE governed enrollment boundary, by exact name, admitted above.
   for (const fn of SEC_MATCH_00_SUSPENDED) {
-    const wrappers = functions.filter((f) => f.proname !== nameOf(fn) && new RegExp(String.raw`\b${nameOf(fn)}\b`, 'u').test(f.prosrc));
+    const wrappers = functions.filter((f) => f.proname !== nameOf(fn) && f.proname !== nameOf(S6_07_GOVERNED_ENROLLMENT)
+      && new RegExp(String.raw`\b${nameOf(fn)}\b`, 'u').test(f.prosrc));
     assert.deepEqual(wrappers.map((f) => f.proname), [], `NO_BACKDOOR no function body names ${nameOf(fn)}`);
   }
+  const enrollment = functions.filter((f) => f.proname === nameOf(S6_07_GOVERNED_ENROLLMENT));
+  assert.equal(enrollment.length, 1, 'NO_BACKDOOR the S6-07 enrollment boundary exists once');
+  assert.deepEqual(SEC_MATCH_00_SUSPENDED.filter((fn) => new RegExp(String.raw`\b${nameOf(fn)}\b`, 'u').test(enrollment[0].prosrc)).map(nameOf).sort(),
+    ['activate_matching_participation_v1', 'grant_matching_context_v1', 'resume_matching_participation_v1',
+      'set_introduction_profile_v1', 'set_matching_requirements_v1'],
+    'NO_BACKDOOR the enrollment boundary names exactly the five suspended commands it calls - never the field-bearing disclosure grant');
   // No relation over Matching setup state - the fourteen tables or any view built on them - grants a client anything.
   const relations = await rows(
     `SELECT DISTINCT r.ev_class::regclass::text AS relation FROM pg_depend d JOIN pg_rewrite r ON r.oid = d.objid
@@ -274,8 +301,17 @@ async function verifyCatalog(report) {
     assert.ok(keys.length > 0, 'the Matching namespace still references the account');
     for (const key of keys) {
       assert.equal(key.width, 1, `${key.relation}.${key.column_name} is a single-column reference`);
+      if (S6_07_ENROLLMENT_EVIDENCE.includes(key.relation)) {
+        assert.equal(key.confdeltype, 'c', `${key.relation}.${key.column_name} cascades with the account (S6-07 evidence, ACCOUNT_CASCADE)`);
+        continue;
+      }
       assert.equal(key.confdeltype, 'r', `${key.relation}.${key.column_name} still RESTRICTs account deletion: 0149 changes no erasure semantics`);
     }
+    assert.deepEqual(keys.filter((key) => S6_07_ENROLLMENT_EVIDENCE.includes(key.relation)).map((key) => key.relation).sort(),
+      S6_07_ENROLLMENT_EVIDENCE, 'the three S6-07 evidence relations are exactly the cascading ones');
+    const [{ registered }] = await rows(`SELECT count(*)::int AS registered FROM account_erasure_private.coverage_registry
+       WHERE relation = ANY($1::text[]) AND coverage = 'ACCOUNT_CASCADE'`, [S6_07_ENROLLMENT_EVIDENCE]);
+    assert.equal(registered, S6_07_ENROLLMENT_EVIDENCE.length, 'each is registered ACCOUNT_CASCADE for the governed erasure');
   });
 }
 
@@ -651,6 +687,53 @@ async function verifyForwardSafety(report, humans) {
 
     await report.probe('f13 the census refuses the account erasure granted to a client role', {
       pristine: `REVOKE EXECUTE ON FUNCTION ${ACCT_DEL_01_ACCOUNT_ERASURE} FROM authenticated`,
+      mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM authenticated', ' TO authenticated'),
+      marker: 'TO authenticated',
+      apply: (text) => q(text),
+      reject: () => verifyNoBackdoor(),
+    });
+
+    // RE-ANCHORED by S6-07 (CP1): the one enrollment boundary is a named exception, not a rule that any enrollment
+    // wrapper, any service_role enrollment path, any wrapper of the facts writer or any grant of its cores is fine.
+    await report.probe('f14 the census refuses a second client-executable wrapper around the enrollment boundary', {
+      pristine: `CREATE FUNCTION public.s6_07_probe_enrollment_wrapper_v1() RETURNS SETOF record
+                 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $probe$
+                   SELECT * FROM public.get_my_matching_setup_v1() $probe$`,
+      mutate: (text) => text.replace('SELECT * FROM public.get_my_matching_setup_v1()',
+        "SELECT * FROM public.enroll_my_matching_setup_v1(gen_random_uuid(), 'ENROLL', 1, 'P', 'C', 'D')"),
+      marker: 'enroll_my_matching_setup_v1',
+      apply: async (text) => {
+        await q(text);
+        await q('GRANT EXECUTE ON FUNCTION public.s6_07_probe_enrollment_wrapper_v1() TO authenticated');
+      },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f15 the census refuses the enrollment boundary granted beyond authenticated', {
+      pristine: `REVOKE EXECUTE ON FUNCTION ${S6_07_GOVERNED_ENROLLMENT} FROM service_role`,
+      mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM service_role', ' TO service_role'),
+      marker: 'TO service_role',
+      apply: (text) => q(text),
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f16 the census refuses a client-executable wrapper around the 0156 facts writer', {
+      pristine: `CREATE FUNCTION public.s6_07_probe_facts_wrapper_v1() RETURNS SETOF record
+                 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $probe$
+                   SELECT * FROM public.get_my_matching_setup_v1() $probe$`,
+      mutate: (text) => text.replace('SELECT * FROM public.get_my_matching_setup_v1()',
+        'SELECT * FROM public.record_matching_confirmed_facts_core_v1(gen_random_uuid(), gen_random_uuid(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)'),
+      marker: 'record_matching_confirmed_facts_core_v1',
+      apply: async (text) => {
+        await q(text);
+        await q('GRANT EXECUTE ON FUNCTION public.s6_07_probe_facts_wrapper_v1() TO authenticated');
+      },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f17 the census refuses an internal enrollment core granted to a client role', {
+      pristine: `REVOKE EXECUTE ON FUNCTION public.set_empty_matching_requirements_core_v1(uuid, uuid, uuid),
+                   public.grant_zero_field_pre_match_disclosure_authority_core_v1(uuid, uuid, uuid, uuid, uuid) FROM authenticated`,
       mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM authenticated', ' TO authenticated'),
       marker: 'TO authenticated',
       apply: (text) => q(text),

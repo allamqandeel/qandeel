@@ -132,6 +132,10 @@ const ABSORBED = [
   'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',
   'accept_my_matching_proposal_v1',
   'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',
+  // RE-ANCHORED by S6-07 CP1 (migration 0165): the ONE governed enrollment boundary reaches the frozen 0109 commands, the
+  // 0156 writer and its two internal cores, all of which answer a stale state with 40001; it absorbs every one into the
+  // bounded CHANGED answer, naming PT409 too, and raises neither itself.
+  'enroll_my_matching_setup_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1'];

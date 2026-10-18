@@ -138,14 +138,26 @@ const fact = (overrides = {}) => ({
   firstName: null, sex: null, birthYear: null, birthMonth: null, countryCode: null, regionCode: null,
   maritalStatus: null, ...overrides,
 });
-/** The writer, called directly as the owner of the database, with explicit arguments. */
-const write = (version, owner, expected, f, at = AT) => rows(`SELECT * FROM ${FN.WRITER.split('(')[0]}(
+/**
+ * The writer, called directly as the owner of the database, with explicit arguments.
+ *
+ * RE-ANCHORED by S6-07 CP1 (migration 0165, CW2-06B-02 §5): the canonical facts reader answers only for a version that
+ * carries a promotion record, which only the governed enrollment boundary writes in production. A version this helper
+ * writes gets a FIXTURE promotion record beside it - test data, exactly like the version - so the writer's own behaviour
+ * below is proven unchanged through the one reader. verify-migration-0165 proves a version without one is UNKNOWN.
+ */
+const write = async (version, owner, expected, f, at = AT) => {
+  const answer = await rows(`SELECT * FROM ${FN.WRITER.split('(')[0]}(
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`, [
-  version, owner, expected,
-  f.firstName ?? null, f.firstName == null ? null : at, f.sex ?? null, f.sex == null ? null : at,
-  f.birthYear ?? null, f.birthMonth ?? null, f.birthYear == null ? null : at,
-  f.countryCode ?? null, f.regionCode ?? null, f.countryCode == null ? null : at,
-  f.maritalStatus ?? null, f.maritalStatus == null ? null : at]);
+    version, owner, expected,
+    f.firstName ?? null, f.firstName == null ? null : at, f.sex ?? null, f.sex == null ? null : at,
+    f.birthYear ?? null, f.birthMonth ?? null, f.birthYear == null ? null : at,
+    f.countryCode ?? null, f.regionCode ?? null, f.countryCode == null ? null : at,
+    f.maritalStatus ?? null, f.maritalStatus == null ? null : at]);
+  await rows(`INSERT INTO matching_enrollment_private.fact_promotions (fact_version_id, user_id, enrollment_command_id, draft_version)
+              VALUES ($1, $2, $3, 1) ON CONFLICT (fact_version_id) DO NOTHING`, [version, owner, randomUUID()]);
+  return answer;
+};
 const ageOf = async (year, month, reference, min, max) =>
   (await rows('SELECT public.matching_structured_age_outcome_v1($1, $2, $3::date, $4, $5) AS o',
     [year, month, reference, min, max]))[0].o;
@@ -211,11 +223,19 @@ async function verifyPosture(report) {
       }
     }
     // NO WRAPPER: no function any application role can run reaches the writer.
+    // RE-ANCHORED by S6-07 CP1 (CA-R5-impl, migration 0165): CW2-06B-02 §3 named S6-07's reviewed, human-authorized
+    // enrollment as the writer's one intended caller. Exactly that ONE named boundary wraps it - authenticated only, the
+    // human from auth.uid(), every promoted version bound to its promotion record - and nothing else may (verify-0149 f16).
     const wrappers = await rows(`SELECT p.oid::regprocedure::text fn FROM pg_proc p
         JOIN pg_namespace n ON n.oid = p.pronamespace
        WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') AND p.prosrc LIKE '%record_matching_confirmed_facts_core_v1%'
          AND p.oid <> $1::regprocedure`, [FN.WRITER]);
-    assert.deepEqual(wrappers, [], 'A02 nothing wraps the internal writer in S6-03 (R5)');
+    assert.deepEqual(wrappers.map((w) => w.fn), ['enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)'],
+      'A02 exactly the one S6-07 enrollment boundary wraps the internal writer (CA-R5-impl)');
+    for (const role of ['public', 'anon', 'service_role']) {
+      assert.equal(await rt.canExecute(role, 'public.enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)'), false,
+        `A02 ${role} cannot run the one wrapper`);
+    }
   });
 
   await report.section('A03 nothing is installed, promoted or bound at rest', async () => {
