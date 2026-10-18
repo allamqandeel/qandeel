@@ -128,6 +128,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /introductions/worlds/:worldId/success/withdrawal': 'AUTHENTICATED',
   'GET /introductions/participation': 'AUTHENTICATED',
   'POST /introductions/participation/resume': 'AUTHENTICATED',
+  // S6-07 (CP1): the governed enrollment - the read, and the act that carries the human's three consents.
+  'GET /introductions/enrollment': 'AUTHENTICATED',
+  'POST /introductions/enrollment': 'SECURITY_SENSITIVE',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',
