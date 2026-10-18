@@ -9,13 +9,14 @@ CP1 correction decision D-CP1-1 = B (2026-10-18, «S6-07 — CP1 Correction: Emp
 CA-D-CP1-1-impl; and «S6-07 — CP1 CLOSED / Start CP2» (2026-10-18), under Q5′ and CA-SYS-02 (CA-SYS-02-impl, §10); and the Product Owner's
 CP2 correction «S6-07 — CP2 Targeted Correction: Account Deletion Guard» (2026-10-18, §10.9); and «S6-07 — CP2 CLOSED / Start
 CP3» (2026-10-18, §11); and «S6-07 — CP3 Copy Gate APPROVED / Resume Implementation» (2026-10-18, §11.5, §11.10); and the
-Product Owner's CP3 review correction (2026-10-18, §11.11); and «S6-07 — CP3 CLOSED / Start CP4» (2026-10-18, §12). No merge
+Product Owner's CP3 review correction (2026-10-18, §11.11); and «S6-07 — CP3 CLOSED / Start CP4» (2026-10-18, §12); and
+«S6-07 — CA-EXP′ APPROVED / Final Closure» (2026-10-18, §12.2.1). No merge
 or deployment without the Product Owner's explicit «ادمج».  
 **Status:** **S6-07 CLOSED / READY FOR THE PRODUCT OWNER'S REVIEW AND MERGE DECISION — CP1, CP2 AND CP3 CLOSED BY THE
 PRODUCT OWNER; CP4 (EXPORT MY DATA & FINAL INTEGRATION) DELIVERED, THE TASK'S CLOSING CHANGE (BG-08 / BG-09, §12.9) — NOT
 MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1, the D-CP1-1 correction (§4) included, on the green head
-`05cc2cbc`; CP2 (§10) on `ad1e4138`; CP3 (§11) on `3aaad0fd`. CP4 is §12; CA-EXP′ (§12.2) awaits the Product Owner's
-decision at this review.  
+`05cc2cbc`; CP2 (§10) on `ad1e4138`; CP3 (§11) on `3aaad0fd`. CP4 is §12; the Product Owner approved CA-EXP′ (§12.2.1) on
+2026-10-18; no Product decision is pending.  
 **Base:** `main` = merged PR #345 (ACCT-DEL-01) at `1861df43943a8695a761edec7aa42f5e18f018ec`, re-verified before the branch.  
 **Branch:** `s6/s6-07-activity-direct-entry-final-integration` (one pull request for the whole task: CP1 … CP4).  
 **Migrations:** `0165_matching_governed_enrollment_v1.sql` (CP1), `0166_matching_forward_dispatch_v1.sql` (CP2) and
@@ -900,7 +901,7 @@ no Stage 7.
 
 ### 12.2 How the approved design is implemented, and the three places it had to be completed
 
-1. **CA-EXP′ — one owner-only reader (for the Product Owner's decision).** CA-EXP said "no new SQL function, grant or
+1. **CA-EXP′ — one owner-only reader (APPROVED by the Product Owner, 2026-10-18).** CA-EXP said "no new SQL function, grant or
    table". The approved manifest (§10.3) joins each photo file to its Introduction by "the same instant the package prints
    for that Introduction". No existing reader gives a World's start instant to its human (the World list, the disclosure
    reader and the shares list carry none), and an order-only join breaks when an Introduction began after the package
@@ -909,6 +910,15 @@ no Stage 7.
    `authorize_my_introduction_media_v1` on the reader's token, and only then mapped to a key. No `0162` object changes.
    *Proposed:* CA-EXP′ = CA-EXP plus this reader. If the Product Owner declines it, the manifest would join by stage only
    (no Introduction instant), which is weaker; the rest stands.
+   *Decision (Product Owner, 2026-10-18, «S6-07 — CA-EXP′ APPROVED / Final Closure»):* **APPROVED**, limited to
+   `public.list_my_introduction_photo_renditions_v1()` and to its purpose — joining the photo renditions authorized for
+   export to the right Introduction World by the Introduction's start instant. Conditions: no widening of access or
+   disclosure; no change to any frozen core; every photo still re-authorized before it is downloaded; no further SQL
+   function under this exception. The delivered implementation meets each condition as delivered (the reader is
+   `authenticated` only and answers the caller's own renditions; no `0162` or other frozen object changed; every photo
+   of every request passes `authorize_my_introduction_media_v1` on the reader's token before its key is read —
+   `verify-0168` A03 / B06 / B09, `prove-0168`, the API specs; `0168` adds exactly this one function beside the builder's
+   re-statement — `verify-0168` A04). Nothing in the implementation changed with the decision.
 2. **Q7″ — the safe path beyond 32 MiB.** Addendum §10.8 answered a total above 32 MiB with `503 capacity_exceeded`. The
    binding condition forbids that: the guard now bounds ONE answer, and every file after the first that does not fit
    travels by the per-photo file route, one rendition per request, each re-authorized. A single photo larger than the
@@ -1038,11 +1048,11 @@ the matcher was changed to skip that one character and the re-run passed.
   `QAN-BL-LAUNCH-06` (the device-save proofs the approved addendum §10.5 named, beyond what the emulator proves).
 - **Checked and not admitted (BG-06):** the Shared / Public / Replay categories (`QAN-BL-PRIV-05`, unchanged); the
   conclusion producer (`QAN-BL-MATCH-03`); opening the `ENROLLMENT` gate, installing the consent texts on the hosted
-  environment and clearing CW2-08 (Stage 9 launch acts, owned there); CA-EXP′ (a Product Owner decision in this report,
-  not an obligation).
+  environment and clearing CW2-08 (Stage 9 launch acts, owned there); CA-EXP′ (a Product Owner decision, approved on
+  2026-10-18 — §12.2.1; it leaves no obligation).
 - The record's banner moves to its final state in this change (BG-09).
 
 ### 12.10 Status
 
 **S6-07 CLOSED / READY FOR THE PRODUCT OWNER'S REVIEW AND MERGE DECISION — NOT MERGED / NOT DEPLOYED** (2026-10-18).
-CA-EXP′ (§12.2.1) awaits the Product Owner's decision at that review.
+The Product Owner approved CA-EXP′ (§12.2.1) on 2026-10-18; no Product decision is pending.

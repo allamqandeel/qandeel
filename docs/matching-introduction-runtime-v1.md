@@ -1534,13 +1534,14 @@ controlled amendment, not a reopening of Product scope.
 ## 50. `S6-07` — controlled forward amendment for the governed Matching enrollment
 
 **Lifecycle:** CP1 implemented on `s6/s6-07-activity-direct-entry-final-integration` from `main` at `1861df43` (the merge
-of PR #345, ACCT-DEL-01) and closed by the Product Owner (2026-10-18); CP2 implemented on the same branch, awaiting the
-Product Owner's CP2 review. Not merged, not deployed. Record:
+of PR #345, ACCT-DEL-01) and closed by the Product Owner (2026-10-18); CP2 and CP3 implemented on the same branch and closed by the Product
+Owner; CP4 delivered, S6-07 ready for the Product Owner's review and merge decision. Not merged, not deployed. Record:
 [S6-07 implementation record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved these
 amendments with the S6-07 CP0 design (2026-10-18): **CA-01-impl** (Q1), **CA-R5-impl**, **CA-08-impl** (Q3-A),
 **CA-10-impl** (Q4′) and **CA-GATE** (Q2(b)); and, as a CP1 correction, **CA-D-CP1-1-impl** under the Product Owner's
 decision D-CP1-1 = B (2026-10-18); and, in CP2, **CA-SYS-02-impl** (Q5′, «S6-07 — CP1 CLOSED / Start CP2», 2026-10-18).
-CP3 and CP4 add Activity / Direct Entry and the export (CA-EXP); each will extend this section when it lands.
+CP3 (Activity / Direct Entry) and CP4 (the export, CA-EXP) are recorded in the S6-07 record (§11, §12); in CP4 the
+Product Owner approved **CA-EXP′** (2026-10-18, «S6-07 — CA-EXP′ APPROVED / Final Closure»), below.
 
 SEC-MATCH-00 (§47) closed the six widening `I-07A` commands and said a reviewed Stage 6 launch path must amend it
 (`QAN-BL-MATCH-01`). Forward migration `0165_matching_governed_enrollment_v1.sql` is that path. It amends the frozen
@@ -1604,6 +1605,13 @@ surface in exactly these places, and nowhere else:
   proposal is forwarded while either human's account deletion is pending (anything but `CANCELLED`): both account rows
   are held `FOR KEY SHARE` after the pair lock, so a deletion request (`0130`, `FOR UPDATE`) is seen or waits; the answer
   is `SKIPPED_DELETION_PENDING`, not terminal, and a still-valid proposal is evaluated again after a cancellation.
+- **The export's photo reader (CA-EXP′, CP4, migration `0168`; approved by the Product Owner on 2026-10-18).** ONE
+  owner-only STABLE reader, `public.list_my_introduction_photo_renditions_v1()`, `authenticated` only, answers the
+  caller's own photo renditions that still exist, each with its Introduction's start instant, so the export's photo
+  manifest joins each rendition to the right Introduction World. The approval is limited to this one function and its
+  purpose: no widening of access or disclosure, no change to a frozen core (no `0162` object changes), every photo still
+  re-authorized by `authorize_my_introduction_media_v1` on the reader's token before it is downloaded, and no further
+  SQL function under this exception (S6-07 record §12.2.1).
 
 What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156` and `0164`; the forward core, the
 materializer, the transition writer, the S6-04 decisions and the `0157` sweeper (CP2); every seam

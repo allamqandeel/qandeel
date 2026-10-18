@@ -3410,8 +3410,8 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   (Q7′ / Q7″): every derived rendition the reader may still download, blurred and clear, each re-authorized on the
   reader's own token; the 32 MiB guard bounds one answer and never the export. Properties 1 – 7 are proven: the
   two-human negative tests (verify-0168 B03, the journey, the wire proof X03), CW2-06 §53 (B04, J03), owner deletion (B05),
-  the category no longer listed. The one addition to CA-EXP - an owner-only photo reader (CA-EXP′) - awaits the Product
-  Owner's decision at the review. Residues admitted: `QAN-BL-PROD-10`, `QAN-BL-LAUNCH-06`. The Shared, Public and Replay
+  the category no longer listed. The one addition to CA-EXP - an owner-only photo reader (CA-EXP′) - was approved by the
+  Product Owner on 2026-10-18, limited to that one reader. Residues admitted: `QAN-BL-PROD-10`, `QAN-BL-LAUNCH-06`. The Shared, Public and Replay
   categories stay with `QAN-BL-PRIV-05` ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §12).
 - **Status:** `CLOSED — TOMBSTONE`
 
@@ -4328,8 +4328,8 @@ as the record of the register before it.
   Both IDs were checked against every earlier ID and the history of every ref; neither had been used.
 - **Checked and not admitted (BG-06):** the Shared / Public / Replay export categories (`QAN-BL-PRIV-05`, unchanged); the
   conclusion producer (`QAN-BL-MATCH-03`, unchanged); opening the `ENROLLMENT` gate, installing the approved consent
-  texts on the hosted environment and clearing CW2-08 (Stage 9 launch acts under CW2-08 and LS-02); CA-EXP′ (a decision
-  for the Product Owner at the review, not an obligation).
+  texts on the hosted environment and clearing CW2-08 (Stage 9 launch acts under CW2-08 and LS-02); CA-EXP′ (a Product
+  Owner decision, approved on 2026-10-18; it leaves no obligation).
 - **BG-05:** S6-07 owns no open item from its merge. `HOSTED-DEPLOY-01` owns `QAN-BL-PROD-06`, `QAN-BL-PROD-08`,
   `QAN-BL-PROD-09` and `QAN-BL-PROD-10`; Stage 9 owns `QAN-BL-LAUNCH-04`, `QAN-BL-LAUNCH-05` and `QAN-BL-LAUNCH-06`.
 - **Untouched:** every other item, owner, severity and status, including `QAN-BL-ACCT-01`, `QAN-BL-ACCT-02`,

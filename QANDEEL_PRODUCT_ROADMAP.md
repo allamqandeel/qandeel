@@ -660,7 +660,7 @@ stay as written.
   bundle with every photo the reader may download (the 32 MiB guard bounding one answer, never the export), the device
   folder save, and the final integration journey on the human boundaries from enrollment to export
   ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §12). S6-07 is closed and ready for the Product
-  Owner's review and merge decision; CA-EXP′ awaits that decision.
+  Owner's review and merge decision; the Product Owner approved CA-EXP′ on 2026-10-18.
 - **Still closed:** the `ENROLLMENT` gate and every launch gate, CW2-08 (`NOT_EVALUATED`), the hosted environment (no
   consent texts installed, nothing deployed). Stage 6 is not launch-ready.
 - **Next:** the Product Owner's review of S6-07; no merge without «ادمج»; Stage 7 is not started.
