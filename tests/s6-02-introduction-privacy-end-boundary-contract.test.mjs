@@ -166,7 +166,10 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
   // S6-04 (2026-10-15) appends its three named decision boundaries after the END exception, and S6-05 (2026-10-16,
   // migration 0159) its one acceptance boundary after them; the END exception itself is unchanged and still named
   // exactly once in the census. S6-06 (2026-10-16, migration 0163) appends its two continuation boundaries after them.
-  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions, the one S6-05 acceptance and the two S6-06 continuation boundaries');
+  // RE-ANCHORED by S6-07 CP1 (2026-10-18, migration 0165, Controlled Amendment CA-01-impl): the ONE governed enrollment
+  // boundary is appended after the S6-06 continuation boundaries in the 0149 census and after their absorbers in the 0150
+  // ABSORBED list; everything pinned before it is unchanged.
+  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\), nameOf\(S6_07_GOVERNED_ENROLLMENT\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions, the one S6-05 acceptance, the two S6-06 continuation boundaries and the one S6-07 enrollment boundary');
   assert.equal((verifier.match(/S6_02_INTRODUCTION_END/gu) ?? []).length, 7, 'the exception is named, not generalized');
   for (const probe of ['f4 the census refuses a second client-executable wrapper around the END core',
     'f5 the census refuses the END boundary granted beyond authenticated']) assert.ok(verifier.includes(probe), probe);
@@ -192,7 +195,8 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   assert.match(read('apps/api/src/http-security/route-rate-limit.census.ts'), /'POST \/introductions\/worlds\/:worldId\/end': 'AUTHENTICATED'/u);
   // S6-04 (2026-10-15) appends its own proposal module, and S6-05 (2026-10-16, CP3) its Introduction World module after
   // it, and S6-06 (2026-10-16, CP1) its two modules after that; the S6-02 module stays composed here, exactly once.
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule\]/u);
+  // RE-ANCHORED by S6-07 CP1 (2026-10-18): the governed enrollment module is composed after the S6-06 modules.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
     'integration/__validation__/s605-proof-introduction-world.ts'];

@@ -124,12 +124,15 @@ test('6 — the named exceptions: 0149 NO_BACKDOOR, 0150 ABSORBED and the 0112 a
   const nb = read('database/verify-migration-0149.mjs');
   assert.match(nb, /const S6_05_MUTUAL_MATCH_ACCEPT = 'public\.accept_my_matching_proposal_v1\(uuid, uuid, uuid\)';/u);
   // RE-ANCHORED by S6-06 (2026-10-16, migration 0163): its two continuation boundaries follow the acceptance.
-  assert.match(nb, /nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\)\]\.sort\(\)/u);
+  // RE-ANCHORED by S6-07 CP1 (2026-10-18, migration 0165, Controlled Amendment CA-01-impl): the ONE governed enrollment
+  // boundary is appended after the S6-06 continuation boundaries in the 0149 census and after their absorbers in the 0150
+  // ABSORBED list; everything pinned before it is unchanged.
+  assert.match(nb, /nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\), nameOf\(S6_07_GOVERNED_ENROLLMENT\)\]\.sort\(\)/u);
   assert.equal((nb.match(/S6_05_MUTUAL_MATCH_ACCEPT/gu) ?? []).length, 4, 'the exception is named, not generalized');
   for (const probe of ['f8 the census refuses a second client-executable wrapper around the Mutual Match core',
     'f9 the census refuses the S6-05 acceptance boundary granted beyond authenticated']) assert.ok(nb.includes(probe), probe);
   // RE-ANCHORED by S6-06 (2026-10-16, migration 0163): its three absorbers follow the acceptance.
-  assert.match(read('database/verify-migration-0150.mjs'), /'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n\];/u);
+  assert.match(read('database/verify-migration-0150.mjs'), /'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n\];/u);
   assert.match(read('database/verify-migration-0112.mjs'), /\['accept_my_matching_proposal_v1', I07C_MATCH_PRODUCER\]\.sort\(\)/u);
   const v0158 = read('database/verify-migration-0158.mjs');
   assert.match(v0158, /actions: \['ACCEPT', 'DECLINE'\], view: secondView/u, 'the S6-04 pin is re-anchored to the offered acceptance');

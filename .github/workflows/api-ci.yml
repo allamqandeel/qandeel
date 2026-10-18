@@ -242,6 +242,7 @@ jobs:
       - {name: "Verify S6-06 Introduction sharing, photos and continuation static contract (shells over the frozen cores, private object store, erasure from database truth, no service_role Matching path, pinned rclone)", run: npm run test:s6-06-introduction-disclosure-contract}
       - {name: "Verify S6-06 mobile sharing experience static contract (approved copy word for word, one strict client of the CP1 routes, renditions from memory only with no image cache, picker copies deleted, no camera / microphone / storage permission, V-1 kept)", run: npm run test:s6-06-introduction-mobile-contract}
       - {name: "Verify ACCT-DEL-01 governed account erasure static contract (0130 untouched, twenty DELETE-only guard prefixes, the 0130 call inside one subtransaction, one service_role entry, RESTRICT kept, the pass on the governed erasure)", run: npm run test:acct-del-01-account-erasure-contract}
+      - {name: "Verify S6-07 governed enrollment static contract (one named authenticated boundary over the frozen commands, the six never reopened, no gate row or consent text, the evidence precondition, the census exceptions, two owner-only routes)", run: npm run test:s6-07-governed-enrollment-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1162,6 +1163,13 @@ jobs:
       # coverage census with a planted relation; eight races on two real connections, none deadlocking.
       - name: Verify ACCT-DEL-01 account erasure across Matching / Introductions against real PostgreSQL
         run: npm run verify:account-deletion-matching-introductions:integration
+      # S6-07 (CP1): migration 0165 - the ONE governed enrollment boundary over the frozen 0109 commands: closed by default
+      # (no gate row, no consent text), the reviewed draft promoted with its promotion record, three consent events each with
+      # its exact version, the zero-item requirement version and the zero-field authority, every refusal writing nothing,
+      # the deletion refusal, idempotency, correction / resume / reconfirmation, 40001 / PT409 absorbed, the governed erasure,
+      # and seven races on two real connections.
+      - name: Verify S6-07 governed Matching enrollment against real PostgreSQL
+        run: npm run verify:matching-governed-enrollment:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1271,6 +1279,9 @@ jobs:
             # S6-06 (CP1): SUCCESS on the wire with the compiled continuation service - a failed system attempt leaves both
             # approvals, a closed gate writes nothing, the next read completes once (condition 3); reactivation gated then explicit.
             POSTGREST_VERSION="$version" npm run --silent prove:introduction-success:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # S6-07 (CP1): the governed enrollment on the wire - anon and service_role refused, the closed gate answered at once,
+            # ENROLLED / replay / reused id with fixture texts, and a 40001 and a PT409 underneath answered ONCE as CHANGED on every line.
+            POSTGREST_VERSION="$version" npm run --silent prove:governed-enrollment:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

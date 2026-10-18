@@ -126,13 +126,16 @@ test('5 — the named exceptions: 0149 NO_BACKDOOR admits exactly the three deci
   assert.match(nb, /const S6_04_PROPOSAL_DECISIONS = \[\n  'public\.approve_my_matching_proposal_forward_v1\(uuid, uuid, uuid\)',\n  'public\.decline_my_matching_proposal_v1\(uuid, uuid, uuid\)',\n  'public\.withdraw_my_matching_proposal_v1\(uuid, uuid, uuid\)',\n\];/u);
   // RE-ANCHORED by S6-05 (2026-10-16, migration 0159): its one acceptance boundary is appended after the three decisions;
   // and by S6-06 (2026-10-16, migration 0163): its two continuation boundaries after that.
-  assert.match(nb, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\)\]\.sort\(\)/u);
+  // RE-ANCHORED by S6-07 CP1 (2026-10-18, migration 0165, Controlled Amendment CA-01-impl): the ONE governed enrollment
+  // boundary is appended after the S6-06 continuation boundaries in the 0149 census and after their absorbers in the 0150
+  // ABSORBED list; everything pinned before it is unchanged.
+  assert.match(nb, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\), nameOf\(S6_07_GOVERNED_ENROLLMENT\)\]\.sort\(\)/u);
   for (const probe of ['f6 the census refuses a fourth client-executable wrapper around a proposal decision core',
     'f7 the census refuses an S6-04 decision boundary granted beyond authenticated']) assert.ok(nb.includes(probe), probe);
   const guard = read('database/verify-migration-0150.mjs');
   // RE-ANCHORED by S6-05 (2026-10-16, migration 0159): the acceptance absorber follows the three decisions; and by S6-06
   // (2026-10-16, migration 0163): its three absorbers follow that.
-  assert.match(guard, /'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n\];/u);
+  assert.match(guard, /'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n\];/u);
 });
 
 test('6 — the API takes a command id and a view only, calls the five boundaries with the caller token, logs and retries nothing', () => {
