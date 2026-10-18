@@ -348,8 +348,8 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - `S6-04` — Private Proposal Review and Decisions;
   - `S6-05` — Mutual Match & Introduction World;
   - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15; 2026-10-17: CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.16)*;
-  - `S6-07` — Activity, Direct Entry and Final Integration.
-  - *(Product Owner, 2026-10-17:)* `ACCT-DEL-01` — Account Deletion Across Matching / Introductions, before S6-07 (`QAN-BL-MATCH-01`'s dependency); CP1 delivered, §6.17; CP1 approved and CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.18.
+  - `S6-07` — Activity, Direct Entry and Final Integration; *(2026-10-18: CP0 approved; CP1 Governed Enrollment delivered, not merged, §6.19)*.
+  - *(Product Owner, 2026-10-17:)* `ACCT-DEL-01` — Account Deletion Across Matching / Introductions, before S6-07 (`QAN-BL-MATCH-01`'s dependency); CP1 delivered, §6.17; CP1 approved and CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.18; merged through PR #345 as `1861df43` (2026-10-17), §6.19.
 
   The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
   Copy Gate where required, a Product Owner-approved Task Contract, proportional validation, independent review and the
@@ -619,3 +619,19 @@ note only; §6.17 stays as written.
 - **Still closed:** every launch gate, CW2-08 and the six suspended Matching commands. Account deletion in QANDEEL as a
   whole is not closed.
 - **Next:** the Product Owner's review and merge decision («ادمج») on the final head. S6-07 is not started.
+
+### 6.19 Execution note — 2026-10-18 (ACCT-DEL-01 merged; S6-07 CP0 approved; CP1 delivered)
+**Recorded:** 2026-10-18 by S6-07 CP1, in the S6-07 pull request (not merged). This is a status note only; §6.9 … §6.18
+stay as written.
+- **Merged:** ACCT-DEL-01 through PR #345 as `1861df43943a8695a761edec7aa42f5e18f018ec` (2026-10-17; not deployed).
+- **Decided:** the Product Owner approved the S6-07 CP0 design and its review addendum (Q1, Q2(b), Q3-A, Q4′, Q5′, Q6,
+  Q7′ / Q7″, Q8(A), Q9, Q10), the Controlled Amendments they need, and one binding condition for CP4: the 32 MiB export
+  bound is a technical guard, never a limit on the right to export; a safe path for larger photo sets is delivered in
+  S6-07 itself. CP1 (Governed Enrollment) was authorized; CP2 waits for the CP1 review.
+- **Delivered (CP1):** migration `0165` — the ONE governed enrollment boundary over the frozen setup commands, closed by
+  default; the reviewed draft promoted with its evidence; three independently revocable consents, each bound to its exact
+  version; the empty requirement version and the zero-field disclosure authority; refused during account deletion — its
+  real-PostgreSQL verifier, live PostgREST proof, static contract and two owner-only API routes ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md)).
+- **Still closed:** the `ENROLLMENT` gate (no row) and the consent texts (none; Copy Gate in CP3), so nothing can be
+  enrolled in production; the six commands for every application role; CW2-08 and every launch gate.
+- **Next:** the Product Owner's CP1 review. CP2 (the forward dispatcher) only after its approval; no merge without «ادمج».

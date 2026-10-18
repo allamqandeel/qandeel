@@ -4999,3 +4999,44 @@ npm run test:acct-del-01-account-erasure-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its behaviour scenarios run in one rolled-back
 transaction with the CW2-08 / I-07D seams replaced for the run and restored byte for byte; its races commit their own
 fresh humans and erase them through the erasure itself (an erased account can never be provisioned again).
+
+## S6-07 - Governed Matching enrollment (migration 0165, CP1)
+
+`0165_matching_governed_enrollment_v1.sql` adds the ONE reviewed Stage 6 launch path SEC-MATCH-00 asked for
+(`QAN-BL-MATCH-01`): an `authenticated` boundary that promotes the owner's own reviewed preparation draft into the frozen
+Matching setup through the frozen `0109` commands, under a closed-by-default operator gate. The controlled forward
+amendments are `docs/matching-introduction-runtime-v1.md` §50. Record: `docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md`.
+
+```text
+enroll_my_matching_setup_v1(command, kind, expected draft version,     authenticated only; the human is auth.uid()
+    participation consent, context consent, disclosure consent)        ENROLL | CORRECTION | RESUME | RECONFIRM_CONSENT
+read_my_matching_enrollment_v1()                                       authenticated only: availability, the current
+                                                                       consent texts, the caller's own setup state
+```
+
+- **Closed.** `matching_enrollment_private.gate_states` holds no row (absent = DENY) and the consent-text catalogue is
+  empty; texts enter through the Copy Gate with the operator installer `install_consent_text_v1`, the gate through the
+  operator function `set_gate_v1` (Stage 9). Every act answers `NOT_AVAILABLE_NOW` in production.
+- **The six stay closed.** The boundary calls five of them with their frozen bodies; none is granted, re-created or
+  re-owned, and a direct call is still `42501`. The field-bearing disclosure grant is never called: the authority is the
+  zero-field core's (CA-08-impl); an empty requirement set is the zero-item core's (CA-10-impl).
+- **Evidence.** `fact_promotions` (the fact version, the reviewed draft version, the act) and `enrollment_acts` (every
+  committed act with the exact version of each consent it exercised and the events it created). The canonical facts
+  reader answers only for a promoted version. A verifier fixture that writes a fact version through the raw writer adds a
+  FIXTURE promotion record beside it (`matching-proposal-verifier-support.mjs`, `verify-migration-0156.mjs`).
+- **All or nothing.** Account row (`FOR KEY SHARE`) -> a committed command id answers its first result -> a live account
+  deletion is `DELETION_PENDING` -> the gate (`FOR SHARE`) -> ONE block: the caller's own setup lock, the consent texts and
+  the draft (`FOR SHARE`), the frozen commands and the cores. Every refusal rolls the block back, lock row included; the
+  cores' `40001` is one bounded `CHANGED`, never sent to PostgREST.
+- **Deletion.** The evidence relations cascade with the account row and are registered `ACCOUNT_CASCADE`.
+
+```sh
+npm run verify:matching-governed-enrollment:integration
+npm run prove:governed-enrollment:postgrest
+npm run test:s6-07-governed-enrollment-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its behaviour scenarios run in one rolled-back
+transaction with fixture gates and fixture consent texts (never Product copy); its races commit their own fresh humans and
+remove them, with every fixture gate, text and trigger, afterwards. The wire proof also needs `POSTGREST_URL` and
+`POSTGREST_JWT_SECRET` (CI-only, throwaway).

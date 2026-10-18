@@ -1530,3 +1530,63 @@ re-anchored, with reasons in place: `verify-migration-0149.mjs` (`NO_BACKDOOR` +
 `verify-migration-0122.mjs` (the erasure census names the account erasure), `verify-migration-0161.mjs` (the three
 replaced readers' defining migration is now `0164`). `I-07` and its slices remain **CLOSED / FROZEN**; this is a
 controlled amendment, not a reopening of Product scope.
+
+## 50. `S6-07` — controlled forward amendment for the governed Matching enrollment
+
+**Lifecycle:** CP1 implemented on `s6/s6-07-activity-direct-entry-final-integration` from `main` at `1861df43` (the merge
+of PR #345, ACCT-DEL-01); awaiting the Product Owner's CP1 review. Not merged, not deployed. Record:
+[S6-07 implementation record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved these
+amendments with the S6-07 CP0 design (2026-10-18): **CA-01-impl** (Q1), **CA-R5-impl**, **CA-08-impl** (Q3-A),
+**CA-10-impl** (Q4′) and **CA-GATE** (Q2(b)). CP2 … CP4 of the same task add the forward dispatcher (CA-SYS-02),
+Activity / Direct Entry and the export (CA-EXP); each will extend this section when it lands.
+
+SEC-MATCH-00 (§47) closed the six widening `I-07A` commands and said a reviewed Stage 6 launch path must amend it
+(`QAN-BL-MATCH-01`). Forward migration `0165_matching_governed_enrollment_v1.sql` is that path. It amends the frozen
+surface in exactly these places, and nowhere else:
+
+- **ONE named `NO_BACKDOOR` exception of the human kind:** `public.enroll_my_matching_setup_v1(uuid, text, bigint, text,
+  text, text)`, `authenticated` only, `SECURITY DEFINER`, the human from `auth.uid()` and nothing else. It is the only
+  function besides the six that names one of them, and it CALLS five of them with their frozen bodies (activate, resume,
+  grant the Matching Context Grant, set the profile, set the requirements); the sixth, the field-bearing disclosure grant,
+  is never called. The six stay executable by no application role: no grant, re-creation, drop or re-own of any of them,
+  no default privilege, no `service_role` path. A direct client call to one of them, with any identity the boundary
+  committed, is still `42501`.
+- **Closed by default (CA-GATE):** a new operator gate, scope `ENROLLMENT`, in `matching_enrollment_private` (the `0154`
+  pattern; absent = DENY; changed only by an operator function no application role can run). No gate row exists. The
+  consent-text catalogue of the three consents is created empty: their texts are Product copy and enter through the
+  Copy Gate (S6-07 CP3). Nothing can be enrolled in production.
+- **The promotion and its evidence (CA-R5-impl, CW2-06B-02 §3–§5):** the boundary is the ONE wrapper of
+  `record_matching_confirmed_facts_core_v1`. It promotes only the owner's own reviewed draft at the exact version the
+  owner confirmed, with the owner's own confirmation instants, and writes a promotion record naming the exact fact
+  version and the exact reviewed draft version. `resolve_matching_confirmed_facts_v1` is replaced forward with one added
+  join: it answers only for a current version that carries a promotion record, so a version written any other way is
+  `UNKNOWN` to discovery, to the pair rule at capture and to snapshot currentness.
+- **Two internal cores, executable by no role (CA-10-impl, CA-08-impl):** `set_empty_matching_requirements_core_v1`
+  writes a requirement version with ZERO items for a reviewed draft whose answer is "no additional hard dealbreaker" and
+  "no soft preference" — the absence of items, never a sentinel (CW2-06B-04 §9); `grant_zero_field_pre_match_disclosure_
+  authority_core_v1` writes a Pre-Match Disclosure Authority over the exact current profile version that approves ZERO
+  profile fields (CW2-06B-06). Each repeats the frozen `0109` lock, replay, compare-and-swap and history rules exactly,
+  with the owner passed by its only caller. `0109` itself is byte-identical and still refuses an empty requirement set and
+  an empty approved-field set.
+- **Three independent consents, each bound to its exact version (Q8(A)):** ENROLL is one transaction or nothing and
+  creates three distinct consent events (participation, the Matching Context Grant, the disclosure authority); every act
+  records the exact consent-text version of each consent it exercised. Each is revoked on its own through the retained
+  `0109` commands. CORRECTION re-grants an ACTIVE authority whose basis (the profile version) moved only with a fresh
+  disclosure consent, and never re-grants a revoked grant or authority; RESUME lifts only a `USER_PAUSED` pause;
+  RECONFIRM_CONSENT grants either consent again under its current version.
+- **Deletion:** no act while the owner's account deletion is live (`SCHEDULED`, `BLOCKED`, `ERASED`, `COMPLETED`); the
+  evidence relations cascade with the account row and are registered `ACCOUNT_CASCADE` in the ACCT-DEL-01 coverage
+  registry, so the governed erasure (§49) removes an enrolled account's enrollment with everything else.
+
+What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156` and `0164`; every seam
+(`NOT_EVALUATED`); CW2-08; every other `I-07` body. A refused act writes nothing, not even the lock row; the cores' `40001`
+is absorbed into one bounded `CHANGED` and never reaches PostgREST.
+
+**Verification.** `verify-migration-0165.mjs` (real PostgreSQL, real `SET ROLE`, seven races on two real connections) and
+`prove-0165-governed-enrollment-postgrest.mjs` (live PostgREST); re-anchored, with reasons in place:
+`verify-migration-0149.mjs` (`NO_BACKDOOR` names the exception, the "names a suspended boundary" rule admits exactly it,
+the evidence relations' cascade, probes f14 – f17), `verify-migration-0150.mjs` (the boundary is an absorber),
+`verify-migration-0156.mjs` (A02: exactly the boundary wraps the writer; its fixtures carry fixture promotion records), the
+shared proposal-verifier fixture (likewise) and the SEC-MATCH-00 static contract (amended as its header required).
+`QAN-BL-MATCH-01` stays open until S6-07's closing change. `I-07` and its slices remain **CLOSED / FROZEN**; this is a
+controlled amendment, not a reopening of Product scope.

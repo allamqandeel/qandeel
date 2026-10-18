@@ -1320,6 +1320,18 @@ or later migration names any of them, `verify-migration-0149` and `0150` pass un
 therefore not discharged: the owner is now `S6-07`, with the `ACCT-DEL-01` dependency above. Severity and status are
 unchanged.
 
+**S6-07 CP1 note (2026-10-18; the S6-07 pull request, not merged).** The Product Owner approved the S6-07 CP0 design and
+its Controlled Amendments (CA-01-impl, CA-R5-impl, CA-08-impl, CA-10-impl, CA-GATE) and started CP1. Migration `0165`
+delivers the reviewed launch path this item asked for: ONE named `authenticated` boundary,
+`enroll_my_matching_setup_v1`, the human from `auth.uid()`, that promotes the owner's own reviewed draft and calls five of
+the six with their frozen bodies under a closed-by-default operator gate (no gate row, no consent text: nothing can be
+enrolled in production). The required future property holds as amended: no plain grant, no re-created command, no
+`service_role` path, and no wrapper other than that one named, gated, `auth.uid()`-derived boundary (`verify-migration-0149`
+`NO_BACKDOOR` and probes f14 – f17; the SEC-MATCH-00 static contract). Correction and resume run through the same boundary.
+The item is **not** tombstoned at CP1: it is dispositioned at S6-07's closing change, under BG-08, with the rest of the
+task ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md), [I-07 runtime §50](matching-introduction-runtime-v1.md)).
+Owner, severity and status unchanged.
+
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: it is a canonical record's explicit deferral to a named future task. The
 entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes implementation (BG-07).
 
