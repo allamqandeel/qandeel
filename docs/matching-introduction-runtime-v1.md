@@ -1600,7 +1600,10 @@ surface in exactly these places, and nowhere else:
   proposal still exists only after the first party's forward approval and only once the delivery binding commits; the
   dispatcher is not a human's decision. A read-only lister answers the committed deliveries whose Activity member does not
   exist yet (the recovery path for a publish lost after a committed forward; the producer is CP3). The ledger cascades with
-  its proposal and is registered for the governed erasure (§49).
+  its proposal and is registered for the governed erasure (§49). *(CP2 correction, Product Owner, 2026-10-18:)* no
+  proposal is forwarded while either human's account deletion is pending (anything but `CANCELLED`): both account rows
+  are held `FOR KEY SHARE` after the pair lock, so a deletion request (`0130`, `FOR UPDATE`) is seen or waits; the answer
+  is `SKIPPED_DELETION_PENDING`, not terminal, and a still-valid proposal is evaluated again after a cancellation.
 
 What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156` and `0164`; the forward core, the
 materializer, the transition writer, the S6-04 decisions and the `0157` sweeper (CP2); every seam

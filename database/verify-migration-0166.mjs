@@ -14,12 +14,15 @@
 //      no conclusion / two conclusions / a moved authority / an expired deadline deliver nothing; one not-ready proposal
 //      cannot starve the others; a reused-id integrity refusal is HELD, never retried and never raised; the backoff is
 //      bounded; the reconciliation lister finds a committed delivery until its Activity member exists; the governed
-//      erasure removes the ledger with the proposal
+//      erasure removes the ledger with the proposal; a pending account deletion of EITHER human (SCHEDULED, BLOCKED)
+//      forwards nothing, binds nothing and keeps the ledger due; once cancelled, the same ids deliver once; an expired or
+//      withdrawn proposal is never revived by the cancellation
 //   D  races on real connections: a human decision holding the pair lock vs the dispatcher (BUSY, bounded, no 40P01) and
 //      the reverse (the human waits one dispatcher transaction, then answers normally); two dispatchers (one delivery); a
 //      deadline crossing while the dispatcher waits (nothing delivered); a worker killed mid-forward (nothing committed,
 //      the restart delivers once); a committed forward whose publish never happened (found again, published once); a
-//      held pair cannot starve the queue
+//      held pair cannot starve the queue; a deletion request committed while the dispatcher waits on the account row is
+//      seen (nothing delivered)
 //
 // Behaviour runs on SYNTHETIC fixture humans; sections B and C roll back, D commits its fixtures and removes them. The
 // CW2-08 seam is replaced for C and D and restored byte for byte. Nothing permissive survives.
@@ -36,7 +39,7 @@ const { q, rows, count, asRole, actAs, rejected } = rt;
 const DISPATCH = 'public.server_forward_approved_matching_proposals_v1(integer)';
 const LISTER = 'public.server_list_proposal_delivery_activity_reconciliation_v1(integer)';
 const LEDGER = 'matching_forward_private.proposal_forward_attempts';
-const OUTCOMES = ['FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED', 'SKIPPED_NOT_READY',
+const OUTCOMES = ['FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_DELETION_PENDING', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED', 'SKIPPED_NOT_READY',
   'SKIPPED_STALE', 'HELD_INTEGRITY', 'BUSY', 'NONE_DUE'];
 const KEY = (transition) => `introductions:proposal-delivered:${transition}`;
 const LIST = 'public.list_my_matching_proposals_v1';
@@ -109,6 +112,18 @@ async function approvedWith(first, candidate, n) {
   await rt.approveForward(randomUUID(), proposal, firstView);
   await owner();
   return { ...f, first, candidate, proposal, firstView, forCandidate };
+}
+/** A live account deletion request of `human` (as 0130 writes it), or its cancellation (as 0130 cancels it). */
+async function requestDeletion(human, status = 'SCHEDULED') {
+  await owner();
+  const [{ id }] = await rows(`INSERT INTO personal_data_private.account_deletions (user_id, command_id, status, final_at, blocked_at)
+    VALUES ($1, gen_random_uuid(), $2, clock_timestamp() + interval '7 days', CASE WHEN $2 = 'BLOCKED' THEN clock_timestamp() END)
+    RETURNING id`, [human, status]);
+  return id;
+}
+async function cancelDeletion(id) {
+  await owner();
+  await q("UPDATE personal_data_private.account_deletions SET status = 'CANCELLED', cancelled_at = clock_timestamp(), lease_until = NULL WHERE id = $1", [id]);
 }
 /** The body of the LAST definition of `schema.name` in the migrations before 0166, CR-free. */
 function priorBody(schema, name) {
@@ -482,6 +497,52 @@ async function verifyRuntime(report, [first, a, b, c, d]) {
       await makeDue(f.proposal);
       assert.equal(await dispatch(), 'NONE_DUE');
     });
+
+    await report.isolated('C08 a pending account deletion of either human forwards nothing; once cancelled, the same ids deliver once; nothing is revived', async () => {
+      await facts([[first, 'FEMALE', 'Mona'], [a, 'MALE', 'Omar'], [b, 'MALE', 'Ali'], [c, 'MALE', 'Yusuf']]);
+      const f = await approvedWith(first, a, 1);
+      const before = await effects(f.proposal);
+      // The first recipient's request (SCHEDULED).
+      const firstRequest = await requestDeletion(first);
+      assert.equal(await dispatch(), 'SKIPPED_DELETION_PENDING', 'C08 the first recipient\'s pending deletion refuses');
+      assert.deepEqual(await effects(f.proposal), before, 'C08 no transition, view or delivery binding');
+      assert.deepEqual(await candidateSees(a, f.proposal), [], 'C08 the candidate sees nothing');
+      const l1 = await ledgerOf(f.proposal);
+      assert.deepEqual([l1.last_outcome, l1.attempts, l1.next_attempt_at !== null], ['SKIPPED_DELETION_PENDING', 1, true],
+        'C08 not terminal: the proposal stays due after the backoff');
+      assert.equal(await dispatch(), 'NONE_DUE', 'C08 the backoff holds it');
+      // The candidate's request instead (BLOCKED counts as pending too).
+      await cancelDeletion(firstRequest);
+      const candidateRequest = await requestDeletion(a, 'BLOCKED');
+      await makeDue(f.proposal);
+      assert.equal(await dispatch(), 'SKIPPED_DELETION_PENDING', 'C08 the candidate\'s pending deletion refuses');
+      assert.deepEqual(await effects(f.proposal), before, 'C08 still nothing delivered');
+      // Cancelled: the still-valid proposal is evaluated again and delivered once, under the ids minted the first time.
+      await cancelDeletion(candidateRequest);
+      assert.equal(await dispatch(), 'NONE_DUE', 'C08 the cancellation does not bypass the backoff');
+      await makeDue(f.proposal);
+      assert.equal(await dispatch(), 'FORWARDED', 'C08 after the cancellation the proposal is forwarded');
+      const l2 = await ledgerOf(f.proposal);
+      assert.deepEqual([l2.forward_command_id, l2.forwarded_view_id], [l1.forward_command_id, l1.forwarded_view_id], 'C08 the same ids');
+      const e = await effects(f.proposal);
+      assert.deepEqual([e.forwards, e.deliveries, e.candidateViews], [1, 1, 1], 'C08 one transition, one binding, one view');
+      assert.equal((await candidateSees(a, f.proposal)).length, 1);
+      assert.equal(await dispatch(), 'NONE_DUE', 'C08 never delivered twice');
+      // Nothing is revived: proposals that expired or were withdrawn during the deletion stay where they are.
+      const expired = await approvedWith(first, b, 1);
+      const withdrawn = await approvedWith(first, c, 1);
+      const pending = await requestDeletion(first);
+      assert.equal(await dispatch(), 'SKIPPED_DELETION_PENDING');
+      assert.equal(await dispatch(), 'SKIPPED_DELETION_PENDING');
+      await rt.backdate(expired.proposal);
+      await actAs(first);
+      await rows(`SELECT * FROM ${WITHDRAW}($1, $2, $3)`, [randomUUID(), withdrawn.proposal, withdrawn.firstView]);
+      await cancelDeletion(pending);
+      await makeDue(expired.proposal);
+      await makeDue(withdrawn.proposal);
+      assert.equal(await dispatch(), 'NONE_DUE', 'C08 an expired or withdrawn proposal is never selected again');
+      assert.deepEqual([(await effects(expired.proposal)).deliveries, (await effects(withdrawn.proposal)).deliveries], [0, 0]);
+    });
   } finally {
     await q('ROLLBACK');
     await owner();
@@ -678,11 +739,43 @@ async function verifyRaces(report, pool) {
       await extra.close();
     }
   });
+
+  await report.section('D07 a deletion request committed while the dispatcher waits on the account row is seen: nothing is delivered', async () => {
+    const [first, cand] = [next(), next()];
+    await facts([[first, 'FEMALE', 'Mona'], [cand, 'MALE', 'Omar']]);
+    const f = await approvedWith(first, cand, 1);
+    const extra = await rt.openExtra();
+    try {
+      // The candidate's deletion request, exactly as 0130 takes it: the account row FOR UPDATE, then the request row.
+      await q('BEGIN');
+      await q('SELECT 1 FROM public.users WHERE id = $1 FOR UPDATE', [cand]);
+      const id = await requestDeletion(cand);
+      const theirs = dispatchOn(extra);
+      assert.equal(await rt.waitForLockWait((t, v) => q(t, v), extra.pid), true, 'D07 the dispatcher waits on the account row');
+      await q('COMMIT');
+      const { rows: [late] } = await theirs;
+      await extra.qx('COMMIT');
+      assert.equal(late.outcome, 'SKIPPED_DELETION_PENDING', 'D07 the committed request is seen under the lock');
+      const e = await effects(f.proposal);
+      assert.deepEqual([e.state, e.forwards, e.deliveries, e.candidateViews], ['FIRST_FORWARD_APPROVED', 0, 0, 0], 'D07 nothing delivered');
+      await q('BEGIN');
+      await cancelDeletion(id);
+      await q('COMMIT');
+      await makeDue(f.proposal);
+      assert.equal(await dispatchCommitted(), 'FORWARDED', 'D07 cancelled: the proposal is forwarded once');
+      assert.equal((await effects(f.proposal)).deliveries, 1);
+    } finally {
+      await q('ROLLBACK').catch(() => undefined);
+      await extra.close();
+      await owner();
+      await q('DELETE FROM personal_data_private.account_deletions WHERE user_id = $1', [cand]);
+    }
+  });
 }
 
 // ------------------------------------------------------------------ the run
 const humans = Array.from({ length: 6 }, () => randomUUID());
-const raceHumans = Array.from({ length: 15 }, () => randomUUID());
+const raceHumans = Array.from({ length: 17 }, () => randomUUID());
 
 await runVerifier('0166', async (setStage) => {
   await rt.client.connect();

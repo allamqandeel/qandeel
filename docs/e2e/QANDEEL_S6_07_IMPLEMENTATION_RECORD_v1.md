@@ -6,10 +6,11 @@
 **Product authority:** the S6-07 Final Task Contract; the CP0 report and its review addendum, approved by the Product Owner
 on 2026-10-18 («S6-07 — CP0 Approved / Start CP1»), with the Controlled Amendments they name; and the Product Owner's
 CP1 correction decision D-CP1-1 = B (2026-10-18, «S6-07 — CP1 Correction: Empty Introduction Profile»), with
-CA-D-CP1-1-impl; and «S6-07 — CP1 CLOSED / Start CP2» (2026-10-18), under Q5′ and CA-SYS-02 (CA-SYS-02-impl, §10). No merge
+CA-D-CP1-1-impl; and «S6-07 — CP1 CLOSED / Start CP2» (2026-10-18), under Q5′ and CA-SYS-02 (CA-SYS-02-impl, §10); and the Product Owner's
+CP2 correction «S6-07 — CP2 Targeted Correction: Account Deletion Guard» (2026-10-18, §10.9). No merge
 or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED — AWAITING
-THE PRODUCT OWNER'S CP2 REVIEW — CP3 / CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1,
+**Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED WITH THE
+ACCOUNT-DELETION GUARD (§10.9) — AWAITING THE PRODUCT OWNER'S CP2 REVIEW — CP3 / CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1,
 the D-CP1-1 correction (§4) included, on the green head `05cc2cbc`; CP2 is §10.  
 **Base:** `main` = merged PR #345 (ACCT-DEL-01) at `1861df43943a8695a761edec7aa42f5e18f018ec`, re-verified before the branch.  
 **Branch:** `s6/s6-07-activity-direct-entry-final-integration` (one pull request for the whole task: CP1 … CP4).  
@@ -254,10 +255,11 @@ deployment, any Launch Gate, another task or pull request.
   DEFINER`, `lock_timeout` 2 s, `p_max` must be 1 (one attempt per transaction, the `0157` sweeper discipline):
   1. the one due proposal, read with NO row lock (`FIRST_FORWARD_APPROVED`, before its deadline, no ledger row or a due
      one; the oldest due first) — none: `NONE_DUE`;
-  2. the canonical pair lock FIRST, the same first lock every core and every human decision takes; a wait past the
-     timeout is `BUSY`, with nothing of the proposal touched;
-  3. the proposal re-read under the lock: moved or expired → `SKIPPED_MOVED`; the first recipient's forward approval no
-     longer bound to their current exact view → `SKIPPED_STALE`;
+  2. the canonical pair lock FIRST, the same first lock every core and every human decision takes, then both humans'
+     account rows `FOR KEY SHARE` (§10.9); a wait past the timeout is `BUSY`, with nothing of the proposal touched;
+  3. the proposal re-read under the lock: moved or expired → `SKIPPED_MOVED`; either human's account deletion pending →
+     `SKIPPED_DELETION_PENDING` (§10.9); the first recipient's forward approval no longer bound to their current exact
+     view → `SKIPPED_STALE`;
   4. the ledger row (the ids minted once) and its row lock;
   5. the candidate's permitted conclusion for the proposal's own snapshot, about the first recipient: exactly one, or
      `SKIPPED_NO_CONCLUSION` — nothing is invented;
@@ -363,8 +365,10 @@ each with its last definition byte for byte); every grant of an earlier function
 - **Dormant in production.** The CW2-08 seam answers `NOT_EVALUATED` and no conclusion producer exists (Stage 8A), so in
   production every attempt would stop at `SKIPPED_NOT_CLEARED` and nothing is forwarded; `FORWARDED` is proven on
   fixtures only. The dispatcher's existence makes neither Stage 8A nor Matching production ready.
-- **Product question, not decided here:** no rule refuses forwarding while either human has a live account deletion
-  request (the S6-04 decisions do not refuse either); the governed erasure itself removes the proposal and its ledger.
+- **Decided and applied (§10.9):** the Product Owner's account-deletion guard. *(Before it, this bullet read: "Product
+  question, not decided here: no rule refuses forwarding while either human has a live account deletion request (the
+  S6-04 decisions do not refuse either); the governed erasure itself removes the proposal and its ledger.")* A
+  cancellation is seen at the proposal's next due attempt (its backoff: at most 6 h, never past its deadline), not at once.
 - **Performance:** `matching_proposals` has no index on its state, so the selection reads the live proposals (none exist in
   production). An index is a change to a frozen relation and waits until there is volume.
 - **Activity:** until CP3 no one is notified of a delivered proposal; the producer, the withdrawal of a stale item, the
@@ -380,6 +384,59 @@ the S6-07 notifications" is CP3's, and it is dispositioned at S6-07's closing ch
 
 ### 10.8 Final status (CP2)
 
-CP2 is delivered on this branch in the same pull request (see the pull request for the head and its CI). It opens no gate
-and changes no frozen body. The Product Owner reviews CP2 next; CP3 starts only after that approval. No merge without
+CP2 is delivered on this branch in the same pull request (see the pull request for the head and its CI), with the
+account-deletion guard of §10.9. It opens no gate and changes no frozen body. The Product Owner reviews CP2 next; CP3 starts only after that approval. No merge without
 «ادمج».
+
+### 10.9 The CP2 correction — the account-deletion guard (Product Owner decision, 2026-10-18)
+
+**Decision** («S6-07 — CP2 Targeted Correction: Account Deletion Guard», APPROVED, on the reviewed head `c5703a2f`): while
+either human of a proposal has an account deletion request that is not `CANCELLED` (`SCHEDULED`, `BLOCKED`, `ERASED`,
+`COMPLETED`), no proposal is forwarded to the other human. Once the request is cancelled, a proposal that is still valid
+and meets its conditions may be evaluated again; a proposal that expired, was withdrawn or was invalidated is never
+revived. A small, proportionate correction inside CP2 — no new lock system, no frozen body, no privilege.
+
+**Size of the change.** `0166` only (it is not deployed: hosted is at `0074`): one statement in the pair-lock block, one
+`IF` before the approval-binding check, one outcome word in the ledger's outcome set, one self-assertion. The worker's
+outcome set and telemetry map gain the word (`blocked_expected`). Nothing else moves.
+
+**The guarantee, from existing locks only.** `0130` takes the account row `FOR UPDATE` before it writes or cancels a
+request; `0154` and `0165` already hold the account row `FOR KEY SHARE` for exactly this. The dispatcher now holds BOTH
+humans' account rows `FOR KEY SHARE` right after the pair lock — the erasure's own order (`0164`: the pair rows, then the
+account row) — inside the same `BUSY` block, so a wait past the 2 s timeout is `BUSY` like the pair lock. Under READ
+COMMITTED each statement reads committed state, so:
+
+- a request that committed first (or committed while the dispatcher waited on the row) is seen, and nothing is forwarded;
+- a request that arrives while the dispatcher holds the rows waits for that one transaction; the forward then committed
+  before the request existed;
+- hence no forward commits after a pending request committed. Lock order: request and cancellation hold only the account
+  row; the erasure takes the pair rows before the account row, as the dispatcher does; `FOR KEY SHARE` does not conflict
+  with `0154` / `0165` or with ordinary updates of the account row. A residual deadlock or wait is `BUSY`.
+
+**The outcome.** `SKIPPED_DELETION_PENDING` — the core is not called, no transition, view or delivery binding is written;
+only the ledger row, NOT terminal: the ids it minted stay the proposal's, and its backoff (1 min doubling, at most 6 h,
+never past the deadline) brings the proposal back. After a cancellation the next due attempt delivers once under the same
+ids; an expired or withdrawn proposal is never selected again. The check runs before the CW2-08 seam's, so in production
+the answer during a pending deletion is `SKIPPED_DELETION_PENDING`, otherwise still `SKIPPED_NOT_CLEARED`.
+
+**Proofs (real PostgreSQL 17.10, focused runs only).** `verify-migration-0166` **23 / 23** (21 + two new):
+
+- **C08:** the first recipient's `SCHEDULED` request → `SKIPPED_DELETION_PENDING`, nothing written but the non-terminal
+  ledger row, the candidate sees nothing; the candidate's `BLOCKED` request → the same; cancelled → the backoff still
+  holds, then `FORWARDED` once under the ids minted the first time (one transition, one binding, one view), then
+  `NONE_DUE`; two proposals refused during a deletion, one then expired and one withdrawn → after the cancellation
+  neither is ever selected.
+- **D07 (the focused race):** a deletion request taken as `0130` takes it (the candidate's account row `FOR UPDATE`, then the
+  request row), held open on its own connection → the dispatcher waits on that row; the request commits → the dispatcher answers
+  `SKIPPED_DELETION_PENDING`, nothing delivered; cancelled → `FORWARDED` once.
+- D01 – D06 unchanged and passing (no new lock inversion, `BUSY` still bounded).
+
+Also re-run: `verify-0149` 36 / 36, `0150` 28 / 28, `0164` 29 / 29, `0165` 33 / 33, `0120` 27 / 27; the static contract
+3 / 3 with 24 planted defects, three new (the account rows not held; only the first recipient's deletion checked; a
+`BLOCKED` deletion let through); API `tsc` and the dispatch / observability Jest suites (57 / 57); the ACCT-DEL-01 and
+PROD-OPS-01 contracts that read `account_deletions` (43 / 43). `verify-migration-0130` fails locally on its own 7-day grace
+assertion (`grace <= 7`, local clock skew) exactly as on the unchanged baseline before this correction; CI is the gate.
+
+**Not done, deliberately:** no change to `0130`, `0164` or any S6-04 decision (a human may still decide on their own
+proposal during a deletion; the governed erasure removes the proposal); no immediate re-evaluation on cancellation; no
+backlog change (`QAN-BL-MATCH-06` stays `DEFERRED — OWNED`).

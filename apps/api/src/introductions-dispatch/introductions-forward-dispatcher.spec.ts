@@ -108,11 +108,12 @@ describe('S6-07 CP2 — IntroductionsForwardDispatcherWorker: the bounded cycle'
 describe('S6-07 CP2 — content-free telemetry', () => {
   it('maps every outcome to one finite label and never emits for NONE_DUE', async () => {
     const { telemetry, recordOperationalOutcome } = recorder();
-    await worker(repo(['FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED', 'SKIPPED_NOT_READY',
-      'SKIPPED_STALE', 'HELD_INTEGRITY', 'BUSY']), telemetry).runOnce();
+    await worker(repo(['FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_DELETION_PENDING', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED',
+      'SKIPPED_NOT_READY', 'SKIPPED_STALE', 'HELD_INTEGRITY', 'BUSY']), telemetry).runOnce();
     expect(recordOperationalOutcome.mock.calls).toEqual([
       ['INTRODUCTIONS_FORWARD', 'dispatch', 'success'],
       ['INTRODUCTIONS_FORWARD', 'dispatch', 'superseded_expected'],
+      ['INTRODUCTIONS_FORWARD', 'dispatch', 'blocked_expected'],
       ['INTRODUCTIONS_FORWARD', 'dispatch', 'blocked_expected'],
       ['INTRODUCTIONS_FORWARD', 'dispatch', 'blocked_expected'],
       ['INTRODUCTIONS_FORWARD', 'dispatch', 'blocked_expected'],

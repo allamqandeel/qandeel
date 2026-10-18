@@ -5052,9 +5052,10 @@ approval (`QAN-BL-MATCH-06`): a `service_role` dispatcher over the frozen `forwa
 
 ```text
 server_forward_approved_matching_proposals_v1(p_max = 1)          service_role only; one attempt per transaction; one word:
-                                                                  FORWARDED | SKIPPED_MOVED | SKIPPED_NO_CONCLUSION |
-                                                                  SKIPPED_NOT_CLEARED | SKIPPED_NOT_READY | SKIPPED_STALE |
-                                                                  HELD_INTEGRITY | BUSY | NONE_DUE
+                                                                  FORWARDED | SKIPPED_MOVED | SKIPPED_DELETION_PENDING |
+                                                                  SKIPPED_NO_CONCLUSION | SKIPPED_NOT_CLEARED |
+                                                                  SKIPPED_NOT_READY | SKIPPED_STALE | HELD_INTEGRITY |
+                                                                  BUSY | NONE_DUE
 server_list_proposal_delivery_activity_reconciliation_v1(limit)   service_role only, read-only: committed deliveries whose
                                                                   recipient has no Activity member yet (CP3 publishes)
 matching_forward_private.proposal_forward_attempts                the ledger: ids minted once, backoff; no application role
@@ -5069,7 +5070,10 @@ matching_forward_private.proposal_forward_attempts                the ledger: id
   only a ledger row).
 - **Fair.** One not-ready proposal waits its own backoff (1 min doubling, capped at 6 h, never past the deadline); a held
   pair is deferred 30 s; a reused-id integrity refusal is held, never retried and never raised.
-- **Deletion.** The ledger cascades with its proposal and is registered `MATCHING_INTRODUCTIONS`.
+- **Deletion.** The ledger cascades with its proposal and is registered `MATCHING_INTRODUCTIONS`. Nothing is forwarded
+  while either human's account deletion is pending (not `CANCELLED`): both account rows are held `FOR KEY SHARE` after
+  the pair lock (a `0130` request, `FOR UPDATE`, is seen or waits) -> `SKIPPED_DELETION_PENDING`, not terminal; after a
+  cancellation a still-valid proposal is forwarded on its next due attempt (Product Owner's CP2 correction, record §10.9).
 - **The worker** is `apps/api/src/introductions-dispatch/` (no route; `INTRODUCTIONS_FORWARD_DISPATCH_DISABLED`).
 
 ```sh

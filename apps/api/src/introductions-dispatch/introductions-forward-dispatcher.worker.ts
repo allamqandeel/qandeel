@@ -35,6 +35,7 @@ type DispatchSignal = 'success' | 'superseded_expected' | 'blocked_expected' | '
 const SIGNAL: Readonly<Record<Exclude<ForwardOutcome, 'NONE_DUE'>, DispatchSignal>> = {
   FORWARDED: 'success',
   SKIPPED_MOVED: 'superseded_expected',
+  SKIPPED_DELETION_PENDING: 'blocked_expected',
   SKIPPED_NO_CONCLUSION: 'blocked_expected',
   SKIPPED_NOT_CLEARED: 'blocked_expected',
   SKIPPED_NOT_READY: 'blocked_expected',

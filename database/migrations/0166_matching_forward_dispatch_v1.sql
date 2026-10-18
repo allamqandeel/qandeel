@@ -30,9 +30,16 @@
 --        2. the canonical pair lock FIRST, exactly as every core and every human decision takes it; a wait past the lock
 --           timeout is BUSY - nothing of the proposal is touched; where the ledger can be written within 100 ms it
 --           defers the proposal 30 s, so a contended pair can never be selected first forever (while a human decision
---           holds the proposal row itself, even the ledger is left untouched and the worker ends its cycle)
---        3. re-read under the pair lock: moved or expired -> SKIPPED_MOVED (terminal for the ledger); the first
---           recipient's forward approval no longer bound to their current exact view -> SKIPPED_STALE
+--           holds the proposal row itself, even the ledger is left untouched and the worker ends its cycle); then both
+--           humans' account rows FOR KEY SHARE, after the pair lock as in the erasure (0164) - a deletion request or its
+--           cancellation (0130), which take the account row FOR UPDATE, waits for this attempt, or this attempt sees it;
+--           a wait past the timeout is BUSY the same way
+--        3. re-read under the pair lock: moved or expired -> SKIPPED_MOVED (terminal for the ledger); either human with
+--           an account deletion request that is not CANCELLED (SCHEDULED, BLOCKED, ERASED, COMPLETED) ->
+--           SKIPPED_DELETION_PENDING (the Product Owner's CP2 correction: no proposal reaches the other human while a
+--           deletion is pending; NOT terminal, so once the request is cancelled a still-valid proposal is evaluated again
+--           after the backoff, and an expired, withdrawn or moved one never is); the first recipient's forward approval
+--           no longer bound to their current exact view -> SKIPPED_STALE
 --        4. the ledger row (the ids minted once, ON CONFLICT DO NOTHING) and its row lock
 --        5. the candidate's permitted conclusion for the proposal's own snapshot (for the candidate, about the first
 --           recipient): exactly one must exist; none (or more than one) -> SKIPPED_NO_CONCLUSION. Nothing is invented: a
@@ -44,8 +51,8 @@
 --           automatically and never raised, so it can neither be taken for a retry nor be selected first forever
 --        7. the ledger: FORWARDED, SKIPPED_MOVED and HELD_INTEGRITY are terminal (no next instant); every other outcome is
 --           due again after a bounded exponential backoff (1 min doubling, capped at 6 h, never past the deadline)
---      Answers ONE word and no identity: FORWARDED | SKIPPED_MOVED | SKIPPED_NO_CONCLUSION | SKIPPED_NOT_CLEARED |
---      SKIPPED_NOT_READY | SKIPPED_STALE | HELD_INTEGRITY | BUSY | NONE_DUE.
+--      Answers ONE word and no identity: FORWARDED | SKIPPED_MOVED | SKIPPED_DELETION_PENDING | SKIPPED_NO_CONCLUSION |
+--      SKIPPED_NOT_CLEARED | SKIPPED_NOT_READY | SKIPPED_STALE | HELD_INTEGRITY | BUSY | NONE_DUE.
 --   3. public.server_list_proposal_delivery_activity_reconciliation_v1(p_limit) - read-only, service_role only: every
 --      proposal delivery whose delivery is still the proposal's current state and whose deadline has not passed, and whose
 --      recipient has no Activity member under the candidate key introductions:proposal-delivered:<delivery transition>
@@ -91,8 +98,8 @@ CREATE TABLE matching_forward_private.proposal_forward_attempts (
     CONSTRAINT proposal_forward_attempts_ids_check CHECK (forward_command_id <> forwarded_view_id),
     CONSTRAINT proposal_forward_attempts_attempts_check CHECK (attempts >= 0),
     CONSTRAINT proposal_forward_attempts_outcome_check CHECK (last_outcome IN (
-        'PENDING', 'FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED', 'SKIPPED_NOT_READY',
-        'SKIPPED_STALE', 'HELD_INTEGRITY', 'BUSY')),
+        'PENDING', 'FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_DELETION_PENDING', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED',
+        'SKIPPED_NOT_READY', 'SKIPPED_STALE', 'HELD_INTEGRITY', 'BUSY')),
     -- Terminal exactly when nothing is due again.
     CONSTRAINT proposal_forward_attempts_terminal_check CHECK (
         (last_outcome IN ('FORWARDED', 'SKIPPED_MOVED', 'HELD_INTEGRITY')) = (next_attempt_at IS NULL)),
@@ -145,6 +152,9 @@ BEGIN
   -- 2. The pair lock FIRST - the same first lock as every core and every human decision, in canonical order.
   BEGIN
     PERFORM public.lock_matching_pair_humans_v1(v_due.lower_user_id, v_due.higher_user_id);
+    -- Then both account rows, after the pair lock as in the erasure (0164): a deletion request or its cancellation
+    -- (0130, FOR UPDATE) waits for this attempt, or this attempt sees it.
+    PERFORM 1 FROM public.users u WHERE u.id IN (v_due.lower_user_id, v_due.higher_user_id) ORDER BY u.id FOR KEY SHARE;
   EXCEPTION WHEN lock_not_available OR deadlock_detected THEN
     -- Nothing of the proposal is touched. The ledger alone defers it, so a held pair cannot be selected first forever;
     -- a terminal row is never reopened, and a ledger row held by another attempt is simply left to it. The deferral
@@ -183,8 +193,14 @@ BEGIN
   SELECT * INTO v_attempt FROM matching_forward_private.proposal_forward_attempts a
    WHERE a.proposal_id = v_proposal.id FOR UPDATE;
 
+  -- No proposal reaches the other human while either human's account deletion is pending (anything but CANCELLED).
+  -- Not terminal: once the request is cancelled, a still-valid proposal is evaluated again after the backoff.
+  IF EXISTS (SELECT 1 FROM personal_data_private.account_deletions d
+              WHERE d.user_id IN (v_proposal.lower_user_id, v_proposal.higher_user_id)
+                AND d.status IN ('SCHEDULED', 'BLOCKED', 'ERASED', 'COMPLETED')) THEN
+    v_outcome := 'SKIPPED_DELETION_PENDING';
   -- The first recipient's forward approval is still bound to their current exact view.
-  IF NOT EXISTS (SELECT 1 FROM public.matching_forward_approval_view_bindings b
+  ELSIF NOT EXISTS (SELECT 1 FROM public.matching_forward_approval_view_bindings b
                    JOIN public.matching_recipient_proposal_view_state st
                      ON st.proposal_id = b.proposal_id AND st.recipient_user_id = b.approver_user_id
                   WHERE b.approval_transition_id = v_proposal.current_transition_id
@@ -362,6 +378,14 @@ BEGIN
      OR src !~ 'WHEN SQLSTATE ''40001'' OR SQLSTATE ''PT409'' THEN' OR src ~ 'ERRCODE = ''(40001|PT409)'''
      OR src ~* '(\mEXECUTE\s|RAISE;|ISOLATION|auth\.uid)' THEN
     RAISE EXCEPTION 'S6-07: the dispatcher writes nothing public itself, never answers the seam, absorbs 40001 / PT409 and runs no dynamic SQL';
+  END IF;
+  IF strpos(src, 'ORDER BY u.id FOR KEY SHARE') = 0
+     OR strpos(src, 'ORDER BY u.id FOR KEY SHARE') < strpos(src, 'lock_matching_pair_humans_v1(')
+     OR strpos(src, 'ORDER BY u.id FOR KEY SHARE') > strpos(src, 'EXCEPTION WHEN lock_not_available')
+     OR strpos(src, 'AND d.status IN (''SCHEDULED'', ''BLOCKED'', ''ERASED'', ''COMPLETED'')) THEN') = 0
+     OR strpos(src, 'v_outcome := ''SKIPPED_DELETION_PENDING''') = 0
+     OR strpos(src, 'v_outcome := ''SKIPPED_DELETION_PENDING''') > strpos(src, 'forward_matching_proposal_to_second_core_v1(') THEN
+    RAISE EXCEPTION 'S6-07: both account rows are held FOR KEY SHARE after the pair lock, and a pending deletion refuses the forward before the core';
   END IF;
   SELECT regexp_replace(p.prosrc, '--[^\n]*', '', 'g') INTO src FROM pg_proc p WHERE p.oid = lister::regprocedure;
   IF src ~* '(INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|TRUNCATE|_core_v1|lock_matching|\mEXECUTE\s)'

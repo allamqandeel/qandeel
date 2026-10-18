@@ -184,7 +184,8 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   frozen forward core, the pair lock first, its ledger in `matching_forward_private`, and the read-only reconciliation
   lister; CA-SYS-02-impl, the census's second named SYSTEM exception), `verify-migration-0166`, `prove-0166` with the
   compiled worker on live PostgREST, the static contract, and the server worker `apps/api/src/introductions-dispatch`
-  (no route).
+  (no route); with the Product Owner's account-deletion guard (record §10.9: nothing forwarded while either human's
+  deletion is pending).
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
   controlled amendment to the frozen `I-07` surface is
   [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.

@@ -82,6 +82,18 @@ function migrationViolations(w) {
   if (/FOR UPDATE|SKIP LOCKED|FOR SHARE/u.test(d.slice(0, order[0])) || /matching_proposals[^;]*FOR (?:UPDATE|SHARE)/u.test(d)) {
     out.push('the proposal row is never locked by the dispatcher, least of all before the pair lock');
   }
+  // The CP2 correction: both account rows FOR KEY SHARE after the pair lock, inside its BUSY block, and a pending deletion of
+  // either human (anything but CANCELLED) refuses before the core, without ending the ledger row.
+  const keyShare = at(d, 'PERFORM 1 FROM public.users u WHERE u.id IN (v_due.lower_user_id, v_due.higher_user_id) ORDER BY u.id FOR KEY SHARE;');
+  const guard = at(d, "WHERE d.user_id IN (v_proposal.lower_user_id, v_proposal.higher_user_id)\n                AND d.status IN ('SCHEDULED', 'BLOCKED', 'ERASED', 'COMPLETED')) THEN\n    v_outcome := 'SKIPPED_DELETION_PENDING';");
+  if (keyShare < order[0] || keyShare > at(d, 'EXCEPTION WHEN lock_not_available OR deadlock_detected THEN')
+      || guard < order[2] || guard > order[3]) {
+    out.push('both account rows held after the pair lock; a pending deletion of either human refuses before the core');
+  }
+  if (!/'SKIPPED_DELETION_PENDING'/u.test(w.migration.match(/CONSTRAINT proposal_forward_attempts_outcome_check[^;]*/u)?.[0] ?? '')
+      || /CONSTRAINT proposal_forward_attempts_terminal[^;]*SKIPPED_DELETION_PENDING/u.test(w.migration)) {
+    out.push('a deletion refusal is a recorded, non-terminal outcome');
+  }
   if ((d.match(/forward_matching_proposal_to_second_core_v1\(/gu) ?? []).length !== 1
       || !/forward_matching_proposal_to_second_core_v1\(\s+v_attempt\.forward_command_id, v_proposal\.id, v_attempt\.forwarded_view_id, v_conclusions\[1\]\)/u.test(d)) {
     out.push('the core is called once, with the ledger\'s ids minted once');
@@ -196,6 +208,13 @@ test('2 - every detector catches a planted defect', () => {
       "    IF (SELECT r.clearance FROM public.resolve_matching_proposal_prerequisites_v1(v_proposal.id) r) <> 'CLEARED' THEN\n      v_outcome := 'SKIPPED_NOT_CLEARED';\n    ELSIF cardinality(v_conclusions) <> 1 THEN")],
     ['a transition written directly', 'migrationViolations', () => plant('migration', "        v_outcome := 'FORWARDED';",
       "        PERFORM 1 FROM public.append_matching_proposal_transition_v1(gen_random_uuid(), v_proposal.id, 'FIRST_FORWARD_APPROVED', 'FORWARDED_TO_SECOND', NULL, NULL, NULL);\n        v_outcome := 'FORWARDED';")],
+    ['the account rows not held', 'migrationViolations', () => plant('migration',
+      '    PERFORM 1 FROM public.users u WHERE u.id IN (v_due.lower_user_id, v_due.higher_user_id) ORDER BY u.id FOR KEY SHARE;\n', '')],
+    ['only the first recipient\'s deletion checked', 'migrationViolations', () => plant('migration',
+      '              WHERE d.user_id IN (v_proposal.lower_user_id, v_proposal.higher_user_id)', '              WHERE d.user_id = v_proposal.first_recipient_user_id')],
+    ['a BLOCKED deletion let through', 'migrationViolations', () => plant('migration',
+      "                AND d.status IN ('SCHEDULED', 'BLOCKED', 'ERASED', 'COMPLETED')) THEN\n    v_outcome := 'SKIPPED_DELETION_PENDING';",
+      "                AND d.status IN ('SCHEDULED', 'ERASED', 'COMPLETED')) THEN\n    v_outcome := 'SKIPPED_DELETION_PENDING';")],
     ['the ledger readable by service_role', 'migrationViolations', () => plant('migration', '    REVOKE ALL ON TABLE matching_forward_private.proposal_forward_attempts FROM service_role;\n', '')],
     ['the ledger restricting the erasure', 'migrationViolations', () => plant('migration', 'REFERENCES public.matching_proposals (id) ON DELETE CASCADE', 'REFERENCES public.matching_proposals (id) ON DELETE RESTRICT')],
     ['the lister writing', 'migrationViolations', () => plant('migration', "   ORDER BY t.occurred_at, b.delivery_transition_id\n   LIMIT p_limit;",

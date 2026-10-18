@@ -3,8 +3,8 @@ import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-
 
 /** The dispatcher's one-word answers (migration 0166 `server_forward_approved_matching_proposals_v1`). */
 export const FORWARD_OUTCOMES = [
-  'FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED', 'SKIPPED_NOT_READY', 'SKIPPED_STALE',
-  'HELD_INTEGRITY', 'BUSY', 'NONE_DUE',
+  'FORWARDED', 'SKIPPED_MOVED', 'SKIPPED_DELETION_PENDING', 'SKIPPED_NO_CONCLUSION', 'SKIPPED_NOT_CLEARED',
+  'SKIPPED_NOT_READY', 'SKIPPED_STALE', 'HELD_INTEGRITY', 'BUSY', 'NONE_DUE',
 ] as const;
 export type ForwardOutcome = (typeof FORWARD_OUTCOMES)[number];
 
