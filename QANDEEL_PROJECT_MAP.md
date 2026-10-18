@@ -170,8 +170,9 @@ This is a **locator note, not a new Product authority**. ACCT-DEL-01 merged thro
 design, its review addendum and their Controlled Amendments (2026-10-18), and started **S6-07 — Activity, Direct Entry
 and Final Integration** as the current implementation task. It owns `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and
 `QAN-BL-PRIV-04`, and closes A3-01 G-17. Evidence: the [S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md).
-- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) CLOSED, CP3 (ACTIVITY, PUSH & DIRECT
-  ENTRY) IN PROGRESS — STOPPED AT THE CP3 PRODUCT COPY GATE — NOT MERGED / NOT DEPLOYED**, on
+- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) CLOSED, CP3 (ACTIVITY, PUSH, DIRECT
+  ENTRY, ENROLLMENT & CONSENT UX) DELIVERED — CP3 PRODUCT COPY GATE CLOSED — AWAITING THE PRODUCT OWNER'S CP3 REVIEW — NOT
+  MERGED / NOT DEPLOYED**, on
   `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4).
 - CP1: migration `0165` (the ONE governed enrollment boundary `enroll_my_matching_setup_v1`, `authenticated` only, over
   five of the six frozen `0109` commands; the closed `ENROLLMENT` gate; the empty consent-text catalogue; the promotion
@@ -191,8 +192,12 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   `tests/s6-07-activity-direct-entry-contract.test.mjs`; the producer `apps/api/src/introductions-activity` (bound as the
   CP2 dispatcher's notifier), the capability truth in `activity/` and `push/`, the Introductions Direct Entry branch of
   `ActivityService.open`, `GET /introductions/alerts`, `PUT /introductions/worlds/:worldId/alerts`,
-  `POST /introductions/enrollment/revocation`; mobile Direct Entry and the mute rows. The CP3 Product Copy Gate is open
-  (record §11.5).
+  `POST /introductions/enrollment/revocation`; mobile Direct Entry and the mute rows. The CP3 Product Copy Gate was closed
+  by the Product Owner on 2026-10-18 (record §11.5); after it (record §11.10): the enrollment step and the consent
+  controls (`apps/mobile/src/introductions/IntroductionsEnrollment.tsx`, `enrollment-controller.ts`, `enrollment-copy.ts`,
+  the transport `runtime-entry/introductions-enrollment-api.ts`), the approved consent texts in the one pinned module
+  `database/matching-consent-texts-v1.mjs` with the loopback-only installer `database/install-matching-consent-texts.mjs`
+  and `verify-matching-consent-texts`, the static contract `tests/s6-07-enrollment-consent-surface-contract.test.mjs`.
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
   controlled amendment to the frozen `I-07` surface is
   [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.

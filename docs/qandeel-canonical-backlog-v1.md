@@ -1335,6 +1335,13 @@ f17 probes all three cores). The item is **not** tombstoned at CP1: it is dispos
 BG-08, with the rest of the task ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md), [I-07 runtime §50](matching-introduction-runtime-v1.md)).
 Owner, severity and status unchanged.
 
+**S6-07 CP3 note (2026-10-18; the S6-07 pull request, not merged).** After the Product Owner closed the CP3 Product Copy
+Gate, the enrollment step and the three independent consents (each withdrawn on its own, through its own retained `0109`
+command) are drawn in «التعارف مع قنديل» on the approved words, and the approved consent texts (version 1) are installed only
+by a loopback-only operator installer that never touches a gate; no migration installs them, so nothing can be enrolled in
+production. Opening `ENROLLMENT` and installing the texts on the hosted environment stay unauthorized. The item stays open
+until S6-07's closing change (CP4).
+
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: it is a canonical record's explicit deferral to a named future task. The
 entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes implementation (BG-07).
 

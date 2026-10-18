@@ -8,11 +8,11 @@ on 2026-10-18 («S6-07 — CP0 Approved / Start CP1»), with the Controlled Amen
 CP1 correction decision D-CP1-1 = B (2026-10-18, «S6-07 — CP1 Correction: Empty Introduction Profile»), with
 CA-D-CP1-1-impl; and «S6-07 — CP1 CLOSED / Start CP2» (2026-10-18), under Q5′ and CA-SYS-02 (CA-SYS-02-impl, §10); and the Product Owner's
 CP2 correction «S6-07 — CP2 Targeted Correction: Account Deletion Guard» (2026-10-18, §10.9); and «S6-07 — CP2 CLOSED / Start
-CP3» (2026-10-18, §11). No merge
+CP3» (2026-10-18, §11); and «S6-07 — CP3 Copy Gate APPROVED / Resume Implementation» (2026-10-18, §11.5, §11.10). No merge
 or deployment without the Product Owner's explicit «ادمج».  
 **Status:** **S6-07 ACTIVE — CP0 APPROVED, CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER, WITH THE
-ACCOUNT-DELETION GUARD) CLOSED, CP3 (ACTIVITY, PUSH & DIRECT ENTRY) IN PROGRESS — STOPPED AT THE CP3 PRODUCT COPY GATE (§11.5)
-— CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1, the D-CP1-1 correction (§4)
+ACCOUNT-DELETION GUARD) CLOSED, CP3 (ACTIVITY, PUSH, DIRECT ENTRY, ENROLLMENT & CONSENT UX) DELIVERED — CP3 PRODUCT COPY
+GATE CLOSED (§11.5) — AWAITING THE PRODUCT OWNER'S CP3 REVIEW — CP4 NOT STARTED — NOT MERGED / NOT DEPLOYED** (2026-10-18). The Product Owner closed CP1, the D-CP1-1 correction (§4)
 included, on the green head `05cc2cbc`; CP2 is §10, closed on the green head `ad1e4138`; CP3 is §11.  
 **Base:** `main` = merged PR #345 (ACCT-DEL-01) at `1861df43943a8695a761edec7aa42f5e18f018ec`, re-verified before the branch.  
 **Branch:** `s6/s6-07-activity-direct-entry-final-integration` (one pull request for the whole task: CP1 … CP4).  
@@ -21,6 +21,8 @@ included, on the green head `05cc2cbc`; CP2 is §10, closed on the green head `a
 
 `MERGED ≠ DEPLOYED ≠ LAUNCH-READY`. The hosted environment is `NOT_DEPLOYED`. CP1 opens no gate: the `ENROLLMENT` gate has
 no row and the consent catalogue no text, so nothing can be enrolled in production; CW2-08 and every launch gate stay closed.
+The approved consent texts (CP3, §11.10) enter a catalogue only through the loopback-only operator installer; no migration
+installs them, and installing them on the hosted environment is not authorized.
 CP2 opens none either: in production every forward attempt stops at the CW2-08 seam. CP3 opens none: in production nothing
 is delivered, born, sent or shared, so nothing is notified.
 
@@ -450,9 +452,11 @@ backlog change (`QAN-BL-MATCH-06` stays `DEFERRED — OWNED`).
 `ad1e41385596a5a8b851649b260c5b842008f5e4`; the CP0 report §5 and the review addendum §5 (Event Matrix; Q6 `WORLD_BORN`;
 Q10 `HUMAN_TEXT` = Class 4); D-CP1-1 = B and Q8(A) for the consent controls.
 
-**State at this point: CP3 IN PROGRESS — STOPPED AT THE CP3 PRODUCT COPY GATE (§11.5).** Everything that needs no new
-Product copy is built and proven. The mobile enrollment step and the consent controls are not drawn until the Product
-Owner approves their words; nothing in this section ships an unapproved sentence.
+**State at this point: CP3 DELIVERED — THE CP3 PRODUCT COPY GATE CLOSED (§11.5) — AWAITING THE PRODUCT OWNER'S CP3 REVIEW.**
+§11.1 – §11.9 are the first part, built before the Copy Gate (everything that needed no new Product copy). After the
+Product Owner approved the Copy Gate (2026-10-18), §11.10 completes CP3: the enrollment step, the three consents and
+their withdrawal on exactly the approved words, the governed install of the approved consent texts, and the correction
+of the CI lint failure on `ec27e01a`. Nothing in this section ships an unapproved sentence.
 
 ### 11.1 What was built
 
@@ -547,7 +551,35 @@ containing it); it is not scrolled to.
   with the account; the counterpart learns only that the Introduction ended; a proposal item whose proposal the erasure
   removed opens nothing.
 
-### 11.5 The CP3 Product Copy Gate — OPEN, awaiting the Product Owner
+### 11.5 The CP3 Product Copy Gate — CLOSED (APPROVED by the Product Owner, 2026-10-18)
+
+**Decision** («S6-07 — CP3 Copy Gate APPROVED / Resume Implementation», 2026-10-18):
+
+| Group | Decision |
+|---|---|
+| A — the enrollment step (EN-01 … EN-21) | **APPROVED**, with EN-03 amended (below) |
+| B — the three consent texts (CT-P, CT-C, CT-D) | **APPROVED**, with CT-P and CT-D amended (below); CT-C unchanged |
+| C — the consent controls (RV-01 … RV-12) | **APPROVED**, with RV-06 and RV-08 amended (below) |
+| D — per-event Activity sentences (AC-01 … AC-06) | **NOT APPROVED FOR USE.** Every Introductions Activity item keeps R-1 «تحديث في التعارف» / "An Introductions update"; Native Push stays L0 |
+
+**The five final words, as the Product Owner wrote them** (they replace the proposed rows below; every other row of A, B
+and C is approved exactly as proposed):
+
+| ID | ar | en |
+|---|---|---|
+| EN-03 | المشاركة في مقترحات التعارف | Taking part in introduction proposals |
+| CT-P | أوافق على المشاركة في مقترحات التعارف التي يقدّمها لي قنديل، ويمكنني إيقاف مشاركتي في أي وقت. | I agree to take part in the introduction proposals QANDEEL offers me, and I can stop taking part at any time. |
+| CT-D | أوافق على أن يقدّم قنديل للطرف الآخر مقترح تعارف خاصًا ومستقلًا قبل التوافق المتبادل، دون مشاركة أي حقل من ملف التعارف الخاص بي. ويمكنني سحب هذه الموافقة في أي وقت. | I agree that QANDEEL may show the other person a separate, private introduction proposal before a mutual match, without sharing any fields from my introduction profile. I can withdraw this consent at any time. |
+| RV-06 | تتوقف مشاركتك في مقترحات التعارف الجديدة، دون إنهاء أي تعارف بدأ بالفعل. | You will stop taking part in new introduction proposals. This does not end an introduction that has already begun. |
+| RV-08 | لن يُسمح بتمرير مقترحات جديدة إلى الطرف الآخر استنادًا إلى هذه الموافقة. | This consent will no longer authorize new proposals to be forwarded to the other person. |
+
+Where the words live: A and C in `apps/mobile/src/introductions/enrollment-copy.ts` (`ENROLLMENT_COPY_GATE`: CLOSED, 33
+rows, each with its ID); B as version 1 of each consent (`MATCHING_PARTICIPATION_V1`, `MATCHING_CONTEXT_GRANT_V1`,
+`PRE_MATCH_DISCLOSURE_AUTHORITY_V1`) in the one pinned module `database/matching-consent-texts-v1.mjs` — never in the
+app, which shows exactly the text the server returns. The approval authorizes neither opening `ENROLLMENT` nor installing
+the texts on the hosted environment (§11.10).
+
+*The proposal as it was put to the Product Owner, kept as history:*
 
 **Reused (approved words, in contexts already authorized; listed for visibility, no decision needed):**
 
@@ -630,10 +662,11 @@ per event, these would replace it **in the app only** (the Lock Screen stays L0,
 | AC-05 | IW-05 «بدأ التعارف» / "Your introduction has begun" (an approved word, in a new context) | | WORLD_BORN |
 | AC-06 | طلب في التعارف بانتظار الرد | A request in your introduction is waiting for a reply | SUCCESS_REQUESTED (dormant) |
 
-**Decisions asked:** (1) approve, amend or reject A (EN-01 … EN-21), B (CT-P, CT-C, CT-D) and C (RV-01 … RV-12);
-(2) D: keep R-1 for every event (*recommended for launch safety: it is already approved and says nothing about the event*)
-or approve AC-01 … AC-06 for the in-app body. After approval, CP3 continues in the same pull request: the enrollment step
-and the consent controls on exactly the approved words, their tests and a device proof — then the CP3 report.
+**Decisions asked (answered above, 2026-10-18):** (1) approve, amend or reject A (EN-01 … EN-21), B (CT-P, CT-C, CT-D) and
+C (RV-01 … RV-12); (2) D: keep R-1 for every event (*recommended for launch safety: it is already approved and says nothing
+about the event*) or approve AC-01 … AC-06 for the in-app body. After approval, CP3 continues in the same pull request: the
+enrollment step and the consent controls on exactly the approved words, their tests and a device proof — then the CP3
+report (§11.10).
 
 ### 11.6 Verification (local: real PostgreSQL 17.10; focused runs)
 
@@ -685,11 +718,13 @@ and the consent controls on exactly the approved words, their tests and a device
 - API specs: `activity.spec.ts` and `public-discussion.spec.ts` (Introductions now opens; Replay fails closed), the S6-05 world module isolation (a fifth
   file, the alerts, under the same rules), the CP2 worker spec and the CP1 enrollment spec (the wider interfaces).
 - Mobile: the runtime-entry barrel pin (one new transport class).
+- *(After the Copy Gate, §11.10:)* the runtime-entry barrel pin again (`IntroductionsEnrollmentApiClient`), and the CP3
+  static contract's Direct Entry pin (the entry taken while rendering).
 
 ### 11.8 Residual risks and what is not done yet
 
-- **Waiting on the Copy Gate:** the mobile enrollment step and the consent controls (the API for both exists); then their
-  device proof.
+- *(Resolved by §11.10:)* ~~Waiting on the Copy Gate: the mobile enrollment step and the consent controls; then their
+  device proof.~~
 - An item appears up to one dispatcher poll (60 s by default) after its event; a server down for more than 7 days skips
   the older events (the feed is not a log).
 - A message deleted, or a share removed, after its item was published leaves the item (it says only R-1); a proposal item
@@ -699,9 +734,112 @@ and the consent controls on exactly the approved words, their tests and a device
 - Not proven here: a real device or a real platform provider (Stage 9, `QAN-BL-LAUNCH-04/05`, `QAN-BL-NOTIF-05`); every
   launch gate and CW2-08 stay closed, so in production nothing is delivered, born, sent or notified.
 
+### 11.10 CP3 completed after the Copy Gate (2026-10-18)
+
+**Authority:** «S6-07 — CP3 Copy Gate APPROVED / Resume Implementation» (2026-10-18), on the reviewed head `ec27e01a`.
+Limits kept: the same task, branch and pull request; no frozen core changed; no Launch Gate, `ENROLLMENT` gate or hosted
+install; no CP4, merge or deployment.
+
+**1. The CI failure on `ec27e01a`, corrected (not a baseline).** Mobile CI's *Fast mobile contract gate* failed on one
+lint error, `react-hooks/set-state-in-effect` at `apps/mobile/src/shared-world/SharedWorldArea.tsx:113`, which CP3 had
+introduced: the revalidated Introduction World entry was taken by a `setIntroduction(...)` inside an effect. The entry is
+now taken once per entry while rendering (React's "adjusting state when a prop changes"), and only once the Introduction
+surface exists — the same exact World opens, nothing else is chosen in its place, and a later entry (a new counter) opens
+again. The rule is not disabled. The CP3 static contract pins the new form and refuses an effect form. The other jobs of
+that run were skipped (dependent) or green (API CI `39132912365` green); no other real failure was on that head.
+
+**2. The enrollment step and the three consents (mobile).**
+
+- `runtime-entry/introductions-enrollment-api.ts` — the transport of the CP1 / CP3 routes, strictly decoded (an
+  "available" view without all three texts is not believed); an act sends only the act, the reviewed draft version and
+  the consent versions it exercises; a withdrawal names one consent.
+- `introductions/enrollment-controller.ts` — one controller per runtime generation (retired with it). `enrollmentOffer`
+  chooses ONE act from the server's view: ENROLL (participation OFF and a reviewed draft — any reviewed draft, no field
+  required: D-CP1-1 = B), RESUME (a `USER_PAUSED` participation only), RECONFIRM_CONSENT (exactly the consents not in
+  force), CORRECTION (a reviewed draft newer than the enrolled one; with a fresh disclosure consent while the authority
+  is in force). Nothing is offered while the gate is closed or a deletion is pending. An act is refused locally unless
+  every consent it exercises was agreed, each by the version of the text shown; a lost answer is retried with the same
+  command id; a fresh read clears an earlier answer.
+- `introductions/IntroductionsEnrollment.tsx` — the step (EN-01, EN-02, then one row per consent: its EN-03 / EN-04 /
+  EN-05 label, the server's own current text in the reader's language, its own «أوافق»; the act enabled only when every
+  row is agreed; EN-08 while it runs; the outcome below it) and «موافقات التعارف» (each consent's RV-02 / RV-03 state,
+  RV-04, a confirmation with RV-05 and that consent's RV-06 / RV-07 / RV-08, RV-09 and the approved «إلغاء»; the answer
+  RV-10 / RV-11 / RV-12 / EN-21 inside that consent's own row).
+- `IntroductionsSurface.tsx` — the step closes the reviewed preparation, after the portrait it confirms; the consent
+  controls stand in the reviewed, intro and read-only (closed or deletion pending) states, so a withdrawal is always
+  reachable. The S6-01 "not available yet" sentences stay exactly where they were while nothing is known or the reader
+  never enrolled and the gate is closed (production); an enrolled reader with a closed gate sees EN-10 instead; none
+  while enrollment is open.
+- Composition: `integration-runtime.ts` (`introductionEnrollment`), `mobile-runtime-entry.ts`
+  (`introductionsEnrollmentFor`), `DepthComposition.tsx` (passed to the surface). Nothing else is reached.
+
+How the approved words are used where a choice was needed (recorded, not new copy):
+
+- **ALREADY_ENROLLED, NOT_ENROLLED, NOT_RESUMABLE** (the state moved since it was shown) answer EN-12 with the refreshed
+  view; **COMMAND_CONFLICT** answers EN-21; **NO_CHANGE** shows nothing and stops offering that correction.
+- **EN-19** names the RECONFIRM_CONSENT act, which is also how a withdrawn context or disclosure consent is given again
+  under the current text (the act the approved context names).
+- **The consent version** is shown with the text it belongs to and is exactly what the act names; it is not drawn as a
+  visible label, because no approved word names a version. If the Product Owner wants a visible version label, it is one
+  more Copy Gate row.
+
+**3. The governed install of the approved consent texts (database tooling; no migration).**
+
+- `database/matching-consent-texts-v1.mjs` — the ONE source of CT-P, CT-C, CT-D as approved, as version 1
+  (`MATCHING_PARTICIPATION_V1`, `MATCHING_CONTEXT_GRANT_V1`, `PRE_MATCH_DISCLOSURE_AUTHORITY_V1`), each pinned by the
+  SHA-256 of its bytes; the module refuses to load if a text and its pin disagree.
+- `database/install-matching-consent-texts.mjs` — the operator installer: only through the `0165` operator function
+  `install_consent_text_v1`, in one transaction; idempotent (an approved version already installed is left as it is);
+  refuses another text under an approved version, a superseded approved version and an unknown current text of a purpose,
+  writing nothing; never acts on a gate and proves the `ENROLLMENT` gate unchanged before committing; **loopback only** —
+  any other host is refused before connecting, so the approval cannot become a hosted install by accident; needs the
+  explicit `--confirm MATCHING_CONSENT_TEXTS_V1`.
+- No migration installs the texts: every database, production included, keeps the catalogue empty and enrollment closed.
+- `database/verify-matching-consent-texts.mjs` (API CI): T01 the bounds; T02 a fresh install is exactly the approved texts
+  and digests, the reader's view shows exactly them, the gate is untouched and still CLOSED, and an ENROLL with the
+  approved versions answers `NOT_AVAILABLE_NOW` writing nothing; T03 idempotent; T04 × 3 the refusals, nothing written;
+  T05 with a FIXTURE gate (never a launch decision) the approved versions are exactly what ENROLL names, for a reviewed
+  draft with neither optional field (one real profile version, zero fields), and any other version is `CONSENT_OUTDATED`.
+  Everything is rolled back; the catalogue is left empty.
+
+**4. Verification (local; GitHub CI on the final head is the deciding proof).**
+
+| Proof | Result |
+|---|---|
+| `verify-matching-consent-texts` (real PostgreSQL 17.10, fresh clone at `0167`) | 7 / 7 scenarios |
+| Mobile `enrollment.test.tsx` (new; Arabic and English; real controllers, scripted transports) | 35 / 35 |
+| Mobile affected suites (`introductions`, `runtime-entry`, `integration`, `shared-world`, `settings`) | 1057 / 1063 — the 6 are the known local baseline (`depth`, `w2-account-access`), unchanged |
+| Mobile `tsc`; `lint` | clean; 0 errors (96 warnings, unchanged) |
+| API `tsc`; enrollment + Introductions Activity specs | clean; 63 / 63 (one new: the approved texts pass through byte for byte) |
+| `tests/s6-07-enrollment-consent-surface-contract.test.mjs` (new) | 2 / 2; every one of its 18 planted defects caught |
+| `tests/s6-07-activity-direct-entry-contract.test.mjs` (re-anchored for §1) | 3 / 3 |
+| Root static contracts (`node --test tests/*.test.mjs`) | 1454 / 1454 |
+| `test:database` | 1310 / 1310 (the hazard contract's H7 asked the installer's savepoint helper to say what an autocommit caller must do; it does) |
+
+The neighbouring suites the earlier part of CP3 proved (`verify-0167`, `verify-0165`, Activity / Push / mutes, `prove-0166`)
+read nothing this part changed and were not re-run; API CI re-runs them on the final head.
+
+**5. Device proof (emulator, validation only).** `.s6-07-reports/cp3-device-proof/` (not committed): the S4-01 proof build
+at `bbfc611a` (APK `c1f83650…`) with the SYNTHETIC stand-ins (`s607-proof-enrollment.ts`, copies of the approved texts,
+checked identical by the static contract), API 36 x86_64 emulator 1080 × 2400 @ 420 dpi, four legs — Arabic / English ×
+Dark / Light — each a clean install and one Maestro journey of 18 photographed steps, all passing (72 screenshots,
+`CP3_DEVICE_EVIDENCE.html`): the production closed state; the step; each consent row with the approved text; two of
+three agreed (act disabled); three agreed; ENROLLED; the three given; withdrawing one (its own confirmation), the other
+two untouched; giving it again (RECONFIRM_CONSENT); the participation and disclosure confirmations (RV-06, RV-08 as
+amended); CONSENT_OUTDATED with nothing agreed; enrolled with the gate closed (EN-10, no act, withdrawal still offered).
+The device found two defects, both fixed before the final legs: a withdrawal's answer stood below the fold (now in that
+consent's row), and an earlier EN-13 stood beside a later closed state (a fresh read now starts clean; a test pins it).
+Not proven here: a physical device and TalkBack / VoiceOver (as for S6-04 … S6-06, required before launch).
+
+**6. Activity, Push and the mutes.** Unchanged by this part: no file of `activity/`, `push/`, `introductions-activity/`,
+`introductions-dispatch/` or `0167` changed after `ec27e01a`; their proofs (§11.6) stand and API CI re-runs them.
+Group D is not used: every Introductions item keeps R-1 at L0.
+
+**Status: CP3 DELIVERED — AWAITING THE PRODUCT OWNER'S CP3 REVIEW.** CP4 is not started.
+
 ### 11.9 Backlog (BG-08 at CP3)
 
 CP3 admits nothing, re-owns nothing and closes nothing. `QAN-BL-MATCH-06` gains a dated CP3 note: its last required
 property ("composes with the S6-07 notifications") is delivered; it is dispositioned at S6-07's closing change. A3-01
-G-17 (the capability truth, publication through the boundary, L0 kept) is delivered here and closed at CP4 with the task.
+G-17 (the capability truth, publication through the boundary, L0 kept) is delivered here and closed at CP4 with the task. *(After the Copy Gate, §11.10:)* still nothing is admitted, re-owned or closed; `QAN-BL-MATCH-01` gains a dated CP3 note (the enrollment step, the three independent consents and the governed loopback-only install of the approved texts; the item stays open until the closing change).
 74 items; counts unchanged.

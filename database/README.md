@@ -5120,3 +5120,25 @@ npm run test:s6-07-activity-direct-entry-contract
 
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its behaviour section rolls back, and the CW2-08
 and I-07D seams are restored byte for byte.
+
+## S6-07 - the approved Matching consent texts (version 1) and their governed install (CP3)
+
+The three consent texts the Product Owner approved on 2026-10-18 (CP3 Copy Gate group B: CT-P, CT-C, CT-D) live in ONE
+module, `matching-consent-texts-v1.mjs`, each pinned by the SHA-256 of its UTF-8 bytes (the module refuses to load if a
+text and its pin disagree). No migration installs them, so every database - production included - keeps the `0165`
+catalogue empty and enrollment closed.
+
+```sh
+node database/install-matching-consent-texts.mjs --database-url <loopback url> --confirm MATCHING_CONSENT_TEXTS_V1
+npm run verify:matching-consent-texts:integration
+npm run test:s6-07-enrollment-consent-surface-contract
+```
+
+- **One way in.** Each text enters through the `0165` operator function `install_consent_text_v1`, in one transaction;
+  a version already installed with exactly the approved text is left as it is; any other text, a superseded version or
+  an unknown current text of a purpose is refused and nothing is written.
+- **No gate.** The installer never calls `set_gate_v1` and proves the `ENROLLMENT` gate unchanged before it commits:
+  installed texts with a closed gate still answer `NOT_AVAILABLE_NOW`.
+- **Loopback only.** Any host but `localhost`, `127.0.0.1` or `::1` is refused before connecting: installing on a hosted
+  environment is a separate, later authorization.
+- The verifier runs on a FULLY migrated database and rolls everything back.
