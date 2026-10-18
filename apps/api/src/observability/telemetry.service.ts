@@ -83,6 +83,10 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  // S6-06 (CP2): the Introduction photo erasure worker (migration 0162) - sweep, erase (DELETE proven by HEAD, or deferred
  // and never dropped) and the listing reconciliation. Outcome classes only - never a key, handle, World, person or byte count.
  ['INTRODUCTION_MEDIA_ERASURE',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','deferred',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])]])],
+ // S6-07 (CP2): the forward dispatcher (migration 0166). A forward is success; a proposal another act moved first is
+ // superseded_expected; one the core or its seam did not clear, or with no single conclusion, is blocked_expected; a held
+ // pair is retry_expected; a held integrity refusal is integrity_failure. Never a person, proposal, view or count.
+ ['INTRODUCTIONS_FORWARD',new Map([['dispatch',new Set(['success','superseded_expected','blocked_expected','retry_expected',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])]])],
  ['PUSH_DELIVERY',new Map([
   ['plan',new Set(['success',...OPERATION_FAILURES])],
   ['claim',new Set(['success',...OPERATION_FAILURES])],

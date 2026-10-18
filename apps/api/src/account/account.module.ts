@@ -9,6 +9,7 @@ import { IntroductionsLifecycleModule } from '../introductions-lifecycle/introdu
 import { IntroductionsPreparationModule } from '../introductions-preparation/introductions-preparation.module';
 import { IntroductionsProposalsModule } from '../introductions-proposals/introductions-proposals.module';
 import { IntroductionsEnrollmentModule } from '../introductions-enrollment/introductions-enrollment.module';
+import { IntroductionsDispatchModule } from '../introductions-dispatch/introductions-dispatch.module';
 import { IntroductionsWorldModule } from '../introductions-world/introductions-world.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { AccountErasureRecoveryWorker } from './account-erasure-recovery.worker';
@@ -69,10 +70,14 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * S6-07 (CP1) composes the owner's governed Matching enrollment (IntroductionsEnrollmentModule) here for the same reason
  * as the other Introductions modules. It shares nothing with these providers or with them, holds no service_role path
  * and imports no AI runtime.
+ *
+ * S6-07 (CP2) composes the forward dispatcher's server pass (IntroductionsDispatchModule) here for the same reason. It has
+ * no controller and no route; its one service_role call reaches the ONE database dispatcher (migration 0166), and it
+ * shares nothing with these providers or the other Introductions modules.
  */
 @Module({
   imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,
-    IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule],
+    IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,
