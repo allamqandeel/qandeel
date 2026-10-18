@@ -10,7 +10,10 @@
 //     SKIPPED_STALE, on every line - including the lines before v16 that re-run a 40001 transaction without bound;
 //   * once nothing is stale the worker forwards exactly once and the candidate's own token reads the neutral row;
 //   * the Activity recovery path: a publication that fails after the committed forward is published on the next cycle,
-//     exactly once, and a third cycle has nothing left (the notifier here is a FIXTURE of the CP3 producer).
+//     exactly once, and a third cycle has nothing left. RE-ANCHORED by S6-07 CP3: the notifier is the REAL compiled CP3
+//     producer (IntroductionsActivityProducer, through its own module), made to fail once by a wrapper: the published item
+//     is the producer's own (L0, the reused generic sentence, the exact proposal entry, until the deadline), and the
+//     candidate's own capability truth reads true through this line while an outsider's reads false.
 //
 // Every fixture is removed afterwards: the humans and everything they own, the policies, the fixture trigger, and the
 // CW2-08 seam is restored byte for byte.
@@ -36,6 +39,8 @@ const { IntroductionsDispatchModule } = require('../apps/api/dist/introductions-
 const { IntroductionsForwardDispatcherWorker } = require('../apps/api/dist/introductions-dispatch/introductions-forward-dispatcher.worker.js');
 const { IntroductionsForwardDispatchRepository } = require('../apps/api/dist/introductions-dispatch/introductions-forward-dispatch.repository.js');
 const { SupabaseServiceRoleApiService } = require('../apps/api/dist/conversation/supabase-service-role-api.service.js');
+const { IntroductionsActivityProducer } = require('../apps/api/dist/introductions-activity/introductions-activity.producer.js');
+const { INTRODUCTIONS_ACTIVITY_COPY } = require('../apps/api/dist/introductions-activity/introductions-activity-copy.js');
 
 const rt = createMatchRuntime(databaseUrl);
 const { q, rows } = rt;
@@ -117,7 +122,7 @@ const delivered = async (proposal) => Number((await rows(`SELECT count(*) n FROM
 
 async function main() {
   await rt.client.connect();
-  const humans = [randomUUID(), randomUUID()];
+  const humans = [randomUUID(), randomUUID(), randomUUID()];
   const [first, candidate] = humans;
   const seam = await rt.captureMatchingSeam(PFN.PREREQUISITES);
   let gateway = null;
@@ -201,18 +206,13 @@ async function main() {
 
     stage = 'the Activity recovery path: a failed publication is published on the next cycle, exactly once';
     let down = true;
+    const producer = context.get(IntroductionsActivityProducer);
     const notifier = {
       async publishDelivered(d) {
         if (down) throw new Error('activity unavailable');
-        const answer = await rpc(service(), 'server_publish_activity_candidate_v1', {
-          p_user_id: d.recipientUserId, p_candidate_key: d.candidateKey, p_source_ref: `proposal-delivered:${d.deliveryTransitionId}`,
-          p_category: 'INTRODUCTIONS', p_kind: 'INTRODUCTION', p_interruption_class: 3, p_critical: false, p_requested: false,
-          p_context_kind: 'INTRODUCTIONS', p_context_ref: null, p_context_label_ar: null, p_context_label_en: null,
-          p_entry_destination: 'INTRODUCTIONS', p_entry_ref: `proposal:${d.proposalId}`, p_speaker: 'PRODUCT', p_body_ar: null,
-          p_body_en: 'prove-0166 fixture', p_secondary_ar: null, p_secondary_en: null, p_actionable: false, p_disclosure_max: 'L0',
-          p_occurred_at: d.deliveredAt, p_expires_at: null });
-        assert.equal(answer.status, 200, `the fixture publication (${JSON.stringify(answer.body)})`);
+        await producer.publishDelivered(d);
       },
+      publishPendingEvents: (limit) => producer.publishPendingEvents(limit),
     };
     const recovering = new IntroductionsForwardDispatcherWorker(new IntroductionsForwardDispatchRepository(new SupabaseServiceRoleApiService()), telemetry, notifier);
     assert.deepEqual(await recovering.runOnce(), { attempts: 0, forwarded: 0, skipped: 0, busy: 0, held: 0, failed: 0, published: 0, publishFailed: 1 });
@@ -225,7 +225,16 @@ async function main() {
       'exactly one notification');
     assert.equal(Number((await rows(`SELECT count(*) n FROM public.activity_item_members WHERE user_id = $1`, [first]))[0].n), 0,
       'and none for the first recipient');
-    console.log(`prove-0166 PostgREST ${version}: anon / authenticated refused; NONE_DUE; SKIPPED_NOT_CLEARED behind the real seam; 40001 and PT409 answered once as SKIPPED_STALE; one forward by the compiled worker; a failed publication recovered once`);
+    const [item] = await rows(`SELECT kind, interruption_class, entry_destination, entry_ref, context_ref, context_label_ar, body_ar, body_en,
+        secondary_ar, disclosure_max, expires_at IS NOT NULL AS expires FROM public.activity_items WHERE user_id = $1`, [candidate]);
+    assert.deepEqual(item, { kind: 'INTRODUCTION', interruption_class: 3, entry_destination: 'INTRODUCTIONS', entry_ref: `proposal:${f.proposal}`,
+      context_ref: null, context_label_ar: null, body_ar: INTRODUCTIONS_ACTIVITY_COPY.update.ar, body_en: INTRODUCTIONS_ACTIVITY_COPY.update.en,
+      secondary_ar: null, disclosure_max: 'L0', expires: true }, 'the real CP3 producer\'s item: L0, the reused sentence, the exact proposal, until its deadline');
+    const entered = await rpc(jwt({ sub: candidate, role: 'authenticated' }), 'read_my_introductions_capability_v1', {});
+    assert.deepEqual([entered.status, entered.body], [200, true], 'the candidate\'s own capability truth, a boolean on the wire');
+    const outsider = await rpc(jwt({ sub: humans[2], role: 'authenticated' }), 'read_my_introductions_capability_v1', {});
+    assert.deepEqual([outsider.status, outsider.body], [200, false], 'a human who never entered reads false');
+    console.log(`prove-0166 PostgREST ${version}: anon / authenticated refused; NONE_DUE; SKIPPED_NOT_CLEARED behind the real seam; 40001 and PT409 answered once as SKIPPED_STALE; one forward by the compiled worker; a failed publication recovered once by the real CP3 producer; the capability truth on the wire`);
   } catch (error) {
     failure = error;
   }

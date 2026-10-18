@@ -204,6 +204,9 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   // RE-ANCHORED by S6-06 CP2 (2026-10-17): the S6-06 sharing and continuation clients (and their suite) name the
   // Introduction World routes for disclosure, photos and SUCCESS — and never the END, which stays the S6-05 client's.
   const sharing = ['runtime-entry/introduction-sharing-api.ts', 'runtime-entry/introduction-continuation-api.ts', 'runtime-entry/__tests__/introduction-sharing-api.test.ts'];
+  // RE-ANCHORED by S6-07 CP3 (2026-10-18): the per-Introduction alerts client and the CP3 integration test name the
+  // Introduction World routes for the alerts and the reads — and never the END.
+  sharing.push('runtime-entry/introduction-alerts-api.ts', 'integration/__tests__/s6-07-introductions-direct-entry.test.tsx');
   for (const file of sharing) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/end\b|end_own_introduction/u, `mobile ${file} wires no END`);
   for (const file of mobile('apps/mobile/src/').map((f) => String(f).replace(/\\/gu, '/'))) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction/u, `mobile ${file} names no database function`);

@@ -127,11 +127,17 @@ function censusViolations(w) {
 function apiViolations(w) {
   const out = [];
   const rpcs = [...w.repository.matchAll(/'rpc\/([a-z0-9_]+)'/gu)].map((m) => m[1]).sort();
-  if (JSON.stringify(rpcs) !== JSON.stringify(['enroll_my_matching_setup_v1', 'read_my_matching_enrollment_v1'])) out.push(`exactly the two 0165 entry points (got ${rpcs})`);
+  // RE-ANCHORED by S6-07 CP3 (2026-10-18): the one-consent withdrawal adds the frozen 0109 self-inspection, and exactly
+  // the three retained 0109 withdrawal commands (named in its REVOCATION table, never a creating one).
+  if (JSON.stringify(rpcs) !== JSON.stringify(['enroll_my_matching_setup_v1', 'get_my_matching_setup_v1', 'read_my_matching_enrollment_v1'])) out.push(`exactly the two 0165 entry points and the 0109 self-inspection (got ${rpcs})`);
+  const withdrawals = [...w.repository.matchAll(/: \['([a-z0-9_]+_v1)', 'p_expected_[a-z_]+'\]/gu)].map((m) => m[1]).sort();
+  if (JSON.stringify(withdrawals) !== JSON.stringify(['revoke_matching_context_v1', 'revoke_pre_match_disclosure_authority_v1', 'turn_off_matching_participation_v1'])) {
+    out.push(`exactly the three retained withdrawal commands (got ${withdrawals})`);
+  }
   if (/ServiceRole|service_role'|SUPABASE_SERVICE_ROLE/u.test(code(w.repository) + code(w.service) + code(w.module))) out.push('no service_role path');
   if (/p_user|user_?id|userId/iu.test(code(w.repository))) out.push('no account parameter reaches the database');
   const routes = [...w.controller.matchAll(/@(Get|Post)\('([^']+)'\)/gu)].map((m) => `${m[1].toUpperCase()} /introductions/${m[2]}`).sort();
-  if (JSON.stringify(routes) !== JSON.stringify(['GET /introductions/enrollment', 'POST /introductions/enrollment'])) out.push(`exactly two routes (got ${routes})`);
+  if (JSON.stringify(routes) !== JSON.stringify(['GET /introductions/enrollment', 'POST /introductions/enrollment', 'POST /introductions/enrollment/revocation'])) out.push(`exactly two routes and the CP3 withdrawal (got ${routes})`);
   if (!w.census.includes("'GET /introductions/enrollment': 'AUTHENTICATED',") || !w.census.includes("'POST /introductions/enrollment': 'SECURITY_SENSITIVE',")) out.push('the route census classes');
   // RE-ANCHORED by S6-07 CP2: the forward dispatcher's server pass is composed after the enrollment module.
   if ((w.account.match(/\bIntroductionsEnrollmentModule\b/gu) ?? []).length < 2 || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u.test(w.account)) out.push('composed once through AccountModule');

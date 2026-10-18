@@ -169,7 +169,11 @@ test('6 — mobile reaches the Introduction World only through its one CP5 clien
   // RE-ANCHORED by S6-06 CP2 (2026-10-17): the S6-06 sharing and continuation clients (and their suite) name the World's
   // disclosure, photo and SUCCESS routes; the messages, END and history routes stay the S6-05 client's alone.
   const S6_06_MOBILE_CLIENTS = ['runtime-entry/introduction-sharing-api.ts', 'runtime-entry/introduction-continuation-api.ts', 'runtime-entry/__tests__/introduction-sharing-api.test.ts'];
-  assert.deepEqual(naming.sort(), [...S6_05_MOBILE_CLIENT, ...S6_06_MOBILE_CLIENTS].sort(), 'one client names the routes');
+  // RE-ANCHORED by S6-07 CP3 (2026-10-18): the per-Introduction alerts client names only `/introductions/worlds/:id/alerts`,
+  // and the CP3 integration test answers the Introduction World reads as the API does; neither wires a message, END or history.
+  const S6_07_MOBILE_CLIENTS = ['runtime-entry/introduction-alerts-api.ts', 'integration/__tests__/s6-07-introductions-direct-entry.test.tsx'];
+  for (const file of S6_07_MOBILE_CLIENTS) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/end\b|\/history|method: 'POST'/u, `${file} wires no message, END or history`);
+  assert.deepEqual(naming.sort(), [...S6_05_MOBILE_CLIENT, ...S6_06_MOBILE_CLIENTS, ...S6_07_MOBILE_CLIENTS].sort(), 'one client names the routes');
   for (const file of S6_06_MOBILE_CLIENTS) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/(?:messages|end|history)\b/u, `${file} names no S6-05 route`);
   for (const file of readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)))) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /_my_introduction_/u, `mobile ${file} names no database function`);

@@ -165,7 +165,9 @@ test('7 — ONE Direct Entry contract, revalidated at open; Stage 5–8 destinat
   // S4-04 (Stage 4) opens SHARED_WORLD, re-authorized by the Shared entry verdict at open; Replay stays Stage 7's.
   // S5-04 re-anchor (validation only): Stage 5 opens PUBLIC_WORLD, re-authorized by the Public domain's own reads at open;
   // Introductions (Stage 6) and Replay (Stage 7) still fail closed.
-  assert.match(types, /export const EXECUTABLE_DESTINATIONS: ReadonlySet<EntryDestination> = new Set\(\['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD'\]\);/u);
+  // S6-07 CP3 re-anchor (validation only): Stage 6 opens INTRODUCTIONS, re-authorized by the Introductions domain's own
+  // reads at open (the caller's own Introduction World or delivered proposal); Replay (Stage 7) still fails closed.
+  assert.match(types, /export const EXECUTABLE_DESTINATIONS: ReadonlySet<EntryDestination> = new Set\(\['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD', 'INTRODUCTIONS'\]\);/u);
   const service = code(`${API}/activity.service.ts`);
   assert.match(service, /return \{ outcome: 'UNAVAILABLE', fallback: null \};/u, 'future destinations fail closed');
   assert.match(service, /if \(row\.outcome === 'STALE'\) return \{ outcome: 'STALE', fallback \};/u, 'no guessed replacement (D39)');

@@ -7,8 +7,9 @@
 // attempt per transaction; the ledger's ids reused, never minted per attempt; exactly one permitted conclusion, never
 // invented; 40001 / PT409 absorbed, nothing re-raised, no dynamic SQL; no transition, view, binding or seam written by
 // the dispatcher itself; the ledger readable by nobody and removed with its proposal; the census naming the second
-// SYSTEM exception exactly; a worker with no route that ends its cycle at BUSY and binds no Activity notifier yet; and the
-// proofs wired into CI. Each detector is shown to catch a planted defect.
+// SYSTEM exception exactly; a worker with no route that ends its cycle at BUSY; and the proofs wired into CI. Each detector
+// is shown to catch a planted defect. RE-ANCHORED by S6-07 (CP3): the worker's notifier is now bound, to exactly the CP3
+// Introductions Activity producer (its own module, tests/s6-07-activity-direct-entry-contract.test.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -144,7 +145,8 @@ function apiViolations(w) {
   }
   if (!/\{ p_max: 1 \}/u.test(w.repository)) out.push('the dispatcher is called with p_max = 1 only');
   if (/@Controller|controllers:|@(?:Get|Post|Put|Patch|Delete)\(/u.test(code(w.module) + code(w.worker) + code(w.repository))) out.push('no controller and no route');
-  if (/INTRODUCTIONS_DELIVERY_NOTIFIER|provide:/u.test(code(w.module))) out.push('no Activity notifier is bound before CP3');
+  if (!/\{ provide: INTRODUCTIONS_DELIVERY_NOTIFIER, useExisting: IntroductionsActivityProducer \}/u.test(code(w.module))
+      || (code(w.module).match(/provide:/gu) ?? []).length !== 1) out.push('the notifier is bound to exactly the CP3 Introductions Activity producer');
   if (/console\.|Logger/u.test(code(w.worker) + code(w.repository))) out.push('the pass logs nothing');
   if (!/export const FORWARD_ATTEMPTS_PER_CYCLE = 10;/u.test(w.worker) || !/for \(let i = 0; i < FORWARD_ATTEMPTS_PER_CYCLE; i \+= 1\)/u.test(w.worker)) out.push('a bounded cycle');
   if (!/if \(outcome === 'NONE_DUE'\) break;/u.test(w.worker) || !/if \(outcome === 'BUSY'\) break;/u.test(w.worker)) out.push('the cycle ends at NONE_DUE and at BUSY');
@@ -223,10 +225,10 @@ test('2 - every detector catches a planted defect', () => {
     ['a third system exception', 'censusViolations', () => plant('verify0149', 'const SYSTEM_EXCEPTIONS = [ACCT_DEL_01_ACCOUNT_ERASURE, S6_07_FORWARD_DISPATCH];',
       "const SYSTEM_EXCEPTIONS = [ACCT_DEL_01_ACCOUNT_ERASURE, S6_07_FORWARD_DISPATCH, 'public.server_anything_v1()'];")],
     ['the absorber dropped', 'censusViolations', () => plant('verify0150', "  'server_forward_approved_matching_proposals_v1',\n", '')],
-    ['a route', 'apiViolations', () => plant('module', '@Module({\n  imports: [ObservabilityModule],', '@Module({\n  imports: [ObservabilityModule],\n  controllers: [IntroductionsForwardDispatcherWorker],')],
+    ['a route', 'apiViolations', () => plant('module', '@Module({\n  imports: [ObservabilityModule, IntroductionsActivityModule],', '@Module({\n  imports: [ObservabilityModule, IntroductionsActivityModule],\n  controllers: [IntroductionsForwardDispatcherWorker],')],
     ['the cycle looping on BUSY', 'apiViolations', () => plant('worker', "        if (outcome === 'BUSY') break;\n", '')],
-    ['a notifier bound before CP3', 'apiViolations', () => plant('module', '  providers: [SupabaseServiceRoleApiService,',
-      '  providers: [{ provide: INTRODUCTIONS_DELIVERY_NOTIFIER, useValue: {} }, SupabaseServiceRoleApiService,')],
+    ['another notifier bound', 'apiViolations', () => plant('module', '{ provide: INTRODUCTIONS_DELIVERY_NOTIFIER, useExisting: IntroductionsActivityProducer }',
+      '{ provide: INTRODUCTIONS_DELIVERY_NOTIFIER, useValue: {} }')],
     ['a batch on the wire', 'apiViolations', () => plant('repository', '{ p_max: 1 }', '{ p_max: 10 }')],
     ['the wire proof outside the loop', 'wiringViolations', () => plant('workflow', '            POSTGREST_VERSION="$version" npm run --silent prove:forward-dispatch:postgrest', '            echo skipped')],
   ]) {
