@@ -132,7 +132,8 @@ test('6 — the named exceptions: 0149 NO_BACKDOOR, 0150 ABSORBED and the 0112 a
   for (const probe of ['f8 the census refuses a second client-executable wrapper around the Mutual Match core',
     'f9 the census refuses the S6-05 acceptance boundary granted beyond authenticated']) assert.ok(nb.includes(probe), probe);
   // RE-ANCHORED by S6-06 (2026-10-16, migration 0163): its three absorbers follow the acceptance.
-  assert.match(read('database/verify-migration-0150.mjs'), /'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n\];/u);
+  // RE-ANCHORED by S6-07 CP2 (2026-10-18, migration 0166): the forward dispatcher's absorber follows the enrollment's.
+  assert.match(read('database/verify-migration-0150.mjs'), /'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n\];/u);
   assert.match(read('database/verify-migration-0112.mjs'), /\['accept_my_matching_proposal_v1', I07C_MATCH_PRODUCER\]\.sort\(\)/u);
   const v0158 = read('database/verify-migration-0158.mjs');
   assert.match(v0158, /actions: \['ACCEPT', 'DECLINE'\], view: secondView/u, 'the S6-04 pin is re-anchored to the offered acceptance');

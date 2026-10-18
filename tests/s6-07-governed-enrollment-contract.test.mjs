@@ -118,7 +118,8 @@ function censusViolations(w) {
   if (!/pristine: `REVOKE EXECUTE ON FUNCTION public\.set_empty_matching_requirements_core_v1\(uuid, uuid, uuid\),\s+public\.set_empty_introduction_profile_core_v1\(uuid, uuid, uuid\),\s+public\.grant_zero_field_pre_match_disclosure_authority_core_v1/u.test(w.verify0149)) {
     out.push('0149 f17 probes every one of the three cores');
   }
-  if (!/ {2}'enroll_my_matching_setup_v1',\n\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the boundary');
+  // RE-ANCHORED by S6-07 CP2 (migration 0166): the forward dispatcher's absorber follows the boundary's.
+  if (!/ {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the boundary');
   if (!w.verify0156.includes("['enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)']")) out.push('0156 A02 admits exactly the boundary as the writer\'s one wrapper');
   return out;
 }
@@ -132,7 +133,8 @@ function apiViolations(w) {
   const routes = [...w.controller.matchAll(/@(Get|Post)\('([^']+)'\)/gu)].map((m) => `${m[1].toUpperCase()} /introductions/${m[2]}`).sort();
   if (JSON.stringify(routes) !== JSON.stringify(['GET /introductions/enrollment', 'POST /introductions/enrollment'])) out.push(`exactly two routes (got ${routes})`);
   if (!w.census.includes("'GET /introductions/enrollment': 'AUTHENTICATED',") || !w.census.includes("'POST /introductions/enrollment': 'SECURITY_SENSITIVE',")) out.push('the route census classes');
-  if ((w.account.match(/\bIntroductionsEnrollmentModule\b/gu) ?? []).length < 2 || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule\]/u.test(w.account)) out.push('composed once through AccountModule');
+  // RE-ANCHORED by S6-07 CP2: the forward dispatcher's server pass is composed after the enrollment module.
+  if ((w.account.match(/\bIntroductionsEnrollmentModule\b/gu) ?? []).length < 2 || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u.test(w.account)) out.push('composed once through AccountModule');
   if (!/exactKeys\(body, \['commandId', 'kind', 'expectedDraftVersion', 'consents'\]\)/u.test(w.service)) out.push('the exact request shape');
   return out;
 }
@@ -186,7 +188,7 @@ test('2 - every detector catches a planted defect', () => {
       "      'public.set_empty_introduction_profile_core_v1(uuid,uuid,uuid)',\n      'public.grant_zero_field", "      'public.grant_zero_field")],
     ['f17 no longer probing the empty-profile core', 'censusViolations', () => plant('verify0149', '                   public.set_empty_introduction_profile_core_v1(uuid, uuid, uuid),\n', '')],
     ['the census exception generalized', 'censusViolations', () => plant('verify0149', 'f.proname !== nameOf(S6_07_GOVERNED_ENROLLMENT)', "!f.proname.startsWith('enroll_')")],
-    ['the absorber dropped', 'censusViolations', () => plant('verify0150', "  'enroll_my_matching_setup_v1',\n];", '];')],
+    ['the absorber dropped', 'censusViolations', () => plant('verify0150', "  'enroll_my_matching_setup_v1',\n", '')],
     ['a third route', 'apiViolations', () => plant('controller', "  @Post('enrollment')", "  @Post('enrollment/admin')\n  admin() { return null; }\n\n  @Post('enrollment')")],
     ['a service_role call', 'apiViolations', () => plant('repository', 'constructor(private readonly dataApi: SupabaseDataApiService) {}',
       'constructor(private readonly dataApi: SupabaseDataApiService, private readonly serviceRole: SupabaseServiceRoleApiService) {}')],

@@ -196,7 +196,8 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   // S6-04 (2026-10-15) appends its own proposal module, and S6-05 (2026-10-16, CP3) its Introduction World module after
   // it, and S6-06 (2026-10-16, CP1) its two modules after that; the S6-02 module stays composed here, exactly once.
   // RE-ANCHORED by S6-07 CP1 (2026-10-18): the governed enrollment module is composed after the S6-06 modules.
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule\]/u);
+  // RE-ANCHORED by S6-07 CP2 (2026-10-18): the forward dispatcher's server pass is composed after it.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
     'integration/__validation__/s605-proof-introduction-world.ts'];
