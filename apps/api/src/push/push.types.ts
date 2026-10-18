@@ -47,6 +47,8 @@ export interface ClaimedAttempt {
   /** The preference row, or null for the frozen defaults. */
   readonly preferences: Record<string, unknown> | null;
   readonly muted: boolean;
+  /** D26 / S6-07: the reader's Introductions capability truth (0167), read by the dispatcher for INTRODUCTIONS items only. */
+  readonly introductionsEntered?: boolean;
   readonly evidence: readonly { readonly at: string; readonly kind: ActivityItemRow['kind']; readonly critical: boolean; readonly requested: boolean }[];
   readonly now: string;
 }

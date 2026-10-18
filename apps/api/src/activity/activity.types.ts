@@ -31,15 +31,16 @@ export const CATEGORY_CONTEXT: Readonly<Record<ActivityCategory, ActivityContext
  * exists for execute. The rest fail closed (UNAVAILABLE) until their Stage owns a surface — nothing here builds one.
  * S4-04 (Stage 4) makes SHARED_WORLD executable: the exact World, re-authorized by the Shared entry verdict at open.
  * S5-04 (Stage 5) makes PUBLIC_WORLD executable: the exact Public Experience discussion or relation context, re-authorized
- * by the Public domain's own reads at open. REPLAY stays closed (generic Replay Product integration is Stage 7), as do
- * Introductions (6).
+ * by the Public domain's own reads at open. S6-07 (Stage 6) makes INTRODUCTIONS executable: the caller's own Introduction
+ * World or delivered proposal, re-authorized by the Introductions domain's own reads at open. REPLAY stays closed (generic
+ * Replay Product integration is Stage 7).
  */
 export const ENTRY_DESTINATIONS = [
   'NONE', 'PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD',
   'INTRODUCTIONS', 'REPLAY',
 ] as const;
 export type EntryDestination = (typeof ENTRY_DESTINATIONS)[number];
-export const EXECUTABLE_DESTINATIONS: ReadonlySet<EntryDestination> = new Set(['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD']);
+export const EXECUTABLE_DESTINATIONS: ReadonlySet<EntryDestination> = new Set(['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD', 'INTRODUCTIONS']);
 export const SETTINGS_SECTIONS = ['SECURITY', 'ACCOUNT', 'NOTIFICATIONS'] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
@@ -137,7 +138,7 @@ export interface ActivityItemView {
   /** P3 §4: seen, still needs the user (an actionable item not yet opened). */
   readonly waiting: boolean;
   readonly stale: boolean;
-  /** D34: the item's Shared World is muted («مكتوم»). */
+  /** D34: the item's World (a Shared World or, S6-07, an Introduction World) is muted («مكتوم»). */
   readonly muted: boolean;
   /** The attention mark (P3 §6): attention state, never event state (D44). */
   readonly mark: boolean;
@@ -179,8 +180,11 @@ export interface ActivityAttentionView extends ActivityIndicatorsView {
 /** S5-04 — the exact Public context a Public item opens: one Experience's discussion, or the reader's relation management of their own Experience. */
 export type PublicEntryTarget = { readonly kind: 'DISCUSSION'; readonly experienceId: string } | { readonly kind: 'RELATIONS'; readonly experienceId: string };
 
+/** S6-07 — the exact Introductions context an Introductions item opens: the reader's own Introduction World, or one of their own delivered proposals. */
+export type IntroductionsEntryTarget = { readonly kind: 'WORLD'; readonly worldId: string } | { readonly kind: 'PROPOSAL'; readonly proposalId: string };
+
 export type ActivityOpenView =
-  | { readonly outcome: 'ENTER'; readonly destination: { readonly kind: 'PERSONAL_CONVERSATION' | 'QANDEEL_UNDERSTANDING' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | { readonly kind: 'SHARED_WORLD'; readonly worldId: string } | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget } }
+  | { readonly outcome: 'ENTER'; readonly destination: { readonly kind: 'PERSONAL_CONVERSATION' | 'QANDEEL_UNDERSTANDING' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | { readonly kind: 'SHARED_WORLD'; readonly worldId: string } | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget } | { readonly kind: 'INTRODUCTIONS'; readonly target: IntroductionsEntryTarget } }
   | { readonly outcome: 'STALE' | 'UNAVAILABLE' | 'NO_ENTRY'; readonly fallback: { readonly kind: 'PERSONAL_CONVERSATION' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | null };
 
 export interface ActivityPreferencesView {

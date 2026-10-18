@@ -42,6 +42,11 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /account/privacy': 'AUTHENTICATED',
   'POST /account/privacy/export': 'SECURITY_SENSITIVE', // password proof
   'GET /account/privacy/export/download': 'SECURITY_SENSITIVE', // the whole Personal record
+  // S6-07 (CP4): the bundle carries the same whole record; each photo file is one of the reader's own renditions, read
+  // exactly as the media route reads it - so it is classed as that route is, and a large export's one request per photo is
+  // never refused for its number (the right to export is not bounded by a request count, Q7'').
+  'GET /account/privacy/export/download/bundle': 'SECURITY_SENSITIVE',
+  'GET /account/privacy/export/download/bundle/files/:fileName': 'AUTHENTICATED',
   'POST /account/privacy/deletion': 'SECURITY_SENSITIVE', // password proof
   'POST /account/privacy/deletion/cancel': 'SECURITY_SENSITIVE',
 
@@ -128,6 +133,14 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /introductions/worlds/:worldId/success/withdrawal': 'AUTHENTICATED',
   'GET /introductions/participation': 'AUTHENTICATED',
   'POST /introductions/participation/resume': 'AUTHENTICATED',
+  // S6-07 (CP1): the governed enrollment - the read, and the act that carries the human's three consents.
+  'GET /introductions/enrollment': 'AUTHENTICATED',
+  'POST /introductions/enrollment': 'SECURITY_SENSITIVE',
+  // S6-07 (CP3): withdrawing ONE consent is a privacy act - never throttled like a credential act; and the
+  // per-Introduction alerts (0167), ordinary acts like the Shared ones.
+  'POST /introductions/enrollment/revocation': 'AUTHENTICATED',
+  'GET /introductions/alerts': 'AUTHENTICATED',
+  'PUT /introductions/worlds/:worldId/alerts': 'AUTHENTICATED',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

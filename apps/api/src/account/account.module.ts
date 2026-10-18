@@ -8,6 +8,8 @@ import { IntroductionsDisclosureModule } from '../introductions-disclosure/intro
 import { IntroductionsLifecycleModule } from '../introductions-lifecycle/introductions-lifecycle.module';
 import { IntroductionsPreparationModule } from '../introductions-preparation/introductions-preparation.module';
 import { IntroductionsProposalsModule } from '../introductions-proposals/introductions-proposals.module';
+import { IntroductionsEnrollmentModule } from '../introductions-enrollment/introductions-enrollment.module';
+import { IntroductionsDispatchModule } from '../introductions-dispatch/introductions-dispatch.module';
 import { IntroductionsWorldModule } from '../introductions-world/introductions-world.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { AccountErasureRecoveryWorker } from './account-erasure-recovery.worker';
@@ -64,10 +66,18 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * ACCT-DEL-01 (CP1) moves the Privacy & Data pass onto the database's ONE governed account erasure (migration 0164:
  * Matching / Introductions plus the unchanged Personal erasure) and adds its recovery and visibility pass
  * (AccountErasureRecoveryWorker) beside it, on the same server channel.
+ *
+ * S6-07 (CP1) composes the owner's governed Matching enrollment (IntroductionsEnrollmentModule) here for the same reason
+ * as the other Introductions modules. It shares nothing with these providers or with them, holds no service_role path
+ * and imports no AI runtime.
+ *
+ * S6-07 (CP2) composes the forward dispatcher's server pass (IntroductionsDispatchModule) here for the same reason. It has
+ * no controller and no route; its one service_role call reaches the ONE database dispatcher (migration 0166), and it
+ * shares nothing with these providers or the other Introductions modules.
  */
 @Module({
   imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,
-    IntroductionsDisclosureModule, IntroductionsContinuationModule],
+    IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,

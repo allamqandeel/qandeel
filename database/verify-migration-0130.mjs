@@ -454,7 +454,9 @@ async function verifyExport(alice, bob) {
   assert.equal(understanding.status, 'current', 'a readable status, not the internal lifecycle name');
   assert.doesNotMatch(JSON.stringify(pkg), /unshown candidate/u, 'a CANDIDATE is never exported');
   assert.equal(understanding.yourDisagreements.length, 1, 'the owner\'s own disagreement');
-  assert.deepEqual(pkg.notYetIncluded, ['shared', 'public', 'replay', 'introductions']);
+  // RE-ANCHORED by S6-07 CP4 (migration 0168, QAN-BL-PRIV-04): the reader's Matching and Introductions data is now its
+  // own section, so `introductions` leaves the list; shared, public and replay stay (QAN-BL-PRIV-05).
+  assert.deepEqual(pkg.notYetIncluded, ['shared', 'public', 'replay']);
   const text = JSON.stringify(pkg);
   assert.doesNotMatch(text, /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/u, 'no internal identifier of any kind');
   assert.doesNotMatch(text, /"(?:id|userId|sessionId|idempotencyKey|confidence|importance|source|assumptions|supporting|routing)"/u);

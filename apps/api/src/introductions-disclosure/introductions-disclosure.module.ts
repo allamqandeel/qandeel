@@ -29,5 +29,7 @@ import { S3IntroductionMediaStore } from './introduction-media.store';
     IntroductionMediaErasureWorker,
     { provide: INTRODUCTION_MEDIA_STORE, useClass: S3IntroductionMediaStore },
   ],
+  // S6-07 (CP4): Export My Data reads the reader's own photos through this service's own decisions (AccountModule).
+  exports: [IntroductionDisclosureService],
 })
 export class IntroductionsDisclosureModule {}

@@ -6,6 +6,12 @@
 // the five retained ones; the frozen 0108 / 0109 sources are byte-identical; NO later migration may reopen, re-create,
 // re-own or blanket-grant one of the six (the forward regression check - a reviewed Stage 6 launch path that needs to
 // must amend this contract under QAN-BL-MATCH-01); and the verifier, the wire proof and the canonical records are wired.
+//
+// AMENDED by S6-07 CP1 (2026-10-18; Controlled Amendment CA-01-impl, approved by the Product Owner with the S6-07 CP0
+// design): that reviewed Stage 6 launch path now exists as migration 0165. It is ONE named authenticated boundary,
+// public.enroll_my_matching_setup_v1, that CALLS five of the six with their frozen bodies under a closed-by-default
+// operator gate; it grants, re-creates, drops and re-owns none of them, so the forward regression check below stands
+// unchanged and still applies to 0165. The test after it pins that the boundary is the only later function that names one.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -127,6 +133,26 @@ test('no later migration reopens, re-creates, re-owns or blanket-grants one of t
   assert.deepEqual(reopenings(read(`${MIGRATIONS}/${MIGRATION}`)), [], '0149 grants, creates, drops and re-owns nothing');
 });
 
+test('the one reviewed Stage 6 launch path (S6-07 CP1, CA-01-impl) names the frozen commands in ONE authenticated boundary only', () => {
+  const later = migrations().filter((name) => name > MIGRATION);
+  const naming = [];
+  for (const name of later) {
+    const text = read(`${MIGRATIONS}/${name}`);
+    for (const match of text.matchAll(/CREATE (?:OR REPLACE )?FUNCTION ([a-z_]+\.[a-z0-9_]+)\(/gu)) {
+      const tail = text.slice(match.index);
+      const open = tail.indexOf('AS $$') + 'AS $$'.length;
+      const body = tail.slice(open, tail.indexOf('$$', open));
+      if (SUSPENDED.map(nameOf).some((fn) => new RegExp(String.raw`\b${fn}\b`, 'u').test(body))) naming.push(`${name}:${match[1]}`);
+    }
+  }
+  assert.deepEqual(naming, ['0165_matching_governed_enrollment_v1.sql:public.enroll_my_matching_setup_v1'],
+    'exactly one function of any later migration names a suspended command: the S6-07 governed enrollment boundary');
+  const m0165 = sql(read(`${MIGRATIONS}/0165_matching_governed_enrollment_v1.sql`));
+  assert.match(m0165, /GRANT EXECUTE ON FUNCTION\n {2}public\.enroll_my_matching_setup_v1\(uuid, text, bigint, text, text, text\),\n {2}public\.read_my_matching_enrollment_v1\(\)\n {2}TO authenticated;/u,
+    'the boundary is granted to authenticated only');
+  assert.doesNotMatch(m0165, /\bTO\s+(?:service_role|anon|PUBLIC)\b/iu, 'and to no other role');
+});
+
 test('the forward regression check is not vacuous: every planted reopening is caught', () => {
   for (const [planted, expected] of [
     ['GRANT EXECUTE ON FUNCTION public.activate_matching_participation_v1(uuid, text, uuid) TO authenticated;', 'GRANT activate_matching_participation_v1'],
@@ -214,7 +240,9 @@ test('the canonical records carry the amendment, and QAN-BL-ACCT-01 stays open',
     'QAN-BL-ACCT-01 is not closed or absorbed');
   // RE-ANCHORED by S6-01's closing change (2026-10-14, validation only): the Product Owner's D1 re-owns the item to
   // S6-07 with a mandatory dependency on ACCT-DEL-01. It stays open: the six commands stay closed.
-  assert.match(backlog, /^\| `QAN-BL-MATCH-01` \| .* \| `S6-07 — Activity, Direct Entry and Final Integration` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu);
+  // RE-ANCHORED by S6-07's closing change (CP4, 2026-10-18): the governed boundary is the approved launch path, so the item
+  // is tombstoned (from the merge); every protection this contract pins above is unchanged.
+  assert.match(backlog, /^\| `QAN-BL-MATCH-01` \| .* \| `S6-07 — Activity, Direct Entry and Final Integration` \| `HIGH` \| `CLOSED — TOMBSTONE` \|$/mu);
   assert.match(backlog, /^- \*\*Dependency:\*\* account-deletion integrity, the separately governed `ACCT-DEL-01` correction path/mu,
     'QAN-BL-MATCH-01 keeps its ACCT-DEL-01 dependency');
   assert.match(backlog, /^### `QAN-BL-MATCH-01` — /mu);

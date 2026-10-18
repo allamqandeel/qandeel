@@ -330,11 +330,22 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // RE-ANCHORED by S6-06 CP1 (migrations 0162, 0163): the Introduction sharing service and the Introduction continuation
   // service each read it for exactly the same one typed refusal, 22023, as the client's INVALID_REQUEST; every other
   // refusal is unavailable, under the same rule.
+  // RE-ANCHORED by S6-07 CP1 (migration 0165): the governed enrollment service reads it for exactly the same one typed
+  // refusal, 22023, as the client's INVALID_REQUEST; every other refusal is unavailable, under the same rule.
+  // RE-ANCHORED by S6-07 CP3: the same service reads it ONCE more, for the one-consent withdrawal through the retained frozen
+  // 0109 commands: their own typed refusals - PT409 (a stale identity, from 0150) as CHANGED, 23505 as COMMAND_CONFLICT, and
+  // 55000 / P0002 (nothing left to withdraw) as NOT_ACTIVE; anything else is unavailable, under the same rule.
   // The list stays exact: any further production reader fails here.)
-  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts', 'apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/introductions-proposals/introduction-proposals.service.ts', 'apps/api/src/introductions-world/introduction-world.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
-  for (const file of ['apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts']) {
+  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts', 'apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-enrollment/introductions-enrollment.service.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/introductions-proposals/introduction-proposals.service.ts', 'apps/api/src/introductions-world/introduction-world.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  for (const file of ['apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts',
+    'apps/api/src/introductions-enrollment/introductions-enrollment.service.ts']) {
     const source = stripComments(read(file));
-    assert.equal((source.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, `${file} reads the identity once`);
+    const enrollment = file.endsWith('introductions-enrollment.service.ts');
+    assert.equal((source.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, enrollment ? 2 : 1, `${file} reads the identity ${enrollment ? 'twice' : 'once'}`);
+    if (enrollment) {
+      assert.match(source, /const code = readDataApiUpstreamIdentity\(error\)\.databaseCode;\n\s+if \(error\.status === 409 && code !== '23505'\) return 'CHANGED';\n\s+if \(code === '23505'\) return 'COMMAND_CONFLICT';\n\s+if \(code === '55000' \|\| code === 'P0002'\) return 'NOT_ACTIVE';\n\s+throw error;/u,
+        'the withdrawal recognises exactly the frozen commands\' own typed refusals');
+    }
     assert.match(source, /error\.status === 400 && readDataApiUpstreamIdentity\(error\)\.databaseCode === '22023'\) return invalid\(\);/u,
       'it recognises exactly the one typed malformed-request refusal');
     assert.doesNotMatch(source, /console\.|Logger|\$\{|databaseMessage|identity\.database(Code|Message)\s*[,)}]/u,

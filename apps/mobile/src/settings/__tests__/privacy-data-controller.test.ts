@@ -18,7 +18,8 @@ function harness(initial: PrivacyStateView = NONE) {
   const transport: PrivacyDataTransport = {
     readPrivacyState: jest.fn(async () => (current === null ? { kind: 'UNAVAILABLE' as const } : { kind: 'READ' as const, view: current })),
     requestDataExport: jest.fn(next),
-    downloadDataExport: jest.fn(next),
+    downloadDataExportBundle: jest.fn(next),
+    downloadExportPhoto: jest.fn(next),
     requestAccountDeletion: jest.fn(next),
     cancelAccountDeletion: jest.fn(next),
   };
@@ -175,12 +176,42 @@ describe('the Privacy & Data controller', () => {
     h.controller.start();
     await flush();
     const document = { format: 'qandeel.personal-data-export.v1' };
-    h.answer({ kind: 'READY', availableUntil: READY.export.availableUntil, document });
-    await expect(h.controller.downloadExport()).resolves.toEqual({ kind: 'READY', document });
+    h.answer({ kind: 'READY', availableUntil: READY.export.availableUntil, document, photos: null });
+    await expect(h.controller.downloadExport()).resolves.toEqual({ kind: 'READY', document, photos: null });
     h.answer({ kind: 'NOT_READY', status: 'EXPIRED' });
     h.set({ ...NONE, export: { status: 'EXPIRED', availableUntil: null } });
     await expect(h.controller.downloadExport()).resolves.toEqual({ kind: 'NOT_READY' });
     expect(h.controller.getState().view?.export.status).toBe('EXPIRED');
+  });
+
+  it('S6-07: the reader\'s photos are handed out with the package; the rest is fetched by name under the token, on this generation only', async () => {
+    const h = harness(READY);
+    h.controller.start();
+    await flush();
+    const document = { format: 'qandeel.personal-data-export.v1' };
+    const manifest = { format: 'qandeel.personal-data-export.photos.v1', files: [], notIncluded: [] };
+    const inline = [{ fileName: 'qandeel-photo-01-stage-1.jpg', bytes: 3, bytesBase64: '/9j/' }];
+    const token = 'a'.repeat(64);
+    h.answer({ kind: 'READY', availableUntil: READY.export.availableUntil, document,
+      photos: { manifest, fileNames: ['qandeel-photo-01-stage-1.jpg', 'qandeel-photo-01-stage-2.jpg'], inline, token } });
+    const result = await h.controller.downloadExport();
+    if (result?.kind !== 'READY' || result.photos === null) throw new Error('expected photos');
+    expect(result.photos.manifest).toBe(manifest);
+    expect(result.photos.inline).toBe(inline);
+    const second = { fileName: 'qandeel-photo-01-stage-2.jpg', bytes: 3, bytesBase64: '/9j/' };
+    h.answer({ kind: 'FILE', file: second });
+    await expect(result.photos.fetch('qandeel-photo-01-stage-2.jpg')).resolves.toEqual(second);
+    expect(h.transport.downloadExportPhoto).toHaveBeenLastCalledWith('qandeel-photo-01-stage-2.jpg', token, expect.any(Object));
+    for (const answer of [{ kind: 'CHANGED' }, { kind: 'FAILED' }, { kind: 'NETWORK' }]) {
+      h.answer(answer);
+      await expect(result.photos.fetch('qandeel-photo-01-stage-2.jpg')).resolves.toBeNull();
+    }
+    (h.transport.downloadExportPhoto as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    await expect(result.photos.fetch('qandeel-photo-01-stage-2.jpg')).resolves.toBeNull();
+    const calls = (h.transport.downloadExportPhoto as jest.Mock).mock.calls.length;
+    h.controller.retire();
+    await expect(result.photos.fetch('qandeel-photo-01-stage-2.jpg')).resolves.toBeNull();
+    expect((h.transport.downloadExportPhoto as jest.Mock).mock.calls.length).toBe(calls);
   });
 
   it('a retired generation does nothing, and its pending timers are cleared', async () => {

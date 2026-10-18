@@ -59,6 +59,9 @@
  *
  * S6-06 — sharing, photos, the display name, SUCCESS and resume (the SYNTHETIC stand-in `s606-proof-introduction-sharing.ts`):
  *   qandeel://s401-proof/introductions/seed-sharing | sharing-closed | sharing-open | sharing-more | sharing-success | sharing-complete
+ *
+ * S6-07 — the governed enrollment step and the three consents (the stand-in `s607-proof-enrollment.ts`):
+ *   qandeel://s401-proof/introductions/enroll-closed | enroll-open | enroll-outdated | enroll-enrolled
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -73,7 +76,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete|enroll-closed|enroll-open|enroll-outdated|enroll-enrolled)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -136,6 +139,12 @@ export function S401ProofRoot() {
           phase.runtime.introductionSharing.refresh();
           phase.runtime.introductionParticipation.refresh();
         }
+      }
+      if (match[1] === 'introductions' && match[2].startsWith('enroll-')) {
+        world.introductionEnrollment(match[2] as Parameters<typeof world.introductionEnrollment>[0]);
+        // The enrollment view is read when the preparation is shown; a seed after launch asks again.
+        const phase = runtime.getPhase();
+        if (phase.kind === 'READY') phase.runtime.introductionEnrollment.open();
       }
       if (match[1] === 'introductions' && (match[2] === 'seed-match' || match[2] === 'peer-end' || match[2] === 'offline')) {
         world.introductionWorld(match[2]);

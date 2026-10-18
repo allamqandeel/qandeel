@@ -102,7 +102,7 @@ describe.each([['ar'], ['en']] as const)('S4-03 former-member own material — P
     authority.bindAccount('reader');
     const privacyTransport: PrivacyDataTransport = {
       readPrivacyState: jest.fn(async () => ({ kind: 'READ' as const, view: NONE })),
-      requestDataExport: jest.fn(), downloadDataExport: jest.fn(), requestAccountDeletion: jest.fn(), cancelAccountDeletion: jest.fn(),
+      requestDataExport: jest.fn(), downloadDataExportBundle: jest.fn(), downloadExportPhoto: jest.fn(), requestAccountDeletion: jest.fn(), cancelAccountDeletion: jest.fn(),
     };
     const privacy = createPrivacyDataController({ transport: privacyTransport, isCurrent: () => true, setTimer: () => null, clearTimer: () => undefined });
     const formerShared = createFormerSharedMaterialController({ transport, isCurrent: () => true });

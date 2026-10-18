@@ -163,7 +163,56 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
-### ACCT-DEL-01 — 2026-10-17 (CURRENT)
+### S6-07 — 2026-10-18 (CURRENT)
+
+This is a **locator note, not a new Product authority**. ACCT-DEL-01 merged through PR #345 as
+`1861df43943a8695a761edec7aa42f5e18f018ec` (2026-10-17; not deployed). On that `main`, the Product Owner approved the S6-07 CP0
+design, its review addendum and their Controlled Amendments (2026-10-18), and started **S6-07 — Activity, Direct Entry
+and Final Integration** as the current implementation task. It owns `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and
+`QAN-BL-PRIV-04`, and closes A3-01 G-17. Evidence: the [S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md).
+- S6-07 is **CLOSED / READY FOR THE PRODUCT OWNER'S REVIEW AND MERGE DECISION — CP1, CP2, CP3 CLOSED; CP4 (EXPORT MY DATA
+  & FINAL INTEGRATION) DELIVERED — NOT MERGED / NOT DEPLOYED**, on
+  `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4).
+- CP1: migration `0165` (the ONE governed enrollment boundary `enroll_my_matching_setup_v1`, `authenticated` only, over
+  five of the six frozen `0109` commands; the closed `ENROLLMENT` gate; the empty consent-text catalogue; the promotion
+  record and the evidence precondition on the canonical facts reader; the zero-item requirement and zero-field
+  authority cores), `verify-migration-0165`, `prove-0165` on live PostgREST, the static contract, and the API routes
+  `GET` / `POST /introductions/enrollment`. *(CP1 correction, 2026-10-18:)* D-CP1-1 = B — the third no-role core
+  `set_empty_introduction_profile_core_v1` (CA-D-CP1-1-impl) makes a reviewed draft with neither optional profile field a
+  real zero-field profile version; no CP1 Product decision is pending.
+- CP2: migration `0166` (the ONE `service_role` forward dispatcher `server_forward_approved_matching_proposals_v1` over the
+  frozen forward core, the pair lock first, its ledger in `matching_forward_private`, and the read-only reconciliation
+  lister; CA-SYS-02-impl, the census's second named SYSTEM exception), `verify-migration-0166`, `prove-0166` with the
+  compiled worker on live PostgREST, the static contract, and the server worker `apps/api/src/introductions-dispatch`
+  (no route); with the Product Owner's account-deletion guard (record §10.9: nothing forwarded while either human's
+  deletion is pending).
+- CP3: migration `0167` (the Introductions capability truth, the delivery re-read, the one lister of Introductions events
+  not yet told, the per-Introduction alerts), `verify-migration-0167`, the static contract
+  `tests/s6-07-activity-direct-entry-contract.test.mjs`; the producer `apps/api/src/introductions-activity` (bound as the
+  CP2 dispatcher's notifier), the capability truth in `activity/` and `push/`, the Introductions Direct Entry branch of
+  `ActivityService.open`, `GET /introductions/alerts`, `PUT /introductions/worlds/:worldId/alerts`,
+  `POST /introductions/enrollment/revocation`; mobile Direct Entry and the mute rows. The CP3 Product Copy Gate was closed
+  by the Product Owner on 2026-10-18 (record §11.5); after it (record §11.10): the enrollment step and the consent
+  controls (`apps/mobile/src/introductions/IntroductionsEnrollment.tsx`, `enrollment-controller.ts`, `enrollment-copy.ts`,
+  the transport `runtime-entry/introductions-enrollment-api.ts`), the approved consent texts in the one pinned module
+  `database/matching-consent-texts-v1.mjs` with the loopback-only installer `database/install-matching-consent-texts.mjs`
+  and `verify-matching-consent-texts`, the static contract `tests/s6-07-enrollment-consent-surface-contract.test.mjs`.
+- CP4: migration `0168` (Export My Data's `matchingAndIntroductions` section and the owner-only reader
+  `list_my_introduction_photo_renditions_v1`), `verify-migration-0168`, the journey `database/verify-s6-07-final-journey.mjs`,
+  the wire proof `database/prove-0168-export-bundle-postgrest.mjs`, the static contract
+  `tests/s6-07-export-final-integration-contract.test.mjs`; the API bundle and per-photo routes in
+  `apps/api/src/account/privacy-data.service.ts` over the sharing module's export reads; the mobile bundle transport
+  (`runtime-entry/account/account-api.ts`) and folder save (`settings/export-file.ts`). Record §12.
+  The CP3 review correction (record §11.11): RECONFIRM_CONSENT reads the approved «تأكيد»; EN-19 only after
+  `CONSENT_OUTDATED`.
+- Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
+  controlled amendment to the frozen `I-07` surface is
+  [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.
+- Still closed: no gate row and no consent text exist, so nothing can be enrolled in production; the six commands stay
+  executable by no application role; CW2-08 and every launch gate stay closed, so the dispatcher forwards nothing in
+  production. CP3 publishes nothing in production for the same reason. CP4 is not started.
+
+### ACCT-DEL-01 — 2026-10-17 (historical: ACCT-DEL-01 merged as PR #345)
 
 This is a **locator note, not a new Product authority**. S6-06 merged through PR #344 as
 `4233c06739149fb19b441db782837497815d8be6` (2026-10-17; not deployed). On that `main`, the Product Owner's approval of the
@@ -555,7 +604,9 @@ contradiction.
 | **8B — Voice Runtime** | **LATER** (runtime / provider-gated) | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
 | **9 — Economy + Launch Closure** | **LATER.** The AI-COST-01 accounting foundation is DONE (PR #303). The final Product economy and provider selection are not | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work, including AI-COST-01's ledger, Price Cards and inactive Credit Policy contract; this stage closes release-specific gaps rather than reopening Product foundations |
 
-> **CURRENT IMPLEMENTATION TASK: ACCT-DEL-01 — Account Deletion Across Matching / Introductions** (owned `QAN-BL-ACCT-01` from its CP1; its closing change re-owns the item, still open, to `ACCT-DEL-02`) from `4233c06739149fb19b441db782837497815d8be6` (the merge of PR #344, S6-06), under the Product Owner's approval of the WP0 v1 / review addendum v1.1 and decisions P-1 … P-4 (2026-10-17) — **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 APPROVED, CP2 (CLOSURE) DELIVERED — NOT MERGED / NOT DEPLOYED** on `acct/acct-del-01-account-erasure` (one pull request, #345; CP1 approved by the Product Owner on `90681312`, API CI and Mobile CI green). CP1: migration `0164` (the ONE governed account erasure over the account's Matching / Introductions footprint and the unchanged `0130` Personal erasure, in one transaction or nothing; the counterpart's retained view and Matching lineage; residue classes, recovery and two-level photo erasure), its verifier and static contract, and the API pass on it. Shared `STANDARD`, Public and Replay are not covered (P-1: `ACCT-DEL-02`, Stage 7); no gate is opened. CP2 (the closure, documentation and governance only): `QAN-BL-ACCT-01` re-owned to `ACCT-DEL-02`; `QAN-BL-ACCT-02` (Replay, Stage 7) and `QAN-BL-PROD-09` (`HOSTED-DEPLOY-01`'s mandatory account-deletion coverage check before any World opens in production) admitted; `QAN-BL-MATCH-01`'s dependency met in engineering. S6-07 is not started ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
+> **CURRENT IMPLEMENTATION TASK: S6-07 — Activity, Direct Entry and Final Integration** (owned `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and `QAN-BL-PRIV-04`; closes A3-01 G-17) from `1861df43943a8695a761edec7aa42f5e18f018ec` (the merge of PR #345, ACCT-DEL-01), under the Product Owner's approval of the CP0 design, its review addendum and the Controlled Amendments CA-01-impl, CA-R5-impl, CA-08-impl, CA-10-impl and CA-GATE (2026-10-18) — **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED — AWAITING THE PRODUCT OWNER'S CP2 REVIEW — NOT MERGED / NOT DEPLOYED** on `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4). CP1: migration `0165` (one named `authenticated` enrollment boundary over five of the six frozen commands, closed by default: no gate row, no consent text), its verifier, live PostgREST proof and static contract, and two owner-only API routes. CP2: migration `0166` (one `service_role` forward dispatcher over the frozen forward core, CA-SYS-02-impl), its verifier, live PostgREST proof and static contract, and a server worker with no route. Nothing can be enrolled or forwarded in production; no gate is opened ([S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md)).
+>
+> *(Previous, ACCT-DEL-01, as written at its closing change:)* **CURRENT IMPLEMENTATION TASK: ACCT-DEL-01 — Account Deletion Across Matching / Introductions** (owned `QAN-BL-ACCT-01` from its CP1; its closing change re-owns the item, still open, to `ACCT-DEL-02`) from `4233c06739149fb19b441db782837497815d8be6` (the merge of PR #344, S6-06), under the Product Owner's approval of the WP0 v1 / review addendum v1.1 and decisions P-1 … P-4 (2026-10-17) — **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 APPROVED, CP2 (CLOSURE) DELIVERED — NOT MERGED / NOT DEPLOYED** on `acct/acct-del-01-account-erasure` (one pull request, #345; CP1 approved by the Product Owner on `90681312`, API CI and Mobile CI green). CP1: migration `0164` (the ONE governed account erasure over the account's Matching / Introductions footprint and the unchanged `0130` Personal erasure, in one transaction or nothing; the counterpart's retained view and Matching lineage; residue classes, recovery and two-level photo erasure), its verifier and static contract, and the API pass on it. Shared `STANDARD`, Public and Replay are not covered (P-1: `ACCT-DEL-02`, Stage 7); no gate is opened. CP2 (the closure, documentation and governance only): `QAN-BL-ACCT-01` re-owned to `ACCT-DEL-02`; `QAN-BL-ACCT-02` (Replay, Stage 7) and `QAN-BL-PROD-09` (`HOSTED-DEPLOY-01`'s mandatory account-deletion coverage check before any World opens in production) admitted; `QAN-BL-MATCH-01`'s dependency met in engineering. S6-07 is not started ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
 >
 > *(Previous, S6-06, as written at its closing change:)* **CURRENT IMPLEMENTATION TASK: S6-06 — Progressive Disclosure, Photos, SUCCESS & Reactivation** (Stage 6; no backlog item named S6-06 at kickoff) from `88a475ab6798edbf511e42f78a2f70e5cdb37c34` (the merge of PR #343, S6-05), under the Product Owner's Task Contract v1.0 with WP0 v1.1 and its five-point correction approved (D-01 … D-12, conditions 1–3, 2026-10-16) — **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 AND CP2 DELIVERED — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED** on `s6/s6-06-progressive-disclosure-photos` (one pull request). CP1: migrations `0162` (disclosure, photos, display consent) and `0163` (SUCCESS, reactivation), their verifiers and live proofs, two API modules, the private S3-protocol object store and its erasure worker, the S6-06 static contract; then CP2 (2026-10-17, after the Visual Gate rev.2 and the Copy Gate closed): the mobile sharing panel in the live Introduction World (P0 – P15, V-1 otherwise unchanged), the three-stage photo drawn from memory only (expo-image, cache off; the picker's copy deleted), the display-name consent, SUCCESS drawn only with a real transition, the status line and resume, the Settings page «ما شاركته في التعارف» (P16); no camera, microphone, storage or media permission (a native gate in Mobile CI); content-free erasure telemetry; an Android emulator proof in five legs with zero image files left on the device. `QAN-BL-LAUNCH-05` admitted (iOS photo-cache proof and store review, Stage 9); no gate is opened ([S6-06 record](docs/e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md)).
 

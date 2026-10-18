@@ -292,7 +292,9 @@ describe('S5-04 — Public Direct Entry revalidates NOW on the caller\'s token',
 
   it('PUBLIC_WORLD is executable now', () => {
     expect(EXECUTABLE_DESTINATIONS.has('PUBLIC_WORLD')).toBe(true);
-    expect(EXECUTABLE_DESTINATIONS.has('INTRODUCTIONS')).toBe(false);
+    // RE-ANCHORED by S6-07 CP3 (2026-10-18): Introductions (Stage 6) now opens too, revalidated at open
+    // (introductions-activity.spec.ts); Replay (Stage 7) still fails closed.
+    expect(EXECUTABLE_DESTINATIONS.has('INTRODUCTIONS')).toBe(true);
     expect(EXECUTABLE_DESTINATIONS.has('REPLAY')).toBe(false);
   });
 

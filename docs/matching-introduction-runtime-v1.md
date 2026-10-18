@@ -1530,3 +1530,102 @@ re-anchored, with reasons in place: `verify-migration-0149.mjs` (`NO_BACKDOOR` +
 `verify-migration-0122.mjs` (the erasure census names the account erasure), `verify-migration-0161.mjs` (the three
 replaced readers' defining migration is now `0164`). `I-07` and its slices remain **CLOSED / FROZEN**; this is a
 controlled amendment, not a reopening of Product scope.
+
+## 50. `S6-07` — controlled forward amendment for the governed Matching enrollment
+
+**Lifecycle:** CP1 implemented on `s6/s6-07-activity-direct-entry-final-integration` from `main` at `1861df43` (the merge
+of PR #345, ACCT-DEL-01) and closed by the Product Owner (2026-10-18); CP2 and CP3 implemented on the same branch and closed by the Product
+Owner; CP4 delivered, S6-07 ready for the Product Owner's review and merge decision. Not merged, not deployed. Record:
+[S6-07 implementation record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved these
+amendments with the S6-07 CP0 design (2026-10-18): **CA-01-impl** (Q1), **CA-R5-impl**, **CA-08-impl** (Q3-A),
+**CA-10-impl** (Q4′) and **CA-GATE** (Q2(b)); and, as a CP1 correction, **CA-D-CP1-1-impl** under the Product Owner's
+decision D-CP1-1 = B (2026-10-18); and, in CP2, **CA-SYS-02-impl** (Q5′, «S6-07 — CP1 CLOSED / Start CP2», 2026-10-18).
+CP3 (Activity / Direct Entry) and CP4 (the export, CA-EXP) are recorded in the S6-07 record (§11, §12); in CP4 the
+Product Owner approved **CA-EXP′** (2026-10-18, «S6-07 — CA-EXP′ APPROVED / Final Closure»), below.
+
+SEC-MATCH-00 (§47) closed the six widening `I-07A` commands and said a reviewed Stage 6 launch path must amend it
+(`QAN-BL-MATCH-01`). Forward migration `0165_matching_governed_enrollment_v1.sql` is that path. It amends the frozen
+surface in exactly these places, and nowhere else:
+
+- **ONE named `NO_BACKDOOR` exception of the human kind:** `public.enroll_my_matching_setup_v1(uuid, text, bigint, text,
+  text, text)`, `authenticated` only, `SECURITY DEFINER`, the human from `auth.uid()` and nothing else. It is the only
+  function besides the six that names one of them, and it CALLS five of them with their frozen bodies (activate, resume,
+  grant the Matching Context Grant, set the profile, set the requirements); the sixth, the field-bearing disclosure grant,
+  is never called. The six stay executable by no application role: no grant, re-creation, drop or re-own of any of them,
+  no default privilege, no `service_role` path. A direct client call to one of them, with any identity the boundary
+  committed, is still `42501`.
+- **Closed by default (CA-GATE):** a new operator gate, scope `ENROLLMENT`, in `matching_enrollment_private` (the `0154`
+  pattern; absent = DENY; changed only by an operator function no application role can run). No gate row exists. The
+  consent-text catalogue of the three consents is created empty: their texts are Product copy and enter through the
+  Copy Gate (S6-07 CP3). Nothing can be enrolled in production.
+- **The promotion and its evidence (CA-R5-impl, CW2-06B-02 §3–§5):** the boundary is the ONE wrapper of
+  `record_matching_confirmed_facts_core_v1`. It promotes only the owner's own reviewed draft at the exact version the
+  owner confirmed, with the owner's own confirmation instants, and writes a promotion record naming the exact fact
+  version and the exact reviewed draft version. `resolve_matching_confirmed_facts_v1` is replaced forward with one added
+  join: it answers only for a current version that carries a promotion record, so a version written any other way is
+  `UNKNOWN` to discovery, to the pair rule at capture and to snapshot currentness.
+- **Two internal cores, executable by no role (CA-10-impl, CA-08-impl):** `set_empty_matching_requirements_core_v1`
+  writes a requirement version with ZERO items for a reviewed draft whose answer is "no additional hard dealbreaker" and
+  "no soft preference" — the absence of items, never a sentinel (CW2-06B-04 §9); `grant_zero_field_pre_match_disclosure_
+  authority_core_v1` writes a Pre-Match Disclosure Authority over the exact current profile version that approves ZERO
+  profile fields (CW2-06B-06). Each repeats the frozen `0109` lock, replay, compare-and-swap and history rules exactly,
+  with the owner passed by its only caller. `0109` itself is byte-identical and still refuses an empty requirement set and
+  an empty approved-field set.
+- **The empty Introduction Profile version (CA-D-CP1-1-impl; D-CP1-1 = B, 2026-10-18).** No optional field may be required
+  to enroll. A third core executable by no role, `set_empty_introduction_profile_core_v1`, writes a real immutable profile
+  version in the owner's chain with NO field rows (the absence of fields, never a sentinel), under the same frozen
+  `set_introduction_profile_v1` lock, replay, compare-and-swap and history law. The boundary is its only caller and
+  chooses by the reviewed draft: one or two fields → the frozen `set_introduction_profile_v1`, unchanged (it still refuses
+  an empty set); neither → the core. Empty ↔ fields corrections are new versions along the same chain; the zero-field
+  authority binds an empty version exactly as any other. `matchable` and the eligibility rules are unchanged (`matchable`
+  already needs only a current version).
+- **Three independent consents, each bound to its exact version (Q8(A)):** ENROLL is one transaction or nothing and
+  creates three distinct consent events (participation, the Matching Context Grant, the disclosure authority); every act
+  records the exact consent-text version of each consent it exercised. Each is revoked on its own through the retained
+  `0109` commands. CORRECTION re-grants an ACTIVE authority whose basis (the profile version) moved only with a fresh
+  disclosure consent, and never re-grants a revoked grant or authority; RESUME lifts only a `USER_PAUSED` pause;
+  RECONFIRM_CONSENT grants either consent again under its current version.
+- **Deletion:** no act while the owner's account deletion is live (`SCHEDULED`, `BLOCKED`, `ERASED`, `COMPLETED`); the
+  evidence relations cascade with the account row and are registered `ACCOUNT_CASCADE` in the ACCT-DEL-01 coverage
+  registry, so the governed erasure (§49) removes an enrolled account's enrollment with everything else.
+
+- **The forward producer (CA-SYS-02-impl, CP2, migration `0166`; also the CW2-06 §16 / §35 implementation note).** ONE
+  `service_role` dispatcher, `server_forward_approved_matching_proposals_v1(p_max = 1)`, is the only caller of the frozen
+  `forward_matching_proposal_to_second_core_v1` and the census's SECOND named SYSTEM exception: it reaches Setup state only
+  through the canonical pair lock, which it takes FIRST, before re-reading the proposal (never locked before it) and before
+  the core takes the lock again. One attempt per transaction under a 2 s `lock_timeout` (a longer wait is `BUSY`); the
+  forward command id and the candidate view id are minted once in a ledger no application role can read, so a retry,
+  restart or crashed worker is the core's committed answer and never a second delivery; exactly one permitted conclusion
+  of the proposal's own snapshot, never invented; the first recipient's approval still bound to their current exact view;
+  the core's revalidation and CW2-08 seam (last) decide, and its `40001` is absorbed. The candidate's independent
+  proposal still exists only after the first party's forward approval and only once the delivery binding commits; the
+  dispatcher is not a human's decision. A read-only lister answers the committed deliveries whose Activity member does not
+  exist yet (the recovery path for a publish lost after a committed forward; the producer is CP3). The ledger cascades with
+  its proposal and is registered for the governed erasure (§49). *(CP2 correction, Product Owner, 2026-10-18:)* no
+  proposal is forwarded while either human's account deletion is pending (anything but `CANCELLED`): both account rows
+  are held `FOR KEY SHARE` after the pair lock, so a deletion request (`0130`, `FOR UPDATE`) is seen or waits; the answer
+  is `SKIPPED_DELETION_PENDING`, not terminal, and a still-valid proposal is evaluated again after a cancellation.
+- **The export's photo reader (CA-EXP′, CP4, migration `0168`; approved by the Product Owner on 2026-10-18).** ONE
+  owner-only STABLE reader, `public.list_my_introduction_photo_renditions_v1()`, `authenticated` only, answers the
+  caller's own photo renditions that still exist, each with its Introduction's start instant, so the export's photo
+  manifest joins each rendition to the right Introduction World. The approval is limited to this one function and its
+  purpose: no widening of access or disclosure, no change to a frozen core (no `0162` object changes), every photo still
+  re-authorized by `authorize_my_introduction_media_v1` on the reader's token before it is downloaded, and no further
+  SQL function under this exception (S6-07 record §12.2.1).
+
+What does NOT change: the bytes of `0108`, `0109`, `0149`, `0150`, `0154`, `0156` and `0164`; the forward core, the
+materializer, the transition writer, the S6-04 decisions and the `0157` sweeper (CP2); every seam
+(`NOT_EVALUATED`); CW2-08; every other `I-07` body. A refused act writes nothing, not even the lock row; the cores' `40001`
+is absorbed into one bounded `CHANGED` and never reaches PostgREST.
+
+**Verification.** `verify-migration-0165.mjs` (real PostgreSQL, real `SET ROLE`, eight races on two real connections) and
+`prove-0165-governed-enrollment-postgrest.mjs` (live PostgREST); re-anchored, with reasons in place:
+`verify-migration-0149.mjs` (`NO_BACKDOOR` names the exception, the "names a suspended boundary" rule admits exactly it,
+the evidence relations' cascade, probes f14 – f17, f17 over all three cores), `verify-migration-0150.mjs` (the boundary is an absorber),
+`verify-migration-0156.mjs` (A02: exactly the boundary wraps the writer; its fixtures carry fixture promotion records), the
+shared proposal-verifier fixture (likewise) and the SEC-MATCH-00 static contract (amended as its header required).
+CP2: `verify-migration-0166.mjs` (real PostgreSQL, six races on real connections) and
+`prove-0166-forward-dispatch-postgrest.mjs` (live PostgREST, the compiled worker); re-anchored: `verify-migration-0149.mjs`
+(two named SYSTEM exceptions, probes f18 / f19) and `verify-migration-0150.mjs` (the dispatcher is an absorber).
+`QAN-BL-MATCH-01` and `QAN-BL-MATCH-06` stay open until S6-07's closing change. `I-07` and its slices remain **CLOSED / FROZEN**; this is a
+controlled amendment, not a reopening of Product scope.

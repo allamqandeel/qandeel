@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import {
-  INTRODUCTIONS_ENTERED, interruptionVerdict, isCallSafe, isExecutable, isStale, isWaiting, markOf, silenceOf,
+  interruptionVerdict, isCallSafe, isExecutable, isStale, isWaiting, markOf, silenceOf,
 } from './activity-decision';
 import { ActivityRepository, type ActivityAnchor, type ActivityPreferencesRow } from './activity.repository';
 import {
@@ -77,12 +77,13 @@ export class ActivityService {
         if (!Array.isArray(rows) || rows.length !== 1) throw new BadRequestException({ outcome: 'INVALID_REQUEST' });
         anchor = rows[0];
       }
-      const [rows, prefs, mutes] = await Promise.all([
+      const [rows, prefs, mutes, entered] = await Promise.all([
         this.repository.page(token, userId, limit, category, anchor), this.preferencesOf(token, userId), this.mutesOf(token, userId),
+        this.enteredOf(token),
       ]);
       if (!Array.isArray(rows)) throw new Error('ACTIVITY_PAGE_MALFORMED');
       const now = Date.now();
-      const items = rows.slice(0, limit).map((row) => this.view(row, prefs, mutes, now));
+      const items = rows.slice(0, limit).map((row) => this.view(row, prefs, mutes, now, entered));
       return { items, before: rows.length > limit ? items[items.length - 1].id : null };
     });
   }
@@ -96,14 +97,15 @@ export class ActivityService {
     exactKeys(value, ['timeZone']);
     const timeZone = validTimeZone(value.timeZone) ?? invalid();
     return this.guard(async () => {
-      const [rows, prefs, mutes] = await Promise.all([
+      const [rows, prefs, mutes, entered] = await Promise.all([
         this.repository.attentionItems(token, userId), this.preferencesOf(token, userId), this.mutesOf(token, userId),
+        this.enteredOf(token),
       ]);
       if (!Array.isArray(rows)) throw new Error('ACTIVITY_ATTENTION_MALFORMED');
       const now = Date.now();
-      const marked = rows.filter((row) => markOf(row, prefs, mutes, now));
+      const marked = rows.filter((row) => markOf(row, prefs, mutes, now, entered));
       const by = (category: ActivityCategory) => marked.filter((row) => row.category === category);
-      const eligible = rows.filter((row) => interruptionVerdict(row, { prefs, mutes, now, timeZone }) === 'ELIGIBLE')
+      const eligible = rows.filter((row) => interruptionVerdict(row, { prefs, mutes, now, timeZone, introductionsEntered: entered }) === 'ELIGIBLE')
         .sort((a, b) => a.interruption_class - b.interruption_class || Date.parse(b.last_occurred_at) - Date.parse(a.last_occurred_at))
         .slice(0, ACTIVITY_INTERRUPTIONS_MAX);
       const shared = by('SHARED').length;
@@ -121,7 +123,7 @@ export class ActivityService {
           SYSTEM: { present: by('SYSTEM').length > 0, count: actionableSystem > 0 ? actionableSystem : null },
         },
         interruptions: eligible.map((row) => ({
-          item: this.view(row, prefs, mutes, now), interruptionClass: row.interruption_class as InterruptionClass,
+          item: this.view(row, prefs, mutes, now, entered), interruptionClass: row.interruption_class as InterruptionClass,
           contextKind: row.context_kind, callSafe: isCallSafe(row),
         })),
       };
@@ -191,8 +193,33 @@ export class ActivityService {
         }
         return { outcome: 'UNAVAILABLE', fallback: null };
       }
-      // Typed future destinations (Introductions / Replay): no production surface and no authority seam exists yet, so
-      // they fail closed. Their Stage owns opening them (Replay: Stage 7).
+      // S6-07 — the exact Introductions context, never a guessed one (D39): `world:<id>` opens only while that World is
+      // still one of the caller's own Introduction Worlds (the S6-05 discovery read, asked NOW on the caller's token:
+      // ACTIVE, ENDED or a retained view); `proposal:<id>` only while the S6-04 reader still answers exactly that
+      // proposal to the caller. Otherwise — expired, withdrawn, erased, made Standard, never theirs — it fails closed: no
+      // fallback, no reason, no substitute World or proposal. The device then opens the same target through the
+      // Introductions surfaces, which read the server again before anything is drawn.
+      if (destination === 'INTRODUCTIONS') {
+        const match = /^(world|proposal):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/u.exec(row.entry_ref ?? '');
+        if (row.context_kind !== 'INTRODUCTIONS' || match === null) throw new Error('ACTIVITY_OPEN_MALFORMED');
+        const [, kind, id] = match;
+        if (kind === 'world') {
+          if (row.context_ref !== id) throw new Error('ACTIVITY_OPEN_MALFORMED');
+          const worlds = await this.repository.ownIntroductionWorlds(token);
+          if (Array.isArray(worlds) && worlds.some((w) => w?.world_id === id)) {
+            return { outcome: 'ENTER', destination: { kind: 'INTRODUCTIONS', target: { kind: 'WORLD', worldId: id } } };
+          }
+          return { outcome: 'UNAVAILABLE', fallback: null };
+        }
+        if (row.context_ref !== null) throw new Error('ACTIVITY_OPEN_MALFORMED');
+        const proposals = await this.repository.ownProposal(token, id);
+        if (Array.isArray(proposals) && proposals.length === 1 && proposals[0]?.matching_proposal_id === id) {
+          return { outcome: 'ENTER', destination: { kind: 'INTRODUCTIONS', target: { kind: 'PROPOSAL', proposalId: id } } };
+        }
+        return { outcome: 'UNAVAILABLE', fallback: null };
+      }
+      // A typed future destination (Replay): no production surface and no authority seam exists yet, so it fails
+      // closed. Its Stage owns opening it (Stage 7).
       return { outcome: 'UNAVAILABLE', fallback: null };
     });
   }
@@ -209,7 +236,7 @@ export class ActivityService {
   }
 
   async readPreferences(userId: string, token: string): Promise<ActivityPreferencesView> {
-    return this.guard(async () => this.preferencesView(await this.preferencesOf(token, userId)));
+    return this.guard(async () => this.preferencesView(await this.preferencesOf(token, userId), await this.enteredOf(token)));
   }
 
   async savePreferences(userId: string, token: string, body: unknown): Promise<ActivityPreferencesView> {
@@ -243,7 +270,7 @@ export class ActivityService {
     } as Omit<ActivityPreferencesRow, 'snooze_until'>;
     return this.guard(async () => {
       await this.repository.savePreferences(token, row);
-      return this.preferencesView(await this.preferencesOf(token, userId));
+      return this.preferencesView(await this.preferencesOf(token, userId), await this.enteredOf(token));
     });
   }
 
@@ -255,7 +282,7 @@ export class ActivityService {
       : typeof value.minutes === 'number' && Number.isSafeInteger(value.minutes) && value.minutes >= 1 && value.minutes <= SNOOZE_MAX_MINUTES ? value.minutes : invalid();
     return this.guard(async () => {
       await this.repository.setSnooze(token, minutes === null ? null : new Date(Date.now() + minutes * 60_000).toISOString());
-      return this.preferencesView(await this.preferencesOf(token, userId));
+      return this.preferencesView(await this.preferencesOf(token, userId), await this.enteredOf(token));
     });
   }
 
@@ -276,7 +303,7 @@ export class ActivityService {
 
   // -------------------------------------------------------------------------------------------------------------------
 
-  private view(row: ActivityItemRow, prefs: ActivityPreferences, mutes: ReadonlySet<string>, now: number): ActivityItemView {
+  private view(row: ActivityItemRow, prefs: ActivityPreferences, mutes: ReadonlySet<string>, now: number, entered: boolean): ActivityItemView {
     const stale = isStale(row, now);
     const pair = (ar: string | null, en: string | null) => (ar === null && en === null ? null : { ar, en });
     return {
@@ -285,8 +312,8 @@ export class ActivityService {
       body: { ar: row.body_ar, en: row.body_en },
       secondary: pair(row.secondary_ar, row.secondary_en),
       attention: row.attention, actionable: row.actionable, waiting: isWaiting(row, now), stale,
-      muted: silenceOf(row, prefs, mutes) === 'MUTED_CONTEXT',
-      mark: markOf(row, prefs, mutes, now),
+      muted: silenceOf(row, prefs, mutes, entered) === 'MUTED_CONTEXT',
+      mark: markOf(row, prefs, mutes, now, entered),
       entry: row.entry_destination === 'NONE' ? 'NONE' : !stale && isExecutable(row) ? 'AVAILABLE' : 'UNAVAILABLE',
     };
   }
@@ -303,13 +330,20 @@ export class ActivityService {
     return new Set(rows.map((row) => row.context_ref));
   }
 
-  private preferencesView(prefs: ActivityPreferences): ActivityPreferencesView {
+  /** D26 / S6-07: the caller's own Introductions capability truth (0167). Anything but a boolean is a refusal. */
+  private async enteredOf(token: string): Promise<boolean> {
+    const answer = await this.repository.introductionsEntered(token);
+    if (typeof answer !== 'boolean') throw new Error('ACTIVITY_CAPABILITY_MALFORMED');
+    return answer;
+  }
+
+  private preferencesView(prefs: ActivityPreferences, entered: boolean): ActivityPreferencesView {
     const snoozed = prefs.snoozeUntil !== null && Date.parse(prefs.snoozeUntil) > Date.now();
     return {
       proactive: prefs.proactive,
       shared: { alerts: prefs.sharedAlerts },
       public: { interactions: prefs.publicInteractions, discovery: prefs.publicDiscovery },
-      introductions: { available: INTRODUCTIONS_ENTERED, alerts: prefs.introductionsAlerts },
+      introductions: { available: entered, alerts: prefs.introductionsAlerts },
       account: { updates: prefs.accountUpdates },
       quietHours: { enabled: prefs.quietHours.enabled, start: hhmm(prefs.quietHours.start), end: hhmm(prefs.quietHours.end) },
       snoozeUntil: snoozed ? prefs.snoozeUntil : null,

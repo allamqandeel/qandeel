@@ -273,7 +273,8 @@ describe('S6-05 - the Introduction World module is isolated and runs no AI', () 
   const own = readdirSync(dir).filter((name) => name.endsWith('.ts') && !name.endsWith('.spec.ts')).sort();
 
   it('is exactly its four files', () => {
-    expect(own).toEqual(['introduction-world.controller.ts', 'introduction-world.repository.ts', 'introduction-world.service.ts', 'introductions-world.module.ts']);
+    // RE-ANCHORED by S6-07 (CP3): the per-Introduction alerts (0167) are the fifth file, under the same isolation rules.
+    expect(own).toEqual(['introduction-world-alerts.controller.ts', 'introduction-world.controller.ts', 'introduction-world.repository.ts', 'introduction-world.service.ts', 'introductions-world.module.ts']);
   });
 
   it.each(own)('%s imports only its own files, auth and the Data API transport, names no AI or Activity path and logs nothing', (name) => {
@@ -289,7 +290,7 @@ describe('S6-05 - the Introduction World module is isolated and runs no AI', () 
 
   it('provides only the auth guard, the Data API transport and its own repository and service', () => {
     const providers = (Reflect.getMetadata(MODULE_METADATA.PROVIDERS, IntroductionsWorldModule) as Array<{ name: string }>).map((p) => p.name).sort();
-    expect(providers).toEqual(['IntroductionWorldRepository', 'IntroductionWorldService', 'SupabaseAuthGuard', 'SupabaseAuthService', 'SupabaseDataApiService']);
+    expect(providers).toEqual(['IntroductionWorldAlertsRepository', 'IntroductionWorldAlertsService', 'IntroductionWorldRepository', 'IntroductionWorldService', 'SupabaseAuthGuard', 'SupabaseAuthService', 'SupabaseDataApiService']);
     expect(Reflect.getMetadata(MODULE_METADATA.IMPORTS, IntroductionsWorldModule) ?? []).toEqual([]);
   });
 

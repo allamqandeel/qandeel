@@ -191,7 +191,15 @@ async function verifyCatalog() {
   const defined0130 = body(migrationText('0130_personal_privacy_export_account_deletion_v1.sql'), 'CREATE FUNCTION personal_data_private.build_personal_export_v1(');
   const defined0153 = body(migrationText('0153_interaction_preferences_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
   const live = (await one("SELECT prosrc FROM pg_proc WHERE oid = 'personal_data_private.build_personal_export_v1(uuid)'::regprocedure")).prosrc.replace(/\r\n/gu, '\n');
-  assert.equal(live, defined0153, 'the live builder is the 0153 body');
+  // RE-ANCHORED by S6-07 CP4 (migration 0168, CA-EXP): the live builder is the 0168 re-statement, which is this 0153 body
+  // byte for byte up to its one added section, with `introductions` gone from the not-yet-included list (verify-0168 A02
+  // proves the same slice against the live body).
+  const defined0168 = body(migrationText('0168_personal_export_matching_introductions_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
+  assert.equal(live, defined0168, 'the live builder is the 0168 re-statement');
+  const s607 = defined0168.indexOf('        -- S6-07 (0168)');
+  assert.ok(s607 > 0, 'the S6-07 section is found');
+  assert.equal(defined0168.slice(0, s607) + "        'notYetIncluded', jsonb_build_array('shared', 'public', 'replay', 'introductions'));\n", defined0153,
+    'the 0153 body is contained in the live builder, byte for byte');
   const addedStart = defined0153.indexOf("        -- IP-IMP-01 (0153)");
   const addedEnd = defined0153.indexOf("        'notYetIncluded'");
   assert.ok(addedStart > 0 && addedEnd > addedStart);
@@ -446,7 +454,8 @@ async function verifyExportAndErasure() {
     const text = JSON.stringify(pkg);
     assert.doesNotMatch(text, /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/u, 'no internal identifier');
     assert.doesNotMatch(text, /"(?:id|userId|version|MAGHREBI_ARABIC|ALWAYS_BRIEF)"/u);
-    assert.deepEqual(pkg.notYetIncluded, ['shared', 'public', 'replay', 'introductions']);
+    // RE-ANCHORED by S6-07 CP4 (migration 0168): `introductions` is a section now; shared, public and replay stay.
+    assert.deepEqual(pkg.notYetIncluded, ['shared', 'public', 'replay']);
     for (const value of [['ENGLISH', 'English'], ['EGYPTIAN_ARABIC', 'Egyptian Arabic'], ['MODERN_STANDARD_ARABIC', 'Modern Standard Arabic'],
       ['LEVANTINE_ARABIC', 'Levantine Arabic'], ['GULF_ARABIC', 'Gulf Arabic']]) {
       const version = (await one(RECORD, [bob])).version;

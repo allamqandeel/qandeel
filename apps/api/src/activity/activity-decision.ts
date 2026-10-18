@@ -19,8 +19,6 @@ import {
 export type ProactiveGateVerdict = 'ABSENT';
 export const PROACTIVE_GATE: ProactiveGateVerdict = 'ABSENT';
 
-/** D26 — Introductions eligibility needs the capability legitimately entered. No Product entry exists today (Stage 6). */
-export const INTRODUCTIONS_ENTERED = false;
 
 export type Silence = 'MUTED_CONTEXT' | 'CATEGORY_OFF' | 'INTRODUCTIONS_NOT_ENTERED' | 'DISCOVERY_NOT_OPTED_IN' | 'PROACTIVE_OFF';
 
@@ -42,8 +40,14 @@ export function isCallSafe(item: Pick<ActivityItemRow, 'kind' | 'critical' | 're
   return (item.kind === 'SECURITY' && item.critical) || (item.kind === 'REMINDER' && item.requested);
 }
 
-/** What silences an item's attention (no mark, no interruption) — the user's own controls and capability authority. */
-export function silenceOf(item: ActivityItemRow, prefs: ActivityPreferences, mutes: ReadonlySet<string>): Silence | null {
+/**
+ * What silences an item's attention (no mark, no interruption) — the user's own controls and capability authority.
+ *
+ * D26 — Introductions eligibility needs the capability legitimately entered. S6-07 (migration 0167) makes that a
+ * per-user SERVER truth the caller passes in (a Matching participation event, an Introduction, or a retained view):
+ * never a global constant, and absent means not entered.
+ */
+export function silenceOf(item: ActivityItemRow, prefs: ActivityPreferences, mutes: ReadonlySet<string>, introductionsEntered = false): Silence | null {
   switch (item.category) {
     case 'SHARED':
       if (item.context_ref !== null && mutes.has(item.context_ref)) return 'MUTED_CONTEXT';
@@ -52,7 +56,9 @@ export function silenceOf(item: ActivityItemRow, prefs: ActivityPreferences, mut
       if (item.kind === 'PUBLIC_DISCOVERY') return prefs.publicDiscovery ? null : 'DISCOVERY_NOT_OPTED_IN';
       return prefs.publicInteractions ? null : 'CATEGORY_OFF';
     case 'INTRODUCTIONS':
-      if (!INTRODUCTIONS_ENTERED) return 'INTRODUCTIONS_NOT_ENTERED';
+      if (!introductionsEntered) return 'INTRODUCTIONS_NOT_ENTERED';
+      // S6-07 (D34): one Introduction World muted, and nothing else.
+      if (item.context_ref !== null && mutes.has(item.context_ref)) return 'MUTED_CONTEXT';
       return prefs.introductionsAlerts ? null : 'CATEGORY_OFF';
     case 'SYSTEM':
       // D36: critical security has no in-app off switch.
@@ -72,8 +78,8 @@ export const isWaiting = (item: ActivityItemRow, now: number): boolean =>
  * P3 §6 / D44 — the attention mark: attention-worthy and not yet at the right attention state. Stale, muted, silenced
  * and ambient (Class 4) items never carry it.
  */
-export function markOf(item: ActivityItemRow, prefs: ActivityPreferences, mutes: ReadonlySet<string>, now: number): boolean {
-  if (isStale(item, now) || silenceOf(item, prefs, mutes) !== null || item.interruption_class >= 4) return false;
+export function markOf(item: ActivityItemRow, prefs: ActivityPreferences, mutes: ReadonlySet<string>, now: number, introductionsEntered = false): boolean {
+  if (isStale(item, now) || silenceOf(item, prefs, mutes, introductionsEntered) !== null || item.interruption_class >= 4) return false;
   return item.attention === 'NEW' || isWaiting(item, now);
 }
 
@@ -102,6 +108,8 @@ export interface InterruptionInput {
   readonly now: number;
   readonly timeZone: string;
   readonly gate?: ProactiveGateVerdict;
+  /** D26 / S6-07: the reader's own Introductions capability truth (0167). Absent means not entered. */
+  readonly introductionsEntered?: boolean;
 }
 
 /**
@@ -114,7 +122,7 @@ export function interruptionVerdict(item: ActivityItemRow, input: InterruptionIn
   if (isStale(item, now)) return 'STALE';
   if (item.attention !== 'NEW') return 'ALREADY_SEEN';
   if (item.interruption_settled_at !== null) return 'SETTLED';
-  const silence = silenceOf(item, prefs, mutes);
+  const silence = silenceOf(item, prefs, mutes, input.introductionsEntered === true);
   if (silence !== null) return silence;
   // Task Contract §7: Allow and Reduce both need the real Proactive Gate's verdict. It does not exist, so proactive
   // interruption fails closed — no score, class rule or threshold stands in for it. The item stays in Activity.

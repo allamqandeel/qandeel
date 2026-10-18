@@ -18,7 +18,10 @@
  *     having to leave and come back. The server alone decides when it is ready and until when it stays available.
  *   - One act at a time: a second act while one is in flight is refused (`null`).
  */
-import type { DeletionCancelOutcome, ExportDownloadOutcome, PrivacyRequestOutcome, PrivacyStateOutcome, PrivacyStateView } from '../runtime-entry';
+import type {
+  DeletionCancelOutcome, ExportBundleOutcome, ExportPhotoFile, ExportPhotoOutcome, ExportPhotoSet, PrivacyRequestOutcome, PrivacyStateOutcome,
+  PrivacyStateView,
+} from '../runtime-entry';
 import { mintPublicIdCommandId } from './public-id-controller';
 
 export type PrivacyDataStatus = 'LOADING' | 'READY';
@@ -32,7 +35,9 @@ export interface PrivacyDataState {
 export interface PrivacyDataTransport {
   readPrivacyState(): Promise<PrivacyStateOutcome>;
   requestDataExport(commandId: string, password: string): Promise<PrivacyRequestOutcome>;
-  downloadDataExport(): Promise<ExportDownloadOutcome>;
+  /** S6-07 (CP4): the package and the reader's own photos (the bundle route); the package-only route is not used here. */
+  downloadDataExportBundle(signal?: AbortSignal): Promise<ExportBundleOutcome>;
+  downloadExportPhoto(fileName: string, token: string, signal?: AbortSignal): Promise<ExportPhotoOutcome>;
   requestAccountDeletion(commandId: string, password: string): Promise<PrivacyRequestOutcome>;
   cancelAccountDeletion(): Promise<DeletionCancelOutcome>;
 }
@@ -40,8 +45,16 @@ export interface PrivacyDataTransport {
 /** ACCEPTED: the request is held (now, or found held). RETRY: it is not known to be held. */
 export type PrivacyRequestResult = 'ACCEPTED' | 'EMPTY' | 'PASSWORD_REJECTED' | 'RETRY';
 export type DeletionCancelResult = 'CANCELLED' | 'NOT_CANCELLABLE' | 'RETRY';
+/** The reader's photos to save beside the package: the server's manifest, its files in order, and how to fetch the rest. */
+export interface ExportPhotosToSave {
+  readonly manifest: Record<string, unknown>;
+  readonly fileNames: readonly string[];
+  readonly inline: readonly ExportPhotoFile[];
+  /** One listed file the answer did not carry, or null when it cannot be had now (nothing is then saved). */
+  fetch(fileName: string): Promise<ExportPhotoFile | null>;
+}
 export type ExportDownloadResult =
-  | { readonly kind: 'READY'; readonly document: Record<string, unknown> }
+  | { readonly kind: 'READY'; readonly document: Record<string, unknown>; readonly photos: ExportPhotosToSave | null }
   | { readonly kind: 'NOT_READY' }
   | { readonly kind: 'RETRY' };
 
@@ -70,6 +83,9 @@ export interface PrivacyDataControllerOptions {
 
 /** The pause before the next read after a failed one; the last value repeats. */
 export const PRIVACY_READ_RETRY_DELAYS_MS: readonly number[] = Object.freeze([1_000, 2_000, 4_000, 8_000, 15_000]);
+/** S6-07 (CP4): how long the bundle answer, and then each photo file, may take before it is a lost answer. Not Product authority. */
+export const EXPORT_DOWNLOAD_TIMEOUT_MS = 120_000;
+export const EXPORT_PHOTO_FILE_TIMEOUT_MS = 60_000;
 /** How often a package being prepared is read again. An implementation detail, not Product authority. */
 export const PRIVACY_PREPARING_POLL_MS = 15_000;
 
@@ -94,6 +110,28 @@ export function createPrivacyDataController({
   let deletionCommand: string | null = null;
   const listeners = new Set<() => void>();
   const live = () => !retired && isCurrent();
+  /** One request under its own bound, on the controller's own (injectable) timer; the timer always ends with the request. */
+  async function bounded<T>(ms: number, request: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    const abort = new AbortController();
+    const handle = setTimer(() => abort.abort(), ms);
+    try {
+      return await request(abort.signal);
+    } finally {
+      clearTimer(handle);
+    }
+  }
+  /** The photos the save writes: the inline files, and the rest asked for one by one on this generation only. */
+  const toSave = (photos: ExportPhotoSet): ExportPhotosToSave => ({
+    manifest: photos.manifest,
+    fileNames: photos.fileNames,
+    inline: photos.inline,
+    async fetch(fileName) {
+      if (!live()) return null;
+      const answer = await bounded(EXPORT_PHOTO_FILE_TIMEOUT_MS, (signal) => transport.downloadExportPhoto(fileName, photos.token, signal))
+        .catch((): ExportPhotoOutcome => ({ kind: 'NETWORK' }));
+      return live() && answer.kind === 'FILE' ? answer.file : null;
+    },
+  });
 
   const watchPreparation = () => {
     if (poll !== null) clearTimer(poll);
@@ -211,11 +249,13 @@ export function createPrivacyDataController({
       });
     },
 
+    // (The fetch is bound to this generation: after a switch of account it answers nothing, so nothing is saved.)
     downloadExport() {
       return exclusive(async (): Promise<ExportDownloadResult> => {
-        const outcome = await transport.downloadDataExport().catch((): ExportDownloadOutcome => ({ kind: 'NETWORK' }));
+        const outcome = await bounded(EXPORT_DOWNLOAD_TIMEOUT_MS, (signal) => transport.downloadDataExportBundle(signal))
+          .catch((): ExportBundleOutcome => ({ kind: 'NETWORK' }));
         if (!live()) return { kind: 'RETRY' };
-        if (outcome.kind === 'READY') return { kind: 'READY', document: outcome.document };
+        if (outcome.kind === 'READY') return { kind: 'READY', document: outcome.document, photos: outcome.photos === null ? null : toSave(outcome.photos) };
         await reread(true);
         return outcome.kind === 'NOT_READY' ? { kind: 'NOT_READY' } : { kind: 'RETRY' };
       });

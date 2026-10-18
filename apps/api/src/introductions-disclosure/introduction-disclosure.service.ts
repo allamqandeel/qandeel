@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
 import {
-  DisclosureRow, DisplayNamesRow, IntroductionDisclosureRepository, OutcomeRow, ShareRow,
+  DisclosureRow, DisplayNamesRow, IntroductionDisclosureRepository, OutcomeRow, OwnRenditionRow, ShareRow,
 } from './introduction-disclosure.repository';
 import { prepareIntroductionImage } from './introduction-image.pipeline';
 import type { IntroductionMediaObjectStore } from './introduction-media.store';
@@ -61,6 +61,26 @@ const DISCLOSURE_COLUMNS = ['introduction_state', 'item_kind', 'is_mine', 'discl
 const NAME_COLUMNS = ['introduction_state', 'my_displayed_version_id', 'other_display_name'] as const;
 const SHARE_COLUMNS = ['world_id', 'introduction_state', 'other_first_name', 'disclosure_material_id', 'disclosure_version_id', 'resource_type',
   'field_key', 'text_value', 'image_series_id', 'image_stage', 'is_displayed', 'established_at'] as const;
+
+const RENDITION_COLUMNS = ['world_id', 'introduction_started_at', 'stage', 'media_handle', 'is_shared'] as const;
+
+/** S6-07 (CP4): one of the caller's OWN photo renditions that still exist, for Export My Data. */
+export interface OwnExportRendition {
+  readonly worldId: string;
+  /** The instant the package prints for that Introduction, exactly as the database wrote it. */
+  readonly introductionStartedAt: string;
+  readonly stage: 1 | 2 | 3;
+  readonly handle: string;
+  readonly shared: boolean;
+}
+export type OwnExportMedia = { readonly kind: 'BYTES'; readonly bytes: Buffer } | { readonly kind: 'NOT_AVAILABLE' };
+/** The store has no object for a key the database still holds: an integrity defect, never a quietly thinner export. */
+export class ExportMediaIntegrityError extends Error {
+  constructor() {
+    super('introduction media object missing for a live key');
+    this.name = 'ExportMediaIntegrityError';
+  }
+}
 
 const nullableString = (v: unknown): boolean => v === null || typeof v === 'string';
 const nullableUuid = (v: unknown): boolean => v === null || isUuid(v);
@@ -270,6 +290,51 @@ export class IntroductionDisclosureService {
     }
     if (bytes === null) throw new NotFoundException({ outcome: 'UNAVAILABLE' });
     return bytes;
+  }
+
+  // ---- S6-07 (CP4): Export My Data. The same decisions as the media route, on the reader's own token; every failure
+  // throws (the export answers 503, never a partial package), and nothing here is ever logged.
+
+  /** The caller's own renditions that still exist (0168), decoded strictly. */
+  async ownRenditionsForExport(token: string): Promise<readonly OwnExportRendition[]> {
+    const rows: unknown = await this.repository.listOwnPhotoRenditions(token);
+    if (!Array.isArray(rows)) throw new Error('introduction export renditions out of shape');
+    return rows.map((row: OwnRenditionRow) => {
+      if (!keysAre(row, RENDITION_COLUMNS) || !isUuid(row.world_id) || typeof row.introduction_started_at !== 'string'
+          || Number.isNaN(Date.parse(row.introduction_started_at)) || !(row.stage === 1 || row.stage === 2 || row.stage === 3)
+          || !isUuid(row.media_handle) || typeof row.is_shared !== 'boolean') throw new Error('introduction export rendition out of shape');
+      return {
+        worldId: row.world_id.toLowerCase(), introductionStartedAt: row.introduction_started_at, stage: row.stage,
+        handle: row.media_handle.toLowerCase(), shared: row.is_shared,
+      };
+    });
+  }
+
+  /** Is the caller allowed to receive these bytes NOW - the media route's own decision (0162), nothing wider. */
+  async authorizedForExport(token: string, worldId: string, handle: string): Promise<boolean> {
+    const answer: unknown = await this.repository.authorizeMedia(token, worldId, handle);
+    if (!Array.isArray(answer) || answer.length !== 1 || !keysAre(answer[0], ['outcome'])) throw new Error('introduction export authorization out of shape');
+    const { outcome } = answer[0] as unknown as OutcomeRow;
+    if (outcome === 'AUTHORIZED') return true;
+    if (outcome === 'UNAVAILABLE') return false;
+    throw new Error('introduction export authorization out of vocabulary');
+  }
+
+  /**
+   * The bytes of one of the caller's own renditions: authorized on the caller's token immediately before the key is
+   * read, exactly as the media route does. NOT_AVAILABLE when the database refuses or holds no key any more (it was just
+   * removed); ExportMediaIntegrityError when the store has no object for a live key; any other failure throws.
+   */
+  async ownMediaForExport(token: string, worldId: string, handle: string, signal: AbortSignal): Promise<OwnExportMedia> {
+    if (!this.store.isConfigured()) throw new Error('introduction media store is not configured');
+    if (!(await this.authorizedForExport(token, worldId, handle))) return { kind: 'NOT_AVAILABLE' };
+    const key: unknown = await this.repository.mediaKey(handle);
+    if (!Array.isArray(key)) throw new Error('introduction export key out of shape');
+    if (key.length === 0) return { kind: 'NOT_AVAILABLE' };
+    if (key.length !== 1 || typeof (key[0] as { storage_key?: unknown }).storage_key !== 'string') throw new Error('introduction export key out of shape');
+    const bytes = await this.store.get((key[0] as { storage_key: string }).storage_key, signal);
+    if (bytes === null) throw new ExportMediaIntegrityError();
+    return { kind: 'BYTES', bytes };
   }
 
   private async discard(token: string, world: string, series: string): Promise<void> {

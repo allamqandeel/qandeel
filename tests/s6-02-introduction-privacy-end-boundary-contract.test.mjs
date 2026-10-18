@@ -166,7 +166,10 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
   // S6-04 (2026-10-15) appends its three named decision boundaries after the END exception, and S6-05 (2026-10-16,
   // migration 0159) its one acceptance boundary after them; the END exception itself is unchanged and still named
   // exactly once in the census. S6-06 (2026-10-16, migration 0163) appends its two continuation boundaries after them.
-  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions, the one S6-05 acceptance and the two S6-06 continuation boundaries');
+  // RE-ANCHORED by S6-07 CP1 (2026-10-18, migration 0165, Controlled Amendment CA-01-impl): the ONE governed enrollment
+  // boundary is appended after the S6-06 continuation boundaries in the 0149 census and after their absorbers in the 0150
+  // ABSORBED list; everything pinned before it is unchanged.
+  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\), nameOf\(S6_07_GOVERNED_ENROLLMENT\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions, the one S6-05 acceptance, the two S6-06 continuation boundaries and the one S6-07 enrollment boundary');
   assert.equal((verifier.match(/S6_02_INTRODUCTION_END/gu) ?? []).length, 7, 'the exception is named, not generalized');
   for (const probe of ['f4 the census refuses a second client-executable wrapper around the END core',
     'f5 the census refuses the END boundary granted beyond authenticated']) assert.ok(verifier.includes(probe), probe);
@@ -192,13 +195,18 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   assert.match(read('apps/api/src/http-security/route-rate-limit.census.ts'), /'POST \/introductions\/worlds\/:worldId\/end': 'AUTHENTICATED'/u);
   // S6-04 (2026-10-15) appends its own proposal module, and S6-05 (2026-10-16, CP3) its Introduction World module after
   // it, and S6-06 (2026-10-16, CP1) its two modules after that; the S6-02 module stays composed here, exactly once.
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule\]/u);
+  // RE-ANCHORED by S6-07 CP1 (2026-10-18): the governed enrollment module is composed after the S6-06 modules.
+  // RE-ANCHORED by S6-07 CP2 (2026-10-18): the forward dispatcher's server pass is composed after it.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
     'integration/__validation__/s605-proof-introduction-world.ts'];
   // RE-ANCHORED by S6-06 CP2 (2026-10-17): the S6-06 sharing and continuation clients (and their suite) name the
   // Introduction World routes for disclosure, photos and SUCCESS — and never the END, which stays the S6-05 client's.
   const sharing = ['runtime-entry/introduction-sharing-api.ts', 'runtime-entry/introduction-continuation-api.ts', 'runtime-entry/__tests__/introduction-sharing-api.test.ts'];
+  // RE-ANCHORED by S6-07 CP3 (2026-10-18): the per-Introduction alerts client and the CP3 integration test name the
+  // Introduction World routes for the alerts and the reads — and never the END.
+  sharing.push('runtime-entry/introduction-alerts-api.ts', 'integration/__tests__/s6-07-introductions-direct-entry.test.tsx');
   for (const file of sharing) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/end\b|end_own_introduction/u, `mobile ${file} wires no END`);
   for (const file of mobile('apps/mobile/src/').map((f) => String(f).replace(/\\/gu, '/'))) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction/u, `mobile ${file} names no database function`);

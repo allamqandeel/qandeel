@@ -105,7 +105,8 @@ import {
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import { createInteractionPreferencesController, type InteractionPreferencesController } from '../../settings';
 import {
-  createDevicePhotoSource, createIntroductionSharingController, createIntroductionWorldsController, createIntroductionsController,
+  createDevicePhotoSource, createEnrollmentController, createIntroductionAlertsController, createIntroductionSharingController, createIntroductionWorldsController, createIntroductionsController,
+  type EnrollmentController, type IntroductionAlertsController,
   createParticipationController, createProposalsController, type IntroductionSharingController, type IntroductionWorldsController, type IntroductionsController,
   releaseIntroductionRenditions, type ParticipationController, type ProposalsController,
 } from '../../introductions';
@@ -264,6 +265,10 @@ export interface IntegrationSessionRuntime {
    * runtime entry's ONE foreground signal and is retired with the generation, so no word of one account reaches the next.
    */
   readonly introductionWorlds: IntroductionWorldsController;
+  /** S6-07: the per-Introduction mute rows of Notifications & Activity (0167), retired with the generation. */
+  readonly introductionAlerts: IntroductionAlertsController;
+  /** S6-07: the governed enrollment and the reader's three consents (0165), retired with the generation. */
+  readonly introductionEnrollment: EnrollmentController;
   /**
    * S6-06: what this identity shares in the Introduction World open now (text, the three-stage photo, the display-name
    * consent) and SUCCESS, on the transports bound to it; a text share is deleted through the same identity-bound Shared
@@ -460,6 +465,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.introductions.retire();
     session.introductionProposals.retire();
     session.introductionWorlds.retire();
+    session.introductionAlerts.retire();
+    session.introductionEnrollment.retire();
     session.introductionSharing.retire();
     session.introductionParticipation.retire();
     session.introductionShares.retire();
@@ -588,6 +595,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       introductionProposals: createProposalsController({ transport: entry.introductionProposalsFor(bundle), isCurrent }),
       // S6-05: the Introduction Worlds; deletion is the existing Shared owner deletion on the Shared transport (R-5).
       introductionWorlds: createIntroductionWorldsController({ transport: entry.introductionWorldsFor(bundle), deletion: shared, isCurrent, foreground: entry.foreground }),
+      // S6-07: the per-Introduction alerts.
+      introductionAlerts: createIntroductionAlertsController({ transport: entry.introductionAlertsFor(bundle), isCurrent }),
+      // S6-07 (CP3): the governed enrollment and the three independent consents.
+      introductionEnrollment: createEnrollmentController({ transport: entry.introductionsEnrollmentFor(bundle), isCurrent }),
       // S6-06: sharing, photos, the display-name consent and SUCCESS; the reader's status line; and their Settings page.
       introductionSharing: createIntroductionSharingController({
         transport: sharing, success: continuation, deletion: shared, photos, isCurrent, foreground: entry.foreground,

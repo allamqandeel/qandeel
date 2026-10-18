@@ -121,7 +121,9 @@ test('5 — ONE Activity boundary and the Product Owner\'s D5 matrix; recipients
 
 test('6 — Public Direct Entry is executable and revalidated NOW; mobile opens the SAME field', () => {
   const types = code('apps/api/src/activity/activity.types.ts');
-  assert.match(types, /new Set\(\['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD'\]\)/u);
+  // RE-ANCHORED by S6-07 CP3 (2026-10-18): Introductions (Stage 6) is executable too, re-authorized at open by the
+  // Introductions domain's own reads; Replay (Stage 7) still fails closed.
+  assert.match(types, /new Set\(\['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD', 'INTRODUCTIONS'\]\)/u);
   const service = code('apps/api/src/activity/activity.service.ts');
   assert.match(service, /this\.repository\.publicExperienceServed\(token, id\)/u);
   assert.match(service, /this\.repository\.ownPublicRelations\(token\)/u);

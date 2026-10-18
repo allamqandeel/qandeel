@@ -349,6 +349,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     setSettingsShown(true);
   }, []);
 
+  // S6-07 — the one Introduction World a Direct Entry opens in the Shared area (a new value for every entry).
+  const [introductionEntry, setIntroductionEntry] = useState<{ readonly worldId: string; readonly n: number } | null>(null);
+  const introductionEntries = useRef(0);
   // A revalidated Direct Entry, executed only into a Product surface that exists (D38–D43).
   const enter = useCallback((destination: DirectEntryDestination) => {
     setIntroductionsShown(false);
@@ -376,6 +379,27 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       cross('CONVERSATION');
       runtime.publicWorld.enterAt(destination.target);
       setArea('PUBLIC_WORLD');
+      return;
+    }
+    if (destination.kind === 'INTRODUCTIONS') {
+      // S6-07 — the exact Introductions context, never a guessed one: an Introduction World opens on its own surface in
+      // the Shared area (where the reader finds it), which reads that World again now and shows the neutral unavailable
+      // state if it is no longer theirs; a delivered proposal opens the «مقترحات التعارف» space, which reads the
+      // reader's proposals again. Nothing else is opened in their place, and the Personal world is not touched.
+      setSettingsShown(false);
+      setUnderstandingShown(false);
+      cross('CONVERSATION');
+      if (destination.target.kind === 'WORLD') {
+        introductionEntries.current += 1;
+        setIntroductionEntry({ worldId: destination.target.worldId, n: introductionEntries.current });
+        setArea('SHARED_WORLD');
+        return;
+      }
+      setArea('MY_WORLD');
+      setReturnedFromIntroductions(false);
+      setIntroductionsShown(true);
+      setReturnedFromProposals(false);
+      setProposalsShown(true);
       return;
     }
     setArea('MY_WORLD');
@@ -602,6 +626,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               activity={{ controller: runtime.attention, onOpen: openActivity, focus: returnedFromActivity && !activityShown }}
               introductions={runtime.introductionWorlds}
               introductionSharing={runtime.introductionSharing}
+              introductionEntry={introductionEntry}
             />
           </View>
         ) : null}
@@ -641,7 +666,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} introductionShares={runtime.introductionShares} interactionPreferences={runtime.interactionPreferences} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} introductionAlerts={runtime.introductionAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} introductionShares={runtime.introductionShares} interactionPreferences={runtime.interactionPreferences} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
@@ -658,7 +683,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           >
             <IntroductionsSurface controller={runtime.introductions} language={locale.language} insets={edges} onBack={closeIntroductions}
               proposals={runtime.introductionProposals} onOpenProposals={openProposals} focusProposals={returnedFromProposals && !proposalsShown}
-              participation={runtime.introductionParticipation} />
+              participation={runtime.introductionParticipation} enrollment={runtime.introductionEnrollment} />
           </View>
         ) : null}
         {introductionsShown && proposalsShown && depth === 'CONVERSATION' && onSignOut !== undefined && runtime.introductionProposals !== undefined ? (

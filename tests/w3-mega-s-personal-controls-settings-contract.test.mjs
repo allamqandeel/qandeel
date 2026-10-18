@@ -141,8 +141,10 @@ test('the verifier is registered once in API CI, and this contract in both CI ga
 test('the owner routes are guarded, account-free and silent; only the provider-removal file reaches an admin endpoint', () => {
   const controller = read(`${API}/privacy-data.controller.ts`);
   assert.match(controller, /@Controller\('account\/privacy'\)\n@UseGuards\(SupabaseAuthGuard\)\nexport class PrivacyDataController/u);
-  assert.deepEqual([...code(controller).matchAll(/@(Get|Post)\(([^)]*)\)/gu)].map((m) => `${m[1]} ${m[2]}`), ["Get ", "Post 'export'", "Get 'export/download'", "Post 'deletion'", "Post 'deletion/cancel'"]);
-  assert.equal((code(controller).match(/@Header\(\.\.\.NO_STORE\)/gu) ?? []).length, 5, 'no answer — above all the package — is kept by a cache');
+  assert.deepEqual([...code(controller).matchAll(/@(Get|Post)\(([^)]*)\)/gu)].map((m) => `${m[1]} ${m[2]}`), ["Get ", "Post 'export'", "Get 'export/download'",
+    // RE-ANCHORED by S6-07 (CP4, QAN-BL-PRIV-04): the export bundle and its per-photo file route, owner-only and additive.
+    "Get 'export/download/bundle'", "Get 'export/download/bundle/files/:fileName'", "Post 'deletion'", "Post 'deletion/cancel'"]);
+  assert.equal((code(controller).match(/@Header\(\.\.\.NO_STORE\)/gu) ?? []).length, 7, 'no answer — above all the package and its photos — is kept by a cache (S6-07 CP4: five routes became seven)');
   assert.match(controller, /const NO_STORE = \['Cache-Control', 'no-store'\] as const;/u);
   const files = readdirSync(new URL(`${API}/`, root)).filter((name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'));
   const adminReachers = files.filter((name) => /\/auth\/v1\/admin\//u.test(code(read(`${API}/${name}`))));

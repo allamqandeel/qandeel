@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { BadRequestException, ConflictException, Injectable, Optional, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ExportMediaIntegrityError, IntroductionDisclosureService, type OwnExportRendition,
+} from '../introductions-disclosure/introduction-disclosure.service';
+import { TelemetryService } from '../observability/telemetry.service';
 import { PrivacyDataRepository, type DeletionActRow, type ExportRequestRow } from './privacy-data.repository';
 import { SupabasePasswordGrantService } from './supabase-password-grant.service';
 
@@ -25,7 +30,56 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  *
  * The export package is downloadable only by its owner, only while READY and within its availability; the owner's
  * Email is added here from the owner's own provider session (the provider holds it; the database never stores it).
+ *
+ * ## S6-07 (CP4) — the export bundle: the package and the reader's own photos (QAN-BL-PRIV-04, Q7′ / Q7″)
+ *
+ *   GET …/export/download                 unchanged: the package only;
+ *   GET …/export/download/bundle          the SAME package object, a photo manifest beside it (never inside it), the
+ *                                         leading photo files inline (base64) while they fit the one-answer guard, and
+ *                                         a manifest token;
+ *   GET …/export/download/bundle/files/:fileName   one listed photo file, for the files that did not fit, under the
+ *                                         token (header `x-qandeel-export-manifest`): CHANGED (409) when the reader's
+ *                                         photos are no longer the ones the manifest names.
+ *
+ * Every photo is the reader's OWN rendition (0168's owner-only reader), re-authorized on the reader's own token at every
+ * request by the media route's own decision (0162), and only then read from the store. The 32 MiB guard bounds ONE
+ * answer, never the export: a photo beyond it travels by the file route, so every photo the reader may download can be
+ * exported. No handle, key, World id or URL is ever answered; the token is a one-way digest of the manifest's internal
+ * identities. A store with no object for a live key, or any transport failure, is 503: never a partial bundle sold as
+ * complete. A photo the reader may no longer download is listed in `notIncluded` (NO_LONGER_AVAILABLE), never silently
+ * missing.
  */
+export const EXPORT_BUNDLE_INLINE_MAX_BYTES = 32 * 1024 * 1024;
+export const EXPORT_BUNDLE_ASSEMBLY_MS = 20_000;
+export const EXPORT_BUNDLE_FILE_MS = 15_000;
+export const EXPORT_PHOTO_MANIFEST_FORMAT = 'qandeel.personal-data-export.photos.v1';
+export const EXPORT_MANIFEST_HEADER = 'x-qandeel-export-manifest';
+const EXPORT_PHOTO_FILE_NAME = /^qandeel-photo-\d{2,4}-stage-[123]\.jpg$/u;
+const MANIFEST_TOKEN = /^[0-9a-f]{64}$/u;
+
+interface ManifestEntry extends OwnExportRendition { readonly fileName: string }
+export interface PhotoManifest {
+  readonly format: typeof EXPORT_PHOTO_MANIFEST_FORMAT;
+  readonly files: ReadonlyArray<{ fileName: string; mimeType: 'image/jpeg'; stage: number; shared: boolean; introductionStartedAt: string; derivedRendition: true }>;
+  readonly notIncluded: ReadonlyArray<{ introductionStartedAt: string; stage: number; reason: 'NO_LONGER_AVAILABLE' }>;
+}
+export interface PhotoFile { readonly fileName: string; readonly bytes: number; readonly bytesBase64: string }
+
+/** Each Introduction with a photo is numbered by when it started (then by World); a file is that number and its stage. */
+function manifestEntries(renditions: readonly OwnExportRendition[]): ManifestEntry[] {
+  const ordered = [...renditions].sort((x, y) => Date.parse(x.introductionStartedAt) - Date.parse(y.introductionStartedAt)
+    || (x.worldId < y.worldId ? -1 : x.worldId > y.worldId ? 1 : 0) || x.stage - y.stage);
+  const numberOf = new Map<string, number>();
+  return ordered.map((r) => {
+    if (!numberOf.has(r.worldId)) numberOf.set(r.worldId, numberOf.size + 1);
+    return { ...r, fileName: `qandeel-photo-${String(numberOf.get(r.worldId)).padStart(2, '0')}-stage-${r.stage}.jpg` };
+  });
+}
+
+/** One-way: the export's availability and the manifest's internal identities, in order. Names nothing. */
+function manifestToken(availableUntil: string | null, entries: readonly ManifestEntry[]): string {
+  return createHash('sha256').update(JSON.stringify([availableUntil, entries.map((e) => [e.fileName, e.worldId, e.handle, e.stage])]), 'utf8').digest('hex');
+}
 export const EXPORT_STATUSES = Object.freeze(['NONE', 'PREPARING', 'READY', 'EXPIRED', 'FAILED'] as const);
 export const DELETION_STATUSES = Object.freeze(['NONE', 'SCHEDULED', 'FINALIZING', 'BLOCKED'] as const);
 export type ExportStatus = (typeof EXPORT_STATUSES)[number];
@@ -40,6 +94,7 @@ const COMMAND_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
 export const PRIVACY_MAX_PASSWORD = 1024;
 
 const unavailable = () => new ServiceUnavailableException({ outcome: 'UNAVAILABLE' });
+const changed = () => new ConflictException({ outcome: 'CHANGED' });
 const invalid = () => new BadRequestException({ outcome: 'INVALID_REQUEST' });
 
 /** Exactly `{ commandId, password }`: a UUID command identity and a non-empty password within its bound. */
@@ -81,6 +136,8 @@ export class PrivacyDataService {
   constructor(
     private readonly repository: PrivacyDataRepository,
     private readonly provider: SupabasePasswordGrantService,
+    @Optional() private readonly photos?: IntroductionDisclosureService,
+    @Optional() private readonly telemetry?: TelemetryService,
   ) {}
 
   async readState(accessToken: string): Promise<PrivacyStateView> {
@@ -132,6 +189,104 @@ export class PrivacyDataService {
       availableUntil: instant(row.available_until),
       package: { ...content, account: { ...account, email: owner.email, emailVerified: owner.emailVerified } },
     };
+  }
+
+  /**
+   * S6-07 (CP4): the bundle - exactly the package `downloadExport` answers, the photo manifest beside it, the leading
+   * photo files inline while they fit EXPORT_BUNDLE_INLINE_MAX_BYTES, and the manifest token for the rest.
+   */
+  async downloadExportBundle(accessToken: string, clientIp: string | undefined) {
+    const base = await this.downloadExport(accessToken, clientIp);
+    if (base.status !== 'READY') {
+      this.signal('bundle', 'not_ready');
+      return { ...base, photoManifest: null, photoFiles: null, photoManifestToken: null };
+    }
+    const signal = AbortSignal.timeout(EXPORT_BUNDLE_ASSEMBLY_MS);
+    try {
+      const entries = manifestEntries(await this.ownPhotos().ownRenditionsForExport(accessToken));
+      const files: ManifestEntry[] = [];
+      const notIncluded: PhotoManifest['notIncluded'][number][] = [];
+      for (const entry of entries) {
+        if (await this.ownPhotos().authorizedForExport(accessToken, entry.worldId, entry.handle)) files.push(entry);
+        else notIncluded.push({ introductionStartedAt: entry.introductionStartedAt, stage: entry.stage, reason: 'NO_LONGER_AVAILABLE' });
+      }
+      const inline: PhotoFile[] = [];
+      let inlineBytes = 0;
+      for (let i = 0; i < files.length; i += 1) {
+        const media = await this.ownPhotos().ownMediaForExport(accessToken, files[i].worldId, files[i].handle, signal);
+        if (media.kind === 'NOT_AVAILABLE') {
+          // Removed since it was authorized a moment ago: listed as no longer available, never silently missing.
+          notIncluded.push({ introductionStartedAt: files[i].introductionStartedAt, stage: files[i].stage, reason: 'NO_LONGER_AVAILABLE' });
+          files.splice(i, 1);
+          i -= 1;
+          continue;
+        }
+        // The guard bounds this ONE answer: the first file that does not fit, and every file after it, travel by the file
+        // route instead (the bytes just read are dropped). It never bounds what the reader may export.
+        if (inlineBytes + media.bytes.length > EXPORT_BUNDLE_INLINE_MAX_BYTES) break;
+        inlineBytes += media.bytes.length;
+        inline.push({ fileName: files[i].fileName, bytes: media.bytes.length, bytesBase64: media.bytes.toString('base64') });
+      }
+      const photoManifest: PhotoManifest = {
+        format: EXPORT_PHOTO_MANIFEST_FORMAT,
+        files: files.map((f) => ({ fileName: f.fileName, mimeType: 'image/jpeg', stage: f.stage, shared: f.shared,
+          introductionStartedAt: f.introductionStartedAt, derivedRendition: true })),
+        notIncluded,
+      };
+      this.signal('bundle', 'success');
+      return { ...base, photoManifest, photoFiles: inline, photoManifestToken: manifestToken(base.availableUntil, entries) };
+    } catch (error) {
+      this.signal('bundle', error instanceof ExportMediaIntegrityError ? 'integrity_failure' : 'transport_failure');
+      throw unavailable();
+    }
+  }
+
+  /**
+   * S6-07 (CP4): one listed photo file, for the files the bundle answer did not carry. The reader's photos must still be
+   * exactly the ones the manifest names (the token), the export still READY, and the file still AUTHORIZED for the reader
+   * now; otherwise CHANGED and the reader's app starts the bundle again.
+   */
+  async downloadExportPhoto(accessToken: string, fileName: unknown, token: unknown) {
+    if (typeof fileName !== 'string' || !EXPORT_PHOTO_FILE_NAME.test(fileName) || typeof token !== 'string' || !MANIFEST_TOKEN.test(token)) throw invalid();
+    const row = await this.repository.readExport(accessToken).catch(() => {
+      this.signal('bundle_file', 'transport_failure');
+      throw unavailable();
+    });
+    if (row === undefined) throw unavailable();
+    if (exportStatus(row.export_status) !== 'READY') {
+      this.signal('bundle_file', 'superseded_expected');
+      throw changed();
+    }
+    let answer: PhotoFile | 'CHANGED';
+    try {
+      const entries = manifestEntries(await this.ownPhotos().ownRenditionsForExport(accessToken));
+      const entry = entries.find((e) => e.fileName === fileName);
+      if (manifestToken(instant(row.available_until), entries) !== token || entry === undefined) {
+        answer = 'CHANGED';
+      } else {
+        const media = await this.ownPhotos().ownMediaForExport(accessToken, entry.worldId, entry.handle, AbortSignal.timeout(EXPORT_BUNDLE_FILE_MS));
+        answer = media.kind === 'BYTES' ? { fileName, bytes: media.bytes.length, bytesBase64: media.bytes.toString('base64') } : 'CHANGED';
+      }
+    } catch (error) {
+      this.signal('bundle_file', error instanceof ExportMediaIntegrityError ? 'integrity_failure' : 'transport_failure');
+      throw unavailable();
+    }
+    if (answer === 'CHANGED') {
+      this.signal('bundle_file', 'superseded_expected');
+      throw changed();
+    }
+    this.signal('bundle_file', 'success');
+    return answer;
+  }
+
+  private ownPhotos(): IntroductionDisclosureService {
+    if (this.photos === undefined) throw new Error('the photo source is not composed');
+    return this.photos;
+  }
+
+  /** PROD-OPS-01's content-free channel: an operation and an outcome class, never a person, photo, size or count. */
+  private signal(operation: 'bundle' | 'bundle_file', outcome: string): void {
+    this.telemetry?.recordOperationalOutcome('PRIVACY_EXPORT', operation, outcome);
   }
 
   async requestDeletion(accessToken: string, body: unknown, clientIp: string | undefined) {

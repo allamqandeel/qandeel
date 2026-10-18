@@ -14,11 +14,11 @@ import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearanc
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { PrivacyStateView } from '../../runtime-entry';
 import { SettingsSurface, createPrivacyDataController, settingsCopy, type PrivacyDataTransport } from '..';
-import { saveExportDocument } from '../export-file';
+import { saveExportBundle } from '../export-file';
 import { openLanguageSettings } from '../language-settings';
 import { formatDay } from '../PrivacyDataSection';
 
-jest.mock('../export-file', () => ({ saveExportDocument: jest.fn(async () => 'SAVED'), exportFileName: () => 'qandeel-data.json' }));
+jest.mock('../export-file', () => ({ saveExportBundle: jest.fn(async () => 'SAVED'), exportFileName: () => 'qandeel-data.json' }));
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual<object>('react-native/Libraries/ReactNative/RendererProxy'),
   findNodeHandle: (node: unknown) => (node === null || node === undefined ? null : 4242),
@@ -39,7 +39,8 @@ function privacyServer(initial: PrivacyStateView = NONE) {
   const transport: PrivacyDataTransport = {
     readPrivacyState: jest.fn(async () => ({ kind: 'READ' as const, view: current })),
     requestDataExport: jest.fn(next),
-    downloadDataExport: jest.fn(next),
+    downloadDataExportBundle: jest.fn(next),
+    downloadExportPhoto: jest.fn(next),
     requestAccountDeletion: jest.fn(next),
     cancelAccountDeletion: jest.fn(next),
   };
@@ -81,7 +82,7 @@ const words = (view: RenderResult) => view.getAllByText(/.+/u).map((node) => nod
 
 afterEach(() => {
   jest.restoreAllMocks();
-  (saveExportDocument as jest.Mock).mockClear();
+  (saveExportBundle as jest.Mock).mockClear();
 });
 
 describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy & Data', (language) => {
@@ -172,20 +173,20 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy 
     const { view, server } = await settings(language, { ...NONE, export: { status: 'READY', availableUntil: UNTIL } });
     expect(view.getByTestId('qandeel-export-status-status').props.children).toBe(p.exportReady(formatDay(UNTIL, language)));
     const document = { format: 'qandeel.personal-data-export.v1', account: { name: 'Noor' } };
-    server.answer({ kind: 'READY', availableUntil: UNTIL, document });
+    server.answer({ kind: 'READY', availableUntil: UNTIL, document, photos: null });
     await press(view, 'qandeel-export-download');
-    expect(saveExportDocument).toHaveBeenCalledWith(document);
+    expect(saveExportBundle).toHaveBeenCalledWith(document, null);
     expect(announce).toHaveBeenLastCalledWith(p.exportSaved);
     expect(view.getByTestId('qandeel-export-download-notice').props.accessibilityLiveRegion).toBe('polite');
 
-    (saveExportDocument as jest.Mock).mockResolvedValueOnce('CANCELLED');
-    server.answer({ kind: 'READY', availableUntil: UNTIL, document });
+    (saveExportBundle as jest.Mock).mockResolvedValueOnce('CANCELLED');
+    server.answer({ kind: 'READY', availableUntil: UNTIL, document, photos: null });
     announce.mockClear();
     await press(view, 'qandeel-export-download');
     expect(announce).not.toHaveBeenCalled();
 
-    (saveExportDocument as jest.Mock).mockResolvedValueOnce('FAILED');
-    server.answer({ kind: 'READY', availableUntil: UNTIL, document });
+    (saveExportBundle as jest.Mock).mockResolvedValueOnce('FAILED');
+    server.answer({ kind: 'READY', availableUntil: UNTIL, document, photos: null });
     await press(view, 'qandeel-export-download');
     expect(announce).toHaveBeenLastCalledWith(p.exportSaveFailed);
   });

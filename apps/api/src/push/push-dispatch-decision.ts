@@ -52,6 +52,7 @@ export function decideDispatch(claim: ClaimedAttempt, now: number): DispatchDeci
     timeZone: device.timeZone,
     evidence,
     osPermission: device.osPermission,
+    introductionsEntered: claim.introductionsEntered === true,
     // The server cannot see the screen; in-app attention is read from A3-01's evidence (above), never inferred.
     foreground: false,
   });

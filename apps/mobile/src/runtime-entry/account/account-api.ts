@@ -141,6 +141,84 @@ export type ExportDownloadOutcome =
   | { readonly kind: 'FAILED' }
   | { readonly kind: 'NETWORK' };
 
+/**
+ * S6-07 (CP4) — the export bundle (QAN-BL-PRIV-04): the same package, the server's photo manifest beside it, the leading
+ * photo files inline, and a token for the files that travel one by one. The app builds and edits nothing: it checks the
+ * answer's shape and saves the server's documents verbatim.
+ */
+export interface ExportPhotoFile { readonly fileName: string; readonly bytes: number; readonly bytesBase64: string }
+export interface ExportPhotoSet {
+  /** The server's manifest document, saved verbatim beside the package. */
+  readonly manifest: Record<string, unknown>;
+  /** Every listed file, in the manifest's order. */
+  readonly fileNames: readonly string[];
+  /** The leading files the answer carried; the rest are asked for by name under the token. */
+  readonly inline: readonly ExportPhotoFile[];
+  readonly token: string;
+}
+export type ExportBundleOutcome =
+  | { readonly kind: 'READY'; readonly availableUntil: string | null; readonly document: Record<string, unknown>; readonly photos: ExportPhotoSet | null }
+  | { readonly kind: 'NOT_READY'; readonly status: PrivacyExportStatus }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+export type ExportPhotoOutcome =
+  | { readonly kind: 'FILE'; readonly file: ExportPhotoFile }
+  /** The reader's photos are no longer the ones the manifest names: start again. */
+  | { readonly kind: 'CHANGED' }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+/** One technical guard for ONE answer (the server's EXPORT_BUNDLE_INLINE_MAX_BYTES); it never bounds the export. */
+export const EXPORT_BUNDLE_INLINE_MAX_BYTES = 32 * 1024 * 1024;
+const PHOTO_MANIFEST_FORMAT = 'qandeel.personal-data-export.photos.v1';
+const PHOTO_FILE_NAME = /^qandeel-photo-\d{2,4}-stage-[123]\.jpg$/u;
+const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
+const MANIFEST_TOKEN = /^[0-9a-f]{64}$/u;
+const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
+  Object.keys(value).length === keys.length && keys.every((key) => key in value);
+/** The decoded length a base64 text stands for, or -1 when it is not base64. */
+export function base64Length(text: string): number {
+  if (!BASE64.test(text)) return -1;
+  return (text.length / 4) * 3 - (text.endsWith('==') ? 2 : text.endsWith('=') ? 1 : 0);
+}
+function decodePhotoFile(value: unknown): ExportPhotoFile | null {
+  if (!isRecord(value) || !exactKeys(value, ['fileName', 'bytes', 'bytesBase64'])) return null;
+  const { fileName, bytes, bytesBase64 } = value;
+  if (typeof fileName !== 'string' || !PHOTO_FILE_NAME.test(fileName) || typeof bytes !== 'number' || !Number.isInteger(bytes) || bytes < 1
+      || typeof bytesBase64 !== 'string' || base64Length(bytesBase64) !== bytes) return null;
+  return { fileName, bytes, bytesBase64 };
+}
+/** The manifest and the inline files, fail-closed: null when anything is out of shape. */
+function decodePhotoSet(manifest: unknown, files: unknown, token: unknown): ExportPhotoSet | 'NONE' | null {
+  if (!isRecord(manifest) || !exactKeys(manifest, ['format', 'files', 'notIncluded']) || manifest.format !== PHOTO_MANIFEST_FORMAT
+      || !Array.isArray(manifest.files) || !Array.isArray(manifest.notIncluded) || !Array.isArray(files)
+      || typeof token !== 'string' || !MANIFEST_TOKEN.test(token)) return null;
+  const names: string[] = [];
+  for (const f of manifest.files) {
+    if (!isRecord(f) || !exactKeys(f, ['fileName', 'mimeType', 'stage', 'shared', 'introductionStartedAt', 'derivedRendition'])
+        || typeof f.fileName !== 'string' || !PHOTO_FILE_NAME.test(f.fileName) || names.includes(f.fileName) || f.mimeType !== 'image/jpeg'
+        || ![1, 2, 3].includes(f.stage as number) || typeof f.shared !== 'boolean' || typeof f.introductionStartedAt !== 'string'
+        || f.derivedRendition !== true) return null;
+    names.push(f.fileName);
+  }
+  for (const n of manifest.notIncluded) {
+    if (!isRecord(n) || !exactKeys(n, ['introductionStartedAt', 'stage', 'reason']) || typeof n.introductionStartedAt !== 'string'
+        || ![1, 2, 3].includes(n.stage as number) || n.reason !== 'NO_LONGER_AVAILABLE') return null;
+  }
+  const inline: ExportPhotoFile[] = [];
+  let total = 0;
+  for (const [i, value] of files.entries()) {
+    const file = decodePhotoFile(value);
+    // The inline files are the manifest's LEADING files, in its order, within the one-answer guard.
+    if (file === null || file.fileName !== names[i]) return null;
+    total += file.bytes;
+    inline.push(file);
+  }
+  if (total > EXPORT_BUNDLE_INLINE_MAX_BYTES) return null;
+  // No photo and nothing to say about one: the package is saved exactly as it always was.
+  if (names.length === 0 && manifest.notIncluded.length === 0) return 'NONE';
+  return { manifest, fileNames: names, inline, token };
+}
+
 const EXPORT_STATUSES: readonly string[] = Object.freeze(['NONE', 'PREPARING', 'READY', 'EXPIRED', 'FAILED']);
 const DELETION_STATUSES: readonly string[] = Object.freeze(['NONE', 'SCHEDULED', 'FINALIZING', 'BLOCKED']);
 /** An instant the app can show: `null` stays null; a string that is not a readable date is refused, never drawn. */
@@ -370,6 +448,31 @@ export class AccountApiClient {
     return { kind: 'READY', availableUntil: until, document };
   }
 
+  /** S6-07 (CP4) — the export bundle: the same package, the photo manifest beside it, the leading photos, the token. */
+  async downloadDataExportBundle(signal?: AbortSignal): Promise<ExportBundleOutcome> {
+    const answer = await this.exchange('GET', '/account/privacy/export/download/bundle', undefined, { signal });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { status, availableUntil, package: document, photoManifest, photoFiles, photoManifestToken } = answer.body;
+    if (typeof status !== 'string' || !EXPORT_STATUSES.includes(status)) return { kind: 'FAILED' };
+    if (status !== 'READY') return { kind: 'NOT_READY', status: status as PrivacyExportStatus };
+    const until = instantOrNull(availableUntil);
+    if (!isRecord(document) || until === undefined) return { kind: 'FAILED' };
+    const photos = decodePhotoSet(photoManifest, photoFiles, photoManifestToken);
+    if (photos === null) return { kind: 'FAILED' };
+    return { kind: 'READY', availableUntil: until, document, photos: photos === 'NONE' ? null : photos };
+  }
+
+  /** S6-07 (CP4) — one listed photo file the bundle did not carry, under the manifest token. */
+  async downloadExportPhoto(fileName: string, token: string, signal?: AbortSignal): Promise<ExportPhotoOutcome> {
+    if (!PHOTO_FILE_NAME.test(fileName) || !MANIFEST_TOKEN.test(token)) return { kind: 'FAILED' };
+    const answer = await this.exchange('GET', `/account/privacy/export/download/bundle/files/${fileName}`, undefined,
+      { signal, headers: { 'x-qandeel-export-manifest': token } });
+    if (answer.kind === 'STATUS') return answer.status === 409 ? { kind: 'CHANGED' } : { kind: 'FAILED' };
+    if (answer.kind !== 'OK') return answer;
+    const file = decodePhotoFile(answer.body);
+    return file !== null && file.fileName === fileName ? { kind: 'FILE', file } : { kind: 'FAILED' };
+  }
+
   /** W3-MEGA-S — ask for the account's deletion, with the password re-entered. ONE command identity per request. */
   async requestAccountDeletion(commandId: string, password: string): Promise<PrivacyRequestOutcome> {
     const answer = await this.exchange('POST', '/account/privacy/deletion', { commandId, password });
@@ -394,13 +497,16 @@ export class AccountApiClient {
     method: 'GET' | 'POST',
     path: string,
     body?: Record<string, string>,
+    // S6-07 (CP4): the export bundle's own bound (a signal its caller owns) and header; every other request is as before.
+    extra: { readonly signal?: AbortSignal; readonly headers?: Record<string, string> } = {},
   ): Promise<{ readonly kind: 'OK'; readonly body: Record<string, unknown> } | { readonly kind: 'STATUS'; readonly status: number } | { readonly kind: 'FAILED' } | { readonly kind: 'NETWORK' }> {
     let response: Awaited<ReturnType<RuntimeHttpFetch>>;
     try {
       response = await this.config.fetch(`${this.config.baseUrl}${path}`, {
         method,
-        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: { ...(body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' }), ...extra.headers },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(extra.signal === undefined ? {} : { signal: extra.signal }),
       });
     } catch {
       return { kind: 'NETWORK' };
@@ -410,7 +516,8 @@ export class AccountApiClient {
     try {
       parsed = await response.json();
     } catch {
-      return { kind: 'FAILED' };
+      // A body cut off by its caller's bound is a lost answer, not a malformed one.
+      return extra.signal?.aborted ? { kind: 'NETWORK' } : { kind: 'FAILED' };
     }
     return isRecord(parsed) ? { kind: 'OK', body: parsed } : { kind: 'FAILED' };
   }

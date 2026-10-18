@@ -9,6 +9,9 @@
  *     words, for the owner to confirm, correct, mark no longer true, or decline. Nothing is presumed.
  *   - Nothing reads as enrollment, participation, eligibility or a match: the end of preparation says plainly that
  *     enrollment is not available yet.
+ *   - S6-07 (CP3): when the server says enrollment is available, the reviewed preparation ends in the governed enrollment
+ *     step instead (`IntroductionsEnrollment.tsx`: one act at a time, three separate consents), and the reader's three
+ *     consents can each be withdrawn on their own — also while preparation is closed or a deletion is pending.
  *   - Arabic and English mirror by logical layout; every target is 44 points; nothing has a fixed width (320 points).
  *
  * VIS-2 — the Living Portrait (Product Owner decision 2026-10-14, direction A with R1–R4). What the server says is
@@ -34,6 +37,8 @@ import type { IntroductionsController } from './introductions-controller';
 import type { ProposalsController } from './proposals-controller';
 import { ProposalsCue } from './ProposalsSurface';
 import { IntroductionsStatusLine } from './IntroductionsStatusLine';
+import type { EnrollmentController, EnrollmentState } from './enrollment-controller';
+import { ConsentControls, EnrollmentAvailabilityLine, EnrollmentStep, enrollmentAvailabilityLine } from './IntroductionsEnrollment';
 import type { ParticipationController } from './participation-controller';
 import { Action, ActionRow, Choice, Field, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
 import { LivingPortrait, OpenBand, type PortraitGroup } from './Portrait';
@@ -54,7 +59,12 @@ export interface IntroductionsSurfaceProps {
   readonly focusProposals?: boolean;
   /** S6-06 (P13) — the reader's own Introductions status and its one explicit resume. Absent: nothing is drawn. */
   readonly participation?: ParticipationController;
+  /** S6-07 (CP3) — the governed enrollment and the reader's three consents. Absent: the S6-01 preparation, unchanged. */
+  readonly enrollment?: EnrollmentController;
 }
+
+const NO_ENROLLMENT_SUBSCRIBE = () => () => undefined;
+const NO_ENROLLMENT_STATE = (): EnrollmentState | null => null;
 
 const HEADER_MIN_HEIGHT = 48;
 const SHEET_RADIUS = 24;
@@ -266,7 +276,7 @@ function PartDetails({ ctx, copy, draft, group, onEdit }: {
 
 // ------------------------------------------------------------------------------------------------------------------
 
-export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals, focusProposals = false, participation }: IntroductionsSurfaceProps) {
+export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals, focusProposals = false, participation, enrollment }: IntroductionsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
@@ -302,6 +312,11 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
   useEffect(() => {
     controller.open();
   }, [controller]);
+  // S6-07: the enrollment view is read afresh each time the surface is shown.
+  useEffect(() => {
+    enrollment?.open();
+  }, [enrollment]);
+  const enrollmentState = useSyncExternalStore(enrollment?.subscribe ?? NO_ENROLLMENT_SUBSCRIBE, enrollment?.getState ?? NO_ENROLLMENT_STATE);
 
   useEffect(() => {
     const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboard(true));
@@ -459,6 +474,10 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
     NOTE_LIMIT: copy.noteLimit, FAILED: copy.failed, INVALID: copy.invalid,
   })[state.notice];
 
+  // S6-07: which "not available" sentence stands where the enrollment step would be (the S6-01 one in production).
+  const availability = enrollmentAvailabilityLine(enrollmentState?.status === 'READY' ? enrollmentState.view : null);
+  const consents = enrollment === undefined ? null : <ConsentControls ctx={ctx} controller={enrollment} />;
+
   const pathLine = view === null ? null : view.plan.path === 'KNOWN' ? copy.pathKnown : view.plan.path === 'MIXED' ? copy.pathMixed : copy.pathNew;
   const readOnly = view !== null && (!view.availability.preparation || view.accountDeletionPending);
   const roomy = windowHeight / Math.max(1, fontScale) >= ROOMY_HEIGHT;
@@ -504,6 +523,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
             <OpenBand ctx={ctx} copy={copy} item={item} title={factTitle(item.key.slice(5) as IntroductionsFact, copy)} textTestID={`qandeel-introductions-open-${item.key}`} />
           </View>
         ))}
+        {consents}
         {draft === null ? null : <DiscardBlock ctx={ctx} copy={copy} confirming={confirmDiscard} setConfirming={setConfirmDiscard} onDiscard={() => void controller.discard()} />}
       </View>
     );
@@ -519,12 +539,13 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
       <View testID="qandeel-introductions-intro" style={{ paddingTop: 12 }}>
         <Question ctx={ctx} text={copy.opening} />
         <Para ctx={ctx} text={copy.privateNote} role="supporting" color={palette.secondary} />
+        {consents}
       </View>
     );
     act = sheet(<>
       {pathLine === null ? null : <Para ctx={sheetCtx} text={pathLine} role="supporting" color={palette.secondary} testID="qandeel-introductions-path" />}
       <Action ctx={sheetCtx} label={copy.start} primary onPress={() => setStarted(true)} testID="qandeel-introductions-start" />
-      <Para ctx={sheetCtx} text={copy.enrollmentUnavailable} role="metadata" color={palette.tertiary} testID="qandeel-introductions-enrollment-unavailable" />
+      <EnrollmentAvailabilityLine ctx={sheetCtx} availability={availability} preparationText={copy.enrollmentUnavailable} role="metadata" color={palette.tertiary} />
     </>);
   } else if (view !== null && portrait !== null && next !== null && next.kind === 'REVIEW') {
     // The review's lead opens the screen (R2: on 320dp the portrait never pushes the question out of view); the
@@ -537,7 +558,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
     );
     act = sheet(
       <>
-        <Para ctx={sheetCtx} text={copy.enrollmentUnavailable} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
+        <EnrollmentAvailabilityLine ctx={sheetCtx} availability={availability} preparationText={copy.enrollmentUnavailable} role="supporting" color={palette.secondary} />
         <Action ctx={sheetCtx} label={copy.reviewConfirm} primary onPress={() => void send('CONFIRM_REVIEW', {})} testID="qandeel-introductions-review-confirm" />
       </>,
       false,
@@ -575,8 +596,11 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
     // The private preparation, complete — and plainly not enrollment: said first (R3), before the portrait it completes.
     world = (
       <View testID="qandeel-introductions-reviewed" style={{ paddingTop: 12 }}>
-        <Para ctx={ctx} text={copy.reviewed} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
+        <EnrollmentAvailabilityLine ctx={ctx} availability={availability} preparationText={copy.reviewed} role="supporting" color={palette.secondary} />
         {composed(portrait, true)}
+        {/* S6-07: the closing step, after the portrait it confirms; then the reader's three consents. */}
+        {enrollment === undefined ? null : <EnrollmentStep ctx={ctx} controller={enrollment} draft={draft} onChanged={() => controller.open()} />}
+        {consents}
         <AssistanceRow ctx={ctx} copy={copy} view={view} controller={controller} />
         <DiscardBlock ctx={ctx} copy={copy} confirming={confirmDiscard} setConfirming={setConfirmDiscard} onDiscard={() => void controller.discard()} />
       </View>

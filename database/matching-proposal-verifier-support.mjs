@@ -346,6 +346,13 @@ export function createProposalRuntime(databaseUrl) {
       value('birthYear'), value('birthMonth'), when('birthYear'),
       value('countryCode'), value('regionCode'), when('countryCode'),
       value('maritalStatus'), when('maritalStatus')]);
+    // RE-ANCHORED by S6-07 CP1 (migration 0165, CW2-06B-02 §5): the canonical facts reader now answers only for a fact
+    // version that carries a promotion record, which only the governed enrollment boundary writes in production. A
+    // fixture version gets a FIXTURE promotion record beside it - test data, exactly like the version itself - so every
+    // verifier that needs a confirmed fact keeps reading it through the one reader. verify-migration-0165 proves that a
+    // version without one is UNKNOWN everywhere.
+    await rows(`INSERT INTO matching_enrollment_private.fact_promotions (fact_version_id, user_id, enrollment_command_id, draft_version)
+                VALUES ($1, $2, $3, 1)`, [version, human, randomUUID()]);
     return version;
   }
   const factsOf = (row) => ({

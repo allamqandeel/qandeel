@@ -96,6 +96,8 @@ export interface RecordedRequest {
   readonly authorization: string | null;
   /** W1A-01: the request body as sent, so a test can prove what a write carried. */
   readonly body: string | null;
+  /** S6-07 (CP4): the request headers as sent (the export manifest token). */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 export type Responder = (request: RecordedRequest) => { status: number; body: unknown } | Promise<{ status: number; body: unknown }>;
@@ -128,6 +130,7 @@ export function httpDouble(): HttpDouble {
       method: init?.method ?? 'GET',
       authorization: init?.headers?.Authorization ?? null,
       body: init?.body ?? null,
+      headers: init?.headers ?? {},
     };
     calls.push(record);
     if (thrown !== null) throw new Error(thrown);

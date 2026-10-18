@@ -4999,3 +4999,176 @@ npm run test:acct-del-01-account-erasure-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its behaviour scenarios run in one rolled-back
 transaction with the CW2-08 / I-07D seams replaced for the run and restored byte for byte; its races commit their own
 fresh humans and erase them through the erasure itself (an erased account can never be provisioned again).
+
+## S6-07 - Governed Matching enrollment (migration 0165, CP1)
+
+`0165_matching_governed_enrollment_v1.sql` adds the ONE reviewed Stage 6 launch path SEC-MATCH-00 asked for
+(`QAN-BL-MATCH-01`): an `authenticated` boundary that promotes the owner's own reviewed preparation draft into the frozen
+Matching setup through the frozen `0109` commands, under a closed-by-default operator gate. The controlled forward
+amendments are `docs/matching-introduction-runtime-v1.md` §50. Record: `docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md`.
+
+```text
+enroll_my_matching_setup_v1(command, kind, expected draft version,     authenticated only; the human is auth.uid()
+    participation consent, context consent, disclosure consent)        ENROLL | CORRECTION | RESUME | RECONFIRM_CONSENT
+read_my_matching_enrollment_v1()                                       authenticated only: availability, the current
+                                                                       consent texts, the caller's own setup state
+```
+
+- **Closed.** `matching_enrollment_private.gate_states` holds no row (absent = DENY) and the consent-text catalogue is
+  empty; texts enter through the Copy Gate with the operator installer `install_consent_text_v1`, the gate through the
+  operator function `set_gate_v1` (Stage 9). Every act answers `NOT_AVAILABLE_NOW` in production.
+- **The six stay closed.** The boundary calls five of them with their frozen bodies; none is granted, re-created or
+  re-owned, and a direct call is still `42501`. The field-bearing disclosure grant is never called: the authority is the
+  zero-field core's (CA-08-impl); an empty requirement set is the zero-item core's (CA-10-impl); a reviewed draft with
+  neither optional profile field is a real profile version with no field rows, the empty-profile core's (CA-D-CP1-1-impl,
+  the Product Owner's D-CP1-1 = B): no optional field is ever required to enroll.
+- **Evidence.** `fact_promotions` (the fact version, the reviewed draft version, the act) and `enrollment_acts` (every
+  committed act with the exact version of each consent it exercised and the events it created). The canonical facts
+  reader answers only for a promoted version. A verifier fixture that writes a fact version through the raw writer adds a
+  FIXTURE promotion record beside it (`matching-proposal-verifier-support.mjs`, `verify-migration-0156.mjs`).
+- **All or nothing.** Account row (`FOR KEY SHARE`) -> a committed command id answers its first result -> a live account
+  deletion is `DELETION_PENDING` -> the gate (`FOR SHARE`) -> ONE block: the caller's own setup lock, the consent texts and
+  the draft (`FOR SHARE`), the frozen commands and the cores. Every refusal rolls the block back, lock row included; the
+  cores' `40001` is one bounded `CHANGED`, never sent to PostgREST.
+- **Deletion.** The evidence relations cascade with the account row and are registered `ACCOUNT_CASCADE`.
+
+```sh
+npm run verify:matching-governed-enrollment:integration
+npm run prove:governed-enrollment:postgrest
+npm run test:s6-07-governed-enrollment-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its behaviour scenarios run in one rolled-back
+transaction with fixture gates and fixture consent texts (never Product copy); its races commit their own fresh humans and
+remove them, with every fixture gate, text and trigger, afterwards. The wire proof also needs `POSTGREST_URL` and
+`POSTGREST_JWT_SECRET` (CI-only, throwaway).
+
+## S6-07 - The forward dispatcher (migration 0166, CP2)
+
+`0166_matching_forward_dispatch_v1.sql` adds the ONE server-side producer of the step after the first recipient's forward
+approval (`QAN-BL-MATCH-06`): a `service_role` dispatcher over the frozen `forward_matching_proposal_to_second_core_v1`
+(Controlled Amendment CA-SYS-02, `docs/matching-introduction-runtime-v1.md` §50). Record:
+`docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md` §10.
+
+```text
+server_forward_approved_matching_proposals_v1(p_max = 1)          service_role only; one attempt per transaction; one word:
+                                                                  FORWARDED | SKIPPED_MOVED | SKIPPED_DELETION_PENDING |
+                                                                  SKIPPED_NO_CONCLUSION | SKIPPED_NOT_CLEARED |
+                                                                  SKIPPED_NOT_READY | SKIPPED_STALE | HELD_INTEGRITY |
+                                                                  BUSY | NONE_DUE
+server_list_proposal_delivery_activity_reconciliation_v1(limit)   service_role only, read-only: committed deliveries whose
+                                                                  recipient has no Activity member yet (CP3 publishes)
+matching_forward_private.proposal_forward_attempts                the ledger: ids minted once, backoff; no application role
+```
+
+- **Lock order.** The proposal is selected with no row lock; the canonical pair lock is taken FIRST (`lock_timeout` 2 s ->
+  `BUSY`); the proposal is re-read under it; then the ledger; then the frozen core, which takes the same lock again.
+- **Idempotent.** The forward command id and the candidate view id are minted once in the ledger and reused by every
+  attempt: a retry, restart or crashed worker is the core's committed answer, never a second delivery.
+- **Nothing invented, nothing opened.** Exactly one permitted conclusion of the proposal's own snapshot, or nothing; the
+  core's revalidation and CW2-08 seam decide (`NOT_EVALUATED` in production: every attempt is `SKIPPED_NOT_CLEARED` with
+  only a ledger row).
+- **Fair.** One not-ready proposal waits its own backoff (1 min doubling, capped at 6 h, never past the deadline); a held
+  pair is deferred 30 s; a reused-id integrity refusal is held, never retried and never raised.
+- **Deletion.** The ledger cascades with its proposal and is registered `MATCHING_INTRODUCTIONS`. Nothing is forwarded
+  while either human's account deletion is pending (not `CANCELLED`): both account rows are held `FOR KEY SHARE` after
+  the pair lock (a `0130` request, `FOR UPDATE`, is seen or waits) -> `SKIPPED_DELETION_PENDING`, not terminal; after a
+  cancellation a still-valid proposal is forwarded on its next due attempt (Product Owner's CP2 correction, record §10.9).
+- **The worker** is `apps/api/src/introductions-dispatch/` (no route; `INTRODUCTIONS_FORWARD_DISPATCH_DISABLED`).
+
+```sh
+npm run verify:matching-forward-dispatch:integration
+npm run prove:forward-dispatch:postgrest
+npm run test:s6-07-forward-dispatch-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its behaviour sections roll back, its races
+commit fresh humans and remove them, and the CW2-08 seam is restored byte for byte. The wire proof also needs
+`POSTGREST_URL`, `POSTGREST_JWT_SECRET` (CI-only, throwaway) and a built API (`apps/api/dist`).
+
+## S6-07 - Introductions Activity, Direct Entry and per-Introduction alerts (migration 0167, CP3)
+
+`0167_introductions_activity_direct_entry_v1.sql` gives Activity (`0136`) its Introductions sources and A3-01 G-17 its
+capability truth. It creates no relation (the governed erasure's census is unchanged) and replaces no function. Record:
+`docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md` §11.
+
+```text
+resolve_introductions_capability_v1(user)          no role: ever a participation event, an Introduction, or a retained view
+read_my_introductions_capability_v1()              authenticated: the caller's own truth (a boolean)
+server_read_introductions_capability_v1(users[])   service_role: for the platform dispatcher (at most 100)
+server_read_introductions_proposal_delivery_v1(t)  service_role: one delivery while current and before its deadline
+server_list_introductions_activity_v1(limit)       service_role, read-only, last 7 days: WORLD_BORN | HUMAN_TEXT |
+                                                   DISCLOSURE | ENDED | SUCCESS_REQUESTED, each to its legitimate
+                                                   recipient only, not yet told under its own candidate key
+list_own_introduction_world_alerts_v1()            authenticated: the caller's Introduction Worlds, each with its mute
+set_own_introduction_world_alerts_v1(world, muted) authenticated: MUTED | UNMUTED | UNAVAILABLE (the caller's own row of
+                                                   activity_context_mutes, context = the World id)
+```
+
+- **Recipients.** A message tells the other human, never its author; an ending tells the human who did not end it (or,
+  after the other human's erasure, the retained-view holder); a disclosure tells its counterpart; a message or a
+  disclosure only while the frozen resolver of its kind still returns it to its recipient.
+- **Once.** The candidate key is the event's own identity; an event already told is never listed again, and one whose
+  publication failed is listed again on the next pass (the forward dispatcher's, `apps/api/src/introductions-activity`).
+- **Nothing opened.** No gate, policy, consent text or item is installed; in production nothing is delivered, born, sent or
+  shared, so nothing is listed.
+
+```sh
+npm run verify:introductions-activity:integration
+npm run test:s6-07-activity-direct-entry-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its behaviour section rolls back, and the CW2-08
+and I-07D seams are restored byte for byte.
+
+## S6-07 - the approved Matching consent texts (version 1) and their governed install (CP3)
+
+The three consent texts the Product Owner approved on 2026-10-18 (CP3 Copy Gate group B: CT-P, CT-C, CT-D) live in ONE
+module, `matching-consent-texts-v1.mjs`, each pinned by the SHA-256 of its UTF-8 bytes (the module refuses to load if a
+text and its pin disagree). No migration installs them, so every database - production included - keeps the `0165`
+catalogue empty and enrollment closed.
+
+```sh
+node database/install-matching-consent-texts.mjs --database-url <loopback url> --confirm MATCHING_CONSENT_TEXTS_V1
+npm run verify:matching-consent-texts:integration
+npm run test:s6-07-enrollment-consent-surface-contract
+```
+
+- **One way in.** Each text enters through the `0165` operator function `install_consent_text_v1`, in one transaction;
+  a version already installed with exactly the approved text is left as it is; any other text, a superseded version or
+  an unknown current text of a purpose is refused and nothing is written.
+- **No gate.** The installer never calls `set_gate_v1` and proves the `ENROLLMENT` gate unchanged before it commits:
+  installed texts with a closed gate still answer `NOT_AVAILABLE_NOW`.
+- **Loopback only.** Any host but `localhost`, `127.0.0.1` or `::1` is refused before connecting: installing on a hosted
+  environment is a separate, later authorization.
+- The verifier runs on a FULLY migrated database and rolls everything back.
+
+## S6-07 - Export My Data for Matching / Introductions (migration 0168, CP4)
+
+`0168_personal_export_matching_introductions_v1.sql` re-states `personal_data_private.build_personal_export_v1` - the
+`0153` body byte for byte plus ONE section, `matchingAndIntroductions` - and adds ONE owner-only reader. It creates no
+relation (the erasure census is unchanged). Record: `docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md` §12.
+
+```text
+build_personal_export_v1(subject)            no role (run by prepare_data_exports_v1): the reader's own preparation,
+                                             enrollment (with consent versions), confirmed facts, delivered proposals
+                                             (the screen's word, the reader's decisions, no arrival instant),
+                                             Introductions (own messages, shares, photo facts, acts), kept words,
+                                             reactivations; notYetIncluded = shared, public, replay
+list_my_introduction_photo_renditions_v1()   authenticated: the caller's own photo renditions that still exist, each
+                                             with its Introduction's start instant, stage, handle and shared flag - for
+                                             the export download, which still authorizes every photo on the token
+```
+
+```sh
+npm run verify:personal-export-matching-introductions:integration
+npm run verify:s6-07-final-journey:integration
+npm run prove:export-bundle:postgrest        # needs POSTGREST_URL / _JWT_SECRET, the QANDEEL_MEDIA_S3_* values, RCLONE_LOG_FILE, a built API
+npm run test:s6-07-export-final-integration-contract
+```
+
+The verifiers need `DATABASE_URL` pointing at a FULLY migrated database; their behaviour sections roll back, and the
+CW2-08 and I-07D seams are restored byte for byte. The journey (`verify-s6-07-final-journey.mjs`) runs enrollment ->
+proposal -> first approval -> forward -> acceptance -> World -> Activity / entry truth -> export on the human boundaries,
+with production closed first (J01) and a decline on each side, an expiry, a consent withdrawn, a pending deletion, END and
+the real erasure.
