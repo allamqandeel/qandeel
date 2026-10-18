@@ -21,7 +21,8 @@
 /** The HTTP seam. Separate from T-03's `FetchLike`, which is frozen and carries no request body. */
 export type RuntimeHttpFetch = (
   input: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string },
+  // S6-07 (CP4): an optional signal bounds the export bundle's download; the authorized seam passes it through untouched.
+  init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: AbortSignal },
 ) => Promise<{ readonly ok: boolean; readonly status: number; json(): Promise<unknown> }>;
 
 /** Exactly what the runtime needs from a created Session. The wire carries more; we assert less. */

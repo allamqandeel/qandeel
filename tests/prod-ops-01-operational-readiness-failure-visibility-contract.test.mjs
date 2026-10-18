@@ -77,7 +77,9 @@ function telemetryContentViolations(w) {
   }
   const t = code(w.telemetry);
   for (const literal of [
-    "['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],",
+    // RE-ANCHORED by S6-07 (CP4, QAN-BL-PRIV-04): the export bundle and its per-photo file route (deliberate widening,
+    // finite outcome classes only - never a person, photo, file name, size or count).
+    "['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])],['bundle',new Set(['success','not_ready',...OPERATION_FAILURES])],['bundle_file',new Set(['success','superseded_expected',...OPERATION_FAILURES])]])],",
     "['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],",
     "const OPERATION_FAILURES=['transport_failure','integrity_failure'] as const;",
     "const OPERATIONAL_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSPORT','INTEGRITY']);",

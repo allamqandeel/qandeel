@@ -40,6 +40,15 @@ export interface ShareRow {
   readonly established_at: string;
 }
 
+/** One row of `list_my_introduction_photo_renditions_v1` (migration 0168): the caller's OWN renditions. Never a user id. */
+export interface OwnRenditionRow {
+  readonly world_id: string;
+  readonly introduction_started_at: string;
+  readonly stage: number;
+  readonly media_handle: string;
+  readonly is_shared: boolean;
+}
+
 export interface OutcomeRow { readonly outcome: string }
 export interface DisclosedRow extends OutcomeRow { readonly disclosed_material_id: string | null; readonly disclosed_at: string | null }
 export interface BegunRow extends OutcomeRow { readonly image_series_id: string | null }
@@ -89,6 +98,11 @@ export class IntroductionDisclosureRepository {
 
   removeImage(token: string, commandId: string, worldId: string, seriesId: string): Promise<OutcomeRow[]> {
     return this.rpc(token, 'remove_my_introduction_image_v1', { p_command_id: commandId, p_world_id: worldId, p_series_id: seriesId });
+  }
+
+  /** S6-07 (CP4): the caller's own photo renditions, for Export My Data only (migration 0168). */
+  listOwnPhotoRenditions(token: string): Promise<OwnRenditionRow[]> {
+    return this.rpc(token, 'list_my_introduction_photo_renditions_v1', {});
   }
 
   authorizeMedia(token: string, worldId: string, handle: string): Promise<OutcomeRow[]> {

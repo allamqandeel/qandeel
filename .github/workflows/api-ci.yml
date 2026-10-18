@@ -246,6 +246,7 @@ jobs:
       - {name: "Verify S6-07 forward dispatcher static contract (one service_role dispatcher over the frozen forward core, the pair lock first, one attempt per transaction, the ledger readable by nobody, the second named SYSTEM exception, no route)", run: npm run test:s6-07-forward-dispatch-contract}
       - {name: "Verify S6-07 Introductions Activity and Direct Entry static contract (no relation, each function one role, the legitimate recipient only, the capability truth everywhere, L0 and one reused sentence, a message never pushed, revalidated entry, the per-Introduction mute)", run: npm run test:s6-07-activity-direct-entry-contract}
       - {name: "Verify S6-07 enrollment step and consent controls static contract (the approved words exactly, no consent text or group-D sentence shipped, versions only and only when agreed, nothing behind a closed gate, no optional field required, the governed loopback-only install that never touches a gate)", run: npm run test:s6-07-enrollment-consent-surface-contract}
+      - {name: "Verify S6-07 Export My Data and final integration static contract (one section keyed on the reader, one owner-only photo reader, no arrival instant, every photo re-authorized before its key, the 32 MiB guard bounding one answer and never the export, nothing partial, photos first and the package last on the device, the proofs wired)", run: npm run test:s6-07-export-final-integration-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1189,6 +1190,18 @@ jobs:
       # gate untouched and closed; all rolled back, so the catalogue stays empty here as in production.
       - name: Verify S6-07 governed install of the approved consent texts against real PostgreSQL
         run: npm run verify:matching-consent-texts:integration
+      # S6-07 (CP4): migration 0168 - Export My Data's Matching and Introductions section (QAN-BL-PRIV-04) on the REAL
+      # pipeline (governed enrollment, the human approval, the CP2 dispatcher, the acceptance, messages, shares, photos, END,
+      # SUCCESS and the real erasure): each reader's own data only, nothing of the other human, no identifier, no arrival
+      # instant (Q9), owner deletion honoured, and the owner-only photo reader equal to the package's photo facts.
+      - name: Verify S6-07 Export My Data for Matching and Introductions against real PostgreSQL
+        run: npm run verify:personal-export-matching-introductions:integration
+      # S6-07 (CP4): the final integration journey on the human boundaries - governed enrollment, proposal, first approval,
+      # the CP2 forward, the acceptance, the Introduction World, the Activity sources and the entry truth, and Export My Data
+      # through 0130 - with production closed (no gate, the real CW2-08 seam), a decline on each side, an expiry, a consent
+      # withdrawn, a pending deletion, END and the real erasure.
+      - name: Verify S6-07 final integration journey against real PostgreSQL
+        run: npm run verify:s6-07-final-journey:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1305,6 +1318,10 @@ jobs:
             # real seam leaving nothing delivered, a 40001 and a PT409 underneath answered ONCE on every line, one forward, and
             # a failed publication recovered exactly once.
             POSTGREST_VERSION="$version" npm run --silent prove:forward-dispatch:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # S6-07 (CP4): Export My Data's bundle with the compiled Privacy & Data and sharing modules, rclone and this line -
+            # the package unchanged on both routes, the reader's own photos byte for byte (never the other human's, by the
+            # storage log), every photo beyond the 32 MiB guard by the file route, 503 on a missing object, CHANGED after a removal.
+            POSTGREST_VERSION="$version" npm run --silent prove:export-bundle:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

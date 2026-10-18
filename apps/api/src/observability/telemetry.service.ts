@@ -68,7 +68,10 @@ const QUESTION_FOREGROUND_POLICY_VERSION='1';
 // operational failure; a cancelled or not-yet-due request is `superseded_expected`.
 const OPERATION_FAILURES=['transport_failure','integrity_failure'] as const;
 const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<string>>>=new Map([
- ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
+ // S6-07 (CP4): the export bundle and its per-photo file route (QAN-BL-PRIV-04). A bundle that is not READY is not_ready; a
+ // file whose photos moved since the manifest is superseded_expected; a store with no object for a live key is
+ // integrity_failure. Never a person, photo, file name, size or count.
+ ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])],['bundle',new Set(['success','not_ready',...OPERATION_FAILURES])],['bundle_file',new Set(['success','superseded_expected',...OPERATION_FAILURES])]])],
  // ACCT-DEL-01: a RETRY the database itself put under a backoff (contention) is `retry_expected`, not a failure.
  ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected','retry_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  // ACCT-DEL-01 (P-3): the account erasure's recovery and visibility pass - the re-arm and its aggregate scan.

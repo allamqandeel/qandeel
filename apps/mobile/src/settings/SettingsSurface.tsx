@@ -64,7 +64,7 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import { ActionRow, EmailChange, IdentityRow, LoginIdChange, NameChange, PasswordChange } from './AccountSecuritySection';
 import type { AccountIdentityController, AccountIdentityState } from './account-identity-controller';
 import { settingsCopy } from './copy';
-import { saveExportDocument } from './export-file';
+import { saveExportBundle } from './export-file';
 import { openLanguageSettings } from './language-settings';
 import type { PrivacyDataController, PrivacyDataState } from './privacy-data-controller';
 import { NotificationsSettings } from './NotificationsSection';
@@ -363,7 +363,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     const result = await privacy.downloadExport();
     let said: string | null = null;
     if (result?.kind === 'READY') {
-      const saved = await saveExportDocument(result.document);
+      const saved = await saveExportBundle(result.document, result.photos);
       said = saved === 'SAVED' ? copy.privacy.exportSaved : saved === 'FAILED' ? copy.privacy.exportSaveFailed : null;
     } else if (result?.kind === 'RETRY') {
       said = copy.privacy.network;

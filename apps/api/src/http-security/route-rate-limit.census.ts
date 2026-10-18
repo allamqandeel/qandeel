@@ -42,6 +42,11 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /account/privacy': 'AUTHENTICATED',
   'POST /account/privacy/export': 'SECURITY_SENSITIVE', // password proof
   'GET /account/privacy/export/download': 'SECURITY_SENSITIVE', // the whole Personal record
+  // S6-07 (CP4): the bundle carries the same whole record; each photo file is one of the reader's own renditions, read
+  // exactly as the media route reads it - so it is classed as that route is, and a large export's one request per photo is
+  // never refused for its number (the right to export is not bounded by a request count, Q7'').
+  'GET /account/privacy/export/download/bundle': 'SECURITY_SENSITIVE',
+  'GET /account/privacy/export/download/bundle/files/:fileName': 'AUTHENTICATED',
   'POST /account/privacy/deletion': 'SECURITY_SENSITIVE', // password proof
   'POST /account/privacy/deletion/cancel': 'SECURITY_SENSITIVE',
 
