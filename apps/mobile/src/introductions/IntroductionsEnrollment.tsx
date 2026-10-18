@@ -178,6 +178,15 @@ export function ConsentControls({ ctx, controller }: { readonly ctx: PartContext
             <Text style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{copy[LABEL[consent]]}</Text>
             <Text testID={`qandeel-enrollment-consent-state-${consent}-${given ? 'given' : 'not-given'}`}
               style={{ ...typeStyle('supporting'), color: palette.secondary, marginTop: 2, writingDirection: writing }}>{given ? copy.given : copy.notGiven}</Text>
+            {/* This consent's own answer, where the reader just acted (announced, not only drawn). */}
+            <View testID={`qandeel-enrollment-consent-notice-${consent}`} accessibilityLiveRegion="polite">
+              {state.notice === null || state.notice.origin !== 'WITHDRAWAL' || state.notice.consent !== consent ? null : (
+                <Text testID={`qandeel-enrollment-consents-notice-${state.notice.key}`}
+                  style={{ ...typeStyle('supporting'), color: state.notice.tone === 'ERROR' ? palette.error : palette.primary, marginTop: 4, writingDirection: writing }}>
+                  {copy[state.notice.key]}
+                </Text>
+              )}
+            </View>
             {!given ? null : confirming === consent ? (
               <View testID={`qandeel-enrollment-withdraw-confirm-${consent}`} style={{ paddingTop: 6 }}>
                 <Text accessibilityRole="header" style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{copy.withdrawTitle}</Text>
@@ -195,12 +204,6 @@ export function ConsentControls({ ctx, controller }: { readonly ctx: PartContext
           </View>
         );
       })}
-      <View testID="qandeel-enrollment-consents-notice" accessibilityLiveRegion="polite">
-        {state.notice === null || state.notice.origin !== 'WITHDRAWAL' ? null : (
-          <Para ctx={ctx} text={copy[state.notice.key]} role="supporting" testID={`qandeel-enrollment-consents-notice-${state.notice.key}`}
-            color={state.notice.tone === 'ERROR' ? palette.error : palette.secondary} />
-        )}
-      </View>
     </View>
   );
 }

@@ -36,7 +36,11 @@ export interface EnrollmentOffer {
 }
 
 /** What the server answered to an act (`ACT`) or to a withdrawal (`WITHDRAWAL`), shown beside that request only. */
-export interface EnrollmentNotice { readonly key: EnrollmentCopyKey; readonly tone: 'DONE' | 'INFO' | 'ERROR'; readonly origin: 'ACT' | 'WITHDRAWAL' }
+export interface EnrollmentNotice {
+  readonly key: EnrollmentCopyKey; readonly tone: 'DONE' | 'INFO' | 'ERROR'; readonly origin: 'ACT' | 'WITHDRAWAL';
+  /** A withdrawal's answer belongs to the one consent it was about, and is shown in that consent's row. */
+  readonly consent?: EnrollmentConsentKind;
+}
 
 export interface EnrollmentState {
   readonly status: 'IDLE' | 'LOADING' | 'READY' | 'UNAVAILABLE';
@@ -103,7 +107,7 @@ export function enrollmentOffer(view: EnrollmentView, draft: IntroductionsDraft 
   return null;
 }
 
-type Said = Omit<EnrollmentNotice, 'origin'>;
+type Said = Omit<EnrollmentNotice, 'origin' | 'consent'>;
 const ACT_NOTICE: Readonly<Record<EnrollmentOutcome, Said | null>> = Object.freeze({
   ENROLLED: { key: 'enrolled', tone: 'DONE' },
   CORRECTED: { key: 'corrected', tone: 'DONE' },
@@ -129,7 +133,8 @@ const REVOCATION_NOTICE: Readonly<Record<EnrollmentRevocationOutcome, Said>> = O
   COMMAND_CONFLICT: { key: 'failed', tone: 'ERROR' },
 });
 const FAILED: Said = Object.freeze({ key: 'failed', tone: 'ERROR' });
-const from = (origin: EnrollmentNotice['origin'], said: Said | null): EnrollmentNotice | null => (said === null ? null : Object.freeze({ ...said, origin }));
+const from = (origin: EnrollmentNotice['origin'], said: Said | null, consent?: EnrollmentConsentKind): EnrollmentNotice | null =>
+  (said === null ? null : Object.freeze({ ...said, origin, ...(consent === undefined ? {} : { consent }) }));
 const INITIAL: EnrollmentState = Object.freeze({ status: 'IDLE', view: null, busy: false, running: null, notice: null, settledDraftVersion: null });
 
 export function createEnrollmentController({ transport, isCurrent, newCommandId = mintIntroductionsCommandId }: EnrollmentControllerOptions): EnrollmentController {
@@ -202,11 +207,11 @@ export function createEnrollmentController({ transport, isCurrent, newCommandId 
       const answer = await transport.revoke(id, consent);
       if (!live()) return null;
       if (answer.kind === 'FAILED') {
-        set({ busy: false, running: null, notice: from('WITHDRAWAL', FAILED) });
+        set({ busy: false, running: null, notice: from('WITHDRAWAL', FAILED, consent) });
         return 'FAILED';
       }
       lost = null;
-      set({ busy: false, running: null, status: 'READY', view: answer.view, notice: from('WITHDRAWAL', REVOCATION_NOTICE[answer.outcome]) });
+      set({ busy: false, running: null, status: 'READY', view: answer.view, notice: from('WITHDRAWAL', REVOCATION_NOTICE[answer.outcome], consent) });
       return answer.outcome;
     },
     dismissNotice() {
