@@ -170,9 +170,9 @@ This is a **locator note, not a new Product authority**. ACCT-DEL-01 merged thro
 design, its review addendum and their Controlled Amendments (2026-10-18), and started **S6-07 — Activity, Direct Entry
 and Final Integration** as the current implementation task. It owns `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06` and
 `QAN-BL-PRIV-04`, and closes A3-01 G-17. Evidence: the [S6-07 record](docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md).
-- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) DELIVERED — AWAITING THE PRODUCT OWNER'S
-  CP2 REVIEW — NOT MERGED / NOT DEPLOYED**, on `s6/s6-07-activity-direct-entry-final-integration` (one pull request for
-  CP1 … CP4).
+- S6-07 is **ACTIVE — CP1 (GOVERNED ENROLLMENT) CLOSED, CP2 (FORWARD DISPATCHER) CLOSED, CP3 (ACTIVITY, PUSH & DIRECT
+  ENTRY) IN PROGRESS — STOPPED AT THE CP3 PRODUCT COPY GATE — NOT MERGED / NOT DEPLOYED**, on
+  `s6/s6-07-activity-direct-entry-final-integration` (one pull request for CP1 … CP4).
 - CP1: migration `0165` (the ONE governed enrollment boundary `enroll_my_matching_setup_v1`, `authenticated` only, over
   five of the six frozen `0109` commands; the closed `ENROLLMENT` gate; the empty consent-text catalogue; the promotion
   record and the evidence precondition on the canonical facts reader; the zero-item requirement and zero-field
@@ -186,12 +186,19 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   compiled worker on live PostgREST, the static contract, and the server worker `apps/api/src/introductions-dispatch`
   (no route); with the Product Owner's account-deletion guard (record §10.9: nothing forwarded while either human's
   deletion is pending).
+- CP3: migration `0167` (the Introductions capability truth, the delivery re-read, the one lister of Introductions events
+  not yet told, the per-Introduction alerts), `verify-migration-0167`, the static contract
+  `tests/s6-07-activity-direct-entry-contract.test.mjs`; the producer `apps/api/src/introductions-activity` (bound as the
+  CP2 dispatcher's notifier), the capability truth in `activity/` and `push/`, the Introductions Direct Entry branch of
+  `ActivityService.open`, `GET /introductions/alerts`, `PUT /introductions/worlds/:worldId/alerts`,
+  `POST /introductions/enrollment/revocation`; mobile Direct Entry and the mute rows. The CP3 Product Copy Gate is open
+  (record §11.5).
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
   controlled amendment to the frozen `I-07` surface is
   [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.
 - Still closed: no gate row and no consent text exist, so nothing can be enrolled in production; the six commands stay
   executable by no application role; CW2-08 and every launch gate stay closed, so the dispatcher forwards nothing in
-  production. CP3 and CP4 are not started.
+  production. CP3 publishes nothing in production for the same reason. CP4 is not started.
 
 ### ACCT-DEL-01 — 2026-10-17 (historical: ACCT-DEL-01 merged as PR #345)
 

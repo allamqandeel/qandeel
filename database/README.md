@@ -5085,3 +5085,38 @@ npm run test:s6-07-forward-dispatch-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its behaviour sections roll back, its races
 commit fresh humans and remove them, and the CW2-08 seam is restored byte for byte. The wire proof also needs
 `POSTGREST_URL`, `POSTGREST_JWT_SECRET` (CI-only, throwaway) and a built API (`apps/api/dist`).
+
+## S6-07 - Introductions Activity, Direct Entry and per-Introduction alerts (migration 0167, CP3)
+
+`0167_introductions_activity_direct_entry_v1.sql` gives Activity (`0136`) its Introductions sources and A3-01 G-17 its
+capability truth. It creates no relation (the governed erasure's census is unchanged) and replaces no function. Record:
+`docs/e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md` §11.
+
+```text
+resolve_introductions_capability_v1(user)          no role: ever a participation event, an Introduction, or a retained view
+read_my_introductions_capability_v1()              authenticated: the caller's own truth (a boolean)
+server_read_introductions_capability_v1(users[])   service_role: for the platform dispatcher (at most 100)
+server_read_introductions_proposal_delivery_v1(t)  service_role: one delivery while current and before its deadline
+server_list_introductions_activity_v1(limit)       service_role, read-only, last 7 days: WORLD_BORN | HUMAN_TEXT |
+                                                   DISCLOSURE | ENDED | SUCCESS_REQUESTED, each to its legitimate
+                                                   recipient only, not yet told under its own candidate key
+list_own_introduction_world_alerts_v1()            authenticated: the caller's Introduction Worlds, each with its mute
+set_own_introduction_world_alerts_v1(world, muted) authenticated: MUTED | UNMUTED | UNAVAILABLE (the caller's own row of
+                                                   activity_context_mutes, context = the World id)
+```
+
+- **Recipients.** A message tells the other human, never its author; an ending tells the human who did not end it (or,
+  after the other human's erasure, the retained-view holder); a disclosure tells its counterpart; a message or a
+  disclosure only while the frozen resolver of its kind still returns it to its recipient.
+- **Once.** The candidate key is the event's own identity; an event already told is never listed again, and one whose
+  publication failed is listed again on the next pass (the forward dispatcher's, `apps/api/src/introductions-activity`).
+- **Nothing opened.** No gate, policy, consent text or item is installed; in production nothing is delivered, born, sent or
+  shared, so nothing is listed.
+
+```sh
+npm run verify:introductions-activity:integration
+npm run test:s6-07-activity-direct-entry-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its behaviour section rolls back, and the CW2-08
+and I-07D seams are restored byte for byte.

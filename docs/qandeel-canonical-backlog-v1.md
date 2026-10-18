@@ -2672,6 +2672,12 @@ answers `NOT_EVALUATED`, so nothing is forwarded in production (`verify-migratio
 at S6-07's closing change, under BG-08 ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §10,
 [I-07 runtime §50](matching-introduction-runtime-v1.md)). Owner, severity and status unchanged.
 
+**S6-07 CP3 note (2026-10-18; the S6-07 pull request, not merged).** The last required property, "composes with the S6-07
+notifications", is delivered by migration `0167` and the Introductions Activity producer bound as the dispatcher's
+notifier: a committed delivery is told to its recipient once, re-read at publish time, recovered after a crash, at L0
+([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §11). Still dispositioned at S6-07's closing change; owner,
+severity and status unchanged.
+
 Admitted under BG-06 / BG-08 by S6-05 at CP2 (2026-10-16), at the Product Owner's R-4 decision, after the
 anti-duplication check above. Nothing here authorizes implementation (BG-07).
 
