@@ -19,9 +19,10 @@ import { Text, View } from 'react-native';
 import { Control, MIN_TARGET, typeStyle } from '../conversation';
 import type { EnrollmentConsentKind, EnrollmentView, IntroductionsDraft } from '../runtime-entry';
 import { sharedCopy } from '../shared-world/copy';
-import { consentInForce, enrollmentOffer, hasConsentControls, type EnrollmentController, type EnrollmentOffer } from './enrollment-controller';
+import { consentInForce, enrollmentOffer, hasConsentControls, type EnrollmentController, type EnrollmentNotice, type EnrollmentOffer } from './enrollment-controller';
 import { enrollmentCopy, type EnrollmentCopy } from './enrollment-copy';
 import { Action, BUSY_OPACITY, Heading, Para, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
+import { proposalsCopy } from './proposals-copy';
 
 const CARD_RADIUS = 16;
 const ORDER: readonly EnrollmentConsentKind[] = ['participation', 'contextGrant', 'disclosureAuthority'];
@@ -31,9 +32,20 @@ const LABEL: Readonly<Record<EnrollmentConsentKind, keyof EnrollmentCopy>> = Obj
 const WITHDRAW_BODY: Readonly<Record<EnrollmentConsentKind, keyof EnrollmentCopy>> = Object.freeze({
   participation: 'withdrawParticipation', contextGrant: 'withdrawContextGrant', disclosureAuthority: 'withdrawDisclosureAuthority',
 });
-const ACT_LABEL: Readonly<Record<EnrollmentOffer['kind'], keyof EnrollmentCopy>> = Object.freeze({
-  ENROLL: 'enroll', CORRECTION: 'correct', RESUME: 'resume', RECONFIRM_CONSENT: 'reconfirm',
+const ACT_LABEL: Readonly<Record<Exclude<EnrollmentOffer['kind'], 'RECONFIRM_CONSENT'>, keyof EnrollmentCopy>> = Object.freeze({
+  ENROLL: 'enroll', CORRECTION: 'correct', RESUME: 'resume',
 });
+
+/**
+ * The act's label. RECONFIRM_CONSENT gives a consent again — often one the reader withdrew, its text unchanged — so it
+ * reads the approved «تأكيد» / "Confirm" (S6-04). EN-19 ("in their new wording") is said only where a changed wording is
+ * proven: the server has just answered CONSENT_OUTDATED to this act and shown the new text. The view carries no version a
+ * consent was given under, so nothing else proves it (CP3 review, 2026-10-18).
+ */
+function actLabel(ctx: PartContext, copy: EnrollmentCopy, kind: EnrollmentOffer['kind'], notice: EnrollmentNotice | null): string {
+  if (kind !== 'RECONFIRM_CONSENT') return copy[ACT_LABEL[kind]];
+  return notice !== null && notice.origin === 'ACT' && notice.key === 'consentOutdated' ? copy.reconfirm : proposalsCopy(ctx.language).confirm;
+}
 
 /**
  * Which "not available" sentence the preparation shows, now that enrollment exists: the S6-01 sentence while nothing is
@@ -145,7 +157,7 @@ export function EnrollmentStep({ ctx, controller, draft, onChanged }: {
           <ConsentRow key={consent} ctx={quiet} copy={copy} consent={consent} text={text} agreed={agreedNow.has(consent)} onToggle={() => toggle(consent)} />
         );
       })}
-      <Action ctx={{ ...quiet, onSheet: true }} primary label={copy[ACT_LABEL[offer.kind]]} disabled={!ready} onPress={() => void run()}
+      <Action ctx={{ ...quiet, onSheet: true }} primary label={actLabel(ctx, copy, offer.kind, state.notice)} disabled={!ready} onPress={() => void run()}
         testID={`qandeel-enrollment-act-${offer.kind}`} />
       <Notice ctx={ctx} controller={controller} copy={copy} />
     </View>

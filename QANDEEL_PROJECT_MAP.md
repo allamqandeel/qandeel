@@ -198,6 +198,8 @@ and Final Integration** as the current implementation task. It owns `QAN-BL-MATC
   the transport `runtime-entry/introductions-enrollment-api.ts`), the approved consent texts in the one pinned module
   `database/matching-consent-texts-v1.mjs` with the loopback-only installer `database/install-matching-consent-texts.mjs`
   and `verify-matching-consent-texts`, the static contract `tests/s6-07-enrollment-consent-surface-contract.test.mjs`.
+  The CP3 review correction (record §11.11): RECONFIRM_CONSENT reads the approved «تأكيد»; EN-19 only after
+  `CONSENT_OUTDATED`.
 - Where the authority lives: the boundary and the cores are in `0165` (`public.*`, `matching_enrollment_private.*`); the
   controlled amendment to the frozen `I-07` surface is
   [`matching-introduction-runtime-v1.md` §50](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.

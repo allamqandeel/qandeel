@@ -777,8 +777,9 @@ How the approved words are used where a choice was needed (recorded, not new cop
 
 - **ALREADY_ENROLLED, NOT_ENROLLED, NOT_RESUMABLE** (the state moved since it was shown) answer EN-12 with the refreshed
   view; **COMMAND_CONFLICT** answers EN-21; **NO_CHANGE** shows nothing and stops offering that correction.
-- **EN-19** names the RECONFIRM_CONSENT act, which is also how a withdrawn context or disclosure consent is given again
-  under the current text (the act the approved context names).
+- ~~**EN-19** names the RECONFIRM_CONSENT act, which is also how a withdrawn context or disclosure consent is given again
+  under the current text (the act the approved context names).~~ *Corrected at the CP3 review (§11.11):* the
+  RECONFIRM_CONSENT act reads the approved «تأكيد» / "Confirm"; EN-19 only where a changed wording is proven.
 - **The consent version** is shown with the text it belongs to and is exactly what the act names; it is not drawn as a
   visible label, because no approved word names a version. If the Product Owner wants a visible version label, it is one
   more Copy Gate row.
@@ -835,7 +836,40 @@ Not proven here: a physical device and TalkBack / VoiceOver (as for S6-04 … S6
 `introductions-dispatch/` or `0167` changed after `ec27e01a`; their proofs (§11.6) stand and API CI re-runs them.
 Group D is not used: every Introductions item keeps R-1 at L0.
 
-**Status: CP3 DELIVERED — AWAITING THE PRODUCT OWNER'S CP3 REVIEW.** CP4 is not started.
+**Status: CP3 DELIVERED — AWAITING THE PRODUCT OWNER'S CP3 REVIEW.** CP4 is not started. *(Superseded by §11.11.)*
+
+### 11.11 The CP3 review correction — the RECONFIRM_CONSENT label (2026-10-18)
+
+**Authority:** the Product Owner's CP3 review of `4940975b` (2026-10-18): the implementation accepted in principle, one
+limited correction before CP3 closes. No new copy, no change to the consent rules or to the database.
+
+- **The defect.** The RECONFIRM_CONSENT act was always labelled EN-19 «تأكيد الموافقات بصيغتها الجديدة», also when the
+  reader gives again a consent they withdrew whose text never changed — the label then claimed a new wording that did
+  not exist.
+- **The correction** (`apps/mobile/src/introductions/IntroductionsEnrollment.tsx`, `actLabel`): the act reads the
+  already-approved «تأكيد» / "Confirm" (the S6-04 Copy Gate row `confirm` of `proposals-copy.ts`, APPROVED 2026-10-15).
+  EN-19 is kept unchanged and is shown only where a changed wording is proven: the server has just answered
+  `CONSENT_OUTDATED` to this act (EN-13 beside it) and the new text is shown. The view carries no version a consent was
+  given under, so nothing else proves a change; a fresh read therefore reads «تأكيد» again. ENROLL, CORRECTION and
+  RESUME keep EN-07, EN-15 and EN-17. The act, its consents and their versions are unchanged.
+- **Tests.** `enrollment.test.tsx` +4 (Arabic and English): a withdrawn consent given again with its text unchanged reads
+  «تأكيد» and never EN-19, and the act names the same version; EN-19 only after `CONSENT_OUTDATED`, the next act naming
+  the new version, and «تأكيد» again after a fresh read. Planting the old label fails all four. The CP3 static contract
+  pins the rule (one more planted defect: EN-19 on every RECONFIRM_CONSENT).
+
+| Proof (local) | Result |
+|---|---|
+| Mobile `enrollment.test.tsx` | 39 / 39 |
+| Mobile `introductions`, `integration`, `runtime-entry` | 797 / 803 — the 6 are the known local baseline (`depth`, `w2-account-access`), unchanged |
+| Mobile `tsc`; `eslint src/introductions` | clean; 0 errors |
+| `tests/s6-07-enrollment-consent-surface-contract.test.mjs` | 2 / 2; 19 planted defects caught |
+| Root static contracts | 1454 / 1454 |
+
+Not re-run (nothing they read changed): the database verifiers, the API specs, Activity / Push / mutes. The device
+evidence (§11.10 §5) predates this correction: its step E11 photographs the old label; the label is proven by the
+rendered tests above.
+
+**Status: CP3 DELIVERED WITH THE REVIEW CORRECTION — AWAITING THE PRODUCT OWNER'S CP3 REVIEW.** CP4 is not started.
 
 ### 11.9 Backlog (BG-08 at CP3)
 

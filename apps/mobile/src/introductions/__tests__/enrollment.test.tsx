@@ -10,7 +10,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { act, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import type { ChromeLanguage } from '../../orientation-chrome';
@@ -23,6 +23,7 @@ import {
   ENROLLMENT_COPY_GATE, ENROLLMENT_COPY_ROWS, IntroductionsSurface, createEnrollmentController, createIntroductionsController, enrollmentCopy, enrollmentOffer,
   introductionsCopy,
 } from '..';
+import { proposalsCopy } from '../proposals-copy';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual<object>('react-native/Libraries/ReactNative/RendererProxy'),
@@ -294,6 +295,46 @@ describe('the one act offered, in its own state only', () => {
     expect(enrollmentOffer(enrolledView({}, 5), draft, 7)).toBeNull();
     // Participation withdrawn (OFF): enrolling again asks for all three consents.
     expect(enrollmentOffer(withSetup(enrolledView(), { participationState: 'OFF' }), draft)?.kind).toBe('ENROLL');
+  });
+});
+
+describe.each(['ar', 'en'] as const)('%s — the RECONFIRM_CONSENT label (CP3 review)', (language) => {
+  const copy = enrollmentCopy(language);
+  const confirm = proposalsCopy(language).confirm;
+  const label = (view: RenderResult, text: string) => within(view.getByTestId('qandeel-enrollment-act-RECONFIRM_CONSENT')).queryByText(text);
+  it('giving a withdrawn consent again, its text unchanged, reads the approved «تأكيد», never EN-19', async () => {
+    const fake = enrollmentServer(enrolledView());
+    const { view } = await surface(language, preparationOf(reviewedDraft(7)), fake);
+    await press(view, 'qandeel-enrollment-withdraw-contextGrant');
+    await press(view, 'qandeel-enrollment-withdraw-yes-contextGrant');
+    expect(textOf(view, 'qandeel-enrollment-consent-contextGrant-text')).toBe(language === 'ar' ? TEXT.contextGrant.textAr : TEXT.contextGrant.textEn);
+    expect(confirm).toBe(language === 'ar' ? 'تأكيد' : 'Confirm');
+    expect(label(view, confirm)).toBeTruthy();
+    expect(view.queryByText(copy.reconfirm)).toBeNull();
+    await press(view, 'qandeel-enrollment-agree-contextGrant');
+    await press(view, 'qandeel-enrollment-act-RECONFIRM_CONSENT');
+    expect(fake.acts[0]).toMatchObject({ kind: 'RECONFIRM_CONSENT', consents: { participation: null, contextGrant: TEXT.contextGrant.version, disclosureAuthority: null } });
+  });
+  it('EN-19 only once the server answered CONSENT_OUTDATED (the wording is proven changed); a fresh read is «تأكيد» again', async () => {
+    const renewed = { version: 'S6_07_TEST_CONTEXT_V2', textAr: 'نص اختباري جديد للسياق', textEn: 'A renewed test context text' };
+    const withdrawn = (consents: EnrollmentView['consents']) => withSetup(enrolledView({ consents }), { contextGrant: false, matchable: false });
+    const fake = enrollmentServer(withdrawn({ ...TEXT }));
+    fake.answerAct({ kind: 'ANSWERED', outcome: 'CONSENT_OUTDATED', view: withdrawn({ ...TEXT, contextGrant: renewed }) });
+    const { view, enrollment } = await surface(language, preparationOf(reviewedDraft(7)), fake);
+    expect(label(view, confirm)).toBeTruthy();
+    await press(view, 'qandeel-enrollment-agree-contextGrant');
+    await press(view, 'qandeel-enrollment-act-RECONFIRM_CONSENT');
+    expect(textOf(view, 'qandeel-enrollment-notice-consentOutdated')).toBe(copy.consentOutdated);
+    expect(textOf(view, 'qandeel-enrollment-consent-contextGrant-text')).toBe(language === 'ar' ? renewed.textAr : renewed.textEn);
+    expect(label(view, copy.reconfirm)).toBeTruthy();
+    expect(label(view, confirm)).toBeNull();
+    await press(view, 'qandeel-enrollment-agree-contextGrant');
+    await press(view, 'qandeel-enrollment-act-RECONFIRM_CONSENT');
+    expect(fake.acts[1].consents.contextGrant).toBe(renewed.version);
+    fake.set(withdrawn({ ...TEXT, contextGrant: renewed }));
+    await act(async () => { enrollment.open(); await flush(); });
+    expect(label(view, confirm)).toBeTruthy();
+    expect(view.queryByText(copy.reconfirm)).toBeNull();
   });
 });
 

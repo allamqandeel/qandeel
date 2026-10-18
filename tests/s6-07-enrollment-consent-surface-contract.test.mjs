@@ -35,6 +35,7 @@ const shipped = () => ({
   copy: read(`${MOBILE}/introductions/enrollment-copy.ts`),
   controller: read(`${MOBILE}/introductions/enrollment-controller.ts`),
   ui: read(`${MOBILE}/introductions/IntroductionsEnrollment.tsx`),
+  proposalsCopy: read(`${MOBILE}/introductions/proposals-copy.ts`),
   surface: read(`${MOBILE}/introductions/IntroductionsSurface.tsx`),
   client: read(`${MOBILE}/runtime-entry/introductions-enrollment-api.ts`),
   runtime: read(`${MOBILE}/integration/runtime/integration-runtime.ts`),
@@ -80,6 +81,10 @@ const DETECTORS = {
       if (w.mobileSources.includes(fragment)) out.push(`the app ships no consent text or group-D sentence (${fragment.slice(0, 30)})`);
     }
     if (!/language === 'ar' \? text\.textAr : text\.textEn/u.test(w.ui)) out.push("each consent shows the server's own current text");
+    // CP3 review: RECONFIRM_CONSENT reads the approved «تأكيد»; EN-19 only after CONSENT_OUTDATED proved the wording changed.
+    if (/RECONFIRM_CONSENT: 'reconfirm'/u.test(w.ui)
+      || !/notice\.key === 'consentOutdated' \? copy\.reconfirm : proposalsCopy\(ctx\.language\)\.confirm/u.test(w.ui)
+      || !/confirm: \{ ar: 'تأكيد', en: 'Confirm' \}, \/\/ APPROVED/u.test(w.proposalsCopy)) out.push('RECONFIRM_CONSENT reads «تأكيد»; EN-19 only where a changed wording is proven');
     return out;
   },
   actViolations(w) {
@@ -141,6 +146,7 @@ test('2 - every detector catches a planted defect', () => {
     ['RV-08 in its old wording', 'copyViolations', () => plant('copy', "en: 'This consent will no longer authorize new proposals to be forwarded to the other person.'", "en: 'Introduction proposals stop being shown to anyone.'")],
     ['a consent text shipped in the app', 'copyViolations', () => plant('mobileSources', 'export function enrollmentCopy', `const CT = '${AMENDED['CT-P'][0]}';\nexport function enrollmentCopy`)],
     ['a group-D sentence used', 'copyViolations', () => plant('mobileSources', 'export function enrollmentCopy', "const X = 'رسالة جديدة في التعارف';\nexport function enrollmentCopy")],
+    ['EN-19 on every RECONFIRM_CONSENT', 'copyViolations', () => plant('ui', '? copy.reconfirm : proposalsCopy(ctx.language).confirm', '? copy.reconfirm : copy.reconfirm')],
     ['a hard-coded consent text', 'copyViolations', () => plant('ui', "language === 'ar' ? text.textAr : text.textEn", "copy.agree")],
     ['an act offered behind a closed gate', 'actViolations', () => plant('controller', 'if (!view.available || view.accountDeletionPending) return null;', 'if (view.accountDeletionPending) return null;')],
     ['an unagreed consent sent', 'actViolations', () => plant('controller', 'if (text === null || !agreed.has(consent)) return null;', 'if (text === null) return null;')],
