@@ -8,7 +8,8 @@ Conversation Selection»). G1.1-R3 is the reference for behaviour and placement.
 is merged, deployed or opened to users without the Product Owner's explicit approval, and S7-03 does not start
 automatically.  
 **Status:** **S7-02 CLOSED / AT THE S7-02 INDEPENDENT REVIEW GATE — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — PRODUCT
-COPY GATE OPEN** (2026-10-19). This change is the task's closing change (BG-08 / BG-09, §10).  
+COPY GATE CLOSED** (2026-10-19; the Product Owner approved every Arabic row word for word, §6). This change is the task's
+closing change (BG-08 / BG-09, §10).  
 **Base:** `main` = merged PR #347 (S7-01) at `c152cb4b5add0b47b080ae952b7f97ee3dbf866d`.  
 **Branch:** `s7/s7-02-replay-entry-selection` (one pull request).  
 **Migration:** none. **API change:** none. **Server change:** none.
@@ -186,29 +187,38 @@ failed.
 
 **The Copy Gate.**
 
-- **Status:** `S7-02 PRODUCT COPY GATE — OPEN — PROPOSED rows await the Product Owner` (`replay-entry/copy.ts`).
-- Arabic is simplified MSA and gender-considerate (LANG-01). Proof copy is not production copy.
-- Every PROPOSED row is shown only behind the closed gate.
+- **Status:** `S7-02 PRODUCT COPY GATE — CLOSED — 11 Arabic rows APPROVED word for word by the Product Owner on 2026-10-19 (the message count included); no English row approved by it` (`replay-entry/copy.ts`).
+- **The Product Owner's decision (2026-10-19).** Every Arabic row proposed by S7-02 is APPROVED exactly as written,
+  including the original open-head sentence and the Arabic rules for counting messages. Rewording any of these rows is
+  refused. The decision closes the gate in this pull request, without reopening the copy or widening the task.
+- **The English rows are not approved by it.** Each row carries an Arabic status (`status`) and an English status
+  (`enStatus`). An English row keeps the status it had before the gate closed: APPROVED where an earlier gate approved
+  it, PROPOSED everywhere else.
+- Arabic is simplified MSA and gender-considerate (LANG-01). The S7-02 contract pins the approved Arabic letter for
+  letter.
 
-| Key | Arabic | English | Status | Source |
-|---|---|---|---|---|
-| replayName | إعادة عرض المحادثة | Replay this conversation | PROPOSED | G1.1-R3 proof copy (R3-J6) |
-| whole | المحادثة كاملة | The whole conversation | LOCKED (Arabic) | G1.1 closure; G1.2 §L. The English is G1.1-R3 proof, PROPOSED |
-| part | جزء من المحادثة | Part of the conversation | LOCKED (Arabic) | G1.1 closure; G1.2 §L. The English is G1.1-R3 proof, PROPOSED |
-| savedDraft | المسودة المحفوظة | The saved draft | PROPOSED | S7-02 |
-| pickHint | أول رسالة وآخر رسالة في الجزء | The first and last message of the part | PROPOSED | G1.1-R3 proof copy |
-| save | حفظ | Save | PROPOSED | S7-02 |
-| openHead | إعادة العرض التي تشمل آخر رسالة لا يمكن عرضها إلا بعد أن تستمر المحادثة. | A Replay that includes the newest message can be shown only after the conversation continues. | PROPOSED | S7-02 (S7-01 §8.1) |
-| savedWhole | حُفظت المحادثة كاملة لإعادة العرض. | The whole conversation was saved for a Replay. | PROPOSED | S7-02 |
-| savedPart | حُفظ الجزء المختار لإعادة العرض. | The chosen part was saved for a Replay. | PROPOSED | S7-02 |
-| changed | تغيّر شيء منذ التحديد. يُرجى التحديد من جديد. | Something changed since this was chosen. Please choose again. | PROPOSED | S7-02 |
-| notProvable | لا يمكن حفظ هذا الاختيار كجزء واحد متصل. | This selection can't be saved as one continuous part. | PROPOSED | S7-02 |
-| unconfirmed | تعذّر التأكد من الحفظ. | It couldn't be confirmed that this was saved. | PROPOSED | S7-02, after the approved W1A-01 sendUnconfirmed |
-| count | رسالة واحدة / رسالتان / N رسائل (3–10) / N رسالة (11+) | 1 message / N messages | PROPOSED | S7-02 |
-| cancel | إلغاء | Cancel | APPROVED | S4-01 Product Copy Gate |
-| tryAgain | إعادة المحاولة | Try again | APPROVED | VI-01 T03 |
-| notAvailable | هذا غير متاح الآن. | This isn't available right now. | APPROVED | S4-01 Product Copy Gate |
-| failed | تعذّر ذلك الآن. | That didn't work right now. | APPROVED | S4-01 Product Copy Gate |
+| Key | Arabic | English | Arabic status | English status | Source |
+|---|---|---|---|---|---|
+| replayName | إعادة عرض المحادثة | Replay this conversation | APPROVED (2026-10-19) | PROPOSED | G1.1-R3 proof copy (R3-J6); the S7-02 Copy Gate |
+| whole | المحادثة كاملة | The whole conversation | LOCKED | PROPOSED | G1.1 closure; G1.2 §L. The English is G1.1-R3 proof |
+| part | جزء من المحادثة | Part of the conversation | LOCKED | PROPOSED | G1.1 closure; G1.2 §L. The English is G1.1-R3 proof |
+| savedDraft | المسودة المحفوظة | The saved draft | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| pickHint | أول رسالة وآخر رسالة في الجزء | The first and last message of the part | APPROVED (2026-10-19) | PROPOSED | G1.1-R3 proof copy; the S7-02 Copy Gate |
+| save | حفظ | Save | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| openHead | إعادة العرض التي تشمل آخر رسالة لا يمكن عرضها إلا بعد أن تستمر المحادثة. | A Replay that includes the newest message can be shown only after the conversation continues. | APPROVED (2026-10-19) | PROPOSED | S7-02 (S7-01 §8.1) |
+| savedWhole | حُفظت المحادثة كاملة لإعادة العرض. | The whole conversation was saved for a Replay. | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| savedPart | حُفظ الجزء المختار لإعادة العرض. | The chosen part was saved for a Replay. | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| changed | تغيّر شيء منذ التحديد. يُرجى التحديد من جديد. | Something changed since this was chosen. Please choose again. | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| notProvable | لا يمكن حفظ هذا الاختيار كجزء واحد متصل. | This selection can't be saved as one continuous part. | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| unconfirmed | تعذّر التأكد من الحفظ. | It couldn't be confirmed that this was saved. | APPROVED (2026-10-19) | PROPOSED | S7-02, after the approved W1A-01 sendUnconfirmed |
+| count | رسالة واحدة / رسالتان / N رسائل (3–10) / N رسالة (11+) | 1 message / N messages | APPROVED (2026-10-19) | PROPOSED | S7-02 |
+| cancel | إلغاء | Cancel | APPROVED | APPROVED | S4-01 Product Copy Gate |
+| tryAgain | إعادة المحاولة | Try again | APPROVED | APPROVED | VI-01 T03 |
+| notAvailable | هذا غير متاح الآن. | This isn't available right now. | APPROVED | APPROVED | S4-01 Product Copy Gate |
+| failed | تعذّر ذلك الآن. | That didn't work right now. | APPROVED | APPROVED | S4-01 Product Copy Gate |
+
+**Approved Arabic: 11 rows** (ten rows and the message count). No Arabic letter changed when the gate closed; only the
+status fields and comments in `copy.ts` changed.
 
 **Deliberately absent:**
 
@@ -251,12 +261,21 @@ are pre-existing duplicate imports of `settings`, also present on `main`.
 
 **Root contracts:**
 
-- these pass: `s7-02-replay-entry-selection` (the shipped change plus 12 planted defects), `s7-01` (re-anchored),
+- these pass: `s7-02-replay-entry-selection` (the shipped change plus 16 planted defects since the Copy Gate closed; 12
+  before it), `s7-01` (re-anchored),
   `w1a-01` (re-anchored), `w3-mega-u2` (re-anchored), `t12p`, `s5-03b` and `s5-03c` (re-anchored), and
   `task-closure-governance`;
 - the full root run passes: 1489 / 1489, including the repository-mirror contract (`forward-safety-contract`). That
   mirror omits the root locators. The S7-02 contract first read them unconditionally and failed there, so it now reads
   them only where the tree carries them, as the precedent contracts do.
+
+**After the Copy Gate closed (2026-10-19):**
+
+- the S7-02 contract: 17 / 17 (the shipped change plus 16 planted defects);
+- the full root run: 1493 / 1493, the mirror included;
+- the focused mobile suites (`replay-entry`, `replay-api`, `scope`, `integration/s7-02-replay-entry`): 80 / 80;
+- `tsc --noEmit` is clean, and `eslint` shows 0 errors on `copy.ts`;
+- the Arabic strings and the count rule in `copy.ts` were compared before and after the change, and they are identical.
 
 **Not run:**
 
@@ -298,7 +317,8 @@ The exact-head CI run is linked on the pull request.
 - the presentation of `MOMENT_NOT_SEALED` and `ANALYSIS_UNAVAILABLE` at preview: S7-03;
 - a device and TalkBack proof of the entry: S7-04's production proof, before any user opening;
 - opening the Personal Replay capability: an operator act behind the Product Owner's approval;
-- the S7-02 Product Copy Gate. It is this task's own open gate, decided by the Product Owner at its review.
+- the S7-02 Product Copy Gate. It was this task's own gate, and the Product Owner closed it on 2026-10-19 (§6): every
+  Arabic row APPROVED word for word; the English rows keep their earlier status. Nothing of it remains open.
 
 **Carried from S7-01 and honoured:**
 

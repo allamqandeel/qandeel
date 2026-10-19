@@ -4458,7 +4458,8 @@ is effective; it stays as written.
     limit at selection only);
   - a device / TalkBack proof of the entry and selection: S7-04's production proof, before any user opening;
   - opening the Personal Replay capability: an operator act behind the Product Owner's approval (no gate row);
-  - the S7-02 Product Copy Gate: S7-02's own open gate, decided by the Product Owner at its review.
+  - the S7-02 Product Copy Gate: S7-02's own gate, closed by the Product Owner on 2026-10-19 (every Arabic row
+    APPROVED word for word; the English rows keep their earlier status). It is no backlog item.
 - **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
   (`NOT_EVALUATED`).
 - **BG-05:** S7-02 owns no open item.

@@ -12,7 +12,8 @@
 //   - the client uses the S7-01 API as it is: only the entry's routes, the identity from the token alone, one command id
 //     per attempt re-used on retry, a revision that names expectedDraftRevision;
 //   - the entry exists only in the Personal world, behind the capability hint, and is retired with the generation;
-//   - the S7-02 Product Copy Gate is OPEN and every PROPOSED row is listed in the record;
+//   - the S7-02 Product Copy Gate is CLOSED: the Product Owner approved every Arabic row word for word (2026-10-19), the
+//     approved Arabic is pinned here letter for letter, and no English row is promoted by that approval;
 //   - the record, the locators and the CI wiring exist.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
@@ -41,6 +42,21 @@ const REUSED = {
   LivingAnalysisMap: 'apps/mobile/src/integration/composition/LivingAnalysisMap.tsx',
   AnalysisReturnBar: 'apps/mobile/src/conversation/AnalysisReturnBar.tsx',
 };
+// The S7-02 Product Copy Gate, closed by the Product Owner on 2026-10-19: every Arabic row approved word for word.
+const COPY_GATE_CLOSED = 'S7-02 PRODUCT COPY GATE — CLOSED — 11 Arabic rows APPROVED word for word by the Product Owner on 2026-10-19 (the message count included); no English row approved by it';
+const APPROVED_ARABIC = Object.freeze({
+  replayName: 'إعادة عرض المحادثة',
+  savedDraft: 'المسودة المحفوظة',
+  pickHint: 'أول رسالة وآخر رسالة في الجزء',
+  save: 'حفظ',
+  openHead: 'إعادة العرض التي تشمل آخر رسالة لا يمكن عرضها إلا بعد أن تستمر المحادثة.',
+  savedWhole: 'حُفظت المحادثة كاملة لإعادة العرض.',
+  savedPart: 'حُفظ الجزء المختار لإعادة العرض.',
+  changed: 'تغيّر شيء منذ التحديد. يُرجى التحديد من جديد.',
+  notProvable: 'لا يمكن حفظ هذا الاختيار كجزء واحد متصل.',
+  unconfirmed: 'تعذّر التأكد من الحفظ.',
+});
+const APPROVED_ARABIC_COUNT = "ar: (n: number) => (n === 1 ? 'رسالة واحدة' : n === 2 ? 'رسالتان' : n >= 3 && n <= 10 ? `${n} رسائل` : `${n} رسالة`),";
 
 const shipped = () => ({
   entry: files(ENTRY).filter((path) => /\.(ts|tsx)$/u.test(path) && !/__(tests|fixtures)__/u.test(path)).map((path) => [path, read(path)]),
@@ -158,12 +174,24 @@ const DETECTORS = {
 
   copyViolations(w) {
     const out = [];
-    if (!w.copy.includes("status: 'S7-02 PRODUCT COPY GATE — OPEN — PROPOSED rows await the Product Owner'")) out.push('the S7-02 Product Copy Gate is OPEN');
-    const rows = [...w.copy.matchAll(/^ {2}(\w+): \{ ar: '([^']*)', en: (?:'([^']*)'|"([^"]*)"), status: '(\w+)'/gmu)];
-    const multi = [...w.copy.matchAll(/^ {2}(\w+): \{\n\s*ar: '([^']*)',[\s\S]*?status: '(\w+)'/gmu)];
-    const proposed = [...rows.filter((m) => m[5] === 'PROPOSED').map((m) => m[2]), ...multi.filter((m) => m[3] === 'PROPOSED').map((m) => m[2])];
-    if (proposed.length < 10) out.push('the copy rows are readable');
-    for (const ar of proposed) if (!w.record.includes(ar)) out.push(`the record lists the PROPOSED row «${ar}»`);
+    if (!w.copy.includes(`status: '${COPY_GATE_CLOSED}'`)) out.push('the S7-02 Product Copy Gate is CLOSED (the Product Owner, 2026-10-19)');
+    if (!w.record.includes(COPY_GATE_CLOSED)) out.push('the record carries the closed Copy Gate');
+    const rows = [
+      ...w.copy.matchAll(/^ {2}(\w+): \{ ar: '([^']*)', en: (?:'[^']*'|"[^"]*"), status: '(\w+)', enStatus: '(\w+)'/gmu),
+      ...w.copy.matchAll(/^ {2}(\w+): \{\n\s*ar: '([^']*)',\n[^\n]*\n\s*status: '(\w+)', enStatus: '(\w+)'/gmu),
+    ].map(([, key, ar, status, enStatus]) => ({ key, ar, status, enStatus }));
+    if (rows.length !== 16) out.push('the copy rows are readable');
+    for (const row of rows) {
+      if (row.status === 'PROPOSED') out.push(`no Arabic row is left PROPOSED: ${row.key}`);
+      if (!w.record.includes(row.ar)) out.push(`the record lists the row «${row.ar}»`);
+    }
+    for (const [key, ar] of Object.entries(APPROVED_ARABIC)) {
+      const row = rows.find((r) => r.key === key);
+      if (row === undefined || row.ar !== ar) out.push(`the approved Arabic of ${key} is unchanged, letter for letter`);
+      else if (row.status !== 'APPROVED' || row.enStatus !== 'PROPOSED') out.push(`${key}: the Arabic is APPROVED and its English stays PROPOSED`);
+    }
+    if (!w.copy.includes(APPROVED_ARABIC_COUNT)) out.push('the approved Arabic message count is unchanged');
+    if (!/status: 'APPROVED' as ReplayCopyStatus,\n {2}enStatus: 'PROPOSED' as ReplayCopyStatus,\n {2}ar: \(n: number\)/u.test(w.copy)) out.push('count: the Arabic is APPROVED and its English stays PROPOSED');
     for (const word of ['تشغيل', 'معاينة', 'Play', 'Preview']) if (w.copy.includes(word)) out.push(`no player word ships in S7-02: ${word}`);
     return out;
   },
@@ -222,7 +250,11 @@ const PLANTED = [
   ['a new command id on retry', 'commandViolations', edit('entry', 'replay-entry-controller.ts', 'issue(selection.command);', 'issue({ ...selection.command, id: newId() });')],
   ['an entry outside the generation', 'wiringViolations', edit('runtime', '', 'session.replayEntry.retire();', '')],
   ['an entry in every world', 'wiringViolations', edit('depth', '', 'chromeEnd={onSignOut === undefined ? null : ', 'chromeEnd={')],
-  ['a PROPOSED row approved silently', 'copyViolations', edit('copy', '', "status: 'S7-02 PRODUCT COPY GATE — OPEN — PROPOSED rows await the Product Owner'", "status: 'S7-02 PRODUCT COPY GATE — CLOSED'")],
+  ['a reopened Copy Gate', 'copyViolations', edit('copy', '', COPY_GATE_CLOSED, 'S7-02 PRODUCT COPY GATE — OPEN')],
+  ['an approved Arabic row reworded', 'copyViolations', edit('copy', '', "ar: 'حُفظ الجزء المختار لإعادة العرض.'", "ar: 'تم حفظ الجزء المختار لإعادة العرض.'")],
+  ['the open-head sentence reworded', 'copyViolations', edit('copy', '', "ar: 'إعادة العرض التي تشمل آخر رسالة لا يمكن عرضها إلا بعد أن تستمر المحادثة.'", "ar: 'لا يمكن عرض آخر رسالة الآن.'")],
+  ['an Arabic count rule changed', 'copyViolations', edit('copy', '', 'n >= 3 && n <= 10 ?', 'n >= 3 && n <= 9 ?')],
+  ['an English row approved with the Arabic', 'copyViolations', edit('copy', '', "en: 'Save', status: 'APPROVED', enStatus: 'PROPOSED'", "en: 'Save', status: 'APPROVED', enStatus: 'APPROVED'")],
   ['a missing review gate', 'recordViolations', edit('record', '', 'STOP: S7-02 — INDEPENDENT REVIEW GATE', 'merged')],
 ];
 
