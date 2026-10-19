@@ -1,7 +1,7 @@
 # QANDEEL — S7-03 Historical Replay Composite Visual Proof — Implementation Record v1
 
 **Task:** S7-03 — Historical Replay Composite Visual Proof (Stage 7)
-**Status:** CLOSED / AT THE S7-03 INDEPENDENT VISUAL & TECHNICAL REVIEW GATE — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — PRODUCT COPY GATE OPEN
+**Status:** CLOSED / AT THE S7-03 INDEPENDENT VISUAL & TECHNICAL REVIEW GATE — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — PRODUCT COPY GATE CLOSED (Arabic 14 / 14 APPROVED; English PROPOSED)
 **Date:** 2026-10-19
 **Branch / base:** `s7/s7-03-composite-visual-proof` from `main` at `3ad4e4143264f1af7a5fd759ccb0102f1b98d087`, the merge of
 PR #348 (S7-02 — Replay Entry & Conversation Selection). S7-01 merged earlier through PR #347 as `c152cb4b`.
@@ -38,7 +38,7 @@ entry, no preview / finalize / reopen in the Product UI (S7-04).
 | `apps/mobile/src/replay-composite/viewpoint-store.ts` | An isolated viewpoint store per version, PINNED at the moment's TC, with no Map authority and no Live Focus. |
 | `apps/mobile/src/replay-composite/composite-controller.ts` | Reads the version, the moments and one moment's analysis per depth; LOADING / FAILED / NOT_FOUND / NOT_RENDERABLE / READY states; retry. |
 | `apps/mobile/src/replay-composite/ReplayMomentComposite.tsx` | The composite: the moment panel (position, scope, gap, the exact message, honest states) as the surface's chrome, and `MapSurface` as its world. `ReplayPreviewLimit` for the two preview limits. |
-| `apps/mobile/src/replay-composite/copy.ts` | The words S7-03 needs; 14 PROPOSED items (§7). Approved words are reused from their owners verbatim. |
+| `apps/mobile/src/replay-composite/copy.ts` | The words S7-03 needs: 14 items, Arabic APPROVED by the Product Owner (2026-10-19), English PROPOSED (§7). Words approved earlier are reused from their owners verbatim. |
 | `apps/mobile/src/replay-composite/__fixtures__/replay-wire.ts` | Serves the captured real-path wire to the real client as HTTP; the labelled `derivedGap` specimen. |
 | `apps/mobile/src/replay-composite/__tests__/replay-composite.test.tsx` | The composite on the real components (§6). |
 | `apps/mobile/src/runtime-entry/__tests__/replay-history-api.test.ts` | Decoding of every captured scene and depth; planted defects; the GET-only client. |
@@ -168,13 +168,20 @@ first build showed Arabic panel text on the left. The composite now sets the rea
 pins it. Limits: a still cannot show motion (Reduced Motion parity rests on the Jest assertion); the Map takes up to about
 30 s to paint after a cold start on the software GPU; System UI raised a "not responding" dialog on the first boot.
 
-## 7. Product Copy Gate — OPEN
+## 7. Product Copy Gate — CLOSED (2026-10-19)
+
+**Product Owner decision, 2026-10-19:** all 14 proposed Arabic rows are APPROVED exactly as written, including the
+counting templates `position` and `gap`. No Arabic character and no counting rule changed in closing the gate. Every
+English row stays PROPOSED; the decision does not approve English. The S7-02 rows reused here are untouched.
+In the code: `REPLAY_COMPOSITE_COPY_GATE` is CLOSED with `decidedOn: '2026-10-19'`; every row has `status: 'APPROVED'`
+(Arabic) and `enStatus: 'PROPOSED'` (English). The static contract pins the 14 Arabic rows word for word and refuses an
+approved English row, an Arabic row left PROPOSED, a reworded row, a changed counting rule and a reopened gate.
 
 Approved words are reused verbatim from their owners and not reopened: the speaker (S4-01 «أنت», W1A-01 «قنديل»), the
 message accessible names (W1A-01), the temporal and spatial sentences (T-08), the scope «المحادثة كاملة» / «جزء من المحادثة»
 (G1.1), the message count, the open-head refusal, «هذا غير متاح الآن.» and «إعادة المحاولة» (S7-02 Copy Gate, CLOSED).
 
-| # | Key | Arabic (PROPOSED) | English (PROPOSED) |
+| # | Key | Arabic (APPROVED, 2026-10-19) | English (PROPOSED) |
 | --- | --- | --- | --- |
 | 1 | notViewableVersionSuperseded | هذه النسخة من إعادة العرض لم تعد الحالية. | This version of the Replay is no longer the current one. |
 | 2 | notViewableSourceContradictory | تغيّرت الرسائل الأصلية بطريقة لا تسمح بعرضها كما كانت. | The original messages changed in a way that doesn't allow showing them as they were. |
@@ -191,7 +198,8 @@ message accessible names (W1A-01), the temporal and spatial sentences (T-08), th
 | 13 | position | في إعادة العرض: {o} من {n}. | In the Replay: {o} of {n}. |
 | 14 | gap | لم تُعرض هنا {count} من المحادثة. | {count} of the conversation is / are not shown here. |
 
-Nothing is approved by being shipped in a proof build. The gate closes only on the Product Owner's word.
+Before the decision, every row was PROPOSED in both languages and nothing was approved by being shipped in a proof build.
+The gate was closed by the Product Owner's word alone, in this PR.
 
 ## 8. Verification
 
@@ -234,7 +242,7 @@ Ran on this branch (Windows 11, Node 24):
   discharged by `ReplayPreviewLimit`.
 - **Admitted:** none. **Checked and not admitted**, each placed with S7-04: F-2 (the Reading scope's session id on the
   wire); inspection, the Timeline, the player and navigation in the composite; a real-device and TalkBack proof. F-1 is no
-  obligation. The S7-03 Copy Gate is this task's own gate.
+  obligation. The S7-03 Copy Gate is this task's own gate, CLOSED by the Product Owner on 2026-10-19 (§7).
 - **Carried:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` not opened (`NOT_EVALUATED`); the Personal Replay
   capability stays closed (no gate row).
 - Register: **77 items; 36 / 4 / 9 / 28; 43 / 32 / 2**, unchanged.
@@ -249,7 +257,7 @@ Ran on this branch (Windows 11, Node 24):
 - **Preview:** `ReplayPreviewLimit({ outcome, language, insets })` for `MOMENT_NOT_SEALED` and `ANALYSIS_UNAVAILABLE`.
 - **Not provided:** the Timeline (`timeline={null}`), play / pause, step controls, the Analysis entry, finalize / reopen,
   inspection (fail-closed by the bridge; opening it needs a decision on what a Replay inspection may read).
-- **Before any user opening:** the S7-03 Copy Gate; F-2; a real-device and TalkBack proof; the capability gate stays an
+- **Before any user opening:** a decision on the English rows (still PROPOSED); F-2; a real-device and TalkBack proof; the capability gate stays an
   operator act behind the Product Owner's approval.
 
 ## 11A. Independent review correction R1 (2026-10-19)
@@ -274,11 +282,19 @@ item for S7-04, with no API change now.
   an answer that started before the revocation and lands after it (out of order); a retry that shows only the fresh
   pair's reason and layers, with nothing during the reads and no analysis read; a fresh pair that is itself inconsistent.
 - **Effect on the visual proof:** none on what the 16 frames show. Every frame came from a consistent real-path pair, and
-  none of them involves a revocation. The withdrawn state reuses approved rows, so no new copy enters the Copy Gate (still
-  OPEN, 14 PROPOSED).
+  none of them involves a revocation. The withdrawn state reuses approved rows, so no new copy enters the Copy Gate (then
+  still OPEN, 14 PROPOSED; closed afterwards, §11B).
 - **CI at `ed1bd9eb`:** `verify-api` failed in `database/verify-migration-0052.mjs` (HIM measurement semantics, outside
   S7-03). Its own fixture check compares two back-to-back `created_at` values at millisecond precision, and both events
   landed in the same millisecond: a timing flake in a pre-existing verifier. S7-03 does not change it.
+
+## 11B. Product Copy Gate closure (2026-10-19)
+
+The Product Owner APPROVED all 14 Arabic rows exactly as proposed, `position` and `gap` included (§7). This change
+records the decision and nothing else: the statuses in `copy.ts`, the gate's status and date, the Jest gate test, the
+static contract's copy detector (the 14 rows pinned, English never approved, five planted defects), this record and the
+locators. No Arabic character, counting rule, English word, S7-02 row, Replay logic or design changed; the visual proof is
+unaffected (the frames show the same words, now approved).
 
 ## 12. Deliberately not implemented
 

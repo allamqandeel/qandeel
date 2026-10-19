@@ -348,14 +348,17 @@ describe('S7-03 — the governed adapter', () => {
 });
 
 describe('S7-03 — the Product Copy Gate', () => {
-  it('is OPEN, with every new row PROPOSED in both languages, and no row naming a server word', () => {
-    expect(REPLAY_COMPOSITE_COPY_GATE.status).toMatch(/OPEN/u);
+  it('is CLOSED by the Product Owner (2026-10-19): all 14 Arabic rows APPROVED, every English row still PROPOSED, and no row naming a server word', () => {
+    expect(REPLAY_COMPOSITE_COPY_GATE.status).toMatch(/^S7-03 PRODUCT COPY GATE — CLOSED — 2026-10-19/u);
+    expect(REPLAY_COMPOSITE_COPY_GATE.decidedOn).toBe('2026-10-19');
     for (const row of Object.values(REPLAY_COMPOSITE_COPY_ROWS)) {
-      expect(row.status).toBe('PROPOSED');
+      expect(row.status).toBe('APPROVED');
       expect(row.enStatus).toBe('PROPOSED');
       expect(`${row.ar} ${row.en}`).not.toMatch(/[A-Z]{3,}_[A-Z]/u);
     }
-    expect(REPLAY_COMPOSITE_COPY_GATE.proposed).toHaveLength(Object.keys(REPLAY_COMPOSITE_COPY_ROWS).length + 2);
+    expect(REPLAY_COMPOSITE_COPY_GATE.arabicApproved).toHaveLength(14);
+    expect(REPLAY_COMPOSITE_COPY_GATE.englishProposed).toEqual(REPLAY_COMPOSITE_COPY_GATE.arabicApproved);
+    expect(replayCompositeCopy('ar').position(3, 6)).toBe('في إعادة العرض: 3 من 6.');
     expect(replayCompositeCopy('ar').gap('رسالتان')).toBe('لم تُعرض هنا رسالتان من المحادثة.');
     expect(replayCompositeCopy('en').gap('1 message')).toBe('1 message of the conversation is not shown here.');
   });

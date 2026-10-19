@@ -7,8 +7,9 @@
  * scope («جزء من المحادثة» / «المحادثة كاملة», G1.1 LOCKED), the message count, the open-head preview refusal, «هذا غير
  * متاح الآن.» and «إعادة المحاولة» (S7-02 Product Copy Gate, CLOSED — not reopened).
  *
- * The rows below are the words S7-03 needs that no gate has approved. Every one of them is PROPOSED, Arabic and English
- * alike, and nothing here is promoted by being shipped in a proof build: the S7-03 Product Copy Gate is OPEN
+ * The rows below are the words S7-03 needs that no earlier gate approved. The S7-03 Product Copy Gate is CLOSED: on
+ * 2026-10-19 the Product Owner APPROVED all 14 Arabic rows exactly as proposed, including the counting templates
+ * `position` and `gap`. Every English row stays PROPOSED; none is approved by that decision
  * (`docs/e2e/QANDEEL_S7_03_IMPLEMENTATION_RECORD_v1.md` §7).
  *
  * Fixed Arabic is simplified Modern Standard Arabic and gender-considerate (LANG-01): no second-person verb that marks
@@ -28,29 +29,30 @@ interface Row {
   readonly source: string;
 }
 
-const proposed = (ar: string, en: string, source: string): Row => ({ ar, en, status: 'PROPOSED', enStatus: 'PROPOSED', source });
+/** Arabic APPROVED by the Product Owner (2026-10-19, S7-03 Copy Gate); English still PROPOSED. */
+const arabicApproved = (ar: string, en: string, source: string): Row => ({ ar, en, status: 'APPROVED', enStatus: 'PROPOSED', source });
 
 export const REPLAY_COMPOSITE_COPY_ROWS = Object.freeze({
   // NOT_VIEWABLE — the version's reason, then both layers, then why no analysis is shown (I-06B: both layers reported).
-  notViewableVersionSuperseded: proposed('هذه النسخة من إعادة العرض لم تعد الحالية.', 'This version of the Replay is no longer the current one.', 'S7-03 (VERSION_SUPERSEDED)'),
-  notViewableSourceContradictory: proposed('تغيّرت الرسائل الأصلية بطريقة لا تسمح بعرضها كما كانت.', "The original messages changed in a way that doesn't allow showing them as they were.", 'S7-03 (SOURCE_STATE_CONTRADICTORY)'),
-  notViewableSourceUnavailable: proposed('الرسائل الأصلية غير متاحة الآن.', "The original messages aren't available right now.", 'S7-03 (SOURCE_NOT_CURRENTLY_AVAILABLE)'),
-  notViewableEvidenceIncomplete: proposed('التحليل المحفوظ لهذه اللحظات غير مكتمل.', 'The saved analysis of these moments is incomplete.', 'S7-03 (ANALYTICAL_EVIDENCE_INCOMPLETE)'),
-  sourceLayerAvailable: proposed('الرسائل الأصلية: متاحة.', 'The original messages: available.', 'S7-03 (sourceLayer DEREFERENCEABLE)'),
-  sourceLayerUnavailable: proposed('الرسائل الأصلية: غير متاحة الآن.', "The original messages: not available right now.", 'S7-03 (sourceLayer NOT_DEREFERENCEABLE)'),
-  analyticalLayerSealed: proposed('التحليل المحفوظ: محفوظ كما كان.', 'The saved analysis: kept as it was.', 'S7-03 (analyticalLayer SEALED_HISTORICAL_EVIDENCE)'),
-  analyticalLayerIncomplete: proposed('التحليل المحفوظ: غير مكتمل.', 'The saved analysis: incomplete.', 'S7-03 (analyticalLayer SEALED_EVIDENCE_INCOMPLETE)'),
-  noAnalysisWithoutText: proposed('لا يُعرض التحليل من دون الرسائل التي يخصّها.', "The analysis isn't shown without the messages it belongs to.", 'S7-03 (I-06B: no analysis without its moment)'),
+  notViewableVersionSuperseded: arabicApproved('هذه النسخة من إعادة العرض لم تعد الحالية.', 'This version of the Replay is no longer the current one.', 'S7-03 (VERSION_SUPERSEDED)'),
+  notViewableSourceContradictory: arabicApproved('تغيّرت الرسائل الأصلية بطريقة لا تسمح بعرضها كما كانت.', "The original messages changed in a way that doesn't allow showing them as they were.", 'S7-03 (SOURCE_STATE_CONTRADICTORY)'),
+  notViewableSourceUnavailable: arabicApproved('الرسائل الأصلية غير متاحة الآن.', "The original messages aren't available right now.", 'S7-03 (SOURCE_NOT_CURRENTLY_AVAILABLE)'),
+  notViewableEvidenceIncomplete: arabicApproved('التحليل المحفوظ لهذه اللحظات غير مكتمل.', 'The saved analysis of these moments is incomplete.', 'S7-03 (ANALYTICAL_EVIDENCE_INCOMPLETE)'),
+  sourceLayerAvailable: arabicApproved('الرسائل الأصلية: متاحة.', 'The original messages: available.', 'S7-03 (sourceLayer DEREFERENCEABLE)'),
+  sourceLayerUnavailable: arabicApproved('الرسائل الأصلية: غير متاحة الآن.', "The original messages: not available right now.", 'S7-03 (sourceLayer NOT_DEREFERENCEABLE)'),
+  analyticalLayerSealed: arabicApproved('التحليل المحفوظ: محفوظ كما كان.', 'The saved analysis: kept as it was.', 'S7-03 (analyticalLayer SEALED_HISTORICAL_EVIDENCE)'),
+  analyticalLayerIncomplete: arabicApproved('التحليل المحفوظ: غير مكتمل.', 'The saved analysis: incomplete.', 'S7-03 (analyticalLayer SEALED_EVIDENCE_INCOMPLETE)'),
+  noAnalysisWithoutText: arabicApproved('لا يُعرض التحليل من دون الرسائل التي يخصّها.', "The analysis isn't shown without the messages it belongs to.", 'S7-03 (I-06B: no analysis without its moment)'),
   // One moment's analysis.
-  analysisNotCurrentlyAvailable: proposed('التحليل كما كان عند هذه اللحظة غير متاح الآن.', "The analysis as it was at this moment isn't available right now.", 'S7-03 (ANALYSIS_NOT_CURRENTLY_AVAILABLE)'),
-  analysisFailed: proposed('تعذّر عرض التحليل الآن. هذا لا يعني أنه غير موجود.', "The analysis couldn't be shown right now. That doesn't mean there is none.", 'S7-03 (a failed analysis read)'),
+  analysisNotCurrentlyAvailable: arabicApproved('التحليل كما كان عند هذه اللحظة غير متاح الآن.', "The analysis as it was at this moment isn't available right now.", 'S7-03 (ANALYSIS_NOT_CURRENTLY_AVAILABLE)'),
+  analysisFailed: arabicApproved('تعذّر عرض التحليل الآن. هذا لا يعني أنه غير موجود.', "The analysis couldn't be shown right now. That doesn't mean there is none.", 'S7-03 (a failed analysis read)'),
   // The preview limit the S7-02 rows do not cover (MOMENT_NOT_SEALED reuses the APPROVED S7-02 `openHead`).
-  previewAnalysisUnavailable: proposed('لا يتوفر تحليل محفوظ لهذه المحادثة، فلا يمكن إعادة عرضها.', "There's no saved analysis of this conversation, so it can't be replayed.", 'S7-03 (preview ANALYSIS_UNAVAILABLE)'),
+  previewAnalysisUnavailable: arabicApproved('لا يتوفر تحليل محفوظ لهذه المحادثة، فلا يمكن إعادة عرضها.', "There's no saved analysis of this conversation, so it can't be replayed.", 'S7-03 (preview ANALYSIS_UNAVAILABLE)'),
 } satisfies Record<string, Row>);
 
 /** The position of a moment inside the version (its ordinal), distinct from its position in the conversation (its TC). */
 const POSITION = Object.freeze({
-  status: 'PROPOSED' as ReplayCompositeCopyStatus,
+  status: 'APPROVED' as ReplayCompositeCopyStatus,
   enStatus: 'PROPOSED' as ReplayCompositeCopyStatus,
   ar: (ordinal: number, count: number) => `في إعادة العرض: ${ordinal} من ${count}.`,
   en: (ordinal: number, count: number) => `In the Replay: ${ordinal} of ${count}.`,
@@ -58,15 +60,17 @@ const POSITION = Object.freeze({
 
 /** A perceptible discontinuity before a moment (PERCEPTIBLE_DISCONTINUITY_REQUIRED), with the approved S7-02 count inside it. */
 const GAP = Object.freeze({
-  status: 'PROPOSED' as ReplayCompositeCopyStatus,
+  status: 'APPROVED' as ReplayCompositeCopyStatus,
   enStatus: 'PROPOSED' as ReplayCompositeCopyStatus,
   ar: (count: string) => `لم تُعرض هنا ${count} من المحادثة.`,
   en: (count: string) => `${count} of the conversation ${count.startsWith('1 ') ? 'is' : 'are'} not shown here.`,
 });
 
 export const REPLAY_COMPOSITE_COPY_GATE = Object.freeze({
-  status: 'S7-03 PRODUCT COPY GATE — OPEN — every row below PROPOSED (Arabic and English); nothing approved by being shipped in a proof build',
-  proposed: [...Object.keys(REPLAY_COMPOSITE_COPY_ROWS), 'position', 'gap'],
+  status: 'S7-03 PRODUCT COPY GATE — CLOSED — 2026-10-19, Product Owner decision: all 14 Arabic rows APPROVED exactly as proposed (position and gap included); every English row stays PROPOSED',
+  decidedOn: '2026-10-19',
+  arabicApproved: [...Object.keys(REPLAY_COMPOSITE_COPY_ROWS), 'position', 'gap'],
+  englishProposed: [...Object.keys(REPLAY_COMPOSITE_COPY_ROWS), 'position', 'gap'],
 });
 
 export type ReplayCompositeCopy = { readonly [K in keyof typeof REPLAY_COMPOSITE_COPY_ROWS]: string } & {

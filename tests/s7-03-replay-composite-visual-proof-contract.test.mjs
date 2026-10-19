@@ -12,7 +12,8 @@
 //     Analysis code, and the adapter speaks the frozen T-03C `HistoricalDisclosure`;
 //   - the frozen authority and privacy files are byte-identical to the branch base (criterion 12);
 //   - the gap G-1 bridge stays sound: no T-04 consumer reads `scene.liveHead` or `scene.sealed`;
-//   - the S7-03 Product Copy Gate is OPEN and the S7-02 approved rows are reused, not rewritten;
+//   - the S7-03 Product Copy Gate is CLOSED (Product Owner, 2026-10-19): the 14 Arabic rows are APPROVED and pinned
+//     word for word, every English row stays PROPOSED, and the S7-02 approved rows are reused, not rewritten;
 //   - the proof build is validation-only and the derived gap specimen is labelled; the record stops at the review gate.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
@@ -35,7 +36,25 @@ const sha = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
 const COMPOSITE = 'apps/mobile/src/replay-composite';
 const CLIENT = 'apps/mobile/src/runtime-entry/replay-history-api.ts';
 const RECORD = 'docs/e2e/QANDEEL_S7_03_IMPLEMENTATION_RECORD_v1.md';
-const COPY_GATE_OPEN = 'S7-03 PRODUCT COPY GATE — OPEN';
+const COPY_GATE_CLOSED = 'S7-03 PRODUCT COPY GATE — CLOSED — 2026-10-19';
+// The 14 Arabic rows the Product Owner APPROVED on 2026-10-19, exactly as proposed (the two counting templates by their
+// source text). Not one character may change without a new decision.
+const ARABIC_APPROVED = [
+  "'هذه النسخة من إعادة العرض لم تعد الحالية.'",
+  "'تغيّرت الرسائل الأصلية بطريقة لا تسمح بعرضها كما كانت.'",
+  "'الرسائل الأصلية غير متاحة الآن.'",
+  "'التحليل المحفوظ لهذه اللحظات غير مكتمل.'",
+  "'الرسائل الأصلية: متاحة.'",
+  "'الرسائل الأصلية: غير متاحة الآن.'",
+  "'التحليل المحفوظ: محفوظ كما كان.'",
+  "'التحليل المحفوظ: غير مكتمل.'",
+  "'لا يُعرض التحليل من دون الرسائل التي يخصّها.'",
+  "'التحليل كما كان عند هذه اللحظة غير متاح الآن.'",
+  "'تعذّر عرض التحليل الآن. هذا لا يعني أنه غير موجود.'",
+  "'لا يتوفر تحليل محفوظ لهذه المحادثة، فلا يمكن إعادة عرضها.'",
+  'ar: (ordinal: number, count: number) => `في إعادة العرض: ${ordinal} من ${count}.`,',
+  'ar: (count: string) => `لم تُعرض هنا ${count} من المحادثة.`,',
+];
 
 /** Criterion 12: the frozen authority and privacy files, byte-identical to the branch base 3ad4e414 (LF-normalised). */
 const FROZEN = [
@@ -159,8 +178,13 @@ const DETECTORS = {
   copyViolations(w) {
     const out = [];
     const copy = w.composite['copy.ts'] ?? '';
-    if (!copy.includes(COPY_GATE_OPEN)) out.push('the S7-03 Copy Gate is OPEN until the Product Owner closes it');
-    if (/status: 'APPROVED'|enStatus: 'APPROVED'/u.test(tsCode(copy))) out.push('no S7-03 row is approved by being shipped');
+    if (!copy.includes(COPY_GATE_CLOSED)) out.push('the S7-03 Copy Gate is CLOSED by the Product Owner (2026-10-19)');
+    const code = tsCode(copy);
+    if (/enStatus: 'APPROVED'/u.test(code)) out.push('no English row is approved: the decision approved Arabic only');
+    if (/status: 'PROPOSED'|status: 'LOCKED'/u.test(code.replace(/enStatus: '[A-Z]+'/gu, ''))) out.push('every Arabic row is APPROVED');
+    for (const row of ARABIC_APPROVED) if (!copy.includes(row)) out.push(`the approved Arabic row is unchanged: ${row}`);
+    const arabicLiterals = [...code.matchAll(/'[^'\n]*[\u0600-\u06FF][^'\n]*'|`[^`\n]*[\u0600-\u06FF][^`\n]*`/gu)].length;
+    if (arabicLiterals !== ARABIC_APPROVED.length) out.push(`exactly the 14 approved Arabic rows are written here (found ${arabicLiterals})`);
     for (const [name, text] of Object.entries(w.composite)) {
       if (name === 'copy.ts') continue;
       if (/[؀-ۿ]/u.test(tsCode(text))) out.push(`${name}: every reader-facing word comes from a copy owner`);
@@ -251,7 +275,11 @@ const PLANTED = [
   ['a T-04 consumer reading the bridged horizon', 'engineViolations', add('mobile', 'apps/mobile/src/map/renderer/Horizon.ts', 'export const h = (context) => context.scene.liveHead;')],
   ['a frozen file changed', 'frozenViolations', editList('frozen', 'apps/mobile/src/map/renderer/MapSurface.tsx', "export const MAP_SURFACE_TEST_ID = 'qandeel-map-surface';", "export const MAP_SURFACE_TEST_ID = 'qandeel-replay-map';")],
   ['an S7-02 approved row reworded', 'frozenViolations', editList('frozen', 'apps/mobile/src/replay-entry/copy.ts', "ar: 'هذا غير متاح الآن.'", "ar: 'غير متاح.'")],
-  ['a closed S7-03 Copy Gate', 'copyViolations', edit('composite', 'copy.ts', COPY_GATE_OPEN, 'S7-03 PRODUCT COPY GATE — CLOSED')],
+  ['a reopened S7-03 Copy Gate', 'copyViolations', edit('composite', 'copy.ts', COPY_GATE_CLOSED, 'S7-03 PRODUCT COPY GATE — OPEN')],
+  ['an approved Arabic row reworded', 'copyViolations', edit('composite', 'copy.ts', "'الرسائل الأصلية: متاحة.'", "'الرسائل الأصلية متاحة.'")],
+  ['an approved counting rule changed', 'copyViolations', edit('composite', 'copy.ts', '`لم تُعرض هنا ${count} من المحادثة.`', '`لم يُعرض هنا ${count} من المحادثة.`')],
+  ['an English row approved with the Arabic', 'copyViolations', edit('composite', 'copy.ts', "status: 'APPROVED', enStatus: 'PROPOSED'", "status: 'APPROVED', enStatus: 'APPROVED'")],
+  ['an Arabic row left PROPOSED', 'copyViolations', edit('composite', 'copy.ts', "  status: 'APPROVED' as ReplayCompositeCopyStatus,", "  status: 'PROPOSED' as ReplayCompositeCopyStatus,")],
   ['Arabic written in the view', 'copyViolations', edit('composite', 'ReplayMomentComposite.tsx', "const speaker = moment.sourceRole === 'USER' ? sharedCopy(language).you : turns.product;", "const speaker = moment.sourceRole === 'USER' ? 'أنت' : turns.product;")],
   ['the Product entry replaced', 'proofViolations', edit('mobilePkg', '', '"main": "expo-router/entry"', '"main": "src/integration/__validation__/s703-proof-entry.tsx"')],
   ['an unlabelled derived specimen', 'proofViolations', edit('fixture', '', 'derivedGap (DERIVED SPECIMEN — not the real path)', 'derivedGap')],

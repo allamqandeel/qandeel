@@ -4490,7 +4490,8 @@ is effective; it stays as written.
   - inspection, the Timeline, the player and its navigation inside the composite (the adapter's bridge leaves inspection
     fail-closed and draws no Timeline): S7-04;
   - a real-device and TalkBack proof of the composite: S7-04's production proof, before any user opening;
-  - the S7-03 Product Copy Gate: S7-03's own gate (OPEN, PROPOSED rows). It is no backlog item.
+  - the S7-03 Product Copy Gate: S7-03's own gate, CLOSED by the Product Owner on 2026-10-19 (all 14 Arabic rows
+    APPROVED word for word; the English rows stay PROPOSED). It is no backlog item.
 - **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
   (`NOT_EVALUATED`); the Personal Replay capability stays closed (no gate row).
 - **BG-05:** S7-03 owns no open item.
