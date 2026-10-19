@@ -1531,3 +1531,37 @@ left fail-closed where it actually is.
 **What a reader should not conclude from this section.** That the runtime is closed says nothing about
 whether anything may be distributed. Section 62 is the binding statement: production Replay
 distribution is `NOT CLEARED / FAIL-CLOSED`, and every prerequisite it names is still unresolved.
+---
+
+## 64. `S7-01` — controlled forward amendment: the Personal Replay wrapper and Replay's account erasure
+
+*Dated forward note (2026-10-19; S7-01, not merged; effective from its merge). The phase stays `CLOSED / FROZEN`: no I-06
+Product semantic, primitive body, contract or verifier is reopened or re-judged here. This section records exactly what
+migration `0169` changes around the frozen runtime and why each change is the one §11 / §30 anticipated.*
+Record: [S7-01 record](e2e/QANDEEL_S7_01_IMPLEMENTATION_RECORD_v1.md).
+
+- **The reviewed wrapper §11 and §30 name.** Eleven `SECURITY INVOKER` wrappers (`authenticated` only) call
+  `replay_private` definers, which call the five frozen human primitives (`create_replay_draft_v1`,
+  `revise_replay_draft_v1`, `prepare_replay_preview_v1`, `finalize_replay_version_v1`,
+  `reopen_replay_for_revision_v1`) as the session subject. The actor remains `auth.uid()`; no wrapper takes an actor,
+  owner, source class or source unit. The primitives, cores, resolvers and every distribution command keep the §11 /
+  §30 / §59 posture: executable by no application role (resolvers `service_role` only).
+- **Scope.** `MY_WORLD` text only (§7): one contiguous range of whole messages of the caller's own covered conversation,
+  named by its first and last Session Position. The preview is a real `REPLAY_VERSION` (I-06B); finalization makes a
+  private version and nothing else; reopening is the frozen §28 path. No package, export, destination, approval or public
+  bridge (I-06C) is reachable, and the CW2-08 prerequisite seam still answers `NOT_EVALUATED` (§62 stands unchanged).
+- **A capability gate, not a launch clearance.** A minimal Personal Replay gate ships closed (no row) and is bound before
+  every primitive call. It claims no `SAFETY_ALLOW`, `LAUNCH_CLEARED` or `ENTITLED` (§11, last paragraph).
+- **Reads.** Creator-exact reads over the frozen resolvers and the I-06D usability derivation (§49 – §53). A moment's
+  analysis is the canonical `get_session_historical_projection_v1` (`0072`) at its represented Session Position,
+  served only when it re-digests to the frozen `point_digest` (§19); it is no second projection authority.
+- **Two guard prefixes.** `reject_replay_component_mutation_v1` and `reject_replay_version_component_mutation_v1` gain
+  exactly the `0164` prefix: a `DELETE` passes only inside the ONE governed, transaction-bound account erasure. Nothing
+  else about either guard changes.
+- **Replay's account erasure (`QAN-BL-ACCT-02`).** A module of the `0164` coordinator deletes the Personal Replay
+  footprint. What belongs to a distribution or to another World answers `BLOCKED` as `REPLAY_OUTSIDE_PERSONAL`
+  (`QAN-BL-ACCT-03`), and no other human's right is deleted.
+- **Not done here.** No player, route to a client, mobile surface, audio, video, download, publication or library; no
+  change to `0100` – `0107`'s bodies other than the two guard prefixes; no change to `0072` or `0130`.
+
+`QAN-BL-NAV-02` is unchanged (§61, §63); the Stage 7 WP0 places its reconciliation at S7-05.

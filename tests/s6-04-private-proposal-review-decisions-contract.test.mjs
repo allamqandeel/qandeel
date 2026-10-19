@@ -136,7 +136,7 @@ test('5 — the named exceptions: 0149 NO_BACKDOOR admits exactly the three deci
   // RE-ANCHORED by S6-05 (2026-10-16, migration 0159): the acceptance absorber follows the three decisions; and by S6-06
   // (2026-10-16, migration 0163): its three absorbers follow that.
   // RE-ANCHORED by S6-07 CP2 (2026-10-18, migration 0166): the forward dispatcher's absorber follows the enrollment's.
-  assert.match(guard, /'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n\];/u);
+  assert.match(guard, /'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n(?: {2}\/\/[^\n]*\n)*(?: {2}'[a-z_]+_my_replay_[a-z_]+_v1',(?: '[a-z_]+_my_replay_[a-z_]+_v1',)*\n)*\];/u);
 });
 
 test('6 — the API takes a command id and a view only, calls the five boundaries with the caller token, logs and retries nothing', () => {

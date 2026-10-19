@@ -15,6 +15,24 @@
   ],
   "version": 1,
   "groups": {
+    "s7-01": {
+      "title": "S7-01 - Personal Replay secure integration and account erasure (migration 0169) with the I-06 Replay, historical projection, governed erasure, Personal erasure and retry-hazard verifiers it must leave unchanged",
+      "verifiers": [
+        "database/verify-migration-0169.mjs",
+        "database/verify-migration-0100.mjs",
+        "database/verify-migration-0101.mjs",
+        "database/verify-migration-0102.mjs",
+        "database/verify-migration-0103.mjs",
+        "database/verify-migration-0104.mjs",
+        "database/verify-migration-0105.mjs",
+        "database/verify-migration-0106.mjs",
+        "database/verify-migration-0107.mjs",
+        "database/verify-migration-0072.mjs",
+        "database/verify-migration-0164.mjs",
+        "database/verify-migration-0130.mjs",
+        "database/verify-migration-0150.mjs"
+      ]
+    },
     "s6-01": {
       "title": "S6-01 - Matching Onboarding Preparation (migration 0154) with the Matching protection, deletion, export-preparation, privilege-matrix, retry-hazard, Memory-authority and Memory-writer verifiers it must leave unchanged",
       "verifiers": [

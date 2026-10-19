@@ -32,6 +32,16 @@ import type {
 } from '@qandeel/runtime';
 import { HistoricalProjectionIntegrityError, type HistoricalKnowledge } from './historical-projection.types';
 
+/**
+ * S7-01: the analytical families of `K(TC)` - everything except the header (Session, Live Head, TC, seal, revision)
+ * and the Moments - with the Material shape as a parameter. The canonical projection maps every family with its
+ * expiry; a Replay moment's frozen analysis carries the same families without `materials[].expiry`.
+ */
+export type HistoricalAnalyticalFamilies<M = DisclosedMaterial> =
+  Omit<HistoricalKnowledge, 'sessionId' | 'liveHead' | 'tc' | 'sealed' | 'revision' | 'moments' | 'materials'> & { readonly materials: readonly M[] };
+/** A Material known at TC without its wall-clock expiry mapping. */
+export type DisclosedMaterialAtTc = Omit<DisclosedMaterial, 'expiry'>;
+
 type Row = Record<string, unknown>;
 
 const fail = (detail: string): never => { throw new HistoricalProjectionIntegrityError('HISTORICAL_PROJECTION_ROW_MALFORMED', detail); };
@@ -105,6 +115,9 @@ const QUESTION_KEYS = ['id', 'informationGapId', 'questionText', 'questionType',
 const QUESTION_APPEARANCE_KEYS = ['bindingId', 'informationGapId', 'gapOpenEpoch', 'hypothesisId', 'hypothesisVersion', 'questionType', 'sourceTurnId', 'assistantTurnId', 'appearedAtSp'] as const;
 const CONFIDENCE_KEYS = ['id', 'targetReadingId', 'targetVersion', 'missingInformationCodes', 'supportingEvidenceIds', 'contradictingEvidenceIds', 'assumptions', 'alternativeReadingIds', 'resolution'] as const;
 const REVISION_KEYS = ['liveHead', 'sameSpEventSequence', 'worldVersion', 'pendingExpiries'] as const;
+const FAMILY_KEYS = ['emerging_focuses', 'live_focus', 'threads', 'thread_reading_appearances', 'readings', 'reading_relations', 'evidence_participations',
+  'materials', 'gaps', 'questions', 'question_appearances', 'confidences'] as const;
+const MATERIAL_AT_TC_KEYS = MATERIAL_KEYS.filter((key) => key !== 'expiry');
 const ROW_KEYS = ['session_id', 'live_head', 'tc', 'sealed', 'revision', 'moments', 'emerging_focuses', 'live_focus', 'threads', 'thread_reading_appearances', 'readings',
   'reading_relations', 'evidence_participations', 'materials', 'gaps', 'questions', 'question_appearances', 'confidences'] as const;
 const LINEAGE_KINDS: readonly ReadingLineageStepKind[] = ['LEGACY_BASELINE', 'CREATED', 'STATUS_TRANSITION', 'VERSION_ADVANCED'];
@@ -197,15 +210,7 @@ function mapReading(raw: unknown, index: number, tc: number, emergingFocusIds: R
   };
 }
 
-function mapMaterial(raw: unknown, index: number, tc: number): DisclosedMaterial {
-  const path = `materials[${index}]`;
-  const row = record(raw, path, MATERIAL_KEYS);
-  const expiry = record(row.expiry, `${path}.expiry`, EXPIRY_KEYS);
-  const mapping = oneOf(expiry.mapping, `${path}.expiry.mapping`, EXPIRY_MAPPINGS);
-  const sp = sessionPositionOrNull(expiry.sp, `${path}.expiry.sp`);
-  if ((mapping === 'SP') !== (sp !== null)) return incoherent(`${path}.expiry: exactly the SP mapping carries a Session Position`);
-  const statusAtTc = text(row.statusAtTc, `${path}.statusAtTc`);
-  if (mapping === 'SP' && sp !== null && sp <= tc && statusAtTc === 'ACTIVE') return incoherent(`${path}: expired inside a Session Position <= TC yet ACTIVE`);
+function mapMaterialFields(row: Row, path: string): DisclosedMaterialAtTc {
   return {
     id: text(row.id, `${path}.id`),
     type: text(row.type, `${path}.type`),
@@ -216,9 +221,25 @@ function mapMaterial(raw: unknown, index: number, tc: number): DisclosedMaterial
     version: integer(row.version, `${path}.version`),
     supersedesMaterialId: textOrNull(row.supersedesMemoryId, `${path}.supersedesMemoryId`),
     supersededByMaterialId: textOrNull(row.supersededByMemoryId, `${path}.supersededByMemoryId`),
-    statusAtTc,
-    expiry: { mapping, sp },
+    statusAtTc: text(row.statusAtTc, `${path}.statusAtTc`),
   };
+}
+
+function mapMaterial(raw: unknown, index: number, tc: number): DisclosedMaterial {
+  const path = `materials[${index}]`;
+  const row = record(raw, path, MATERIAL_KEYS);
+  const expiry = record(row.expiry, `${path}.expiry`, EXPIRY_KEYS);
+  const mapping = oneOf(expiry.mapping, `${path}.expiry.mapping`, EXPIRY_MAPPINGS);
+  const sp = sessionPositionOrNull(expiry.sp, `${path}.expiry.sp`);
+  if ((mapping === 'SP') !== (sp !== null)) return incoherent(`${path}.expiry: exactly the SP mapping carries a Session Position`);
+  const material = mapMaterialFields(row, path);
+  if (mapping === 'SP' && sp !== null && sp <= tc && material.statusAtTc === 'ACTIVE') return incoherent(`${path}: expired inside a Session Position <= TC yet ACTIVE`);
+  return { ...material, expiry: { mapping, sp } };
+}
+
+function mapMaterialAtTc(raw: unknown, index: number): DisclosedMaterialAtTc {
+  const path = `materials[${index}]`;
+  return mapMaterialFields(record(raw, path, MATERIAL_AT_TC_KEYS), path);
 }
 
 /** Maps one projection row into `K(TC)`; throws `HistoricalProjectionIntegrityError` on any shape or coherence defect. */
@@ -257,6 +278,21 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
   });
   // Every Session Position <= TC is exactly one committed Moment: gapless, in order.
   if (moments.length !== tc || moments.some((moment, index) => moment.sp !== index + 1)) return incoherent('moments: not exactly SP(1) .. SP(TC) in order');
+
+  return { sessionId, liveHead, tc, sealed, revision, moments, ...mapFamilies(row, tc, mapMaterial) };
+}
+
+/**
+ * S7-01: maps the analytical families of ONE Replay moment's frozen `K(TC)` (no header, no Moments, no Material
+ * expiry) under exactly the checks of the canonical projection; throws `HistoricalProjectionIntegrityError` on any
+ * shape or coherence defect. It adds no second projection: the families come from the same canonical function.
+ */
+export function mapHistoricalAnalyticalFamilies(raw: unknown, tc: number): HistoricalAnalyticalFamilies<DisclosedMaterialAtTc> {
+  if (!Number.isSafeInteger(tc) || tc < 1) return fail('analysis: TC is a Session Position >= 1');
+  return mapFamilies(record(raw, 'analysis', FAMILY_KEYS), tc, mapMaterialAtTc);
+}
+
+function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapMaterialOf: (raw: unknown, index: number, tc: number) => M): HistoricalAnalyticalFamilies<M> {
 
   const emergingFocuses: DisclosedEmergingFocus[] = list(row.emerging_focuses, 'emerging_focuses').map((entry, index) => {
     const path = `emerging_focuses[${index}]`;
@@ -305,7 +341,7 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
     return { a, b };
   });
 
-  const materials = list(row.materials, 'materials').map((entry, index) => mapMaterial(entry, index, tc));
+  const materials = list(row.materials, 'materials').map((entry, index) => mapMaterialOf(entry, index, tc));
   const materialIds = new Set(materials.map((material) => material.id));
   if (materialIds.size !== materials.length) return incoherent('materials: a Material appears twice');
   for (const material of materials) {
@@ -410,7 +446,7 @@ export function mapHistoricalProjectionRow(raw: unknown): HistoricalKnowledge {
   });
 
   return {
-    sessionId, liveHead, tc, sealed, revision, moments, emergingFocuses, liveFocus, threads, threadReadingAppearances,
+    emergingFocuses, liveFocus, threads, threadReadingAppearances,
     readings, readingRelations, evidenceParticipations, materials, gaps, questions, questionAppearances, confidences,
   };
 }

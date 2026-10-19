@@ -1,4 +1,4 @@
-import { disclose, FAMILY_DEPTH, HISTORICAL_SEMANTIC_DEPTHS, resolveInspection } from './historical-disclosure';
+import { disclose, discloseAnalyticalRungs, FAMILY_DEPTH, HISTORICAL_SEMANTIC_DEPTHS, resolveInspection } from './historical-disclosure';
 import { mapHistoricalProjectionRow } from './historical-projection-mapper';
 import { projectionRow } from './historical-projection.fixture.spec';
 
@@ -89,5 +89,16 @@ describe('Layer B: V = Disclose(K(TC), depth, inspection) (cases 10-16)', () => 
     const frozen = JSON.stringify(knowledge);
     expect(disclose(knowledge, 'SESSION', { family: 'MOMENT', id: 'cu-1' })).toEqual(disclose(knowledge, 'SESSION', { family: 'MOMENT', id: 'cu-1' }));
     expect(JSON.stringify(knowledge)).toBe(frozen);
+  });
+});
+
+describe('S7-01: the one depth law over the analytical families', () => {
+  it.each(HISTORICAL_SEMANTIC_DEPTHS)('at %s, the shared rungs are exactly the rungs disclose answers', (depth) => {
+    const full = disclose(knowledge, depth);
+    const rungs = discloseAnalyticalRungs(knowledge, depth);
+    expect([rungs.world, rungs.thread, rungs.analyticalObject, rungs.sourceProvenance]).toEqual([full.world, full.thread, full.analyticalObject, full.sourceProvenance]);
+    expect(rungs.sessionAnalytics).toEqual(full.session.status === 'DISCLOSED'
+      ? { status: 'DISCLOSED', value: { emergingFocuses: full.session.value.emergingFocuses, questionAppearances: full.session.value.questionAppearances } }
+      : { status: 'DEPTH_WITHHELD' });
   });
 });

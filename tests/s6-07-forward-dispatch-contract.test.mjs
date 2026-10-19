@@ -133,7 +133,7 @@ function censusViolations(w) {
   if (!w.verify0149.includes("'NO_BACKDOOR the forward dispatcher is service_role-only'")) out.push('0149 proves the dispatcher is service_role-only');
   for (const probe of ['f18 the census refuses a second service_role wrapper around the forward dispatcher',
     'f19 the census refuses the forward dispatcher granted to a client role']) if (!w.verify0149.includes(probe)) out.push(`0149 probe: ${probe}`);
-  if (!/ {2}'server_forward_approved_matching_proposals_v1',\n\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the dispatcher');
+  if (!/ {2}'server_forward_approved_matching_proposals_v1',\n(?: {2}\/\/[^\n]*\n)*(?: {2}'[a-z_]+_my_replay_[a-z_]+_v1',(?: '[a-z_]+_my_replay_[a-z_]+_v1',)*\n)*\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the dispatcher');
   return out;
 }
 
@@ -153,7 +153,7 @@ function apiViolations(w) {
   if (!/process\.env\.NODE_ENV !== 'test'/u.test(w.worker) || !/this\.timer\.unref\(\);/u.test(w.worker)
       || !/INTRODUCTIONS_FORWARD_DISPATCH_DISABLED !== 'true'/u.test(w.worker)) out.push('off under tests, switchable off, and a timer that never keeps the process alive');
   if ((w.account.match(/\bIntroductionsDispatchModule\b/gu) ?? []).length !== 3
-      || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u.test(w.account)) out.push('composed once through AccountModule');
+      || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule,\n {4}ReplayModule\]/u.test(w.account) /* RE-ANCHORED by S7-01: ReplayModule after it */) out.push('composed once through AccountModule');
   if (!w.telemetry.includes("['INTRODUCTIONS_FORWARD',new Map([['dispatch',new Set(['success','superseded_expected','blocked_expected','retry_expected',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])]])],")) {
     out.push('the telemetry relation for the dispatcher is exact');
   }

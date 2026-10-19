@@ -664,3 +664,21 @@ stay as written.
 - **Still closed:** the `ENROLLMENT` gate and every launch gate, CW2-08 (`NOT_EVALUATED`), the hosted environment (no
   consent texts installed, nothing deployed). Stage 6 is not launch-ready.
 - **Next:** the Product Owner's review of S6-07; no merge without «ادمج»; Stage 7 is not started.
+
+### 6.22 Execution note — 2026-10-19 (S6-07 merged; Stage 7 WP0 approved; S7-01 delivered, at its Independent Review Gate)
+**Recorded:** 2026-10-19 by S7-01, in the S7-01 pull request (not merged). This is a status note only; §6.9 … §6.21
+stay as written.
+- **Decided:** S6-07 merged through PR #346 as `3ea76f37c1c7c87661bad480e90460cc1edf7da2` (not deployed). The Product
+  Owner approved the Stage 7 / WP0: a personal, text-only Replay with a real preview and a private final version; no
+  exported video, external distribution or separate Replay library; one contiguous range of whole messages; `MY_WORLD`
+  only; never present non-existent audio as original audio; Replay reuses the existing analysis screens. **Stage 7 is
+  ACTIVE**, in five tasks: S7-01 the secure integration and erasure; S7-02 entry and selection in the app; S7-03 the
+  composite player proof; S7-04 the production player and navigation; S7-05 the final version, device proof and closure.
+- **Delivered (S7-01):** migration `0169` (the Personal Replay boundary over the frozen I-06 runtime, closed by its
+  capability gate, and Replay's account-erasure module) and the graphics-independent API `apps/api/src/replay`
+  ([S7-01 record](docs/e2e/QANDEEL_S7_01_IMPLEMENTATION_RECORD_v1.md)). `QAN-BL-ACCT-02` is tombstoned from the merge;
+  `QAN-BL-ACCT-03` admitted (Stage 9).
+- **Still closed:** the Personal Replay capability (no gate row), CW2-08 (`NOT_EVALUATED`), every distribution path,
+  the hosted environment. Replay is not available to users.
+- **Next:** the independent review of S7-01 and the Product Owner's decision; no merge, deployment or user opening
+  without the Product Owner's approval. S7-02 and S7-03 start only on the Product Owner's word.

@@ -12,6 +12,7 @@ import { IntroductionsEnrollmentModule } from '../introductions-enrollment/intro
 import { IntroductionsDispatchModule } from '../introductions-dispatch/introductions-dispatch.module';
 import { IntroductionsWorldModule } from '../introductions-world/introductions-world.module';
 import { ObservabilityModule } from '../observability/observability.module';
+import { ReplayModule } from '../replay/replay.module';
 import { AccountErasureRecoveryWorker } from './account-erasure-recovery.worker';
 import { AccountIdentityRepository } from './account-identity.repository';
 import { AccountSecurityController } from './account-security.controller';
@@ -74,10 +75,15 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * S6-07 (CP2) composes the forward dispatcher's server pass (IntroductionsDispatchModule) here for the same reason. It has
  * no controller and no route; its one service_role call reaches the ONE database dispatcher (migration 0166), and it
  * shares nothing with these providers or the other Introductions modules.
+ *
+ * S7-01 composes the owner's Personal Replay boundary (ReplayModule, migration 0169) here for the same reason: it is the
+ * owner's own account-scoped Replay of their own conversations. It shares nothing with these providers, holds no
+ * service_role path and imports no AI runtime, mobile or graphics code.
  */
 @Module({
   imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,
-    IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule],
+    IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule,
+    ReplayModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,
