@@ -328,7 +328,21 @@ test('the integration owner holds no recovery mechanism: it loads, decides and w
 
 test('§17 — the bootstrap constructs the one store from the FRESH snapshot plus the validated viewpoint, after the snapshot', () => {
   const creators = mobileProduction.filter((file) => /createCanonicalStore\(/u.test(stripComments(read(file))) && !/state\/store\.ts$/u.test(file));
-  assert.deepEqual(creators, [BOOTSTRAP], 'exactly one production call site creates the canonical store, and it is the bootstrap');
+  // S7-03 RE-ANCHOR (2026-10-19): the ONE live store is still the bootstrap's. The Historical Replay composite adds ONE
+  // isolated, read-only viewpoint over a sealed Replay version - never the live conversation's store, which Replay may not
+  // write (the S7-03 brief forbids Replay state in the live conversation store). It is pinned, carries no live truth
+  // (LF NONE), wires no authority and no dependency, and nothing outside the composite reaches it (S7-03 record §5, G-2).
+  const REPLAY_VIEWPOINT = 'apps/mobile/src/replay-composite/viewpoint-store.ts';
+  assert.deepEqual(creators, [BOOTSTRAP, REPLAY_VIEWPOINT].sort(), 'exactly one production call site creates the live canonical store, and it is the bootstrap; the only other is the isolated Replay viewpoint');
+  const viewpoint = stripComments(read(REPLAY_VIEWPOINT));
+  assert.equal(viewpoint.match(/createCanonicalStore\(/gu)?.length, 1, 'the Replay viewpoint creates one store');
+  assert.match(viewpoint, /temporal: \{ kind: 'PINNED', at: sessionPosition\(tc\) \},/u, 'the Replay viewpoint is pinned at a moment');
+  assert.match(viewpoint, /LF: \{ value: \{ kind: 'NONE' \}, atSp: null \}/u, 'the Replay viewpoint carries no live truth');
+  assert.match(viewpoint, /camera: initialCameraIntent\(WORLD_ORIGIN, undefined, depth\),\s*\n\s*\}\);/u, 'no StoreDependencies: no authority is wired');
+  assert.doesNotMatch(viewpoint, /Authority|deps|bootstrap|conversation|liveTruthFromSnapshot/u, 'the Replay viewpoint touches no live runtime');
+  for (const file of mobileProduction.filter((file) => !file.startsWith('apps/mobile/src/replay-composite/'))) {
+    assert.doesNotMatch(stripComments(read(file)), /createReplayViewpointStore|viewpoint-store/u, `${file} does not reach the Replay viewpoint`);
+  }
   // Fresh live truth is the snapshot's, never the record's; the four recovered fields replace the entry laws by name.
   assert.match(bootstrap, /live: liveTruthFromSnapshot\(snapshot\),/u);
   assert.match(bootstrap, /temporal: \{ kind: 'FOLLOW_LIVE' \}/u, 'the fresh entry law is unchanged');

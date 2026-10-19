@@ -16,7 +16,10 @@
 //     ONE mobile client, `apps/mobile/src/runtime-entry/replay-api.ts`, and it calls only the entry's routes (the
 //     capability, this conversation's Replays, one Replay, create and revise a draft). No other production module calls a
 //     Replay route, and no mobile code calls preview, finalize, reopen, a version, its moments or their analysis: those
-//     stay S7-03's. Test doubles under `__tests__` / `__fixtures__` are not production surfaces;
+//     stay S7-03's. Test doubles under `__tests__` / `__fixtures__` are not production surfaces. S7-03 RE-ANCHOR: the
+//     composite proof adds the ONE read-only history client, `apps/mobile/src/runtime-entry/replay-history-api.ts`, and
+//     it calls only a version, its moments and one moment's analysis — never a command (draft, preview, finalize,
+//     reopen: S7-04's); the S7-02 client still calls none of the three reads;
 //   - the proofs are wired into CI.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
@@ -41,6 +44,8 @@ const COMMANDS = ['create_my_replay_draft_v1', 'revise_my_replay_draft_v1', 'pre
 const FROZEN_CORES = ['create_replay_draft_v1', 'revise_replay_draft_v1', 'prepare_replay_preview_v1', 'finalize_replay_version_v1', 'reopen_replay_for_revision_v1'];
 /** S7-02 RE-ANCHOR: the ONE mobile client of the Replay routes (the entry and selection's own). */
 const S7_02_REPLAY_CLIENT = 'apps/mobile/src/runtime-entry/replay-api.ts';
+/** S7-03 RE-ANCHOR: the ONE read-only client of a version, its moments and their analysis (the composite proof's own). */
+const S7_03_REPLAY_HISTORY_CLIENT = 'apps/mobile/src/runtime-entry/replay-history-api.ts';
 const API_FILES = ['replay.controller.ts', 'replay.module.ts', 'replay.repository.ts', 'replay.service.ts', 'replay.types.ts'];
 
 const shipped = () => ({
@@ -161,8 +166,14 @@ const DETECTORS = {
       if (/create_my_replay|ReplayModule/u.test(text)) out.push(`${path}: no mobile code names a Replay wrapper or the API module`);
       if (/\/__(tests|fixtures)__\//u.test(path)) continue;
       const calls = /['`]\/replay\/|\/replay\b['`]/u.test(text);
-      if (calls && path !== S7_02_REPLAY_CLIENT) out.push(`${path}: S7-01 has no player or client; S7-02's one client is ${S7_02_REPLAY_CLIENT}`);
-      if (calls && /\/(preview|finalize|reopen|versions|moments|analysis)\b/u.test(tsCode(text))) out.push(`${path}: the player's routes stay S7-03's`);
+      if (calls && path !== S7_02_REPLAY_CLIENT && path !== S7_03_REPLAY_HISTORY_CLIENT) {
+        out.push(`${path}: S7-01 has no player or client; the clients are ${S7_02_REPLAY_CLIENT} and ${S7_03_REPLAY_HISTORY_CLIENT}`);
+      }
+      if (calls && path === S7_02_REPLAY_CLIENT && /\/(preview|finalize|reopen|versions|moments|analysis)\b/u.test(tsCode(text))) out.push(`${path}: the history reads are S7-03's client's`);
+      // S7-03: the history client reads, by GET only; every command stays S7-04's.
+      if (calls && path === S7_03_REPLAY_HISTORY_CLIENT && /\/(preview|finalize|reopen|drafts|revisions|capability|conversations)\b|method: '(?!GET')/u.test(tsCode(text))) {
+        out.push(`${path}: the history client reads; every command is S7-04's`);
+      }
     }
     return out;
   },
@@ -217,6 +228,8 @@ LANGUAGE sql STABLE SECURITY DEFINER`)],
   ['the module composed in the application root', 'apiViolations', () => ({ ...shipped(), app: `${shipped().app}\n// ReplayModule\n` })],
   ['a mobile client of the Replay routes', 'mobileViolations', () => ({ ...shipped(), mobile: [...shipped().mobile, ['apps/mobile/src/replay/api.ts', "fetch(`${base}/replay/drafts`); request('/replay/capability')"]] })],
   ['a player route in the S7-02 client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_02_REPLAY_CLIENT ? `${text}\nthis.read(\`/replay/\${id}/preview\`);` : text]) })],
+  ['a command route in the S7-03 history client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_03_REPLAY_HISTORY_CLIENT ? `${text}\nthis.read(\`/replay/\${id}/preview\`);` : text]) })],
+  ['a write method in the S7-03 history client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_03_REPLAY_HISTORY_CLIENT ? text.replace("{ method: 'GET',", "{ method: 'POST',") : text]) })],
   ['a Replay wrapper named in a mobile test', 'mobileViolations', () => ({ ...shipped(), mobile: [...shipped().mobile, ['apps/mobile/src/replay-entry/__tests__/x.test.ts', "rpc('create_my_replay_draft_v1')"]] })],
   ['the verifier left out of CI', 'wiringViolations', () => plant('workflow', 'run: npm run verify:replay-personal-secure-integration:integration', 'run: true')],
 ];

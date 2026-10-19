@@ -252,7 +252,9 @@ test('9 — governance: the record, the backlog and the locators tell the same t
     // Owner's approval of the S6-07 CP0 design makes S6-07 the current implementation task.
     // RE-ANCHORED by S7-01 (2026-10-19): S6-07 merged through PR #346; S7-01 is the current task.
     // RE-ANCHORED by S7-02 (2026-10-19): S7-01 merged through PR #347; S7-02 is the current task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S7-02 — Replay Entry & Conversation Selection\*\*/mu);
+    // RE-ANCHORED by S7-03 (2026-10-19): S7-02 merged through PR #348; S7-03 is the current task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S7-02/u, 'the merged S7-02 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S7-01/u, 'the merged S7-01 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-07/u, 'the merged S6-07 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: ACCT-DEL-01/u, 'the merged ACCT-DEL-01 is no longer the current task');

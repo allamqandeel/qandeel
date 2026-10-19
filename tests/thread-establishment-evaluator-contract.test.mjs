@@ -309,6 +309,10 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     'database/migrations/0072_historical_coverage_projection_disclosure_v1.sql',
     'database/verify-migration-0072.mjs',
     'database/tests/historical-projection-v1.test.mjs',
+    // S7-03 RE-ANCHOR (2026-10-19): the Replay composite's proof world drives the FINAL 0071 coordinator with the frozen
+    // TE-01 provenance exactly as the 0072 verifier does (to build a real history for the 0169 reads), and never imports
+    // this evaluator.
+    'database/replay-composite-proof-world.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
