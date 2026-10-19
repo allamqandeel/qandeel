@@ -254,8 +254,9 @@ are pre-existing duplicate imports of `settings`, also present on `main`.
 - these pass: `s7-02-replay-entry-selection` (the shipped change plus 12 planted defects), `s7-01` (re-anchored),
   `w1a-01` (re-anchored), `w3-mega-u2` (re-anchored), `t12p`, `s5-03b` and `s5-03c` (re-anchored), and
   `task-closure-governance`;
-- the full root run (1489 tests) leaves only the repository-mirror contract (`forward-safety-contract`, 10 tests). It
-  is known to need `apps/mobile/android` moved aside on this machine (S4-03 baseline). CI is the arbiter.
+- the full root run passes: 1489 / 1489, including the repository-mirror contract (`forward-safety-contract`). That
+  mirror omits the root locators. The S7-02 contract first read them unconditionally and failed there, so it now reads
+  them only where the tree carries them, as the precedent contracts do.
 
 **Not run:**
 
