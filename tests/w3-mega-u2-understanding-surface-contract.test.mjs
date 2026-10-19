@@ -116,7 +116,9 @@ function talkViolations(world) {
   if (!/case 'CHANGED':\n\s*\/\/[^\n]*\n\s*update\(\{ talk: 'IDLE' \}\);\n\s*await readDetail\(view\.ref\);/u.test(world.controller)) out.push('a changed item is not re-read before the reader chooses again');
   const all = [world.surface, world.controller, world.strip, world.depth].map(code).join('\n');
   if (/setDraft|submitTurn|\.send\(|controller\.issue/u.test(all)) out.push('talk writes or sends words for the reader');
-  if (!/discussion=\{<UnderstandingDiscussionStrip /u.test(world.depth)) out.push('the context line is not carried into the Conversation');
+  // S7-02 RE-ANCHOR: the strip may share the Conversation's one discussion seam with the Replay entry's saved line,
+  // which stands before it in the same fragment; the strip itself is carried exactly as before.
+  if (!/discussion=\{(?:<UnderstandingDiscussionStrip |\(\n\s*<>\n(?:\s*\{\/\*[^\n]*\*\/\}\n)?\s*<ReplayNoticeLine [^\n]*\/>\n\s*<UnderstandingDiscussionStrip )/u.test(world.depth)) out.push('the context line is not carried into the Conversation');
   return out;
 }
 

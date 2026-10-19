@@ -390,6 +390,11 @@ happens to reversible history — are defined here.
   feature / Launch Gate runtime, whose canonical seam answers `NOT_EVALUATED` on every dimension.
   Neither is deferred *here*: each fails closed in the runtime itself and is owned by its own frozen
   `CW2-0N` contract, which is why no new backlog item is admitted for either (`BG-01`, `BG-06`).
+- *(S7-02 dated note, 2026-10-19; not merged; no field changed.)* S7-02 delivers the Personal Conversation's Replay
+  entry and the selection of the whole conversation or one contiguous part, saving a real draft through the S7-01 API
+  behind the closed Personal Replay capability ([S7-02 record](e2e/QANDEEL_S7_02_IMPLEMENTATION_RECORD_v1.md)). It is
+  not the surface this item names: no player, preview or analysis development exists (S7-03 / S7-04). The item stays
+  `OPEN — UNASSIGNED`; the Stage 7 WP0 places its reconciliation at S7-05.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime + Durable Audio Source
@@ -4438,6 +4443,28 @@ ACCT-DEL-01, is recounted in the same change.
 - **Untouched:** every other item, owner, severity and status, including `QAN-BL-ACCT-01`, `QAN-BL-NAV-02`,
   `QAN-BL-VOICE-01` and `QAN-BL-PRIV-05`'s fields.
 - **Latest index: 77 items; 36 / 4 / 9 / 28 by status, 43 / 32 / 2 by severity**, recounted mechanically from §4.
+
+**S7-02 closing change (2026-10-19; not merged).** BG-08 / BG-09 at S7-02's closure
+([S7-02 record](e2e/QANDEEL_S7_02_IMPLEMENTATION_RECORD_v1.md) §10), under the Product Owner's checkpoint rule (no separate
+documentation task). S7-01 merged through PR #347 as `c152cb4b5add0b47b080ae952b7f97ee3dbf866d`, so the paragraph above
+is effective; it stays as written.
+- **Inherited (BG-05):** none owned. Read in full: `QAN-BL-NAV-02` (`OPEN — UNASSIGNED`, unchanged, with a dated S7-02
+  note in §4), `QAN-BL-ACCT-03`, `QAN-BL-PRIV-05` and `QAN-BL-VOICE-01` (untouched).
+- **Admitted (BG-06 / BG-08):** none.
+- **Checked and not admitted (BG-06):** each is placed in a named Stage 7 task by the S7-02 record's S7-03 handover (§11):
+  - the same Replay entry at the Analysis depth (the S7-02 control is in the Conversation chrome only; the Analysis
+    surfaces are untouched): S7-04, the production player and navigation;
+  - the presentation of `MOMENT_NOT_SEALED` and `ANALYSIS_UNAVAILABLE` at preview: S7-03 (S7-02 states the open-head
+    limit at selection only);
+  - a device / TalkBack proof of the entry and selection: S7-04's production proof, before any user opening;
+  - opening the Personal Replay capability: an operator act behind the Product Owner's approval (no gate row);
+  - the S7-02 Product Copy Gate: S7-02's own gate, closed by the Product Owner on 2026-10-19 (every Arabic row
+    APPROVED word for word; the English rows keep their earlier status). It is no backlog item.
+- **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
+  (`NOT_EVALUATED`).
+- **BG-05:** S7-02 owns no open item.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 77 items; 36 / 4 / 9 / 28 by status, 43 / 32 / 2 by severity**, unchanged.
 
 ## 8. What is deliberately not in this backlog
 

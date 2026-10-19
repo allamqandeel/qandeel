@@ -682,3 +682,17 @@ stay as written.
   the hosted environment. Replay is not available to users.
 - **Next:** the independent review of S7-01 and the Product Owner's decision; no merge, deployment or user opening
   without the Product Owner's approval. S7-02 and S7-03 start only on the Product Owner's word.
+
+### 6.23 Execution note — 2026-10-19 (S7-01 merged; S7-02 delivered, at its Independent Review Gate)
+**Recorded:** 2026-10-19 by S7-02, in the S7-02 pull request (not merged). This is a status note only; §6.9 … §6.22
+stay as written.
+- **Decided:** S7-01 merged through PR #347 as `c152cb4b5add0b47b080ae952b7f97ee3dbf866d` (not deployed; the capability closed). The Product Owner
+  started S7-02 (entry and selection in the app).
+- **Delivered (S7-02):** the «إعادة العرض» entry on the current Personal conversation and the selection of the whole
+  conversation or one contiguous part, saving a real draft through the S7-01 API; no server, API or migration change
+  ([S7-02 record](docs/e2e/QANDEEL_S7_02_IMPLEMENTATION_RECORD_v1.md)). Its Product Copy Gate is CLOSED: the Product Owner approved
+  every Arabic row word for word on 2026-10-19; the English rows keep their earlier status.
+- **Still closed:** the Personal Replay capability (no gate row), so the entry is not drawn for anyone; CW2-08
+  (`NOT_EVALUATED`); the player, preview and every distribution path; the hosted environment.
+- **Next:** the independent review of S7-02 and the Product Owner's merge decision; S7-03 starts only
+  on the Product Owner's word.

@@ -20,6 +20,11 @@
  *   - W3-MEGA-U (P4-C1 U-A): the same row carries, at the reader's START edge, the Personal world's own entry it is
  *     handed (personalEntry) — the QANDEEL Understanding entry. This layer draws none of it and writes none of its
  *     words. Above the composer it also shows the bounded context it is handed (discussion), and nothing else.
+ *   - S7-02 (G1.1-R3 §B7): the upper chrome's END edge carries the one action it is handed (chromeEnd), after the
+ *     depth control; an overlay layer carries what that action anchors (overlay), with no scrim; and a SELECTION MODE
+ *     the composition hands it (selection) turns the conversation's own messages into whole units that are in or out,
+ *     with the mode's bar where the composer stands. This layer draws none of their words, holds none of their state
+ *     and never changes the conversation's: the composer's words, a submission and the history are untouched.
  *
  * The surface lays itself out in an explicit left-to-right frame and places every element on a
  * PHYSICAL side computed from the reader's language. That is what makes the frozen side rule
@@ -27,11 +32,12 @@
  *
  * Every word comes from `copy.ts`, exactly as approved. A state with no approved word says nothing.
  */
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   FlatList,
   KeyboardAvoidingView,
+  Pressable,
   Text,
   TextInput,
   View,
@@ -60,6 +66,29 @@ export interface SurfaceInsets {
   readonly right: number;
   readonly bottom: number;
   readonly left: number;
+}
+
+/** S7-02: how one message stands in a selection mode. NONE: not a selectable message (not a whole saved one yet). */
+export interface ConversationSelectionMark {
+  readonly mark: 'IN' | 'OUT' | 'NONE';
+  /** The range's joining line continues to the message above / below. */
+  readonly joinAbove: boolean;
+  readonly joinBelow: boolean;
+}
+
+/**
+ * S7-02: a selection mode over this conversation's own messages, owned and worded by the composition. Messages are
+ * named by their own turn ids, never by their place in the list.
+ */
+export interface ConversationSelection {
+  /** What the upper chrome says while the mode is on. */
+  readonly title: string;
+  /** Whether a message can be pressed to change the selection (a whole-conversation selection is shown, not chosen). */
+  readonly interactive: boolean;
+  markOf(messageId: string): ConversationSelectionMark | null;
+  onToggle(messageId: string): void;
+  /** The mode's bar, drawn where the composer stands. */
+  readonly bar: ReactElement;
 }
 
 export interface ConversationSurfaceProps {
@@ -100,10 +129,21 @@ export interface ConversationSurfaceProps {
    * edge opposite the depth control. Presentation only; this layer writes none of its words.
    */
   readonly chromeStart?: ReactElement | null;
+  /**
+   * S7-02 (G1.1-R3 §B7): the one action the composition hands the upper chrome's END edge, after the depth control.
+   * Presentation only; this layer writes none of its words.
+   */
+  readonly chromeEnd?: ReactElement | null;
+  /** S7-02: what the END-edge action anchors (an ASIDE), drawn over the surface with no scrim. Presentation only. */
+  readonly overlay?: ReactElement | null;
+  /** S7-02: the selection mode, while it is on. */
+  readonly selection?: ConversationSelection | null;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
 const HEADER_MIN_HEIGHT = 48;
+/** S7-02: the upper chrome's height above its safe-area inset, so what its END-edge action anchors stands under it. */
+export const CONVERSATION_HEADER_MIN_HEIGHT = HEADER_MIN_HEIGHT;
 /** P4-C1 S-B proof geometry: the Personal row beneath the upper chrome, one 44 pt target high. */
 const PERSONAL_ROW_HEIGHT = 44;
 const THREAD_GUTTER = 24;
@@ -114,6 +154,11 @@ const COMPOSER_MAX_LINES = 5;
 const FOLLOW_THRESHOLD = 96;
 /** How close to the oldest held turn scrolling must come before an older page is asked for. */
 const OLDER_THRESHOLD = 240;
+
+/** S7-02 (G1.1-R3 §B7): the selection mark — a ring, filled when the message is in — in the END gutter. */
+const SELECTION_MARK = 14;
+const SELECTION_MARK_INSET = 5;
+const SELECTION_MARK_TOP = 12;
 
 const textAlignFor = (side: PhysicalSide) => side;
 const alignSelfFor = (side: PhysicalSide) => (side === 'right' ? 'flex-end' : 'flex-start');
@@ -174,16 +219,74 @@ function StatusLine({ text, tone, side, palette, testID, language }: {
   );
 }
 
-function ExchangeRow({ exchange, copy, palette, language, contentWidth }: {
+/**
+ * S7-02: one message inside a selection mode. The message keeps its own look; it becomes a checkbox of the mode (or,
+ * when it is not selectable, stays what it is), with its mark in the END gutter: a shape, never colour alone. The gap
+ * above the message is inside it, so the range's joining line runs unbroken from one message to the next.
+ */
+function Selectable({ id, label, gap, selection, palette, language, children }: {
+  readonly id: string;
+  readonly label: string;
+  readonly gap: number;
+  readonly selection: ConversationSelection;
+  readonly palette: ConversationPalette;
+  readonly language: ChromeLanguage;
+  readonly children: ReactNode;
+}) {
+  const state = selection.markOf(id);
+  const end = oppositeSide(readerSide(language));
+  const inset = -THREAD_GUTTER + SELECTION_MARK_INSET;
+  const lineInset = inset + (SELECTION_MARK - palette.markerThickness) / 2;
+  const at = (offset: number) => (end === 'left' ? { left: offset } : { right: offset });
+  const dotTop = gap + SELECTION_MARK_TOP;
+  const selectable = state !== null && state.mark !== 'NONE';
+  return (
+    <Pressable
+      testID={`qandeel-selectable-${id}`}
+      accessible
+      accessibilityRole={selectable ? 'checkbox' : undefined}
+      accessibilityState={selectable ? { checked: state.mark === 'IN', disabled: !selection.interactive } : undefined}
+      accessibilityLabel={label}
+      accessibilityLanguage={language}
+      disabled={!selectable || !selection.interactive}
+      onPress={() => selection.onToggle(id)}
+      style={{ paddingTop: gap }}
+    >
+      {selectable && state.joinAbove ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, height: dotTop, width: palette.markerThickness, backgroundColor: palette.selectedMarker, ...at(lineInset) }} />
+      ) : null}
+      {selectable && state.joinBelow ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: dotTop + SELECTION_MARK, bottom: 0, width: palette.markerThickness, backgroundColor: palette.selectedMarker, ...at(lineInset) }} />
+      ) : null}
+      {selectable ? (
+        <View
+          testID={`qandeel-selection-mark-${id}`}
+          pointerEvents="none"
+          style={{
+            position: 'absolute', top: dotTop, width: SELECTION_MARK, height: SELECTION_MARK, borderRadius: SELECTION_MARK / 2, ...at(inset),
+            ...(state.mark === 'IN' ? { backgroundColor: palette.selectedMarker } : { borderWidth: 1.5, borderColor: palette.tertiary }),
+          }}
+        />
+      ) : null}
+      {children}
+    </Pressable>
+  );
+}
+
+function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection }: {
   readonly exchange: ConversationExchangeView;
   readonly copy: ConversationCopy;
   readonly palette: ConversationPalette;
   readonly language: ChromeLanguage;
   readonly contentWidth: number;
+  readonly selection: ConversationSelection | null;
 }) {
   const mine = readerSide(language);
   const theirs = oppositeSide(mine);
   const fallback = readerDirection(language);
+  if (selection !== null) {
+    return <SelectingExchangeRow exchange={exchange} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={selection} />;
+  }
   return (
     <View>
       {/* UTTERANCE — the reader's committed words, on the reader's own edge. */}
@@ -226,6 +329,54 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth }: {
   );
 }
 
+function SelectingExchangeRow({ exchange, copy, palette, language, contentWidth, selection }: {
+  readonly exchange: ConversationExchangeView;
+  readonly copy: ConversationCopy;
+  readonly palette: ConversationPalette;
+  readonly language: ChromeLanguage;
+  readonly contentWidth: number;
+  readonly selection: ConversationSelection;
+}) {
+  const mine = readerSide(language);
+  const theirs = oppositeSide(mine);
+  const fallback = readerDirection(language);
+  return (
+    <View>
+      <Selectable id={exchange.userTurn.id} label={copy.userTurnName(exchange.userTurn.content)} gap={28} selection={selection} palette={palette} language={language}>
+        <View
+          testID={`qandeel-utterance-${exchange.userTurn.id}`}
+          style={{
+            alignSelf: alignSelfFor(mine),
+            maxWidth: Math.max(0, contentWidth - SLAB_END_INSET),
+            backgroundColor: palette.utterance,
+            paddingTop: 11,
+            paddingBottom: 12,
+            ...(mine === 'right'
+              ? { marginRight: -THREAD_GUTTER, paddingRight: THREAD_GUTTER, paddingLeft: 18, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }
+              : { marginLeft: -THREAD_GUTTER, paddingLeft: THREAD_GUTTER, paddingRight: 18, borderTopRightRadius: 18, borderBottomRightRadius: 18 }),
+          }}
+        >
+          <Paragraphs text={exchange.userTurn.content} fallback={fallback} palette={palette} role="body" />
+        </View>
+      </Selectable>
+      {exchange.reply !== null ? (
+        <Selectable id={exchange.reply.id} label={copy.replyTurnName(exchange.reply.content)} gap={16} selection={selection} palette={palette} language={language}>
+          <View
+            testID={`qandeel-reply-${exchange.reply.id}`}
+            style={{ alignSelf: alignSelfFor(theirs), maxWidth: Math.max(0, contentWidth - REPLY_END_INSET) }}
+          >
+            <Paragraphs text={exchange.reply.content} fallback={fallback} palette={palette} role="body" />
+          </View>
+        </Selectable>
+      ) : exchange.replyState === 'FAILED' ? (
+        <StatusLine text={copy.replyFailed} tone="failure" side={theirs} palette={palette} language={language} testID={`qandeel-reply-failed-${exchange.userTurn.id}`} />
+      ) : (
+        <StatusLine text={copy.waitingForReply} tone="waiting" side={theirs} palette={palette} language={language} testID={`qandeel-reply-pending-${exchange.userTurn.id}`} />
+      )}
+    </View>
+  );
+}
+
 export function ConversationSurface({
   controller,
   language,
@@ -239,6 +390,9 @@ export function ConversationSurface({
   personalSecondEntry = null,
   discussion = null,
   chromeStart = null,
+  chromeEnd = null,
+  overlay = null,
+  selection = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -373,6 +527,24 @@ export function ConversationSurface({
       style={{ flex: 1, backgroundColor: palette.world, direction: 'ltr' }}
     >
       {/* The upper chrome: its one own control, Conversation → Analysis, at the reader's END edge; the handed entry at START. */}
+      {selection !== null ? (
+        // S7-02: while a selection mode is on, the upper chrome names the mode and offers nothing else (G1.1-R3 §B7).
+        <View
+          testID="qandeel-selection-title"
+          style={{
+            paddingTop: insets.top,
+            paddingLeft: insets.left + 24,
+            paddingRight: insets.right + 24,
+            minHeight: insets.top + HEADER_MIN_HEIGHT,
+            justifyContent: 'center',
+            alignItems: mine === 'right' ? 'flex-end' : 'flex-start',
+          }}
+        >
+          <Text accessibilityRole="header" accessibilityLanguage={language} style={{ ...typeStyle('action'), color: palette.primary, textAlign: textAlignFor(mine), writingDirection: fallback }}>
+            {selection.title}
+          </Text>
+        </View>
+      ) : (
       <View
         style={{
           paddingTop: insets.top,
@@ -386,6 +558,7 @@ export function ConversationSurface({
         }}
       >
         {chromeStart === null ? null : <View testID="qandeel-chrome-start">{chromeStart}</View>}
+        <View style={{ flexDirection: endSide === 'right' ? 'row' : 'row-reverse', alignItems: 'center' }}>
         <Control
           palette={palette}
           language={language}
@@ -404,7 +577,11 @@ export function ConversationSurface({
             </Text>
           </View>
         </Control>
+        {/* S7-02: the handed END-edge action stands outermost, after the depth control (G1.1-R3 §B7). */}
+        {chromeEnd === null ? null : <View testID="qandeel-chrome-end" style={endSide === 'right' ? { marginLeft: 4 } : { marginRight: 4 }}>{chromeEnd}</View>}
+        </View>
       </View>
+      )}
 
       {/*
         W3-01 — Personal QANDEEL's own row (P4-C1 S-B), directly beneath the upper chrome and on the World:
@@ -414,7 +591,11 @@ export function ConversationSurface({
       {onOpenSettings === undefined ? null : (
         <View
           testID="qandeel-personal-row"
+          pointerEvents={selection === null ? 'auto' : 'none'}
+          importantForAccessibility={selection === null ? 'auto' : 'no-hide-descendants'}
+          accessibilityElementsHidden={selection !== null}
           style={{
+            opacity: selection === null ? 1 : 0,
             paddingLeft: insets.left + 10,
             paddingRight: insets.right + 10,
             // S6-01: with a second entry the row may grow, so no entry is ever cut short (320 points, large text).
@@ -453,7 +634,8 @@ export function ConversationSurface({
         testID="qandeel-conversation-thread"
         data={state.exchanges}
         keyExtractor={(exchange) => exchange.userTurn.id}
-        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} />}
+        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={selection} />}
+        extraData={selection}
         ListHeaderComponent={state.exchanges.length > 0 ? historyFailure : null}
         // An empty list is either a history that could not be read, or — once READ — a genuinely empty
         // Conversation, which is where the W1B-01 opening belongs.
@@ -475,9 +657,11 @@ export function ConversationSurface({
         }}
       />
 
-      {discussion}
+      {selection !== null ? <View testID="qandeel-selection-bar">{selection.bar}</View> : null}
 
-      {submission !== null && submission.phase === 'UNCONFIRMED' ? (
+      {selection !== null ? null : discussion}
+
+      {selection === null && submission !== null && submission.phase === 'UNCONFIRMED' ? (
         <View
           testID="qandeel-conversation-unconfirmed"
           style={{
@@ -501,7 +685,7 @@ export function ConversationSurface({
       ) : null}
 
       {/* A definitive refusal: the words are back in the composer, editable. No retry is offered. */}
-      {submission === null && state.refused ? (
+      {selection === null && submission === null && state.refused ? (
         <View
           testID="qandeel-conversation-refused"
           style={{
@@ -522,6 +706,7 @@ export function ConversationSurface({
       ) : null}
 
       {/* FIELD — the composer. One lower line; Send at the END edge, present only with words to send. */}
+      {selection !== null ? null : (
       <View
         testID="qandeel-conversation-composer"
         style={{
@@ -569,6 +754,14 @@ export function ConversationSurface({
           </Control>
         ) : null}
       </View>
+      )}
+
+      {/* S7-02: what the END-edge action anchors, over the surface; it takes no touch it does not draw (no scrim). */}
+      {overlay === null ? null : (
+        <View testID="qandeel-conversation-overlay" pointerEvents="box-none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}>
+          {overlay}
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

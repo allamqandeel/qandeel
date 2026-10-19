@@ -229,6 +229,26 @@ export const CANONICAL_VISUAL = {
         }
       ],
       "dots": []
+    },
+    "replay": {
+      "size": 22,
+      "mirrorsInRtl": false,
+      "strokes": [
+        {
+          "d": "M5.216 7.761A8 8 0 1 1 4.81 15.507",
+          "strokeWidth": 1.66
+        },
+        {
+          "d": "M5.016 4.361L5.216 7.761L8.516 8.261",
+          "strokeWidth": 1.66
+        }
+      ],
+      "dots": [],
+      "fills": [
+        {
+          "d": "M10.6 9.6v4.8c0 .5.5.8.9.5l3.6-2.4c.4-.2.4-.8 0-1l-3.6-2.4c-.4-.3-.9 0-.9.5z"
+        }
+      ]
     }
   },
   "type": {
