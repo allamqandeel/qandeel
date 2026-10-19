@@ -66,7 +66,11 @@ export function ReplayMomentComposite({ controller, ordinal, language, insets, i
             <Band bottomInset={composition.bottomInset}>
               {state.status === 'LOADING' ? <Busy /> : state.status === 'FAILED'
                 ? <Refusal language={language} text={replayEntryCopy(language).failed} onRetry={() => controller.retry()} testID="qandeel-replay-failed" />
-                : <Refusal language={language} text={replayEntryCopy(language).notAvailable} testID="qandeel-replay-not-available" />}
+                : state.status === 'REVOKED'
+                  // Withdrawn while viewing: nothing from the earlier reads — no text, no Map, no reason, no layer — until a
+                  // fresh, consistent pair of reads.
+                  ? <Refusal language={language} text={replayEntryCopy(language).notAvailable} onRetry={() => controller.retry()} testID="qandeel-replay-revoked" />
+                  : <Refusal language={language} text={replayEntryCopy(language).notAvailable} testID="qandeel-replay-not-available" />}
             </Band>
           )}
         />

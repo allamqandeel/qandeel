@@ -252,6 +252,34 @@ Ran on this branch (Windows 11, Node 24):
 - **Before any user opening:** the S7-03 Copy Gate; F-2; a real-device and TalkBack proof; the capability gate stays an
   operator act behind the Product Owner's approval.
 
+## 11A. Independent review correction R1 (2026-10-19)
+
+The independent review of PR #349 at `ed1bd9eb` accepted the visual proof within S7-03's scope (no rebuild, no new
+screenshots) and asked for one focused engineering correction before any merge. Its decisions: G-1 accepted for this
+proof; G-2 accepted provisionally, on condition the Replay viewpoint never reaches the live store and gains no mutating
+authority (the T-13 re-anchor keeps pinning both); F-1 accepted as a labelled illustration; F-2 stays a binding privacy
+item for S7-04, with no API change now.
+
+- **Cross-read consistency** (`composite-controller.ts`). The version and its moments are used together only when they
+  agree: a VIEWABLE version needs every moment's original text, a NOT_VIEWABLE one none. A mixed or contradictory answer is
+  FAILED whole: no text, reason, layer or analysis is shown, and no analysis is read.
+- **Revocation while viewing** (`composite-controller.ts`, `ReplayMomentComposite.tsx`). A moment analysis that answers
+  NOT_VIEWABLE withdraws the viewing permission: the controller forgets the version, its texts and every analysis at once
+  (state `REVOKED`), so the text and the Map leave the screen. Every read carries the epoch it started in; an answer
+  from an earlier epoch is dropped when it lands, so a late answer brings nothing back. The withdrawn screen says only the
+  APPROVED S7-02 «هذا غير متاح الآن.» with the APPROVED «إعادة المحاولة»; no reason or layer is shown from the earlier
+  version read. A retry reads the version and its moments again, and the composite shows them only when the fresh pair is
+  consistent. No analysis is read for a moment whose text is not here.
+- **Tests** (`replay-composite.test.tsx`, 7 new): the three consistency cases; withdrawal of the text and Map on screen;
+  an answer that started before the revocation and lands after it (out of order); a retry that shows only the fresh
+  pair's reason and layers, with nothing during the reads and no analysis read; a fresh pair that is itself inconsistent.
+- **Effect on the visual proof:** none on what the 16 frames show. Every frame came from a consistent real-path pair, and
+  none of them involves a revocation. The withdrawn state reuses approved rows, so no new copy enters the Copy Gate (still
+  OPEN, 14 PROPOSED).
+- **CI at `ed1bd9eb`:** `verify-api` failed in `database/verify-migration-0052.mjs` (HIM measurement semantics, outside
+  S7-03). Its own fixture check compares two back-to-back `created_at` values at millisecond precision, and both events
+  landed in the same millisecond: a timing flake in a pre-existing verifier. S7-03 does not change it.
+
 ## 12. Deliberately not implemented
 
 The player, its navigation and controls; the Analysis-screen entry; preview / finalize / reopen in the Product UI; opening

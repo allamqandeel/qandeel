@@ -7,6 +7,7 @@
  * viewable; Arabic, RTL, accessibility and Reduced Motion; no identity or Session context; a Replay engine independent
  * of the graphics; and (statically, in the root contract) the frozen authority and privacy files unchanged.
  */
+import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
@@ -16,7 +17,7 @@ import { MAP_ACCESSIBILITY_TEST_ID, MAP_SURFACE_TEST_ID, MapSurface } from '../.
 import { MapSurface as MapSurfaceActual } from '../../map/renderer/MapSurface';
 import { RESPONSIVE_SURFACE_TEST_ID } from '../../responsive';
 import { resize } from '../../responsive/__fixtures__/composition';
-import type { ReplayHistoryMoment, ReplayHistoryVersion, ReplayMomentAnalysis } from '../../runtime-entry';
+import type { ReplayAnalysisResult, ReplayHistoryMoment, ReplayHistoryVersion, ReplayMomentAnalysis } from '../../runtime-entry';
 import { createReplayCompositeController, type ReplayHistoryReader } from '../composite-controller';
 import { REPLAY_COMPOSITE_COPY_GATE, REPLAY_COMPOSITE_COPY_ROWS, replayCompositeCopy } from '../copy';
 import { REPLAY_RENDER_CONTRACT_V1, discloseReplayMoment, replayViewpointKey } from '../projection-adapter';
@@ -357,5 +358,192 @@ describe('S7-03 — the Product Copy Gate', () => {
     expect(REPLAY_COMPOSITE_COPY_GATE.proposed).toHaveLength(Object.keys(REPLAY_COMPOSITE_COPY_ROWS).length + 2);
     expect(replayCompositeCopy('ar').gap('رسالتان')).toBe('لم تُعرض هنا رسالتان من المحادثة.');
     expect(replayCompositeCopy('en').gap('1 message')).toBe('1 message of the conversation is not shown here.');
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// S7-03 independent review — cross-read consistency and revocation while viewing.
+// ---------------------------------------------------------------------------------------------------------------------
+
+const cloneScene = (base: ReplayWireScene, edit: (scene: { version: Record<string, any>; moments: { moments: Record<string, any>[] } }) => void): ReplayWireScene => {
+  const copy = JSON.parse(JSON.stringify(base));
+  edit(copy);
+  return copy as ReplayWireScene;
+};
+/** The main version as it would read once its source is no longer dereferenceable: NOT_VIEWABLE, and no text. */
+const mainRevoked = () => cloneScene(replayScene('main'), (scene) => {
+  scene.version.viewing = { state: 'NOT_VIEWABLE', notViewableClass: 'SOURCE_NOT_CURRENTLY_AVAILABLE', sourceLayer: 'NOT_DEREFERENCEABLE', analyticalLayer: 'SEALED_HISTORICAL_EVIDENCE' };
+  for (const moment of scene.moments.moments) moment.text = null;
+});
+const NOTHING_HISTORICAL = ['qandeel-replay-text', 'qandeel-replay-source', 'qandeel-replay-not-viewable-reason', 'qandeel-replay-source-layer', 'qandeel-replay-analytical-layer', MAP_SURFACE_TEST_ID];
+const expectNothingHistorical = (view: RenderResult) => {
+  for (const id of NOTHING_HISTORICAL) expect(view.queryByTestId(id)).toBeNull();
+};
+
+/** A reader whose moment analyses answer only when the test says so, in the order the test chooses. */
+function heldReader(scene: ReplayWireScene) {
+  const real = replayWireClient(scene);
+  const held: { ordinal: number; depth: HistoricalSemanticDepth; answer: (kind: 'REAL' | 'NOT_VIEWABLE') => Promise<void> }[] = [];
+  let fresh: { scene: ReplayWireScene; gate: Promise<void>; release: () => void } | null = null;
+  const reader: ReplayHistoryReader = {
+    version: async (replayId, versionId) => {
+      if (fresh === null) return real.version(replayId, versionId);
+      await fresh.gate;
+      return replayWireClient(fresh.scene).version(replayId, versionId);
+    },
+    moments: async (replayId, versionId) => {
+      if (fresh === null) return real.moments(replayId, versionId);
+      await fresh.gate;
+      return replayWireClient(fresh.scene).moments(replayId, versionId);
+    },
+    momentAnalysis: (replayId, versionId, ordinal, depth) => new Promise<ReplayAnalysisResult>((resolve) => {
+      held.push({
+        ordinal,
+        depth,
+        answer: async (kind) => {
+          await act(async () => {
+            resolve(kind === 'REAL'
+              ? await real.momentAnalysis(replayId, versionId, ordinal, depth)
+              : { kind: 'ANSWERED', analysis: { outcome: 'NOT_VIEWABLE', ordinal, tc: ordinal } });
+          });
+          await flush();
+        },
+      });
+    }),
+  };
+  /** From now on the version and its moments read as `next`, and only once `release()` is called. */
+  const serveNext = (next: ReplayWireScene) => {
+    let release = () => undefined as void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    fresh = { scene: next, gate, release: () => release() };
+    return async () => { await act(async () => { fresh?.release(); }); await flush(); };
+  };
+  const find = (ordinal: number, depth: HistoricalSemanticDepth) => {
+    const entry = held.find((candidate) => candidate.ordinal === ordinal && candidate.depth === depth);
+    if (entry === undefined) throw new Error(`no analysis read for ${ordinal} ${depth}`);
+    return entry;
+  };
+  return { reader, held, find, serveNext };
+}
+
+async function mountHeld(scene: ReplayWireScene, ordinal: number) {
+  const held = heldReader(scene);
+  const controller = createReplayCompositeController(held.reader, scene.replayId, scene.versionId);
+  const element = (n: number) => (
+    <AppearanceProvider authority={appearance()}><ReplayMomentComposite controller={controller} ordinal={n} language="ar" insets={INSETS} /></AppearanceProvider>
+  );
+  const view = await render(element(ordinal));
+  await flush();
+  await resize(view, SIZE.width, SIZE.height, { mapHeight: 520 });
+  await flush();
+  const show = async (n: number) => {
+    await view.rerender(element(n));
+    await flush();
+  };
+  const settle = async () => {
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: 520 });
+    await flush();
+  };
+  return { view, controller, show, settle, ...held };
+}
+
+describe('S7-03 review — the version and its moments are used only when they agree', () => {
+  it('a VIEWABLE version whose moments arrive without their original text fails whole: nothing shown, nothing analysed', async () => {
+    const scene = cloneScene(replayScene('main'), (wire) => { for (const moment of wire.moments.moments) moment.text = null; });
+    const { view, controller, reads } = await mount(scene, 1);
+    expect(controller.state().status).toBe('FAILED');
+    expect(view.getByTestId('qandeel-replay-failed')).toBeTruthy();
+    expectNothingHistorical(view);
+    expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
+  });
+
+  it('a NOT_VIEWABLE version whose moments arrive WITH text fails whole: no text, no reason, no layer', async () => {
+    const scene = cloneScene(replayScene('notViewable'), (wire) => { for (const moment of wire.moments.moments) moment.text = 'نص لا يجوز أن يظهر'; });
+    const { view, controller, reads } = await mount(scene, 1);
+    expect(controller.state().status).toBe('FAILED');
+    expect(view.getByTestId('qandeel-replay-failed')).toBeTruthy();
+    expectNothingHistorical(view);
+    expect(readerFacing(view.toJSON()).join(' ')).not.toContain('نص لا يجوز أن يظهر');
+    expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
+  });
+
+  it('a mixed answer (text for some moments only) fails whole', async () => {
+    const scene = cloneScene(replayScene('main'), (wire) => { wire.moments.moments[2].text = null; });
+    const { view, controller, reads } = await mount(scene, 1);
+    expect(controller.state().status).toBe('FAILED');
+    expectNothingHistorical(view);
+    expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
+  });
+});
+
+describe('S7-03 review — a NOT_VIEWABLE analysis while viewing withdraws everything at once', () => {
+  it('the text and the Map that are on screen are withdrawn, with no reason or layer from the earlier version read', async () => {
+    const { view, controller, show, settle, find } = await mountHeld(replayScene('main'), 2);
+    await find(2, 'WORLD').answer('REAL');
+    await settle();
+    expect(text(view, 'qandeel-replay-text')).toBe(MAIN.moments[1].text);
+    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+
+    await show(3);
+    await find(3, 'WORLD').answer('NOT_VIEWABLE');
+    expect(controller.state().status).toBe('REVOKED');
+    expect(view.getByTestId('qandeel-replay-revoked')).toBeTruthy();
+    expectNothingHistorical(view);
+    expect(controller.analysis(2, 'WORLD')).toBeNull();
+  });
+
+  it('an answer that started before the revocation and lands after it brings nothing back (answers out of order)', async () => {
+    const { view, controller, show, find, held } = await mountHeld(replayScene('main'), 2);
+    await show(3);
+    // Both reads are in flight; the later one answers first.
+    await find(3, 'WORLD').answer('NOT_VIEWABLE');
+    expect(controller.state().status).toBe('REVOKED');
+    await find(2, 'WORLD').answer('REAL');
+    expect(controller.state().status).toBe('REVOKED');
+    expect(controller.analysis(2, 'WORLD')).toBeNull();
+    expectNothingHistorical(view);
+    // Nothing is read on the withdrawn permission.
+    const before = held.length;
+    controller.ensureAnalysis(2, 'WORLD');
+    controller.ensureAnalysis(4, 'THREAD');
+    expect(held.length).toBe(before);
+  });
+
+  it('a retry shows only what a FRESH, consistent pair of reads says — nothing while they are in flight', async () => {
+    const { view, controller, show, find, held, serveNext } = await mountHeld(replayScene('main'), 2);
+    await show(3);
+    await find(3, 'WORLD').answer('NOT_VIEWABLE');
+    const release = serveNext(mainRevoked());
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-replay-revoked-retry')); });
+    await flush();
+    expect(controller.state().status).toBe('LOADING');
+    expectNothingHistorical(view);
+    // The late answer from the first epoch still changes nothing.
+    await find(2, 'WORLD').answer('REAL');
+    expect(controller.state().status).toBe('LOADING');
+    expectNothingHistorical(view);
+
+    const before = held.length;
+    await release();
+    expect(controller.state().status).toBe('READY');
+    expect(text(view, 'qandeel-replay-not-viewable-reason')).toBe('الرسائل الأصلية غير متاحة الآن.');
+    expect(text(view, 'qandeel-replay-source-layer')).toBe('الرسائل الأصلية: غير متاحة الآن.');
+    expect(view.queryByTestId('qandeel-replay-text')).toBeNull();
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    // No analysis is read for moments whose text is not here.
+    expect(held.length).toBe(before);
+  });
+
+  it('a retry whose fresh pair is itself inconsistent fails whole, and shows nothing', async () => {
+    const { view, controller, show, find, serveNext } = await mountHeld(replayScene('main'), 2);
+    await show(3);
+    await find(3, 'WORLD').answer('NOT_VIEWABLE');
+    const inconsistent = cloneScene(mainRevoked(), (wire) => { for (const moment of wire.moments.moments) moment.text = 'نص قديم'; });
+    const release = serveNext(inconsistent);
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-replay-revoked-retry')); });
+    await release();
+    expect(controller.state().status).toBe('FAILED');
+    expectNothingHistorical(view);
+    expect(readerFacing(view.toJSON()).join(' ')).not.toContain('نص قديم');
   });
 });

@@ -12,6 +12,15 @@
  *   NOT_CURRENTLY_AVAILABLE  this moment's sealed analysis is not available now (ANALYSIS_NOT_CURRENTLY_AVAILABLE);
  *   NOT_FOUND                not this reader's, or no longer there;
  *   FAILED                   nothing usable arrived — a technical failure, retryable, and NEVER an empty history.
+ *
+ * Cross-read consistency: the version and its moments are two reads, so they are used together only when they agree. A
+ * VIEWABLE version must arrive with every moment's original text; a NOT_VIEWABLE one with none. Anything else is FAILED
+ * whole: no text, no reason, no layer and no analysis is shown from a mixed answer.
+ *
+ * Revocation while viewing: a moment analysis that answers NOT_VIEWABLE withdraws the viewing permission the version
+ * gave. The controller then forgets the version, its texts and every analysis at once (REVOKED), and every answer still in
+ * flight is from an earlier epoch and is dropped when it lands. Nothing is shown again — not the text, not the Map, and not
+ * a reason or a layer from the earlier version read — until a fresh pair of reads (the reader's retry) proves consistent.
  */
 import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 
@@ -38,13 +47,14 @@ export type ReplayCompositeState =
   | { readonly status: 'NOT_FOUND' }
   /** The version's render contract, or a moment's medium, is one this composite cannot honour: nothing is rendered. */
   | { readonly status: 'NOT_RENDERABLE' }
+  /** A moment analysis answered NOT_VIEWABLE while the version was being viewed: everything read is forgotten. */
+  | { readonly status: 'REVOKED' }
   | { readonly status: 'READY'; readonly version: ReplayHistoryVersion; readonly moments: readonly ReplayHistoryMoment[] };
 
 export type ReplayAnalysisState =
   | { readonly status: 'LOADING' }
   | { readonly status: 'FAILED' }
   | { readonly status: 'NOT_FOUND' }
-  | { readonly status: 'NOT_VIEWABLE' }
   | { readonly status: 'NOT_CURRENTLY_AVAILABLE' }
   | { readonly status: 'AVAILABLE'; readonly analysis: Extract<ReplayMomentAnalysis, { outcome: 'AVAILABLE' }> };
 
@@ -58,17 +68,25 @@ export interface ReplayCompositeController {
   readonly open: () => void;
   /** Reads one moment's analysis at one depth once; a held answer is never read again. */
   readonly ensureAnalysis: (ordinal: number, depth: HistoricalSemanticDepth) => void;
-  /** Forgets every FAILED answer and reads it again. Nothing else is re-read. */
+  /** Forgets every FAILED answer and reads it again; after a FAILED or REVOKED version, reads the version and its moments again. */
   readonly retry: () => void;
 }
 
 const LOADING = Object.freeze({ status: 'LOADING' as const });
 const keyOf = (ordinal: number, depth: HistoricalSemanticDepth) => `${ordinal} ${depth}`;
 
+/** The two reads describe one viewable-or-not version: the moment count and range, and text exactly when viewable. */
+function consistent(version: ReplayHistoryVersion, moments: readonly ReplayHistoryMoment[]): boolean {
+  if (moments.length !== version.momentCount || moments.some((moment) => moment.tc < version.firstTc || moment.tc > version.lastTc)) return false;
+  return version.viewing.state === 'VIEWABLE' ? moments.every((moment) => moment.text !== null) : moments.every((moment) => moment.text === null);
+}
+
 export function createReplayCompositeController(reader: ReplayHistoryReader, replayId: string, versionId: string): ReplayCompositeController {
   let state: ReplayCompositeState = LOADING;
   let opened = false;
   let revision = 0;
+  // Every read belongs to the epoch it started in; an answer from an earlier epoch is dropped when it lands.
+  let epoch = 0;
   const analyses = new Map<string, ReplayAnalysisState>();
   const listeners = new Set<() => void>();
   const changed = () => {
@@ -77,6 +95,7 @@ export function createReplayCompositeController(reader: ReplayHistoryReader, rep
   };
 
   const read = async () => {
+    const started = epoch;
     let version: ReplayVersionResult;
     let moments: ReplayMomentsResult;
     try {
@@ -85,28 +104,48 @@ export function createReplayCompositeController(reader: ReplayHistoryReader, rep
       version = { kind: 'UNAVAILABLE' };
       moments = { kind: 'UNAVAILABLE' };
     }
+    if (started !== epoch) return;
     if (version.kind === 'NOT_FOUND' || moments.kind === 'NOT_FOUND') state = { status: 'NOT_FOUND' };
     else if (version.kind !== 'FOUND' || moments.kind !== 'FOUND') state = { status: 'FAILED' };
-    else if (moments.moments.length !== version.version.momentCount || moments.moments.some((moment) => moment.tc < version.version.firstTc || moment.tc > version.version.lastTc)) {
-      // The two reads do not describe one version: neither is used.
+    else if (!consistent(version.version, moments.moments)) {
+      // The two reads do not describe one version, or disagree about whether it may be viewed: neither is used.
       state = { status: 'FAILED' };
     } else if (!honoursRenderContract(version.version) || !moments.moments.every(isRenderableMedium)) state = { status: 'NOT_RENDERABLE' };
     else state = { status: 'READY', version: version.version, moments: moments.moments };
     changed();
   };
 
+  /** Withdraws everything read under the earlier viewing permission. */
+  const revoke = () => {
+    epoch += 1;
+    analyses.clear();
+    state = { status: 'REVOKED' };
+    changed();
+  };
+  const reread = () => {
+    epoch += 1;
+    analyses.clear();
+    state = LOADING;
+    changed();
+    void read();
+  };
+
   const readAnalysis = async (ordinal: number, depth: HistoricalSemanticDepth) => {
+    const started = epoch;
     let answer: ReplayAnalysisResult;
     try {
       answer = await reader.momentAnalysis(replayId, versionId, ordinal, depth);
     } catch {
       answer = { kind: 'UNAVAILABLE' };
     }
+    if (started !== epoch) return;
     let next: ReplayAnalysisState;
     if (answer.kind === 'NOT_FOUND') next = { status: 'NOT_FOUND' };
     else if (answer.kind !== 'ANSWERED') next = { status: 'FAILED' };
-    else if (answer.analysis.outcome === 'NOT_VIEWABLE') next = { status: 'NOT_VIEWABLE' };
-    else if (answer.analysis.outcome === 'ANALYSIS_NOT_CURRENTLY_AVAILABLE') next = { status: 'NOT_CURRENTLY_AVAILABLE' };
+    else if (answer.analysis.outcome === 'NOT_VIEWABLE') {
+      revoke();
+      return;
+    } else if (answer.analysis.outcome === 'ANALYSIS_NOT_CURRENTLY_AVAILABLE') next = { status: 'NOT_CURRENTLY_AVAILABLE' };
     else next = { status: 'AVAILABLE', analysis: answer.analysis };
     analyses.set(keyOf(ordinal, depth), next);
     changed();
@@ -129,7 +168,8 @@ export function createReplayCompositeController(reader: ReplayHistoryReader, rep
     },
     ensureAnalysis(ordinal: number, depth: HistoricalSemanticDepth) {
       if (state.status !== 'READY' || state.version.viewing.state !== 'VIEWABLE') return;
-      if (!state.moments.some((moment) => moment.ordinal === ordinal)) return;
+      // No analysis is read for a moment whose original text is not here.
+      if (!state.moments.some((moment) => moment.ordinal === ordinal && moment.text !== null)) return;
       const key = keyOf(ordinal, depth);
       if (analyses.has(key)) return;
       analyses.set(key, LOADING);
@@ -137,10 +177,8 @@ export function createReplayCompositeController(reader: ReplayHistoryReader, rep
       void readAnalysis(ordinal, depth);
     },
     retry() {
-      if (state.status === 'FAILED') {
-        state = LOADING;
-        changed();
-        void read();
+      if (state.status === 'FAILED' || state.status === 'REVOKED') {
+        reread();
         return;
       }
       for (const [key, value] of analyses) {
