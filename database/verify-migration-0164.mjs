@@ -367,14 +367,19 @@ async function verifyPosture(report) {
     assert.doesNotMatch(census, /\bEXECUTE\b/u, 'A05 static SQL only: no dynamic statement');
   });
 
-  await report.section('A06 the release gate: every residue class is uncovered today, owned, and readable by the server', async () => {
+  // RE-ANCHORED by S7-01 (migration 0169): Stage 7 covers REPLAY with its Personal Replay module (QAN-BL-ACCT-02) and
+  // adds the one uncovered class REPLAY_OUTSIDE_PERSONAL (QAN-BL-ACCT-03). ACCT-DEL-01 itself still claims nothing
+  // beyond Matching / Introductions: Shared STANDARD, Public and UNREGISTERED stay uncovered and owned as it left them.
+  await report.section('A06 the release gate: every class beyond Matching / Introductions and Replay is uncovered, owned, and readable', async () => {
     await asRole('service_role');
     const coverage = await rows(`SELECT * FROM ${COVERAGE.replace('()', '()')}`);
     await owner();
     assert.deepEqual(coverage.map((r) => [r.residue_class, r.covered]),
-      [['PUBLIC', false], ['REPLAY', false], ['SHARED_STANDARD', false], ['UNREGISTERED', false]], 'A06 nothing is claimed beyond Matching / Introductions');
+      [['PUBLIC', false], ['REPLAY', true], ['REPLAY_OUTSIDE_PERSONAL', false], ['SHARED_STANDARD', false], ['UNREGISTERED', false]],
+      'A06 nothing is claimed beyond Matching / Introductions and the Personal Replay module');
     assert.deepEqual(Object.fromEntries(coverage.map((r) => [r.residue_class, r.owner])), {
       PUBLIC: 'ACCT-DEL-02', REPLAY: 'Stage 7 - Replay', SHARED_STANDARD: 'ACCT-DEL-02',
+      REPLAY_OUTSIDE_PERSONAL: 'QAN-BL-ACCT-03 - not opened: non-Personal Replay sources and Replay distribution',
       UNREGISTERED: 'none - refused by the ACCT-DEL-01 coverage census in CI',
     }, 'A06 and every class has its owner');
   });

@@ -241,6 +241,21 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /public/field/experiences/:experienceId/discussion': 'AUTHENTICATED',
   'POST /public/field/experiences/:experienceId/discussion': 'SECURITY_SENSITIVE',
   'POST /public/field/experiences/:experienceId/discussion/:postId/qandeel': 'SECURITY_SENSITIVE',
+  // S7-01 — the Personal Replay (0169). Preparing a preview derives and seals the canonical historical projection once
+  // per selected moment, the heaviest database work a human can ask for here, so it takes the strict class; the draft,
+  // its revision, finalizing (a private version, never a distribution), reopening and every read are ordinary own acts
+  // the database bounds itself (one range of whole messages, 100 Replays per conversation). No new class.
+  'GET /replay/capability': 'AUTHENTICATED',
+  'GET /replay/conversations/:sessionId': 'AUTHENTICATED',
+  'POST /replay/drafts': 'AUTHENTICATED',
+  'POST /replay/:replayId/revisions': 'AUTHENTICATED',
+  'POST /replay/:replayId/preview': 'SECURITY_SENSITIVE',
+  'POST /replay/:replayId/finalize': 'AUTHENTICATED',
+  'POST /replay/:replayId/reopen': 'AUTHENTICATED',
+  'GET /replay/:replayId': 'AUTHENTICATED',
+  'GET /replay/:replayId/versions/:versionId': 'AUTHENTICATED',
+  'GET /replay/:replayId/versions/:versionId/moments': 'AUTHENTICATED',
+  'GET /replay/:replayId/versions/:versionId/moments/:ordinal/analysis': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

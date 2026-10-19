@@ -153,7 +153,8 @@ test('5 — the API: four routes, the caller token, SECURITY_SENSITIVE send (R-8
   // RE-ANCHORED by S6-06 (2026-10-16, CP1): its two modules are composed after this one.
   // RE-ANCHORED by S6-07 CP1 (2026-10-18): the governed enrollment module is composed after the S6-06 modules.
   // RE-ANCHORED by S6-07 CP2 (2026-10-18): the forward dispatcher's server pass is composed after it.
-  assert.match(account, /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u);
+  // RE-ANCHORED by S7-01 (2026-10-19): the Personal Replay module (migration 0169) is composed after it, on its own line.
+  assert.match(account, /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule,\n {4}ReplayModule\]/u);
   // The Stage 4 send keeps its Activity, and only it: the Introduction module calls no producer (R-7).
   assert.equal((read('apps/api/src/shared-world/shared-world.controller.ts').match(/this\.activity\.humanText\(/gu) ?? []).length, 1);
 });

@@ -140,6 +140,11 @@ const ABSORBED = [
   // forward core's 40001 no-longer-valid and stale refusals; it absorbs every one into the bounded SKIPPED_STALE answer,
   // naming PT409 too, and raises neither itself.
   'server_forward_approved_matching_proposals_v1',
+  // RE-ANCHORED by S7-01 (migration 0169): the five Personal Replay commands reach the frozen I-06A / I-06B
+  // primitives' 40001 refusals (stale draft, stale source, stale version, open Live Head, stale projection or render
+  // contract); each answers one bounded word from a handler that names PT409 too, and raises neither itself.
+  'create_my_replay_draft_v1', 'revise_my_replay_draft_v1', 'prepare_my_replay_preview_v1',
+  'finalize_my_replay_version_v1', 'reopen_my_replay_for_revision_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1'];

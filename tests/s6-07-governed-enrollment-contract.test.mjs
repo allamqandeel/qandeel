@@ -119,7 +119,7 @@ function censusViolations(w) {
     out.push('0149 f17 probes every one of the three cores');
   }
   // RE-ANCHORED by S6-07 CP2 (migration 0166): the forward dispatcher's absorber follows the boundary's.
-  if (!/ {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the boundary');
+  if (!/ {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n(?: {2}\/\/[^\n]*\n)*(?: {2}'[a-z_]+_my_replay_[a-z_]+_v1',(?: '[a-z_]+_my_replay_[a-z_]+_v1',)*\n)*\];/u.test(w.verify0150)) out.push('0150 ABSORBED names the boundary');
   if (!w.verify0156.includes("['enroll_my_matching_setup_v1(uuid,text,bigint,text,text,text)']")) out.push('0156 A02 admits exactly the boundary as the writer\'s one wrapper');
   return out;
 }
@@ -140,7 +140,7 @@ function apiViolations(w) {
   if (JSON.stringify(routes) !== JSON.stringify(['GET /introductions/enrollment', 'POST /introductions/enrollment', 'POST /introductions/enrollment/revocation'])) out.push(`exactly two routes and the CP3 withdrawal (got ${routes})`);
   if (!w.census.includes("'GET /introductions/enrollment': 'AUTHENTICATED',") || !w.census.includes("'POST /introductions/enrollment': 'SECURITY_SENSITIVE',")) out.push('the route census classes');
   // RE-ANCHORED by S6-07 CP2: the forward dispatcher's server pass is composed after the enrollment module.
-  if ((w.account.match(/\bIntroductionsEnrollmentModule\b/gu) ?? []).length < 2 || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u.test(w.account)) out.push('composed once through AccountModule');
+  if ((w.account.match(/\bIntroductionsEnrollmentModule\b/gu) ?? []).length < 2 || !/IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule,\n {4}ReplayModule\]/u.test(w.account) /* RE-ANCHORED by S7-01: ReplayModule after it */) out.push('composed once through AccountModule');
   if (!/exactKeys\(body, \['commandId', 'kind', 'expectedDraftVersion', 'consents'\]\)/u.test(w.service)) out.push('the exact request shape');
   return out;
 }

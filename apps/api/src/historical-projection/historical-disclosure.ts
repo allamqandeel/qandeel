@@ -21,6 +21,12 @@
 // or Product action is produced here.
 
 import type {
+  DisclosedAnalyticalObjectRung,
+  DisclosedEmergingFocus,
+  DisclosedQuestionAppearance,
+  DisclosedSourceProvenanceRung,
+  DisclosedThreadRung,
+  DisclosedWorldRung,
   HistoricalDisclosure,
   HistoricalFamily,
   HistoricalInspectionRequest,
@@ -28,6 +34,7 @@ import type {
   HistoricalRung,
   HistoricalSemanticDepth,
 } from '@qandeel/runtime';
+import type { HistoricalAnalyticalFamilies } from './historical-projection-mapper';
 import type { HistoricalKnowledge } from './historical-projection.types';
 
 export const HISTORICAL_SEMANTIC_DEPTHS: readonly HistoricalSemanticDepth[] = Object.freeze(['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE']);
@@ -120,9 +127,38 @@ export function resolveInspection(knowledge: HistoricalKnowledge, depth: Histori
   };
 }
 
+/** The rungs every disclosure shares, over the analytical families alone; the Material shape is the caller's. */
+export interface DisclosedAnalyticalRungs<M> {
+  readonly world: DisclosedWorldRung;
+  readonly thread: HistoricalRung<DisclosedThreadRung>;
+  /** The SESSION rung without its Moments: the caller adds them from its own source, or discloses none. */
+  readonly sessionAnalytics: HistoricalRung<{ readonly emergingFocuses: readonly DisclosedEmergingFocus[]; readonly questionAppearances: readonly DisclosedQuestionAppearance[] }>;
+  readonly analyticalObject: HistoricalRung<Omit<DisclosedAnalyticalObjectRung, 'materials'> & { readonly materials: readonly M[] }>;
+  readonly sourceProvenance: HistoricalRung<DisclosedSourceProvenanceRung>;
+}
+
+/**
+ * The one depth law over the analytical families: every rung at or below `depth` is disclosed, every rung above it is
+ * DEPTH_WITHHELD. `disclose` composes it for one Session at one TC; S7-01's Replay composes it for one Replay moment.
+ */
+export function discloseAnalyticalRungs<M>(knowledge: HistoricalAnalyticalFamilies<M>, depth: HistoricalSemanticDepth): DisclosedAnalyticalRungs<M> {
+  const level = levelOf(depth);
+  return {
+    world: { threads: knowledge.threads, liveFocus: knowledge.liveFocus },
+    thread: rung(level >= levelOf('THREAD'), () => ({ threadReadingAppearances: knowledge.threadReadingAppearances })),
+    sessionAnalytics: rung(level >= levelOf('SESSION'), () => ({ emergingFocuses: knowledge.emergingFocuses, questionAppearances: knowledge.questionAppearances })),
+    analyticalObject: rung(level >= levelOf('ANALYTICAL_OBJECT'), () => ({
+      readings: knowledge.readings, readingRelations: knowledge.readingRelations, materials: knowledge.materials,
+      gaps: knowledge.gaps, questions: knowledge.questions, confidences: knowledge.confidences,
+    })),
+    sourceProvenance: rung(level >= levelOf('SOURCE_PROVENANCE'), () => ({ evidenceParticipations: knowledge.evidenceParticipations })),
+  };
+}
+
 /** `V = Disclose(K(TC), semanticDepth, inspectionContext)`. Pure; adds nothing to K(TC). */
 export function disclose(knowledge: HistoricalKnowledge, depth: HistoricalSemanticDepth, inspection: HistoricalInspectionRequest | null = null): HistoricalDisclosure {
   const level = levelOf(depth);
+  const rungs = discloseAnalyticalRungs(knowledge, depth);
   return {
     sessionId: knowledge.sessionId,
     liveHead: knowledge.liveHead,
@@ -130,16 +166,13 @@ export function disclose(knowledge: HistoricalKnowledge, depth: HistoricalSemant
     sealed: knowledge.sealed,
     depth,
     revision: knowledge.revision,
-    world: { threads: knowledge.threads, liveFocus: knowledge.liveFocus },
-    thread: rung(level >= levelOf('THREAD'), () => ({ threadReadingAppearances: knowledge.threadReadingAppearances })),
+    world: rungs.world,
+    thread: rungs.thread,
     session: rung(level >= levelOf('SESSION'), () => ({
       moments: knowledge.moments, emergingFocuses: knowledge.emergingFocuses, questionAppearances: knowledge.questionAppearances,
     })),
-    analyticalObject: rung(level >= levelOf('ANALYTICAL_OBJECT'), () => ({
-      readings: knowledge.readings, readingRelations: knowledge.readingRelations, materials: knowledge.materials,
-      gaps: knowledge.gaps, questions: knowledge.questions, confidences: knowledge.confidences,
-    })),
-    sourceProvenance: rung(level >= levelOf('SOURCE_PROVENANCE'), () => ({ evidenceParticipations: knowledge.evidenceParticipations })),
+    analyticalObject: rungs.analyticalObject,
+    sourceProvenance: rungs.sourceProvenance,
     inspection: inspection === null ? null : resolveInspection(knowledge, depth, inspection),
   };
 }

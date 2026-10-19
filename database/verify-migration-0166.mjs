@@ -32,6 +32,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import process from 'node:process';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import { CLEAN, createMatchRuntime, P, PFN, MATCH, runVerifier } from './matching-match-verifier-support.mjs';
+import { coordinatorWithS701Edits } from './replay-personal-verifier-support.mjs';
 
 const rt = createMatchRuntime(process.env.DATABASE_URL);
 const { q, rows, count, asRole, actAs, rejected } = rt;
@@ -200,6 +201,13 @@ async function verifyPosture(report) {
   });
 
   await report.section('A03 every frozen body the dispatcher composes is byte-unchanged; it is the forward core\'s ONE caller', async () => {
+    // RE-ANCHORED by S7-01 (2026-10-19): migration 0169 forward-replaces the coordinator with exactly three approved edits
+    // (the Replay lock, the Personal Replay module + its residue check, the coverage comment). Where 0169 is applied the
+    // coordinator must equal the pre-0166 body plus EXACTLY those edits (the one shared definition 0169 A07 also uses);
+    // where it is not, the pre-0166 body itself. Every other body stays byte-exact, and every EXECUTE posture is unchanged.
+    const [{ s701 }] = await rows(`SELECT to_regprocedure('account_erasure_private.erase_personal_replays_v1(uuid,uuid)') IS NOT NULL AS s701`);
+    const expected = (schema, name) => (s701 && schema === 'account_erasure_private' && name === 'erase_account_v1'
+      ? coordinatorWithS701Edits(priorBody(schema, name)) : priorBody(schema, name));
     // [schema, name, signature, the application roles that execute it] - the S6-04 decisions are authenticated-only.
     for (const [schema, name, signature, executors] of [
       ['public', 'forward_matching_proposal_to_second_core_v1', PFN.FORWARD, []],
@@ -215,9 +223,31 @@ async function verifyPosture(report) {
       ['account_erasure_private', 'erase_matching_introductions_v1', 'account_erasure_private.erase_matching_introductions_v1(uuid,uuid,uuid[])', []],
     ]) {
       const live = (await rt.functionPosture(signature)).prosrc.replace(/\r\n/gu, '\n');
-      assert.equal(live, priorBody(schema, name), `A03 ${signature} is byte-unchanged`);
+      assert.equal(live, expected(schema, name), `A03 ${signature} is byte-unchanged${s701 && name === 'erase_account_v1' ? ' but for the three S7-01 edits' : ''}`);
       for (const role of ['anon', 'authenticated', 'service_role']) {
         assert.equal(await rt.canExecute(role, signature), executors.includes(role), `A03 ${role} ${executors.includes(role) ? 'still executes' : 'still cannot execute'} ${signature}`);
+      }
+    }
+    if (s701) {
+      // Beyond the exact equality, the three S7-01 edits stand where the lock order and the erasure need them.
+      const coordinator = (await rt.functionPosture('account_erasure_private.erase_account_v1(uuid)')).prosrc.replace(/--[^\n]*/gu, '');
+      const at = (needle, last = false) => {
+        const i = last ? coordinator.lastIndexOf(needle) : coordinator.indexOf(needle);
+        assert.ok(i >= 0, `A03 the coordinator carries ${needle}`);
+        return i;
+      };
+      const locks = ['FROM public.matching_active_introduction_claims c', 'FROM public.replays r WHERE r.created_by_user_id = v_user ORDER BY r.id FOR UPDATE',
+        'FROM public.users u WHERE u.id = v_user FOR UPDATE', 'FROM personal_data_private.account_deletions d WHERE d.id = p_deletion_id FOR UPDATE'].map((n) => at(n));
+      for (let i = 1; i < locks.length; i += 1) assert.ok(locks[i] > locks[i - 1], `A03 coordinator lock ${i} follows lock ${i - 1}: the Replays after the claims, before the account row`);
+      const steps = ['erase_matching_introductions_v1(', 'account_erasure_private.module_residue_v1(v_user)', 'erase_personal_replays_v1(p_deletion_id, v_user)',
+        'account_erasure_private.replay_module_residue_v1(v_user)', 'DELETE FROM account_erasure_private.erasure_authorizations', 'erase_personal_account_v1(p_deletion_id)']
+        .map((n, k, all) => at(n, k === all.length - 1));
+      for (let i = 1; i < steps.length; i += 1) assert.ok(steps[i] > steps[i - 1], `A03 coordinator erasure step ${i} follows step ${i - 1}: the Replay module and its residue check under the authorization, before 0130`);
+      assert.equal(coordinator.split('erase_personal_replays_v1(').length - 1, 1, 'A03 the coordinator calls the Replay module exactly once');
+      for (const signature of ['account_erasure_private.erase_personal_replays_v1(uuid,uuid)', 'account_erasure_private.replay_module_residue_v1(uuid)']) {
+        for (const role of ['anon', 'authenticated', 'service_role']) {
+          assert.equal(await rt.canExecute(role, signature), false, `A03 ${role} cannot execute ${signature}`);
+        }
       }
     }
     const callers = await rows(`SELECT p.oid::regprocedure::text fn FROM pg_proc p

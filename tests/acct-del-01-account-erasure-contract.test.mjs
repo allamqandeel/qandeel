@@ -79,10 +79,24 @@ function migrationViolations(w) {
 
 function ownershipViolations(w) {
   const out = [];
+  // RE-ANCHORED by S7-01 (migration 0169): 0169 forward-replaces the coordinator (to lock and erase the Personal Replay
+  // footprint) and narrows two I-06 guards with the same prefix. The rule is unchanged and now stated exactly: only the ONE
+  // coordinator, account_erasure_private.erase_account_v1, ever opens qandeel.account_erasure or writes the authorization;
+  // 0164 defines it and 0169 alone forward-replaces it, and every other mention is a guard READING the setting.
+  const COORDINATOR = /CREATE (?:OR REPLACE )?FUNCTION account_erasure_private\.erase_account_v1\(p_deletion_id uuid\)[\s\S]*?\nEND\$\$;/u;
+  const definers = w.migrations.filter(([, t]) => COORDINATOR.test(t)).map(([f]) => f);
+  if (JSON.stringify(definers) !== JSON.stringify(['0164_account_deletion_matching_introductions_v1.sql', '0169_replay_personal_secure_integration_erasure_v1.sql'])) {
+    out.push(`the coordinator is defined by 0164 and forward-replaced by 0169 alone (got ${definers})`);
+  }
+  for (const [f, t] of w.migrations) {
+    const outside = t.replace(new RegExp(COORDINATOR.source, 'gu'), '');
+    if (/set_config\('qandeel\.account_erasure'/u.test(outside)) out.push(`${f} opens qandeel.account_erasure outside the coordinator`);
+    if (/INSERT INTO account_erasure_private\.erasure_authorizations \(/u.test(outside)) out.push(`${f} writes the account erasure authorization outside the coordinator`);
+  }
   const owners = w.migrations.filter(([, t]) => /qandeel\.account_erasure/u.test(t)).map(([f]) => f);
-  if (JSON.stringify(owners) !== JSON.stringify(['0164_account_deletion_matching_introductions_v1.sql'])) out.push(`exactly one migration opens qandeel.account_erasure (got ${owners})`);
-  const writers = w.migrations.filter(([, t]) => /INSERT INTO account_erasure_private\.erasure_authorizations/u.test(t)).map(([f]) => f);
-  if (writers.length !== 1) out.push('exactly one migration writes the account erasure authorization');
+  if (JSON.stringify(owners) !== JSON.stringify(['0164_account_deletion_matching_introductions_v1.sql', '0169_replay_personal_secure_integration_erasure_v1.sql'])) {
+    out.push(`only 0164 and 0169 name qandeel.account_erasure (got ${owners})`);
+  }
   return out;
 }
 
@@ -112,7 +126,11 @@ function wiringViolations(w) {
   // The closure (CP2, P-1): QAN-BL-ACCT-01 stays open with ACCT-DEL-02 (Shared STANDARD / Public), Replay is its own item
   // with Stage 7, and the release gate is HOSTED-DEPLOY-01's mandatory condition. None may be closed by this task.
   if (!/^\| `QAN-BL-ACCT-01` \| .* \| `ACCT-DEL-02 — Account Deletion Across Shared STANDARD \/ Public` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('QAN-BL-ACCT-01 is not owned by ACCT-DEL-02, or was closed');
-  if (!/^\| `QAN-BL-ACCT-02` \| .* \| `Stage 7 — Replay` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('Replay account deletion is not owned by Stage 7, or was closed');
+  // RE-ANCHORED by S7-01 (2026-10-19): Stage 7's first task delivered the Personal Replay erasure module in the same change
+  // as the first user-reachable Replay relation (0169), so the item is tombstoned by it; the residue outside the Personal
+  // Replay is QAN-BL-ACCT-03's. Closing it by anything else, or reopening it silently, still fails here.
+  if (!/^\| `QAN-BL-ACCT-02` \| .* \| `S7-01 — Replay Secure Integration & Account Erasure` \| `HIGH` \| `CLOSED — TOMBSTONE` \|$/mu.test(w.backlog)) out.push('Replay account deletion is not closed by S7-01');
+  if (!/^\| `QAN-BL-ACCT-03` \| .* \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('the residue outside the Personal Replay is not owned');
   if (!/^\| `QAN-BL-PROD-09` \| .* \| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('the release gate is not a HOSTED-DEPLOY-01 condition, or was closed');
   for (const required of ['P-1', 'P-2', 'P-3', 'P-4', 'ACCT-DEL-02', 'Stage 7', 'NOT_DEPLOYED', '0130']) {
     if (!w.record.includes(required)) out.push(`the record does not state ${required}`);
@@ -142,7 +160,9 @@ const PLANTED = [
   ['RETRY counted as a failure', 'apiViolations', () => plant('worker', "outcome === 'RETRY' ? 'retry_expected'", "outcome === 'RETRY' ? 'integrity_failure'")],
   ['the verifier dropped from CI', 'wiringViolations', () => plant('workflow', 'run: npm run verify:account-deletion-matching-introductions:integration', 'run: echo skipped')],
   ['QAN-BL-ACCT-01 closed', 'wiringViolations', () => plant('backlog', "`ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `HIGH` | `DEFERRED — OWNED` |", "`ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `HIGH` | `CLOSED — TOMBSTONE` |")],
-  ['Replay deletion handed to no one', 'wiringViolations', () => plant('backlog', "`Stage 7 — Replay` | `HIGH` | `DEFERRED — OWNED` |", "`UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |")],
+  // RE-ANCHORED by S7-01: the planted defects now reopen the tombstone silently, and drop the residue's owner.
+  ['Replay deletion reopened to no one', 'wiringViolations', () => plant('backlog', "`S7-01 — Replay Secure Integration & Account Erasure` | `HIGH` | `CLOSED — TOMBSTONE` |", "`UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |")],
+  ['the Replay residue outside the Personal path handed to no one', 'wiringViolations', () => plant('backlog', "`Stage 9 — Economy + Launch Closure (Replay distribution / CW2-08)` | `HIGH` | `DEFERRED — OWNED` |", "`UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |")],
   ['the release gate closed', 'wiringViolations', () => plant('backlog', "| `QAN-BL-PROD-09` | No World Opens in Production Without an Automated Account-Deletion Coverage Check | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |", "| `QAN-BL-PROD-09` | No World Opens in Production Without an Automated Account-Deletion Coverage Check | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `CLOSED — TOMBSTONE` |")],
 ];
 

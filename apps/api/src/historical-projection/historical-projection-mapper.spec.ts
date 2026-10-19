@@ -1,4 +1,4 @@
-import { mapHistoricalProjectionRow } from './historical-projection-mapper';
+import { mapHistoricalAnalyticalFamilies, mapHistoricalProjectionRow } from './historical-projection-mapper';
 import { HistoricalProjectionIntegrityError } from './historical-projection.types';
 import { GAP, MATERIAL, READING, SESSION, THREAD, FOCUS, projectionRow } from './historical-projection.fixture.spec';
 
@@ -96,5 +96,28 @@ describe('the Layer-A row becomes typed knowledge (cases 1-9)', () => {
     const { subjectGroundings: _dropped, ...ungrounded } = reading;
     rejects(projectionRow({ readings: [ungrounded] }), 'HISTORICAL_PROJECTION_ROW_MALFORMED', /readings\[0\]/u);
     rejects(projectionRow({ readings: [{ ...reading, subjectGroundings: [{ emergingFocusId: FOCUS, groundedAtSp: 2, threadId: 'x' }] }] }), 'HISTORICAL_PROJECTION_ROW_MALFORMED', /subjectGroundings\[0\]/u);
+  });
+});
+
+describe('S7-01: the analytical families of one Replay moment are mapped by the same checks', () => {
+  const familiesOf = (row: Record<string, unknown>): Record<string, unknown> => {
+    const { session_id: _s, live_head: _l, tc: _t, sealed: _x, revision: _r, moments: _m, ...families } = row;
+    return { ...families, materials: (families.materials as Record<string, unknown>[]).map(({ expiry: _e, ...material }) => material) };
+  };
+
+  it('maps exactly the canonical families, without the header, the Moments or a Material expiry', () => {
+    const { sessionId: _s, liveHead: _l, tc: _t, sealed: _x, revision: _r, moments: _m, materials, ...canonical } = mapHistoricalProjectionRow(projectionRow());
+    const families = mapHistoricalAnalyticalFamilies(familiesOf(projectionRow()), 2);
+    expect(families).toEqual({ ...canonical, materials: materials.map(({ expiry: _e, ...material }) => material) });
+    expect(JSON.stringify(families)).not.toMatch(/expiry|committedText|liveHead/u);
+  });
+
+  it('fails closed on a header, a Material expiry, a missing family, a coherence defect or a TC that is not a Session Position', () => {
+    expect(() => mapHistoricalAnalyticalFamilies({ ...familiesOf(projectionRow()), tc: 2 }, 2)).toThrow(/unknown key tc/u);
+    expect(() => mapHistoricalAnalyticalFamilies({ ...familiesOf(projectionRow()), materials: projectionRow().materials }, 2)).toThrow(/unknown key expiry/u);
+    const { gaps: _gaps, ...withoutGaps } = familiesOf(projectionRow());
+    expect(() => mapHistoricalAnalyticalFamilies(withoutGaps, 2)).toThrow(/missing gaps/u);
+    expect(() => mapHistoricalAnalyticalFamilies(familiesOf(projectionRow()), 1)).toThrow(HistoricalProjectionIntegrityError);
+    expect(() => mapHistoricalAnalyticalFamilies(familiesOf(projectionRow()), 0)).toThrow(/TC is a Session Position/u);
   });
 });

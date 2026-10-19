@@ -226,7 +226,9 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // approval of the ACCT-DEL-01 WP0 v1.1 (P-1 … P-4) makes ACCT-DEL-01 the current implementation task.
     // RE-ANCHORED by S6-07 CP1 (2026-10-18, validation only): ACCT-DEL-01 merged as PR #345 (`1861df43`); the Product
     // Owner's approval of the S6-07 CP0 design makes S6-07 the current implementation task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-07 — Activity, Direct Entry and Final Integration\*\*/mu);
+    // RE-ANCHORED by S7-01 (2026-10-19): S6-07 merged through PR #346; S7-01 is the current task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S7-01 — Replay Secure Integration & Account Erasure\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-07/u, 'the merged S6-07 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: ACCT-DEL-01/u, 'the merged ACCT-DEL-01 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-06/u, 'the merged S6-06 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-05/u, 'the merged S6-05 is no longer the current task');

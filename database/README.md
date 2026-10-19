@@ -5172,3 +5172,57 @@ CW2-08 and I-07D seams are restored byte for byte. The journey (`verify-s6-07-fi
 proposal -> first approval -> forward -> acceptance -> World -> Activity / entry truth -> export on the human boundaries,
 with production closed first (J01) and a decline on each side, an expiry, a consent withdrawn, a pending deletion, END and
 the real erasure.
+
+## S7-01 - Personal Replay secure integration and account erasure (migration 0169)
+
+`0169_replay_personal_secure_integration_erasure_v1.sql` opens the frozen I-06 Replay runtime to the human, for their own
+text conversations only, through the 0138 wrapper shape, and delivers Replay's account-erasure module in the same change
+(`QAN-BL-ACCT-02`). It is a controlled forward amendment of I-06 (`docs/replay-runtime-v1.md` §64). Record:
+`docs/e2e/QANDEEL_S7_01_IMPLEMENTATION_RECORD_v1.md`.
+
+```text
+read_my_replay_capability_v1()                       authenticated: whether a new Replay act would be admitted now (a hint)
+create_my_replay_draft_v1(cmd, session, first, last) authenticated, gated: a draft over ONE contiguous range of whole
+                                                     messages of the caller's own covered MY_WORLD conversation
+revise_my_replay_draft_v1(cmd, replay, rev, f, l)    authenticated, gated: the same, against the draft revision composed on
+prepare_my_replay_preview_v1(cmd, replay, rev)       authenticated, gated: a real preview version (sealed K(TC) per moment)
+finalize_my_replay_version_v1(cmd, replay, version)  authenticated, gated: a PRIVATE final version - never a distribution
+reopen_my_replay_for_revision_v1(cmd, replay, ver)   authenticated, gated: back to a draft from that version
+read_my_replay_v1 / _version_v1 / _moments_v1        authenticated, ungated, creator-exact: state, the version with its
+                                                     render truth contract and both layers, the moments (text only while
+                                                     viewable)
+read_my_replay_moment_analysis_v1(r, v, ordinal)     authenticated, ungated: the canonical K(TC) at that moment, re-derived
+                                                     through 0072 and served only if it re-digests to what was frozen
+list_my_conversation_replays_v1(session)             authenticated, ungated: the caller's Replays of ONE own conversation
+```
+
+- **Posture.** Every public function is a one-line `SECURITY INVOKER` wrapper, `authenticated` only; every body is a
+  `replay_private` definer; the actor is `auth.uid()` alone and no argument names a human, a source class or a source
+  unit. The five frozen I-06 primitives stay executable by no application role; the wrappers call them as the session
+  subject. Zero rows / `UNAVAILABLE` for anything that is not the caller's: one answer, no existence oracle.
+- **The gate.** `replay_private.replay_launch_capability_states` (scope `PERSONAL_REPLAY`) ships with **no row**, so
+  every command answers `NOT_AVAILABLE_NOW` and writes nothing. Only the operator setter (no application role) writes
+  it; each command binds it `FOR SHARE` before the primitive and records the snapshot beside its act. It is not the
+  CW2-08 Launch Gate: the CW2-08 seam still answers `NOT_EVALUATED`, and every distribution path stays closed.
+- **Retries.** An equivalent retry is answered from committed history (deterministic identities); the same command id
+  naming another request is `COMMAND_CONFLICT`. Every `40001` / `PT409` of the primitives becomes one bounded word
+  (`CHANGED`, `SOURCE_CHANGED`, `MOMENT_NOT_SEALED`, `ANALYSIS_CHANGED`, ...), so a PostgREST before v16.0 never re-runs it
+  (`verify-0150` ABSORBED, re-anchored).
+- **The open head.** A moment is sealed only below the Live Head, so a range that reaches the newest message answers
+  `MOMENT_NOT_SEALED` until a newer message exists (frozen I-06 / 0072).
+- **Erasure.** `account_erasure_private.erase_personal_replays_v1` deletes the whole Personal Replay footprint children
+  first in foreign-key order; the coordinator (forward-replaced from 0164 with named edits) locks the account's Replays
+  ascending after the claims and before the account row. 29 Replay relations are registered; `REPLAY` is covered. Rows
+  outside the Personal path (another human's approver / authorization, a non-`MY_WORLD` manifest, a package, a
+  reconciliation command or event) are the new class `REPLAY_OUTSIDE_PERSONAL` (`QAN-BL-ACCT-03`, not covered): a truthful
+  `BLOCKED`, nothing erased, re-armed when covered. The two I-06 history guards are narrowed in place with the 0164 prefix.
+- **Deployment.** Not deployed; nothing opens the gate.
+
+```sh
+npm run verify:replay-personal-secure-integration:integration
+npm run test:s7-01-replay-secure-integration-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its posture and behaviour sections run in
+rolled-back transactions with the gate set for the run only; its races (G01 - G06) commit their own fresh humans on real
+connections and remove them afterwards.

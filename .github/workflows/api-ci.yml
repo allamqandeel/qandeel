@@ -247,6 +247,7 @@ jobs:
       - {name: "Verify S6-07 Introductions Activity and Direct Entry static contract (no relation, each function one role, the legitimate recipient only, the capability truth everywhere, L0 and one reused sentence, a message never pushed, revalidated entry, the per-Introduction mute)", run: npm run test:s6-07-activity-direct-entry-contract}
       - {name: "Verify S6-07 enrollment step and consent controls static contract (the approved words exactly, no consent text or group-D sentence shipped, versions only and only when agreed, nothing behind a closed gate, no optional field required, the governed loopback-only install that never touches a gate)", run: npm run test:s6-07-enrollment-consent-surface-contract}
       - {name: "Verify S6-07 Export My Data and final integration static contract (one section keyed on the reader, one owner-only photo reader, no arrival instant, every photo re-authorized before its key, the 32 MiB guard bounding one answer and never the export, nothing partial, photos first and the package last on the device, the proofs wired)", run: npm run test:s6-07-export-final-integration-contract}
+      - {name: "Verify S7-01 Personal Replay secure integration static contract (closed by default, the actor from auth.uid() alone, the frozen I-06 cores unreachable, one range of whole messages, a private version and nothing distributed, the analysis re-derived and never a second projection, the governed erasure registered, a graphics-independent API)", run: npm run test:s7-01-replay-secure-integration-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1202,6 +1203,14 @@ jobs:
       # withdrawn, a pending deletion, END and the real erasure.
       - name: Verify S6-07 final integration journey against real PostgreSQL
         run: npm run verify:s6-07-final-journey:integration
+      # S7-01: migration 0169 - the Personal Replay boundary over the frozen I-06 cores: closed by default (no gate row),
+      # the actor from auth.uid() alone, one contiguous range of whole messages of the caller's own covered conversation,
+      # a real preview, a private finalized version and reopening; two accounts and no existence oracle; the open head
+      # refused; the moment analysis equal to the canonical K(TC) and re-digested; 40001 / PT409 absorbed; the governed
+      # account erasure of real Replay data (ERASED, RETRY with nothing deleted, BLOCKED outside Personal, re-arm); and
+      # six races on real connections.
+      - name: Verify S7-01 Personal Replay secure integration and erasure against real PostgreSQL
+        run: npm run verify:replay-personal-secure-integration:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

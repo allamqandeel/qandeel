@@ -71,13 +71,14 @@ test('4 - the census verifiers name the S6-06 exceptions exactly', () => {
   // boundary is appended after the S6-06 continuation boundaries in the 0149 census and after their absorbers in the 0150
   // ABSORBED list; everything pinned before it is unchanged.
   // RE-ANCHORED by S6-07 CP2 (2026-10-18, migration 0166): the forward dispatcher's absorber follows the enrollment's.
-  assert.match(read('database/verify-migration-0150.mjs'), /'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n\];/u);
+  assert.match(read('database/verify-migration-0150.mjs'), /'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'enroll_my_matching_setup_v1',\n(?: {2}\/\/[^\n]*\n)* {2}'server_forward_approved_matching_proposals_v1',\n(?: {2}\/\/[^\n]*\n)*(?: {2}'[a-z_]+_my_replay_[a-z_]+_v1',(?: '[a-z_]+_my_replay_[a-z_]+_v1',)*\n)*\];/u);
 });
 
 test('5 - the API: two modules composed through AccountModule, exact routes and rate classes, no service_role in continuation', () => {
   // RE-ANCHORED by S6-07 CP1 (2026-10-18): the governed enrollment module is composed after the S6-06 modules.
   // RE-ANCHORED by S6-07 CP2 (2026-10-18): the forward dispatcher's server pass is composed after it.
-  assert.match(read('apps/api/src/account/account.module.ts'), /IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule\]/u);
+  // RE-ANCHORED by S7-01 (2026-10-19): the Personal Replay module (migration 0169) is composed after it, on its own line.
+  assert.match(read('apps/api/src/account/account.module.ts'), /IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule, IntroductionsEnrollmentModule, IntroductionsDispatchModule,\n {4}ReplayModule\]/u);
   const census = read('apps/api/src/http-security/route-rate-limit.census.ts');
   for (const [route, rate] of [
     ['GET /introductions/worlds/:worldId/disclosures', 'AUTHENTICATED'],

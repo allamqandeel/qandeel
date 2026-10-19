@@ -206,10 +206,11 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-05` | The Confirmed Introduction First Name Is Not the Canonical Matching First-Name Source | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-MATCH-06` | No Runtime Producer Forwards a First-Approved Proposal to the Second Recipient | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-LAUNCH-05` | Introduction Photos on iOS: Device Cache Proof and Store Review of the Purpose Strings | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-ACCT-02` | Replay Has No Account-Deletion Module: an Account's Replay Footprint Blocks Its Erasure | `Stage 7 — Replay` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-ACCT-02` | Replay Has No Account-Deletion Module: an Account's Replay Footprint Blocks Its Erasure | `S7-01 — Replay Secure Integration & Account Erasure` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-09` | No World Opens in Production Without an Automated Account-Deletion Coverage Check | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-10` | A Photo Object Lost From the Private Store Blocks Its Owner's Export Bundle | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-06` | Export My Data's Photo Folder Save on iOS, Physical Android Devices and Read-Only Places | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-ACCT-03` | Account Erasure Outside the Personal Replay: Non-Personal Replay Sources and Replay Distribution | `Stage 9 — Economy + Launch Closure (Replay distribution / CW2-08)` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -2531,6 +2532,19 @@ implementation (BG-07).
   - format, labels and copy (Copy Gate; the language rule).
 - **Not in this item:** the `'introductions'` category (`QAN-BL-PRIV-04`, `S6-07`); deletion (`QAN-BL-ACCT-01`); the
   package size (`QAN-BL-PROD-05`).
+- **Dated note (S7-01, 2026-10-19; changes no field):** the coordination interface for Replay, recorded only. S7-01
+  adds no export and does not touch `build_personal_export_v1`; `'replay'` stays in `notYetIncluded`.
+  - *What exists to export:* the reader's own Personal Replays (`0169`): per Replay its lifecycle, creation instant, the
+    draft's range (first / last Session Position, coverage class) and each version's revision, finalization and render
+    truth contract. All of it is the reader's own; no other human's material exists on this path.
+  - *What it is not:* a moment's text is the reader's own conversation text, already in the Personal package; a moment's
+    analysis is the canonical K(TC), re-derived and never a copy. Neither is a second source to export.
+  - *The read boundary to reuse:* the creator-exact reads `read_my_replay_v1`, `read_my_replay_version_v1` and
+    `list_my_conversation_replays_v1`, or their definers in `replay_private`. Internal identities (manifest, selection,
+    projection, render-contract rows, Conversation Units, Turns) stay out (W3-MEGA-S `:368`).
+  - *Out of the Personal path:* everything in `QAN-BL-ACCT-03`'s class.
+  - The ordering question (export before the user-facing opening, the WP0's D8) is the Product Owner's; S7-01 opens nothing
+    to users.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted under BG-06 / BG-08 at the Product Owner's explicit D5 designation (Stage 6 WP0 final decision addendum,
@@ -2733,6 +2747,9 @@ task in this repository can perform. Nothing here authorizes implementation (BG-
 
 ### `QAN-BL-ACCT-02` — Replay Has No Account-Deletion Module: an Account's Replay Footprint Blocks Its Erasure
 
+> **Historical pre-closure schema.** This block records the item as it stood before S7-01's closing change; it is not the
+> current lifecycle state. The current state is the `CLOSED — TOMBSTONE` record of `QAN-BL-ACCT-02` in §6 (S7-01).
+
 Admitted under BG-06 / BG-08 by ACCT-DEL-01 at its closing change (2026-10-17; PR #345, not merged; effective from its
 merge), at the Product Owner's P-1 designation (Replay's account deletion belongs to Stage 7). Nothing here authorizes
 implementation (BG-07).
@@ -2770,6 +2787,45 @@ implementation (BG-07).
 
   The other participants' rights in a shared Replay are Stage 7's Product decision. Replay is not production-ready for
   users while this item is open.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-ACCT-03` — Account Erasure Outside the Personal Replay: Non-Personal Replay Sources and Replay Distribution
+
+Admitted under BG-06 / BG-08 by S7-01 at its closing change (2026-10-19; not merged; effective from its merge). Nothing
+here authorizes implementation, a distribution path or a gate (BG-07).
+
+- **Title / Finding:** S7-01's Replay erasure module (`account_erasure_private.erase_personal_replays_v1`, migration `0169`)
+  erases exactly the Personal Replay footprint: the caller's own Replays of their own `MY_WORLD` text conversations, every
+  draft, version, sealed projection, render-contract binding and lifecycle event, and the S7-01 launch evidence. It cannot
+  erase what belongs to someone else or to a distribution:
+  - a row in `replay_distribution_required_approvers` / `replay_distribution_authorizations` (`0104`) names another human's
+    right over a package and references the account `ON DELETE RESTRICT`;
+  - a Replay over a non-`MY_WORLD` manifest (the Introduction World, `GATE-35`), a package, a reconciliation command or a
+    source-availability reconciliation event belongs to a distribution path or to another World.
+
+  The governed erasure's census classifies each as the new residue class `REPLAY_OUTSIDE_PERSONAL` (not covered). An account
+  with such a row answers a truthful, recorded `BLOCKED` and nothing is erased; it is re-armed with a fresh grace when the
+  class is covered. Real-PostgreSQL proof: `verify-migration-0169` R03 / R04.
+- **Source:** the S7-01 brief («C. QAN-BL-ACCT-02 … handle ON DELETE RESTRICT without overriding others' rights»); the
+  [S7-01 record](e2e/QANDEEL_S7_01_IMPLEMENTATION_RECORD_v1.md) §6; `account_erasure_private.residue_class_coverage`
+  (`0169`, owner text `QAN-BL-ACCT-03 - not opened: non-Personal Replay sources and Replay distribution`).
+- **Anti-duplication:** `QAN-BL-ACCT-02` was the Personal Replay module, delivered by S7-01. `QAN-BL-ACCT-01` keeps Shared
+  `STANDARD` and Public. `QAN-BL-PROD-09` is the hosted release gate. `QAN-BL-PRIV-05` is export, not deletion. The ID
+  `QAN-BL-ACCT-03` was unused in the tree and in the history of every ref.
+- **Current truth:** no product path can create any row of this class. No API route or mobile surface reaches a
+  distribution, a package, an approver or a non-`MY_WORLD` source; CW2-08 answers `NOT_EVALUATED`; every I-06C / I-06D
+  distribution command stays executable by no application role. Nothing is deployed.
+- **Why deferred:** the other humans' rights in a distributed Replay, the package's retention after one participant's
+  erasure, and the CW2-08 §2 deleted-content non-serving law at distribution are the distribution path's Product and
+  launch decisions. Deciding them now would invent them.
+- **Owner task:** `Stage 9 — Economy + Launch Closure (Replay distribution / CW2-08)`, where Replay distribution is
+  sequenced (the Stage 7 WP0, approved; CW2-08).
+- **Severity:** `HIGH`. If reopened, it decides whether a Replay may ever be distributed (W3-PDG-01 closure §8.4 item 9).
+- **Reopen condition:** automatic when any task opens a Replay distribution, package, approver or non-`MY_WORLD` source
+  path (BG-05); before CW2-08 answers anything but `NOT_EVALUATED`.
+- **Required future property:** that change delivers the erasure of its own footprint in the same change, registers every
+  relation it adds, covers `REPLAY_OUTSIDE_PERSONAL`, and proves on real PostgreSQL what `verify-migration-0164` and
+  `-0169` prove, without deleting a right another human holds.
 - **Status:** `DEFERRED — OWNED`
 
 ### `QAN-BL-PROD-09` — No World Opens in Production Without an Automated Account-Deletion Coverage Check
@@ -3429,20 +3485,40 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   journey runs it between the two human approvals (J02, J07) ([S6-07 record](e2e/QANDEEL_S6_07_IMPLEMENTATION_RECORD_v1.md) §10, §11, §12.4).
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-ACCT-02` — Replay Has No Account-Deletion Module: an Account's Replay Footprint Blocks Its Erasure
+
+- **Closing task:** `S7-01 — Replay Secure Integration & Account Erasure`.
+- **PR / SHA:** the S7-01 pull request from branch `s7/s7-01-replay-secure-integration`, from `main` at
+  `3ea76f37` (the merge of PR #346). The closing change is the head recorded in the
+  [S7-01 record](e2e/QANDEEL_S7_01_IMPLEMENTATION_RECORD_v1.md) §10. The tombstone holds from its merge; until then this item is not closed.
+- **Disposition:** completed for the Personal Replay, in the same change as the first user-reachable Replay relation
+  (`0169`). The module `account_erasure_private.erase_personal_replays_v1` deletes the whole footprint children first in
+  foreign-key order. The coordinator locks the account's Replays in ascending order after the claims and before the users
+  row. Every Replay relation (29 rows) is registered in `coverage_registry` and `REPLAY` is covered. The two I-06 history
+  guards are narrowed in place to the ONE transaction-bound erasure, with the 0164 prefix. On real PostgreSQL
+  (`verify-migration-0169` R01 – R05, G04 / G05) it proves:
+  - a real footprint ERASED to zero rows;
+  - a planted `RESTRICT` ending in RETRY with nothing deleted;
+  - `BLOCKED` outside the Personal path;
+  - the re-arm, and no deadlock against an in-flight revision.
+
+  The residue it cannot cover without overriding another human's right is admitted as `QAN-BL-ACCT-03`.
+- **Status:** `CLOSED — TOMBSTONE`
+
 ## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 37 |
+| `DEFERRED — OWNED` | 36 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
-| `CLOSED — TOMBSTONE` | 24 |
-| **Total** | **74** |
+| `CLOSED — TOMBSTONE` | 28 |
+| **Total** | **77** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 42 |
-| `MEDIUM` | 30 |
+| `HIGH` | 43 |
+| `MEDIUM` | 32 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -4335,6 +4411,33 @@ as the record of the register before it.
 - **Untouched:** every other item, owner, severity and status, including `QAN-BL-ACCT-01`, `QAN-BL-ACCT-02`,
   `QAN-BL-PRIV-05` and `QAN-BL-MATCH-03` (Issue #322 stays OPEN).
 - **Latest index: 76 items; 36 / 4 / 9 / 27 by status, 42 / 32 / 2 by severity**, recounted mechanically from §4.
+
+**S7-01 closing change (2026-10-19; not merged; effective from its merge).** BG-08 / BG-09 at S7-01's closure
+([S7-01 record](e2e/QANDEEL_S7_01_IMPLEMENTATION_RECORD_v1.md) §10), under the Product Owner's checkpoint rule (no separate
+documentation task). The paragraph above stays as the record of the register before it. The §7 table, last refreshed at
+ACCT-DEL-01, is recounted in the same change.
+- **Inherited (BG-05):** `QAN-BL-ACCT-02` (`Stage 7 — Replay`) - **`CLOSED — TOMBSTONE`** for the Personal Replay, with
+  its §6 record (holding from the merge). Its index-row pin in the ACCT-DEL-01 contract is re-anchored in the same change.
+- **Admitted (BG-06 / BG-08):** `QAN-BL-ACCT-03` (`HIGH`; owner `Stage 9 — Economy + Launch Closure (Replay distribution /
+  CW2-08)`): the account erasure of non-Personal Replay sources and Replay distribution, the residue class
+  `REPLAY_OUTSIDE_PERSONAL` that S7-01 cannot cover without overriding another human's right. The ID was checked against
+  every earlier ID and the history of every ref.
+- **Dated note:** `QAN-BL-PRIV-05`: the Replay coordination interface and data boundaries (no field changed; S7-01 adds no
+  export).
+- **Checked and not admitted (BG-06):**
+  - the open-head consequence (the newest message of a conversation can be replayed only once a newer one exists). It is
+    the frozen I-06 / `0072` sealing law, answered as `MOMENT_NOT_SEALED`, and a Product presentation matter for S7-02 /
+    S7-03 (record §8);
+  - opening the Personal Replay capability (an operator act behind the Product Owner's approval; the gate ships with no
+    row);
+  - `QAN-BL-NAV-02` (`OPEN — UNASSIGNED`, unchanged): the WP0 places its reconciliation at S7-05;
+  - `QAN-BL-PROD-09` and `QAN-BL-PROD-06` (`HOSTED-DEPLOY-01`, unchanged): S7-01's five commands let no `40001` / `PT409`
+    escape (`verify-migration-0150`, re-anchored).
+- **BG-05:** S7-01 owns no open item from its merge. Stage 9 owns `QAN-BL-ACCT-03`; `PRIV-EXPORT-01` keeps
+  `QAN-BL-PRIV-05`; `HOSTED-DEPLOY-01` keeps `QAN-BL-PROD-06` and `QAN-BL-PROD-09`.
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-ACCT-01`, `QAN-BL-NAV-02`,
+  `QAN-BL-VOICE-01` and `QAN-BL-PRIV-05`'s fields.
+- **Latest index: 77 items; 36 / 4 / 9 / 28 by status, 43 / 32 / 2 by severity**, recounted mechanically from §4.
 
 ## 8. What is deliberately not in this backlog
 
