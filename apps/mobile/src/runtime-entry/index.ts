@@ -180,6 +180,11 @@ export type {
 } from './introduction-alerts-api';
 export { IntroductionAlertsApiClient } from './introduction-alerts-api';
 export type {
+  CommittedEventsResult, ReplayApiConfig, ReplayCapabilityResult, ReplayCommandResult, ReplayCoverageView, ReplayDraftAnswer, ReplayDraftRefusal,
+  ReplayDraftView, ReplayLifecycleView, ReplayListResult, ReplayRange, ReplayReadResult, ReplaySummaryView, TemporalHeadResult,
+} from './replay-api';
+export { ReplayApiClient } from './replay-api';
+export type {
   EnrollmentActKind, EnrollmentActResult, EnrollmentConsentKind, EnrollmentConsentText, EnrollmentOutcome, EnrollmentRead, EnrollmentRevocationOutcome,
   EnrollmentRevocationResult, EnrollmentView, IntroductionsEnrollmentApiConfig,
 } from './introductions-enrollment-api';

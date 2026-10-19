@@ -144,8 +144,10 @@ function primitives(markup) {
   const strokes = [...markup.matchAll(/<path d="([^"]+)"[^>]*?stroke-width="([0-9.]+)"/gu)].map((m) => ({ d: m[1], strokeWidth: Number(m[2]) }));
   const dots = [...markup.matchAll(/<circle cx="([0-9.]+)" cy="([0-9.]+)" r="([0-9.]+)" fill="currentColor"/gu)]
     .map((m) => ({ cx: Number(m[1]), cy: Number(m[2]), r: Number(m[3]) }));
+  // S7-02: a solid shape of the glyph (the Replay glyph's play mark). Only a glyph that has one carries the key.
+  const fills = [...markup.matchAll(/<path d="([^"]+)" fill="currentColor"\/>/gu)].map((m) => ({ d: m[1] }));
   if (strokes.length === 0) throw new Error(`no stroked path in glyph markup: ${markup}`);
-  return { strokes, dots };
+  return fills.length === 0 ? { strokes, dots } : { strokes, dots, fills };
 }
 
 const open = NUANCES.open;
@@ -169,6 +171,12 @@ if (glyphs.back.strokes[0].strokeWidth !== strokeFor(22)) throw new Error('P2 ba
 const settings = utilInner('settings', { size: 22 });
 glyphs.settings = { size: 22, mirrorsInRtl: false, ...primitives(settings.inner) };
 if (glyphs.settings.strokes.some((stroke) => stroke.strokeWidth !== strokeFor(22))) throw new Error('P2 settings is not at the optical stroke for 22 px');
+// S7-02 — «إعادة عرض المحادثة» (G1.1-R3 §B7): P2's own signature Replay glyph, an open ring that turns back on itself
+// around the play mark, at the upper chrome's 22 px beside the depth glyph. A media glyph: it never mirrors.
+glyphs.replay = { size: 22, mirrorsInRtl: false, ...primitives(SIG.replay(open, 22)) };
+if (glyphs.replay.strokes.some((stroke) => stroke.strokeWidth !== strokeFor(22)) || glyphs.replay.fills?.length !== 1) {
+  throw new Error('P2 replay is not two optical strokes and one play mark at 22 px');
+}
 
 // ------------------------------------------------------------------------------------------ type
 const system = JSON.parse(readFileSync(E3_SYSTEM, 'utf8'));

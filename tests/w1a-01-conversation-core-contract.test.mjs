@@ -237,7 +237,11 @@ test('§5 — the composer stays above the keyboard on both platforms (Android 1
 
 test('§6 — the Conversation belongs to the runtime generation and is retired with it', () => {
   const runtime = code(read('apps/mobile/src/integration/runtime/integration-runtime.ts'));
-  assert.match(runtime, /conversation: createConversationController\(\{\n\s*sessionId: bundle\.sessionId,\n\s*transport: entry\.conversationTurnsFor\(bundle\),\n\s*isCurrent,\n\s*onReplyCommitted: \(\) => built\.liveDriver\.requestImmediateCatchUp\(\),/u);
+  // S7-02 RE-ANCHOR: the same construction, held in a local just before the generation's object so the Replay entry can
+  // READ the same conversation; the generation still carries it as `conversation` and retires it with itself.
+  assert.match(runtime, /const conversation = createConversationController\(\{\n\s*sessionId: bundle\.sessionId,\n\s*transport: entry\.conversationTurnsFor\(bundle\),\n\s*isCurrent,\n\s*onReplyCommitted: \(\) => built\.liveDriver\.requestImmediateCatchUp\(\),\n\s*\}\);\n\s*const built: IntegrationSessionRuntime = \{/u);
+  assert.match(runtime, /\n\s*conversation,\n/u);
+  assert.equal((runtime.match(/createConversationController\(/gu) ?? []).length, 1, 'one Conversation per generation');
   assert.match(runtime, /session\.conversation\.retire\(\);/u);
 });
 
@@ -280,14 +284,18 @@ test('§7 — no Voice, Replay, Activity, Settings, Understanding, Global Shell,
   // destination is its own layer. Only those named W3-01 identifiers are removed before the scan, so any other
   // Settings code in this layer is still caught.
   const W3_01_ENTRY = /settingsName|onOpenSettings|focusSettingsEntry|settingsRef|qandeel-settings-entry|name="settings"|'Settings'|"settings": \{/gu;
-  const layer = LAYER_PRODUCTION.map((file) => code(read(file)).replace(W3_01_ENTRY, '')).join('\n').toLowerCase();
+  // S7-02 RE-ANCHOR. The permanent claim stands: this layer implements no Replay. S7-02 ported ONE P2 glyph into the
+  // generated constants (the Replay media glyph its own layer draws in the chrome's END-edge seam); only that glyph's
+  // key is removed before the scan, so any Replay code in this layer is still caught.
+  const S7_02_GLYPH = /"replay": \{/gu;
+  const layer = LAYER_PRODUCTION.map((file) => code(read(file)).replace(W3_01_ENTRY, '').replace(S7_02_GLYPH, '')).join('\n').toLowerCase();
   for (const outside of ['replay', 'voice', 'microphone', 'activity', 'settings', 'understanding', 'switcher', 'shared', 'public', 'cancelturn', '/cancel']) {
     assert.equal(layer.includes(outside), false, `W1A-01 does not implement ${outside}`);
   }
   const generated = read(`${LAYER}/visual/canonical-visual.generated.ts`);
   const glyphs = generated.slice(generated.indexOf('"glyphs"'), generated.indexOf('"type"'));
-  // The three W1A glyphs, plus W3-01's P2 `settings` utility glyph for the S-B entry.
-  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings'], 'only the W1A glyphs and W3-01’s settings glyph are ported');
+  // The three W1A glyphs, plus W3-01's P2 `settings` utility glyph for the S-B entry, plus S7-02's P2 `replay` media glyph.
+  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay'], 'only the W1A glyphs, W3-01’s settings glyph and S7-02’s replay glyph are ported');
 });
 
 // ---------------------------------------------------------------------------------------------

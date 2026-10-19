@@ -12,7 +12,11 @@
 //     projection is called, never re-defined; the erasure registers its relations and owns the residue it cannot cover;
 //   - the API module calls only those wrappers on the caller's token, reuses the T-03C mapper and depth law, and imports
 //     no mobile, graphics, AI or distribution code; the application root stays untouched;
-//   - no mobile surface calls a Replay route (S7-01 has no player);
+//   - no mobile surface calls a Replay route (S7-01 has no player). S7-02 RE-ANCHOR: the Personal Replay entry adds the
+//     ONE mobile client, `apps/mobile/src/runtime-entry/replay-api.ts`, and it calls only the entry's routes (the
+//     capability, this conversation's Replays, one Replay, create and revise a draft). No other production module calls a
+//     Replay route, and no mobile code calls preview, finalize, reopen, a version, its moments or their analysis: those
+//     stay S7-03's. Test doubles under `__tests__` / `__fixtures__` are not production surfaces;
 //   - the proofs are wired into CI.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
@@ -35,6 +39,8 @@ const WRAPPERS = ['read_my_replay_capability_v1', 'create_my_replay_draft_v1', '
   'read_my_replay_moment_analysis_v1', 'list_my_conversation_replays_v1'];
 const COMMANDS = ['create_my_replay_draft_v1', 'revise_my_replay_draft_v1', 'prepare_my_replay_preview_v1', 'finalize_my_replay_version_v1', 'reopen_my_replay_for_revision_v1'];
 const FROZEN_CORES = ['create_replay_draft_v1', 'revise_replay_draft_v1', 'prepare_replay_preview_v1', 'finalize_replay_version_v1', 'reopen_replay_for_revision_v1'];
+/** S7-02 RE-ANCHOR: the ONE mobile client of the Replay routes (the entry and selection's own). */
+const S7_02_REPLAY_CLIENT = 'apps/mobile/src/runtime-entry/replay-api.ts';
 const API_FILES = ['replay.controller.ts', 'replay.module.ts', 'replay.repository.ts', 'replay.service.ts', 'replay.types.ts'];
 
 const shipped = () => ({
@@ -150,7 +156,15 @@ const DETECTORS = {
   },
 
   mobileViolations(w) {
-    return w.mobile.filter(([, text]) => /['`]\/replay\/|\/replay\b['`]|create_my_replay|ReplayModule/u.test(text)).map(([path]) => `${path}: S7-01 has no player or client`);
+    const out = [];
+    for (const [path, text] of w.mobile) {
+      if (/create_my_replay|ReplayModule/u.test(text)) out.push(`${path}: no mobile code names a Replay wrapper or the API module`);
+      if (/\/__(tests|fixtures)__\//u.test(path)) continue;
+      const calls = /['`]\/replay\/|\/replay\b['`]/u.test(text);
+      if (calls && path !== S7_02_REPLAY_CLIENT) out.push(`${path}: S7-01 has no player or client; S7-02's one client is ${S7_02_REPLAY_CLIENT}`);
+      if (calls && /\/(preview|finalize|reopen|versions|moments|analysis)\b/u.test(tsCode(text))) out.push(`${path}: the player's routes stay S7-03's`);
+    }
+    return out;
   },
 
   wiringViolations(w) {
@@ -202,6 +216,8 @@ LANGUAGE sql STABLE SECURITY DEFINER`)],
   ['a publish route', 'apiViolations', () => plant('api', "  @Post(':replayId/reopen')", "  @Post(':replayId/publish')\n  @HttpCode(200)\n  publish() { return null; }\n\n  @Post(':replayId/reopen')", 'replay.controller.ts')],
   ['the module composed in the application root', 'apiViolations', () => ({ ...shipped(), app: `${shipped().app}\n// ReplayModule\n` })],
   ['a mobile client of the Replay routes', 'mobileViolations', () => ({ ...shipped(), mobile: [...shipped().mobile, ['apps/mobile/src/replay/api.ts', "fetch(`${base}/replay/drafts`); request('/replay/capability')"]] })],
+  ['a player route in the S7-02 client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_02_REPLAY_CLIENT ? `${text}\nthis.read(\`/replay/\${id}/preview\`);` : text]) })],
+  ['a Replay wrapper named in a mobile test', 'mobileViolations', () => ({ ...shipped(), mobile: [...shipped().mobile, ['apps/mobile/src/replay-entry/__tests__/x.test.ts', "rpc('create_my_replay_draft_v1')"]] })],
   ['the verifier left out of CI', 'wiringViolations', () => plant('workflow', 'run: npm run verify:replay-personal-secure-integration:integration', 'run: true')],
 ];
 

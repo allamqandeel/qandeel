@@ -42,6 +42,7 @@ import { IntroductionsApiClient } from './introductions-api';
 import { IntroductionProposalsApiClient } from './introduction-proposals-api';
 import { IntroductionWorldsApiClient } from './introduction-worlds-api';
 import { IntroductionAlertsApiClient } from './introduction-alerts-api';
+import { ReplayApiClient } from './replay-api';
 import { IntroductionsEnrollmentApiClient } from './introductions-enrollment-api';
 import { IntroductionSharingApiClient, type IntroductionSharingFetch } from './introduction-sharing-api';
 import { IntroductionContinuationApiClient } from './introduction-continuation-api';
@@ -165,6 +166,11 @@ export interface MobileRuntimeEntry {
   introductionWorldsFor(bundle: CanonicalRuntimeBundle): IntroductionWorldsApiClient;
   /** S6-07 — the per-Introduction alerts client (0167), on the same AC-01 seam bound to the bundle's own auth generation. */
   introductionAlertsFor(bundle: CanonicalRuntimeBundle): IntroductionAlertsApiClient;
+  /**
+   * S7-02 — the Personal Replay entry client (the S7-01 capability, draft and conversation reads, and the committed-unit
+   * events a selection is proven against), on the same AC-01 seam bound to the bundle's own auth generation.
+   */
+  replayFor(bundle: CanonicalRuntimeBundle): ReplayApiClient;
   /** S6-07 — the governed enrollment and the withdrawal of one consent (0165), on the same AC-01 seam bound to the bundle's own auth generation. */
   introductionsEnrollmentFor(bundle: CanonicalRuntimeBundle): IntroductionsEnrollmentApiClient;
   /**
@@ -363,6 +369,15 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     introductionAlertsFor(bundle) {
       return new IntroductionAlertsApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    replayFor(bundle) {
+      const authorized = authorizedFetchFor(bundle.authGeneration);
+      // The temporal reads go through the same seam: `NO_CAPTURED_CREDENTIAL` is overwritten by the bundle's own token.
+      return new ReplayApiClient({
+        baseUrl: config.apiBaseUrl,
+        fetch: authorized,
+        temporal: new TemporalApiClient({ baseUrl: config.apiBaseUrl, accessToken: NO_CAPTURED_CREDENTIAL, fetch: authorized }),
+      });
     },
     introductionsEnrollmentFor(bundle) {
       return new IntroductionsEnrollmentApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

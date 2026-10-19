@@ -96,6 +96,7 @@ import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } f
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
+import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, useReplaySelection } from '../../replay-entry';
 import type { DirectEntryDestination } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
@@ -512,6 +513,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const switcherBand = onSignOut === undefined ? 0 : GLOBAL_SWITCHER_HEIGHT + 1;
   const conversationInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + switcherBand }), [edges, switcherBand]);
   const shared = runtime.sharedWorld;
+  // S7-02 — the Personal Replay entry: an action on THIS conversation, in the Personal world only, beside the depth control.
+  const replaySelection = useReplaySelection(runtime.replayEntry, runtime.conversation, locale.language, conversationInsets);
 
   const layer = (which: WorldDepth, current: boolean): ReactNode =>
     which === 'CONVERSATION' ? (
@@ -530,7 +533,16 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         personalSecondEntry={onSignOut === undefined ? null : (
           <IntroductionsEntry controller={runtime.introductions} proposals={runtime.introductionProposals} language={locale.language} onOpen={openIntroductions} focus={returnedFromIntroductions && !introductionsShown} />
         )}
-        discussion={<UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />}
+        discussion={(
+          <>
+            {/* S7-02: the one saved / unavailable line; nothing unless the entry (Personal world only) answered. */}
+            <ReplayNoticeLine controller={runtime.replayEntry} language={locale.language} insets={edges} />
+            <UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />
+          </>
+        )}
+        chromeEnd={onSignOut === undefined ? null : <ReplayEntryControl controller={runtime.replayEntry} language={locale.language} />}
+        overlay={onSignOut === undefined ? null : <ReplayEntryMenu controller={runtime.replayEntry} language={locale.language} insets={conversationInsets} />}
+        selection={onSignOut === undefined ? null : replaySelection}
         chromeStart={onSignOut === undefined ? null : (
           <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
         )}

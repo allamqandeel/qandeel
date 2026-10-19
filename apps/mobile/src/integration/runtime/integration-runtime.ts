@@ -103,6 +103,7 @@ import {
   type PublicIdController,
 } from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
+import { createReplayEntryController, type ReplayEntryController } from '../../replay-entry';
 import { createInteractionPreferencesController, type InteractionPreferencesController } from '../../settings';
 import {
   createDevicePhotoSource, createEnrollmentController, createIntroductionAlertsController, createIntroductionSharingController, createIntroductionWorldsController, createIntroductionsController,
@@ -267,6 +268,12 @@ export interface IntegrationSessionRuntime {
   readonly introductionWorlds: IntroductionWorldsController;
   /** S6-07: the per-Introduction mute rows of Notifications & Activity (0167), retired with the generation. */
   readonly introductionAlerts: IntroductionAlertsController;
+  /**
+   * S7-02: the Personal Replay entry and selection over THIS Session's own conversation, on the Replay transport bound to
+   * this identity. It reads the conversation and never writes it; retired with the generation, so no selection, proof
+   * or unresolved command of one account reaches the next.
+   */
+  readonly replayEntry: ReplayEntryController;
   /** S6-07: the governed enrollment and the reader's three consents (0165), retired with the generation. */
   readonly introductionEnrollment: EnrollmentController;
   /**
@@ -455,6 +462,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
+    session.replayEntry.retire();
     session.conversation.retire();
     session.account.retire();
     session.publicId.retire();
@@ -561,6 +569,15 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         return outcome;
       },
     };
+    // W1A-01: the Conversation of THIS Session, on the T-12P transport bound to this identity. The Session id is the
+    // bundle's own — never a literal, a fixture or a synthesised one — and a committed reply asks THIS generation's one
+    // driver to catch up, which is how Analysis learns.
+    const conversation = createConversationController({
+      sessionId: bundle.sessionId,
+      transport: entry.conversationTurnsFor(bundle),
+      isCurrent,
+      onReplyCommitted: () => built.liveDriver.requestImmediateCatchUp(),
+    });
     const built: IntegrationSessionRuntime = {
       generation,
       bundle,
@@ -574,15 +591,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       returnSurface: { store: bundle.store, preview },
       liveDriver: entry.liveDriverFor(bundle),
       recovery: { origin: decision.kind === 'RESUME' ? 'RESUMED' : 'FRESH', writer },
-      // W1A-01: the Conversation of THIS Session, on the T-12P transport bound to this identity. The
-      // Session id is the bundle's own — never a literal, a fixture or a synthesised one — and a
-      // committed reply asks THIS generation's one driver to catch up, which is how Analysis learns.
-      conversation: createConversationController({
-        sessionId: bundle.sessionId,
-        transport: entry.conversationTurnsFor(bundle),
-        isCurrent,
-        onReplyCommitted: () => built.liveDriver.requestImmediateCatchUp(),
-      }),
+      conversation,
+      // S7-02: the Replay entry reads THIS Session's conversation, by the same bundle Session id.
+      replayEntry: createReplayEntryController({ sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent }),
       // W1B-01: the account's first use, on the T-12P account transport bound to this identity.
       account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),
       // W3-02: the Public ID, on the same account transport bound to this identity.

@@ -6,7 +6,7 @@
  * round caps and joins, on P2's 24-unit grid scaled to the render size. No generic icon replaces
  * any of it, and `react-native-svg` is not used (P2 §14; W1A-01 authorization §5.3).
  *
- * Direction is by MEANING: Send and the depth glyph never mirror; the back chevron points back in
+ * Direction is by MEANING: Send, the depth glyph and the Replay media glyph never mirror; the back chevron points back in
  * the reading direction it is shown in. A glyph is always decorative — the control that holds it
  * carries the accessible name.
  */
@@ -56,6 +56,10 @@ export function Glyph({ name, color, direction }: GlyphProps) {
           ))}
           {glyph.dots.map((dot) => (
             <Circle key={`${dot.cx},${dot.cy}`} cx={dot.cx} cy={dot.cy} r={dot.r} color={color} />
+          ))}
+          {/* S7-02: a glyph's solid shape (the Replay glyph's play mark), P2's own path. */}
+          {('fills' in glyph ? glyph.fills : []).map((fill) => (
+            <Path key={fill.d} path={fill.d} style="fill" color={color} />
           ))}
         </Group>
       </Canvas>
