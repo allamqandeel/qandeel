@@ -38,6 +38,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // S6-07 (CP3) added exactly one: IntroductionAlertsApiClient, the per-Introduction alerts transport (a plain class); and
   // after its Copy Gate exactly one more: IntroductionsEnrollmentApiClient, the governed enrollment transport (a plain class).
   // S7-02 added exactly one: ReplayApiClient, the Personal Replay entry transport (a plain class).
+  // S7-03 added exactly one: ReplayHistoryApiClient, the read-only version / moments / moment-analysis transport (a plain class).
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
@@ -65,6 +66,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'PublicWorldApiClient',
     'PushApiClient',
     'ReplayApiClient',
+    'ReplayHistoryApiClient',
     'SIGN_UP_METADATA_KEYS',
     'SUPABASE_AUTH_OPTIONS',
     'SharedWorldApiClient',
@@ -106,8 +108,8 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // W3-MEGA-U's Understanding transport is a plain class too, and so are A3-01's Activity and A3-02's push transports,
     // and S4-01's Shared World transport, and S5-01's Public World transport, and S5-02's Public authoring transport.
     // S6-05's Introduction World transport is a plain class too, and so are S6-06's sharing and continuation transports.
-    // S7-02's Replay entry transport is a plain class too.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient', 'IntroductionsEnrollmentApiClient', 'ReplayApiClient'].includes(name)) continue;
+    // S7-02's Replay entry transport is a plain class too, and so is S7-03's read-only Replay history transport.
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient', 'IntroductionsEnrollmentApiClient', 'ReplayApiClient', 'ReplayHistoryApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

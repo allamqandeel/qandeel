@@ -185,6 +185,12 @@ export type {
 } from './replay-api';
 export { ReplayApiClient } from './replay-api';
 export type {
+  ReplayAnalysisResult, ReplayAnalyticalObjectView, ReplayHistoryApiConfig, ReplayHistoryCoverage, ReplayHistoryMoment, ReplayHistoryVersion,
+  ReplayMaterialAtTcView, ReplayMomentAnalysis, ReplayMomentsResult, ReplayNotViewableClass, ReplayOriginalMedium, ReplayQuestionAppearanceView,
+  ReplayRenderContractView, ReplaySessionAnalyticsView, ReplayVersionResult, ReplayViewingView,
+} from './replay-history-api';
+export { ReplayHistoryApiClient } from './replay-history-api';
+export type {
   EnrollmentActKind, EnrollmentActResult, EnrollmentConsentKind, EnrollmentConsentText, EnrollmentOutcome, EnrollmentRead, EnrollmentRevocationOutcome,
   EnrollmentRevocationResult, EnrollmentView, IntroductionsEnrollmentApiConfig,
 } from './introductions-enrollment-api';

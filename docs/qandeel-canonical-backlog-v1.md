@@ -395,6 +395,12 @@ happens to reversible history — are defined here.
   behind the closed Personal Replay capability ([S7-02 record](e2e/QANDEEL_S7_02_IMPLEMENTATION_RECORD_v1.md)). It is
   not the surface this item names: no player, preview or analysis development exists (S7-03 / S7-04). The item stays
   `OPEN — UNASSIGNED`; the Stage 7 WP0 places its reconciliation at S7-05.
+- *(S7-03 dated note, 2026-10-19; not merged; no field changed.)* S7-03 delivers the historical composite visual proof:
+  one Replay moment's exact text and the analysis as it stood at that moment, read through the three S7-01 reads and drawn
+  by the existing Living Analysis surface and Map through a governed adapter
+  ([S7-03 record](e2e/QANDEEL_S7_03_IMPLEMENTATION_RECORD_v1.md)). It is a proof, not the surface this item names: no
+  player, navigation or Analysis entry exists (S7-04). The item stays `OPEN — UNASSIGNED`; the Stage 7 WP0 places its
+  reconciliation at S7-05.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime + Durable Audio Source
@@ -4463,6 +4469,31 @@ is effective; it stays as written.
 - **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
   (`NOT_EVALUATED`).
 - **BG-05:** S7-02 owns no open item.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 77 items; 36 / 4 / 9 / 28 by status, 43 / 32 / 2 by severity**, unchanged.
+
+**S7-03 closing change (2026-10-19; not merged).** BG-08 / BG-09 at S7-03's closure
+([S7-03 record](e2e/QANDEEL_S7_03_IMPLEMENTATION_RECORD_v1.md) §10), under the Product Owner's checkpoint rule (no separate
+documentation task). S7-02 merged through PR #348 as `3ad4e4143264f1af7a5fd759ccb0102f1b98d087`, so the paragraph above
+is effective; it stays as written.
+- **Inherited (BG-05):** none owned. Read in full: `QAN-BL-NAV-02` (`OPEN — UNASSIGNED`, unchanged, with a dated S7-03
+  note in §4), `QAN-BL-ACCT-03`, `QAN-BL-PRIV-05` and `QAN-BL-VOICE-01` (untouched). S7-02's two S7-03 placements are
+  discharged: the presentation of `MOMENT_NOT_SEALED` and `ANALYSIS_UNAVAILABLE` at preview is delivered as the
+  composite's preview limits.
+- **Admitted (BG-06 / BG-08):** none.
+- **Checked and not admitted (BG-06):** each is placed in a named Stage 7 task by the S7-03 record's S7-04 handover (§11):
+  - a Reading's `scope` carries the source conversation's session id across the Replay wire (finding F-2; the
+    composite neither reads nor shows it; it is the creator's own conversation, served creator-exact): S7-04 decides, with
+    the Product Owner, before any user opening, whether the wire keeps it;
+  - `omittedBefore` is always 0 on the real Personal path (finding F-1; one contiguous range of whole messages), so a
+    gap was shown only on a labelled derived specimen: no obligation, recorded as the reason the specimen exists;
+  - inspection, the Timeline, the player and its navigation inside the composite (the adapter's bridge leaves inspection
+    fail-closed and draws no Timeline): S7-04;
+  - a real-device and TalkBack proof of the composite: S7-04's production proof, before any user opening;
+  - the S7-03 Product Copy Gate: S7-03's own gate (OPEN, PROPOSED rows). It is no backlog item.
+- **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
+  (`NOT_EVALUATED`); the Personal Replay capability stays closed (no gate row).
+- **BG-05:** S7-03 owns no open item.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 77 items; 36 / 4 / 9 / 28 by status, 43 / 32 / 2 by severity**, unchanged.
 

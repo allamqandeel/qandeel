@@ -512,8 +512,14 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
     }
   }
   assert.doesNotMatch(mobileCi, /0070|thread-lifecycle/u);
+  // S7-03 RE-ANCHOR (2026-10-19): the Replay history client decodes the SAME frozen T-03C Thread-state-at-TC vocabulary
+  // from the Replay wire as the historical seam does (a Thread's state at a moment, never its live lifecycle), and the
+  // captured real-path wire it is proven on carries those values. Only the two exact quoted state names are let through,
+  // and only in those two files; every other word stays forbidden there too.
+  const REPLAY_HISTORY = ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'apps/mobile/src/replay-composite/__fixtures__/replay-wire.json'];
+  const historicalStateNames = (file, text) => (REPLAY_HISTORY.includes(file) ? text.replace(/(['"])ESTABLISHED_(?:DORMANT|REOPENED)\1/gu, "''") : text);
   for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative).filter((file) => !file.startsWith(HISTORICAL_SEAM))) {
-    assert.doesNotMatch(read(file), /thread_lifecycle|ThreadLifecycle|Dormant|DORMANT|Reopened|REOPENED|focus_binding|identity_dossier/u, `${file} untouched`);
+    assert.doesNotMatch(historicalStateNames(file, read(file)), /thread_lifecycle|ThreadLifecycle|Dormant|DORMANT|Reopened|REOPENED|focus_binding|identity_dossier/u, `${file} untouched`);
   }
 });
 
