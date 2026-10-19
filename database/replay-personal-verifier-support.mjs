@@ -287,5 +287,34 @@ export function createPersonalReplayRuntime(databaseUrl) {
   };
 }
 
+/**
+ * The 0164 coordinator body (`account_erasure_private.erase_account_v1`) with exactly the three edits 0169 makes to it,
+ * and nothing else: E1 the account's own Replays locked ascending before the account row, E2 the Personal Replay module
+ * and its residue check under the same authorization before 0130, E3 the coverage comment. Each anchor must occur exactly
+ * once in the given body, so a drifted 0164 body fails here rather than producing a wrong expectation.
+ *
+ * Shared by verify-migration-0169 (A07) and every earlier verifier that pins the coordinator byte-for-byte (0166 A03),
+ * so the approved S7-01 edit set is written down once.
+ */
+export function coordinatorWithS701Edits(body0164) {
+  const once = (text, from, to, label) => {
+    assert.equal(text.split(from).length - 1, 1, `${label}: the 0164 coordinator anchor exists exactly once`);
+    return text.replace(from, () => to);
+  };
+  let coordinator = once(body0164, '    PERFORM 1 FROM public.matching_active_introduction_claims c WHERE c.world_id = ANY (v_worlds) ORDER BY c.id FOR UPDATE;\n',
+    '    PERFORM 1 FROM public.matching_active_introduction_claims c WHERE c.world_id = ANY (v_worlds) ORDER BY c.id FOR UPDATE;\n'
+    + "    -- S7-01 (0169): the account's own Replays, ascending, before the account row (every Replay path takes its Replay first).\n"
+    + '    PERFORM 1 FROM public.replays r WHERE r.created_by_user_id = v_user ORDER BY r.id FOR UPDATE;\n', 'E1');
+  coordinator = once(coordinator, "    IF account_erasure_private.module_residue_v1(v_user) THEN\n      RAISE EXCEPTION 'ACCOUNT_ERASURE_MODULE_INCOMPLETE' USING ERRCODE = 'P0001';\n    END IF;\n",
+    "    IF account_erasure_private.module_residue_v1(v_user) THEN\n      RAISE EXCEPTION 'ACCOUNT_ERASURE_MODULE_INCOMPLETE' USING ERRCODE = 'P0001';\n    END IF;\n"
+    + '    -- S7-01 (0169): the Personal Replay module (QAN-BL-ACCT-02), under the same authorization, before 0130.\n'
+    + '    PERFORM account_erasure_private.erase_personal_replays_v1(p_deletion_id, v_user);\n'
+    + '    IF account_erasure_private.replay_module_residue_v1(v_user) THEN\n'
+    + "      RAISE EXCEPTION 'ACCOUNT_ERASURE_MODULE_INCOMPLETE' USING ERRCODE = 'P0001';\n"
+    + '    END IF;\n', 'E2');
+  return once(coordinator, '  -- it (none does yet: ACCT-DEL-02 and Stage 7 own them, and cover a class in the same change as its module).\n',
+    '  -- it (S7-01 / 0169 covers REPLAY; ACCT-DEL-02 owns Shared STANDARD and Public; QAN-BL-ACCT-03 the Replay remainder).\n', 'E3');
+}
+
 export { runVerifier, APP_ROLES } from './public-runtime-verifier-support.mjs';
 export { CONTRACT_POLICY, VFN } from './replay-version-verifier-support.mjs';

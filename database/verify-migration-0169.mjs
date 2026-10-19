@@ -24,7 +24,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import process from 'node:process';
-import { CONTRACT_POLICY, P, PERSONAL_REPLAY_DISCLOSURE_BAN, W, createPersonalReplayRuntime, runVerifier } from './replay-personal-verifier-support.mjs';
+import {
+  CONTRACT_POLICY, P, PERSONAL_REPLAY_DISCLOSURE_BAN, W, coordinatorWithS701Edits, createPersonalReplayRuntime, runVerifier,
+} from './replay-personal-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
@@ -240,20 +242,7 @@ async function verifyPosture(report) {
       const start = at + open.index + open[0].length;
       return m0164.slice(start, m0164.indexOf(open[1], start));
     };
-    let coordinator = body('CREATE FUNCTION account_erasure_private.erase_account_v1(p_deletion_id uuid)');
-    coordinator = once(coordinator, '    PERFORM 1 FROM public.matching_active_introduction_claims c WHERE c.world_id = ANY (v_worlds) ORDER BY c.id FOR UPDATE;\n',
-      '    PERFORM 1 FROM public.matching_active_introduction_claims c WHERE c.world_id = ANY (v_worlds) ORDER BY c.id FOR UPDATE;\n'
-      + "    -- S7-01 (0169): the account's own Replays, ascending, before the account row (every Replay path takes its Replay first).\n"
-      + '    PERFORM 1 FROM public.replays r WHERE r.created_by_user_id = v_user ORDER BY r.id FOR UPDATE;\n', 'E1');
-    coordinator = once(coordinator, "    IF account_erasure_private.module_residue_v1(v_user) THEN\n      RAISE EXCEPTION 'ACCOUNT_ERASURE_MODULE_INCOMPLETE' USING ERRCODE = 'P0001';\n    END IF;\n",
-      "    IF account_erasure_private.module_residue_v1(v_user) THEN\n      RAISE EXCEPTION 'ACCOUNT_ERASURE_MODULE_INCOMPLETE' USING ERRCODE = 'P0001';\n    END IF;\n"
-      + '    -- S7-01 (0169): the Personal Replay module (QAN-BL-ACCT-02), under the same authorization, before 0130.\n'
-      + '    PERFORM account_erasure_private.erase_personal_replays_v1(p_deletion_id, v_user);\n'
-      + '    IF account_erasure_private.replay_module_residue_v1(v_user) THEN\n'
-      + "      RAISE EXCEPTION 'ACCOUNT_ERASURE_MODULE_INCOMPLETE' USING ERRCODE = 'P0001';\n"
-      + '    END IF;\n', 'E2');
-    coordinator = once(coordinator, '  -- it (none does yet: ACCT-DEL-02 and Stage 7 own them, and cover a class in the same change as its module).\n',
-      '  -- it (S7-01 / 0169 covers REPLAY; ACCT-DEL-02 owns Shared STANDARD and Public; QAN-BL-ACCT-03 the Replay remainder).\n', 'E3');
+    const coordinator = coordinatorWithS701Edits(body('CREATE FUNCTION account_erasure_private.erase_account_v1(p_deletion_id uuid)'));
     assert.equal(await live('account_erasure_private.erase_account_v1(uuid)'), coordinator, 'A07 the coordinator is 0164 plus E1-E3');
 
     const out = `'${OUTSIDE}'::text`;

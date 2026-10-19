@@ -162,7 +162,7 @@ const DETECTORS = {
     if (!w.workflow.includes('run: npm run test:s7-01-replay-secure-integration-contract}')) out.push('CI runs this contract');
     const group = JSON.parse(w.focused).groups['s7-01'];
     if (!group || group.verifiers[0] !== 'database/verify-migration-0169.mjs'
-        || !['0100', '0101', '0102', '0103', '0104', '0105', '0106', '0107', '0072', '0164', '0130', '0150'].every((n) => group.verifiers.includes(`database/verify-migration-${n}.mjs`))) {
+        || !['0100', '0101', '0102', '0103', '0104', '0105', '0106', '0107', '0072', '0164', '0166', '0130', '0150'].every((n) => group.verifiers.includes(`database/verify-migration-${n}.mjs`))) {
       out.push('the focused s7-01 group runs 0169 with every verifier it must leave unchanged');
     }
     return out;

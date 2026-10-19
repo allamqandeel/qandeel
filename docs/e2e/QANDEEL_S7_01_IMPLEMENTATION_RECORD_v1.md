@@ -32,8 +32,9 @@ no distribution path is reachable.
 - `database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql`, with eight sections and terminal
   self-assertions: the schema, the gate, the helpers, the commands, the reads, the wrappers, the erasure and the ACL.
 - `database/verify-migration-0169.mjs` (34 scenarios) and `database/replay-personal-verifier-support.mjs`.
-- Re-anchored verifiers: `verify-migration-0150.mjs` (ABSORBED names the five commands) and `verify-migration-0164.mjs`
-  (A06: the new residue class and its owner).
+- Re-anchored verifiers: `verify-migration-0150.mjs` (ABSORBED names the five commands), `verify-migration-0164.mjs`
+  (A06: the new residue class and its owner) and `verify-migration-0166.mjs` (A03: the coordinator is the pre-0166 body
+  plus exactly the three 0169 edits; §9.6).
 - API (`apps/api/src/replay/`): `replay.module.ts`, `replay.controller.ts`, `replay.service.ts`, `replay.repository.ts`,
   `replay.types.ts`, `replay.spec.ts`.
   - Composed through `account/account.module.ts`, because the application root is pinned.
@@ -199,7 +200,9 @@ and a client contract is published when a client consumes it. The runtime index 
   Each is narrowed in place with exactly 0164's prefix: a `DELETE` passes only inside the ONE transaction-bound governed
   erasure. Every other line is byte-identical (A06). This follows the 0164 precedent for 0130's guards.
 - **The 0164 coordinator, census and operations summary.** They are forward-replaced with named edits only (A07), as
-  the 0164 framework requires a new module to do.
+  the 0164 framework requires a new module to do. The three coordinator edits are defined once
+  (`coordinatorWithS701Edits` in `replay-personal-verifier-support.mjs`), and both 0169 A07 and 0166 A03 compare the live
+  body to it exactly.
 - **Not changed:** any I-06 primitive or core body, any contract, 0072, 0130 and CW2-08. No frozen authority needed a
   Product Owner decision beyond the approved WP0, so this task did not stop at a decision point.
 
@@ -227,6 +230,8 @@ All local runs used PostgreSQL 17.10 on a database migrated `0001` … `0169`.
 | `verify-migration-0169` | 34 scenarios, 34 passed (A01 – A09, E01 – E14, R01 – R05, G01 – G06) |
 | `verify-migration-0150` (re-anchored) | 28 / 28 |
 | `verify-migration-0164` (re-anchored) | 29 / 29 |
+| `verify-migration-0166` (re-anchored, §9.6) | 23 / 23 with 0169; 23 / 23 on `0001` … `0168` without it |
+| `verify-migration-0167`, `0168`, `verify-matching-consent-texts`, `verify-s6-07-final-journey` | 13 / 13, 13 / 13, 7 / 7, 7 / 7 (the CI steps after 0166, run locally after the correction) |
 | `verify-migration-0100` … `0107` | each verified (0102 16, 0103 38, 0104 25, 0105 48, 0106 23, 0107 35 scenarios) |
 | `verify-migration-0149`, `0132`, `0130`, `0072` | verified |
 | `verify-migration-0133` | **not run locally**: it needs `psql`, which this machine lacks. It runs in CI |
@@ -251,6 +256,8 @@ Each change is commented in place as `RE-ANCHORED by S7-01`:
 - the typed-error reader census admits `replay.service.ts` under the same `22023` rule;
 - the Project Map's current task is S7-01, and the merged S6-07 is no longer it (S5-03B, S5-03C);
 - the rate-limit census classifies the 11 Replay routes: preview is strict, and the rest are authenticated (PROD-SEC-01);
+- `verify-migration-0166` A03 (S6-07 CP2): the coordinator is byte-compared to the pre-0166 body plus exactly the three
+  0169 edits where 0169 is applied, and to the pre-0166 body where it is not (§9.6);
 - ACCT-DEL-01:
   - the coordinator alone opens the erasure; 0164 defines it and 0169 alone forward-replaces it;
   - `QAN-BL-ACCT-02` is tombstoned by S7-01, and `QAN-BL-ACCT-03` is owned.
@@ -268,6 +275,43 @@ Each change is commented in place as `RE-ANCHORED by S7-01`:
 
 `tests/*.test.mjs`: 1474 / 1474 on the closing tree (2026-10-19). That includes this task's contract (17 tests), the
 re-anchored contracts and the forward-safety mirror. CI on the pull request's exact head is the gate for review.
+
+### 9.6 CI correction R1 (2026-10-19): `verify-migration-0166` A03
+
+**The failure.** CI on `082309ca` failed in `API CI` / `verify-api`, at the step "Verify S6-07 forward dispatcher
+against real PostgreSQL": 22 of 23 passed. A03 compared the live `account_erasure_private.erase_account_v1(uuid)`
+byte-for-byte to its last definition before 0166, but 0169 forward-replaces it with the approved Replay module. The
+local evidence in §9.1 had not run 0166. The steps after it did not run in CI.
+
+**The correction, verifiers only.** No migration, no Replay logic and no erasure logic changed.
+- The three 0169 edits to the coordinator (E1: the Replay lock; E2: the module and its residue check; E3: the coverage
+  comment) now live in one place, `coordinatorWithS701Edits` in `replay-personal-verifier-support.mjs`. 0169 A07 uses it
+  in place of its inline copy. Each anchor must occur exactly once.
+- 0166 A03 still compares every other frozen body byte-for-byte to its history. For the coordinator, the expected body
+  is the pre-0166 body plus exactly the three edits when `erase_personal_replays_v1` exists, and the pre-0166 body when
+  it does not. Nothing else is accepted.
+- Where 0169 is applied, A03 also asserts these points on the live coordinator:
+  - the lock order: the claims, then the Replays, then the account row, then the request;
+  - the Replay module is called exactly once, after `module_residue_v1`, with its residue check before the
+    authorization ends and before 0130;
+  - no application role executes either new module function.
+- The coordinator's own EXECUTE posture keeps being checked as before.
+- The focused group `s7-01` now includes 0166, and this task's contract requires it.
+
+**Negative proof** (planted with `CREATE OR REPLACE` on fresh databases):
+
+| Database | Result |
+|---|---|
+| An extra `PERFORM 1;` after the Replay module call | 0166: 22 / 23, A03 fails |
+| The Replay lock moved after the account-row lock | 0166: 22 / 23, A03 fails |
+| The extra statement, under 0169 | 0169: 33 / 34, A07 fails |
+| Without 0169 (`0001` … `0168`) | 0166: 23 / 23, the coordinator is the pre-0166 body |
+
+**After the correction**, on fresh `0001` … `0169` databases:
+- 0166: 23 / 23; 0169: 34 / 34; 0164: 29 / 29;
+- 0167: 13 / 13; 0168: 13 / 13; the consent texts: 7 / 7; the S6-07 final journey: 7 / 7.
+
+The S7-01, S6-07 forward-dispatch and verifier-hazard contracts give 53 / 53. CI on the new head is the gate.
 
 ## 10. Closure: BG-08 / BG-09
 
