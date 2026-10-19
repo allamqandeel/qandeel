@@ -17,12 +17,14 @@
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8').replace(/\r\n/gu, '\n');
+// The root locators are not part of every tree this contract runs in (the forward-safety mirror omits them).
+const readIfPresent = (path) => (existsSync(join(root, path)) ? read(path) : null);
 const tsCode = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/(^|[^:'"`])\/\/[^\n]*/gu, '$1');
 const files = (dir) => readdirSync(join(root, dir)).flatMap((name) => {
   const path = `${dir}/${name}`;
@@ -51,8 +53,8 @@ const shipped = () => ({
   depth: read('apps/mobile/src/integration/composition/DepthComposition.tsx'),
   copy: read(`${ENTRY}/copy.ts`),
   record: read(RECORD),
-  state: read('QANDEEL_CURRENT_STATE.md'),
-  map: read('QANDEEL_PROJECT_MAP.md'),
+  state: readIfPresent('QANDEEL_CURRENT_STATE.md'),
+  map: readIfPresent('QANDEEL_PROJECT_MAP.md'),
   pkg: read('package.json'),
   workflow: read('.github/workflows/api-ci.yml'),
 });
@@ -173,6 +175,7 @@ const DETECTORS = {
     }
     if (!/\*\*Task:\*\* S7-02/u.test(w.record)) out.push('the record carries its lifecycle banner');
     for (const [name, text] of [['QANDEEL_CURRENT_STATE.md', w.state], ['QANDEEL_PROJECT_MAP.md', w.map]]) {
+      if (text === null) continue;
       if (!text.includes(RECORD)) out.push(`${name} points to the S7-02 record`);
       if (!/S7-01[^\n]*MERGED[^\n]*#347|#347[^\n]*S7-01[^\n]*MERGED|S7-01[^\n]*#347[^\n]*c152cb4b/u.test(text)) out.push(`${name} records S7-01 merged via #347`);
     }
