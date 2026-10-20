@@ -170,6 +170,19 @@ describe('S7-04 - the captured lifecycle journey through the real ReplayService'
     expect(JSON.parse(readFileSync(WIRE, 'utf8'))).toEqual(JSON.parse(JSON.stringify(wire)));
   });
 
+  it('S7-05 F-2: no answer carries a Session — every Reading the database answered is canonical, and leaves as its class', () => {
+    const captured = JSON.stringify(capture.scenes).match(/"scope":"[^"]*"/gu) ?? [];
+    expect(captured.length).toBeGreaterThan(0);
+    for (const scope of captured) expect(scope).toMatch(/^"scope":"CONVERSATION_SESSION:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"$/u);
+    const answers = JSON.stringify([Object.values(wire.steps).map((step) => step.body), wire.scenes]);
+    // Each Reading is served at every depth that discloses it (ANALYTICAL_OBJECT and below), always as the class.
+    const scopes = answers.match(/"scope":"[^"]*"/gu) ?? [];
+    expect(scopes.length).toBeGreaterThanOrEqual(captured.length);
+    expect(new Set(scopes)).toEqual(new Set(['"scope":"CONVERSATION_SESSION"']));
+    // The conversation's Session reaches the API only in what the client itself sends (the list path, the draft body).
+    for (const session of new Set(captured.map((scope) => scope.slice('"scope":"CONVERSATION_SESSION:'.length, -1)))) expect(answers).not.toContain(session);
+  });
+
   it('a real preview binds a real version, and a retry under the same id is answered from committed history', () => {
     expect(body('preview')).toMatchObject({ outcome: 'PREVIEW_READY', momentCount: 6, versionRevision: 1 });
     expect(body('previewRetry')).toEqual(body('preview'));

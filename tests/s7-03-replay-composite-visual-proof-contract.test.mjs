@@ -13,7 +13,8 @@
 //   - the frozen authority and privacy files are byte-identical to the branch base (criterion 12);
 //   - the gap G-1 bridge stays sound: no T-04 consumer reads `scene.liveHead` or `scene.sealed`;
 //   - the S7-03 Product Copy Gate is CLOSED (Product Owner, 2026-10-19): the 14 Arabic rows are APPROVED and pinned
-//     word for word, every English row stays PROPOSED, and the S7-02 approved rows are reused, not rewritten;
+//     word for word, and the S7-02 approved rows are reused, not rewritten. Re-anchored by S7-05 (Product Owner decision
+//     D2, 2026-10-20): every English row, position and gap included, is APPROVED and pinned word for word;
 //   - the proof build is validation-only and the derived gap specimen is labelled; the record stops at the review gate.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
@@ -55,6 +56,25 @@ const ARABIC_APPROVED = [
   'ar: (ordinal: number, count: number) => `في إعادة العرض: ${ordinal} من ${count}.`,',
   'ar: (count: string) => `لم تُعرض هنا ${count} من المحادثة.`,',
 ];
+// S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D2): the 14 English rows APPROVED word for word, the two counting
+// templates by their source text (docs/e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md). The Arabic above is unchanged.
+const ENGLISH_APPROVAL = 'S7-05 ENGLISH COPY APPROVAL — 2026-10-20, Product Owner decision D2: the English of all 14 S7-03 rows (position and gap included) APPROVED word for word; no Arabic row changed';
+const ENGLISH_APPROVED = [
+  "'This version of the Replay is no longer current.'",
+  `"The original messages have changed, so they can't be shown as they were."`,
+  `"The original messages aren't available right now."`,
+  "'The saved analysis of these moments is incomplete.'",
+  "'Original messages: available.'",
+  "'Original messages: not available right now.'",
+  "'Saved analysis: kept as it was.'",
+  "'Saved analysis: incomplete.'",
+  `"The analysis isn't shown without the messages it belongs to."`,
+  `"The analysis as it was at this moment isn't available right now."`,
+  `"The analysis couldn't be displayed right now. This doesn't mean it doesn't exist."`,
+  `"There's no saved analysis of this conversation, so it can't be replayed."`,
+  'en: (ordinal: number, count: number) => `In the Replay: ${ordinal} of ${count}.`,',
+  "en: (count: string) => `${count} of the conversation ${count.startsWith('1 ') ? 'is' : 'are'} not shown here.`,",
+];
 
 /** Criterion 12: the frozen authority and privacy files, byte-identical to the branch base 3ad4e414 (LF-normalised). */
 const FROZEN = [
@@ -74,13 +94,16 @@ const FROZEN = [
   // S7-04 RE-ANCHOR (2026-10-20, Product Owner decision G-1): the conversation list's summary decoder reads 0169's
   // EXISTS answer `false` beside a null version as "no version yet" and leaves it as the wire's null; a contradiction
   // stays refused. Nothing else in the service changed; 0169 and the wire are unchanged.
-  ['apps/api/src/replay/replay.service.ts', '4db247cdbb2c35c06fed431113bd1e32da1ffade1bd8a6e8a1c58171a83821c2'],
-  ['apps/api/src/replay/replay.types.ts', 'f8bfb198002bf28e911f00bb2a12d262d95020647a88b1c930313eed161c6af3'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope leaves as its class `CONVERSATION_SESSION` alone, its exact canonical form verified first, anything else refused whole).
+  ['apps/api/src/replay/replay.service.ts', '2a3bdb2328f943d4de022ce60f1285dd26cce66717df0dd88b0c5fe0724afc83'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
+  ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
   // S7-04 RE-ANCHOR (2026-10-19): the S7-02 Replay read keeps the current version the S7-01 read already answered
   // (`currentVersion`: its id, its revision, whether it is the private copy) - no new server field, no new route.
   ['apps/mobile/src/runtime-entry/replay-api.ts', '83df75fb033d56213180f5e6f9dbe6a7715366026bbe4c3450e5da289a6b0f43'],
-  ['apps/mobile/src/replay-entry/copy.ts', '5fbf1adfd4a316a2ecc8296204c143e541d8404ba0ad83a2b20a6def1f2bb46b'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D2: the English of every S7-02 row and of the count APPROVED word for word; no Arabic changed).
+  ['apps/mobile/src/replay-entry/copy.ts', 'e3afc223476941ce0e7d060947a3138da2a2eefee1d0ebfb31b7773f88d6aeaa'],
 ];
 
 const shipped = () => {
@@ -185,7 +208,10 @@ const DETECTORS = {
     const copy = w.composite['copy.ts'] ?? '';
     if (!copy.includes(COPY_GATE_CLOSED)) out.push('the S7-03 Copy Gate is CLOSED by the Product Owner (2026-10-19)');
     const code = tsCode(copy);
-    if (/enStatus: 'APPROVED'/u.test(code)) out.push('no English row is approved: the decision approved Arabic only');
+    // S7-05 (D2, 2026-10-20): the English of every row is APPROVED word for word; none is PROPOSED.
+    if (/enStatus: 'PROPOSED'/u.test(code)) out.push('every English row is APPROVED (S7-05 D2)');
+    if (!copy.includes(ENGLISH_APPROVAL)) out.push('the copy records the S7-05 English approval');
+    for (const row of ENGLISH_APPROVED) if (!copy.includes(row)) out.push(`the approved English row is exactly the Product Owner's: ${row}`);
     if (/status: 'PROPOSED'|status: 'LOCKED'/u.test(code.replace(/enStatus: '[A-Z]+'/gu, ''))) out.push('every Arabic row is APPROVED');
     for (const row of ARABIC_APPROVED) if (!copy.includes(row)) out.push(`the approved Arabic row is unchanged: ${row}`);
     const arabicLiterals = [...code.matchAll(/'[^'\n]*[\u0600-\u06FF][^'\n]*'|`[^`\n]*[\u0600-\u06FF][^`\n]*`/gu)].length;
@@ -234,7 +260,8 @@ const DETECTORS = {
     if (w.state !== null && !/S7-02[^\n]*MERGED[^\n]*#348|#348[^\n]*S7-02/u.test(w.state)) out.push('Current State proves S7-02 merged via PR #348');
     // S7-04 RE-ANCHOR (2026-10-19): S7-03 merged through PR #349; the Project Map's current task is S7-04, and S7-03 stands
     // beneath it as the previous task, as written at its closing change.
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu.test(w.map)) out.push('the Project Map names S7-04 as current');
+    // S7-05 RE-ANCHOR (2026-10-20): S7-04 merged through PR #350; the current task is S7-05.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-05 — Replay Final Integration, Device Proof & Stage Closure\*\*/mu.test(w.map)) out.push('the Project Map names S7-05 as current');
     if (w.map !== null && !/^> \*\(Previous, S7-03, as written at its closing change; merged through PR #349:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-03 as the previous task');
     return out;
   },
@@ -286,7 +313,9 @@ const PLANTED = [
   ['a reopened S7-03 Copy Gate', 'copyViolations', edit('composite', 'copy.ts', COPY_GATE_CLOSED, 'S7-03 PRODUCT COPY GATE — OPEN')],
   ['an approved Arabic row reworded', 'copyViolations', edit('composite', 'copy.ts', "'الرسائل الأصلية: متاحة.'", "'الرسائل الأصلية متاحة.'")],
   ['an approved counting rule changed', 'copyViolations', edit('composite', 'copy.ts', '`لم تُعرض هنا ${count} من المحادثة.`', '`لم يُعرض هنا ${count} من المحادثة.`')],
-  ['an English row approved with the Arabic', 'copyViolations', edit('composite', 'copy.ts', "status: 'APPROVED', enStatus: 'PROPOSED'", "status: 'APPROVED', enStatus: 'APPROVED'")],
+  ['an English row back to PROPOSED', 'copyViolations', edit('composite', 'copy.ts', "status: 'APPROVED', enStatus: 'APPROVED', source:", "status: 'APPROVED', enStatus: 'PROPOSED', source:")],
+  ['an approved English row reworded', 'copyViolations', edit('composite', 'copy.ts', "'Saved analysis: incomplete.'", "'The saved analysis: incomplete.'")],
+  ['an English counting rule changed', 'copyViolations', edit('composite', 'copy.ts', "count.startsWith('1 ') ? 'is' : 'are'", "'are'")],
   ['an Arabic row left PROPOSED', 'copyViolations', edit('composite', 'copy.ts', "  status: 'APPROVED' as ReplayCompositeCopyStatus,", "  status: 'PROPOSED' as ReplayCompositeCopyStatus,")],
   ['Arabic written in the view', 'copyViolations', edit('composite', 'ReplayMomentComposite.tsx', "const speaker = moment.sourceRole === 'USER' ? sharedCopy(language).you : turns.product;", "const speaker = moment.sourceRole === 'USER' ? 'أنت' : turns.product;")],
   ['the Product entry replaced', 'proofViolations', edit('mobilePkg', '', '"main": "expo-router/entry"', '"main": "src/integration/__validation__/s703-proof-entry.tsx"')],

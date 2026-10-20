@@ -618,6 +618,47 @@ async function verifyBehaviour(report) {
       await rejected(() => q('SELECT * FROM public.read_my_replay_capability_v1()'), ['42501']);
       await owner();
     });
+
+    // S7-05 D5 (3): the gate governs creation acts only. A Replay that already exists is read exactly as before once the
+    // gate closes (E01 reads an empty list; this reads a real FINALIZED and a real PREVIEW_READY Replay), while every act
+    // on it is NOT_AVAILABLE_NOW and writes nothing, and the other human still reaches nothing.
+    await report.isolated('E15 the gate closes after a Replay exists: its version, moments, analysis and list answer unchanged; every act is refused', async () => {
+      const [A, B] = [randomUUID(), randomUUID()];
+      await rt.provisionHumans([A, B]);
+      const c = await rt.provisionConversation(A, { turns: 4, unitsPerTurn: 2 });
+      await rt.setGate();
+      const f = await rt.bringTo(A, c, 'FINALIZED', { first: 1, last: 4 });
+      const p = await rt.bringTo(A, c, 'PREVIEW_READY', { first: 5, last: 6 });
+      const snapshotOf = async (r) => ({
+        read: await rt.read(A, r.replay),
+        version: await rt.version(A, r.replay, r.version),
+        moments: await rt.moments(A, r.replay, r.version),
+        analysis: await rt.analysis(A, r.replay, r.version, 1),
+      });
+      const open = { f: await snapshotOf(f), p: await snapshotOf(p), list: await rt.list(A, c.session) };
+      assert.deepEqual([open.f.read[0].replay_lifecycle, open.p.read[0].replay_lifecycle], ['FINALIZED', 'PREVIEW_READY'], 'E15 a FINALIZED and a PREVIEW_READY Replay exist');
+      assert.deepEqual([open.f.version[0].viewing_state, open.p.version[0].viewing_state], ['VIEWABLE', 'VIEWABLE'], 'E15 both versions are viewable under the open gate');
+      assert.equal(open.f.moments.length, 4, 'E15 the finalized version has its four moments');
+      assert.ok(open.f.moments.every((m) => typeof m.source_text === 'string' && m.source_text.length > 0), 'E15 with their text');
+      assert.equal(open.f.analysis.length, 1, 'E15 the moment analysis answers under the open gate');
+      for (const flag of [['EMERGENCY_DISABLED', 'SATISFIED'], ['DISABLED', 'SATISFIED']]) {
+        await rt.setGate(...flag);
+        const label = `E15 ${flag[0]}`;
+        assert.equal(await rt.capability(A), false, `${label}: the hint says closed`);
+        const before = await replayFingerprint();
+        assert.deepEqual(await snapshotOf(f), open.f, `${label}: the FINALIZED Replay, version, moments and analysis read exactly as before`);
+        assert.deepEqual(await snapshotOf(p), open.p, `${label}: the PREVIEW_READY Replay reads exactly as before`);
+        assert.deepEqual(await rt.list(A, c.session), open.list, `${label}: the conversation lists both, unchanged`);
+        assert.equal(outcomeOf(await rt.reopen(A, randomUUID(), f.replay, f.version)), 'NOT_AVAILABLE_NOW', `${label}: reopen is refused`);
+        assert.equal(outcomeOf(await rt.finalize(A, randomUUID(), p.replay, p.version)), 'NOT_AVAILABLE_NOW', `${label}: finalize is refused`);
+        assert.equal(outcomeOf(await rt.create(A, randomUUID(), c.session, 1, 4)), 'NOT_AVAILABLE_NOW', `${label}: create is refused`);
+        sameFingerprint(before, await replayFingerprint(), label);
+        assert.deepEqual(await rt.read(B, f.replay), [], `${label}: the other human reads nothing`);
+        assert.deepEqual(await rt.version(B, f.replay, f.version), [], `${label}: nor its version`);
+        assert.deepEqual(await rt.moments(B, f.replay, f.version), [], `${label}: nor its moments`);
+        assert.deepEqual(await rt.analysis(B, f.replay, f.version, 1), [], `${label}: nor its analysis`);
+      }
+    });
   } finally {
     await owner();
     await q('ROLLBACK');

@@ -19,6 +19,10 @@
  * The Replay wire is narrower than `V`, and this client keeps it narrower: the Session rung carries no Moments (the
  * version's own source layer is the moments read), a Question appearance names no Turn, a Material carries no wall-clock
  * lifetime (hindsight at TC), and no K(TC) header (Session, Live Head, revision) exists to decode.
+ *
+ * S7-05 (F-2): nor does a Reading name a Session. Its scope arrives as its class alone, `CONVERSATION_SESSION`, and is
+ * decoded as exactly that word: it is not the Reading's historical scope, nothing here reads it as one, and an answer whose
+ * scope names a Session (or anything else) is refused whole.
  */
 import type {
   DisclosedAnalyticalObjectRung,
@@ -146,6 +150,8 @@ const POLICY_KEYS = ['originalMedium', 'sourceText', 'semanticCut', 'temporalDis
   'motion', 'captionProvenance', 'accessibilityParity', 'reducedMotionParity', 'editorialAnnotation'] as const;
 const THREAD_STATES = ['ESTABLISHED_ACTIVE', 'ESTABLISHED_DORMANT', 'ESTABLISHED_REOPENED', 'ESTABLISHED_UNBOUND_IN_SESSION'] as const;
 const LINEAGE_KINDS = ['LEGACY_BASELINE', 'CREATED', 'STATUS_TRANSITION', 'VERSION_ADVANCED'] as const;
+/** S7-05 (F-2): the one word a Reading's scope crosses the Replay wire as — its class, never its Session. */
+const READING_SCOPE_CLASSES = ['CONVERSATION_SESSION'] as const;
 const CONFIDENCE_RESOLUTIONS = ['CURRENT', 'SUPERSEDED', 'PREVALID'] as const;
 
 /** One refused answer, thrown inside a decoder and caught at its edge: an answer is used whole or not at all. */
@@ -389,7 +395,7 @@ function decodeAnalyticalRung(raw: unknown, tc: number): ReplayAnalyticalObjectV
       statement: text(reading.statement, `${path}.statement`),
       type: text(reading.type, `${path}.type`),
       domain: text(reading.domain, `${path}.domain`),
-      scope: text(reading.scope, `${path}.scope`),
+      scope: vocabulary(reading.scope, `${path}.scope`, READING_SCOPE_CLASSES),
       origin: text(reading.origin, `${path}.origin`),
       assumptions: texts(reading.assumptions, `${path}.assumptions`),
       disconfirmingConditions: texts(reading.disconfirmingConditions, `${path}.disconfirmingConditions`),

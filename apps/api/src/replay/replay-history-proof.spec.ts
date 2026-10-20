@@ -106,6 +106,20 @@ describe('S7-03 - the captured real-path history through the real ReplayService'
     }
   });
 
+  it('S7-05 F-2: every Reading the real database answered has the canonical scope, and the wire carries its class and no Session', () => {
+    // What PostgreSQL answered: each Reading's scope is exactly `CONVERSATION_SESSION:<uuid>` (0029 / 0033's one form).
+    const captured = JSON.stringify(capture.scenes).match(/"scope":"[^"]*"/gu) ?? [];
+    expect(captured.length).toBeGreaterThan(0);
+    for (const scope of captured) expect(scope).toMatch(/^"scope":"CONVERSATION_SESSION:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"$/u);
+    // What the API served: the class, once per Reading, and no Session id anywhere in an answer.
+    const served = JSON.stringify(wire);
+    // Each Reading is served at every depth that discloses it (ANALYTICAL_OBJECT and below), always as the class.
+    const scopes = served.match(/"scope":"[^"]*"/gu) ?? [];
+    expect(scopes.length).toBeGreaterThanOrEqual(captured.length);
+    expect(new Set(scopes)).toEqual(new Set(['"scope":"CONVERSATION_SESSION"']));
+    for (const session of new Set(captured.map((scope) => scope.slice('"scope":"CONVERSATION_SESSION:'.length, -1)))) expect(served).not.toContain(session);
+  });
+
   it('the bounded states are the real path\'s own answers', () => {
     const scenes = wire.scenes as Record<string, { version: { outcome: string; viewing?: unknown }; moments: { moments: { text: string | null }[] }; analysis: Record<string, Record<string, { outcome: string }>> }>;
     expect(scenes.notViewable.version.viewing).toEqual({ state: 'NOT_VIEWABLE', notViewableClass: 'SOURCE_NOT_CURRENTLY_AVAILABLE',

@@ -1,6 +1,7 @@
 import type {
   DisclosedEmergingFocus,
   DisclosedQuestionAppearance,
+  DisclosedReading,
   DisclosedSourceProvenanceRung,
   DisclosedThreadRung,
   DisclosedWorldRung,
@@ -148,6 +149,17 @@ export interface ReplaySessionAnalyticsRung {
   readonly questionAppearances: readonly ReplayQuestionAppearance[];
 }
 
+/**
+ * S7-05 (F-2): a Reading on the Replay wire. Its scope is the canonical scope's CLASS only, never the Session it names: the
+ * moment is addressed by its ordinal and Session Position, and no Session id crosses (the header carries none either).
+ */
+export type ReplayReading = Omit<DisclosedReading, 'scope'> & { readonly scope: 'CONVERSATION_SESSION' };
+
+/** The ANALYTICAL_OBJECT rung of a Replay moment's analysis: T-03C's, with each Reading's scope narrowed to its class. */
+export type ReplayAnalyticalObjectRung =
+  Omit<Extract<DisclosedAnalyticalRungs<DisclosedMaterialAtTc>['analyticalObject'], { status: 'DISCLOSED' }>['value'], 'readings'>
+  & { readonly readings: readonly ReplayReading[] };
+
 export type ReplayMomentAnalysisView =
   | {
     readonly outcome: 'AVAILABLE';
@@ -157,7 +169,7 @@ export type ReplayMomentAnalysisView =
     readonly world: DisclosedWorldRung;
     readonly thread: HistoricalRung<DisclosedThreadRung>;
     readonly session: HistoricalRung<ReplaySessionAnalyticsRung>;
-    readonly analyticalObject: DisclosedAnalyticalRungs<DisclosedMaterialAtTc>['analyticalObject'];
+    readonly analyticalObject: HistoricalRung<ReplayAnalyticalObjectRung>;
     readonly sourceProvenance: HistoricalRung<DisclosedSourceProvenanceRung>;
   }
   /** The version is not viewable now (see the version's `viewing`): no analysis stands in for it. */

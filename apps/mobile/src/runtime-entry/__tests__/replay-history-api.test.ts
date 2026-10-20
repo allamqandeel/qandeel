@@ -85,6 +85,15 @@ describe('S7-03 — decoding the real-path Replay wire', () => {
       expect(analysis((body) => { body.session.value.moments = []; })).toBe('UNAVAILABLE');
       expect(analysis((body) => { body.world.threads[0].label = 'invented'; })).toBe('UNAVAILABLE');
     });
+    it('S7-05 F-2: a Reading scope that names a Session, or is anything but its class', () => {
+      expect(analysis(() => undefined)).toBe('ANSWERED');
+      const scopes = (body: Record<string, any>) => body.analyticalObject.value.readings as Record<string, unknown>[];
+      expect(analysis((body) => { expect(scopes(body).length).toBeGreaterThan(0); })).toBe('ANSWERED');
+      for (const scope of [`CONVERSATION_SESSION:${MAIN.replayId}`, 'CONVERSATION_SESSION:', 'conversation_session', 'USER', '']) {
+        expect(analysis((body) => { scopes(body)[0].scope = scope; })).toBe('UNAVAILABLE');
+      }
+      expect(analysis((body) => { delete scopes(body)[0].scope; })).toBe('UNAVAILABLE');
+    });
     it('a moment list out of chronology, a gap before the first moment, or text for only some moments', () => {
       const moments = (mutate: (body: Record<string, any>) => void) => {
         const body = clone(MAIN.moments) as Record<string, any>;

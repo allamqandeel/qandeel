@@ -9,7 +9,7 @@ import { AccessibilityInfo, StyleSheet } from 'react-native';
 import { ConversationSurface, createConversationController, type ConversationController } from '../../conversation';
 import { exchange, page, scriptedTransport } from '../../conversation/__fixtures__/conversation';
 import type { ChromeLanguage } from '../../orientation-chrome';
-import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, createReplayEntryController, replayEntryCopy, useReplaySelection, type ReplayEntryController } from '..';
+import { REPLAY_ENTRY_COPY_GATE, REPLAY_ENTRY_COPY_ROWS, ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, createReplayEntryController, replayEntryCopy, useReplaySelection, type ReplayEntryController } from '..';
 import { REPLAY_ID, SESSION, fakeReplayTransport, flush, timeline, type FakeReplayTransport } from '../__fixtures__/replay';
 
 // The test renderer has no native node handles; the precedent (introductions.test.tsx) stands one in.
@@ -183,5 +183,45 @@ describe('S7-02 — the selection mode over the conversation’s own messages', 
     expect(view.getByText(copy.unconfirmed)).toBeTruthy();
     await press(view, 'qandeel-replay-try-again');
     expect(replayTransport.commands.map((c) => c.commandId)).toEqual(['cmd-1', 'cmd-1']);
+  });
+});
+
+describe('S7-05 — the English of the S7-02 rows (Product Owner decision D2, 2026-10-20)', () => {
+  /** Word for word as the Product Owner approved it. */
+  const APPROVED_ENGLISH = {
+    replayName: 'Conversation replay',
+    whole: 'The whole conversation',
+    part: 'Part of the conversation',
+    savedDraft: 'Saved draft',
+    pickHint: 'The first and last messages of the part',
+    save: 'Save',
+    openHead: 'A Replay that includes the latest message can only be shown once the conversation continues.',
+    savedWhole: 'The whole conversation was saved for a Replay.',
+    savedPart: 'The selected part was saved for a Replay.',
+    changed: 'Something changed since you made this selection. Please select again.',
+    notProvable: "This selection can't be saved as one continuous part.",
+    unconfirmed: "We couldn't confirm whether it was saved.",
+  } as const;
+
+  it('every one of the 12 rows and the message count is APPROVED in English, word for word; no row is PROPOSED', () => {
+    const en = replayEntryCopy('en');
+    for (const [key, text] of Object.entries(APPROVED_ENGLISH)) {
+      const row = REPLAY_ENTRY_COPY_ROWS[key as keyof typeof APPROVED_ENGLISH];
+      expect(row.enStatus).toBe('APPROVED');
+      expect(row.en).toBe(text);
+      expect(en[key as keyof typeof APPROVED_ENGLISH]).toBe(text);
+    }
+    for (const row of Object.values(REPLAY_ENTRY_COPY_ROWS)) expect(row.enStatus).toBe('APPROVED');
+    expect(REPLAY_ENTRY_COPY_GATE.englishProposed).toEqual([]);
+    expect(REPLAY_ENTRY_COPY_GATE.englishApproved).toEqual(expect.arrayContaining([...Object.keys(APPROVED_ENGLISH), 'count']));
+    expect(REPLAY_ENTRY_COPY_GATE.englishApproval).toMatch(/^S7-05 ENGLISH COPY APPROVAL — 2026-10-20/u);
+  });
+
+  it('the message count keeps its plural rule, with no brackets in what is shown', () => {
+    const en = replayEntryCopy('en');
+    expect(en.count(1)).toBe('1 message');
+    expect(en.count(2)).toBe('2 messages');
+    expect(en.count(11)).toBe('11 messages');
+    for (const n of [1, 2, 7]) expect(en.count(n)).not.toMatch(/[()[\]/]/u);
   });
 });

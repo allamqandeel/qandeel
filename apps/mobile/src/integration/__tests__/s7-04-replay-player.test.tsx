@@ -16,13 +16,14 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 import { MAP_SURFACE_TEST_ID } from '../../map';
 import { conversationCopy } from '../../conversation';
 import { replayEntryCopy } from '../../replay-entry';
+import { replayCompositeCopy } from '../../replay-composite';
 import { REPLAY_PLAYER_TEST_ID, replayPlayerCopy } from '../../replay-player';
-import { PLAYER_WIRE, playerServer, type PlayerServer } from '../../replay-player/__fixtures__/player-wire';
+import { PLAYER_IDS, PLAYER_WIRE, playerServer, type PlayerServer } from '../../replay-player/__fixtures__/player-wire';
 import { turnEvent } from '../../replay-entry/__fixtures__/replay';
 import { RESPONSIVE_MAP_FRAME_TEST_ID, RESPONSIVE_SURFACE_TEST_ID } from '../../responsive';
 import { TEST_CONFIG } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
-import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
+import { harness, settle, snapshot, worldDisclosure, SESSION_A, SESSION_B, type IntegrationHarness } from '../__fixtures__/integration';
 import { deviceProductLanguage } from '../locale/device-locale';
 
 // Each journey drives the whole production composition through many reads and commands; under a full parallel run
@@ -275,6 +276,157 @@ describe('S7-04 — Select → Saved Draft → Real Preview → Player → Priva
     expect(h.http.matching('/finalize')).toHaveLength(0);
     expect(h.http.matching('/reopen')).toHaveLength(0);
     expect(h.http.matching('/versions/')).toHaveLength(0);
+    view.unmount();
+    h.dispose();
+  });
+});
+
+/**
+ * S7-05 D5 (1) — an account switch after a sign-out. Account A saves, previews and privately finalizes a Replay, then
+ * signs out; account B signs in through the explicit path into its own Session. Nothing of A's Replay — its passage,
+ * its notice, its conversation, its ids — reaches B's screen or B's requests, and B's Analysis offers B's own (empty)
+ * history, never A's. The Replay A made is the captured one; B's server answers B's own reads only.
+ */
+describe('S7-05 D5 — an account switch after a sign-out shows nothing of the previous account', () => {
+  const USER_2 = { userId: 'user-2', accessToken: 'token-2' };
+  const B = `Bearer ${USER_2.accessToken}`;
+
+  it('A finalizes a Replay and signs out; B signs in: no passage, notice, conversation or id of A appears, and no request of B names A', async () => {
+    const { h, server, view } = await world();
+    await savePart(view);
+    await press(view, 'qandeel-replay-preview');
+    await layOut(view);
+    await press(view, 'qandeel-replay-player-finalize');
+    expect(text(view, 'qandeel-replay-player-sentence')).toBe(PLAYER_WORDS.finalizedNotice);
+    expect(h.ready().bundle.sessionId).toBe(SESSION_A);
+
+    // B's own world, routed by B's credential: a new Session with one committed exchange of its own (so B's Analysis
+    // entry is live, not a held slot), and an empty Replay history.
+    const own = (call: { authorization: string | null }) => call.authorization === B;
+    const unexpectedOfB: string[] = [];
+    const HISTORY_B = [exchange('fixture: the second account’s words')];
+    const EVENTS_B = [turnEvent(HISTORY_B[0].userTurn.id, 1, 1, SESSION_B), turnEvent(HISTORY_B[0].reply!.id, 2, 2, SESSION_B)];
+    h.http.on('/conversation/sessions', (call) => ({
+      status: 201,
+      body: { id: own(call) ? SESSION_B : SESSION_A, user_id: own(call) ? USER_2.userId : 'user-1', status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now', last_activity_at: 'now', closed_at: null },
+    }));
+    h.http.on('/temporal', (call) => ({ status: 200, body: snapshot({ sessionId: own(call) ? SESSION_B : SESSION_A, liveHead: own(call) ? 2 : 8 }) }));
+    h.http.on('/temporal/events', (call) => ({ status: 200, body: own(call) ? { sessionId: SESSION_B, events: EVENTS_B } : { sessionId: SESSION_A, events: EVENTS(SESSION_A) } }));
+    h.http.on('/historical-projection', (call) => ({ status: 200, body: own(call) ? worldDisclosure(SESSION_B, 2, 2) : worldDisclosure(SESSION_A, 8, 8) }));
+    h.http.on('/turns', (call) => ({ status: 200, body: historyBody(own(call) ? HISTORY_B : HISTORY) }));
+    h.http.on('/replay', async (call) => {
+      if (own(call)) {
+        if (call.url.endsWith('/replay/capability')) return { status: 200, body: { creationAvailable: true } };
+        if (call.url.endsWith(`/replay/conversations/${SESSION_B}`)) return { status: 200, body: { replays: [] } };
+        unexpectedOfB.push(`${call.method} ${call.url}`);
+        return { status: 404, body: { code: 'NOT_FOUND' } };
+      }
+      const answer = await server.fetch(call.url, { method: call.method, ...(call.body === null ? {} : { body: call.body }) });
+      return { status: answer.status, body: await answer.json() };
+    });
+
+    await act(async () => {
+      await h.runtime.auth.signOut();
+      await settle();
+    });
+    expect(h.phase().kind).toBe('SIGNED_OUT');
+    expect(view.queryByTestId(REPLAY_PLAYER_TEST_ID, HIDDEN)).toBeNull();
+    const signedOutAt = h.http.calls.length;
+
+    await act(async () => {
+      h.auth.signInWith({ ok: true, value: USER_2 });
+      await h.runtime.auth.signInWithPassword('validation identity', 'validation credential');
+      await settle();
+    });
+    const second = h.ready();
+    expect(second.bundle.sessionId).toBe(SESSION_B);
+    expect(second.replayPlayer.getState().open).toBeNull();
+    await layOut(view);
+
+    // B's own conversation is on screen; nothing of A, mounted or hidden: no passage, no saved notice, none of A's words.
+    expect(view.getAllByText(HISTORY_B[0].userTurn.content, { exact: false }).length).toBeGreaterThan(0);
+    expect(view.queryByTestId(REPLAY_PLAYER_TEST_ID, HIDDEN)).toBeNull();
+    expect(view.queryByTestId('qandeel-replay-notice', HIDDEN)).toBeNull();
+    for (const exchangeOfA of HISTORY) expect(view.queryAllByText(exchangeOfA.userTurn.content, { ...HIDDEN, exact: false })).toHaveLength(0);
+    for (const moment of MOMENTS) expect(view.queryAllByText(moment.text, { ...HIDDEN, exact: false })).toHaveLength(0);
+
+    // B's Analysis: its Replay entry (the gate answers B open) reads B's own empty history, never A's Replay.
+    await press(view, 'qandeel-depth-to-analysis');
+    await layOut(view);
+    await press(view, 'qandeel-replay-analysis-entry');
+    await layOut(view);
+    const listsOfB = h.http.calls.slice(signedOutAt).filter((call) => call.url.includes('/replay/conversations/'));
+    expect(listsOfB.length).toBeGreaterThan(0);
+    for (const call of listsOfB) expect(call.url.endsWith(`/replay/conversations/${SESSION_B}`)).toBe(true);
+    for (const moment of MOMENTS) expect(view.queryAllByText(moment.text, { ...HIDDEN, exact: false })).toHaveLength(0);
+
+    // Every request after the sign-out is B's, and none names A's Session, A's Replay or A's version.
+    const afterSwitch = h.http.calls.slice(signedOutAt);
+    expect(afterSwitch.length).toBeGreaterThan(0);
+    expect(afterSwitch.some((call) => call.url.endsWith('/replay/capability'))).toBe(true);
+    for (const call of afterSwitch) {
+      if (call.authorization !== null) expect(call.authorization).toBe(B);
+      for (const ofA of [SESSION_A, PLAYER_IDS.replay, PLAYER_IDS.v1, PLAYER_IDS.session]) {
+        expect(call.url).not.toContain(ofA);
+        expect(call.body ?? '').not.toContain(ofA);
+      }
+    }
+    expect(unexpectedOfB).toEqual([]);
+    expect(h.http.matching('/replay').filter((call) => call.authorization === B && call.method === 'POST')).toHaveLength(0);
+    view.unmount();
+    h.dispose();
+  });
+});
+
+/**
+ * S7-05 D5 (4) — NOT_VIEWABLE through the real path, in the production composition. The chain is real end to end: the
+ * 0169 wrappers' rows on a real PostgreSQL database (verifier E07 proves the same withdrawal there), passed through the
+ * REAL ReplayService (`apps/api/src/replay/replay-player-proof.spec.ts`), give the captured wire the production clients
+ * read here. The reader saves the captured source part (1 .. 3), previews it, and its original message changes before
+ * they save a private copy: the finalization is refused, and the passage reads its version again as NOT_VIEWABLE.
+ */
+describe('S7-05 D5 — NOT_VIEWABLE through the real path, in the production composition', () => {
+  it('the source changes after the preview: Finalize is refused, and the passage shows the reason and both layers — no text, no Map, no analysis read', async () => {
+    const { h, server, view } = await world();
+    const COMPOSITE_WORDS = replayCompositeCopy(LANGUAGE);
+    const SOURCE_MOMENTS = (PLAYER_WIRE.scenes.source.moments as { moments: { text: string }[] }).moments;
+    await press(view, 'qandeel-replay-entry');
+    await press(view, 'qandeel-replay-choose-part');
+    await press(view, `qandeel-selectable-${HISTORY[0].userTurn.id}`);
+    await press(view, `qandeel-selectable-${HISTORY[0].reply!.id}`);
+    await press(view, 'qandeel-replay-save');
+    expect(JSON.parse(h.http.matching('/replay/drafts')[0].body!)).toMatchObject({ firstTc: 1, lastTc: 3 });
+    await press(view, 'qandeel-replay-preview');
+    await layOut(view);
+    expect(text(view, 'qandeel-replay-text')).toBe(SOURCE_MOMENTS[0].text);
+    expect(view.queryByTestId('qandeel-replay-not-viewable')).toBeNull();
+
+    server.withdrawSource();
+    await press(view, 'qandeel-replay-player-finalize');
+    await layOut(view);
+    expect(text(view, 'qandeel-replay-player-sentence')).toBe(replayEntryCopy(LANGUAGE).changed);
+    expect(h.http.matching('/finalize')).toHaveLength(1);
+    const analysisReadsBefore = h.http.matching('/analysis').length;
+    await layOut(view);
+
+    // The version read again is the captured withdrawn one: its reason and both layers, and nothing of the messages.
+    expect(view.getByTestId('qandeel-replay-not-viewable')).toBeTruthy();
+    expect(text(view, 'qandeel-replay-not-viewable-reason')).toBe(COMPOSITE_WORDS.notViewable('SOURCE_NOT_CURRENTLY_AVAILABLE'));
+    expect(text(view, 'qandeel-replay-source-layer')).toBe(COMPOSITE_WORDS.sourceLayerUnavailable);
+    expect(text(view, 'qandeel-replay-analytical-layer')).toBe(COMPOSITE_WORDS.analyticalLayerSealed);
+    expect(text(view, 'qandeel-replay-no-analysis-without-text')).toBe(COMPOSITE_WORDS.noAnalysisWithoutText);
+    expect(view.queryByTestId('qandeel-replay-text')).toBeNull();
+    for (const moment of SOURCE_MOMENTS) expect(view.queryAllByText(moment.text, { ...HIDDEN, exact: false })).toHaveLength(0);
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    // Nothing is playable — no Spine is offered over a version that is not viewable — and no moment analysis is read.
+    expect(view.queryByTestId('qandeel-replay-spine', HIDDEN)).toBeNull();
+    expect(h.ready().replayPlayer.transport().available).toBe(false);
+    await act(async () => {
+      await settle();
+    });
+    expect(h.http.matching('/analysis').length).toBe(analysisReadsBefore);
+    for (const call of h.http.matching(`/replay/${PLAYER_IDS.source}/versions/`)) expect(call.authorization).toBe('Bearer token-1');
+    expect(server.uncaptured).toEqual([]);
     view.unmount();
     h.dispose();
   });
