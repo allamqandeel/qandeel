@@ -151,7 +151,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-SEC-01` | Mobile Credential Backup & Hardware Security Hardening | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
-| `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-NAV-02` | Analysis Replay | `S7-05 — Replay Final Integration, Device Proof & Stage Closure` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `HIGH` | `DEFERRED — OWNED` |
@@ -211,6 +211,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PROD-10` | A Photo Object Lost From the Private Store Blocks Its Owner's Export Bundle | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-06` | Export My Data's Photo Folder Save on iOS, Physical Android Devices and Read-Only Places | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-03` | Account Erasure Outside the Personal Replay: Non-Personal Replay Sources and Replay Distribution | `Stage 9 — Economy + Launch Closure (Replay distribution / CW2-08)` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-RSP-03` | Arabic Global Switcher Destination Words Truncated at the Default Text Size on a Physical Phone | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -362,6 +363,9 @@ happens to reversible history — are defined here.
 
 ### `QAN-BL-NAV-02` — Analysis Replay
 
+> **Historical pre-closure schema.** This block records the item as it stood before S7-05's closing change; it is not the
+> current lifecycle state. The current state is the `CLOSED — TOMBSTONE` record of `QAN-BL-NAV-02` in §6 (S7-05).
+
 - **Title / Finding:** there is no Replay of how an analysis developed.
 - **Source:** [T-07 §12](return-navigation-layer-v1.md) ("no Replay").
 - **Why deferred:** T-07 explicitly excludes Replay, and no current owner is frozen. The Replay
@@ -412,6 +416,8 @@ happens to reversible history — are defined here.
   rows of S7-02 and S7-03 ([S7-05 record](e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md)). The Product Owner approved this
   item's closure in principle (D4), at CP3 and only on complete evidence, including the real-device proof. The item stays
   `OPEN — UNASSIGNED` until then.
+- *(S7-05 closing dated note, 2026-10-20; PR #351, not merged.)* Tombstoned by S7-05's closing change under D4, on the
+  completed evidence ([S7-05 record](e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md) §7, §8, §10); see §6. The fields above are kept as they stood.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime + Durable Audio Source
@@ -2959,6 +2965,30 @@ an emulator can prove. Nothing here authorizes implementation (BG-07).
   nothing written, and a failed rollback leaves no folder that holds the package.
 - **Status:** `DEFERRED — OWNED`
 
+### `QAN-BL-RSP-03` — Arabic Global Switcher Destination Words Truncated at the Default Text Size on a Physical Phone
+
+Admitted under BG-06 / BG-08 by S7-05 at its closing change (2026-10-20; PR #351, not merged; effective from its merge).
+It was found independently during the S7-05 real-device proof and is not Replay code. Nothing here authorizes
+implementation (BG-07).
+
+- **Title / Finding:** on the Product Owner's HONOR ALI-NX1 (Android 15, 1200 × 2652 at 520 dpi), at font scale 1.0 with
+  the app in Arabic, the three destination words of the bottom Global Switcher
+  (`apps/mobile/src/shared-world/GlobalSwitcher.tsx`: one third of the width each, the word under its glyph,
+  `numberOfLines={1}`) draw truncated: «قند…», «العالم المش…», «لعالم ال..». A cell is about 400 px wide, so even the
+  short word «قنديل» should fit; the cause (the Arabic face's text measurement on Android, the cell's padding or
+  something else) is not diagnosed. The accessible names (`accessibilityLabel`) carry the whole word. Seen in the S7-05
+  proof build, which renders the production `RuntimePhaseSurface` and this same switcher; not checked in English, at
+  other scales or on other devices.
+- **Source:** [S7-05 record](e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md) §7.5 (the device screenshot is kept outside the repository, with the S7-05 evidence).
+- **Why deferred:** it is outside S7-05's scope — the switcher is S4-01 / S5-01 chrome, not Replay (AGENTS.md §3) — and
+  it violates no S7-05 contract (BG-01); its cause is not yet diagnosed.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `HIGH` — as `QAN-BL-RSP-02` (a clipped label): the primary navigation words of the Arabic-first Product
+  are not readable whole at the default text size (release quality).
+- **Reopen condition:** a task contract claims it. Its proof: the three destination words drawn whole, in Arabic and in
+  English, at 100 %, 130 % and 200 % on a physical Android phone of this width class, with the accessible names unchanged.
+- **Status:** `OPEN — UNASSIGNED`
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3527,6 +3557,36 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   The residue it cannot cover without overriding another human's right is admitted as `QAN-BL-ACCT-03`.
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-NAV-02` — Analysis Replay
+
+- **Closing task:** `S7-05 — Replay Final Integration, Device Proof & Stage Closure`, under the Product Owner's D4 (2026-10-20: closure approved in principle, at CP3, on
+  complete evidence only).
+- **PR / SHA:** PR #351 from branch `s7/s7-05-replay-final-integration`, from `main` at
+  `f9bc3947d840646385c618ea8db400914ca5aac4` (the merge of PR #350). The closing change is the head recorded in the
+  [S7-05 record](e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md) §10. The tombstone holds from the merge of PR #351; until then this item is not closed.
+- **Disposition:** completed for the Personal Analysis Replay — a surface through which a human watches, moment by moment,
+  how the analysis of their own conversation developed. Stage 7 built it over the frozen `I-06` runtime in five tasks:
+  - S7-01 (PR #347, `c152cb4b`): the Personal Replay boundary (`0169`) and its account erasure;
+  - S7-02 (PR #348, `3ad4e414`): the entry and the selection of the whole conversation or one contiguous part;
+  - S7-03 (PR #349, `0d8a7335`): one moment's exact text and its analysis at that moment, on the existing Living Analysis
+    surface;
+  - S7-04 (PR #350, `f9bc3947`): the player, a passage over the Conversation or the Analysis, with the Replay Temporal
+    Spine, play / pause and the private preview / finalize / reopen;
+  - S7-05 (PR #351): F-2 Option B, the English copy, the real-device proof and the four D5 proofs.
+
+  The evidence is in the S7-05 record:
+  - §7: the real-device render proof on the Product Owner's phone, kept apart from the API / DB proof. TalkBack is
+    `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER` (2026-10-20), not a pass.
+  - §8: the account switch, the revise retry, the read after the gate closes (`verify-migration-0169` E15) and
+    NOT_VIEWABLE through the real path.
+
+  **Not covered, and not closed by this tombstone:**
+  - Shared and Public World Replay: the Stage 7 WP0 is `MY_WORLD` only, and D4 excludes them.
+  - Media, storage, transport and export (`CW2-05`'s deferral).
+  - Distribution: `CW2-08` answers `NOT_EVALUATED`; see `QAN-BL-ACCT-03`.
+  - Opening to users: the Personal Replay capability stays closed and nothing is deployed (`QAN-BL-PROD-09`).
+- **Status:** `CLOSED — TOMBSTONE`
+
 ## 7. Counts at this baseline
 
 | Status | Count |
@@ -3534,12 +3594,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | `DEFERRED — OWNED` | 36 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
-| `CLOSED — TOMBSTONE` | 28 |
-| **Total** | **77** |
+| `CLOSED — TOMBSTONE` | 29 |
+| **Total** | **78** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 43 |
+| `HIGH` | 44 |
 | `MEDIUM` | 32 |
 | `LOW` | 2 |
 
@@ -4536,6 +4596,30 @@ is effective; it stays as written.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 77 items; 36 / 4 / 9 / 28 by status, 43 / 32 / 2 by severity**, unchanged.
 
+**S7-05 closing change (2026-10-20; PR #351, not merged; effective from its merge).** BG-05 / BG-08 / BG-09 at S7-05's
+closure ([S7-05 record](e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md) §10), under the Product Owner's checkpoint rule (no separate documentation task). S7-04 merged
+through PR #350 as `f9bc3947d840646385c618ea8db400914ca5aac4`, so the paragraph above is effective; it stays as written.
+- **Inherited (BG-05):** none owned. Claimed by the Product Owner's D4: `QAN-BL-NAV-02`. Read in full and left unchanged:
+  `QAN-BL-ACCT-03`, `QAN-BL-PRIV-05`, `QAN-BL-PROD-09` and `QAN-BL-VOICE-01`. S7-04's two S7-05 placements are
+  discharged: F-2's wire question is decided (D1, Option B) and implemented; the real-device proof is delivered (D3),
+  with TalkBack `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER` (2026-10-20).
+- **Tombstoned:** `QAN-BL-NAV-02` (§6), completed for the Personal Analysis Replay; Shared and Public World Replay,
+  media and distribution are outside it.
+- **Admitted (BG-06 / BG-08):** `QAN-BL-RSP-03` — the Arabic Global Switcher's words drawn truncated on the Product Owner's
+  phone, found independently during the device proof (`UNASSIGNED`, `HIGH`).
+- **Checked and not admitted (BG-06):**
+  - TalkBack on the device: waived for S7-05 by the Product Owner, who directed that it is no defect, no blocker, no
+    backlog item and not moved to Stage 9.
+  - Shared and Public World Replay: the Stage 7 WP0's anti-scope (`MY_WORLD` only) and D4's exclusion. No canonical
+    document defers it to a named task, so it waits for a Product Owner designation.
+  - Two proof-harness limits, not Product obligations: the whole conversation's save, which the captured journey never
+    made, and the open-head draft's captured coverage.
+  - One full-suite Jest run in which a suite failed with no failing test; it did not recur.
+- **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
+  (`NOT_EVALUATED`); the Personal Replay capability stays closed (no gate row).
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 78 items; 36 / 4 / 9 / 29 by status, 44 / 32 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -4618,6 +4702,7 @@ Inherited after T-12 closure reconciliation:
 | `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `QAN-BL-ACCT-01` (re-owned from `UNASSIGNED` by ACCT-DEL-01 CP1, 2026-10-17, the Product Owner having confirmed the name and approved WP0 v1.1 with P-1 … P-4; effective from its merge; it stays open — Shared `STANDARD` and Public go to `ACCT-DEL-02` and Replay to Stage 7 at CP2, P-1). *Closing change (CP2, 2026-10-17; PR #345, not merged; effective from its merge):* the Matching / Introductions part delivered; `QAN-BL-ACCT-01` re-owned to `ACCT-DEL-02` (still open); admitted `QAN-BL-ACCT-02` (Stage 7) and `QAN-BL-PROD-09` (`HOSTED-DEPLOY-01`); dated notes on `QAN-BL-MATCH-01` (dependency met in engineering), `QAN-BL-PROD-06`, `QAN-BL-PROD-08` and `QAN-BL-PRIV-04` (§7). ACCT-DEL-01 owns no open item |
 | `ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `QAN-BL-ACCT-01` (re-owned from `ACCT-DEL-01` by its closing change, 2026-10-17, at the Product Owner's P-1; effective from its merge; a future task, not opened; the descriptive half of the name is ACCT-DEL-01's until its own Task Contract) |
 | `Stage 7 — Replay` | `QAN-BL-ACCT-02` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's P-1; Replay's account-deletion module) |
+| `S7-05 — Replay Final Integration, Device Proof & Stage Closure` | none owned at kickoff; `QAN-BL-NAV-02` claimed by the Product Owner's D4 and tombstoned by its closing change (PR #351; effective from its merge); admitted `QAN-BL-RSP-03` |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project); `QAN-BL-PROD-10` (admitted by S6-07's closing change, 2026-10-18: a photo object lost from the store blocks its owner's export bundle) |

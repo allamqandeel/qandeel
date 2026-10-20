@@ -746,3 +746,20 @@ stay as written.
   hosted environment; Stage 8A.
 - **Next:** CP2, the real-device proof on the Product Owner's Android phone; then CP3, the closure, stopping at the S7-05
   Final Independent Review & Merge Gate.
+
+### 6.27 Execution note — 2026-10-20 (S7-05 closed, at its Final Independent Review & Merge Gate)
+**Recorded:** 2026-10-20 by S7-05's closing change, in PR #351 (not merged). This is a status note only; §6.9 … §6.26
+stay as written.
+- **Decided:** the Product Owner waived the manual TalkBack test for S7-05 — `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER`: no defect,
+  blocker or backlog item, not moved to Stage 9, no pass claimed.
+- **Delivered (S7-05 CP2 / CP3):** the real-device render proof on the Product Owner's Android phone, kept apart from the
+  API / DB proof (no production journey through an open gate is claimed); the four D5 proofs; `QAN-BL-NAV-02` tombstoned
+  for the Personal Analysis Replay and `QAN-BL-RSP-03` admitted, both from the merge
+  ([S7-05 record](docs/e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md) §7, §8, §10).
+- **Stage 7:** S7-01 … S7-04 merged; S7-05 at its gate. On its merge Stage 7's planned scope — a personal, text-only
+  Replay with a real preview and a private final version — is engineering-complete in the repository. It is not
+  deployed and not launch-ready.
+- **Still closed:** the Personal Replay capability (no gate row); CW2-08 (`NOT_EVALUATED`); every distribution path; the
+  hosted environment; Shared and Public World Replay; Stage 8A.
+- **Next:** the Product Owner's review and merge decision on PR #351. No merge, deployment, user opening or Stage 8A
+  without the Product Owner's explicit approval.

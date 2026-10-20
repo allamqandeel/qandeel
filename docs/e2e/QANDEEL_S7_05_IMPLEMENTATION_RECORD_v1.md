@@ -1,7 +1,7 @@
 # QANDEEL — S7-05 Replay Final Integration, Device Proof & Stage Closure — Implementation Record v1
 
 **Task:** S7-05 — Replay Final Integration, Device Proof & Stage Closure (Stage 7)
-**Status:** IN PROGRESS — CP1 DELIVERED — CP2 DELIVERED EXCEPT TalkBack (it needs the Product Owner to operate the phone; not a pass) — CP3: the four D5 proofs DELIVERED; `QAN-BL-NAV-02`, BG-08 / BG-09 and the closure NOT YET DELIVERED — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS
+**Status:** CLOSED / AT THE S7-05 FINAL INDEPENDENT REVIEW & MERGE GATE — ENGINEERING COMPLETE — REAL-DEVICE VERIFIED (proof build on the Product Owner's phone; TalkBack NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER) — NOT MERGED / NOT DEPLOYED / NOT LAUNCH READY / CLOSED TO USERS
 **Date:** 2026-10-20
 **Branch / base:** `s7/s7-05-replay-final-integration` from `main` at `f9bc3947d840646385c618ea8db400914ca5aac4`, the merge
 of PR #350 (S7-04 — Production Replay Player & Navigation). S7-01 merged through PR #347 as `c152cb4b`, S7-02 through
@@ -15,13 +15,13 @@ S7-01 … S7-04 records; CW2-05 / I-06, unchanged; migration `0169`, unchanged.
 Merging, deploying, opening the Personal Replay capability, any distribution, CW2-08 and Stage 8A each need the Product
 Owner's explicit approval. None is done here.
 
-## 1. What S7-05 delivers (so far)
+## 1. What S7-05 delivers
 
 | Checkpoint | Scope | State |
 | --- | --- | --- |
 | CP1 | F-2 Option B (D1); the 27 English rows (D2); post-merge reconciliation of S7-04; tests and pins | DELIVERED (this record §2–§5) |
-| CP2 | Real-device render and accessibility proof (D3) | DELIVERED except TalkBack (§7); the production journey through an open gate is not performed and not claimed |
-| CP3 | The four focused tests (D5); BG-05 / BG-08 / BG-09; `QAN-BL-NAV-02` (D4); final locators; the Stage 7 status | D5 DELIVERED (§8); the rest NOT YET DELIVERED |
+| CP2 | Real-device render and accessibility proof (D3) | DELIVERED (§7); TalkBack `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER` (§7.4); the production journey through an open gate is not performed and not claimed |
+| CP3 | The four focused tests (D5); BG-05 / BG-08 / BG-09; `QAN-BL-NAV-02` (D4); final locators; the Stage 7 status | DELIVERED (§8, §10) |
 
 ## 2. F-2 — Option B (Product Owner decision D1, 2026-10-20)
 
@@ -172,6 +172,7 @@ After CP2 and the D5 proofs (local, Windows, on the head that carries them):
 | API Jest `src/replay` | 78 / 78 pass |
 | S7-01 / S7-02 / S7-03 / S7-04 / S7-05 contracts | 23 / 23, 19 / 19, 31 / 31, 58 / 58, 23 / 23 pass |
 | S5-03B, S5-03C contracts; `npm run test:task-closure-governance-contract` | 13 / 13, 8 / 8; 24 / 24 pass |
+| At the closing change (the documentation closure, with `apps/mobile/android` removed): every root `*contract*` script | 108 of 111 pass; the same three as below fail, and inside `forward-safety` every failing subtest (10 of 35) is the one expo-doctor check in a mirror |
 
 Not green locally, for reasons outside this change (as S7-04 recorded): `test:qan-inf-03-deterministic-expo-dependency-validation-contract`
 (expo-doctor's online checks cannot run deterministically here) and `test:forward-safety-contract` through the same
@@ -186,7 +187,7 @@ D3 asks for three proofs, reported apart. This section keeps them apart:
 
 | Proof | What it is | State |
 | --- | --- | --- |
-| **Device render / accessibility proof** | the PRODUCTION phase surface (`RuntimePhaseSurface`) on the Product Owner's physical phone, over the validation-only proof world and the REAL-PATH captured Replay wire (§7.2) | DELIVERED for every D3 item except TalkBack (§7.4) |
+| **Device render / accessibility proof** | the PRODUCTION phase surface (`RuntimePhaseSurface`) on the Product Owner's physical phone, over the validation-only proof world and the REAL-PATH captured Replay wire (§7.2) | DELIVERED (§7.3); TalkBack `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER` (§7.4) |
 | **API / DB proof** | the same wire's truth chain: the 0169 wrappers on real PostgreSQL (`verify-migration-0169`), the real `ReplayService` over the captured rows (`replay-player-proof.spec.ts`), and the D5 proofs (§8) | DELIVERED |
 | **Production journey through an open gate** | a reader on a deployed build, against a hosted database, with the Personal Replay capability open | **NOT PERFORMED — and not claimed.** The capability stays closed (D3), nothing is deployed and 0169 is not on a hosted database. No harness run here is a production journey. |
 
@@ -202,8 +203,9 @@ D3 asks for three proofs, reported apart. This section keeps them apart:
   S7-04 proof world (an in-memory synthetic identity and a fixture conversation; no real person, no network) and its
   REAL-PATH captured Replay wire. The launch link `qandeel://s705-proof/<journey|faults|revoked>` picks the network's
   behaviour; no Replay answer is invented (§1, the S7-05 contract's `proofViolations`).
-- **Phone settings** were read before the proof and restored after it: font scale 1.0, the three animator scales 1.0,
-  no accessibility service enabled.
+- **Phone settings** were read before the proof. Font scale and the three animator scales are restored to 1.0. TalkBack was
+  switched on by the Product Owner for the pass that was then waived, so it is the Product Owner's to switch off. The
+  proof app stays installed (per-app locale `en-US`) until the Product Owner asks for it to be removed.
 
 ### 7.3 Results (screenshots and accessibility dumps kept outside the repository, in the local evidence folder)
 
@@ -227,20 +229,26 @@ D3 asks for three proofs, reported apart. This section keeps them apart:
 | G-1 after a restart | Force-stop and relaunch: the Analysis entry reaches the "Saved draft", and Preview plays it |
 | The world beneath the player | The compressed accessibility tree (important-for-accessibility nodes only) holds the player alone: the Conversation beneath is not reachable (`DepthComposition` hides it with `no-hide-descendants`; `accessibilityViewIsModal` is iOS-only) |
 
-### 7.4 TalkBack (D3: names, focus order, moment reading, increment / decrement)
+### 7.4 TalkBack — NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER
 
-The accessibility tree on the device gives the names and the tree order (English: Back "Conversation", the title,
-"Save a private copy", "Edit the Replay", "Play", "Replay moments, In the Replay: 1 of 6.", the position, the pace note,
-the message, the reading; Arabic: the same names, the header and transport children in their right-to-left order).
-That is not a TalkBack proof: on a phone that is not rooted, injected input bypasses TalkBack, so its focus order,
-its speech and its increment / decrement gestures can only be driven by a person. **TalkBack is not yet proven on the
-device; it is not reported as a pass.**
+The Product Owner waived the manual TalkBack test for S7-05 (2026-10-20): it is not needed in the verification scope
+the Product Owner set. It is recorded as no defect, no failure and no blocker; it opens no corrective task and no
+backlog item, and it is not moved to Stage 9. **No TalkBack pass is claimed.** No accessibility support was removed or
+disabled.
+
+What the device did show, without TalkBack, is recorded as observed, not as a TalkBack result:
+- The accessibility tree holds the names and their tree order. In English: Back "Conversation", the title, "Save a
+  private copy", "Edit the Replay", "Play", "Replay moments, In the Replay: 1 of 6.", the position, the pace note, the
+  message and the reading. In Arabic the names are the same, with the header and transport children in their
+  right-to-left order.
+- The Conversation beneath the player is out of the tree (§7.3).
+- The Spine's increment and decrement are proven in Jest (`s7-04-replay-player.test.tsx`, `replay-player.test.tsx`).
 
 ### 7.5 Observation outside S7-05
 
 The Arabic labels of the bottom world switcher (`GlobalSwitcher`) truncate at font scale 1.0 on this phone («قند…»,
-«العالم المش…», «لعالم ال..»). It is not Replay code and it is not inside the player. It is admitted under BG-08 at this
-task's closing change (CP3).
+«العالم المش…», «لعالم ال..»). It is not Replay code and it is not inside the player. It is admitted as `QAN-BL-RSP-03`
+(`OPEN — UNASSIGNED`, `HIGH`) by this task's closing change (§10).
 
 ## 8. The four focused proofs (Product Owner decision D5)
 
@@ -260,3 +268,52 @@ planted defects show it: a proof removed, the E15 scenario renamed, and a proof 
 
 Opening the Personal Replay Capability Gate or CW2-08; any migration, SQL or route change; any change to the general
 meaning of a Hypothesis scope; sharing, publishing, distribution or export; Stage 8A; a redo of S7-01 … S7-04.
+
+## 10. Closure (CP3)
+
+### 10.1 Where S7-05 stands
+
+| State | S7-05 |
+| --- | --- |
+| **Engineering Complete** | YES. CP1, CP2 and CP3 are on PR #351 (§1). Local verification is §6; CI on the PR head is the authority for merge. |
+| **Real-device Verified** | YES, as a device render proof (§7.1): the production surface over the proof world and the captured real-path wire, on the Product Owner's phone. TalkBack is `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER`. No production journey through an open gate was performed. |
+| **Merged** | NO. It needs the Product Owner's explicit approval. |
+| **Deployed** | NO. `0169` is not on a hosted database (`HOSTED-DEPLOY-01`, `QAN-BL-PROD-09`). |
+| **Launch Ready** | NO. The Personal Replay capability is closed (no gate row); `CW2-08` answers `NOT_EVALUATED`; distribution is `NOT CLEARED / FAIL-CLOSED`; `QAN-BL-ACCT-03`, `QAN-BL-PRIV-05` and `QAN-BL-PROD-09` stay open. |
+
+### 10.2 Stage 7
+
+Stage 7 (Replay Product Integration) planned five tasks in its WP0. Four have merged: S7-01 (PR #347, `c152cb4b`), S7-02
+(PR #348, `3ad4e414`), S7-03 (PR #349, `0d8a7335`) and S7-04 (PR #350, `f9bc3947`). S7-05 is this PR, at its Final
+Independent Review & Merge Gate. When it merges, Stage 7's planned scope is engineering-complete in the repository: a
+personal, text-only Replay with a real preview and a private final version. It stays closed to users and is not
+deployed. Outside Stage 7: Shared and Public World Replay, media and export, distribution, the hosted deployment,
+opening the capability, and Stage 8A.
+
+### 10.3 BG-05 / BG-08 / BG-09
+
+- **BG-05.** S7-05 owned no backlog item at kickoff. The Product Owner's D4 claimed `QAN-BL-NAV-02`. These were read in
+  full and left unchanged: `QAN-BL-ACCT-03`, `QAN-BL-PRIV-05`, `QAN-BL-PROD-09` and `QAN-BL-VOICE-01`. S7-04's two
+  S7-05 placements are discharged: F-2 (D1, §2), and the real-device proof (D3, §7, with the TalkBack waiver).
+- **BG-08.**
+  - `QAN-BL-NAV-02` is `CLOSED — TOMBSTONE`, completed for the Personal Analysis Replay. Shared and Public World Replay,
+    media and distribution are outside it. It holds from the merge of PR #351.
+  - `QAN-BL-RSP-03` is admitted (§7.5).
+  - Checked and not admitted (BG-06):
+    - the waived TalkBack pass (the Product Owner's direction);
+    - Shared and Public World Replay (the WP0's `MY_WORLD`-only scope; no canonical deferral to a named task);
+    - the two proof-harness limits (§7.3: Whole's save, the open-head coverage);
+    - the one Jest run that did not recur (§6).
+  - The register: 78 items; 36 / 4 / 9 / 29 by status and 44 / 32 / 2 by severity (backlog §7).
+- **BG-09.** This record's banner moves to its final lifecycle state in the same change. Current State, the Project
+  Map and the Roadmap (§6.27) are updated with it.
+
+### 10.4 The closing change
+
+The closing change is the head of PR #351 at the S7-05 Final Independent Review & Merge Gate, on
+`s7/s7-05-replay-final-integration` from `main` at `f9bc3947d840646385c618ea8db400914ca5aac4`. Its commits are:
+- `bbaef7a3` CP1;
+- `e9009ad8` CP2 and the D5 proofs;
+- this documentation closure.
+
+Nothing is merged, deployed or opened without the Product Owner's explicit approval.
