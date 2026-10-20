@@ -407,6 +407,11 @@ happens to reversible history — are defined here.
   reopen through the existing S7-01 routes ([S7-04 record](e2e/QANDEEL_S7_04_IMPLEMENTATION_RECORD_v1.md)). Nothing is
   reachable while the gate is closed. The item stays `OPEN — UNASSIGNED`; the Stage 7 WP0 places its reconciliation at
   S7-05.
+- *(S7-05 CP1 dated note, 2026-10-20; not merged; no field changed.)* S7-04 merged through PR #350 as `f9bc3947`. S7-05
+  decides F-2 as Option B — a Reading's scope crosses the Replay wire as its class alone — and approves the 27 English
+  rows of S7-02 and S7-03 ([S7-05 record](e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md)). The Product Owner approved this
+  item's closure in principle (D4), at CP3 and only on complete evidence, including the real-device proof. The item stays
+  `OPEN — UNASSIGNED` until then.
 - **Status:** `OPEN — UNASSIGNED`
 
 ### `QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime + Durable Audio Source

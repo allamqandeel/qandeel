@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { MODULE_METADATA } from '@nestjs/common/constants';
 import { DataApiError, type SupabaseDataApiService } from '../conversation/supabase-data-api.service';
-import { projectionRow, READING, THREAD } from '../historical-projection/historical-projection.fixture.spec';
+import { projectionRow, READING, SESSION as PROJECTION_SESSION, THREAD } from '../historical-projection/historical-projection.fixture.spec';
 import { ReplayController } from './replay.controller';
 import { ReplayModule } from './replay.module';
 import { ReplayRepository } from './replay.repository';
@@ -262,6 +262,45 @@ describe('S7-01 - ReplayService', () => {
       const wire = JSON.stringify(deep);
       for (const forbidden of ['sessionId', 'liveHead', 'revision', 'moments', 'expiry', 'committedText', 'sourceTurnId', 'assistantTurnId']) expect(wire).not.toContain(forbidden);
       expect(repository.momentAnalysis).toHaveBeenCalledWith('token', REPLAY, VERSION, 2);
+    });
+
+    it('S7-05 F-2: a Reading\'s scope leaves as its class alone, for this Session\'s Readings and an earlier Session\'s, and nothing else moves', async () => {
+      const EARLIER = '55555555-5555-4555-8555-555555555555';
+      const families = analysisOf();
+      const [reading] = families.readings as Record<string, unknown>[];
+      const earlier = { ...reading, id: '66666666-6666-4666-8666-666666666666', scope: `CONVERSATION_SESSION:${EARLIER}` };
+      repository.momentAnalysis.mockResolvedValue([{ outcome: 'AVAILABLE', selected_ordinal: 2, tc: 2, analysis: { ...families, readings: [reading, earlier] } }]);
+      const deep = await service.momentAnalysis('token', REPLAY, VERSION, '2', 'SOURCE_PROVENANCE');
+      if (deep.outcome !== 'AVAILABLE' || deep.analyticalObject.status !== 'DISCLOSED') throw new Error('expected a disclosed analysis');
+      expect(deep.analyticalObject.value.readings.map((item) => item.scope)).toEqual(['CONVERSATION_SESSION', 'CONVERSATION_SESSION']);
+      const wire = JSON.stringify(deep);
+      for (const session of [PROJECTION_SESSION, EARLIER]) expect(wire).not.toContain(session);
+      expect(wire).not.toContain('CONVERSATION_SESSION:');
+      // Everything else is exactly what the T-03C mapper and depth law disclose: each Reading differs in its scope alone,
+      // and every other rung and family is untouched.
+      repository.momentAnalysis.mockResolvedValue([{ outcome: 'AVAILABLE', selected_ordinal: 2, tc: 2, analysis: { ...families, readings: [reading, earlier] } }]);
+      const again = await service.momentAnalysis('token', REPLAY, VERSION, '2', 'SOURCE_PROVENANCE');
+      expect(again).toEqual(deep);
+      const unscoped = (items: readonly Record<string, unknown>[]) => items.map(({ scope: _scope, ...rest }) => rest);
+      expect(unscoped(deep.analyticalObject.value.readings)).toEqual(unscoped([reading, earlier]));
+      expect(deep.analyticalObject.value.readingRelations).toEqual(families.reading_relations);
+    });
+
+    it.each([
+      ['a free-text scope (the table admits one; no live writer produces it)', 'USER'],
+      ['the class without its Session', 'CONVERSATION_SESSION'],
+      ['an empty Session', 'CONVERSATION_SESSION:'],
+      ['an upper-case Session (not the canonical uuid::text)', 'CONVERSATION_SESSION:5555555A-5555-4555-8555-555555555555'],
+      ['a padded scope', `CONVERSATION_SESSION:${SESSION} `],
+      ['another scope class', `GOAL:${SESSION}`],
+      ['two Sessions', `CONVERSATION_SESSION:${SESSION}:${SESSION}`],
+    ])('S7-05 F-2: refuses %s whole — never repaired, never passed on', async (_label, scope) => {
+      const families = analysisOf();
+      const [reading] = families.readings as Record<string, unknown>[];
+      repository.momentAnalysis.mockResolvedValue([{ outcome: 'AVAILABLE', selected_ordinal: 2, tc: 2, analysis: { ...families, readings: [{ ...reading, scope }] } }]);
+      await expect(service.momentAnalysis('token', REPLAY, VERSION, '2', 'SOURCE_PROVENANCE')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      // Below the rung that carries Readings nothing of them is disclosed, so nothing about their scope is answered.
+      await expect(service.momentAnalysis('token', REPLAY, VERSION, '2', 'WORLD')).resolves.toMatchObject({ outcome: 'AVAILABLE', analyticalObject: { status: 'DEPTH_WITHHELD' } });
     });
 
     it('never lets the analysis stand in for a version that is not viewable', async () => {

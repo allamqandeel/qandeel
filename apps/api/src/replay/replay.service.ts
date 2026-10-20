@@ -1,16 +1,20 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import type { HistoricalSemanticDepth } from '@qandeel/runtime';
+import type { DisclosedReading, HistoricalSemanticDepth } from '@qandeel/runtime';
 import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
 import { discloseAnalyticalRungs, isHistoricalSemanticDepth } from '../historical-projection/historical-disclosure';
 import { mapHistoricalAnalyticalFamilies } from '../historical-projection/historical-projection-mapper';
 import { ReplayRepository, type ReplayRow } from './replay.repository';
 import type {
   ReplayCapabilityView, ReplayCoverageClass, ReplayDraftCommandView, ReplayFinalizeView, ReplayLifecycle, ReplayMoment,
-  ReplayMomentAnalysisView, ReplayMomentsView, ReplayNotViewableClass, ReplayPreviewView, ReplayRefusal, ReplayReopenView,
+  ReplayMomentAnalysisView, ReplayMomentsView, ReplayNotViewableClass, ReplayPreviewView, ReplayReading, ReplayRefusal, ReplayReopenView,
   ReplaySummary, ReplayVersionView, ReplayView,
 } from './replay.types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+/** The one canonical Hypothesis scope a Reading reaches a Personal Replay with (`'CONVERSATION_SESSION:' || session_id`). */
+const CANONICAL_READING_SCOPE = /^CONVERSATION_SESSION:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+/** Its class: all of the scope the Replay wire carries (F-2). */
+const REPLAY_READING_SCOPE_CLASS = 'CONVERSATION_SESSION';
 /** An instant exactly as the database returns it (ISO 8601 with an offset), never a free-form date. */
 const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/u;
 /** The largest Session Position / ordinal / revision the database's integer columns can hold. */
@@ -126,6 +130,20 @@ function momentOf(row: unknown, index: number): ReplayMoment {
       || (index === 0 && row.omitted_before !== 0) || (row.source_text !== null && typeof row.source_text !== 'string')) return unavailable();
   return { ordinal: row.selected_ordinal as number, tc: row.tc, sourceRole: row.source_role, originalMedium: row.original_medium,
     omittedBefore: row.omitted_before, text: row.source_text as string | null };
+}
+
+/**
+ * S7-05 (F-2; Product Owner decision D1, 2026-10-20): a Reading's scope crosses the Replay wire as its class alone. Every
+ * live writer of a Hypothesis (the durable generation intent, 0029 / 0033) serialises its scope as exactly
+ * `CONVERSATION_SESSION:<the Session's id>`, and a moment's analysis also carries the Readings known from earlier Sessions
+ * (0072's world baseline), so the instance would name Sessions the Replay never shows. That exact canonical form is
+ * checked, and only its class leaves; any other scope (the table admits free text, which no live writer produces) is
+ * refused whole as UNAVAILABLE, never repaired and never passed on. 0169 has already re-digested the analysis to the
+ * version's frozen point before this, so the narrowing reaches neither the digest nor the historical truth it guards.
+ */
+function readingOf(reading: DisclosedReading): ReplayReading {
+  if (!CANONICAL_READING_SCOPE.test(reading.scope)) return unavailable();
+  return { ...reading, scope: REPLAY_READING_SCOPE_CLASS };
 }
 
 /**
@@ -290,8 +308,12 @@ export class ReplayService {
       ? { status: 'DISCLOSED', value: { emergingFocuses: rungs.sessionAnalytics.value.emergingFocuses,
         questionAppearances: rungs.sessionAnalytics.value.questionAppearances.map(({ sourceTurnId: _source, assistantTurnId: _assistant, ...appearance }) => appearance) } }
       : { status: 'DEPTH_WITHHELD' };
+    // No Session crosses either (F-2): a Reading's scope leaves as its class alone.
+    const analyticalObject: ReplayMomentAnalysisObject = rungs.analyticalObject.status === 'DISCLOSED'
+      ? { status: 'DISCLOSED', value: { ...rungs.analyticalObject.value, readings: rungs.analyticalObject.value.readings.map(readingOf) } }
+      : { status: 'DEPTH_WITHHELD' };
     return { outcome: 'AVAILABLE', ordinal, tc, depth, world: rungs.world, thread: rungs.thread, session,
-      analyticalObject: rungs.analyticalObject, sourceProvenance: rungs.sourceProvenance };
+      analyticalObject, sourceProvenance: rungs.sourceProvenance };
   }
 
   private draftCommandOf(row: ReplayRow, outcome: 'CREATED' | 'REVISED'): ReplayDraftCommandView | null {
@@ -316,4 +338,5 @@ export class ReplayService {
 }
 
 type ReplayMomentAnalysisSession = Extract<ReplayMomentAnalysisView, { outcome: 'AVAILABLE' }>['session'];
+type ReplayMomentAnalysisObject = Extract<ReplayMomentAnalysisView, { outcome: 'AVAILABLE' }>['analyticalObject'];
 type ReplayVersionRenderPolicies = Extract<ReplayVersionView, { outcome: 'FOUND' }>['renderContract']['policies'];

@@ -13,9 +13,10 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { LivingAnalysisSurface } from '../../living-analysis';
 import { LivingAnalysisSurface as LivingAnalysisSurfaceActual } from '../../living-analysis/LivingAnalysisSurface';
-import { MAP_ACCESSIBILITY_TEST_ID, MAP_SURFACE_TEST_ID, MapSurface } from '../../map';
+import { MAP_ACCESSIBILITY_TEST_ID, MAP_SURFACE_TEST_ID, MapSurface, deriveMapScene } from '../../map';
 import { MapSurface as MapSurfaceActual } from '../../map/renderer/MapSurface';
 import { RESPONSIVE_SURFACE_TEST_ID } from '../../responsive';
+import { sessionPosition } from '../../state';
 import { resize } from '../../responsive/__fixtures__/composition';
 import type { ReplayAnalysisResult, ReplayHistoryMoment, ReplayHistoryVersion, ReplayMomentAnalysis } from '../../runtime-entry';
 import { createReplayCompositeController, type ReplayHistoryReader } from '../composite-controller';
@@ -314,8 +315,35 @@ describe('S7-03 — the governed adapter', () => {
     expect(disclosure.sourceProvenance).toEqual(analysis4().sourceProvenance);
     expect(disclosure.session.status === 'DISCLOSED' && disclosure.session.value.moments).toEqual([]);
     expect(disclosure.inspection).toBeNull();
-    // The Replay-wire Reading `scope` names the conversation Session (finding F-2): it crosses only as data, and no
-    // component of the composite reads or shows it (criterion 10 above).
+    // S7-05 (F-2): a Reading's scope crosses the Replay wire as its class alone (no Session), and no component of the
+    // composite reads or shows it (criterion 10 above; the next test).
+    for (const reading of disclosure.analyticalObject.status === 'DISCLOSED' ? disclosure.analyticalObject.value.readings : []) expect(reading.scope).toBe('CONVERSATION_SESSION');
+  });
+
+  it('S7-05 F-2: the Map\'s scene, at every captured moment and depth, is the same whatever a Reading\'s scope says', async () => {
+    const scene = REPLAY_WIRE.scenes.main;
+    const client = replayWireClient(scene);
+    let compared = 0;
+    for (const moment of MAIN.moments) {
+      for (const depth of ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'] as const) {
+        const answer = await client.momentAnalysis(scene.replayId, scene.versionId, moment.ordinal, depth);
+        if (answer.kind !== 'ANSWERED' || answer.analysis.outcome !== 'AVAILABLE') continue;
+        const analysis = answer.analysis;
+        const sceneWith = (scope: string) => {
+          const copy = JSON.parse(JSON.stringify(analysis)) as typeof analysis;
+          if (copy.analyticalObject.status === 'DISCLOSED') for (const reading of copy.analyticalObject.value.readings as unknown as { scope: string }[]) reading.scope = scope;
+          const result = discloseReplayMoment(MAIN.version, moment, copy);
+          if (result.status !== 'DISCLOSED') throw new Error(result.reason);
+          return deriveMapScene(result.entry, { sessionId: replayViewpointKey(MAIN.version), tc: sessionPosition(moment.tc), depth });
+        };
+        const served = sceneWith('CONVERSATION_SESSION');
+        expect(served.status).toBe('SCENE');
+        expect(sceneWith('CONVERSATION_SESSION:a7050000-0000-4000-8000-000000000001')).toEqual(served);
+        expect(sceneWith('anything at all')).toEqual(served);
+        compared += 1;
+      }
+    }
+    expect(compared).toBeGreaterThan(10);
   });
 
   it('refuses another moment\'s analysis, a moment without text, knowledge after the moment, and an unknown contract or medium', () => {
@@ -348,19 +376,65 @@ describe('S7-03 — the governed adapter', () => {
 });
 
 describe('S7-03 — the Product Copy Gate', () => {
-  it('is CLOSED by the Product Owner (2026-10-19): all 14 Arabic rows APPROVED, every English row still PROPOSED, and no row naming a server word', () => {
+  it('is CLOSED by the Product Owner (2026-10-19): all 14 Arabic rows APPROVED, and no row naming a server word', () => {
     expect(REPLAY_COMPOSITE_COPY_GATE.status).toMatch(/^S7-03 PRODUCT COPY GATE — CLOSED — 2026-10-19/u);
     expect(REPLAY_COMPOSITE_COPY_GATE.decidedOn).toBe('2026-10-19');
     for (const row of Object.values(REPLAY_COMPOSITE_COPY_ROWS)) {
       expect(row.status).toBe('APPROVED');
-      expect(row.enStatus).toBe('PROPOSED');
       expect(`${row.ar} ${row.en}`).not.toMatch(/[A-Z]{3,}_[A-Z]/u);
     }
     expect(REPLAY_COMPOSITE_COPY_GATE.arabicApproved).toHaveLength(14);
-    expect(REPLAY_COMPOSITE_COPY_GATE.englishProposed).toEqual(REPLAY_COMPOSITE_COPY_GATE.arabicApproved);
     expect(replayCompositeCopy('ar').position(3, 6)).toBe('في إعادة العرض: 3 من 6.');
     expect(replayCompositeCopy('ar').gap('رسالتان')).toBe('لم تُعرض هنا رسالتان من المحادثة.');
-    expect(replayCompositeCopy('en').gap('1 message')).toBe('1 message of the conversation is not shown here.');
+  });
+});
+
+describe('S7-05 — the English of the S7-03 rows (Product Owner decision D2, 2026-10-20)', () => {
+  /** Word for word as the Product Owner approved it. */
+  const APPROVED_ENGLISH = {
+    notViewableVersionSuperseded: 'This version of the Replay is no longer current.',
+    notViewableSourceContradictory: "The original messages have changed, so they can't be shown as they were.",
+    notViewableSourceUnavailable: "The original messages aren't available right now.",
+    notViewableEvidenceIncomplete: 'The saved analysis of these moments is incomplete.',
+    sourceLayerAvailable: 'Original messages: available.',
+    sourceLayerUnavailable: 'Original messages: not available right now.',
+    analyticalLayerSealed: 'Saved analysis: kept as it was.',
+    analyticalLayerIncomplete: 'Saved analysis: incomplete.',
+    noAnalysisWithoutText: "The analysis isn't shown without the messages it belongs to.",
+    analysisNotCurrentlyAvailable: "The analysis as it was at this moment isn't available right now.",
+    analysisFailed: "The analysis couldn't be displayed right now. This doesn't mean it doesn't exist.",
+    previewAnalysisUnavailable: "There's no saved analysis of this conversation, so it can't be replayed.",
+  } as const;
+
+  it('every one of the 14 English rows is APPROVED, word for word, and none is PROPOSED', () => {
+    expect(Object.keys(REPLAY_COMPOSITE_COPY_ROWS).sort()).toEqual(Object.keys(APPROVED_ENGLISH).sort());
+    const en = replayCompositeCopy('en');
+    for (const [key, text] of Object.entries(APPROVED_ENGLISH)) {
+      const row = REPLAY_COMPOSITE_COPY_ROWS[key as keyof typeof APPROVED_ENGLISH];
+      expect(row.enStatus).toBe('APPROVED');
+      expect(row.en).toBe(text);
+      expect(en[key as keyof typeof APPROVED_ENGLISH]).toBe(text);
+    }
+    expect(REPLAY_COMPOSITE_COPY_GATE.englishApproval).toMatch(/^S7-05 ENGLISH COPY APPROVAL — 2026-10-20/u);
+    expect(REPLAY_COMPOSITE_COPY_GATE.englishApproved).toEqual(REPLAY_COMPOSITE_COPY_GATE.arabicApproved);
+    expect(REPLAY_COMPOSITE_COPY_GATE.englishProposed).toEqual([]);
+  });
+
+  it('position and gap keep their counting rules, with no brackets in what is shown', () => {
+    const en = replayCompositeCopy('en');
+    expect(en.position(3, 6)).toBe('In the Replay: 3 of 6.');
+    expect(en.position(1, 1)).toBe('In the Replay: 1 of 1.');
+    expect(en.gap('1 message')).toBe('1 message of the conversation is not shown here.');
+    expect(en.gap('4 messages')).toBe('4 messages of the conversation are not shown here.');
+    for (const text of [en.position(2, 9), en.gap('1 message'), en.gap('2 messages')]) expect(text).not.toMatch(/[()[\]/]/u);
+  });
+
+  it('each NOT_VIEWABLE reason says its own approved English', () => {
+    const en = replayCompositeCopy('en');
+    expect(en.notViewable('VERSION_SUPERSEDED')).toBe(APPROVED_ENGLISH.notViewableVersionSuperseded);
+    expect(en.notViewable('SOURCE_STATE_CONTRADICTORY')).toBe(APPROVED_ENGLISH.notViewableSourceContradictory);
+    expect(en.notViewable('SOURCE_NOT_CURRENTLY_AVAILABLE')).toBe(APPROVED_ENGLISH.notViewableSourceUnavailable);
+    expect(en.notViewable('ANALYTICAL_EVIDENCE_INCOMPLETE')).toBe(APPROVED_ENGLISH.notViewableEvidenceIncomplete);
   });
 });
 

@@ -57,6 +57,25 @@ const APPROVED_ARABIC = Object.freeze({
   unconfirmed: 'تعذّر التأكد من الحفظ.',
 });
 const APPROVED_ARABIC_COUNT = "ar: (n: number) => (n === 1 ? 'رسالة واحدة' : n === 2 ? 'رسالتان' : n >= 3 && n <= 10 ? `${n} رسائل` : `${n} رسالة`),";
+// Re-anchored by S7-05 (Product Owner decision D2, 2026-10-20): the English of every S7-02 row and of the message count is
+// APPROVED word for word. The Arabic gate above is unchanged; an English row is now held to its approved words, where it
+// was held to PROPOSED (docs/e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md).
+const ENGLISH_APPROVAL = 'S7-05 ENGLISH COPY APPROVAL — 2026-10-20, Product Owner decision D2: the English of all 12 S7-02 rows and the message count APPROVED word for word; no Arabic row changed';
+const APPROVED_ENGLISH = Object.freeze({
+  replayName: 'Conversation replay',
+  whole: 'The whole conversation',
+  part: 'Part of the conversation',
+  savedDraft: 'Saved draft',
+  pickHint: 'The first and last messages of the part',
+  save: 'Save',
+  openHead: 'A Replay that includes the latest message can only be shown once the conversation continues.',
+  savedWhole: 'The whole conversation was saved for a Replay.',
+  savedPart: 'The selected part was saved for a Replay.',
+  changed: 'Something changed since you made this selection. Please select again.',
+  notProvable: "This selection can't be saved as one continuous part.",
+  unconfirmed: "We couldn't confirm whether it was saved.",
+});
+const APPROVED_ENGLISH_COUNT = "en: (n: number) => (n === 1 ? '1 message' : `${n} messages`),";
 
 const shipped = () => ({
   entry: files(ENTRY).filter((path) => /\.(ts|tsx)$/u.test(path) && !/__(tests|fixtures)__/u.test(path)).map((path) => [path, read(path)]),
@@ -177,9 +196,9 @@ const DETECTORS = {
     if (!w.copy.includes(`status: '${COPY_GATE_CLOSED}'`)) out.push('the S7-02 Product Copy Gate is CLOSED (the Product Owner, 2026-10-19)');
     if (!w.record.includes(COPY_GATE_CLOSED)) out.push('the record carries the closed Copy Gate');
     const rows = [
-      ...w.copy.matchAll(/^ {2}(\w+): \{ ar: '([^']*)', en: (?:'[^']*'|"[^"]*"), status: '(\w+)', enStatus: '(\w+)'/gmu),
-      ...w.copy.matchAll(/^ {2}(\w+): \{\n\s*ar: '([^']*)',\n[^\n]*\n\s*status: '(\w+)', enStatus: '(\w+)'/gmu),
-    ].map(([, key, ar, status, enStatus]) => ({ key, ar, status, enStatus }));
+      ...w.copy.matchAll(/^ {2}(\w+): \{ ar: '([^']*)', en: (?:'([^']*)'|"([^"]*)"), status: '(\w+)', enStatus: '(\w+)'/gmu),
+      ...w.copy.matchAll(/^ {2}(\w+): \{\n\s*ar: '([^']*)',\n\s*en: (?:'([^']*)'|"([^"]*)"),\n\s*status: '(\w+)', enStatus: '(\w+)'/gmu),
+    ].map(([, key, ar, en1, en2, status, enStatus]) => ({ key, ar, en: en1 ?? en2, status, enStatus }));
     if (rows.length !== 16) out.push('the copy rows are readable');
     for (const row of rows) {
       if (row.status === 'PROPOSED') out.push(`no Arabic row is left PROPOSED: ${row.key}`);
@@ -188,10 +207,18 @@ const DETECTORS = {
     for (const [key, ar] of Object.entries(APPROVED_ARABIC)) {
       const row = rows.find((r) => r.key === key);
       if (row === undefined || row.ar !== ar) out.push(`the approved Arabic of ${key} is unchanged, letter for letter`);
-      else if (row.status !== 'APPROVED' || row.enStatus !== 'PROPOSED') out.push(`${key}: the Arabic is APPROVED and its English stays PROPOSED`);
+      else if (row.status !== 'APPROVED') out.push(`${key}: the Arabic is APPROVED`);
     }
+    // S7-05 (D2): each English row is APPROVED, in exactly the Product Owner's words; none is PROPOSED.
+    for (const row of rows) if (row.enStatus !== 'APPROVED') out.push(`${row.key}: its English is APPROVED (S7-05 D2)`);
+    for (const [key, en] of Object.entries(APPROVED_ENGLISH)) {
+      const row = rows.find((r) => r.key === key);
+      if (row === undefined || row.en !== en) out.push(`the approved English of ${key} is exactly the Product Owner's (S7-05 D2)`);
+    }
+    if (!w.copy.includes(ENGLISH_APPROVAL)) out.push('the copy records the S7-05 English approval');
     if (!w.copy.includes(APPROVED_ARABIC_COUNT)) out.push('the approved Arabic message count is unchanged');
-    if (!/status: 'APPROVED' as ReplayCopyStatus,\n {2}enStatus: 'PROPOSED' as ReplayCopyStatus,\n {2}ar: \(n: number\)/u.test(w.copy)) out.push('count: the Arabic is APPROVED and its English stays PROPOSED');
+    if (!w.copy.includes(APPROVED_ENGLISH_COUNT)) out.push('the approved English message count keeps its plural rule');
+    if (!/status: 'APPROVED' as ReplayCopyStatus,\n {2}enStatus: 'APPROVED' as ReplayCopyStatus,\n {2}ar: \(n: number\)/u.test(w.copy)) out.push('count: the Arabic and the English are APPROVED');
     for (const word of ['تشغيل', 'معاينة', 'Play', 'Preview']) if (w.copy.includes(word)) out.push(`no player word ships in S7-02: ${word}`);
     return out;
   },
@@ -254,7 +281,9 @@ const PLANTED = [
   ['an approved Arabic row reworded', 'copyViolations', edit('copy', '', "ar: 'حُفظ الجزء المختار لإعادة العرض.'", "ar: 'تم حفظ الجزء المختار لإعادة العرض.'")],
   ['the open-head sentence reworded', 'copyViolations', edit('copy', '', "ar: 'إعادة العرض التي تشمل آخر رسالة لا يمكن عرضها إلا بعد أن تستمر المحادثة.'", "ar: 'لا يمكن عرض آخر رسالة الآن.'")],
   ['an Arabic count rule changed', 'copyViolations', edit('copy', '', 'n >= 3 && n <= 10 ?', 'n >= 3 && n <= 9 ?')],
-  ['an English row approved with the Arabic', 'copyViolations', edit('copy', '', "en: 'Save', status: 'APPROVED', enStatus: 'PROPOSED'", "en: 'Save', status: 'APPROVED', enStatus: 'APPROVED'")],
+  ['an English row back to PROPOSED', 'copyViolations', edit('copy', '', "en: 'Save', status: 'APPROVED', enStatus: 'APPROVED'", "en: 'Save', status: 'APPROVED', enStatus: 'PROPOSED'")],
+  ['an approved English row reworded', 'copyViolations', edit('copy', '', "en: 'Saved draft'", "en: 'The saved draft'")],
+  ['an English count rule changed', 'copyViolations', edit('copy', '', "n === 1 ? '1 message'", "n <= 1 ? '1 message'")],
   ['a missing review gate', 'recordViolations', edit('record', '', 'STOP: S7-02 — INDEPENDENT REVIEW GATE', 'merged')],
 ];
 

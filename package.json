@@ -326,6 +326,7 @@
     "test:s7-02-replay-entry-selection-contract": "node --test tests/s7-02-replay-entry-selection-contract.test.mjs",
     "test:s7-03-replay-composite-visual-proof-contract": "node --test tests/s7-03-replay-composite-visual-proof-contract.test.mjs",
     "test:s7-04-replay-player-navigation-contract": "node --test tests/s7-04-replay-player-navigation-contract.test.mjs",
+    "test:s7-05-replay-final-integration-contract": "node --test tests/s7-05-replay-final-integration-contract.test.mjs",
     "verify:ci-01:intelligence-reality:local": "node scripts/ci-01/local-db.mjs run-baseline",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:qan-inf-02-windows-temp-harness-cleanup-contract": "node --test tests/qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs",

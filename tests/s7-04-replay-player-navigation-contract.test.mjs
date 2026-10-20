@@ -84,14 +84,19 @@ const FROZEN = [
   // S7-04 RE-ANCHOR (2026-10-20, Product Owner decision G-1): the conversation list's summary decoder reads 0169's
   // EXISTS answer `false` beside a null version as "no version yet" and leaves it as the wire's null; a contradiction
   // stays refused. Nothing else in the service changed; 0169 and the wire are unchanged.
-  ['apps/api/src/replay/replay.service.ts', '4db247cdbb2c35c06fed431113bd1e32da1ffade1bd8a6e8a1c58171a83821c2'],
-  ['apps/api/src/replay/replay.types.ts', 'f8bfb198002bf28e911f00bb2a12d262d95020647a88b1c930313eed161c6af3'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope leaves as its class `CONVERSATION_SESSION` alone, its exact canonical form verified first, anything else refused whole).
+  ['apps/api/src/replay/replay.service.ts', '2a3bdb2328f943d4de022ce60f1285dd26cce66717df0dd88b0c5fe0724afc83'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
+  ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
-  ['apps/mobile/src/replay-entry/copy.ts', '5fbf1adfd4a316a2ecc8296204c143e541d8404ba0ad83a2b20a6def1f2bb46b'],
-  ['apps/mobile/src/replay-composite/copy.ts', '29f1dc121ce153a0aed38e3ae5730f3ca9fb98c2c27bd701b2f7a0c753157405'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D2: the English of every S7-02 row and of the count APPROVED word for word; no Arabic changed).
+  ['apps/mobile/src/replay-entry/copy.ts', 'e3afc223476941ce0e7d060947a3138da2a2eefee1d0ebfb31b7773f88d6aeaa'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D2: the English of all 14 S7-03 rows APPROVED word for word; no Arabic changed).
+  ['apps/mobile/src/replay-composite/copy.ts', '927c24f51f7e1e2189e315235089b10ce7b670b6b87974df1638813d691f1d7b'],
   ['apps/mobile/src/replay-composite/viewpoint-store.ts', '56166095f5578bf4789b2552f6c3e21d54bd064573f99aeb423fedbfe1fb23bb'],
   ['apps/mobile/src/replay-composite/projection-adapter.ts', '3a3ea0257acd4b139acbf4a5f34416e4c11da35288985d6c07c790db848daf9f'],
-  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'daef47606d4bf284617f876a8ed276d93f169257a054bccce9efa22318180518'],
+  // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope is decoded as exactly its class).
+  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'afc05df83bb2de9266cb12775e89ac5963a908072185e35be010321f431cba91'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '08687f8e87ff34a9c37ea69260041fc55cc3138ea42c272697763586a72407ab'],
   ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
@@ -306,7 +311,11 @@ const DETECTORS = {
     for (const finding of ['G-1', 'F-2', 'S7-05']) if (!w.record.includes(finding)) out.push(`the record carries ${finding}`);
     if (!/PR #349/u.test(w.record)) out.push('the record proves S7-03 merged via PR #349');
     if (w.state !== null && !/S7-03[^\n]*MERGED[^\n]*#349|#349[^\n]*S7-03/u.test(w.state)) out.push('Current State proves S7-03 merged via PR #349');
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu.test(w.map)) out.push('the Project Map names S7-04 as current');
+    // S7-05 RE-ANCHOR (2026-10-20): S7-04 merged through PR #350; the current task is S7-05, and S7-04 stands beneath it
+    // as the previous task, as written at its closing change.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-05 — Replay Final Integration, Device Proof & Stage Closure\*\*/mu.test(w.map)) out.push('the Project Map names S7-05 as current');
+    if (w.map !== null && !/^> \*\(Previous, S7-04, as written at its closing change; merged through PR #350:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-04 as the previous task');
+    if (w.state !== null && !/S7-04[^\n]*MERGED[^\n]*#350/u.test(w.state)) out.push('Current State proves S7-04 merged via PR #350');
     return out;
   },
 };

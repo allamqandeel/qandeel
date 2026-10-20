@@ -731,3 +731,18 @@ stay as written.
 - **Still closed:** the Personal Replay capability (no gate row); CW2-08 (`NOT_EVALUATED`); every distribution path; the
   hosted environment. Placed with S7-05: F-2's wire question, a real-device and TalkBack proof.
 - **Next:** the Product Owner's merge decision on PR #350; S7-05 starts only on the Product Owner's word.
+
+### 6.26 Execution note — 2026-10-20 (S7-04 merged; S7-05 CP1 delivered)
+**Recorded:** 2026-10-20 by S7-05, in the S7-05 pull request (not merged). This is a status note only; §6.9 … §6.25
+stay as written.
+- **Decided:** S7-04 merged through PR #350 as `f9bc3947d840646385c618ea8db400914ca5aac4` (not deployed; the capability closed). The
+  Product Owner's CP0 Final Decisions (2026-10-20): D1 — F-2 Option B, with conditions (only the scope's class crosses the
+  Replay wire; the exact canonical form verified first; anything else refused, never repaired; no frozen authority or
+  0169 change); D2 — the 27 English rows of S7-02 and S7-03 approved word for word; D3 — a real-device proof inside S7-05;
+  D4 — `QAN-BL-NAV-02` approved in principle for closure at CP3, on complete evidence only; D5 — four focused tests.
+- **Delivered (S7-05 CP1):** F-2 Option B in the API and the mobile decoder, with the wires regenerated from the real
+  path; the 27 English rows; the post-merge reconciliation of S7-04 ([S7-05 record](docs/e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md)).
+- **Still closed:** the Personal Replay capability (no gate row); CW2-08 (`NOT_EVALUATED`); every distribution path; the
+  hosted environment; Stage 8A.
+- **Next:** CP2, the real-device proof on the Product Owner's Android phone; then CP3, the closure, stopping at the S7-05
+  Final Independent Review & Merge Gate.

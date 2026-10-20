@@ -8,6 +8,7 @@ import { BackHandler } from 'react-native';
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { MAP_SURFACE_TEST_ID } from '../../map';
 import { REPLAY_COMPOSITE_TEST_ID } from '../../replay-composite';
+import { replayEntryCopy } from '../../replay-entry';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { REPLAY_PLAYER_COPY_GATE, REPLAY_PLAYER_COPY_ROWS, REPLAY_PLAYER_TEST_ID, ReplayPlayer, createReplayPlayerController, type ReplayPlayerController, type ReplayPlayerScheduler } from '..';
 import { PLAYER_IDS, PLAYER_WIRE, capturedHandoff, capturedIds, playerClients, playerServer, type PlayerServerOptions } from '../__fixtures__/player-wire';
@@ -203,10 +204,24 @@ describe('S7-04 — Arabic RTL, English, accessibility and Reduced Motion', () =
   });
 });
 
+describe('S7-05 — one name for the Replay (D2)', () => {
+  it.each([['ar', 'إعادة عرض المحادثة'], ['en', 'Conversation replay']] as const)('%s: the player is titled with the same approved name the entry controls are labelled with', async (language, name) => {
+    const { view } = await mount(language);
+    expect(replayEntryCopy(language).replayName).toBe(name);
+    const title = view.getByTestId('qandeel-replay-player-title');
+    expect(title.props.children).toBe(name);
+    expect(title.props.accessibilityRole).toBe('header');
+  });
+});
+
 describe('S7-04 — F-2: no Session context, id or Reading scope reaches the reader', () => {
-  it('the wire carries CONVERSATION_SESSION:<id> as data; nothing the reader sees or hears contains it, or any id', async () => {
-    const wire = JSON.stringify(PLAYER_WIRE.scenes.preview.analysis);
-    expect(wire).toContain(`CONVERSATION_SESSION:${PLAYER_IDS.session}`);
+  it('S7-05: the wire carries no Session at all (a Reading scope is its class); nothing the reader sees or hears contains one, or any id', async () => {
+    // The answers the player is served: every Reading scope is the class `CONVERSATION_SESSION`, and the conversation's
+    // Session appears in no answer (only in what the client itself sends: the list path and the draft body).
+    const answers = JSON.stringify([Object.values(PLAYER_WIRE.steps).map((step) => step.body), PLAYER_WIRE.scenes]);
+    expect(answers).not.toContain(PLAYER_IDS.session);
+    expect(answers).not.toContain('CONVERSATION_SESSION:');
+    expect(new Set(answers.match(/"scope":"[^"]*"/gu))).toEqual(new Set(['"scope":"CONVERSATION_SESSION"']));
     const { view } = await mount('ar', ['finalize']);
     for (let i = 0; i < 6; i += 1) {
       for (const words of readerFacing(view.toJSON())) {
