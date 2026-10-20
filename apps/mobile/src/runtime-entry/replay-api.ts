@@ -56,6 +56,16 @@ export interface ReplaySummaryView {
   readonly createdAt: string;
 }
 
+/**
+ * S7-04 — the Replay's current version, exactly as `GET /replay/:replayId` already serves it (no new server field). A
+ * reopened Replay is a DRAFT whose current version is still the finalized one until a new preview replaces it.
+ */
+export interface ReplayCurrentVersionView {
+  readonly versionId: string;
+  readonly revision: number;
+  readonly finalized: boolean;
+}
+
 export interface ReplayDraftView {
   readonly replayId: string;
   readonly lifecycle: ReplayLifecycleView;
@@ -64,6 +74,8 @@ export interface ReplayDraftView {
   readonly firstTc: number;
   readonly lastTc: number;
   readonly sourceState: 'CURRENT' | 'STALE';
+  /** S7-04: the version a player opens; `null` while no preview exists. */
+  readonly currentVersion: ReplayCurrentVersionView | null;
 }
 
 export type ReplayCapabilityResult = { readonly kind: 'READ'; readonly creationAvailable: boolean } | { readonly kind: 'UNAVAILABLE' };
@@ -141,12 +153,17 @@ export function decodeReplayRead(value: unknown, replayId: string): ReplayReadRe
     return { kind: 'UNAVAILABLE' };
   }
   const version = value.currentVersion;
-  if (version !== null && (!isRecord(version) || !hasExactly(version, ['versionId', 'revision', 'finalized']) || !isUuid(version.versionId)
-      || !isPosition(version.revision) || typeof version.finalized !== 'boolean')) return { kind: 'UNAVAILABLE' };
+  let currentVersion: ReplayCurrentVersionView | null = null;
+  if (version !== null) {
+    if (!isRecord(version) || !hasExactly(version, ['versionId', 'revision', 'finalized']) || !isUuid(version.versionId)
+        || !isPosition(version.revision) || typeof version.finalized !== 'boolean') return { kind: 'UNAVAILABLE' };
+    currentVersion = Object.freeze({ versionId: version.versionId.toLowerCase(), revision: version.revision, finalized: version.finalized });
+  }
   return {
     kind: 'FOUND',
     replay: Object.freeze({ replayId: value.replayId.toLowerCase(), lifecycle: value.lifecycle, revision: draft.revision, coverage: draft.coverageClass,
-      firstTc: draft.firstTc, lastTc: draft.lastTc, sourceState: draft.sourceState }),
+      firstTc: draft.firstTc, lastTc: draft.lastTc, sourceState: draft.sourceState,
+      currentVersion }),
   };
 }
 

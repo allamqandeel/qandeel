@@ -8,6 +8,6 @@ export type { ReplayCompositeCopy, ReplayCompositeCopyStatus } from './copy';
 export { REPLAY_COMPOSITE_COPY_GATE, REPLAY_COMPOSITE_COPY_ROWS, replayCompositeCopy } from './copy';
 export type { ReplayDisclosureRefusal, ReplayMomentDisclosure } from './projection-adapter';
 export { REPLAY_RENDER_CONTRACT_V1, discloseReplayMoment, honoursRenderContract, isRenderableMedium, replayViewpointKey } from './projection-adapter';
-export type { ReplayMomentCompositeProps, ReplayPreviewLimitOutcome, ReplayPreviewLimitProps } from './ReplayMomentComposite';
+export type { ReplayMomentCompositeProps, ReplayMomentControls, ReplayPreviewLimitOutcome, ReplayPreviewLimitProps } from './ReplayMomentComposite';
 export { REPLAY_COMPOSITE_TEST_ID, ReplayMomentComposite, ReplayPreviewLimit } from './ReplayMomentComposite';
 export { createReplayViewpointStore } from './viewpoint-store';

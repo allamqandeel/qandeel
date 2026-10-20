@@ -180,7 +180,7 @@ export type {
 } from './introduction-alerts-api';
 export { IntroductionAlertsApiClient } from './introduction-alerts-api';
 export type {
-  CommittedEventsResult, ReplayApiConfig, ReplayCapabilityResult, ReplayCommandResult, ReplayCoverageView, ReplayDraftAnswer, ReplayDraftRefusal,
+  CommittedEventsResult, ReplayApiConfig, ReplayCapabilityResult, ReplayCommandResult, ReplayCoverageView, ReplayCurrentVersionView, ReplayDraftAnswer, ReplayDraftRefusal,
   ReplayDraftView, ReplayLifecycleView, ReplayListResult, ReplayRange, ReplayReadResult, ReplaySummaryView, TemporalHeadResult,
 } from './replay-api';
 export { ReplayApiClient } from './replay-api';
@@ -190,6 +190,11 @@ export type {
   ReplayRenderContractView, ReplaySessionAnalyticsView, ReplayVersionResult, ReplayViewingView,
 } from './replay-history-api';
 export { ReplayHistoryApiClient } from './replay-history-api';
+export type {
+  ReplayFinalizeAnswer, ReplayFinalizeRefusal, ReplayFinalizeResult, ReplayLifecycleAnswer, ReplayLifecycleApiConfig, ReplayLifecycleRefusal,
+  ReplayLifecycleResult, ReplayPreviewAnswer, ReplayPreviewRefusal, ReplayPreviewResult, ReplayReopenAnswer, ReplayReopenRefusal, ReplayReopenResult,
+} from './replay-lifecycle-api';
+export { ReplayLifecycleApiClient } from './replay-lifecycle-api';
 export type {
   EnrollmentActKind, EnrollmentActResult, EnrollmentConsentKind, EnrollmentConsentText, EnrollmentOutcome, EnrollmentRead, EnrollmentRevocationOutcome,
   EnrollmentRevocationResult, EnrollmentView, IntroductionsEnrollmentApiConfig,

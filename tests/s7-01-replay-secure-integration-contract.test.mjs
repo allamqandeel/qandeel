@@ -46,6 +46,8 @@ const FROZEN_CORES = ['create_replay_draft_v1', 'revise_replay_draft_v1', 'prepa
 const S7_02_REPLAY_CLIENT = 'apps/mobile/src/runtime-entry/replay-api.ts';
 /** S7-03 RE-ANCHOR: the ONE read-only client of a version, its moments and their analysis (the composite proof's own). */
 const S7_03_REPLAY_HISTORY_CLIENT = 'apps/mobile/src/runtime-entry/replay-history-api.ts';
+/** S7-04 RE-ANCHOR: the ONE client of the three lifecycle commands (the player's own), by POST only. */
+const S7_04_REPLAY_LIFECYCLE_CLIENT = 'apps/mobile/src/runtime-entry/replay-lifecycle-api.ts';
 const API_FILES = ['replay.controller.ts', 'replay.module.ts', 'replay.repository.ts', 'replay.service.ts', 'replay.types.ts'];
 
 const shipped = () => ({
@@ -166,13 +168,19 @@ const DETECTORS = {
       if (/create_my_replay|ReplayModule/u.test(text)) out.push(`${path}: no mobile code names a Replay wrapper or the API module`);
       if (/\/__(tests|fixtures)__\//u.test(path)) continue;
       const calls = /['`]\/replay\/|\/replay\b['`]/u.test(text);
-      if (calls && path !== S7_02_REPLAY_CLIENT && path !== S7_03_REPLAY_HISTORY_CLIENT) {
+      if (calls && path !== S7_02_REPLAY_CLIENT && path !== S7_03_REPLAY_HISTORY_CLIENT && path !== S7_04_REPLAY_LIFECYCLE_CLIENT) {
         out.push(`${path}: S7-01 has no player or client; the clients are ${S7_02_REPLAY_CLIENT} and ${S7_03_REPLAY_HISTORY_CLIENT}`);
       }
       if (calls && path === S7_02_REPLAY_CLIENT && /\/(preview|finalize|reopen|versions|moments|analysis)\b/u.test(tsCode(text))) out.push(`${path}: the history reads are S7-03's client's`);
       // S7-03: the history client reads, by GET only; every command stays S7-04's.
       if (calls && path === S7_03_REPLAY_HISTORY_CLIENT && /\/(preview|finalize|reopen|drafts|revisions|capability|conversations)\b|method: '(?!GET')/u.test(tsCode(text))) {
         out.push(`${path}: the history client reads; every command is S7-04's`);
+      }
+      // S7-04: the lifecycle client sends the three existing commands, by POST only; it reads nothing and adds no route.
+      if (calls && path === S7_04_REPLAY_LIFECYCLE_CLIENT
+          && (/\/(drafts|revisions|capability|conversations|versions|moments|analysis|export|share|publish|download|library)\b|method: '(?!POST')/u.test(tsCode(text))
+            || !text.includes("act: 'preview' | 'finalize' | 'reopen', payload"))) {
+        out.push(`${path}: the lifecycle client sends preview, finalize and reopen, by POST, and nothing else`);
       }
     }
     return out;
@@ -230,6 +238,8 @@ LANGUAGE sql STABLE SECURITY DEFINER`)],
   ['a player route in the S7-02 client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_02_REPLAY_CLIENT ? `${text}\nthis.read(\`/replay/\${id}/preview\`);` : text]) })],
   ['a command route in the S7-03 history client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_03_REPLAY_HISTORY_CLIENT ? `${text}\nthis.read(\`/replay/\${id}/preview\`);` : text]) })],
   ['a write method in the S7-03 history client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_03_REPLAY_HISTORY_CLIENT ? text.replace("{ method: 'GET',", "{ method: 'POST',") : text]) })],
+  ['a read in the S7-04 lifecycle client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_04_REPLAY_LIFECYCLE_CLIENT ? text.replace("method: 'POST',", "method: 'GET',") : text]) })],
+  ['a share command in the S7-04 lifecycle client', 'mobileViolations', () => ({ ...shipped(), mobile: shipped().mobile.map(([path, text]) => [path, path === S7_04_REPLAY_LIFECYCLE_CLIENT ? text.replace("act: 'preview' | 'finalize' | 'reopen'", "act: 'preview' | 'finalize' | 'reopen' | 'share'") : text]) })],
   ['a Replay wrapper named in a mobile test', 'mobileViolations', () => ({ ...shipped(), mobile: [...shipped().mobile, ['apps/mobile/src/replay-entry/__tests__/x.test.ts', "rpc('create_my_replay_draft_v1')"]] })],
   ['the verifier left out of CI', 'wiringViolations', () => plant('workflow', 'run: npm run verify:replay-personal-secure-integration:integration', 'run: true')],
 ];

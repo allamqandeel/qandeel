@@ -89,7 +89,7 @@ describe('S7-02 — strict decoders', () => {
   });
 
   it('a Replay read is FOUND only for the Replay asked for; UNAVAILABLE is NOT_FOUND', () => {
-    expect(decodeReplayRead(FOUND, REPLAY)).toEqual({ kind: 'FOUND', replay: { replayId: REPLAY, lifecycle: 'DRAFT', revision: 2, coverage: 'SELECTED_EXCERPT', firstTc: 5, lastTc: 8, sourceState: 'CURRENT' } });
+    expect(decodeReplayRead(FOUND, REPLAY)).toEqual({ kind: 'FOUND', replay: { replayId: REPLAY, lifecycle: 'DRAFT', revision: 2, coverage: 'SELECTED_EXCERPT', firstTc: 5, lastTc: 8, sourceState: 'CURRENT', currentVersion: null } });
     expect(decodeReplayRead(FOUND, '44444444-4444-4444-8444-444444444444').kind).toBe('UNAVAILABLE');
     expect(decodeReplayRead({ outcome: 'UNAVAILABLE' }, REPLAY).kind).toBe('NOT_FOUND');
     expect(decodeReplayRead({ ...FOUND, draft: { ...FOUND.draft, lastTc: 4 } }, REPLAY).kind).toBe('UNAVAILABLE');

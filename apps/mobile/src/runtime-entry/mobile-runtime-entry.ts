@@ -43,6 +43,8 @@ import { IntroductionProposalsApiClient } from './introduction-proposals-api';
 import { IntroductionWorldsApiClient } from './introduction-worlds-api';
 import { IntroductionAlertsApiClient } from './introduction-alerts-api';
 import { ReplayApiClient } from './replay-api';
+import { ReplayHistoryApiClient } from './replay-history-api';
+import { ReplayLifecycleApiClient } from './replay-lifecycle-api';
 import { IntroductionsEnrollmentApiClient } from './introductions-enrollment-api';
 import { IntroductionSharingApiClient, type IntroductionSharingFetch } from './introduction-sharing-api';
 import { IntroductionContinuationApiClient } from './introduction-continuation-api';
@@ -171,6 +173,13 @@ export interface MobileRuntimeEntry {
    * events a selection is proven against), on the same AC-01 seam bound to the bundle's own auth generation.
    */
   replayFor(bundle: CanonicalRuntimeBundle): ReplayApiClient;
+  /**
+   * S7-04 — the Personal Replay player's two clients, on the same AC-01 seam bound to the bundle's own auth generation: the
+   * three lifecycle commands (preview, finalize, reopen) and the three S7-01 history reads (version, moments, analysis).
+   * A replaced identity's request is refused before it is issued.
+   */
+  replayLifecycleFor(bundle: CanonicalRuntimeBundle): ReplayLifecycleApiClient;
+  replayHistoryFor(bundle: CanonicalRuntimeBundle): ReplayHistoryApiClient;
   /** S6-07 — the governed enrollment and the withdrawal of one consent (0165), on the same AC-01 seam bound to the bundle's own auth generation. */
   introductionsEnrollmentFor(bundle: CanonicalRuntimeBundle): IntroductionsEnrollmentApiClient;
   /**
@@ -378,6 +387,12 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
         fetch: authorized,
         temporal: new TemporalApiClient({ baseUrl: config.apiBaseUrl, accessToken: NO_CAPTURED_CREDENTIAL, fetch: authorized }),
       });
+    },
+    replayLifecycleFor(bundle) {
+      return new ReplayLifecycleApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    replayHistoryFor(bundle) {
+      return new ReplayHistoryApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     introductionsEnrollmentFor(bundle) {
       return new IntroductionsEnrollmentApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
