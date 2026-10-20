@@ -10,6 +10,10 @@
 //   - migration 0169 and the frozen historical projection (`packages/runtime`, T-03C's wire) are byte-identical: the
 //     narrowing is the Replay wire's alone, not a new meaning of scope;
 //   - D2: the English of the 27 S7-02 / S7-03 rows is APPROVED and no English row of either file is PROPOSED;
+//   - D5: the four focused proofs stay in their existing suites, none skipped — the account switch after a sign-out and
+//     NOT_VIEWABLE through the real path (the production composition over the captured real-path wire), the revise retry
+//     with the same command id (the entry owner; the server's answer is 0169 verifier E10), and an existing Replay read
+//     after the Creation Capability Gate closes (0169 verifier E15, real PostgreSQL);
 //   - the record carries the decisions and its lifecycle, and the locators name it; this contract runs in CI.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
@@ -36,6 +40,20 @@ const WIRES = ['apps/mobile/src/replay-composite/__fixtures__/replay-wire.json',
 const ENTRY_COPY = 'apps/mobile/src/replay-entry/copy.ts';
 const COMPOSITE_COPY = 'apps/mobile/src/replay-composite/copy.ts';
 const RECORD = 'docs/e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md';
+const D5_SUITES = {
+  composition: 'apps/mobile/src/integration/__tests__/s7-04-replay-player.test.tsx',
+  entry: 'apps/mobile/src/replay-entry/__tests__/replay-entry-controller.test.ts',
+  verifier: 'database/verify-migration-0169.mjs',
+};
+const D5_PROOFS = [
+  ['composition', "describe('S7-05 D5 — an account switch after a sign-out shows nothing of the previous account'"],
+  ['composition', 'h.auth.signInWith({ ok: true, value: USER_2 });'],
+  ['composition', "describe('S7-05 D5 — NOT_VIEWABLE through the real path, in the production composition'"],
+  ['composition', 'server.withdrawSource();'],
+  ['entry', "it('S7-05 D5 — an unconfirmed revision is retried with the SAME command id, Replay, expected revision and range'"],
+  ['verifier', "assert.deepEqual(await rt.revise(A, reviseCmd, created.replay_id, 1, 3, 6), revised, 'E10 revise retried');"],
+  ['verifier', "await report.isolated('E15 the gate closes after a Replay exists: its version, moments, analysis and list answer unchanged; every act is refused'"],
+];
 const CONSUMERS = ['apps/mobile/src/replay-composite', 'apps/mobile/src/replay-player', 'apps/mobile/src/map', 'apps/mobile/src/living-analysis'];
 /** Byte-identical to the base `f9bc3947` (LF-normalised): the narrowing changes neither the migration nor the frozen wire. */
 const UNCHANGED = [
@@ -73,6 +91,7 @@ const shipped = () => ({
   proofRoot: read('apps/mobile/src/integration/__validation__/S705ProofRoot.tsx'),
   mobile: files('apps/mobile/src').filter((path) => /\.(ts|tsx)$/u.test(path) && !/\/__(tests|fixtures|validation)__\//u.test(path)).map((path) => [path, read(path)]),
   workflow: read('.github/workflows/api-ci.yml'),
+  d5: Object.fromEntries(Object.entries(D5_SUITES).map(([key, path]) => [key, read(path)])),
 });
 
 const DETECTORS = {
@@ -161,6 +180,14 @@ const DETECTORS = {
     return out;
   },
 
+  d5Violations(w) {
+    const out = [];
+    for (const [key, text] of D5_PROOFS) if (!w.d5[key].includes(text)) out.push(`${D5_SUITES[key]}: the D5 proof is present (${text.slice(0, 60)}…)`);
+    for (const [key, text] of Object.entries(w.d5)) {
+      if (/\b(describe|it|test)\.(skip|only|todo)\(|\bx(describe|it|test)\(/u.test(text)) out.push(`${D5_SUITES[key]}: no proof is skipped or singled out`);
+    }
+    return out;
+  },
   wiringViolations(w) {
     const out = [];
     if (!w.pkg.includes('"test:s7-05-replay-final-integration-contract": "node --test tests/s7-05-replay-final-integration-contract.test.mjs"')) out.push('package.json runs this contract');
@@ -212,6 +239,18 @@ const PLANTED = [
   ['an ungated selector', 'proofViolations', edit('selector', "process.env.S705_DEVICE_PROOF !== '1'", 'false')],
   ['an invented Replay answer', 'proofViolations', edit('proofWorld', 'return answer(200, withdrawn.version);', "return answer(200, { outcome: 'FOUND' });")],
   ['a production module reaching the proof', 'proofViolations', add('mobile', 'apps/mobile/src/replay-player/x.ts', "import { S705ProofRoot } from '../integration/__validation__/S705ProofRoot';")],
+  ['the account-switch proof removed', 'd5Violations', () => {
+    const w = shipped();
+    return { ...w, d5: { ...w.d5, composition: w.d5.composition.replace('S7-05 D5 — an account switch', 'an account switch') } };
+  }],
+  ['the read-after-close scenario removed', 'd5Violations', () => {
+    const w = shipped();
+    return { ...w, d5: { ...w.d5, verifier: w.d5.verifier.replace("report.isolated('E15", "report.isolated('E15-off") } };
+  }],
+  ['a D5 proof skipped', 'd5Violations', () => {
+    const w = shipped();
+    return { ...w, d5: { ...w.d5, entry: w.d5.entry.replace("it('S7-05 D5 —", "it.skip('S7-05 D5 —") } };
+  }],
   ['this contract left out of CI', 'wiringViolations', edit('workflow', 'run: npm run test:s7-05-replay-final-integration-contract', 'run: true')],
 ];
 

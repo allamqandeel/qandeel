@@ -361,6 +361,35 @@ describe('S7-02 — returning to this conversation’s saved draft', () => {
     expect(r.controller.getState().selection).toBeNull();
   });
 
+  // S7-05 D5 (2): a revise retry is the SAME command — the same id, Replay, expected revision and range — so the
+  // server's idempotency (0169 verifier E10, real PostgreSQL) answers it with its first result, never a second revision.
+  it('S7-05 D5 — an unconfirmed revision is retried with the SAME command id, Replay, expected revision and range', async () => {
+    const r = await rig();
+    r.transport.listAnswer = { kind: 'READ', replays: [{ replayId: REPLAY_ID, lifecycle: 'DRAFT', createdAt: '2026-10-19T09:00:00Z' }] };
+    r.transport.readAnswer = { kind: 'FOUND', replay: draftView({ revision: 2, firstTc: 5, lastTc: 8 }) };
+    await select(r, 'SAVED_DRAFT');
+    r.controller.toggle(r.history[2].userTurn.id);
+    r.controller.toggle(r.history[2].reply!.id);
+    r.controller.save();
+    const first = r.transport.commands[0];
+    expect(first).toMatchObject({ kind: 'REVISE', commandId: 'cmd-1', replayId: REPLAY_ID, expectedDraftRevision: 2, range: { firstTc: 9, lastTc: 12 } });
+    first.answer({ kind: 'OUTCOME_UNKNOWN' });
+    await flush();
+    expect(r.controller.getState().selection).toMatchObject({ problem: 'UNCONFIRMED', command: { id: 'cmd-1', phase: 'UNCONFIRMED' } });
+    // Save again is not a second command; only Try again re-issues the one unresolved command.
+    r.controller.save();
+    expect(r.transport.commands).toHaveLength(1);
+    r.controller.retry();
+    expect(r.transport.commands).toHaveLength(2);
+    const retried = r.transport.commands[1];
+    expect(retried).toMatchObject({ kind: 'REVISE', commandId: first.commandId, replayId: first.replayId, expectedDraftRevision: first.expectedDraftRevision });
+    expect(retried.range).toEqual(first.range);
+    retried.answer({ kind: 'ANSWERED', answer: { outcome: 'REVISED', replayId: REPLAY_ID, lifecycle: 'DRAFT', draftRevision: 3, coverage: 'SELECTED_EXCERPT', selectedMomentCount: 2 } });
+    await flush();
+    expect(r.controller.getState()).toMatchObject({ notice: 'SAVED_PART', selection: null, saved: { replayId: REPLAY_ID, draftRevision: 3 } });
+    expect(r.transport.commands.map((c) => c.commandId)).toEqual(['cmd-1', 'cmd-1']);
+  });
+
   it('a revision answered CHANGED re-reads the draft revision it must name', async () => {
     const r = await rig();
     r.transport.listAnswer = { kind: 'READ', replays: [{ replayId: REPLAY_ID, lifecycle: 'DRAFT', createdAt: '2026-10-19T09:00:00Z' }] };
