@@ -445,6 +445,7 @@ happens to reversible history — are defined here.
   route state; interruption/reconnection semantics; durable Voice Note audio if history playback is
   shipped; consent/retention/deletion for any Personal original audio; and a reviewed source
   contract before audio-led Replay can claim the original call.
+- **Arabic speech-pronunciation quality (Product Owner direction, 2026-10-20; Stage 8B handoff, no implementation authorized):** the future Voice runtime must have a **context-aware Arabic pronunciation/vocalization preparation step before TTS**, capable of resolving unvowelled words whose meaning/pronunciation changes with diacritics, respecting the user dialogue, intended meaning and relevant dialect. Evaluate selective diacritization or provider-compatible phonetic hints rather than indiscriminately rewriting all displayed words. The speech-only representation must not mutate user-visible conversation text, stored original utterances, Memories or factual meaning; avoid inventing a pronunciation when context does not establish it. Test ambiguous minimal pairs in context, Egyptian and supported Arabic dialects, proper names, latency/streaming fit and the chosen TTS voice. This is within **the existing VOICE-01 item** — no second backlog item, count/state/owner change. Stage 8A may preserve necessary text/context interfaces but does not implement, claim or close this TTS requirement.
 - **Status:** `OPEN — UNASSIGNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
