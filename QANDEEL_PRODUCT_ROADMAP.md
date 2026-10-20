@@ -7,6 +7,8 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
+> **LATEST EXECUTION DIRECTION (2026-10-20):** Stage 7 / S7-05 merged through PR #351 (`daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd`) and is engineering-complete, not deployed or launch-ready. Stage 8A is NEXT, at approved **planning direction** only: DeepSeek Flash is the sole model to qualify for QANDEEL, with friendly/familiar/spontaneous personality from the outset, appropriate seriousness, dialect fidelity, real Personal knowledge and HIM, Shared/Public semantics and Matching, measured cost per successful outcome. No implementation task or model has passed acceptance. Stage 8B owns contextual Arabic vocalization **before TTS** under existing `QAN-BL-VOICE-01`; Stage 9 keeps Credits / Economy / Launch. See [Stage 8A WP0 direction](docs/e2e/QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md) and [Project Map](QANDEEL_PROJECT_MAP.md) §5. Older execution notes are historical.
+
 ## 1. Roadmap rules
 1. **Frozen authority remains frozen.** A roadmap item consumes existing authority unless an explicit controlled
    change is opened.
@@ -763,3 +765,18 @@ stay as written.
   hosted environment; Shared and Public World Replay; Stage 8A.
 - **Next:** the Product Owner's review and merge decision on PR #351. No merge, deployment, user opening or Stage 8A
   without the Product Owner's explicit approval.
+
+
+### 6.28 Execution note — 2026-10-20 (S7-05 merged; DeepSeek-only Stage 8A planning direction)
+
+### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)
+
+- **Stage 7 DONE / MERGED (engineering only):** S7-01 through S7-05; final PR [#351](https://github.com/allamqandeel/qandeel/pull/351), merge `daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd` (2026-10-20). Personal text Replay remains **NOT DEPLOYED / CLOSED TO USERS / NOT LAUNCH READY**. The Product Owner waived TalkBack for S7-05: neither a pass nor a future blocker; the Arabic visual proof was accepted. Do not reopen Stage 7.
+- **Stage 8A NEXT — planning direction selected; no execution task yet:** qualify **DeepSeek Flash only** for QANDEEL, not an Anthropic/OpenAI bake-off. Retain the existing provider-neutral Model Router, Behavioral Runtime, FAST/DEEP, usage accounting, HIM, Memory, Shared/Public contracts and Matching gates. DeepSeek has **not yet passed** the production qualification or been deployed. The exact model/API configuration and paid-test costs require verification at execution.
+- **QANDEEL personality decision:** naturally friendly, familiar and spontaneous **from the start** (friend-like conversational warmth without pretending to be a human or claiming emotions/relationship); switch naturally to sober, responsible and clear expression when circumstances demand. No rigid tone classifier, additional persona engine or forced jokes. Refining already approved model-facing wording requires its appropriate reviewed Product Copy / Controlled Amendment gate; this direction alone does not edit frozen copy.
+- **Quality gate:** prove real dialogue, Egyptian and other supported dialects, preference precedence, humour/seriousness, natural acquisition/correction/semantic retrieval of user knowledge and grounded HIM, truthful Shared/Public semantic and spatial production, and consent-safe Matching readiness plus conclusion production. Real model evidence, privacy and cost **per successful outcome** matter more than a generic chat sample or raw token price.
+- **Stage 8B LATER — Arabic speech disambiguation:** before delivering generated Arabic to TTS, design a contextual pronunciation/vocalization layer that resolves ambiguous unvowelled words, uses appropriate selective diacritization or provider-compatible pronunciation hints, and verifies Egyptian/other dialect pronunciations. Speech-side pronunciation text must not silently change the visible chat transcript or alter factual meaning. It is a **Voice runtime requirement**, not an S8A implementation task; tracked within existing `QAN-BL-VOICE-01` without a duplicate item.
+- **Stage 9 LATER:** hosted release, policies, credits and launch readiness remain unapproved; model qualification is distinct from launch.
+- **Provisional S8A work map (not open task contracts):** S8A-01 DeepSeek adapter + accounted real-text smoke; S8A-02 personality/dialects/preferences and feedback loop; S8A-03 Personal acquisition, correction, retrieval, Memory and HIM; S8A-04 Shared semantic/spatial bindings with `CW-05` decision; S8A-05 Public semantic/spatial bindings; S8A-06 Matching understanding readiness; S8A-07 safe Compatibility Conclusion producer; S8A-08 cross-world real-model, performance and economics exit proof. Sequence/task boundaries to be independently checked before execution; validation starts with the first model run, not only S8A-08.
+- **Existing owned backlog, unchanged state/count:** `QAN-BL-CW-05`, `QAN-BL-IP-02`, `QAN-BL-ACE-02`, `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04`; and the already existing `QAN-BL-VOICE-01` for Stage 8B. These are not new items. Full direction: [S8A WP0 DeepSeek direction](docs/e2e/QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md). No branch, implementation code, paid evaluation, Product/Architecture amendment, feature-gate opening or merge is authorized by this documentation alone.
+
