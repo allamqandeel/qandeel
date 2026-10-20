@@ -21,7 +21,14 @@
 //
 // Everything runs in ONE transaction that is ROLLED BACK: the database is left exactly as it was.
 //
-//   DATABASE_URL=postgres://... node database/replay-composite-proof-world.mjs <out.json>
+//   DATABASE_URL=postgres://... node database/replay-composite-proof-world.mjs <out.json> [--player]
+//
+// With `--player` (S7-04 — Production Replay Player & Navigation) the same world instead records the owner's whole
+// lifecycle journey through the same wrappers — draft, preview (+ idempotent retry, COMMAND_CONFLICT), finalize
+// (+ stale CHANGED, retry, LIFECYCLE_NOT_ELIGIBLE), reopen, a second preview, MOMENT_NOT_SEALED, SOURCE_CHANGED and
+// ANALYSIS_CHANGED — into `tests/fixtures/s7-04-replay-player/rows.json`, which
+// `apps/api/src/replay/replay-player-proof.spec.ts` maps through the REAL ReplayService into
+// `apps/mobile/src/replay-player/__fixtures__/replay-player-wire.json`.
 //
 // The output is the raw-row capture. `apps/api/src/replay/replay-history-proof.spec.ts` maps it through the REAL
 // ReplayService into the wire answers the mobile proof renders (`apps/mobile/src/replay-composite/__fixtures__/replay-wire.json`;
@@ -32,7 +39,10 @@ import { writeFileSync } from 'node:fs';
 import { createPersonalReplayRuntime, W } from './replay-personal-verifier-support.mjs';
 
 const OUT = process.argv[2];
-if (!OUT) throw new Error('usage: node database/replay-composite-proof-world.mjs <out.json>');
+if (!OUT) throw new Error('usage: node database/replay-composite-proof-world.mjs <out.json> [--player]');
+// S7-04 — `--player` captures the production player's lifecycle journey on the SAME history instead of the S7-03 scenes
+// (`playerJourney` below; rows into `tests/fixtures/s7-04-replay-player/`). Without it, the S7-03 capture is unchanged.
+const PLAYER = process.argv[3] === '--player';
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows } = rt;
 const one = async (text, values = []) => (await rows(text, values))[0];
@@ -309,12 +319,16 @@ async function stageReadings(owner, session) {
 }
 
 // ------------------------------------------------------------ the read boundary, as the Data API serializes it
-/** One 0169 wrapper called as exactly `uid`; each row as PostgREST would serialize it (`to_jsonb`). */
+/**
+ * One 0169 wrapper called as exactly `uid`; each row as PostgREST would serialize it (`to_jsonb`).
+ * The sub-select keeps a one-column `RETURNS TABLE` a row (`{creation_available: true}`): a bare
+ * `FROM fn() r` makes `r` that single column's scalar, which PostgREST never sends.
+ */
 async function wire(uid, fn, args = []) {
   await identity('authenticated', uid);
   const name = fn.replace(/\(.*$/u, '');
   const params = args.map((_, i) => `$${i + 1}`).join(', ');
-  const result = (await rows(`SELECT to_jsonb(r) AS row FROM ${name}(${params}) r`, args)).map((r) => r.row);
+  const result = (await rows(`SELECT to_jsonb(r) AS row FROM (SELECT * FROM ${name}(${params})) r`, args)).map((r) => r.row);
   await identity('postgres');
   return result;
 }
@@ -331,6 +345,115 @@ async function readVersion(uid, replay, version, ordinals) {
   };
 }
 
+// ------------------------------------------------------------ S7-04: the player's lifecycle journey
+/**
+ * One Replay through every lifecycle act the production player issues — a real preview, a private finalization and a
+ * reopening, each with its retry under the SAME command id — and every bounded refusal the player must say, each read
+ * back through the boundary the player reads. Every step records the exact arguments it was called with, so the API
+ * spec can replay it through the REAL ReplayService.
+ */
+async function playerJourney(owner, world, readings) {
+  const journey = { steps: {}, scenes: {} };
+  const step = async (label, fn, args) => {
+    journey.steps[label] = { fn: fn.replace(/\(.*$/u, ''), args, rows: await wire(owner, fn, args) };
+    return journey.steps[label].rows[0];
+  };
+  const ALL = [1, 2, 3, 4, 5, 6];
+
+  await step('capability', W.CAPABILITY, []);
+  await step('listBefore', W.LIST, [world.session]);
+  // The selection the reader saves in S7-02: the first three messages, SP1 .. SP6.
+  const draft = await step('draft', W.CREATE, [randomUUID(), world.session, 1, 6]);
+  assert.equal(draft.outcome, 'CREATED', `the draft is created (${draft.outcome})`);
+  const replay = draft.replay_id;
+  await step('readDraft', W.READ, [replay]);
+  await step('listDraft', W.LIST, [world.session]);
+
+  // The real preview, its retry under the same id, the same id over another request, and a second preview attempt.
+  const previewCommand = randomUUID();
+  const preview = await step('preview', W.PREVIEW, [previewCommand, replay, draft.draft_revision]);
+  assert.equal(preview.outcome, 'PREVIEW_READY', `the draft previews (${preview.outcome})`);
+  const retried = await step('previewRetry', W.PREVIEW, [previewCommand, replay, draft.draft_revision]);
+  assert.equal(retried.replay_version_id, preview.replay_version_id, 'a retry under the same id is answered from committed history');
+  await step('previewConflict', W.PREVIEW, [previewCommand, replay, draft.draft_revision + 1]);
+  await step('previewAgain', W.PREVIEW, [randomUUID(), replay, draft.draft_revision]);
+  await step('readPreview', W.READ, [replay]);
+  await step('listPreview', W.LIST, [world.session]);
+  const first = preview.replay_version_id;
+  journey.scenes.preview = await readVersion(owner, replay, first, ALL);
+
+  // The private finalization: a stale expectation, the act, its retry, and a second act on a finalized version.
+  await step('finalizeStale', W.FINALIZE, [randomUUID(), replay, randomUUID()]);
+  const finalizeCommand = randomUUID();
+  const finalized = await step('finalize', W.FINALIZE, [finalizeCommand, replay, first]);
+  assert.equal(finalized.outcome, 'FINALIZED', `the previewed version is finalized (${finalized.outcome})`);
+  await step('finalizeRetry', W.FINALIZE, [finalizeCommand, replay, first]);
+  await step('finalizeAgain', W.FINALIZE, [randomUUID(), replay, first]);
+  await step('readFinalized', W.READ, [replay]);
+  await step('listFinalized', W.LIST, [world.session]);
+  await step('versionFinalized', W.VERSION, [replay, first]);
+
+  // Reopening for revision, its retry, and what the boundary then says about the version left behind.
+  const reopenCommand = randomUUID();
+  const reopened = await step('reopen', W.REOPEN, [reopenCommand, replay, first]);
+  assert.equal(reopened.outcome, 'REOPENED', `the finalized Replay reopens (${reopened.outcome})`);
+  await step('reopenRetry', W.REOPEN, [reopenCommand, replay, first]);
+  const afterReopen = await step('readAfterReopen', W.READ, [replay]);
+  await step('versionAfterReopen', W.VERSION, [replay, first]);
+  await step('listAfterReopen', W.LIST, [world.session]);
+  // A later preview creates a NEW version; the first stays immutable.
+  const second = await step('previewSecond', W.PREVIEW, [randomUUID(), replay, afterReopen.draft_revision]);
+  assert.equal(second.outcome, 'PREVIEW_READY', `the reopened draft previews again (${second.outcome})`);
+  await step('readSecond', W.READ, [replay]);
+  await step('versionFirstAfterSecond', W.VERSION, [replay, first]);
+  journey.scenes.second = await readVersion(owner, replay, second.replay_version_id, ALL);
+
+  // E05 — the open Live Head: a preview of the whole conversation, SP7 not sealed.
+  const open = await step('openHeadDraft', W.CREATE, [randomUUID(), world.session, 1, 7]);
+  await step('openHeadPreview', W.PREVIEW, [randomUUID(), open.replay_id, open.draft_revision]);
+  await step('readOpenHead', W.READ, [open.replay_id]);
+
+  // A source changed after the preview: the finalization refuses, and a moment read while viewing withdraws the viewing.
+  const changing = await step('sourceDraft', W.CREATE, [randomUUID(), world.session, 1, 3]);
+  const changingPreview = await step('sourcePreview', W.PREVIEW, [randomUUID(), changing.replay_id, changing.draft_revision]);
+  assert.equal(changingPreview.outcome, 'PREVIEW_READY', `the first message previews (${changingPreview.outcome})`);
+  await step('readSourcePreview', W.READ, [changing.replay_id]);
+  journey.scenes.source = await readVersion(owner, changing.replay_id, changingPreview.replay_version_id, [1, 2, 3]);
+  const [changed] = await rows('SELECT id, committed_text FROM public.conversation_units WHERE session_id = $1 AND session_position = 2', [world.session]);
+  await rt.asReplica(() => q('UPDATE public.conversation_units SET committed_text = $2 WHERE id = $1', [changed.id, `${changed.committed_text.slice(0, -1)}X`]));
+  await identity('postgres');
+  journey.scenes.sourceWithdrawn = await readVersion(owner, changing.replay_id, changingPreview.replay_version_id, [1, 2, 3]);
+  await step('sourceChangedFinalize', W.FINALIZE, [randomUUID(), changing.replay_id, changingPreview.replay_version_id]);
+  await step('readSourceAfterRefusal', W.READ, [changing.replay_id]);
+  await rt.asReplica(() => q('UPDATE public.conversation_units SET committed_text = $2 WHERE id = $1', [changed.id, changed.committed_text]));
+  await identity('postgres');
+
+  // An analysis moved after the preview (the S7-03 E08 surgery, last, since it moves every later version too).
+  const moving = await step('analysisDraft', W.CREATE, [randomUUID(), world.session, 4, 6]);
+  const movingPreview = await step('analysisPreview', W.PREVIEW, [randomUUID(), moving.replay_id, moving.draft_revision]);
+  assert.equal(movingPreview.outcome, 'PREVIEW_READY', `the part previews (${movingPreview.outcome})`);
+  await step('readAnalysisPreview', W.READ, [moving.replay_id]);
+  await rt.asReplica(() => q(
+    `INSERT INTO public.historical_reading_events
+       (event_id, user_id, hypothesis_id, event_kind, from_status, to_status, from_version, to_version,
+        session_id, session_position, same_sp_event_sequence, world_version)
+     VALUES (gen_random_uuid(), $1, $2, 'STATUS_TRANSITION', 'CANDIDATE', 'REJECTED', 1, 1, $3, 2, 1, $4)`,
+    [owner, readings.readingA, world.session, readings.world + 10]));
+  await identity('postgres');
+  await step('analysisChangedFinalize', W.FINALIZE, [randomUUID(), moving.replay_id, movingPreview.replay_version_id]);
+  await step('readAnalysisAfterRefusal', W.READ, [moving.replay_id]);
+  journey.scenes.analysisMoved = await readVersion(owner, moving.replay_id, movingPreview.replay_version_id, [1, 2, 3]);
+  // The way on after a refused finalize: reopen the PREVIEW_READY Replay (0103 accepts it), and preview it again.
+  const reopenMoved = await step('analysisReopen', W.REOPEN, [randomUUID(), moving.replay_id, movingPreview.replay_version_id]);
+  assert.equal(reopenMoved.outcome, 'REOPENED', `a refused preview reopens (${reopenMoved.outcome})`);
+  const movedDraft = await step('readAnalysisAfterReopen', W.READ, [moving.replay_id]);
+  const movedAgain = await step('analysisPreviewAgain', W.PREVIEW, [randomUUID(), moving.replay_id, movedDraft.draft_revision]);
+  assert.equal(movedAgain.outcome, 'PREVIEW_READY', `the reopened part previews again (${movedAgain.outcome})`);
+  await step('readAnalysisPreviewAgain', W.READ, [moving.replay_id]);
+  journey.scenes.analysisSecond = await readVersion(owner, moving.replay_id, movedAgain.replay_version_id, [1, 2, 3]);
+  return journey;
+}
+
 async function main() {
   await rt.client.connect();
   await q('BEGIN');
@@ -344,6 +467,22 @@ async function main() {
     const readings = await stageReadings(owner, world.session);
     await newLogicalTransaction();
     await rt.setGate();
+
+    if (PLAYER) {
+      const journey = await playerJourney(owner, world, readings);
+      journey.provenance = {
+        task: 'S7-04',
+        generator: 'database/replay-composite-proof-world.mjs --player',
+        migrations: '0001 .. 0169 (the merged main), applied to a fresh PostgreSQL 17 database',
+        scenario: 'the S7-03 history (the frozen T-03D Session 1 + one quiet exchange; Readings staged as SP-native events)',
+        journey: 'draft -> preview (retry, conflict, again) -> finalize (stale, retry, again) -> reopen (retry) -> preview again; E05 open head; source changed; analysis moved -> reopen -> preview again',
+        transaction: 'ROLLED BACK: the database is left exactly as it was',
+        capturedAt: new Date().toISOString(),
+      };
+      writeFileSync(OUT, `${JSON.stringify(journey, null, 2)}\n`);
+      console.log(`captured ${Object.keys(journey.steps).length} steps and ${Object.keys(journey.scenes).length} scenes into ${OUT}`);
+      return;
+    }
 
     const capture = { scenes: {}, commands: {} };
     const command = async (label, fn, args) => {

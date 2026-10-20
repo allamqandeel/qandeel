@@ -6,7 +6,7 @@
  * band is the World and nothing else; the Living Analysis Map below it is untouched and is simply
  * laid out beneath the band's measured height, so the band never covers any part of the world.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { AccessibilityInfo, Text, View, findNodeHandle, type LayoutChangeEvent } from 'react-native';
 
 import type { ChromeLanguage } from '../orientation-chrome';
@@ -25,11 +25,16 @@ export interface AnalysisReturnBarProps {
   readonly onHeight: (height: number) => void;
   /** Move screen-reader focus to the control once, when arriving from the Conversation. */
   readonly focusControl?: boolean;
+  /**
+   * S7-04: one control at the band's END edge, handed in by the composition (the same END-edge box the Conversation's
+   * upper chrome has). Without it the band is exactly what it always was.
+   */
+  readonly end?: ReactNode;
 }
 
 export const ANALYSIS_RETURN_BAR_MIN_HEIGHT = 48;
 
-export function AnalysisReturnBar({ language, insets, onReturnToConversation, onHeight, focusControl = false }: AnalysisReturnBarProps) {
+export function AnalysisReturnBar({ language, insets, onReturnToConversation, onHeight, focusControl = false, end = null }: AnalysisReturnBarProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = conversationCopy(language);
@@ -54,9 +59,10 @@ export function AnalysisReturnBar({ language, insets, onReturnToConversation, on
         paddingLeft: insets.left + 10,
         paddingRight: insets.right + 10,
         minHeight: insets.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT,
-        flexDirection: 'row',
+        // With an END control the way back still comes first in reading order; the row is turned so it stands at START.
+        flexDirection: end !== null && start === 'right' ? 'row-reverse' : 'row',
         alignItems: 'center',
-        justifyContent: start === 'right' ? 'flex-end' : 'flex-start',
+        justifyContent: end === null ? (start === 'right' ? 'flex-end' : 'flex-start') : 'space-between',
       }}
     >
       {ready ? (
@@ -79,6 +85,7 @@ export function AnalysisReturnBar({ language, insets, onReturnToConversation, on
           </View>
         </Control>
       ) : null}
+      {ready && end !== null ? end : null}
     </View>
   );
 }

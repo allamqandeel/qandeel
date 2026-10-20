@@ -253,7 +253,9 @@ test('9 — governance: the record, the backlog and the locators tell the same t
     // RE-ANCHORED by S7-01 (2026-10-19): S6-07 merged through PR #346; S7-01 is the current task.
     // RE-ANCHORED by S7-02 (2026-10-19): S7-01 merged through PR #347; S7-02 is the current task.
     // RE-ANCHORED by S7-03 (2026-10-19): S7-02 merged through PR #348; S7-03 is the current task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu);
+    // RE-ANCHORED by S7-04 (2026-10-19): S7-03 merged through PR #349; S7-04 is the current task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S7-03/u, 'the merged S7-03 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S7-02/u, 'the merged S7-02 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S7-01/u, 'the merged S7-01 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-07/u, 'the merged S6-07 is no longer the current task');

@@ -97,6 +97,7 @@ import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
 import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, useReplaySelection } from '../../replay-entry';
+import { ReplayAnalysisEntry, ReplayPlayer, ReplayPreviewAction } from '../../replay-player';
 import type { DirectEntryDestination } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
@@ -173,6 +174,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // choice; never persisted, so a restart always lands on the Personal world and no restored value is ever authority.
   const [area, setArea] = useState<WorldArea>('MY_WORLD');
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
+  // S7-04 — the Replay player's passage, over the depth the reader came from. Its visibility is the player's own state
+  // (one per runtime generation), never a second navigation state here: a new generation's player starts closed.
+  const replayPlayer = runtime.replayPlayer;
+  const playerOpen = useSyncExternalStore(replayPlayer.subscribe, () => replayPlayer.getState().open !== null);
   const reduceMotion = useReduceMotion();
   const incoming = useSharedValue(1);
   const incomingStyle = useAnimatedStyle(() => ({ opacity: incoming.get() }));
@@ -329,9 +334,11 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // A3-01 — Activity over the Conversation. Back returns to exactly where the reader was.
   const openActivity = useCallback(() => {
+    // S7-04: Activity is not entered from beneath the Replay passage; the passage closes first.
+    replayPlayer.close();
     setReturnedFromActivity(false);
     setActivityShown(true);
-  }, []);
+  }, [replayPlayer]);
   const closeActivity = useCallback(() => {
     setActivityShown(false);
     setReturnedFromActivity(true);
@@ -355,6 +362,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const introductionEntries = useRef(0);
   // A revalidated Direct Entry, executed only into a Product surface that exists (D38–D43).
   const enter = useCallback((destination: DirectEntryDestination) => {
+    // A Direct Entry leaves the Replay passage first: the surface it opens is never beneath it.
+    replayPlayer.close();
     setIntroductionsShown(false);
     setActivityShown(false);
     setReturnedFromActivity(false);
@@ -418,10 +427,11 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       setSettingsPage(destination.section === 'NOTIFICATIONS' ? 'NOTIFICATIONS' : undefined);
       setSettingsShown(true);
     }
-  }, [cross, runtime.sharedWorld, runtime.publicWorld]);
+  }, [cross, replayPlayer, runtime.sharedWorld, runtime.publicWorld]);
 
   // The surface truth the attention law reads: the composition's own state, never a second navigation state.
-  const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'
+  // S7-04: the Replay passage is an Analysis surface for the attention law (no ordinary attention over it).
+  const surface: ProductSurface = depth === 'ANALYSIS' || playerOpen ? 'ANALYSIS'
     : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : introductionsShown ? 'INTRODUCTIONS' : activityShown ? 'ACTIVITY' : area === 'SHARED_WORLD' ? 'SHARED_WORLD' : area === 'PUBLIC_WORLD' ? 'PUBLIC_WORLD' : 'CONVERSATION';
   const attention = runtime.attention;
   useEffect(() => {
@@ -483,6 +493,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     if (onSignOut === undefined) return undefined;
     const consume = () => {
       if (!publicLinks.take()) return;
+      replayPlayer.close();
       setIntroductionsShown(false);
       setActivityShown(false);
       setReturnedFromActivity(false);
@@ -494,7 +505,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     };
     void Promise.resolve().then(consume);
     return publicLinks.subscribe(consume);
-  }, [publicLinks, publicWorld, cross, onSignOut]);
+  }, [publicLinks, publicWorld, cross, onSignOut, replayPlayer]);
   const push = runtime.push;
   const { education, permission } = useSyncExternalStore(push.subscribe, push.getState);
   // S4-04 — P3 §11 / A3-02 G-12: the first LEGITIMATE Shared entry (a World's entry verdict is ALLOW, the reader is in
@@ -536,7 +547,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         discussion={(
           <>
             {/* S7-02: the one saved / unavailable line; nothing unless the entry (Personal world only) answered. */}
-            <ReplayNoticeLine controller={runtime.replayEntry} language={locale.language} insets={edges} />
+            <ReplayNoticeLine controller={runtime.replayEntry} language={locale.language} insets={edges} action={onSignOut === undefined ? null : <ReplayPreviewAction player={replayPlayer} entry={runtime.replayEntry} language={locale.language} />} />
             <UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />
           </>
         )}
@@ -570,6 +581,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
                   onReturnToConversation={() => cross('CONVERSATION')}
                   onHeight={setBandHeight}
                   focusControl={crossed && current}
+                  end={onSignOut === undefined ? null : <ReplayAnalysisEntry player={replayPlayer} entry={runtime.replayEntry} language={locale.language} />}
                 />
               ),
               height: bandHeight,
@@ -603,8 +615,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           const reachable = current && !settingsShown && !understandingShown;
           // A3-01: beneath Activity, too, the Personal world stays mounted and out of reach.
           const personalReachable = reachable && !activityShown && area === 'MY_WORLD';
-          // S6-01: beneath the Introductions preparation, too.
-          const personalOpen = personalReachable && !introductionsShown;
+          // S6-01: beneath the Introductions preparation, too. S7-04: and beneath the Replay passage — the depth it was
+          // opened from keeps every state it had.
+          const personalOpen = personalReachable && !introductionsShown && !playerOpen;
           return (
             <Animated.View
               key={which}
@@ -661,7 +674,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             />
           </View>
         ) : null}
-        {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown && !introductionsShown ? (
+        {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown && !introductionsShown && !playerOpen ? (
           <View style={styles.switcher}>
             <GlobalSwitcher area={area} language={locale.language} bottomInset={edges.bottom} onSelect={setArea} />
           </View>
@@ -705,10 +718,15 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           </View>
         ) : null}
         {/*
+          S7-04 — the Replay passage, over whichever depth opened it (the Personal world only). The depth beneath stays
+          mounted and out of reach; Back, and the passage's own way back, return to it exactly as it was.
+        */}
+        {onSignOut !== undefined && area === 'MY_WORLD' ? <ReplayPlayer controller={replayPlayer} language={locale.language} insets={edges} /> : null}
+        {/*
           A3-01 — the one ordinary Attention Strip, attached under the non-Analysis upper chrome. Never at the Analysis
           depth: the presentation law never presents ordinary attention there, and this host never mounts it there.
         */}
-        {strip !== null && strip.form === 'ORDINARY' && depth === 'CONVERSATION' && leaving === null ? (
+        {strip !== null && strip.form === 'ORDINARY' && depth === 'CONVERSATION' && leaving === null && !playerOpen ? (
           <AttentionStrip
             key={strip.candidate.item.id}
             item={strip.candidate.item}
@@ -720,7 +738,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           />
         ) : null}
         {/* A3-02 — the education before the OS prompt: never at the Analysis depth. */}
-        {education && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+        {education && depth === 'CONVERSATION' && onSignOut !== undefined && !playerOpen ? (
           <PermissionEducationSheet language={locale.language} insets={edges} onAllow={() => void push.allow()} onNotNow={() => push.notNow()} />
         ) : null}
       </View>

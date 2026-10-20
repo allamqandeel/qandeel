@@ -194,6 +194,25 @@ describe('S7-01 - ReplayService', () => {
       expect(repository.conversationReplays).toHaveBeenCalledTimes(1);
     });
 
+    // S7-04 G-1: 0169's list answers the finalization with an EXISTS, so a fresh draft (no version) reads `false` there.
+    it('S7-04 G-1: lists a fresh draft with no version, and still refuses a contradictory answer', async () => {
+      const summary = (lifecycle: string, version: string | null, finalized: unknown) =>
+        ({ replay_id: REPLAY, replay_lifecycle: lifecycle, created_at: AT, current_replay_version_id: version, current_version_finalized: finalized });
+      repository.conversationReplays.mockResolvedValue([summary('DRAFT', null, false), summary('PREVIEW_READY', VERSION, false),
+        summary('FINALIZED', VERSION, true), summary('DRAFT', VERSION, true)]);
+      await expect(service.conversationReplays('token', SESSION)).resolves.toEqual({ replays: [
+        { replayId: REPLAY, lifecycle: 'DRAFT', createdAt: AT, currentVersionId: null, currentVersionFinalized: null },
+        { replayId: REPLAY, lifecycle: 'PREVIEW_READY', createdAt: AT, currentVersionId: VERSION, currentVersionFinalized: false },
+        { replayId: REPLAY, lifecycle: 'FINALIZED', createdAt: AT, currentVersionId: VERSION, currentVersionFinalized: true },
+        { replayId: REPLAY, lifecycle: 'DRAFT', createdAt: AT, currentVersionId: VERSION, currentVersionFinalized: true },
+      ] });
+      for (const wrong of [summary('DRAFT', null, true), summary('DRAFT', null, null), summary('DRAFT', null, 'false'),
+        summary('PREVIEW_READY', VERSION, null), summary('DRAFT', 'not-a-version', false)]) {
+        repository.conversationReplays.mockResolvedValue([summary('DRAFT', null, false), wrong]);
+        await expect(service.conversationReplays('token', SESSION)).rejects.toMatchObject({ response: { outcome: 'UNAVAILABLE' } });
+      }
+    });
+
     it('reads one Replay, with no current version before the first preview', async () => {
       await expect(service.replay('token', REPLAY)).resolves.toMatchObject({ outcome: 'FOUND', lifecycle: 'PREVIEW_READY',
         draft: { revision: 2, firstTc: 1, lastTc: 2, sourceState: 'CURRENT' }, currentVersion: { versionId: VERSION, revision: 1, finalized: false } });

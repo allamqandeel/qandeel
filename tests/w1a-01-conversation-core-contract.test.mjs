@@ -294,8 +294,10 @@ test('§7 — no Voice, Replay, Activity, Settings, Understanding, Global Shell,
   }
   const generated = read(`${LAYER}/visual/canonical-visual.generated.ts`);
   const glyphs = generated.slice(generated.indexOf('"glyphs"'), generated.indexOf('"type"'));
-  // The three W1A glyphs, plus W3-01's P2 `settings` utility glyph for the S-B entry, plus S7-02's P2 `replay` media glyph.
-  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay'], 'only the W1A glyphs, W3-01’s settings glyph and S7-02’s replay glyph are ported');
+  // The three W1A glyphs, plus W3-01's P2 `settings` utility glyph for the S-B entry, plus S7-02's P2 `replay` media glyph,
+  // plus S7-04's Replay transport: P2's `play` / `pause` media marks.
+  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay', 'play', 'pause'],
+    'only the W1A glyphs, W3-01’s settings glyph, S7-02’s replay glyph and S7-04’s transport are ported');
 });
 
 // ---------------------------------------------------------------------------------------------

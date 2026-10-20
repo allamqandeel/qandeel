@@ -179,7 +179,7 @@ export function fakeConversation(exchanges: readonly ConversationExchangeView[])
 }
 
 export function draftView(overrides: Partial<ReplayDraftView> = {}): ReplayDraftView {
-  return { replayId: REPLAY_ID, lifecycle: 'DRAFT', revision: 2, coverage: 'SELECTED_EXCERPT', firstTc: 3, lastTc: 6, sourceState: 'CURRENT', ...overrides };
+  return { replayId: REPLAY_ID, lifecycle: 'DRAFT', revision: 2, coverage: 'SELECTED_EXCERPT', firstTc: 3, lastTc: 6, sourceState: 'CURRENT', currentVersion: null, ...overrides };
 }
 
 /** Let every queued promise continuation run. */

@@ -1,0 +1,2993 @@
+{
+  "steps": {
+    "capability": {
+      "fn": "public.read_my_replay_capability_v1",
+      "args": [],
+      "rows": [
+        {
+          "creation_available": true
+        }
+      ]
+    },
+    "listBefore": {
+      "fn": "public.list_my_conversation_replays_v1",
+      "args": [
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745"
+      ],
+      "rows": []
+    },
+    "draft": {
+      "fn": "public.create_my_replay_draft_v1",
+      "args": [
+        "fd774186-8a26-4b58-a9b2-9f77e0c6167c",
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745",
+        1,
+        6
+      ],
+      "rows": [
+        {
+          "outcome": "CREATED",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "coverage_class": "SELECTED_EXCERPT",
+          "draft_revision": 1,
+          "replay_lifecycle": "DRAFT",
+          "selected_item_count": 6
+        }
+      ]
+    },
+    "readDraft": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "DRAFT",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": null,
+          "current_version_finalized": null,
+          "draft_selected_item_count": 6,
+          "current_replay_version_revision": null
+        }
+      ]
+    },
+    "listDraft": {
+      "fn": "public.list_my_conversation_replays_v1",
+      "args": [
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "DRAFT",
+          "current_replay_version_id": null,
+          "current_version_finalized": false
+        }
+      ]
+    },
+    "preview": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "81d57bc6-59b1-412d-b844-4c1c9cc1576a",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "PREVIEW_READY",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "moment_count": 6,
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "replay_version_revision": 1,
+          "temporal_discontinuity_count": 0
+        }
+      ]
+    },
+    "previewRetry": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "81d57bc6-59b1-412d-b844-4c1c9cc1576a",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "PREVIEW_READY",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "moment_count": 6,
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "replay_version_revision": 1,
+          "temporal_discontinuity_count": 0
+        }
+      ]
+    },
+    "previewConflict": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "81d57bc6-59b1-412d-b844-4c1c9cc1576a",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        2
+      ],
+      "rows": [
+        {
+          "outcome": "COMMAND_CONFLICT",
+          "replay_id": null,
+          "moment_count": null,
+          "replay_version_id": null,
+          "replay_version_revision": null,
+          "temporal_discontinuity_count": null
+        }
+      ]
+    },
+    "previewAgain": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "e16e9113-0acb-4b7e-bcdf-c8a1bfeffe6a",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "LIFECYCLE_NOT_ELIGIBLE",
+          "replay_id": null,
+          "moment_count": null,
+          "replay_version_id": null,
+          "replay_version_revision": null,
+          "temporal_discontinuity_count": null
+        }
+      ]
+    },
+    "readPreview": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 6,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "listPreview": {
+      "fn": "public.list_my_conversation_replays_v1",
+      "args": [
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "current_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "current_version_finalized": false
+        }
+      ]
+    },
+    "finalizeStale": {
+      "fn": "public.finalize_my_replay_version_v1",
+      "args": [
+        "74a81dd1-7092-47e4-9971-98b16ca146c8",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "84cd20f8-a7f8-4a95-ac6a-fc5d99b4fa66"
+      ],
+      "rows": [
+        {
+          "outcome": "CHANGED",
+          "replay_id": null,
+          "replay_version_id": null,
+          "replay_version_revision": null
+        }
+      ]
+    },
+    "finalize": {
+      "fn": "public.finalize_my_replay_version_v1",
+      "args": [
+        "43d8f326-1345-4105-9e35-dcbe28b0672b",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "outcome": "FINALIZED",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "replay_version_revision": 1
+        }
+      ]
+    },
+    "finalizeRetry": {
+      "fn": "public.finalize_my_replay_version_v1",
+      "args": [
+        "43d8f326-1345-4105-9e35-dcbe28b0672b",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "outcome": "FINALIZED",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "replay_version_revision": 1
+        }
+      ]
+    },
+    "finalizeAgain": {
+      "fn": "public.finalize_my_replay_version_v1",
+      "args": [
+        "104a54a2-dd10-4fe8-8c08-86e4eb9f91f8",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "outcome": "LIFECYCLE_NOT_ELIGIBLE",
+          "replay_id": null,
+          "replay_version_id": null,
+          "replay_version_revision": null
+        }
+      ]
+    },
+    "readFinalized": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "FINALIZED",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "current_version_finalized": true,
+          "draft_selected_item_count": 6,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "listFinalized": {
+      "fn": "public.list_my_conversation_replays_v1",
+      "args": [
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "FINALIZED",
+          "current_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "current_version_finalized": true
+        }
+      ]
+    },
+    "versionFinalized": {
+      "fn": "public.read_my_replay_version_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "last_tc": 6,
+          "first_tc": 1,
+          "finalized": true,
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "is_current": true,
+          "moment_count": 6,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.080597+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ]
+    },
+    "reopen": {
+      "fn": "public.reopen_my_replay_for_revision_v1",
+      "args": [
+        "7047436c-15ed-45dc-9af2-da043ab57433",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "outcome": "REOPENED",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "replay_lifecycle": "DRAFT",
+          "reopened_from_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+        }
+      ]
+    },
+    "reopenRetry": {
+      "fn": "public.reopen_my_replay_for_revision_v1",
+      "args": [
+        "7047436c-15ed-45dc-9af2-da043ab57433",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "outcome": "REOPENED",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "replay_lifecycle": "DRAFT",
+          "reopened_from_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+        }
+      ]
+    },
+    "readAfterReopen": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "DRAFT",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "current_version_finalized": true,
+          "draft_selected_item_count": 6,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "versionAfterReopen": {
+      "fn": "public.read_my_replay_version_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "last_tc": 6,
+          "first_tc": 1,
+          "finalized": true,
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "is_current": true,
+          "moment_count": 6,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.080597+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ]
+    },
+    "listAfterReopen": {
+      "fn": "public.list_my_conversation_replays_v1",
+      "args": [
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "DRAFT",
+          "current_replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "current_version_finalized": true
+        }
+      ]
+    },
+    "previewSecond": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "38629f9d-fe21-42ee-ab6e-257e0a35670d",
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "PREVIEW_READY",
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "moment_count": 6,
+          "replay_version_id": "3822f573-77de-43de-8330-14429f2011ed",
+          "replay_version_revision": 2,
+          "temporal_discontinuity_count": 0
+        }
+      ]
+    },
+    "readSecond": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d"
+      ],
+      "rows": [
+        {
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "created_at": "2026-10-19T21:43:20.929504+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:20.929504+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "3822f573-77de-43de-8330-14429f2011ed",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 6,
+          "current_replay_version_revision": 2
+        }
+      ]
+    },
+    "versionFirstAfterSecond": {
+      "fn": "public.read_my_replay_version_v1",
+      "args": [
+        "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+        "3c846cb7-00c9-45ac-8394-a83a2de9f38a"
+      ],
+      "rows": [
+        {
+          "last_tc": 6,
+          "first_tc": 1,
+          "finalized": true,
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "is_current": false,
+          "moment_count": 6,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.080597+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ]
+    },
+    "openHeadDraft": {
+      "fn": "public.create_my_replay_draft_v1",
+      "args": [
+        "d3f5bac9-19d4-4f67-be97-ffc3c7694004",
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745",
+        1,
+        7
+      ],
+      "rows": [
+        {
+          "outcome": "CREATED",
+          "replay_id": "fdc2233f-d318-49d4-8937-788764489e5a",
+          "coverage_class": "FULL_SOURCE",
+          "draft_revision": 1,
+          "replay_lifecycle": "DRAFT",
+          "selected_item_count": 7
+        }
+      ]
+    },
+    "openHeadPreview": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "3e039df0-58fe-4e02-81b7-962edee6db8e",
+        "fdc2233f-d318-49d4-8937-788764489e5a",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "MOMENT_NOT_SEALED",
+          "replay_id": null,
+          "moment_count": null,
+          "replay_version_id": null,
+          "replay_version_revision": null,
+          "temporal_discontinuity_count": null
+        }
+      ]
+    },
+    "readOpenHead": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "fdc2233f-d318-49d4-8937-788764489e5a"
+      ],
+      "rows": [
+        {
+          "replay_id": "fdc2233f-d318-49d4-8937-788764489e5a",
+          "created_at": "2026-10-19T21:43:21.811486+03:00",
+          "draft_last_tc": 7,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:21.811486+03:00",
+          "replay_lifecycle": "DRAFT",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "FULL_SOURCE",
+          "current_replay_version_id": null,
+          "current_version_finalized": null,
+          "draft_selected_item_count": 7,
+          "current_replay_version_revision": null
+        }
+      ]
+    },
+    "sourceDraft": {
+      "fn": "public.create_my_replay_draft_v1",
+      "args": [
+        "1d39ddf6-af7e-4b2a-95fa-d071868dc25c",
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745",
+        1,
+        3
+      ],
+      "rows": [
+        {
+          "outcome": "CREATED",
+          "replay_id": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+          "coverage_class": "SELECTED_EXCERPT",
+          "draft_revision": 1,
+          "replay_lifecycle": "DRAFT",
+          "selected_item_count": 3
+        }
+      ]
+    },
+    "sourcePreview": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "565facaa-6b51-44de-b0a8-48546258c178",
+        "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "PREVIEW_READY",
+          "replay_id": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+          "moment_count": 3,
+          "replay_version_id": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+          "replay_version_revision": 1,
+          "temporal_discontinuity_count": 0
+        }
+      ]
+    },
+    "readSourcePreview": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d"
+      ],
+      "rows": [
+        {
+          "replay_id": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+          "created_at": "2026-10-19T21:43:21.876986+03:00",
+          "draft_last_tc": 3,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:21.876986+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 3,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "sourceChangedFinalize": {
+      "fn": "public.finalize_my_replay_version_v1",
+      "args": [
+        "931d84e5-4066-482b-95c4-1ddd5932f76e",
+        "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+        "efacf72b-0b88-4baf-8a0a-c878abe76d12"
+      ],
+      "rows": [
+        {
+          "outcome": "SOURCE_CHANGED",
+          "replay_id": null,
+          "replay_version_id": null,
+          "replay_version_revision": null
+        }
+      ]
+    },
+    "readSourceAfterRefusal": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d"
+      ],
+      "rows": [
+        {
+          "replay_id": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+          "created_at": "2026-10-19T21:43:21.876986+03:00",
+          "draft_last_tc": 3,
+          "draft_first_tc": 1,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:21.876986+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "STALE",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 3,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "analysisDraft": {
+      "fn": "public.create_my_replay_draft_v1",
+      "args": [
+        "b0ac0680-2093-413d-9e11-37d945db84e5",
+        "fe3f1395-aa63-4d48-8252-875d9cfcc745",
+        4,
+        6
+      ],
+      "rows": [
+        {
+          "outcome": "CREATED",
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "coverage_class": "SELECTED_EXCERPT",
+          "draft_revision": 1,
+          "replay_lifecycle": "DRAFT",
+          "selected_item_count": 3
+        }
+      ]
+    },
+    "analysisPreview": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "867192a1-24f3-4ba4-ab49-9def8bdcd365",
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "PREVIEW_READY",
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "moment_count": 3,
+          "replay_version_id": "b0e8b0e0-fe87-4f14-88b7-770da79be40d",
+          "replay_version_revision": 1,
+          "temporal_discontinuity_count": 0
+        }
+      ]
+    },
+    "readAnalysisPreview": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a"
+      ],
+      "rows": [
+        {
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "created_at": "2026-10-19T21:43:22.01115+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 4,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:22.01115+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "b0e8b0e0-fe87-4f14-88b7-770da79be40d",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 3,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "analysisChangedFinalize": {
+      "fn": "public.finalize_my_replay_version_v1",
+      "args": [
+        "937554f4-6521-46b0-a584-d1b2728dd304",
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+        "b0e8b0e0-fe87-4f14-88b7-770da79be40d"
+      ],
+      "rows": [
+        {
+          "outcome": "ANALYSIS_CHANGED",
+          "replay_id": null,
+          "replay_version_id": null,
+          "replay_version_revision": null
+        }
+      ]
+    },
+    "readAnalysisAfterRefusal": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a"
+      ],
+      "rows": [
+        {
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "created_at": "2026-10-19T21:43:22.01115+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 4,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:22.01115+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "b0e8b0e0-fe87-4f14-88b7-770da79be40d",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 3,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "analysisReopen": {
+      "fn": "public.reopen_my_replay_for_revision_v1",
+      "args": [
+        "2e6b1bcf-2316-4e38-ba93-a440672a2050",
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+        "b0e8b0e0-fe87-4f14-88b7-770da79be40d"
+      ],
+      "rows": [
+        {
+          "outcome": "REOPENED",
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "replay_lifecycle": "DRAFT",
+          "reopened_from_replay_version_id": "b0e8b0e0-fe87-4f14-88b7-770da79be40d"
+        }
+      ]
+    },
+    "readAnalysisAfterReopen": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a"
+      ],
+      "rows": [
+        {
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "created_at": "2026-10-19T21:43:22.01115+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 4,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:22.01115+03:00",
+          "replay_lifecycle": "DRAFT",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "b0e8b0e0-fe87-4f14-88b7-770da79be40d",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 3,
+          "current_replay_version_revision": 1
+        }
+      ]
+    },
+    "analysisPreviewAgain": {
+      "fn": "public.prepare_my_replay_preview_v1",
+      "args": [
+        "d440e2eb-0e0e-44c8-9cc8-cab26ce392d6",
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+        1
+      ],
+      "rows": [
+        {
+          "outcome": "PREVIEW_READY",
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "moment_count": 3,
+          "replay_version_id": "2b571a06-644b-4aa7-853a-d67be2af71f6",
+          "replay_version_revision": 2,
+          "temporal_discontinuity_count": 0
+        }
+      ]
+    },
+    "readAnalysisPreviewAgain": {
+      "fn": "public.read_my_replay_v1",
+      "args": [
+        "634bb469-17c0-46bb-8850-ffb3d533fe9a"
+      ],
+      "rows": [
+        {
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "created_at": "2026-10-19T21:43:22.01115+03:00",
+          "draft_last_tc": 6,
+          "draft_first_tc": 4,
+          "draft_revision": 1,
+          "draft_updated_at": "2026-10-19T21:43:22.01115+03:00",
+          "replay_lifecycle": "PREVIEW_READY",
+          "draft_source_state": "CURRENT",
+          "draft_coverage_class": "SELECTED_EXCERPT",
+          "current_replay_version_id": "2b571a06-644b-4aa7-853a-d67be2af71f6",
+          "current_version_finalized": false,
+          "draft_selected_item_count": 3,
+          "current_replay_version_revision": 2
+        }
+      ]
+    }
+  },
+  "scenes": {
+    "preview": {
+      "replayId": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+      "versionId": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+      "version": [
+        {
+          "last_tc": 6,
+          "first_tc": 1,
+          "finalized": false,
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "is_current": true,
+          "moment_count": 6,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "3c846cb7-00c9-45ac-8394-a83a2de9f38a",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.080597+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ],
+      "moments": [
+        {
+          "tc": 1,
+          "source_role": "USER",
+          "source_text": "المدير بقى بيتعامل معايا بشكل غريب.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 1
+        },
+        {
+          "tc": 2,
+          "source_role": "USER",
+          "source_text": "أحمد اللي في الفريق قالّي إن الموضوع ده عادي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 2
+        },
+        {
+          "tc": 3,
+          "source_role": "USER",
+          "source_text": "أحمد نفسه بدأ يقلقني.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 3
+        },
+        {
+          "tc": 4,
+          "source_role": "ASSISTANT",
+          "source_text": "تقصد إن أحمد بيتجنبك؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 4
+        },
+        {
+          "tc": 5,
+          "source_role": "ASSISTANT",
+          "source_text": "وإمتى ده بدأ؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 5
+        },
+        {
+          "tc": 6,
+          "source_role": "USER",
+          "source_text": "وكمان الشغل كتير الأيام دي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 6
+        }
+      ],
+      "analysis": {
+        "1": [
+          {
+            "tc": 1,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                }
+              ],
+              "readings": [],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                "atSp": 1,
+                "kind": "THREAD",
+                "reasonCode": "NEW_INDEPENDENT_FOCUS"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 1
+          }
+        ],
+        "2": [
+          {
+            "tc": 2,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                "atSp": 1,
+                "kind": "THREAD",
+                "reasonCode": "NEW_INDEPENDENT_FOCUS"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 2
+          }
+        ],
+        "3": [
+          {
+            "tc": 3,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 3,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 3
+          }
+        ],
+        "4": [
+          {
+            "tc": 4,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 4,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 4
+          }
+        ],
+        "5": [
+          {
+            "tc": 5,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 5,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 5
+          }
+        ],
+        "6": [
+          {
+            "tc": 6,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    },
+                    {
+                      "kind": "STATUS_TRANSITION",
+                      "toStatus": "ACTIVE",
+                      "toVersion": 1,
+                      "fromStatus": "CANDIDATE",
+                      "fromVersion": 1
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "ACTIVE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 5,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 6
+          }
+        ]
+      }
+    },
+    "second": {
+      "replayId": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+      "versionId": "3822f573-77de-43de-8330-14429f2011ed",
+      "version": [
+        {
+          "last_tc": 6,
+          "first_tc": 1,
+          "finalized": false,
+          "replay_id": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+          "is_current": true,
+          "moment_count": 6,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "3822f573-77de-43de-8330-14429f2011ed",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.651569+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 2,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 2,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ],
+      "moments": [
+        {
+          "tc": 1,
+          "source_role": "USER",
+          "source_text": "المدير بقى بيتعامل معايا بشكل غريب.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 1
+        },
+        {
+          "tc": 2,
+          "source_role": "USER",
+          "source_text": "أحمد اللي في الفريق قالّي إن الموضوع ده عادي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 2
+        },
+        {
+          "tc": 3,
+          "source_role": "USER",
+          "source_text": "أحمد نفسه بدأ يقلقني.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 3
+        },
+        {
+          "tc": 4,
+          "source_role": "ASSISTANT",
+          "source_text": "تقصد إن أحمد بيتجنبك؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 4
+        },
+        {
+          "tc": 5,
+          "source_role": "ASSISTANT",
+          "source_text": "وإمتى ده بدأ؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 5
+        },
+        {
+          "tc": 6,
+          "source_role": "USER",
+          "source_text": "وكمان الشغل كتير الأيام دي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 6
+        }
+      ],
+      "analysis": {
+        "1": [
+          {
+            "tc": 1,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                }
+              ],
+              "readings": [],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                "atSp": 1,
+                "kind": "THREAD",
+                "reasonCode": "NEW_INDEPENDENT_FOCUS"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 1
+          }
+        ],
+        "2": [
+          {
+            "tc": 2,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                "atSp": 1,
+                "kind": "THREAD",
+                "reasonCode": "NEW_INDEPENDENT_FOCUS"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 2
+          }
+        ],
+        "3": [
+          {
+            "tc": 3,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 3,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 3
+          }
+        ],
+        "4": [
+          {
+            "tc": 4,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 4,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 4
+          }
+        ],
+        "5": [
+          {
+            "tc": 5,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 5,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 5
+          }
+        ],
+        "6": [
+          {
+            "tc": 6,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    },
+                    {
+                      "kind": "STATUS_TRANSITION",
+                      "toStatus": "ACTIVE",
+                      "toVersion": 1,
+                      "fromStatus": "CANDIDATE",
+                      "fromVersion": 1
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "ACTIVE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 5,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 6
+          }
+        ]
+      }
+    },
+    "source": {
+      "replayId": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+      "versionId": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+      "version": [
+        {
+          "last_tc": 3,
+          "first_tc": 1,
+          "finalized": false,
+          "replay_id": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+          "is_current": true,
+          "moment_count": 3,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.892318+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ],
+      "moments": [
+        {
+          "tc": 1,
+          "source_role": "USER",
+          "source_text": "المدير بقى بيتعامل معايا بشكل غريب.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 1
+        },
+        {
+          "tc": 2,
+          "source_role": "USER",
+          "source_text": "أحمد اللي في الفريق قالّي إن الموضوع ده عادي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 2
+        },
+        {
+          "tc": 3,
+          "source_role": "USER",
+          "source_text": "أحمد نفسه بدأ يقلقني.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 3
+        }
+      ],
+      "analysis": {
+        "1": [
+          {
+            "tc": 1,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                }
+              ],
+              "readings": [],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                "atSp": 1,
+                "kind": "THREAD",
+                "reasonCode": "NEW_INDEPENDENT_FOCUS"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 1
+          }
+        ],
+        "2": [
+          {
+            "tc": 2,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                "atSp": 1,
+                "kind": "THREAD",
+                "reasonCode": "NEW_INDEPENDENT_FOCUS"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 2
+          }
+        ],
+        "3": [
+          {
+            "tc": 3,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 3,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 3
+          }
+        ]
+      }
+    },
+    "sourceWithdrawn": {
+      "replayId": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+      "versionId": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+      "version": [
+        {
+          "last_tc": 3,
+          "first_tc": 1,
+          "finalized": false,
+          "replay_id": "70ad7dd6-44c6-42fe-87e9-fa2a9c7bc43d",
+          "is_current": true,
+          "moment_count": 3,
+          "source_layer": "NOT_DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "NOT_VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "efacf72b-0b88-4baf-8a0a-c878abe76d12",
+          "not_viewable_class": "SOURCE_NOT_CURRENTLY_AVAILABLE",
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:21.892318+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ],
+      "moments": [
+        {
+          "tc": 1,
+          "source_role": "USER",
+          "source_text": null,
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 1
+        },
+        {
+          "tc": 2,
+          "source_role": "USER",
+          "source_text": null,
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 2
+        },
+        {
+          "tc": 3,
+          "source_role": "USER",
+          "source_text": null,
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 3
+        }
+      ],
+      "analysis": {
+        "1": [
+          {
+            "tc": 1,
+            "outcome": "NOT_VIEWABLE",
+            "analysis": null,
+            "selected_ordinal": 1
+          }
+        ],
+        "2": [
+          {
+            "tc": 2,
+            "outcome": "NOT_VIEWABLE",
+            "analysis": null,
+            "selected_ordinal": 2
+          }
+        ],
+        "3": [
+          {
+            "tc": 3,
+            "outcome": "NOT_VIEWABLE",
+            "analysis": null,
+            "selected_ordinal": 3
+          }
+        ]
+      }
+    },
+    "analysisMoved": {
+      "replayId": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+      "versionId": "b0e8b0e0-fe87-4f14-88b7-770da79be40d",
+      "version": [
+        {
+          "last_tc": 6,
+          "first_tc": 4,
+          "finalized": false,
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "is_current": true,
+          "moment_count": 3,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "b0e8b0e0-fe87-4f14-88b7-770da79be40d",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:22.031213+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 1,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 1,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ],
+      "moments": [
+        {
+          "tc": 4,
+          "source_role": "ASSISTANT",
+          "source_text": "تقصد إن أحمد بيتجنبك؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 1
+        },
+        {
+          "tc": 5,
+          "source_role": "ASSISTANT",
+          "source_text": "وإمتى ده بدأ؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 2
+        },
+        {
+          "tc": 6,
+          "source_role": "USER",
+          "source_text": "وكمان الشغل كتير الأيام دي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 3
+        }
+      ],
+      "analysis": {
+        "1": [
+          {
+            "tc": 4,
+            "outcome": "ANALYSIS_NOT_CURRENTLY_AVAILABLE",
+            "analysis": null,
+            "selected_ordinal": 1
+          }
+        ],
+        "2": [
+          {
+            "tc": 5,
+            "outcome": "ANALYSIS_NOT_CURRENTLY_AVAILABLE",
+            "analysis": null,
+            "selected_ordinal": 2
+          }
+        ],
+        "3": [
+          {
+            "tc": 6,
+            "outcome": "ANALYSIS_NOT_CURRENTLY_AVAILABLE",
+            "analysis": null,
+            "selected_ordinal": 3
+          }
+        ]
+      }
+    },
+    "analysisSecond": {
+      "replayId": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+      "versionId": "2b571a06-644b-4aa7-853a-d67be2af71f6",
+      "version": [
+        {
+          "last_tc": 6,
+          "first_tc": 4,
+          "finalized": false,
+          "replay_id": "634bb469-17c0-46bb-8850-ffb3d533fe9a",
+          "is_current": true,
+          "moment_count": 3,
+          "source_layer": "DEREFERENCEABLE",
+          "motion_policy": "EXPLANATORY_MOTION_ONLY",
+          "viewing_state": "VIEWABLE",
+          "coverage_class": "SELECTED_EXCERPT",
+          "analytical_layer": "SEALED_HISTORICAL_EVIDENCE",
+          "replay_version_id": "2b571a06-644b-4aa7-853a-d67be2af71f6",
+          "not_viewable_class": null,
+          "source_text_policy": "EXACT_SOURCE_TEXT",
+          "version_created_at": "2026-10-19T21:43:22.203674+03:00",
+          "semantic_cut_policy": "WHOLE_ITEM_ONLY_PROVEN_SAFE",
+          "source_medium_class": "ORIGINAL_TEXT_ONLY",
+          "camera_emphasis_policy": "EMPHASIS_WITHOUT_MEANING_CREATION",
+          "original_medium_policy": "PRESERVE_ORIGINAL_MEDIUM_ONLY",
+          "render_contract_schema": "QANDEEL_REPLAY_RENDER_CONTRACT_V1",
+          "replay_version_revision": 2,
+          "timing_integrity_policy": "PRESENTATION_PACING_DECLARED",
+          "render_contract_revision": 2,
+          "caption_provenance_policy": "DERIVED_CAPTION_DISTINCT_FROM_SOURCE",
+          "accessibility_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "editorial_annotation_policy": "NO_EDITORIAL_ANNOTATION",
+          "analytical_projection_policy": "BOUND_HISTORICAL_PROJECTION_DIGEST",
+          "reduced_motion_parity_policy": "EQUIVALENT_TRUTH_REQUIRED",
+          "temporal_discontinuity_count": 0,
+          "temporal_discontinuity_policy": "PERCEPTIBLE_DISCONTINUITY_REQUIRED"
+        }
+      ],
+      "moments": [
+        {
+          "tc": 4,
+          "source_role": "ASSISTANT",
+          "source_text": "تقصد إن أحمد بيتجنبك؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 1
+        },
+        {
+          "tc": 5,
+          "source_role": "ASSISTANT",
+          "source_text": "وإمتى ده بدأ؟",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 2
+        },
+        {
+          "tc": 6,
+          "source_role": "USER",
+          "source_text": "وكمان الشغل كتير الأيام دي.",
+          "omitted_before": 0,
+          "original_medium": "ORIGINAL_TEXT",
+          "selected_ordinal": 3
+        }
+      ],
+      "analysis": {
+        "1": [
+          {
+            "tc": 4,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    },
+                    {
+                      "kind": "STATUS_TRANSITION",
+                      "toStatus": "REJECTED",
+                      "toVersion": 1,
+                      "fromStatus": "CANDIDATE",
+                      "fromVersion": 1
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "REJECTED",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 4,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 1
+          }
+        ],
+        "2": [
+          {
+            "tc": 5,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    },
+                    {
+                      "kind": "STATUS_TRANSITION",
+                      "toStatus": "REJECTED",
+                      "toVersion": 1,
+                      "fromStatus": "CANDIDATE",
+                      "fromVersion": 1
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "REJECTED",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 5,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 2
+          }
+        ],
+        "3": [
+          {
+            "tc": 6,
+            "outcome": "AVAILABLE",
+            "analysis": {
+              "gaps": [],
+              "threads": [
+                {
+                  "id": "bbdce700-435f-558e-9309-c9dd0c2418eb",
+                  "home": {
+                    "x": "-99078",
+                    "y": "834358"
+                  },
+                  "establishedSp": 1,
+                  "sessionLifecycle": "DORMANT",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644"
+                },
+                {
+                  "id": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                  "home": {
+                    "x": "-889202",
+                    "y": "371258"
+                  },
+                  "establishedSp": 3,
+                  "sessionLifecycle": "ACTIVE",
+                  "establishmentPath": "TE-01",
+                  "establishedInSession": true,
+                  "groundingEmergingFocusId": "e64931c2-5dac-49e6-8fb3-599231e9daa8"
+                }
+              ],
+              "readings": [
+                {
+                  "id": "76667f2c-f05f-4040-819f-f33677b17cee",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    },
+                    {
+                      "kind": "STATUS_TRANSITION",
+                      "toStatus": "ACTIVE",
+                      "toVersion": 1,
+                      "fromStatus": "CANDIDATE",
+                      "fromVersion": 1
+                    },
+                    {
+                      "kind": "STATUS_TRANSITION",
+                      "toStatus": "REJECTED",
+                      "toVersion": 1,
+                      "fromStatus": "CANDIDATE",
+                      "fromVersion": 1
+                    }
+                  ],
+                  "statement": "تعامل المدير تغيّر منذ وقت قريب.",
+                  "statusAtTc": "REJECTED",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                },
+                {
+                  "id": "b919dc6d-ad00-4f55-8dad-a024abd37344",
+                  "type": "CAUSAL",
+                  "scope": "CONVERSATION_SESSION:fe3f1395-aa63-4d48-8252-875d9cfcc745",
+                  "domain": "GENERAL",
+                  "origin": "SYSTEM_GENERATED",
+                  "lineage": [
+                    {
+                      "kind": "CREATED",
+                      "toStatus": "CANDIDATE",
+                      "toVersion": 1,
+                      "fromStatus": null,
+                      "fromVersion": null
+                    }
+                  ],
+                  "statement": "قلق المتحدث من أحمد أصبح هو الموضوع الأقرب.",
+                  "statusAtTc": "CANDIDATE",
+                  "assumptions": [],
+                  "versionAtTc": 1,
+                  "subjectGroundings": [],
+                  "disconfirmingConditions": []
+                }
+              ],
+              "materials": [],
+              "questions": [],
+              "live_focus": {
+                "ref": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed",
+                "atSp": 3,
+                "kind": "THREAD",
+                "reasonCode": "FOCUS_REPLACEMENT"
+              },
+              "confidences": [],
+              "emerging_focuses": [
+                {
+                  "id": "bf6a724d-9b40-4e34-919e-3ab6fcb6c644",
+                  "startedSp": 1,
+                  "lastAttentionSp": 1,
+                  "promotedThreadId": "bbdce700-435f-558e-9309-c9dd0c2418eb"
+                },
+                {
+                  "id": "e64931c2-5dac-49e6-8fb3-599231e9daa8",
+                  "startedSp": 3,
+                  "lastAttentionSp": 5,
+                  "promotedThreadId": "dd1a4d59-70a3-58c8-bc2c-03138427f6ed"
+                }
+              ],
+              "reading_relations": [],
+              "question_appearances": [],
+              "evidence_participations": [],
+              "thread_reading_appearances": []
+            },
+            "selected_ordinal": 3
+          }
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "task": "S7-04",
+    "generator": "database/replay-composite-proof-world.mjs --player",
+    "migrations": "0001 .. 0169 (the merged main), applied to a fresh PostgreSQL 17 database",
+    "scenario": "the S7-03 history (the frozen T-03D Session 1 + one quiet exchange; Readings staged as SP-native events)",
+    "journey": "draft -> preview (retry, conflict, again) -> finalize (stale, retry, again) -> reopen (retry) -> preview again; E05 open head; source changed; analysis moved -> reopen -> preview again",
+    "transaction": "ROLLED BACK: the database is left exactly as it was",
+    "capturedAt": "2026-10-19T18:43:22.273Z"
+  }
+}

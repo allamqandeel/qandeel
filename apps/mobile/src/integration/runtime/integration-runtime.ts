@@ -104,6 +104,7 @@ import {
 } from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import { createReplayEntryController, type ReplayEntryController } from '../../replay-entry';
+import { createReplayPlayerController, type ReplayPlayerController } from '../../replay-player';
 import { createInteractionPreferencesController, type InteractionPreferencesController } from '../../settings';
 import {
   createDevicePhotoSource, createEnrollmentController, createIntroductionAlertsController, createIntroductionSharingController, createIntroductionWorldsController, createIntroductionsController,
@@ -274,6 +275,12 @@ export interface IntegrationSessionRuntime {
    * or unresolved command of one account reaches the next.
    */
   readonly replayEntry: ReplayEntryController;
+  /**
+   * S7-04: the Personal Replay player over THIS identity's own Replays — the S7-02 reads, the S7-04 lifecycle commands
+   * and the S7-03 history reads, all on transports bound to this identity. Its passage is open only inside this
+   * generation: retired with it, so no version, moment, timer or command of one account or Session reaches the next.
+   */
+  readonly replayPlayer: ReplayPlayerController;
   /** S6-07: the governed enrollment and the reader's three consents (0165), retired with the generation. */
   readonly introductionEnrollment: EnrollmentController;
   /**
@@ -462,6 +469,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
+    session.replayPlayer.retire();
     session.replayEntry.retire();
     session.conversation.retire();
     session.account.retire();
@@ -594,6 +602,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       conversation,
       // S7-02: the Replay entry reads THIS Session's conversation, by the same bundle Session id.
       replayEntry: createReplayEntryController({ sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent }),
+      // S7-04: the Replay player, on the same identity's transports; it never touches the conversation.
+      replayPlayer: createReplayPlayerController({
+        sessionId: bundle.sessionId, reads: entry.replayFor(bundle), commands: entry.replayLifecycleFor(bundle), history: entry.replayHistoryFor(bundle), isCurrent,
+      }),
       // W1B-01: the account's first use, on the T-12P account transport bound to this identity.
       account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),
       // W3-02: the Public ID, on the same account transport bound to this identity.

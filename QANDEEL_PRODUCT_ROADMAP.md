@@ -713,3 +713,21 @@ stay as written.
   Analysis entry and preview / finalize / reopen in the Product UI (S7-04); every distribution path; the hosted environment.
 - **Next:** the independent visual and technical review of S7-03 and the Product Owner's merge
   decision; S7-04 starts only on the Product Owner's word.
+
+### 6.25 Execution note — 2026-10-20 (S7-03 merged; S7-04 delivered, at its Final Merge Review Gate)
+**Recorded:** 2026-10-20 by S7-04, in the S7-04 pull request (not merged). This is a status note only; §6.9 … §6.24
+stay as written.
+- **Decided:** S7-03 merged through PR #349 as `0d8a73350f075402897421e9ebb88379fe165575` (not deployed; the capability
+  closed). The Product Owner directed the player's layout (Visual Direction #1, option (b): CHROME_ONLY with a measured
+  band), decided its navigation (Decision #2, «Replay Temporal Spine»: P2's Temporal Spine + Aperture C "Parting"), and
+  after the visual review approved that direction with two corrections: the controls stay in reach while a long message
+  scrolls, and P2's discontinuity is never reused for omitted messages. It then approved the visual design, decided G-1's
+  correction within S7-04, and approved the 13 rows in Arabic and English (Product Copy Gate closed).
+- **Delivered (S7-04):** the Personal Replay player — a passage over the Conversation or the Analysis with its two
+  entries, the S7-03 composite on the ONE Living Analysis surface, the Replay Temporal Spine, P2's play / pause at a
+  declared reading pace, and the private preview / finalize / reopen through the existing S7-01 routes
+  ([S7-04 record](docs/e2e/QANDEEL_S7_04_IMPLEMENTATION_RECORD_v1.md)), in PR #350. One API change — G-1's list decoder —
+  and no route or migration change. Its Product Copy Gate is CLOSED (13 rows APPROVED, Arabic and English).
+- **Still closed:** the Personal Replay capability (no gate row); CW2-08 (`NOT_EVALUATED`); every distribution path; the
+  hosted environment. Placed with S7-05: F-2's wire question, a real-device and TalkBack proof.
+- **Next:** the Product Owner's merge decision on PR #350; S7-05 starts only on the Product Owner's word.

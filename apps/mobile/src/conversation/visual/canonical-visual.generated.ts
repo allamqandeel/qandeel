@@ -249,6 +249,39 @@ export const CANONICAL_VISUAL = {
           "d": "M10.6 9.6v4.8c0 .5.5.8.9.5l3.6-2.4c.4-.2.4-.8 0-1l-3.6-2.4c-.4-.3-.9 0-.9.5z"
         }
       ]
+    },
+    "play": {
+      "size": 20,
+      "mirrorsInRtl": false,
+      "strokes": [],
+      "dots": [],
+      "fills": [
+        {
+          "d": "M8.4 6.6v10.8c0 .9 1 1.4 1.7.9l8-5.4c.6-.4.6-1.3 0-1.7l-8-5.4c-.7-.5-1.7 0-1.7.8z"
+        }
+      ]
+    },
+    "pause": {
+      "size": 20,
+      "mirrorsInRtl": false,
+      "strokes": [],
+      "dots": [],
+      "rects": [
+        {
+          "x": 7,
+          "y": 6,
+          "width": 3.4,
+          "height": 12,
+          "r": 1.4
+        },
+        {
+          "x": 13.6,
+          "y": 6,
+          "width": 3.4,
+          "height": 12,
+          "r": 1.4
+        }
+      ]
     }
   },
   "type": {

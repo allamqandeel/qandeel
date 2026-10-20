@@ -71,10 +71,15 @@ const FROZEN = [
   ['apps/api/src/replay/replay.controller.ts', 'f7fb49fdfbcc2d936b3c4a9dea89bfe24a0466acd861600959312d53452c4a0a'],
   ['apps/api/src/replay/replay.module.ts', '76d7012b0a76cfea0bad39d264e1d011a3b4c0089231538b31f50381a6e0e985'],
   ['apps/api/src/replay/replay.repository.ts', '5921784cd2e14323304ea5b5d37b5f5c201b1f6915950d467f527dcb3f6df874'],
-  ['apps/api/src/replay/replay.service.ts', '127f901ebf2001b368542df9c334dd0d4c06c09113239ca5d77f2183b0ea135b'],
+  // S7-04 RE-ANCHOR (2026-10-20, Product Owner decision G-1): the conversation list's summary decoder reads 0169's
+  // EXISTS answer `false` beside a null version as "no version yet" and leaves it as the wire's null; a contradiction
+  // stays refused. Nothing else in the service changed; 0169 and the wire are unchanged.
+  ['apps/api/src/replay/replay.service.ts', '4db247cdbb2c35c06fed431113bd1e32da1ffade1bd8a6e8a1c58171a83821c2'],
   ['apps/api/src/replay/replay.types.ts', 'f8bfb198002bf28e911f00bb2a12d262d95020647a88b1c930313eed161c6af3'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
-  ['apps/mobile/src/runtime-entry/replay-api.ts', 'a3db1e39dfd38dc543e5a63b6116a46dce1debf902ce539bb171364badfd59d7'],
+  // S7-04 RE-ANCHOR (2026-10-19): the S7-02 Replay read keeps the current version the S7-01 read already answered
+  // (`currentVersion`: its id, its revision, whether it is the private copy) - no new server field, no new route.
+  ['apps/mobile/src/runtime-entry/replay-api.ts', '83df75fb033d56213180f5e6f9dbe6a7715366026bbe4c3450e5da289a6b0f43'],
   ['apps/mobile/src/replay-entry/copy.ts', '5fbf1adfd4a316a2ecc8296204c143e541d8404ba0ad83a2b20a6def1f2bb46b'],
 ];
 
@@ -227,7 +232,10 @@ const DETECTORS = {
     }
     if (!/PR #348/u.test(w.record)) out.push('the record proves S7-02 merged via PR #348');
     if (w.state !== null && !/S7-02[^\n]*MERGED[^\n]*#348|#348[^\n]*S7-02/u.test(w.state)) out.push('Current State proves S7-02 merged via PR #348');
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu.test(w.map)) out.push('the Project Map names S7-03 as current');
+    // S7-04 RE-ANCHOR (2026-10-19): S7-03 merged through PR #349; the Project Map's current task is S7-04, and S7-03 stands
+    // beneath it as the previous task, as written at its closing change.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu.test(w.map)) out.push('the Project Map names S7-04 as current');
+    if (w.map !== null && !/^> \*\(Previous, S7-03, as written at its closing change; merged through PR #349:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-03 as the previous task');
     return out;
   },
 };

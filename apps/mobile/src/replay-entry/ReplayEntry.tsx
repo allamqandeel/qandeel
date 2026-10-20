@@ -13,7 +13,7 @@
  * Every word is `copy.ts`'s. Nothing here reads or draws any Analysis, map, graphic or motion state, and nothing here
  * holds selection state: the controller does, by message id.
  */
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, BackHandler, findNodeHandle, Text, View } from 'react-native';
 
 import {
@@ -278,13 +278,16 @@ export interface ReplayNoticeLineProps {
   readonly controller: ReplayEntryController;
   readonly language: ChromeLanguage;
   readonly insets: { readonly left: number; readonly right: number };
+  /** S7-04: the player's one action on a saved draft (its Preview), handed in by the composition. Default: none. */
+  readonly action?: ReactNode;
 }
 
 /**
  * The one line after a save, or when the gate refused: above the composer, never a dialog. It has no control of its own
- * and so no new word: it goes when the conversation moves on or the entry is opened again.
+ * and so no new word: it goes when the conversation moves on or the entry is opened again. After a save it carries the
+ * action the composition hands it (S7-04), and nothing when the gate refused.
  */
-export function ReplayNoticeLine({ controller, language, insets }: ReplayNoticeLineProps) {
+export function ReplayNoticeLine({ controller, language, insets, action = null }: ReplayNoticeLineProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const palette = usePalette();
   const copy = replayEntryCopy(language);
@@ -310,6 +313,7 @@ export function ReplayNoticeLine({ controller, language, insets }: ReplayNoticeL
           <Text testID="qandeel-replay-notice-open-head" style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: writing }}>{copy.openHead}</Text>
         ) : null}
       </View>
+      {state.notice !== 'NOT_AVAILABLE' && state.saved !== null ? action : null}
     </View>
   );
 }

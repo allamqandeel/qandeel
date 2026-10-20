@@ -6,11 +6,11 @@
  * round caps and joins, on P2's 24-unit grid scaled to the render size. No generic icon replaces
  * any of it, and `react-native-svg` is not used (P2 §14; W1A-01 authorization §5.3).
  *
- * Direction is by MEANING: Send, the depth glyph and the Replay media glyph never mirror; the back chevron points back in
- * the reading direction it is shown in. A glyph is always decorative — the control that holds it
+ * Direction is by MEANING: Send, the depth glyph and the media glyphs (Replay, play, pause) never mirror; the back chevron
+ * points back in the reading direction it is shown in. A glyph is always decorative — the control that holds it
  * carries the accessible name.
  */
-import { Canvas, Circle, Group, Path } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Path, RoundedRect } from '@shopify/react-native-skia';
 import { View } from 'react-native';
 
 import { CANONICAL_VISUAL } from './canonical-visual.generated';
@@ -60,6 +60,10 @@ export function Glyph({ name, color, direction }: GlyphProps) {
           {/* S7-02: a glyph's solid shape (the Replay glyph's play mark), P2's own path. */}
           {('fills' in glyph ? glyph.fills : []).map((fill) => (
             <Path key={fill.d} path={fill.d} style="fill" color={color} />
+          ))}
+          {/* S7-04: a glyph's solid rounded bars (the media transport's pause), P2's own rectangles. */}
+          {('rects' in glyph ? glyph.rects : []).map((rect) => (
+            <RoundedRect key={`${rect.x},${rect.y}`} x={rect.x} y={rect.y} width={rect.width} height={rect.height} r={rect.r} color={color} />
           ))}
         </Group>
       </Canvas>

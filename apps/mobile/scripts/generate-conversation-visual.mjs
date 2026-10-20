@@ -146,8 +146,14 @@ function primitives(markup) {
     .map((m) => ({ cx: Number(m[1]), cy: Number(m[2]), r: Number(m[3]) }));
   // S7-02: a solid shape of the glyph (the Replay glyph's play mark). Only a glyph that has one carries the key.
   const fills = [...markup.matchAll(/<path d="([^"]+)" fill="currentColor"\/>/gu)].map((m) => ({ d: m[1] }));
-  if (strokes.length === 0) throw new Error(`no stroked path in glyph markup: ${markup}`);
-  return fills.length === 0 ? { strokes, dots } : { strokes, dots, fills };
+  // S7-04: a solid rounded rectangle (the media transport's pause bars), taken as P2 drew it.
+  const rects = [...markup.matchAll(/<rect x="([0-9.]+)" y="([0-9.]+)" width="([0-9.]+)" height="([0-9.]+)" rx="([0-9.]+)" fill="currentColor"\/>/gu)]
+    .map((m) => ({ x: Number(m[1]), y: Number(m[2]), width: Number(m[3]), height: Number(m[4]), r: Number(m[5]) }));
+  // Every drawn element is taken, and nothing is dropped: a shape the parser does not know is a refusal, not a gap.
+  const drawn = (markup.match(/<(path|circle|rect)\b/gu) ?? []).length;
+  if (drawn !== strokes.length + dots.length + fills.length + rects.length) throw new Error(`glyph markup carries a shape that is not taken: ${markup}`);
+  if (strokes.length === 0 && fills.length === 0 && rects.length === 0) throw new Error(`nothing drawn in glyph markup: ${markup}`);
+  return { strokes, dots, ...(fills.length === 0 ? {} : { fills }), ...(rects.length === 0 ? {} : { rects }) };
 }
 
 const open = NUANCES.open;
@@ -177,6 +183,14 @@ glyphs.replay = { size: 22, mirrorsInRtl: false, ...primitives(SIG.replay(open, 
 if (glyphs.replay.strokes.some((stroke) => stroke.strokeWidth !== strokeFor(22)) || glyphs.replay.fills?.length !== 1) {
   throw new Error('P2 replay is not two optical strokes and one play mark at 22 px');
 }
+// S7-04 — the Replay player's play / pause (Product Owner decisions, 2026-10-20): P2's OWN media transport (`sig.mjs`:
+// solid anchors, P2_ICON_GEOMETRY_SPEC §2), at the 20 px P2 gives the voice-message transport. Media: they never mirror.
+// The moments themselves are navigated on the Replay's Temporal Spine (P2's Spine + Aperture C), not by glyphs.
+glyphs.play = { size: 20, mirrorsInRtl: false, ...primitives(SIG.play(open, 20)) };
+glyphs.pause = { size: 20, mirrorsInRtl: false, ...primitives(SIG.pause(open, 20)) };
+if (glyphs.play.fills?.length !== 1 || glyphs.play.strokes.length !== 0) throw new Error('P2 play is no longer one solid mark');
+if (glyphs.pause.rects?.length !== 2 || glyphs.pause.strokes.length !== 0) throw new Error('P2 pause is no longer two solid bars');
+
 
 // ------------------------------------------------------------------------------------------ type
 const system = JSON.parse(readFileSync(E3_SYSTEM, 'utf8'));

@@ -518,8 +518,14 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
   // and only in those two files; every other word stays forbidden there too.
   const REPLAY_HISTORY = ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'apps/mobile/src/replay-composite/__fixtures__/replay-wire.json'];
   const historicalStateNames = (file, text) => (REPLAY_HISTORY.includes(file) ? text.replace(/(['"])ESTABLISHED_(?:DORMANT|REOPENED)\1/gu, "''") : text);
+  // S7-04 RE-ANCHOR (2026-10-19): the Replay player is proven on a second captured real-path wire carrying the same
+  // T-03C Thread-state-at-TC names, and the Replay lifecycle client decodes the S7-01 reopen command's own outcome word
+  // (a Replay draft again, never a Thread's lifecycle). Only the exact quoted words are let through, only in those files.
+  REPLAY_HISTORY.push('apps/mobile/src/replay-player/__fixtures__/replay-player-wire.json');
+  const REPLAY_REOPEN_OUTCOME = ['apps/mobile/src/runtime-entry/replay-lifecycle-api.ts', 'apps/mobile/src/replay-player/__fixtures__/replay-player-wire.json'];
+  const replayOutcome = (file, text) => (REPLAY_REOPEN_OUTCOME.includes(file) ? text.replace(/(['"])REOPENED\1/gu, "''") : text);
   for (const file of listFiles(join(rootPath, 'apps/mobile/src')).map(relative).filter((file) => !file.startsWith(HISTORICAL_SEAM))) {
-    assert.doesNotMatch(historicalStateNames(file, read(file)), /thread_lifecycle|ThreadLifecycle|Dormant|DORMANT|Reopened|REOPENED|focus_binding|identity_dossier/u, `${file} untouched`);
+    assert.doesNotMatch(replayOutcome(file, historicalStateNames(file, read(file))), /thread_lifecycle|ThreadLifecycle|Dormant|DORMANT|Reopened|REOPENED|focus_binding|identity_dossier/u, `${file} untouched`);
   }
 });
 
