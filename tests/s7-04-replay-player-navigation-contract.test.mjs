@@ -14,8 +14,10 @@
 //     motion of its own and no P2 discontinuity (an omission is said in the composite's own words); ReplaySpine is
 //     the ONE player file hosting Animated views, carrying only T-06's styles; play /
 //     pause are P2's own (sig.mjs), through the generated glyphs, never the Call Rail;
-//   - no API change: only the existing preview, finalize and reopen commands, by POST, beside the S7-02 and S7-03 reads;
-//     the Replay API module and migration 0169 are byte-identical to the branch base, and no migration follows 0169;
+//   - only the existing preview, finalize and reopen commands, by POST, beside the S7-02 and S7-03 reads; the Replay
+//     API module and migration 0169 are byte-identical to the branch base, and no migration follows 0169 — except the
+//     ONE G-1 correction the Product Owner decided (2026-10-20): the list's summary decoder reads 0169's EXISTS answer
+//     `false` beside a null version as "no version yet", and still refuses a contradiction;
 //   - no fourth world and no route: the player is an overlay passage of the Personal world, the depth beneath stays
 //     mounted and out of reach, and no router is imported; Activity, Direct Entry and public links close it first;
 //   - no Replay state in the live store and nothing live in the player: no state store, no integration runtime, no
@@ -23,9 +25,10 @@
 //   - one controller per auth generation, built on that generation's transports and retired with it;
 //   - F-2: the player shows, logs and sends no Reading scope (no `scope`, no console, no telemetry);
 //   - the declared reading pace is a constant, and the copy claims no sound, video or original timing;
-//   - the S7-04 Product Copy Gate is OPEN: every row PROPOSED, Arabic and English alike, and the S7-02 / S7-03 approved
-//     rows are reused, not rewritten (their files are byte-identical);
-//   - the proof build is validation-only, and the record stops at the review gate.
+//   - the S7-04 Product Copy Gate is CLOSED (Product Owner, 2026-10-20): all 13 rows APPROVED, Arabic and English, each
+//     word for word as decided, and the S7-02 / S7-03 approved rows are reused, not rewritten (their files are
+//     byte-identical);
+//   - the proof build is validation-only, and the record stops at the final merge review gate.
 // Each detector is shown to catch a planted defect.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -49,16 +52,39 @@ const CLIENT = 'apps/mobile/src/runtime-entry/replay-lifecycle-api.ts';
 const DEPTH = 'apps/mobile/src/integration/composition/DepthComposition.tsx';
 const RUNTIME = 'apps/mobile/src/integration/runtime/integration-runtime.ts';
 const RECORD = 'docs/e2e/QANDEEL_S7_04_IMPLEMENTATION_RECORD_v1.md';
-const COPY_GATE_OPEN = 'S7-04 PRODUCT COPY GATE — OPEN — 13 Arabic rows PROPOSED and 13 English rows PROPOSED; awaiting the Product Owner';
-const COPY_ROWS = ['play', 'pause', 'restart', 'moments', 'pacing', 'preview', 'finalize', 'finalized', 'finalizedNotice',
-  'reopen', 'reopenedNotice', 'analysisChanged', 'commandUnconfirmed'];
+const COPY_GATE_CLOSED = 'S7-04 PRODUCT COPY GATE — CLOSED — 2026-10-20, Product Owner decision: all 13 rows APPROVED in Arabic and English word for word (the English of moments, finalized and commandUnconfirmed as reworded by the Product Owner); no S7-02 or S7-03 row is approved by it';
+/** The Product Owner's decision of 2026-10-20, word for word: [key, Arabic, English]. */
+const APPROVED_COPY = [
+  ['play', 'تشغيل', 'Play'],
+  ['pause', 'إيقاف مؤقت', 'Pause'],
+  ['restart', 'التشغيل من البداية', 'Play from the start'],
+  ['moments', 'لحظات إعادة العرض', 'Replay moments'],
+  ['pacing', 'تُعرض الرسائل نصًّا بإيقاع مناسب للقراءة، لا بتوقيتها الأصلي.', 'Messages are shown as text at a reading pace, not at their original timing.'],
+  ['preview', 'معاينة', 'Preview'],
+  ['finalize', 'حفظ نسخة خاصة', 'Save a private copy'],
+  ['finalized', 'نسخة خاصة محفوظة', 'Private copy saved'],
+  ['finalizedNotice', 'حُفظت نسخة خاصة من إعادة العرض، ولا تُشارك مع أحد.', "A private copy of the Replay was saved. It isn't shared with anyone."],
+  ['reopen', 'تعديل إعادة العرض', 'Edit the Replay'],
+  ['reopenedNotice', 'أصبحت إعادة العرض مسودة يمكن تعديلها.', 'The Replay is a draft again and can be edited.'],
+  ['analysisChanged', 'تغيّر التحليل منذ المعاينة، فلا يمكن حفظ هذه النسخة.', "The analysis changed since the preview, so this version can't be saved."],
+  ['commandUnconfirmed', 'تعذّر التأكد من إتمام ذلك.', "We couldn't confirm whether the action was completed."],
+];
+const COPY_ROWS = APPROVED_COPY.map(([key]) => key);
+/** G-1 (Product Owner decision, 2026-10-20): the one change in the Replay service. */
+const G1_DECODE = [
+  '  const finalized = versionId === null && row.current_version_finalized === false ? null : row.current_version_finalized;',
+  "  if (versionId === null ? row.current_version_finalized !== false : !isUuid(versionId) || typeof finalized !== 'boolean') return unavailable();",
+];
 
 /** The Replay engine, the earlier gates' words and the graphics' authority, byte-identical to the branch base 0d8a7335. */
 const FROZEN = [
   ['apps/api/src/replay/replay.controller.ts', 'f7fb49fdfbcc2d936b3c4a9dea89bfe24a0466acd861600959312d53452c4a0a'],
   ['apps/api/src/replay/replay.module.ts', '76d7012b0a76cfea0bad39d264e1d011a3b4c0089231538b31f50381a6e0e985'],
   ['apps/api/src/replay/replay.repository.ts', '5921784cd2e14323304ea5b5d37b5f5c201b1f6915950d467f527dcb3f6df874'],
-  ['apps/api/src/replay/replay.service.ts', '127f901ebf2001b368542df9c334dd0d4c06c09113239ca5d77f2183b0ea135b'],
+  // S7-04 RE-ANCHOR (2026-10-20, Product Owner decision G-1): the conversation list's summary decoder reads 0169's
+  // EXISTS answer `false` beside a null version as "no version yet" and leaves it as the wire's null; a contradiction
+  // stays refused. Nothing else in the service changed; 0169 and the wire are unchanged.
+  ['apps/api/src/replay/replay.service.ts', '4db247cdbb2c35c06fed431113bd1e32da1ffade1bd8a6e8a1c58171a83821c2'],
   ['apps/api/src/replay/replay.types.ts', 'f8bfb198002bf28e911f00bb2a12d262d95020647a88b1c930313eed161c6af3'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
   ['apps/mobile/src/replay-entry/copy.ts', '5fbf1adfd4a316a2ecc8296204c143e541d8404ba0ad83a2b20a6def1f2bb46b'],
@@ -169,6 +195,8 @@ const DETECTORS = {
       const expected = FROZEN.find(([candidate]) => candidate === path)?.[1];
       if (sha(text) !== expected) out.push(`${path}: changed`);
     }
+    const service = w.frozen.find(([path]) => path === 'apps/api/src/replay/replay.service.ts')?.[1] ?? '';
+    for (const line of G1_DECODE) if (!service.includes(line)) out.push('G-1: a fresh draft is listed with no version, and a contradiction is still refused');
     const latest = w.migrations.map((name) => name.slice(0, 4)).sort().at(-1);
     if (latest !== '0169') out.push(`no migration follows 0169 (found ${latest})`);
     return out;
@@ -229,13 +257,16 @@ const DETECTORS = {
   copyViolations(w) {
     const out = [];
     const copy = w.player['copy.ts'] ?? '';
-    if (!copy.includes(COPY_GATE_OPEN)) out.push('the S7-04 Copy Gate is OPEN');
-    if (/status: 'APPROVED'|enStatus: 'APPROVED'|status: 'LOCKED'/u.test(tsCode(copy).replace("export type ReplayPlayerCopyStatus = 'APPROVED' | 'LOCKED' | 'PROPOSED';", ''))) out.push('no S7-04 row is approved before the Product Owner decides');
-    const rows = [...tsCode(copy).matchAll(/^\s{2}(\w+): proposed\(/gmu)].map((match) => match[1]);
-    if (JSON.stringify(rows) !== JSON.stringify(COPY_ROWS)) out.push(`the 15 proposed rows (found ${rows.join(', ')})`);
+    if (!copy.includes(COPY_GATE_CLOSED)) out.push("the S7-04 Copy Gate is CLOSED by the Product Owner's decision of 2026-10-20");
+    const code = tsCode(copy).replace("export type ReplayPlayerCopyStatus = 'APPROVED' | 'LOCKED' | 'PROPOSED';", '');
+    if (/status: 'PROPOSED'|enStatus: 'PROPOSED'|status: 'LOCKED'|enStatus: 'LOCKED'/u.test(code)
+        || !code.includes("({ ar, en, status: 'APPROVED', enStatus: 'APPROVED', source:")) out.push('every S7-04 row is APPROVED, Arabic and English');
+    const rows = [...code.matchAll(/^\s{2}(\w+): approved\(/gmu)].map((match) => match[1]);
+    if (JSON.stringify(rows) !== JSON.stringify(COPY_ROWS)) out.push(`the 13 approved rows (found ${rows.join(', ')})`);
     // The words shown (each row's Arabic and English), not the rows' provenance notes.
-    const shown = [...tsCode(copy).matchAll(/proposed\('([^']*)', (?:'([^']*)'|"([^"]*)")/gu)].flatMap((match) => [match[1], match[2] ?? match[3]]);
-    if (shown.length !== COPY_ROWS.length * 2 || shown.some((words) => /صوت|فيديو|sound|audio|video/iu.test(words))) out.push('no row claims sound or video');
+    const shown = [...code.matchAll(/^\s{2}(\w+): approved\('([^']*)', (?:'([^']*)'|"([^"]*)")/gmu)].map((match) => [match[1], match[2], match[3] ?? match[4]]);
+    if (JSON.stringify(shown) !== JSON.stringify(APPROVED_COPY)) out.push('every row says exactly the approved words');
+    if (shown.some(([, ar, en]) => /صوت|فيديو|sound|audio|video/iu.test(`${ar} ${en}`))) out.push('no row claims sound or video');
     if (!copy.includes("'تُعرض الرسائل نصًّا بإيقاع مناسب للقراءة، لا بتوقيتها الأصلي.'")) out.push('the pacing line says the timing is not the original');
     for (const [name, text] of Object.entries(w.player)) {
       if (name !== 'copy.ts' && /[؀-ۿ]/u.test(tsCode(text))) out.push(`${name}: Arabic is written only in copy.ts`);
@@ -267,7 +298,8 @@ const DETECTORS = {
   recordViolations(w) {
     const out = [];
     if (w.record === null) return out;
-    if (!w.record.includes('STOP — S7-04 INDEPENDENT PRODUCT, VISUAL & TECHNICAL REVIEW GATE')) out.push('the record stops at the review gate');
+    if (!w.record.includes('STOP — S7-04 FINAL MERGE REVIEW GATE')) out.push('the record stops at the final merge review gate');
+    if (!w.record.includes('PRODUCT COPY GATE CLOSED')) out.push('the record carries the closed Copy Gate');
     for (const evidence of ['AUTOMATED TEST', 'RENDER PROOF ON THE REAL COMPOSITION', 'EMULATOR SCREENSHOT', 'REAL DEVICE TEST']) {
       if (!w.record.includes(evidence)) out.push(`the record names the evidence class ${evidence}`);
     }
@@ -333,6 +365,8 @@ const PLANTED = [
   ['a GET in the lifecycle client', 'apiViolations', edit('client', '', "method: 'POST',", "method: 'GET',")],
   ['an identity in a command body', 'apiViolations', edit('client', '', "this.command(replayId, 'preview', { commandId, expectedDraftRevision },", "this.command(replayId, 'preview', { commandId, expectedDraftRevision, sessionId: replayId },")],
   ['a changed Replay service', 'apiViolations', editList('frozen', 'apps/api/src/replay/replay.service.ts', 'export class ReplayService', 'export class ReplayService2')],
+  ['G-1 hidden as a success', 'apiViolations', editList('frozen', 'apps/api/src/replay/replay.service.ts', 'versionId === null ? row.current_version_finalized !== false :', 'versionId === null ? false :')],
+  ['G-1 left failing', 'apiViolations', editList('frozen', 'apps/api/src/replay/replay.service.ts', 'versionId === null ? row.current_version_finalized !== false :', 'versionId === null ? finalized !== null :')],
   ['an S7-02 approved row reworded', 'apiViolations', editList('frozen', 'apps/mobile/src/replay-entry/copy.ts', "ar: 'هذا غير متاح الآن.'", "ar: 'غير متاح.'")],
   ['a new migration', 'apiViolations', () => ({ ...shipped(), migrations: [...shipped().migrations, '0170_replay_player_v1.sql'] })],
   ['the depth beneath rebuilt', 'navigationViolations', edit('depth', '', 'const personalOpen = personalReachable && !introductionsShown && !playerOpen;', 'const personalOpen = personalReachable && !introductionsShown;')],
@@ -348,15 +382,17 @@ const PLANTED = [
   ['the Reading scope read', 'privacyViolations', add('player', 'scope.ts', 'export const s = (r: { scope: string }) => r.scope;')],
   ['a log line', 'privacyViolations', add('player', 'log.ts', 'console.log("moment");')],
   ['a different pace', 'privacyViolations', edit('player', 'player-controller.ts', 'baseMs: 2500', 'baseMs: 900')],
-  ['a closed S7-04 Copy Gate', 'copyViolations', edit('player', 'copy.ts', COPY_GATE_OPEN, 'S7-04 PRODUCT COPY GATE — CLOSED')],
-  ['a row approved early', 'copyViolations', edit('player', 'copy.ts', "status: 'PROPOSED', enStatus: 'PROPOSED'", "status: 'APPROVED', enStatus: 'PROPOSED'")],
-  ['a sound claim', 'copyViolations', edit('player', 'copy.ts', "play: proposed('تشغيل',", "play: proposed('تشغيل الصوت',")],
+  ['a reopened S7-04 Copy Gate', 'copyViolations', edit('player', 'copy.ts', COPY_GATE_CLOSED, 'S7-04 PRODUCT COPY GATE — OPEN')],
+  ['the English left unapproved', 'copyViolations', edit('player', 'copy.ts', "status: 'APPROVED', enStatus: 'APPROVED', source:", "status: 'APPROVED', enStatus: 'PROPOSED', source:")],
+  ['an approved word changed', 'copyViolations', edit('player', 'copy.ts', "'Replay moments'", "'The moments'")],
+  ['the Arabic of reopenedNotice reworded', 'copyViolations', edit('player', 'copy.ts', "'أصبحت إعادة العرض مسودة يمكن تعديلها.'", "'عادت إعادة العرض مسودة.'")],
+  ['a sound claim', 'copyViolations', edit('player', 'copy.ts', "play: approved('تشغيل',", "play: approved('تشغيل الصوت',")],
   ['Arabic written in the view', 'copyViolations', add('player', 'Label.tsx', "export const label = 'تشغيل';")],
   ['the Product entry replaced', 'proofViolations', edit('mobilePkg', '', '"main": "expo-router/entry"', '"main": "src/integration/__validation__/s704-proof-entry.tsx"')],
   ['a production module reaching the proof', 'proofViolations', add('mobile', 'apps/mobile/src/replay-player/x.ts', "import { playerServer } from './__fixtures__/player-wire';")],
   ['an unguarded selector', 'proofViolations', edit('selector', '', "process.env.S704_VISUAL_PROOF !== '1'", 'false')],
   ['this contract left out of CI', 'wiringViolations', edit('workflow', '', 'run: npm run test:s7-04-replay-player-navigation-contract}', 'run: true}')],
-  ['a missing review gate', 'recordViolations', () => ({ ...shipped(), record: (shipped().record ?? 'STOP — S7-04 INDEPENDENT PRODUCT, VISUAL & TECHNICAL REVIEW GATE').replace('STOP — S7-04 INDEPENDENT PRODUCT, VISUAL & TECHNICAL REVIEW GATE', 'merged') })],
+  ['a missing review gate', 'recordViolations', () => ({ ...shipped(), record: (shipped().record ?? 'STOP — S7-04 FINAL MERGE REVIEW GATE').replace('STOP — S7-04 FINAL MERGE REVIEW GATE', 'merged') })],
 ];
 
 for (const [name, detector, plant] of PLANTED) {

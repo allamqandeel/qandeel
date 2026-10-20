@@ -1,17 +1,19 @@
 # QANDEEL — S7-04 Production Replay Player & Navigation — Implementation Record v1
 
 **Task:** S7-04 — Production Replay Player & Navigation (Stage 7)
-**Status:** CLOSED / AT THE S7-04 INDEPENDENT PRODUCT, VISUAL & TECHNICAL REVIEW GATE (FINAL) — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — PRODUCT COPY GATE OPEN (13 rows PROPOSED, Arabic and English)
+**Status:** CLOSED / AT THE S7-04 FINAL MERGE REVIEW GATE — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — G-1 CORRECTED (Product Owner decision, 2026-10-20) — PRODUCT COPY GATE CLOSED (2026-10-20: all 13 rows APPROVED, Arabic and English)
 **Date:** 2026-10-20
 **Branch / base:** `s7/s7-04-replay-player` from `main` at `0d8a73350f075402897421e9ebb88379fe165575`, the merge of PR #349
 (S7-03 — Historical Replay Composite Visual Proof). S7-01 merged through PR #347 as `c152cb4b`, S7-02 through PR #348 as
 `3ad4e414`.
 **Authority:** the Product Owner's S7-04 brief and its binding rules (Replay owns the historical truth and the order of
 moments; the graphics belong to Living Analysis; only the existing preview / finalize / reopen routes, one command id per
-attempt; no fourth world; nothing in the live store; F-2; new copy PROPOSED); the Product Owner's Visual Direction #1
+attempt; no fourth world; nothing in the live store; F-2; new copy PROPOSED until decided); the Product Owner's Visual Direction #1
 (2026-10-20, option (b): CHROME_ONLY with a measured band); Decision #2 (2026-10-20, «Replay Temporal Spine»: P2's
 Temporal Spine + Aperture C "Parting"); and the Independent Visual Review Decision (2026-10-20: the Spine approved in
-principle, two corrections required — §5A). The S7-03 record (the composite and its handover); CW2-05 / I-06; T-04, T-05,
+principle, two corrections required — §5A); and the G-1 Correction + Final Copy Approval decision (2026-10-20: the
+visual design approved; G-1 corrected within this PR — §5B; the 13 rows APPROVED in Arabic and English and the S7-04
+Product Copy Gate CLOSED — §7). The S7-03 record (the composite and its handover); CW2-05 / I-06; T-04, T-05,
 T-06, T-11 and VPORT-02, unchanged.
 
 Merging, deploying or opening Replay to users needs the Product Owner's explicit approval. S7-05 does not start
@@ -57,7 +59,7 @@ Analysis END-edge Replay glyph ──────┴─► ReplayPlayer passage 
 | `apps/mobile/src/replay-player/ReplayPlayer.tsx` | The passage, its top band (the way back, the title, the private lifecycle), the transport (play / pause + the Spine) and the pacing line; hands the moment controls to the S7-03 composite. |
 | `apps/mobile/src/replay-player/ReplaySpine.tsx` | The Replay's Temporal Spine (§4). |
 | `apps/mobile/src/replay-player/player-controller.ts` | The player's state: open / close, the saved-draft and Analysis entries, `seek`, play / pause at the declared pace, preview / finalize / reopen with one command id per attempt, revocation, generation. |
-| `apps/mobile/src/replay-player/copy.ts` | The 13 new rows, all PROPOSED (§7). Approved words are reused from their owners. |
+| `apps/mobile/src/replay-player/copy.ts` | The 13 new rows, APPROVED in Arabic and English by the Product Owner on 2026-10-20 (§7). Words approved earlier are reused from their owners. |
 | `apps/mobile/src/replay-player/__fixtures__/` | The captured real-path wire (`replay-player-wire.json`) served to the real clients as HTTP. |
 | `apps/mobile/src/replay-player/__tests__/` | `player-controller`, `replay-player`, `replay-player-layout` (§8). |
 | `apps/mobile/src/runtime-entry/replay-lifecycle-api.ts` | The ONE client of the three lifecycle commands, by POST only, strict decoders, `OUTCOME_UNKNOWN`. |
@@ -74,9 +76,12 @@ action on the saved line), `DepthComposition.tsx` and `integration-runtime.ts` (
 `Glyph.tsx` (P2's `play` / `pause`), the re-anchored pins (§9), `package.json` and `.github/workflows/api-ci.yml` (the new
 contract in API CI), and the locators.
 
-No server, API, migration or schema change; no new route. No change to `LivingAnalysisSurface`, `MapSurface`,
+The ONE server change is G-1's (§5B): the conversation list's summary decoder in `apps/api/src/replay/replay.service.ts`,
+with its specs (`replay.spec.ts`, `replay-player-proof.spec.ts`) and the regenerated wire. No migration, schema, SQL,
+route or wire-shape change. No change to `LivingAnalysisSurface`, `MapSurface`,
 `WorldViewSurface`, `LivingAnalysisMap`, T-05, T-06, T-11, VPORT-02's drawings, the S7-02 or S7-03 copy, the S7-03
-adapter or viewpoint store (sha256 pins, detector `frozen`). No frozen file was changed, so no decision gate was needed.
+adapter or viewpoint store (sha256 pins, detector `frozen`). No frozen file was changed; the service change is the
+Product Owner's G-1 decision, re-anchored in the S7-03 and S7-04 pins (§9).
 
 ## 3. The truth chain
 
@@ -108,17 +113,15 @@ Controlled synthetic data builds the history; everything displayed came back thr
 - **Touch.** A drag (`Pan.minDistance(0)`) and a tap race; whichever completes commits where the finger lifted, and the
   touch is cancelled only when both fail (Android never activates a pan on a stationary tap). A late or older callback can
   never reopen or commit a settled touch. A release outside the moments commits nothing.
-- **Accessibility.** One adjustable element named «لحظات إعادة العرض» (PROPOSED), whose value is the APPROVED S7-03
+- **Accessibility.** One adjustable element named «لحظات إعادة العرض» (APPROVED, 2026-10-20), whose value is the APPROVED S7-03
   position sentence; increment / decrement are the next / previous moment.
 - **Paging.** A version longer than the strip jumps a whole window at a time (T-05's rule), never glides.
 
 ## 5. Gaps and findings
 
-- **G-1 (API finding, not fixed here: an API change needs a decision).** While a fresh draft exists in a conversation,
-  the 0169 list wrapper answers `current_version_finalized = false` beside a null version, and the S7-01 summary decoder
-  accepts only null there, so the conversation list fails closed (503). The Analysis entry says this as a failure with a
-  retry, never as "nothing here" (test `G-1`); the saved-draft entry reads the Replay itself and is unaffected. Placed
-  with S7-05 (§11).
+- **G-1 — CORRECTED in this change (§5B).** While a fresh draft existed in a conversation, the 0169 list wrapper answered
+  `current_version_finalized = false` beside a null version, the S7-01 summary decoder accepted only null there, and the
+  conversation list failed closed (503) — so the Analysis could not reach a draft saved before a restart.
 - **F-1.** On the real Personal path `omittedBefore` is always 0 (S7-01 selects one contiguous range), so an omission is
   shown only on a test specimen (`omitBefore`), never on the device.
 - **F-2 assessment (binding from S7-03).** A Reading's `scope` carries `CONVERSATION_SESSION:<sessionId>` across the
@@ -155,7 +158,42 @@ The Product Owner approved the Spine direction, the 1:1 preview and the two aper
    («لم تُعرض هنا {count} من المحادثة.», `qandeel-replay-gap`), now inside the moment's reading. The notches stay 48
    points apart across an omission.
 
-No approved copy changed; the 13 new rows stay PROPOSED.
+No approved copy changed; the 13 new rows stayed PROPOSED until the Product Owner's decision of 2026-10-20 (§7).
+
+## 5B. G-1 correction (Product Owner decision, 2026-10-20)
+
+**Root cause.** The four layers were read independently:
+
+| Layer | What it says with no current version |
+| --- | --- |
+| 0169 `replay_private.list_my_conversation_replays_v1` | `current_version_finalized` is `EXISTS (… WHERE f.replay_version_id = cv.current_replay_version_id)`: an EXISTS is never null, so a fresh draft (no `replay_current_version_state` row) answers `false`. |
+| 0169 `replay_private.read_my_replay_v1` | The same column comes from the frozen resolver's record, so it is `null`. |
+| `ReplayService.summaryOf` (S7-01) | Required `null` beside a null version, so the whole list answered 503 `UNAVAILABLE`. |
+| `ReplayApiClient` (mobile) and `ReplayPlayerController` | The wire's own shape since S7-01: `currentVersionId: null` with `currentVersionFinalized: null`. The controller opens the newest Replay of the list and reads it; it was never reached. |
+
+So the API decoder disagreed with the list wrapper it decodes; the wrapper, the wire and the client agree with each other.
+
+**The correction, the smallest correct one.** Only the list's summary decoder changes: beside a null version it accepts
+exactly 0169's answer `false` and gives the wire's `null`. A null version beside `true` (a finalized nothing), `null` (a
+value the list cannot produce), or anything else stays refused as before (503), and so does a version beside a
+non-boolean. Nothing is hidden as a success, and nothing is weakened: the decoder is exactly as strict, about what 0169
+actually says. Migration 0169, the SQL, the wire shape, the mobile client and every frozen file are unchanged; no new
+migration was needed, so no decision gate was opened.
+
+**Tests (all ran, §8.1).**
+- API `replay.spec.ts`: a list of DRAFT with no version, PREVIEW_READY, FINALIZED and a reopened DRAFT (its kept
+  version) decodes; five contradictory answers are each refused with `UNAVAILABLE`.
+- API `replay-player-proof.spec.ts` over the real captured 0169 rows: the list answers 200 with the fresh draft
+  (`currentVersionId: null`, `currentVersionFinalized: null`) and, after it, PREVIEW_READY, FINALIZED and the reopened
+  draft; the wire served to the mobile proofs is regenerated from it.
+- Mobile controller: after a restart (a new generation with no draft saved in it) the Analysis opens the fresh draft from
+  the list, then PREVIEW_READY, FINALIZED and the reopened draft the same way; a contradictory list answer is still
+  refused and said as a failure, never as "nothing here".
+- Mobile journey in the production composition: after a restart the Analysis opens the draft saved before it, through
+  the list, and previews it; opening from the Conversation (the saved draft and «معاينة») is unchanged and green.
+- S7-01, S7-02 and S7-03 contracts and suites: green.
+- Not run: an emulator or device run of G-1. The restart journey is proven in Jest on the production composition over
+  the real captured wire; the APK of §6.2 predates the correction.
 
 ## 6. Evidence
 
@@ -203,54 +241,60 @@ uiautomator on the same frames.
 - **No discontinuity anywhere:** in every frame the Spine shows only its notches and the aperture; the three points are
   not drawn.
 
-## 7. Product Copy Gate — OPEN
+## 7. Product Copy Gate — CLOSED (Product Owner decision, 2026-10-20)
 
-Every row below is PROPOSED, Arabic and English alike, until the Product Owner decides; shipping a row promotes nothing.
-Approved words are reused verbatim from their owners (S7-02 and S7-03 Copy Gates, CLOSED; W1A-01; T-08) and not
-reopened. The previous / next chevrons and their two rows were removed by Decision #2.
+**S7-04 PRODUCT COPY GATE CLOSED.** On 2026-10-20 the Product Owner APPROVED all 13 rows, Arabic and English, word for
+word as below. The English of `moments`, `finalized` and `commandUnconfirmed` is the Product Owner's rewording; every
+other row is approved as proposed, and the Arabic of `reopenedNotice` in its original wording. The approval covers these
+13 rows only: no English row of S7-02 or S7-03 is approved by it, and neither of their closed gates is reopened. Words
+approved earlier are reused verbatim from their owners (S7-02 and S7-03 Copy Gates; W1A-01; T-08). The previous / next
+chevrons and their two rows were removed by Decision #2. Jest (`replay-player.test.tsx`) and the S7-04 contract pin
+every row word for word.
 
-| # | Key | Arabic (PROPOSED) | English (PROPOSED) |
+| # | Key | Arabic (APPROVED) | English (APPROVED) |
 | --- | --- | --- | --- |
 | 1 | play | تشغيل | Play |
 | 2 | pause | إيقاف مؤقت | Pause |
 | 3 | restart | التشغيل من البداية | Play from the start |
-| 4 | moments | لحظات إعادة العرض | The Replay's moments |
+| 4 | moments | لحظات إعادة العرض | Replay moments |
 | 5 | pacing | تُعرض الرسائل نصًّا بإيقاع مناسب للقراءة، لا بتوقيتها الأصلي. | Messages are shown as text at a reading pace, not at their original timing. |
 | 6 | preview | معاينة | Preview |
 | 7 | finalize | حفظ نسخة خاصة | Save a private copy |
-| 8 | finalized | نسخة خاصة محفوظة | A saved private copy |
+| 8 | finalized | نسخة خاصة محفوظة | Private copy saved |
 | 9 | finalizedNotice | حُفظت نسخة خاصة من إعادة العرض، ولا تُشارك مع أحد. | A private copy of the Replay was saved. It isn't shared with anyone. |
 | 10 | reopen | تعديل إعادة العرض | Edit the Replay |
 | 11 | reopenedNotice | أصبحت إعادة العرض مسودة يمكن تعديلها. | The Replay is a draft again and can be edited. |
 | 12 | analysisChanged | تغيّر التحليل منذ المعاينة، فلا يمكن حفظ هذه النسخة. | The analysis changed since the preview, so this version can't be saved. |
-| 13 | commandUnconfirmed | تعذّر التأكد من إتمام ذلك. | It couldn't be confirmed that this was done. |
+| 13 | commandUnconfirmed | تعذّر التأكد من إتمام ذلك. | We couldn't confirm whether the action was completed. |
 
 ## 8. Verification
 
 See §8.1 for the run on the final head of this change.
 
-### 8.1 What ran, on this change's final source (2026-10-20, locally, Windows)
+### 8.1 What ran, on this change's final source (2026-10-20, locally, Windows; after the G-1 correction and the copy approval)
 
 Only what actually ran is listed; CI on the PR head is the authority for merge.
 
 | Check | Result |
 | --- | --- |
-| `npm run test:s7-04-replay-player-navigation-contract` | 54 / 54 pass |
+| `npm run test:s7-04-replay-player-navigation-contract` | 58 / 58 pass (incl. the G-1 and approved-copy detectors, each shown to catch its planted defect) |
 | S7-01 / S7-02 / S7-03 contracts | 23 / 23, 17 / 17, 29 / 29 pass |
 | S5-03B, S5-03C, thread-lifecycle continuity, W1A-01 contracts (re-anchored) | 13 / 13, 8 / 8, 17 / 17, 18 / 18 pass |
 | `npm run test:task-closure-governance-contract` | pass |
-| Every other root `*contract*` script | pass, except the three below |
+| Every other root `*contract*` script | 107 of 110 pass; the three below do not |
 | `apps/mobile` `tsc --noEmit` | clean |
-| `apps/mobile` ESLint on the touched trees | 0 errors (34 warnings, all in files or lines S7-04 did not write) |
-| Mobile Jest, focused (replay-player, replay-composite, replay-entry, runtime-entry, the S7-04 journey) | 28 suites, 450 / 450 pass — including the six language × font-scale layout cases (Arabic and English at 1.0, 1.3, 2.0) and the S7-03 composite without controls |
-| Mobile Jest, whole suite | 2872 / 2878 pass; the 6 failures (`depth.test.tsx`, `w2-account-access.test.tsx`) are the known machine-locale baseline (this machine's `Intl` is ar-EG); with the English locale shim, 2878 / 2878 pass |
-| API Jest `src/replay` (incl. `replay-player-proof.spec.ts`) | 3 suites, 67 / 67 pass |
+| `apps/mobile` ESLint on the touched trees | 0 errors (34 warnings on the wider trees, all in files or lines S7-04 did not write; `replay-player` and the S7-04 journey clean). `apps/api` has no ESLint configuration; `tsc --noEmit` clean |
+| Mobile Jest, focused (replay-player, replay-composite, replay-entry, runtime-entry, the S7-04 journey) | 28 suites, 452 / 452 pass — including G-1 (the Analysis after a restart, each lifecycle, a contradiction refused), the 13 approved rows word for word, the six language × font-scale layout cases (Arabic and English at 1.0, 1.3, 2.0) and the S7-03 composite without controls |
+| Mobile Jest, whole suite | 2874 / 2880 pass; the 6 failures (`depth.test.tsx`, `w2-account-access.test.tsx`) are the known machine-locale baseline (this machine's `Intl` is ar-EG); with the English locale shim, 2880 / 2880 pass |
+| API Jest `src/replay` (incl. `replay-player-proof.spec.ts`) | 3 suites, 68 / 68 pass — incl. G-1 over the real captured 0169 rows and the five refused contradictions |
 
 Not green locally, for reasons outside this change:
 
 - `test:qan-inf-03-deterministic-expo-dependency-validation-contract` — expo-doctor's online checks cannot run
   deterministically here; `test:forward-safety-contract` fails only through the same check (its mirror's test 561).
-- `verify:replay-analytical-projection-render-contract:integration` — needs PostgreSQL, which this run had none of.
+- `verify:replay-analytical-projection-render-contract:integration` (`database/verify-migration-0102.mjs`) — a database
+  verifier that needs a fully migrated PostgreSQL; the local database it reached has no such schema (`relation
+  "public.shared_worlds" does not exist`). The migrated database runs in API CI.
 
 A generated `apps/mobile/android` left by the local APK builds made five root contracts fail ("no generated native
 project"); it was removed and the five pass. It is not part of this change.
@@ -265,6 +309,9 @@ project"); it was removed and the five pass. It is not part of this change.
   T-03C Thread-state-at-TC names, and the lifecycle client the reopen command's own outcome word; nothing else.
 - `tests/w1a-01-conversation-core-contract.test.mjs`: the ported glyphs gain P2's `play` / `pause`.
 - `apps/mobile/src/runtime-entry/__tests__/scope.test.ts`: the census gains exactly one class, `ReplayLifecycleApiClient`.
+- G-1 (Product Owner decision, 2026-10-20): the `apps/api/src/replay/replay.service.ts` sha256 pin in the S7-03 and S7-04
+  contracts moves to the corrected summary decoder (§5B); the S7-04 contract pins the two decoder lines and catches a
+  contradiction hidden as a success and the old 503 (two planted defects).
 
 ## 10. BG-08 / BG-09
 
@@ -273,9 +320,9 @@ project"); it was removed and the five pass. It is not part of this change.
   discharged or placed: the player and its navigation are delivered (inspection stays fail-closed; the composite still
   draws no Timeline, by the Product Owner's direction); F-2 is assessed (§5) and its wire decision placed with S7-05; the
   real-device and TalkBack proof is placed with S7-05, before any user opening.
-- **Admitted:** none. **Checked and not admitted**, each placed with S7-05: G-1 (the list 503 while a fresh draft exists;
-  an API change needs a decision); F-2's wire question; a real-device and TalkBack proof of the player; the English rows
-  and the S7-04 Copy Gate (this task's own gate, OPEN). F-1 is no obligation.
+- **Admitted:** none. **Discharged in this change:** G-1 (§5B) and the S7-04 Copy Gate (§7, CLOSED). **Checked and not
+  admitted**, each placed with S7-05: F-2's wire question; a real-device and TalkBack proof of the player. F-1 is no
+  obligation.
 - **Carried:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` not opened (`NOT_EVALUATED`); the Personal Replay
   capability stays closed (no gate row).
 - Register: **77 items; 36 / 4 / 9 / 28; 43 / 32 / 2**, unchanged.
@@ -285,9 +332,8 @@ project"); it was removed and the five pass. It is not part of this change.
 ## 11. S7-05 handover
 
 - **What exists:** the player behind the closed capability gate; its two entries; the private lifecycle; the Spine.
-- **Before any user opening (S7-05 and the Product Owner):** the S7-04 Copy Gate (13 rows) and every English row; F-2
-  (whether the wire keeps the Reading scope's session id — an API decision); G-1 (the list 503 while a fresh draft exists
-  — an API decision); a real-device and TalkBack proof of the entry, the selection, the player and the Spine;
+- **Before any user opening (S7-05 and the Product Owner):** the English rows of S7-02 and S7-03 (still PROPOSED; the
+  S7-04 rows are APPROVED); F-2 (whether the wire keeps the Reading scope's session id — an API decision); a real-device and TalkBack proof of the entry, the selection, the player and the Spine;
   `QAN-BL-NAV-02`'s reconciliation (the WP0 places it at S7-05); the capability gate stays an operator act behind the
   Product Owner's approval; CW2-08 stays `NOT_EVALUATED`.
 - **Known, not obligations:** F-1; the two approved position sentences both shown; uiautomator lists the depth beneath the
@@ -295,12 +341,11 @@ project"); it was removed and the five pass. It is not part of this change.
 
 ## 12. Deliberately not implemented
 
-Opening the Capability Gate or CW2-08; any API, DB or migration change; sharing, publishing, export, library, audio or
+Opening the Capability Gate or CW2-08; any API change beyond G-1's decoder (§5B); any DB or migration change; sharing, publishing, export, library, audio or
 video; a Live Timeline, Live Head or Return Live in Replay; inspection in the composite; a rebuild of S7-03, Living
 Analysis or I-06; S7-05.
 
 ---
 
-**STOP — S7-04 INDEPENDENT PRODUCT, VISUAL & TECHNICAL REVIEW GATE.** The player is not finally approved before the
-Product Owner reviews the frames and the motion. No merge, deployment or user opening without the Product Owner's
-approval; S7-05 is not started.
+**STOP — S7-04 FINAL MERGE REVIEW GATE.** The visual design, G-1's correction and the 13 rows are decided; the PR is not
+merged without the Product Owner's explicit permission. No deployment or user opening; S7-05 is not started.

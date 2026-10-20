@@ -105,11 +105,17 @@ function commandOf<V>(row: ReplayRow, success: string, refusals: readonly Replay
   return unavailable();
 }
 
+/**
+ * S7-04 (G-1): 0169's list wrapper answers `current_version_finalized` with an EXISTS over the current version's
+ * finalization, which is never null: a Replay with no version yet (a fresh draft) reads exactly `false` there. That one
+ * answer is decoded as "no version" and leaves as null, the wire's shape since S7-01; a finalized nothing (`true`) or
+ * anything else beside a null version is a contradiction, refused as before.
+ */
 function summaryOf(row: unknown): ReplaySummary {
   if (!isRow(row, SUMMARY_KEYS) || !isUuid(row.replay_id) || !isOneOf(row.replay_lifecycle, LIFECYCLES) || !isInstant(row.created_at)) return unavailable();
   const versionId = row.current_replay_version_id;
-  const finalized = row.current_version_finalized;
-  if (versionId === null ? finalized !== null : !isUuid(versionId) || typeof finalized !== 'boolean') return unavailable();
+  const finalized = versionId === null && row.current_version_finalized === false ? null : row.current_version_finalized;
+  if (versionId === null ? row.current_version_finalized !== false : !isUuid(versionId) || typeof finalized !== 'boolean') return unavailable();
   return { replayId: lower(row.replay_id), lifecycle: row.replay_lifecycle, createdAt: row.created_at,
     currentVersionId: versionId === null ? null : lower(versionId as string), currentVersionFinalized: finalized as boolean | null };
 }

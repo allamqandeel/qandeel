@@ -176,7 +176,7 @@ describe('S7-04 — Arabic RTL, English, accessibility and Reduced Motion', () =
     expect(en.view.getByTestId('qandeel-replay-pacing').props.style.textAlign).toBe('left');
     expect(en.view.getByTestId('qandeel-replay-player-back').props.accessibilityLabel).toBe('Conversation');
     expect(en.view.getByTestId('qandeel-replay-play').props.accessibilityLabel).toBe('Play');
-    expect(en.view.getByTestId('qandeel-replay-spine').props.accessibilityLabel).toBe("The Replay's moments");
+    expect(en.view.getByTestId('qandeel-replay-spine').props.accessibilityLabel).toBe('Replay moments');
     // The historical Arabic message keeps its own start in an English reader.
     expect(en.view.getByTestId('qandeel-replay-text').props.style.textAlign).toBe('right');
   });
@@ -221,13 +221,34 @@ describe('S7-04 — F-2: no Session context, id or Reading scope reaches the rea
   });
 });
 
-describe('S7-04 — the Product Copy Gate is OPEN', () => {
-  it('every new row is PROPOSED in Arabic AND English; nothing is promoted by shipping', () => {
-    expect(REPLAY_PLAYER_COPY_GATE.status).toContain('OPEN');
-    for (const row of Object.values(REPLAY_PLAYER_COPY_ROWS)) {
-      expect(row.status).toBe('PROPOSED');
-      expect(row.enStatus).toBe('PROPOSED');
+/** The Product Owner's decision of 2026-10-20, word for word: [Arabic, English] per key. */
+const APPROVED_COPY: Readonly<Record<string, readonly [string, string]>> = {
+  play: ['تشغيل', 'Play'],
+  pause: ['إيقاف مؤقت', 'Pause'],
+  restart: ['التشغيل من البداية', 'Play from the start'],
+  moments: ['لحظات إعادة العرض', 'Replay moments'],
+  pacing: ['تُعرض الرسائل نصًّا بإيقاع مناسب للقراءة، لا بتوقيتها الأصلي.', 'Messages are shown as text at a reading pace, not at their original timing.'],
+  preview: ['معاينة', 'Preview'],
+  finalize: ['حفظ نسخة خاصة', 'Save a private copy'],
+  finalized: ['نسخة خاصة محفوظة', 'Private copy saved'],
+  finalizedNotice: ['حُفظت نسخة خاصة من إعادة العرض، ولا تُشارك مع أحد.', "A private copy of the Replay was saved. It isn't shared with anyone."],
+  reopen: ['تعديل إعادة العرض', 'Edit the Replay'],
+  reopenedNotice: ['أصبحت إعادة العرض مسودة يمكن تعديلها.', 'The Replay is a draft again and can be edited.'],
+  analysisChanged: ['تغيّر التحليل منذ المعاينة، فلا يمكن حفظ هذه النسخة.', "The analysis changed since the preview, so this version can't be saved."],
+  commandUnconfirmed: ['تعذّر التأكد من إتمام ذلك.', "We couldn't confirm whether the action was completed."],
+};
+
+describe('S7-04 — the Product Copy Gate is CLOSED (Product Owner, 2026-10-20)', () => {
+  it('all 13 rows are APPROVED in Arabic AND English, each exactly as the Product Owner wrote it', () => {
+    expect(REPLAY_PLAYER_COPY_GATE.status).toContain('CLOSED');
+    expect(REPLAY_PLAYER_COPY_GATE.decidedOn).toBe('2026-10-20');
+    expect(Object.keys(REPLAY_PLAYER_COPY_ROWS)).toEqual(Object.keys(APPROVED_COPY));
+    for (const [key, row] of Object.entries(REPLAY_PLAYER_COPY_ROWS)) {
+      expect([row.ar, row.en]).toEqual(APPROVED_COPY[key]);
+      expect(row.status).toBe('APPROVED');
+      expect(row.enStatus).toBe('APPROVED');
     }
-    expect(Object.keys(REPLAY_PLAYER_COPY_ROWS)).toHaveLength(13);
+    expect(REPLAY_PLAYER_COPY_GATE.arabicApproved).toEqual(Object.keys(APPROVED_COPY));
+    expect(REPLAY_PLAYER_COPY_GATE.englishApproved).toEqual(Object.keys(APPROVED_COPY));
   });
 });

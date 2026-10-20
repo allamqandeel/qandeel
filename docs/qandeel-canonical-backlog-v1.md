@@ -4514,16 +4514,16 @@ is effective; it stays as written.
   draws no Timeline, by the Product Owner's visual direction); F-2 is assessed — the player and the composite never read,
   show, log or send the Reading scope — and its wire question is placed below; the device proof is placed below.
 - **Admitted (BG-06 / BG-08):** none.
+- **Discharged within S7-04 (Product Owner decision, 2026-10-20), neither a backlog item:** G-1 — while a fresh draft
+  existed, the 0169 list wrapper answered `current_version_finalized = false` beside a null version and the S7-01 summary
+  decoder refused it, so the conversation list failed closed; the decoder now reads exactly that answer as "no version
+  yet" and still refuses a contradiction (record §5B; no migration); and the S7-04 Product Copy Gate — CLOSED, all 13
+  rows APPROVED in Arabic and English (record §7).
 - **Checked and not admitted (BG-06):** each is placed in S7-05 by the S7-04 record's handover (§11), before any user
   opening:
-  - G-1: while a fresh draft exists, the 0169 list wrapper answers `current_version_finalized = false` beside a null
-    version and the S7-01 summary decoder refuses it, so the conversation list fails closed (the player says it as a
-    failure with a retry). Fixing it is an API change, which S7-04 may not make without a decision: S7-05, with the
-    Product Owner;
   - F-2's wire question (whether the Replay wire keeps `CONVERSATION_SESSION:<sessionId>` in a Reading's scope): an API
     decision for the Product Owner, S7-05;
   - a real-device and TalkBack proof of the entry, the selection, the composite, the player and the Spine: S7-05;
-  - the S7-04 Product Copy Gate (13 rows PROPOSED, Arabic and English): S7-04's own gate, OPEN. It is no backlog item.
   - F-1 (`omittedBefore` always 0 on the real path) is no obligation.
 - **Carried and honoured:** `QAN-BL-PROD-09` stays `HOSTED-DEPLOY-01`'s; `CW2-08` is not changed or opened
   (`NOT_EVALUATED`); the Personal Replay capability stays closed (no gate row).

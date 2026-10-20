@@ -155,7 +155,7 @@ async function buildWire() {
   for (const [label, step] of Object.entries(capture.steps)) steps[label] = await wireStep(step);
   const scenes: Record<string, unknown> = {};
   for (const [name, scene] of Object.entries(capture.scenes)) scenes[name] = await wireScene(scene);
-  return { provenance: { ...capture.provenance, mappedBy: 'apps/api/src/replay/replay.service.ts (ReplayService), unchanged' }, steps, scenes };
+  return { provenance: { ...capture.provenance, mappedBy: 'apps/api/src/replay/replay.service.ts (ReplayService; S7-01, with the S7-04 G-1 list decoding)' }, steps, scenes };
 }
 
 describe('S7-04 - the captured lifecycle journey through the real ReplayService', () => {
@@ -205,12 +205,13 @@ describe('S7-04 - the captured lifecycle journey through the real ReplayService'
     expect(withdrawn.analysis['2'].WORLD.outcome).toBe('NOT_VIEWABLE');
   });
 
-  // S7-04 finding G-1 (record §5): the conversation list refuses a Replay that has no version yet. The 0169 list wrapper
-  // answers `current_version_finalized = false` beside a null version, and the S7-01 summary decoder accepts only null
-  // there, so the whole list fails closed (503) while a fresh draft exists in the conversation.
-  it('G-1 evidence: the conversation list fails closed while a fresh draft exists, and reads again once it has a version', () => {
+  // S7-04 G-1 (record §5, corrected): the 0169 list wrapper answers `current_version_finalized = false` beside a null
+  // version (an EXISTS is never null). The summary decoder reads exactly that as "no version yet", so a fresh draft is
+  // listed with the wire's own null; before the correction the whole list failed closed (503).
+  it('G-1: the conversation list lists a fresh draft with no version, in each lifecycle after it as well', () => {
     expect(capture.steps.listDraft.rows).toEqual([expect.objectContaining({ current_replay_version_id: null, current_version_finalized: false })]);
-    expect(wire.steps.listDraft.status).toBe(503);
+    expect(wire.steps.listDraft).toMatchObject({ status: 200, body: { replays: [
+      { replayId: capture.steps.listDraft.rows[0].replay_id, lifecycle: 'DRAFT', currentVersionId: null, currentVersionFinalized: null }] } });
     expect(wire.steps.listBefore).toMatchObject({ status: 200, body: { replays: [] } });
     expect(wire.steps.listAfterReopen).toMatchObject({ status: 200, body: { replays: [{ lifecycle: 'DRAFT', currentVersionFinalized: true }] } });
     // The Replay read itself carries null there, and is read.

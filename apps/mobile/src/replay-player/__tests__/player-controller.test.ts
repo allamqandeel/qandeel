@@ -447,15 +447,45 @@ describe('S7-04 — the Analysis entry', () => {
     expect(server.uncaptured).toEqual([]);
   });
 
-  it('G-1: while a fresh draft exists the list fails closed, and that is said as a failure, never as "nothing here"', async () => {
-    const built = build(capturedIds());
-    built.player.openLatest(null);
+  // G-1 (corrected in S7-04, record §5): the list now carries a fresh draft with no version, so the Analysis reaches it
+  // after a restart too — a new generation, with no draft saved in it — and in every lifecycle after it.
+  it('G-1: after a restart the Analysis opens the fresh draft from the list, then PREVIEW_READY, FINALIZED and the reopened draft', async () => {
+    const built = build(capturedIds('preview', 'finalize', 'reopen'));
+    const latest = async () => {
+      built.player.close();
+      const before = built.server.requests.length;
+      built.player.openLatest(null);
+      await settle();
+      return built.server.requests.slice(before, before + 2);
+    };
+    const replay = { method: 'GET', path: `/replay/${PLAYER_IDS.replay}` };
+    expect(await latest()).toEqual([PLAYER_WIRE.steps.listDraft.request, replay]);
+    expect(PLAYER_WIRE.steps.listDraft).toMatchObject({ status: 200, body: { replays: [{ lifecycle: 'DRAFT', currentVersionId: null, currentVersionFinalized: null }] } });
+    expect(open(built.player)).toMatchObject({ origin: 'ANALYSIS', replayId: PLAYER_IDS.replay, lifecycle: 'DRAFT', draftRevision: 1, version: null, problem: null });
+    built.player.preview();
     await settle();
-    expect(PLAYER_WIRE.steps.listDraft.status).toBe(503);
-    expect(open(built.player)).toMatchObject({ problem: 'READ_FAILED', replayId: null });
-    built.server.listIs('listBefore');
-    built.player.retry();
+    expect(await latest()).toEqual([PLAYER_WIRE.steps.listPreview.request, replay]);
+    expect(open(built.player)).toMatchObject({ lifecycle: 'PREVIEW_READY', version: { versionId: PLAYER_IDS.v1, finalized: false }, problem: null });
+    built.player.finalize();
     await settle();
-    expect(open(built.player)).toMatchObject({ problem: 'NONE', replayId: null });
+    expect(await latest()).toEqual([PLAYER_WIRE.steps.listFinalized.request, replay]);
+    expect(open(built.player)).toMatchObject({ lifecycle: 'FINALIZED', version: { versionId: PLAYER_IDS.v1, finalized: true }, problem: null });
+    built.player.reopen();
+    await settle();
+    expect(await latest()).toEqual([PLAYER_WIRE.steps.listAfterReopen.request, replay]);
+    expect(open(built.player)).toMatchObject({ lifecycle: 'DRAFT', version: { versionId: PLAYER_IDS.v1, finalized: true }, problem: null });
+    expect(built.server.uncaptured).toEqual([]);
+  });
+
+  it('G-1: a contradictory list answer is still refused, and said as a failure, never as "nothing here"', async () => {
+    const [draft] = (PLAYER_WIRE.steps.listDraft.body as { replays: Record<string, unknown>[] }).replays;
+    for (const wrong of [{ ...draft, currentVersionFinalized: false }, { ...draft, currentVersionFinalized: true },
+      { ...draft, currentVersionId: PLAYER_IDS.v1, currentVersionFinalized: null }]) {
+      const built = build(capturedIds(), { intercept: (request) => (request.path.startsWith('/replay/conversations/') ? { status: 200, body: { replays: [wrong] } } : undefined) });
+      built.player.openLatest(null);
+      await settle();
+      expect(open(built.player)).toMatchObject({ problem: 'READ_FAILED', replayId: null, lifecycle: null });
+      expect(built.server.requests).toHaveLength(1);
+    }
   });
 });

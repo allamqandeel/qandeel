@@ -7,7 +7,7 @@
     "journey": "draft -> preview (retry, conflict, again) -> finalize (stale, retry, again) -> reopen (retry) -> preview again; E05 open head; source changed; analysis moved -> reopen -> preview again",
     "transaction": "ROLLED BACK: the database is left exactly as it was",
     "capturedAt": "2026-10-19T18:43:22.273Z",
-    "mappedBy": "apps/api/src/replay/replay.service.ts (ReplayService), unchanged"
+    "mappedBy": "apps/api/src/replay/replay.service.ts (ReplayService; S7-01, with the S7-04 G-1 list decoding)"
   },
   "steps": {
     "capability": {
@@ -79,9 +79,17 @@
         "method": "GET",
         "path": "/replay/conversations/fe3f1395-aa63-4d48-8252-875d9cfcc745"
       },
-      "status": 503,
+      "status": 200,
       "body": {
-        "outcome": "UNAVAILABLE"
+        "replays": [
+          {
+            "replayId": "139cb084-1bbe-44f4-89a8-6f7195485f2d",
+            "lifecycle": "DRAFT",
+            "createdAt": "2026-10-19T21:43:20.929504+03:00",
+            "currentVersionId": null,
+            "currentVersionFinalized": null
+          }
+        ]
       }
     },
     "preview": {

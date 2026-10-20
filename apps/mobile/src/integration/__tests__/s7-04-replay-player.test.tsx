@@ -214,6 +214,28 @@ describe('S7-04 — Select → Saved Draft → Real Preview → Player → Priva
     h.dispose();
   });
 
+  // G-1 (corrected in S7-04, record §5): the draft was saved before the app restarted, so this generation has none of
+  // its own; the Analysis reaches it through the conversation's list, which now carries a draft with no version.
+  it('G-1: after a restart, the Analysis opens the draft saved before it from the list, and previews it', async () => {
+    const { h, server, view } = await world();
+    server.listIs('listDraft');
+    await press(view, 'qandeel-depth-to-analysis');
+    await layOut(view);
+    await press(view, 'qandeel-replay-analysis-entry');
+    await layOut(view);
+    expect(h.http.matching('/replay/drafts')).toHaveLength(0);
+    expect(h.http.matching('/replay/conversations/')).toHaveLength(1);
+    expect(view.getByTestId(REPLAY_PLAYER_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId('qandeel-replay-player-draft')).toBeTruthy();
+    await press(view, 'qandeel-replay-player-preview');
+    await layOut(view);
+    expect(h.http.matching('/preview')).toHaveLength(1);
+    expect(text(view, 'qandeel-replay-text')).toBe(MOMENTS[0].text);
+    expect(server.uncaptured).toEqual([]);
+    view.unmount();
+    h.dispose();
+  });
+
   it('a sign-out while the passage is open retires it with the generation: nothing of it stays, and a late answer shows nothing', async () => {
     let release: (() => void) | null = null;
     const { h, view } = await world();
