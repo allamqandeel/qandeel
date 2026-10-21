@@ -438,7 +438,8 @@ function assertIntegratedContextBudgetContract(world) {
   for (const carried of [
     "task: 'CONVERSATIONAL_RESPONSE', path: selection.path,",
     "complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',",
-    "latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,",
+    // S8A-01 (Product Owner, 2026-10-21): DEEP 20 s by a controlled change; FAST unchanged.
+    "latencyBudgetMs: selection.path === 'DEEP' ? 20000 : 3000,",
     "costBudget: 'LOW', safetyLevel: 'STANDARD',",
     // ACE-01 (WP2) re-anchor: the locale is now decided upstream of QIR-004 (resolveConversationLocale, `und` when
     // unreliable) and carried through here unchanged, exactly like the other already-decided semantics.

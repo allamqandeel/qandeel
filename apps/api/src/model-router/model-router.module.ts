@@ -3,6 +3,7 @@ import { ClaudeModelRouter } from './providers/anthropic/claude-model-router';
 import { FakeModelRouter } from './fake-model-router';
 import { MODEL_ROUTER, type ModelRouter } from './model-router.types';
 import { OpenAIModelRouter } from './providers/openai/openai-model-router';
+import { DeepSeekModelRouter } from './providers/deepseek/deepseek-model-router';
 import { ObservabilityModule } from '../observability/observability.module';
 import { TelemetryService } from '../observability/telemetry.service';
 import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
@@ -20,8 +21,11 @@ export function createConfiguredModelRouter(
       return ClaudeModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
     case 'openai':
       return OpenAIModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
+    // S8A-01: qualification-only (synthetic data); its configuration refuses production and an undeclared mode.
+    case 'deepseek':
+      return DeepSeekModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
     default:
-      throw new Error('MODEL_PROVIDER must be either anthropic or openai.');
+      throw new Error('MODEL_PROVIDER must be one of anthropic, openai or deepseek.');
   }
 }
 

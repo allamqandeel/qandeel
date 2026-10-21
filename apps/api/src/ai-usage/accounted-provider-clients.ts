@@ -12,6 +12,7 @@
 import type { AiProviderCallAccounting } from './ai-provider-call-accounting';
 import {
   normalizeAnthropicMessagesUsage,
+  normalizeDeepSeekChatCompletionsUsage,
   normalizeGeminiGenerateContentUsage,
   normalizeOpenAIResponsesUsage,
 } from './ai-usage-normalization';
@@ -62,6 +63,25 @@ export function accountedAnthropicMessagesClient<C extends MessagesCreateClient>
     signalOf(options),
   );
   return { messages: { create } } as unknown as C;
+}
+
+interface ChatCompletionsCreateClient {
+  chat: { completions: { create(...args: never[]): Promise<unknown> } };
+}
+
+/** S8A-01: a DeepSeek Chat Completions client whose every `chat.completions.create` is one accounted attempt. */
+export function accountedDeepSeekChatCompletionsClient<C extends ChatCompletionsCreateClient>(
+  client: C,
+  featureFamily: AiFeatureFamily,
+  accounting: AiProviderCallAccounting,
+): C {
+  const create = (body: unknown, options?: unknown) => accounting.track(
+    { provider: 'DEEPSEEK', requestedModel: modelOf(body), featureFamily },
+    () => (client.chat.completions.create as (b: unknown, o?: unknown) => Promise<unknown>)(body, options),
+    normalizeDeepSeekChatCompletionsUsage,
+    signalOf(options),
+  );
+  return { chat: { completions: { create } } } as unknown as C;
 }
 
 export interface GeminiTransportResponse {

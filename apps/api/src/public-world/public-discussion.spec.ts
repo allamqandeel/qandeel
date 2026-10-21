@@ -187,7 +187,7 @@ describe('S5-04 — Public QANDEEL: the lease, the public-only context, revalida
   });
 
   it('no provider bound, an empty answer, or a dark context: nothing is invented — the lease ends unanswered', async () => {
-    const unbound: ModelRouter = { generate: jest.fn(async () => { throw new Error('MODEL_PROVIDER must be either anthropic or openai.'); }) };
+    const unbound: ModelRouter = { generate: jest.fn(async () => { throw new Error('MODEL_PROVIDER must be one of anthropic, openai or deepseek.'); }) };
     for (const [router, repo] of [
       [unbound, discussionRepository()], [routerAnswering('   '), discussionRepository()],
       [routerAnswering('x'), discussionRepository({ context: jest.fn(async () => []) })],

@@ -1,12 +1,13 @@
 // AI-COST-01 - the closed vocabularies of provider-call accounting.
 //
-// Each registry here equals, exactly, the CHECK constraint of migration 0135 that stores it. A fourth provider, a new
-// feature family or a new billable kind is a reviewed change in BOTH places, never an implicit widening.
+// Each registry here equals, exactly, the CHECK constraint of migration 0135 that stores it, as widened by 0170 (S8A-01:
+// DEEPSEEK). A new provider, a new feature family or a new billable kind is a reviewed change in BOTH places, never an
+// implicit widening.
 //
 // Nothing in this file is a price, a Credit value or a provider choice.
 
 /** The providers a production call may name. `TEST_PROVIDER` exists only in the database, for synthetic prices. */
-export const AI_PROVIDERS = ['OPENAI', 'ANTHROPIC', 'GEMINI'] as const;
+export const AI_PROVIDERS = ['OPENAI', 'ANTHROPIC', 'GEMINI', 'DEEPSEEK'] as const;
 export type AiProvider = typeof AI_PROVIDERS[number];
 
 /** The exact external operation each provider is asked to perform. */
@@ -14,6 +15,7 @@ export const AI_PROVIDER_OPERATION = {
   OPENAI: 'OPENAI_RESPONSES_CREATE',
   ANTHROPIC: 'ANTHROPIC_MESSAGES_CREATE',
   GEMINI: 'GEMINI_GENERATE_CONTENT',
+  DEEPSEEK: 'DEEPSEEK_CHAT_COMPLETIONS_CREATE',
 } as const satisfies Record<AiProvider, string>;
 export type AiProviderOperation = typeof AI_PROVIDER_OPERATION[AiProvider];
 
@@ -49,6 +51,7 @@ export const AI_COMPLETE_USAGE_KINDS: Readonly<Record<AiProvider, readonly AiUsa
   OPENAI: ['CACHE_READ_INPUT_TOKEN', 'CACHE_WRITE_INPUT_TOKEN', 'INPUT_TOKEN', 'OUTPUT_TOKEN'],
   ANTHROPIC: ['CACHE_READ_INPUT_TOKEN', 'CACHE_WRITE_INPUT_TOKEN', 'INPUT_TOKEN', 'OUTPUT_TOKEN'],
   GEMINI: ['CACHE_READ_INPUT_TOKEN', 'INPUT_TOKEN', 'OUTPUT_TOKEN'],
+  DEEPSEEK: ['CACHE_READ_INPUT_TOKEN', 'INPUT_TOKEN', 'OUTPUT_TOKEN'],
 };
 
 /**

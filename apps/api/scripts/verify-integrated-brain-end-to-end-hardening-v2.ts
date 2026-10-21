@@ -944,7 +944,8 @@ async function main(): Promise<void> {
     // B - only the frozen processing path / projection may differ.
     assert.equal(deepRequest.path, 'DEEP', 'B anti-vacuity: the DEEP fixture really routed DEEP through the real orchestrator');
     assert.equal(deepRequest.complexity, 'HIGH');
-    assert.equal(deepRequest.latencyBudgetMs, 10000, 'B: the frozen DEEP latency budget is unchanged');
+    // S8A-01 (Product Owner, 2026-10-21): the DEEP budget is 20 s by a controlled change; FAST is unchanged.
+    assert.equal(deepRequest.latencyBudgetMs, 20000, 'B: the DEEP latency budget is the S8A-01 controlled value');
     assert.equal(turn2Call.request.path, 'FAST', 'B anti-vacuity: the FAST representative really routed FAST');
     assert.equal(turn2Call.request.complexity, 'LOW');
     assert.equal(turn2Call.request.latencyBudgetMs, 3000, 'B: the frozen FAST latency budget is unchanged');
