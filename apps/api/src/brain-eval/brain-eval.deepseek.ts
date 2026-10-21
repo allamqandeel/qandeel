@@ -137,9 +137,21 @@ export interface DeepSeekEvaluationDependencies {
 /** The evidence key of one attempt: the case id alone in a single-attempt run, `caseId#repeat` otherwise. */
 export const attemptKey = (caseId: string, repeat: number, repeats: number): string => (repeats === 1 ? caseId : `${caseId}#${repeat}`);
 
+/** How many times one case runs: the suite's repeats, or fewer when the case sets `maxRepeats`. */
+export const caseRepeats = (testCase: BrainEvaluationCase, repeats: number): number => {
+  const limit = testCase.maxRepeats ?? repeats;
+  if (!Number.isInteger(limit) || limit < 1) throw new Error(`${testCase.id}: maxRepeats must be a positive integer.`);
+  return Math.min(limit, repeats);
+};
+
+/** The attempts one run of these cases makes (no retries, so this is also the most it can send). */
+export const plannedAttempts = (cases: ReadonlyArray<BrainEvaluationCase>, repeats: number): number =>
+  cases.reduce((sum, testCase) => sum + caseRepeats(testCase, repeats), 0);
+
 /**
  * `repeats` attempts per case, round-robin (every case's first attempt, then every case's second, ...) so that time-of-day
- * drift is spread across repeats instead of landing on one. A failure is recorded with unknown usage and never retried.
+ * drift is spread across repeats instead of landing on one; a case with `maxRepeats` sits out the later rounds. A failure is
+ * recorded with unknown usage and never retried.
  */
 export async function runDeepSeekEvaluation(
   cases: ReadonlyArray<BrainEvaluationCase>,
@@ -150,7 +162,9 @@ export async function runDeepSeekEvaluation(
   if (!Number.isInteger(repeats) || repeats < 1 || repeats > 3) throw new Error('A DeepSeek evaluation run repeats each case 1 to 3 times.');
   const now = dependencies.now ?? (() => performance.now());
   const results: DeepSeekEvaluationResult[] = [];
+  for (const testCase of cases) caseRepeats(testCase, repeats);
   for (let repeat = 1; repeat <= repeats; repeat += 1) for (const testCase of cases) {
+    if (repeat > caseRepeats(testCase, repeats)) continue;
     const request = deepSeekEvaluationRequest(testCase);
     const route = decideFastDeepRoute(currentMessageOf(testCase));
     const base = {

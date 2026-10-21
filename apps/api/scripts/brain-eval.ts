@@ -5,7 +5,7 @@ import { ClaudeModelRouter } from '../src/model-router/providers/anthropic/claud
 import { OpenAIModelRouter } from '../src/model-router/providers/openai/openai-model-router';
 import { expectedRequestCount, runEvaluation, writeEvaluationArtifacts } from '../src/brain-eval/brain-eval.harness';
 import {
-  assertGuidanceMatchesLabel, attemptKey, createGuidanceComparisonArtifacts, currentMessageOf, deepSeekEvaluationRequest, isDeepSeekEvaluationLabel,
+  assertGuidanceMatchesLabel, attemptKey, createGuidanceComparisonArtifacts, plannedAttempts, currentMessageOf, deepSeekEvaluationRequest, isDeepSeekEvaluationLabel,
   runDeepSeekEvaluation, summarizeDeepSeekRun, type DeepSeekEvaluationResult,
 } from '../src/brain-eval/brain-eval.deepseek';
 import {
@@ -43,13 +43,13 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   if ((guard.round ?? 1) !== suite.round) throw new Error(`NOT RUN: the guard enforces round ${guard.round ?? 1} caps; ${suite.name} is round ${suite.round}.`);
   suite.validate(suite.cases);
   assertGuidanceMatchesLabel(suite.cases, label);
-  const planned = suite.cases.length * suite.repeats;
+  const planned = plannedAttempts(suite.cases, suite.repeats);
   const selfTest = await guard.selfTest();
   if (!selfTest.allBlocked) throw new Error('NOT RUN: the network guard self-test let a forbidden destination through.');
   if (!guard.dry && guard.remainingAttempts() < planned) {
     throw new Error(`NOT RUN: ${guard.remainingAttempts()} attempts remain under the cumulative cap; this run needs ${planned}.`);
   }
-  console.log(`DEEPSEEK ${guard.dry ? 'DRY (zero sent)' : 'PAID'} RUN (${suite.name}, ${label}, round ${suite.round}): ${suite.cases.length} cases x ${suite.repeats} = ${planned} attempts, no retries.`);
+  console.log(`DEEPSEEK ${guard.dry ? 'DRY (zero sent)' : 'PAID'} RUN (${suite.name}, ${label}, round ${suite.round}): ${suite.cases.length} cases, up to ${suite.repeats} repeats = ${planned} attempts, no retries.`);
 
   const ledger = await openDeepSeekEvaluationLedger(process.env);
   const evidence = new Map<string, { attempts: Array<Record<string, unknown>>; ledger: ReadonlyArray<LedgerRow> }>();
@@ -152,8 +152,8 @@ async function main(): Promise<void> {
       const route = decideFastDeepRoute(currentMessageOf(testCase));
       console.log(`${testCase.id}: ${testCase.world?.kind ?? 'PERSONAL'} ${testCase.path} (${request.latencyBudgetMs} ms); production route ${route.path}${route.path === testCase.path ? '' : ' (differs)'}`);
     }
-    const perRun = suite.cases.length * suite.repeats;
-    console.log(`PLANNED (round ${suite.round}): ${suite.cases.length} cases x ${suite.repeats} = ${perRun} DeepSeek calls per run (${suite.labels.join(', ')}). ZERO CALLS: no client was constructed.`);
+    const perRun = plannedAttempts(suite.cases, suite.repeats);
+    console.log(`PLANNED (round ${suite.round}): ${suite.cases.length} cases, up to ${suite.repeats} repeats = ${perRun} DeepSeek calls per run (${suite.labels.join(', ')}). ZERO CALLS: no client was constructed.`);
     return;
   }
   if (command === 'deepseek-run') return deepSeekRun(process.argv[3], process.argv[4]);

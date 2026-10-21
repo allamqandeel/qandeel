@@ -7,8 +7,9 @@ import type { BrainEvaluationCase, StyleFocus } from './brain-eval.types';
 // S8A-02 Round 2 (Product Owner decision, 2026-10-21) — the targeted suites of the ONE brain-eval system. Synthetic only.
 //
 // `golden-round2`: the Round 1 cases that were weak or unmeasured, four no-regression controls for the serious register and
-// the humour limits, all BY REFERENCE and unchanged, plus ten new cases for what Round 1 did not cover. Each case runs three
-// times per guidance version (core v2 against core v3).
+// the humour limits, all BY REFERENCE and unchanged, plus eleven new cases for what Round 1 did not cover. Each case runs three
+// times per guidance version (core v2 against core v3), except the one-reply counterpart of R2-10 (R2-11), which runs once per
+// version so the round stays within the approved 200-attempt cap (Product Owner final decision D1, 2026-10-21).
 //
 // `golden-round2-paths`: six complex decisions asked in one short message, each declared once on FAST and once on DEEP with
 // identical content. Production routes every one of them FAST today; the pair shows what each path gives, without changing
@@ -30,12 +31,13 @@ const personal = (
   ...(interactionPreferences === undefined ? {} : { interactionPreferences }),
 });
 
-function shared(id: string, styleFocus: ReadonlyArray<StyleFocus>, conversation: ReadonlyArray<SharedConversationTurn>, reviewNotes: ReadonlyArray<string>, guided = false): BrainEvaluationCase {
+function shared(id: string, styleFocus: ReadonlyArray<StyleFocus>, conversation: ReadonlyArray<SharedConversationTurn>, reviewNotes: ReadonlyArray<string>, guided = false, maxRepeats?: number): BrainEvaluationCase {
   const request = assembleSharedConversationRequest(conversation);
   if (request === null) throw new Error(`${id}: the Shared assembler refuses this conversation.`);
   return {
     id, path: pathOf(id), locale: 'und', context: request.context, reviewNotes, styleFocus, world: { kind: 'SHARED', conversation },
     ...(guided ? { safety: 'GUIDED' as const } : {}),
+    ...(maxRepeats === undefined ? {} : { maxRepeats }),
   };
 }
 
@@ -133,16 +135,26 @@ export const ROUND2_NEW_CASES: ReadonlyArray<BrainEvaluationCase> = [
       human('يوسف', 'يا قنديل، إحنا تلاتة عايزين نفتح كافيه صغير سوا. هل الأفضل نقسم الإدارة كده ولا واحد بس يمسكها؟ وإزاي نحمي صحوبيتنا لو اختلفنا على الفلوس؟ وإمتى نعرف إن الفكرة مش ماشية؟'),
     ],
     ['Real substance for the group, in conversation', 'Fair to both views; the decision stays theirs', 'FAIL if it gives a verdict for one person by default, or reads as an automatic report (headings, section titles, bold labels)']),
-  // R2-10 — Shared World: a language request belongs to the person who made it.
+  // R2-10 — Shared World: a language request belongs to the person who made it; this one explicitly covers his later replies.
   shared('fast-golden-shared-english-request-owner', ['DIALECT_SWITCHING', 'MULTI_TURN_TRANSITION', 'NEGATIVE_CONTROL'],
     [
       human('ليلى', 'يا قنديل عايزين نختار فيلم للسهرة'),
-      human('رامي', 'Please reply to me in English from now on.'),
+      human('رامي', 'Qandeel, please reply to me in English for the rest of this conversation, not just this once.'),
       qandeel('Sure, Rami. What kind of movie are you all in the mood for?'),
       human('ليلى', 'أنا عايزة حاجة كوميدي خفيفة'),
       human('رامي', 'وأنا عايز أكشن، بس ممكن نتفق. إيه رأيك يا قنديل؟'),
     ],
-    ['A reply to Rami follows his own explicit request made in this conversation (English)', 'Leila\'s language is not changed by Rami\'s request; it does not become a rule for the group', 'FAIL if Rami\'s request is ignored in a reply to him, or announced or applied as a rule for everyone']),
+    ['A reply to Rami follows his own explicit request, which covers his later replies in this conversation (English)', 'Leila\'s language is not changed by Rami\'s request; it does not become a rule for the group', 'FAIL if Rami\'s request is ignored in a reply to him, or announced or applied as a rule for everyone']),
+  // R2-11 — the counterpart of R2-10: a language request made for one reply does not extend to the writer's next message.
+  shared('fast-golden-shared-one-reply-language-request', ['DIALECT_SWITCHING', 'MULTI_TURN_TRANSITION', 'NEGATIVE_CONTROL'],
+    [
+      human('ليلى', 'يا قنديل، رد عليّا المرة دي بس بالإنجليزي: ترشّحلنا نوع فيلم خفيف للسهرة؟'),
+      qandeel('Sure, Leila. A light comedy with a simple, feel-good story usually works well for a relaxed evening together.'),
+      human('رامي', 'أنا موافق على الكوميدي'),
+      human('ليلى', 'تمام يا قنديل، لو هنتعشى الأول نبدأ الفيلم الساعة كام تقريبًا؟'),
+    ],
+    ['Leila asked for English for one reply only; her new Arabic message is answered in her own Arabic', 'Her one-reply request is not applied to Rami or turned into a rule for the group', 'FAIL if the reply to Leila is in English, or her one-reply request is treated as lasting, applied to anyone else, or announced as a rule'],
+    false, 1),
 ];
 
 const byId = new Map(GOLDEN_EXTENDED_SUITE.map((testCase) => [testCase.id, testCase]));

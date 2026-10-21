@@ -3,7 +3,7 @@ import { SAFETY_HUMOUR_SUSPENSION_LINE } from '../interaction-preferences/intera
 import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import {
-  assertGuidanceMatchesLabel, attemptKey, currentMessageOf, deepSeekEvaluationRequest, replyShape, runDeepSeekEvaluation,
+  assertGuidanceMatchesLabel, attemptKey, caseRepeats, currentMessageOf, deepSeekEvaluationRequest, plannedAttempts, replyShape, runDeepSeekEvaluation,
   summarizeDeepSeekRun, type DeepSeekEvaluationResult,
 } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE } from './brain-eval.golden-extended.suite';
@@ -33,11 +33,11 @@ function result(testCase: BrainEvaluationCase, label: DeepSeekEvaluationResult['
 }
 
 describe('S8A-02 Round 2 — targeted suites, repeats and the blinded set review (zero calls)', () => {
-  it('references 19 Round 1 cases unchanged and adds 10, validated per case without a coverage quota', () => {
-    expect(GOLDEN_ROUND2_SUITE).toHaveLength(29);
-    expect(ROUND2_NEW_CASES).toHaveLength(10);
+  it('references 19 Round 1 cases unchanged and adds 11, validated per case without a coverage quota', () => {
+    expect(GOLDEN_ROUND2_SUITE).toHaveLength(30);
+    expect(ROUND2_NEW_CASES).toHaveLength(11);
     for (const id of ROUND2_REFERENCED_CASE_IDS) expect(caseById(id)).toBe(GOLDEN_EXTENDED_SUITE.find((testCase) => testCase.id === id));
-    expect(validateGoldenTargetedSuite(GOLDEN_ROUND2_SUITE)).toMatchObject({ caseCount: 29, expectedPaidRequests: 29 });
+    expect(validateGoldenTargetedSuite(GOLDEN_ROUND2_SUITE)).toMatchObject({ caseCount: 30, expectedPaidRequests: 30 });
     expect(Object.keys(EVALUATION_SUITES)).toEqual(['brain-bakeoff', 'golden-conversations']);
   });
 
@@ -68,13 +68,14 @@ describe('S8A-02 Round 2 — targeted suites, repeats and the blinded set review
     expect(() => validateGoldenPathPairSuite(GOLDEN_ROUND2_PATH_SUITE.slice(1))).toThrow();
   });
 
-  it('fixes repeats, labels and round in the registry, and plans 198 attempts within the 200-attempt cap', () => {
+  it('fixes repeats, labels and round in the registry, and plans 200 attempts: exactly the 200-attempt cap, no retries', () => {
     const round2 = resolveDeepSeekEvaluationSuite('golden-round2');
     const paths = resolveDeepSeekEvaluationSuite('golden-round2-paths');
     expect(round2).toMatchObject({ repeats: 3, labels: ['core-v2', 'core-v3'], round: 2, comparison: 'GUIDANCE' });
     expect(paths).toMatchObject({ repeats: 2, labels: ['core-v3'], round: 2, comparison: 'PATHS' });
-    const planned = round2.cases.length * round2.repeats * round2.labels.length + paths.cases.length * paths.repeats * paths.labels.length;
-    expect(planned).toBe(198);
+    const planned = plannedAttempts(round2.cases, round2.repeats) * round2.labels.length + plannedAttempts(paths.cases, paths.repeats) * paths.labels.length;
+    expect([plannedAttempts(round2.cases, round2.repeats), plannedAttempts(paths.cases, paths.repeats)]).toEqual([88, 24]);
+    expect(planned).toBe(200);
     expect(planned).toBeLessThanOrEqual(200);
     for (const name of ['brain-bakeoff', 'golden-conversations', 'golden-conversations-extended'] as const) {
       expect(DEEPSEEK_EVALUATION_SUITES[name]).toMatchObject({ repeats: 1, labels: ['baseline', 'candidate'], round: 1, comparison: 'GUIDANCE' });
@@ -100,10 +101,25 @@ describe('S8A-02 Round 2 — targeted suites, repeats and the blinded set review
     await expect(runDeepSeekEvaluation(cases, 'core-v2', { router, attribute: async (_key, work) => work() }, 4)).rejects.toThrow('1 to 3');
   });
 
+  it('states R2-10 as a request for later replies, and runs its one-reply counterpart R2-11 once per version', async () => {
+    expect(JSON.stringify(caseById('fast-golden-shared-english-request-owner').world)).toContain('for the rest of this conversation, not just this once');
+    const counterpart = caseById('fast-golden-shared-one-reply-language-request');
+    expect(JSON.stringify(counterpart.world)).toContain('المرة دي بس');
+    expect([counterpart.world?.kind, counterpart.maxRepeats, caseRepeats(counterpart, 3)]).toEqual(['SHARED', 1, 1]);
+    expect(GOLDEN_ROUND2_SUITE.filter((testCase) => testCase.maxRepeats !== undefined).map((testCase) => testCase.id)).toEqual([counterpart.id]);
+    const router: ModelRouter = { generate: jest.fn(async (request: ModelRouterRequest) => ({ content: 'تمام', routingMetadata: { path: request.path }, usage: { inputTokens: 900, outputTokens: 20 } })) };
+    const keys: string[] = [];
+    const cases = [GOLDEN_ROUND2_SUITE[0], counterpart];
+    await runDeepSeekEvaluation(cases, 'core-v2', { router, attribute: async (key, work) => { keys.push(key); return work(); } }, 3);
+    expect(keys).toEqual([`${cases[0].id}#1`, `${counterpart.id}#1`, `${cases[0].id}#2`, `${cases[0].id}#3`]);
+    expect(plannedAttempts(cases, 3)).toBe(4);
+    expect(() => caseRepeats({ ...counterpart, maxRepeats: 0 }, 3)).toThrow('positive integer');
+  });
+
   it('refuses a run whose label does not match the guidance this commit renders', () => {
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v2')).not.toThrow();
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_PATH_SUITE, 'core-v2')).not.toThrow();
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3')).toThrow('not core-v3 for 29 case(s)');
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3')).toThrow('not core-v3 for 30 case(s)');
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'baseline')).not.toThrow();
   });
 
@@ -113,7 +129,7 @@ describe('S8A-02 Round 2 — targeted suites, repeats and the blinded set review
     const v3 = cases.flatMap((testCase) => [3, 1, 2].map((repeat) => result(testCase, 'core-v3', repeat, `ردّ النسخة الثانية ${repeat}`)));
     const { packet, labelMap } = createBlindPacket(guidanceGroups(cases, v2, v3), SALT);
     expect(createBlindPacket(guidanceGroups(cases, v2, v3), SALT)).toEqual({ packet, labelMap });
-    expect(packet).toHaveLength(29);
+    expect(packet).toHaveLength(30);
     const serialized = JSON.stringify(packet) + renderBlindPacketMarkdown('t', packet);
     expect(serialized).not.toMatch(/core-v|"label"|latency|Tokens|productionRoute|"path"|4321|1500|baseline|candidate/u);
     expect(labelMap.salt).toBe(SALT);

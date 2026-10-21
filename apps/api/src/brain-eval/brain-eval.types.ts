@@ -47,6 +47,11 @@ export interface BrainEvaluationCase {
    * personality, its locale is `und`, and no Personal preference can reach it. `context` must equal the assembled context.
    */
   world?: EvaluationWorld;
+  /**
+   * S8A-02 Round 2 — the DeepSeek-only path runs this case fewer times than the suite repeats (at least 1): a counterpart
+   * check that fits the approved attempt cap. Every other runner ignores it.
+   */
+  maxRepeats?: number;
 }
 
 export type EvaluationWorld =
