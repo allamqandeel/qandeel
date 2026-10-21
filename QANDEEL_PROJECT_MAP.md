@@ -205,7 +205,8 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
 - **Shared attribution (Product Owner decision, 2026-10-21):** core v3.1 is kept as an experiment only. The separated
   representation (a-1: one model message per person's message, visible Names, no identifiers) exists as a candidate that
   production does not send; production's merged input is proven byte-identical. A two-call DeepSeek probe precedes any
-  attribution test; mixing between people blocks S8A-02's closure.
+  attribution test; mixing between people blocks S8A-02's closure. Probe done (2 calls, USD 0.0012): DeepSeek accepts
+  consecutive `user` messages on FAST and DEEP, both replies completed. The comparative test awaits authorization.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); 86 items. No routing, budget or real-user change.

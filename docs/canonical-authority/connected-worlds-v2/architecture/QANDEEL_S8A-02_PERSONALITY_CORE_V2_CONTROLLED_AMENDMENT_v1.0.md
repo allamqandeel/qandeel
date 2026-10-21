@@ -303,4 +303,10 @@ the Product Owner's decision. Its acceptance evidence is the comparative attribu
 USD 0.02) first, then the full plan only if the Product Owner authorizes it (at most 100 calls and USD 0.20 in all). The
 identity hazards the separated form cannot fix are `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-08` (Stage 8A, HIGH).
 
+**Shared attribution probe result (2026-10-21).** 2 DeepSeek calls, USD 0.0012 at the peak rate, one conversation of four
+people in the separated form. DeepSeek accepted five consecutive `user` messages on FAST (thinking disabled) and on DEEP
+(thinking enabled): HTTP 200 and a completed reply in both, FAST in 2.6 s of its 3 s budget. The probe shows format
+acceptance only; it judges no attribution and compares nothing. The comparative attribution test has not run and awaits
+the Product Owner's authorization.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**
