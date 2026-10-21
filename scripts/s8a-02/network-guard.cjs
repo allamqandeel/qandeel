@@ -62,6 +62,9 @@ if (!DRY) {
   if (spend.round !== undefined && spend.round !== ROUND) throw new Error('S8A_02_GUARD: spend state belongs to another round');
 }
 const persist = () => { if (!DRY) fs.writeFileSync(statePath, JSON.stringify(spend, null, 2)); };
+// S8A-02 Round 3: the state file is created (with its directory) when the guard loads, so a state that cannot be written
+// stops the run before any attempt is counted or sent, never inside an attempt.
+if (!DRY) { fs.mkdirSync(require('node:path').dirname(statePath), { recursive: true }); persist(); }
 const run = { label: process.env.QANDEEL_EVAL_RUN_LABEL ?? null, attemptsThisRun: 0, blocked: [], scrubbed };
 
 function forbid(what) {
