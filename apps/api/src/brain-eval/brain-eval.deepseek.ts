@@ -7,7 +7,7 @@ import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/inte
 import type { ModelRouter, ModelRouterRequest, ProcessingPath } from '../model-router/model-router.types';
 import { buildEvaluationRequest, evaluationGuidance, evaluationSafetyGuidance, stableCaseParity } from './brain-eval.harness';
 import type { BrainEvaluationCase } from './brain-eval.types';
-import { separatedSharedContext } from '../shared-world/shared-conversation-model-input';
+import { assembleSourcedSharedConversationRequest, separatedSharedContext } from '../shared-world/shared-conversation-model-input';
 import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds';
 
 // S8A-02 — the DeepSeek-only path of the ONE brain-eval system (Product Owner D3, 2026-10-21).
@@ -26,7 +26,9 @@ import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds
 // `core-v3.1`, core v3 with a revised world-neutral paragraph 3 (the Personal core is the same in both). Shared attribution
 // (Product Owner Shared Attribution Engineering Decision, 2026-10-21): `shared-merged` against `shared-separated`, the same
 // core v3.1 guidance on two representations of the same Shared conversation; only the provider message boundaries differ.
-export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1', 'shared-merged', 'shared-separated'] as const;
+// Shared attribution integrity (Product Owner decision, 2026-10-21): `shared-sourced`, the server-sourced record candidate,
+// differs from production only in its context and in the Shared frame that explains the record; the core is the same.
+export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1', 'shared-merged', 'shared-separated', 'shared-sourced'] as const;
 export type DeepSeekEvaluationLabel = typeof DEEPSEEK_EVALUATION_LABELS[number];
 
 export function isDeepSeekEvaluationLabel(value: string | undefined): value is DeepSeekEvaluationLabel {
@@ -46,10 +48,11 @@ const GUIDANCE_CORES: Readonly<Record<Exclude<DeepSeekEvaluationLabel, 'baseline
   'core-v3.1': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
   'shared-merged': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
   'shared-separated': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
+  'shared-sourced': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
 };
 
-/** The Shared representation a label names: production's merged context, or the experimental separated candidate (a-1). */
-export const SHARED_REPRESENTATION_LABELS = { 'shared-merged': 'MERGED', 'shared-separated': 'SEPARATED' } as const;
+/** The Shared representation a label names: production's merged context, or an experimental candidate: separated (a-1), sourced. */
+export const SHARED_REPRESENTATION_LABELS = { 'shared-merged': 'MERGED', 'shared-separated': 'SEPARATED', 'shared-sourced': 'SOURCED' } as const;
 const isRepresentationLabel = (label: DeepSeekEvaluationLabel): label is keyof typeof SHARED_REPRESENTATION_LABELS =>
   Object.prototype.hasOwnProperty.call(SHARED_REPRESENTATION_LABELS, label);
 
@@ -93,6 +96,13 @@ export function deepSeekEvaluationRequest(testCase: BrainEvaluationCase, label?:
     if (label !== undefined && isRepresentationLabel(label) && SHARED_REPRESENTATION_LABELS[label] === 'SEPARATED') {
       if (testCase.world.kind !== 'SHARED') throw new Error(`${testCase.id}: ${label} applies to Shared cases only.`);
       return { ...request, context: separatedSharedContext(testCase.world.conversation) };
+    }
+    // The sourced arm replaces the context and the Shared frame only; everything else is the production request.
+    if (label !== undefined && isRepresentationLabel(label) && SHARED_REPRESENTATION_LABELS[label] === 'SOURCED') {
+      if (testCase.world.kind !== 'SHARED') throw new Error(`${testCase.id}: ${label} applies to Shared cases only.`);
+      const sourced = assembleSourcedSharedConversationRequest(testCase.world.conversation, safetyGuidance);
+      if (sourced === null) throw new Error(`${testCase.id}: the sourced candidate refuses this conversation.`);
+      return { ...request, behavioralGuidance: sourced.behavioralGuidance, context: sourced.context };
     }
     return request;
   }

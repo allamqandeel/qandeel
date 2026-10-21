@@ -332,4 +332,22 @@ structural message record, a new versioned material read returning a per-request
 position, collision-only labels) awaits the Product Owner's decisions; nothing frozen is changed. Part T judged
 attribution only; language (Part L) has not been tested.
 
+**Shared Attribution Integrity decision (Product Owner, 2026-10-21).** `QAN-BL-AI-09` is admitted (`HIGH`, Stage 8A).
+Neither the merged nor the separated representation is a final solution. One bounded design is to cover who sent each
+message, people who share a Name or have none, the person an earlier QANDEEL reply answered where stored data proves it,
+and quotations that must never become their alleged author's own message; no internal identifier reaches the provider;
+Migration `0171` is not approved; the core personality and FAST / DEEP are not changed; a structured format alone is not
+accepted as proof. Since then, S8A-02 has built the **server-sourced candidate**, for evaluation only (production
+unchanged): each person's message is one record the server writes, `from` (the sender the server knows) and `text`
+(exactly what they wrote), on one line with no line break of any kind, so nothing in a message can start a record or a
+speaker line; a Name shared by different authors gets a collision-only number, never an identifier; a reply link is shown
+only when stored data proves it and the rendering cannot point at the wrong message, and is never inferred from order;
+the Shared frame (not the core) explains the record. The trusted data was checked first: the reply composition already
+reads each message's author identity server-side (the frozen `0089` resolver returns `author_user_id` for every
+recipient it calls), so telling authors apart needs no database change; the reply link is stored (the `0139` reply
+identities derive from the human command) but no granted read returns it, so it needs a new read whose design awaits the
+Product Owner. Free proofs pass, zero calls. A focused paid check (five conversations: the three that mixed people in
+Part T, and Karim's own statement against a line written in his name inside Sara's message; sourced against production;
+30 attempts) is proposed and cannot send anything until its count and cap are approved.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

@@ -2,12 +2,13 @@ import {
   EVALUATION_ARTIFACT_DIRECTORY, GOLDEN_CONVERSATION_ARTIFACT_DIRECTORY, GOLDEN_EXTENDED_ARTIFACT_DIRECTORY, GOLDEN_ROUND2_ARTIFACT_DIRECTORY,
   GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
   SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY,
+  SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY,
 } from './brain-eval.paths';
 import type { DeepSeekEvaluationLabel } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE } from './brain-eval.golden-extended.suite';
 import { GOLDEN_ROUND2_PATH_SUITE, GOLDEN_ROUND2_SUITE } from './brain-eval.golden-round2.suite';
 import { GOLDEN_ROUND3_PERSONALITY_SUITE, GOLDEN_ROUND3_SHARED_SUITE } from './brain-eval.golden-round3.suite';
-import { SHARED_ATTRIBUTION_PROBE_SUITE, SHARED_ATTRIBUTION_SUITE } from './brain-eval.shared-attribution.suite';
+import { SHARED_ATTRIBUTION_PROBE_SUITE, SHARED_ATTRIBUTION_SOURCED_SUITE, SHARED_ATTRIBUTION_SUITE } from './brain-eval.shared-attribution.suite';
 import { GOLDEN_CONVERSATION_SUITE } from './brain-eval.golden.suite';
 import { BRAIN_EVALUATION_SUITE } from './brain-eval.suite';
 import { GOLDEN_CONVERSATION_RUBRIC, RUBRIC, type BrainEvaluationCase } from './brain-eval.types';
@@ -52,7 +53,7 @@ export function resolveEvaluationSuite(name: string | undefined): EvaluationSuit
 export interface DeepSeekEvaluationSuiteDefinition extends EvaluationSuiteDefinition {
   readonly repeats: number;
   readonly labels: ReadonlyArray<DeepSeekEvaluationLabel>;
-  readonly round: 1 | 2 | 3 | 4 | 5 | 6;
+  readonly round: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   /** GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. */
   readonly comparison: 'GUIDANCE' | 'PATHS';
   /** Stop the run, sending nothing more, once more than this many cases are INCONCLUSIVE (S8A-02 Shared attribution D3). */
@@ -108,6 +109,14 @@ export const DEEPSEEK_EVALUATION_SUITES = {
   'shared-attribution-language': {
     cases: GOLDEN_ROUND3_SHARED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY,
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 6, comparison: 'GUIDANCE',
+  },
+  // Round 7 (Product Owner Shared Attribution Integrity decision, 2026-10-21): the focused check of the server-sourced
+  // candidate against production on the five conversations that decide it. Registered for the free checks only: the guard
+  // gives round 7 no caps and the launcher does not list it, so it sends nothing until its count and cap are approved.
+  'shared-attribution-sourced': {
+    cases: SHARED_ATTRIBUTION_SOURCED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY,
+    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-sourced'], round: 7, comparison: 'GUIDANCE',
+    stopWhenInconclusiveExceeds: 1,
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;
 
