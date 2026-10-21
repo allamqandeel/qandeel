@@ -821,7 +821,9 @@ stay as written.
   production does not send; production's merged input is proven byte-identical. A two-call DeepSeek probe precedes any
   attribution test; mixing between people blocks S8A-02's closure. Probe done (2 calls, USD 0.0012): DeepSeek accepts
   consecutive `user` messages on FAST and DEEP, both replies completed. Part T (attribution only, 60 calls, USD 0.12) is
-  authorized; Part L waits for the Product Owner's review of Part T. `AI-06` / `AI-07` / `AI-08` block Shared readiness.
+  done (60 / 60, USD 0.026): information mixing proven in both representations (separated 4 replies, merged 2), the
+  separated candidate worse on a quoted speaker line; not approvable, Part L not started, awaiting the Product Owner's
+  review. `AI-06` / `AI-07` / `AI-08` block Shared readiness; a quoted-speaker finding is proposed as `AI-09`.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); 86 items. No routing, budget or real-user change.

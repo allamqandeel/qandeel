@@ -317,4 +317,19 @@ byte-identical to Karim speaking. A run stops, sending nothing more, once more t
 replies. Part L waits for the Product Owner's review of Part T. `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-08` are real
 blockers to Shared World readiness, not optional improvements.
 
+**Part T result (2026-10-21).** 60 of 60 authorized attempts, FAST only, USD 0.0258 at the peak rate (cumulative with the
+probe: 62 attempts, USD 0.0270); no retries. Separated 29 / 30 replies, merged 27 / 30; every missing reply was accepted
+(HTTP 200) and cut at the 3 s FAST budget, all in the one conversation that needs the longest answer, which is
+inconclusive in the merged arm only; the stop rule was not triggered. **Information mixing is proven in both
+representations**, so neither can be approved: separated in 4 replies (the quoted line read as Karim's own statement in
+3 of 3, and one newcomer's circumstance placed on the person born in the city), merged in 2 (the quoted line once, and one
+message's author lost and replaced by a guess). The separated candidate did not protect against the quoted speaker line
+and was worse there; per the Product Owner's D3, Part L does not proceed. Both representations mark a speaker only by a
+`Name:` line prefix that text inside a message can imitate, which is also a way for one participant to put words in
+another's name: a fourth identity finding, recorded here and proposed to the Product Owner for admission as
+`QAN-BL-AI-09` (not yet admitted). A bounded proposal for server-side participant distinction without identifiers (a
+structural message record, a new versioned material read returning a per-request author ordinal and the replied-to
+position, collision-only labels) awaits the Product Owner's decisions; nothing frozen is changed. Part T judged
+attribution only; language (Part L) has not been tested.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**
