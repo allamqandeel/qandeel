@@ -177,7 +177,7 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
 - Proof: `deepseek-model-router.spec.ts`, `model-output-release-guard.spec.ts`, the S8A-01 block of
   `conversation-orchestrator.service.spec.ts`, `database/verify-migration-0170.mjs` (API CI), the AI-COST-01 contract and the static contract
   `tests/s8a-01-deepseek-production-integration-contract.test.mjs`.
-- Register: `QAN-BL-AI-01` (Stage 9), `QAN-BL-AI-02` (Stage 8A), `QAN-BL-AI-03` (Stage 9) admitted from the merge; 81 items
+- Register: `QAN-BL-AI-01` (Stage 8A; Stage 9 approves the compliance surfaces), `QAN-BL-AI-02` (Stage 8A), `QAN-BL-AI-03` (Stage 9) admitted from the merge; 81 items
   (backlog §7). BG-08 / BG-09 at CP4.
 - Still closed: no real user's data reaches DeepSeek; no paid call has been made; CP4 (at most 12 calls, USD 0.30) and
   S8A-02 each wait for the Product Owner.

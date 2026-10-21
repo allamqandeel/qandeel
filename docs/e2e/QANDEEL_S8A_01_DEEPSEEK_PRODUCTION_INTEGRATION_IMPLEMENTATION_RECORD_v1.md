@@ -172,7 +172,9 @@ ledger) with deterministic doubles for the subsidiary operations, a network allo
   none is claimed by S8A-01's contract. `QAN-BL-INTEL-02`'s reopen condition 4 ("Stage 8A binds a real intent or
   candidate provider") is not triggered: S8A-01 binds the reply only, and the intent and candidate providers are
   unchanged; `QAN-BL-AI-02` names the condition so that the task which moves them reads it. `QAN-BL-VOICE-01` is untouched.
-- **Admitted at CP2 (effective from the merge):** `QAN-BL-AI-01` (real-user enablement for DeepSeek, `HIGH`),
+- **Admitted at CP2 (effective from the merge):** `QAN-BL-AI-01` (real-user enablement for DeepSeek, `HIGH`, owner Stage 8A: output
+  protection, the provider disclosures and the core data-sharing requirements; Stage 9 keeps the approval of the
+  compliance surfaces and the final release requirements, Product Owner 2026-10-21),
   `QAN-BL-AI-02` (the background calls still bound to OpenAI / Gemini, `HIGH`, owner Stage 8A) and `QAN-BL-AI-03`
   (time-of-day pricing, `MEDIUM`).
 - **BG-08 / BG-09** are reconciled at CP4, the closing checkpoint; this record's banner moves to its final state then.

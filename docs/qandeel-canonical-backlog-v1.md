@@ -212,7 +212,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-06` | Export My Data's Photo Folder Save on iOS, Physical Android Devices and Read-Only Places | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-03` | Account Erasure Outside the Personal Replay: Non-Personal Replay Sources and Replay Distribution | `Stage 9 — Economy + Launch Closure (Replay distribution / CW2-08)` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-RSP-03` | Arabic Global Switcher Destination Words Truncated at the Default Text Size on a Physical Phone | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
-| `QAN-BL-AI-01` | DeepSeek Real-User Enablement: Data Terms, Disclosure, Consent, Policy, In-App Report, Pseudonymous Identifier and Output Moderation | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-01` | DeepSeek Real-User Enablement: Data Terms, Disclosure, Consent, Policy, In-App Report, Pseudonymous Identifier and Output Moderation | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-02` | The Background and Semantic Model Calls Are Still Bound to OpenAI and Gemini | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-03` | DeepSeek's Time-of-Day Pricing Cannot Be Represented by a Price Card | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 
@@ -3015,8 +3015,12 @@ at the Product Owner's CP0 decision 5. Nothing here authorizes implementation (B
 - **Source:** [S8A-01 record](e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §5, §6; the
   Product Owner's CP0 decisions 4, 5 and 7 (2026-10-21).
 - **Why deferred:** decision 5 records these requirements and their owner without implementing the compliance surfaces in
-  S8A-01; they are release and legal gates, not model qualification.
-- **Owner task:** `Stage 9 — Economy + Launch Closure (release-readiness gate)`
+  S8A-01.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` (the S8A task that claims it; none is named yet).
+- **Ownership split (the Product Owner, 2026-10-21):** Stage 8A owns the output protection (7), the DeepSeek provider
+  disclosures (2, 4) and the core data-sharing requirements (1, 3, 6), and the in-app report (5) as their means. Stage 9
+  keeps only the approval of the compliance surfaces and the final release requirements, inside its existing
+  release-readiness gate; that is not a second item.
 - **Severity:** `HIGH` — sending a real user's private conversation to a provider without disclosure and consent breaks
   the privacy contract.
 - **Reopen condition:** a task contract claims it. It closes only on the seven items above, with the router's
@@ -4707,7 +4711,7 @@ paragraph above is effective; it stays as written.
   reopen condition 4 not triggered (the reply is bound; the intent and candidate providers are unchanged).
   `QAN-BL-VOICE-01`: untouched.
 - **Admitted (BG-06 / BG-08), at the Product Owner's CP0 decisions 3 and 5:** `QAN-BL-AI-01` (DeepSeek real-user
-  enablement, `HIGH`, Stage 9), `QAN-BL-AI-02` (the background calls still on OpenAI / Gemini, `HIGH`, Stage 8A),
+  enablement, `HIGH`, Stage 8A; Stage 9 approves the compliance surfaces and the final release requirements), `QAN-BL-AI-02` (the background calls still on OpenAI / Gemini, `HIGH`, Stage 8A),
   `QAN-BL-AI-03` (time-of-day pricing, `MEDIUM`, Stage 9).
 - **Checked and not admitted (BG-06):** the real-model evaluation of the existing Golden and preference suites with
   accounted DeepSeek calls is already `QAN-BL-IP-02` / `QAN-BL-ACE-02` (Stage 8A); CP4 is S8A-01's own checkpoint.

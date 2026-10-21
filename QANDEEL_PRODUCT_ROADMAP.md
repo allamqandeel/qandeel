@@ -793,7 +793,7 @@ stay as written.
   and outside `SYNTHETIC_ONLY`; the output release guard; AI-COST-01 accounting through migration `0170` (DeepSeek
   `UNPRICED`, Credits not activated); deterministic tests including the real orchestrator over the accounted transport
   and real PostgreSQL. No paid call was made. Record: [S8A-01](docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md).
-- **Admitted from the merge:** `QAN-BL-AI-01` (real-user enablement; Stage 9), `QAN-BL-AI-02` (background calls still on
+- **Admitted from the merge:** `QAN-BL-AI-01` (real-user enablement; Stage 8A, with Stage 9 approving the compliance surfaces and the final release requirements), `QAN-BL-AI-02` (background calls still on
   OpenAI / Gemini; Stage 8A), `QAN-BL-AI-03` (time-of-day pricing; Stage 9).
 - **Not claimed:** DeepSeek qualification (CP4 not run), "DeepSeek only", any real-user use, any gate opened.
 - **Next:** the Product Owner's separate approval of CP4 (at most 12 synthetic calls, USD 0.30). No merge, S8A-02 or

@@ -29,7 +29,7 @@ const M0170 = 'database/migrations/0170_s8a_01_deepseek_provider_ledger_admissio
 const RECORD = 'docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md';
 const BACKLOG = 'docs/qandeel-canonical-backlog-v1.md';
 const ADMITTED = {
-  'QAN-BL-AI-01': ['`Stage 9 — Economy + Launch Closure (release-readiness gate)`', '`HIGH`'],
+  'QAN-BL-AI-01': ['`Stage 8A — QANDEEL AI Brain / Production LLM Runtime`', '`HIGH`'],
   'QAN-BL-AI-02': ['`Stage 8A — QANDEEL AI Brain / Production LLM Runtime`', '`HIGH`'],
   'QAN-BL-AI-03': ['`Stage 9 — Economy + Launch Closure (release-readiness gate)`', '`MEDIUM`'],
 };
