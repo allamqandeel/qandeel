@@ -8,7 +8,8 @@ import type { ModelRouterContextMessage, ModelRouterRequest } from '../model-rou
 import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
 import { DEEPSEEK_MAX_OUTPUT_TOKENS, type DeepSeekModelRouterConfig } from '../model-router/providers/deepseek/deepseek-model-router.config';
 import {
-  SHARED_CONVERSATION_FRAME, SHARED_CONVERSATION_FRAME_SOURCED, UNNAMED_PARTICIPANT, assembleSharedConversationRequest,
+  SHARED_CONVERSATION_FRAME, SHARED_CONVERSATION_FRAME_SOURCED, SHARED_FRAME_NAME_PREFIX_SENTENCE, SHARED_FRAME_NUMBER_SENTENCE,
+  SHARED_FRAME_RECORD_SENTENCES, SHARED_FRAME_REPLY_LINK_SENTENCE, UNNAMED_PARTICIPANT, assembleSharedConversationRequest,
   assembleSourcedSharedConversationRequest, boundedSharedContext, provenQandeelReplyTargets, sharedSpeakerLabels, sourcedSharedContext,
   type SharedConversationTurn,
 } from '../shared-world/shared-conversation-model-input';
@@ -116,6 +117,32 @@ describe('S8A-02 sourced candidate — production is untouched (zero calls)', ()
     expect(SHARED_CONVERSATION_FRAME_SOURCED).toContain(production[2]);
     expect(SHARED_CONVERSATION_FRAME_SOURCED).toContain('Address the people present; do not take one person\'s side by default.');
     expect(SHARED_CONVERSATION_FRAME_SOURCED).not.toContain('begins with their name');
+  });
+
+  it('D2: the sourced frame is the production frame with ONE sentence replaced, and each optional definition appears only when used', () => {
+    expect(SHARED_CONVERSATION_FRAME.split(SHARED_FRAME_NAME_PREFIX_SENTENCE)).toHaveLength(2);
+    expect(SHARED_CONVERSATION_FRAME_SOURCED).toBe(SHARED_CONVERSATION_FRAME.replace(SHARED_FRAME_NAME_PREFIX_SENTENCE, SHARED_FRAME_RECORD_SENTENCES));
+    expect(SHARED_CONVERSATION_FRAME_SOURCED.split('\n')).toHaveLength(SHARED_CONVERSATION_FRAME.split('\n').length);
+    const guidance = (conversation: ReadonlyArray<SharedConversationTurn>) => assembleSourcedSharedConversationRequest(conversation)!.behavioralGuidance;
+    // The focused check's five conversations, and every registered Shared case, use the base frame only.
+    for (const testCase of [...SHARED_ATTRIBUTION_SOURCED_SUITE, ...sharedCases()]) {
+      const sent = deepSeekEvaluationRequest(testCase, 'shared-sourced').behavioralGuidance;
+      expect(sent).toContain(SHARED_CONVERSATION_FRAME_SOURCED);
+      expect(sent).not.toContain(SHARED_FRAME_NUMBER_SENTENCE);
+      expect(sent).not.toContain(SHARED_FRAME_REPLY_LINK_SENTENCE);
+    }
+    const twoSaras = [human('سارة', 'أ', 1), human('سارة', 'ب', 2), human('عمر', '؟', 3)];
+    expect(guidance(twoSaras)).toContain(`${SHARED_FRAME_RECORD_SENTENCES} ${SHARED_FRAME_NUMBER_SENTENCE} Address`);
+    expect(guidance(twoSaras)).not.toContain(SHARED_FRAME_REPLY_LINK_SENTENCE);
+    const linked = [human('منى', 'ينفع؟'), qandeel('أيوه.', 0), human('منى', 'تمام؟')];
+    expect(guidance(linked)).toContain(`${SHARED_FRAME_RECORD_SENTENCES} ${SHARED_FRAME_REPLY_LINK_SENTENCE} Address`);
+    expect(guidance(linked)).not.toContain(SHARED_FRAME_NUMBER_SENTENCE);
+    // A link whose answered message the history budget dropped is not shown, and needs no definition.
+    const dropped = [human('منى', 'كلام '.repeat(5_000)), qandeel('أيوه.', 0), human('منى', 'تمام؟')];
+    expect(records(sourcedSharedContext(dropped))).toEqual([{ from: 'منى', text: 'تمام؟' }]);
+    expect(guidance(dropped)).not.toContain(SHARED_FRAME_REPLY_LINK_SENTENCE);
+    // Nothing about personality, behaviour or reply format is added.
+    expect(SHARED_CONVERSATION_FRAME_SOURCED).not.toMatch(/plain words|never records|do not say/u);
   });
 });
 
@@ -300,7 +327,7 @@ describe('S8A-02 sourced candidate — the evaluation arm and the focused check 
     expect(() => assertGuidanceMatchesLabel([personal], 'shared-sourced')).toThrow('not a Shared case');
   });
 
-  it('the focused check: five conversations, all FAST, sourced against merged, 30 attempts in round 7, which nothing can send yet', () => {
+  it('the focused check: five conversations, all FAST, sourced against merged, 30 attempts and USD 0.04 in round 7 (D1)', () => {
     const suite = resolveDeepSeekEvaluationSuite('shared-attribution-sourced');
     expect(validateGoldenFocusedSuite(SHARED_ATTRIBUTION_SOURCED_SUITE)).toMatchObject({ caseCount: 5, fastCount: 5, deepCount: 0 });
     expect(SHARED_ATTRIBUTION_SOURCED_SUITE.map((testCase) => testCase.id)).toEqual([
@@ -314,7 +341,8 @@ describe('S8A-02 sourced candidate — the evaluation arm and the focused check 
     expect(plannedAttempts(suite.cases, suite.repeats) * suite.labels.length).toBe(30);
     const root = resolve(__dirname, '../../../..');
     const guard = readFileSync(resolve(root, 'scripts/s8a-02/network-guard.cjs'), 'utf8');
-    expect(guard.match(/const ROUND_CAPS = \{[^;]*\};/u)?.[0]).not.toMatch(/\b7:/u);
-    expect(readFileSync(resolve(root, 'scripts/s8a-02/deepseek-eval.mjs'), 'utf8')).not.toContain('shared-attribution-sourced');
+    expect(guard.match(/const ROUND_CAPS = \{[^;]*\};/u)?.[0]).toContain('7: { maxAttempts: 30, costCapUsd: 0.04 }');
+    expect(readFileSync(resolve(root, 'scripts/s8a-02/deepseek-eval.mjs'), 'utf8'))
+      .toContain("'shared-attribution-sourced': { round: 7, labels: ['shared-merged', 'shared-sourced'], spendSuite: 'shared-attribution-sourced' },");
   });
 });

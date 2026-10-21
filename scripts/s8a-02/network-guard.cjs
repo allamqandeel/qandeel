@@ -34,9 +34,11 @@ const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 // together, independent of Round 2. Round 4 (the Shared attribution probe; Product Owner Shared Attribution Engineering
 // Decision D2, 2026-10-21): at most 2 attempts and USD 0.02, its own file. Round 5 (Part T of the Shared attribution test;
 // Attribution Probe Review D1, 2026-10-21): at most 60 attempts and USD 0.12, its own file; with round 4 it stays inside the
-// cumulative 100 attempts and USD 0.20. Part L (round 6) has no caps here because it is not authorized: it refuses.
+// cumulative 100 attempts and USD 0.20. Part L (round 6) has no caps here because it is not authorized: it refuses. Round 7
+// (the focused check of the server-sourced candidate; Product Owner Attribution Integrity Prototype decision D1,
+// 2026-10-21): at most 30 attempts and USD 0.04, its own file, both arms together.
 const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 }, 3: { maxAttempts: 80, costCapUsd: 0.22 },
-  4: { maxAttempts: 2, costCapUsd: 0.02 }, 5: { maxAttempts: 60, costCapUsd: 0.12 } };
+  4: { maxAttempts: 2, costCapUsd: 0.02 }, 5: { maxAttempts: 60, costCapUsd: 0.12 }, 7: { maxAttempts: 30, costCapUsd: 0.04 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;

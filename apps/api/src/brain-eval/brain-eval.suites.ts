@@ -111,8 +111,9 @@ export const DEEPSEEK_EVALUATION_SUITES = {
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 6, comparison: 'GUIDANCE',
   },
   // Round 7 (Product Owner Shared Attribution Integrity decision, 2026-10-21): the focused check of the server-sourced
-  // candidate against production on the five conversations that decide it. Registered for the free checks only: the guard
-  // gives round 7 no caps and the launcher does not list it, so it sends nothing until its count and cap are approved.
+  // candidate against production on the five conversations that decide it. Approved by the Attribution Integrity Prototype
+  // decision (D1, 2026-10-21): 30 attempts and USD 0.04 (the guard's round 7 caps, its own spend file); a run stops,
+  // sending nothing more, once more than 1 of its 5 conversations is INCONCLUSIVE.
   'shared-attribution-sourced': {
     cases: SHARED_ATTRIBUTION_SOURCED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY,
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-sourced'], round: 7, comparison: 'GUIDANCE',

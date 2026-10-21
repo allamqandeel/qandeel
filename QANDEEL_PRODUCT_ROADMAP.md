@@ -824,7 +824,7 @@ stay as written.
   done (60 / 60, USD 0.026): information mixing proven in both representations (separated 4 replies, merged 2), the
   separated candidate worse on a quoted speaker line; neither representation is final, Part L not started.
   `AI-06` to `AI-09` block Shared readiness (`AI-09` admitted, 87 items). A server-sourced candidate is built for evaluation
-  only, with free proofs; its focused paid check (30 attempts) awaits the Product Owner's approval of count and cap.
+  only, with free proofs; its focused check is approved (30 attempts, USD 0.04) and waits on the verbatim frame (D2).
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); `AI-09` admitted (HIGH: a line inside a message posing as another speaker);

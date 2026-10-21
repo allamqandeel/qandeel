@@ -350,4 +350,19 @@ Product Owner. Free proofs pass, zero calls. A focused paid check (five conversa
 Part T, and Karim's own statement against a line written in his name inside Sara's message; sourced against production;
 30 attempts) is proposed and cannot send anything until its count and cap are approved.
 
+**Attribution Integrity Prototype decision (Product Owner, 2026-10-21).** The server-sourced representation is the
+candidate direction, not an approved production change. The focused check is approved: five conversations, three repeats
+per arm, 30 attempts, USD 0.04 in its own spend file, no retries and no extension, stopping once more than one
+conversation cannot reach two replies; Karim's own statement, Sara's quotation of it and the line written in his name are
+scored separately. Acceptance: no mixing of information sources in completed replies, with direct statements still
+attributed to their author; any invention, transfer of one person's view to another, or unfounded assumption is recorded;
+zero errors in the sample is limited positive evidence, not a guarantee. Before any paid call the full English frame is
+shown verbatim (D2): the candidate is now the production Shared frame with one sentence replaced ("Each person's message
+begins with their name." becomes two sentences defining the record), plus a definition of a numbered label or of a reply
+link only when the input carries one; nothing about personality or behaviour is added. Adopting it in production would
+need a narrow controlled amendment of ACE-SP-01 §2, §3 step 1 and CG-6 (Shared frame only), of S4-02 §7 step 3 ("Names
+only"), and of this record's §2 and §6 (the World frames); no CW2 sentence. No database change is started; whether the
+reply link needs a new read is decided after the check (D4). After the check: one recommendation, adopt for
+implementation or reject with the proven blocker (D5).
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**
