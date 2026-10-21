@@ -79,7 +79,12 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   await writeFile(join(directory, 'results.json'), JSON.stringify({
     suite: suite.name, label, round: suite.round, repeats: suite.repeats, dry: guard.dry, startedAt, finishedAt: new Date().toISOString(),
     gitHead: process.env.QANDEEL_EVAL_GIT_HEAD ?? null,
-    guidanceSha256: Object.fromEntries(suite.cases.map((testCase) => [testCase.id, sha256(deepSeekEvaluationRequest(testCase).behavioralGuidance)])),
+    guidanceSha256: Object.fromEntries(suite.cases.map((testCase) => [testCase.id, sha256(deepSeekEvaluationRequest(testCase, label).behavioralGuidance)])),
+    // S8A-02 Shared attribution: the context each case sent under this label (merged or separated), as a hash and a count.
+    context: Object.fromEntries(suite.cases.map((testCase) => {
+      const { context } = deepSeekEvaluationRequest(testCase, label);
+      return [testCase.id, { messages: context.length, sha256: sha256(JSON.stringify(context)) }];
+    })),
     summary: summarizeDeepSeekRun(results),
     controls: {
       guardSelfTest: selfTest.allBlocked, blockedDuringRun: guard.run.blocked.slice(selfTest.blockedBySelfTest),

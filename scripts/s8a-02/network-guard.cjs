@@ -31,10 +31,13 @@ const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 // 2026-10-21): at most 200 attempts and USD 0.35, both arms and the FAST / DEEP pairs together (exhausted). Round 3 (the
 // focused comparison, Part A Shared language and Part B gender and brevity; Product Owner Round 3 decision D4,
 // 2026-10-21; nothing runs before the final copy is approved verbatim): at most 80 attempts and USD 0.22 for both parts
-// together, independent of Round 2.
-const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 }, 3: { maxAttempts: 80, costCapUsd: 0.22 } };
+// together, independent of Round 2. Round 4 (the Shared attribution probe; Product Owner Shared Attribution Engineering
+// Decision D2, 2026-10-21): at most 2 attempts and USD 0.02, its own file. The full attribution plan (round 5) has no caps
+// here because it is not authorized: a run of it refuses before anything is sent.
+const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 }, 3: { maxAttempts: 80, costCapUsd: 0.22 },
+  4: { maxAttempts: 2, costCapUsd: 0.02 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
-if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error('S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (1, 2 or 3)');
+if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;
 const COST_CAP_USD = ROUND_CAPS[ROUND].costCapUsd;
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
@@ -111,6 +114,8 @@ globalThis.fetch = async function guardedFetch(input, init) {
       const json = await response.clone().json();
       attempt.bodyMs = Math.round(performance.now() - t0);
       const u = json.usage ?? null;
+      // A refusal's reason, as DeepSeek states it (its own words, never request or reply text), bounded.
+      if (response.status >= 400) attempt.providerError = { type: String(json.error?.type ?? ''), code: String(json.error?.code ?? ''), message: String(json.error?.message ?? '').slice(0, 300) };
       attempt.finishReason = json.choices?.[0]?.finish_reason ?? null;
       attempt.usage = u && { prompt: u.prompt_tokens, cacheHit: u.prompt_cache_hit_tokens, cacheMiss: u.prompt_cache_miss_tokens,
         completion: u.completion_tokens, reasoning: u.completion_tokens_details?.reasoning_tokens ?? null, total: u.total_tokens };

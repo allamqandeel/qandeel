@@ -816,5 +816,10 @@ stay as written.
   the peak rate. Neither version is clearly better: participant language is not solved, and gender and ALWAYS_BRIEF on DEEP
   are not improved. The diagnosis points to how Shared speakers are represented in the model input, not to wording; it
   awaits the Product Owner. A Shared information-attribution test is an acceptance condition of S8A-02.
-- Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12); 83
-  items. No routing, budget or real-user change.
+- **Shared attribution (Product Owner decision, 2026-10-21):** core v3.1 is kept as an experiment only. The separated
+  representation (a-1: one model message per person's message, visible Names, no identifiers) exists as a candidate that
+  production does not send; production's merged input is proven byte-identical. A two-call DeepSeek probe precedes any
+  attribution test; mixing between people blocks S8A-02's closure.
+- Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
+  `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
+  answered, are all invisible to the model); 86 items. No routing, budget or real-user change.

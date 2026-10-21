@@ -47,11 +47,16 @@ function render(turn: SharedConversationTurn): ModelRouterContextMessage {
 }
 
 /**
- * The bounded context: the current (last) message always; earlier messages newest-first while they fit the history
- * budget; consecutive same-role messages merged (several people may speak before QANDEEL); leading QANDEEL lines dropped
- * so the provider context opens with a person.
+ * The bounded context with one provider message per turn: the current (last) message always; earlier messages
+ * newest-first while they fit the history budget; leading QANDEEL lines dropped so the provider context opens with a
+ * person.
+ *
+ * S8A-02 (Product Owner Shared Attribution Engineering Decision, 2026-10-21): this is the EXPERIMENTAL candidate (a-1) —
+ * each person's message stays its own message under the same visible Name, and no identifier is added. Production does
+ * not send it: `assembleSharedConversationRequest` still sends `boundedSharedContext`, which is exactly this output with
+ * consecutive same-role messages merged, so the two can differ only in where one provider message ends.
  */
-export function boundedSharedContext(conversation: ReadonlyArray<SharedConversationTurn>): ModelRouterContextMessage[] {
+export function separatedSharedContext(conversation: ReadonlyArray<SharedConversationTurn>): ModelRouterContextMessage[] {
   const current = conversation.at(-1);
   if (current === undefined || current.producer !== 'HUMAN') return [];
   const kept: SharedConversationTurn[] = [current];
@@ -62,14 +67,28 @@ export function boundedSharedContext(conversation: ReadonlyArray<SharedConversat
     used += size;
     kept.unshift(conversation[index]);
   }
+  const messages = kept.map(render);
+  while (messages.length > 0 && messages[0].role === 'ASSISTANT') messages.shift();
+  return messages;
+}
+
+/** Consecutive same-role messages joined into one with a blank line between them (several people may speak before QANDEEL). */
+export function mergeConsecutiveSameRole(messages: ReadonlyArray<ModelRouterContextMessage>): ModelRouterContextMessage[] {
   const merged: ModelRouterContextMessage[] = [];
-  for (const message of kept.map(render)) {
+  for (const message of messages) {
     const last = merged.at(-1);
     if (last !== undefined && last.role === message.role) merged[merged.length - 1] = { role: last.role, content: `${last.content}\n\n${message.content}` };
     else merged.push(message);
   }
-  while (merged.length > 0 && merged[0].role === 'ASSISTANT') merged.shift();
   return merged;
+}
+
+/**
+ * The bounded context production sends: the separated context with consecutive same-role messages merged. Leading
+ * QANDEEL lines are dropped before the merge, which leaves the same result as dropping them after it.
+ */
+export function boundedSharedContext(conversation: ReadonlyArray<SharedConversationTurn>): ModelRouterContextMessage[] {
+  return mergeConsecutiveSameRole(separatedSharedContext(conversation));
 }
 
 export function assembleSharedConversationRequest(

@@ -291,4 +291,16 @@ nothing. Core v3.1 is not clearly better than core v3: the one-reply and standin
 regresses in its original conversation, and gender and ALWAYS_BRIEF on DEEP are not improved. Per D1 the wording is not
 lengthened; the diagnosis concerns how Shared speakers are represented in the model input, and awaits the Product Owner.
 
+**Shared attribution (Product Owner Shared Attribution Engineering Decision, 2026-10-21).** Core v3.1 stays on the branch as
+an experiment, neither adopted nor reverted. The Shared assembler now also exports the separated candidate (a-1),
+`separatedSharedContext`: one provider message per person's message, under the same visible Name, with no identifier.
+**Production does not send it.** `boundedSharedContext`, the context production sends, is now that output with
+consecutive same-role messages merged, and is proven byte-identical to the function it replaces on every Shared input
+(`apps/api/src/brain-eval/brain-eval.shared-attribution.spec.ts`). The real DeepSeek adapter's request body is the same in
+both representations except where a provider message ends. The DeepSeek `name` field (a-2) is not used, and the Model
+Router contract is unchanged. Adopting (a-1) in production would be a controlled change to the Shared assembler and needs
+the Product Owner's decision. Its acceptance evidence is the comparative attribution test: one probe of two calls (at most
+USD 0.02) first, then the full plan only if the Product Owner authorizes it (at most 100 calls and USD 0.20 in all). The
+identity hazards the separated form cannot fix are `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-08` (Stage 8A, HIGH).
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

@@ -14,3 +14,7 @@ export const GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFAC
 export const GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round3-shared');
 // S8A-02 Round 3 Part B: gender and declared brevity (git-ignored).
 export const GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round3-personality');
+// S8A-02 Shared attribution: the D2 probe, Part T and Part L (git-ignored).
+export const SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-probe');
+export const SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution');
+export const SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-language');

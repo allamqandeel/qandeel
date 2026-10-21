@@ -7,6 +7,7 @@ import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/inte
 import type { ModelRouter, ModelRouterRequest, ProcessingPath } from '../model-router/model-router.types';
 import { buildEvaluationRequest, evaluationGuidance, evaluationSafetyGuidance, stableCaseParity } from './brain-eval.harness';
 import type { BrainEvaluationCase } from './brain-eval.types';
+import { separatedSharedContext } from '../shared-world/shared-conversation-model-input';
 import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds';
 
 // S8A-02 — the DeepSeek-only path of the ONE brain-eval system (Product Owner D3, 2026-10-21).
@@ -22,8 +23,10 @@ import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds
 
 // Round 1: `baseline` / `candidate`. Round 2 (Product Owner decision, 2026-10-21): `core-v2` / `core-v3`, each the guidance
 // rendered at the commit the run is made from. Round 3 (Product Owner review of Round 2, 2026-10-21): `core-v3` against
-// `core-v3.1`, core v3 with a revised world-neutral paragraph 3 (the Personal core is the same in both).
-export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1'] as const;
+// `core-v3.1`, core v3 with a revised world-neutral paragraph 3 (the Personal core is the same in both). Shared attribution
+// (Product Owner Shared Attribution Engineering Decision, 2026-10-21): `shared-merged` against `shared-separated`, the same
+// core v3.1 guidance on two representations of the same Shared conversation; only the provider message boundaries differ.
+export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1', 'shared-merged', 'shared-separated'] as const;
 export type DeepSeekEvaluationLabel = typeof DEEPSEEK_EVALUATION_LABELS[number];
 
 export function isDeepSeekEvaluationLabel(value: string | undefined): value is DeepSeekEvaluationLabel {
@@ -41,10 +44,21 @@ const GUIDANCE_CORES: Readonly<Record<Exclude<DeepSeekEvaluationLabel, 'baseline
   'core-v2': { personal: QANDEEL_PERSONALITY_CORE_V2, world: QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL },
   'core-v3': { personal: QANDEEL_PERSONALITY_CORE_V3, world: QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL },
   'core-v3.1': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
+  'shared-merged': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
+  'shared-separated': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
 };
+
+/** The Shared representation a label names: production's merged context, or the experimental separated candidate (a-1). */
+export const SHARED_REPRESENTATION_LABELS = { 'shared-merged': 'MERGED', 'shared-separated': 'SEPARATED' } as const;
+const isRepresentationLabel = (label: DeepSeekEvaluationLabel): label is keyof typeof SHARED_REPRESENTATION_LABELS =>
+  Object.prototype.hasOwnProperty.call(SHARED_REPRESENTATION_LABELS, label);
 
 export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationCase>, label: DeepSeekEvaluationLabel): void {
   if (label === 'baseline' || label === 'candidate') return;
+  if (isRepresentationLabel(label)) {
+    const notShared = cases.filter((testCase) => testCase.world?.kind !== 'SHARED').map((testCase) => testCase.id);
+    if (notShared.length > 0) throw new Error(`NOT RUN: ${label} names a Shared representation; ${notShared[0]} is not a Shared case.`);
+  }
   const cores = GUIDANCE_CORES[label];
   const renders = (testCase: BrainEvaluationCase) => cores !== null
     && deepSeekEvaluationRequest(testCase).behavioralGuidance.includes(testCase.world === undefined ? cores.personal : cores.world);
@@ -68,12 +82,19 @@ export function currentMessageOf(testCase: BrainEvaluationCase): string {
  * The request a case sends on its named path: production guidance (the Behavioral Runtime's, or the World assembler's),
  * production Safety guidance, and the production budget of that path in that World.
  */
-export function deepSeekEvaluationRequest(testCase: BrainEvaluationCase): ModelRouterRequest {
+export function deepSeekEvaluationRequest(testCase: BrainEvaluationCase, label?: DeepSeekEvaluationLabel): ModelRouterRequest {
   const safetyGuidance = evaluationSafetyGuidance(testCase);
   const path = testCase.path;
   const complexity = path === 'DEEP' ? 'HIGH' : 'LOW';
   if (testCase.world !== undefined) {
-    return { ...worldEvaluationRequest(testCase, safetyGuidance), path, complexity, latencyBudgetMs: WORLD_REPLY_LATENCY_BUDGET_MS[path] };
+    const request: ModelRouterRequest = { ...worldEvaluationRequest(testCase, safetyGuidance), path, complexity, latencyBudgetMs: WORLD_REPLY_LATENCY_BUDGET_MS[path] };
+    // The separated arm replaces only the context, with the candidate (a-1) of the same conversation; everything else is the
+    // production request.
+    if (label !== undefined && isRepresentationLabel(label) && SHARED_REPRESENTATION_LABELS[label] === 'SEPARATED') {
+      if (testCase.world.kind !== 'SHARED') throw new Error(`${testCase.id}: ${label} applies to Shared cases only.`);
+      return { ...request, context: separatedSharedContext(testCase.world.conversation) };
+    }
+    return request;
   }
   return { ...buildEvaluationRequest(testCase, evaluationGuidance(testCase), safetyGuidance), latencyBudgetMs: PERSONAL_REPLY_LATENCY_BUDGET_MS[path] };
 }
@@ -176,7 +197,7 @@ export async function runDeepSeekEvaluation(
   for (const testCase of cases) caseRepeats(testCase, repeats);
   for (let repeat = 1; repeat <= repeats; repeat += 1) for (const testCase of cases) {
     if (repeat > caseRepeats(testCase, repeats)) continue;
-    const request = deepSeekEvaluationRequest(testCase);
+    const request = deepSeekEvaluationRequest(testCase, label);
     const route = decideFastDeepRoute(currentMessageOf(testCase));
     const base = {
       caseId: testCase.id, label, repeat, world: testCase.world?.kind ?? 'PERSONAL' as const, path: testCase.path,

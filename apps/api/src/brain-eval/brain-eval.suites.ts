@@ -1,11 +1,13 @@
 import {
   EVALUATION_ARTIFACT_DIRECTORY, GOLDEN_CONVERSATION_ARTIFACT_DIRECTORY, GOLDEN_EXTENDED_ARTIFACT_DIRECTORY, GOLDEN_ROUND2_ARTIFACT_DIRECTORY,
   GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
+  SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY,
 } from './brain-eval.paths';
 import type { DeepSeekEvaluationLabel } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE } from './brain-eval.golden-extended.suite';
 import { GOLDEN_ROUND2_PATH_SUITE, GOLDEN_ROUND2_SUITE } from './brain-eval.golden-round2.suite';
 import { GOLDEN_ROUND3_PERSONALITY_SUITE, GOLDEN_ROUND3_SHARED_SUITE } from './brain-eval.golden-round3.suite';
+import { SHARED_ATTRIBUTION_PROBE_SUITE, SHARED_ATTRIBUTION_SUITE } from './brain-eval.shared-attribution.suite';
 import { GOLDEN_CONVERSATION_SUITE } from './brain-eval.golden.suite';
 import { BRAIN_EVALUATION_SUITE } from './brain-eval.suite';
 import { GOLDEN_CONVERSATION_RUBRIC, RUBRIC, type BrainEvaluationCase } from './brain-eval.types';
@@ -50,7 +52,7 @@ export function resolveEvaluationSuite(name: string | undefined): EvaluationSuit
 export interface DeepSeekEvaluationSuiteDefinition extends EvaluationSuiteDefinition {
   readonly repeats: number;
   readonly labels: ReadonlyArray<DeepSeekEvaluationLabel>;
-  readonly round: 1 | 2 | 3;
+  readonly round: 1 | 2 | 3 | 4 | 5;
   /** GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. */
   readonly comparison: 'GUIDANCE' | 'PATHS';
 }
@@ -86,6 +88,22 @@ export const DEEPSEEK_EVALUATION_SUITES = {
   'golden-round3-personality': {
     cases: GOLDEN_ROUND3_PERSONALITY_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['core-v3', 'core-v3.1'], round: 3, comparison: 'GUIDANCE',
+  },
+  // Shared attribution (Product Owner Shared Attribution Engineering Decision, 2026-10-21). Round 4 is the D2 probe: one
+  // conversation on FAST and on DEEP, separated only, at most 2 attempts and USD 0.02. Round 5 is Part T (attribution) and
+  // Part L (the Round 3 Shared language cases), merged against separated: registered for the free checks only. The guard
+  // gives round 5 no caps, so neither can send anything until the Product Owner authorizes it (D4).
+  'shared-attribution-probe': {
+    cases: SHARED_ATTRIBUTION_PROBE_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY,
+    validate: validateGoldenPathPairSuite, repeats: 1, labels: ['shared-separated'], round: 4, comparison: 'PATHS',
+  },
+  'shared-attribution': {
+    cases: SHARED_ATTRIBUTION_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY,
+    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 5, comparison: 'GUIDANCE',
+  },
+  'shared-attribution-language': {
+    cases: GOLDEN_ROUND3_SHARED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY,
+    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 5, comparison: 'GUIDANCE',
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;
 

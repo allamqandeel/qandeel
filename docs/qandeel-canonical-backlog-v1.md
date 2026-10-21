@@ -217,6 +217,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-03` | DeepSeek's Time-of-Day Pricing Cannot Be Represented by a Price Card | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-04` | Shared and Public World DEEP Replies Keep the 10 s Budget Under DeepSeek | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-05` | Complex Messages Routed FAST Rarely Complete Within the 3 s Budget Under DeepSeek | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-06` | Two Shared World Participants With the Same Name Reach the Model as One Speaker | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-07` | Shared World Participants Without a Name All Reach the Model as One "A participant" | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-08` | QANDEEL's Earlier Shared Replies Reach the Model Without the Person They Answered | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -3138,6 +3141,102 @@ authorizes implementation (BG-07).
   path pairs and pinned by tests.
 - **Status:** `DEFERRED — OWNED`
 
+### `QAN-BL-AI-06` — Two Shared World Participants With the Same Name Reach the Model as One Speaker
+
+Admitted under BG-06 / BG-08 by S8A-02 at the Product Owner's Shared Attribution Engineering Decision (2026-10-21,
+D5; the S8A-02 pull request, not yet opened; effective from its merge), as a Stage 8A item with no separate task. Nothing
+here authorizes implementation (BG-07).
+
+- **Title / Finding:** the Shared model input labels every human message with its author's visible Name and nothing else.
+  A Name is not unique (`0123`: only the Login ID is). Two different people with the same Name reach the model as the
+  same bytes as one person with that Name saying both things, in production's merged representation and in the separated
+  candidate alike, so the model cannot tell what each of them said.
+- **Source:** the S8A-02 Shared attribution engineering check (2026-10-21) and its free proof,
+  `apps/api/src/brain-eval/brain-eval.shared-attribution.spec.ts` (the identity hazards), recorded in the
+  [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §7; the Product Owner's Shared Attribution Engineering
+  Decision (2026-10-21), D5.
+- **Current truth:** the `0139` material read returns `author_name` and `is_self` and no per-author key, so the Shared
+  assembler has nothing to tell two people apart. No identifier reaches the model, and none may (Product Owner,
+  2026-10-21).
+- **Impact on trust and attribution:** a fact, opinion, decision or correction of one person can be read, and repeated by
+  QANDEEL, as the other's, and neither person can see why.
+- **Controlled change it may need:** a server-side distinction between authors within one request, for example an opaque
+  per-read author ordinal from a new version of the `0139` read, used only inside the server to derive the label the
+  model sees (such as the Name with a stable ordinal), never an identifier. That changes a frozen RPC and adds
+  model-visible text (copy); each needs its own Product Owner decision.
+- **Anti-duplication:** `QAN-BL-AI-07` is people with no Name; `QAN-BL-AI-08` is the person an earlier QANDEEL reply
+  answered. `QAN-BL-ACE-02` scores reply behaviour, not the identity carried by the input.
+- **Why deferred:** the Product Owner did not authorize changing the frozen database functions now, and kept the risk in
+  Stage 8A rather than ignoring it.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `HIGH` — information can be attributed to the wrong person in a Shared World, and nothing in the input
+  can prevent it.
+- **Reopen condition:** a condition of the Shared World readiness assessment. It is not closed without a fix or an
+  explicit Product decision based on evidence, and it is decided before any real Shared conversation reaches a production
+  model.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-AI-07` — Shared World Participants Without a Name All Reach the Model as One "A participant"
+
+Admitted under BG-06 / BG-08 by S8A-02 at the Product Owner's Shared Attribution Engineering Decision (2026-10-21,
+D5; the S8A-02 pull request, not yet opened; effective from its merge), as a Stage 8A item with no separate task. Nothing
+here authorizes implementation (BG-07).
+
+- **Title / Finding:** an account provisioned without a Name keeps `NULL` (`0123`), and the `0139` read returns
+  `NULL` for it. The Shared assembler renders every such message as `A participant: …`, so two or more people without a
+  Name reach the model as one speaker, in both representations.
+- **Source:** the S8A-02 Shared attribution engineering check (2026-10-21) and its free proof,
+  `apps/api/src/brain-eval/brain-eval.shared-attribution.spec.ts` (the identity hazards), recorded in the
+  [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §7; the Product Owner's Shared Attribution Engineering
+  Decision (2026-10-21), D5.
+- **Current truth:** `UNNAMED_PARTICIPANT` is one fixed label (S4-02). No identifier reaches the model, and none may.
+- **Impact on trust and attribution:** what several unnamed people said is merged into one voice; counts, opinions and
+  decisions can be attributed to the wrong person or to nobody.
+- **Controlled change it may need:** the same server-side, per-request author distinction as `QAN-BL-AI-06` (for example
+  "A participant 1", "A participant 2", derived inside the server and never an identifier), which changes a frozen RPC
+  and adds copy; or a Product decision that a Shared World member always has a Name.
+- **Anti-duplication:** `QAN-BL-AI-06` is people who share a Name; this item is people with none.
+- **Why deferred:** the Product Owner did not authorize changing the frozen database functions now, and kept the risk in
+  Stage 8A rather than ignoring it.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `HIGH` — several people's words reach the model as one person's.
+- **Reopen condition:** a condition of the Shared World readiness assessment. It is not closed without a fix or an
+  explicit Product decision based on evidence, and it is decided before any real Shared conversation reaches a production
+  model.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-AI-08` — QANDEEL's Earlier Shared Replies Reach the Model Without the Person They Answered
+
+Admitted under BG-06 / BG-08 by S8A-02 at the Product Owner's Shared Attribution Engineering Decision (2026-10-21,
+D5; the S8A-02 pull request, not yet opened; effective from its merge), as a Stage 8A item with no separate task. Nothing
+here authorizes implementation (BG-07).
+
+- **Title / Finding:** a QANDEEL reply in a Shared World answers one person's message. The server composes it for that
+  message (the `0139` reply work is bound to its command), but the material read returns no reply-to link, so the model
+  sees an earlier reply only by its position. In production's merged input it follows a block of several people. In the
+  separated candidate it follows the last message before it, which is not necessarily the one it answered: another person
+  can write in between.
+- **Source:** the S8A-02 Shared attribution engineering check (2026-10-21) and its free proof,
+  `apps/api/src/brain-eval/brain-eval.shared-attribution.spec.ts` (the identity hazards), recorded in the
+  [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §7; the Product Owner's Shared Attribution Engineering
+  Decision (2026-10-21), D5.
+- **Current truth:** an earlier QANDEEL reply is an `assistant` message with its text only. S8A-02 Round 3's language
+  failures followed an English reply to one person that the model then continued for others.
+- **Impact on trust and attribution:** an earlier answer, its language, or a commitment in it can be read as given to the
+  wrong person.
+- **Controlled change it may need:** a new version of the `0139` read exposing the reply-to link, rendered as
+  model-visible attribution (copy). It changes a frozen RPC; it needs its own Product Owner decision.
+- **Anti-duplication:** `QAN-BL-AI-06` / `QAN-BL-AI-07` are the authors of human messages; this item is the addressee of
+  QANDEEL's own replies.
+- **Why deferred:** the Product Owner did not authorize changing the frozen database functions now, and kept the risk in
+  Stage 8A rather than ignoring it.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `HIGH` — QANDEEL's own earlier words can be attached to the wrong person.
+- **Reopen condition:** a condition of the Shared World readiness assessment. It is not closed without a fix or an
+  explicit Product decision based on evidence, and it is decided before any real Shared conversation reaches a production
+  model.
+- **Status:** `DEFERRED — OWNED`
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3740,15 +3839,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 41 |
+| `DEFERRED — OWNED` | 44 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 29 |
-| **Total** | **83** |
+| **Total** | **86** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 47 |
+| `HIGH` | 50 |
 | `MEDIUM` | 34 |
 | `LOW` | 2 |
 
@@ -4819,6 +4918,18 @@ BG-08 at the Product Owner's review of the S8A-02 Round 2 evaluation (item 4). T
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 83 items; 41 / 4 / 9 / 29 by status, 47 / 34 / 2 by severity.**
 
+**S8A-02 Shared attribution change (2026-10-21; the S8A-02 pull request, not yet opened; effective from its merge).** BG-06
+/ BG-08 at the Product Owner's Shared Attribution Engineering Decision (D5). The paragraphs above stay as written.
+- **Admitted (BG-06 / BG-08):** `QAN-BL-AI-06` (two participants with the same Name reach the model as one speaker),
+  `QAN-BL-AI-07` (participants without a Name all reach it as one "A participant") and `QAN-BL-AI-08` (QANDEEL's earlier
+  Shared replies reach it without the person they answered); each `HIGH`, Stage 8A, no separate task, and each a
+  condition of the Shared World readiness assessment.
+- **Checked and not admitted:** the merging of consecutive speakers into one model message is S8A-02's own work (the
+  separated candidate and its attribution test), not residue.
+- **Reconciled in §9:** the Stage 8A row lists `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-08`.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 86 items; 44 / 4 / 9 / 29 by status, 50 / 34 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -4892,7 +5003,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
-| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13); `QAN-BL-AI-01`, `QAN-BL-AI-02` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-AI-04` (admitted by S8A-01's closing change); `QAN-BL-AI-05` (admitted by S8A-02 at the Product Owner's Round 2 review) |
+| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13); `QAN-BL-AI-01`, `QAN-BL-AI-02` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-AI-04` (admitted by S8A-01's closing change); `QAN-BL-AI-05` (admitted by S8A-02 at the Product Owner's Round 2 review); `QAN-BL-AI-06`, `QAN-BL-AI-07`, `QAN-BL-AI-08` (admitted by S8A-02 at the Product Owner's Shared Attribution Engineering Decision, D5) |
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |
