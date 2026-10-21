@@ -17,7 +17,8 @@ request, with the approved world-neutral paragraph 3), recorded verbatim in §5;
 verbatim, and the final world-neutral paragraph 3 (D1), recorded verbatim in §5.1; then *S8A-02 — Round 3 Product Owner
 Decisions* (2026-10-21): D1–D3, the direction of core v3.1 and the §3.2 amendment; then *S8A-02 — Round 3 Final Product Owner
 Decision* (2026-10-21): the paragraph 2 sentence (D3), the gender clause (D2) and the §3.2 sentence (D4) approved
-verbatim, recorded in §5.2; world-neutral paragraph 3.1 awaiting its verbatim approval  
+verbatim, recorded in §5.2; then *S8A-02 — Round 3 Final Approval* (2026-10-21): world-neutral paragraph 3.1
+approved verbatim (D1), recorded in §5.2  
 **Task:** `S8A-02` — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (Stage 8A). It carries the evidence of
 `QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase  
 **Implementation:** S8A-02, in the pull request that carries this record
@@ -210,8 +211,8 @@ current-writer wording of the world-neutral paragraph 3, with participant indepe
 D2, gender option A on the stated conditions; D3, a brevity request that holds on DEEP without dropping what is
 essential or what safety requires. The *Round 3 Final Product Owner Decision* (2026-10-21) then approves verbatim
 the paragraph 2 sentence (D3), the gender clause (D2: natural neutral wording first, the grammatical masculine only where
-neutral wording would be forced, gender never inferred or stored) and the §3.2 sentence (D4). World-neutral paragraph 3.1
-is shown in full for its own verbatim approval; no paid call runs before it.
+neutral wording would be forced, gender never inferred or stored) and the §3.2 sentence (D4). The *Round 3 Final Approval*
+(2026-10-21) approves world-neutral paragraph 3.1 verbatim, with no further change, and authorizes the Round 3 run.
 
 **Paragraph 2 — one sentence added after "rather than a clipped summary." (D3):** "When they have asked for brevity, keep to it even on a complex question: give your answer and the one or two points that matter most in a few sentences, never leaving out what is essential or what safety requires."
 
