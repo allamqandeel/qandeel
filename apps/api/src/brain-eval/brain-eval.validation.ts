@@ -10,6 +10,7 @@ import {
 import { evaluationGuidance, evaluationSafetyGuidance, expectedRequestCount } from './brain-eval.harness';
 import { REPOSITORY_ROOT } from './brain-eval.paths';
 import { EVALUATION_PRICING } from './brain-eval.pricing';
+import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds';
 import { GOLDEN_CONVERSATION_RUBRIC, RUBRIC, STYLE_FOCUS, type BrainEvaluationCase } from './brain-eval.types';
 
 export interface ValidationReport { caseCount: number; fastCount: number; deepCount: number; expectedPaidRequests: number; warnings: string[] }
@@ -78,12 +79,20 @@ export function validateGoldenConversationSuite(cases: ReadonlyArray<BrainEvalua
       if (!testCase.reviewNotes.some((note) => note.startsWith('FAIL if '))) throw new Error(`${testCase.id} is a negative control without an explicit FAIL condition.`);
     }
     // Safety is the production gate's decision: GUIDED exactly where labelled, never BLOCK (BLOCK never reaches a model).
-    const current = testCase.context.at(-1)?.content ?? '';
+    const current = testCase.world === undefined ? testCase.context.at(-1)?.content ?? '' : worldCurrentMessage(testCase);
     const disposition = gate.evaluate(current, testCase.context).disposition;
     if (disposition !== (testCase.safety === 'GUIDED' ? 'GUIDED' : 'ALLOW')) throw new Error(`${testCase.id}: the production Safety gate decides ${disposition}.`);
     evaluationSafetyGuidance(testCase);
-    // The case locale is the production locale for that turn (ACE-01 WP2), never a hand-picked dialect.
-    if (testCase.locale !== resolveConversationLocale({ currentUserContent: current, preferences })) throw new Error(`${testCase.id}: locale differs from the production locale.`);
+    if (testCase.world !== undefined) {
+      // S8A-02: a World case is exactly what that World's assembler sends: no Personal preference, `und`, same context.
+      if (testCase.interactionPreferences !== undefined) throw new Error(`${testCase.id}: a World case carries no Personal preference.`);
+      const request = worldEvaluationRequest(testCase, evaluationSafetyGuidance(testCase));
+      if (testCase.locale !== 'und' || request.locale !== 'und') throw new Error(`${testCase.id}: a World case has the World locale und.`);
+      if (JSON.stringify(request.context) !== JSON.stringify(testCase.context)) throw new Error(`${testCase.id}: context differs from the ${testCase.world.kind} assembler's.`);
+    } else if (testCase.locale !== resolveConversationLocale({ currentUserContent: current, preferences })) {
+      // The case locale is the production locale for that turn (ACE-01 WP2), never a hand-picked dialect.
+      throw new Error(`${testCase.id}: locale differs from the production locale.`);
+    }
     if (!evaluationGuidance(testCase).trim()) throw new Error(`${testCase.id}: empty production guidance.`);
   }
   const missing = STYLE_FOCUS.filter((focus) => !covered.has(focus));
@@ -96,4 +105,18 @@ export function assertPaidRunAllowed(environment: NodeJS.ProcessEnv): void {
   if (environment.QANDEEL_ALLOW_PAID_EVAL !== '1') throw new Error('NOT RUN: QANDEEL_ALLOW_PAID_EVAL=1 is required. No paid evaluation ran.');
   if (!environment.ANTHROPIC_API_KEY?.trim()) throw new Error('NOT RUN: ANTHROPIC_API_KEY is required. No provider calls were made.');
   if (!environment.OPENAI_API_KEY?.trim()) throw new Error('NOT RUN: OPENAI_API_KEY is required. No provider calls were made.');
+}
+
+/**
+ * S8A-02 (Product Owner D3) — the DeepSeek-only paid run: synthetic qualification mode, never production, the guard preload
+ * in place, no other provider's key in the process, and the explicit paid-evaluation switch. The key's value is never read here.
+ */
+export function assertDeepSeekRunAllowed(environment: NodeJS.ProcessEnv, guardPreloaded: boolean): void {
+  if (environment.QANDEEL_ALLOW_PAID_EVAL !== '1') throw new Error('NOT RUN: QANDEEL_ALLOW_PAID_EVAL=1 is required. No paid evaluation ran.');
+  if (environment.NODE_ENV === 'production') throw new Error('NOT RUN: DeepSeek is qualification-only and never runs in production.');
+  if (environment.DEEPSEEK_QUALIFICATION_MODE?.trim() !== 'SYNTHETIC_ONLY') throw new Error('NOT RUN: DEEPSEEK_QUALIFICATION_MODE=SYNTHETIC_ONLY is required.');
+  if (!environment.DEEPSEEK_API_KEY?.trim()) throw new Error('NOT RUN: DEEPSEEK_API_KEY is required. No provider calls were made.');
+  const others = Object.keys(environment).filter((name) => /^(?:OPENAI|ANTHROPIC|GEMINI|GOOGLE)_/u.test(name));
+  if (others.length) throw new Error(`NOT RUN: another provider's variables are present (${others.join(', ')}); this run is DeepSeek only.`);
+  if (!guardPreloaded) throw new Error('NOT RUN: the S8A-02 network and spend guard (scripts/s8a-02/network-guard.cjs) is not preloaded.');
 }
