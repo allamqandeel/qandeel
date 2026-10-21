@@ -59,7 +59,9 @@ test('ONE personality: the world-neutral core is derived from the approved core 
   const coreBlock = (name) => policy.slice(policy.indexOf(`export const ${name} = [`), policy.indexOf('].join(', policy.indexOf(`export const ${name} = [`)));
   const v1 = coreBlock('QANDEEL_PERSONALITY_CORE_V1');
   const v2 = coreBlock('QANDEEL_PERSONALITY_CORE_V2');
-  const outside = policy.replace(v1, '').replace(v2, '');
+  // RE-ANCHORED by S8A-02 Round 2 (2026-10-21; the Round 2 Copy Gate): core v3 is a third core block, derived the same way.
+  const v3 = coreBlock('QANDEEL_PERSONALITY_CORE_V3');
+  const outside = policy.replace(v1, '').replace(v2, '').replace(v3, '');
   for (const opening of ['Speak naturally as QANDEEL', 'Be concise by default', 'Listen first.', 'Show care through accurate attention',
     'Light humour may arise naturally', 'When genuine evidence supports', 'Keep suggestions proportionate']) {
     assert.equal(count(v1, opening), 1, `exactly one literal of the v1 paragraph opening "${opening}" exists in core v1`);
@@ -77,6 +79,19 @@ test('ONE personality: the world-neutral core is derived from the approved core 
     'Keep suggestions proportionate to the evidence and preserve user agency. Never claim to be human']) {
     assert.equal(count(v2, opening), 1, `exactly one literal of the v2 paragraph opening "${opening}" exists in core v2`);
   }
+  // S8A-02 Round 2: the approved world-neutral paragraph 3 of core v3, verbatim, and the same mapping applied to core v3.
+  const S8A_02_R2_WN_3 = "Answer each message in its writer\\'s language or dialect when reliably supported, subject to safety and that writer\\'s own explicit language request within its stated scope. A request made for one reply applies only to that reply; a request explicitly covering subsequent replies may apply only to the same writer within this conversation. Never apply one person\\'s request to anyone else, make it a rule for the group, or save it as a standing preference. Keep one dialect consistent within a reply instead of mixing forms from different dialects. When the language marks grammatical gender, follow the gender a person\\'s own words in this conversation clearly show, only for how you word your reply and never as a fact about them; when their words have not shown it, use natural wording that does not assume one, and never guess it from a name, a topic or a stereotype. Never infer identity from language or dialect.";
+  assert.ok(policy.includes(`const WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3 = '${S8A_02_R2_WN_3}';`), 'the approved world-neutral paragraph 3 of core v3');
+  assert.ok(policy.includes("export const QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL = QANDEEL_PERSONALITY_CORE_V3.split('\\n').map((paragraph, index) => {"),
+    'core v3 world-neutral is derived from core v3, not a second copy');
+  assert.ok(policy.includes('  if (index === 2) return WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3;'));
+  assert.equal(count(policy, "  if (index === 5) return replaceExactlyOnce(paragraph, 'at the user\\'s expense', 'at anyone\\'s expense');"), 2, 'CG-2 on v2 and on v3');
+  assert.equal(count(policy, "  if (index === 6) return replaceExactlyOnce(paragraph, 'humiliating the user', 'humiliating anyone');"), 2, 'CG-3 on v2 and on v3');
+  for (const opening of ['Speak as QANDEEL: one consistent personality', 'Answer directly when the request is clear', 'Reply in the person',
+    'Understand what the person means from their own words', 'Be warmly present', 'You have a quick, light sense of humour',
+    'When genuine evidence supports disagreement, say so', 'Keep suggestions proportionate to the evidence and preserve user agency. Never claim to be human']) {
+    assert.equal(count(v3, opening), 1, `exactly one literal of the v3 paragraph opening "${opening}" exists in core v3`);
+  }
 });
 
 test('one pure, append-only helper adds the approved Safety humour suspension on GUIDED turns only (CG-4)', () => {
@@ -87,7 +102,8 @@ test('one pure, append-only helper adds the approved Safety humour suspension on
   const body = policy.slice(start, policy.indexOf('\n}\n', start) + 2);
   // RE-ANCHORED by LANG-01 Work Package C (LA-17, D4): the world-neutral D4 line follows the world-neutral core.
   // RE-ANCHORED by S8A-02 (2026-10-21; D2): the helper renders the world-neutral core v2.
-  assert.ok(body.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'), 'the World prefix stays first');
+  // RE-ANCHORED by S8A-02 Round 2 (2026-10-21; the Round 2 Copy Gate): the helper renders the world-neutral core v3.
+  assert.ok(body.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'), 'the World prefix stays first');
   assert.ok(body.includes('  return safetyGuided ? `${guidance}\\n\\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;'), 'the line only when guided');
   assert.doesNotMatch(body, /await |this\.|preference|Preference|process\.env|fetch\(/u, 'pure: it reads nothing');
   assert.equal(count(policy, CG_4), 0, 'the suspension line is never copied: its only literal stays in the IP-IMP-01 module');

@@ -158,7 +158,10 @@ function explicitTriggerViolations(world) {
   const path = code(world.conversationPath).replace('When genuine evidence supports disagreement, be clear and respectful. Explain the reason without moralizing, humiliating the user or arguing to win.', '')
     // S8A-02 re-anchor (2026-10-21): the approved core v2 paragraph 7 (Product Owner D1) is the same kind of guidance TO the
     // model; exactly that sentence is excluded too.
-    .replace('When genuine evidence supports disagreement, say so clearly and respectfully instead of agreeing to please. Explain the reason without moralizing, humiliating the user or arguing to win.', '');
+    .replace('When genuine evidence supports disagreement, say so clearly and respectfully instead of agreeing to please. Explain the reason without moralizing, humiliating the user or arguing to win.', '')
+    // S8A-02 Round 2 re-anchor (2026-10-21): the approved core v3 paragraph 7 (the Round 2 Copy Gate), the same kind of
+    // guidance TO the model; exactly that sentence is excluded too.
+    .replace('When genuine evidence supports disagreement, say so clearly and respectfully instead of agreeing to please. Give your reasons without repeating them, and keep the explanation an important decision needs, without moralizing, humiliating the user or arguing to win.', '');
   if (/disagree|contest|I see it differently|أراه بشكل مختلف/iu.test(path)) out.push('the conversation path interprets what the reader says as a disagreement');
   if (!/onPress=\{\(\) => \{\n\s*void controller\.disagree\(\);/u.test(world.strip)) out.push('the act is not one explicit control');
   return out;
