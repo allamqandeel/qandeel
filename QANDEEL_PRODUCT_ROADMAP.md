@@ -806,3 +806,13 @@ stay as written.
 - **Not claimed:** DeepSeek qualification beyond CP4's first real conversation (the Personal reply, synthetic data), "DeepSeek only", any real-user use, any gate opened.
 - **Next:** the Product Owner's final review and merge decision on the S8A-01 pull request. No merge, S8A-02 or
   deployment without the Product Owner's explicit approval.
+
+### S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (2026-10-21; local branch, no PR)
+
+- **Evaluated on DeepSeek Flash, synthetic data, the accounted AI-COST-01 path:** Round 1 (60 calls) and Round 2 (200
+  calls, USD 0.209 at the peak rate). The branch renders core v3 ([amendment record](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md)).
+- **Product Owner's Round 2 review:** core v3 is **not adopted as written** and v2 is not restored. A shorter world-neutral
+  paragraph 3 and a focused comparison are awaiting approval; no further paid call before it. Gender guessed from a topic
+  and ALWAYS_BRIEF on DEEP stay open in S8A-02.
+- Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12); 83
+  items. No routing, budget or real-user change.

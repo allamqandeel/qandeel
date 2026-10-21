@@ -219,4 +219,10 @@ core v3, Text v4 composing core v3, the world-neutral cores derived by the same 
 Real-model before / after evidence on DeepSeek is the S8A-02 evaluation: Round 1 (the extended Golden suite, 30 synthetic
 cases) and Round 2 (core v2 against core v3: the targeted suite `golden-round2` and the FAST / DEEP pairs).
 
+**Round 2 review (Product Owner, 2026-10-21).** Core v3 is not adopted as written, and core v2 is not restored: the
+world-neutral paragraph 3 is to be shortened with its full meaning kept, and checked by a focused comparison before
+approval. Gender guessed from a topic and ALWAYS_BRIEF on DEEP stay open in S8A-02. The FAST / DEEP pairs showed FAST
+completing 2 / 12 against DEEP 12 / 12 on short complex decisions; that gap is `QAN-BL-AI-05` (Stage 8A), and routing is
+not changed by this amendment.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

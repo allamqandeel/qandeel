@@ -216,6 +216,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-02` | The Background and Semantic Model Calls Are Still Bound to OpenAI and Gemini | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-03` | DeepSeek's Time-of-Day Pricing Cannot Be Represented by a Price Card | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-04` | Shared and Public World DEEP Replies Keep the 10 s Budget Under DeepSeek | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-05` | Complex Messages Routed FAST Rarely Complete Within the 3 s Budget Under DeepSeek | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -3106,6 +3107,37 @@ from its merge). Nothing here authorizes implementation (BG-07).
   their DEEP budget from a measurement, and pins it with tests.
 - **Status:** `DEFERRED — OWNED`
 
+### `QAN-BL-AI-05` — Complex Messages Routed FAST Rarely Complete Within the 3 s Budget Under DeepSeek
+
+Admitted under BG-06 / BG-08 by S8A-02 at the Product Owner's review of its Round 2 evaluation (2026-10-21; the S8A-02
+pull request, not yet opened; effective from its merge), as a Stage 8A item with no separate task. Nothing here
+authorizes implementation (BG-07).
+
+- **Title / Finding:** S8A-02 Round 2 declared six short complex decisions (for example a parent's dementia care, two job
+  offers, leaving a stable job) once on FAST and once on DEEP with identical content, two repeats each. Production routing
+  (`decideFastDeepRoute`) sends all six FAST. FAST completed **2 / 12**: ten attempts were aborted at the 3 s request
+  budget (FAST: thinking disabled, `max_tokens` 1024). DEEP completed **12 / 12** (p50 8.7 s, max 11.7 s, about 1,120
+  output tokens), with the better depth and usefulness in the blind review. In the two Round 2 guidance arms, 22 / 116
+  FAST attempts were aborted at 3 s, and two cases produced no FAST reply in six attempts: a Personal everyday case and
+  the Public World Safety `GUIDED` case, whose real-model behaviour is therefore unmeasured.
+- **Source:** the S8A-02 Round 2 evaluation (brain-eval `golden-round2-paths` and `golden-round2`; DeepSeek Flash,
+  synthetic data, the accounted AI-COST-01 path; 2026-10-21), recorded in the
+  [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §7; the Product Owner's Round 2 review
+  (2026-10-21), item 4.
+- **Current truth:** an aborted FAST reply fails closed: no partial reply is released and the person gets no answer. The
+  routing policy, the FAST budget and `max_tokens` are unchanged; S8A-02 changes copy only. No real user reaches DeepSeek
+  (`QAN-BL-AI-01`).
+- **Anti-duplication:** `QAN-BL-AI-04` is the Shared / Public DEEP 10 s budget, not FAST. `QAN-BL-ACE-02` scores reply
+  behaviour, not completion. This item is FAST completion and the path chosen for short complex messages.
+- **Why deferred:** the Product Owner kept routing out of the S8A-02 copy correction and placed the gap in Stage 8A.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `HIGH` — on the path production chooses, many complex messages, and a Safety-guided Public reply, get no
+  answer at all.
+- **Reopen condition:** before `QAN-BL-AI-01` lets any real user reach DeepSeek, and before any change to the FAST budget,
+  FAST `max_tokens` or the FAST / DEEP routing. The correction is a measured controlled change, proven with the brain-eval
+  path pairs and pinned by tests.
+- **Status:** `DEFERRED — OWNED`
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3708,15 +3740,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 40 |
+| `DEFERRED — OWNED` | 41 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 29 |
-| **Total** | **82** |
+| **Total** | **83** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 46 |
+| `HIGH` | 47 |
 | `MEDIUM` | 34 |
 | `LOW` | 2 |
 
@@ -4776,6 +4808,17 @@ paragraph above stays as written.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 82 items; 40 / 4 / 9 / 29 by status, 46 / 34 / 2 by severity.**
 
+**S8A-02 Round 2 review change (2026-10-21; the S8A-02 pull request, not yet opened; effective from its merge).** BG-06 /
+BG-08 at the Product Owner's review of the S8A-02 Round 2 evaluation (item 4). The paragraphs above stay as written.
+- **Admitted (BG-06 / BG-08):** `QAN-BL-AI-05` (complex messages routed FAST rarely complete within the 3 s budget under
+  DeepSeek; `HIGH`, Stage 8A, no separate task).
+- **Evidence, no change of state:** `QAN-BL-AI-04` — the Round 2 Shared World DEEP case was aborted at the 10 s budget in
+  5 of 6 attempts. `QAN-BL-ACE-02` and `QAN-BL-IP-02` — S8A-02's Round 1 and Round 2 evaluations ran; their reconciliation
+  is S8A-02's closing change (BG-08 / BG-09).
+- **Reconciled in §9:** the Stage 8A row lists `QAN-BL-AI-05`.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 83 items; 41 / 4 / 9 / 29 by status, 47 / 34 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -4849,7 +4892,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
-| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13); `QAN-BL-AI-01`, `QAN-BL-AI-02` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-AI-04` (admitted by S8A-01's closing change) |
+| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13); `QAN-BL-AI-01`, `QAN-BL-AI-02` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-AI-04` (admitted by S8A-01's closing change); `QAN-BL-AI-05` (admitted by S8A-02 at the Product Owner's Round 2 review) |
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |
