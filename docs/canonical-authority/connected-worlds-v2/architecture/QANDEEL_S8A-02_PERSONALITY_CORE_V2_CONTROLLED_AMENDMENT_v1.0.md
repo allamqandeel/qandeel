@@ -286,4 +286,9 @@ verbatim. Attempts with no reply are counted apart and judged neither way. A Sha
 three or four participants, is an acceptance condition of S8A-02 (D5); its design follows Round 3, with no paid call
 before approval.
 
+**Round 3 result (2026-10-21).** 78 DeepSeek calls, USD 0.044 at the peak rate; 18 earlier local preflight failures sent
+nothing. Core v3.1 is not clearly better than core v3: the one-reply and standing-request rules improve, no-transfer
+regresses in its original conversation, and gender and ALWAYS_BRIEF on DEEP are not improved. Per D1 the wording is not
+lengthened; the diagnosis concerns how Shared speakers are represented in the model input, and awaits the Product Owner.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

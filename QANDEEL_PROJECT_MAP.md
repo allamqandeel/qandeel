@@ -197,9 +197,11 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
 
 - **Evaluated on DeepSeek Flash, synthetic data, the accounted AI-COST-01 path:** Round 1 (60 calls) and Round 2 (200
   calls, USD 0.209 at the peak rate). The branch renders core v3 ([amendment record](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md)).
-- **Product Owner's Round 2 review:** core v3 is **not adopted as written** and v2 is not restored. A shorter world-neutral
-  paragraph 3 and a focused comparison are awaiting approval; no further paid call before it. Gender guessed from a topic
-  and ALWAYS_BRIEF on DEEP stay open in S8A-02.
+- **Product Owner's Round 2 review:** core v3 is **not adopted as written** and v2 is not restored.
+- **Round 3 (2026-10-21):** core v3.1 (approved verbatim, rendered on the branch) against core v3. 78 calls, USD 0.044 at
+  the peak rate. Neither version is clearly better: participant language is not solved, and gender and ALWAYS_BRIEF on DEEP
+  are not improved. The diagnosis points to how Shared speakers are represented in the model input, not to wording; it
+  awaits the Product Owner. A Shared information-attribution test is an acceptance condition of S8A-02.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12); 83
   items. No routing, budget or real-user change.
 
