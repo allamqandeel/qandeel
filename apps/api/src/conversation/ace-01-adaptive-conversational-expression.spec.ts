@@ -1,5 +1,6 @@
 // S8A-02: the rendered-guidance assertions are re-anchored to Text v4 / core v2 (Product Owner D1, 2026-10-21); the Text v1 -> v2 byte record is unchanged.
 // S8A-02 Round 2 (2026-10-21): re-anchored again to core v3, which Text v4 composes since the Round 2 Copy Gate.
+// S8A-02 Round 3 (2026-10-21): re-anchored again to core v3.1, which Text v4 composes since the Round 3 decisions.
 // ACE-01 (WP4) — structural validation of Adaptive Conversational Expression on the ONE normalized provider request.
 //
 // The same harness as IP-IMP-01's orchestrator proof: a deterministic Model Router double captures the request, and the
@@ -40,7 +41,7 @@ import { INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE }
 const SESSION = '00000000-0000-4000-8000-000000000201';
 const TURN = '00000000-0000-4000-8000-000000000202';
 
-import { QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3, TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from './behavioral-response-policy.service';
+import { QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3_1 as QANDEEL_PERSONALITY_CORE_V3, TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from './behavioral-response-policy.service';
 import { SafetyResponseGateService } from './safety-response-gate.service';
 import { assembleSharedConversationRequest, SHARED_CONVERSATION_FRAME } from '../shared-world/shared-conversation-model-input';
 import { assemblePublicQandeelRequest, PUBLIC_QANDEEL_FRAME } from '../public-world/public-qandeel-model-input';

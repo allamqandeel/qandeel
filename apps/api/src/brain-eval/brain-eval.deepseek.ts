@@ -1,5 +1,6 @@
 import {
   QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL,
+  QANDEEL_PERSONALITY_CORE_V3_1, QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL,
 } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
@@ -34,12 +35,12 @@ export function isDeepSeekEvaluationLabel(value: string | undefined): value is D
  * case's guidance must carry that core (Personal) or its world-neutral derivation (Shared / Public). Round 1 labels name a
  * before / after moment, not a text, and are not checked here.
  */
-// The core each guidance label must render, in Personal and in a World. core v3.1 (S8A-02 Round 3) has no core at a commit
-// that does not define it, so the label is refused there.
+// The core each guidance label must render, in Personal and in a World. core v3.1 (S8A-02 Round 3) was null, and so refused,
+// at the Round 3 tooling commit, which defines no core v3.1.
 const GUIDANCE_CORES: Readonly<Record<Exclude<DeepSeekEvaluationLabel, 'baseline' | 'candidate'>, { personal: string; world: string } | null>> = {
   'core-v2': { personal: QANDEEL_PERSONALITY_CORE_V2, world: QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL },
   'core-v3': { personal: QANDEEL_PERSONALITY_CORE_V3, world: QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL },
-  'core-v3.1': null,
+  'core-v3.1': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
 };
 
 export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationCase>, label: DeepSeekEvaluationLabel): void {

@@ -5,6 +5,7 @@ import {
   QANDEEL_PERSONALITY_CORE_V1,
   QANDEEL_PERSONALITY_CORE_V2,
   QANDEEL_PERSONALITY_CORE_V3,
+  QANDEEL_PERSONALITY_CORE_V3_1,
   TEXT_V1_BEHAVIORAL_GUIDANCE,
   TEXT_V2_BEHAVIORAL_GUIDANCE,
   TEXT_V3_BEHAVIORAL_GUIDANCE,
@@ -78,12 +79,25 @@ describe('BehavioralResponsePolicyService', () => {
     ]);
     const [v2, v3] = [QANDEEL_PERSONALITY_CORE_V2.split('\n'), QANDEEL_PERSONALITY_CORE_V3.split('\n')];
     expect([v3[0], v3[7]]).toEqual([v2[0], v2[7]]);
-    expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
-    expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE.replace(QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3));
+    // S8A-02 Round 3 (re-anchored): Text v4 composes core v3.1 since the Round 3 decisions; core v3 above is the record.
+    expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_1}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
+    expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE.replace(QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3_1));
     // S8A-02 Round 2 (re-anchored): core v3 is longer than v2 by approved copy, so the test-local bound moves from 4096 to 5120.
-    expect(Buffer.byteLength(TEXT_V4_BEHAVIORAL_GUIDANCE, 'utf8')).toBeLessThanOrEqual(5_120);
+    expect(Buffer.byteLength(TEXT_V3_BEHAVIORAL_GUIDANCE.replace(QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3), 'utf8')).toBeLessThanOrEqual(5_120);
     // Still no register selector, persona name, emotion label or provider name.
     expect(QANDEEL_PERSONALITY_CORE_V3).not.toMatch(/SERIOUS_REGISTER|LIGHT_REGISTER|PLAYFUL|tone:|mood|sentiment|the user feels|the user seems/iu);
     expect(TEXT_V4_BEHAVIORAL_GUIDANCE).not.toMatch(/Claude|Anthropic|OpenAI|GPT|Gemini|Kimi|DeepSeek/iu);
+  });
+
+  it('S8A-02 Round 3: core v3.1 is core v3 with the approved brevity sentence added to paragraph 2 and the gender clause of paragraph 3 replaced', () => {
+    const [v3, v31] = [QANDEEL_PERSONALITY_CORE_V3.split('\n'), QANDEEL_PERSONALITY_CORE_V3_1.split('\n')];
+    expect(v31).toHaveLength(8);
+    for (const index of [0, 3, 4, 5, 6, 7]) expect(v31[index]).toBe(v3[index]);
+    expect(v31[1]).toBe('Answer directly when the request is clear and keep everyday replies short. When the person asks for depth, or the question genuinely needs it and they have not asked for brevity, give the full substance rather than a clipped summary. When they have asked for brevity, keep to it even on a complex question: give your answer and the one or two points that matter most in a few sentences, never leaving out what is essential or what safety requires. Even a long answer should read as a conversation, not a report: lead with the answer or your view and explain in connected prose. Do not add headings, section titles or bold labels by default; use a short list or a side-by-side comparison only when it genuinely makes a complex answer easier to follow, or when the person asks for one.');
+    expect(v31[2]).toBe('Reply in the person\'s language or dialect when reliably supported, respecting, in this order, safety, their explicit current request and their durable interaction preferences; a requested or preferred reply language applies even when they write in another. Keep one dialect consistent within a reply instead of mixing forms from different dialects. When the language marks grammatical gender, follow the gender the person\'s own words in this conversation clearly show, only for how you word your reply and never as a fact about them; when their words have not shown it, use natural wording that does not assume one; where that would sound forced, use the conventional generic form (in Arabic, the grammatical masculine) consistently throughout the reply, never as a sign of their gender. Never guess their gender from a name, a topic or a stereotype. Never infer identity from language or dialect.');
+    // Core v3.1 is longer than v3 by approved copy, so the test-local Personal bound moves from 5120 to 6144 bytes; no runtime or
+    // canonical cap applies to the guidance size.
+    expect(Buffer.byteLength(TEXT_V4_BEHAVIORAL_GUIDANCE, 'utf8')).toBeLessThanOrEqual(6_144);
+    expect(QANDEEL_PERSONALITY_CORE_V3_1).not.toMatch(/SERIOUS_REGISTER|LIGHT_REGISTER|PLAYFUL|tone:|mood|sentiment|the user feels|the user seems/iu);
   });
 });

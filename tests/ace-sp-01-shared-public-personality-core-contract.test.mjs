@@ -85,8 +85,17 @@ test('ONE personality: the world-neutral core is derived from the approved core 
   assert.ok(policy.includes("export const QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL = QANDEEL_PERSONALITY_CORE_V3.split('\\n').map((paragraph, index) => {"),
     'core v3 world-neutral is derived from core v3, not a second copy');
   assert.ok(policy.includes('  if (index === 2) return WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3;'));
-  assert.equal(count(policy, "  if (index === 5) return replaceExactlyOnce(paragraph, 'at the user\\'s expense', 'at anyone\\'s expense');"), 2, 'CG-2 on v2 and on v3');
-  assert.equal(count(policy, "  if (index === 6) return replaceExactlyOnce(paragraph, 'humiliating the user', 'humiliating anyone');"), 2, 'CG-3 on v2 and on v3');
+  // RE-ANCHORED by S8A-02 Round 3 (2026-10-21; Product Owner Round 3 decisions): the same mapping applied to core v3.1 too.
+  assert.equal(count(policy, "  if (index === 5) return replaceExactlyOnce(paragraph, 'at the user\\'s expense', 'at anyone\\'s expense');"), 3, 'CG-2 on v2, v3 and v3.1');
+  assert.equal(count(policy, "  if (index === 6) return replaceExactlyOnce(paragraph, 'humiliating the user', 'humiliating anyone');"), 3, 'CG-3 on v2, v3 and v3.1');
+  // S8A-02 Round 3: core v3.1 is derived from core v3 (two exact replacements, no second literal core), and its world-neutral
+  // form from core v3.1 by the same mapping, with world-neutral paragraph 3.1 sharing the one gender clause.
+  assert.ok(policy.includes("export const QANDEEL_PERSONALITY_CORE_V3_1 = QANDEEL_PERSONALITY_CORE_V3.split('\\n').map((paragraph, index) => {"), 'core v3.1 is derived from core v3');
+  assert.ok(policy.includes("export const QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL = QANDEEL_PERSONALITY_CORE_V3_1.split('\\n').map((paragraph, index) => {"),
+    'core v3.1 world-neutral is derived from core v3.1, not a second copy');
+  assert.ok(policy.includes('  if (index === 2) return WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3_1;'));
+  assert.equal(count(policy, ' + PERSONALITY_GENDER_CLAUSE_V3_1 + '), 1, 'world-neutral paragraph 3.1 reuses the one gender clause');
+  assert.ok(policy.includes('  if (index === 2) return replaceExactlyOnce(paragraph, ') && policy.includes(', PERSONALITY_GENDER_CLAUSE_V3_1);'), 'paragraph 3 of core v3.1 reuses it too');
   for (const opening of ['Speak as QANDEEL: one consistent personality', 'Answer directly when the request is clear', 'Reply in the person',
     'Understand what the person means from their own words', 'Be warmly present', 'You have a quick, light sense of humour',
     'When genuine evidence supports disagreement, say so', 'Keep suggestions proportionate to the evidence and preserve user agency. Never claim to be human']) {
@@ -103,7 +112,8 @@ test('one pure, append-only helper adds the approved Safety humour suspension on
   // RE-ANCHORED by LANG-01 Work Package C (LA-17, D4): the world-neutral D4 line follows the world-neutral core.
   // RE-ANCHORED by S8A-02 (2026-10-21; D2): the helper renders the world-neutral core v2.
   // RE-ANCHORED by S8A-02 Round 2 (2026-10-21; the Round 2 Copy Gate): the helper renders the world-neutral core v3.
-  assert.ok(body.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'), 'the World prefix stays first');
+  // RE-ANCHORED by S8A-02 Round 3 (2026-10-21; Product Owner Round 3 decisions): the helper renders the world-neutral core v3.1.
+  assert.ok(body.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'), 'the World prefix stays first');
   assert.ok(body.includes('  return safetyGuided ? `${guidance}\\n\\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;'), 'the line only when guided');
   assert.doesNotMatch(body, /await |this\.|preference|Preference|process\.env|fetch\(/u, 'pure: it reads nothing');
   assert.equal(count(policy, CG_4), 0, 'the suspension line is never copied: its only literal stays in the IP-IMP-01 module');

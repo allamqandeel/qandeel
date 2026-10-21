@@ -5,7 +5,8 @@
 **Amends:** the [ACE-SP-01 Shared / Public QANDEEL Personality Core controlled amendment](QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md),
 exactly: §2 "The approved core" and "The world-neutral core", CG-1's world-neutral paragraph (§5) and CG-5's "the
 approved ACE-01 Gate A wording" (§5) — the core the world-neutral derivation is taken from, and the world-neutral
-paragraph 3. With them, what the Personal conversation renders as its core (ACE-01 Text v2 / LANG-01 Text v3).  
+paragraph 3. With them, what the Personal conversation renders as its core (ACE-01 Text v2 / LANG-01 Text v3). From Round 3,
+also one sentence of §3.2, narrowly (§5.2): "The guidance follows the message being answered and the requests made in it."  
 **Binds within, superseding no sentence of:** CW2-03, CW2-04, CW2-08; S4-02 and S5-04 as ACE-SP-01 left them  
 **Does not amend:** everything in §6 below  
 **Authority:** the Product Owner — *S8A-02 — Final Product Owner Approval & Execution Authorization* (2026-10-21): D1
@@ -13,7 +14,9 @@ paragraph 3. With them, what the Personal conversation renders as its core (ACE-
 personality across Personal, Shared and Public, through a narrow controlled amendment of ACE-SP-01 in the same pull
 request, with the approved world-neutral paragraph 3), recorded verbatim in §5; then *S8A-02 — Round 2 decision* and
 *S8A-02 — Final Product Copy Decision & Round 2 Authorization* (both 2026-10-21): core v3, paragraphs 1–8 approved
-verbatim, and the final world-neutral paragraph 3 (D1), recorded verbatim in §5.1  
+verbatim, and the final world-neutral paragraph 3 (D1), recorded verbatim in §5.1; then *S8A-02 — Round 3 Product Owner
+Decisions* (2026-10-21): D1–D3, the direction of core v3.1 and the §3.2 amendment, recorded in §5.2 — its exact wording
+PROPOSED, awaiting the Product Owner's verbatim approval  
 **Task:** `S8A-02` — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (Stage 8A). It carries the evidence of
 `QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase  
 **Implementation:** S8A-02, in the pull request that carries this record
@@ -52,8 +55,12 @@ change is a standalone, indexed amendment and not an edit of the earlier record.
   and 8 are core v2's bytes. From Round 2 on, the ONE rendered personality core.
 - **The world-neutral core v3** — `QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL`: core v3 by the same mapping, with paragraph 3
   replaced by the final approved world-neutral paragraph 3 (§5.1, D1). Paragraphs 1, 2, 4, 5 and 8 are core v3's bytes.
-- **Text v4** — `TEXT_V4_BEHAVIORAL_GUIDANCE`: Text v1 unchanged, a blank line, the rendered core (core v3 from Round 2;
-  core v2 before it), a blank line, the LANG-01 Personal D4 line unchanged. The same shape as Text v3 with only the core
+- **Core v3.1** — `QANDEEL_PERSONALITY_CORE_V3_1`: core v3 with one sentence added to paragraph 2 and the gender clause of
+  paragraph 3 replaced (§5.2). Every other byte is core v3's. From Round 3 on, the ONE rendered personality core.
+- **The world-neutral core v3.1** — `QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL`: core v3.1 by the same mapping, with
+  paragraph 3 replaced by world-neutral paragraph 3.1 (§5.2). Paragraphs 1, 2, 4, 5 and 8 are core v3.1's bytes.
+- **Text v4** — `TEXT_V4_BEHAVIORAL_GUIDANCE`: Text v1 unchanged, a blank line, the rendered core (core v3.1 from Round 3,
+  core v3 from Round 2, core v2 before it), a blank line, the LANG-01 Personal D4 line unchanged. The same shape as Text v3 with only the core
   replaced.
 - Text v1, the World frames, the LANG-01 D4 lines, the IP-IMP-01 preference compiler and the Safety humour-suspension line
   keep their ACE-01 / ACE-SP-01 / LANG-01 / IP-IMP-01 definitions, byte-identical.
@@ -65,7 +72,7 @@ change is a standalone, indexed amendment and not an edit of the earlier record.
 - **Personal.** The Personal guidance is Text v4, followed — as before — by the standing interaction-preference block
   when there is one, and on a Safety `GUIDED` turn by the humour-suspension line.
 - **Shared and Public.** The guidance is, as ACE-SP-01 §3 states, the unchanged Text v1 + World frame prefix, then the
-  world-neutral core — now the world-neutral core v3 (v2 before Round 2) — then the LANG-01 world-neutral D4 line, and on a `GUIDED` turn only
+  world-neutral core — now the world-neutral core v3.1 (v3 in Round 2, v2 before it) — then the LANG-01 world-neutral D4 line, and on a `GUIDED` turn only
   the humour-suspension line. Locale stays `und`.
 
 ## 3.1 One personality, one source
@@ -195,6 +202,47 @@ The world-neutral paragraphs 6 and 7 of core v3 take the same CG-2 / CG-3 substi
 current conversation, for wording only: no gender is inferred, stored, or read from Memory to choose forms (G-A). The
 limits of D1 are stated in §3.2. As with D1 and D2 above, this approval is copy approval only.
 
+## 5.2 Round 3 — core v3.1 (PROPOSED verbatim; direction approved 2026-10-21)
+
+The Product Owner's *S8A-02 — Round 3 Product Owner Decisions* (2026-10-21) approve the direction: D1, the
+current-writer wording of the world-neutral paragraph 3, with participant independence and the limits of ACE-SP-01 kept;
+D2, gender option A on the stated conditions; D3, a brevity request that holds on DEEP without dropping what is
+essential or what safety requires. The exact wording below is PROPOSED and is rendered on the branch for the free checks
+only. No paid call runs before the Product Owner approves it verbatim.
+
+**Paragraph 2 — one sentence added after "rather than a clipped summary." (D3):** "When they have asked for brevity, keep to it even on a complex question: give your answer and the one or two points that matter most in a few sentences, never leaving out what is essential or what safety requires."
+
+**Paragraph 3 and world-neutral paragraph 3 — the gender clause, the same words in both (D2):** "when their words have not shown it, use natural wording that does not assume one; where that would sound forced, use the conventional generic form (in Arabic, the grammatical masculine) consistently throughout the reply, never as a sign of their gender. Never guess their gender from a name, a topic or a stereotype."
+
+It replaces "when their words have not shown it, use natural wording that does not assume one, and never guess it from a
+name, a topic or a stereotype." Every other sentence of paragraph 3 is core v3's.
+
+**World-neutral paragraph 3.1 (D1, D2):** "For each reply, follow safety first, then the current writer's explicit language request, then any still-applicable
+language request that same writer explicitly made for their later replies in this conversation; the current writer is
+the person whose latest message you are answering. Otherwise use the language or dialect of the current writer's message
+when reliably supported. A request for one reply expires after that reply. Never transfer a language request between
+participants, make it a group rule, or save it as a standing preference. Keep one dialect consistent within a reply
+instead of mixing forms from different dialects. When the language marks grammatical gender, follow the gender a
+person's own words in this conversation clearly show, only for how you word your reply and never as a fact about them;
+when their words have not shown it, use natural wording that does not assume one; where that would sound forced, use the
+conventional generic form (in Arabic, the grammatical masculine) consistently throughout the reply, never as a sign of
+their gender. Never guess their gender from a name, a topic or a stereotype. Never infer identity from language or
+dialect."
+
+Its last three sentences are the dialect sentence and the identity sentence of the D1 paragraph (§5.1), byte-identical,
+around the gender clause above. The D1 paragraph stays in code as the record the Round 3 baseline arm ran.
+
+**ACE-SP-01 §3.2 — one sentence narrowly amended (D1).** In "No authority for the requester", the sentence "The guidance follows the message being answered and the requests made in it."
+reads, for Shared and Public: "The guidance follows the message being answered, the requests made in it, and any
+still-applicable language request that the same writer explicitly made earlier in the same conversation for their own
+later replies." Every other sentence of §3.2 stands: the requester's identity is used for cost accounting only and never
+enters the request; no participant gains a standing preference over the others; no request transfers to another
+participant or becomes a group rule; nothing is saved, and no setting, preference or saved trait is created. In Public,
+"conversation" is the discussion and "message" is the invoking post.
+
+If core v3.1 fails the focused comparison, the paragraph is not lengthened further: how the participants are represented
+in the DeepSeek input is examined first (D1). As above, approval is copy approval only.
+
 ---
 
 # 6. Explicit non-amendments
@@ -202,7 +250,8 @@ limits of D1 are stated in §3.2. As with D1 and D2 above, this approval is copy
 This amendment does not change:
 - Text v1, the World frames, the LANG-01 D4 lines (Personal and world-neutral), the Safety humour-suspension line;
 - the IP-IMP-01 durable preference compiler, its header, precedence and copy;
-- ACE-SP-01 §3.2, §4, §6, and every CW2-03 / CW2-04 / CW2-08 sentence it names;
+- ACE-SP-01 §3.2 (except the one sentence §5.2 narrowly amends), §4, §6, and every CW2-03 / CW2-04 / CW2-08 sentence it
+  names;
 - the ONE Model Router, its FAST / DEEP routing (`decideFastDeepRoute`) and its latency budgets;
 - Memory, Human Intelligence, Hypothesis, Recommendation, Question, Matching and Introduction authority;
 - the Safety Response Gate and its `ALLOW` / `GUIDED` / `BLOCK` outcomes;
@@ -224,5 +273,13 @@ world-neutral paragraph 3 is to be shortened with its full meaning kept, and che
 approval. Gender guessed from a topic and ALWAYS_BRIEF on DEEP stay open in S8A-02. The FAST / DEEP pairs showed FAST
 completing 2 / 12 against DEEP 12 / 12 on short complex decisions; that gap is `QAN-BL-AI-05` (Stage 8A), and routing is
 not changed by this amendment.
+
+**Round 3 (Product Owner decisions, 2026-10-21).** Core v3.1 (§5.2) is rendered on the branch; Text v4 composes it and
+`withWorldNeutralPersonality` renders its world-neutral form. Core v3 and the D1 paragraph stay in code as the record
+the baseline arm runs. The focused comparison, core v3 against core v3.1 (Part A: the Shared language rules; Part B:
+gender and declared brevity; at most 80 attempts and USD 0.22), runs only after the Product Owner approves the wording
+verbatim. Attempts with no reply are counted apart and judged neither way. A Shared World information-attribution test,
+three or four participants, is an acceptance condition of S8A-02 (D5); its design follows Round 3, with no paid call
+before approval.
 
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

@@ -58,8 +58,9 @@ describe('S8A-02 Round 3 — the focused Shared language comparison (zero calls)
     const complex = GOLDEN_ROUND2_SUITE.find((testCase) => testCase.id === 'deep-golden-complex-decision-ar-eg')!;
     expect(briefComplex.context).toEqual(complex.context);
     expect([complex.interactionPreferences?.replyLength ?? 'DEFAULT', briefComplex.interactionPreferences?.replyLength]).toEqual(['DEFAULT', 'ALWAYS_BRIEF']);
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3')).not.toThrow();
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3.1')).toThrow('not core-v3.1 for 7 case(s)');
+    // Core v3.1 is rendered since the Round 3 copy commit; arm A (core-v3) runs from the tooling commit before it.
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3.1')).not.toThrow();
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3')).toThrow('not core-v3 for 7 case(s)');
   });
 
   it('counts attempts with no reply apart, judges them neither way, and marks an item INCONCLUSIVE below the minimum replies', () => {
@@ -80,10 +81,10 @@ describe('S8A-02 Round 3 — the focused Shared language comparison (zero calls)
     expect(() => completionReport([], 0)).toThrow('positive integer');
   });
 
-  it('runs core-v3 at this commit and refuses core-v3.1 until the revised world-neutral paragraph 3 is rendered', () => {
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_SHARED_SUITE, 'core-v3')).not.toThrow();
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_SHARED_SUITE, 'core-v3.1')).toThrow('not core-v3.1 for 6 case(s)');
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3')).not.toThrow();
+  it('runs core-v3.1 at this commit, which renders it, and refuses core-v3, whose arm runs from the tooling commit', () => {
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_SHARED_SUITE, 'core-v3.1')).not.toThrow();
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_SHARED_SUITE, 'core-v3')).toThrow('not core-v3 for 6 case(s)');
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3.1')).not.toThrow();
   });
 
   it('blinds the two labels of the suite, whatever they are', () => {

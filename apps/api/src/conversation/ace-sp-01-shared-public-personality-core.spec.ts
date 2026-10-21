@@ -22,6 +22,7 @@ import {
 import {
   BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL,
   QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL,
+  QANDEEL_PERSONALITY_CORE_V3_1, QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL,
   TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V3_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
   ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL,
 } from './behavioral-response-policy.service';
@@ -42,6 +43,10 @@ const NEUTRAL = QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL.split('\n');
 // pair above stays as the record the Round 2 baseline arm ran and is still checked below.
 const APPROVED_V3 = QANDEEL_PERSONALITY_CORE_V3.split('\n');
 const NEUTRAL_V3 = QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL.split('\n');
+// S8A-02 Round 3 (2026-10-21): the Worlds render the world-neutral core v3.1, derived from core v3.1 by the same mapping;
+// the v3 pair above stays as the record the Round 3 baseline arm ran and is still checked below.
+const APPROVED_V3_1 = QANDEEL_PERSONALITY_CORE_V3_1.split('\n');
+const NEUTRAL_V3_1 = QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL.split('\n');
 const SAFETY_HEADER = 'Safety guidance for this turn:';
 
 // The Product Owner's approved texts, verbatim (CG-1 … CG-4).
@@ -55,6 +60,10 @@ const S8A_02_WN_3 = 'Match the language or dialect of the message you are answer
 // S8A-02 Round 2: the approved world-neutral paragraph 3 of core v3, verbatim (Product Owner final decision D1: each writer's
 // own language request, within its stated scope, for that writer only, never a group rule or a standing preference).
 const S8A_02_R2_WN_3 = 'Answer each message in its writer\'s language or dialect when reliably supported, subject to safety and that writer\'s own explicit language request within its stated scope. A request made for one reply applies only to that reply; a request explicitly covering subsequent replies may apply only to the same writer within this conversation. Never apply one person\'s request to anyone else, make it a rule for the group, or save it as a standing preference. Keep one dialect consistent within a reply instead of mixing forms from different dialects. When the language marks grammatical gender, follow the gender a person\'s own words in this conversation clearly show, only for how you word your reply and never as a fact about them; when their words have not shown it, use natural wording that does not assume one, and never guess it from a name, a topic or a stereotype. Never infer identity from language or dialect.';
+// S8A-02 Round 3: world-neutral paragraph 3.1, verbatim (Product Owner Round 3 decisions D1 and D2: the current writer's
+// explicit request, then that same writer's still-applicable request for their later replies in this conversation; a
+// one-reply request expires; nothing transfers, becomes a group rule or is saved; the core v3.1 gender clause).
+const S8A_02_R3_WN_3 = 'For each reply, follow safety first, then the current writer\'s explicit language request, then any still-applicable language request that same writer explicitly made for their later replies in this conversation; the current writer is the person whose latest message you are answering. Otherwise use the language or dialect of the current writer\'s message when reliably supported. A request for one reply expires after that reply. Never transfer a language request between participants, make it a group rule, or save it as a standing preference. Keep one dialect consistent within a reply instead of mixing forms from different dialects. When the language marks grammatical gender, follow the gender a person\'s own words in this conversation clearly show, only for how you word your reply and never as a fact about them; when their words have not shown it, use natural wording that does not assume one; where that would sound forced, use the conventional generic form (in Arabic, the grammatical masculine) consistently throughout the reply, never as a sign of their gender. Never guess their gender from a name, a topic or a stereotype. Never infer identity from language or dialect.';
 const BLOCK_WORDS = 'I can\'t help with ways to harm yourself. If you may act now, move away from anything you could use and contact local emergency services or a trusted person who can stay with you right now.';
 
 // Anything that would show a Personal preference, a Personal-only clause or Personal intelligence in a World request.
@@ -168,18 +177,32 @@ describe('ACE-SP-01 — the world-neutral core is the ONE approved core, derived
     expect(QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL.match(/[^.]*preference[^.]*\./gu)).toEqual([' Never apply one person\'s request to anyone else, make it a rule for the group, or save it as a standing preference.']);
   });
 
+  it('S8A-02 Round 3: the world-neutral core v3.1 is derived from core v3.1 by the same mapping; only 3, 6 and 7 differ', () => {
+    expect(NEUTRAL_V3_1).toHaveLength(8);
+    for (const index of [0, 1, 3, 4, 7]) expect(NEUTRAL_V3_1[index]).toBe(APPROVED_V3_1[index]);
+    expect(NEUTRAL_V3_1[2]).toBe(S8A_02_R3_WN_3);
+    expect(NEUTRAL_V3_1[5]).toBe(APPROVED_V3_1[5].replace('at the user\'s expense', 'at anyone\'s expense'));
+    expect(NEUTRAL_V3_1[6]).toBe(APPROVED_V3_1[6].replace('humiliating the user', 'humiliating anyone'));
+    // The gender clause is one sentence, the same in Personal and in the Worlds: no second copy that can drift.
+    const gender = APPROVED_V3_1[2].slice(APPROVED_V3_1[2].indexOf('when their words have not shown it'), APPROVED_V3_1[2].indexOf(' Never infer identity'));
+    expect(NEUTRAL_V3_1[2].split(gender)).toHaveLength(2);
+    expect(QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL).not.toMatch(/durable|interaction preference|the user's|humiliating the user|\bthe user\b/u);
+    // The one mention of a preference is the approved refusal to create one (ACE-SP-01 §3.2 as narrowly amended).
+    expect(QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL.match(/[^.]*preference[^.]*\./gu)).toEqual([' Never transfer a language request between participants, make it a group rule, or save it as a standing preference.']);
+  });
+
   it('the helper is pure and append-only: the World prefix is kept, the core follows, the suspension only when guided', () => {
     for (const prefix of [SHARED_PREFIX, PUBLIC_PREFIX]) {
       // LANG-01 Work Package C (LA-17): the world-neutral D4 line follows the world-neutral core.
-      expect(withWorldNeutralPersonality(prefix, false)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`);
-      expect(withWorldNeutralPersonality(prefix, true)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}\n\n${CG_4}`);
+      expect(withWorldNeutralPersonality(prefix, false)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`);
+      expect(withWorldNeutralPersonality(prefix, true)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}\n\n${CG_4}`);
       expect(withWorldNeutralPersonality(prefix, true)).toBe(withWorldNeutralPersonality(prefix, true));
       const bytes = (text: string) => Buffer.byteLength(text, 'utf8');
-      expect(bytes(withWorldNeutralPersonality(prefix, false)) - bytes(prefix)).toBe(2 + bytes(QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL) + 2 + bytes(ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL));
+      expect(bytes(withWorldNeutralPersonality(prefix, false)) - bytes(prefix)).toBe(2 + bytes(QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL) + 2 + bytes(ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL));
       expect(withWorldNeutralPersonality(prefix, true)).not.toContain(ARABIC_DEFAULT_LANGUAGE_LINE);
       // S8A-02 (re-anchored): core v2 is longer than v1 by approved copy, so the test-local bound moves from 4096 to 5120 bytes;
       // no runtime or canonical cap applies to the guidance size. S8A-02 Round 2 (re-anchored): core v3 is longer again by
-      // approved copy, so the bound moves from 5120 to 6144 bytes.
+      // approved copy, so the bound moves from 5120 to 6144 bytes. S8A-02 Round 3: core v3.1 stays within 6144 bytes.
       expect(bytes(withWorldNeutralPersonality(prefix, true))).toBeLessThanOrEqual(6144);
     }
   });
@@ -189,14 +212,16 @@ describe('ACE-SP-01 — the world-neutral core is the ONE approved core, derived
     expect(TEXT_V2_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`);
     // LANG-01 Work Package C: the rendered Personal guidance was Text v2 unchanged, then the Personal D4 line (Text v3).
     expect(TEXT_V3_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
-    // S8A-02 (re-anchored): since core v2 it is Text v4, which only replaces the core; since Round 2 Text v4 composes core v3.
+    // S8A-02 (re-anchored): since core v2 it is Text v4, which only replaces the core; since Round 2 Text v4 composes core v3,
+    // and since Round 3 core v3.1.
     expect(policy.buildTextGuidance()).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
-    expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
+    expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_1}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
     for (const text of [policy.buildTextGuidance(), TEXT_V3_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE]) {
       expect(text).not.toContain(ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL);
       expect(text).not.toContain(CG_1);
       expect(text).not.toContain(S8A_02_WN_3);
       expect(text).not.toContain(S8A_02_R2_WN_3);
+      expect(text).not.toContain(S8A_02_R3_WN_3);
       expect(text).not.toContain('anyone\'s expense');
       expect(text).not.toContain('humiliating anyone');
     }
@@ -213,7 +238,7 @@ describe.each(WORLDS)('ACE-SP-01 — $world World QANDEEL request', ({ world, pr
     expect(request.path).toBe('FAST');
     expect(request.behavioralGuidance).toBe(withWorldNeutralPersonality(prefix, false));
     expect(request.behavioralGuidance.startsWith(`${prefix}\n\n`)).toBe(true);
-    for (const paragraph of NEUTRAL_V3) expect(request.behavioralGuidance.split(paragraph)).toHaveLength(2);
+    for (const paragraph of NEUTRAL_V3_1) expect(request.behavioralGuidance.split(paragraph)).toHaveLength(2);
     expect(request.behavioralGuidance).not.toContain(CG_4);
     expect(request.safetyGuidance).toBeUndefined();
     expect(composeServerGuidance(request)).not.toContain(SAFETY_HEADER);

@@ -1,8 +1,9 @@
 // S8A-02: re-anchored to Text v4 / core v2 (Personal) and the world-neutral core v2, rendered since the approved core v2 (Product Owner D1 / D2, 2026-10-21). The D4 lines are unchanged.
 // S8A-02 Round 2 (2026-10-21): re-anchored again to core v3 and the world-neutral core v3 (the Round 2 Copy Gate). The D4 lines are unchanged.
+// S8A-02 Round 3 (2026-10-21): re-anchored again to core v3.1 and the world-neutral core v3.1.
 import {
-  ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL, BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V3,
-  QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL, TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
+  ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL, BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V3_1 as QANDEEL_PERSONALITY_CORE_V3,
+  QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL as QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL, TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
 } from './behavioral-response-policy.service';
 import { INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE } from '../interaction-preferences/interaction-preference-guidance';
 import { DEFAULT_INTERACTION_PREFERENCES, type InteractionPreferences } from '../interaction-preferences/interaction-preferences.types';

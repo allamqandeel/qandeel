@@ -70,7 +70,9 @@ test('WP1: the ONE personality core is the approved Product Copy Gate wording, i
   // record, and Personal guidance is Text v4 = Text v1 unchanged + core v2 + the same D4 line.
   // RE-ANCHORED by S8A-02 Round 2 (2026-10-21; the Round 2 Copy Gate): Text v4 composes the approved core v3; core v2 stays in
   // the file as the record the Round 2 baseline arm ran.
-  assert.match(policy, /export const TEXT_V4_BEHAVIORAL_GUIDANCE = `\$\{TEXT_V1_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{QANDEEL_PERSONALITY_CORE_V3\}\\n\\n\$\{ARABIC_DEFAULT_LANGUAGE_LINE\}`;/u);
+  // RE-ANCHORED by S8A-02 Round 3 (2026-10-21; Product Owner Round 3 decisions): Text v4 composes core v3.1, derived from
+  // core v3; core v3 stays in the file as the record the Round 3 baseline arm ran.
+  assert.match(policy, /export const TEXT_V4_BEHAVIORAL_GUIDANCE = `\$\{TEXT_V1_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{QANDEEL_PERSONALITY_CORE_V3_1\}\\n\\n\$\{ARABIC_DEFAULT_LANGUAGE_LINE\}`;/u);
   assert.match(policy, /return preferences === undefined \? TEXT_V4_BEHAVIORAL_GUIDANCE : `\$\{TEXT_V4_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{preferences\}`;/u);
 });
 

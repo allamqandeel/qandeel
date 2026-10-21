@@ -117,9 +117,10 @@ describe('S8A-02 Round 2 — targeted suites, repeats and the blinded set review
   });
 
   it('refuses a run whose label does not match the guidance this commit renders', () => {
-    // Since the Round 2 Copy Gate every World renders core v3; core v2 is the record the baseline arm ran at its own commit.
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3')).not.toThrow();
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_PATH_SUITE, 'core-v3')).not.toThrow();
+    // Since the Round 3 decisions every World renders core v3.1; core v2 and core v3 are the records their arms ran at their
+    // own commits, so neither label runs here.
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3')).toThrow('not core-v3 for 30 case(s)');
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_PATH_SUITE, 'core-v3.1')).not.toThrow();
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v2')).toThrow('not core-v2 for 30 case(s)');
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'baseline')).not.toThrow();
   });
