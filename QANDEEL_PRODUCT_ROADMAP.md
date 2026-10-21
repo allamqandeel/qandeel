@@ -827,8 +827,9 @@ stay as written.
   only, with free proofs. Its focused check is done (30 / 30, USD 0.0069): a quotation is no longer read as the quoted
   person speaking (0 / 3, production 2 / 3), and direct statements are kept (3 / 3). A speaker line written inside another
   person's message still mixes (2 / 3), so `AI-09` stays a HIGH blocker and the representation stays a candidate. A
-  deterministic, fail-closed attribution guard over the server's true message sources is designed (not implemented;
-  no database change); its implementation and final test await the Product Owner.
+  fail-closed attribution guard was designed and declined. A final free review on independent cases shows the server
+  can verify only verbatim quotations, not freely worded attribution, so `AI-09` cannot close on a guarantee. The
+  Product Owner decides how it closes: evidence-based acceptance, a narrower Shared behaviour, or deferral.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); `AI-09` admitted (HIGH: a line inside a message posing as another speaker);

@@ -412,4 +412,30 @@ A free in-sample replay over the 86 existing replies of Part T and the sourced c
 The guard does not make the model answer such cases correctly, and attribution errors with no such name remain
 model-dependent. Implementation and its final test await the Product Owner's review.
 
+**Decision on the attribution guard, and the final verifiability review (Product Owner, 2026-10-21).** The guard and its
+15-call check are not approved, because it withheld correct replies and missed errors. The design, the prototype and the
+sourced representation are kept, none adopted. One last bounded review was run free, on independent cases, with its
+criteria frozen before the run.
+
+The question: can the server's true message sources verify the attribution of direct statements, without word
+similarity and without withholding many correct replies?
+
+Answer: **no, not for freely worded statements** (`.s8a-02-reports/S8A-02_ATTRIBUTION_VERIFIABILITY_REVIEW.md`, local):
+- The only link the server can verify without interpreting meaning is a verbatim quotation. On 108 independent replies,
+  exact quote provenance withheld every misquotation it can see (12 / 12) and 1 of 58 correct replies.
+- It cannot see 38 of the 50 misattributions: paraphrases, negations, pronouns and inferences. It gave the same verdict to
+  both members of all 14 minimal pairs, replies that differ only by «مش» or by the subject.
+- The declined lexical guard, out of sample, withheld 17 of 50 misattributions and 3 of 58 correct replies.
+
+The obstacle: the link between a sentence of the reply and the message it relies on is created only by the model, in free
+language. Rebuilding it needs semantic interpretation, which is a new engine and model-dependent; a source the model
+chooses can be checked only for its author, not for its meaning.
+
+`QAN-BL-AI-09` therefore cannot close on a guarantee. The Product Owner's decision is needed among three options:
+- evidence-based acceptance with the sourced representation, against a pre-set criterion;
+- a narrower Shared behaviour, pointing people to the person's own message;
+- deferral of Shared QANDEEL from production models.
+
+S8A-02 stays open.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**
