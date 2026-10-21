@@ -167,3 +167,24 @@ export function assertDeepSeekRunAllowed(environment: NodeJS.ProcessEnv, guardPr
   if (others.length) throw new Error(`NOT RUN: another provider's variables are present (${others.join(', ')}); this run is DeepSeek only.`);
   if (!guardPreloaded) throw new Error('NOT RUN: the S8A-02 network and spend guard (scripts/s8a-02/network-guard.cjs) is not preloaded.');
 }
+
+/**
+ * S8A-02 Round 3 — a focused Golden suite: a handful of cases on one rule set, below the 20–30 bound by design. It keeps the
+ * shared per-case checks (stable unique ids, USER-final contexts, review notes) and every per-case Golden truth.
+ */
+export function validateGoldenFocusedSuite(cases: ReadonlyArray<BrainEvaluationCase>): ValidationReport {
+  if (cases.length < 1 || cases.length > 12) throw new Error('A focused suite holds 1-12 cases.');
+  const ids = new Set<string>();
+  for (const testCase of cases) {
+    if (!/^(fast|deep)-[a-z0-9-]+$/u.test(testCase.id)) throw new Error(`Invalid stable case id: ${testCase.id}`);
+    if (ids.has(testCase.id)) throw new Error(`Duplicate case id: ${testCase.id}`);
+    ids.add(testCase.id);
+    if (!testCase.context.length || testCase.context.at(-1)?.role !== 'USER') throw new Error(`${testCase.id} must end in a USER message.`);
+    if (!testCase.reviewNotes.length) throw new Error(`${testCase.id} requires human-review notes.`);
+  }
+  assertGoldenCases(cases);
+  return {
+    caseCount: cases.length, fastCount: cases.filter(({ path }) => path === 'FAST').length, deepCount: cases.filter(({ path }) => path === 'DEEP').length,
+    expectedPaidRequests: cases.length, warnings: [],
+  };
+}

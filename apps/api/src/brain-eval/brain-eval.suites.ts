@@ -1,15 +1,16 @@
 import {
   EVALUATION_ARTIFACT_DIRECTORY, GOLDEN_CONVERSATION_ARTIFACT_DIRECTORY, GOLDEN_EXTENDED_ARTIFACT_DIRECTORY, GOLDEN_ROUND2_ARTIFACT_DIRECTORY,
-  GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY,
+  GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY,
 } from './brain-eval.paths';
 import type { DeepSeekEvaluationLabel } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE } from './brain-eval.golden-extended.suite';
 import { GOLDEN_ROUND2_PATH_SUITE, GOLDEN_ROUND2_SUITE } from './brain-eval.golden-round2.suite';
+import { GOLDEN_ROUND3_SHARED_SUITE } from './brain-eval.golden-round3.suite';
 import { GOLDEN_CONVERSATION_SUITE } from './brain-eval.golden.suite';
 import { BRAIN_EVALUATION_SUITE } from './brain-eval.suite';
 import { GOLDEN_CONVERSATION_RUBRIC, RUBRIC, type BrainEvaluationCase } from './brain-eval.types';
 import {
-  validateEvaluationSuite, validateGoldenConversationSuite, validateGoldenPathPairSuite, validateGoldenTargetedSuite, type ValidationReport,
+  validateEvaluationSuite, validateGoldenConversationSuite, validateGoldenFocusedSuite, validateGoldenPathPairSuite, validateGoldenTargetedSuite, type ValidationReport,
 } from './brain-eval.validation';
 
 // ACE-01 (WP3) — the named suites of the ONE evaluation system: one validator bound, one harness, one CLI, one blinded
@@ -49,7 +50,7 @@ export function resolveEvaluationSuite(name: string | undefined): EvaluationSuit
 export interface DeepSeekEvaluationSuiteDefinition extends EvaluationSuiteDefinition {
   readonly repeats: number;
   readonly labels: ReadonlyArray<DeepSeekEvaluationLabel>;
-  readonly round: 1 | 2;
+  readonly round: 1 | 2 | 3;
   /** GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. */
   readonly comparison: 'GUIDANCE' | 'PATHS';
 }
@@ -74,6 +75,12 @@ export const DEEPSEEK_EVALUATION_SUITES = {
   'golden-round2-paths': {
     cases: GOLDEN_ROUND2_PATH_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY,
     validate: validateGoldenPathPairSuite, repeats: 2, labels: ['core-v3'], round: 2, comparison: 'PATHS',
+  },
+  // Round 3 (proposed to the Product Owner, 2026-10-21; runs only after approval): core v3 against core v3.1 on the three
+  // Shared language rules, each in two conversations, three repeats.
+  'golden-round3-shared': {
+    cases: GOLDEN_ROUND3_SHARED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY,
+    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['core-v3', 'core-v3.1'], round: 3, comparison: 'GUIDANCE',
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;
 

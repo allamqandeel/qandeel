@@ -1,5 +1,6 @@
 import {
   QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL,
+  WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3,
 } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
@@ -20,8 +21,9 @@ import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds
 // and the attribution scope (the AI-COST-01 ledger, D3); this module neither reads the environment nor opens a connection.
 
 // Round 1: `baseline` / `candidate`. Round 2 (Product Owner decision, 2026-10-21): `core-v2` / `core-v3`, each the guidance
-// rendered at the commit the run is made from.
-export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3'] as const;
+// rendered at the commit the run is made from. Round 3 (Product Owner review of Round 2, 2026-10-21): `core-v3` against
+// `core-v3.1`, core v3 with a revised world-neutral paragraph 3 (the Personal core is the same in both).
+export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1'] as const;
 export type DeepSeekEvaluationLabel = typeof DEEPSEEK_EVALUATION_LABELS[number];
 
 export function isDeepSeekEvaluationLabel(value: string | undefined): value is DeepSeekEvaluationLabel {
@@ -34,13 +36,16 @@ export function isDeepSeekEvaluationLabel(value: string | undefined): value is D
  * before / after moment, not a text, and are not checked here.
  */
 export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationCase>, label: DeepSeekEvaluationLabel): void {
-  if (label !== 'core-v2' && label !== 'core-v3') return;
-  const [core, worldNeutral] = label === 'core-v2'
-    ? [QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL]
-    : [QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL];
+  if (label === 'baseline' || label === 'candidate') return;
+  // core v3 and core v3.1 share the Personal core; in a World they differ only in paragraph 3, so the World check names
+  // it: core v3 renders the D1 paragraph, core v3.1 renders the world-neutral core v3 without it.
   const renders = (testCase: BrainEvaluationCase) => {
     const guidance = deepSeekEvaluationRequest(testCase).behavioralGuidance;
-    return guidance.includes(core) || guidance.includes(worldNeutral);
+    if (label === 'core-v2') return guidance.includes(QANDEEL_PERSONALITY_CORE_V2) || guidance.includes(QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL);
+    if (testCase.world === undefined) return guidance.includes(QANDEEL_PERSONALITY_CORE_V3);
+    const worldV3 = guidance.includes(QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL);
+    const d1 = guidance.includes(WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3);
+    return label === 'core-v3' ? worldV3 && d1 : worldV3 && !d1;
   };
   const mismatched = cases.filter((testCase) => !renders(testCase)).map((testCase) => testCase.id);
   if (mismatched.length > 0) {

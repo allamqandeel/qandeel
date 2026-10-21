@@ -97,7 +97,7 @@ async function deepSeekCompare(suiteName: string | undefined): Promise<void> {
   const suite = resolveDeepSeekEvaluationSuite(suiteName);
   const directory = join(suite.artifactDirectory, 'deepseek');
   const load = async (label: string) => JSON.parse(await readFile(join(directory, label, 'results.json'), 'utf8')) as { results: DeepSeekEvaluationResult[]; summary: unknown };
-  if (suite.round === 2) return round2Compare(suite.name, suite.comparison, suite.cases, directory, load);
+  if (suite.round >= 2) return round2Compare(suite.name, suite.comparison, suite.cases, suite.labels, directory, load);
   const [baseline, candidate] = [await load('baseline'), await load('candidate')];
   const { blindedReview, labelMap } = createGuidanceComparisonArtifacts(suite.cases, baseline.results, candidate.results, suite.rubric);
   await Promise.all([
@@ -114,15 +114,16 @@ async function deepSeekCompare(suiteName: string | undefined): Promise<void> {
  * facts; it is opened only after the review is complete.
  */
 async function round2Compare(
-  suiteName: string, comparison: 'GUIDANCE' | 'PATHS', cases: ReadonlyArray<BrainEvaluationCase>, directory: string,
+  suiteName: string, comparison: 'GUIDANCE' | 'PATHS', cases: ReadonlyArray<BrainEvaluationCase>, labels: ReadonlyArray<string>, directory: string,
   load: (label: string) => Promise<{ results: DeepSeekEvaluationResult[]; summary: unknown }>,
 ): Promise<void> {
   let groups: BlindGroup[];
   let measured: Record<string, unknown>;
   if (comparison === 'GUIDANCE') {
-    const [coreV2, coreV3] = [await load('core-v2'), await load('core-v3')];
-    groups = guidanceGroups(cases, coreV2.results, coreV3.results);
-    measured = { 'core-v2': coreV2.summary, 'core-v3': coreV3.summary };
+    const [firstLabel, secondLabel] = labels;
+    const [first, second] = [await load(firstLabel), await load(secondLabel)];
+    groups = guidanceGroups(cases, first.results, second.results, [firstLabel, secondLabel]);
+    measured = { [firstLabel]: first.summary, [secondLabel]: second.summary };
   } else {
     const coreV3 = await load('core-v3');
     groups = pathGroups(cases, coreV3.results);

@@ -228,12 +228,13 @@ const resultsOf = (results: ReadonlyArray<DeepSeekEvaluationResult>, caseId: str
 
 /** GUIDANCE: one item per case; the two sets are every attempt under core v2 and every attempt under core v3. */
 export function guidanceGroups(
-  cases: ReadonlyArray<BrainEvaluationCase>, coreV2: ReadonlyArray<DeepSeekEvaluationResult>, coreV3: ReadonlyArray<DeepSeekEvaluationResult>,
+  cases: ReadonlyArray<BrainEvaluationCase>, first: ReadonlyArray<DeepSeekEvaluationResult>, second: ReadonlyArray<DeepSeekEvaluationResult>,
+  labels: readonly [string, string] = ['core-v2', 'core-v3'],
 ): BlindGroup[] {
   return cases.map((testCase) => ({
     itemId: testCase.id, testCase,
-    a: { condition: 'core-v2', results: resultsOf(coreV2, testCase.id) },
-    b: { condition: 'core-v3', results: resultsOf(coreV3, testCase.id) },
+    a: { condition: labels[0], results: resultsOf(first, testCase.id) },
+    b: { condition: labels[1], results: resultsOf(second, testCase.id) },
   }));
 }
 

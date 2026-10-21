@@ -28,10 +28,12 @@ const DEEPSEEK_HOST = 'api.deepseek.com';
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 // The Product Owner's caps, per approved round; each round has its own spend-state file, so one round can never spend
 // another's allowance. Round 1 (D3): 60 paid calls and USD 0.50, baseline and candidate together. Round 2 (decision of
-// 2026-10-21): at most 200 attempts and USD 0.35, both arms and the FAST / DEEP pairs together.
-const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 } };
+// 2026-10-21): at most 200 attempts and USD 0.35, both arms and the FAST / DEEP pairs together (exhausted). Round 3 (the
+// focused Shared language comparison, proposed 2026-10-21; nothing runs before the Product Owner approves it): at most
+// 40 attempts and USD 0.10, independent of Round 2.
+const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 }, 3: { maxAttempts: 40, costCapUsd: 0.1 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
-if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error('S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (1 or 2)');
+if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error('S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (1, 2 or 3)');
 const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;
 const COST_CAP_USD = ROUND_CAPS[ROUND].costCapUsd;
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';

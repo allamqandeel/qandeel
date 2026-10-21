@@ -3,6 +3,7 @@
 //   node scripts/s8a-02/deepseek-eval.mjs baseline|candidate [--dry]                  (Round 1, the extended Golden suite)
 //   node scripts/s8a-02/deepseek-eval.mjs golden-round2 core-v2|core-v3 [--dry]        (Round 2, the two arms)
 //   node scripts/s8a-02/deepseek-eval.mjs golden-round2-paths core-v3 [--dry]          (Round 2, the FAST / DEEP pairs)
+//   node scripts/s8a-02/deepseek-eval.mjs golden-round3-shared core-v3|core-v3.1 [--dry] (Round 3, the Shared language rules)
 //
 // The suite fixes its round, and the round fixes the caps the guard enforces and the ONE spend-state file every run of
 // that round shares (Round 2: 200 attempts, USD 0.35 in total, Product Owner decision of 2026-10-21).
@@ -32,11 +33,12 @@ const SUITES = {
   'golden-conversations-extended': { round: 1, labels: ['baseline', 'candidate'], spendSuite: 'golden-conversations-extended' },
   'golden-round2': { round: 2, labels: ['core-v2', 'core-v3'], spendSuite: 'golden-round2' },
   'golden-round2-paths': { round: 2, labels: ['core-v3'], spendSuite: 'golden-round2' },
+  'golden-round3-shared': { round: 3, labels: ['core-v3', 'core-v3.1'], spendSuite: 'golden-round3-shared' },
 };
 const args = process.argv.slice(2);
 const [SUITE, label, flag] = SUITES[args[0]] === undefined ? ['golden-conversations-extended', ...args] : args;
 if (!SUITES[SUITE].labels.includes(label) || (flag !== undefined && flag !== '--dry')) {
-  console.error('usage: node scripts/s8a-02/deepseek-eval.mjs [golden-round2|golden-round2-paths] <label> [--dry]');
+  console.error('usage: node scripts/s8a-02/deepseek-eval.mjs [golden-round2|golden-round2-paths|golden-round3-shared] <label> [--dry]');
   process.exit(2);
 }
 const { round, spendSuite } = SUITES[SUITE];
