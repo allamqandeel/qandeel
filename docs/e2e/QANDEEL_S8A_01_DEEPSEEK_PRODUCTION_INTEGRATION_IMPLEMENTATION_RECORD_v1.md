@@ -1,7 +1,7 @@
 # QANDEEL — S8A-01 DeepSeek Production Integration & First Real Conversation — Implementation Record v1
 
 **Task:** S8A-01 — DeepSeek Production Integration & First Real Conversation (Stage 8A)
-**Status:** CP1–CP3 DELIVERED — CP4 (FIRST REAL CONVERSATION) AWAITING THE PRODUCT OWNER'S SEPARATE APPROVAL — NOT CLOSED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS
+**Status:** CP1–CP4 DELIVERED — CP4 RAN (6 SYNTHETIC CALLS, ≈ USD 0.007): FAST PASSED; DEEP EXCEEDED ITS 10 s CEILING ONCE — THE DEEP BUDGET DECISION AWAITS THE PRODUCT OWNER — NOT CLOSED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS
 **Date:** 2026-10-21
 **Branch / base:** `s8a/s8a-01-deepseek-production-integration` from `main` at `26d05fff999b1188137ec0d2220f64ac5e7e456b`, the
 merge of PR #352 (the Stage 8A DeepSeek-only direction, [S8A WP0](QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md)). S7-05
@@ -10,8 +10,9 @@ merged through PR #351 as `daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd`.
 Implementation Direction (2026-10-21; seven binding decisions, §2). AI-COST-01 (migration `0135`, PR #303) and the
 existing Model Router, FAST / DEEP, Behavioral Runtime, HIM and Memory contracts, all unchanged.
 
-Merging, deploying, sending any real user's data to DeepSeek, opening any launch gate, running CP4 and starting S8A-02 each
-need the Product Owner's explicit approval. None is done here. No paid call was made.
+Merging, deploying, sending any real user's data to DeepSeek, opening any launch gate and starting S8A-02 each need the
+Product Owner's explicit approval. None is done here. CP4 ran under the Product Owner's CP4 Authorization (2026-10-21):
+six paid calls, synthetic data only (§8).
 
 ## 1. What S8A-01 delivers
 
@@ -21,7 +22,7 @@ need the Product Owner's explicit approval. None is done here. No paid call was 
 | CP1 | The DeepSeek reply adapter behind the existing `ModelRouter`; FAST / DEEP profile; the synthetic-qualification gate | DELIVERED (§3) |
 | CP2 | AI-COST-01 accounting for DeepSeek (migration `0170`); the output release guard | DELIVERED (§4, §5) |
 | CP3 | Deterministic tests: unit, the real orchestrator over the accounted transport, real PostgreSQL | DELIVERED (§7) |
-| CP4 | The first real conversation: synthetic data, at most 12 calls, a USD 0.30 cap | NOT RUN — awaits separate approval (§8) |
+| CP4 | The first real conversation: synthetic data, at most 12 calls, a USD 0.30 cap | RAN 2026-10-21 (§8): FAST passed; DEEP exceeded its 10 s ceiling once — the DEEP budget decision awaits the Product Owner |
 
 ## 2. The Product Owner's CP0 decisions (2026-10-21)
 
@@ -147,13 +148,138 @@ request's GitHub CI is reported with the pull request; no CI result is claimed h
   task as written at its closing change. They had been failing on `main` since PR #352 replaced that line (API CI and
   Mobile CI on `26d05fff`); this change restores one current-task line.
 
-## 8. CP4 — readiness (not run)
+## 8. CP4 — the first real conversation (2026-10-21)
 
-Ready on the code side; it runs only after the Product Owner's separate approval, with the key set by the Product Owner in
-the local environment (never in the chat or a tracked file). The plan: one synthetic account in a local database, the real
-Phase-1 conversation path (Safety, Behavioral Runtime, HIM, Memory, FAST / DEEP, the DeepSeek router, the AI-COST-01
-ledger) with deterministic doubles for the subsidiary operations, a network allow-list of `api.deepseek.com` only, at most
-12 calls and a USD 0.30 cap, measuring latency, tokens and the ledger's rows. A failure is reported, not retried around.
+Run under the Product Owner's CP4 Authorization (2026-10-21). CP1–CP3 were proven on GitHub at `5716bc8a` (API CI and
+Mobile CI green, as the Product Owner reported). Six calls to `deepseek-flash` in all, between 06:51 and 06:53 UTC. All
+input was synthetic and invented; no real person, account or identifier was used.
+
+### 8.1 How it ran
+
+- **Path.** The real Phase-1 conversation path, composed as production composes it:
+  `ConversationRepository` (admission, claim, finalize) → `ConversationOrchestratorService` (Safety, Behavioral Runtime,
+  HIM, Memory, Hypothesis, Question, Interaction Preferences, the Integrated Context Budget, FAST / DEEP) →
+  `DeepSeekModelRouter.fromEnvironment` → the accounted DeepSeek transport → the AI-COST-01 ledger
+  (`SupabaseAiProviderCallLedger`).
+- **Database.** A disposable local PostgreSQL 17 built from the bootstrap and every migration through `0170`. The Data API
+  was the CI-01 bounded SQL transport: same role and JWT claim per request, and an allow-list of tables and RPCs.
+- **Doubles.** Only the foreground lease gate and the transport token were doubles. DeepSeek's reply was never simulated.
+  Not exercised: the Phase-2 semantic chain and the post-response background work (CP0 decision 3); no OpenAI or Gemini
+  client was composed.
+- **Preconditions, checked before any call:**
+  - `NODE_ENV=development`.
+  - `DEEPSEEK_QUALIFICATION_MODE=SYNTHETIC_ONLY`.
+  - The key present: read from a per-user file outside the repository into the child process only, never printed or written.
+  - No other provider variable.
+  - The composed router is a `DeepSeekModelRouter`, not a `FakeModelRouter`.
+  - The database is the harness's own cluster on 127.0.0.1.
+- **Network guard (preloaded before every module):**
+  - Only `POST https://api.deepseek.com/chat/completions` and the local database were reachable. Every other fetch, HTTP,
+    HTTP/2, TLS, socket, DNS and UDP path threw; a 13-probe self-test passed before each run.
+  - The guard enforced the 12-attempt cap and the USD 0.30 cap itself.
+  - Before each request it reserved the worst case at the peak rate: every request byte priced as a cache-miss token,
+    plus the whole `max_tokens` priced as output.
+  - Unknown usage was charged at that worst case, never as zero.
+- **Zero-cost dry runs.** The same harness with the attempt cap at 0 proved the wiring first: the ledger intent was
+  written before the refused request, the call settled `FAILED_USAGE_UNKNOWN`, and the turn failed closed.
+- **Harness location.** Kept outside the repository, with the results (`.s8a-01-reports/`, untracked). It is a dev-only
+  paid test, never a CI step.
+
+### 8.2 Results
+
+| # | Scenario | Path (decided = stored) | Provider wall time | Tokens: prompt (cache hit) / completion (reasoning) | `finish_reason` | Ledger |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | S1 greeting, one turn | FAST | 1.25 s | 1,216 (0) / 34 | `stop` | `SUCCEEDED_USAGE_REPORTED`, `COMPLETE`, `UNPRICED` |
+| 2 | S2 a decision with three questions | DEEP (`MULTI_QUESTION`) | **10.03 s — aborted at the 10 s ceiling** | unknown | — | `FAILED_USAGE_UNKNOWN`, `ABSENT`, `USAGE_UNKNOWN` |
+| 3 | S3 turn 1 (name, work, city) | FAST | 1.15 s | 1,223 (1,024) / 47 | `stop` | `SUCCEEDED_USAGE_REPORTED`, `COMPLETE`, `UNPRICED` |
+| 4 | S3 turn 2 (tomorrow's recording) | FAST | 1.73 s | 1,295 (1,152) / 77 | `stop` | `SUCCEEDED_USAGE_REPORTED`, `COMPLETE`, `UNPRICED` |
+| 5 | S3 turn 3 ("do you remember what I do and where?") | FAST | 1.07 s | 1,389 (1,152) / 35 | `stop` | `SUCCEEDED_USAGE_REPORTED`, `COMPLETE`, `UNPRICED` |
+| 6 | S2 again, measurement only (§8.5) | DEEP | 8.82 s (headers at 0.62 s) | 1,428 (1,280) / 1,168 (697) | `stop` | `SUCCEEDED_USAGE_REPORTED`, `COMPLETE`, `UNPRICED` |
+
+**Requests and ledger rows.**
+- Every request carried exactly `model`, `messages`, `max_tokens`, `thinking`, `stream` and, for DEEP only,
+  `reasoning_effort: low`. FAST had `thinking: disabled` and `max_tokens` 1024; DEEP had `thinking: enabled` and 2048. No
+  `user` field or other identifier was sent.
+- Every ledger row was written before its request, bound to its session and its source turn, with provider `DEEPSEEK`,
+  operation `DEEPSEEK_CHAT_COMPLETIONS_CREATE`, family `CONVERSATION_REPLY`, attempt 1 and the stored path.
+- Usage split as designed: cache hit → `CACHE_READ_INPUT_TOKEN`, cache miss → `INPUT_TOKEN`, completion (reasoning
+  included) → `OUTPUT_TOKEN`. With no Price Card, the rating is `UNPRICED`.
+
+**Controls.**
+- No user text, reply or reasoning appeared in the telemetry or the ledger: 0 matches for every word of five or more
+  letters.
+- No Data API request was refused.
+- The router never read the reasoning trace (CP1).
+
+**Cost** (official `deepseek-flash` rates; every call ran in a peak window, so the applicable rate is peak):
+
+| Item | Estimate (USD) |
+| --- | --- |
+| FAST, 4 calls (reported usage) | 0.000790 |
+| DEEP measurement call (reported usage) | 0.001454 |
+| DEEP aborted call (usage unknown; charged at its worst case, never as zero) | ≤ 0.004740 |
+| **Total** | **≤ 0.006984 (≈ 2.3 % of the USD 0.30 cap)** |
+
+- Cache reads began from the second call: the shared server-guidance prefix was cached, 1,024–1,280 tokens.
+- Calls: 6 of the 12 authorised; no retry. The router's single attempt (`maxRetries: 0`) held.
+
+**One blocked network attempt.**
+- In the run with the aborted DEEP call, the guard refused one network attempt besides its self-test. Its destination was
+  not recorded: the guard recorded it after that run.
+- It was refused before any connection opened, so nothing left the process.
+- The measurement run, recording every refusal, had none. It is reported here; it is not explained.
+
+### 8.3 Reply quality (synthetic; the texts stay in the untracked results)
+
+- **FAST.** Short, warm, in Egyptian Arabic, one question at a time, no lecture. The tomorrow's-recording turn offered a
+  concrete choice of three worries instead of reassurance.
+- **Context carried.** Asked "do you remember what I do and where?", the third S3 turn answered in one line: the work, the
+  city, the studio and tomorrow's recording, all from the session's history.
+- **Dialect drift.** One FAST reply used non-Egyptian forms ("أهلين" and "وش" for "what"). That is an S8A-02 matter
+  (personality and dialects); CP4 changes no copy.
+- **DEEP (the measurement call).**
+  - It answered the user's three direct questions with concrete criteria: paid deposits, repeat clients, side income over
+    three months, and a stop rule for the savings.
+  - It ended with one clarifying question.
+  - It was long, about 470 answer tokens, and used Markdown bold and bullets. Whether such length and formatting are
+    acceptable on the mobile surface is an S8A-02 behaviour decision; nothing here changes it.
+
+### 8.4 What CP4 proves, and what it does not
+
+- **Proven:**
+  - DeepSeek replies through QANDEEL's real foreground path with the instructions applied.
+  - FAST fits its 3 s ceiling with room: 1.07–1.73 s.
+  - Multi-turn context is carried.
+  - The AI-COST-01 ledger records every call, success or failure, with the right state.
+  - No content leaks to telemetry or the ledger.
+  - A provider failure fails the turn closed, with nothing saved.
+- **Not proven:**
+  - That DEEP is reliable inside 10 s (§8.5).
+  - Anything about real users, the Phase-2 chain, the background adapters or production.
+
+### 8.5 The DEEP ceiling: measurement and proposal (decision for the Product Owner)
+
+**Measured:**
+- The aborted DEEP call ran past 10 s.
+- The same prompt then took 8.82 s with the ceiling raised in the harness only: 0.62 s to headers, then 1,168 completion
+  tokens (697 of them reasoning) at about 143 tokens/s.
+- DEEP's `max_tokens` is 2048, reasoning included. A completion that uses it fully needs about 0.6 s + 2048 ÷ 143 ≈ 15 s.
+- At `reasoning_effort: low`, DEEP therefore exceeds 10 s in ordinary use. One of the two runs did.
+
+**The 10 s ceiling is not DeepSeek's alone.**
+- The router uses `min(request.latencyBudgetMs, 10 s)`.
+- The orchestrator's `latencyBudgetMs: DEEP 10000 / FAST 3000` is pinned by the FAST / DEEP v2 and Integrated Context
+  Budget contracts.
+- Changing it is a controlled change, not a CP4 fix. It is not made here.
+
+**Proposal:**
+- **Recommended:** raise DEEP's latency budget to 16 s (the orchestrator's DEEP budget and DeepSeek's DEEP timeout), with
+  FAST unchanged at 3 s and the 90 s turn deadline unchanged. The figure is the full 2048-token completion at the
+  measured throughput, plus margin. Done inside this pull request, with its contract pins and a test.
+- **Alternatives, not recommended:**
+  - Keep 10 s and lower DEEP's `max_tokens` to about 1,300. A long answer would then end in `length` and be refused, so
+    the failures move rather than stop.
+  - Stream DEEP. That is a larger change, outside S8A-01's scope.
 
 ## 9. Deliberately not implemented
 
@@ -163,7 +289,7 @@ ledger) with deterministic doubles for the subsidiary operations, a network allo
 - No disclosure, consent, policy or report surface; no output content moderation (`QAN-BL-AI-01`).
 - No Price Card, Credit or plan; no time-of-day pricing (`QAN-BL-AI-03`).
 - No personality or copy change (S8A-02), no Shared / Public semantic binding, no Matching producer.
-- No paid call, no deployment, no gate opened.
+- No deployment, no gate opened; the only paid calls are CP4's six synthetic calls (§8).
 
 ## 10. Backlog (BG-05 / BG-06)
 
@@ -177,4 +303,6 @@ ledger) with deterministic doubles for the subsidiary operations, a network allo
   compliance surfaces and the final release requirements, Product Owner 2026-10-21),
   `QAN-BL-AI-02` (the background calls still bound to OpenAI / Gemini, `HIGH`, owner Stage 8A) and `QAN-BL-AI-03`
   (time-of-day pricing, `MEDIUM`).
-- **BG-08 / BG-09** are reconciled at CP4, the closing checkpoint; this record's banner moves to its final state then.
+- **BG-08 / BG-09** are reconciled at the closing change, once the Product Owner has decided the DEEP budget (§8.5). CP4
+  found a measured defect inside S8A-01's own scope, so the task is not closed on it; this record's banner moves to its
+  final state then.
