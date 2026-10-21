@@ -581,7 +581,8 @@ test('P3 - forward safety: every change a later QIR task is expected to make sta
     'a later reviewed task may revise the integrated context budget assembly surface');
 
   // Provider latency budgets and the LOW/HIGH mapping stay QIR-002-neutral.
-  const rebudgeted = shipped.orchestrator.replace('latencyBudgetMs: selection.path === \'DEEP\' ? 10000 : 3000,', 'latencyBudgetMs: selection.path === \'DEEP\' ? 12000 : 2500,');
+  // S8A-01 (Product Owner, 2026-10-21): the shipped DEEP budget is 20 s by a controlled change.
+  const rebudgeted = shipped.orchestrator.replace('latencyBudgetMs: selection.path === \'DEEP\' ? 20000 : 3000,', 'latencyBudgetMs: selection.path === \'DEEP\' ? 12000 : 2500,');
   assert.notDeepEqual(rebudgeted, shipped.orchestrator);
   assert.doesNotThrow(() => assertFastDeepRuntimeDecisionPolicyV2Contract({ ...shipped, orchestrator: rebudgeted }),
     'a later reviewed task may retune the provider latency budget');

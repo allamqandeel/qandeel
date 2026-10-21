@@ -7,7 +7,7 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-21):** S8A-01 — DeepSeek Production Integration & First Real Conversation; CP1–CP4 delivered, CP4's DEEP budget decision awaiting the Product Owner, not merged (§6.29).
+> **CURRENT TASK (2026-10-21):** S8A-01 — DeepSeek Production Integration & First Real Conversation; CLOSED at its final review & merge gate: CP1–CP4 delivered, CP4 passed, not merged (§6.29).
 
 > **LATEST EXECUTION DIRECTION (2026-10-20):** Stage 7 / S7-05 merged through PR #351 (`daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd`) and is engineering-complete, not deployed or launch-ready. Stage 8A is NEXT, at approved **planning direction** only: DeepSeek Flash is the sole model to qualify for QANDEEL, with friendly/familiar/spontaneous personality from the outset, appropriate seriousness, dialect fidelity, real Personal knowledge and HIM, Shared/Public semantics and Matching, measured cost per successful outcome. No implementation task or model has passed acceptance. Stage 8B owns contextual Arabic vocalization **before TTS** under existing `QAN-BL-VOICE-01`; Stage 9 keeps Credits / Economy / Launch. See [Stage 8A WP0 direction](docs/e2e/QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md) and [Project Map](QANDEEL_PROJECT_MAP.md) §5. Older execution notes are historical.
 
@@ -782,7 +782,7 @@ stay as written.
 - **Provisional S8A work map (not open task contracts):** S8A-01 DeepSeek adapter + accounted real-text smoke; S8A-02 personality/dialects/preferences and feedback loop; S8A-03 Personal acquisition, correction, retrieval, Memory and HIM; S8A-04 Shared semantic/spatial bindings with `CW-05` decision; S8A-05 Public semantic/spatial bindings; S8A-06 Matching understanding readiness; S8A-07 safe Compatibility Conclusion producer; S8A-08 cross-world real-model, performance and economics exit proof. Sequence/task boundaries to be independently checked before execution; validation starts with the first model run, not only S8A-08.
 - **Existing owned backlog, unchanged state/count:** `QAN-BL-CW-05`, `QAN-BL-IP-02`, `QAN-BL-ACE-02`, `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04`; and the already existing `QAN-BL-VOICE-01` for Stage 8B. These are not new items. Full direction: [S8A WP0 DeepSeek direction](docs/e2e/QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md). No branch, implementation code, paid evaluation, Product/Architecture amendment, feature-gate opening or merge is authorized by this documentation alone.
 
-### 6.29 Execution note — 2026-10-21 (S8A-01 CP1–CP4 delivered; the DEEP budget decision awaiting the Product Owner)
+### 6.29 Execution note — 2026-10-21 (S8A-01 closed at its merge gate; CP4 passed)
 
 - **S8A-01 — DeepSeek Production Integration & First Real Conversation** started from `main` at `26d05fff` (PR #352). At its
   CP0 gate the Product Owner gave the Closure & Implementation Direction (2026-10-21): Chat Completions and
@@ -799,6 +799,10 @@ stay as written.
   passed: 1.07–1.73 s, concise Egyptian replies, a three-turn context carried, every call in the AI-COST-01 ledger, no
   content in telemetry. DEEP was aborted at its 10 s ceiling once; measured at 8.8 s, a full 2048-token DEEP needs
   about 15 s.
-- **Not claimed:** DeepSeek qualification (DEEP not reliable inside 10 s), "DeepSeek only", any real-user use, any gate opened.
-- **Next:** the Product Owner's decision on the DEEP budget (recommended: 16 s for DEEP only; record §8.5). No merge,
-  S8A-02 or deployment without the Product Owner's explicit approval.
+- **DEEP decision (Product Owner, 2026-10-21):** a controlled change raised the Personal DEEP budget to 20 s, with FAST,
+  `max_tokens` and the 90 s deadline unchanged. A seventh synthetic call then completed DEEP in 8.7 s, so CP4 passed
+  (≤ USD 0.0084). `QAN-BL-AI-04` was admitted (Shared / Public DEEP still 10 s), and CP4's Arabic-quality observations
+  are filed under `QAN-BL-ACE-02` for the S8A-02 work.
+- **Not claimed:** DeepSeek qualification beyond CP4's first real conversation (the Personal reply, synthetic data), "DeepSeek only", any real-user use, any gate opened.
+- **Next:** the Product Owner's final review and merge decision on the S8A-01 pull request. No merge, S8A-02 or
+  deployment without the Product Owner's explicit approval.

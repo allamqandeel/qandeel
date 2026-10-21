@@ -550,7 +550,9 @@ export class ConversationOrchestratorService {
         // whole; an omitted or never-selected Question changes presence only.
         ...(questionForeground?.state === 'SELECTED' ? { questionContext: questionForeground.questionContext } : {}),
         locale, modality: 'TEXT',
-        latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
+        // S8A-01 (Product Owner, 2026-10-21): DEEP 20 s, a controlled change measured at CP4 (a full DEEP completion with
+        // thinking needs about 15 s); FAST unchanged. Each provider still caps the request with its own ceiling.
+        latencyBudgetMs: selection.path === 'DEEP' ? 20000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));

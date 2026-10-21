@@ -6,7 +6,9 @@ import type { ProcessingPath } from '../../model-router.types';
 export const DEEPSEEK_API_BASE_URL = 'https://api.deepseek.com';
 // DEEP thinks before it answers, and DeepSeek counts the thinking inside max_tokens, so DEEP needs room for both.
 export const DEEPSEEK_MAX_OUTPUT_TOKENS = { FAST: 1024, DEEP: 2048 } as const satisfies Record<ProcessingPath, number>;
-export const DEEPSEEK_PROVIDER_TIMEOUT_MS = 10_000;
+// S8A-01 (Product Owner, 2026-10-21): 20 s, the DEEP budget measured at CP4. FAST stays at its 3 s request budget,
+// because the router applies min(request budget, this ceiling).
+export const DEEPSEEK_PROVIDER_TIMEOUT_MS = 20_000;
 export const DEEPSEEK_MAX_RETRIES = 0;
 
 /**

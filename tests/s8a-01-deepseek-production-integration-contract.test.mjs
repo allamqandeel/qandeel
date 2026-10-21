@@ -32,6 +32,8 @@ const ADMITTED = {
   'QAN-BL-AI-01': ['`Stage 8A — QANDEEL AI Brain / Production LLM Runtime`', '`HIGH`'],
   'QAN-BL-AI-02': ['`Stage 8A — QANDEEL AI Brain / Production LLM Runtime`', '`HIGH`'],
   'QAN-BL-AI-03': ['`Stage 9 — Economy + Launch Closure (release-readiness gate)`', '`MEDIUM`'],
+  // The closing change: the Shared / Public DEEP budget the Product Owner's DEEP decision left at 10 s.
+  'QAN-BL-AI-04': ['`Stage 8A — QANDEEL AI Brain / Production LLM Runtime`', '`MEDIUM`'],
 };
 
 const world = () => ({

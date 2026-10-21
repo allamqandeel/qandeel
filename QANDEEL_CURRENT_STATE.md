@@ -12,24 +12,29 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
 
 ## 0. Current execution checkpoint (2026-10-21)
 
-### S8A-01 — DeepSeek Production Integration & First Real Conversation (2026-10-21; current task)
+### S8A-01 — DeepSeek Production Integration & First Real Conversation (2026-10-21; current task, closed at its merge gate)
 
-- **CP1–CP4 DELIVERED — CP4 RAN (6 SYNTHETIC CALLS, ≈ USD 0.007): FAST PASSED; DEEP EXCEEDED ITS 10 s CEILING ONCE — THE DEEP BUDGET DECISION AWAITS THE PRODUCT OWNER — NOT CLOSED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS**, on `s8a/s8a-01-deepseek-production-integration` from `26d05fff`
+- **CLOSED / AT THE S8A-01 FINAL REVIEW & MERGE GATE — CP1–CP4 DELIVERED — CP4 PASSED (7 SYNTHETIC CALLS, ≤ USD 0.0084; PERSONAL DEEP BUDGET 20 s BY THE PRODUCT OWNER'S CONTROLLED CHANGE) — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS**, on `s8a/s8a-01-deepseek-production-integration` from `26d05fff`
   (PR #352). Record: [S8A-01](docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md).
 - Implemented, under the Product Owner's CP0 Closure & Implementation Direction (2026-10-21): DeepSeek `deepseek-flash`
   through Chat Completions as the **reply** provider behind the existing `ModelRouter` (`MODEL_PROVIDER=deepseek`); FAST
-  without thinking, DEEP with thinking at `low`, inside the existing 3 s / 10 s budgets; the router refuses in production
+  without thinking, DEEP with thinking at `low`, inside the 3 s / 20 s budgets (DEEP 20 s by the Product Owner's CP4 decision); the router refuses in production
   and outside `DEEPSEEK_QUALIFICATION_MODE=SYNTHETIC_ONLY`; no end-user identifier is sent; a structural output release
   guard before a reply is saved or shown; AI-COST-01 accounting through migration `0170` (the next is `0171`), DeepSeek
   calls `UNPRICED`, Credits not activated.
-- **CP4 (2026-10-21, six synthetic calls, ≈ USD 0.007 of the USD 0.30 cap):** FAST replied through the real path in
-  1.07–1.73 s (3 s ceiling), carried a three-turn context, and every call reached the AI-COST-01 ledger with no content in
-  telemetry. DEEP was aborted at its 10 s ceiling once; measured at 8.8 s for 1,168 tokens, a full 2048-token DEEP needs
-  about 15 s. The proposal (DEEP to 16 s) awaits the Product Owner (record §8.5).
-- **Not true yet:** DeepSeek has not passed qualification (DEEP is not reliable inside its budget). "DeepSeek only" is not claimed:
+- **CP4 (2026-10-21; seven synthetic calls, ≤ USD 0.0084 of the USD 0.30 cap): PASSED.**
+  - FAST replied through the real path in 1.07–1.73 s (3 s ceiling) and carried a three-turn context.
+  - Every call reached the AI-COST-01 ledger, with no content in telemetry.
+  - DEEP was aborted once at its old 10 s ceiling. The Product Owner then raised the Personal DEEP budget to 20 s as a
+    controlled change (Orchestrator and DeepSeek router; FAST, `max_tokens` and the 90 s deadline unchanged; the
+    OpenAI and Anthropic routers keep their own 10 s). One verification call then completed in 8.7 s (record §8.6).
+- **Not true yet:** DeepSeek is proven only by CP4's first real conversation (the Personal reply, synthetic data); the
+  Golden and preference evaluations (`QAN-BL-ACE-02`, `QAN-BL-IP-02`) have not run, and Shared and Public DEEP replies keep
+  10 s (`QAN-BL-AI-04`). "DeepSeek only" is not claimed:
   the Personal Phase-2 semantic chain and the Hypothesis adapters keep OpenAI / Gemini (`QAN-BL-AI-02`). No real user's
   data may reach DeepSeek before `QAN-BL-AI-01` closes.
-- Register: `QAN-BL-AI-01`, `QAN-BL-AI-02`, `QAN-BL-AI-03` admitted from the merge; 81 items (§5).
+- Register: `QAN-BL-AI-01`, `QAN-BL-AI-02`, `QAN-BL-AI-03` (CP2) and `QAN-BL-AI-04` (closing change) admitted from the merge;
+  `QAN-BL-ACE-02` carries CP4's Arabic-quality observations; 82 items (§5). BG-08 / BG-09 reconciled.
 
 ### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)
 
@@ -227,7 +232,7 @@ W-slices are in §7.
 | S7-03 — Historical Replay Composite Visual Proof (no migration; mobile, plus an API proof spec) | **`CLOSED / MERGED` through PR #349 as `0d8a73350f075402897421e9ebb88379fe165575` (2026-10-19); NOT DEPLOYED / CLOSED TO USERS.** Reconciled by S7-04 (2026-10-20). As written at its closing change: **CLOSED / AT THE S7-03 INDEPENDENT VISUAL & TECHNICAL REVIEW GATE — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — PRODUCT COPY GATE CLOSED** (2026-10-19; all 14 Arabic rows APPROVED word for word by the Product Owner, the English rows still PROPOSED), on `s7/s7-03-composite-visual-proof` from `main` at `3ad4e414`; merging, deploying or opening the capability needs the Product Owner's explicit approval, and S7-04 does not start automatically. The Product Owner's binding decision: Replay owns the historical truth and the order of moments; the graphics belong to the existing Living Analysis system. One Replay moment — its exact historical message with its speaker, and the analysis as it stood at that moment — read only through the three S7-01 reads (version, moments, moment analysis), decoded strictly, bridged by a governed projection adapter into the existing `HistoricalDisclosure` and drawn by the unchanged LivingAnalysisSurface and T-04 MapSurface in an isolated, pinned viewpoint (no live store, no model, no current analysis). Honest states: a version that is not viewable (its reason and both layers, no analysis read), an analysis not available now, a failed read (never an empty map), and the two preview limits. A real-path proof chain (PostgreSQL `0169` → the real ReplayService → the wire → the real client and components), automated tests, a static contract and a validation-only proof build. No server, API or migration change; the frozen components byte-identical. Findings for the Product Owner (record §5): a Reading's scope carries the source session id over the Replay wire (not shown); `omittedBefore` is always 0 on the real path. Admits, re-owns and closes nothing; a dated note on `QAN-BL-NAV-02` | [S7-03 record](docs/e2e/QANDEEL_S7_03_IMPLEMENTATION_RECORD_v1.md) |
 | S7-04 — Production Replay Player & Navigation (no migration; mobile, plus an API proof spec) | **`CLOSED / MERGED` through PR #350 as `f9bc3947d840646385c618ea8db400914ca5aac4` (2026-10-20); NOT DEPLOYED / CLOSED TO USERS.** Reconciled by S7-05 CP1 (2026-10-20). As written at its closing change: **CLOSED / AT THE S7-04 FINAL MERGE REVIEW GATE — NOT MERGED / NOT DEPLOYED / CLOSED TO USERS — G-1 CORRECTED — PRODUCT COPY GATE CLOSED** (2026-10-20; the Product Owner approved all 13 rows, Arabic and English), on `s7/s7-04-replay-player` from `main` at `0d8a7335`; merging, deploying or opening the capability needs the Product Owner's explicit approval, and S7-05 does not start automatically. The Personal Replay player: one passage over the Conversation or the Analysis (which stay mounted and untouched beneath it), entered from the Conversation's saved draft («معاينة») or the Analysis band's END edge; the S7-03 composite on the ONE Living Analysis surface, CHROME_ONLY (no Live Timeline); the moments navigated on the Replay Temporal Spine (Product Owner Decision #2: P2's Temporal Spine + Aperture C "Parting", drawn by VPORT-02's own drawings and moved by T-06's own motion, one notch per moment, no Live Head, no Return Live, no temporal authority; a tap or a drag commits one ordinal); P2's play / pause at a declared reading pace, never the original timing; the private preview / finalize / reopen through the existing S7-01 routes, one command id per attempt, an unreadable answer said as unconfirmed. Independent Visual Review corrections (2026-10-20): the controls stay in place while a long message scrolls (an additive S7-03 composite seam, bounded by T-11's own cap; S7-03 consumers unchanged), and P2's discontinuity is never reused for omitted messages (the composite's approved gap sentence says them). G-1 corrected by the Product Owner's decision (2026-10-20, record §5B): the conversation list's summary decoder in `ReplayService` reads 0169's EXISTS answer `false` beside a null version as "no version yet" (the wire's null), so a fresh draft is listed and the Analysis reaches it after a restart; a contradiction stays refused. No migration, SQL, route or wire-shape change; nothing in the live store; F-2: no Reading scope is read, shown, logged or sent. Placed with S7-05 (record §11): F-2's wire question, a real-device and TalkBack proof. Admits, re-owns and closes nothing; a dated note on `QAN-BL-NAV-02` | [S7-04 record](docs/e2e/QANDEEL_S7_04_IMPLEMENTATION_RECORD_v1.md) |
 | S7-05 — Replay Final Integration, Device Proof & Stage Closure (no migration; API wire narrowing, mobile, tests, a verifier scenario) | **`CLOSED / MERGED` through PR #351 as `daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd` (2026-10-20); NOT DEPLOYED / NOT LAUNCH READY / CLOSED TO USERS.** Reconciled by S8A-01 (2026-10-21). As written at its closing change: **CLOSED / AT THE S7-05 FINAL INDEPENDENT REVIEW & MERGE GATE — ENGINEERING COMPLETE — REAL-DEVICE VERIFIED (proof build; TalkBack NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER) — NOT MERGED / NOT DEPLOYED / NOT LAUNCH READY / CLOSED TO USERS** (2026-10-20), PR #351 on `s7/s7-05-replay-final-integration` from `main` at `f9bc3947`, under the Product Owner's CP0 Final Decisions (D1 … D5) and TalkBack waiver (2026-10-20). CP1: F-2 Option B (D1) — a Reading's scope verified against its one canonical form and sent as its class `CONVERSATION_SESSION` alone, anything else refused whole and never repaired; 0169 and the frozen historical wire unchanged; the 27 English rows APPROVED (D2). CP2: the real-device render proof on the Product Owner's Android phone (proof APK over the captured real-path wire; the API / DB proof kept apart; no production journey through an open gate claimed); TalkBack `NOT REQUIRED FOR S7-05 — PRODUCT OWNER WAIVER`, not a pass. CP3: the four D5 proofs (account switch after sign-out; revise retry with the same command id; an existing Replay read after the gate closes — `verify-migration-0169` E15; NOT_VIEWABLE through the real path); `QAN-BL-NAV-02` tombstoned (Personal Analysis Replay; Shared / Public World Replay, media and distribution outside it) and `QAN-BL-RSP-03` admitted, both from the merge. The Personal Replay capability stays closed; no distribution, CW2-08 or Stage 8A | [S7-05 record](docs/e2e/QANDEEL_S7_05_IMPLEMENTATION_RECORD_v1.md) |
-| S8A-01 — DeepSeek Production Integration & First Real Conversation (migration `0170`; API only) | **CP1–CP4 DELIVERED — CP4 RAN (6 SYNTHETIC CALLS, ≈ USD 0.007): FAST PASSED; DEEP EXCEEDED ITS 10 s CEILING ONCE — THE DEEP BUDGET DECISION AWAITS THE PRODUCT OWNER — NOT CLOSED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS** (2026-10-21), on `s8a/s8a-01-deepseek-production-integration` from `26d05fff`. The DeepSeek reply router, its synthetic-only gate, the output release guard and its AI-COST-01 admission; `QAN-BL-AI-01` … `AI-03` admitted | [record](docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) |
+| S8A-01 — DeepSeek Production Integration & First Real Conversation (migration `0170`; API only) | **CLOSED / AT THE S8A-01 FINAL REVIEW & MERGE GATE — CP1–CP4 DELIVERED — CP4 PASSED (7 SYNTHETIC CALLS, ≤ USD 0.0084; PERSONAL DEEP BUDGET 20 s BY THE PRODUCT OWNER'S CONTROLLED CHANGE) — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS** (2026-10-21), on `s8a/s8a-01-deepseek-production-integration` from `26d05fff`. The DeepSeek reply router, its synthetic-only gate, the output release guard and its AI-COST-01 admission; `QAN-BL-AI-01` … `AI-03` admitted | [record](docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) |
 | PROD-AUTH-01 — Auth Verification Path; PROD-DATA-01 — List/Fan-out Correction | **`DEFERRED — OWNED`** (`QAN-BL-PROD-04`, `QAN-BL-PROD-05`). Not opened, and not promoted ahead of VPORT-02 | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 
 There is no task named `W3-CORR-M`. Memory control is the merged W3-MEGA-M (PR #293); no record or backlog item
@@ -272,17 +277,19 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 
 | Status | Count |
 |---|---:|
-| `DEFERRED — OWNED` | 39 |
+| `DEFERRED — OWNED` | 40 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 29 |
-| **Total** | **81** |
+| **Total** | **82** |
 
-| Severity (all 81) | Count |
+| Severity (all 82) | Count |
 |---|---:|
 | `HIGH` | 46 |
-| `MEDIUM` | 33 |
+| `MEDIUM` | 34 |
 | `LOW` | 2 |
+
+*S8A-01 closing change (2026-10-21; the S8A-01 pull request, not merged; effective from its merge) admits `QAN-BL-AI-04` (Shared and Public World DEEP replies keep the 10 s budget under DeepSeek; Stage 8A, `MEDIUM`), records CP4's Arabic-quality observations under `QAN-BL-ACE-02` (no new item) and lists `QAN-BL-AI-01` … `AI-04` in the register's §9 owner rows: 82 items, 40 / 4 / 9 / 29 by status, 46 / 34 / 2 by severity.*
 
 *S8A-01 CP2 change (2026-10-21; the S8A-01 pull request, not merged; effective from its merge) admits `QAN-BL-AI-01` (DeepSeek real-user enablement: data terms, disclosure, consent, policy, in-app report, pseudonymous identifier, output moderation; Stage 8A, `HIGH`; Stage 9 approves the compliance surfaces and the final release requirements), `QAN-BL-AI-02` (the background and semantic calls still on OpenAI / Gemini; Stage 8A, `HIGH`) and `QAN-BL-AI-03` (DeepSeek's time-of-day pricing; Stage 9, `MEDIUM`); it tombstones and re-owns nothing ([S8A-01 record](docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §10): 81 items; 39 / 4 / 9 / 29; 46 / 33 / 2. S7-05 merged through PR #351 as `daa5c415`, so its closing change below is effective (this table had not yet been moved to its 78 items).*
 
@@ -434,7 +441,7 @@ An entry authorizes no implementation (BG-07).
 
 ## 7. Forward roadmap
 
-> **S8A-01 (2026-10-21):** the current task; CP1–CP4 delivered, CP4's DEEP budget decision awaiting the Product Owner, not merged (§0).
+> **S8A-01 (2026-10-21):** the current task; CLOSED at its final review & merge gate (CP4 passed, Personal DEEP 20 s), not merged (§0).
 >
 > **Most recent execution decision (2026-10-20):** Stage 7 is DONE / MERGED through PR #351; Stage 8A DeepSeek-only qualification is NEXT, still at planning and product-gate level. Read §0 above before historical Stage 6/7 execution notes and the former unstarted status. Stage 8B owns Arabic contextual TTS pronunciation and Stage 9 owns launch/economy. This does not itself create task contracts or reopen any closed stage.
 

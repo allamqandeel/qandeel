@@ -1,7 +1,7 @@
 # QANDEEL — S8A-01 DeepSeek Production Integration & First Real Conversation — Implementation Record v1
 
 **Task:** S8A-01 — DeepSeek Production Integration & First Real Conversation (Stage 8A)
-**Status:** CP1–CP4 DELIVERED — CP4 RAN (6 SYNTHETIC CALLS, ≈ USD 0.007): FAST PASSED; DEEP EXCEEDED ITS 10 s CEILING ONCE — THE DEEP BUDGET DECISION AWAITS THE PRODUCT OWNER — NOT CLOSED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS
+**Status:** CLOSED / AT THE S8A-01 FINAL REVIEW & MERGE GATE — CP1–CP4 DELIVERED — CP4 PASSED (7 SYNTHETIC CALLS, ≤ USD 0.0084; PERSONAL DEEP BUDGET 20 s BY THE PRODUCT OWNER'S CONTROLLED CHANGE, 2026-10-21) — BG-08 / BG-09 RECONCILED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS
 **Date:** 2026-10-21
 **Branch / base:** `s8a/s8a-01-deepseek-production-integration` from `main` at `26d05fff999b1188137ec0d2220f64ac5e7e456b`, the
 merge of PR #352 (the Stage 8A DeepSeek-only direction, [S8A WP0](QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md)). S7-05
@@ -11,8 +11,8 @@ Implementation Direction (2026-10-21; seven binding decisions, §2). AI-COST-01 
 existing Model Router, FAST / DEEP, Behavioral Runtime, HIM and Memory contracts, all unchanged.
 
 Merging, deploying, sending any real user's data to DeepSeek, opening any launch gate and starting S8A-02 each need the
-Product Owner's explicit approval. None is done here. CP4 ran under the Product Owner's CP4 Authorization (2026-10-21):
-six paid calls, synthetic data only (§8).
+Product Owner's explicit approval. None is done here. CP4 ran under the Product Owner's CP4 Authorization and DEEP decision
+(2026-10-21): seven paid calls, synthetic data only (§8).
 
 ## 1. What S8A-01 delivers
 
@@ -22,7 +22,7 @@ six paid calls, synthetic data only (§8).
 | CP1 | The DeepSeek reply adapter behind the existing `ModelRouter`; FAST / DEEP profile; the synthetic-qualification gate | DELIVERED (§3) |
 | CP2 | AI-COST-01 accounting for DeepSeek (migration `0170`); the output release guard | DELIVERED (§4, §5) |
 | CP3 | Deterministic tests: unit, the real orchestrator over the accounted transport, real PostgreSQL | DELIVERED (§7) |
-| CP4 | The first real conversation: synthetic data, at most 12 calls, a USD 0.30 cap | RAN 2026-10-21 (§8): FAST passed; DEEP exceeded its 10 s ceiling once — the DEEP budget decision awaits the Product Owner |
+| CP4 | The first real conversation: synthetic data, at most 12 calls, a USD 0.30 cap | PASSED 2026-10-21 (§8): FAST passed; DEEP passed at 8.7 s after the Product Owner's DEEP decision raised its budget to 20 s (§8.6); the closing checkpoint (§10) |
 
 ## 2. The Product Owner's CP0 decisions (2026-10-21)
 
@@ -58,7 +58,7 @@ six paid calls, synthetic data only (§8).
     back.
   - Usage the provider did not report stays unknown (`null`), never zero.
   - Each failure becomes the existing bounded "provider unavailable" outcome. The foreground budget is checked before
-    the call, and the request is aborted at `min(latencyBudgetMs, 10 s)`.
+    the call, and the request is aborted at `min(latencyBudgetMs, 20 s)` (10 s until the Product Owner's DEEP decision, §8.6).
   - The SDK client is built with `organization`, `project`, `adminAPIKey` and `webhookSecret` set to `null` and a fixed
     `baseURL`, because the `openai` SDK would otherwise read `OPENAI_*` variables and send them to DeepSeek as headers or
     redirect the call. A wire test proves it.
@@ -281,6 +281,61 @@ input was synthetic and invented; no real person, account or identifier was used
     the failures move rather than stop.
   - Stream DEEP. That is a larger change, outside S8A-01's scope.
 
+### 8.6 The Product Owner's DEEP decision and its verification (2026-10-21)
+
+**The decision.** The Product Owner approved a controlled change to the DEEP budget inside this pull request. No new task
+was opened and no frozen contract was rewritten.
+- DEEP: 20,000 ms instead of 10,000 ms, in the Orchestrator and the DeepSeek router.
+- FAST stays 3,000 ms. DEEP's `max_tokens` stays 2,048, and the 90 s turn deadline is unchanged.
+- The older OpenAI and Anthropic routers keep their own ceilings.
+
+**Delivered:**
+- `conversation-orchestrator.service.ts`: `latencyBudgetMs: selection.path === 'DEEP' ? 20000 : 3000`.
+- `deepseek-model-router.config.ts`: `DEEPSEEK_PROVIDER_TIMEOUT_MS = 20_000`.
+  - The router applies `min(request budget, this ceiling)`, so FAST is still cut at 3 s.
+- The OpenAI and Anthropic routers are unchanged.
+  - Each still applies `min(request budget, its own 10_000 ms)`, so their DEEP calls are still cut at 10 s: the same
+    behaviour as before.
+- The pins that named the old value are updated, each with a note of this change, and nothing else:
+  - the S8A-01 blocks of `conversation-orchestrator.service.spec.ts` and `deepseek-model-router.spec.ts`;
+  - `tests/fast-deep-runtime-decision-policy-v2-contract.test.mjs`: the source of its re-budget mutation;
+  - `tests/integrated-context-budget-conflict-resolution-v1-contract.test.mjs`: the carried value;
+  - `apps/api/scripts/verify-integrated-brain-end-to-end-hardening-v2.ts`: the DEEP assertion.
+- The frozen QIR-001 contract (`docs/integrated-intelligence-runtime-contract-v1.md`) still describes its own baseline
+  (10000 DEEP) and is not rewritten. For the Personal DEEP budget, this record binds over it from its merge.
+- **Not changed:** the Shared World and Public World reply inputs keep `DEEP 10000`. The decision names the Orchestrator
+  and the DeepSeek router only. With DeepSeek, their DEEP replies are still cut at 10 s; the residue is
+  `QAN-BL-AI-04` (§10).
+
+**The verification call:**
+- One real DEEP call, with the same synthetic three-question message, on the production router and budgets. No ceiling
+  was raised in the harness.
+- It counts against CP4's original caps: the guard carried the six earlier calls and their estimated cost in, so at most
+  six more calls were possible.
+
+| Provider wall time | Headers | Tokens: prompt (cache hit) / completion (reasoning) | `finish_reason` | Ledger |
+| --- | --- | --- | --- | --- |
+| 8.73 s (turn 8.82 s), under the 20 s budget | 0.38 s | 1,428 (1,280) / 1,071 (429) | `stop` | `SUCCEEDED_USAGE_REPORTED`, `COMPLETE`, `UNPRICED`, bound to its session and turn |
+
+- The reply was complete and in Egyptian Arabic.
+- It answered the three questions with testable criteria: paid deposits, repeat bookings, a monthly-income threshold over
+  three months, and a stop rule.
+- It ended with one question.
+- It was again long and used Markdown, an observation for `QAN-BL-ACE-02`.
+- Controls: no content in the telemetry or the ledger, and no network attempt refused.
+
+**CP4 totals:**
+- 7 of the 12 authorised calls.
+- Cost: ≤ USD 0.008321 at the peak rate, the applicable one since every call ran in a peak window. This counts the
+  aborted call at its worst case.
+- **CP4 passed.**
+
+**Verification of the change (local, 2026-10-21):**
+- `tsc --noEmit` is clean.
+- The affected Jest suites pass: the orchestrator, every Model Router, AI usage and ACE-SP-01, 19 suites in all.
+- The root contracts that read the Orchestrator, the DeepSeek router, the locators, the backlog or this record pass.
+- The task-closure governance contract passes.
+
 ## 9. Deliberately not implemented
 
 - The seven background / semantic adapters (Focus Resolution, Thread Establishment, Thread Continuity, CU Segmentation and
@@ -289,7 +344,8 @@ input was synthetic and invented; no real person, account or identifier was used
 - No disclosure, consent, policy or report surface; no output content moderation (`QAN-BL-AI-01`).
 - No Price Card, Credit or plan; no time-of-day pricing (`QAN-BL-AI-03`).
 - No personality or copy change (S8A-02), no Shared / Public semantic binding, no Matching producer.
-- No deployment, no gate opened; the only paid calls are CP4's six synthetic calls (§8).
+- No deployment, no gate opened; the only paid calls are CP4's seven synthetic calls (§8).
+- The Shared World and Public World DEEP budgets are not changed (`QAN-BL-AI-04`).
 
 ## 10. Backlog (BG-05 / BG-06)
 
@@ -303,6 +359,18 @@ input was synthetic and invented; no real person, account or identifier was used
   compliance surfaces and the final release requirements, Product Owner 2026-10-21),
   `QAN-BL-AI-02` (the background calls still bound to OpenAI / Gemini, `HIGH`, owner Stage 8A) and `QAN-BL-AI-03`
   (time-of-day pricing, `MEDIUM`).
-- **BG-08 / BG-09** are reconciled at the closing change, once the Product Owner has decided the DEEP budget (§8.5). CP4
-  found a measured defect inside S8A-01's own scope, so the task is not closed on it; this record's banner moves to its
-  final state then.
+- **BG-08 (the closing change, 2026-10-21):**
+  - Inherited and left as they stand: `QAN-BL-CW-05`, `QAN-BL-IP-02`, `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and
+    `QAN-BL-VOICE-01`. S8A-01's contract claims none of them.
+  - `QAN-BL-ACE-02` stays `VALIDATION — OPEN` and carries CP4's Arabic-quality observations as evidence (§8.3, §8.6),
+    as the Product Owner directed for the S8A-02 work.
+  - `QAN-BL-INTEL-02`'s reopen condition 4 is not triggered.
+  - `QAN-BL-AI-01` (the privacy and disclosure requirements, Stage 8A, as decided), `QAN-BL-AI-02` and
+    `QAN-BL-AI-03` stay with their owners.
+  - **Admitted:** `QAN-BL-AI-04` (Shared and Public World DEEP replies keep the 10 s budget under DeepSeek; `MEDIUM`,
+    Stage 8A).
+  - The register's §9 owner rows now list `QAN-BL-AI-01` … `AI-04`.
+  - 82 items: 40 / 4 / 9 / 29 by status, 46 / 34 / 2 by severity.
+  - The DEEP budget itself is S8A-01's own work and is delivered (§8.6). No item for it survives in a review comment or
+    a report.
+- **BG-09:** this record's banner is at its final state for the merge gate. The pull request is not merged.

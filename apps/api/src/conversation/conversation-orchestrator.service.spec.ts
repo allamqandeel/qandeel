@@ -1835,7 +1835,7 @@ describe('ConversationOrchestratorService', () => {
       expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
-        path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 10000, recommendationContext: groundedContext,
+        path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 20000, recommendationContext: groundedContext,
       }));
     });
   });
@@ -2966,7 +2966,7 @@ describe('ConversationOrchestratorService', () => {
       expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_MULTI_PART' });
       // The selected path keeps driving every existing downstream projection.
       expect(himConsumptionPolicy.project).toHaveBeenCalledWith('DEEP', expect.anything());
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 10000 }));
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 20000 }));
       expect(router.generate).toHaveBeenCalledTimes(1);
     });
 
