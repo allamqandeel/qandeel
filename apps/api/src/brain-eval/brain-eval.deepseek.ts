@@ -1,6 +1,5 @@
 import {
   QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL,
-  WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3,
 } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
@@ -35,18 +34,19 @@ export function isDeepSeekEvaluationLabel(value: string | undefined): value is D
  * case's guidance must carry that core (Personal) or its world-neutral derivation (Shared / Public). Round 1 labels name a
  * before / after moment, not a text, and are not checked here.
  */
+// The core each guidance label must render, in Personal and in a World. core v3.1 (S8A-02 Round 3) has no core at a commit
+// that does not define it, so the label is refused there.
+const GUIDANCE_CORES: Readonly<Record<Exclude<DeepSeekEvaluationLabel, 'baseline' | 'candidate'>, { personal: string; world: string } | null>> = {
+  'core-v2': { personal: QANDEEL_PERSONALITY_CORE_V2, world: QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL },
+  'core-v3': { personal: QANDEEL_PERSONALITY_CORE_V3, world: QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL },
+  'core-v3.1': null,
+};
+
 export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationCase>, label: DeepSeekEvaluationLabel): void {
   if (label === 'baseline' || label === 'candidate') return;
-  // core v3 and core v3.1 share the Personal core; in a World they differ only in paragraph 3, so the World check names
-  // it: core v3 renders the D1 paragraph, core v3.1 renders the world-neutral core v3 without it.
-  const renders = (testCase: BrainEvaluationCase) => {
-    const guidance = deepSeekEvaluationRequest(testCase).behavioralGuidance;
-    if (label === 'core-v2') return guidance.includes(QANDEEL_PERSONALITY_CORE_V2) || guidance.includes(QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL);
-    if (testCase.world === undefined) return guidance.includes(QANDEEL_PERSONALITY_CORE_V3);
-    const worldV3 = guidance.includes(QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL);
-    const d1 = guidance.includes(WORLD_NEUTRAL_LANGUAGE_PARAGRAPH_V3);
-    return label === 'core-v3' ? worldV3 && d1 : worldV3 && !d1;
-  };
+  const cores = GUIDANCE_CORES[label];
+  const renders = (testCase: BrainEvaluationCase) => cores !== null
+    && deepSeekEvaluationRequest(testCase).behavioralGuidance.includes(testCase.world === undefined ? cores.personal : cores.world);
   const mismatched = cases.filter((testCase) => !renders(testCase)).map((testCase) => testCase.id);
   if (mismatched.length > 0) {
     throw new Error(`NOT RUN: the guidance at this commit is not ${label} for ${mismatched.length} case(s), e.g. ${mismatched[0]}.`);

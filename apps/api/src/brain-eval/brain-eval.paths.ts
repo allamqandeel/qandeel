@@ -12,3 +12,5 @@ export const GOLDEN_ROUND2_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRE
 export const GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round2-paths');
 // S8A-02 Round 3: the focused Shared language comparison (git-ignored).
 export const GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round3-shared');
+// S8A-02 Round 3 Part B: gender and declared brevity (git-ignored).
+export const GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round3-personality');

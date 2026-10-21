@@ -192,6 +192,7 @@ export function renderBlindPacketMarkdown(title: string, packet: ReadonlyArray<B
     `# ${title}`, '',
     'Each item shows two sets of replies, X and Y, to the same input. They were produced under two conditions that are not',
     'disclosed here; which one is X changes from item to item. Every attempt is shown in full, failures included.',
+    'An attempt with no reply is neither a pass nor a fail of any rule: judge only the replies.',
     'Review aids are flags for attention only, never scores.', '',
   ];
   for (const item of packet) {
@@ -222,6 +223,27 @@ export function renderBlindPacketMarkdown(title: string, packet: ReadonlyArray<B
     }
   }
   return lines.join('\n');
+}
+
+// Round 3 (Product Owner decision D4, 2026-10-21): attempts that produced no reply are counted on their own and judged
+// neither way. An item is INCONCLUSIVE when either set has fewer than `minimumReplies` replies.
+export const ROUND3_MINIMUM_REPLIES = 2;
+
+export function completionReport(groups: ReadonlyArray<BlindGroup>, minimumReplies: number) {
+  if (!Number.isInteger(minimumReplies) || minimumReplies < 1) throw new Error('minimumReplies must be a positive integer.');
+  const side = (results: ReadonlyArray<DeepSeekEvaluationResult>) => {
+    const failures = results.filter((result) => !result.success);
+    return {
+      attempts: results.length, replies: results.length - failures.length, noReply: failures.length,
+      failureReasons: [...new Set(failures.map((result) => result.error ?? 'unknown'))],
+    };
+  };
+  const items = groups.map((group) => {
+    const [a, b] = [side(group.a.results), side(group.b.results)];
+    const conclusive = a.replies >= minimumReplies && b.replies >= minimumReplies;
+    return { itemId: group.itemId, verdict: conclusive ? 'CONCLUSIVE' as const : 'INCONCLUSIVE' as const, [group.a.condition]: a, [group.b.condition]: b };
+  });
+  return { minimumReplies, inconclusiveItems: items.filter((item) => item.verdict === 'INCONCLUSIVE').map((item) => item.itemId), items };
 }
 
 const resultsOf = (results: ReadonlyArray<DeepSeekEvaluationResult>, caseId: string) => results.filter((result) => result.caseId === caseId);

@@ -1,11 +1,11 @@
 import {
   EVALUATION_ARTIFACT_DIRECTORY, GOLDEN_CONVERSATION_ARTIFACT_DIRECTORY, GOLDEN_EXTENDED_ARTIFACT_DIRECTORY, GOLDEN_ROUND2_ARTIFACT_DIRECTORY,
-  GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY,
+  GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
 } from './brain-eval.paths';
 import type { DeepSeekEvaluationLabel } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE } from './brain-eval.golden-extended.suite';
 import { GOLDEN_ROUND2_PATH_SUITE, GOLDEN_ROUND2_SUITE } from './brain-eval.golden-round2.suite';
-import { GOLDEN_ROUND3_SHARED_SUITE } from './brain-eval.golden-round3.suite';
+import { GOLDEN_ROUND3_PERSONALITY_SUITE, GOLDEN_ROUND3_SHARED_SUITE } from './brain-eval.golden-round3.suite';
 import { GOLDEN_CONVERSATION_SUITE } from './brain-eval.golden.suite';
 import { BRAIN_EVALUATION_SUITE } from './brain-eval.suite';
 import { GOLDEN_CONVERSATION_RUBRIC, RUBRIC, type BrainEvaluationCase } from './brain-eval.types';
@@ -76,10 +76,15 @@ export const DEEPSEEK_EVALUATION_SUITES = {
     cases: GOLDEN_ROUND2_PATH_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY,
     validate: validateGoldenPathPairSuite, repeats: 2, labels: ['core-v3'], round: 2, comparison: 'PATHS',
   },
-  // Round 3 (proposed to the Product Owner, 2026-10-21; runs only after approval): core v3 against core v3.1 on the three
-  // Shared language rules, each in two conversations, three repeats.
+  // Round 3 (Product Owner Round 3 decisions, 2026-10-21; runs only after the final copy is approved verbatim): core v3
+  // against core v3.1. Part A: the three Shared language rules, each in two conversations. Part B: gender without evidence
+  // and declared brevity on DEEP. Three repeats; both parts share the one Round 3 guard (80 attempts, USD 0.22).
   'golden-round3-shared': {
     cases: GOLDEN_ROUND3_SHARED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY,
+    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['core-v3', 'core-v3.1'], round: 3, comparison: 'GUIDANCE',
+  },
+  'golden-round3-personality': {
+    cases: GOLDEN_ROUND3_PERSONALITY_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['core-v3', 'core-v3.1'], round: 3, comparison: 'GUIDANCE',
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;

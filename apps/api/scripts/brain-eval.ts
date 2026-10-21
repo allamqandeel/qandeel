@@ -9,7 +9,7 @@ import {
   runDeepSeekEvaluation, summarizeDeepSeekRun, type DeepSeekEvaluationResult,
 } from '../src/brain-eval/brain-eval.deepseek';
 import {
-  createBlindPacket, guidanceGroups, pathGroups, renderBlindPacketMarkdown, reviewForm, type BlindGroup,
+  completionReport, createBlindPacket, guidanceGroups, ROUND3_MINIMUM_REPLIES, pathGroups, renderBlindPacketMarkdown, reviewForm, type BlindGroup,
 } from '../src/brain-eval/brain-eval.round2-review';
 import { resolveDeepSeekEvaluationSuite, resolveEvaluationSuite } from '../src/brain-eval/brain-eval.suites';
 import { summarizeResults } from '../src/brain-eval/brain-eval.summary';
@@ -130,6 +130,8 @@ async function round2Compare(
     measured = { 'core-v3': coreV3.summary };
   }
   const { packet, labelMap } = createBlindPacket(groups, randomBytes(24).toString('hex'));
+  // Failed attempts are counted apart and judged neither way; too few replies makes an item inconclusive (Round 3 D4).
+  const completion = completionReport(groups, ROUND3_MINIMUM_REPLIES);
   const [review, unblinded] = [join(directory, 'review'), join(directory, 'unblinded')];
   await Promise.all([mkdir(review, { recursive: true }), mkdir(unblinded, { recursive: true })]);
   await Promise.all([
@@ -138,8 +140,10 @@ async function round2Compare(
     writeFile(join(review, 'review-form.json'), JSON.stringify(reviewForm(packet), null, 2)),
     writeFile(join(unblinded, 'label-map.json'), JSON.stringify({ suite: suiteName, comparison, ...labelMap }, null, 2)),
     writeFile(join(unblinded, 'measured-comparison.json'), JSON.stringify(measured, null, 2)),
+    writeFile(join(unblinded, 'completion.json'), JSON.stringify(completion, null, 2)),
   ]);
-  console.log(`BLINDED PACKET WRITTEN: ${packet.length} items under ${review}; label map and measurements under ${unblinded}. No winner is selected by this command.`);
+  console.log(`BLINDED PACKET WRITTEN: ${packet.length} items under ${review}; label map, measurements and completion under ${unblinded}. No winner is selected by this command.`);
+  console.log(`COMPLETION: ${completion.inconclusiveItems.length} of ${groups.length} item(s) INCONCLUSIVE (fewer than ${completion.minimumReplies} replies in a set)${completion.inconclusiveItems.length ? `: ${completion.inconclusiveItems.join(', ')}` : ''}.`);
 }
 
 async function main(): Promise<void> {
