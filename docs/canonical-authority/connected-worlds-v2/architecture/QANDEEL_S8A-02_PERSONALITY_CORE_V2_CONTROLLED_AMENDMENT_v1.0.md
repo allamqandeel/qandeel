@@ -387,4 +387,29 @@ The D3 condition (no mixing in completed replies) is therefore **not met**. Reco
 No database change. The reply-link read is not designed (D4): no evidence needs it, and `QAN-BL-AI-08` stays a known
 data gap. No further round is started. Report: `.s8a-02-reports/S8A-02_SOURCED_CHECK_RESULTS.md` (local).
 
+**Product decision after the sourced check (Product Owner, 2026-10-21).** The proven improvement is acknowledged, but the
+sourced representation is not adopted as the production fix. Mixing in 2 of 3 replies when a speaker line is written
+inside another person's message is not acceptable for closing S8A-02, and `QAN-BL-AI-09` stays a HIGH blocker. The
+Product Owner asked for one bounded design that relies on the message sources the server truly holds, not on DeepSeek's
+understanding alone, with no promise the system cannot enforce; no core change and no new warning sentence as the
+solution. Constraints: no database change, no paid call, the sourced representation kept as a candidate.
+
+**The design** (`.s8a-02-reports/S8A-02_ATTRIBUTION_GUARD_DESIGN.md`, local; nothing implemented) is a deterministic,
+fail-closed attribution guard after generation:
+- What the server can enforce is a person's own message against what appears inside someone else's message about them.
+  Whether the second is a report or an imitation is intent, and the server cannot decide it; attribution does not need it.
+- A reply is withheld when one sentence names a person present, repeats at least two content words of a span inside
+  another person's message that names them, is less supported by that person's own messages, and does not frame the
+  content as the other person's report.
+- A withheld reply returns `UNAVAILABLE` from the generator, so nothing is committed and the requester sees the existing
+  «تعذّر إكمال رد قنديل.». There is no new copy, no regeneration and no logging.
+
+A free in-sample replay over the 86 existing replies of Part T and the sourced check:
+- withheld 11 of the 11 replies that took a quotation or a speaker line as the named person's own words;
+- withheld 3 correct replies of 73;
+- missed 2 mixings outside its scope (no name inside another's message).
+
+The guard does not make the model answer such cases correctly, and attribution errors with no such name remain
+model-dependent. Implementation and its final test await the Product Owner's review.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

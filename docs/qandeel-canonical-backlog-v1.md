@@ -3268,7 +3268,8 @@ authorizes implementation (BG-07).
   person an earlier QANDEEL reply answered; this item is text inside a message posing as a speaker.
 - **Why deferred:** S8A-02 is studying the server-sourced candidate under the Product Owner's decision; no representation is
   adopted. That candidate fixes the quotation case in its focused check but not a line written in another person's name.
-  The remaining direction is a Product Owner decision.
+  The Product Owner kept this item HIGH (2026-10-21) and asked for a server-enforced design. A deterministic, fail-closed
+  attribution guard over the server's true message sources is designed, not implemented, and awaits review.
 - **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
 - **Severity:** `HIGH` — proven wrong-person attribution in paid tests, and a way for one participant to speak in
   another's name.
