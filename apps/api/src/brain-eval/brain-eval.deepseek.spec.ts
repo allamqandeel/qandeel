@@ -113,7 +113,7 @@ describe('S8A-02 — the extended Golden suite and the DeepSeek-only path of the
       expect(labelShownAsA(testCase.id)).toBe(candidateAProvider(testCase.id) === 'ANTHROPIC' ? 'baseline' : 'candidate');
     }
     const make = (label: 'baseline' | 'candidate') => GOLDEN_EXTENDED_SUITE.map((testCase) => ({
-      caseId: testCase.id, label, world: 'PERSONAL' as const, path: testCase.path, productionRoute: testCase.path, productionRouteReason: 'r',
+      caseId: testCase.id, label, repeat: 1, world: 'PERSONAL' as const, path: testCase.path, productionRoute: testCase.path, productionRouteReason: 'r',
       latencyBudgetMs: 3000, latencyMs: 1, inputTokens: 1, outputTokens: 1, success: true, response: `${label} reply`, shape: replyShape(`${label} reply`),
     }));
     const { blindedReview, labelMap } = createGuidanceComparisonArtifacts(GOLDEN_EXTENDED_SUITE, make('baseline'), make('candidate'), GOLDEN_CONVERSATION_RUBRIC);

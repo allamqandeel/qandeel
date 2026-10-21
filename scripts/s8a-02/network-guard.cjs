@@ -1,8 +1,8 @@
 'use strict';
 // S8A-02 — network and spend guard PRELOAD for the DeepSeek-only brain-eval run (operator-only; never a CI step; never
 // imported by production code). Loaded with `node --require` BEFORE ts-node and every production module, on the pattern of
-// scripts/ci-01/network-guard.cjs and the S8A-01 CP4 guard. One difference from both: the caps are CUMULATIVE across the
-// baseline and the candidate runs (Product Owner D3, 2026-10-21): one spend-state file carries every attempt either run
+// scripts/ci-01/network-guard.cjs and the S8A-01 CP4 guard. One difference from both: the caps are CUMULATIVE across every run of one round (Round 1: the
+// baseline and the candidate, D3; Round 2: both arms and the FAST / DEEP pairs): one spend-state file carries every attempt those runs
 // made, and a request that would pass the attempt cap or the cost cap is refused HERE, before a byte leaves the process.
 //
 // Allowed: HTTPS POST to https://api.deepseek.com/chat/completions (and its TLS / DNS while that request is in flight), and
@@ -26,9 +26,14 @@ for (const n of scrubbed) delete process.env[n];
 
 const DEEPSEEK_HOST = 'api.deepseek.com';
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
-// The Product Owner's first-round caps (D3): 60 paid calls and USD 0.50 in total, baseline and candidate together.
-const MAX_ATTEMPTS = 60;
-const COST_CAP_USD = 0.5;
+// The Product Owner's caps, per approved round; each round has its own spend-state file, so one round can never spend
+// another's allowance. Round 1 (D3): 60 paid calls and USD 0.50, baseline and candidate together. Round 2 (decision of
+// 2026-10-21): at most 200 attempts and USD 0.35, both arms and the FAST / DEEP pairs together.
+const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 } };
+const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
+if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error('S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (1 or 2)');
+const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;
+const COST_CAP_USD = ROUND_CAPS[ROUND].costCapUsd;
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
 // Official deepseek-flash rates, USD per 1M tokens, checked on api-docs.deepseek.com/quick_start/pricing on 2026-10-21.
 // Off-peak is half the peak rate; peak is 01:00-04:00 and 06:00-10:00 UTC, Monday to Friday (Chinese public holidays are
@@ -44,12 +49,14 @@ const dbPort = /^\d+$/u.test(process.env.QANDEEL_EVAL_LEDGER_DB_PORT ?? '') ? Nu
 
 // 2. The cumulative spend state. A live run refuses to start without it; a dry run never writes it.
 const statePath = process.env.QANDEEL_EVAL_SPEND_STATE ?? '';
-const initial = { maxAttempts: MAX_ATTEMPTS, costCapUsd: COST_CAP_USD, attempts: [], spentPeakUsd: 0, spentApplicableUsd: 0 };
+const initial = { round: ROUND, maxAttempts: MAX_ATTEMPTS, costCapUsd: COST_CAP_USD, attempts: [], spentPeakUsd: 0, spentApplicableUsd: 0 };
 let spend = initial;
 if (!DRY) {
   if (!statePath) throw new Error('S8A_02_GUARD: QANDEEL_EVAL_SPEND_STATE is required for a live run');
   if (fs.existsSync(statePath)) spend = JSON.parse(fs.readFileSync(statePath, 'utf8'));
   if (spend.maxAttempts !== MAX_ATTEMPTS || spend.costCapUsd !== COST_CAP_USD) throw new Error('S8A_02_GUARD: spend state caps differ from the approved caps');
+  // Round 1's file predates the round field; any file that names a round must name this one.
+  if (spend.round !== undefined && spend.round !== ROUND) throw new Error('S8A_02_GUARD: spend state belongs to another round');
 }
 const persist = () => { if (!DRY) fs.writeFileSync(statePath, JSON.stringify(spend, null, 2)); };
 const run = { label: process.env.QANDEEL_EVAL_RUN_LABEL ?? null, attemptsThisRun: 0, blocked: [], scrubbed };
@@ -179,6 +186,6 @@ async function selfTest() {
 }
 
 globalThis.__QANDEEL_DEEPSEEK_EVAL_GUARD__ = {
-  dry: DRY, maxAttempts: MAX_ATTEMPTS, costCapUsd: COST_CAP_USD, peakRates: PEAK, spend, run, selfTest,
+  dry: DRY, round: ROUND, maxAttempts: MAX_ATTEMPTS, costCapUsd: COST_CAP_USD, peakRates: PEAK, spend, run, selfTest,
   remainingAttempts: () => (DRY ? 0 : MAX_ATTEMPTS - spend.attempts.length),
 };

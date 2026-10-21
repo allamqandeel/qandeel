@@ -56,6 +56,15 @@ export function validateGoldenConversationSuite(cases: ReadonlyArray<BrainEvalua
   if (GOLDEN_CONVERSATION_RUBRIC.length !== RUBRIC.length + 4 || !RUBRIC.every((name, index) => GOLDEN_CONVERSATION_RUBRIC[index] === name)) {
     throw new Error('The Golden rubric must keep the nine shared dimensions, in order, and add exactly four.');
   }
+  const { covered, negativeControls } = assertGoldenCases(cases);
+  const missing = STYLE_FOCUS.filter((focus) => !covered.has(focus));
+  if (missing.length) throw new Error(`The Golden suite does not cover: ${missing.join(', ')}.`);
+  if (negativeControls < MIN_GOLDEN_NEGATIVE_CONTROLS) throw new Error('The Golden suite needs explicit negative controls.');
+  return report;
+}
+
+/** The structural truths every Golden case holds, case by case (ids, focus, canonical preferences, Safety, World input). */
+function assertGoldenCases(cases: ReadonlyArray<BrainEvaluationCase>): { covered: Set<string>; negativeControls: number } {
   const covered = new Set<string>();
   let negativeControls = 0;
   const gate = new SafetyResponseGateService();
@@ -95,10 +104,48 @@ export function validateGoldenConversationSuite(cases: ReadonlyArray<BrainEvalua
     }
     if (!evaluationGuidance(testCase).trim()) throw new Error(`${testCase.id}: empty production guidance.`);
   }
-  const missing = STYLE_FOCUS.filter((focus) => !covered.has(focus));
-  if (missing.length) throw new Error(`The Golden suite does not cover: ${missing.join(', ')}.`);
-  if (negativeControls < MIN_GOLDEN_NEGATIVE_CONTROLS) throw new Error('The Golden suite needs explicit negative controls.');
-  return report;
+  return { covered, negativeControls };
+}
+
+/**
+ * S8A-02 Round 2 — a targeted Golden suite: every per-case Golden truth and the shared validator's checks, but not the full
+ * style-focus coverage a complete Golden suite must show (a targeted round covers what was weak, by design). It runs only on
+ * the DeepSeek-only path, so one run of it is one request per case per repeat (not the historical two-provider count).
+ */
+export function validateGoldenTargetedSuite(cases: ReadonlyArray<BrainEvaluationCase>): ValidationReport {
+  const report = validateEvaluationSuite(cases);
+  assertGoldenCases(cases);
+  return { ...report, expectedPaidRequests: cases.length };
+}
+
+/**
+ * S8A-02 Round 2 — the FAST / DEEP pairs: each stem exactly once on each path, with identical content, so the only
+ * difference between the two replies is the path. Fewer than 20 cases by design; every per-case Golden truth still holds.
+ */
+export function validateGoldenPathPairSuite(cases: ReadonlyArray<BrainEvaluationCase>): ValidationReport {
+  const ids = new Set(cases.map((testCase) => testCase.id));
+  if (ids.size !== cases.length) throw new Error('Duplicate case id in the path-pair suite.');
+  const stems = new Map<string, BrainEvaluationCase[]>();
+  for (const testCase of cases) {
+    const match = /^(fast|deep)-golden-pathcmp-([a-z0-9-]+)$/u.exec(testCase.id);
+    if (match === null) throw new Error(`${testCase.id} is not a path-pair case id.`);
+    if (!testCase.reviewNotes.length || testCase.context.at(-1)?.role !== 'USER') throw new Error(`${testCase.id} needs review notes and a USER-final context.`);
+    stems.set(match[2], [...(stems.get(match[2]) ?? []), testCase]);
+  }
+  for (const [stem, pair] of stems) {
+    const paths = pair.map((testCase) => testCase.path).sort().join(',');
+    if (paths !== 'DEEP,FAST') throw new Error(`${stem}: needs exactly one FAST and one DEEP case.`);
+    const [first, second] = pair;
+    const { id: _a, path: _b, ...firstRest } = first;
+    const { id: _c, path: _d, ...secondRest } = second;
+    void _a; void _b; void _c; void _d;
+    if (JSON.stringify(firstRest) !== JSON.stringify(secondRest)) throw new Error(`${stem}: the FAST and DEEP cases differ in more than the path.`);
+  }
+  assertGoldenCases(cases);
+  return {
+    caseCount: cases.length, fastCount: cases.filter(({ path }) => path === 'FAST').length, deepCount: cases.filter(({ path }) => path === 'DEEP').length,
+    expectedPaidRequests: cases.length, warnings: [],
+  };
 }
 
 export function assertPaidRunAllowed(environment: NodeJS.ProcessEnv): void {
