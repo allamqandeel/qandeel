@@ -15,8 +15,9 @@ personality across Personal, Shared and Public, through a narrow controlled amen
 request, with the approved world-neutral paragraph 3), recorded verbatim in §5; then *S8A-02 — Round 2 decision* and
 *S8A-02 — Final Product Copy Decision & Round 2 Authorization* (both 2026-10-21): core v3, paragraphs 1–8 approved
 verbatim, and the final world-neutral paragraph 3 (D1), recorded verbatim in §5.1; then *S8A-02 — Round 3 Product Owner
-Decisions* (2026-10-21): D1–D3, the direction of core v3.1 and the §3.2 amendment, recorded in §5.2 — its exact wording
-PROPOSED, awaiting the Product Owner's verbatim approval  
+Decisions* (2026-10-21): D1–D3, the direction of core v3.1 and the §3.2 amendment; then *S8A-02 — Round 3 Final Product Owner
+Decision* (2026-10-21): the paragraph 2 sentence (D3), the gender clause (D2) and the §3.2 sentence (D4) approved
+verbatim, recorded in §5.2; world-neutral paragraph 3.1 awaiting its verbatim approval  
 **Task:** `S8A-02` — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (Stage 8A). It carries the evidence of
 `QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase  
 **Implementation:** S8A-02, in the pull request that carries this record
@@ -202,13 +203,15 @@ The world-neutral paragraphs 6 and 7 of core v3 take the same CG-2 / CG-3 substi
 current conversation, for wording only: no gender is inferred, stored, or read from Memory to choose forms (G-A). The
 limits of D1 are stated in §3.2. As with D1 and D2 above, this approval is copy approval only.
 
-## 5.2 Round 3 — core v3.1 (PROPOSED verbatim; direction approved 2026-10-21)
+## 5.2 Round 3 — core v3.1 (Product Owner, 2026-10-21)
 
 The Product Owner's *S8A-02 — Round 3 Product Owner Decisions* (2026-10-21) approve the direction: D1, the
 current-writer wording of the world-neutral paragraph 3, with participant independence and the limits of ACE-SP-01 kept;
 D2, gender option A on the stated conditions; D3, a brevity request that holds on DEEP without dropping what is
-essential or what safety requires. The exact wording below is PROPOSED and is rendered on the branch for the free checks
-only. No paid call runs before the Product Owner approves it verbatim.
+essential or what safety requires. The *Round 3 Final Product Owner Decision* (2026-10-21) then approves verbatim
+the paragraph 2 sentence (D3), the gender clause (D2: natural neutral wording first, the grammatical masculine only where
+neutral wording would be forced, gender never inferred or stored) and the §3.2 sentence (D4). World-neutral paragraph 3.1
+is shown in full for its own verbatim approval; no paid call runs before it.
 
 **Paragraph 2 — one sentence added after "rather than a clipped summary." (D3):** "When they have asked for brevity, keep to it even on a complex question: give your answer and the one or two points that matter most in a few sentences, never leaving out what is essential or what safety requires."
 
