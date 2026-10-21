@@ -82,6 +82,34 @@ export function normalizeAnthropicMessagesUsage(message: unknown): NormalizedAiU
   return result(quantities, Object.values(quantities).every((value) => value !== undefined));
 }
 
+/**
+ * DeepSeek Chat Completions: `completion.usage` (S8A-01). prompt_tokens is exactly prompt_cache_hit_tokens +
+ * prompt_cache_miss_tokens, and DeepSeek has no cache-write charge; completion_tokens is all billed output, the
+ * reasoning trace included (completion_tokens_details.reasoning_tokens is its share). Any figure that contradicts
+ * another leaves the affected kind unknown.
+ */
+export function normalizeDeepSeekChatCompletionsUsage(completion: unknown): NormalizedAiUsage {
+  const usage = record(record(completion)?.usage);
+  if (!usage) return ABSENT_AI_USAGE;
+  const prompt = count(usage.prompt_tokens);
+  const hit = count(usage.prompt_cache_hit_tokens);
+  const miss = count(usage.prompt_cache_miss_tokens);
+  const completionTokens = count(usage.completion_tokens);
+  const total = count(usage.total_tokens);
+  const reasoning = count(record(usage.completion_tokens_details)?.reasoning_tokens);
+  const inputKnown = prompt !== undefined && hit !== undefined && miss !== undefined && hit + miss === prompt;
+  const inputContradictory = prompt !== undefined && hit !== undefined && miss !== undefined && hit + miss !== prompt;
+  const outputContradictory = completionTokens !== undefined
+    && ((reasoning !== undefined && reasoning > completionTokens)
+      || (total !== undefined && prompt !== undefined && total !== prompt + completionTokens));
+  const output = outputContradictory ? undefined : completionTokens;
+  return result({
+    INPUT_TOKEN: inputContradictory ? undefined : miss,
+    CACHE_READ_INPUT_TOKEN: inputContradictory ? undefined : hit,
+    OUTPUT_TOKEN: output,
+  }, inputKnown && output !== undefined);
+}
+
 /** Gemini generateContent: `response.usageMetadata` (proto3 JSON: an optional zero count is omitted). */
 export function normalizeGeminiGenerateContentUsage(body: unknown): NormalizedAiUsage {
   const usage = record(record(body)?.usageMetadata);

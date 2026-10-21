@@ -202,8 +202,10 @@ const DETECTORS = {
     }
     const service = w.frozen.find(([path]) => path === 'apps/api/src/replay/replay.service.ts')?.[1] ?? '';
     for (const line of G1_DECODE) if (!service.includes(line)) out.push('G-1: a fresh draft is listed with no version, and a contradiction is still refused');
-    const latest = w.migrations.map((name) => name.slice(0, 4)).sort().at(-1);
-    if (latest !== '0169') out.push(`no migration follows 0169 (found ${latest})`);
+    // Re-anchored by S8A-01 (0170): S7-04 adds no migration, and nothing after 0169 is a Replay migration.
+    const later = w.migrations.filter((name) => name.slice(0, 4) > '0169');
+    if (!w.migrations.some((name) => name.startsWith('0169_'))) out.push('0169 is missing');
+    for (const name of later) if (/replay/iu.test(name)) out.push(`a Replay migration follows 0169 (${name})`);
     return out;
   },
 
@@ -313,7 +315,10 @@ const DETECTORS = {
     if (w.state !== null && !/S7-03[^\n]*MERGED[^\n]*#349|#349[^\n]*S7-03/u.test(w.state)) out.push('Current State proves S7-03 merged via PR #349');
     // S7-05 RE-ANCHOR (2026-10-20): S7-04 merged through PR #350; the current task is S7-05, and S7-04 stands beneath it
     // as the previous task, as written at its closing change.
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-05 — Replay Final Integration, Device Proof & Stage Closure\*\*/mu.test(w.map)) out.push('the Project Map names S7-05 as current');
+    // S8A-01 RE-ANCHOR (2026-10-21): S7-05 merged through PR #351; the current task is S8A-01, and S7-05 stands beneath it
+    // as the previous task, as written at its closing change.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8A-01 — DeepSeek Production Integration & First Real Conversation\*\*/mu.test(w.map)) out.push('the Project Map names S8A-01 as current');
+    if (w.map !== null && !/^> \*\(Previous, S7-05, as written at its closing change; merged through PR #351:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-05 — Replay Final Integration, Device Proof & Stage Closure\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-05 as the previous task');
     if (w.map !== null && !/^> \*\(Previous, S7-04, as written at its closing change; merged through PR #350:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-04 as the previous task');
     if (w.state !== null && !/S7-04[^\n]*MERGED[^\n]*#350/u.test(w.state)) out.push('Current State proves S7-04 merged via PR #350');
     return out;

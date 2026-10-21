@@ -169,7 +169,7 @@ describe('the real API bootstraps over HTTP with no provider configured, and ans
     // must not become "generate anyway": with no provider configured, a generation attempt has to
     // fail with the same error it always did, and it must arrive as a rejection.
     const router = app!.get<ModelRouter>(MODEL_ROUTER);
-    await expect(router.generate({} as never)).rejects.toThrow('MODEL_PROVIDER must be either anthropic or openai.');
+    await expect(router.generate({} as never)).rejects.toThrow('MODEL_PROVIDER must be one of anthropic, openai or deepseek.');
   });
 
   it('still FAILS CLOSED when something actually asks it to extract', async () => {

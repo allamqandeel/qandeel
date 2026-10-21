@@ -261,7 +261,8 @@ const DETECTORS = {
     // S7-04 RE-ANCHOR (2026-10-19): S7-03 merged through PR #349; the Project Map's current task is S7-04, and S7-03 stands
     // beneath it as the previous task, as written at its closing change.
     // S7-05 RE-ANCHOR (2026-10-20): S7-04 merged through PR #350; the current task is S7-05.
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S7-05 — Replay Final Integration, Device Proof & Stage Closure\*\*/mu.test(w.map)) out.push('the Project Map names S7-05 as current');
+    // S8A-01 RE-ANCHOR (2026-10-21): S7-05 merged through PR #351; the current task is S8A-01.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8A-01 — DeepSeek Production Integration & First Real Conversation\*\*/mu.test(w.map)) out.push('the Project Map names S8A-01 as current');
     if (w.map !== null && !/^> \*\(Previous, S7-03, as written at its closing change; merged through PR #349:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-03 as the previous task');
     return out;
   },

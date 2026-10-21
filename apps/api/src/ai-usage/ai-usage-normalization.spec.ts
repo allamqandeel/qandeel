@@ -1,5 +1,6 @@
 import {
   normalizeAnthropicMessagesUsage,
+  normalizeDeepSeekChatCompletionsUsage,
   normalizeGeminiGenerateContentUsage,
   normalizeOpenAIResponsesUsage,
 } from './ai-usage-normalization';
@@ -93,6 +94,29 @@ describe('AI-COST-01 usage normalization: a disjoint partition, unknown never ze
         .toEqual({ completeness: 'INCOMPLETE', quantities: { INPUT_TOKEN: 10, CACHE_READ_INPUT_TOKEN: 0 } });
       expect(normalizeGeminiGenerateContentUsage({ usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 2, toolUsePromptTokenCount: 4 } }))
         .toEqual({ completeness: 'INCOMPLETE', quantities: { OUTPUT_TOKEN: 2 } });
+    });
+  });
+  describe('DeepSeek Chat Completions (prompt_tokens = cache hit + cache miss; reasoning is inside completion_tokens)', () => {
+    it('splits input into cache hit and miss, and keeps all output, reasoning included, as OUTPUT', () => {
+      expect(normalizeDeepSeekChatCompletionsUsage({ usage: {
+        prompt_tokens: 1000, prompt_cache_hit_tokens: 640, prompt_cache_miss_tokens: 360,
+        completion_tokens: 300, completion_tokens_details: { reasoning_tokens: 220 }, total_tokens: 1300,
+      } })).toEqual({ completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 360, CACHE_READ_INPUT_TOKEN: 640, OUTPUT_TOKEN: 300 } });
+    });
+
+    it('missing usage is ABSENT; a missing cache figure is INCOMPLETE, never assumed uncached', () => {
+      for (const response of [{}, { usage: null }, null]) expect(normalizeDeepSeekChatCompletionsUsage(response)).toEqual({ completeness: 'ABSENT' });
+      expect(normalizeDeepSeekChatCompletionsUsage({ usage: { prompt_tokens: 50, completion_tokens: 5 } }))
+        .toEqual({ completeness: 'INCOMPLETE', quantities: { OUTPUT_TOKEN: 5 } });
+    });
+
+    it('contradictory figures leave the affected kind unknown', () => {
+      expect(normalizeDeepSeekChatCompletionsUsage({ usage: { prompt_tokens: 50, prompt_cache_hit_tokens: 10, prompt_cache_miss_tokens: 30, completion_tokens: 5 } }))
+        .toEqual({ completeness: 'INCOMPLETE', quantities: { OUTPUT_TOKEN: 5 } });
+      expect(normalizeDeepSeekChatCompletionsUsage({ usage: { prompt_tokens: 40, prompt_cache_hit_tokens: 10, prompt_cache_miss_tokens: 30, completion_tokens: 5, completion_tokens_details: { reasoning_tokens: 9 } } }))
+        .toEqual({ completeness: 'INCOMPLETE', quantities: { INPUT_TOKEN: 30, CACHE_READ_INPUT_TOKEN: 10 } });
+      expect(normalizeDeepSeekChatCompletionsUsage({ usage: { prompt_tokens: 40, prompt_cache_hit_tokens: 10, prompt_cache_miss_tokens: 30, completion_tokens: 5, total_tokens: 60 } }))
+        .toEqual({ completeness: 'INCOMPLETE', quantities: { INPUT_TOKEN: 30, CACHE_READ_INPUT_TOKEN: 10 } });
     });
   });
 });

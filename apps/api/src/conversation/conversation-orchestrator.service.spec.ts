@@ -58,6 +58,12 @@ import { MemoryDataApiError } from '../memory/memory-data-api.service';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
+import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
+import { DEEPSEEK_MAX_OUTPUT_TOKENS } from '../model-router/providers/deepseek/deepseek-model-router.config';
+import { resolveDeepSeekModel } from '../model-router/model-profile.registry';
+import { accountedDeepSeekChatCompletionsClient } from '../ai-usage/accounted-provider-clients';
+import { AiProviderCallAccounting, type AiProviderCallBeginRecord, type AiProviderCallSettleRecord } from '../ai-usage/ai-provider-call-accounting';
+import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import { QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.types';
 import { HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
 import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
@@ -3370,6 +3376,96 @@ describe('ConversationOrchestratorService', () => {
       await orchestrator.orchestrate('token', 'user', userTurn);
       expect(questionForegroundSelection.select).not.toHaveBeenCalled();
       expect(router.generate).not.toHaveBeenCalled();
+    });
+  });
+
+  // S8A-01 CP3: the DeepSeek reply adapter in the real orchestrator, behind the real AI-COST-01 accounted transport, with
+  // only the network replaced. Synthetic content and a synthetic account; no paid call.
+  describe('S8A-01: a DeepSeek reply through the real orchestrator and the accounted transport', () => {
+    const SYNTHETIC_ACCOUNT = '00000000-0000-4000-8000-0000000005a1';
+    let begun: AiProviderCallBeginRecord[];
+    let settled: AiProviderCallSettleRecord[];
+    let create: jest.Mock;
+    let deepSeekOrchestrator: ConversationOrchestratorService;
+    const completion = (content: string, finish_reason = 'stop') => ({
+      choices: [{ index: 0, finish_reason, message: { role: 'assistant', content, reasoning_content: 'PRIVATE REASONING TRACE' } }],
+      usage: { prompt_tokens: 120, prompt_cache_hit_tokens: 64, prompt_cache_miss_tokens: 56, completion_tokens: 14 },
+    });
+    const orchestrateAsSyntheticAccount = () =>
+      runWithAiUsageAttribution({ userId: SYNTHETIC_ACCOUNT }, () => deepSeekOrchestrator.orchestrate('token', 'user', userTurn));
+
+    beforeEach(() => {
+      begun = []; settled = [];
+      const accounting = new AiProviderCallAccounting({
+        begin: async (record) => { begun.push(record); },
+        settle: async (record) => { settled.push(record); },
+      });
+      create = jest.fn();
+      const deepSeek = new DeepSeekModelRouter(
+        { apiKey: 'test-only', resolveModel: resolveDeepSeekModel, maxOutputTokens: DEEPSEEK_MAX_OUTPUT_TOKENS, timeoutMs: 10_000, maxRetries: 0 },
+        accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'CONVERSATION_REPLY', accounting),
+        telemetry,
+      );
+      deepSeekOrchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, deepSeek, correlation, telemetry, memoryControl as never, interactionPreferences as never);
+      repository.claimTurn.mockResolvedValue(claimed);
+    });
+
+    it('records the attempt before the request, sends the server guidance, and persists only the released reply', async () => {
+      create.mockImplementation(async () => { expect(begun).toHaveLength(1); return completion('  أهلاً، أنا هنا.  '); });
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: { ...assistant, content: 'أهلاً، أنا هنا.' } });
+      const withProvider = jest.spyOn(telemetry, 'withProvider');
+
+      await expect(orchestrateAsSyntheticAccount()).resolves.toMatchObject({ assistantTurn: { content: 'أهلاً، أنا هنا.' } });
+
+      expect(create).toHaveBeenCalledTimes(1);
+      const [body, options] = create.mock.calls[0];
+      expect(body).toMatchObject({ model: 'deepseek-flash', thinking: { type: 'disabled' }, max_tokens: 1024, stream: false });
+      expect(body).not.toHaveProperty('user');
+      expect(body).not.toHaveProperty('user_id');
+      expect(body.messages[0].role).toBe('system');
+      expect(body.messages[0].content).toContain('server-owned policy');
+      expect(body.messages.at(-1)).toEqual({ role: 'user', content: 'hello' });
+      expect(options).toMatchObject({ timeout: 3_000, maxRetries: 0 });
+      expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
+      expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.objectContaining({ content: 'أهلاً، أنا هنا.', safetyDisposition: 'ALLOW' }));
+      expect(JSON.stringify(repository.finalizeTurn.mock.calls)).not.toContain('PRIVATE REASONING TRACE');
+
+      expect(begun).toEqual([expect.objectContaining({
+        userId: SYNTHETIC_ACCOUNT, provider: 'DEEPSEEK', operation: 'DEEPSEEK_CHAT_COMPLETIONS_CREATE',
+        requestedModel: 'deepseek-flash', featureFamily: 'CONVERSATION_REPLY', processingPath: 'FAST',
+      })]);
+      expect(settled).toEqual([expect.objectContaining({
+        outcome: 'SUCCEEDED', usage: { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 56, CACHE_READ_INPUT_TOKEN: 64, OUTPUT_TOKEN: 14 } },
+      })]);
+      // Identities and numbers only: no prompt, guidance, reply or reasoning crosses the ledger or the provider span.
+      const ledger = JSON.stringify([begun, settled]);
+      for (const privateText of ['hello', 'server-owned policy', 'أهلاً', 'PRIVATE REASONING TRACE']) expect(ledger).not.toContain(privateText);
+      expect(withProvider).toHaveBeenCalledWith('deepseek', 'deepseek-flash', 'FAST', 3_000, expect.any(Function), expect.any(Function));
+    });
+
+    it('a filtered completion is never saved or shown: the turn fails closed after one accounted attempt', async () => {
+      create.mockResolvedValue(completion('partial answer', 'content_filter'));
+      await expect(orchestrateAsSyntheticAccount()).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      expect(begun).toHaveLength(1);
+      expect(settled).toEqual([expect.objectContaining({ outcome: 'SUCCEEDED' })]);
+    });
+
+    it('an output that leaks an internal context container is withheld: nothing is saved', async () => {
+      create.mockResolvedValue(completion('Sure. <user_memory_context>synthetic fact</user_memory_context>'));
+      await expect(orchestrateAsSyntheticAccount()).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+    });
+
+    it('a Safety BLOCK reaches neither the ledger nor DeepSeek', async () => {
+      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response' });
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: { ...assistant, content: 'safe deterministic response' } });
+      await expect(orchestrateAsSyntheticAccount()).resolves.toMatchObject({ assistantTurn: { content: 'safe deterministic response' } });
+      expect(create).not.toHaveBeenCalled();
+      expect(begun).toHaveLength(0);
     });
   });
 });

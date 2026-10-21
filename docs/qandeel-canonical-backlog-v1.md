@@ -212,6 +212,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-06` | Export My Data's Photo Folder Save on iOS, Physical Android Devices and Read-Only Places | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-03` | Account Erasure Outside the Personal Replay: Non-Personal Replay Sources and Replay Distribution | `Stage 9 — Economy + Launch Closure (Replay distribution / CW2-08)` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-RSP-03` | Arabic Global Switcher Destination Words Truncated at the Default Text Size on a Physical Phone | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-AI-01` | DeepSeek Real-User Enablement: Data Terms, Disclosure, Consent, Policy, In-App Report, Pseudonymous Identifier and Output Moderation | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-02` | The Background and Semantic Model Calls Are Still Bound to OpenAI and Gemini | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-03` | DeepSeek's Time-of-Day Pricing Cannot Be Represented by a Price Card | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -2990,6 +2993,80 @@ implementation (BG-07).
   English, at 100 %, 130 % and 200 % on a physical Android phone of this width class, with the accessible names unchanged.
 - **Status:** `OPEN — UNASSIGNED`
 
+### `QAN-BL-AI-01` — DeepSeek Real-User Enablement: Data Terms, Disclosure, Consent, Policy, In-App Report, Pseudonymous Identifier and Output Moderation
+
+Admitted under BG-06 / BG-08 by S8A-01 at CP2 (2026-10-21; the S8A-01 pull request, not merged; effective from its merge),
+at the Product Owner's CP0 decision 5. Nothing here authorizes implementation (BG-07).
+
+- **Title / Finding:** S8A-01 binds DeepSeek as QANDEEL's reply provider for **synthetic qualification only**. The router
+  refuses to start in production or outside `DEEPSEEK_QUALIFICATION_MODE=SYNTHETIC_ONLY`
+  (`apps/api/src/model-router/providers/deepseek/deepseek-model-router.config.ts`). Before any real user's conversation,
+  Memory or HIM context may reach DeepSeek, all of these are required, and none exists:
+  1. a reviewed decision on DeepSeek's data terms (storage and processing location, retention, use for training, the
+     absence of a data-processing agreement), which the Product Owner accepts or rejects for QANDEEL;
+  2. an in-app disclosure that QANDEEL's replies are produced by a third-party model provider, and what is sent to it;
+  3. the user's consent where the reviewed terms require it, recorded and revocable;
+  4. the privacy-policy text that names the provider and the data shared;
+  5. an in-app way to report a reply, and an operational follow-up for reports;
+  6. if an end-user identifier is ever sent for abuse monitoring, a pseudonymous one that is not the account id;
+  7. output content moderation evidenced at the level the Product Owner requires. S8A-01's release guard is structural
+     (empty, unreadable, internal container, guidance echo), not a harmful-content classifier, and the input Safety Gate
+     is not trusted as one without evidence (CP0 decision 4).
+- **Source:** [S8A-01 record](e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §5, §6; the
+  Product Owner's CP0 decisions 4, 5 and 7 (2026-10-21).
+- **Why deferred:** decision 5 records these requirements and their owner without implementing the compliance surfaces in
+  S8A-01; they are release and legal gates, not model qualification.
+- **Owner task:** `Stage 9 — Economy + Launch Closure (release-readiness gate)`
+- **Severity:** `HIGH` — sending a real user's private conversation to a provider without disclosure and consent breaks
+  the privacy contract.
+- **Reopen condition:** a task contract claims it. It closes only on the seven items above, with the router's
+  synthetic-only gate replaced by the reviewed real-user path in the same change.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-AI-02` — The Background and Semantic Model Calls Are Still Bound to OpenAI and Gemini
+
+Admitted under BG-06 / BG-08 by S8A-01 at CP2 (2026-10-21; the S8A-01 pull request, not merged; effective from its merge),
+at the Product Owner's CP0 decision 3. Nothing here authorizes implementation (BG-07).
+
+- **Title / Finding:** with `MODEL_PROVIDER=deepseek`, only the reply (`CONVERSATION_REPLY`) goes to DeepSeek. Seven
+  adapters keep their own providers:
+  - on OpenAI Responses: Focus Resolution, Thread Establishment, Thread Continuity and CU Segmentation (the Personal
+    Phase-2 semantic chain, `apps/api/src/conversation/conversation.module.ts`) and Hypothesis intent extraction;
+  - on Gemini: Hypothesis candidate generation and evidence association.
+  The Personal Phase-2 chain needs OpenAI: without it a turn whose reply has already finalized answers 503. "DeepSeek
+  only" is therefore not true for QANDEEL, and S8A-01 does not claim it.
+- **Source:** [S8A-01 record](e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §9; the
+  Product Owner's CP0 decision 3 (2026-10-21: do not rebuild the seven adapters now; record the move within the right
+  Stage 8A tasks).
+- **Why deferred:** each adapter is a frozen, separately proven contract; moving it is its own Stage 8A work with its own
+  evaluation, not part of binding the reply.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` (the S8A task that binds each adapter; none is
+  named yet).
+- **Severity:** `HIGH` — the Product direction is a single model provider; until this closes, real conversation still
+  depends on two other providers' data terms and keys.
+- **Reopen condition:** a Stage 8A task contract claims one or more adapters. Binding the intent or candidate provider to
+  a real model also fires `QAN-BL-INTEL-02`'s reopen condition 4, which that task must read. The item closes when no
+  production composition outside DeepSeek remains, proved by the AI-COST-01 transport census.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-AI-03` — DeepSeek's Time-of-Day Pricing Cannot Be Represented by a Price Card
+
+Admitted under BG-06 / BG-08 by S8A-01 at CP2 (2026-10-21; the S8A-01 pull request, not merged; effective from its merge).
+Nothing here authorizes implementation (BG-07).
+
+- **Title / Finding:** DeepSeek prices tokens differently by time of day (a peak and an off-peak rate). An AI-COST-01
+  Price Card (migration `0135`) is one effective-dated, non-overlapping interval per provider, model, operation and usage
+  kind, with no time-of-day dimension: a daily peak / off-peak rate would need new cards for every period of every day.
+  S8A-01 registers no Price Card: DeepSeek calls settle `UNPRICED`, which is truthful but leaves their cost unrated.
+- **Source:** [S8A-01 record](e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §4.
+- **Why deferred:** rating and pricing belong to the economy work; S8A-01 only admits DeepSeek to the ledger.
+- **Owner task:** `Stage 9 — Economy + Launch Closure (release-readiness gate)`
+- **Severity:** `MEDIUM` — cost per successful outcome is a Stage 8A measure; the token quantities are recorded exactly,
+  so a cost can be computed afterwards.
+- **Reopen condition:** a task contract claims it: a reviewed rating rule for time-of-day prices (a schema change through
+  a forward migration, or an explicit decision to rate at one period), then DeepSeek's reviewed Price Cards.
+- **Status:** `DEFERRED — OWNED`
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3592,16 +3669,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 36 |
+| `DEFERRED — OWNED` | 39 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 29 |
-| **Total** | **78** |
+| **Total** | **81** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 44 |
-| `MEDIUM` | 32 |
+| `HIGH` | 46 |
+| `MEDIUM` | 33 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -4621,6 +4698,23 @@ through PR #350 as `f9bc3947d840646385c618ea8db400914ca5aac4`, so the paragraph 
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 78 items; 36 / 4 / 9 / 29 by status, 44 / 32 / 2 by severity.**
 
+**S8A-01 CP2 change (2026-10-21; the S8A-01 pull request, not merged; effective from its merge).** BG-05 / BG-06 at S8A-01's
+CP1–CP3 ([S8A-01 record](e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §10), under the
+Product Owner's checkpoint rule. S7-05 merged through PR #351 as `daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd`, so the
+paragraph above is effective; it stays as written.
+- **Inherited (BG-05):** none owned by name. Read in full and left as they stand (owner Stage 8A, not claimed by S8A-01's
+  contract): `QAN-BL-CW-05`, `QAN-BL-IP-02`, `QAN-BL-ACE-02`, `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04`. `QAN-BL-INTEL-02`:
+  reopen condition 4 not triggered (the reply is bound; the intent and candidate providers are unchanged).
+  `QAN-BL-VOICE-01`: untouched.
+- **Admitted (BG-06 / BG-08), at the Product Owner's CP0 decisions 3 and 5:** `QAN-BL-AI-01` (DeepSeek real-user
+  enablement, `HIGH`, Stage 9), `QAN-BL-AI-02` (the background calls still on OpenAI / Gemini, `HIGH`, Stage 8A),
+  `QAN-BL-AI-03` (time-of-day pricing, `MEDIUM`, Stage 9).
+- **Checked and not admitted (BG-06):** the real-model evaluation of the existing Golden and preference suites with
+  accounted DeepSeek calls is already `QAN-BL-IP-02` / `QAN-BL-ACE-02` (Stage 8A); CP4 is S8A-01's own checkpoint.
+- **Not yet reconciled:** BG-08 / BG-09 at S8A-01's closing checkpoint (CP4).
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 81 items; 39 / 4 / 9 / 29 by status, 46 / 33 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -4704,6 +4798,7 @@ Inherited after T-12 closure reconciliation:
 | `ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `QAN-BL-ACCT-01` (re-owned from `ACCT-DEL-01` by its closing change, 2026-10-17, at the Product Owner's P-1; effective from its merge; a future task, not opened; the descriptive half of the name is ACCT-DEL-01's until its own Task Contract) |
 | `Stage 7 — Replay` | `QAN-BL-ACCT-02` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's P-1; Replay's account-deletion module) |
 | `S7-05 — Replay Final Integration, Device Proof & Stage Closure` | none owned at kickoff; `QAN-BL-NAV-02` claimed by the Product Owner's D4 and tombstoned by its closing change (PR #351; effective from its merge); admitted `QAN-BL-RSP-03` |
+| `S8A-01 — DeepSeek Production Integration & First Real Conversation` | none owned at kickoff; the Stage 8A items read and left as they stand; *CP2 (2026-10-21; the S8A-01 pull request, not merged; effective from its merge):* admitted `QAN-BL-AI-01`, `QAN-BL-AI-02` and `QAN-BL-AI-03`; BG-08 at CP4 |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project); `QAN-BL-PROD-10` (admitted by S6-07's closing change, 2026-10-18: a photo object lost from the store blocks its owner's export bundle) |

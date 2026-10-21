@@ -3905,6 +3905,10 @@ and privilege census, begin / settle exactly-once semantics, unknown and unprice
 effective date, overlap refusal, stable history and explicit re-rating, the compiled simulator equal to the database,
 the Credit activation gate, the operational summary, erasure coverage and committed multi-connection races.
 
+**Forward amendment (S8A-01, migration 0170).** DeepSeek is admitted to the three closed registries above, and an
+unlisted provider now has an empty COMPLETE partition. See the 0170 section at the end of this README. The paragraphs
+above remain the 0135 record.
+
 ## S4-01 - Shared World reachability, invitation and birth (migration 0138)
 
 The Product execution boundary over the frozen I-04 runtime, forward-only; migrations `0001`–`0137` are untouched and no
@@ -5226,3 +5230,32 @@ npm run test:s7-01-replay-secure-integration-contract
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its posture and behaviour sections run in
 rolled-back transactions with the gate set for the run only; its races (G01 - G06) commit their own fresh humans on real
 connections and remove them afterwards.
+
+## S8A-01 - DeepSeek admitted to the AI-COST-01 ledger (migration 0170)
+
+`0170_s8a_01_deepseek_provider_ledger_admission_v1.sql` is the reviewed provider admission that 0135 requires ("a fourth
+provider ... is a reviewed change here, never an implicit widening"), forward-only and in one transaction. Migrations
+`0001`–`0169` are untouched.
+
+- **What it replaces in place** (same signature, return type, volatility, security posture, `search_path`, owner and
+  grants): `ai_provider_operation_is_known_v1` (adds `DEEPSEEK` / `DEEPSEEK_CHAT_COMPLETIONS_CREATE`),
+  `ai_complete_usage_kinds_v1` (adds DeepSeek's partition `CACHE_READ_INPUT_TOKEN` + `INPUT_TOKEN` + `OUTPUT_TOKEN`, and
+  an `ELSE` that answers an empty partition) and `begin_ai_provider_call_v1` (0135's body with only the provider
+  allow-list line changed).
+- **Why the three move together.** In 0135 the usage-kind CASE had no `ELSE`: for a provider it does not name it yields
+  NULL, and a NULL comparison makes the settlement's COMPLETE / INCOMPLETE validation and the Price Card kind CHECK pass
+  instead of refusing. Admitting a provider at begin alone would have opened that hole; now an unlisted provider fails
+  closed everywhere.
+- **What it does not change.** No table, constraint, row, price, Price Card, Credit policy or grant. DeepSeek calls settle
+  `UNPRICED` until an operator registers a reviewed Price Card (time-of-day pricing: `QAN-BL-AI-03`). Credits stay
+  `CREDIT_POLICY_NOT_ACTIVATED`. The service-role surface stays the five 0135 functions.
+- **Deployment.** Not deployed.
+
+```sh
+npm run verify:ai-usage-deepseek-admission:integration
+npm run test:s8a-01-deepseek-production-integration-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. It checks the posture of the three replaced
+functions and the service-role surface, then, in a rolled-back transaction, a DeepSeek begin and every settlement shape,
+the refusals of an unlisted provider and of a foreign usage kind, and exact rating once reviewed Price Cards exist.

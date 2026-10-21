@@ -252,6 +252,7 @@ jobs:
       - {name: "Verify S7-03 Historical Replay composite visual proof static contract (the existing LivingAnalysisSurface and MapSurface only, no Replay map or motion of its own, no live state and no model, three GET reads, the Replay engine independent of the graphics, frozen authority and privacy files unchanged, the Copy Gate closed with the 14 approved Arabic rows pinned and, since S7-05, the 14 approved English rows, the proof build validation-only)", run: npm run test:s7-03-replay-composite-visual-proof-contract}
       - {name: "Verify S7-04 Production Replay player and navigation static contract (the S7-03 composite inside the one Living Analysis surface with no map, motion, audio or video of its own, only the existing preview, finalize and reopen commands by POST with the Replay engine and 0169 unchanged, a passage of the Personal world with no route and the depth beneath kept, no Replay state in the live store, one player per auth generation retired with it, no Reading scope shown or logged, the Copy Gate closed with all 13 rows approved, the proof build validation-only)", run: npm run test:s7-04-replay-player-navigation-contract}
       - {name: "Verify S7-05 Replay final integration static contract (a Reading's scope verified against its one canonical form and sent as its class alone, anything else refused whole and never repaired, no Session id in either captured wire, the decoder taking the class alone, no consumer reading a scope, 0169 and the frozen historical wire unchanged, the 27 English rows approved, the record and locators in place)", run: npm run test:s7-05-replay-final-integration-contract}
+      - {name: "Verify S8A-01 DeepSeek production integration static contract (no reasoning trace read, no end-user identifier, the fixed DeepSeek endpoint, accounted only, synthetic qualification only, the output release guard, 0170 the three registries only)", run: npm run test:s8a-01-deepseek-production-integration-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1215,6 +1216,12 @@ jobs:
       # six races on real connections.
       - name: Verify S7-01 Personal Replay secure integration and erasure against real PostgreSQL
         run: npm run verify:replay-personal-secure-integration:integration
+      # S8A-01: migration 0170 - DeepSeek admitted to the AI-COST-01 ledger: the three closed registries widened together
+      # in place (posture, owner, grants and the five-function surface unchanged), every 0135 provider unchanged, an
+      # unlisted provider fails closed, a DeepSeek settlement COMPLETE only with its three kinds and UNPRICED until a
+      # reviewed Price Card rates it exactly.
+      - name: Verify S8A-01 DeepSeek ledger admission against real PostgreSQL
+        run: npm run verify:ai-usage-deepseek-admission:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

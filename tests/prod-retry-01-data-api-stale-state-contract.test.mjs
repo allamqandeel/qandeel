@@ -101,7 +101,12 @@ test('outside the twelve bodies 0150 is only its self-check: no grant, owner, ta
 test('40P01 is never converted, and PT409 is raised only by the eleven and the two 0135 AI-usage conflicts', () => {
   assert.doesNotMatch(M0150.replace(/--[^\n]*/gu, ''), /40P01|deadlock_detected/u);
   const raisingPt409 = migrations().filter((name) => /ERRCODE\s*=\s*'PT409'/u.test(read(`${MIGRATIONS}/${name}`).replace(/--[^\n]*/gu, '')));
-  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME]);
+  // S8A-01 RE-ANCHOR (2026-10-21): 0170 replaces 0135's begin_ai_provider_call_v1 in place (one allow-list line differs),
+  // so it re-carries that function's one AI-usage identity conflict, and no other PT409.
+  const m0170 = '0170_s8a_01_deepseek_provider_ledger_admission_v1.sql';
+  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170]);
+  const pt409In0170 = read(`${MIGRATIONS}/${m0170}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu);
+  assert.deepEqual(pt409In0170, ["RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"]);
 });
 
 test('the guard lexes literals and comments as data, never as code', () => {
