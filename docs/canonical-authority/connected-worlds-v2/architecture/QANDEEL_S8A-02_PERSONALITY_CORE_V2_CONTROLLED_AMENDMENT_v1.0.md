@@ -309,4 +309,12 @@ people in the separated form. DeepSeek accepted five consecutive `user` messages
 acceptance only; it judges no attribution and compares nothing. The comparative attribution test has not run and awaits
 the Product Owner's authorization.
 
+**Part T authorized (Product Owner Attribution Probe Review, 2026-10-21).** The probe proved DeepSeek compatibility only,
+not attribution. Part T alone is authorized: ten synthetic conversations of 3-4 people, merged against separated, three
+repeats each, at most 60 attempts and USD 0.12, inside the cumulative 100 attempts and USD 0.20 that include the probe.
+One ambiguity conversation now carries a quoted line that looks like a speaker line (Sara quoting Karim); merged, it is
+byte-identical to Karim speaking. A run stops, sending nothing more, once more than 2 of the 10 conversations cannot reach 2
+replies. Part L waits for the Product Owner's review of Part T. `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-08` are real
+blockers to Shared World readiness, not optional improvements.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

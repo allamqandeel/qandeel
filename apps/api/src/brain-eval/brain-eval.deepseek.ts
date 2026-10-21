@@ -164,6 +164,24 @@ export interface DeepSeekEvaluationDependencies {
    */
   readonly attribute: <T>(attemptKey: string, work: () => Promise<T>) => Promise<T>;
   readonly now?: () => number;
+  /**
+   * Checked before every attempt: a reason to stop the run, or null to go on. The attempt it stops is never sent, so a stop
+   * spends nothing further (S8A-02 Shared attribution D3).
+   */
+  readonly stopWhen?: (results: ReadonlyArray<DeepSeekEvaluationResult>) => string | null;
+}
+
+/**
+ * The cases that can no longer reach `minimumReplies` replies: more attempts failed than the case can lose. Such a case is
+ * INCONCLUSIVE in this run whatever its remaining attempts do.
+ */
+export function inconclusiveCaseIds(
+  cases: ReadonlyArray<BrainEvaluationCase>, results: ReadonlyArray<DeepSeekEvaluationResult>, repeats: number, minimumReplies: number,
+): string[] {
+  return cases.filter((testCase) => {
+    const failed = results.filter((result) => result.caseId === testCase.id && !result.success).length;
+    return failed > caseRepeats(testCase, repeats) - minimumReplies;
+  }).map((testCase) => testCase.id);
 }
 
 /** The evidence key of one attempt: the case id alone in a single-attempt run, `caseId#repeat` otherwise. */
@@ -195,8 +213,9 @@ export async function runDeepSeekEvaluation(
   const now = dependencies.now ?? (() => performance.now());
   const results: DeepSeekEvaluationResult[] = [];
   for (const testCase of cases) caseRepeats(testCase, repeats);
-  for (let repeat = 1; repeat <= repeats; repeat += 1) for (const testCase of cases) {
+  run: for (let repeat = 1; repeat <= repeats; repeat += 1) for (const testCase of cases) {
     if (repeat > caseRepeats(testCase, repeats)) continue;
+    if (dependencies.stopWhen?.(results) != null) break run;
     const request = deepSeekEvaluationRequest(testCase, label);
     const route = decideFastDeepRoute(currentMessageOf(testCase));
     const base = {

@@ -5,7 +5,7 @@ import { ClaudeModelRouter } from '../src/model-router/providers/anthropic/claud
 import { OpenAIModelRouter } from '../src/model-router/providers/openai/openai-model-router';
 import { expectedRequestCount, runEvaluation, writeEvaluationArtifacts } from '../src/brain-eval/brain-eval.harness';
 import {
-  assertGuidanceMatchesLabel, attemptKey, createGuidanceComparisonArtifacts, plannedAttempts, currentMessageOf, deepSeekEvaluationRequest, isDeepSeekEvaluationLabel,
+  assertGuidanceMatchesLabel, attemptKey, inconclusiveCaseIds, createGuidanceComparisonArtifacts, plannedAttempts, currentMessageOf, deepSeekEvaluationRequest, isDeepSeekEvaluationLabel,
   runDeepSeekEvaluation, summarizeDeepSeekRun, type DeepSeekEvaluationResult,
 } from '../src/brain-eval/brain-eval.deepseek';
 import {
@@ -51,6 +51,15 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   }
   console.log(`DEEPSEEK ${guard.dry ? 'DRY (zero sent)' : 'PAID'} RUN (${suite.name}, ${label}, round ${suite.round}): ${suite.cases.length} cases, up to ${suite.repeats} repeats = ${planned} attempts, no retries.`);
 
+  // S8A-02 Shared attribution D3: stop, sending nothing more, once more than the suite's limit of cases are INCONCLUSIVE.
+  let stoppedEarly: string | null = null;
+  const stopRule = (sofar: ReadonlyArray<DeepSeekEvaluationResult>) => {
+    const inconclusive = inconclusiveCaseIds(suite.cases, sofar, suite.repeats, ROUND3_MINIMUM_REPLIES);
+    if (suite.stopWhenInconclusiveExceeds !== undefined && inconclusive.length > suite.stopWhenInconclusiveExceeds) {
+      stoppedEarly ??= `${inconclusive.length} cases INCONCLUSIVE (more than ${suite.stopWhenInconclusiveExceeds}): ${inconclusive.join(', ')}`;
+    }
+    return stoppedEarly;
+  };
   const ledger = await openDeepSeekEvaluationLedger(process.env);
   const evidence = new Map<string, { attempts: Array<Record<string, unknown>>; ledger: ReadonlyArray<LedgerRow> }>();
   const startedAt = new Date().toISOString();
@@ -58,6 +67,7 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   try {
     results = await runDeepSeekEvaluation(suite.cases, label, {
       router: ledger.router,
+      ...(suite.stopWhenInconclusiveExceeds === undefined ? {} : { stopWhen: stopRule }),
       attribute: async <T>(key: string, work: () => Promise<T>) => {
         const before = guard.spend.attempts.length;
         const outcome = await ledger.attribute(work);
@@ -79,6 +89,7 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   await writeFile(join(directory, 'results.json'), JSON.stringify({
     suite: suite.name, label, round: suite.round, repeats: suite.repeats, dry: guard.dry, startedAt, finishedAt: new Date().toISOString(),
     gitHead: process.env.QANDEEL_EVAL_GIT_HEAD ?? null,
+    stoppedEarly,
     guidanceSha256: Object.fromEntries(suite.cases.map((testCase) => [testCase.id, sha256(deepSeekEvaluationRequest(testCase, label).behavioralGuidance)])),
     // S8A-02 Shared attribution: the context each case sent under this label (merged or separated), as a hash and a count.
     context: Object.fromEntries(suite.cases.map((testCase) => {
@@ -94,6 +105,7 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
     results: results.map((result) => ({ ...result, ...evidence.get(attemptKey(result.caseId, result.repeat, suite.repeats)) })),
   }, null, 2));
   const failed = results.filter((result) => !result.success).length;
+  if (stoppedEarly !== null) console.log(`STOPPED EARLY, nothing more sent: ${stoppedEarly}.`);
   console.log(`COMPLETE: ${results.length} attempts (${failed} failed, not retried). Cumulative attempts ${guard.spend.attempts.length}; peak-rate USD ${guard.spend.spentPeakUsd.toFixed(6)}.`);
   console.log(`Local artifacts written under ${directory}.`);
 }

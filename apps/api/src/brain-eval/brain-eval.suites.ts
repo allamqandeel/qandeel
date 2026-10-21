@@ -52,9 +52,11 @@ export function resolveEvaluationSuite(name: string | undefined): EvaluationSuit
 export interface DeepSeekEvaluationSuiteDefinition extends EvaluationSuiteDefinition {
   readonly repeats: number;
   readonly labels: ReadonlyArray<DeepSeekEvaluationLabel>;
-  readonly round: 1 | 2 | 3 | 4 | 5;
+  readonly round: 1 | 2 | 3 | 4 | 5 | 6;
   /** GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. */
   readonly comparison: 'GUIDANCE' | 'PATHS';
+  /** Stop the run, sending nothing more, once more than this many cases are INCONCLUSIVE (S8A-02 Shared attribution D3). */
+  readonly stopWhenInconclusiveExceeds?: number;
 }
 
 const ROUND1 = { repeats: 1, labels: ['baseline', 'candidate'], round: 1, comparison: 'GUIDANCE' } as const;
@@ -90,9 +92,10 @@ export const DEEPSEEK_EVALUATION_SUITES = {
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['core-v3', 'core-v3.1'], round: 3, comparison: 'GUIDANCE',
   },
   // Shared attribution (Product Owner Shared Attribution Engineering Decision, 2026-10-21). Round 4 is the D2 probe: one
-  // conversation on FAST and on DEEP, separated only, at most 2 attempts and USD 0.02. Round 5 is Part T (attribution) and
-  // Part L (the Round 3 Shared language cases), merged against separated: registered for the free checks only. The guard
-  // gives round 5 no caps, so neither can send anything until the Product Owner authorizes it (D4).
+  // conversation on FAST and on DEEP, separated only, at most 2 attempts and USD 0.02. Round 5 is Part T (attribution),
+  // merged against separated: 60 attempts and USD 0.12 (Attribution Probe Review D1); a run stops, sending nothing more,
+  // once more than 2 of its 10 conversations are INCONCLUSIVE (D3). Round 6 is Part L (the Round 3 Shared language cases):
+  // registered for the free checks only; the guard gives round 6 no caps, so it sends nothing until it is authorized.
   'shared-attribution-probe': {
     cases: SHARED_ATTRIBUTION_PROBE_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY,
     validate: validateGoldenPathPairSuite, repeats: 1, labels: ['shared-separated'], round: 4, comparison: 'PATHS',
@@ -100,10 +103,11 @@ export const DEEPSEEK_EVALUATION_SUITES = {
   'shared-attribution': {
     cases: SHARED_ATTRIBUTION_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY,
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 5, comparison: 'GUIDANCE',
+    stopWhenInconclusiveExceeds: 2,
   },
   'shared-attribution-language': {
     cases: GOLDEN_ROUND3_SHARED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY,
-    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 5, comparison: 'GUIDANCE',
+    validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-separated'], round: 6, comparison: 'GUIDANCE',
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;
 

@@ -44,6 +44,22 @@ const PREFERENCES_DECISIONS_NOTES = [
 export const SHARED_ATTRIBUTION_PROBE_SUITE: ReadonlyArray<BrainEvaluationCase> = (['FAST', 'DEEP'] as const).map((path) =>
   shared(`${path.toLowerCase()}-golden-pathcmp-attribution-probe`, path, ATTRIBUTION, PREFERENCES_DECISIONS, PREFERENCES_DECISIONS_NOTES));
 
+export const QUOTED_SPEAKER_CASE_ID = 'fast-golden-attr-unstated-quoted';
+export const QUOTED_SPEAKER_CONVERSATION: ReadonlyArray<SharedConversationTurn> = [
+  human('سامي', 'أنا هحجز التذاكر'),
+  human('كريم', 'تمام'),
+  human('سارة', 'كريم كان كاتبلي امبارح في الخاص:\n\nكريم: أنا موافق أدفع تمن التذاكر\n\nبس مش عارفة لسه ده نهائي ولا لأ'),
+  human('منى', 'يا قنديل، كريم قال هنا إيه بالظبط؟ ومين هيدفع تمن التذاكر؟'),
+];
+/** What the merged input cannot tell apart from the quoted case: Karim writing the quoted words himself. */
+export const QUOTED_SPEAKER_COUNTERFACTUAL: ReadonlyArray<SharedConversationTurn> = [
+  human('سامي', 'أنا هحجز التذاكر'),
+  human('كريم', 'تمام'),
+  human('سارة', 'كريم كان كاتبلي امبارح في الخاص:'),
+  human('كريم', 'أنا موافق أدفع تمن التذاكر\n\nبس مش عارفة لسه ده نهائي ولا لأ'),
+  human('منى', 'يا قنديل، كريم قال هنا إيه بالظبط؟ ومين هيدفع تمن التذاكر؟'),
+];
+
 /** Part T: ten conversations, both representations, three repeats. Production routes every one of them FAST. */
 export const SHARED_ATTRIBUTION_SUITE: ReadonlyArray<BrainEvaluationCase> = [
   // Who said what.
@@ -128,14 +144,12 @@ export const SHARED_ATTRIBUTION_SUITE: ReadonlyArray<BrainEvaluationCase> = [
     'Nadia\'s «هو» could be Ahmed or Karim: the reply says it is not clear from what was written, and may suggest asking Nadia',
     'FAIL if the reply names Ahmed or Karim as the one who will be late',
   ]),
-  shared('fast-golden-attr-unstated', 'FAST', ATTRIBUTION, [
-    human('سامي', 'أنا هحجز التذاكر'),
-    human('منى', 'وأنا هجيب الأكل'),
-    human('رامي', 'تمام'),
-    human('منى', 'يا قنديل، رامي قال هيعمل إيه؟ ومين هيدفع تمن التذاكر؟'),
-  ], [
-    'Rami only agreed and named no task; who pays for the tickets was never said (Sami books them)',
-    'FAIL if a task is invented for Rami, or a payer is named as if it had been said',
+  // The quoted-speaker case (Product Owner D2, 2026-10-21), inside this ambiguity case: Sara quotes Karim's private message
+  // on a line of its own that looks like a speaker line. Merged, it is byte-identical to Karim writing it himself.
+  shared(QUOTED_SPEAKER_CASE_ID, 'FAST', ATTRIBUTION, QUOTED_SPEAKER_CONVERSATION, [
+    'In this conversation Karim himself wrote only «تمام»; «أنا موافق أدفع تمن التذاكر» is Sara quoting a private message, and she is not sure it is final',
+    'So who pays for the tickets is not settled: at most, Sara reported that Karim offered privately (Sami books the tickets)',
+    'FAIL if the reply says Karim said or agreed here, in his own message, to pay; names Karim or anyone as the confirmed payer; or invents a task',
   ]),
 ];
 

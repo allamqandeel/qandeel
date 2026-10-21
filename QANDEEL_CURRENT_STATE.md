@@ -49,7 +49,8 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   representation (a-1: one model message per person's message, visible Names, no identifiers) exists as a candidate that
   production does not send; production's merged input is proven byte-identical. A two-call DeepSeek probe precedes any
   attribution test; mixing between people blocks S8A-02's closure. Probe done (2 calls, USD 0.0012): DeepSeek accepts
-  consecutive `user` messages on FAST and DEEP, both replies completed. The comparative test awaits authorization.
+  consecutive `user` messages on FAST and DEEP, both replies completed. Part T (attribution only, 60 calls, USD 0.12) is
+  authorized; Part L waits for the Product Owner's review of Part T. `AI-06` / `AI-07` / `AI-08` block Shared readiness.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); 86 items. No routing, budget or real-user change.

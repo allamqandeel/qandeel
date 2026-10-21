@@ -6,6 +6,7 @@
 //   node scripts/s8a-02/deepseek-eval.mjs golden-round3-shared core-v3|core-v3.1 [--dry] (Round 3 Part A, the Shared language rules)
 //   node scripts/s8a-02/deepseek-eval.mjs golden-round3-personality core-v3|core-v3.1 [--dry] (Round 3 Part B, gender and brevity)
 //   node scripts/s8a-02/deepseek-eval.mjs shared-attribution-probe shared-separated [--dry] (Shared attribution D2 probe, 2 attempts)
+//   node scripts/s8a-02/deepseek-eval.mjs shared-attribution shared-merged|shared-separated [--dry] (Part T, 60 attempts in all)
 //
 // The suite fixes its round, and the round fixes the caps the guard enforces and the ONE spend-state file every run of
 // that round shares (Round 2: 200 attempts, USD 0.35 in total, Product Owner decision of 2026-10-21).
@@ -38,11 +39,12 @@ const SUITES = {
   'golden-round3-shared': { round: 3, labels: ['core-v3', 'core-v3.1'], spendSuite: 'golden-round3' },
   'golden-round3-personality': { round: 3, labels: ['core-v3', 'core-v3.1'], spendSuite: 'golden-round3' },
   'shared-attribution-probe': { round: 4, labels: ['shared-separated'], spendSuite: 'shared-attribution-probe' },
+  'shared-attribution': { round: 5, labels: ['shared-merged', 'shared-separated'], spendSuite: 'shared-attribution' },
 };
 const args = process.argv.slice(2);
 const [SUITE, label, flag] = SUITES[args[0]] === undefined ? ['golden-conversations-extended', ...args] : args;
 if (!SUITES[SUITE].labels.includes(label) || (flag !== undefined && flag !== '--dry')) {
-  console.error('usage: node scripts/s8a-02/deepseek-eval.mjs [golden-round2|golden-round2-paths|golden-round3-shared|golden-round3-personality|shared-attribution-probe] <label> [--dry]');
+  console.error('usage: node scripts/s8a-02/deepseek-eval.mjs [golden-round2|golden-round2-paths|golden-round3-shared|golden-round3-personality|shared-attribution-probe|shared-attribution] <label> [--dry]');
   process.exit(2);
 }
 const { round, spendSuite } = SUITES[SUITE];

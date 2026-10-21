@@ -10,8 +10,13 @@ import {
   UNNAMED_PARTICIPANT, assembleSharedConversationRequest, boundedSharedContext, mergeConsecutiveSameRole, separatedSharedContext,
   type SharedConversationTurn,
 } from '../shared-world/shared-conversation-model-input';
-import { assertGuidanceMatchesLabel, currentMessageOf, deepSeekEvaluationRequest, plannedAttempts } from './brain-eval.deepseek';
-import { SHARED_ATTRIBUTION_PROBE_SUITE, SHARED_ATTRIBUTION_SUITE, SHARED_IDENTITY_HAZARDS } from './brain-eval.shared-attribution.suite';
+import {
+  assertGuidanceMatchesLabel, currentMessageOf, deepSeekEvaluationRequest, inconclusiveCaseIds, plannedAttempts, runDeepSeekEvaluation,
+} from './brain-eval.deepseek';
+import {
+  QUOTED_SPEAKER_CASE_ID, QUOTED_SPEAKER_CONVERSATION, QUOTED_SPEAKER_COUNTERFACTUAL, SHARED_ATTRIBUTION_PROBE_SUITE, SHARED_ATTRIBUTION_SUITE,
+  SHARED_IDENTITY_HAZARDS,
+} from './brain-eval.shared-attribution.suite';
 import { DEEPSEEK_EVALUATION_SUITES, resolveDeepSeekEvaluationSuite } from './brain-eval.suites';
 import type { BrainEvaluationCase } from './brain-eval.types';
 import { validateGoldenFocusedSuite, validateGoldenPathPairSuite } from './brain-eval.validation';
@@ -179,7 +184,36 @@ describe('S8A-02 Shared attribution — the probe and the attribution suites (ze
     }
     expect(singleMerged).toBe(9);
     const full = ['shared-attribution', 'shared-attribution-language'].map((name) => resolveDeepSeekEvaluationSuite(name));
-    expect(full.map((suite) => [suite.round, plannedAttempts(suite.cases, suite.repeats) * suite.labels.length])).toEqual([[5, 60], [5, 36]]);
+    expect(full.map((suite) => [suite.round, plannedAttempts(suite.cases, suite.repeats) * suite.labels.length])).toEqual([[5, 60], [6, 36]]);
+    // Five categories, two conversations each (the quoted-speaker case is one of the two ambiguity cases).
+    const categories = ['who-said-what', 'no-transfer', 'preferences-decisions|opinions', 'correction', 'ambiguous|unstated'];
+    for (const category of categories) {
+      expect([category, SHARED_ATTRIBUTION_SUITE.filter((testCase) => new RegExp(category, 'u').test(testCase.id)).length]).toEqual([category, 2]);
+    }
+  });
+
+  it('the quoted-speaker case (D2): merged, Sara quoting Karim is byte-identical to Karim speaking; separated, the quote stays inside Sara\'s message', () => {
+    const testCase = SHARED_ATTRIBUTION_SUITE.find((entry) => entry.id === QUOTED_SPEAKER_CASE_ID)!;
+    expect(conversationOf(testCase)).toEqual(QUOTED_SPEAKER_CONVERSATION);
+    expect(deepSeekEvaluationRequest(testCase, 'shared-merged').context).toEqual(boundedSharedContext(QUOTED_SPEAKER_COUNTERFACTUAL));
+    const separated = deepSeekEvaluationRequest(testCase, 'shared-separated').context;
+    expect(separated).not.toEqual(separatedSharedContext(QUOTED_SPEAKER_COUNTERFACTUAL));
+    expect(separated.map((message) => message.content.split(':')[0])).toEqual(['سامي', 'كريم', 'سارة', 'منى']);
+    expect(separated[1].content).toBe('كريم: تمام');
+    expect(separated[2].content).toContain('\n\nكريم: أنا موافق أدفع تمن التذاكر\n\n');
+  });
+
+  it('the D3 stop rule stops a run, sending nothing more, once more than 2 of 10 conversations cannot reach 2 replies', async () => {
+    const generate = jest.fn().mockRejectedValue(new Error('timeout'));
+    const results = await runDeepSeekEvaluation(SHARED_ATTRIBUTION_SUITE, 'shared-separated', {
+      router: { generate }, attribute: (_key, work) => work(),
+      stopWhen: (sofar) => (inconclusiveCaseIds(SHARED_ATTRIBUTION_SUITE, sofar, 3, 2).length > 2 ? 'stop' : null),
+    }, 3);
+    // Repeat 1: ten failures, none INCONCLUSIVE yet; repeat 2: the third case's second failure makes three.
+    expect(results).toHaveLength(13);
+    expect(generate).toHaveBeenCalledTimes(13);
+    expect(inconclusiveCaseIds(SHARED_ATTRIBUTION_SUITE, results, 3, 2)).toEqual(SHARED_ATTRIBUTION_SUITE.slice(0, 3).map((testCase) => testCase.id));
+    expect(resolveDeepSeekEvaluationSuite('shared-attribution').stopWhenInconclusiveExceeds).toBe(2);
   });
 });
 
