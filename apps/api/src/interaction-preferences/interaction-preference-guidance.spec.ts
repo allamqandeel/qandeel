@@ -1,4 +1,5 @@
-import { BehavioralResponsePolicyService, TEXT_V3_BEHAVIORAL_GUIDANCE } from '../conversation/behavioral-response-policy.service';
+// S8A-02: re-anchored from Text v3 to Text v4, the Personal guidance rendered since the approved core v2 (Product Owner D1, 2026-10-21).
+import { BehavioralResponsePolicyService, TEXT_V4_BEHAVIORAL_GUIDANCE } from '../conversation/behavioral-response-policy.service';
 import { compileInteractionPreferenceGuidance, INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE } from './interaction-preference-guidance';
 import { DEFAULT_INTERACTION_PREFERENCES, type InteractionPreferences } from './interaction-preferences.types';
 
@@ -8,8 +9,8 @@ describe('IP-IMP-01 WP4 — the interaction-preference constraint compiler', () 
   it('renders nothing for no durable declaration, so the guidance stays exactly Text v2', () => {
     expect(compileInteractionPreferenceGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: false })).toBeUndefined();
     const policy = new BehavioralResponsePolicyService();
-    expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: false })).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
-    expect(policy.buildTextGuidance()).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
+    expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: false })).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
+    expect(policy.buildTextGuidance()).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
   });
 
   it('renders one line per chosen field in the frozen order, after the header, appended to Text v2', () => {
@@ -22,7 +23,7 @@ describe('IP-IMP-01 WP4 — the interaction-preference constraint compiler', () 
       '- Humour: do not use humour.',
       '- Explanation style: explain in simple terms and get to the point directly.',
     ].join('\n'));
-    expect(new BehavioralResponsePolicyService().buildTextGuidance({ preferences: all, safetyGuided: false })).toBe(`${TEXT_V3_BEHAVIORAL_GUIDANCE}\n\n${block}`);
+    expect(new BehavioralResponsePolicyService().buildTextGuidance({ preferences: all, safetyGuided: false })).toBe(`${TEXT_V4_BEHAVIORAL_GUIDANCE}\n\n${block}`);
   });
 
   it.each([
@@ -59,14 +60,14 @@ describe('IP-IMP-01 WP4 — the interaction-preference constraint compiler', () 
     // Safety's constraint is its own line, never presented under the header as the user's own choice.
     expect(guided.slice(0, guided.indexOf(SAFETY_HUMOUR_SUSPENSION_LINE))).not.toContain('playfulness');
     expect(new BehavioralResponsePolicyService().buildTextGuidance({ preferences, safetyGuided: true }))
-      .toBe(`${TEXT_V3_BEHAVIORAL_GUIDANCE}\n\n${guided}`);
+      .toBe(`${TEXT_V4_BEHAVIORAL_GUIDANCE}\n\n${guided}`);
   });
 
   it('all DEFAULT is byte-identical Text v2 only without GUIDED; GUIDED all-DEFAULT adds exactly the Safety suspension', () => {
     const policy = new BehavioralResponsePolicyService();
-    expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: false })).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
+    expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: false })).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
     expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: true }))
-      .toBe(`${TEXT_V3_BEHAVIORAL_GUIDANCE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
+      .toBe(`${TEXT_V4_BEHAVIORAL_GUIDANCE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
   });
 
   it('R2-02: the block outranks remembered context, so an old Memory never weakens a declared preference', () => {

@@ -38,6 +38,10 @@ The rules below are the repository's own, each cited to where it is stated.
    - the [ACE-SP-01 Shared / Public QANDEEL Personality Core controlled amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md),
      in its named scope: the model-facing guidance of the Shared World and Public World QANDEEL replies. It supersedes
      no CW2 sentence (registered in the [Canonical Authority Index](docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md));
+   - the [S8A-02 Personality Core v2 narrow controlled amendment of ACE-SP-01](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md),
+     in its named scope: the ONE QANDEEL personality core is core v2 in Personal, Shared and Public, and the world-neutral
+     paragraph 3, derived by the ACE-SP-01 mapping (binding on the merge of the pull request that carries it). It
+     supersedes no CW2 sentence and keeps every ACE-SP-01 boundary;
    - the [CW2-06A Matching Onboarding Preparation and Assistance controlled amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06A_MATCHING_ONBOARDING_PREPARATION_ASSISTANCE_CONTROLLED_AMENDMENT_v1.0.md),
      in its named scope: the pre-enrollment preparation draft, the separate `MATCHING_ONBOARDING_ASSISTANCE` consent
      family and the declared sex fact (`CA-09` part 1), added to CW2-06 §4–§5, §7 and §9 (S6-01, binding on the merge
