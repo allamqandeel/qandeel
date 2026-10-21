@@ -3251,6 +3251,10 @@ authorizes implementation (BG-07).
 - **Source:** S8A-02 Part T (2026-10-21; 60 paid DeepSeek attempts, synthetic only): the quoted-speaker conversation was
   read as Karim's own statement in this conversation in 3 of 3 separated replies and 1 of 3 merged replies; recorded in the
   [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §7; the Product Owner's Shared Attribution Integrity decision (2026-10-21).
+  The focused check of the server-sourced candidate (2026-10-21; 30 paid attempts) found:
+  - the quotation was no longer read as Karim speaking (0 / 3, against 2 / 3 in production);
+  - a «كريم:» line written inside Sara's message, after «ماشي», was still taken as Karim speaking in 2 / 3 candidate
+    replies, so the finding persists with the sender stated in the input.
 - **Current truth:** production sends the merged representation; no part of it tells a person's own words from a line
   inside their message that names someone else.
 - **Impact on trust and attribution:** a report, quotation or fabrication by one participant can be presented by QANDEEL as
@@ -3263,7 +3267,8 @@ authorizes implementation (BG-07).
 - **Anti-duplication:** `QAN-BL-AI-06` / `QAN-BL-AI-07` are authors the input cannot tell apart; `QAN-BL-AI-08` is the
   person an earlier QANDEEL reply answered; this item is text inside a message posing as a speaker.
 - **Why deferred:** S8A-02 is studying the server-sourced candidate under the Product Owner's decision; no representation is
-  adopted.
+  adopted. That candidate fixes the quotation case in its focused check but not a line written in another person's name.
+  The remaining direction is a Product Owner decision.
 - **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
 - **Severity:** `HIGH` — proven wrong-person attribution in paid tests, and a way for one participant to speak in
   another's name.

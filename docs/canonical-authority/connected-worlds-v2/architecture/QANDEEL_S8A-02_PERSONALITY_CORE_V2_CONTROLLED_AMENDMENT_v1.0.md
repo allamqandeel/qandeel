@@ -365,4 +365,26 @@ only"), and of this record's §2 and §6 (the World frames); no CW2 sentence. No
 reply link needs a new read is decided after the check (D4). After the check: one recommendation, adopt for
 implementation or reject with the proven blocker (D5).
 
+**Focused check result (2026-10-21).** The Product Owner approved the frame verbatim, for the experiment only. The
+conditional numbered-label and reply-link sentences are not approved for production. Both arms ran from `d1303ad8`:
+30 / 30 attempts, all completed, none retried, USD 0.006920 at peak rate. Results:
+- Karim's own statement: attributed to him in 3 / 3 replies in both arms.
+- Sara's quotation of it: read as Karim speaking here in 0 / 3 sourced replies, against 2 / 3 in production.
+- A «كريم:» line written inside Sara's message: still taken as Karim speaking in 2 / 3 sourced replies; the third gets
+  the source right but invents a second Karim message. Production does the same 3 / 3, as expected, since its bytes are
+  identical to Karim speaking.
+- No transfer of one person's circumstance to another in the sourced arm. Production made 3 unfounded assumptions or lost
+  authors, the sourced arm 1 invention and 1 assumption.
+- Totals: sourced 2 BLOCK and 2 FLAW, production 5 BLOCK and 4 FLAW. A blind AI reviewer agrees on every sourced BLOCK.
+- One sourced reply began with the speaker label «قنديل:».
+
+The D3 condition (no mixing in completed replies) is therefore **not met**. Recommendation (D5):
+- Adopt the server-sourced representation for engineering implementation as a partial fix, under the controlled
+  amendment shown at D2 and the Product Owner's copy decision.
+- `QAN-BL-AI-09` is not resolved. Its proven blocker is that DeepSeek Flash still credits a speaker line inside another
+  person's record to the named person, although the record and the frame both state the sender.
+
+No database change. The reply-link read is not designed (D4): no evidence needs it, and `QAN-BL-AI-08` stays a known
+data gap. No further round is started. Report: `.s8a-02-reports/S8A-02_SOURCED_CHECK_RESULTS.md` (local).
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**
