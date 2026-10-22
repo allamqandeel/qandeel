@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { AiProviderCallAccounting } from '../src/ai-usage/ai-provider-call-accounting';
 import { SupabaseAiProviderCallLedger, type AiLedgerRpc } from '../src/ai-usage/ai-provider-call-ledger.repository';
 import { runWithAiUsageAttribution } from '../src/ai-usage/ai-usage-attribution';
-import { DeepSeekModelRouter } from '../src/model-router/providers/deepseek/deepseek-model-router';
+import { accountedDeepSeekChatCompletionsClient } from '../src/ai-usage/accounted-provider-clients';
+import { createDeepSeekClient, DeepSeekModelRouter } from '../src/model-router/providers/deepseek/deepseek-model-router';
+import { loadDeepSeekModelRouterConfig } from '../src/model-router/providers/deepseek/deepseek-model-router.config';
 import { correlation } from '../src/observability/shared-correlation';
 import { TelemetryService } from '../src/observability/telemetry.service';
 
@@ -45,7 +47,15 @@ function required(environment: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
-export async function openDeepSeekEvaluationLedger(environment: NodeJS.ProcessEnv): Promise<DeepSeekEvaluationLedger> {
+/**
+ * CP3 Arm L: an evaluation-only DEEP max_tokens for the diagnostic re-send. The router is composed exactly as production
+ * composes it (accounted client, same config) with only that one number changed; production configuration is untouched.
+ */
+export interface DeepSeekEvaluationLedgerOptions { readonly diagnosticDeepMaxOutputTokens?: number }
+
+export async function openDeepSeekEvaluationLedger(
+  environment: NodeJS.ProcessEnv, options: DeepSeekEvaluationLedgerOptions = {},
+): Promise<DeepSeekEvaluationLedger> {
   const port = Number(required(environment, 'QANDEEL_EVAL_LEDGER_DB_PORT'));
   const database = required(environment, 'QANDEEL_EVAL_LEDGER_DB_NAME');
   const dataDirectory = required(environment, 'QANDEEL_EVAL_LEDGER_DB_DATA_DIR');
@@ -90,7 +100,15 @@ export async function openDeepSeekEvaluationLedger(environment: NodeJS.ProcessEn
 
   const telemetry = new TelemetryService(correlation);
   const accounting = new AiProviderCallAccounting(new SupabaseAiProviderCallLedger(serviceApi), telemetry, () => correlation.current());
-  const router = DeepSeekModelRouter.fromEnvironment(telemetry, accounting);
+  const deepMax = options.diagnosticDeepMaxOutputTokens;
+  let router: DeepSeekModelRouter;
+  if (deepMax === undefined) {
+    router = DeepSeekModelRouter.fromEnvironment(telemetry, accounting);
+  } else {
+    const config = loadDeepSeekModelRouterConfig();
+    const diagnostic = { ...config, maxOutputTokens: { ...config.maxOutputTokens, DEEP: deepMax } as unknown as typeof config.maxOutputTokens };
+    router = new DeepSeekModelRouter(diagnostic, accountedDeepSeekChatCompletionsClient(createDeepSeekClient(diagnostic), 'CONVERSATION_REPLY', accounting), telemetry);
+  }
 
   return {
     router,

@@ -2,8 +2,11 @@ import {
   EVALUATION_ARTIFACT_DIRECTORY, GOLDEN_CONVERSATION_ARTIFACT_DIRECTORY, GOLDEN_EXTENDED_ARTIFACT_DIRECTORY, GOLDEN_ROUND2_ARTIFACT_DIRECTORY,
   GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
   SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY,
-  SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY,
+  SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY, GOLDEN_CP3_ARTIFACT_DIRECTORY, GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY,
 } from './brain-eval.paths';
+import {
+  CP3_DIAGNOSTIC_DEEP_MAX_OUTPUT_TOKENS, CP3_DIAGNOSTIC_MAX_ATTEMPTS, CP3_TRANSPORT_BUDGET_MS, GOLDEN_CP3_PERSONAL_SUITE,
+} from './brain-eval.golden-cp3.suite';
 import type { DeepSeekEvaluationLabel } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE } from './brain-eval.golden-extended.suite';
 import { GOLDEN_ROUND2_PATH_SUITE, GOLDEN_ROUND2_SUITE } from './brain-eval.golden-round2.suite';
@@ -13,7 +16,7 @@ import { GOLDEN_CONVERSATION_SUITE } from './brain-eval.golden.suite';
 import { BRAIN_EVALUATION_SUITE } from './brain-eval.suite';
 import { GOLDEN_CONVERSATION_RUBRIC, RUBRIC, type BrainEvaluationCase } from './brain-eval.types';
 import {
-  validateEvaluationSuite, validateGoldenConversationSuite, validateGoldenFocusedSuite, validateGoldenPathPairSuite, validateGoldenTargetedSuite, type ValidationReport,
+  validateEvaluationSuite, validateGoldenConversationSuite, validateGoldenFocusedSuite, validateGoldenPathPairSuite, validateGoldenTargetedSuite, validateGoldenQualificationSuite, type ValidationReport,
 } from './brain-eval.validation';
 
 // ACE-01 (WP3) — the named suites of the ONE evaluation system: one validator bound, one harness, one CLI, one blinded
@@ -53,9 +56,22 @@ export function resolveEvaluationSuite(name: string | undefined): EvaluationSuit
 export interface DeepSeekEvaluationSuiteDefinition extends EvaluationSuiteDefinition {
   readonly repeats: number;
   readonly labels: ReadonlyArray<DeepSeekEvaluationLabel>;
-  readonly round: 1 | 2 | 3 | 4 | 5 | 6 | 7;
-  /** GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. */
-  readonly comparison: 'GUIDANCE' | 'PATHS';
+  readonly round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  /**
+   * GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. QUALIFICATION (CP3):
+   * one label, judged on its own against the preregistered criteria, with a blind human packet of one reply per case.
+   */
+  readonly comparison: 'GUIDANCE' | 'PATHS' | 'QUALIFICATION';
+  /**
+   * CP3: the transport timeout every attempt is sent with (the adapter's ceiling), so the full reply exists to be judged;
+   * the production budget is recorded beside it and production delivery is decided afterwards. Never a production setting.
+   */
+  readonly transportBudgetMs?: number;
+  /**
+   * CP3 Arm L: a diagnostic re-send of the named suite's DEEP attempts that stopped at `length`, once each, with this DEEP
+   * max_tokens and at most this many attempts. The evaluation router is composed with it; production config is untouched.
+   */
+  readonly diagnosticOf?: { readonly suite: string; readonly deepMaxOutputTokens: number; readonly maxAttempts: number };
   /** Stop the run, sending nothing more, once more than this many cases are INCONCLUSIVE (S8A-02 Shared attribution D3). */
   readonly stopWhenInconclusiveExceeds?: number;
 }
@@ -118,6 +134,20 @@ export const DEEPSEEK_EVALUATION_SUITES = {
     cases: SHARED_ATTRIBUTION_SOURCED_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY,
     validate: validateGoldenFocusedSuite, repeats: 3, labels: ['shared-merged', 'shared-sourced'], round: 7, comparison: 'GUIDANCE',
     stopWhenInconclusiveExceeds: 1,
+  },
+  // Round 8 (S8A-02 CP3, preregistration v2): the Personal qualification run, 39 cases × 3 on their production route (the
+  // other 5 of the 44 reuse byte-identical Round 3 attempts), then Arm L. Registered for the free checks only until the
+  // Product Owner approves the run: the guard holds no round 8 caps, so it sends nothing before that approval.
+  'golden-cp3-personal': {
+    cases: GOLDEN_CP3_PERSONAL_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_CP3_ARTIFACT_DIRECTORY,
+    validate: validateGoldenQualificationSuite, repeats: 3, labels: ['core-v3.1'], round: 8, comparison: 'QUALIFICATION',
+    transportBudgetMs: CP3_TRANSPORT_BUDGET_MS,
+  },
+  'golden-cp3-deep-2800': {
+    cases: GOLDEN_CP3_PERSONAL_SUITE.filter((testCase) => testCase.path === 'DEEP'), rubric: GOLDEN_CONVERSATION_RUBRIC,
+    artifactDirectory: GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY, validate: validateGoldenQualificationSuite, repeats: 3,
+    labels: ['core-v3.1'], round: 8, comparison: 'QUALIFICATION', transportBudgetMs: CP3_TRANSPORT_BUDGET_MS,
+    diagnosticOf: { suite: 'golden-cp3-personal', deepMaxOutputTokens: CP3_DIAGNOSTIC_DEEP_MAX_OUTPUT_TOKENS, maxAttempts: CP3_DIAGNOSTIC_MAX_ATTEMPTS },
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;
 

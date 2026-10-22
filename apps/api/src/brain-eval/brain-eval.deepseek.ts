@@ -160,6 +160,8 @@ export interface DeepSeekEvaluationResult {
   productionRoute: ProcessingPath;
   productionRouteReason: string;
   latencyBudgetMs: number;
+  /** CP3: the transport timeout the attempt was actually sent with, when it differs from the production budget. */
+  transportBudgetMs?: number;
   latencyMs: number;
   /** Provider-reported usage; null when unknown, never zero (AI-COST-01). */
   inputTokens: number | null;
@@ -184,6 +186,11 @@ export interface DeepSeekEvaluationDependencies {
    * spends nothing further (S8A-02 Shared attribution D3).
    */
   readonly stopWhen?: (results: ReadonlyArray<DeepSeekEvaluationResult>) => string | null;
+  /**
+   * CP3: send every attempt with this transport timeout instead of the production budget, which is still recorded as
+   * `latencyBudgetMs` so production delivery can be decided afterwards. Never a production setting.
+   */
+  readonly transportBudgetMs?: number;
 }
 
 /**
@@ -231,11 +238,14 @@ export async function runDeepSeekEvaluation(
   run: for (let repeat = 1; repeat <= repeats; repeat += 1) for (const testCase of cases) {
     if (repeat > caseRepeats(testCase, repeats)) continue;
     if (dependencies.stopWhen?.(results) != null) break run;
-    const request = deepSeekEvaluationRequest(testCase, label);
+    const productionRequest = deepSeekEvaluationRequest(testCase, label);
+    const transport = dependencies.transportBudgetMs;
+    const request = transport === undefined ? productionRequest : { ...productionRequest, latencyBudgetMs: transport };
     const route = decideFastDeepRoute(currentMessageOf(testCase));
     const base = {
       caseId: testCase.id, label, repeat, world: testCase.world?.kind ?? 'PERSONAL' as const, path: testCase.path,
-      productionRoute: route.path, productionRouteReason: route.reason, latencyBudgetMs: request.latencyBudgetMs,
+      productionRoute: route.path, productionRouteReason: route.reason, latencyBudgetMs: productionRequest.latencyBudgetMs,
+      ...(transport === undefined ? {} : { transportBudgetMs: transport }),
     };
     const started = now();
     try {

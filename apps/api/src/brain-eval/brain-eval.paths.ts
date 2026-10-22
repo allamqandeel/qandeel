@@ -19,3 +19,6 @@ export const SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY = resolve(EVALUATION_AR
 export const SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution');
 export const SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-language');
 export const SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-sourced');
+// S8A-02 CP3: the Personal qualification run, its DEEP-budget diagnostic and its review packets (git-ignored).
+export const GOLDEN_CP3_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-personal');
+export const GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-deep-2800');

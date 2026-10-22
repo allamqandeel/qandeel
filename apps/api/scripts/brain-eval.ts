@@ -12,6 +12,11 @@ import {
   completionReport, createBlindPacket, guidanceGroups, ROUND3_MINIMUM_REPLIES, pathGroups, renderBlindPacketMarkdown, reviewForm, type BlindGroup,
 } from '../src/brain-eval/brain-eval.round2-review';
 import { resolveDeepSeekEvaluationSuite, resolveEvaluationSuite } from '../src/brain-eval/brain-eval.suites';
+import { CP3_REUSED_CASE_IDS, GOLDEN_CP3_QUALIFICATION_CASES } from '../src/brain-eval/brain-eval.golden-cp3.suite';
+import {
+  CP3_HUMAN_REVIEW_NOT_STARTED, cp3HumanReviewForm, createCp3Packets, renderCp3HumanPacketMarkdown, type CP3RecordedResult,
+} from '../src/brain-eval/brain-eval.cp3-review';
+import { GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY } from '../src/brain-eval/brain-eval.paths';
 import { summarizeResults } from '../src/brain-eval/brain-eval.summary';
 import { assertDeepSeekRunAllowed, assertPaidRunAllowed } from '../src/brain-eval/brain-eval.validation';
 import type { BrainEvaluationCase, CandidateResult } from '../src/brain-eval/brain-eval.types';
@@ -41,32 +46,38 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   if (guard === undefined) return;
   // The suite fixes its round; a guard enforcing another round's caps (or a pre-Round 2 guard on a Round 2 suite) refuses.
   if ((guard.round ?? 1) !== suite.round) throw new Error(`NOT RUN: the guard enforces round ${guard.round ?? 1} caps; ${suite.name} is round ${suite.round}.`);
-  suite.validate(suite.cases);
-  assertGuidanceMatchesLabel(suite.cases, label);
-  const planned = plannedAttempts(suite.cases, suite.repeats);
+  // CP3 Arm L: only the DEEP attempts of the qualification run that stopped at `length`, once each, capped.
+  const cases = suite.diagnosticOf === undefined ? suite.cases : await diagnosticCases(suite.cases, suite.diagnosticOf, label);
+  if (cases.length === 0) { console.log(`NOT RUN: ${suite.name} has nothing to re-send (no DEEP attempt stopped at length).`); return; }
+  suite.validate(cases);
+  assertGuidanceMatchesLabel(cases, label);
+  const planned = plannedAttempts(cases, suite.repeats);
+  if (suite.diagnosticOf !== undefined && planned > suite.diagnosticOf.maxAttempts) throw new Error(`NOT RUN: Arm L may send at most ${suite.diagnosticOf.maxAttempts} attempts; ${planned} selected.`);
   const selfTest = await guard.selfTest();
   if (!selfTest.allBlocked) throw new Error('NOT RUN: the network guard self-test let a forbidden destination through.');
   if (!guard.dry && guard.remainingAttempts() < planned) {
     throw new Error(`NOT RUN: ${guard.remainingAttempts()} attempts remain under the cumulative cap; this run needs ${planned}.`);
   }
-  console.log(`DEEPSEEK ${guard.dry ? 'DRY (zero sent)' : 'PAID'} RUN (${suite.name}, ${label}, round ${suite.round}): ${suite.cases.length} cases, up to ${suite.repeats} repeats = ${planned} attempts, no retries.`);
+  console.log(`DEEPSEEK ${guard.dry ? 'DRY (zero sent)' : 'PAID'} RUN (${suite.name}, ${label}, round ${suite.round}): ${cases.length} cases, up to ${suite.repeats} repeats = ${planned} attempts, no retries.`);
 
   // S8A-02 Shared attribution D3: stop, sending nothing more, once more than the suite's limit of cases are INCONCLUSIVE.
   let stoppedEarly: string | null = null;
   const stopRule = (sofar: ReadonlyArray<DeepSeekEvaluationResult>) => {
-    const inconclusive = inconclusiveCaseIds(suite.cases, sofar, suite.repeats, ROUND3_MINIMUM_REPLIES);
+    const inconclusive = inconclusiveCaseIds(cases, sofar, suite.repeats, ROUND3_MINIMUM_REPLIES);
     if (suite.stopWhenInconclusiveExceeds !== undefined && inconclusive.length > suite.stopWhenInconclusiveExceeds) {
       stoppedEarly ??= `${inconclusive.length} cases INCONCLUSIVE (more than ${suite.stopWhenInconclusiveExceeds}): ${inconclusive.join(', ')}`;
     }
     return stoppedEarly;
   };
-  const ledger = await openDeepSeekEvaluationLedger(process.env);
+  const ledger = await openDeepSeekEvaluationLedger(process.env,
+    suite.diagnosticOf === undefined ? {} : { diagnosticDeepMaxOutputTokens: suite.diagnosticOf.deepMaxOutputTokens });
   const evidence = new Map<string, { attempts: Array<Record<string, unknown>>; ledger: ReadonlyArray<LedgerRow> }>();
   const startedAt = new Date().toISOString();
   let results: ReadonlyArray<DeepSeekEvaluationResult>;
   try {
-    results = await runDeepSeekEvaluation(suite.cases, label, {
+    results = await runDeepSeekEvaluation(cases, label, {
       router: ledger.router,
+      ...(suite.transportBudgetMs === undefined ? {} : { transportBudgetMs: suite.transportBudgetMs }),
       ...(suite.stopWhenInconclusiveExceeds === undefined ? {} : { stopWhen: stopRule }),
       attribute: async <T>(key: string, work: () => Promise<T>) => {
         const before = guard.spend.attempts.length;
@@ -82,7 +93,7 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
 
   // Controls: no case text or reply in the ledger evidence; nothing blocked beyond the self-test's own probes.
   const ledgerText = JSON.stringify([...evidence.values()].map((entry) => entry.ledger));
-  const words = [...suite.cases.map(currentMessageOf), ...results.map((result) => result.response)]
+  const words = [...cases.map(currentMessageOf), ...results.map((result) => result.response)]
     .flatMap((text) => text.split(/\s+/u)).filter((word) => word.length >= 5);
   const directory = join(suite.artifactDirectory, 'deepseek', guard.dry ? `${label}-dry` : label);
   await mkdir(directory, { recursive: true });
@@ -90,9 +101,11 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
     suite: suite.name, label, round: suite.round, repeats: suite.repeats, dry: guard.dry, startedAt, finishedAt: new Date().toISOString(),
     gitHead: process.env.QANDEEL_EVAL_GIT_HEAD ?? null,
     stoppedEarly,
-    guidanceSha256: Object.fromEntries(suite.cases.map((testCase) => [testCase.id, sha256(deepSeekEvaluationRequest(testCase, label).behavioralGuidance)])),
+    transportBudgetMs: suite.transportBudgetMs ?? null,
+    diagnosticOf: suite.diagnosticOf ?? null,
+    guidanceSha256: Object.fromEntries(cases.map((testCase) => [testCase.id, sha256(deepSeekEvaluationRequest(testCase, label).behavioralGuidance)])),
     // S8A-02 Shared attribution: the context each case sent under this label (merged or separated), as a hash and a count.
-    context: Object.fromEntries(suite.cases.map((testCase) => {
+    context: Object.fromEntries(cases.map((testCase) => {
       const { context } = deepSeekEvaluationRequest(testCase, label);
       return [testCase.id, { messages: context.length, sha256: sha256(JSON.stringify(context)) }];
     })),
@@ -110,10 +123,50 @@ async function deepSeekRun(suiteName: string | undefined, label: string | undefi
   console.log(`Local artifacts written under ${directory}.`);
 }
 
+/**
+ * CP3 Arm L: the qualification run's DEEP attempts that stopped at `length` (read from the guard evidence recorded with
+ * each attempt), each re-sent once: a case with n such stops runs n times (maxRepeats).
+ */
+async function diagnosticCases(
+  candidates: ReadonlyArray<BrainEvaluationCase>, diagnostic: { suite: string; maxAttempts: number }, label: string,
+): Promise<BrainEvaluationCase[]> {
+  const source = resolveDeepSeekEvaluationSuite(diagnostic.suite);
+  const recorded = JSON.parse(await readFile(join(source.artifactDirectory, 'deepseek', label, 'results.json'), 'utf8')) as {
+    dry: boolean; results: Array<DeepSeekEvaluationResult & { attempts?: Array<{ finishReason?: string }> }>;
+  };
+  if (recorded.dry) throw new Error(`NOT RUN: ${diagnostic.suite} ${label} is a dry run; Arm L needs the paid qualification results.`);
+  const stops = new Map<string, number>();
+  for (const result of recorded.results) {
+    if (result.path === 'DEEP' && result.attempts?.some((attempt) => attempt.finishReason === 'length')) stops.set(result.caseId, (stops.get(result.caseId) ?? 0) + 1);
+  }
+  return candidates.filter((testCase) => stops.has(testCase.id)).map((testCase) => ({ ...testCase, maxRepeats: stops.get(testCase.id) }));
+}
+
+/** CP3: the qualification packets (blind human set of one reply per case, AI-rater set of every reply) from the run + reuse. */
+async function cp3Compare(suiteName: string, directory: string): Promise<void> {
+  const own = JSON.parse(await readFile(join(directory, 'core-v3.1', 'results.json'), 'utf8')) as { dry: boolean; results: CP3RecordedResult[] };
+  const reused = JSON.parse(await readFile(join(GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY, 'deepseek', 'core-v3.1', 'results.json'), 'utf8')) as { results: CP3RecordedResult[] };
+  const packets = createCp3Packets(GOLDEN_CP3_QUALIFICATION_CASES, own.results, reused.results.filter((result) => (CP3_REUSED_CASE_IDS as readonly string[]).includes(result.caseId)), randomBytes(24).toString('hex'));
+  const [review, unblinded] = [join(directory, 'review'), join(directory, 'unblinded')];
+  await Promise.all([mkdir(review, { recursive: true }), mkdir(unblinded, { recursive: true })]);
+  await Promise.all([
+    writeFile(join(review, 'human-packet.md'), renderCp3HumanPacketMarkdown(packets.human)),
+    writeFile(join(review, 'human-packet.json'), JSON.stringify(packets.human, null, 2)),
+    writeFile(join(review, 'human-review-form.json'), JSON.stringify(cp3HumanReviewForm(packets.human), null, 2)),
+    writeFile(join(review, 'human-review-status.json'), JSON.stringify(CP3_HUMAN_REVIEW_NOT_STARTED, null, 2)),
+    writeFile(join(review, 'ai-rater-packet.json'), JSON.stringify(packets.aiRater, null, 2)),
+    writeFile(join(unblinded, 'item-map.json'), JSON.stringify({ suite: suiteName, dry: own.dry, ...packets.map }, null, 2)),
+    writeFile(join(unblinded, 'delivery.json'), JSON.stringify(packets.delivery, null, 2)),
+  ]);
+  console.log(`CP3 PACKETS WRITTEN: ${packets.human.length} human items, ${packets.aiRater.length} AI-rater items under ${review}; the map and delivery under ${unblinded}.`);
+  console.log('HUMAN REVIEW: NOT STARTED. Only the reviewer completes it; no command marks it complete.');
+}
+
 async function deepSeekCompare(suiteName: string | undefined): Promise<void> {
   const suite = resolveDeepSeekEvaluationSuite(suiteName);
   const directory = join(suite.artifactDirectory, 'deepseek');
   const load = async (label: string) => JSON.parse(await readFile(join(directory, label, 'results.json'), 'utf8')) as { results: DeepSeekEvaluationResult[]; summary: unknown };
+  if (suite.comparison === 'QUALIFICATION') return cp3Compare(suite.name, directory);
   if (suite.round >= 2) return round2Compare(suite.name, suite.comparison, suite.cases, suite.labels, directory, load);
   const [baseline, candidate] = [await load('baseline'), await load('candidate')];
   const { blindedReview, labelMap } = createGuidanceComparisonArtifacts(suite.cases, baseline.results, candidate.results, suite.rubric);

@@ -8,6 +8,8 @@
 //   node scripts/s8a-02/deepseek-eval.mjs shared-attribution-probe shared-separated [--dry] (Shared attribution D2 probe, 2 attempts)
 //   node scripts/s8a-02/deepseek-eval.mjs shared-attribution shared-merged|shared-separated [--dry] (Part T, 60 attempts in all)
 //   node scripts/s8a-02/deepseek-eval.mjs shared-attribution-sourced shared-merged|shared-sourced [--dry] (sourced check, 30 in all)
+//   node scripts/s8a-02/deepseek-eval.mjs golden-cp3-personal core-v3.1 [--dry]      (CP3 Personal qualification, 117 attempts)
+//   node scripts/s8a-02/deepseek-eval.mjs golden-cp3-deep-2800 core-v3.1 [--dry]     (CP3 Arm L, DEEP length re-sends, at most 6)
 //
 // The suite fixes its round, and the round fixes the caps the guard enforces and the ONE spend-state file every run of
 // that round shares (Round 2: 200 attempts, USD 0.35 in total, Product Owner decision of 2026-10-21).
@@ -42,6 +44,9 @@ const SUITES = {
   'shared-attribution-probe': { round: 4, labels: ['shared-separated'], spendSuite: 'shared-attribution-probe' },
   'shared-attribution': { round: 5, labels: ['shared-merged', 'shared-separated'], spendSuite: 'shared-attribution' },
   'shared-attribution-sourced': { round: 7, labels: ['shared-merged', 'shared-sourced'], spendSuite: 'shared-attribution-sourced' },
+  // CP3 (round 8): runs only once the guard holds the Product Owner's round 8 caps; until then the guard refuses it.
+  'golden-cp3-personal': { round: 8, labels: ['core-v3.1'], spendSuite: 'golden-cp3' },
+  'golden-cp3-deep-2800': { round: 8, labels: ['core-v3.1'], spendSuite: 'golden-cp3' },
 };
 const args = process.argv.slice(2);
 const [SUITE, label, flag] = SUITES[args[0]] === undefined ? ['golden-conversations-extended', ...args] : args;

@@ -169,6 +169,28 @@ export function assertDeepSeekRunAllowed(environment: NodeJS.ProcessEnv, guardPr
 }
 
 /**
+ * S8A-02 CP3 — the Personal qualification suite: up to the 44 approved Golden cases, each on its production route. The same
+ * per-case truths as every Golden suite (stable unique ids, USER-final contexts, review notes, canonical preferences, the
+ * production Safety gate's decision); no coverage floor, because the set is fixed by the preregistration, not grown.
+ */
+export function validateGoldenQualificationSuite(cases: ReadonlyArray<BrainEvaluationCase>): ValidationReport {
+  if (cases.length < 1 || cases.length > 44) throw new Error('The qualification suite holds 1-44 cases.');
+  const ids = new Set<string>();
+  for (const testCase of cases) {
+    if (ids.has(testCase.id)) throw new Error(`Duplicate case id: ${testCase.id}`);
+    ids.add(testCase.id);
+    if (!testCase.context.length || testCase.context.at(-1)?.role !== 'USER') throw new Error(`${testCase.id} must end in a USER message.`);
+    if (!testCase.reviewNotes.length) throw new Error(`${testCase.id} requires human-review notes.`);
+    if (testCase.world !== undefined) throw new Error(`${testCase.id}: the qualification suite is Personal only.`);
+  }
+  assertGoldenCases(cases);
+  return {
+    caseCount: cases.length, fastCount: cases.filter(({ path }) => path === 'FAST').length, deepCount: cases.filter(({ path }) => path === 'DEEP').length,
+    expectedPaidRequests: cases.length, warnings: [],
+  };
+}
+
+/**
  * S8A-02 Round 3 — a focused Golden suite: a handful of cases on one rule set, below the 20–30 bound by design. It keeps the
  * shared per-case checks (stable unique ids, USER-final contexts, review notes) and every per-case Golden truth.
  */
