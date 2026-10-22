@@ -38,7 +38,9 @@ const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 // (the focused check of the server-sourced candidate; Product Owner Attribution Integrity Prototype decision D1,
 // 2026-10-21): at most 30 attempts and USD 0.04, its own file, both arms together.
 const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 }, 3: { maxAttempts: 80, costCapUsd: 0.22 },
-  4: { maxAttempts: 2, costCapUsd: 0.02 }, 5: { maxAttempts: 60, costCapUsd: 0.12 }, 7: { maxAttempts: 30, costCapUsd: 0.04 } };
+  4: { maxAttempts: 2, costCapUsd: 0.02 }, 5: { maxAttempts: 60, costCapUsd: 0.12 }, 7: { maxAttempts: 30, costCapUsd: 0.04 },
+  // Round 8: CP3 Personal qualification, Product Owner Round 8 Execution Authorization, 2026-10-22 (prereg v2).
+  8: { maxAttempts: 123, costCapUsd: 0.25 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;

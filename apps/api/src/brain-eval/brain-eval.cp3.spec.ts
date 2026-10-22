@@ -50,11 +50,11 @@ describe('S8A-02 CP3 Personal qualification suite', () => {
     expect(() => assertGuidanceMatchesLabel(run.cases, 'core-v3.1')).not.toThrow();
   });
 
-  it('the guard holds no round 8 caps: nothing can be sent before the Product Owner approves the run', () => {
+  it('the guard holds exactly the approved round 8 caps: 123 attempts, USD 0.25 (Product Owner authorization, 2026-10-22)', () => {
     const guard = readFileSync(join(REPOSITORY_ROOT, 'scripts', 's8a-02', 'network-guard.cjs'), 'utf8');
     const caps = /const ROUND_CAPS = \{([\s\S]*?)\};/u.exec(guard)?.[1] ?? '';
-    expect(caps).toMatch(/\b7: \{/u);
-    expect(caps).not.toMatch(/\b8: \{/u);
+    expect(caps).toMatch(/\b7: \{ maxAttempts: 30, costCapUsd: 0\.04 \}/u);
+    expect(caps).toMatch(/\b8: \{ maxAttempts: 123, costCapUsd: 0\.25 \}/u);
   });
 });
 
