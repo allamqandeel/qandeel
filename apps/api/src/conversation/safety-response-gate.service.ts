@@ -53,26 +53,55 @@ export const THIRD_PARTY_SUPPORT_GUIDANCE = [
 ].join('\n');
 
 const ARABIC = /[؀-ۿ]/;
+// Arabic whole-word binding. JavaScript's \b sees only ASCII word characters, so a bare Arabic stem also matched inside
+// unrelated words (سم in اسم / سمك / جسم / رسمة, ناس in مناسب, اختي in اختيار, هات in أمهات / الهاتف). arWord() matches a
+// stem only as a whole Arabic word: optionally after the listed proclitics, optionally followed by harakat and the listed
+// enclitics, and never touching another Arabic letter on either side.
+const AR_LETTER = '\\u0621-\\u064A\\u0640\\u0671-\\u06D3';
+const AR_MARK = '\\u064B-\\u065F\\u0670';
+const arWord = (stems: string, proclitics = '', enclitics = ''): string =>
+  `(?<![${AR_LETTER}${AR_MARK}])(?:${proclitics})?(?:${stems})[${AR_MARK}]*(?:${enclitics})?(?![${AR_LETTER}])`;
+// Poison as a word, never بسم / وسم / اسم; harmful objects keep their possessive forms (حبوبي, سكينته).
+const POISON_AR = arWord('سم|سموم', 'ال|وال|بال|فال|لل');
+const HARM_OBJECT_AR = `${arWord('حبوب|مسدس|سكينة|سكين|حبل|سلاح|جرعة', 'ال|وال|بال|و|ب', 'ي|ه|ها|نا|ك|تي|ته|تها')}|${POISON_AR}`;
+// A bare third-person death verb, except the common Egyptian exaggerations "dying of heat / hunger / laughter" and
+// "dying to see / know / try" (Safety Response Gate v1: exaggeration phrasing is protected).
+const FIGURATIVE_DEATH_CONTINUATION_AR =
+  '\\s*(?:من\\s+(?:ال)?(?:حر|برد|جوع|عطش|ضحك|زهق|ملل|تعب|فرحة|غيظ)|و\\s*(?:ي|ت|أ|ا|ن)?(?:شوف|عرف|جرب|روح|سافر|قابل|اكل|لعب))';
+const BARE_DEATH_VERB_AR = `${arWord('يموت|تموت', 'ب|ه|ح|س', 'وا|ون|ي')}(?!${FIGURATIVE_DEATH_CONTINUATION_AR})`;
 const METHOD_SEEKING = /\b(?:how (?:can|do|would) i|ways? to|best (?:way|method)|methods? (?:to|for)|instructions? (?:to|for)|step[ -]by[ -]step)\b|(?:ازاي|إزاي|كيف|إيه أفضل طريقة|ايه افضل طريقة|أفضل طريقة|افضل طريقة|طريقة|طرق|خطوات|تعليمات)/i;
 const SELF_HARM_ACTION = /\b(?:kill(?:ing)? myself|end(?:ing)? my life|commit(?:ting)? suicide|hurt(?:ing)? myself|harm(?:ing)? myself|cut(?:ting)? myself|overdos(?:e|ing))\b|(?:أ?قتل نفسي|هقتل نفسي|أ?نتحر|هنتحر|أنهي حياتي|انهي حياتي|هأنهي حياتي|أؤذي نفسي|اؤذي نفسي|أأذي نفسي|اأذي نفسي|أجرح نفسي|اجرّح نفسي|جرح نفسي|أقطع شراييني|اقطع شراييني|جرعة زائدة)/i;
 const SUICIDE_TOPIC = /\b(?:suicide|suicidal)\b|(?:انتحار|الانتحار|انتحاري|انتحارية)/i;
 const DECIDED_INTENT = /\b(?:i (?:decided|intend|plan|am going|will)|i'm going|i've decided|going to|about to)\b|(?:أنا قررت|انا قررت|قررت|ناوي|ناوية|هنتحر|هقتل نفسي|هأنهي حياتي|هأذي نفسي)/i;
 const IMMINENT_TIME = /\b(?:right now|tonight|today|immediately|about to|on my way|going there now)\b|(?:دلوقتي|الآن|الان|النهارده|الليلة|حالًا|حالا|رايحله|رايح لها|في الطريق)/i;
-const HARM_MEANS = /\b(?:have|got|with|using)\b[\s\S]{0,30}\b(?:pills?|gun|knife|rope|weapon|poison)\b|(?:معايا|معي|باستخدام|عندي)[\s\S]{0,25}(?:حبوب|مسدس|سكينة|سكين|حبل|سلاح|سم)/i;
+const HARM_MEANS = new RegExp(
+  `${/\b(?:have|got|with|using)\b[\s\S]{0,30}\b(?:pills?|gun|knife|rope|weapon|poison)\b/.source}|(?:معايا|معي|باستخدام|عندي)[\\s\\S]{0,25}(?:${HARM_OBJECT_AR})`,
+  'i',
+);
 const NON_IMMINENT_DISCLOSURE = /\b(?:sometimes|lately|been thinking|thinking about|thoughts? of|urge(?:s)? to|want to)\b|(?:ساعات|أحيانًا|احيانا|مؤخرًا|مؤخرا|بفكر|أفكر|افكر|عندي أفكار|عندي رغبة|عايز|عاوز)/i;
 const AMBIGUOUS_SELF_HARM = /\b(?:could kill myself|wanted to kill myself|nearly killed myself)\b|(?:كنت هولع في نفسي|هولع في نفسي|كنت عايز أقتل نفسي|كنت عاوز اقتل نفسي|هموت نفسي)/i;
 const CLEAR_FIGURATIVE_IDIOM = /\b(?:nearly died laughing|dying (?:of|from) laughter)\b|(?:هموت نفسي من الضحك|هموت من الضحك|هيموت من الضحك|يموت من الضحك|تموت من الضحك|موتني من الضحك)/i;
-const VIOLENT_ACTION = /\b(?:kill|murder|shoot|stab|poison|attack|seriously hurt)\b|(?:أ?قتل|هقتل|أضربه بالنار|اضربه بالنار|هضربه بالنار|أطعنه|اطعنه|هطعنه|أسممه|اسممه|هسممه|أهاجم|اهاجم|ههاجم|أؤذيه بشدة|اؤذيه بشدة)/i;
+// "kill" / قتل aimed at time, a computer process or garden pests is not harm to another person, in this turn or as the
+// prior turn of an incomplete follow-up.
+const VIOLENT_ACTION = /\b(?:kill(?!\s+(?:(?:the|some|a|my|this|that|all)\s+)?(?:time|process(?:es)?|weeds?|bugs?|pests?|germs?|bacteria|mosquito(?:e?s)?|cockroach(?:es)?|ants?|mold|lights?|engine|app|tab|task|job|server|session)\b)|murder|shoot|stab|poison|attack|seriously hurt)\b|(?:(?:أ?قتل|هقتل)(?!\s*(?:ال)?(?:وقت|ملل|زهق|فراغ|حشرات|صراصير|ناموس|نمل|بروسيس|عملية|برنامج|حشائش|حشايش|جراثيم|بكتيريا|ميكروبات))|أضربه بالنار|اضربه بالنار|هضربه بالنار|أطعنه|اطعنه|هطعنه|أسممه|اسممه|هسممه|أهاجم|اهاجم|ههاجم|أؤذيه بشدة|اؤذيه بشدة)/i;
 const VIOLENT_INTENT = /\b(?:want to|intend to|plan to|going to|will|decided to|seriously hurt)\b|(?:عايز|عاوز|ناوي|ناوية|هقتل|هطعنه|هسممه|ههاجم|قررت)/i;
 const EVASION_OR_PLANNING = /\b(?:without getting caught|undetected|hide (?:the )?(?:body|evidence)|where to aim|plan (?:an|the)? attack|how do i do it)\b|(?:من غير ما اتمسك|بدون ما أتمسك|من غير ما ينكشف|أخفي الجثة|اخفي الجثة|أخفي الدليل|اخفي الدليل|أصوب فين|اصوب فين|أخطط للهجوم|اخطط للهجوم|اعملها ازاي|أعملها إزاي)/i;
 const INCOMPLETE_HARM_FOLLOW_UP = /\b(?:best method|what methods?|how do i do it|how can i do it|without getting caught|what should i use)\b|(?:أفضل طريقة|افضل طريقة|إيه الطريقة|ايه الطريقة|أعملها إزاي|اعملها ازاي|من غير ما اتمسك|أستخدم إيه|استخدم ايه)/i;
 const MINOR = /\b(?:child|children|kid|minor|underage|teen(?:ager)?|(?:1[0-7]|[0-9])[ -]?year[ -]?old)\b|(?:طفل|طفلة|أطفال|اطفال|قاصر|قاصرة|تحت السن|مراهق|مراهقة|عمره \d{1,2}|عمرها \d{1,2})/i;
 const SEXUAL = /\b(?:sex|sexual|nude|naked|porn|erotic|explicit (?:photo|image|video|scene))\b|(?:جنس|جنسي|جنسية|عاري|عارية|عراة|إباحي|اباحي|فاضح|فاضحة|مشهد مثير)/i;
-const CREATION_OR_REQUEST = /\b(?:write|create|make|generate|draw|show|find|send|describe|give me|tell me)\b|(?:اكتب|أنشئ|انشئ|اعمل|ارسم|وريني|ابعت|اوصف|صف|هات|اديني|قل لي)/i;
+const CREATION_ENCLITICS_AR = 'لي|له|لها|لنا|لهم|هالي|هولي|ي|ه|ها|هم|ني|وا';
+const CREATION_OR_REQUEST = new RegExp(
+  `${/\b(?:write|create|make|generate|draw|show|find|send|describe|give me|tell me)\b/.source}|${arWord('اكتب|أنشئ|انشئ|اعمل|ارسم|وريني|ابعت|اوصف|هات|اديني|قل لي', 'و|ف', CREATION_ENCLITICS_AR)}|${arWord('صف', '', CREATION_ENCLITICS_AR)}`,
+  'i',
+);
 // Credential clause requires an acquisition/operational verb; grammatical person (attacker/hacker)
 // deliberately plays no role, so third-person operational requests remain blocked while purely
 // defensive explanations ("how password managers protect credentials") are not isolated-keyword hits.
-const ILLEGAL_HARM = /\b(?:build|make|create|give|write|explain)\b[\s\S]{0,30}\b(?:bomb|explosive)\b|\b(?:write|create|deploy|spread|give)\b[\s\S]{0,50}\b(?:ransomware|destructive malware)\b|\b(?:steal(?:s|ing)?|hack(?:s|ing)?|crack(?:s|ing)?|phish(?:es|ing)?|intercept(?:s|ing)?|bypass(?:es|ing)?|dump(?:s|ing)?|exfiltrat\w*|obtain(?:s|ing)?)\b[\s\S]{0,50}\b(?:credential(?:s)?|password(?:s)?)\b|\b(?:poison|toxin)\b[\s\S]{0,70}\b(?:instructions?|steps?|recipe|undetected|without (?:being )?detected|evade)\b|\b(?:instructions?|steps?|step[ -]by[ -]step|recipe)\b[\s\S]{0,70}\b(?:bomb|explosive|ransomware|destructive malware|credential theft|poison|toxin)\b|(?:اصنع|أصنع|اعمل|اشرح|اديني)[\s\S]{0,50}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات مرور|سم|مادة سامة)|(?:خطوات|تعليمات|طريقة)[\s\S]{0,70}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات المرور|تسميم)/i;
+const ILLEGAL_HARM_EN = /\b(?:build|make|create|give|write|explain)\b[\s\S]{0,30}\b(?:bomb|explosive)\b|\b(?:write|create|deploy|spread|give)\b[\s\S]{0,50}\b(?:ransomware|destructive malware)\b|\b(?:steal(?:s|ing)?|hack(?:s|ing)?|crack(?:s|ing)?|phish(?:es|ing)?|intercept(?:s|ing)?|bypass(?:es|ing)?|dump(?:s|ing)?|exfiltrat\w*|obtain(?:s|ing)?)\b[\s\S]{0,50}\b(?:credential(?:s)?|password(?:s)?)\b|\b(?:poison|toxin)\b[\s\S]{0,70}\b(?:instructions?|steps?|recipe|undetected|without (?:being )?detected|evade)\b|\b(?:instructions?|steps?|step[ -]by[ -]step|recipe)\b[\s\S]{0,70}\b(?:bomb|explosive|ransomware|destructive malware|credential theft|poison|toxin)\b/;
+const ILLEGAL_HARM = new RegExp(
+  `${ILLEGAL_HARM_EN.source}|(?:اصنع|أصنع|اعمل|اشرح|اديني)[\\s\\S]{0,50}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات مرور|${POISON_AR}|مادة سامة)|(?:خطوات|تعليمات|طريقة)[\\s\\S]{0,70}(?:قنبلة|متفجرات|برمجية خبيثة|فدية|سرقة كلمات المرور|تسميم)`,
+  'i',
+);
 const MEDICAL_EMERGENCY = /\b(?:can't breathe|cannot breathe|severe chest pain|signs? of (?:a )?stroke|face droop|severe bleeding|won't stop bleeding|unconscious|not breathing|anaphylaxis|severe allergic reaction|overdos(?:e|ed)|seizure)\b|(?:مش قادر أتنفس|مش قادرة أتنفس|مش قادر يتنفس|مش قادرة تتنفس|مش بيتنفس|مش بتتنفس|لا أستطيع التنفس|ألم شديد في الصدر|الم شديد في الصدر|علامات جلطة|نزيف شديد|النزيف مش بيقف|فاقد الوعي|لا يتنفس|حساسية شديدة|جرعة زائدة|تشنجات|تشنج)/i;
 const ACUTE_PERSON_CONTEXT = /\b(?:i have|i'm having|i am having|my |he is|he's|she is|she's|they are|they're|someone is|right now|just )\b|(?:عندي|عنده|عندها|معايا|معاه|معاها|أنا|انا|هو |هي |دلوقتي|الآن|الان|حالًا|حالا|جاله|جالها|ابني|بنتي)/i;
 const INFORMATIONAL_FRAME = /\b(?:history|historical|research|news|reported|documentary|fiction|fictional|novel|movie|film|video game|game boss|prevention)\b|(?:تاريخ|تاريخي|تاريخية|بحث|الأخبار|الاخبار|خبر|وثائقي|خيالي|خيالية|رواية|فيلم|لعبة|في اللعبة|وقاية)/i;
@@ -88,11 +117,16 @@ const MEDICAL_ONGOING_STATE = /\b(?:is|are|am|'s)\s+(?:still\s+)?(?:unconscious|
 // --- Actor attribution (v2). These surfaces exist so the semantic actor of self-harm language
 // can be distinguished before method interpretation. None of them is a standalone allow-list:
 // protective framing only matters when facilitation and direct-user signals are absent.
-const THIRD_PARTY_PERSON = /\b(?:my|our)\s+(?:best )?(?:friend|brother|sister|mom|mother|dad|father|son|daughter|husband|wife|cousin|colleague|coworker|classmate|roommate|neighbou?r|mate)\b|\b(?:someone|somebody|a friend(?: of mine)?|(?:a |the )?person|people)\b|(?:صاحبي|صاحبتي|أخويا|اخويا|أختي|اختي|ابني|بنتي|جوزي|مراتي|زميلي|زميلتي|واحد صاحبي|حد قريب مني|حد أعرفه|حد اعرفه|شخص|ناس)/i;
+const THIRD_PARTY_PERSON_EN = /\b(?:my|our)\s+(?:best )?(?:friend|brother|sister|mom|mother|dad|father|son|daughter|husband|wife|cousin|colleague|coworker|classmate|roommate|neighbou?r|mate)\b|\b(?:someone|somebody|a friend(?: of mine)?|(?:a |the )?person|people)\b/;
+const THIRD_PARTY_PERSON = new RegExp(
+  `${THIRD_PARTY_PERSON_EN.source}|${arWord('صاحبي|صاحبتي|أخويا|اخويا|أختي|اختي|ابني|بنتي|ابنتي|جوزي|مراتي|زميلي|زميلتي|واحد صاحبي|حد قريب مني|حد أعرفه|حد اعرفه|ناس', 'ال|وال|بال|لل|و|ب|ل|ف')}|${arWord('شخص', 'ال|وال|بال|لل|و|ب|ل|ف', 'ين|ان')}`,
+  'i',
+);
 // "want to die" is deliberately NOT free-floating: the third-person reading requires either the
 // third-person inflection (wants) or an explicit third-person subject binding, so first-person
 // "I want to die" can never be reassigned to a nearby third-party noun.
-const THIRD_PERSON_RISK_STATE = /\b(?:suicidal|thinking about (?:suicide|killing (?:him|her|them)sel(?:f|ves))|wants to die|(?:who|he|she|they) want to die|wants? to kill (?:him|her|them)sel(?:f|ves)|kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|hurt(?:s|ing)? (?:him|her)self|end(?:s|ing)? (?:his|her|their) (?:own )?life|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would|wants? to)\s*die)\b|(?:بيفكر في الانتحار|بتفكر في الانتحار|عايز يموت|عاوز يموت|عايزة تموت|هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه|يموت|تموت|هيموت)/i;
+const THIRD_PERSON_RISK_STATE_BASE = /\b(?:suicidal|thinking about (?:suicide|killing (?:him|her|them)sel(?:f|ves))|wants to die|(?:who|he|she|they) want to die|wants? to kill (?:him|her|them)sel(?:f|ves)|kill(?:s|ing)? (?:him|her|them)sel(?:f|ves)|hurt(?:s|ing)? (?:him|her)self|end(?:s|ing)? (?:his|her|their) (?:own )?life|from committing suicide|(?:he|she|they)\s+(?:can|could|will|would|wants? to)\s*die)\b|(?:بيفكر في الانتحار|بتفكر في الانتحار|عايز يموت|عاوز يموت|عايزة تموت|هينتحر|ينتحر|تنتحر|هيقتل نفسه|يقتل نفسه|تقتل نفسها|يأذي نفسه|يؤذي نفسه|ينهي حياته|هينهي حياته|يجرح نفسه)/;
+const THIRD_PERSON_RISK_STATE = new RegExp(`${THIRD_PERSON_RISK_STATE_BASE.source}|${BARE_DEATH_VERB_AR}`, 'i');
 // First-person death wish: strictly first-person surfaces, used both for risk detection and to
 // give the user's own risk precedence over any third-party support reading.
 const FIRST_PERSON_DEATH_WISH = /\bi (?:just )?want(?:ed)? to die\b|\bi wish i (?:was|were) dead\b|(?:أنا |انا )?(?:عايز|عاوز|نفسي) (?:أموت|اموت)|عايزة (?:أموت|اموت)|عاوزة (?:أموت|اموت)/i;
@@ -121,9 +155,9 @@ const FACILITATION_REQUEST_AR = new RegExp(
   [
     '(?:أساعد|اساعد|ساعد|أدعم|ادعم)(?:(?!اللي|إللي|بيقول|قال|عشان ما|علشان ما|مش|ما )[\\s\\S]){0,30}(?:يموت|تموت|ينتحر|تنتحر|ينهي حياته|يقتل نفسه)',
     '(?:يستخدم|تستخدم|ياخد|تاخد)\\s*(?:إيه|ايه)',
-    '(?:أقوله|اقوله|أقول له|اقول له|أقولها|اقولها)[\\s\\S]{0,15}(?:يستخدم|ياخد)[^.؟!\\n]{0,20}(?:حبوب|سم|سلاح|سكينة|حبل|جرعة)',
+    `(?:أقوله|اقوله|أقول له|اقول له|أقولها|اقولها)[\\s\\S]{0,15}(?:يستخدم|ياخد)[^.؟!\\n]{0,20}(?:${HARM_OBJECT_AR})`,
     '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)\\s*(?:إيه|ايه)',
-    '(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)[^.؟!\\n]{0,20}(?:حبوب|سم|سلاح|سكينة|حبل|جرعة)',
+    `(?:أديله|اديله|أجيبله|اجيبله|أديلها|اديلها)[^.؟!\\n]{0,20}(?:${HARM_OBJECT_AR})`,
     // Lethal PURPOSE binding: transfer verb + explicit death purpose, object-independent
     // ("أديله حاجة عشان يموت"). Negated purposes ("عشان ما يموتش") do not match because the
     // purpose marker must be immediately followed by the death verb.
