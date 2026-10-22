@@ -104,8 +104,10 @@ test('ONE personality: the world-neutral core is derived from the approved core 
 });
 
 test('one pure, append-only helper adds the approved Safety humour suspension on GUIDED turns only (CG-4)', () => {
-  assert.match(policy, /import \{\n  compileInteractionPreferenceGuidance, SAFETY_HUMOUR_SUSPENSION_LINE, type InteractionPreferenceGuidanceInput,\n\} from '\.\.\/interaction-preferences\/interaction-preference-guidance';/u,
+  assert.match(policy, /import \{\n  compileInteractionPreferenceBlock, SAFETY_HUMOUR_SUSPENSION_LINE, type InteractionPreferenceGuidanceInput,\n\} from '\.\.\/interaction-preferences\/interaction-preference-guidance';/u,
     'the approved line is reused from its one source through the existing import');
+  // RE-ANCHORED by S8A-02 CP3 correction (2026-10-22; Product Owner Final Integrated Correction): the compiler
+  // is renamed compileInteractionPreferenceBlock (it returns the preference block alone); the import is otherwise unchanged.
   const start = policy.indexOf('export function withWorldNeutralPersonality(worldPrefix: string, safetyGuided: boolean): string {');
   assert.ok(start >= 0, 'the helper exists with its exact signature');
   const body = policy.slice(start, policy.indexOf('\n}\n', start) + 2);

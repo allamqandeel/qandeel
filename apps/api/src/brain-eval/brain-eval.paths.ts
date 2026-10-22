@@ -22,3 +22,5 @@ export const SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY = resolve(EVALUATION_
 // S8A-02 CP3: the Personal qualification run, its DEEP-budget diagnostic and its review packets (git-ignored).
 export const GOLDEN_CP3_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-personal');
 export const GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-deep-2800');
+// S8A-02 CP3 Final Integrated Correction: the acceptance run and its review packets (git-ignored).
+export const GOLDEN_CP3_CORRECTION_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-correction');

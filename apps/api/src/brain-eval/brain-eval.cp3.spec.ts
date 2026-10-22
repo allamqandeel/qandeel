@@ -41,13 +41,16 @@ describe('S8A-02 CP3 Personal qualification suite', () => {
     expect(dispositions.filter(([, disposition]) => disposition === 'BLOCK')).toEqual([]);
   });
 
-  it('is registered as round 8 with the 20 s transport ceiling and the capped DEEP 2 800 diagnostic, and renders core v3.1', () => {
+  it('is registered as round 8 with the 20 s transport ceiling and the capped DEEP 2 800 diagnostic; core v3.1 is now its record', () => {
     const run = DEEPSEEK_EVALUATION_SUITES['golden-cp3-personal'];
     const diagnostic = DEEPSEEK_EVALUATION_SUITES['golden-cp3-deep-2800'];
     expect(run).toMatchObject({ round: 8, repeats: 3, labels: ['core-v3.1'], comparison: 'QUALIFICATION', transportBudgetMs: 20_000 });
     expect(diagnostic).toMatchObject({ round: 8, diagnosticOf: { suite: 'golden-cp3-personal', deepMaxOutputTokens: 2_800, maxAttempts: 6 } });
     expect(run.validate(run.cases).caseCount).toBe(39);
-    expect(() => assertGuidanceMatchesLabel(run.cases, 'core-v3.1')).not.toThrow();
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): Round 8 ran core v3.1 at its own commit (48c8b159); this commit
+    // renders core v3.2, so the round 8 label is refused here and core-v3.2 runs.
+    expect(() => assertGuidanceMatchesLabel(run.cases, 'core-v3.1')).toThrow('not core-v3.1 for 39 case(s)');
+    expect(() => assertGuidanceMatchesLabel(run.cases, 'core-v3.2')).not.toThrow();
   });
 
   it('the guard holds exactly the approved round 8 caps: 123 attempts, USD 0.25 (Product Owner authorization, 2026-10-22)', () => {
@@ -71,14 +74,15 @@ describe('S8A-02 CP3 runner: full reply on a 20 s transport, production budget r
     const [fast] = GOLDEN_CP3_PERSONAL_SUITE.filter((testCase) => testCase.path === 'FAST');
     const [result] = await runDeepSeekEvaluation([fast], 'core-v3.1', { router, attribute, transportBudgetMs: 20_000 });
     expect(seen[0].latencyBudgetMs).toBe(20_000);
-    expect(result).toMatchObject({ latencyBudgetMs: 3_000, transportBudgetMs: 20_000, success: true });
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): the recorded production FAST budget is 10 s.
+    expect(result).toMatchObject({ latencyBudgetMs: 10_000, transportBudgetMs: 20_000, success: true });
   });
 
   it('without the option, the request keeps the production budget (every earlier round is unchanged)', async () => {
     const { seen, router } = recording();
     const [fast] = GOLDEN_CP3_PERSONAL_SUITE.filter((testCase) => testCase.path === 'FAST');
     const [result] = await runDeepSeekEvaluation([fast], 'core-v3.1', { router, attribute });
-    expect(seen[0].latencyBudgetMs).toBe(3_000);
+    expect(seen[0].latencyBudgetMs).toBe(10_000);
     expect(result.transportBudgetMs).toBeUndefined();
   });
 });

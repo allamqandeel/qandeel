@@ -59,7 +59,8 @@ describe('DeepSeekModelRouter', () => {
     const create = jest.fn().mockResolvedValue(completion('رد'));
     await routerWith(create).generate(request('DEEP'));
     const [body, options] = create.mock.calls[0];
-    expect(body).toMatchObject({ model: 'deepseek-flash', thinking: { type: 'enabled' }, reasoning_effort: 'low', max_tokens: 2048 });
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): DEEP max_tokens 2 800 (2 048 cut the reply at the length stop in CP3 Round 8).
+    expect(body).toMatchObject({ model: 'deepseek-flash', thinking: { type: 'enabled' }, reasoning_effort: 'low', max_tokens: 2800 });
     expect(options.timeout).toBe(20_000);
   });
 

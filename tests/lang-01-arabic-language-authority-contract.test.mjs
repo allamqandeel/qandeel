@@ -283,15 +283,19 @@ test('Work Package C: the D4 lines are the amendment bytes, appended after the c
   // RE-ANCHORED by S8A-02 Round 3 (2026-10-21; Product Owner Round 3 decisions): the cores v3.1 replace v3 in what is
   // rendered; the D4 lines and their position are unchanged. Text v4 = Text v1 + core v3.1 + the Personal D4 line.
   assert.ok(policy.includes('export const TEXT_V4_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\\n\\n${QANDEEL_PERSONALITY_CORE_V3_1}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;'));
-  assert.ok(policy.includes('    return preferences === undefined ? TEXT_V4_BEHAVIORAL_GUIDANCE : `${TEXT_V4_BEHAVIORAL_GUIDANCE}\\n\\n${preferences}`;'),
-    'the standing preference block still follows, and still takes precedence over anything inferred');
+  // RE-ANCHORED by S8A-02 CP3 correction (2026-10-22; Product Owner Final Integrated Correction): the Personal
+  // core v3.2 replaces v3.1 in what is rendered (Text v5); the D4 lines and their position after the core are unchanged. The
+  // standing preference block now LEADS the guidance, stating its precedence before the general guidance and the D4 line.
+  assert.ok(policy.includes('export const TEXT_V5_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\\n\\n${QANDEEL_PERSONALITY_CORE_V3_2}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;'));
+  assert.ok(policy.includes('    const guidance = block === undefined ? TEXT_V5_BEHAVIORAL_GUIDANCE : `${block}\\n\\n${TEXT_V5_BEHAVIORAL_GUIDANCE}`;'),
+    'the standing preference block leads, and still takes precedence over anything inferred');
   // Shared / Public: the World prefix, the world-neutral core, then the world D4 line; the humour suspension stays last.
   assert.ok(policy.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'));
   assert.ok(policy.includes('  return safetyGuided ? `${guidance}\\n\\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;'));
   // The Worlds still receive no Personal authority: their sources name neither the Personal line nor any preference.
   for (const path of ['apps/api/src/shared-world/shared-conversation-model-input.ts', 'apps/api/src/public-world/public-qandeel-model-input.ts']) {
     const source = await read(path);
-    assert.doesNotMatch(source, /ARABIC_DEFAULT_LANGUAGE_LINE|TEXT_V3_BEHAVIORAL_GUIDANCE|TEXT_V4_BEHAVIORAL_GUIDANCE|interaction-preference/u, `${path} reads nothing Personal`);
+    assert.doesNotMatch(source, /ARABIC_DEFAULT_LANGUAGE_LINE|TEXT_V3_BEHAVIORAL_GUIDANCE|TEXT_V4_BEHAVIORAL_GUIDANCE|TEXT_V5_BEHAVIORAL_GUIDANCE|interaction-preference/u, `${path} reads nothing Personal`);
   }
 });
 

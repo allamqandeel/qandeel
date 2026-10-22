@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
 import {
-  compileInteractionPreferenceGuidance, SAFETY_HUMOUR_SUSPENSION_LINE, type InteractionPreferenceGuidanceInput,
+  compileInteractionPreferenceBlock, SAFETY_HUMOUR_SUSPENSION_LINE, type InteractionPreferenceGuidanceInput,
 } from '../interaction-preferences/interaction-preference-guidance';
 
 // Text v1 — the frozen hard Behavioral Policy lines. Byte-identical since before ACE-01: the Shared World and Public World
@@ -112,9 +112,32 @@ export const QANDEEL_PERSONALITY_CORE_V3_1 = QANDEEL_PERSONALITY_CORE_V3.split('
   return paragraph;
 }).join('\n');
 
-// Text v4 — the Personal conversation's guidance after S8A-02: Text v1 unchanged, then the S8A-02 core (v3.1 since Round 3),
-// then the LANG-01 D4 line unchanged. The same additive shape as Text v3, with only the core replaced.
+// Text v4 — the Personal conversation's guidance after S8A-02 Round 3: Text v1 unchanged, then core v3.1, then the LANG-01
+// D4 line unchanged. Kept as the record CP3 Round 8 ran; Text v5 below replaced it.
 export const TEXT_V4_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_1}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;
+
+// S8A-02 CP3 Final Integrated Correction (Product Owner, 2026-10-22) — the PERSONAL core v3.2: core v3.1 with two
+// replacements, each answering a failure the Product Owner confirmed in the CP3 human review. PROPOSED copy, presented at
+// the correction's approval gate. Every other byte is core v3.1's. The Worlds keep the world-neutral core v3.1 unchanged
+// (CP2 / Shared World is outside this correction), so the two cores now differ in these two places only.
+//   - Paragraph 3, the gender clause (H28: masculine and feminine mixed inside one reply). The Product Owner accepts a
+//     natural assumption where nothing confirms the person's gender; what must hold is ONE form, kept through the reply
+//     and the conversation, and changed when the person's words show or correct it. v3.1 asked first for wording that
+//     assumes no gender — in Arabic that wording runs out mid-reply, and the reply slipped between forms.
+//   - Paragraph 4, one sentence after the first (H15: «نسيت معاد الدكتور» answered as a missed university lecture, with an
+//     invented quiz and classmates). Not a rule against assuming: use what the earlier conversation settles, and where a
+//     word can reasonably mean different things and nothing settles it, do not build the whole reply on one guess.
+export const PERSONALITY_GENDER_CLAUSE_V3_2 = 'when their words have not shown it, use one natural form (in Arabic, usually the conventional grammatical masculine) and keep exactly that form through the whole reply and the rest of the conversation, never switching between masculine and feminine; change it only when their words show it or they correct you.';
+export const PERSONALITY_CONTEXT_SENTENCE_V3_2 = 'Use what the earlier conversation already makes clear; when a word or situation could reasonably mean different things and nothing you have been given settles it, do not build the whole reply on one guess: answer what holds either way, cover the likely meanings briefly, or ask one short question when the answer really depends on it.';
+export const QANDEEL_PERSONALITY_CORE_V3_2 = QANDEEL_PERSONALITY_CORE_V3_1.split('\n').map((paragraph, index) => {
+  if (index === 2) return replaceExactlyOnce(paragraph, PERSONALITY_GENDER_CLAUSE_V3_1, PERSONALITY_GENDER_CLAUSE_V3_2);
+  if (index === 3) return replaceExactlyOnce(paragraph, 'each within its own authority.', `each within its own authority. ${PERSONALITY_CONTEXT_SENTENCE_V3_2}`);
+  return paragraph;
+}).join('\n');
+
+// Text v5 — the Personal guidance since the CP3 correction: Text v4's shape with core v3.2 in place of core v3.1. The
+// standing-preference block, when the owner chose any, LEADS it (BehavioralResponsePolicyService.buildTextGuidance).
+export const TEXT_V5_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_2}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;
 
 // S8A-02 (D2, the narrow controlled amendment of ACE-SP-01) — the world-neutral core v2, derived from core v2 by the SAME
 // mapping ACE-SP-01 applied to v1, so the Worlds never hold a copy that can drift: paragraph 3 is the approved world-neutral
@@ -170,10 +193,14 @@ export function withWorldNeutralPersonality(worldPrefix: string, safetyGuided: b
   return safetyGuided ? `${guidance}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;
 }
 
+// The Personal guidance: the owner's standing-preference block first (when any is chosen), so it states its precedence over
+// the general guidance below before that guidance speaks; then Text v5; then, on a Safety GUIDED turn only, the Safety
+// humour suspension last, as before. All DEFAULT without GUIDED is exactly Text v5.
 @Injectable()
 export class BehavioralResponsePolicyService implements BehavioralResponsePolicy {
   buildTextGuidance(interaction?: InteractionPreferenceGuidanceInput): string {
-    const preferences = interaction === undefined ? undefined : compileInteractionPreferenceGuidance(interaction);
-    return preferences === undefined ? TEXT_V4_BEHAVIORAL_GUIDANCE : `${TEXT_V4_BEHAVIORAL_GUIDANCE}\n\n${preferences}`;
+    const block = interaction === undefined ? undefined : compileInteractionPreferenceBlock(interaction);
+    const guidance = block === undefined ? TEXT_V5_BEHAVIORAL_GUIDANCE : `${block}\n\n${TEXT_V5_BEHAVIORAL_GUIDANCE}`;
+    return interaction?.safetyGuided ? `${guidance}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;
   }
 }

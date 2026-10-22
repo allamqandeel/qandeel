@@ -3,7 +3,9 @@ import {
   GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY, GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY,
   SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY, SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY,
   SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY, GOLDEN_CP3_ARTIFACT_DIRECTORY, GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY,
+  GOLDEN_CP3_CORRECTION_ARTIFACT_DIRECTORY,
 } from './brain-eval.paths';
+import { GOLDEN_CP3_CORRECTION_SUITE } from './brain-eval.golden-cp3-correction.suite';
 import {
   CP3_DIAGNOSTIC_DEEP_MAX_OUTPUT_TOKENS, CP3_DIAGNOSTIC_MAX_ATTEMPTS, CP3_TRANSPORT_BUDGET_MS, GOLDEN_CP3_PERSONAL_SUITE,
 } from './brain-eval.golden-cp3.suite';
@@ -56,7 +58,7 @@ export function resolveEvaluationSuite(name: string | undefined): EvaluationSuit
 export interface DeepSeekEvaluationSuiteDefinition extends EvaluationSuiteDefinition {
   readonly repeats: number;
   readonly labels: ReadonlyArray<DeepSeekEvaluationLabel>;
-  readonly round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  readonly round: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   /**
    * GUIDANCE: one case under two guidance labels. PATHS: one message on FAST and on DEEP under one label. QUALIFICATION (CP3):
    * one label, judged on its own against the preregistered criteria, with a blind human packet of one reply per case.
@@ -148,6 +150,14 @@ export const DEEPSEEK_EVALUATION_SUITES = {
     artifactDirectory: GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY, validate: validateGoldenQualificationSuite, repeats: 3,
     labels: ['core-v3.1'], round: 8, comparison: 'QUALIFICATION', transportBudgetMs: CP3_TRANSPORT_BUDGET_MS,
     diagnosticOf: { suite: 'golden-cp3-personal', deepMaxOutputTokens: CP3_DIAGNOSTIC_DEEP_MAX_OUTPUT_TOKENS, maxAttempts: CP3_DIAGNOSTIC_MAX_ATTEMPTS },
+  },
+  // Round 9 (S8A-02 CP3 Final Integrated Correction, Product Owner, 2026-10-22): the acceptance run of the corrected Personal
+  // guidance (core v3.2 with the leading preference block) and budgets, 44 cases × 3 on their production route, sent at the
+  // PRODUCTION budgets (no transport override), so every time or token limit is a real production outcome. Registered for
+  // the free checks only: the guard holds no round 9 caps, so it sends nothing before the Product Owner approves the run.
+  'golden-cp3-correction': {
+    cases: GOLDEN_CP3_CORRECTION_SUITE, rubric: GOLDEN_CONVERSATION_RUBRIC, artifactDirectory: GOLDEN_CP3_CORRECTION_ARTIFACT_DIRECTORY,
+    validate: validateGoldenQualificationSuite, repeats: 3, labels: ['core-v3.2'], round: 9, comparison: 'QUALIFICATION',
   },
 } as const satisfies Readonly<Record<string, DeepSeekEvaluationSuiteDefinition>>;
 

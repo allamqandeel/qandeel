@@ -1,15 +1,22 @@
 // S8A-02: re-anchored from Text v3 to Text v4, the Personal guidance rendered since the approved core v2 (Product Owner D1, 2026-10-21).
 // S8A-02 Round 2 (2026-10-21): Text v4 now composes the approved core v3; core v2 stays pinned as the record arm A ran.
+// S8A-02 CP3 correction (Product Owner, 2026-10-22): the policy renders Text v5 (core v3.2); Text v4 stays pinned as the record
+// CP3 Round 8 ran.
 import {
   BehavioralResponsePolicyService,
   QANDEEL_PERSONALITY_CORE_V1,
   QANDEEL_PERSONALITY_CORE_V2,
   QANDEEL_PERSONALITY_CORE_V3,
   QANDEEL_PERSONALITY_CORE_V3_1,
+  QANDEEL_PERSONALITY_CORE_V3_2,
+  PERSONALITY_GENDER_CLAUSE_V3_1,
+  PERSONALITY_GENDER_CLAUSE_V3_2,
+  PERSONALITY_CONTEXT_SENTENCE_V3_2,
   TEXT_V1_BEHAVIORAL_GUIDANCE,
   TEXT_V2_BEHAVIORAL_GUIDANCE,
   TEXT_V3_BEHAVIORAL_GUIDANCE,
   TEXT_V4_BEHAVIORAL_GUIDANCE,
+  TEXT_V5_BEHAVIORAL_GUIDANCE,
   ARABIC_DEFAULT_LANGUAGE_LINE,
 } from './behavioral-response-policy.service';
 
@@ -25,7 +32,8 @@ describe('BehavioralResponsePolicyService', () => {
     const policy = new BehavioralResponsePolicyService();
     // LANG-01 Work Package C: the rendered guidance was Text v3 — Text v2 (below) unchanged, then the D4 line.
     // S8A-02 (re-anchored): since the approved core v2 it is Text v4; Text v2 / v3 stay byte-identical as the record.
-    expect(policy.buildTextGuidance()).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
+    // S8A-02 CP3 correction (re-anchored): since core v3.2 it is Text v5; Text v4 stays byte-identical as the record.
+    expect(policy.buildTextGuidance()).toBe(TEXT_V5_BEHAVIORAL_GUIDANCE);
     expect(TEXT_V3_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
     expect(policy.buildTextGuidance()).toBe(policy.buildTextGuidance());
     expect(TEXT_V2_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`);
@@ -99,5 +107,26 @@ describe('BehavioralResponsePolicyService', () => {
     // canonical cap applies to the guidance size.
     expect(Buffer.byteLength(TEXT_V4_BEHAVIORAL_GUIDANCE, 'utf8')).toBeLessThanOrEqual(6_144);
     expect(QANDEEL_PERSONALITY_CORE_V3_1).not.toMatch(/SERIOUS_REGISTER|LIGHT_REGISTER|PLAYFUL|tone:|mood|sentiment|the user feels|the user seems/iu);
+  });
+
+  it('S8A-02 CP3 correction: core v3.2 is core v3.1 with the gender clause of paragraph 3 replaced and one context sentence in paragraph 4', () => {
+    const [v31, v32] = [QANDEEL_PERSONALITY_CORE_V3_1.split('\n'), QANDEEL_PERSONALITY_CORE_V3_2.split('\n')];
+    expect(v32).toHaveLength(8);
+    for (const index of [0, 1, 4, 5, 6, 7]) expect(v32[index]).toBe(v31[index]);
+    expect(v32[2]).toBe(v31[2].replace(PERSONALITY_GENDER_CLAUSE_V3_1, PERSONALITY_GENDER_CLAUSE_V3_2));
+    expect(v32[3]).toBe(v31[3].replace('each within its own authority.', `each within its own authority. ${PERSONALITY_CONTEXT_SENTENCE_V3_2}`));
+    // H28: one form, kept through the reply and the conversation, changed only by the person's words; a natural assumption is
+    // allowed (the Product Owner's CP3 review), so v3.1's "never guess" sentence is gone and no neutral wording is demanded.
+    expect(v32[2]).toContain('keep exactly that form through the whole reply and the rest of the conversation, never switching between masculine and feminine');
+    expect(v32[2]).not.toContain('Never guess their gender');
+    expect(v32[2]).not.toContain('natural wording that does not assume one');
+    // H15: not a rule against assuming; no single guess carries a whole reply when nothing settles the meaning.
+    expect(PERSONALITY_CONTEXT_SENTENCE_V3_2).toContain('do not build the whole reply on one guess');
+    expect(PERSONALITY_CONTEXT_SENTENCE_V3_2).toContain('Use what the earlier conversation already makes clear');
+    expect(TEXT_V5_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_2}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
+    // The test-local Personal bound moves from 6144 to 7168 bytes for the added sentence; no runtime cap applies.
+    expect(Buffer.byteLength(TEXT_V5_BEHAVIORAL_GUIDANCE, 'utf8')).toBeLessThanOrEqual(7_168);
+    expect(QANDEEL_PERSONALITY_CORE_V3_2).not.toMatch(/SERIOUS_REGISTER|LIGHT_REGISTER|PLAYFUL|tone:|mood|sentiment|the user feels|the user seems/iu);
+    expect(TEXT_V5_BEHAVIORAL_GUIDANCE).not.toMatch(/Claude|Anthropic|OpenAI|GPT|Gemini|Kimi|DeepSeek/iu);
   });
 });

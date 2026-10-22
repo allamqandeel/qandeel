@@ -73,7 +73,11 @@ test('WP1: the ONE personality core is the approved Product Copy Gate wording, i
   // RE-ANCHORED by S8A-02 Round 3 (2026-10-21; Product Owner Round 3 decisions): Text v4 composes core v3.1, derived from
   // core v3; core v3 stays in the file as the record the Round 3 baseline arm ran.
   assert.match(policy, /export const TEXT_V4_BEHAVIORAL_GUIDANCE = `\$\{TEXT_V1_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{QANDEEL_PERSONALITY_CORE_V3_1\}\\n\\n\$\{ARABIC_DEFAULT_LANGUAGE_LINE\}`;/u);
-  assert.match(policy, /return preferences === undefined \? TEXT_V4_BEHAVIORAL_GUIDANCE : `\$\{TEXT_V4_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{preferences\}`;/u);
+  // RE-ANCHORED by S8A-02 CP3 correction (2026-10-22; Product Owner Final Integrated Correction): Personal guidance is Text v5 = Text v1
+  // unchanged + core v3.2 + the same D4 line; Text v4 (core v3.1) stays in the file as the record CP3 Round 8 ran. The standing
+  // preference block now LEADS the guidance, and the GUIDED Safety humour suspension stays last.
+  assert.match(policy, /export const TEXT_V5_BEHAVIORAL_GUIDANCE = `\$\{TEXT_V1_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{QANDEEL_PERSONALITY_CORE_V3_2\}\\n\\n\$\{ARABIC_DEFAULT_LANGUAGE_LINE\}`;/u);
+  assert.ok(policy.includes('    const guidance = block === undefined ? TEXT_V5_BEHAVIORAL_GUIDANCE : `${block}\\n\\n${TEXT_V5_BEHAVIORAL_GUIDANCE}`;'));
 });
 
 // RE-ANCHORED by ACE-SP-01 (2026-10-12; Gate B Option A, the ACE-SP-01 controlled amendment): Shared / Public keep Text v1

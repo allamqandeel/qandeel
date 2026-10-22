@@ -59,7 +59,9 @@ describe('S8A-02 Round 3 — the focused Shared language comparison (zero calls)
     expect(briefComplex.context).toEqual(complex.context);
     expect([complex.interactionPreferences?.replyLength ?? 'DEFAULT', briefComplex.interactionPreferences?.replyLength]).toEqual(['DEFAULT', 'ALWAYS_BRIEF']);
     // Core v3.1 is rendered since the Round 3 copy commit; arm A (core-v3) runs from the tooling commit before it.
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3.1')).not.toThrow();
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): core v3.1 is now the record arm B ran; core v3.2 renders.
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3.1')).toThrow('not core-v3.1 for 7 case(s)');
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3.2')).not.toThrow();
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_PERSONALITY_SUITE, 'core-v3')).toThrow('not core-v3 for 7 case(s)');
   });
 
@@ -84,7 +86,9 @@ describe('S8A-02 Round 3 — the focused Shared language comparison (zero calls)
   it('runs core-v3.1 at this commit, which renders it, and refuses core-v3, whose arm runs from the tooling commit', () => {
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_SHARED_SUITE, 'core-v3.1')).not.toThrow();
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND3_SHARED_SUITE, 'core-v3')).toThrow('not core-v3 for 6 case(s)');
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3.1')).not.toThrow();
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): the Personal cases of the Round 2 suite render core v3.2.
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3.1')).toThrow('not core-v3.1 for 23 case(s)');
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3.2')).not.toThrow();
   });
 
   it('blinds the two labels of the suite, whatever they are', () => {

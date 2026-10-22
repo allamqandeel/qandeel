@@ -120,7 +120,10 @@ describe('S8A-02 Round 2 — targeted suites, repeats and the blinded set review
     // Since the Round 3 decisions every World renders core v3.1; core v2 and core v3 are the records their arms ran at their
     // own commits, so neither label runs here.
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v3')).toThrow('not core-v3 for 30 case(s)');
-    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_PATH_SUITE, 'core-v3.1')).not.toThrow();
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): the Personal policy renders core v3.2 and the Worlds keep
+    // the world-neutral core v3.1, which is what core-v3.2 names for them; core-v3.1 is refused for the Personal cases.
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_PATH_SUITE, 'core-v3.1')).toThrow('not core-v3.1 for 12 case(s)');
+    expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_PATH_SUITE, 'core-v3.2')).not.toThrow();
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'core-v2')).toThrow('not core-v2 for 30 case(s)');
     expect(() => assertGuidanceMatchesLabel(GOLDEN_ROUND2_SUITE, 'baseline')).not.toThrow();
   });

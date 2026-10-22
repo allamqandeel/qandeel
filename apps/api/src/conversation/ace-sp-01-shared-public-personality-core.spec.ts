@@ -23,7 +23,7 @@ import {
   BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL,
   QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL,
   QANDEEL_PERSONALITY_CORE_V3_1, QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL,
-  TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V3_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
+  TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V3_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE, TEXT_V5_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
   ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL,
 } from './behavioral-response-policy.service';
 import {
@@ -214,10 +214,11 @@ describe('ACE-SP-01 — the world-neutral core is the ONE approved core, derived
     // LANG-01 Work Package C: the rendered Personal guidance was Text v2 unchanged, then the Personal D4 line (Text v3).
     expect(TEXT_V3_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
     // S8A-02 (re-anchored): since core v2 it is Text v4, which only replaces the core; since Round 2 Text v4 composes core v3,
-    // and since Round 3 core v3.1.
-    expect(policy.buildTextGuidance()).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
+    // and since Round 3 core v3.1. S8A-02 CP3 correction (re-anchored): the Personal policy renders Text v5 (core v3.2); the
+    // Worlds keep the world-neutral core v3.1, untouched (CP2 / Shared World is outside the correction).
+    expect(policy.buildTextGuidance()).toBe(TEXT_V5_BEHAVIORAL_GUIDANCE);
     expect(TEXT_V4_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_1}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
-    for (const text of [policy.buildTextGuidance(), TEXT_V3_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE]) {
+    for (const text of [policy.buildTextGuidance(), TEXT_V3_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE, TEXT_V5_BEHAVIORAL_GUIDANCE]) {
       expect(text).not.toContain(ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL);
       expect(text).not.toContain(CG_1);
       expect(text).not.toContain(S8A_02_WN_3);

@@ -11,7 +11,7 @@ import {
 import {
   completionReport, createBlindPacket, guidanceGroups, ROUND3_MINIMUM_REPLIES, pathGroups, renderBlindPacketMarkdown, reviewForm, type BlindGroup,
 } from '../src/brain-eval/brain-eval.round2-review';
-import { resolveDeepSeekEvaluationSuite, resolveEvaluationSuite } from '../src/brain-eval/brain-eval.suites';
+import { resolveDeepSeekEvaluationSuite, resolveEvaluationSuite, type DeepSeekEvaluationSuiteDefinition } from '../src/brain-eval/brain-eval.suites';
 import { CP3_REUSED_CASE_IDS, GOLDEN_CP3_QUALIFICATION_CASES } from '../src/brain-eval/brain-eval.golden-cp3.suite';
 import {
   CP3_HUMAN_REVIEW_NOT_STARTED, cp3HumanReviewForm, createCp3Packets, renderCp3HumanPacketMarkdown, type CP3RecordedResult,
@@ -143,10 +143,15 @@ async function diagnosticCases(
 }
 
 /** CP3: the qualification packets (blind human set of one reply per case, AI-rater set of every reply) from the run + reuse. */
-async function cp3Compare(suiteName: string, directory: string): Promise<void> {
-  const own = JSON.parse(await readFile(join(directory, 'core-v3.1', 'results.json'), 'utf8')) as { dry: boolean; results: CP3RecordedResult[] };
-  const reused = JSON.parse(await readFile(join(GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY, 'deepseek', 'core-v3.1', 'results.json'), 'utf8')) as { results: CP3RecordedResult[] };
-  const packets = createCp3Packets(GOLDEN_CP3_QUALIFICATION_CASES, own.results, reused.results.filter((result) => (CP3_REUSED_CASE_IDS as readonly string[]).includes(result.caseId)), randomBytes(24).toString('hex'));
+async function cp3Compare(suite: DeepSeekEvaluationSuiteDefinition & { readonly name: string }, directory: string): Promise<void> {
+  const [label] = suite.labels;
+  const own = JSON.parse(await readFile(join(directory, label, 'results.json'), 'utf8')) as { dry: boolean; results: CP3RecordedResult[] };
+  // CP3 (round 8) adds the five byte-identical Round 3 attempts it reused; the correction (round 9) reuses no attempt.
+  const packets = suite.name === 'golden-cp3-personal'
+    ? createCp3Packets(GOLDEN_CP3_QUALIFICATION_CASES, own.results, (JSON.parse(await readFile(join(GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY, 'deepseek', 'core-v3.1', 'results.json'), 'utf8')) as { results: CP3RecordedResult[] })
+      .results.filter((result) => (CP3_REUSED_CASE_IDS as readonly string[]).includes(result.caseId)), randomBytes(24).toString('hex'))
+    : createCp3Packets(suite.cases, own.results, [], randomBytes(24).toString('hex'));
+  const suiteName = suite.name;
   const [review, unblinded] = [join(directory, 'review'), join(directory, 'unblinded')];
   await Promise.all([mkdir(review, { recursive: true }), mkdir(unblinded, { recursive: true })]);
   await Promise.all([
@@ -166,7 +171,7 @@ async function deepSeekCompare(suiteName: string | undefined): Promise<void> {
   const suite = resolveDeepSeekEvaluationSuite(suiteName);
   const directory = join(suite.artifactDirectory, 'deepseek');
   const load = async (label: string) => JSON.parse(await readFile(join(directory, label, 'results.json'), 'utf8')) as { results: DeepSeekEvaluationResult[]; summary: unknown };
-  if (suite.comparison === 'QUALIFICATION') return cp3Compare(suite.name, directory);
+  if (suite.comparison === 'QUALIFICATION') return cp3Compare(suite, directory);
   if (suite.round >= 2) return round2Compare(suite.name, suite.comparison, suite.cases, suite.labels, directory, load);
   const [baseline, candidate] = [await load('baseline'), await load('candidate')];
   const { blindedReview, labelMap } = createGuidanceComparisonArtifacts(suite.cases, baseline.results, candidate.results, suite.rubric);

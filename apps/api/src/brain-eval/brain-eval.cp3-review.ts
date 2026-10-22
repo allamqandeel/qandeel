@@ -12,7 +12,7 @@ import { GOLDEN_CONVERSATION_RUBRIC, type BrainEvaluationCase } from './brain-ev
 // Delivery (would production have delivered this reply in time?) is computed apart and never shown to a reviewer.
 
 export type CP3RecordedResult = DeepSeekEvaluationResult & {
-  attempts?: ReadonlyArray<{ headersMs?: number; bodyMs?: number; finishReason?: string; bodyError?: string; usage?: { completion?: number; reasoning?: number | null } | null }>;
+  attempts?: ReadonlyArray<{ headersMs?: number; bodyMs?: number; finishReason?: string; bodyError?: string; transportError?: string; usage?: { completion?: number; reasoning?: number | null } | null }>;
 };
 
 export interface CP3ReviewItem {
@@ -39,13 +39,19 @@ const item = (itemId: string, testCase: BrainEvaluationCase, result: CP3Recorded
   reply: result?.success ? result.response : null, failure: result?.success ? null : NO_REPLY, aids: result?.success ? reviewAids(result.response) : null,
 });
 
-/** Production delivery of one attempt: a complete reply within the production budget (FAST 3 s, DEEP 20 s). */
+/**
+ * Production delivery of one attempt: a complete reply within the production budget the attempt recorded (round 8: FAST 3 s,
+ * DEEP 20 s, judged after a 20 s transport; round 9, the CP3 correction: FAST 10 s, DEEP 20 s, sent at that budget). An
+ * attempt sent at its production budget that ended without a provider answer once the budget had run out is TIME_LIMITED.
+ */
 export function cp3Delivery(result: CP3RecordedResult) {
   const attempt = result.attempts?.at(-1);
   const providerMs = attempt?.headersMs !== undefined && attempt.bodyMs !== undefined ? attempt.headersMs + attempt.bodyMs : null;
   const finishReason = attempt?.finishReason ?? null;
+  const timedOut = finishReason === null && (attempt?.transportError !== undefined || attempt?.bodyError !== undefined)
+    && result.transportBudgetMs === undefined && result.latencyMs >= result.latencyBudgetMs;
   const outcome = !result.success
-    ? finishReason === 'length' ? 'TOKEN_LIMITED' : 'FAILED'
+    ? finishReason === 'length' ? 'TOKEN_LIMITED' : timedOut ? 'TIME_LIMITED' : 'FAILED'
     : providerMs !== null && providerMs > result.latencyBudgetMs ? 'DELIVERY_LIMITED_TIME' : 'DELIVERED';
   return {
     caseId: result.caseId, repeat: result.repeat, path: result.path, productionBudgetMs: result.latencyBudgetMs, providerMs, finishReason,

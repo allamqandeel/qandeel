@@ -77,7 +77,8 @@ describe('ACE-01 WP3 — Golden Conversations, the second named suite of the ONE
     const cases = [golden('deep-golden-declared-brevity-ar-eg'), golden('fast-golden-declared-no-humour-ar-eg'), golden('fast-golden-everyday-ar-eg')];
     await runEvaluation(cases, { ANTHROPIC: router(requests), OPENAI: router([]) });
     expect(requests[0].behavioralGuidance).toBe(policy.buildTextGuidance({ preferences: { ...DEFAULT_INTERACTION_PREFERENCES, replyLength: 'ALWAYS_BRIEF' }, safetyGuided: false }));
-    expect(requests[0].behavioralGuidance).toContain('- Reply length: keep the reply brief.');
+    // S8A-02 CP3 correction (Product Owner, 2026-10-22): the v2 brevity line.
+    expect(requests[0].behavioralGuidance).toContain('- Reply length: keep every reply brief, even on a complex question: give your answer and only the points that matter most, in a few sentences.');
     expect(requests[1].behavioralGuidance).toContain('- Humour: do not use humour.');
     expect(requests[2].behavioralGuidance).toBe(policy.buildTextGuidance());
     // The old dialogue line is not used as a stand-in.

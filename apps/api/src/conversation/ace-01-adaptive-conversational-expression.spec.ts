@@ -29,7 +29,9 @@ import { ConversationOrchestratorService } from './conversation-orchestrator.ser
 import type { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
 import type { ContextBuilder } from './context-builder.types';
-import { BehavioralResponsePolicyService, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V4_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
+// S8A-02 CP3 correction (Product Owner, 2026-10-22): re-anchored to Text v5 (core v3.2), with the standing-preference block
+// LEADING the guidance in its v2 wording and the GUIDED Safety humour suspension still last.
+import { BehavioralResponsePolicyService, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V5_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
 import type { SafetyResponseGate, SafetyResponseGateResult } from './safety-response-gate.types';
 import type { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import type { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -41,7 +43,7 @@ import { INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE }
 const SESSION = '00000000-0000-4000-8000-000000000201';
 const TURN = '00000000-0000-4000-8000-000000000202';
 
-import { QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3_1 as QANDEEL_PERSONALITY_CORE_V3, TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from './behavioral-response-policy.service';
+import { QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V3_2 as QANDEEL_PERSONALITY_CORE_V3, TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from './behavioral-response-policy.service';
 import { SafetyResponseGateService } from './safety-response-gate.service';
 import { assembleSharedConversationRequest, SHARED_CONVERSATION_FRAME } from '../shared-world/shared-conversation-model-input';
 import { assemblePublicQandeelRequest, PUBLIC_QANDEEL_FRAME } from '../public-world/public-qandeel-model-input';
@@ -119,7 +121,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
   it('(1) every Personal request carries the ONE personality core exactly once, after the frozen Text v1, in the Mandatory Core', async () => {
     await orchestrator.orchestrate('token', 'user', turnOf('hello'));
     const request = dispatched();
-    expect(request.behavioralGuidance).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
+    expect(request.behavioralGuidance).toBe(TEXT_V5_BEHAVIORAL_GUIDANCE);
     expect(request.behavioralGuidance.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3}`)).toBe(true);
     const rendered = composeServerGuidance(request);
     expect(rendered.split(QANDEEL_PERSONALITY_CORE_V3)).toHaveLength(2);
@@ -140,7 +142,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     expect(router.generate).toHaveBeenCalledTimes(messages.length);
     const guidance = router.generate.mock.calls.map(([request]) => (request as ModelRouterRequest).behavioralGuidance);
     expect(new Set(guidance).size).toBe(1);
-    expect(guidance[0]).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
+    expect(guidance[0]).toBe(TEXT_V5_BEHAVIORAL_GUIDANCE);
     // Each request has the same fields: the conversation differs, no tone field exists.
     const keys = router.generate.mock.calls.map(([request]) => Object.keys(request as object).sort().join(','));
     expect(new Set(keys).size).toBe(1);
@@ -164,7 +166,10 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
       await orchestrator.orchestrate('token', 'user', turnOf('كنت هولع في نفسي من الزهق 😂'));
       expect(router.generate).toHaveBeenCalledTimes(1);
       const request = dispatched();
-      expect(request.behavioralGuidance.startsWith(TEXT_V4_BEHAVIORAL_GUIDANCE)).toBe(true);
+      // The standing-preference block (when one is chosen) leads; Text v5 follows; the Safety suspension is last.
+      expect(request.behavioralGuidance).toContain(TEXT_V5_BEHAVIORAL_GUIDANCE);
+      const lead = request.behavioralGuidance.slice(0, request.behavioralGuidance.indexOf(TEXT_V5_BEHAVIORAL_GUIDANCE));
+      expect(lead === '' || lead.startsWith(INTERACTION_PREFERENCE_GUIDANCE_HEADER)).toBe(true);
       expect(request.behavioralGuidance.endsWith(`\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`)).toBe(true);
       expect(request.behavioralGuidance).not.toContain('light humour is welcome');
       expect(request.safetyGuidance).toBe('Respond supportively.');
@@ -187,14 +192,14 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     expect(repository.finalizeInteractionPreferenceTurn).not.toHaveBeenCalled();
     await orchestrator.orchestrate('token', 'user', turnOf('عامل إيه؟'));
     const next = router.generate.mock.calls[1][0] as ModelRouterRequest;
-    expect(next.behavioralGuidance).toContain('- Reply language: reply in Egyptian Arabic.');
+    expect(next.behavioralGuidance).toContain('- Reply language: write the whole reply in Egyptian Arabic, even when the user writes in another dialect or language.');
     expect(next.locale).toBe('ar');
   });
 
   // 5 (review R1) — a natural temporary language request conflicting with the durable preference.
   it.each([
-    ['EGYPTIAN_ARABIC', 'Can you answer in English?', 'en', '- Reply language: reply in Egyptian Arabic.', 'ar'],
-    ['ENGLISH', 'خلاص قول لي بالعربي', 'ar', '- Reply language: reply in English.', 'en'],
+    ['EGYPTIAN_ARABIC', 'Can you answer in English?', 'en', '- Reply language: write the whole reply in Egyptian Arabic, even when the user writes in another dialect or language.', 'ar'],
+    ['ENGLISH', 'خلاص قول لي بالعربي', 'ar', '- Reply language: write the whole reply in English, even when the user writes in another language.', 'en'],
   ] as const)(
     '(5-R1) durable %s + «%s» → locale %s for this turn only; nothing durable is written',
     async (durable, message, locale, durableLine, nextLocale) => {
@@ -220,7 +225,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     memoryRetrieve.mockResolvedValue([{ type: 'STABLE_PREFERENCE', content: 'أنا بحب الهزار وبحب الكلام بالإنجليزي.', source: 'CONVERSATION', about: 'USER' }]);
     await orchestrator.orchestrate('token', 'user', turnOf('صباح الخير'));
     const request = dispatched();
-    expect(request.behavioralGuidance).toBe(TEXT_V4_BEHAVIORAL_GUIDANCE);
+    expect(request.behavioralGuidance).toBe(TEXT_V5_BEHAVIORAL_GUIDANCE);
     expect(request.locale).toBe('ar');
     expect(request.memoryContext).toHaveLength(1);
     const rendered = composeServerGuidance(request);

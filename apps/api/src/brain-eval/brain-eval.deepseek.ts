@@ -1,6 +1,6 @@
 import {
   QANDEEL_PERSONALITY_CORE_V2, QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3, QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL,
-  QANDEEL_PERSONALITY_CORE_V3_1, QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL,
+  QANDEEL_PERSONALITY_CORE_V3_1, QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3_2,
 } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
@@ -28,7 +28,9 @@ import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds
 // core v3.1 guidance on two representations of the same Shared conversation; only the provider message boundaries differ.
 // Shared attribution integrity (Product Owner decision, 2026-10-21): `shared-sourced`, the server-sourced record candidate,
 // differs from production only in its context and in the Shared frame that explains the record; the core is the same.
-export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1', 'shared-merged', 'shared-separated', 'shared-sourced'] as const;
+// S8A-02 CP3 correction (Product Owner, 2026-10-22): `core-v3.2`, the Personal core v3.2 (gender form kept consistent; an
+// ambiguous word not built on one guess) with the standing-preference block leading; the Worlds keep world-neutral v3.1.
+export const DEEPSEEK_EVALUATION_LABELS = ['baseline', 'candidate', 'core-v2', 'core-v3', 'core-v3.1', 'core-v3.2', 'shared-merged', 'shared-separated', 'shared-sourced'] as const;
 export type DeepSeekEvaluationLabel = typeof DEEPSEEK_EVALUATION_LABELS[number];
 
 export function isDeepSeekEvaluationLabel(value: string | undefined): value is DeepSeekEvaluationLabel {
@@ -46,6 +48,7 @@ const GUIDANCE_CORES: Readonly<Record<Exclude<DeepSeekEvaluationLabel, 'baseline
   'core-v2': { personal: QANDEEL_PERSONALITY_CORE_V2, world: QANDEEL_PERSONALITY_CORE_V2_WORLD_NEUTRAL },
   'core-v3': { personal: QANDEEL_PERSONALITY_CORE_V3, world: QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL },
   'core-v3.1': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
+  'core-v3.2': { personal: QANDEEL_PERSONALITY_CORE_V3_2, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
   'shared-merged': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
   'shared-separated': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
   'shared-sourced': { personal: QANDEEL_PERSONALITY_CORE_V3_1, world: QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL },
@@ -71,8 +74,8 @@ export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationC
   }
 }
 
-/** The Personal orchestrator's reply budgets (S8A-01, Product Owner 2026-10-21: DEEP 20 s). */
-export const PERSONAL_REPLY_LATENCY_BUDGET_MS = { FAST: 3_000, DEEP: 20_000 } as const satisfies Record<ProcessingPath, number>;
+/** The Personal orchestrator's reply budgets (S8A-01, Product Owner 2026-10-21: DEEP 20 s; S8A-02 CP3 correction: FAST 10 s). */
+export const PERSONAL_REPLY_LATENCY_BUDGET_MS = { FAST: 10_000, DEEP: 20_000 } as const satisfies Record<ProcessingPath, number>;
 /** The Shared and Public assemblers' reply budgets (DEEP stays 10 s: QAN-BL-AI-04). */
 export const WORLD_REPLY_LATENCY_BUDGET_MS = { FAST: 3_000, DEEP: 10_000 } as const satisfies Record<ProcessingPath, number>;
 
