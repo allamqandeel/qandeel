@@ -5002,6 +5002,18 @@ its merge).** No admission and no change of state. The paragraphs above stay as 
 - **Untouched:** every item, owner, severity and status.
 - **Latest index: 87 items; 45 / 4 / 9 / 29 by status, 51 / 34 / 2 by severity.**
 
+**S8A-02 CP1 Controlled Amendment (2026-10-22; the S8A-02 pull request, not yet opened; effective from its merge).** No
+admission and no change of state. The paragraphs above stay as written.
+- **Evidence, no change of state:** `QAN-BL-AI-06` / `QAN-BL-AI-07` — the model-visible text each said needs its own
+  Product Owner decision is now authorized: separated messages and the collision-only " (n)" speaker label, by the narrow
+  controlled amendment in the
+  [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §5.3,
+  with the Shared frame's bytes unchanged. The frozen-RPC change each anticipated was not needed: the `0089` resolver
+  already returns each message's author. Their disposition stays with S8A-02's closing change. `QAN-BL-AI-08` /
+  `QAN-BL-AI-09` — untouched; they stay open.
+- **Untouched:** every item, owner, severity and status.
+- **Latest index: 87 items; 45 / 4 / 9 / 29 by status, 51 / 34 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

@@ -6,8 +6,12 @@
 exactly: §2 "The approved core" and "The world-neutral core", CG-1's world-neutral paragraph (§5) and CG-5's "the
 approved ACE-01 Gate A wording" (§5) — the core the world-neutral derivation is taken from, and the world-neutral
 paragraph 3. With them, what the Personal conversation renders as its core (ACE-01 Text v2 / LANG-01 Text v3). From Round 3,
-also one sentence of §3.2, narrowly (§5.2): "The guidance follows the message being answered and the requests made in it."  
-**Binds within, superseding no sentence of:** CW2-03, CW2-04, CW2-08; S4-02 and S5-04 as ACE-SP-01 left them  
+also one sentence of §3.2, narrowly (§5.2): "The guidance follows the message being answered and the requests made in it."
+From CP1, also, narrowly (§5.3): the "Names only" that ACE-SP-01 §4 preserves from S4-02 §7 step 3, and what the Shared
+frame's sentence "Each person's message begins with their name." denotes under ACE-SP-01 §2 "The World frame" and CG-6, its
+bytes unchanged.  
+**Binds within, superseding no sentence of:** CW2-03, CW2-04, CW2-08; S4-02 and S5-04 as ACE-SP-01 left them, except the
+"Names only" of S4-02 §7 step 3, narrowly amended in §5.3  
 **Does not amend:** everything in §6 below  
 **Authority:** the Product Owner — *S8A-02 — Final Product Owner Approval & Execution Authorization* (2026-10-21): D1
 (the S8A-02 Product Copy Gate, eight paragraphs, paragraph 1 in the Product Owner's own wording) and D2 (Option A: one
@@ -18,7 +22,8 @@ verbatim, and the final world-neutral paragraph 3 (D1), recorded verbatim in §5
 Decisions* (2026-10-21): D1–D3, the direction of core v3.1 and the §3.2 amendment; then *S8A-02 — Round 3 Final Product Owner
 Decision* (2026-10-21): the paragraph 2 sentence (D3), the gender clause (D2) and the §3.2 sentence (D4) approved
 verbatim, recorded in §5.2; then *S8A-02 — Round 3 Final Approval* (2026-10-21): world-neutral paragraph 3.1
-approved verbatim (D1), recorded in §5.2  
+approved verbatim (D1), recorded in §5.2; then *S8A-02 — CP1 Controlled Amendment & Closure Gate* (2026-10-22): the
+separated representation (a-1) and the collision-only " (n)" speaker label, recorded verbatim in §5.3  
 **Task:** `S8A-02` — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (Stage 8A). It carries the evidence of
 `QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase  
 **Implementation:** S8A-02, in the pull request that carries this record
@@ -64,8 +69,11 @@ change is a standalone, indexed amendment and not an edit of the earlier record.
 - **Text v4** — `TEXT_V4_BEHAVIORAL_GUIDANCE`: Text v1 unchanged, a blank line, the rendered core (core v3.1 from Round 3,
   core v3 from Round 2, core v2 before it), a blank line, the LANG-01 Personal D4 line unchanged. The same shape as Text v3 with only the core
   replaced.
+- **The speaker label** — in the Shared model input, the label each person's message opens with (§5.3): the author's
+  visible Name, or `A participant`, with " (n)" only when different server-verified authors share it. Never an identifier.
 - Text v1, the World frames, the LANG-01 D4 lines, the IP-IMP-01 preference compiler and the Safety humour-suspension line
-  keep their ACE-01 / ACE-SP-01 / LANG-01 / IP-IMP-01 definitions, byte-identical.
+  keep their ACE-01 / ACE-SP-01 / LANG-01 / IP-IMP-01 definitions, byte-identical. §5.3 states what the Shared frame's
+  "their name" denotes; it changes no byte of it.
 
 ---
 
@@ -76,6 +84,8 @@ change is a standalone, indexed amendment and not an edit of the earlier record.
 - **Shared and Public.** The guidance is, as ACE-SP-01 §3 states, the unchanged Text v1 + World frame prefix, then the
   world-neutral core — now the world-neutral core v3.1 (v3 in Round 2, v2 before it) — then the LANG-01 world-neutral D4 line, and on a `GUIDED` turn only
   the humour-suspension line. Locale stays `und`.
+- **Shared model input (CP1).** Each person's message is its own provider message, opened with its speaker label; who
+  is speaking comes from the server-verified author of each message, never from the Name or the words (§5.3).
 
 ## 3.1 One personality, one source
 
@@ -247,12 +257,79 @@ participant or becomes a group rule; nothing is saved, and no setting, preferenc
 If core v3.1 fails the focused comparison, the paragraph is not lengthened further: how the participants are represented
 in the DeepSeek input is examined first (D1). As above, approval is copy approval only.
 
+## 5.3 CP1 — separated messages and the Shared speaker label (Product Owner, 2026-10-22)
+
+The Product Owner's *S8A-02 — CP1 Controlled Amendment & Closure Gate* (2026-10-22) gives the direction, verbatim:
+
+> اتجاه القرار المنتجـي: اعتماد التمثيل المنفصل `a-1`، والسماح بتسميات تمييزية مؤقتة `(n)` عند تشابه أسماء المشاركين أو غيابها، من خلال Controlled Amendment ضيق. هذا توجيه لإعداد التعديل ومراجعته، وليس إذنًا بالدمج أو بدء CP2.
+
+and the binding design limits, verbatim:
+
+> * التمييز يعتمد على `author_user_id` الموثق من الخادم، وليس على الاسم أو محتوى الرسالة.
+> * الرموز مؤقتة داخل الطلب، ولا ترسل معرفات الحسابات أو الرسائل الحقيقية إلى DeepSeek.
+> * الأرقام ليست جزءًا من الاسم القانوني أو الشخصي، ولا تُعتبر حقيقة عن الشخص.
+> * الرسائل المخفية أو المحذوفة لا تدخل في السياق أو الترقيم.
+> * كل رسالة تظل مستقلة عند حدود Model Router.
+> * لا نعتبر نجاح الفصل دليلًا على صحة الفهم الدلالي؛ هذه مسؤولية CP2.
+
+Why an amendment: §7 records that adopting the separated candidate (a-1) "would be a controlled change to the Shared
+assembler and needs the Product Owner's decision", and that a numbered label in production would need a narrow controlled
+amendment of ACE-SP-01 and of S4-02 §7 step 3 ("Names only"). CP1 implemented both before this section existed; this
+section is that amendment. The CP1 implementation is not changed by it.
+
+**The amended rule — the Shared World QANDEEL reply only.**
+1. **Who is speaking.** The author of each person's message is the author identity the frozen `0089` resolver returns for
+   that exact `material_id` (CW2-02 §15), read server-side for every human of the audience. Reads that disagree, a
+   person's message without an author or a QANDEEL message with one refuse the history. Neither the Name nor anything a
+   person writes decides who is speaking.
+2. **Separated messages.** Each person's message reaches the Model Router as its own `USER` context message: its speaker
+   label, a colon and a space, then the words exactly as written. Consecutive messages are never merged. QANDEEL's earlier
+   replies stay `ASSISTANT` messages, with no link to any message.
+3. **The speaker label.** The author's visible Name (the Name the conversation shows on that author's newest message), or
+   `A participant` when there is none. Only when two or more different authors would have the same label does each get
+   " (1)", " (2)", … after it, in the order they first appear, skipping a label already in use. An author who shares the
+   label with no one gets no number.
+4. **What the number is.** A disambiguator inside one request. It is not part of anyone's legal or personal name and not a
+   fact about the person; it is not derived from or tied to an account, not stored, not shown to anyone by the server, and
+   not stable between requests.
+5. **Hidden and deleted messages.** Labels are computed only over the conversation every current recipient may see (S4-02
+   §7 step 2): hidden and deleted messages neither enter the context nor count towards any label. They are computed over
+   that whole conversation before the 16 KiB history budget trims it, so an author keeps one label throughout a request.
+6. **Nothing else crosses.** Request-local tokens (`M1`, … per message; `S1`, … per author) carry the provenance from the
+   reply composition to the assembler inside the server and are never sent. No account, material, World or other
+   identifier, no provider `name` or `user` field and no reply link reaches the provider; the requester's identity stays
+   cost attribution only (ACE-SP-01 §3.2).
+
+**Exact supersession, in this scope only.**
+- S4-02 §7 step 3, "Names only", as ACE-SP-01 §4 preserves it ("Everything else in those sentences is preserved unchanged:
+  … Names only;"), reads: "speaker labels only (S8A-02 §5.3): the visible Name or `A participant`, with a collision-only
+  ' (n)'; never an identifier".
+- ACE-SP-01 §2 "The World frame" and CG-6: the Shared frame stays byte-identical and is not reworded. In its sentence
+  "Each person's message begins with their name.", "their name" denotes the speaker label of rule 3.
+- The one Shared assembler sends the separated context (`separatedSharedContext`). The merged context
+  (`boundedSharedContext`) stays only as the evaluation harness's `shared-merged` arm.
+
+**Why the frame is not reworded.** A new frame sentence would be new model-visible copy needing its own verbatim Product
+Copy Gate approval, and the numbered-label sentence of the sourced candidate was not approved for production (§7). The
+amendment binds what the existing words denote, and adds no byte to what the model receives beyond what CP1 sends.
+
+**Not changed.** The personality cores, Text v1, the World frames' bytes, the LANG-01 lines, FAST / DEEP, the Model Router
+contract and the DeepSeek adapter, the `0089` / `0139` RPCs, their grants and migrations, Memory / HIM, Personal and
+Public (the Public assembler and S5-04), and every CW2 sentence.
+
+**What it does not prove.** Correctly separated and labelled messages are message provenance only. Whether a model reads
+them correctly, including whether a reply repeats a " (n)" label to the people, is not proven here and belongs to CP2.
+`QAN-BL-AI-08` and `QAN-BL-AI-09` stay open. The direction authorizes this amendment only: no merge, pull request or CP2.
+
 ---
 
 # 6. Explicit non-amendments
 
 This amendment does not change:
-- Text v1, the World frames, the LANG-01 D4 lines (Personal and world-neutral), the Safety humour-suspension line;
+- Text v1, the World frames (their bytes; §5.3 only states what the Shared frame's "their name" denotes), the LANG-01 D4
+  lines (Personal and world-neutral), the Safety humour-suspension line;
+- the `0089` / `0139` RPCs, their grants and migrations, the Model Router contract, the DeepSeek adapter and the Public
+  assembler;
 - the IP-IMP-01 durable preference compiler, its header, precedence and copy;
 - ACE-SP-01 §3.2 (except the one sentence §5.2 narrowly amends), §4, §6, and every CW2-03 / CW2-04 / CW2-08 sentence it
   names;
@@ -464,11 +541,12 @@ and the exact body the DeepSeek adapter would send (recording client). It covers
 log, QANDEEL and a person named «قنديل», and every fail-closed case. Reverting either the rendering or the tokens fails
 5 or 6 of its 8 tests.
 
-Points for the Product Owner's review: the " (n)" suffix is model-visible text the Shared frame does not define (the frame
-stays byte-identical, as ACE-SP-01 CG-6 requires); and the separated representation, an experimental candidate until now,
-becomes production. CP1 proves message provenance only: it does not prove that a model reading this input attributes
+The Product Owner's acceptance review (2026-10-22) found that the " (n)" suffix is model-visible text the Shared frame
+does not define, and that the separated representation, an experimental candidate until then, becomes production: each
+needed a controlled amendment under this record, and CP1 had not stopped for it. The *CP1 Controlled Amendment & Closure
+Gate* (2026-10-22) directed that amendment; it is §5.3, and it changes no CP1 code. CP1 proves message provenance only: it does not prove that a model reading this input attributes
 information correctly. `QAN-BL-AI-08` and `QAN-BL-AI-09` stay open.
 
-S8A-02 stays open.
+CP1 is complete and awaits the Product Owner's independent review. S8A-02 stays open; CP2 has not started.
 
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

@@ -41,7 +41,8 @@ The rules below are the repository's own, each cited to where it is stated.
    - the [S8A-02 Personality Core v2, then v3, narrow controlled amendment of ACE-SP-01](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md),
      in its named scope: the ONE QANDEEL personality core is core v2 in Personal, Shared and Public, and the world-neutral
      paragraph 3, derived by the ACE-SP-01 mapping (binding on the merge of the pull request that carries it). It
-     supersedes no CW2 sentence and keeps every ACE-SP-01 boundary;
+     supersedes no CW2 sentence. From CP1 (§5.3) it also sets the Shared model input's separated messages and speaker
+     labels, narrowly replacing "Names only"; every other ACE-SP-01 boundary stands;
    - the [CW2-06A Matching Onboarding Preparation and Assistance controlled amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06A_MATCHING_ONBOARDING_PREPARATION_ASSISTANCE_CONTROLLED_AMENDMENT_v1.0.md),
      in its named scope: the pre-enrollment preparation draft, the separate `MATCHING_ONBOARDING_ASSISTANCE` consent
      family and the declared sex fact (`CA-09` part 1), added to CW2-06 §4–§5, §7 and §9 (S6-01, binding on the merge
@@ -216,11 +217,14 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
   fail-closed attribution guard was designed and declined. A final free review on independent cases shows the server
   can verify only verbatim quotations, not freely worded attribution, so `AI-09` cannot close on a guarantee. The
   Product Owner decides how it closes: evidence-based acceptance, a narrower Shared behaviour, or deferral.
-- **S8A-02 CP1 — Trusted Speaker & Message Provenance (2026-10-22; local, awaiting the Product Owner's review):** the
+- **S8A-02 CP1 — Trusted Speaker & Message Provenance (2026-10-22; local; complete, awaiting the Product Owner's
+  independent review):** the
   Shared reply now keeps the author the frozen `0089` resolver holds for each `material_id`. Each person's message is its
   own model message under their label; different people who share a Name, or have none, get " (1)", " (2)"; only
   request-local tokens leave the composition. No migration, RPC, Router, adapter or frame change. Proven at the Model
-  Router boundary and in the DeepSeek body, zero calls. Message provenance only: `AI-08` / `AI-09` stay open.
+  Router boundary and in the DeepSeek body, zero calls. Message provenance only: `AI-08` / `AI-09` stay open. The
+  separated messages and the collision-only " (n)" label are authorized by the narrow controlled amendment in the S8A-02
+  record §5.3 (Product Owner, 2026-10-22), which replaces "Names only" in that scope and keeps the Shared frame's bytes.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); `AI-09` admitted (HIGH: a line inside a message posing as another speaker);
