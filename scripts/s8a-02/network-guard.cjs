@@ -42,12 +42,26 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // Round 8: CP3 Personal qualification, Product Owner Round 8 Execution Authorization, 2026-10-22 (prereg v2).
   8: { maxAttempts: 123, costCapUsd: 0.25 },
   // Round 9: CP3 Final Integrated Correction acceptance, Product Owner Final Correction Approval, 2026-10-22 (132, USD 0.20).
-  9: { maxAttempts: 132, costCapUsd: 0.2 } };
+  9: { maxAttempts: 132, costCapUsd: 0.2 },
+  // Round 10: S8A-02 / CP2 attribution-layer comparison (B / S / S_R, 468 planned provider calls). The Founder approved the
+  // test PREPARATION on 2026-10-22, not the run: the caps are written here so the dry and simulated runs enforce exactly them,
+  // and `authorized: false` makes every LIVE round 10 run refuse at load until the Founder's explicit run authorization.
+  10: { maxAttempts: 495, costCapUsd: 0.6, authorized: false } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
-const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;
-const COST_CAP_USD = ROUND_CAPS[ROUND].costCapUsd;
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
+// Simulated mode (round 10 readiness): scripts/s8a-02/simulated-deepseek.cjs is preloaded BEFORE this guard and replaces
+// fetch for the DeepSeek URL with a local stub, so the guard below wraps the stub and counts, caps and settles exactly as it
+// would a live call, at zero cost. It is refused without the stub, and the stub is refused outside simulated mode.
+const SIMULATED = process.env.QANDEEL_EVAL_SIMULATE === '1';
+const stub = globalThis.__QANDEEL_SIMULATED_DEEPSEEK__;
+if (SIMULATED && (stub === undefined || globalThis.fetch !== stub.fetch)) throw new Error('S8A_02_GUARD: simulated mode requires the simulated DeepSeek preload');
+if (!SIMULATED && stub !== undefined) throw new Error('S8A_02_GUARD: the simulated DeepSeek stub is loaded outside simulated mode');
+if (ROUND_CAPS[ROUND].authorized === false && !DRY && !SIMULATED) throw new Error(`S8A_02_GUARD: round ${ROUND} is not authorized for a live run; nothing was sent`);
+// Simulated cap overrides (the cap-enforcement tests only): "maxAttempts,costCapUsd", honoured in simulated mode alone.
+const simulatedCaps = SIMULATED && /^\d+,\d+(?:\.\d+)?$/u.test(process.env.QANDEEL_EVAL_SIMULATED_CAPS ?? '') ? process.env.QANDEEL_EVAL_SIMULATED_CAPS.split(',').map(Number) : null;
+const MAX_ATTEMPTS = simulatedCaps ? simulatedCaps[0] : ROUND_CAPS[ROUND].maxAttempts;
+const COST_CAP_USD = simulatedCaps ? simulatedCaps[1] : ROUND_CAPS[ROUND].costCapUsd;
 // Official deepseek-flash rates, USD per 1M tokens, checked on api-docs.deepseek.com/quick_start/pricing on 2026-10-21.
 // Off-peak is half the peak rate; peak is 01:00-04:00 and 06:00-10:00 UTC, Monday to Friday (Chinese public holidays are
 // off-peak and are not modelled here, so a holiday is charged at peak: the safe direction). The CAP is always enforced at
@@ -204,6 +218,6 @@ async function selfTest() {
 }
 
 globalThis.__QANDEEL_DEEPSEEK_EVAL_GUARD__ = {
-  dry: DRY, round: ROUND, maxAttempts: MAX_ATTEMPTS, costCapUsd: COST_CAP_USD, peakRates: PEAK, spend, run, selfTest,
+  dry: DRY, simulated: SIMULATED, round: ROUND, maxAttempts: MAX_ATTEMPTS, costCapUsd: COST_CAP_USD, peakRates: PEAK, spend, run, selfTest,
   remainingAttempts: () => (DRY ? 0 : MAX_ATTEMPTS - spend.attempts.length),
 };

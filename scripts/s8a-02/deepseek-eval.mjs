@@ -11,6 +11,7 @@
 //   node scripts/s8a-02/deepseek-eval.mjs golden-cp3-personal core-v3.1 [--dry]      (CP3 Personal qualification, 117 attempts)
 //   node scripts/s8a-02/deepseek-eval.mjs golden-cp3-deep-2800 core-v3.1 [--dry]     (CP3 Arm L, DEEP length re-sends, at most 6)
 //   node scripts/s8a-02/deepseek-eval.mjs golden-cp3-correction core-v3.2 [--dry]    (CP3 correction acceptance, 132 attempts)
+//   node scripts/s8a-02/deepseek-eval.mjs shared-attribution-layer B|S|S_R [--dry|--simulate[=tag]] (CP2 round 10, 468 calls)
 //
 // The suite fixes its round, and the round fixes the caps the guard enforces and the ONE spend-state file every run of
 // that round shares (Round 2: 200 attempts, USD 0.35 in total, Product Owner decision of 2026-10-21).
@@ -24,6 +25,9 @@
 // 4. Stops and removes the cluster, always.
 //
 // `--dry` sends nothing (the guard refuses every DeepSeek request) and writes no spend state: a zero-cost wiring check.
+// `--simulate[=tag]` (round 10 readiness) reads no key and sends nothing either: scripts/s8a-02/simulated-deepseek.cjs answers
+// in DeepSeek's place, under the same guard, with its own simulated spend state (one per tag). QANDEEL_EVAL_SIMULATED_FAULTS,
+// _LATENCY and _CAPS pass through to the stub and the guard in this mode only.
 //
 // Configuration: QANDEEL_EVAL_PG_BIN — the directory holding initdb / pg_ctl / postgres of PostgreSQL 17.
 import { spawnSync } from 'node:child_process';
@@ -50,15 +54,19 @@ const SUITES = {
   'golden-cp3-deep-2800': { round: 8, labels: ['core-v3.1'], spendSuite: 'golden-cp3' },
   // CP3 Final Integrated Correction (round 9): runs only once the guard holds the Product Owner's round 9 caps.
   'golden-cp3-correction': { round: 9, labels: ['core-v3.2'], spendSuite: 'golden-cp3-correction' },
+  // CP2 attribution-layer comparison (round 10): the guard refuses it live until the Founder authorizes the paid run.
+  'shared-attribution-layer': { round: 10, labels: ['B', 'S', 'S_R'], spendSuite: 'shared-attribution-layer', command: 'attribution-layer-run' },
 };
 const args = process.argv.slice(2);
 const [SUITE, label, flag] = SUITES[args[0]] === undefined ? ['golden-conversations-extended', ...args] : args;
-if (!SUITES[SUITE].labels.includes(label) || (flag !== undefined && flag !== '--dry')) {
+const simulateTag = /^--simulate(?:=([a-z0-9-]{1,24}))?$/u.exec(flag ?? '');
+if (!SUITES[SUITE].labels.includes(label) || (flag !== undefined && flag !== '--dry' && !simulateTag) || (simulateTag && SUITES[SUITE].round !== 10)) {
   console.error('usage: node scripts/s8a-02/deepseek-eval.mjs [golden-round2|golden-round2-paths|golden-round3-shared|golden-round3-personality|shared-attribution-probe|shared-attribution|shared-attribution-sourced] <label> [--dry]');
   process.exit(2);
 }
 const { round, spendSuite } = SUITES[SUITE];
 const dry = flag === '--dry';
+const simulate = simulateTag !== null;
 const log = (line) => console.log(`[s8a-02] ${line}`);
 
 const git = (args) => spawnSync('git', ['-C', REPO, ...args], { encoding: 'utf8' });
@@ -70,7 +78,7 @@ const pgBin = process.env.QANDEEL_EVAL_PG_BIN;
 if (!pgBin) { console.error('[s8a-02] NOT RUN: QANDEEL_EVAL_PG_BIN is not set.'); process.exit(2); }
 
 let key = '';
-if (!dry) {
+if (!dry && !simulate) {
   const keyFile = join(homedir(), '.qandeel', 'deepseek-api-key.txt');
   if (!existsSync(keyFile)) { console.error('[s8a-02] NOT RUN: the DeepSeek key file is missing; nothing was sent.'); process.exit(2); }
   key = readFileSync(keyFile, 'ascii').trim();
@@ -83,7 +91,7 @@ const started = localDb(['start']);
 if (started.status !== 0) { console.error(`[s8a-02] local database did not start: ${(started.stderr || started.stdout).slice(-600)}`); process.exit(1); }
 const stateFile = started.stdout.trim().split(/\r?\n/u).at(-1);
 const state = JSON.parse(readFileSync(stateFile, 'utf8'));
-log(`ledger database ready on 127.0.0.1:${state.port} (${state.database}); head ${head}; ${SUITE} ${label}, round ${round}${dry ? ', DRY' : ''}`);
+log(`ledger database ready on 127.0.0.1:${state.port} (${state.database}); head ${head}; ${SUITE} ${label}, round ${round}${dry ? ', DRY' : simulate ? ', SIMULATED (no network)' : ''}`);
 
 let code = 1;
 try {
@@ -92,16 +100,18 @@ try {
   const env = Object.fromEntries(KEEP.filter((name) => process.env[name] !== undefined).map((name) => [name, process.env[name]]));
   Object.assign(env, {
     NODE_ENV: 'development', TS_NODE_TRANSPILE_ONLY: 'true', QANDEEL_ALLOW_PAID_EVAL: '1',
-    DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: dry ? 'sk-dry-run-placeholder-not-a-real-key-0000' : key,
+    DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: dry || simulate ? 'sk-dry-run-placeholder-not-a-real-key-0000' : key,
     QANDEEL_EVAL_LEDGER_DB_PORT: String(state.port), QANDEEL_EVAL_LEDGER_DB_NAME: state.database,
     QANDEEL_EVAL_LEDGER_DB_PASSWORD: state.password, QANDEEL_EVAL_LEDGER_DB_DATA_DIR: state.dataDir,
-    QANDEEL_EVAL_ROUND: String(round), QANDEEL_EVAL_SPEND_STATE: join(REPO, 'artifacts', 'evals', spendSuite, 'deepseek', 'spend-state.json'),
+    QANDEEL_EVAL_ROUND: String(round), QANDEEL_EVAL_SPEND_STATE: join(REPO, 'artifacts', 'evals', spendSuite, simulate ? `deepseek-simulated${simulateTag[1] ? `-${simulateTag[1]}` : ''}` : 'deepseek', 'spend-state.json'),
     QANDEEL_EVAL_RUN_LABEL: label, QANDEEL_EVAL_GIT_HEAD: head, ...(dry ? { QANDEEL_EVAL_DRY: '1' } : {}),
+    ...(simulate ? { QANDEEL_EVAL_SIMULATE: '1', QANDEEL_EVAL_SIMULATE_TAG: simulateTag[1] ?? '', ...Object.fromEntries(['QANDEEL_EVAL_SIMULATED_FAULTS', 'QANDEEL_EVAL_SIMULATED_LATENCY', 'QANDEEL_EVAL_SIMULATED_CAPS']
+      .filter((name) => process.env[name] !== undefined).map((name) => [name, process.env[name]])) } : {}),
   });
   key = '';
-  const child = spawnSync(process.execPath, ['--require', join(HERE, 'network-guard.cjs'),
+  const child = spawnSync(process.execPath, [...(simulate ? ['--require', join(HERE, 'simulated-deepseek.cjs')] : []), '--require', join(HERE, 'network-guard.cjs'),
     join(REPO, 'node_modules', 'ts-node', 'dist', 'bin.js'), '--project', join(REPO, 'apps', 'api', 'tsconfig.json'),
-    join(REPO, 'apps', 'api', 'scripts', 'brain-eval.ts'), 'deepseek-run', SUITE, label], { cwd: REPO, env, stdio: 'inherit' });
+    join(REPO, 'apps', 'api', 'scripts', 'brain-eval.ts'), ...(SUITES[SUITE].command ? [SUITES[SUITE].command, label] : ['deepseek-run', SUITE, label])], { cwd: REPO, env, stdio: 'inherit' });
   code = child.status ?? 1;
   log(`brain-eval exited ${code}`);
 } finally {

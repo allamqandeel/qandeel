@@ -21,6 +21,7 @@ import { summarizeResults } from '../src/brain-eval/brain-eval.summary';
 import { assertDeepSeekRunAllowed, assertPaidRunAllowed } from '../src/brain-eval/brain-eval.validation';
 import type { BrainEvaluationCase, CandidateResult } from '../src/brain-eval/brain-eval.types';
 import { decideFastDeepRoute } from '../src/intelligence-runtime/fast-deep-runtime-decision-policy-v2';
+import { attributionLayerCommand } from './brain-eval-attribution-layer';
 import { openDeepSeekEvaluationLedger, type LedgerRow } from './brain-eval-deepseek-ledger';
 
 /** S8A-02: the spend / network guard preload (scripts/s8a-02/network-guard.cjs), when present. */
@@ -237,6 +238,8 @@ async function main(): Promise<void> {
     return;
   }
   if (command === 'deepseek-run') return deepSeekRun(process.argv[3], process.argv[4]);
+  // S8A-02 / CP2 Round 10: the attribution-layer comparison (three arms, two call kinds) has its own commands.
+  if (command?.startsWith('attribution-layer-')) return attributionLayerCommand(command, process.argv.slice(3));
   if (command === 'deepseek-compare') return deepSeekCompare(process.argv[3]);
   // ACE-01 (WP3): an optional suite name selects a named suite of the same system; the default is the Brain Bake-off.
   const suite = resolveEvaluationSuite(process.argv[3]);
