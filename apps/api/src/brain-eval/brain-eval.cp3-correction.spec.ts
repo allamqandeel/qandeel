@@ -44,7 +44,7 @@ describe('S8A-02 CP3 correction acceptance suite (zero calls)', () => {
     expect(() => assertGuidanceMatchesLabel(run.cases, 'core-v3.2')).not.toThrow();
     expect(() => assertGuidanceMatchesLabel(run.cases, 'core-v3.1')).toThrow('not core-v3.1 for 44 case(s)');
     for (const testCase of run.cases) {
-      expect(deepSeekEvaluationRequest(testCase).latencyBudgetMs).toBe(testCase.path === 'DEEP' ? 20_000 : 10_000);
+      expect(deepSeekEvaluationRequest(testCase).latencyBudgetMs).toBe(testCase.path === 'DEEP' ? 25_000 : 10_000);
     }
     expect(DEEPSEEK_MAX_OUTPUT_TOKENS).toEqual({ FAST: 1024, DEEP: 2800 });
   });
@@ -63,10 +63,11 @@ describe('S8A-02 CP3 correction acceptance suite (zero calls)', () => {
     expect(changed.context[3]).toEqual({ role: 'ASSISTANT', content: 'تم حفظ التفضيل. اللغة واللهجة: مصري.' });
   });
 
-  it('the guard holds no round 9 caps until the Product Owner approves the run, and the launcher knows the suite', () => {
+  it('the guard holds exactly the approved round 9 caps: 132 attempts, USD 0.20 (Product Owner approval, 2026-10-22)', () => {
     const guard = readFileSync(join(REPOSITORY_ROOT, 'scripts', 's8a-02', 'network-guard.cjs'), 'utf8');
     const caps = /const ROUND_CAPS = \{([\s\S]*?)\};/u.exec(guard)?.[1] ?? '';
-    expect(caps).not.toMatch(/\b9: \{/u);
+    expect(caps).toMatch(/\b8: \{ maxAttempts: 123, costCapUsd: 0\.25 \}/u);
+    expect(caps).toMatch(/\b9: \{ maxAttempts: 132, costCapUsd: 0\.2 \}/u);
     const launcher = readFileSync(join(REPOSITORY_ROOT, 'scripts', 's8a-02', 'deepseek-eval.mjs'), 'utf8');
     expect(launcher).toContain("'golden-cp3-correction': { round: 9, labels: ['core-v3.2'], spendSuite: 'golden-cp3-correction' },");
   });

@@ -74,8 +74,8 @@ export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationC
   }
 }
 
-/** The Personal orchestrator's reply budgets (S8A-01, Product Owner 2026-10-21: DEEP 20 s; S8A-02 CP3 correction: FAST 10 s). */
-export const PERSONAL_REPLY_LATENCY_BUDGET_MS = { FAST: 10_000, DEEP: 20_000 } as const satisfies Record<ProcessingPath, number>;
+/** The Personal orchestrator's reply budgets (S8A-01, Product Owner 2026-10-21: DEEP 20 s; S8A-02 CP3 correction: FAST 10 s, DEEP 25 s). */
+export const PERSONAL_REPLY_LATENCY_BUDGET_MS = { FAST: 10_000, DEEP: 25_000 } as const satisfies Record<ProcessingPath, number>;
 /** The Shared and Public assemblers' reply budgets (DEEP stays 10 s: QAN-BL-AI-04). */
 export const WORLD_REPLY_LATENCY_BUDGET_MS = { FAST: 3_000, DEEP: 10_000 } as const satisfies Record<ProcessingPath, number>;
 

@@ -123,11 +123,13 @@ export const TEXT_V4_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${
 //   - Paragraph 3, the gender clause (H28: masculine and feminine mixed inside one reply). The Product Owner accepts a
 //     natural assumption where nothing confirms the person's gender; what must hold is ONE form, kept through the reply
 //     and the conversation, and changed when the person's words show or correct it. v3.1 asked first for wording that
-//     assumes no gender — in Arabic that wording runs out mid-reply, and the reply slipped between forms.
+//     assumes no gender — in Arabic that wording runs out mid-reply, and the reply slipped between forms. Revised per the
+//     Product Owner's Final Correction Approval (2026-10-22): the assumption may come from the conversation's context, not
+//     only the person's explicit words; it stays wording only, never a fact about them, and a correction is adopted at once.
 //   - Paragraph 4, one sentence after the first (H15: «نسيت معاد الدكتور» answered as a missed university lecture, with an
 //     invented quiz and classmates). Not a rule against assuming: use what the earlier conversation settles, and where a
 //     word can reasonably mean different things and nothing settles it, do not build the whole reply on one guess.
-export const PERSONALITY_GENDER_CLAUSE_V3_2 = 'when their words have not shown it, use one natural form (in Arabic, usually the conventional grammatical masculine) and keep exactly that form through the whole reply and the rest of the conversation, never switching between masculine and feminine; change it only when their words show it or they correct you.';
+export const PERSONALITY_GENDER_CLAUSE_V3_2 = 'when their words have not shown it, you may make the natural assumption the conversation suggests (otherwise, in Arabic, the conventional grammatical masculine), only for how you word your reply and never as a fact about them; keep exactly that one form through the whole reply and the rest of the conversation, never switching between masculine and feminine, and adopt the other form at once when their words show it or they correct you.';
 export const PERSONALITY_CONTEXT_SENTENCE_V3_2 = 'Use what the earlier conversation already makes clear; when a word or situation could reasonably mean different things and nothing you have been given settles it, do not build the whole reply on one guess: answer what holds either way, cover the likely meanings briefly, or ask one short question when the answer really depends on it.';
 export const QANDEEL_PERSONALITY_CORE_V3_2 = QANDEEL_PERSONALITY_CORE_V3_1.split('\n').map((paragraph, index) => {
   if (index === 2) return replaceExactlyOnce(paragraph, PERSONALITY_GENDER_CLAUSE_V3_1, PERSONALITY_GENDER_CLAUSE_V3_2);

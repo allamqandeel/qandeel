@@ -117,7 +117,12 @@ describe('BehavioralResponsePolicyService', () => {
     expect(v32[3]).toBe(v31[3].replace('each within its own authority.', `each within its own authority. ${PERSONALITY_CONTEXT_SENTENCE_V3_2}`));
     // H28: one form, kept through the reply and the conversation, changed only by the person's words; a natural assumption is
     // allowed (the Product Owner's CP3 review), so v3.1's "never guess" sentence is gone and no neutral wording is demanded.
-    expect(v32[2]).toContain('keep exactly that form through the whole reply and the rest of the conversation, never switching between masculine and feminine');
+    expect(v32[2]).toContain('keep exactly that one form through the whole reply and the rest of the conversation, never switching between masculine and feminine');
+    // Product Owner Final Correction Approval (2026-10-22): a natural assumption may come from the conversation's context, it
+    // is wording only (never a fact about them), and a correction is adopted at once.
+    expect(PERSONALITY_GENDER_CLAUSE_V3_2).toContain('you may make the natural assumption the conversation suggests');
+    expect(PERSONALITY_GENDER_CLAUSE_V3_2).toContain('never as a fact about them');
+    expect(PERSONALITY_GENDER_CLAUSE_V3_2).toContain('adopt the other form at once when their words show it or they correct you');
     expect(v32[2]).not.toContain('Never guess their gender');
     expect(v32[2]).not.toContain('natural wording that does not assume one');
     // H15: not a rule against assuming; no single guess carries a whole reply when nothing settles the meaning.

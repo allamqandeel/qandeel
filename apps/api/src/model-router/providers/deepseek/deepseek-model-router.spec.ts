@@ -7,7 +7,7 @@ import {
 } from './deepseek-model-router.config';
 import { resolveDeepSeekModel } from '../../model-profile.registry';
 
-const request = (path: 'FAST' | 'DEEP' = 'FAST', latencyBudgetMs = path === 'FAST' ? 3_000 : 20_000): ModelRouterRequest => ({
+const request = (path: 'FAST' | 'DEEP' = 'FAST', latencyBudgetMs = path === 'FAST' ? 3_000 : 25_000): ModelRouterRequest => ({
   task: 'CONVERSATIONAL_RESPONSE', path, complexity: path === 'FAST' ? 'LOW' : 'HIGH',
   behavioralGuidance: 'provider-neutral policy',
   context: [
@@ -22,7 +22,7 @@ const request = (path: 'FAST' | 'DEEP' = 'FAST', latencyBudgetMs = path === 'FAS
 
 const config: DeepSeekModelRouterConfig = {
   apiKey: 'test-only', resolveModel: resolveDeepSeekModel, maxOutputTokens: DEEPSEEK_MAX_OUTPUT_TOKENS,
-  timeoutMs: 20_000, maxRetries: 0,
+  timeoutMs: 25_000, maxRetries: 0,
 };
 const completion = (content: string | null, finish_reason = 'stop', usage: unknown = { prompt_tokens: 40, completion_tokens: 9 }) => ({
   choices: [{ index: 0, finish_reason, message: { role: 'assistant', content, reasoning_content: 'PRIVATE CHAIN OF THOUGHT' } }],
@@ -55,13 +55,16 @@ describe('DeepSeekModelRouter', () => {
     expect(options).toEqual({ timeout: 3_000, maxRetries: 0, signal: expect.any(AbortSignal) });
   });
 
-  it('DEEP: thinks at the lowest effort with room for thinking and answer, inside the 20 s DEEP budget', async () => {
+  it('DEEP: thinks at the lowest effort with room for thinking and answer, inside the 25 s Personal DEEP budget', async () => {
     const create = jest.fn().mockResolvedValue(completion('رد'));
     await routerWith(create).generate(request('DEEP'));
     const [body, options] = create.mock.calls[0];
     // S8A-02 CP3 correction (Product Owner, 2026-10-22): DEEP max_tokens 2 800 (2 048 cut the reply at the length stop in CP3 Round 8).
     expect(body).toMatchObject({ model: 'deepseek-flash', thinking: { type: 'enabled' }, reasoning_effort: 'low', max_tokens: 2800 });
-    expect(options.timeout).toBe(20_000);
+    // S8A-02 CP3 Final Correction Approval (Product Owner, 2026-10-22): Personal DEEP 25 s; a shorter budget still wins.
+    expect(options.timeout).toBe(25_000);
+    await routerWith(create).generate(request('DEEP', 10_000));
+    expect(create.mock.calls[1][1].timeout).toBe(10_000);
   });
 
   it('never surfaces the reasoning trace', async () => {
@@ -107,7 +110,7 @@ describe('DeepSeek qualification configuration', () => {
   const qualified = { DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'test-only' };
 
   it('loads only under the declared synthetic qualification mode', () => {
-    expect(loadDeepSeekModelRouterConfig({ ...qualified, NODE_ENV: 'development' })).toMatchObject({ apiKey: 'test-only', timeoutMs: 20_000, maxRetries: 0 });
+    expect(loadDeepSeekModelRouterConfig({ ...qualified, NODE_ENV: 'development' })).toMatchObject({ apiKey: 'test-only', timeoutMs: 25_000, maxRetries: 0 });
   });
 
   it('refuses production whatever it declares, an undeclared mode, and a missing key', () => {

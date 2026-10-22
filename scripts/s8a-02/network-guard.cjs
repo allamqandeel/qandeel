@@ -40,7 +40,9 @@ const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 200, costCapUsd: 0.35 }, 3: { maxAttempts: 80, costCapUsd: 0.22 },
   4: { maxAttempts: 2, costCapUsd: 0.02 }, 5: { maxAttempts: 60, costCapUsd: 0.12 }, 7: { maxAttempts: 30, costCapUsd: 0.04 },
   // Round 8: CP3 Personal qualification, Product Owner Round 8 Execution Authorization, 2026-10-22 (prereg v2).
-  8: { maxAttempts: 123, costCapUsd: 0.25 } };
+  8: { maxAttempts: 123, costCapUsd: 0.25 },
+  // Round 9: CP3 Final Integrated Correction acceptance, Product Owner Final Correction Approval, 2026-10-22 (132, USD 0.20).
+  9: { maxAttempts: 132, costCapUsd: 0.2 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const MAX_ATTEMPTS = ROUND_CAPS[ROUND].maxAttempts;

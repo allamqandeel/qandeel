@@ -73,7 +73,7 @@ describe('S8A-02 — the extended Golden suite and the DeepSeek-only path of the
       expect(request.latencyBudgetMs).toBe((testCase.world ? WORLD_REPLY_LATENCY_BUDGET_MS : PERSONAL_REPLY_LATENCY_BUDGET_MS)[testCase.path]);
     }
     // S8A-02 CP3 correction (Product Owner, 2026-10-22): Personal FAST 10 s; the Worlds are unchanged.
-    expect(PERSONAL_REPLY_LATENCY_BUDGET_MS).toEqual({ FAST: 10_000, DEEP: 20_000 });
+    expect(PERSONAL_REPLY_LATENCY_BUDGET_MS).toEqual({ FAST: 10_000, DEEP: 25_000 });
     expect(WORLD_REPLY_LATENCY_BUDGET_MS).toEqual({ FAST: 3_000, DEEP: 10_000 });
     const brevity = GOLDEN_CONVERSATION_SUITE.find((testCase) => testCase.id === 'deep-golden-declared-brevity-ar-eg')!;
     expect(deepSeekEvaluationRequest(brevity).behavioralGuidance).toBe(new BehavioralResponsePolicyService().buildTextGuidance({ preferences: brevity.interactionPreferences!, safetyGuided: false }));
