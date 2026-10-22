@@ -59,6 +59,11 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   fail-closed attribution guard was designed and declined. A final free review on independent cases shows the server
   can verify only verbatim quotations, not freely worded attribution, so `AI-09` cannot close on a guarantee. The
   Product Owner decides how it closes: evidence-based acceptance, a narrower Shared behaviour, or deferral.
+- **S8A-02 CP1 — Trusted Speaker & Message Provenance (2026-10-22; local, awaiting the Product Owner's review):** the
+  Shared reply now keeps the author the frozen `0089` resolver holds for each `material_id`. Each person's message is its
+  own model message under their label; different people who share a Name, or have none, get " (1)", " (2)"; only
+  request-local tokens leave the composition. No migration, RPC, Router, adapter or frame change. Proven at the Model
+  Router boundary and in the DeepSeek body, zero calls. Message provenance only: `AI-08` / `AI-09` stay open.
 - Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
   `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
   answered, are all invisible to the model); `AI-09` admitted (HIGH: a line inside a message posing as another speaker);

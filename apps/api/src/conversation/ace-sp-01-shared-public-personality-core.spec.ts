@@ -17,7 +17,7 @@ import {
 } from '../public-world/public-qandeel-model-input';
 import { SharedConversationReplyGenerator } from '../shared-world/shared-conversation-reply.generator';
 import {
-  SHARED_CONVERSATION_FRAME, assembleSharedConversationRequest, boundedSharedContext, type SharedConversationTurn,
+  SHARED_CONVERSATION_FRAME, assembleSharedConversationRequest, separatedSharedContext, type SharedConversationTurn,
 } from '../shared-world/shared-conversation-model-input';
 import {
   BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL,
@@ -93,10 +93,11 @@ function recordingRouter() {
 
 const gate = new SafetyResponseGateService();
 const evaluate = (text: string) => gate.evaluate(text, [{ role: 'USER', content: text }]);
-const sharedTurns = (text: string): SharedConversationTurn[] => [
-  { producer: 'HUMAN', authorName: 'Mona', text: 'خلّوا الرد بالإنجليزي من فضلكم' },
-  { producer: 'QANDEEL', authorName: null, text: 'Sure.' },
-  { producer: 'HUMAN', authorName: 'Karim', text },
+// S8A-02 CP1 (2026-10-22): the generator receives each message with its request-local provenance tokens.
+const sharedTurns = (text: string): Array<SharedConversationTurn & { messageRef: string; speakerRef: string | null }> => [
+  { producer: 'HUMAN', authorName: 'Mona', text: 'خلّوا الرد بالإنجليزي من فضلكم', messageRef: 'M1', speakerRef: 'S1' },
+  { producer: 'QANDEEL', authorName: null, text: 'Sure.', messageRef: 'M2', speakerRef: null },
+  { producer: 'HUMAN', authorName: 'Karim', text, messageRef: 'M3', speakerRef: 'S2' },
 ];
 const publicContext = (text: string): PublicQandeelContext => ({
   versionId: '00000000-0000-4000-8000-000000000001', meaning: 'Courage found in small daily choices',
@@ -290,7 +291,8 @@ describe('ACE-SP-01 — the requester gains no authority and the World inputs ar
   it('Shared: the context is the bounded exact-World conversation by Name; no participant\'s request becomes a setting', () => {
     const turns = sharedTurns(ALLOW_FAST);
     const request = assembleSharedConversationRequest(turns)!;
-    expect(request.context).toEqual(boundedSharedContext(turns));
+    // RE-ANCHORED by S8A-02 CP1 (2026-10-22): production sends the separated context (each person's message its own).
+    expect(request.context).toEqual(separatedSharedContext(turns));
     expect(request).toMatchObject({ task: 'CONVERSATIONAL_RESPONSE', locale: 'und', modality: 'TEXT', costBudget: 'LOW', safetyLevel: 'STANDARD' });
     // The guidance is the same whoever asks and whatever was asked before: it is a function of the World and the
     // Safety disposition only.

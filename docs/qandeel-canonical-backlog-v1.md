@@ -4990,6 +4990,18 @@ above stay as written.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 87 items; 45 / 4 / 9 / 29 by status, 51 / 34 / 2 by severity.**
 
+**S8A-02 CP1 — Trusted Speaker & Message Provenance (2026-10-22; the S8A-02 pull request, not yet opened; effective from
+its merge).** No admission and no change of state. The paragraphs above stay as written.
+- **Evidence, no change of state:** `QAN-BL-AI-06` / `QAN-BL-AI-07` — production's Shared input now tells authors apart by
+  the `0089` author of each `material_id`, with no database change: same-Name and unnamed people reach the model as
+  different labels, proven at the Model Router boundary with zero calls. Their disposition is for the Product Owner's
+  review and S8A-02's closing change. `QAN-BL-AI-09` — a "Name:" line inside a message now stays inside its sender's own
+  model message, but how a model reads it is not proven; it stays open. `QAN-BL-AI-08` — untouched: no proven reply link
+  is shown. Recorded in the
+  [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §7.
+- **Untouched:** every item, owner, severity and status.
+- **Latest index: 87 items; 45 / 4 / 9 / 29 by status, 51 / 34 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

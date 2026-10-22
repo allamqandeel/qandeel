@@ -12,7 +12,9 @@
 //                                         candidate is offered, so no Personal context can enter (see the types file)
 //   2  Shared history for the audience    the requester's Product read (migration 0139), intersected with what EVERY human
 //                                         of that exact audience may see through the frozen 0089 resolver (CW2-02 §15):
-//                                         hidden and deleted material never reach the model
+//                                         hidden and deleted material never reach the model; each message keeps the
+//                                         author that resolver returns for its material_id, as a request-local token
+//                                         (S8A-02 CP1)
 //   3  generation                         the Shared World boundary's generator over the provider-neutral Model Router
 //   4  delivery readiness (I-03G → I-03F) the Source Disclosure Gate, then authority / audience revalidation, in order
 //   5  the commit binding (I-04G FIX-B)   `bindSharedQandeelMaterialCommit` refuses evidence of another World, another
@@ -135,11 +137,20 @@ export class SharedQandeelReplyService {
     if (answered === undefined || answered.materialId.toLowerCase() !== request.humanMaterialId.toLowerCase() || answered.producer !== 'HUMAN') {
       return refused('HISTORY_UNRESOLVED');
     }
+    // S8A-02 CP1: each message's author is the one the frozen resolver holds for that exact material. A person's message
+    // must have one, QANDEEL's never does; any disagreement with the Product read is a history this request cannot trust.
+    const authors = conversation.map((material) => visibleToAll.get(material.materialId.toLowerCase()));
+    if (conversation.some((material, index) => (material.producer === 'HUMAN') !== (typeof authors[index] === 'string'))) return refused('HISTORY_UNRESOLVED');
+    const speakerRefs = new Map<string, string>();
+    for (const author of authors) if (typeof author === 'string' && !speakerRefs.has(author)) speakerRefs.set(author, `S${speakerRefs.size + 1}`);
 
-    // 3. The words.
+    // 3. The words. Only request-local tokens leave this composition: no account, material or World identity.
     const generated = await this.generator.generate(Object.freeze({
       requesterUserId: request.requesterUserId,
-      conversation: Object.freeze(conversation.map((material) => Object.freeze({ producer: material.producer, authorName: material.authorName, text: material.text }))),
+      conversation: Object.freeze(conversation.map((material, index) => Object.freeze({
+        producer: material.producer, authorName: material.authorName, text: material.text,
+        messageRef: `M${index + 1}`, speakerRef: typeof authors[index] === 'string' ? speakerRefs.get(authors[index] as string) as string : null,
+      }))),
     }));
     if (generated.state !== 'GENERATED' || generated.text.trim().length === 0) return refused('GENERATION_UNAVAILABLE');
     const text = generated.text;
@@ -190,19 +201,26 @@ export class SharedQandeelReplyService {
     return refused(row.outcome === 'STALE' ? 'COMMIT_STALE' : 'COMMIT_REFUSED');
   }
 
-  /** The material ids every human of the audience may see, through the frozen resolver; null when any read fails. */
-  private async visibleToEveryRecipient(worldId: SharedWorldId, humanIds: ReadonlyArray<string>): Promise<Set<string> | null> {
-    let intersection: Set<string> | null = null as Set<string> | null;
+  /**
+   * The material ids every human of the audience may see, through the frozen resolver, each with the author identity that
+   * resolver returns for it (null: QANDEEL). Null when any read fails, when a row carries no valid author field, or when two
+   * reads disagree about one material's author. The author never leaves this composition.
+   */
+  private async visibleToEveryRecipient(worldId: SharedWorldId, humanIds: ReadonlyArray<string>): Promise<Map<string, string | null> | null> {
+    let intersection: Map<string, string | null> | null = null as Map<string, string | null> | null;
     for (const humanId of humanIds) {
       const rows = await this.server.rpc<unknown>(SHARED_MATERIAL_VISIBILITY_RPC, { p_world_id: worldId, p_user_id: humanId });
       if (!Array.isArray(rows)) return null;
-      const visible = new Set<string>();
+      const visible = new Map<string, string | null>();
       for (const row of rows) {
         if (!isRecord(row) || typeof row.material_id !== 'string' || row.world_id !== worldId) return null;
-        visible.add(row.material_id.toLowerCase());
+        const author = row.author_user_id;
+        if (author !== null && (typeof author !== 'string' || !UUID.test(author))) return null;
+        visible.set(row.material_id.toLowerCase(), author === null ? null : author.toLowerCase());
       }
-      const previous: Set<string> | null = intersection;
-      intersection = previous === null ? visible : new Set([...previous].filter((id: string) => visible.has(id)));
+      const previous: Map<string, string | null> | null = intersection;
+      if (previous !== null && [...previous].some(([id, author]) => visible.has(id) && visible.get(id) !== author)) return null;
+      intersection = previous === null ? visible : new Map([...previous].filter(([id]) => visible.has(id)));
     }
     return intersection;
   }

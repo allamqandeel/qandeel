@@ -12,7 +12,9 @@
  *     state, so the requester gains no authority over the others and nothing about anyone is kept;
  *   - the Safety Response Gate's guidance when it guided this turn;
  *   - producer attribution by legitimate visible Name only — no internal identifier, audience, authority or provenance
- *     reaches the provider;
+ *     reaches the provider. S8A-02 CP1 (Trusted Speaker & Message Provenance, 2026-10-22): who is speaking is the trusted
+ *     author the server resolved for each message, never the Name or the words; each person's message is its own provider
+ *     message beginning with their label, and different people who share a Name (or have none) get " (1)", " (2)" after it;
  *   - the current message always, and older history newest-first within the frozen QIR-004 history budget.
  *
  * It never adds Memory, Human Intelligence, Hypothesis, Recommendation or Question context: Personal intelligence is
@@ -27,6 +29,11 @@ export interface SharedConversationTurn {
   readonly producer: 'HUMAN' | 'QANDEEL';
   readonly authorName: string | null;
   readonly text: string;
+  /**
+   * S8A-02 CP1: on a HUMAN turn, the request-local token of its trusted author (`S1`, `S2`, …); the production generator
+   * always supplies it. A turn without one (the evaluation harness) is told apart by its label only. Never sent as such.
+   */
+  readonly speakerRef?: string | null;
   /**
    * S8A-02 (EXPERIMENTAL; Product Owner Shared Attribution Integrity decision, 2026-10-21): on a HUMAN turn, a small number
    * the server assigns per request to each distinct author, from the author identity it already holds, so that two people
@@ -52,10 +59,40 @@ export const UNNAMED_PARTICIPANT = 'A participant';
 
 const bytes = (text: string) => Buffer.byteLength(text, 'utf8');
 
-function render(turn: SharedConversationTurn): ModelRouterContextMessage {
+/**
+ * S8A-02 CP1 — the label of every turn (null for QANDEEL). A speaker is the trusted author (`speakerRef`), or, on a turn
+ * without one, the label itself. Each speaker's label is their visible Name (the one on their newest message), or
+ * `A participant`; only when two or more different speakers would share a label does each get ` (n)` in order of first
+ * appearance, skipping any label already in use. Nothing a person writes takes part.
+ */
+export function sharedConversationLabels(conversation: ReadonlyArray<SharedConversationTurn>): Array<string | null> {
+  const speakerOf = (turn: SharedConversationTurn) => (typeof turn.speakerRef === 'string' ? `ref\u0000${turn.speakerRef}` : `name\u0000${turn.authorName ?? UNNAMED_PARTICIPANT}`);
+  const baseOf = new Map<string, string>();
+  for (const turn of conversation) if (turn.producer === 'HUMAN') baseOf.set(speakerOf(turn), turn.authorName ?? UNNAMED_PARTICIPANT);
+  const speakersByBase = new Map<string, string[]>();
+  for (const [speaker, base] of baseOf) speakersByBase.set(base, [...(speakersByBase.get(base) ?? []), speaker]);
+  const taken = new Set(speakersByBase.keys());
+  const labels = new Map<string, string>();
+  for (const [base, speakers] of speakersByBase) {
+    if (speakers.length === 1) {
+      labels.set(speakers[0], base);
+      continue;
+    }
+    let ordinal = 0;
+    for (const speaker of speakers) {
+      let numbered: string;
+      do { ordinal += 1; numbered = `${base} (${ordinal})`; } while (taken.has(numbered));
+      taken.add(numbered);
+      labels.set(speaker, numbered);
+    }
+  }
+  return conversation.map((turn) => (turn.producer === 'HUMAN' ? labels.get(speakerOf(turn)) as string : null));
+}
+
+function render(turn: SharedConversationTurn, label: string | null): ModelRouterContextMessage {
   return turn.producer === 'QANDEEL'
     ? { role: 'ASSISTANT', content: turn.text }
-    : { role: 'USER', content: `${turn.authorName ?? UNNAMED_PARTICIPANT}: ${turn.text}` };
+    : { role: 'USER', content: `${label}: ${turn.text}` };
 }
 
 /**
@@ -63,23 +100,24 @@ function render(turn: SharedConversationTurn): ModelRouterContextMessage {
  * newest-first while they fit the history budget; leading QANDEEL lines dropped so the provider context opens with a
  * person.
  *
- * S8A-02 (Product Owner Shared Attribution Engineering Decision, 2026-10-21): this is the EXPERIMENTAL candidate (a-1) —
- * each person's message stays its own message under the same visible Name, and no identifier is added. Production does
- * not send it: `assembleSharedConversationRequest` still sends `boundedSharedContext`, which is exactly this output with
- * consecutive same-role messages merged, so the two can differ only in where one provider message ends.
+ * S8A-02 (Product Owner Shared Attribution Engineering Decision, 2026-10-21): this began as the EXPERIMENTAL candidate
+ * (a-1). S8A-02 CP1 (2026-10-22) makes it what production sends: a person's words stay inside their own provider message,
+ * under the label of their trusted author, so a Name or a "Name:" line they write never starts another person's message.
  */
 export function separatedSharedContext(conversation: ReadonlyArray<SharedConversationTurn>): ModelRouterContextMessage[] {
   const current = conversation.at(-1);
   if (current === undefined || current.producer !== 'HUMAN') return [];
-  const kept: SharedConversationTurn[] = [current];
+  const labels = sharedConversationLabels(conversation);
+  const rendered = conversation.map((turn, index) => render(turn, labels[index]));
+  let first = rendered.length - 1;
   let used = 0;
-  for (let index = conversation.length - 2; index >= 0; index -= 1) {
-    const size = bytes(render(conversation[index]).content);
+  for (let index = rendered.length - 2; index >= 0; index -= 1) {
+    const size = bytes(rendered[index].content);
     if (used + size > HISTORY_BUDGET_BYTES) break;
     used += size;
-    kept.unshift(conversation[index]);
+    first = index;
   }
-  const messages = kept.map(render);
+  const messages = rendered.slice(first);
   while (messages.length > 0 && messages[0].role === 'ASSISTANT') messages.shift();
   return messages;
 }
@@ -96,8 +134,9 @@ export function mergeConsecutiveSameRole(messages: ReadonlyArray<ModelRouterCont
 }
 
 /**
- * The bounded context production sends: the separated context with consecutive same-role messages merged. Leading
- * QANDEEL lines are dropped before the merge, which leaves the same result as dropping them after it.
+ * The separated context with consecutive same-role messages merged: what production sent before S8A-02 CP1, kept as the
+ * evaluation harness's `shared-merged` arm. Production no longer sends it. Leading QANDEEL lines are dropped before the
+ * merge, which leaves the same result as dropping them after it.
  */
 export function boundedSharedContext(conversation: ReadonlyArray<SharedConversationTurn>): ModelRouterContextMessage[] {
   return mergeConsecutiveSameRole(separatedSharedContext(conversation));
@@ -254,7 +293,7 @@ export function assembleSharedConversationRequest(
   conversation: ReadonlyArray<SharedConversationTurn>,
   safetyGuidance?: string,
 ): ModelRouterRequest | null {
-  const context = boundedSharedContext(conversation);
+  const context = separatedSharedContext(conversation);
   const current = conversation.at(-1);
   if (context.length === 0 || current === undefined) return null;
   const path = decideFastDeepRoute(current.text).path;

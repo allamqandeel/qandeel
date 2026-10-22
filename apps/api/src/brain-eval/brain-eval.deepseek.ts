@@ -7,7 +7,7 @@ import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/inte
 import type { ModelRouter, ModelRouterRequest, ProcessingPath } from '../model-router/model-router.types';
 import { buildEvaluationRequest, evaluationGuidance, evaluationSafetyGuidance, stableCaseParity } from './brain-eval.harness';
 import type { BrainEvaluationCase } from './brain-eval.types';
-import { assembleSourcedSharedConversationRequest, separatedSharedContext } from '../shared-world/shared-conversation-model-input';
+import { assembleSourcedSharedConversationRequest, boundedSharedContext, separatedSharedContext } from '../shared-world/shared-conversation-model-input';
 import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds';
 
 // S8A-02 — the DeepSeek-only path of the ONE brain-eval system (Product Owner D3, 2026-10-21).
@@ -92,10 +92,15 @@ export function deepSeekEvaluationRequest(testCase: BrainEvaluationCase, label?:
   if (testCase.world !== undefined) {
     const request: ModelRouterRequest = { ...worldEvaluationRequest(testCase, safetyGuidance), path, complexity, latencyBudgetMs: WORLD_REPLY_LATENCY_BUDGET_MS[path] };
     // The separated arm replaces only the context, with the candidate (a-1) of the same conversation; everything else is the
-    // production request.
+    // production request. S8A-02 CP1 (2026-10-22): production now sends the separated context itself, so the merged arm is
+    // the one that replaces it — with the pre-CP1 merged context — and each label keeps the representation it was run with.
     if (label !== undefined && isRepresentationLabel(label) && SHARED_REPRESENTATION_LABELS[label] === 'SEPARATED') {
       if (testCase.world.kind !== 'SHARED') throw new Error(`${testCase.id}: ${label} applies to Shared cases only.`);
       return { ...request, context: separatedSharedContext(testCase.world.conversation) };
+    }
+    if (label !== undefined && isRepresentationLabel(label) && SHARED_REPRESENTATION_LABELS[label] === 'MERGED') {
+      if (testCase.world.kind !== 'SHARED') throw new Error(`${testCase.id}: ${label} applies to Shared cases only.`);
+      return { ...request, context: boundedSharedContext(testCase.world.conversation) };
     }
     // The sourced arm replaces the context and the Shared frame only; everything else is the production request.
     if (label !== undefined && isRepresentationLabel(label) && SHARED_REPRESENTATION_LABELS[label] === 'SOURCED') {

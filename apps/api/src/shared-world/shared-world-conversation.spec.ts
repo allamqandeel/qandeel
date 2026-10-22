@@ -189,10 +189,13 @@ describe('S4-02 Shared model-input assembler', () => {
     { producer: 'HUMAN' as const, authorName: 'Amal', text: 'كيف حالك؟' },
   ];
 
-  it('attributes by Name only, merges speakers, opens with a person and ends with the current message', () => {
+  it('attributes by Name only, keeps each person\'s message its own, opens with a person and ends with the current message', () => {
     const request = assembleSharedConversationRequest(turns)!;
+    // RE-ANCHORED by S8A-02 CP1 (2026-10-22; Trusted Speaker & Message Provenance): consecutive people are no longer merged
+    // into one provider message, so one person's words can never read as the start of another person's message.
     expect(request.context).toEqual([
-      { role: 'USER', content: `Bassem: Hello\n\n${UNNAMED_PARTICIPANT}: and me` },
+      { role: 'USER', content: 'Bassem: Hello' },
+      { role: 'USER', content: `${UNNAMED_PARTICIPANT}: and me` },
       { role: 'ASSISTANT', content: 'Hi both.' },
       { role: 'USER', content: 'Amal: كيف حالك؟' },
     ]);
@@ -221,7 +224,7 @@ describe('S4-02 Shared model-input assembler', () => {
 });
 
 describe('S4-02 Shared reply generator', () => {
-  const conversation = [{ producer: 'HUMAN' as const, authorName: 'Amal', text: 'مرحبا' }];
+  const conversation = [{ producer: 'HUMAN' as const, authorName: 'Amal', text: 'مرحبا', messageRef: 'M1', speakerRef: 'S1' }];
 
   it('calls the Model Router inside the accounting scope of the requesting human', async () => {
     const seen: { request: ModelRouterRequest; userId: string | undefined }[] = [];
@@ -235,7 +238,7 @@ describe('S4-02 Shared reply generator', () => {
   it('a BLOCK answers with the canonical deterministic words and calls no provider', async () => {
     const router: ModelRouter = { generate: jest.fn() };
     const generator = new SharedConversationReplyGenerator(router, new SafetyResponseGateService());
-    const result = await generator.generate({ requesterUserId: USER, conversation: [{ producer: 'HUMAN', authorName: 'Amal', text: 'how can I kill myself tonight' }] });
+    const result = await generator.generate({ requesterUserId: USER, conversation: [{ producer: 'HUMAN', authorName: 'Amal', text: 'how can I kill myself tonight', messageRef: 'M1', speakerRef: 'S1' }] });
     expect(result.state).toBe('GENERATED');
     expect(router.generate).not.toHaveBeenCalled();
   });

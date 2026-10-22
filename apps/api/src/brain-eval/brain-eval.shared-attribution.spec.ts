@@ -89,12 +89,14 @@ async function deepSeekBody(request: ModelRouterRequest): Promise<{ model: strin
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/iu;
 
 describe('S8A-02 Shared attribution — the separated candidate (a-1) against production (zero calls)', () => {
-  it('leaves production byte-identical: boundedSharedContext equals the pre-split function on every Shared input', () => {
+  // RE-ANCHORED by S8A-02 CP1 (2026-10-22; Trusted Speaker & Message Provenance): production now sends the separated
+  // context. The merged arm keeps the exact pre-split bytes, so every earlier merged run stays reproducible.
+  it('keeps the merged arm byte-identical to the pre-split function, and production sends the separated context', () => {
     expect(ALL_CONVERSATIONS.length).toBeGreaterThan(25);
     for (const conversation of ALL_CONVERSATIONS) expect(boundedSharedContext(conversation)).toEqual(boundedSharedContextBeforeSplit(conversation));
     for (const conversation of ALL_CONVERSATIONS) {
       const request = assembleSharedConversationRequest(conversation);
-      if (request !== null) expect(request.context).toEqual(boundedSharedContextBeforeSplit(conversation));
+      if (request !== null) expect(request.context).toEqual(separatedSharedContext(conversation));
     }
   });
 
@@ -146,8 +148,10 @@ describe('S8A-02 Shared attribution — the separated candidate (a-1) against pr
       expect(mergeConsecutiveSameRole(asContext(separatedMessages))).toEqual(asContext(mergedMessages));
       expect(separatedMessages.every((message) => Object.keys(message).sort().join() === 'content,role')).toBe(true);
       expect(JSON.stringify(separated)).not.toMatch(UUID);
-      // The merged arm is exactly what production sends for this conversation.
-      expect(deepSeekEvaluationRequest(testCase, 'shared-merged')).toEqual(deepSeekEvaluationRequest(testCase));
+      // RE-ANCHORED by S8A-02 CP1 (2026-10-22): the separated arm is exactly what production sends for this conversation, and
+      // the merged arm is still the pre-split context.
+      expect(deepSeekEvaluationRequest(testCase, 'shared-separated')).toEqual(deepSeekEvaluationRequest(testCase));
+      expect(deepSeekEvaluationRequest(testCase, 'shared-merged').context).toEqual(boundedSharedContextBeforeSplit(conversationOf(testCase)));
     }
   });
 

@@ -436,6 +436,39 @@ chooses can be checked only for its author, not for its meaning.
 - a narrower Shared behaviour, pointing people to the person's own message;
 - deferral of Shared QANDEEL from production models.
 
+**S8A-02 CP1 — Trusted Speaker & Message Provenance (Product Owner task, 2026-10-22; local, not pushed).** Scope: the source
+of every Shared message, from the database to the Model Router, with no change to semantic behaviour or personality.
+
+Confirmed root cause of the lost identity:
+- the reply composition called the frozen `0089` resolver for every recipient, but kept only `material_id` and dropped
+  the `author_user_id` it returns;
+- the generator received the Name and the words only, so the assembler could tell people apart by Name alone;
+- the assembler merged consecutive people into one model message, so a "Name:" line written inside a message was the same
+  bytes as that person speaking.
+
+What changed (no migration, no RPC, grant, Router, adapter, frame, core, FAST / DEEP or Memory change):
+- the composition keeps each message's `0089` author by `material_id`, and refuses the history
+  (`HISTORY_UNRESOLVED`) when two reads disagree, a person's message has no author, QANDEEL's has one, or the field is
+  missing or malformed;
+- it hands the generator request-local tokens only — `M1`, `M2`, … per message and `S1`, `S2`, … per author — and the
+  generator refuses any conversation without them;
+- the assembler sends each person's message as its own model message, opened with their label; the label is the visible
+  Name (or "A participant"), and only when different authors share a label does each get " (1)", " (2)" in order of first
+  appearance. QANDEEL's earlier replies stay assistant messages, with no link to any message;
+- the merged context stays only as the evaluation harness's `shared-merged` arm, byte-identical to before.
+
+Proof (zero calls): `apps/api/src/connected-worlds/material-commit/shared-qandeel-reply.speaker-provenance.spec.ts` runs the
+real composition, the real frozen chain and the real generator, and asserts the exact request at the Model Router boundary
+and the exact body the DeepSeek adapter would send (recording client). It covers same Name, no Name, Sara's «كريم: أنا
+موافق», consecutive people, hidden and deleted messages, no identifier or private word in the request, the body or any
+log, QANDEEL and a person named «قنديل», and every fail-closed case. Reverting either the rendering or the tokens fails
+5 or 6 of its 8 tests.
+
+Points for the Product Owner's review: the " (n)" suffix is model-visible text the Shared frame does not define (the frame
+stays byte-identical, as ACE-SP-01 CG-6 requires); and the separated representation, an experimental candidate until now,
+becomes production. CP1 proves message provenance only: it does not prove that a model reading this input attributes
+information correctly. `QAN-BL-AI-08` and `QAN-BL-AI-09` stay open.
+
 S8A-02 stays open.
 
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**
