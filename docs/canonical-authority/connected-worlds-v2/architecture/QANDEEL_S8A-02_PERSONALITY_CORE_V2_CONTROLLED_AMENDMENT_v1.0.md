@@ -549,4 +549,22 @@ information correctly. `QAN-BL-AI-08` and `QAN-BL-AI-09` stay open.
 
 CP1 is complete and awaits the Product Owner's independent review. S8A-02 stays open; CP2 has not started.
 
+**S8A-02 CP2 — Shared attribution layer (2026-10-22 / 2026-10-23; local, not pushed).**
+- *Round 10* (Founder Round 10 Run Authorization, 2026-10-22) ran B / S / S+R:
+  - 468 DeepSeek calls, USD 0.065 actual;
+  - provisional blind AI verdicts on gated cases: B 24.3%, S 15.7%, S+R 10.2% critical attribution errors;
+  - S vs B and S+R vs S both **failed** their preregistered criteria;
+  - human review has not been done.
+- *Founder decision* (2026-10-23): option (b), from a re-analysis of the same data by gate tier, with no new paid run:
+  - B on tier 0;
+  - S+R on tiers 1 and 2;
+  - fallback to S;
+  - a 2.5 s reading inside a 6 s total, FAST only; DEEP keeps 10 s.
+- *Implementation* on the branch, under the separate candidate record
+  [S8A-02 CP2 Shared Attribution Layer Controlled Amendment](QANDEEL_S8A-02_CP2_SHARED_ATTRIBUTION_LAYER_CONTROLLED_AMENDMENT_v1.0.md)
+  (CA-S1 / CA-S2 / CA-S3), which awaits the Founder's final approval.
+- That deployment was not itself measured; Round 10's result stands as recorded.
+- The remaining accuracy limits are accepted for v1, recorded as item 002 of the Future Improvements log (non-blocking).
+- The disposition of `QAN-BL-AI-09` awaits the Founder; S8A-02 stays open.
+
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

@@ -27,7 +27,7 @@ describe('releaseModelOutput', () => {
   });
 
   it.each(['user_memory_context', 'him_reasoning_context', 'him_brain_context', 'hypothesis_reasoning_context',
-    'recommendation_grounding_context', 'question_context', 'think'])('withholds an exposed <%s> container', (name) => {
+    'recommendation_grounding_context', 'question_context', 'shared_attribution_notes', 'think'])('withholds an exposed <%s> container', (name) => {
     expect(withheld(`ok <${name}>x`)).toBe('INTERNAL_CONTAINER');
     expect(withheld(`ok </ ${name.toUpperCase()} >`)).toBe('INTERNAL_CONTAINER');
   });

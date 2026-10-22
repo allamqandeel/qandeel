@@ -3,9 +3,8 @@ import { SafetyResponseGateService } from '../conversation/safety-response-gate.
 import { resolveDeepSeekModel } from '../model-router/model-profile.registry';
 import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
 import { DEEPSEEK_MAX_OUTPUT_TOKENS, type DeepSeekModelRouterConfig } from '../model-router/providers/deepseek/deepseek-model-router.config';
-import { ATTRIBUTION_READING_INSTRUCTION, ModelRouterAttributionReader } from '../shared-world/shared-attribution-reading.experimental';
-import { AttributionNotesReplyGenerator } from '../shared-world/shared-attribution-reply.experimental';
-import { SharedConversationReplyGenerator } from '../shared-world/shared-conversation-reply.generator';
+import { ATTRIBUTION_READING_INSTRUCTION, ModelRouterAttributionReader } from '../shared-world/shared-attribution-reading';
+import { AttributionNotesReplyGenerator, PreLayerSharedReplyGenerator } from '../shared-world/shared-attribution-reply.experimental';
 import {
   ATTRIBUTION_LAYER_ARMS, ATTRIBUTION_LAYER_TRANSPORT_MS, LAYER_NO_REPLY, armCases, createLayerBlindPacket, earlierLayerCases, joinLayerVerdicts,
   layerConversation, layerReviewForm, layerTier, measureLayerArm, plannedLayerCalls, runAttributionLayerArm, scoreAttributionLayer,
@@ -96,7 +95,7 @@ describe('S8A-02 CP2 round 10 — attribution-layer harness', () => {
       const bodiesOf = async (kind: 'B' | 'S' | 'R_DEEP') => {
         const { router, bodies } = recordingRouter();
         const safety = new SafetyResponseGateService();
-        const generator = kind === 'B' ? new SharedConversationReplyGenerator(router, safety)
+        const generator = kind === 'B' ? new PreLayerSharedReplyGenerator(router, safety)
           : new AttributionNotesReplyGenerator(router, safety, { mode: kind, readOn: 'ANY_RISK', reader: new ModelRouterAttributionReader(router, 15_000), readingBudgetMs: 15_000 });
         await runWithAiUsageAttribution({ userId: USER }, () => generator.generate({ conversation, requesterUserId: USER }));
         return JSON.stringify(bodies);

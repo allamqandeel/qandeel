@@ -136,13 +136,15 @@ test('Shared and Public keep Text v1 + their frame as the literal prefix, locale
 });
 
 test('BLOCK still returns before the assembler and the ONE provider call in both generators', () => {
-  for (const [name, source, assemble] of [
-    ['Shared', sharedGenerator, 'assembleSharedConversationRequest('],
-    ['Public', publicGenerator, 'assemblePublicQandeelRequest('],
+  // S8A-02 CP2 (CA-S3): the Shared reply call sends the request the attribution layer returns (`reply`); the attribution
+  // reading, when the gate needs it, is made by that layer AFTER this call site's BLOCK return and assembler.
+  for (const [name, source, assemble, sent] of [
+    ['Shared', sharedGenerator, 'assembleSharedConversationRequest(', 'reply'],
+    ['Public', publicGenerator, 'assemblePublicQandeelRequest(', 'request'],
   ]) {
     const block = source.indexOf("if (gate.disposition === 'BLOCK')");
     const assembled = source.indexOf(`const request = ${assemble}`);
-    const call = source.indexOf('this.router.generate(request)');
+    const call = source.indexOf(`this.router.generate(${sent})`);
     assert.ok(block > 0 && block < assembled && assembled < call, `${name}: BLOCK → assembler → router, in that order`);
     assert.equal(count(source, 'this.router.generate('), 1, `${name}: exactly one provider call`);
   }

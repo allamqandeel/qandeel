@@ -341,7 +341,7 @@ describe('S8A-02 sourced candidate — the evaluation arm and the focused check 
     expect(plannedAttempts(suite.cases, suite.repeats) * suite.labels.length).toBe(30);
     const root = resolve(__dirname, '../../../..');
     const guard = readFileSync(resolve(root, 'scripts/s8a-02/network-guard.cjs'), 'utf8');
-    expect(guard.match(/const ROUND_CAPS = \{[^;]*\};/u)?.[0]).toContain('7: { maxAttempts: 30, costCapUsd: 0.04 }');
+    expect(guard.match(/const ROUND_CAPS = \{[\s\S]*?\} \};/u)?.[0]).toContain('7: { maxAttempts: 30, costCapUsd: 0.04 }');
     expect(readFileSync(resolve(root, 'scripts/s8a-02/deepseek-eval.mjs'), 'utf8'))
       .toContain("'shared-attribution-sourced': { round: 7, labels: ['shared-merged', 'shared-sourced'], spendSuite: 'shared-attribution-sourced' },");
   });

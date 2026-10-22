@@ -18,6 +18,8 @@ const INTERNAL_CONTAINERS = [
   'hypothesis_reasoning_context',
   'recommendation_grounding_context',
   'question_context',
+  // S8A-02 CP2 (CA-S3): the Shared attribution notes container; a reply that exposes it is withheld.
+  'shared_attribution_notes',
   'think',
 ] as const;
 const INTERNAL_CONTAINER_TAG = new RegExp(`<\\s*/?\\s*(?:${INTERNAL_CONTAINERS.join('|')})\\s*>`, 'iu');

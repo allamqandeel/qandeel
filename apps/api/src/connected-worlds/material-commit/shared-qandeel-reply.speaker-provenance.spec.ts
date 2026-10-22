@@ -15,6 +15,7 @@ import { resolveDeepSeekModel } from '../../model-router/model-profile.registry'
 import type { ModelRouter, ModelRouterContextMessage, ModelRouterRequest } from '../../model-router/model-router.types';
 import { DeepSeekModelRouter } from '../../model-router/providers/deepseek/deepseek-model-router';
 import { DEEPSEEK_MAX_OUTPUT_TOKENS, type DeepSeekModelRouterConfig } from '../../model-router/providers/deepseek/deepseek-model-router.config';
+import { ATTRIBUTION_READING_INSTRUCTION } from '../../shared-world/shared-attribution-reading';
 import { boundedSharedContext } from '../../shared-world/shared-conversation-model-input';
 import { SharedConversationReplyGenerator } from '../../shared-world/shared-conversation-reply.generator';
 import { SharedHumanAudienceResolverService, fingerprintSharedHumanAudience } from '../audience/shared-human-audience-resolver.service';
@@ -134,12 +135,19 @@ async function run(stored: ReadonlyArray<Stored>, options: {
   return { outcome, generated, routed, spendAttributedTo };
 }
 
-/** The one request the Model Router received. */
+const isReading = (request: ModelRouterRequest) => request.behavioralGuidance === ATTRIBUTION_READING_INSTRUCTION;
+/** The one REPLY request the Model Router received; since S8A-02 CP2 an attribution reading may precede it (gate tiers 1 / 2). */
+function replyOf(routed: ReadonlyArray<ModelRouterRequest>): ModelRouterRequest {
+  const replies = routed.filter((request) => !isReading(request));
+  expect(replies).toHaveLength(1);
+  expect(routed.length).toBeLessThanOrEqual(2);
+  if (routed.length === 2) expect(isReading(routed[0])).toBe(true);
+  return replies[0];
+}
 async function boundary(stored: ReadonlyArray<Stored>, options?: Parameters<typeof run>[1]): Promise<ModelRouterRequest> {
   const result = await run(stored, options);
   expect(result.outcome).toEqual({ state: 'COMMITTED', materialId: REPLY });
-  expect(result.routed).toHaveLength(1);
-  return result.routed[0];
+  return replyOf(result.routed);
 }
 
 /** What production sent before CP1 for the same words: the Name only, consecutive people merged. */
@@ -260,16 +268,19 @@ describe('S8A-02 CP1 — trusted speaker and message provenance at the Model Rou
     try {
       result = await run(stored, { hiddenFrom: { [stored[7].id]: [KARIM, SARA_B] } });
       expect(result.outcome).toEqual({ state: 'COMMITTED', materialId: REPLY });
-      body = await deepSeekBody(result.routed[0]);
+      body = await deepSeekBody(replyOf(result.routed));
     } finally {
       for (const sink of sinks) sink.mockRestore();
     }
-    const request = result.routed[0];
+    const request = replyOf(result.routed);
+    // S8A-02 CP2: this conversation carries a «سارة:» line inside Karim's message (tier 2), so an attribution reading ran first.
+    const reading = result.routed[0];
+    expect(isReading(reading)).toBe(true);
     const secrets = [WORLD, COMMAND, LEASE, ...MEMBERS, ...Array.from({ length: 9 }, (_, index) => `40000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`)];
     // The generator's input holds one identity, the requester's, only to attribute the spend (AI-COST-01); its conversation
     // holds none.
     expect(Object.keys(result.generated[0]).sort()).toEqual(['conversation', 'requesterUserId']);
-    for (const surface of [JSON.stringify(request), JSON.stringify(body), JSON.stringify(result.generated[0].conversation)]) {
+    for (const surface of [JSON.stringify(request), JSON.stringify(reading), JSON.stringify(body), JSON.stringify(result.generated[0].conversation)]) {
       expect(surface).not.toMatch(UUID);
       for (const secret of secrets) expect(surface.toLowerCase()).not.toContain(secret.toLowerCase());
       expect(surface).not.toContain('خاص بسارة وحدها');
@@ -285,7 +296,7 @@ describe('S8A-02 CP1 — trusted speaker and message provenance at the Model Rou
     // Nothing was logged at all: no identity, no words.
     expect(logged).toEqual([]);
     // The spend is attributed in-process to the requester (AI-COST-01), and that identity never entered the request.
-    expect(result.spendAttributedTo).toEqual([SARA_A]);
+    expect(result.spendAttributedTo).toEqual([SARA_A, SARA_A]);
   });
 
   it('7. QANDEEL stays its own speaker, a human named «قنديل» stays a person, and no reply is linked to a message', async () => {

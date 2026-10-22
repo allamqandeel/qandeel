@@ -6,15 +6,17 @@ import type {
 } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
 import type { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
 import type { ModelRouter, ModelRouterContextMessage, ModelRouterRequest } from '../model-router/model-router.types';
-import { type AttributionScan, type AttributionTier, attributionFacts, factNotes, renderAttributionNotes, scanAttribution } from './shared-attribution-notes.experimental';
+import { type AttributionScan, type AttributionTier, attributionFacts, factNotes, renderAttributionNotes, scanAttribution } from './shared-attribution-notes';
 import {
   type SharedAttributionReader, type VerifiedReading, attributionReadingInput, readingNotes, verifyAttributionReading,
-} from './shared-attribution-reading.experimental';
+} from './shared-attribution-reading';
 import { assembleSharedConversationRequest } from './shared-conversation-model-input';
 
-// S8A-02 CP2 — the attribution reply generator (S and R-DEEP). EXPERIMENTAL, evaluation only (Founder approval of
-// `CP2_ATTRIBUTION_LAYER_DESIGN_CORRECTION.md`, 2026-10-22). Nothing in production imports this file, and it is bound to no
-// module: production keeps `SharedConversationReplyGenerator`. R-2 is not implemented.
+// S8A-02 CP2 — the attribution reply generators of the Round 10 comparison (B, S and R-DEEP / S+R). EVALUATION ONLY (Founder
+// approval of `CP2_ATTRIBUTION_LAYER_DESIGN_CORRECTION.md`, 2026-10-22). Nothing in production imports this file and it is bound to
+// no module. Since the Founder's product decision of 2026-10-23 production runs the layer itself (`shared-attribution-layer.ts`
+// in `SharedConversationReplyGenerator`); this file keeps the measured arms reproducible, including `PreLayerSharedReplyGenerator`,
+// the Shared generator exactly as it was before CP2 (arm B). R-2 is not implemented.
 //
 // Production's flow, unchanged in order: the Safety Response Gate first; then production's own Shared request. The layer
 // only ADDS, and only when the gate finds an attribution marker (tier 1 or 2): the server's notes, in a data container at the
@@ -127,6 +129,30 @@ export class AttributionNotesReplyGenerator implements SharedQandeelReplyGenerat
 }
 
 class ReadingTimeout extends Error {}
+
+/** Arm B: the Shared reply generator exactly as production ran it before CP2 (Safety, the one assembler, one attributed call). */
+export class PreLayerSharedReplyGenerator implements SharedQandeelReplyGenerator {
+  constructor(private readonly router: ModelRouter, private readonly safety: SafetyResponseGateService) {}
+
+  async generate(input: SharedReplyGenerationInput): Promise<SharedReplyGeneration> {
+    const current = input.conversation.at(-1);
+    if (current === undefined || current.producer !== 'HUMAN' || !hasTrustedProvenance(input.conversation)) return { state: 'UNAVAILABLE' };
+    const earlier: ModelRouterContextMessage[] = input.conversation.slice(0, -1)
+      .filter((turn) => turn.producer === 'HUMAN').map((turn) => ({ role: 'USER', content: turn.text }));
+    const gate = this.safety.evaluate(current.text, [...earlier, { role: 'USER', content: current.text }]);
+    if (gate.disposition === 'BLOCK') {
+      return gate.deterministicResponse ? { state: 'GENERATED', text: gate.deterministicResponse } : { state: 'UNAVAILABLE' };
+    }
+    const request = assembleSharedConversationRequest(input.conversation, gate.disposition === 'GUIDED' ? gate.safetyGuidance : undefined);
+    if (request === null) return { state: 'UNAVAILABLE' };
+    try {
+      const result = await runWithAiUsageAttribution({ userId: input.requesterUserId }, () => this.router.generate(request));
+      return result.content.trim().length > 0 ? { state: 'GENERATED', text: result.content } : { state: 'UNAVAILABLE' };
+    } catch {
+      return { state: 'UNAVAILABLE' };
+    }
+  }
+}
 
 const MESSAGE_REF = /^M[1-9][0-9]*$/u;
 const SPEAKER_REF = /^S[1-9][0-9]*$/u;

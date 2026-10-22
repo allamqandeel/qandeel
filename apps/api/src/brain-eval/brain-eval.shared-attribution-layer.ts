@@ -3,11 +3,10 @@ import { currentAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import type { SharedReplyGenerationTurn } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
 import { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
 import type { ModelRouter, ModelRouterRequest, ModelRouterResult, ProcessingPath } from '../model-router/model-router.types';
-import { scanAttribution, type AttributionTier } from '../shared-world/shared-attribution-notes.experimental';
-import { ATTRIBUTION_READING_INSTRUCTION, ModelRouterAttributionReader } from '../shared-world/shared-attribution-reading.experimental';
-import { AttributionNotesReplyGenerator, type AttributionObservation, type ReadingState } from '../shared-world/shared-attribution-reply.experimental';
+import { scanAttribution, type AttributionTier } from '../shared-world/shared-attribution-notes';
+import { ATTRIBUTION_READING_INSTRUCTION, ModelRouterAttributionReader } from '../shared-world/shared-attribution-reading';
+import { AttributionNotesReplyGenerator, type AttributionObservation, type ReadingState, PreLayerSharedReplyGenerator } from '../shared-world/shared-attribution-reply.experimental';
 import { sharedConversationLabels } from '../shared-world/shared-conversation-model-input';
-import { SharedConversationReplyGenerator } from '../shared-world/shared-conversation-reply.generator';
 import { replyShape, type ReplyShape } from './brain-eval.deepseek';
 import { reviewAids, type ReviewAids } from './brain-eval.round2-review';
 import { DIRECT_SPEAKER_CASE_ID, FORGED_SPEAKER_CASE_ID, SHARED_ATTRIBUTION_SOURCED_SUITE, SHARED_ATTRIBUTION_SUITE } from './brain-eval.shared-attribution.suite';
@@ -15,7 +14,7 @@ import { DIRECT_SPEAKER_CASE_ID, FORGED_SPEAKER_CASE_ID, SHARED_ATTRIBUTION_SOUR
 // S8A-02 / CP2 — the paid comparison of the attribution layer (Founder approval of the final test preparation, 2026-10-22).
 // EVALUATION ONLY: nothing in production imports this file. Three arms on the same 48 synthetic Shared conversations:
 //
-// - B   production as it is: `SharedConversationReplyGenerator`, untouched.
+// - B   production as it was before CP2: `PreLayerSharedReplyGenerator` (the measured baseline; production now runs the layer).
 // - S   production plus the server's notes (`AttributionNotesReplyGenerator`, mode S).
 // - S_R the notes plus the separate attribution reading on ANY turn the gate flags, FAST or DEEP (`readOn: 'ANY_RISK'`).
 //
@@ -274,7 +273,7 @@ export async function runAttributionLayerArm(
         recorder = router;
         const safety = new SafetyResponseGateService();
         const generator = arm === 'B'
-          ? new SharedConversationReplyGenerator(router, safety)
+          ? new PreLayerSharedReplyGenerator(router, safety)
           : new AttributionNotesReplyGenerator(router, safety, {
             mode: arm === 'S' ? 'S' : 'R_DEEP', readOn: 'ANY_RISK', reader: new ModelRouterAttributionReader(router, readingTransportMs),
             readingBudgetMs: readingTransportMs, observe: (seen) => { observation = seen; },
