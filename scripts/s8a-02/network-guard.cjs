@@ -43,10 +43,10 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   8: { maxAttempts: 123, costCapUsd: 0.25 },
   // Round 9: CP3 Final Integrated Correction acceptance, Product Owner Final Correction Approval, 2026-10-22 (132, USD 0.20).
   9: { maxAttempts: 132, costCapUsd: 0.2 },
-  // Round 10: S8A-02 / CP2 attribution-layer comparison (B / S / S_R, 468 planned provider calls). The Founder approved the
-  // test PREPARATION on 2026-10-22, not the run: the caps are written here so the dry and simulated runs enforce exactly them,
-  // and `authorized: false` makes every LIVE round 10 run refuse at load until the Founder's explicit run authorization.
-  10: { maxAttempts: 495, costCapUsd: 0.6, authorized: false } };
+  // Round 10: S8A-02 / CP2 attribution-layer comparison (B / S / S_R, 468 planned provider calls). Founder Round 10 Run
+  // Authorization, 2026-10-22: at most 468 actual calls within these caps, no retries, no raised limits; the lock is lifted
+  // as the single change PREREGISTRATION_ROUND10.md permits, and its new hash is recorded beside it before the first call.
+  10: { maxAttempts: 495, costCapUsd: 0.6 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
