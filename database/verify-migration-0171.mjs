@@ -23,8 +23,8 @@
 //   Q-3  a forget removes the Memory's index and every read of it (criterion 5); an expired Memory is never served;
 //   Q-4  cross-user isolation (criterion 7): RLS on both tables, retrieval never serves another owner's Memory, the
 //        functions are executable only by their one role;
-//   Q-5  conflict: two CURRENT SELF facts in one slot are both served, flagged; a PAST fact, a plan and someone else's
-//        fact are never a conflict; a Memory with no slot is retrieved normally (slots never filter retrieval);
+//   Q-5  same slot (CP2 R1): two CURRENT SELF facts in one slot are both served, flagged UNSETTLED (never a confirmed
+//        conflict); a PAST fact, a plan and someone else's fact are never UNSETTLED; a Memory with no slot is retrieved normally (slots never filter retrieval);
 //   E-1  deleting a Memory (the governed erasure's path) cascades its index.
 // Every step runs in a transaction that is rolled back; nothing is committed.
 import assert from 'node:assert/strict';
@@ -441,6 +441,16 @@ async function verifyBackfill() {
   assert.equal(await capture(next.id, { index: [{ id: eligible[5], slot: 'RESIDENCE', terms: ['تاني'] }] }), 'COMPLETED');
   assert.deepEqual(await effectOf(next.id), { state: 'COMPLETED', result_code: 'NO_UNDERSTANDING_RECORDED', result_reference: null, result_payload: null }, 'never re-indexed');
   assert.deepEqual([(await profileOf(eligible[5])).slot, await termsOf(eligible[5])], ['STUDY', ['دراسه']]);
+
+  stage = 'B-1 (CP2 R3) a Memory settled with NO term leaves the backlog, so older eligible Memories move into the window';
+  const window = (await backfill(next.turn)).map((r) => r.memory_id);
+  assert.deepEqual(window, [eligible[4], eligible[3], eligible[2], eligible[1]]);
+  assert.equal(await capture(next.id, { index: window.map((id) => ({ id, terms: [] })) }), 'NO_OP', 'the completed effect writes nothing');
+  const settle = await captureExecution(me, s);
+  assert.equal(await capture(settle.id, { index: window.map((id) => ({ id, terms: [] })) }), 'COMPLETED');
+  for (const id of window) assert.deepEqual([(await profileOf(id)).semantic_indexed, await termsOf(id)], [true, []]);
+  const after = await captureExecution(me, s);
+  assert.deepEqual((await backfill(after.turn)).map((r) => r.memory_id), [eligible[0]], 'the oldest eligible Memory is reached');
 }
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -457,9 +467,9 @@ async function verifyRetrieval() {
   assert.ok(!recent.includes(work), 'the fixture sits outside the 32-Memory recall window');
   await index(me, s, work, ['شغال', 'فودافون', 'شغل', 'وظيفه', 'job', 'employer'], { slot: 'EMPLOYER' });
   const served = await retrieve(me, ['بشتغل', 'وظيفه', 'فين']);
-  assert.deepEqual(served.map((r) => [r.id, r.hits, r.slot, r.conflicting, r.subject, r.status]), [[work, 1, 'EMPLOYER', false, 'SELF', 'ACTIVE']]);
-  assert.deepEqual(Object.keys(served[0]).sort(), ['confidence', 'conflicting', 'content', 'created_at', 'expires_at', 'hits', 'id', 'importance', 'scope', 'slot', 'source',
-    'status', 'subject', 'supersedes_memory_id', 'type', 'updated_at', 'user_id', 'version'].sort());
+  assert.deepEqual(served.map((r) => [r.id, r.hits, r.slot, r.unsettled, r.subject, r.status]), [[work, 1, 'EMPLOYER', false, 'SELF', 'ACTIVE']]);
+  assert.deepEqual(Object.keys(served[0]).sort(), ['confidence', 'content', 'created_at', 'expires_at', 'hits', 'id', 'importance', 'scope', 'slot', 'source',
+    'status', 'subject', 'supersedes_memory_id', 'type', 'unsettled', 'updated_at', 'user_id', 'version'].sort());
   assert.deepEqual(await retrieve(me, ['حاجه_مش_موجوده']), []);
   assert.deepEqual(await retrieve(me, []), []);
   assert.equal((await retrieve(me, ['job'], 0)).length, 0, 'the caller\'s limit bounds the read');
@@ -555,11 +565,11 @@ async function verifyIsolation() {
   await rejected(() => client.query("INSERT INTO public.memory_retrieval_terms (memory_id, user_id, term) VALUES ($1, $2, 'xx')", [theirs, alice]), ['23503']);
 }
 
-async function verifyConflict() {
+async function verifyUnsettled() {
   const me = await reader();
   const s = await session(me);
 
-  stage = 'Q-5 two CURRENT SELF facts in one slot are both served and flagged; the unmatched one follows as a partner';
+  stage = 'Q-5 two CURRENT SELF facts in one slot are both served and flagged UNSETTLED; the unmatched one follows';
   const maadi = await memory(me, { content: 'أنا ساكن في المعادي.' });
   const nasr = await memory(me, { content: 'أنا عايش في مدينة نصر.' });
   const tanta = await memory(me, { content: 'كنت ساكن في طنطا.' });
@@ -573,16 +583,28 @@ async function verifyConflict() {
   await index(me, s, sister, ['ساكنه', 'اسوان', 'سكن'], { slot: 'RESIDENCE' });
   await index(me, s, free, ['بحر', 'سكن']);
   const served = await retrieve(me, ['معاد']);
-  assert.deepEqual(served.map((r) => [r.id, r.hits, r.conflicting]), [[maadi, 1, true], [nasr, 0, true]]);
+  assert.deepEqual(served.map((r) => [r.id, r.hits, r.unsettled]), [[maadi, 1, true], [nasr, 0, true]]);
 
-  stage = 'Q-5 a PAST fact, a plan, someone else\'s fact and a slot-less Memory are retrieved normally and are never a conflict';
-  const broad = Object.fromEntries((await retrieve(me, ['سكن'])).map((r) => [r.id, r.conflicting]));
+  stage = 'Q-5 a PAST fact, a plan, someone else\'s fact and a slot-less Memory are retrieved normally and are never UNSETTLED';
+  const broad = Object.fromEntries((await retrieve(me, ['سكن'])).map((r) => [r.id, r.unsettled]));
   assert.deepEqual(broad, { [maadi]: true, [tanta]: false, [plan]: false, [sister]: false, [free]: false, [nasr]: true });
 
-  stage = 'Q-5 once one side is corrected away, the conflict disappears';
+  stage = 'Q-5 once one side is corrected away, nothing is UNSETTLED any more';
   const correctTurn = await userTurn(me, s, { content: 'لا أنا مش ساكن في المعادي' });
   assert.deepEqual(await finalize2({ session: s, user: me, turn: correctTurn, kind: 'CORRECT', outcome: 'CORRECTED', target: maadi, content: 'أنا عزلت.', subject: 'SELF' }), ['CORRECTED']);
-  assert.deepEqual((await retrieve(me, ['نصر'])).map((r) => [r.id, r.conflicting]), [[nasr, false]]);
+  assert.deepEqual((await retrieve(me, ['نصر'])).map((r) => [r.id, r.unsettled]), [[nasr, false]]);
+
+  stage = 'Q-5 (CP2 R1) two employers held at once are served together as UNSETTLED; the read claims no conflict at all';
+  const bank = await memory(me, { content: 'أنا بشتغل في بنك مصر الصبح.' });
+  const clinic = await memory(me, { content: 'وبشتغل كمان في عيادة بالليل.' });
+  await index(me, s, bank, ['بنك', 'شغل'], { slot: 'EMPLOYER' });
+  await index(me, s, clinic, ['عياده', 'شغل'], { slot: 'EMPLOYER' });
+  const jobs = await retrieve(me, ['بنك']);
+  assert.deepEqual(jobs.map((r) => [r.id, r.unsettled]), [[bank, true], [clinic, true]]);
+  assert.ok(jobs.every((r) => !('conflicting' in r)), 'no row of the read asserts a conflict');
+  const signature = await one("SELECT pg_get_function_result('public.retrieve_personal_memory_candidates_v1(text[],integer)'::regprocedure) AS r");
+  assert.match(signature.r, /unsettled boolean/u);
+  assert.doesNotMatch(signature.r, /conflict/iu);
 }
 
 async function verifyErasure() {
@@ -611,11 +633,11 @@ async function verifyErasure() {
 async function main() {
   try {
     await client.connect();
-    for (const step of [verifyCatalog, verifyResult, verifyCapture, verifyCaptureRules, verifyBackfill, verifyRetrieval, verifyIsolation, verifyConflict, verifyErasure]) {
+    for (const step of [verifyCatalog, verifyResult, verifyCapture, verifyCaptureRules, verifyBackfill, verifyRetrieval, verifyIsolation, verifyUnsettled, verifyErasure]) {
       await client.query('BEGIN');
       try { await step(); } finally { await client.query('ROLLBACK'); }
     }
-    console.log('Verified migration 0171 Personal Understanding: owner-only, read-only index tables that leave with their Memory, an identifiers-only typed capture effect, one atomic capture command that keeps the user\'s own words as SELF / MODEL_ASSISTED_CAPTURE at 0.80 under every 0152 rule (command turns, later commands, equivalents of any type) with no replay, no partial write and no change to an existing Memory, a bounded execution-scoped backfill, and an RLS-bound semantic read with read-time eligibility that serves Memories outside the recent window, never a forgotten, corrected, disabled or expired one, never another owner\'s, and both sides of an unresolved single-value conflict.');
+    console.log('Verified migration 0171 Personal Understanding: owner-only, read-only index tables that leave with their Memory, an identifiers-only typed capture effect, one atomic capture command that keeps the user\'s own words as SELF / MODEL_ASSISTED_CAPTURE at 0.80 under every 0152 rule (command turns, later commands, equivalents of any type) with no replay, no partial write and no change to an existing Memory, a bounded execution-scoped backfill, and an RLS-bound semantic read with read-time eligibility that serves Memories outside the recent window, never a forgotten, corrected, disabled or expired one, never another owner\'s, and every current fact of a shared slot together as UNSETTLED, never as a confirmed conflict.');
   } finally {
     await client.end();
   }

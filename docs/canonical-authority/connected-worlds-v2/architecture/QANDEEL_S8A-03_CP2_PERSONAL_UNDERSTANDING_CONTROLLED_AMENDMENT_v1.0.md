@@ -102,10 +102,16 @@ normalized by the ONE tokenizer the reader also uses. Eligibility is decided at 
 itself: the owner's own, `ACTIVE` and unexpired, and never an Interaction Preference. The semantic path is additive and
 fail-soft: an index failure serves the recall path alone.
 
-The slots (residence, occupation, employer, study, marital status, smoking) are a conflict vocabulary only:
+The slots (residence, occupation, employer, study, marital status, smoking) only group current facts on one topic:
 - a Memory with no slot is retrieved exactly like any other;
-- two or more `CURRENT` `SELF` Memories in one slot are served together, marked `CONFLICTING`;
-- a `PAST` fact, a plan, a temporary state and someone else's fact are never a conflict.
+- two or more `CURRENT` `SELF` Memories in one slot are `UNSETTLED`, never a confirmed conflict (CP2 review R1). A
+  shared slot proves no mutual exclusion: a user may work for two employers at once, or state one fact twice in other
+  words, and nothing compares values at read time. `UNSETTLED` therefore claims only that no one of them is the
+  settled answer;
+- the `UNSETTLED` Memories of a slot are ONE unit, served whole only when the whole unit fits
+  `MAX_SELECTED_MEMORIES` (4) and `MAX_MEMORY_CONTEXT_CHARACTERS` (2400), and otherwise not at all. One side is never
+  served as the settled answer, and the bounds are never exceeded (CP2 review R2);
+- a `PAST` fact, a plan, a temporary state and someone else's fact are never `UNSETTLED`.
 
 # 3. Superseded sentences — before and after
 
@@ -148,8 +154,9 @@ The slots (residence, occupation, employer, study, marital status, smoking) are 
 >
 > *After:* "Retrieval still makes no provider, embedding, vector or paid call and performs no Memory write. Semantic
 > retrieval is the S8A-03 CP2 index path (amendment §2.4): terms written in the background, compared for equality in
-> PostgreSQL, with eligibility read from `public.memories` at read time. Semantic contradiction RESOLUTION stays deferred:
-> a single-value conflict is surfaced as `CONFLICTING`, never resolved."
+> PostgreSQL, with eligibility read from `public.memories` at read time. Semantic contradiction detection and
+> RESOLUTION stay deferred: current facts sharing a slot are surfaced together as `UNSETTLED`, never declared a conflict
+> and never resolved."
 
 # 4. Prompt version and replay
 
@@ -172,13 +179,14 @@ session or execution identifier is sent. The JSON schema bounds facts to six (ze
 memories to the handles supplied, keys to sixteen of at most 48 characters, and every enumerated field to its closed
 values.
 
-**5.2 The conflict sentence of the reply's server guidance** (`MEMORY_CONFLICT_GUIDANCE`, in
+**5.2 The same-slot sentence of the reply's server guidance** (`MEMORY_UNSETTLED_GUIDANCE`, in
 `model-router/model-router.types.ts`). It is appended after the existing Memory-context sentence only when some served
-Memory is `CONFLICTING`; otherwise the reply's guidance is byte-for-byte as before:
+Memory is `UNSETTLED`; otherwise the reply's guidance is byte-for-byte as before. It replaces the CP2 candidate's
+`CONFLICTING` sentence (CP2 review R1), which asserted that the facts "cannot all be true now":
 
-> An item whose standing is CONFLICTING is one of two or more current facts the user stated that cannot all be true now (for example two different homes or employers). Do not choose between them, merge them or present either as settled; if it matters to the reply, ask the user briefly which one is true now.
+> An item whose standing is UNSETTLED is one of two or more current facts the user stated on the same topic (for example two homes, two jobs or two employers). They may all be true at once, or a newer one may have replaced an older one; nothing here says which. Do not treat them as a contradiction, and do not choose, drop or merge them or present any one of them as the only answer; if it matters to the reply, ask the user briefly.
 
-Each served Memory item gains the optional field `standing: "CONFLICTING"` in the escaped `<user_memory_context>` data,
+Each served Memory item gains the optional field `standing: "UNSETTLED"` in the escaped `<user_memory_context>` data,
 and only when that is true.
 
 # 6. Durable design — migration 0171 (local only)
@@ -210,6 +218,11 @@ It returns at most four of the owner's eligible Memories whose keys are not inde
 - natural captures, «افتكر» / correction results and pre-0171 Memories alike;
 - never an Interaction Preference.
 
+A Memory in that window that may never reach the provider is settled without the model, in the same command: a Memory
+over the 1 000-character bound under its own words only, and a secret-bearing one under no term at all. It leaves the
+window like any indexed Memory, so unsendable Memories can never hold it and starve older eligible ones (CP2 review R3).
+When nothing is left to send, the effect makes no provider call.
+
 **The ONE atomic capture command.** `complete_post_response_personal_capture_v1` takes parallel arrays (no json argument
 on a Memory writer). It writes only while the effect is `CLAIMED` by a `RUNNING` execution (otherwise `NO_OP`), under
 the owner's equivalence lock. For each Memory it applies every 0152 rule of the background writer:
@@ -233,8 +246,8 @@ typed completion in one transaction, or nothing at all.
   - the DeepSeek adapter and its module;
   - the capture service;
   - the dispatcher stage: four slots, recovery, quarantine, lost claim, lost completion, exhausted budget;
-  - the retriever: paraphrase with no cue, outside the window, fail-soft, conflict partners;
-  - the conflict sentence;
+  - the retriever: paraphrase with no cue, outside the window, fail-soft, the same-slot unit inside both bounds;
+  - the `UNSETTLED` sentence;
   - the transports;
   - the module composition (the `@Optional` dependency is proven wired).
 - **API build** and the **scripts type-check**.
@@ -249,13 +262,13 @@ typed completion in one transaction, or nothing at all.
   - retrieval outside the 32 most recent Memories;
   - correction, forget, disable and expiry at read time, with the explicit cleanup;
   - two-owner isolation;
-  - conflicts, with history, plans and someone else's facts excluded;
+  - same-slot `UNSETTLED` facts (two employers at once included), with history, plans and someone else's facts excluded;
   - erasure.
 - **Every CI-ordered database verifier** that runs locally.
 
 The verifier found and fixed two real SQL defects before any review:
 - the effect CHECK used `result_code = '…'`, which admitted a NULL result code;
-- `conflicting` was NULL for a slot-less Memory, which the reader treats as an integrity failure, so the semantic path
+- the same-slot flag (then `conflicting`, now `unsettled`) was NULL for a slot-less Memory, which the reader treats as an integrity failure, so the semantic path
   would have silently served nothing.
 
 **7.2 Not proven, and CP3's to measure** (CP1 amendment §7.1: an independent paraphrase set, Memories outside the window,
@@ -271,13 +284,32 @@ Locally the keys are fixtures. The mechanism is proven; the quality of the model
 - A third party named only by a personal name («أحمد ساكن في …») is not detectable lexically. It rests on the model's
   `subject` and the first-person signal.
 - Ambiguous Egyptian verb forms (`بتـ` / `بنـ`, past `…ت`) are first-person signals; the third-person `بيـ` is refused.
-- The background never supersedes, so a user who moved and says so naturally shows as `CONFLICTING` until they correct
-  it. That is the Founder's rule 3: nothing is replaced while unresolved.
+- The background never supersedes, so a user who moved and says so naturally shows both homes as `UNSETTLED` until
+  they correct it. That is the Founder's rule 3: nothing is replaced while unresolved.
+- A same-slot unit larger than the places left (or the character budget) is not served on that turn at all. Fewer
+  Memories are served rather than one side as the answer.
 - The expired-index cleanup runs with the owner's next capture; reads never depend on it.
 - The A2 / Full Intelligence / Integrated Brain end-to-end harnesses build the dispatcher by hand without the capture
   stage. They still prove the v1-shaped path; the composed path is proven by the module composition spec and the 0171
   verifier.
 - The code depends on 0171 being deployed with it. Both are local only.
+
+**7.4 CP2 independent review corrections** (Founder, 2026-10-23, on `369ba841`):
+- **R1, false conflicts.** `CONFLICTING` became `UNSETTLED` in 0171 (`unsettled` column), the retriever, the Router
+  data and the model text (§5.2). The grouping is unchanged; the claim of a contradiction is withdrawn. No resolution
+  engine and no automatic replacement.
+- **R2, context bound.** The same-slot unit is served whole inside both explicit bounds, or not at all (§2.4).
+- **R3, backfill starvation.** Unsendable Memories are settled without the model (§6), so four of them no longer block
+  older eligible Memories.
+
+Focused proofs:
+- the 0171 verifier: two employers at once are served together as `UNSETTLED`, and the read's signature names no
+  conflict; four Memories settled under no term leave the window and the oldest eligible Memory is reached;
+- the retriever spec: R1, and four R2 cases (no fourth-place overflow, a unit too large for the places left, no
+  one-sided character overflow, a fitting unit served whole);
+- the capture service spec: three R3 cases (settled with no provider call; a secret under no term and a long Memory
+  under its own words only; never sent, and still settled on a provider failure);
+- the Router spec: the `UNSETTLED` sentence, verbatim.
 
 # 8. Explicit non-amendments, implementation and status
 

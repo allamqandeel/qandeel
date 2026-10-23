@@ -24,11 +24,18 @@ import {
   PERSONAL_UNDERSTANDING_CAPTURE_SCHEMA_VERSION,
   type PersonalUnderstandingCaptureCommand,
   type PersonalUnderstandingCaptureProvider,
+  type VerifiedUnderstandingIndex,
 } from './personal-understanding.types';
 
 export interface PersonalUnderstandingCapturePlan {
   readonly message: string | null;
   readonly backlog: ReadonlyArray<{ readonly handle: string; readonly memoryId: string; readonly type: MemoryType; readonly content: string }>;
+  /**
+   * CP2 R3: backfill Memories that may never be sent to the provider (too long, or carrying a secret). They are settled
+   * WITHOUT the model - a long one under its own words, a secret-bearing one under no term at all - so they leave the
+   * bounded backfill window instead of holding it forever and starving every older eligible Memory.
+   */
+  readonly settle: ReadonlyArray<VerifiedUnderstandingIndex>;
   readonly current: ReadonlyArray<Pick<MemoryRecord, 'type' | 'content'>>;
 }
 
@@ -55,15 +62,22 @@ export class PersonalUnderstandingCaptureService {
 
   async prepare(context: BackgroundIntelligenceExecutionContext, currentUserContent: string, now = new Date()): Promise<PersonalUnderstandingCapturePlan | undefined> {
     const message = capturableMessage(currentUserContent);
-    const backlog = (await this.data.listUnindexedMemories(context, MAX_UNDERSTANDING_BACKFILL))
-      .filter((memory) => memory.content.trim().length > 0 && [...memory.content].length <= MAX_UNDERSTANDING_MEMORY_CHARS && !containsObviousSecret(memory.content))
-      .map((memory, index) => ({ handle: `m${index + 1}`, ...memory }));
-    if (message === null && backlog.length === 0) return undefined;
+    const unindexed = await this.data.listUnindexedMemories(context, MAX_UNDERSTANDING_BACKFILL);
+    const sendable = (memory: { readonly content: string }) =>
+      memory.content.trim().length > 0 && [...memory.content].length <= MAX_UNDERSTANDING_MEMORY_CHARS && !containsObviousSecret(memory.content);
+    const backlog = unindexed.filter(sendable).map((memory, index) => ({ handle: `m${index + 1}`, ...memory }));
+    const settle = unindexed.filter((memory) => !sendable(memory)).map((memory) => {
+      const [own] = verifyMemoryProposals([], [{ handle: '', ...memory }]);
+      return containsObviousSecret(memory.content) ? { ...own, terms: [] } : own;
+    });
+    if (message === null && backlog.length === 0 && settle.length === 0) return undefined;
     const current = message === null ? [] : await this.data.listCaptureScreenMemories(context, now);
-    return { message, backlog, current };
+    return { message, backlog, settle, current };
   }
 
   async propose(plan: PersonalUnderstandingCapturePlan, now = new Date()): Promise<PersonalUnderstandingCaptureCommand> {
+    // CP2 R3: settling needs no model, so a plan with nothing to send makes no provider call at all.
+    if (plan.message === null && plan.backlog.length === 0) return { items: [], index: [...plan.settle] };
     let output;
     try {
       output = await this.provider.capture({
@@ -72,9 +86,9 @@ export class PersonalUnderstandingCaptureService {
         memories: plan.backlog.map((memory) => ({ handle: memory.handle, type: memory.type, content: memory.content })),
       });
     } catch {
-      return { items: [], index: [] };
+      return { items: [], index: [...plan.settle] };
     }
     const items = plan.message === null ? [] : verifyFactProposals(output.facts, plan.message, plan.current, now).kept;
-    return { items, index: verifyMemoryProposals(output.memories, plan.backlog) };
+    return { items, index: [...verifyMemoryProposals(output.memories, plan.backlog), ...plan.settle] };
   }
 }

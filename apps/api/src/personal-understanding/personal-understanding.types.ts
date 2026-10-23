@@ -10,7 +10,7 @@ import type { MemoryType } from '../memory/memory.types';
 export const PERSONAL_UNDERSTANDING_CAPTURE_PROVIDER = Symbol('PERSONAL_UNDERSTANDING_CAPTURE_PROVIDER');
 export const PERSONAL_UNDERSTANDING_CAPTURE_SCHEMA_VERSION = 1 as const;
 
-/** The single-value slots the conflict rule reads (Founder CP2 condition 3). Optional: most Memories have none. */
+/** The slots the same-slot UNSETTLED rule reads (Founder CP2 condition 3, CP2 R1). Optional: most Memories have none. */
 export const UNDERSTANDING_SLOTS = ['RESIDENCE', 'OCCUPATION', 'EMPLOYER', 'STUDY', 'MARITAL_STATUS', 'SMOKING'] as const;
 export type UnderstandingSlot = typeof UNDERSTANDING_SLOTS[number];
 export const UNDERSTANDING_TEMPORALS = ['CURRENT', 'PAST', 'PLANNED', 'TEMPORARY'] as const;

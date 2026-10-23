@@ -19,10 +19,10 @@ export class MemoryRetrievalIndexRepository {
     });
     if (!Array.isArray(rows)) throw new Error('MEMORY_SEMANTIC_READ_INTEGRITY');
     return rows.map((row: Record<string, unknown>) => {
-      if (row?.user_id !== userId || row.status !== 'ACTIVE' || typeof row.hits !== 'number' || typeof row.conflicting !== 'boolean' ||
+      if (row?.user_id !== userId || row.status !== 'ACTIVE' || typeof row.hits !== 'number' || typeof row.unsettled !== 'boolean' ||
           !(row.slot === null || typeof row.slot === 'string')) throw new Error('MEMORY_SEMANTIC_READ_INTEGRITY');
-      const { hits, slot, conflicting, ...memory } = row;
-      return { memory: withMemorySubject(memory as unknown as MemoryRecord), hits: hits as number, slot: slot as string | null, conflicting: conflicting as boolean };
+      const { hits, slot, unsettled, ...memory } = row;
+      return { memory: withMemorySubject(memory as unknown as MemoryRecord), hits: hits as number, slot: slot as string | null, unsettled: unsettled as boolean };
     });
   }
 }

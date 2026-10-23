@@ -6,9 +6,9 @@
 -- This migration is the durable half of that decision, and nothing else:
 --
 --   1. memory_retrieval_profiles - one row per indexed Memory: whether its semantic keys were indexed, and the
---      OPTIONAL single-value slot (RESIDENCE / OCCUPATION / EMPLOYER / STUDY / MARITAL_STATUS / SMOKING) and temporal
---      standing (CURRENT / PAST / PLANNED / TEMPORARY) the conflict rule reads. A Memory with no slot is retrieved
---      exactly like any other: the slots are a conflict vocabulary, never a retrieval filter.
+--      OPTIONAL slot (RESIDENCE / OCCUPATION / EMPLOYER / STUDY / MARITAL_STATUS / SMOKING) and temporal standing
+--      (CURRENT / PAST / PLANNED / TEMPORARY) the same-slot rule reads. A Memory with no slot is retrieved exactly like
+--      any other: the slots only group current facts on one topic, never a retrieval filter.
 --   2. memory_retrieval_terms - the normalized retrieval terms of a Memory (its own words and its semantic keys, both
 --      normalized by the ONE TypeScript tokenizer the reader also uses). The database compares terms for equality only.
 --   3. An index row never outlives the Memory's eligibility: leaving ACTIVE (forgotten, disabled, corrected, expired)
@@ -31,7 +31,7 @@
 --      The background never retires, supersedes or re-attributes an existing Memory. It is also the explicit cleanup
 --      path of the owner's EXPIRED Memories' index rows (expiry is a time, not an event, and fires no trigger).
 --   9. retrieve_personal_memory_candidates_v1 - the foreground semantic read, SECURITY INVOKER under the caller's RLS:
---      the caller's ACTIVE, unexpired Memories whose terms match, plus the Memories that share a contested slot.
+--      the caller's ACTIVE, unexpired Memories whose terms match, plus the other UNSETTLED Memories of a matched slot.
 --
 -- No hosted application is authorized by this file: it is applied to the local verification database only until a
 -- separate authorization says otherwise. Migrations 0001-0170 are byte-unchanged.
@@ -373,13 +373,15 @@ END;$$;
 -- 9. The foreground semantic read. SECURITY INVOKER: the caller's own RLS on memories, attributions, profiles and terms
 --    is the authority, and auth.uid() names the owner explicitly as well. Eligibility is read from public.memories at
 --    read time - ACTIVE and unexpired - so an index row can never serve a forgotten, corrected or expired Memory.
---    Returned: up to 12 matching Memories (most terms matched first), then every Memory that shares a contested slot
---    with one of them (two or more CURRENT SELF Memories in one single-value slot), flagged CONFLICTING.
+--    Returned: up to 12 matching Memories (most terms matched first), then every other Memory of a matched shared slot
+--    (two or more CURRENT SELF Memories in one slot), flagged UNSETTLED. UNSETTLED is NOT a confirmed conflict (CP2 R1):
+--    sharing a slot proves no mutual exclusion - a user may work for two employers at once, or state one fact twice in
+--    other words - and the database compares no values, so it claims only that no one of them is the settled answer.
 -- ---------------------------------------------------------------------------------------------------------------
 CREATE FUNCTION public.retrieve_personal_memory_candidates_v1(p_terms text[], p_limit integer)
 RETURNS TABLE(id uuid, user_id uuid, scope text, type text, content text, source text, confidence double precision,
   importance double precision, status text, version integer, created_at timestamptz, updated_at timestamptz,
-  expires_at timestamptz, supersedes_memory_id uuid, subject text, hits integer, slot text, conflicting boolean)
+  expires_at timestamptz, supersedes_memory_id uuid, subject text, hits integer, slot text, unsettled boolean)
 LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
   WITH me AS (SELECT (SELECT auth.uid()) AS uid),
   live AS MATERIALIZED (
@@ -390,7 +392,7 @@ LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
       LEFT JOIN public.memory_retrieval_profiles p ON p.memory_id = m.id AND p.user_id = m.user_id
      WHERE m.status = 'ACTIVE' AND (m.expires_at IS NULL OR m.expires_at > CURRENT_TIMESTAMP)
        AND m.type <> 'INTERACTION_PREFERENCE'
-  ), contested AS (
+  ), shared_slot AS (
     SELECT l.slot FROM live l WHERE l.slot IS NOT NULL AND l.temporal = 'CURRENT' AND l.subject = 'SELF'
      GROUP BY l.slot HAVING count(*) > 1
   ), hit AS (
@@ -405,12 +407,12 @@ LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
   ), partner AS (
     SELECT l.*, 0 AS hits FROM live l
      WHERE l.temporal = 'CURRENT' AND l.subject = 'SELF' AND l.id NOT IN (SELECT x.id FROM matched x)
-       AND l.slot IN (SELECT x.slot FROM matched x JOIN contested c ON c.slot = x.slot WHERE x.temporal = 'CURRENT' AND x.subject = 'SELF')
+       AND l.slot IN (SELECT x.slot FROM matched x JOIN shared_slot c ON c.slot = x.slot WHERE x.temporal = 'CURRENT' AND x.subject = 'SELF')
   )
   SELECT r.id, r.user_id, r.scope, r.type, r.content, r.source, r.confidence, r.importance, r.status, r.version,
          r.created_at, r.updated_at, r.expires_at, r.supersedes_memory_id, r.subject, r.hits, r.slot,
-         -- Never NULL: a Memory with no slot, no time standing or no attribution is simply not in conflict.
-         coalesce(r.temporal = 'CURRENT' AND r.subject = 'SELF' AND r.slot IN (SELECT c.slot FROM contested c), false) AS conflicting
+         -- Never NULL: a Memory with no slot, no time standing or no attribution is simply not unsettled.
+         coalesce(r.temporal = 'CURRENT' AND r.subject = 'SELF' AND r.slot IN (SELECT c.slot FROM shared_slot c), false) AS unsettled
     FROM (SELECT * FROM matched UNION ALL SELECT * FROM partner) r
    ORDER BY r.hits DESC, r.importance DESC, r.updated_at DESC, r.id
 $$;

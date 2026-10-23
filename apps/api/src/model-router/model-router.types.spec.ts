@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { composeServerGuidance, MEMORY_CONFLICT_GUIDANCE } from './model-router.types';
+import { composeServerGuidance, MEMORY_UNSETTLED_GUIDANCE } from './model-router.types';
 import { buildHumanIntelligenceProviderSemantics } from './human-intelligence-provider-semantics';
 import type { HumanIntelligenceProviderSemantics } from './human-intelligence-provider-semantics.types';
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
@@ -539,19 +539,21 @@ describe('composeServerGuidance recommendation grounding boundary', () => {
   });
 });
 
-// S8A-03 CP2: the conflict sentence is rendered only when a served Memory is CONFLICTING, verbatim (Copy Gate).
-describe('S8A-03 CP2 memory conflict guidance', () => {
-  it('adds the exact conflict sentence only when some served Memory is CONFLICTING', () => {
+// S8A-03 CP2 (R1): the same-slot sentence is rendered only when a served Memory is UNSETTLED, verbatim (Copy Gate). It
+// claims no conflict: two current facts on one topic may both hold.
+describe('S8A-03 CP2 memory unsettled guidance', () => {
+  it('adds the exact UNSETTLED sentence only when some served Memory is UNSETTLED, and never asserts a contradiction', () => {
     const settled = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [{ type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', about: 'USER' }] });
-    expect(settled).not.toContain(MEMORY_CONFLICT_GUIDANCE);
-    expect(settled).not.toContain('CONFLICTING');
-    const contested = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [
-      { type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', about: 'USER', standing: 'CONFLICTING' },
-      { type: 'PERSONAL_FACT', content: 'أنا ساكن في مدينة نصر.', about: 'USER', standing: 'CONFLICTING' },
+    expect(settled).not.toContain(MEMORY_UNSETTLED_GUIDANCE);
+    expect(settled).not.toContain('UNSETTLED');
+    const unsettled = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [
+      { type: 'PERSONAL_FACT', content: 'بشتغل في بنك مصر الصبح.', about: 'USER', standing: 'UNSETTLED' },
+      { type: 'PERSONAL_FACT', content: 'وبشتغل كمان في عيادة بالليل.', about: 'USER', standing: 'UNSETTLED' },
     ] });
-    expect(MEMORY_CONFLICT_GUIDANCE).toBe('An item whose standing is CONFLICTING is one of two or more current facts the user stated that cannot all be true now (for example two different homes or employers). Do not choose between them, merge them or present either as settled; if it matters to the reply, ask the user briefly which one is true now.');
-    expect(contested.split(MEMORY_CONFLICT_GUIDANCE)).toHaveLength(2);
-    expect(contested.indexOf(MEMORY_CONFLICT_GUIDANCE)).toBeLessThan(contested.indexOf('<user_memory_context>'));
-    expect(contested).toContain('"standing":"CONFLICTING"');
+    expect(MEMORY_UNSETTLED_GUIDANCE).toBe('An item whose standing is UNSETTLED is one of two or more current facts the user stated on the same topic (for example two homes, two jobs or two employers). They may all be true at once, or a newer one may have replaced an older one; nothing here says which. Do not treat them as a contradiction, and do not choose, drop or merge them or present any one of them as the only answer; if it matters to the reply, ask the user briefly.');
+    expect(unsettled.split(MEMORY_UNSETTLED_GUIDANCE)).toHaveLength(2);
+    expect(unsettled.indexOf(MEMORY_UNSETTLED_GUIDANCE)).toBeLessThan(unsettled.indexOf('<user_memory_context>'));
+    expect(unsettled).toContain('"standing":"UNSETTLED"');
+    expect(unsettled).not.toContain('CONFLICTING');
   });
 });

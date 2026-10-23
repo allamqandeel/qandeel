@@ -165,7 +165,7 @@ describe('MemoryRetrieverService', () => {
   });
   // S8A-03 CP2 (Founder option B): the semantic index path. No model call at read time; eligibility is the database's.
   describe('S8A-03 CP2 semantic retrieval', () => {
-    const row = (record: MemoryRecord, hits: number, slot: string | null = null, conflicting = false) => ({ memory: record, hits, slot, conflicting });
+    const row = (record: MemoryRecord, hits: number, slot: string | null = null, unsettled = false) => ({ memory: record, hits, slot, unsettled });
 
     it('finds a fact by a paraphrase with no recall cue, through the index, and never reads the recent window for it', async () => {
       runtime.retrieveSemanticCandidates.mockResolvedValue([row(memory('m1', 'أنا ساكن في المعادي.'), 1, 'RESIDENCE')]);
@@ -193,16 +193,70 @@ describe('MemoryRetrieverService', () => {
       ]);
     });
 
-    it('never serves a contested current fact alone: its slot partners follow it, both marked CONFLICTING', () => {
+    it('never serves an UNSETTLED current fact alone: the other facts of its slot follow it, all marked UNSETTLED', () => {
       const served = selectMemories('أنا ساكن فين؟', [], [
         row(memory('a', 'أنا ساكن في المعادي.'), 1, 'RESIDENCE', true),
         row(memory('b', 'أنا عايش في مدينة نصر.'), 0, 'RESIDENCE', true),
         row(memory('c', 'بشتغل مهندس.'), 0, 'OCCUPATION', false),
       ]);
       expect(served).toEqual([
-        { type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', source: 'USER_STATED', about: 'USER', standing: 'CONFLICTING' },
-        { type: 'PERSONAL_FACT', content: 'أنا عايش في مدينة نصر.', source: 'USER_STATED', about: 'USER', standing: 'CONFLICTING' },
+        { type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', source: 'USER_STATED', about: 'USER', standing: 'UNSETTLED' },
+        { type: 'PERSONAL_FACT', content: 'أنا عايش في مدينة نصر.', source: 'USER_STATED', about: 'USER', standing: 'UNSETTLED' },
       ]);
+    });
+
+    // CP2 R1: two employers held at once are not a confirmed conflict. They are served together, UNSETTLED, and nothing
+    // the retriever emits names a conflict.
+    it('R1 - two simultaneous employers are served together as UNSETTLED, never as CONFLICTING', () => {
+      const served = selectMemories('بشتغل فين؟', [], [
+        row(memory('bank', 'بشتغل في بنك مصر الصبح.'), 1, 'EMPLOYER', true),
+        row(memory('clinic', 'وبشتغل كمان في عيادة بالليل.'), 1, 'EMPLOYER', true),
+      ]);
+      expect(served.map((item) => item.standing)).toEqual(['UNSETTLED', 'UNSETTLED']);
+      expect(JSON.stringify(served)).not.toMatch(/CONFLICT/u);
+    });
+
+    // CP2 R2: the same-slot unit is served whole or not at all, inside MAX_SELECTED_MEMORIES and
+    // MAX_MEMORY_CONTEXT_CHARACTERS.
+    describe('R2 - the same-slot unit never breaks the explicit bounds', () => {
+      it('three Memories served first leave one place: a two-Memory unit does not fit, so neither side is served', () => {
+        const served = selectMemories('أنا ساكن فين؟', [], [
+          row(memory('s1', 'أنا ساكن جنب النادي.', { importance: 0.9 }), 3),
+          row(memory('s2', 'أنا ساكن قريب من الشغل.', { importance: 0.9 }), 3),
+          row(memory('s3', 'أنا ساكن في الدور التالت.', { importance: 0.9 }), 3),
+          row(memory('a', 'أنا ساكن في المعادي.', { importance: 0.1 }), 1, 'RESIDENCE', true),
+          row(memory('b', 'أنا عايش في مدينة نصر.', { importance: 0.1 }), 1, 'RESIDENCE', true),
+        ]);
+        expect(served.map((item) => item.content)).toEqual(['أنا ساكن جنب النادي.', 'أنا ساكن قريب من الشغل.', 'أنا ساكن في الدور التالت.']);
+        expect(served.some((item) => item.standing === 'UNSETTLED')).toBe(false);
+      });
+
+      it('a unit larger than the places left is skipped whole, and a later Memory still gets its place', () => {
+        const unit = ['أ', 'ب', 'ج', 'د', 'ه'].map((label, n) => row(memory(`u${n}`, `أنا ساكن في الحي ${label}.`), 2, 'RESIDENCE', true));
+        const served = selectMemories('أنا ساكن فين؟', [], [...unit, row(memory('free', 'أنا ساكن لوحدي.'), 1)]);
+        expect(served).toEqual([{ type: 'PERSONAL_FACT', content: 'أنا ساكن لوحدي.', source: 'USER_STATED', about: 'USER' }]);
+      });
+
+      it('a unit whose second side would pass the character budget is not served half: neither side appears', () => {
+        const served = selectMemories('أنا ساكن فين؟', [], [
+          row(memory('a', `أنا ساكن في ${'س'.repeat(MAX_MEMORY_CONTEXT_CHARACTERS - 40)}`), 2, 'RESIDENCE', true),
+          row(memory('b', 'أنا عايش في مدينة نصر في شارع طويل اسمه مكتوب بالكامل هنا.'), 1, 'RESIDENCE', true),
+        ]);
+        expect(served).toEqual([]);
+      });
+
+      it('a unit that fits is served whole, and the total stays inside both bounds', () => {
+        const served = selectMemories('أنا ساكن فين؟', [], [
+          row(memory('a', 'أنا ساكن في المعادي.'), 2, 'RESIDENCE', true),
+          row(memory('b', 'أنا عايش في مدينة نصر.'), 1, 'RESIDENCE', true),
+          row(memory('c', 'أنا ساكن مع صحابي.'), 1),
+          row(memory('d', 'أنا ساكن في الدور التالت.'), 1),
+          row(memory('e', 'أنا ساكن من سنتين.'), 1),
+        ]);
+        expect(served).toHaveLength(MAX_SELECTED_MEMORIES);
+        expect(served.filter((item) => item.standing === 'UNSETTLED').map((item) => item.content)).toEqual(['أنا ساكن في المعادي.', 'أنا عايش في مدينة نصر.']);
+        expect(served.reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(MAX_MEMORY_CONTEXT_CHARACTERS);
+      });
     });
 
     it('adds no standing to a settled fact and never serves a legacy Interaction Preference', () => {

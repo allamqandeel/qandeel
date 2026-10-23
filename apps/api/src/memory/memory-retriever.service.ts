@@ -8,7 +8,7 @@ import { lexicalMemoryTokens, MAX_RETRIEVAL_QUERY_TERMS, memoryRetrievalTerms } 
 export const MEMORY_CANDIDATE_LIMIT = 32;
 export const MAX_SELECTED_MEMORIES = 4;
 export const MAX_MEMORY_CONTEXT_CHARACTERS = 2400;
-/** S8A-03 CP2: the most indexed Memories one semantic read asks for (0171 caps it at 12, plus conflict partners). */
+/** S8A-03 CP2: the most indexed Memories one semantic read asks for (0171 caps it at 12, plus the other UNSETTLED Memories of a matched slot). */
 export const SEMANTIC_CANDIDATE_LIMIT = 12;
 
 const RECALL_CUES = [
@@ -23,7 +23,7 @@ const PERSONAL_SIGNALS = [
 // what the Memory is about. It never selects a Memory on its own while the query's other words select one.
 const NON_DISTINCTIVE_STEMS = new Set(['بحب']);
 
-interface Candidate { memory: MemoryRecord; hits: number; slot: string | null; conflicting: boolean }
+interface Candidate { memory: MemoryRecord; hits: number; slot: string | null; unsettled: boolean }
 interface RankedMemory extends Candidate { relevance: number; score: number }
 
 @Injectable()
@@ -67,11 +67,11 @@ export function selectMemories(
   allCandidates: ReadonlyArray<MemoryRecord>,
   semantic: ReadonlyArray<SemanticMemoryCandidate> = [],
 ): ReadonlyArray<ModelRouterMemoryContext> {
-  // S8A-03 CP2: one candidate per Memory; an indexed row adds how many query terms it is indexed under and its conflict
+  // S8A-03 CP2: one candidate per Memory; an indexed row adds how many query terms it is indexed under and its same-slot
   // standing. With no indexed rows this is exactly the MEM-AR-01A selection.
   const byId = new Map<string, Candidate>();
-  for (const memory of allCandidates) byId.set(memory.id, { memory, hits: 0, slot: null, conflicting: false });
-  for (const row of semantic) byId.set(row.memory.id, { memory: row.memory, hits: row.hits, slot: row.slot, conflicting: row.conflicting });
+  for (const memory of allCandidates) byId.set(memory.id, { memory, hits: 0, slot: null, unsettled: false });
+  for (const row of semantic) byId.set(row.memory.id, { memory: row.memory, hits: row.hits, slot: row.slot, unsettled: row.unsettled });
   // IP-IMP-01 (WP4): a legacy INTERACTION_PREFERENCE Memory never steers a reply. The canonical Interaction Preferences
   // record is the ONE preference authority, so an old Memory can neither override it nor revive a preference the owner
   // reset. The Memory itself is untouched: still listed, exported, correctable and forgettable by its owner.
@@ -85,29 +85,32 @@ export function selectMemories(
   const selected: ModelRouterMemoryContext[] = [];
   const seen = new Set<string>();
   let characters = 0;
-  const serve = (candidate: Candidate): boolean => {
-    const { memory } = candidate;
-    const duplicateKey = normalize(memory.content).trim().replace(/\s+/gu, ' ');
-    if (seen.has(duplicateKey)) return false;
-    seen.add(duplicateKey);
-    if (characters + memory.content.length > MAX_MEMORY_CONTEXT_CHARACTERS) return false;
-    selected.push({
-      type: memory.type, content: memory.content, source: memory.source, about: aboutOf(memory),
-      ...(candidate.conflicting ? { standing: 'CONFLICTING' as const } : {}),
-    });
-    characters += memory.content.length;
-    return true;
-  };
+  const keyOf = (candidate: Candidate) => normalize(candidate.memory.content).trim().replace(/\s+/gu, ' ');
   for (const candidate of ranked) {
     if (selected.length >= MAX_SELECTED_MEMORIES) break;
-    if (!serve(candidate)) continue;
-    // S8A-03 CP2: a contested current fact is never served alone. Its partners in the same slot follow it, so the reply
-    // sees the conflict instead of one side of it (Founder CP2 condition 3: an unresolved conflict is not settled).
-    if (candidate.conflicting && candidate.slot !== null) {
-      for (const partner of candidates) {
-        if (partner !== candidate && partner.conflicting && partner.slot === candidate.slot) serve(partner);
-      }
+    if (seen.has(keyOf(candidate))) continue;
+    // S8A-03 CP2 (R2): an UNSETTLED current fact is never served alone. It and every other UNSETTLED Memory of its slot
+    // are ONE unit, served whole only when the whole unit fits the explicit bounds - MAX_SELECTED_MEMORIES and
+    // MAX_MEMORY_CONTEXT_CHARACTERS - and otherwise not at all, so the reply never sees one side as the settled answer
+    // and the bounds are never exceeded (Founder CP2 condition 3).
+    const unit = candidate.unsettled && candidate.slot !== null
+      ? [candidate, ...candidates.filter((other) => other !== candidate && other.unsettled && other.slot === candidate.slot)]
+      : [candidate];
+    const fresh = unit.filter((member, index) => !seen.has(keyOf(member)) && unit.findIndex((other) => keyOf(other) === keyOf(member)) === index);
+    const length = fresh.reduce((sum, member) => sum + member.memory.content.length, 0);
+    if (selected.length + fresh.length > MAX_SELECTED_MEMORIES || characters + length > MAX_MEMORY_CONTEXT_CHARACTERS) {
+      if (unit.length === 1) seen.add(keyOf(candidate));
+      continue;
     }
+    for (const member of fresh) {
+      const { memory } = member;
+      seen.add(keyOf(member));
+      selected.push({
+        type: memory.type, content: memory.content, source: memory.source, about: aboutOf(memory),
+        ...(member.unsettled ? { standing: 'UNSETTLED' as const } : {}),
+      });
+    }
+    characters += length;
   }
   return selected;
 }

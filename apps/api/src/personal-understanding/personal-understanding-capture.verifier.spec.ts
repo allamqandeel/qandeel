@@ -121,7 +121,7 @@ describe('S8A-03 CP2 Personal Understanding verifier - what is never a user fact
 });
 
 describe('S8A-03 CP2 Personal Understanding verifier - time', () => {
-  it('keeps a past fact only as PAST: history is never a current conflict', () => {
+  it('keeps a past fact only as PAST: history is never UNSETTLED with a current fact', () => {
     expect(rejected(fact('كنت ساكن في طنطا', { slot: 'RESIDENCE' }), 'كنت ساكن في طنطا')).toBe('TEMPORAL_MISMATCH');
     const past = kept(fact('كنت ساكن في طنطا', { slot: 'RESIDENCE', temporal: 'PAST' }), 'كنت ساكن في طنطا');
     expect([past.temporal, past.slot]).toEqual(['PAST', 'RESIDENCE']);
@@ -139,7 +139,7 @@ describe('S8A-03 CP2 Personal Understanding verifier - time', () => {
     expect(rejected(fact('أنا متضايق النهارده', { temporal: 'TEMPORARY', type: 'TEMPORARY_STATE' }), 'أنا متضايق النهارده')).toBe('TRANSIENT_EMOTION');
   });
 
-  it('keeps a plan without a conflict slot', () => {
+  it('keeps a plan without a slot', () => {
     const plan = kept(fact('هنقل إسكندرية السنة الجاية', { temporal: 'PLANNED', type: 'GOAL', slot: 'RESIDENCE' }), 'أنا هنقل إسكندرية السنة الجاية');
     expect([plan.temporal, plan.slot, plan.type]).toEqual(['PLANNED', null, 'GOAL']);
   });
@@ -191,7 +191,7 @@ describe('S8A-03 CP2 Personal Understanding verifier - backfill index', () => {
     ], memories);
     expect(rows.map((row) => [row.memoryId.slice(-1), row.slot, row.temporal])).toEqual([
       ['1', 'RESIDENCE', 'CURRENT'],
-      ['2', null, 'TEMPORARY'], // a TEMPORARY_STATE is always temporary and never a conflict slot
+      ['2', null, 'TEMPORARY'], // a TEMPORARY_STATE is always temporary and never takes a slot
       ['3', null, 'CURRENT'], // «كنت» without PAST: the slot is dropped rather than trusted
       ['4', null, 'CURRENT'], // no proposal: own words only
     ]);

@@ -303,13 +303,15 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
     merge of the one S8A-03 pull request and records the Founder's eight CP2 corrections.
   - No migration, paid call or live-environment change. `QAN-BL-AI-02` stays open until the migration is proven
     complete, and no backlog ownership has moved.
-- **CP2 delivered (local, not pushed; at the Founder's independent CP2 review gate; CP3 not started)** under the
+- **CP2 delivered (pushed as `369ba841`, no PR; the Founder's review corrections R1–R3 applied locally; at the final CP2
+  review; CP3 not started)** under the
   Founder's option B (DeepSeek Flash acquisition at write time, a semantic index at read time with no model call):
   - a separate background `UNDERSTANDING_CAPTURE_PROVIDER` effect (QIR-005 v2, four provider effects) proposes up to six
     facts per message plus search keys for at most four unindexed Memories; deterministic server verification keeps at
     most three, written at 0.80 by ONE atomic command; the deterministic Memory Write Evaluator is unchanged;
   - Memory retrieval gains a fail-soft semantic index path, beyond the 32 most recent Memories and with no recall cue
-    needed; eligibility is read at read time, and same-slot current facts are served together as `CONFLICTING`;
+    needed; eligibility is read at read time, and same-slot current facts are served together as `UNSETTLED` (never a
+    confirmed conflict), whole or not at all inside the context bounds (CP2 review R1 / R2);
   - migration `0171_s8a_03_personal_understanding_v1.sql`, **local only**, proven by `database/verify-migration-0171.mjs`
     on real PostgreSQL 17;
   - governed by the candidate [S8A-03 CP2 Personal Understanding Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md)

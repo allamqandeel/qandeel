@@ -33,14 +33,15 @@ export type MemorySubject = 'SELF' | 'OTHER';
 
 /**
  * S8A-03 CP2 (migration 0171): one row of the semantic read - an eligible Memory of the caller, how many of the query's
- * terms it is indexed under, its optional single-value slot, and whether it shares that slot with another CURRENT SELF
- * Memory (an unresolved conflict the reply must not settle).
+ * terms it is indexed under, its optional slot, and whether it shares that slot with another CURRENT SELF Memory. Such a
+ * Memory is UNSETTLED, never a confirmed conflict: the server cannot tell whether both still hold (two employers) or one
+ * replaced the other (a move), so neither is served as the settled answer (CP2 R1).
  */
 export interface SemanticMemoryCandidate {
   memory: MemoryRecord;
   hits: number;
   slot: string | null;
-  conflicting: boolean;
+  unsettled: boolean;
 }
 
 export interface MemoryRecord {
