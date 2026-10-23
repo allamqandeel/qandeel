@@ -5,3 +5,22 @@ export const REPOSITORY_ROOT = resolve(__dirname, '..', '..', '..', '..');
 export const EVALUATION_ARTIFACT_DIRECTORY = resolve(REPOSITORY_ROOT, 'artifacts', 'evals');
 /** ACE-01 (WP3): the Golden Conversations suite writes beside, never over, the Brain Bake-off artifacts (still git-ignored). */
 export const GOLDEN_CONVERSATION_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-conversations');
+/** S8A-02: the extended Golden suite and its DeepSeek-only runs, beside the others (still git-ignored). */
+export const GOLDEN_EXTENDED_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-conversations-extended');
+// S8A-02 Round 2: the targeted suite and the FAST / DEEP pairs (git-ignored, like every evaluation artifact).
+export const GOLDEN_ROUND2_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round2');
+export const GOLDEN_ROUND2_PATHS_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round2-paths');
+// S8A-02 Round 3: the focused Shared language comparison (git-ignored).
+export const GOLDEN_ROUND3_SHARED_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round3-shared');
+// S8A-02 Round 3 Part B: gender and declared brevity (git-ignored).
+export const GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-round3-personality');
+// S8A-02 Shared attribution: the D2 probe, Part T and Part L (git-ignored).
+export const SHARED_ATTRIBUTION_PROBE_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-probe');
+export const SHARED_ATTRIBUTION_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution');
+export const SHARED_ATTRIBUTION_LANGUAGE_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-language');
+export const SHARED_ATTRIBUTION_SOURCED_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'shared-attribution-sourced');
+// S8A-02 CP3: the Personal qualification run, its DEEP-budget diagnostic and its review packets (git-ignored).
+export const GOLDEN_CP3_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-personal');
+export const GOLDEN_CP3_DIAGNOSTIC_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-deep-2800');
+// S8A-02 CP3 Final Integrated Correction: the acceptance run and its review packets (git-ignored).
+export const GOLDEN_CP3_CORRECTION_ARTIFACT_DIRECTORY = resolve(EVALUATION_ARTIFACT_DIRECTORY, 'golden-cp3-correction');

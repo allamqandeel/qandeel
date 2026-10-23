@@ -24,6 +24,8 @@ const M_HIDDEN = '40000000-0000-4000-8000-000000000002';
 const M_NOW = '40000000-0000-4000-8000-000000000003';
 const REPLY = '50000000-0000-4000-8000-000000000001';
 const LEASE = '60000000-0000-4000-8000-000000000001';
+/** Who wrote each fixture material, as the frozen 0089 resolver holds it. */
+const AUTHORS: Record<string, string | null> = { [M_OLD]: BASSEM, [M_HIDDEN]: AMAL, [M_NOW]: AMAL };
 const OUTPUT = 'أهلًا بكما. ما الذي يشغلكما اليوم؟';
 
 const members = (episodeSuffix = '1') => [{ userId: AMAL, membershipEpisodeId: `60000000-0000-4000-8000-00000000000${episodeSuffix}` }, { userId: BASSEM, membershipEpisodeId: '60000000-0000-4000-8000-000000000009' }];
@@ -84,7 +86,8 @@ function harness(options: {
       }
       if (name === 'end_shared_qandeel_reply_work_v1') return true;
       if (name === 'resolve_shared_world_material_v1') {
-        return (visibility[body.p_user_id as string] ?? []).map((material_id) => ({ world_id: body.p_world_id, material_id }));
+        // S8A-02 CP1: the frozen resolver returns each material's author; the double returns the one each fixture has.
+        return (visibility[body.p_user_id as string] ?? []).map((material_id) => ({ world_id: body.p_world_id, material_id, author_user_id: AUTHORS[material_id] }));
       }
       return [options.commitRow ? options.commitRow(body) : { outcome: 'MATERIAL_COMMITTED', material_id: REPLY, established_at: '2026-10-05T10:02:01Z' }];
     },
@@ -143,8 +146,9 @@ describe('S4-02 Shared QANDEEL reply over the frozen chain', () => {
     await h.service.reply(request());
     expect(h.generated).toHaveLength(1);
     expect(h.generated[0].conversation).toEqual([
-      { producer: 'HUMAN', authorName: 'Bassem', text: 'Hello both' },
-      { producer: 'HUMAN', authorName: 'Amal', text: 'كيف حالكما؟' },
+      // S8A-02 CP1 (2026-10-22): each message carries request-local tokens of itself and of its trusted author, never an id.
+      { producer: 'HUMAN', authorName: 'Bassem', text: 'Hello both', messageRef: 'M1', speakerRef: 'S1' },
+      { producer: 'HUMAN', authorName: 'Amal', text: 'كيف حالكما؟', messageRef: 'M2', speakerRef: 'S2' },
     ]);
     expect(JSON.stringify(h.generated[0].conversation)).not.toContain('granted to Amal alone');
     expect(JSON.stringify(h.generated[0].conversation)).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/u);
@@ -154,7 +158,7 @@ describe('S4-02 Shared QANDEEL reply over the frozen chain', () => {
   it('a deleted message is absent from the resolver, so it never reaches the model', async () => {
     const h = harness({ visibility: { [AMAL]: [M_NOW], [BASSEM]: [M_NOW] } });
     await h.service.reply(request());
-    expect(h.generated[0].conversation).toEqual([{ producer: 'HUMAN', authorName: 'Amal', text: 'كيف حالكما؟' }]);
+    expect(h.generated[0].conversation).toEqual([{ producer: 'HUMAN', authorName: 'Amal', text: 'كيف حالكما؟', messageRef: 'M1', speakerRef: 'S1' }]);
   });
 
   it('a closed World generates nothing and commits nothing', async () => {

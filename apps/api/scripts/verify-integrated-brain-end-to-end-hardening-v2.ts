@@ -944,11 +944,12 @@ async function main(): Promise<void> {
     // B - only the frozen processing path / projection may differ.
     assert.equal(deepRequest.path, 'DEEP', 'B anti-vacuity: the DEEP fixture really routed DEEP through the real orchestrator');
     assert.equal(deepRequest.complexity, 'HIGH');
-    // S8A-01 (Product Owner, 2026-10-21): the DEEP budget is 20 s by a controlled change; FAST is unchanged.
-    assert.equal(deepRequest.latencyBudgetMs, 20000, 'B: the DEEP latency budget is the S8A-01 controlled value');
+    // S8A-01 (Product Owner, 2026-10-21) raised the Personal DEEP budget to 20 s; the S8A-02 CP3 correction (Product Owner,
+    // 2026-10-22; conversation-orchestrator.service.ts) set Personal DEEP 25 s and FAST 10 s.
+    assert.equal(deepRequest.latencyBudgetMs, 25000, 'B: the Personal DEEP latency budget (S8A-02 CP3: 25 s)');
     assert.equal(turn2Call.request.path, 'FAST', 'B anti-vacuity: the FAST representative really routed FAST');
     assert.equal(turn2Call.request.complexity, 'LOW');
-    assert.equal(turn2Call.request.latencyBudgetMs, 3000, 'B: the frozen FAST latency budget is unchanged');
+    assert.equal(turn2Call.request.latencyBudgetMs, 10000, 'B: the Personal FAST latency budget (S8A-02 CP3: 10 s)');
     for (const request of [turn2Call.request, deepRequest]) {
       assert.equal(request.task, 'CONVERSATIONAL_RESPONSE');
       assert.equal(request.costBudget, 'LOW');

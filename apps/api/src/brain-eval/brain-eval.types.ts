@@ -1,5 +1,7 @@
 import type { InteractionPreferences } from '../interaction-preferences/interaction-preferences.types';
 import type { ModelRouterContextMessage, ProcessingPath } from '../model-router/model-router.types';
+import type { PublicQandeelContext } from '../public-world/public-qandeel-model-input';
+import type { SharedConversationTurn } from '../shared-world/shared-conversation-model-input';
 
 export type EvaluationProvider = 'ANTHROPIC' | 'OPENAI';
 
@@ -39,7 +41,22 @@ export interface BrainEvaluationCase {
   interactionPreferences?: InteractionPreferences;
   /** Golden Conversations only: the production Safety gate must decide GUIDED for this case; its guidance is used. */
   safety?: 'GUIDED';
+  /**
+   * S8A-02 — a Shared World or Public World QANDEEL reply instead of the Personal conversation. The request is built by
+   * that World's production model-input assembler from this synthetic input, so its guidance is the world-neutral
+   * personality, its locale is `und`, and no Personal preference can reach it. `context` must equal the assembled context.
+   */
+  world?: EvaluationWorld;
+  /**
+   * S8A-02 Round 2 — the DeepSeek-only path runs this case fewer times than the suite repeats (at least 1): a counterpart
+   * check that fits the approved attempt cap. Every other runner ignores it.
+   */
+  maxRepeats?: number;
 }
+
+export type EvaluationWorld =
+  | { readonly kind: 'SHARED'; readonly conversation: ReadonlyArray<SharedConversationTurn> }
+  | { readonly kind: 'PUBLIC'; readonly discussion: PublicQandeelContext };
 
 export interface CandidateResult {
   caseId: string;

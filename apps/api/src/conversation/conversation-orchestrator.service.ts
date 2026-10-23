@@ -551,8 +551,15 @@ export class ConversationOrchestratorService {
         ...(questionForeground?.state === 'SELECTED' ? { questionContext: questionForeground.questionContext } : {}),
         locale, modality: 'TEXT',
         // S8A-01 (Product Owner, 2026-10-21): DEEP 20 s, a controlled change measured at CP4 (a full DEEP completion with
-        // thinking needs about 15 s); FAST unchanged. Each provider still caps the request with its own ceiling.
-        latencyBudgetMs: selection.path === 'DEEP' ? 20000 : 3000,
+        // thinking needs about 15 s). S8A-02 CP3 correction (Product Owner, 2026-10-22): FAST 10 s, measured on the 111
+        // uncensored CP3 Round 8 FAST replies (provider time = 1.33 s + 7.2 ms per token; 3 s cut every reply over ~230
+        // tokens, 27 / 111 complete useful replies); 10 s covers a FAST reply up to its own 1024-token ceiling (~8.7 s, ~9.4 s
+        // at +2 SD). A reply is never slower for it: only a reply that would have been discarded now arrives. Each provider
+        // still caps the request with its own ceiling. S8A-02 CP3 Final Correction Approval (Product Owner, 2026-10-22):
+        // Personal DEEP 25 s (was 20 s), with the DeepSeek router ceiling raised to match; DEEP max_tokens 2800 needs ~19.3 s,
+        // so 25 s leaves the margin a slow provider response needs. Nothing above blocks it: foreground deadline 90 s (min 30 s),
+        // GENERATING recovery 120 s, mobile window 120 s. The Shared / Public budgets are their own and unchanged.
+        latencyBudgetMs: selection.path === 'DEEP' ? 25000 : 10000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));

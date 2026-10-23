@@ -845,14 +845,15 @@ async function main(): Promise<void> {
     const firstResult = await correlation.runRequest(() => orchestrator.orchestrate(ACCESS_TOKEN, userId, firstTurn));
     timings.foreground_turn_1_ms = performance.now() - firstStart;
 
-    // Conversation/routing: FAST route, LOW complexity, unchanged budgets,
-    // Safety ALLOW, exactly one conversational ModelRouter call.
+    // Conversation/routing: FAST route, LOW complexity, the Personal FAST budget (10 s since the S8A-02 CP3
+    // correction, Product Owner 2026-10-22; conversation-orchestrator.service.ts), Safety ALLOW, exactly one
+    // conversational ModelRouter call.
     assert.equal(conversationalRouter.callCount, 1, 'exactly one conversational ModelRouter call on Turn #1');
     const firstCall = conversationalRouter.calls[0];
     assert.equal(firstCall.request.task, 'CONVERSATIONAL_RESPONSE');
     assert.equal(firstCall.request.path, 'FAST', 'route is FAST');
     assert.equal(firstCall.request.complexity, 'LOW', 'complexity is LOW');
-    assert.equal(firstCall.request.latencyBudgetMs, 3000, 'existing FAST latency budget unchanged');
+    assert.equal(firstCall.request.latencyBudgetMs, 10000, 'the Personal FAST latency budget (S8A-02 CP3: 10 s)');
     assert.equal(firstCall.request.costBudget, 'LOW', 'existing cost budget unchanged');
     assert.equal(firstCall.request.safetyLevel, 'STANDARD', 'existing safety level unchanged');
     // ACE-01 (WP2): the locale is decided by resolveConversationLocale (explicit current request > durable replyLanguage >

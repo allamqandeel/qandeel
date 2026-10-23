@@ -22,11 +22,29 @@ export interface SharedConversationMaterial {
 }
 
 /**
+ * One message of the conversation the generator receives.
+ *
+ * S8A-02 CP1 (Trusted Speaker & Message Provenance, 2026-10-22): who wrote a message is the author identity the frozen 0089
+ * resolver returns for that exact `material_id`, never the Name and never anything in the words. The composition turns it
+ * into a token that lives for this one request only, so two people with one Name, or with none, stay two people, and no
+ * account or material identity crosses this boundary.
+ */
+export interface SharedReplyGenerationTurn {
+  readonly producer: 'HUMAN' | 'QANDEEL';
+  readonly authorName: string | null;
+  readonly text: string;
+  /** This message in this request: `M1`, `M2`, … in conversation order. Never a material identity. */
+  readonly messageRef: string;
+  /** The human author in this request: `S1`, `S2`, … by first appearance; null for QANDEEL. Never an account identity. */
+  readonly speakerRef: string | null;
+}
+
+/**
  * What the generator receives: the exact-World conversation every current recipient may see, oldest first, ending with
  * the requesting human's committed message. No identifier, no audience, no authority and no private context.
  */
 export interface SharedReplyGenerationInput {
-  readonly conversation: ReadonlyArray<{ readonly producer: 'HUMAN' | 'QANDEEL'; readonly authorName: string | null; readonly text: string }>;
+  readonly conversation: ReadonlyArray<SharedReplyGenerationTurn>;
   /** The account the provider spend is attributed to (AI-COST-01): the human whose request started the generation. */
   readonly requesterUserId: string;
 }

@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-21):** S8A-01 — DeepSeek Production Integration & First Real Conversation; CLOSED at its final review & merge gate: CP1–CP4 delivered, CP4 passed, not merged (§6.29).
+> **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-21):** S8A-01 — DeepSeek Production Integration & First Real Conversation; CLOSED at its final review & merge gate: CP1–CP4 delivered, CP4 passed, not merged (§6.29).
 
 > **LATEST EXECUTION DIRECTION (2026-10-20):** Stage 7 / S7-05 merged through PR #351 (`daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd`) and is engineering-complete, not deployed or launch-ready. Stage 8A is NEXT, at approved **planning direction** only: DeepSeek Flash is the sole model to qualify for QANDEEL, with friendly/familiar/spontaneous personality from the outset, appropriate seriousness, dialect fidelity, real Personal knowledge and HIM, Shared/Public semantics and Matching, measured cost per successful outcome. No implementation task or model has passed acceptance. Stage 8B owns contextual Arabic vocalization **before TTS** under existing `QAN-BL-VOICE-01`; Stage 9 keeps Credits / Economy / Launch. See [Stage 8A WP0 direction](docs/e2e/QANDEEL_S8A_WP0_DEEPSEEK_PRODUCT_DIRECTION_v1.md) and [Project Map](QANDEEL_PROJECT_MAP.md) §5. Older execution notes are historical.
 
@@ -805,4 +807,69 @@ stay as written.
   are filed under `QAN-BL-ACE-02` for the S8A-02 work.
 - **Not claimed:** DeepSeek qualification beyond CP4's first real conversation (the Personal reply, synthetic data), "DeepSeek only", any real-user use, any gate opened.
 - **Next:** the Product Owner's final review and merge decision on the S8A-01 pull request. No merge, S8A-02 or
-  deployment without the Product Owner's explicit approval.
+  deployment without the Product Owner's explicit approval. *(Merged through PR #353 as `d566a7e7`, 2026-10-21.)*
+
+### S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (2026-10-21 … 2026-10-23; current task, closed at its final review & merge gate; one pull request, not merged)
+
+- **Evaluated on DeepSeek Flash, synthetic data, the accounted AI-COST-01 path:** Round 1 (60 calls) and Round 2 (200
+  calls, USD 0.209 at the peak rate). The branch renders core v3 ([amendment record](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md)).
+- **Product Owner's Round 2 review:** core v3 is **not adopted as written** and v2 is not restored.
+- **Round 3 (2026-10-21):** core v3.1 (approved verbatim, rendered on the branch) against core v3. 78 calls, USD 0.044 at
+  the peak rate. Neither version is clearly better: participant language is not solved, and gender and ALWAYS_BRIEF on DEEP
+  are not improved. The diagnosis points to how Shared speakers are represented in the model input, not to wording; it
+  awaits the Product Owner. A Shared information-attribution test is an acceptance condition of S8A-02.
+- **Shared attribution (Product Owner decision, 2026-10-21):** core v3.1 is kept as an experiment only. The separated
+  representation (a-1: one model message per person's message, visible Names, no identifiers) exists as a candidate that
+  production does not send; production's merged input is proven byte-identical. A two-call DeepSeek probe precedes any
+  attribution test; mixing between people blocks S8A-02's closure. Probe done (2 calls, USD 0.0012): DeepSeek accepts
+  consecutive `user` messages on FAST and DEEP, both replies completed. Part T (attribution only, 60 calls, USD 0.12) is
+  done (60 / 60, USD 0.026): information mixing proven in both representations (separated 4 replies, merged 2), the
+  separated candidate worse on a quoted speaker line; neither representation is final, Part L not started.
+  `AI-06` to `AI-09` block Shared readiness (`AI-09` admitted, 87 items). A server-sourced candidate is built for evaluation
+  only, with free proofs. Its focused check is done (30 / 30, USD 0.0069): a quotation is no longer read as the quoted
+  person speaking (0 / 3, production 2 / 3), and direct statements are kept (3 / 3). A speaker line written inside another
+  person's message still mixes (2 / 3), so `AI-09` stays a HIGH blocker and the representation stays a candidate. A
+  fail-closed attribution guard was designed and declined. A final free review on independent cases shows the server
+  can verify only verbatim quotations, not freely worded attribution, so `AI-09` cannot close on a guarantee. The
+  Product Owner decides how it closes: evidence-based acceptance, a narrower Shared behaviour, or deferral.
+- **S8A-02 CP1 — Trusted Speaker & Message Provenance (2026-10-22; local; complete, awaiting the Product Owner's
+  independent review):** the
+  Shared reply now keeps the author the frozen `0089` resolver holds for each `material_id`. Each person's message is its
+  own model message under their label; different people who share a Name, or have none, get " (1)", " (2)"; only
+  request-local tokens leave the composition. No migration, RPC, Router, adapter or frame change. Proven at the Model
+  Router boundary and in the DeepSeek body, zero calls. Message provenance only: `AI-08` / `AI-09` stay open. The
+  separated messages and the collision-only " (n)" label are authorized by the narrow controlled amendment in the S8A-02
+  record §5.3 (Product Owner, 2026-10-22), which replaces "Names only" in that scope and keeps the Shared frame's bytes.
+- Register: `QAN-BL-AI-05` admitted (Stage 8A; FAST completed 2 / 12 short complex decisions against DEEP 12 / 12);
+  `QAN-BL-AI-06` / `AI-07` / `AI-08` admitted (Stage 8A, HIGH: same Name, no Name, and the person an earlier QANDEEL reply
+  answered, are all invisible to the model); `AI-09` admitted (HIGH: a line inside a message posing as another speaker);
+  87 items. No routing, budget or real-user change. *(The bullets above are as written at each checkpoint.)*
+- **S8A-02 CP3 — Personal Brain, Guard Impact & Personality Qualification (2026-10-22; Product Owner Final Correction
+  Approval):** all verbatim in the [S8A-02 record](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §5.4.
+  - Personal core v3.2: the gender clause and the context sentence.
+  - The IP-IMP-01 preference block leads the Personal guidance (header v2, ten lines v2); precedence is unchanged.
+  - Personal FAST 10 s / DEEP 25 s, with the DeepSeek ceiling at 25 s and DEEP `max_tokens` 2800.
+  - The Safety gate's Arabic whole-word correction.
+
+  Round 9 delivered 132 / 132 (USD 0.0665 at the peak rate) and was provisionally NOT ACCEPTED (7 quality fails, 0
+  critical). The Founder accepted the personality and conversational quality as a product decision and deferred the
+  preference findings (Future Improvement 001). Round 9 is not claimed as a pass.
+- **S8A-02 CP2 — Shared Attribution Layer (2026-10-22 / 2026-10-23).**
+  - Round 10: 468 calls, USD 0.065. Provisional blind AI verdicts on gated cases gave critical attribution errors of
+    B 24.3%, S 15.7% and S+R 10.2%. S vs B and S+R vs S both failed their preregistered criteria. Human review was not
+    done.
+  - The Founder's option (b) (2026-10-23):
+    - tier 0 sends B; tiers 1 / 2 send S+R; a failed reading falls back to S;
+    - a 2.5 s reading inside a 6 s FAST total; DEEP keeps 10 s in total.
+  - It is governed by the [CP2 Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_CP2_SHARED_ATTRIBUTION_LAYER_CONTROLLED_AMENDMENT_v1.0.md) (CA-S1 / CA-S2 / CA-S3), registered in the Canonical Authority
+    Index, and binds on the merge.
+  - The production distribution was not measured as deployed.
+- **S8A-02 closure (Founder, 2026-10-23): CLOSED / AT THE S8A-02 FINAL REVIEW & MERGE GATE — CP1–CP3 DELIVERED — BG-08 / BG-09 RECONCILED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS**. One pull request, from `main` at `d566a7e7`.
+  - Tombstoned: `QAN-BL-AI-06` / `AI-07` (completed by CP1) and `QAN-BL-AI-09` (product acceptance for v1). The limits
+    are Future Improvement 002: non-blocking, unscheduled and not a release blocker.
+  - Still open: `AI-04`, `AI-05`, `AI-08`, `ACE-02` and `IP-02`.
+  - 87 items; 42 / 4 / 9 / 32 by status.
+  - The final engineering review found three defects in the branch's own changes (the Safety gate's Arabic binding, the
+    notes' label escaping and the notes' echo check); all three were corrected with tests, and no paid call was made.
+  - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
+  - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).

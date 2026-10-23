@@ -84,7 +84,9 @@ test('3 — QANDEEL\'s reply is the server\'s act over the frozen chain: one com
 });
 
 test('4 — no Personal intelligence enters a Shared model call; the provider is reached only through the Model Router, attributed', () => {
-  const files = [`${API}/shared-conversation-model-input.ts`, `${API}/shared-conversation-reply.generator.ts`, `${API}/shared-world-conversation.service.ts`, `${CW}/shared-qandeel-reply.service.ts`];
+  // S8A-02 CP2 (CA-S3): the Shared attribution layer and its two modules are part of the Shared model input, under the same rules.
+  const files = [`${API}/shared-conversation-model-input.ts`, `${API}/shared-conversation-reply.generator.ts`, `${API}/shared-world-conversation.service.ts`, `${CW}/shared-qandeel-reply.service.ts`,
+    `${API}/shared-attribution-layer.ts`, `${API}/shared-attribution-notes.ts`, `${API}/shared-attribution-reading.ts`];
   for (const file of files) {
     const text = code(file);
     assert.doesNotMatch(text, /from '\.\.\/(?:\.\.\/)?(?:memory|human-model|hypothesis|recommendation|question|background-intelligence|post-response-intelligence)\//u, `${file} reads no Personal intelligence`);
@@ -94,7 +96,12 @@ test('4 — no Personal intelligence enters a Shared model call; the provider is
   }
   const generator = code(`${API}/shared-conversation-reply.generator.ts`);
   assert.match(generator, /@Inject\(MODEL_ROUTER\)/u);
-  assert.match(generator, /runWithAiUsageAttribution\(\{ userId: input\.requesterUserId \}, \(\) => this\.router\.generate\(request\)\)/u, 'every provider call is attributed (AI-COST-01)');
+  // S8A-02 CP2 (CA-S3): the attribution reading and the reply are both made inside the ONE requester-attributed scope.
+  assert.match(generator, /runWithAiUsageAttribution\(\{ userId: input\.requesterUserId \}, async \(\) => \{\s*const reply = \(await withSharedAttribution\(input\.conversation, request, this\.reader\)\)\.request;\s*return this\.router\.generate\(reply\);\s*\}\)/u, 'every provider call is attributed (AI-COST-01)');
+  assert.equal(generator.split('withSharedAttribution(').length - 1, 1, 'the attribution layer is reached once, only inside the attributed scope');
+  assert.equal(generator.split('this.router.generate(').length - 1, 1, 'one reply call');
+  const reading = code(`${API}/shared-attribution-reading.ts`);
+  assert.equal(reading.split('this.router.generate(').length - 1, 1, 'the reading reaches the provider only through the Model Router, once');
   assert.match(generator, /this\.safety\.evaluate\(/u, 'the canonical Safety Response Gate runs first');
   const assembler = code(`${API}/shared-conversation-model-input.ts`);
   assert.match(assembler, /TEXT_V1_BEHAVIORAL_GUIDANCE/u, 'the frozen Behavioral Response Policy, unchanged');

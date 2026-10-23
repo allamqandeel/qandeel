@@ -1,6 +1,9 @@
+// S8A-02: re-anchored to Text v4 / core v2 (Personal) and the world-neutral core v2, rendered since the approved core v2 (Product Owner D1 / D2, 2026-10-21). The D4 lines are unchanged.
+// S8A-02 Round 2 (2026-10-21): re-anchored again to core v3 and the world-neutral core v3 (the Round 2 Copy Gate). The D4 lines are unchanged.
+// S8A-02 Round 3 (2026-10-21): re-anchored again to core v3.1 and the world-neutral core v3.1.
 import {
-  ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL, BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V1,
-  QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL, TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V2_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
+  ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL, BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V3_1 as QANDEEL_PERSONALITY_CORE_V3,
+  QANDEEL_PERSONALITY_CORE_V3_1_WORLD_NEUTRAL as QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL, QANDEEL_PERSONALITY_CORE_V3_2, TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V5_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
 } from './behavioral-response-policy.service';
 import { INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE } from '../interaction-preferences/interaction-preference-guidance';
 import { DEFAULT_INTERACTION_PREFERENCES, type InteractionPreferences } from '../interaction-preferences/interaction-preferences.types';
@@ -17,10 +20,12 @@ const policy = new BehavioralResponsePolicyService();
 const WORLD_PREFIXES = [`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`, `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}`];
 
 describe('LANG-01 D4 — the generated-language default in the model-facing guidance', () => {
-  it('Personal: the D4 line follows Text v2 unchanged, once, and names no dialect as a default', () => {
+  it('Personal: the D4 line follows the core (Text v4 since S8A-02), once, and names no dialect as a default', () => {
     const guidance = policy.buildTextGuidance();
-    expect(guidance).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
-    expect(guidance.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`)).toBe(true);
+    // S8A-02 CP3 correction (re-anchored): Text v5, with the Personal core v3.2 in place of v3.1.
+    expect(guidance).toBe(TEXT_V5_BEHAVIORAL_GUIDANCE);
+    expect(guidance.endsWith(`\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`)).toBe(true);
+    expect(guidance.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_2}`)).toBe(true);
     expect(count(guidance, ARABIC_DEFAULT_LANGUAGE_LINE)).toBe(1);
     expect(ARABIC_DEFAULT_LANGUAGE_LINE).toContain('neutral simplified Modern Standard Arabic');
     expect(ARABIC_DEFAULT_LANGUAGE_LINE).toContain('Never default to Egyptian Arabic or any other regional dialect.');
@@ -28,26 +33,29 @@ describe('LANG-01 D4 — the generated-language default in the model-facing guid
   });
 
   it.each(['EGYPTIAN_ARABIC', 'GULF_ARABIC', 'MODERN_STANDARD_ARABIC', 'ENGLISH'] as const)(
-    'Personal: a standing %s preference still renders after the default, under the header that gives it precedence', (replyLanguage) => {
+    'Personal: a standing %s preference leads the guidance, before the default, under the header that gives it precedence', (replyLanguage) => {
+      // S8A-02 CP3 correction (re-anchored): the block LEADS the guidance, so it states its precedence over the general language
+      // guidance and this default before they speak; the default itself still defers to a standing reply-language preference.
       const guidance = policy.buildTextGuidance({ preferences: prefs({ replyLanguage }), safetyGuided: false });
       const defaultAt = guidance.indexOf(ARABIC_DEFAULT_LANGUAGE_LINE);
       const headerAt = guidance.indexOf(INTERACTION_PREFERENCE_GUIDANCE_HEADER);
-      expect(defaultAt).toBeGreaterThan(0);
-      expect(headerAt).toBeGreaterThan(defaultAt);
+      expect(headerAt).toBe(0);
+      expect(defaultAt).toBeGreaterThan(headerAt);
       expect(INTERACTION_PREFERENCE_GUIDANCE_HEADER).toContain('They take precedence over anything inferred from the conversation');
-      expect(guidance).toMatch(/- Reply language: reply in /u);
+      expect(ARABIC_DEFAULT_LANGUAGE_LINE).toContain('a standing reply-language preference');
+      expect(guidance).toMatch(/- Reply language: write the whole reply in /u);
     });
 
   it('Personal on a GUIDED turn: the default stays before the Safety humour suspension, which stays last', () => {
     const guidance = policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: true });
-    expect(guidance).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
+    expect(guidance).toBe(`${TEXT_V5_BEHAVIORAL_GUIDANCE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
   });
 
   it('Shared and Public: the world-neutral line follows the world-neutral core and reads only the message being answered', () => {
     for (const prefix of WORLD_PREFIXES) {
       for (const guided of [false, true]) {
         const guidance = withWorldNeutralPersonality(prefix, guided);
-        expect(guidance.startsWith(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`)).toBe(true);
+        expect(guidance.startsWith(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V3_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`)).toBe(true);
         expect(count(guidance, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL)).toBe(1);
         // No participant's personal authority reaches the others: no Personal line, no preference header.
         expect(guidance).not.toContain(ARABIC_DEFAULT_LANGUAGE_LINE);

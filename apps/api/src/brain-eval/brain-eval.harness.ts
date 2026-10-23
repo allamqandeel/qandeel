@@ -7,6 +7,7 @@ import { resolveAnthropicModel, resolveOpenAIModel } from '../model-router/model
 import type { ModelRouter, ModelRouterRequest, ProcessingPath } from '../model-router/model-router.types';
 import { estimateCostUsd } from './brain-eval.pricing';
 import { EVALUATION_ARTIFACT_DIRECTORY } from './brain-eval.paths';
+import { worldCurrentMessage, worldEvaluationRequest } from './brain-eval.worlds';
 import { RUBRIC, type BrainEvaluationCase, type CandidateResult, type EvaluationProvider } from './brain-eval.types';
 
 export const PROVIDERS: ReadonlyArray<EvaluationProvider> = ['ANTHROPIC', 'OPENAI'];
@@ -18,13 +19,18 @@ export function expectedRequestCount(cases: ReadonlyArray<BrainEvaluationCase>):
   return cases.length * PROVIDERS.length;
 }
 
-export function candidateAProvider(caseId: string): EvaluationProvider {
+/** A case's stable blinding parity (FNV-1a of its id): which candidate is shown as A never depends on run order. */
+export function stableCaseParity(caseId: string): 0 | 1 {
   let hash = 2_166_136_261;
   for (const character of caseId) {
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16_777_619);
   }
-  return (hash >>> 0) % 2 === 0 ? 'ANTHROPIC' : 'OPENAI';
+  return (hash >>> 0) % 2 === 0 ? 0 : 1;
+}
+
+export function candidateAProvider(caseId: string): EvaluationProvider {
+  return stableCaseParity(caseId) === 0 ? 'ANTHROPIC' : 'OPENAI';
 }
 
 export function providerExecutionOrder(caseId: string): readonly [EvaluationProvider, EvaluationProvider] {
@@ -38,7 +44,8 @@ export function providerExecutionOrder(caseId: string): readonly [EvaluationProv
  */
 export function evaluationSafetyGuidance(testCase: BrainEvaluationCase): string | undefined {
   if (testCase.safety !== 'GUIDED') return undefined;
-  const decision = new SafetyResponseGateService().evaluate(testCase.context.at(-1)?.content ?? '', testCase.context);
+  const current = testCase.world === undefined ? testCase.context.at(-1)?.content ?? '' : worldCurrentMessage(testCase);
+  const decision = new SafetyResponseGateService().evaluate(current, testCase.context);
   if (decision.disposition !== 'GUIDED' || !decision.safetyGuidance) throw new Error(`${testCase.id} is not GUIDED by the production Safety gate.`);
   return decision.safetyGuidance;
 }
@@ -49,6 +56,8 @@ export function evaluationSafetyGuidance(testCase: BrainEvaluationCase): string 
  * GUIDED humour suspension included.
  */
 export function evaluationGuidance(testCase: BrainEvaluationCase, policy = new BehavioralResponsePolicyService()): string {
+  // S8A-02: a Shared / Public case carries its World's own guidance (the world-neutral personality), never the Personal one.
+  if (testCase.world !== undefined) return worldEvaluationRequest(testCase, evaluationSafetyGuidance(testCase)).behavioralGuidance;
   const safetyGuided = testCase.safety === 'GUIDED';
   if (testCase.interactionPreferences === undefined && !safetyGuided) return policy.buildTextGuidance();
   return policy.buildTextGuidance({ preferences: testCase.interactionPreferences ?? DEFAULT_INTERACTION_PREFERENCES, safetyGuided });

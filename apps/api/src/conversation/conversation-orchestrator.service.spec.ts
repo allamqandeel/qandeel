@@ -1835,7 +1835,7 @@ describe('ConversationOrchestratorService', () => {
       expect(recommendationGrounding.ground).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledTimes(1);
       expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({
-        path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 20000, recommendationContext: groundedContext,
+        path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 25000, recommendationContext: groundedContext,
       }));
     });
   });
@@ -2966,7 +2966,7 @@ describe('ConversationOrchestratorService', () => {
       expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'DEEP', reason: 'RUNTIME_ROUTING_V2_DEEP_MULTI_PART' });
       // The selected path keeps driving every existing downstream projection.
       expect(himConsumptionPolicy.project).toHaveBeenCalledWith('DEEP', expect.anything());
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 20000 }));
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 25000 }));
       expect(router.generate).toHaveBeenCalledTimes(1);
     });
 
@@ -2977,7 +2977,8 @@ describe('ConversationOrchestratorService', () => {
       repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
       await orchestrator.orchestrate('token', 'user', emojiTurn);
       expect(repository.claimTurn).toHaveBeenCalledWith('session', 'user', 'user-turn', { path: 'FAST', reason: 'RUNTIME_ROUTING_V2_FAST_DEFAULT' });
-      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', complexity: 'LOW', latencyBudgetMs: 3000 }));
+      // S8A-02 CP3 correction (Product Owner, 2026-10-22): the Personal FAST reply budget is 10 s.
+      expect(router.generate).toHaveBeenCalledWith(expect.objectContaining({ path: 'FAST', complexity: 'LOW', latencyBudgetMs: 10000 }));
     });
 
     it('never lets a lost claim create a competing route, provider call, or canonical decision metric', async () => {
@@ -3425,7 +3426,8 @@ describe('ConversationOrchestratorService', () => {
       expect(body.messages[0].role).toBe('system');
       expect(body.messages[0].content).toContain('server-owned policy');
       expect(body.messages.at(-1)).toEqual({ role: 'user', content: 'hello' });
-      expect(options).toMatchObject({ timeout: 3_000, maxRetries: 0 });
+      // S8A-02 CP3 correction (Product Owner, 2026-10-22): the Personal FAST budget is 10 s, so the timeout is min(10 s, the 10 s adapter ceiling).
+      expect(options).toMatchObject({ timeout: 10_000, maxRetries: 0 });
       expect(repository.finalizeTurn).toHaveBeenCalledTimes(1);
       expect(repository.finalizeTurn).toHaveBeenCalledWith(expect.objectContaining({ content: 'أهلاً، أنا هنا.', safetyDisposition: 'ALLOW' }));
       expect(JSON.stringify(repository.finalizeTurn.mock.calls)).not.toContain('PRIVATE REASONING TRACE');
@@ -3440,7 +3442,7 @@ describe('ConversationOrchestratorService', () => {
       // Identities and numbers only: no prompt, guidance, reply or reasoning crosses the ledger or the provider span.
       const ledger = JSON.stringify([begun, settled]);
       for (const privateText of ['hello', 'server-owned policy', 'أهلاً', 'PRIVATE REASONING TRACE']) expect(ledger).not.toContain(privateText);
-      expect(withProvider).toHaveBeenCalledWith('deepseek', 'deepseek-flash', 'FAST', 3_000, expect.any(Function), expect.any(Function));
+      expect(withProvider).toHaveBeenCalledWith('deepseek', 'deepseek-flash', 'FAST', 10_000, expect.any(Function), expect.any(Function));
     });
 
     it('a filtered completion is never saved or shown: the turn fails closed after one accounted attempt', async () => {
