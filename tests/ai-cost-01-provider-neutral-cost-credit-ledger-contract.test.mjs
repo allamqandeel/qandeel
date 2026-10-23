@@ -16,6 +16,8 @@ import { test } from 'node:test';
 // wrappers were removed. The ledger stays provider-neutral (0135 / 0170 vocabulary). The S8A-03 detectors below also hold
 // that no other provider is reachable, that every DeepSeek adapter passes the SYNTHETIC_ONLY qualification gate, and that
 // the structured adapters share one JSON Output request and one fail-closed completion envelope.
+// S8A-03 CP2 (2026-10-23): an eighth structured adapter, the background Personal Understanding capture, joins the census
+// under the same rules (family PERSONAL_UNDERSTANDING_CAPTURE, accounted, SYNTHETIC_ONLY, shared JSON envelope).
 
 const rootUrl = new URL('../', import.meta.url);
 const rootPath = decodeURIComponent(rootUrl.pathname).replace(/^\/([A-Za-z]:)/u, '$1');
@@ -65,6 +67,7 @@ const FILES = {
   intentAdapter: 'apps/api/src/hypothesis/deepseek-hypothesis-intent-extraction.provider.ts',
   associationAdapter: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts',
   candidateAdapter: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts',
+  understandingAdapter: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts',
   cuConfig: 'apps/api/src/conversation-unit/cu-segmentation-provider.config.ts',
   focusConfig: 'apps/api/src/conversational-focus/focus-resolution-provider.config.ts',
   threadConfig: 'apps/api/src/thread-establishment/thread-establishment-provider.config.ts',
@@ -72,6 +75,7 @@ const FILES = {
   intentConfig: 'apps/api/src/hypothesis/hypothesis-intent-extraction-provider.config.ts',
   associationConfig: 'apps/api/src/hypothesis/hypothesis-evidence-association-provider.config.ts',
   candidateConfig: 'apps/api/src/hypothesis/hypothesis-candidate-generator-provider.config.ts',
+  understandingConfig: 'apps/api/src/personal-understanding/personal-understanding-capture-provider.config.ts',
   routerTypes: 'apps/api/src/model-router/model-router.types.ts',
   routerModule: 'apps/api/src/model-router/model-router.module.ts',
   conversationModule: 'apps/api/src/conversation/conversation.module.ts',
@@ -83,6 +87,7 @@ const FILES = {
   intentModule: 'apps/api/src/hypothesis/hypothesis-intent-extraction-provider.module.ts',
   associationModule: 'apps/api/src/hypothesis/hypothesis-evidence-association-provider.module.ts',
   candidateModule: 'apps/api/src/hypothesis/hypothesis-candidate-generator-provider.module.ts',
+  understandingModule: 'apps/api/src/personal-understanding/personal-understanding-capture-provider.module.ts',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
 };
@@ -117,12 +122,14 @@ const CENSUS = [
   { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-intent-extraction.provider.ts', family: 'HYPOTHESIS_INTENT_EXTRACTION', frozen: 'eed991a4a3b2642fef982d5d7c3595e5789296c1' },
   { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts', family: 'HYPOTHESIS_EVIDENCE_ASSOCIATION', frozen: '00216737d23ebd67f7fb43f7b7359062886923d7' },
   { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts', family: 'HYPOTHESIS_CANDIDATE_GENERATION', frozen: 'efc828ad938e1765b5bf2deb7f0e32c4c423a011' },
+  // S8A-03 CP2 (2026-10-23): the background Personal Understanding capture, the QIR-005 v2 fourth provider effect.
+  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: '3bb59a829117541e48a2330db16f823940a104cb' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
-const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter'];
-const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig'];
+const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter'];
+const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig'];
 /** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
 const FOREIGN_PROVIDER = /OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_AI_API_KEY|GEMINI_API_KEY|@anthropic-ai\/|@google\/(?:genai|generative-ai)|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|\bnew Anthropic\(|OpenAIModelRouter|ClaudeModelRouter|accountedOpenAIResponsesClient|accountedAnthropicMessagesClient|accountedGeminiTransport/u;
 
@@ -153,7 +160,7 @@ function censusViolations(world) {
     if (/decorateClient\?:|decorateClient: \w+ = |decorateClient \?\?/u.test(ts(world[key]))) out.push(`${key} makes its accounting decorator optional`);
   }
   if (!ts(world.production).includes('return (client) => accountedDeepSeekChatCompletionsClient(client, featureFamily, productionAiProviderCallAccounting());')) out.push('the semantic cost-ledger decorator is not the DeepSeek accounting wrapper');
-  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION']]) {
+  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION'], ['understandingModule', 'PERSONAL_UNDERSTANDING_CAPTURE']]) {
     if (!new RegExp(`accountedDeepSeekChatCompletionsClient\\(\\s*createDeepSeekClient\\(config\\), '${family}', productionAiProviderCallAccounting\\(\\)\\)`, 'u').test(ts(world[key]))) out.push(`${family} is not accounted`);
     if (/\.fromEnvironment\(environment\)/u.test(ts(world[key]))) out.push(`${key} composes the unaccounted fromEnvironment adapter in production`);
   }
@@ -421,7 +428,7 @@ function attributionViolations(world) {
 // Output request shape and one fail-closed completion envelope for every structured adapter.
 // ---------------------------------------------------------------------------------------------------------------
 const AI_PATH_KEYS = ['clients', 'production', 'deepseekRouter', 'deepseekClient', 'routerConfig', 'routerModule', 'healthProbe', 'conversationModule',
-  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', ...ADAPTERS, ...CONFIGS];
+  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', 'understandingModule', ...ADAPTERS, ...CONFIGS];
 
 function deepSeekOnlyViolations(world) {
   const out = [];

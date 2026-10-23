@@ -80,4 +80,12 @@ describe('BackgroundIntelligenceDataApiService',()=>{
   expect(new URL(relianceUrl).pathname).toMatch(/\/rpc\/background_hypothesis_evidence_reliance_v1$/u);expect(JSON.parse(relianceInit.body)).toEqual({p_user_id:context.userId,p_hypothesis_ids:['h-1','h-2']});
   expect(new URL(housekeepingUrl).pathname).toMatch(/\/rpc\/background_reevaluate_withdrawn_hypothesis_evidence_v1$/u);expect(JSON.parse(housekeepingInit.body)).toEqual({p_user_id:context.userId,p_limit:32});
   await expect(service.readHypothesisEvidenceReliance({...context},['h-1'])).rejects.toThrow();});
+ it('S8A-03 CP2: reads the bounded unindexed backlog through the execution-scoped definer and fails closed on a malformed row',async()=>{const service=new BackgroundIntelligenceDataApiService(),context=await authorize(),m='20000000-0000-4000-8000-000000000001';
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>[{memory_id:m,type:'GOAL',content:'عايز أتعلم ألماني.'}]}as Response);
+  await expect(service.listUnindexedMemories(context,4)).resolves.toEqual([{memoryId:m,type:'GOAL',content:'عايز أتعلم ألماني.'}]);
+  const[url,init]=(fetch as jest.Mock).mock.calls[0];expect(url).toBe('https://database.invalid/rest/v1/rpc/background_unindexed_memories_v1');
+  expect(JSON.parse(init.body)).toEqual({p_source_turn_id:context.sourceTurnId,p_limit:4});
+  for(const rows of [[{memory_id:'x',type:'GOAL',content:'c'}],[{memory_id:m,type:'SECRET',content:'c'}],[{memory_id:m,type:'GOAL',content:1}],{},Array(5).fill({memory_id:m,type:'GOAL',content:'c'})]){
+   (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>rows}as Response);
+   await expect(service.listUnindexedMemories(context,4)).rejects.toThrow('BACKGROUND_UNDERSTANDING_BACKFILL_INTEGRITY');}});
 });

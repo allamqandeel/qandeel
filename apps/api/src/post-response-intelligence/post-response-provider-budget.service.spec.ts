@@ -1,5 +1,5 @@
 import type { TelemetryService } from '../observability/telemetry.service';
-import { POST_RESPONSE_PROVIDER_CALL_BUDGET_V1, POST_RESPONSE_PROVIDER_EFFECTS_V1 } from './post-response-provider-budget';
+import { POST_RESPONSE_PROVIDER_CALL_BUDGET_V2, POST_RESPONSE_PROVIDER_EFFECTS_V2 } from './post-response-provider-budget';
 import { PostResponseProviderBudgetService } from './post-response-provider-budget.service';
 import type { IntelligenceEffectState } from './post-response-intelligence.types';
 
@@ -18,8 +18,8 @@ describe('PostResponseProviderBudgetService', () => {
     expect(service.open([effect('MEMORY_WRITE', 'COMPLETED'), effect('CONFIDENCE_BATCH', 'COMPLETED')], 'FAST').spent).toBe(0);
     expect(service.open([effect('ASSOCIATION_PROVIDER', 'COMPLETED')], 'FAST').spent).toBe(1);
     expect(service.open([effect('ASSOCIATION_PROVIDER', 'COMPLETED'), effect('INTENT_PROVIDER', 'COMPLETED')], 'DEEP').spent).toBe(2);
-    const all = service.open(POST_RESPONSE_PROVIDER_EFFECTS_V1.map((key) => effect(key, 'COMPLETED')), 'DEEP');
-    expect(all.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+    const all = service.open(POST_RESPONSE_PROVIDER_EFFECTS_V2.map((key) => effect(key, 'COMPLETED')), 'DEEP');
+    expect(all.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
     expect(all.remaining).toBe(0);
   });
 

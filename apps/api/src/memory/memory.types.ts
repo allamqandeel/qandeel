@@ -31,6 +31,18 @@ export type MemorySource = (typeof MEMORY_SOURCES)[number];
 export type MemoryStatus = (typeof MEMORY_STATUSES)[number];
 export type MemorySubject = 'SELF' | 'OTHER';
 
+/**
+ * S8A-03 CP2 (migration 0171): one row of the semantic read - an eligible Memory of the caller, how many of the query's
+ * terms it is indexed under, its optional single-value slot, and whether it shares that slot with another CURRENT SELF
+ * Memory (an unresolved conflict the reply must not settle).
+ */
+export interface SemanticMemoryCandidate {
+  memory: MemoryRecord;
+  hits: number;
+  slot: string | null;
+  conflicting: boolean;
+}
+
 export interface MemoryRecord {
   id: string;
   user_id: string;

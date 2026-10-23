@@ -93,3 +93,49 @@ describe('PostResponseIntelligenceRepository.syncInformationGaps', () => {
     expect(mock).not.toHaveBeenCalled();
   });
 });
+
+// S8A-03 CP2: the ONE atomic capture command (0171 complete_post_response_personal_capture_v1). Parallel arrays only (no
+// jsonb argument on a Memory writer); the database derives the owner from the execution.
+describe('PostResponseIntelligenceRepository.completeUnderstandingCapture', () => {
+  const executionId = '10000000-0000-4000-8000-000000000005';
+  const originalFetch = globalThis.fetch;
+  const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY };
+  beforeEach(() => { process.env.SUPABASE_URL = 'https://database.example.test/'; process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test-key'; });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
+  });
+  const respond = (body: unknown, ok = true) => {
+    const mock = jest.fn().mockResolvedValue({ ok, status: ok ? 200 : 500, json: async () => body });
+    globalThis.fetch = mock as unknown as typeof fetch;
+    return mock;
+  };
+  const command = {
+    items: [{ memoryId: 'a1', type: 'PERSONAL_FACT' as const, content: 'أنا ساكن في المعادي.', importance: 0.65, expiresAt: null, slot: 'RESIDENCE' as const, temporal: 'CURRENT' as const, terms: ['ساكن', 'معاد'] }],
+    index: [{ memoryId: 'b2', slot: null, temporal: 'CURRENT' as const, terms: ['شغل'] }],
+  };
+
+  it('sends one service-role RPC with aligned parallel arrays and the flattened terms', async () => {
+    const fetchMock = respond('COMPLETED');
+    await expect(new PostResponseIntelligenceRepository().completeUnderstandingCapture(executionId, command)).resolves.toBe('COMPLETED');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://database.example.test/rest/v1/rpc/complete_post_response_personal_capture_v1');
+    expect(JSON.parse(init.body)).toEqual({
+      p_execution_id: executionId, p_memory_ids: ['a1'], p_types: ['PERSONAL_FACT'], p_contents: ['أنا ساكن في المعادي.'], p_importances: [0.65],
+      p_expires_at: [null], p_slots: ['RESIDENCE'], p_temporals: ['CURRENT'], p_index_memory_ids: ['b2'], p_index_slots: [null],
+      p_index_temporals: ['CURRENT'], p_term_memory_ids: ['a1', 'a1', 'b2'], p_terms: ['ساكن', 'معاد', 'شغل'],
+    });
+    expect(JSON.parse(init.body)).not.toHaveProperty('p_user_id');
+  });
+
+  it('maps NO_OP and fails closed on any other answer or transport failure', async () => {
+    respond('NO_OP');
+    await expect(new PostResponseIntelligenceRepository().completeUnderstandingCapture(executionId, command)).resolves.toBe('NO_OP');
+    for (const [body, ok] of [[true, true], [null, true], ['COMPLETED', false]] as const) {
+      respond(body, ok);
+      await expect(new PostResponseIntelligenceRepository().completeUnderstandingCapture(executionId, command)).rejects.toThrow('POST_RESPONSE_DATABASE_UNAVAILABLE');
+    }
+  });
+});

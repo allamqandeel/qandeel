@@ -21,7 +21,23 @@ export const POST_RESPONSE_PROVIDER_EFFECTS_V1 = [
   'CANDIDATE_PROVIDER',
 ] as const;
 
-export type PostResponseProviderEffect = typeof POST_RESPONSE_PROVIDER_EFFECTS_V1[number];
+/**
+ * QIR-005 v2 (S8A-03 CP2, Founder option B) - the CURRENT registry of provider-backed post-response effects.
+ *
+ * The v1 list above is kept byte-identical as the frozen record of QIR-005 v1. v2 is the deliberate, separately
+ * reviewed and versioned update that v1 says a fourth provider effect requires: it adds exactly
+ * `UNDERSTANDING_CAPTURE_PROVIDER`, the background Personal Understanding capture (DeepSeek Flash), and nothing else.
+ * Four is the Founder's ceiling ("أربعة مؤثرات مزود كحد أقصى"). The integration law, the durable claim, the no-refund
+ * rule and the no-replay recovery are unchanged; only the registry and the cap move together.
+ */
+export const POST_RESPONSE_PROVIDER_EFFECTS_V2 = [
+  'ASSOCIATION_PROVIDER',
+  'INTENT_PROVIDER',
+  'CANDIDATE_PROVIDER',
+  'UNDERSTANDING_CAPTURE_PROVIDER',
+] as const;
+
+export type PostResponseProviderEffect = typeof POST_RESPONSE_PROVIDER_EFFECTS_V2[number];
 
 export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER';
 
@@ -66,6 +82,24 @@ export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 = {
   HYPOTHESIS_PERSISTENCE: 'NON_PROVIDER',
   CONFIDENCE_BATCH: 'NON_PROVIDER',
   HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',
+} as const satisfies Record<Exclude<IntelligenceEffect, 'UNDERSTANDING_CAPTURE_PROVIDER'>, PostResponseProviderClassification>;
+
+/**
+ * QIR-005 v2 - the exhaustive classification of every canonical effect, total by `satisfies` exactly as v1 was (v1
+ * above is the frozen record and covers the v1 effects only). The entries marked PROVIDER equal
+ * `POST_RESPONSE_PROVIDER_EFFECTS_V2` exactly. It is one explicit literal, never a spread of v1, so the QIR-005
+ * static contract reads every entry it freezes.
+ */
+export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2 = {
+  MEMORY_WRITE: 'NON_PROVIDER',
+  INTENT_PROVIDER: 'PROVIDER',
+  CANDIDATE_PROVIDER: 'PROVIDER',
+  ASSOCIATION_PROVIDER: 'PROVIDER',
+  HYPOTHESIS_UPDATE_BATCH: 'NON_PROVIDER',
+  HYPOTHESIS_PERSISTENCE: 'NON_PROVIDER',
+  CONFIDENCE_BATCH: 'NON_PROVIDER',
+  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',
+  UNDERSTANDING_CAPTURE_PROVIDER: 'PROVIDER',
 } as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;
 
 /**
@@ -83,7 +117,10 @@ export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 = {
  */
 export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = 3;
 
-export const POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION = '1';
+/** QIR-005 v2: one slot per v2 provider effect, four in all; the same compile-time constant rules as v1. */
+export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 4;
+
+export const POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION = '2';
 
 /**
  * The bounded telemetry decision vocabulary. `AUTHORIZED` is recorded only after
@@ -98,7 +135,7 @@ export const POST_RESPONSE_PROVIDER_BUDGET_DECISIONS = ['AUTHORIZED', 'RECOVERED
 export type PostResponseProviderBudgetDecision = typeof POST_RESPONSE_PROVIDER_BUDGET_DECISIONS[number];
 
 /** Bounded label registries, shared with the telemetry boundary so exactly ONE registry exists. */
-export const POST_RESPONSE_PROVIDER_EFFECT_KEYS: ReadonlySet<string> = new Set(POST_RESPONSE_PROVIDER_EFFECTS_V1);
+export const POST_RESPONSE_PROVIDER_EFFECT_KEYS: ReadonlySet<string> = new Set(POST_RESPONSE_PROVIDER_EFFECTS_V2);
 export const POST_RESPONSE_PROVIDER_BUDGET_DECISION_KEYS: ReadonlySet<string> = new Set(POST_RESPONSE_PROVIDER_BUDGET_DECISIONS);
 
 /**
@@ -192,7 +229,7 @@ export class PostResponseProviderBudget {
   get spent(): number { return this.spentSlots.size; }
 
   /** Provider slots this durable execution may still spend. Never negative. */
-  get remaining(): number { return Math.max(0, POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 - this.spentSlots.size); }
+  get remaining(): number { return Math.max(0, POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 - this.spentSlots.size); }
 
   isSpent(effect: PostResponseProviderEffect): boolean { return this.spentSlots.has(effect); }
 
@@ -203,7 +240,7 @@ export class PostResponseProviderBudget {
    * or when the hard lifecycle cap is already reached.
    */
   authorize(effect: PostResponseProviderEffect): PostResponseProviderBudgetAuthorization {
-    if (this.spentSlots.has(effect) || this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V1) {
+    if (this.spentSlots.has(effect) || this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V2) {
       this.record(effect, 'EXHAUSTED');
       return 'EXHAUSTED';
     }

@@ -5150,6 +5150,19 @@ paragraphs above stay as written.
   or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
+**S8A-03 CP2 checkpoint (2026-10-23; the S8A-03 pull request, not yet opened; local, not pushed).** CP2 delivered
+background natural acquisition and a semantic Memory retrieval index under the candidate S8A-03 CP2 Personal
+Understanding Controlled Amendment (migration 0171, local only). The paragraphs above stay as written.
+- **Evidence only, no change of state:** `QAN-BL-MATCH-04` gains local mechanism evidence for natural acquisition and
+  cross-session retrieval (the 0171 verifier on real PostgreSQL); real-model behaviour is CP3's. `QAN-BL-AI-02` stays
+  open.
+- **Not admitted:** the task-local residues stay with S8A-03 itself, which is still open and must dispose of them at its
+  closing change: real-model capture and paraphrase quality (CP3), and composing the capture stage into the hand-built
+  A2 / Full Intelligence / Integrated Brain end-to-end harnesses. Hosted application of 0171 rides the existing hosted
+  deployment items.
+- **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

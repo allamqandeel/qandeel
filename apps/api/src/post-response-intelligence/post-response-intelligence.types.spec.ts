@@ -1,7 +1,8 @@
 import{CONFIDENCE_BATCH_COMMAND_STATUSES,HIM_BRAIN_CONTEXT_COMMAND_STATUSES,INTELLIGENCE_EFFECTS,type ClaimableIntelligenceEffect,type ConfidenceBatchCommandStatus,type HimBrainContextCommandStatus,type IntelligenceEffect,type ManagedIntelligenceEffect}from'./post-response-intelligence.types';
 
 describe('post-response intelligence effect registry',()=>{
- it('exposes the exact eight independent durable effect keys',()=>{expect(INTELLIGENCE_EFFECTS).toEqual(['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION']);expect(new Set(INTELLIGENCE_EFFECTS).size).toBe(INTELLIGENCE_EFFECTS.length);expect(INTELLIGENCE_EFFECTS.indexOf('ASSOCIATION_PROVIDER')).not.toBe(INTELLIGENCE_EFFECTS.indexOf('CANDIDATE_PROVIDER'));});
+ // S8A-03 CP2 re-anchor (2026-10-23): migration 0171 adds the ninth effect, UNDERSTANDING_CAPTURE_PROVIDER (QIR-005 v2).
+ it('exposes the exact nine independent durable effect keys',()=>{expect(INTELLIGENCE_EFFECTS).toEqual(['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION','UNDERSTANDING_CAPTURE_PROVIDER']);expect(new Set(INTELLIGENCE_EFFECTS).size).toBe(INTELLIGENCE_EFFECTS.length);expect(INTELLIGENCE_EFFECTS.indexOf('ASSOCIATION_PROVIDER')).not.toBe(INTELLIGENCE_EFFECTS.indexOf('CANDIDATE_PROVIDER'));});
  it('keeps the association key a first-class effect while every effect now carries a typed durable result',()=>{
   const effect:IntelligenceEffect='ASSOCIATION_PROVIDER';expect(effect).toBe('ASSOCIATION_PROVIDER');
   // Migration 0035 removed the last generic result-less effect: there is no

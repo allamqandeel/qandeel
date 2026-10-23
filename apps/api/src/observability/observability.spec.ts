@@ -14,7 +14,7 @@ import { SpanKind,SpanStatusCode,type SpanContext } from '@opentelemetry/api';
 import type { ReadableSpan,SpanExporter } from '@opentelemetry/sdk-trace-base';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { RUNTIME_ROUTING_V2_REASONS } from '../intelligence-runtime/fast-deep-routing-contract';
-import { POST_RESPONSE_PROVIDER_BUDGET_DECISIONS, POST_RESPONSE_PROVIDER_EFFECTS_V1 } from '../post-response-intelligence/post-response-provider-budget';
+import { POST_RESPONSE_PROVIDER_BUDGET_DECISIONS, POST_RESPONSE_PROVIDER_EFFECTS_V2 } from '../post-response-intelligence/post-response-provider-budget';
 
 const request:ModelRouterRequest={task:'CONVERSATIONAL_RESPONSE',path:'FAST',complexity:'LOW',behavioralGuidance:'secret prompt',context:[{role:'USER',content:'private message'}],locale:'und',modality:'TEXT',latencyBudgetMs:3000,costBudget:'LOW',safetyLevel:'STANDARD'};
 // QIR-004 Fix 01 / QIR-006: the frozen LEGAL source/outcome relation, quoted
@@ -134,16 +134,16 @@ describe('Correlation and telemetry foundation v1',()=>{
  // QIR-005 post-response provider-budget telemetry: the SAME frozen registries
  // the production gate uses, four finite dimensions, no identifier or payload,
  // and fail-soft under any meter failure.
- it('records exactly the 3 x 3 x 2 legal QIR-005 provider-budget dimensions and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).postResponseProviderBudgetDecisions={add};
-  for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1)for(const decision of POST_RESPONSE_PROVIDER_BUDGET_DECISIONS)for(const path of['FAST','DEEP'])t.recordPostResponseProviderBudget(effect,decision,path);
-  expect(POST_RESPONSE_PROVIDER_EFFECTS_V1).toHaveLength(3);
+ it('records exactly the 4 x 3 x 2 legal QIR-005 v2 provider-budget dimensions and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).postResponseProviderBudgetDecisions={add};
+  for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2)for(const decision of POST_RESPONSE_PROVIDER_BUDGET_DECISIONS)for(const path of['FAST','DEEP'])t.recordPostResponseProviderBudget(effect,decision,path);
+  expect(POST_RESPONSE_PROVIDER_EFFECTS_V2).toHaveLength(4);
   expect(POST_RESPONSE_PROVIDER_BUDGET_DECISIONS).toHaveLength(3);
-  expect(add).toHaveBeenCalledTimes(18);
+  expect(add).toHaveBeenCalledTimes(24);
   for(const call of add.mock.calls){const labels=call[1] as Record<string,string>;expect(call[0]).toBe(1);
    expect(Object.keys(labels).sort()).toEqual(['decision','effect','policy_version','processing_path']);
-   expect(POST_RESPONSE_PROVIDER_EFFECTS_V1 as readonly string[]).toContain(labels.effect);
+   expect(POST_RESPONSE_PROVIDER_EFFECTS_V2 as readonly string[]).toContain(labels.effect);
    expect(POST_RESPONSE_PROVIDER_BUDGET_DECISIONS as readonly string[]).toContain(labels.decision);
-   expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('1');}
+   expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('2');}
   expect(JSON.stringify(add.mock.calls)).not.toMatch(/hello|content|session|turn|user|hypothesis|evidence|\d{3,}|claude|gpt|anthropic|openai/i);});
  it('drops any QIR-005 provider-budget decision outside the finite registries, including a fourth provider effect',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).postResponseProviderBudgetDecisions={add};
   for(const [effect,decision,path] of [

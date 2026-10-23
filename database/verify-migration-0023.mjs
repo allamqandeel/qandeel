@@ -6,7 +6,8 @@ import pg from'pg';import{randomUUID}from'node:crypto';const{Client}=pg,db=new C
 // state at all. Each is claimed only inside its own one-transaction command, so
 // the ordinary claim loop below covers every claimable key and all three managed
 // keys are proven claim-rejected instead.
-const canonical=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION'];
+// S8A-03 CP2 re-anchor (2026-10-23): migration 0171 registers the fourth provider effect UNDERSTANDING_CAPTURE_PROVIDER (QIR-005 v2).
+const canonical=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION','UNDERSTANDING_CAPTURE_PROVIDER'];
 const managed=['HYPOTHESIS_UPDATE_BATCH','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 const claimable=canonical.filter(key=>!managed.includes(key));
 const execution=randomUUID(),event=randomUUID(),user=randomUUID(),session=randomUUID(),turn=randomUUID();

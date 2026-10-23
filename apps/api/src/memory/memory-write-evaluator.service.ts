@@ -237,6 +237,12 @@ export function screenMemoryCapture(
   return undefined;
 }
 
+/** S8A-03 CP2: the same secret / sensitive-identifier screen, read by the model-assisted capture and its pre-screen. */
+export function containsObviousSecret(value: string): boolean {
+  const content = clean(value);
+  return OBVIOUS_SECRET.some((pattern) => pattern.test(content));
+}
+
 function clean(value: string): string { return value.normalize('NFKC').trim().replace(/\s+/gu, ' '); }
 /** MEM-AR-01A: the user's clause as said: orthographic «انا» → «أنا» and one terminal full stop, nothing else. */
 function asSaid(clause: string): string { return `${trimValue(clause).replace(/^انا(?=\s)/u, 'أنا')}.`; }

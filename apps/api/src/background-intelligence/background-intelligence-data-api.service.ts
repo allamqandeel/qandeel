@@ -4,6 +4,7 @@ import type { HimSnapshotSourceRow } from '../human-model/him-intelligence-snaps
 import type { HimBrainContextSourceRow } from '../human-model/him-brain-context.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
 import { MEMORY_SUBJECT_EMBED, withMemorySubject } from '../memory/memory-subject';
+import { MEMORY_TYPES } from '../memory/memory.types';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
@@ -102,6 +103,23 @@ export class BackgroundIntelligenceDataApiService {
     this.assertExecutionContext(context);
     const query=new URLSearchParams({select:SOURCE_TURN_FIELDS,id:`eq.${context.sourceTurnId}`,session_id:`eq.${context.sessionId}`,user_id:`eq.${context.userId}`,role:'eq.USER',status:'eq.COMPLETED',limit:'1'});
     return (await this.request<BackgroundCanonicalSourceTurn[]>(`conversation_turns?${query}`))[0];
+  }
+
+  // S8A-03 CP2 (migration 0171): the bounded backfill read. The source turn names the RUNNING execution, and the
+  // database answers at most four of its owner's eligible Memories whose semantic keys are not indexed yet.
+  async listUnindexedMemories(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ memoryId: string; type: MemoryType; content: string }>> {
+    this.assertExecutionContext(context);
+    const rows = await this.request<Array<{ memory_id: unknown; type: unknown; content: unknown }>>('rpc/background_unindexed_memories_v1', {
+      method: 'POST', body: JSON.stringify({ p_source_turn_id: context.sourceTurnId, p_limit: limit }),
+    });
+    if (!Array.isArray(rows) || rows.length > limit) throw new Error('BACKGROUND_UNDERSTANDING_BACKFILL_INTEGRITY');
+    return rows.map((row) => {
+      if (typeof row?.memory_id !== 'string' || !BACKGROUND_UUID.test(row.memory_id) || typeof row.type !== 'string' ||
+          !(MEMORY_TYPES as readonly string[]).includes(row.type) || typeof row.content !== 'string') {
+        throw new Error('BACKGROUND_UNDERSTANDING_BACKFILL_INTEGRITY');
+      }
+      return { memoryId: row.memory_id, type: row.type as MemoryType, content: row.content };
+    });
   }
 
   async listActiveMemories(context: BackgroundIntelligenceExecutionContext, limit:number, now=new Date()):Promise<MemoryRecord[]> {

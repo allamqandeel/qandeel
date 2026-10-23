@@ -7,7 +7,7 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered (local) and awaiting review, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
+> **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered and accepted, CP2 delivered (local; migration 0171 local only) and at the independent CP2 review gate, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
 >
 > *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
 >
@@ -878,7 +878,7 @@ stay as written.
   - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
   - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
 
-### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP1 delivered, awaiting review; one pull request at the end, not merged)
+### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP2 delivered, at the independent CP2 review gate; one pull request at the end, not merged)
 
 - Started 2026-10-23 on `s8a/s8a-03-personal-understanding-reality` from `main` at `37812845` (the merge of PR #354,
   S8A-02). CP0, an independent read-only review, was delivered and reviewed by the Founder, who approved its direction
@@ -889,7 +889,7 @@ stay as written.
     only.
   - D3: closed systems are consumed; only narrow controlled amendments.
   - D4: acquisition, correction and semantic recall are proven; no invented or forgotten knowledge.
-- **CP1 delivered (local, not pushed; awaiting the Founder's review; CP2 not started):**
+- **CP1 delivered, pushed and accepted** (`932dabb8`):
   - every production AI call is on DeepSeek Flash, and the OpenAI / Anthropic / Gemini production paths are removed;
   - the seven structured functions use Chat Completions with JSON Output, the shared DeepSeek client and the
     `SYNTHETIC_ONLY` gate, with their ports, validators, accounting families and timeouts unchanged;
@@ -897,4 +897,18 @@ stay as written.
     merge of the one S8A-03 pull request and records the Founder's eight CP2 corrections.
   - No migration, paid call or live-environment change. `QAN-BL-AI-02` stays open until the migration is proven
     complete, and no backlog ownership has moved.
+- **CP2 delivered (local, not pushed; at the Founder's independent CP2 review gate; CP3 not started)** under the
+  Founder's option B (DeepSeek Flash acquisition at write time, a semantic index at read time with no model call):
+  - a separate background `UNDERSTANDING_CAPTURE_PROVIDER` effect (QIR-005 v2, four provider effects) proposes up to six
+    facts per message plus search keys for at most four unindexed Memories; deterministic server verification keeps at
+    most three, written at 0.80 by ONE atomic command; the deterministic Memory Write Evaluator is unchanged;
+  - Memory retrieval gains a fail-soft semantic index path, beyond the 32 most recent Memories and with no recall cue
+    needed; eligibility is read at read time, and same-slot current facts are served together as `CONFLICTING`;
+  - migration `0171_s8a_03_personal_understanding_v1.sql`, **local only**, proven by `database/verify-migration-0171.mjs`
+    on real PostgreSQL 17;
+  - governed by the candidate [S8A-03 CP2 Personal Understanding Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md)
+    (QIR-001 §7 background exception, QIR-005 v2, the extraction stage, the semantic retrieval path; model texts
+    verbatim), which binds on the merge of the one S8A-03 pull request;
+  - the real-model quality of spans, readings and keys is CP3's to measure. No paid call, and no backlog ownership has
+    moved; `QAN-BL-AI-02` stays open.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

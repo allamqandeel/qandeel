@@ -72,7 +72,8 @@ const EFFECT = 'SELECT * FROM public.post_response_intelligence_effects WHERE ex
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
 const AUDITS = 'SELECT * FROM public.hypothesis_updates WHERE id=ANY($1) ORDER BY after_version';
 const CONFIDENCE = 'SELECT * FROM public.confidence_evaluations WHERE id=ANY($1)';
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
+// S8A-03 CP2 re-anchor (2026-10-23): migration 0171 registers the fourth provider effect UNDERSTANDING_CAPTURE_PROVIDER (QIR-005 v2).
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION', 'UNDERSTANDING_CAPTURE_PROVIDER'];
 
 const userId = randomUUID();
 const otherUserId = randomUUID();
@@ -136,7 +137,8 @@ async function verifySurfaceAndAcls() {
        AND conname LIKE 'post_response_intelligence_effects_%_result_check' ORDER BY conname`,
   )).map((row) => row.conname);
   assert.ok(constraints.includes('post_response_intelligence_effects_update_batch_result_check'), 'the managed result check exists');
-  assert.equal(constraints.length, 10, 'every earlier result check survives alongside the 0035 Confidence and 0061 Brain-Context checks');
+  // S8A-03 CP2 re-anchor (2026-10-23): migration 0171 adds the eleventh, the UNDERSTANDING_CAPTURE_PROVIDER result check.
+  assert.equal(constraints.length, 11, 'every earlier result check survives alongside the 0035 Confidence, 0061 Brain-Context and 0171 Understanding checks');
 
   for (const [signature, expected] of [
     [EXECUTE_RPC, { service_role: true, authenticated: false, anon: false, public: false }],

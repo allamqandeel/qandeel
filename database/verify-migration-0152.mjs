@@ -307,9 +307,12 @@ async function verifyCatalog() {
     }
   }
   // The governed erasure is 0130's two server entry points (the public wrapper and its private core), both unchanged.
+  // S8A-03 CP2 re-anchor (2026-10-23): migration 0171 adds the ONE atomic capture command of the fourth provider effect,
+  // complete_post_response_personal_capture_v1 - service_role only, bound to a RUNNING execution with its effect CLAIMED,
+  // under the same owner lock and the same command-turn / later-command / equivalence rules as background_record_memory_v1.
   assert.deepEqual([...executable].sort(), ['personal_data_private.erase_personal_account_v1', 'public.background_record_memory_v1',
-    'public.server_erase_personal_account_v1', 'public.server_finalize_memory_control_turn_v2'],
-  'the writable set is exactly {v2, background_record_memory_v1, governed erasure}');
+    'public.complete_post_response_personal_capture_v1', 'public.server_erase_personal_account_v1', 'public.server_finalize_memory_control_turn_v2'],
+  'the writable set is exactly {v2, background_record_memory_v1, the 0171 capture command, governed erasure}');
 
   stage = 'W-1 catalog: CC-M1 is the 0028 L2 body plus exactly one marked line';
   const l2Live = await liveBody('public.canonical_eligible_memory_ids_v1(uuid,timestamp with time zone)');

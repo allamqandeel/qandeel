@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { composeServerGuidance } from './model-router.types';
+import { composeServerGuidance, MEMORY_CONFLICT_GUIDANCE } from './model-router.types';
 import { buildHumanIntelligenceProviderSemantics } from './human-intelligence-provider-semantics';
 import type { HumanIntelligenceProviderSemantics } from './human-intelligence-provider-semantics.types';
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
@@ -536,5 +536,22 @@ describe('composeServerGuidance recommendation grounding boundary', () => {
     });
     expect(guidance.indexOf('<hypothesis_reasoning_context>')).toBeLessThan(guidance.indexOf('<recommendation_grounding_context>'));
     expect(guidance.indexOf('</hypothesis_reasoning_context>')).toBeLessThan(guidance.indexOf('<recommendation_grounding_context>'));
+  });
+});
+
+// S8A-03 CP2: the conflict sentence is rendered only when a served Memory is CONFLICTING, verbatim (Copy Gate).
+describe('S8A-03 CP2 memory conflict guidance', () => {
+  it('adds the exact conflict sentence only when some served Memory is CONFLICTING', () => {
+    const settled = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [{ type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', about: 'USER' }] });
+    expect(settled).not.toContain(MEMORY_CONFLICT_GUIDANCE);
+    expect(settled).not.toContain('CONFLICTING');
+    const contested = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [
+      { type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', about: 'USER', standing: 'CONFLICTING' },
+      { type: 'PERSONAL_FACT', content: 'أنا ساكن في مدينة نصر.', about: 'USER', standing: 'CONFLICTING' },
+    ] });
+    expect(MEMORY_CONFLICT_GUIDANCE).toBe('An item whose standing is CONFLICTING is one of two or more current facts the user stated that cannot all be true now (for example two different homes or employers). Do not choose between them, merge them or present either as settled; if it matters to the reply, ask the user briefly which one is true now.');
+    expect(contested.split(MEMORY_CONFLICT_GUIDANCE)).toHaveLength(2);
+    expect(contested.indexOf(MEMORY_CONFLICT_GUIDANCE)).toBeLessThan(contested.indexOf('<user_memory_context>'));
+    expect(contested).toContain('"standing":"CONFLICTING"');
   });
 });

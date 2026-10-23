@@ -1222,6 +1222,12 @@ jobs:
       # reviewed Price Card rates it exactly.
       - name: Verify S8A-01 DeepSeek ledger admission against real PostgreSQL
         run: npm run verify:ai-usage-deepseek-admission:integration
+      # S8A-03 CP2: migration 0171 - Personal Understanding: the owner-only read-only index tables and their retirement, the
+      # identifiers-only typed capture effect, the ONE atomic capture command under every 0152 rule (command turns, later
+      # commands, equivalents of any type; no replay, no partial write), the bounded backfill, and the RLS-bound semantic
+      # read with read-time eligibility, owner isolation, single-value conflicts and erasure.
+      - name: Verify S8A-03 Personal Understanding capture and semantic retrieval against real PostgreSQL
+        run: npm run verify:personal-understanding:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

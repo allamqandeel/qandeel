@@ -14,7 +14,7 @@ import { HimReasoningConsumptionService } from '../human-model/him-reasoning-con
 import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationContext } from '../hypothesis/him-hypothesis-generation-context';
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
 import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, screenMemoryCapture } from '../memory/memory-write-evaluator.service';
-import type { MemoryWriteResult } from '../memory/memory.types';
+import type { MemoryRecord, MemoryType, MemoryWriteResult } from '../memory/memory.types';
 import { interpretMemoryControl } from '../memory/memory-control.interpreter';
 import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
 import type { EvidenceItem } from '../memory/evidence.types';
@@ -127,6 +127,12 @@ export class BackgroundIntelligenceEnrichmentService {
   if(recorded.outcome!=='CREATED'&&recorded.outcome!=='ALREADY_RECORDED')return{decision:'SKIP',reason:recorded.outcome,type:decision.candidate.type};
   return{decision:'WRITE',type:decision.candidate.type,memoryId:recorded.memoryId,evidenceId:`memory:${recorded.memoryId}`};
  }
+
+ // S8A-03 CP2: the two reads of the background Personal Understanding capture, through this facade (the raw data API
+ // stays private to this module): the bounded backlog of Memories whose semantic keys are not indexed yet, and the
+ // current Memories its duplicate / reversal screen reads (the same bound the deterministic writer reads).
+ async listUnindexedMemories(context:BackgroundIntelligenceExecutionContext,limit:number):Promise<Array<{memoryId:string;type:MemoryType;content:string}>>{this.assert(context);return this.data.listUnindexedMemories(context,limit);}
+ async listCaptureScreenMemories(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<MemoryRecord[]>{this.assert(context);return this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT,now);}
 
  async listEligibleEvidence(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<ReadonlyArray<EvidenceItem>>{this.assert(context);return projectEligibleEvidence(context.userId,await this.data.listActiveMemories(context,EVIDENCE_CANDIDATE_LIMIT,now),now).slice(0,MAX_ELIGIBLE_EVIDENCE);}
 

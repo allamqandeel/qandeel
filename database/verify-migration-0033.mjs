@@ -74,7 +74,8 @@ const VALID_CANDIDATES = 'SELECT public.post_response_generation_candidates_vali
 const VALID_IDS = 'SELECT public.post_response_persisted_hypothesis_ids_valid_v1($1::jsonb) valid';
 const EFFECT = 'SELECT * FROM public.post_response_intelligence_effects WHERE execution_id=$1 AND effect_key=$2';
 const HYPOTHESIS = 'SELECT * FROM public.hypotheses WHERE id=$1';
-const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
+// S8A-03 CP2 re-anchor (2026-10-23): migration 0171 registers the fourth provider effect UNDERSTANDING_CAPTURE_PROVIDER (QIR-005 v2).
+const EFFECT_KEYS = ['MEMORY_WRITE', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'ASSOCIATION_PROVIDER', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION', 'UNDERSTANDING_CAPTURE_PROVIDER'];
 
 const userId = randomUUID();
 const memories = { first: randomUUID(), second: randomUUID(), third: randomUUID() };
@@ -150,6 +151,7 @@ async function verifySurfaceAndAcls() {
     'post_response_intelligence_effects_intent_result_check',
     'post_response_intelligence_effects_memory_result_check',
     'post_response_intelligence_effects_persistence_result_check',
+    'post_response_intelligence_effects_understanding_result_check', // S8A-03 CP2 re-anchor: 0171
     'post_response_intelligence_effects_untyped_result_check',
     'post_response_intelligence_effects_update_batch_result_check',
   ], 'the 0029/0031 checks survive, each generation effect states its own domain, and the 0034/0035/0061 checks join them');
