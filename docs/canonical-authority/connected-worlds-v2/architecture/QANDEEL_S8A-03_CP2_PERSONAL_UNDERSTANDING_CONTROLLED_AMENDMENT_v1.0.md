@@ -342,6 +342,25 @@ negation refusals; the natural negated disclosure kept as negations only) and th
 table: MSA sent, disclosure sent, every correction shape and command still the foreground's). No model-visible text
 changed.
 
+**7.6 Pre-CP3 correction D-3: a question is never a background fact** (Founder, *S8A-03 CP3 D-3 Focused Correction
+Approval*, 2026-10-23). Found by the zero-cost CP3 simulation, with no paid call (finding F-1): the deterministic 01A
+background writer (`MemoryWriteEvaluatorService`, the `MEMORY_WRITE` effect) wrote the question «أنا عايش فين؟» as the
+Memory «أنا عايش فين.». Every background pattern ends in an optional «؟», so «أنا ساكن فين؟», «هدفي إيه؟», «أحمد
+أخويا؟» or "I prefer what?" were kept the same way; and the residence clause took an interrogative as its place even
+without the mark («أنا ساكن فين», «أنا عايش إزاي»). The correction is two lines of the writer, nothing else:
+- a background message carrying «؟» or «?» is not captured (`NO_SUPPORTED_EXPLICIT_PATTERN`; no new reason code);
+- the residence clause is not captured when its place is an interrogative («فين», «منين», «إزاي», «إمتى», «ليه»,
+  «إيه», «أنهي», …, optionally after «في»), so the unpunctuated question is not a residence either.
+
+Unchanged: every statement the writer captured before («أنا عايش في القاهرة», «أنا ساكن في المعادي», the same-message
+residence list, the «بالمناسبة … من 3 سنين» form); the explicit REMEMBER path, CORRECT (the interpreter already refuses
+a question, so the reversal's use of the writer never sees one), FORGET (which does not use the writer), MEM-AR-01B /
+01C, write authority and privacy. The capture verifier already refused the same span (`NOT_A_STATEMENT`); the capture
+pre-screen, the CP3 cases, questions, criteria and preregistration hashes are unchanged. Focused proofs: the writer spec
+(questions with and without the mark refused; residence statements still captured as said; the «افتكر» path unchanged),
+the Memory, capture, enrichment and memory-control route suites, the W3-MEGA-M and MEM-AR-01 contracts, and one CP3
+simulation with no H4 breach.
+
 # 8. Explicit non-amendments, implementation and status
 
 - **Not amended:**

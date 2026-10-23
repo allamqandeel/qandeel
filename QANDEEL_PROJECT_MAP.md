@@ -304,8 +304,8 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
   - No migration, paid call or live-environment change. `QAN-BL-AI-02` stays open until the migration is proven
     complete, and no backlog ownership has moved.
 - **CP2 delivered (pushed as `369ba841`, then `dd906d96` with the Founder's review corrections R1–R3; no PR; CP2
-  engineering closed by the Founder; the pre-CP3 acquisition corrections D-1 / D-2 applied locally, amendment §7.5;
-  CP3 prepared, no paid call yet)** under the
+  engineering closed by the Founder; the pre-CP3 corrections D-1 / D-2 and D-3 applied locally, amendment §7.5 / §7.6;
+  CP3 harness prepared and simulated at zero cost, no paid call yet)** under the
   Founder's option B (DeepSeek Flash acquisition at write time, a semantic index at read time with no model call):
   - a separate background `UNDERSTANDING_CAPTURE_PROVIDER` effect (QIR-005 v2, four provider effects) proposes up to six
     facts per message plus search keys for at most four unindexed Memories; deterministic server verification keeps at
