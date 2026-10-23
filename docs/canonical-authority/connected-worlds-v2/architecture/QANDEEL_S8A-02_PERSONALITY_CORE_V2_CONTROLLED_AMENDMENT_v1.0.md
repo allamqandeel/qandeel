@@ -9,7 +9,11 @@ paragraph 3. With them, what the Personal conversation renders as its core (ACE-
 also one sentence of §3.2, narrowly (§5.2): "The guidance follows the message being answered and the requests made in it."
 From CP1, also, narrowly (§5.3): the "Names only" that ACE-SP-01 §4 preserves from S4-02 §7 step 3, and what the Shared
 frame's sentence "Each person's message begins with their name." denotes under ACE-SP-01 §2 "The World frame" and CG-6, its
-bytes unchanged.  
+bytes unchanged. From CP3, also, narrowly and in the Personal conversation only (§5.4):
+- the Personal core (v3.2);
+- the IP-IMP-01 preference block's header, its lines and its position in the Personal guidance;
+- the Personal FAST / DEEP budgets and the DeepSeek DEEP output ceiling;
+- with them, the corresponding sentences of §6 and of the S8A-01 record §8.6.  
 **Binds within, superseding no sentence of:** CW2-03, CW2-04, CW2-08; S4-02 and S5-04 as ACE-SP-01 left them, except the
 "Names only" of S4-02 §7 step 3, narrowly amended in §5.3  
 **Does not amend:** everything in §6 below  
@@ -23,9 +27,14 @@ Decisions* (2026-10-21): D1–D3, the direction of core v3.1 and the §3.2 amend
 Decision* (2026-10-21): the paragraph 2 sentence (D3), the gender clause (D2) and the §3.2 sentence (D4) approved
 verbatim, recorded in §5.2; then *S8A-02 — Round 3 Final Approval* (2026-10-21): world-neutral paragraph 3.1
 approved verbatim (D1), recorded in §5.2; then *S8A-02 — CP1 Controlled Amendment & Closure Gate* (2026-10-22): the
-separated representation (a-1) and the collision-only " (n)" speaker label, recorded verbatim in §5.3  
+separated representation (a-1) and the collision-only " (n)" speaker label, recorded verbatim in §5.3; then *S8A-02 / CP3 —
+PO Final Correction Approval* (2026-10-22): every correction and test decision of the CP3 correction report, with the
+H28 change and the budgets it names, recorded in §5.4. The Shared attribution layer (CP2) has its own record, the
+[S8A-02 CP2 Shared Attribution Layer controlled amendment](QANDEEL_S8A-02_CP2_SHARED_ATTRIBUTION_LAYER_CONTROLLED_AMENDMENT_v1.0.md)  
 **Task:** `S8A-02` — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (Stage 8A). It carries the evidence of
-`QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase  
+`QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase
+**Task status:** `S8A-02 — CLOSED / AT THE S8A-02 FINAL REVIEW & MERGE GATE (2026-10-23) — CP1–CP3 DELIVERED — BG-08 / BG-09
+RECONCILED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS` (§7, closure)  
 **Implementation:** S8A-02, in the pull request that carries this record
 
 This record is additive. ACE-SP-01 stays the historical record of its own decision; its bytes are not changed. The core v1
@@ -321,6 +330,101 @@ Public (the Public assembler and S5-04), and every CW2 sentence.
 them correctly, including whether a reply repeats a " (n)" label to the people, is not proven here and belongs to CP2.
 `QAN-BL-AI-08` and `QAN-BL-AI-09` stay open. The direction authorizes this amendment only: no merge, pull request or CP2.
 
+## 5.4 CP3 — the Personal core v3.2, the leading preference block and the Personal budgets (Product Owner, 2026-10-22)
+
+Authority: *S8A-02 / CP3 — PO Final Correction Approval* (2026-10-22). The Product Owner approved every correction and test
+decision of the CP3 correction report, with these changes:
+- H28: a natural assumption may come from the context, kept consistent and corrected at once;
+- the budgets: Personal DEEP 25 000 ms, Personal FAST 10 000 ms, DEEP `max_tokens` 2800;
+- Shared / Public settings unchanged.
+
+The Founder then accepted QANDEEL's personality and conversational quality (2026-10-22). The preference-adherence findings
+are deferred past the launch and are not a closure blocker; they are Future Improvement 001
+(`docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`). The Personal conversation only; the Worlds keep the
+world-neutral core v3.1. Copied verbatim from the code that ships.
+
+**The Personal core v3.2.** Core v3.1 with two replacements; every other byte is core v3.1's.
+- Paragraph 3, the gender clause (H28). Before (v3.1):
+
+  > when their words have not shown it, use natural wording that does not assume one; where that would sound forced, use the conventional generic form (in Arabic, the grammatical masculine) consistently throughout the reply, never as a sign of their gender. Never guess their gender from a name, a topic or a stereotype.
+
+  After (v3.2):
+
+  > when their words have not shown it, you may make the natural assumption the conversation suggests (otherwise, in Arabic, the conventional grammatical masculine), only for how you word your reply and never as a fact about them; keep exactly that one form through the whole reply and the rest of the conversation, never switching between masculine and feminine, and adopt the other form at once when their words show it or they correct you.
+
+- Paragraph 4, one sentence added after "each within its own authority." (H15):
+
+  > Use what the earlier conversation already makes clear; when a word or situation could reasonably mean different things and nothing you have been given settles it, do not build the whole reply on one guess: answer what holds either way, cover the likely meanings briefly, or ask one short question when the answer really depends on it.
+
+**The standing-preference block (IP-IMP-01, narrowly amended).**
+- **Position.** When the owner chose any preference, the block now LEADS the Personal guidance (block, then Text v5 = Text v1 +
+  core v3.2 + the LANG-01 D4 line). It no longer follows it.
+- **Safety.** The Safety humour-suspension line stays the last line of every `GUIDED` turn, unchanged.
+- **Unchanged.** The humour lines, the field order and the precedence (Safety, then the current explicit request, then the
+  durable preference) are unchanged.
+- **The v1 texts stay the record.** The v1 header stays in code as `INTERACTION_PREFERENCE_GUIDANCE_HEADER_V1`. The v1 lines
+  are recorded in the IP-IMP-01 implementation record (CA-2).
+
+Header v2:
+
+> Standing interaction preferences the user explicitly chose. Follow them in every reply; they override the general language, dialect, length and explanation guidance below. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence. They take precedence over anything inferred from the conversation or from user memory context. Apply them quietly, without announcing or repeating them to the user.
+
+Lines v2:
+
+- `- Reply length: keep every reply brief, even on a complex question: give your answer and only the points that matter most, in a few sentences.`
+- `- Reply language: write the whole reply in Egyptian Arabic, even when the user writes in another dialect or language.`
+- `- Reply language: write the whole reply in Modern Standard Arabic, without dialect words, even when the user writes in a dialect or another language.`
+- `- Reply language: write the whole reply in Levantine Arabic, even when the user writes in another dialect or language.`
+- `- Reply language: write the whole reply in Gulf Arabic, even when the user writes in another dialect or language.`
+- `- Reply language: write the whole reply in Maghrebi Arabic, even when the user writes in another dialect or language.`
+- `- Reply language: write the whole reply in English, even when the user writes in another language.`
+- `- Explanation style: explain in simple, everyday words, without jargon.`
+- `- Explanation style: lead with the answer itself, without preamble.`
+- `- Explanation style: lead with the answer itself, in simple, everyday words, without preamble or jargon.`
+
+**The Personal budgets.**
+| Setting | Before | After |
+|---|---|---|
+| Personal FAST (`conversation-orchestrator.service.ts`) | 3 000 ms | 10 000 ms |
+| Personal DEEP | 20 000 ms | 25 000 ms |
+| DeepSeek router ceiling (`DEEPSEEK_PROVIDER_TIMEOUT_MS`) | 20 000 ms | 25 000 ms |
+| DeepSeek DEEP `max_tokens` | 2048 | 2800 |
+
+- DeepSeek FAST `max_tokens` (1024) is unchanged.
+- Nothing above the budgets blocks them: the foreground deadline is 90 s, GENERATING recovery 120 s and the mobile window
+  120 s.
+- Shared and Public send their own budgets (FAST 3 000 ms, DEEP 10 000 ms; the Shared reading path follows its CP2 record).
+  The router applies `min(request budget, ceiling)`, so they are unchanged.
+- For Personal DEEP, this supersedes the S8A-01 record §8.6.
+
+**The Safety Response Gate correction (CP3 corrective, 2026-10-22).** Arabic stems in the gate now match whole Arabic words
+only. This fixes false positives such as «سم» inside «اسم» / «جسم», «ناس» inside «مناسب», and «هات» inside «الهاتف». Also:
+- Egyptian exaggerations ("dying of heat / hunger") no longer guide;
+- "kill" aimed at time, a process or pests no longer persists as a violent prior turn.
+
+It adds no guard, changes no policy and changes no deterministic reply. Every risk and support case in the new tests was
+caught before and after the change (`safety-response-gate.service.spec.ts`, 49 cases). The gate serves every World.
+
+*Final engineering review (2026-10-23).* The review found that the binding had also narrowed stems that never sat inside
+unrelated words. Feminine and plural requests (اكتبيلي, ارسميلي, ابعتيلي) no longer met the minors / sexual-content BLOCK.
+Death verbs with a «و» or «ها» prefix or a «-و» suffix (ويموت, هايموت, هيموتو) no longer guided third-party risk. Plural
+and dual means (مسدسات, مسدسين) no longer met decided intent. The correction narrows the binding to the stems that caused
+the false positives: «سم» / «سموم», «هات», «صف» and the third-party person list. Every other stem keeps its original
+substring match, and the death verb's whole word is consumed before the exaggeration check. 14 regression cases were
+added; the 12 risk cases among them fail on the uncorrected gate. The 49 CP3 cases still pass.
+
+**Evidence.**
+- Round 8: 118 calls, USD 0.042 at the peak rate.
+- Round 9, the one paid acceptance round:
+  - 132 / 132 delivered, USD 0.067 at the peak rate;
+  - FAST 120 / 120 within 10 s (max 6.5 s); DEEP 12 / 12 within 25 s (max 15.9 s).
+- Under the criteria fixed before Round 9 (sha256 `1df69747…`), the provisional AI verdict was **not accepted**:
+  - seven quality criteria failed (A1–A6, B2), mainly an English preference losing to an Arabic message (0 / 3) and
+    brevity (2 / 9);
+  - no critical failure.
+- The human packet was not reviewed.
+- The Founder's acceptance above is a product decision on that evidence. It is not a pass of those criteria.
+
 ---
 
 # 6. Explicit non-amendments
@@ -330,12 +434,16 @@ This amendment does not change:
   lines (Personal and world-neutral), the Safety humour-suspension line;
 - the `0089` / `0139` RPCs, their grants and migrations, the Model Router contract, the DeepSeek adapter and the Public
   assembler;
-- the IP-IMP-01 durable preference compiler, its header, precedence and copy;
+- the IP-IMP-01 durable preference compiler, its header, precedence and copy (except, from CP3, the header, lines and
+  position recorded in §5.4; the precedence is unchanged);
 - ACE-SP-01 §3.2 (except the one sentence §5.2 narrowly amends), §4, §6, and every CW2-03 / CW2-04 / CW2-08 sentence it
   names;
-- the ONE Model Router, its FAST / DEEP routing (`decideFastDeepRoute`) and its latency budgets;
+- the ONE Model Router and its FAST / DEEP routing (`decideFastDeepRoute`). The latency budgets are unchanged except:
+  - the Personal budgets and the DeepSeek ceiling / DEEP `max_tokens` of §5.4 (CP3);
+  - the Shared attribution reading path of the CP2 record (CA-S1);
 - Memory, Human Intelligence, Hypothesis, Recommendation, Question, Matching and Introduction authority;
-- the Safety Response Gate and its `ALLOW` / `GUIDED` / `BLOCK` outcomes;
+- the Safety Response Gate and its `ALLOW` / `GUIDED` / `BLOCK` outcomes (CP3's whole-word correction, §5.4, changes
+  no policy);
 - AI usage attribution and the AI-COST-01 ledger;
 - the scopes of `QAN-BL-CW-02`, `QAN-BL-IP-01` and `QAN-BL-MATCH-01`.
 
@@ -549,6 +657,17 @@ information correctly. `QAN-BL-AI-08` and `QAN-BL-AI-09` stay open.
 
 CP1 is complete and awaits the Product Owner's independent review. S8A-02 stays open; CP2 has not started.
 
+**S8A-02 CP3 — Personal Brain, Guard Impact & Personality Qualification (2026-10-22).**
+- Under the Product Owner's CP3 direction, its Corrective Gate and its Final Integrated Correction:
+  - the Safety gate's Arabic whole-word correction;
+  - the Personal core v3.2;
+  - the leading preference block;
+  - the Personal budgets (§5.4).
+- Round 8 and the one acceptance round, Round 9, ran on DeepSeek Flash, synthetic data, the accounted path.
+- The Founder accepted the personality and conversational quality and deferred the preference findings (Future
+  Improvement 001).
+- The CP2 prototype of 63aad31f (evidence-linked reasoning) stays experimental, not wired.
+
 **S8A-02 CP2 — Shared attribution layer (2026-10-22 / 2026-10-23; local, not pushed).**
 - *Round 10* (Founder Round 10 Run Authorization, 2026-10-22) ran B / S / S+R:
   - 468 DeepSeek calls, USD 0.065 actual;
@@ -565,6 +684,29 @@ CP1 is complete and awaits the Product Owner's independent review. S8A-02 stays 
   (CA-S1 / CA-S2 / CA-S3), which awaits the Founder's final approval.
 - That deployment was not itself measured; Round 10's result stands as recorded.
 - The remaining accuracy limits are accepted for v1, recorded as item 002 of the Future Improvements log (non-blocking).
-- The disposition of `QAN-BL-AI-09` awaits the Founder; S8A-02 stays open.
+- The disposition of `QAN-BL-AI-09` awaits the Founder; S8A-02 stays open. *(As written at CP2; see the closure below.)*
+
+**S8A-02 closure (Founder, 2026-10-23; S8A-02's closing change).** The Founder approved CP2's direction and implementation as a
+product and directed the final closure, with no further research or paid round.
+- **Records.** CA-S1 / CA-S3 are approved in direction. CA-S2's final copy is presented in the pull request. The
+  [CP2 record](QANDEEL_S8A-02_CP2_SHARED_ATTRIBUTION_LAYER_CONTROLLED_AMENDMENT_v1.0.md) is registered in the Canonical
+  Authority Index and Project Map rule 2.
+- **Tombstoned (BG-08).** In the canonical backlog §6:
+  - `QAN-BL-AI-09`, by the Founder's product acceptance for the first release, its evidence and limits kept;
+  - `QAN-BL-AI-06` / `QAN-BL-AI-07`, completed by CP1 (§5.3), whose disposition was left to this change.
+- **Still open, with recorded reasons.** `QAN-BL-AI-04`, `QAN-BL-AI-05` and `QAN-BL-AI-08` stay Stage 8A's.
+  `QAN-BL-ACE-02` and `QAN-BL-IP-02` stay `VALIDATION — OPEN`, carrying S8A-02's evidence.
+- **Accepted limits.** The remaining attribution accuracy limits are Future Improvement 002: non-blocking, unscheduled,
+  and not a release blocker.
+- **Final engineering review.** It found and corrected three defects within S8A-02's own changes, with regression tests:
+  the Safety gate correction above (§5.4); a participant's Name could close the notes container, so labels are now escaped
+  in the notes as participant words are; and the guidance-echo check now also covers the notes' header and tier-2 line
+  (CP2 record §5–§6). No paid call was made.
+- **Historical results unchanged.** Round 9 and Round 10 are recorded as they ran. Neither is claimed to pass criteria it
+  did not meet, and the production distribution of CP2 was not separately measured.
+- **What S8A-02 does not close.** The other Stage 8A scopes (S8A-03 … S8A-08) are not closed.
+
+S8A-02 is CLOSED at its final review & merge gate. Nothing is merged, deployed or opened to users, and no real user's data
+reaches DeepSeek (`QAN-BL-AI-01`).
 
 > **S8A-02 — PERSONALITY CORE V2 NARROW CONTROLLED AMENDMENT OF ACE-SP-01 — EFFECTIVE / FROZEN ON MERGE**

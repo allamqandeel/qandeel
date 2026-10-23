@@ -61,14 +61,17 @@ const AR_LETTER = '\\u0621-\\u064A\\u0640\\u0671-\\u06D3';
 const AR_MARK = '\\u064B-\\u065F\\u0670';
 const arWord = (stems: string, proclitics = '', enclitics = ''): string =>
   `(?<![${AR_LETTER}${AR_MARK}])(?:${proclitics})?(?:${stems})[${AR_MARK}]*(?:${enclitics})?(?![${AR_LETTER}])`;
-// Poison as a word, never بسم / وسم / اسم; harmful objects keep their possessive forms (حبوبي, سكينته).
+// Poison as a word, never بسم / وسم / اسم. Only the poison stem is bound: every other harmful object keeps the original
+// substring match, so its plural, dual and possessive forms (مسدسات, مسدسين, حبوبي, سكينته) are still caught.
 const POISON_AR = arWord('سم|سموم', 'ال|وال|بال|فال|لل');
-const HARM_OBJECT_AR = `${arWord('حبوب|مسدس|سكينة|سكين|حبل|سلاح|جرعة', 'ال|وال|بال|و|ب', 'ي|ه|ها|نا|ك|تي|ته|تها')}|${POISON_AR}`;
+const HARM_OBJECT_AR = `حبوب|مسدس|سكينة|سكين|حبل|سلاح|جرعة|${POISON_AR}`;
 // A bare third-person death verb, except the common Egyptian exaggerations "dying of heat / hunger / laughter" and
 // "dying to see / know / try" (Safety Response Gate v1: exaggeration phrasing is protected).
 const FIGURATIVE_DEATH_CONTINUATION_AR =
   '\\s*(?:من\\s+(?:ال)?(?:حر|برد|جوع|عطش|ضحك|زهق|ملل|تعب|فرحة|غيظ)|و\\s*(?:ي|ت|أ|ا|ن)?(?:شوف|عرف|جرب|روح|سافر|قابل|اكل|لعب))';
-const BARE_DEATH_VERB_AR = `${arWord('يموت|تموت', 'ب|ه|ح|س', 'وا|ون|ي')}(?!${FIGURATIVE_DEATH_CONTINUATION_AR})`;
+// The verb keeps the original substring match (any prefix or suffix: ويموت, هايموت, هيموتو); the rest of its word is
+// consumed whole before the figurative check, so a suffix can never be split off to dodge or satisfy it.
+const BARE_DEATH_VERB_AR = `(?:يموت|تموت)[${AR_LETTER}${AR_MARK}]*(?![${AR_LETTER}${AR_MARK}])(?!${FIGURATIVE_DEATH_CONTINUATION_AR})`;
 const METHOD_SEEKING = /\b(?:how (?:can|do|would) i|ways? to|best (?:way|method)|methods? (?:to|for)|instructions? (?:to|for)|step[ -]by[ -]step)\b|(?:ازاي|إزاي|كيف|إيه أفضل طريقة|ايه افضل طريقة|أفضل طريقة|افضل طريقة|طريقة|طرق|خطوات|تعليمات)/i;
 const SELF_HARM_ACTION = /\b(?:kill(?:ing)? myself|end(?:ing)? my life|commit(?:ting)? suicide|hurt(?:ing)? myself|harm(?:ing)? myself|cut(?:ting)? myself|overdos(?:e|ing))\b|(?:أ?قتل نفسي|هقتل نفسي|أ?نتحر|هنتحر|أنهي حياتي|انهي حياتي|هأنهي حياتي|أؤذي نفسي|اؤذي نفسي|أأذي نفسي|اأذي نفسي|أجرح نفسي|اجرّح نفسي|جرح نفسي|أقطع شراييني|اقطع شراييني|جرعة زائدة)/i;
 const SUICIDE_TOPIC = /\b(?:suicide|suicidal)\b|(?:انتحار|الانتحار|انتحاري|انتحارية)/i;
@@ -89,9 +92,12 @@ const EVASION_OR_PLANNING = /\b(?:without getting caught|undetected|hide (?:the 
 const INCOMPLETE_HARM_FOLLOW_UP = /\b(?:best method|what methods?|how do i do it|how can i do it|without getting caught|what should i use)\b|(?:أفضل طريقة|افضل طريقة|إيه الطريقة|ايه الطريقة|أعملها إزاي|اعملها ازاي|من غير ما اتمسك|أستخدم إيه|استخدم ايه)/i;
 const MINOR = /\b(?:child|children|kid|minor|underage|teen(?:ager)?|(?:1[0-7]|[0-9])[ -]?year[ -]?old)\b|(?:طفل|طفلة|أطفال|اطفال|قاصر|قاصرة|تحت السن|مراهق|مراهقة|عمره \d{1,2}|عمرها \d{1,2})/i;
 const SEXUAL = /\b(?:sex|sexual|nude|naked|porn|erotic|explicit (?:photo|image|video|scene))\b|(?:جنس|جنسي|جنسية|عاري|عارية|عراة|إباحي|اباحي|فاضح|فاضحة|مشهد مثير)/i;
-const CREATION_ENCLITICS_AR = 'لي|له|لها|لنا|لهم|هالي|هولي|ي|ه|ها|هم|ني|وا';
+// Only هات and صف are bound as words (they sit inside أمهات, الهاتف, نصف); their imperative may carry a gender or number
+// ending and then an object (هاتيلي, هاتولي, صفيهالي). Every other verb keeps the original substring match, so its
+// feminine and plural commands (اكتبيلي, اكتبولي, ارسميلي, ابعتيلي, اعمليلي) are still caught.
+const CREATION_ENCLITICS_AR = '(?:ي|ين|وا|و)?(?:لي|له|لها|لنا|لهم|هالي|هولي|ه|ها|هم|ني)?';
 const CREATION_OR_REQUEST = new RegExp(
-  `${/\b(?:write|create|make|generate|draw|show|find|send|describe|give me|tell me)\b/.source}|${arWord('اكتب|أنشئ|انشئ|اعمل|ارسم|وريني|ابعت|اوصف|هات|اديني|قل لي', 'و|ف', CREATION_ENCLITICS_AR)}|${arWord('صف', '', CREATION_ENCLITICS_AR)}`,
+  `${/\b(?:write|create|make|generate|draw|show|find|send|describe|give me|tell me)\b/.source}|(?:اكتب|أنشئ|انشئ|اعمل|ارسم|وريني|ابعت|اوصف|اديني|قل لي)|${arWord('هات', 'و|ف', CREATION_ENCLITICS_AR)}|${arWord('صف', '', CREATION_ENCLITICS_AR)}`,
   'i',
 );
 // Credential clause requires an acquisition/operational verb; grammatical person (attacker/hacker)

@@ -117,8 +117,8 @@ export const QANDEEL_PERSONALITY_CORE_V3_1 = QANDEEL_PERSONALITY_CORE_V3.split('
 export const TEXT_V4_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V3_1}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;
 
 // S8A-02 CP3 Final Integrated Correction (Product Owner, 2026-10-22) — the PERSONAL core v3.2: core v3.1 with two
-// replacements, each answering a failure the Product Owner confirmed in the CP3 human review. PROPOSED copy, presented at
-// the correction's approval gate. Every other byte is core v3.1's. The Worlds keep the world-neutral core v3.1 unchanged
+// replacements, each answering a failure the Product Owner confirmed in the CP3 human review. APPROVED copy (PO Final
+// Correction Approval, 2026-10-22; recorded verbatim in the S8A-02 amendment record §5.4). Every other byte is core v3.1's. The Worlds keep the world-neutral core v3.1 unchanged
 // (CP2 / Shared World is outside this correction), so the two cores now differ in these two places only.
 //   - Paragraph 3, the gender clause (H28: masculine and feminine mixed inside one reply). The Product Owner accepts a
 //     natural assumption where nothing confirms the person's gender; what must hold is ONE form, kept through the reply

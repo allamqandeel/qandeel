@@ -44,7 +44,12 @@ const collapse = (text: string): string => text.replace(/\s+/gu, ' ');
  * own Memory and context, which a reply may legitimately say back to them.
  */
 function serverAuthoredSentences(serverGuidance: string): string[] {
-  const prose = serverGuidance.replace(/<([a-z_]+)>[\s\S]*?<\/\1>/gu, '\n');
+  // The Shared attribution notes container holds the server's fixed header and instruction ahead of its `- [` note lines
+  // (S8A-02 CP2, CA-S3); those instructions stay checked for verbatim echo, only the note lines are data.
+  const prose = serverGuidance
+    .replace(/<shared_attribution_notes>([\s\S]*?)<\/shared_attribution_notes>/gu, (_container, body: string) =>
+      `\n${body.split('\n').filter((line) => !line.startsWith('- [')).join('\n')}\n`)
+    .replace(/<([a-z_]+)>[\s\S]*?<\/\1>/gu, '\n');
   return prose
     .split(/\n+|(?<=[.!?:])\s+/u)
     .map((sentence) => collapse(sentence).trim())

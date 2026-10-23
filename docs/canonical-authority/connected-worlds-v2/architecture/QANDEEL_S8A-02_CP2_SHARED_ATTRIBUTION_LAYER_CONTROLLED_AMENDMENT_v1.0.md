@@ -1,14 +1,27 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-02 CP2 — Shared Attribution Layer (selective S+R) — Narrow Controlled Amendment v1.0
 
-**Status:** `CANDIDATE CONTROLLED AMENDMENT — AWAITING FOUNDER FINAL APPROVAL` (becomes `EFFECTIVE / FROZEN ON MERGE` only
-after the Founder's final approval of this record and the merge of the pull request that carries it)  
+**Status:** `CANONICAL CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`. It binds from the merge of the S8A-02 pull
+request that carries it, and the Founder merges only after approving it. CA-S1 and CA-S3 are approved in direction (2026-10-23).
+CA-S2's final production copy (§5) is presented verbatim in that pull request for the Founder's approval, and the merge is
+that approval  
 **Scope:** the Shared World QANDEEL reply only. Personal, Public, the general FAST / DEEP budgets and routing are outside it  
 **Amends, narrowly and only in that scope:** see §6 (the exact sentences, before and after)  
-**Authority:** the Founder — *S8A-02 CP2 — final decision on the selective-binding plan* (2026-10-23): option (b), S+R on gate
-tiers 1 and 2, B on tier 0, the fallback to S, the 2.5 s reading timeout and the 6 s total for the reading path, and the
-direction of CA-S1 / CA-S2 / CA-S3 «in the Shared World scope only, with the verbatim texts and the differences from the
-existing contracts completed under the required Controlled Amendment procedure»  
+**Authority:** the Founder. Every date is local time, +03:00.
+- *S8A-02 CP2 — final decision on the selective-binding plan* (2026-10-23):
+  - option (b): S+R on gate tiers 1 and 2, B on tier 0;
+  - the fallback to S;
+  - the 2.5 s reading timeout and the 6 s total for the reading path;
+  - the direction of CA-S1 / CA-S2 / CA-S3 «in the Shared World scope only, with the verbatim texts and the differences
+    from the existing contracts completed under the required Controlled Amendment procedure».
+- *S8A-02 / CP2 closure decision* (2026-10-23):
+  - the implementation is approved as a product;
+  - CA-S1 and CA-S3 are approved in direction;
+  - CA-S2 is to carry its final verbatim texts for approval in the pull request;
+  - this record is registered in the Canonical Authority Index;
+  - `QAN-BL-AI-09` is closed by a product acceptance for the first release.
+
+  The C1–C4 copy and the reading instruction were first approved on 2026-10-22, for the paid comparison only.  
 **Task:** `S8A-02` — CP2 (the Shared attribution layer). It is not a new task and not a Connected Worlds phase  
 **Implementation:** S8A-02, on branch `s8a/s8a-02-personality-deepseek-quality` (§7)
 
@@ -61,7 +74,8 @@ and recorded as one non-blocking item in the Future Improvements log (§7).
 6. A defect in the deterministic scan sends B.
 7. Accounting. The reading and the reply are both made inside the requester's one AI-COST-01 attribution scope. Each is one
    ledger row under `CONVERSATION_REPLY`. A failed or timed-out reading that reached the provider is still accounted.
-8. Release guard. The reply passes the unchanged release guard. A reply exposing the notes container is withheld (CA-S3).
+8. Release guard. A reply exposing the notes container, or repeating the container's own header or tier-2 instruction
+   verbatim, is withheld (CA-S3).
 
 ---
 
@@ -85,12 +99,16 @@ and recorded as one non-blocking item in the Future Improvements log (§7).
 
 # 5. CA-S2 — model-visible copy, verbatim
 
-Approved for the paid comparison only on 2026-10-22 (C1–C4). This record brings them to production for the reading path, with
-their bytes unchanged from the modules Round 10 measured:
+**Final production copy, presented for the Founder's approval in the S8A-02 pull request.**
+- It was approved on 2026-10-22, for the paid comparison only (C1–C4 and the reading instruction).
+- Its production approval is the Founder's approval of that pull request.
+- Its copy bytes are unchanged from the modules Round 10 measured (the one later correction, from the final engineering
+  review, escapes a label as §5 says; an ordinary Name renders byte-identically):
 - `shared-attribution-notes.experimental.ts`, sha256 `f9de6dcc1b648564fc2e29d6aa2ce5dd3321dd165a667658a16636ec1508bbe7`;
 - `shared-attribution-reading.experimental.ts`, sha256 `7bbfedffa320d1ac796fa75d18ea1d0117dbb9fcfba381b45f78052cb2dbcffe`.
 
-`X`, `Y`, `Z` stand for a participant's visible label, `«…»` for a participant's own words as one JSON string literal
+`X`, `Y`, `Z` stand for a participant's visible label (escaped as participant words are: a `<`, `>` or line break in a Name
+is written as a JSON-style Unicode escape), `«…»` for a participant's own words as one JSON string literal
 (`quoteWords`: no line break, `<` / `>` escaped, at most 160 characters plus ` (shortened)`), `N` for a quoted name or word.
 
 ## 5.1 The notes container
@@ -171,8 +189,9 @@ participant's own characters, and the note renders them from those characters. U
 - *Reply call.* B, with §5.1 appended to `behavioralGuidance` after a blank line, and `latencyBudgetMs` per §4.
 
 **Release guard.** `INTERNAL_CONTAINERS` gains `shared_attribution_notes`: a candidate exposing that tag is withheld
-(`INTERNAL_CONTAINER`). The guidance-echo check already ignores `<tag>…</tag>` containers. A reply may therefore quote a
-participant's line that a note also quotes.
+(`INTERNAL_CONTAINER`). The guidance-echo check ignores `<tag>…</tag>` data containers; inside this one it ignores only the
+`- [` note lines and keeps checking the header and the tier-2 instruction, so a reply repeating them verbatim is withheld
+(`GUIDANCE_ECHO`). A reply may still quote a participant's line that a note also quotes.
 
 **Differences from the existing contracts (before → after, Shared reading path only):**
 
@@ -192,7 +211,8 @@ participant's line that a note also quotes.
 
 **Not changed by this amendment:**
 - the gate, its tiers and its marker lists;
-- the Round 10 modules' logic (promoted unchanged; only comments and one import path changed);
+- the Round 10 modules' logic (promoted unchanged; only comments, one import path and, from the final engineering review,
+  the label escaping of §5 changed);
 - the Shared assembler, Text v1, the Shared frame, the CP1 speaker representation;
 - the Safety Response Gate;
 - the DeepSeek adapter;
@@ -228,13 +248,16 @@ participant's line that a note also quotes.
 - The two contract tests above.
 - No paid call was made.
 
-**Accepted limits (v1).** Recorded once in `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`, item 002, non-blocking.
+**Accepted limits (v1).** The Founder's product acceptance (2026-10-23) covers the remaining attribution accuracy limits.
+- They are recorded once, in `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`, item 002, as a future improvement:
+  non-blocking and unscheduled.
+- They do not block the first release.
+- Round 10's historical result stands as written in §1.
 
-**Pending the Founder's final approval:**
-- this record (CA-S1, CA-S2's verbatim copy, CA-S3);
-- its registration in the Canonical Authority Index;
-- the disposition of `QAN-BL-AI-09` in the backlog.
+**Closure (2026-10-23; S8A-02's closing change).**
+- This record is registered in the Canonical Authority Index and Project Map rule 2.
+- `QAN-BL-AI-09` is tombstoned in the canonical backlog by the Founder's product acceptance for the first release, with
+  the evidence and the known limits kept there.
+- Every date above is local time (+03:00).
 
-None is done by this record.
-
-> **S8A-02 CP2 — SHARED ATTRIBUTION LAYER CONTROLLED AMENDMENT — CANDIDATE, AWAITING FOUNDER FINAL APPROVAL**
+> **S8A-02 CP2 — SHARED ATTRIBUTION LAYER CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE**

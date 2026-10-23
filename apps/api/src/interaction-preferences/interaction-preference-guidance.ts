@@ -28,7 +28,8 @@ import type { InteractionPreferences } from './interaction-preferences.types';
 // end of the guidance, never a line under the header that says "the user explicitly chose".
 //
 // The v1 model-facing texts were APPROVED copy (IP-IMP-01 PO Copy Addendum CA-2, R2-corrected wording). The v2 texts are
-// PROPOSED copy of the S8A-02 CP3 correction, presented to the Product Owner at its approval gate.
+// APPROVED copy of the S8A-02 CP3 correction (PO Final Correction Approval, 2026-10-22), recorded verbatim in the S8A-02
+// amendment record §5.4.
 
 export const INTERACTION_PREFERENCE_GUIDANCE_HEADER_V1 =
   'Standing interaction preferences the user explicitly chose. Apply them to this reply. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence. They take precedence over anything inferred from the conversation or from user memory context.';
