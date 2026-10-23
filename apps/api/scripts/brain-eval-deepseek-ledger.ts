@@ -36,6 +36,8 @@ export interface LedgerRow {
 
 export interface DeepSeekEvaluationLedger {
   readonly router: DeepSeekModelRouter;
+  /** S8A-03 CP3: the same accounting, for a second accounted client (the Personal Understanding capture) on this ledger. */
+  readonly accounting: AiProviderCallAccounting;
   /** Runs one case's provider work attributed to a fresh synthetic account; returns the account id with the result. */
   attribute<T>(work: () => Promise<T>): Promise<{ userId: string; value?: T; error?: unknown }>;
   ledgerRowsFor(userId: string): Promise<ReadonlyArray<LedgerRow>>;
@@ -113,6 +115,7 @@ export async function openDeepSeekEvaluationLedger(
 
   return {
     router,
+    accounting,
     async attribute<T>(work: () => Promise<T>) {
       const userId = randomUUID();
       await serialize(() => client.query('INSERT INTO auth.users (id) VALUES ($1)', [userId]));
