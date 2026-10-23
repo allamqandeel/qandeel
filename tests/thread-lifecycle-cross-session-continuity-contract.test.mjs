@@ -51,7 +51,7 @@ const B3_FILES = [
   'thread-continuity-provider.types.ts',
   'thread-continuity-provider.config.ts',
   'fake-thread-continuity.provider.ts',
-  'openai-thread-continuity.provider.ts',
+  'deepseek-thread-continuity.provider.ts',
   'thread-continuity-validator.ts',
   'thread-continuity-evaluator.service.ts',
   'thread-continuity-binding.ts',
@@ -70,6 +70,8 @@ const B3_SPECS = [
   'conversation-thread-lifecycle-runtime-mapper.spec.ts',
   'conversation-thread-lifecycle-runtime.repository.spec.ts',
   'conversation-thread-lifecycle-establishment.service.spec.ts',
+  // S8A-03 (D1): the DeepSeek continuity adapter gains its own focused unit spec.
+  'deepseek-thread-continuity.provider.spec.ts',
 ];
 
 const migration = read(`database/migrations/${MIGRATION}`);
@@ -84,7 +86,7 @@ const runtimeTypes = read(`${LIFECYCLE_DIR}/conversation-thread-lifecycle-runtim
 const reducer = stripComments(read(`${LIFECYCLE_DIR}/thread-lifecycle-reducer.ts`));
 const continuityTypes = read(`${LIFECYCLE_DIR}/thread-continuity.types.ts`);
 const evaluator = stripComments(read(`${LIFECYCLE_DIR}/thread-continuity-evaluator.service.ts`));
-const provider = read(`${LIFECYCLE_DIR}/openai-thread-continuity.provider.ts`);
+const provider = read(`${LIFECYCLE_DIR}/deepseek-thread-continuity.provider.ts`);
 const binding = read(`${LIFECYCLE_DIR}/thread-continuity-binding.ts`);
 const canonicalizer = read(`${LIFECYCLE_DIR}/durable-thread-lifecycle-canonicalizer.ts`);
 const lifecycleTypes = read(`${LIFECYCLE_DIR}/thread-lifecycle.types.ts`);
@@ -92,7 +94,7 @@ const productionCode = B3_FILES.map((name) => stripComments(read(`${LIFECYCLE_DI
 // The runtime proper: everything except the provider adapter (which carries the
 // prompt text) and the config module (which, exactly like the T-03B1a / T-03B2a
 // configs, is the ONE place that reads the credential when a real call is made).
-const runtimeCode = B3_FILES.filter((name) => !['openai-thread-continuity.provider.ts', 'thread-continuity-provider.config.ts'].includes(name))
+const runtimeCode = B3_FILES.filter((name) => !['deepseek-thread-continuity.provider.ts', 'thread-continuity-provider.config.ts'].includes(name))
   .map((name) => stripComments(read(`${LIFECYCLE_DIR}/${name}`))).join('\n');
 const conversationModule = read('apps/api/src/conversation/conversation.module.ts');
 const conversationService = read('apps/api/src/conversation/conversation.service.ts');
@@ -455,21 +457,24 @@ test('FIX-T03B2B3-01 preserved: the direct completed-exchange gate proves the WH
 test('the continuity provider is lazy and strict, and no Thread, Home, binding or lifecycle payload reaches the wire', () => {
   // RE-ANCHORED by AI-COST-01: the factory gains an optional transport-client decorator (provider-call accounting,
   // identity by default, applied only where the adapter is built on the FIRST real call).
-  assert.match(binding, /export function openAiThreadContinuityBinding\(\s*environment: NodeJS\.ProcessEnv = process\.env,[\s\S]*?decorateClient: ThreadContinuityClientDecorator = \(client\) => client,\s*\): ThreadContinuityBindingFactory \{\s*return \(\) => \{\s*const identity = loadThreadContinuityProviderIdentity\(environment\);/u);
-  assert.match(binding, /const real = \(\): OpenAiThreadContinuityProvider => \{\s*if \(adapter === undefined\) \{\s*const config = loadThreadContinuityOpenAIConfig\(environment\);/u, 'the adapter (and the credential) is built on the FIRST real call');
+  // RE-ANCHORED by S8A-03: the environment and the accounting decorator are both REQUIRED, so no composition of the
+  // binding can reach DeepSeek unaccounted or with an ambient environment.
+  assert.match(binding, /export function deepSeekThreadContinuityBinding\(\s*environment: NodeJS\.ProcessEnv,[\s\S]*?decorateClient: ThreadContinuityClientDecorator,\s*\): ThreadContinuityBindingFactory \{\s*return \(\) => \{\s*const identity = loadThreadContinuityProviderIdentity\(environment\);/u);
+  assert.match(binding, /const real = \(\): DeepSeekThreadContinuityProvider => \{\s*if \(adapter === undefined\) \{\s*const config = loadThreadContinuityDeepSeekConfig\(environment\);/u, 'the adapter (and the credential) is built on the FIRST real call');
   assert.match(service, /this\.continuity \?\?= this\.createContinuityBinding\(\);/u);
   assert.match(service, /this\.focus \?\?= this\.createFocusBinding\(\);/u);
   assert.match(service, /this\.thread \?\?= this\.createThreadBinding\(\);/u);
   assert.equal((service.match(/this\.createContinuityBinding\(\)/gu) ?? []).length, 1);
   const constructorEnd = service.indexOf('async establish(');
   assert.doesNotMatch(service.slice(0, constructorEnd), /createContinuityBinding\(\)|createThreadBinding\(\)|createFocusBinding\(\)|createSegmentationBinding\(\)|process\.env/u, 'construction reads no environment and builds no provider');
-  assert.doesNotMatch(runtimeCode, /OPENAI_API_KEY|process\.env\./u, 'no ambient credential read in the runtime');
+  assert.doesNotMatch(runtimeCode, /DEEPSEEK_API_KEY|OPENAI_API_KEY|process\.env\./u, 'no ambient credential read in the runtime');
   assert.match(stripComments(read(`${LIFECYCLE_DIR}/thread-continuity-provider.config.ts`)), /export function loadThreadContinuityProviderIdentity\(environment: NodeJS\.ProcessEnv = process\.env\): ThreadContinuityProviderIdentity \{/u);
   const identityLoader = stripComments(read(`${LIFECYCLE_DIR}/thread-continuity-provider.config.ts`));
-  assert.doesNotMatch(identityLoader.slice(identityLoader.indexOf('export function loadThreadContinuityProviderIdentity('), identityLoader.indexOf('export function loadThreadContinuityOpenAIConfig(')), /OPENAI_API_KEY/u,
+  assert.doesNotMatch(identityLoader.slice(identityLoader.indexOf('export function loadThreadContinuityProviderIdentity('), identityLoader.indexOf('export function loadThreadContinuityDeepSeekConfig(')), /DEEPSEEK_API_KEY|requireDeepSeekQualification/u,
     'recording provenance never needs the credential');
-  assert.match(provider, /text: \{ format: \{ type: 'json_schema', name, strict: true, schema \} \}/u);
-  assert.match(provider, /store: false/u);
+  // S8A-03: DeepSeek JSON Output carries the closed schema inside the system instruction (the shared request builder).
+  assert.match(provider, /deepSeekJsonRequest\(\{/u);
+  assert.match(provider, /return deepSeekJsonContent\(response\);/u);
   assert.match(provider, /maxRetries: 0/u);
   assert.match(provider, /new AbortController\(\)/u);
   assert.match(provider, /additionalProperties: false/u);

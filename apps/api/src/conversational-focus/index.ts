@@ -8,7 +8,7 @@ export * from './focus-resolution-provider.types';
 export * from './focus-resolution-provider.config';
 export * from './focus-resolution-validator';
 export * from './fake-focus-resolution.provider';
-export * from './openai-focus-resolution.provider';
+export * from './deepseek-focus-resolution.provider';
 export * from './conversational-focus-evaluator.service';
 // T-03B1b1 - durable canonicalization (pure, inert).
 export * from './durable-focus-payload.types';

@@ -1,9 +1,11 @@
-import OpenAI from 'openai';
+// S8A-03 (D1): hypothesis intent extraction on DeepSeek Flash. DeepSeek JSON Output carries the schema in the system
+// instruction; `parseOutput` is the enforcement (exactly three keys, an allowed domain, only supplied Evidence IDs,
+// no duplicate), as it always also was. The request validation, the instructions and the provider data are unchanged.
 import { EVIDENCE_KINDS } from '../memory/evidence.types';
 import { HYPOTHESIS_DOMAINS, MAX_STATEMENT_LENGTH } from './hypothesis.types';
 import { HYPOTHESIS_TRIGGER_REASONS, MAX_HYPOTHESIS_TRIGGER_INPUT_CHARS } from './hypothesis-generation-trigger-classification.types';
 import { MAX_INTENT_EVIDENCE_IDS } from './hypothesis-generation-intent-authority.types';
-import { loadHypothesisIntentExtractionOpenAIConfig, type HypothesisIntentExtractionOpenAIConfig } from './hypothesis-intent-extraction-provider.config';
+import type { HypothesisIntentExtractionDeepSeekConfig } from './hypothesis-intent-extraction-provider.config';
 import {
   HYPOTHESIS_INTENT_EXTRACTION_SCHEMA_VERSION,
   MAX_EXTRACTION_EVIDENCE_TEXT_CHARS,
@@ -14,30 +16,23 @@ import {
   type HypothesisIntentExtractionProviderOutput,
   type HypothesisIntentExtractionProviderRequest,
 } from './hypothesis-intent-extraction-provider.types';
+import {
+  deepSeekJsonContent,
+  deepSeekJsonRequest,
+  escapeDeepSeekData,
+  isDeepSeekTimeout,
+  isDeepSeekUnavailable,
+  type DeepSeekJsonClient,
+} from '../model-router/providers/deepseek/deepseek-client';
 
 const MEMORY_EVIDENCE_ID = /^memory:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_RAW_USER_TEXT_CODE_UNITS = MAX_HYPOTHESIS_TRIGGER_INPUT_CHARS * 2;
 
-interface OpenAIExtractionResponse { output_text: string }
-interface OpenAIExtractionClient {
-  responses: {
-    create(body: Record<string, unknown>, options: {
-      timeout: number;
-      maxRetries: 0;
-      signal: AbortSignal;
-    }): Promise<OpenAIExtractionResponse>;
-  };
-}
-
-export class OpenAIHypothesisIntentExtractionProvider implements HypothesisIntentExtractionProvider {
-  static fromEnvironment(environment: NodeJS.ProcessEnv = process.env): OpenAIHypothesisIntentExtractionProvider {
-    const config = loadHypothesisIntentExtractionOpenAIConfig(environment);
-    return new OpenAIHypothesisIntentExtractionProvider(config, createOpenAIExtractionClient(config));
-  }
-
+/** AI-COST-01: composed only with an accounted client (the provider module); there is no unaccounted factory. */
+export class DeepSeekHypothesisIntentExtractionProvider implements HypothesisIntentExtractionProvider {
   constructor(
-    private readonly config: HypothesisIntentExtractionOpenAIConfig,
-    private readonly client: OpenAIExtractionClient,
+    private readonly config: HypothesisIntentExtractionDeepSeekConfig,
+    private readonly client: DeepSeekJsonClient,
   ) {}
 
   async extract(request: HypothesisIntentExtractionProviderRequest): Promise<HypothesisIntentExtractionProviderOutput> {
@@ -46,19 +41,17 @@ export class OpenAIHypothesisIntentExtractionProvider implements HypothesisInten
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
-      const response = await this.client.responses.create({
-        model: this.config.model,
+      const response = await this.client.chat.completions.create(deepSeekJsonRequest({
         instructions: INSTRUCTIONS,
-        input: [{ role: 'user', content: `<intent_extraction_data>${escapeData(providerData(request))}</intent_extraction_data>` }],
-        text: { format: structuredFormat(request) },
-        max_output_tokens: this.config.maxOutputTokens,
-        store: false,
-      }, { timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal });
-      return parseOutput(response.output_text, request);
+        schema: extractionSchema(request),
+        data: `<intent_extraction_data>${escapeDeepSeekData(providerData(request))}</intent_extraction_data>`,
+        maxTokens: this.config.maxOutputTokens,
+      }), { timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal });
+      return parseOutput(deepSeekJsonContent(response), request);
     } catch (error) {
       if (error instanceof HypothesisIntentExtractionProviderError) throw error;
-      if (controller.signal.aborted || isTimeout(error)) throw new HypothesisIntentExtractionProviderError('TIMEOUT');
-      if (isUnavailable(error)) throw new HypothesisIntentExtractionProviderError('UNAVAILABLE');
+      if (controller.signal.aborted || isDeepSeekTimeout(error)) throw new HypothesisIntentExtractionProviderError('TIMEOUT');
+      if (isDeepSeekUnavailable(error)) throw new HypothesisIntentExtractionProviderError('UNAVAILABLE');
       throw new HypothesisIntentExtractionProviderError('PROVIDER_ERROR');
     } finally {
       clearTimeout(timer);
@@ -85,19 +78,17 @@ function providerData(request: HypothesisIntentExtractionProviderRequest): objec
   };
 }
 
-function structuredFormat(request: HypothesisIntentExtractionProviderRequest): object {
+/** The `hypothesis_intent_extraction_v1` schema, unchanged; `parseOutput` enforces every part of it. */
+function extractionSchema(request: HypothesisIntentExtractionProviderRequest): object {
   return {
-    type: 'json_schema', name: 'hypothesis_intent_extraction_v1', strict: true,
-    schema: {
-      type: 'object', additionalProperties: false,
-      required: ['problemText', 'domain', 'selectedEvidenceIds'],
-      properties: {
-        problemText: { type: 'string', minLength: 1, maxLength: MAX_STATEMENT_LENGTH },
-        domain: { type: 'string', enum: [...request.allowedDomains] },
-        selectedEvidenceIds: {
-          type: 'array', minItems: 1, maxItems: request.maxSelectedEvidence,
-          items: { type: 'string', enum: request.eligibleEvidence.map((item) => item.evidenceId) },
-        },
+    type: 'object', additionalProperties: false,
+    required: ['problemText', 'domain', 'selectedEvidenceIds'],
+    properties: {
+      problemText: { type: 'string', minLength: 1, maxLength: MAX_STATEMENT_LENGTH },
+      domain: { type: 'string', enum: [...request.allowedDomains] },
+      selectedEvidenceIds: {
+        type: 'array', minItems: 1, maxItems: request.maxSelectedEvidence,
+        items: { type: 'string', enum: request.eligibleEvidence.map((item) => item.evidenceId) },
       },
     },
   };
@@ -151,17 +142,3 @@ function parseOutput(value: unknown, request: HypothesisIntentExtractionProvider
 }
 
 function normalize(value: string): string { return value.normalize('NFKC').trim().replace(/\s+/gu, ' '); }
-function escapeData(value: unknown): string {
-  return JSON.stringify(value).replace(/&/gu, '\\u0026').replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
-}
-function isTimeout(error: unknown): boolean {
-  return error instanceof Error && (error.name === 'AbortError' || error.name === 'APIConnectionTimeoutError');
-}
-function isUnavailable(error: unknown): boolean {
-  const value = error as { name?: unknown; status?: unknown };
-  return value?.name === 'APIConnectionError' || value?.status === 502 || value?.status === 503 || value?.status === 504;
-}
-
-export function createOpenAIExtractionClient(config: HypothesisIntentExtractionOpenAIConfig): OpenAI {
-  return new OpenAI({ apiKey: config.apiKey, maxRetries: 0, timeout: config.timeoutMs, logLevel: 'off' });
-}

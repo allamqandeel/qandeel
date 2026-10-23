@@ -1,18 +1,18 @@
-// T-03B1a - the OpenAI focus-resolution adapter.
+// T-03B1a - the focus-resolution adapter. S8A-03 (D1): DeepSeek Flash.
 //
-// Follows the T-03A1 structured-output posture exactly: strict json_schema
-// with additionalProperties:false at every level, store:false, zero SDK
-// retries, an explicit AbortController timeout, the request wrapped in an
-// untrusted-data envelope, and a fail-closed parser that is tested separately
-// from API invocation. No live provider request ever runs in CI.
+// Follows the T-03A1 posture: DeepSeek JSON Output with the schema in the
+// system instruction, zero SDK retries, an explicit AbortController timeout,
+// the request wrapped in an untrusted-data envelope, and a fail-closed parser
+// that is tested separately from API invocation. No live provider request ever
+// runs in CI.
 //
-// The schema is the enforcement, not the instructions: there is no key for an
-// offset, a score, a speaker, a Thread, an LF, or an emerging_focus_id, so the
-// model cannot author one even if it tried. Allowlist membership (handles,
-// focus candidates, target CUs) and every cross-element rule are enforced by
-// the deterministic validator; the parser enforces SHAPE only.
+// The parser is the shape enforcement, not the instructions: it accepts the
+// exact key set at every level, so there is no key for an offset, a score, a
+// speaker, a Thread, an LF, or an emerging_focus_id, and the model cannot
+// author one even if it tried. Allowlist membership (handles, focus candidates,
+// target CUs) and every cross-element rule are enforced by the deterministic
+// validator; the parser enforces SHAPE only.
 
-import OpenAI from 'openai';
 import { codePointLength } from '../conversation-unit/cu-anchor-mapper';
 import {
   ATTENTION_KINDS,
@@ -29,7 +29,7 @@ import {
   SEQUENCE_POSITIONS,
   type ExtractiveAnchor,
 } from './conversational-focus.types';
-import { loadFocusResolutionOpenAIConfig, type FocusResolutionOpenAIConfig } from './focus-resolution-provider.config';
+import type { FocusResolutionDeepSeekConfig } from './focus-resolution-provider.config';
 import {
   FOCUS_RESOLUTION_SCHEMA_VERSION,
   FocusResolutionProviderError,
@@ -40,29 +40,20 @@ import {
   type FocusResolutionRequest,
   type ReferenceResolutionProposal,
 } from './focus-resolution-provider.types';
+import {
+  deepSeekJsonContent,
+  deepSeekJsonRequest,
+  escapeDeepSeekData,
+  isDeepSeekTimeout,
+  isDeepSeekUnavailable,
+  type DeepSeekJsonClient,
+} from '../model-router/providers/deepseek/deepseek-client';
 
-interface OpenAIFocusResponse {
-  output_text: string;
-}
-
-interface OpenAIFocusClient {
-  responses: {
-    create(
-      body: Record<string, unknown>,
-      options: { timeout: number; maxRetries: 0; signal: AbortSignal },
-    ): Promise<OpenAIFocusResponse>;
-  };
-}
-
-export class OpenAiFocusResolutionProvider implements FocusResolutionProvider {
-  static fromEnvironment(environment: NodeJS.ProcessEnv = process.env): OpenAiFocusResolutionProvider {
-    const config = loadFocusResolutionOpenAIConfig(environment);
-    return new OpenAiFocusResolutionProvider(config, createOpenAiFocusClient(config));
-  }
-
+/** AI-COST-01: composed only with an accounted client (`focus-resolution-binding.ts`); there is no unaccounted factory. */
+export class DeepSeekFocusResolutionProvider implements FocusResolutionProvider {
   constructor(
-    private readonly config: FocusResolutionOpenAIConfig,
-    private readonly client: OpenAIFocusClient,
+    private readonly config: FocusResolutionDeepSeekConfig,
+    private readonly client: DeepSeekJsonClient,
   ) {}
 
   async propose(request: FocusResolutionRequest): Promise<FocusResolutionProposal> {
@@ -70,34 +61,27 @@ export class OpenAiFocusResolutionProvider implements FocusResolutionProvider {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
-      const response = await this.client.responses.create(
-        {
-          model: this.config.model,
+      const response = await this.client.chat.completions.create(
+        deepSeekJsonRequest({
           instructions: INSTRUCTIONS,
-          input: [
-            {
-              role: 'user',
-              content: `<conversational_focus_source>${escapeData({
-                schemaVersion: request.schemaVersion,
-                currentCu: request.currentCu,
-                priorCus: request.priorCus,
-                referenceHandles: request.referenceHandles,
-                focusCandidates: request.focusCandidates,
-                currentFocusCandidateId: request.currentFocusCandidateId,
-              })}</conversational_focus_source>`,
-            },
-          ],
-          text: { format: structuredFormat(request) },
-          max_output_tokens: this.config.maxOutputTokens,
-          store: false,
-        },
+          schema: focusResolutionSchema(request),
+          data: `<conversational_focus_source>${escapeDeepSeekData({
+            schemaVersion: request.schemaVersion,
+            currentCu: request.currentCu,
+            priorCus: request.priorCus,
+            referenceHandles: request.referenceHandles,
+            focusCandidates: request.focusCandidates,
+            currentFocusCandidateId: request.currentFocusCandidateId,
+          })}</conversational_focus_source>`,
+          maxTokens: this.config.maxOutputTokens,
+        }),
         { timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal },
       );
-      return parseProposal(response.output_text, request);
+      return parseProposal(deepSeekJsonContent(response), request);
     } catch (error) {
       if (error instanceof FocusResolutionProviderError) throw error;
-      if (controller.signal.aborted || isTimeout(error)) throw new FocusResolutionProviderError('TIMEOUT');
-      if (isUnavailable(error)) throw new FocusResolutionProviderError('UNAVAILABLE');
+      if (controller.signal.aborted || isDeepSeekTimeout(error)) throw new FocusResolutionProviderError('TIMEOUT');
+      if (isDeepSeekUnavailable(error)) throw new FocusResolutionProviderError('UNAVAILABLE');
       throw new FocusResolutionProviderError('PROVIDER_ERROR');
     } finally {
       clearTimeout(timer);
@@ -134,74 +118,70 @@ function maxOccurrenceFor(request: FocusResolutionRequest): number {
   return codePointLength(request.currentCu.committedText);
 }
 
-function structuredFormat(request: FocusResolutionRequest): object {
+/** The `conversational_focus_resolution_v1` schema, unchanged; `parseFocusResolutionOutput` enforces its shape. */
+function focusResolutionSchema(request: FocusResolutionRequest): object {
   const anchor = ANCHOR_SCHEMA(request);
   return {
-    type: 'json_schema',
-    name: 'conversational_focus_resolution_v1',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['functions', 'sequencePosition', 'targetCuId', 'references', 'claimAttributions', 'attention'],
-      properties: {
-        functions: {
-          type: 'array',
-          minItems: 1,
-          maxItems: MAX_FUNCTIONS_PER_CU,
-          items: { type: 'string', enum: [...CONVERSATIONAL_FUNCTIONS] },
-        },
-        sequencePosition: { type: 'string', enum: [...SEQUENCE_POSITIONS] },
-        targetCuId: { type: ['string', 'null'] },
-        references: {
-          type: 'array',
-          maxItems: MAX_REFERENCES_PER_CU,
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['anchor', 'state', 'resolvedHandleId', 'candidateHandleIds', 'newReference'],
-            properties: {
-              anchor,
-              state: { type: 'string', enum: [...REFERENCE_RESOLUTION_STATES] },
-              resolvedHandleId: { type: ['string', 'null'] },
-              candidateHandleIds: { type: 'array', maxItems: request.referenceHandles.length, items: { type: 'string' } },
-              newReference: { type: 'boolean' },
-            },
-          },
-        },
-        claimAttributions: {
-          type: 'array',
-          maxItems: MAX_CLAIM_ATTRIBUTIONS_PER_CU,
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['anchor', 'claimant', 'frame'],
-            properties: {
-              anchor,
-              claimant: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['kind', 'handleId', 'referenceIndex'],
-                properties: {
-                  kind: { type: 'string', enum: [...CLAIMANT_KINDS] },
-                  handleId: { type: ['string', 'null'] },
-                  referenceIndex: { type: ['integer', 'null'], minimum: 0, maximum: MAX_REFERENCES_PER_CU - 1 },
-                },
-              },
-              frame: { type: 'string', enum: [...CLAIM_FRAMES] },
-            },
-          },
-        },
-        attention: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['functions', 'sequencePosition', 'targetCuId', 'references', 'claimAttributions', 'attention'],
+    properties: {
+      functions: {
+        type: 'array',
+        minItems: 1,
+        maxItems: MAX_FUNCTIONS_PER_CU,
+        items: { type: 'string', enum: [...CONVERSATIONAL_FUNCTIONS] },
+      },
+      sequencePosition: { type: 'string', enum: [...SEQUENCE_POSITIONS] },
+      targetCuId: { type: ['string', 'null'] },
+      references: {
+        type: 'array',
+        maxItems: MAX_REFERENCES_PER_CU,
+        items: {
           type: 'object',
           additionalProperties: false,
-          required: ['kind', 'existingFocusCandidateId', 'groundingAnchor', 'reason'],
+          required: ['anchor', 'state', 'resolvedHandleId', 'candidateHandleIds', 'newReference'],
           properties: {
-            kind: { type: 'string', enum: [...ATTENTION_KINDS] },
-            existingFocusCandidateId: { type: ['string', 'null'] },
-            groundingAnchor: { anyOf: [anchor, { type: 'null' }] },
-            reason: { type: 'string', enum: [...ATTENTION_REASONS] },
+            anchor,
+            state: { type: 'string', enum: [...REFERENCE_RESOLUTION_STATES] },
+            resolvedHandleId: { type: ['string', 'null'] },
+            candidateHandleIds: { type: 'array', maxItems: request.referenceHandles.length, items: { type: 'string' } },
+            newReference: { type: 'boolean' },
           },
+        },
+      },
+      claimAttributions: {
+        type: 'array',
+        maxItems: MAX_CLAIM_ATTRIBUTIONS_PER_CU,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['anchor', 'claimant', 'frame'],
+          properties: {
+            anchor,
+            claimant: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['kind', 'handleId', 'referenceIndex'],
+              properties: {
+                kind: { type: 'string', enum: [...CLAIMANT_KINDS] },
+                handleId: { type: ['string', 'null'] },
+                referenceIndex: { type: ['integer', 'null'], minimum: 0, maximum: MAX_REFERENCES_PER_CU - 1 },
+              },
+            },
+            frame: { type: 'string', enum: [...CLAIM_FRAMES] },
+          },
+        },
+      },
+      attention: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['kind', 'existingFocusCandidateId', 'groundingAnchor', 'reason'],
+        properties: {
+          kind: { type: 'string', enum: [...ATTENTION_KINDS] },
+          existingFocusCandidateId: { type: ['string', 'null'] },
+          groundingAnchor: { anyOf: [anchor, { type: 'null' }] },
+          reason: { type: 'string', enum: [...ATTENTION_REASONS] },
         },
       },
     },
@@ -324,20 +304,3 @@ export function parseFocusResolutionOutput(value: unknown, request: FocusResolut
 }
 
 const parseProposal = parseFocusResolutionOutput;
-
-function escapeData(value: unknown): string {
-  return JSON.stringify(value).replace(/&/gu, '\\u0026').replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
-}
-
-function isTimeout(error: unknown): boolean {
-  return error instanceof Error && (error.name === 'AbortError' || error.name === 'APIConnectionTimeoutError');
-}
-
-function isUnavailable(error: unknown): boolean {
-  const value = error as { name?: unknown; status?: unknown };
-  return value?.name === 'APIConnectionError' || value?.status === 502 || value?.status === 503 || value?.status === 504;
-}
-
-export function createOpenAiFocusClient(config: FocusResolutionOpenAIConfig): OpenAI {
-  return new OpenAI({ apiKey: config.apiKey, maxRetries: 0, timeout: config.timeoutMs, logLevel: 'off' });
-}

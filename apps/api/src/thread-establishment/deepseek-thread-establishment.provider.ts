@@ -1,23 +1,21 @@
-// T-03B2a - the OpenAI Thread-establishment adapter.
+// T-03B2a - the Thread-establishment adapter. S8A-03 (D1): DeepSeek Flash.
 //
-// Follows the proven T-03A1 / T-03B1a structured-output posture exactly: strict
-// json_schema with additionalProperties:false at every level, every property
-// required, exact enums, store:false, zero SDK retries, an explicit
-// AbortController timeout, the request wrapped in an untrusted-data envelope,
-// and a fail-closed parser that is tested separately from API invocation. No
-// live provider request ever runs in CI.
+// Follows the proven T-03A1 / T-03B1a posture: DeepSeek JSON Output with the
+// schema (every property required, exact enums) in the system instruction,
+// zero SDK retries, an explicit AbortController timeout, the request wrapped in
+// an untrusted-data envelope, and a fail-closed parser that is tested
+// separately from API invocation. No live provider request ever runs in CI.
 //
-// The schema is the enforcement, not the instructions: there is no key for an
-// offset, a score, a confidence, a rationale, a Thread id, a Home or spatial
-// value, an LF, or a semantic relation, so the model cannot author one even if
-// it tried. Evidence membership, path structure, attribution restraint and the
-// same-focus rule are enforced by the deterministic validator; the parser
-// enforces SHAPE only.
+// The parser is the shape enforcement, not the instructions: it accepts the
+// exact key set, so there is no key for an offset, a score, a confidence, a
+// rationale, a Thread id, a Home or spatial value, an LF, or a semantic
+// relation, and the model cannot author one even if it tried. Evidence
+// membership, path structure, attribution restraint and the same-focus rule are
+// enforced by the deterministic validator; the parser enforces SHAPE only.
 
-import OpenAI from 'openai';
 import { codePointLength } from '../conversation-unit/cu-anchor-mapper';
 import { MAX_FOCUS_ANCHOR_CHARS, MAX_FOCUS_SOURCE_CHARS, type ExtractiveAnchor } from '../conversational-focus/conversational-focus.types';
-import { loadThreadEstablishmentOpenAIConfig, type ThreadEstablishmentOpenAIConfig } from './thread-establishment-provider.config';
+import type { ThreadEstablishmentDeepSeekConfig } from './thread-establishment-provider.config';
 import {
   THREAD_ESTABLISHMENT_SCHEMA_VERSION,
   ThreadEstablishmentProviderError,
@@ -26,29 +24,20 @@ import {
   type ThreadEstablishmentRequest,
 } from './thread-establishment-provider.types';
 import { THREAD_ESTABLISHMENT_DECISIONS, THREAD_ESTABLISHMENT_PATHS } from './thread-establishment.types';
+import {
+  deepSeekJsonContent,
+  deepSeekJsonRequest,
+  escapeDeepSeekData,
+  isDeepSeekTimeout,
+  isDeepSeekUnavailable,
+  type DeepSeekJsonClient,
+} from '../model-router/providers/deepseek/deepseek-client';
 
-interface OpenAIThreadResponse {
-  output_text: string;
-}
-
-interface OpenAIThreadClient {
-  responses: {
-    create(
-      body: Record<string, unknown>,
-      options: { timeout: number; maxRetries: 0; signal: AbortSignal },
-    ): Promise<OpenAIThreadResponse>;
-  };
-}
-
-export class OpenAiThreadEstablishmentProvider implements ThreadEstablishmentProvider {
-  static fromEnvironment(environment: NodeJS.ProcessEnv = process.env): OpenAiThreadEstablishmentProvider {
-    const config = loadThreadEstablishmentOpenAIConfig(environment);
-    return new OpenAiThreadEstablishmentProvider(config, createOpenAiThreadClient(config));
-  }
-
+/** AI-COST-01: composed only with an accounted client (`thread-establishment-binding.ts`); there is no unaccounted factory. */
+export class DeepSeekThreadEstablishmentProvider implements ThreadEstablishmentProvider {
   constructor(
-    private readonly config: ThreadEstablishmentOpenAIConfig,
-    private readonly client: OpenAIThreadClient,
+    private readonly config: ThreadEstablishmentDeepSeekConfig,
+    private readonly client: DeepSeekJsonClient,
   ) {}
 
   async propose(request: ThreadEstablishmentRequest): Promise<ThreadEstablishmentProposal> {
@@ -56,33 +45,26 @@ export class OpenAiThreadEstablishmentProvider implements ThreadEstablishmentPro
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
-      const response = await this.client.responses.create(
-        {
-          model: this.config.model,
+      const response = await this.client.chat.completions.create(
+        deepSeekJsonRequest({
           instructions: INSTRUCTIONS,
-          input: [
-            {
-              role: 'user',
-              content: `<thread_establishment_source>${escapeData({
-                schemaVersion: request.schemaVersion,
-                currentCu: request.currentCu,
-                currentFocusSemantics: request.currentFocusSemantics,
-                priorCus: request.priorCus,
-                focusAttentionHistory: request.focusAttentionHistory,
-              })}</thread_establishment_source>`,
-            },
-          ],
-          text: { format: structuredFormat(request) },
-          max_output_tokens: this.config.maxOutputTokens,
-          store: false,
-        },
+          schema: threadEstablishmentSchema(request),
+          data: `<thread_establishment_source>${escapeDeepSeekData({
+            schemaVersion: request.schemaVersion,
+            currentCu: request.currentCu,
+            currentFocusSemantics: request.currentFocusSemantics,
+            priorCus: request.priorCus,
+            focusAttentionHistory: request.focusAttentionHistory,
+          })}</thread_establishment_source>`,
+          maxTokens: this.config.maxOutputTokens,
+        }),
         { timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal },
       );
-      return parseProposal(response.output_text, request);
+      return parseProposal(deepSeekJsonContent(response), request);
     } catch (error) {
       if (error instanceof ThreadEstablishmentProviderError) throw error;
-      if (controller.signal.aborted || isTimeout(error)) throw new ThreadEstablishmentProviderError('TIMEOUT');
-      if (isUnavailable(error)) throw new ThreadEstablishmentProviderError('UNAVAILABLE');
+      if (controller.signal.aborted || isDeepSeekTimeout(error)) throw new ThreadEstablishmentProviderError('TIMEOUT');
+      if (isDeepSeekUnavailable(error)) throw new ThreadEstablishmentProviderError('UNAVAILABLE');
       throw new ThreadEstablishmentProviderError('PROVIDER_ERROR');
     } finally {
       clearTimeout(timer);
@@ -125,21 +107,17 @@ function maxEvidenceFor(request: ThreadEstablishmentRequest): number {
   return request.priorCus.length + 1;
 }
 
-function structuredFormat(request: ThreadEstablishmentRequest): object {
+/** The `thread_establishment_evidence_path_v1` schema, unchanged; `parseThreadEstablishmentOutput` enforces its shape. */
+function threadEstablishmentSchema(request: ThreadEstablishmentRequest): object {
   return {
-    type: 'json_schema',
-    name: 'thread_establishment_evidence_path_v1',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['decision', 'path', 'evidenceCuIds', 'explicitSelectionAnchor'],
-      properties: {
-        decision: { type: 'string', enum: [...THREAD_ESTABLISHMENT_DECISIONS] },
-        path: { anyOf: [{ type: 'string', enum: [...THREAD_ESTABLISHMENT_PATHS] }, { type: 'null' }] },
-        evidenceCuIds: { type: 'array', maxItems: maxEvidenceFor(request), items: { type: 'string' } },
-        explicitSelectionAnchor: { anyOf: [ANCHOR_SCHEMA(request), { type: 'null' }] },
-      },
+    type: 'object',
+    additionalProperties: false,
+    required: ['decision', 'path', 'evidenceCuIds', 'explicitSelectionAnchor'],
+    properties: {
+      decision: { type: 'string', enum: [...THREAD_ESTABLISHMENT_DECISIONS] },
+      path: { anyOf: [{ type: 'string', enum: [...THREAD_ESTABLISHMENT_PATHS] }, { type: 'null' }] },
+      evidenceCuIds: { type: 'array', maxItems: maxEvidenceFor(request), items: { type: 'string' } },
+      explicitSelectionAnchor: { anyOf: [ANCHOR_SCHEMA(request), { type: 'null' }] },
     },
   };
 }
@@ -207,20 +185,3 @@ export function parseThreadEstablishmentOutput(value: unknown, request: ThreadEs
 }
 
 const parseProposal = parseThreadEstablishmentOutput;
-
-function escapeData(value: unknown): string {
-  return JSON.stringify(value).replace(/&/gu, '\\u0026').replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
-}
-
-function isTimeout(error: unknown): boolean {
-  return error instanceof Error && (error.name === 'AbortError' || error.name === 'APIConnectionTimeoutError');
-}
-
-function isUnavailable(error: unknown): boolean {
-  const value = error as { name?: unknown; status?: unknown };
-  return value?.name === 'APIConnectionError' || value?.status === 502 || value?.status === 503 || value?.status === 504;
-}
-
-export function createOpenAiThreadClient(config: ThreadEstablishmentOpenAIConfig): OpenAI {
-  return new OpenAI({ apiKey: config.apiKey, maxRetries: 0, timeout: config.timeoutMs, logLevel: 'off' });
-}

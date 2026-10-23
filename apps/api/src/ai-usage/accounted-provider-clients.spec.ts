@@ -1,4 +1,5 @@
-import { accountedAnthropicMessagesClient, accountedDeepSeekChatCompletionsClient, accountedGeminiTransport, accountedOpenAIResponsesClient } from './accounted-provider-clients';
+import * as transports from './accounted-provider-clients';
+import { accountedDeepSeekChatCompletionsClient } from './accounted-provider-clients';
 import { AiProviderCallAccounting, AiProviderCallAccountingUnavailableError, type AiProviderCallBeginRecord, type AiProviderCallSettleRecord } from './ai-provider-call-accounting';
 import { runWithAiUsageAttribution } from './ai-usage-attribution';
 import { SupabaseAiProviderCallLedger } from './ai-provider-call-ledger.repository';
@@ -17,34 +18,21 @@ function recordingAccounting(beginFails = false) {
 const attributed = <T>(work: () => Promise<T>) => runWithAiUsageAttribution({ userId: USER }, work);
 
 describe('AI-COST-01 accounted provider transports', () => {
-  it('OpenAI: the body and options reach the real client unchanged, the model comes from the server-built body', async () => {
+  it('S8A-03 (D1): DeepSeek Chat Completions is the only accounted transport', () => {
+    expect(Object.keys(transports).sort()).toEqual(['accountedDeepSeekChatCompletionsClient']);
+  });
+
+  it('DeepSeek: a structured adapter request and its options reach the real client unchanged, the model comes from the server-built body', async () => {
     const r = recordingAccounting();
-    const response = { output_text: 'x', usage: { input_tokens: 9, input_tokens_details: { cached_tokens: 4, cache_write_tokens: 0 }, output_tokens: 2 } };
-    const create = jest.fn(async (_body: unknown, _options?: unknown) => response);
-    const client = accountedOpenAIResponsesClient({ responses: { create } }, 'FOCUS_RESOLUTION', r.accounting);
-    const body = { model: 'gpt-5-mini', input: [] };
+    const completion = { choices: [{ finish_reason: 'stop', message: { content: '{}' } }], usage: { prompt_tokens: 9, prompt_cache_hit_tokens: 4, prompt_cache_miss_tokens: 5, completion_tokens: 2 } };
+    const create = jest.fn(async (_body: unknown, _options?: unknown) => completion);
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'FOCUS_RESOLUTION', r.accounting);
+    const body = { model: 'deepseek-flash', messages: [], response_format: { type: 'json_object' }, thinking: { type: 'disabled' } };
     const options = { timeout: 5, maxRetries: 0 as const, signal: new AbortController().signal };
-    await expect(attributed(() => client.responses.create(body as never, options as never))).resolves.toBe(response);
+    await expect(attributed(() => client.chat.completions.create(body as never, options as never))).resolves.toBe(completion);
     expect(create).toHaveBeenCalledWith(body, options);
-    expect(r.begun[0]).toMatchObject({ provider: 'OPENAI', operation: 'OPENAI_RESPONSES_CREATE', requestedModel: 'gpt-5-mini', featureFamily: 'FOCUS_RESOLUTION' });
-    expect(r.settled[0]).toMatchObject({ outcome: 'SUCCEEDED', usage: { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 5, CACHE_READ_INPUT_TOKEN: 4, CACHE_WRITE_INPUT_TOKEN: 0, OUTPUT_TOKEN: 2 } } });
-  });
-
-  it('OpenAI: no intent, no request - the adapter sees the 503-shaped refusal its classifier maps to UNAVAILABLE', async () => {
-    const r = recordingAccounting(true);
-    const create = jest.fn(async (_body: unknown) => ({}));
-    const client = accountedOpenAIResponsesClient({ responses: { create } }, 'CU_SEGMENTATION', r.accounting);
-    await expect(attributed(() => client.responses.create({ model: 'gpt-5-mini' } as never))).rejects.toMatchObject({ status: 503 });
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it('Anthropic: one accounted attempt per messages.create, with its own usage partition', async () => {
-    const r = recordingAccounting();
-    const message = { content: [], usage: { input_tokens: 7, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 3 } };
-    const client = accountedAnthropicMessagesClient({ messages: { create: jest.fn(async (_body: unknown) => message) } }, 'CONVERSATION_REPLY', r.accounting);
-    await runWithAiUsageAttribution({ userId: USER, processingPath: 'DEEP' }, () => client.messages.create({ model: 'claude-sonnet-4-6' } as never));
-    expect(r.begun[0]).toMatchObject({ provider: 'ANTHROPIC', operation: 'ANTHROPIC_MESSAGES_CREATE', requestedModel: 'claude-sonnet-4-6', processingPath: 'DEEP' });
-    expect(r.settled[0].usage).toEqual({ completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 7, CACHE_READ_INPUT_TOKEN: 0, CACHE_WRITE_INPUT_TOKEN: 0, OUTPUT_TOKEN: 3 } });
+    expect(r.begun[0]).toMatchObject({ provider: 'DEEPSEEK', operation: 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', requestedModel: 'deepseek-flash', featureFamily: 'FOCUS_RESOLUTION' });
+    expect(r.settled[0]).toMatchObject({ outcome: 'SUCCEEDED', usage: { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 5, CACHE_READ_INPUT_TOKEN: 4, OUTPUT_TOKEN: 2 } } });
   });
 
   it('DeepSeek: one accounted attempt per chat.completions.create, intent before the request, its own usage partition', async () => {
@@ -59,71 +47,45 @@ describe('AI-COST-01 accounted provider transports', () => {
     expect(r.settled[0]).toMatchObject({ outcome: 'SUCCEEDED', usage: { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 4, CACHE_READ_INPUT_TOKEN: 8, OUTPUT_TOKEN: 3 } } });
   });
 
-  it('DeepSeek: no durable intent, no request', async () => {
+  it('DeepSeek: no durable intent, no request - the adapter sees the 503-shaped refusal its classifier maps to UNAVAILABLE', async () => {
     const r = recordingAccounting(true);
     const create = jest.fn(async (_body: unknown) => ({}));
-    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'CONVERSATION_REPLY', r.accounting);
-    await expect(attributed(() => client.chat.completions.create({ model: 'deepseek-flash' } as never))).rejects.toBeInstanceOf(AiProviderCallAccountingUnavailableError);
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'CU_SEGMENTATION', r.accounting);
+    const refusal = attributed(() => client.chat.completions.create({ model: 'deepseek-flash' } as never));
+    await expect(refusal).rejects.toBeInstanceOf(AiProviderCallAccountingUnavailableError);
+    await expect(refusal).rejects.toMatchObject({ status: 503 });
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('Gemini: the 2xx body is read once for usage and handed to the adapter unchanged', async () => {
+  it('DeepSeek: no attribution, no request', async () => {
     const r = recordingAccounting();
-    const body = { candidates: [{ content: { parts: [{ text: '[]' }] } }], usageMetadata: { promptTokenCount: 30, candidatesTokenCount: 2 } };
-    const json = jest.fn(async () => body);
-    const transport = accountedGeminiTransport(async () => ({ ok: true, status: 200, json }), 'gemini-2.5-flash', 'HYPOTHESIS_CANDIDATE_GENERATION', r.accounting);
-    const response = await attributed(() => transport('https://example.invalid', { method: 'POST' }));
-    await expect(response.json()).resolves.toBe(body);
-    expect(json).toHaveBeenCalledTimes(1);
-    expect(r.begun[0]).toMatchObject({ provider: 'GEMINI', operation: 'GEMINI_GENERATE_CONTENT', requestedModel: 'gemini-2.5-flash' });
-    expect(r.settled[0]).toMatchObject({ outcome: 'SUCCEEDED', usage: { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 30, CACHE_READ_INPUT_TOKEN: 0, OUTPUT_TOKEN: 2 } } });
+    const create = jest.fn(async (_body: unknown) => ({}));
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'HYPOTHESIS_EVIDENCE_ASSOCIATION', r.accounting);
+    await expect(client.chat.completions.create({ model: 'deepseek-flash' } as never)).rejects.toBeInstanceOf(AiProviderCallAccountingUnavailableError);
+    expect(create).not.toHaveBeenCalled();
+    expect(r.begun).toHaveLength(0);
   });
 
-  it('Gemini: a non-2xx answer is a FAILED attempt with unknown usage and passes through untouched', async () => {
+  it('DeepSeek: a provider failure is a FAILED attempt with unknown usage and is re-thrown as it was', async () => {
     const r = recordingAccounting();
-    const original = { ok: false, status: 503, json: jest.fn() };
-    const transport = accountedGeminiTransport(async () => original, 'gemini-2.5-flash', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', r.accounting);
-    await expect(attributed(() => transport('u', {}))).resolves.toBe(original);
-    expect(original.json).not.toHaveBeenCalled();
+    const failure = Object.assign(new Error('bad gateway'), { status: 502 });
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create: jest.fn(async (_body: unknown) => { throw failure; }) } } }, 'HYPOTHESIS_CANDIDATE_GENERATION', r.accounting);
+    await expect(attributed(() => client.chat.completions.create({ model: 'deepseek-flash' } as never))).rejects.toBe(failure);
+    expect(r.begun[0]).toMatchObject({ provider: 'DEEPSEEK', featureFamily: 'HYPOTHESIS_CANDIDATE_GENERATION' });
     expect(r.settled[0]).toMatchObject({ outcome: 'FAILED', usage: { completeness: 'ABSENT' } });
-  });
-
-  it('Gemini: an unreadable 2xx body is SUCCEEDED with unknown usage, and the adapter sees the same error', async () => {
-    const r = recordingAccounting();
-    const broken = new SyntaxError('bad json');
-    const transport = accountedGeminiTransport(async () => ({ ok: true, status: 200, json: async () => { throw broken; } }), 'gemini-2.5-flash', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', r.accounting);
-    const response = await attributed(() => transport('u', {}));
-    await expect(response.json()).rejects.toBe(broken);
-    expect(r.settled[0]).toMatchObject({ outcome: 'SUCCEEDED', usage: { completeness: 'ABSENT' } });
-  });
-
-  it('Gemini: a network failure is FAILED with unknown usage and re-thrown as it was', async () => {
-    const r = recordingAccounting();
-    const network = new TypeError('fetch failed');
-    const transport = accountedGeminiTransport(async () => { throw network; }, 'gemini-2.5-flash', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', r.accounting);
-    await expect(attributed(() => transport('u', {}))).rejects.toBe(network);
-    expect(r.settled[0]).toMatchObject({ outcome: 'FAILED', usage: { completeness: 'ABSENT' } });
-  });
-
-  it('Gemini: no attribution, no request', async () => {
-    const r = recordingAccounting();
-    const http = jest.fn();
-    const transport = accountedGeminiTransport(http, 'gemini-2.5-flash', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', r.accounting);
-    await expect(transport('u', {})).rejects.toBeInstanceOf(AiProviderCallAccountingUnavailableError);
-    expect(http).not.toHaveBeenCalled();
   });
 });
 
 describe('AI-COST-01 ledger repository (service-role channel)', () => {
-  const begin = { callId: 'c', userId: USER, sessionId: null, sourceTurnId: null, provider: 'GEMINI', requestedModel: 'm', operation: 'GEMINI_GENERATE_CONTENT', featureFamily: 'HYPOTHESIS_CANDIDATE_GENERATION', processingPath: 'FAST' } as const;
+  const begin = { callId: 'c', userId: USER, sessionId: null, sourceTurnId: null, provider: 'DEEPSEEK', requestedModel: 'm', operation: 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', featureFamily: 'HYPOTHESIS_CANDIDATE_GENERATION', processingPath: 'FAST' } as const;
   it('sends identities and numbers only, and accepts only the defined outcomes', async () => {
     const rpc = jest.fn().mockResolvedValueOnce([{ begin_outcome: 'BEGUN', attempt_number: 1 }]).mockResolvedValueOnce([{ settle_outcome: 'ALREADY_SETTLED' }]);
     const ledger = new SupabaseAiProviderCallLedger({ rpc });
     await ledger.begin(begin);
     await ledger.settle({ callId: 'c', userId: USER, outcome: 'SUCCEEDED', usage: { completeness: 'INCOMPLETE', quantities: { OUTPUT_TOKEN: 3 } } });
     expect(rpc).toHaveBeenNthCalledWith(1, 'begin_ai_provider_call_v1', {
-      p_call_id: 'c', p_user_id: USER, p_session_id: null, p_source_turn_id: null, p_provider: 'GEMINI', p_requested_model: 'm',
-      p_operation: 'GEMINI_GENERATE_CONTENT', p_feature_family: 'HYPOTHESIS_CANDIDATE_GENERATION', p_processing_path: 'FAST',
+      p_call_id: 'c', p_user_id: USER, p_session_id: null, p_source_turn_id: null, p_provider: 'DEEPSEEK', p_requested_model: 'm',
+      p_operation: 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', p_feature_family: 'HYPOTHESIS_CANDIDATE_GENERATION', p_processing_path: 'FAST',
     });
     expect(rpc).toHaveBeenNthCalledWith(2, 'settle_ai_provider_call_v1', {
       p_call_id: 'c', p_user_id: USER, p_outcome: 'SUCCEEDED', p_usage_completeness: 'INCOMPLETE', p_usage: { OUTPUT_TOKEN: 3 },

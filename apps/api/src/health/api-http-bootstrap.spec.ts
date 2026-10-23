@@ -40,8 +40,8 @@
  *
  * Those are guaranteed structurally rather than by hope:
  *
- *   NO provider configuration is set at all — no `MODEL_PROVIDER`, no `OPENAI_API_KEY`, no
- *   `ANTHROPIC_API_KEY`, no `GOOGLE_AI_API_KEY`. Nothing can call a provider it cannot select, and
+ *   NO provider configuration is set at all — no `MODEL_PROVIDER`, no `DEEPSEEK_API_KEY`, no
+ *   `DEEPSEEK_QUALIFICATION_MODE` (nor any former OpenAI / Anthropic / Gemini key). Nothing can call a provider it cannot select, and
  *   the last test below proves generation still fails closed rather than silently degrading;
  *
  *   every `SUPABASE_*` and `REDIS_URL` value is REMOVED for the duration, so the Supabase transports
@@ -77,7 +77,7 @@ const HTTP_PLATFORM_ADAPTERS = ['@nestjs/platform-express', '@nestjs/platform-fa
  */
 const WITHHELD = [
   'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'REDIS_URL', 'DATABASE_URL',
-  'MODEL_PROVIDER', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_AI_API_KEY',
+  'MODEL_PROVIDER', 'DEEPSEEK_API_KEY', 'DEEPSEEK_QUALIFICATION_MODE', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_AI_API_KEY',
   'HYPOTHESIS_INTENT_EXTRACTION_PROVIDER', 'HYPOTHESIS_CANDIDATE_GENERATION_PROVIDER',
 ];
 
@@ -169,11 +169,12 @@ describe('the real API bootstraps over HTTP with no provider configured, and ans
     // must not become "generate anyway": with no provider configured, a generation attempt has to
     // fail with the same error it always did, and it must arrive as a rejection.
     const router = app!.get<ModelRouter>(MODEL_ROUTER);
-    await expect(router.generate({} as never)).rejects.toThrow('MODEL_PROVIDER must be one of anthropic, openai or deepseek.');
+    await expect(router.generate({} as never)).rejects.toThrow('MODEL_PROVIDER must be deepseek.');
   });
 
   it('still FAILS CLOSED when something actually asks it to extract', async () => {
     const provider = app!.get<HypothesisIntentExtractionProvider>(HYPOTHESIS_INTENT_EXTRACTION_PROVIDER);
-    await expect(provider.extract({} as never)).rejects.toThrow('OPENAI_API_KEY is required for hypothesis intent extraction.');
+    // S8A-03: the production process refuses DeepSeek (SYNTHETIC_ONLY qualification), so extraction fails closed there.
+    await expect(provider.extract({} as never)).rejects.toThrow('DeepSeek is qualification-only and cannot be selected in production.');
   });
 });

@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
+> **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered (local) and awaiting review, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
 >
 > *(Previous:)* **CURRENT TASK (2026-10-21):** S8A-01 — DeepSeek Production Integration & First Real Conversation; CLOSED at its final review & merge gate: CP1–CP4 delivered, CP4 passed, not merged (§6.29).
 
@@ -809,7 +811,9 @@ stay as written.
 - **Next:** the Product Owner's final review and merge decision on the S8A-01 pull request. No merge, S8A-02 or
   deployment without the Product Owner's explicit approval. *(Merged through PR #353 as `d566a7e7`, 2026-10-21.)*
 
-### S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (2026-10-21 … 2026-10-23; current task, closed at its final review & merge gate; one pull request, not merged)
+### S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (2026-10-21 … 2026-10-23; MERGED through PR #354 as `37812845`)
+
+*S8A-02 merged through PR #354 as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23); not deployed, closed to users. Reconciled by S8A-03 (2026-10-23). The bullets below are as written at its checkpoints and its closing change.*
 
 - **Evaluated on DeepSeek Flash, synthetic data, the accounted AI-COST-01 path:** Round 1 (60 calls) and Round 2 (200
   calls, USD 0.209 at the peak rate). The branch renders core v3 ([amendment record](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md)).
@@ -873,3 +877,24 @@ stay as written.
     notes' label escaping and the notes' echo check); all three were corrected with tests, and no paid call was made.
   - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
   - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
+
+### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP1 delivered, awaiting review; one pull request at the end, not merged)
+
+- Started 2026-10-23 on `s8a/s8a-03-personal-understanding-reality` from `main` at `37812845` (the merge of PR #354,
+  S8A-02). CP0, an independent read-only review, was delivered and reviewed by the Founder, who approved its direction
+  and F1 / F2 / F3 / F10. S8A-03 owns no backlog item at kickoff.
+- Founder decisions:
+  - D1: every production AI call goes to DeepSeek Flash; no OpenAI, Gemini or Anthropic fallback, and no Pro model.
+  - D2: semantic cross-session retrieval, Egyptian Arabic included, is a precondition of the first launch, on DeepSeek
+    only.
+  - D3: closed systems are consumed; only narrow controlled amendments.
+  - D4: acquisition, correction and semantic recall are proven; no invented or forgotten knowledge.
+- **CP1 delivered (local, not pushed; awaiting the Founder's review; CP2 not started):**
+  - every production AI call is on DeepSeek Flash, and the OpenAI / Anthropic / Gemini production paths are removed;
+  - the seven structured functions use Chat Completions with JSON Output, the shared DeepSeek client and the
+    `SYNTHETIC_ONLY` gate, with their ports, validators, accounting families and timeouts unchanged;
+  - governed by the candidate [S8A-03 DeepSeek Structured Functions Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_DEEPSEEK_STRUCTURED_FUNCTIONS_CONTROLLED_AMENDMENT_v1.0.md), which binds on the
+    merge of the one S8A-03 pull request and records the Founder's eight CP2 corrections.
+  - No migration, paid call or live-environment change. `QAN-BL-AI-02` stays open until the migration is proven
+    complete, and no backlog ownership has moved.
+- `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

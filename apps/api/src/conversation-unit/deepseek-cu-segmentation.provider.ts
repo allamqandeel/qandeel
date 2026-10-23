@@ -1,20 +1,21 @@
-// T-03A1 - the OpenAI CU segmentation adapter.
+// T-03A1 - the CU segmentation adapter. S8A-03 (D1): DeepSeek Flash.
 //
-// The strict schema is the enforcement, not the instructions: `start`, `end`,
-// `offset` and any other key are structurally unrepresentable, so the model
-// cannot propose an offset even if it tried, and every excerpt it returns is
-// checked against the canonical source by the pure mapper before it can become
-// a span. A paraphrase therefore has no location and cannot be committed.
+// The fail-closed parser is the enforcement, not the instructions: `start`,
+// `end`, `offset` and any other key are refused (exactly two keys per unit), so
+// the model cannot propose an offset even if it tried, and every excerpt it
+// returns is checked against the canonical source by the pure mapper before it
+// can become a span. A paraphrase therefore has no location and cannot be
+// committed.
 //
-// Reuses the existing `openai` dependency and the repository's established
-// structured-output posture: strict json_schema, additionalProperties:false,
-// store:false, zero SDK retries, an explicit AbortController timeout, and the
-// source wrapped in an untrusted-data envelope.
+// DeepSeek Chat Completions offers JSON Output (`json_object`) only, so the
+// schema below travels inside the system instruction as the description of the
+// answer; it never was the only defence. Zero SDK retries, an explicit
+// AbortController timeout and the source wrapped in an untrusted-data envelope
+// are unchanged.
 
-import OpenAI from 'openai';
 import { MAX_SOURCE_EXCERPT_CHARS, MAX_UNITS_PER_COMMIT_BATCH, MAX_COMMITTABLE_SOURCE_CHARS } from './conversation-unit.types';
 import { codePointLength, type SourceAnchor } from './cu-anchor-mapper';
-import { loadCuSegmentationOpenAIConfig, type CuSegmentationOpenAIConfig } from './cu-segmentation-provider.config';
+import type { CuSegmentationDeepSeekConfig } from './cu-segmentation-provider.config';
 import {
   CU_SEGMENTATION_SCHEMA_VERSION,
   CuSegmentationProviderError,
@@ -22,29 +23,20 @@ import {
   type CuSegmentationProvider,
   type CuSegmentationRequest,
 } from './cu-segmentation-provider.types';
+import {
+  deepSeekJsonContent,
+  deepSeekJsonRequest,
+  escapeDeepSeekData,
+  isDeepSeekTimeout,
+  isDeepSeekUnavailable,
+  type DeepSeekJsonClient,
+} from '../model-router/providers/deepseek/deepseek-client';
 
-interface OpenAISegmentationResponse {
-  output_text: string;
-}
-
-interface OpenAISegmentationClient {
-  responses: {
-    create(
-      body: Record<string, unknown>,
-      options: { timeout: number; maxRetries: 0; signal: AbortSignal },
-    ): Promise<OpenAISegmentationResponse>;
-  };
-}
-
-export class OpenAiCuSegmentationProvider implements CuSegmentationProvider {
-  static fromEnvironment(environment: NodeJS.ProcessEnv = process.env): OpenAiCuSegmentationProvider {
-    const config = loadCuSegmentationOpenAIConfig(environment);
-    return new OpenAiCuSegmentationProvider(config, createOpenAiSegmentationClient(config));
-  }
-
+/** AI-COST-01: composed only with an accounted client (`conversation.module.ts`); there is no unaccounted factory. */
+export class DeepSeekCuSegmentationProvider implements CuSegmentationProvider {
   constructor(
-    private readonly config: CuSegmentationOpenAIConfig,
-    private readonly client: OpenAISegmentationClient,
+    private readonly config: CuSegmentationDeepSeekConfig,
+    private readonly client: DeepSeekJsonClient,
   ) {}
 
   async propose(request: CuSegmentationRequest): Promise<CuSegmentationProposal> {
@@ -52,33 +44,26 @@ export class OpenAiCuSegmentationProvider implements CuSegmentationProvider {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
-      const response = await this.client.responses.create(
-        {
-          model: this.config.model,
+      const response = await this.client.chat.completions.create(
+        deepSeekJsonRequest({
           instructions: INSTRUCTIONS,
-          input: [
-            {
-              role: 'user',
-              content: `<conversational_unit_source>${escapeData({
-                sourceText: request.sourceText,
-                sourceRole: request.sourceRole,
-                maxUnits: request.maxUnits,
-                maxExcerptChars: request.maxExcerptChars,
-                schemaVersion: request.schemaVersion,
-              })}</conversational_unit_source>`,
-            },
-          ],
-          text: { format: structuredFormat(request) },
-          max_output_tokens: this.config.maxOutputTokens,
-          store: false,
-        },
+          schema: segmentationSchema(request),
+          data: `<conversational_unit_source>${escapeDeepSeekData({
+            sourceText: request.sourceText,
+            sourceRole: request.sourceRole,
+            maxUnits: request.maxUnits,
+            maxExcerptChars: request.maxExcerptChars,
+            schemaVersion: request.schemaVersion,
+          })}</conversational_unit_source>`,
+          maxTokens: this.config.maxOutputTokens,
+        }),
         { timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal },
       );
-      return parseProposal(response.output_text, request);
+      return parseProposal(deepSeekJsonContent(response), request);
     } catch (error) {
       if (error instanceof CuSegmentationProviderError) throw error;
-      if (controller.signal.aborted || isTimeout(error)) throw new CuSegmentationProviderError('TIMEOUT');
-      if (isUnavailable(error)) throw new CuSegmentationProviderError('UNAVAILABLE');
+      if (controller.signal.aborted || isDeepSeekTimeout(error)) throw new CuSegmentationProviderError('TIMEOUT');
+      if (isDeepSeekUnavailable(error)) throw new CuSegmentationProviderError('UNAVAILABLE');
       throw new CuSegmentationProviderError('PROVIDER_ERROR');
     } finally {
       clearTimeout(timer);
@@ -119,27 +104,23 @@ function maxOccurrenceFor(request: CuSegmentationRequest): number {
   return codePointLength(request.sourceText);
 }
 
-function structuredFormat(request: CuSegmentationRequest): object {
+/** The `conversational_unit_segmentation_v1` schema, unchanged; `parseProposal` enforces every part of it. */
+function segmentationSchema(request: CuSegmentationRequest): object {
   return {
-    type: 'json_schema',
-    name: 'conversational_unit_segmentation_v1',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['units'],
-      properties: {
-        units: {
-          type: 'array',
-          maxItems: request.maxUnits,
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['text', 'occurrence'],
-            properties: {
-              text: { type: 'string', minLength: 1, maxLength: request.maxExcerptChars },
-              occurrence: { type: 'integer', minimum: 1, maximum: maxOccurrenceFor(request) },
-            },
+    type: 'object',
+    additionalProperties: false,
+    required: ['units'],
+    properties: {
+      units: {
+        type: 'array',
+        maxItems: request.maxUnits,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['text', 'occurrence'],
+          properties: {
+            text: { type: 'string', minLength: 1, maxLength: request.maxExcerptChars },
+            occurrence: { type: 'integer', minimum: 1, maximum: maxOccurrenceFor(request) },
           },
         },
       },
@@ -191,8 +172,8 @@ function parseProposal(value: unknown, request: CuSegmentationRequest): CuSegmen
         throw new Error();
       }
       const anchor = entry as Record<string, unknown>;
-      // Any offset-shaped key is refused here as well as by the strict schema:
-      // the provider never supplies coordinates.
+      // Any offset-shaped key is refused here: the provider never supplies
+      // coordinates.
       if (!('text' in anchor) || !('occurrence' in anchor)) throw new Error();
       if (
         typeof anchor.text !== 'string' ||
@@ -211,21 +192,4 @@ function parseProposal(value: unknown, request: CuSegmentationRequest): CuSegmen
   } catch {
     throw new CuSegmentationProviderError('INVALID_STRUCTURED_OUTPUT');
   }
-}
-
-function escapeData(value: unknown): string {
-  return JSON.stringify(value).replace(/&/gu, '\\u0026').replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
-}
-
-function isTimeout(error: unknown): boolean {
-  return error instanceof Error && (error.name === 'AbortError' || error.name === 'APIConnectionTimeoutError');
-}
-
-function isUnavailable(error: unknown): boolean {
-  const value = error as { name?: unknown; status?: unknown };
-  return value?.name === 'APIConnectionError' || value?.status === 502 || value?.status === 503 || value?.status === 504;
-}
-
-export function createOpenAiSegmentationClient(config: CuSegmentationOpenAIConfig): OpenAI {
-  return new OpenAI({ apiKey: config.apiKey, maxRetries: 0, timeout: config.timeoutMs, logLevel: 'off' });
 }

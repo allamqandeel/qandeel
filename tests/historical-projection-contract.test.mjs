@@ -347,7 +347,7 @@ test('R2: the production A-1 path is the canonical subject-grounding authority e
   assert.match(enrichment, /eligibleSubjectGroundings/u);
   const authority = stripComments(read('apps/api/src/hypothesis/hypothesis-subject-grounding.authority.ts'));
   const types = stripComments(read('apps/api/src/hypothesis/hypothesis-subject-grounding.types.ts'));
-  const generator = stripComments(read('apps/api/src/hypothesis/gemini-hypothesis-candidate.generator.ts'));
+  const generator = stripComments(read('apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts'));
   for (const [name, text] of [['the authority', authority], ['the types', types]]) {
     assert.doesNotMatch(text, /emergingFocusId|threadId|focusId|emerging_focus|thread_id|sessionId/u, `${name} never sees or accepts a focus, Thread or Session identity: handles only`);
   }
@@ -363,7 +363,9 @@ test('R2: the production A-1 path is the canonical subject-grounding authority e
   assert.match(types, /export const MAX_SUBJECT_GROUNDINGS_PER_CANDIDATE = 8;/u);
   assert.match(generator, /eligibleSubjectGroundings: request\.eligibleSubjectGroundings\.map\(\(\{ handle, subjectText, startedSp, lastAttentionSp \}\) =>/u, 'the provider sees exactly the handle, the wording and the Session Positions');
   assert.match(generator, /items: \{ type: 'string', enum: \[\.\.\.handles\] \}/u, 'the provider schema enumerates exactly the issued handles');
-  assert.match(generator, /grounded \? `\$\{INSTRUCTIONS\} \$\{SUBJECT_GROUNDING_INSTRUCTIONS\}` : INSTRUCTIONS/u, 'a request without a universe is the frozen request, byte for byte');
+  // RE-ANCHORED by S8A-03 (D1): the DeepSeek generator selects the instructions per request; a request without a
+  // universe still carries the base instructions alone, with no grounding sentence.
+  assert.match(generator, /return subjectGroundingHandles\(request\)\.length > 0 \? `\$\{INSTRUCTIONS\} \$\{SUBJECT_GROUNDING_INSTRUCTIONS\}` : INSTRUCTIONS;/u, 'a request without a universe carries the base instructions alone');
   // The wire and both decoders carry the grounding as a closed shape; the T-02 kernel (blob-pinned above) has no key for it.
   assert.match(runtimeIndex, /^\s*DisclosedSubjectGrounding,$/mu);
   assert.match(stripComments(runtimeHistorical), /export interface DisclosedSubjectGrounding \{\s*readonly emergingFocusId: string;\s*readonly groundedAtSp: number;\s*\}/u);

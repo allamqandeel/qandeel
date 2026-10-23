@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import {
   ModelRouterProviderError,
   composeServerGuidance,
@@ -7,11 +6,8 @@ import {
   type ModelRouterResult,
 } from '../../model-router.types';
 import { releaseModelOutput } from '../../model-output-release-guard';
-import {
-  DEEPSEEK_API_BASE_URL,
-  loadDeepSeekModelRouterConfig,
-  type DeepSeekModelRouterConfig,
-} from './deepseek-model-router.config';
+import { loadDeepSeekModelRouterConfig, type DeepSeekModelRouterConfig } from './deepseek-model-router.config';
+import { createDeepSeekClient } from './deepseek-client';
 import { TelemetryService } from '../../../observability/telemetry.service';
 import { assertForegroundProviderBudget } from '../../../conversation/foreground-turn-work';
 import type { AiProviderCallAccounting } from '../../../ai-usage/ai-provider-call-accounting';
@@ -112,19 +108,4 @@ export class DeepSeekModelRouter implements ModelRouter {
       clearTimeout(timer);
     }
   }
-}
-
-export function createDeepSeekClient(config: DeepSeekModelRouterConfig): OpenAI {
-  return new OpenAI({
-    apiKey: config.apiKey,
-    baseURL: DEEPSEEK_API_BASE_URL,
-    // The SDK would otherwise read these from OPENAI_* variables and send them to DeepSeek as headers.
-    organization: null,
-    project: null,
-    adminAPIKey: null,
-    webhookSecret: null,
-    maxRetries: config.maxRetries,
-    timeout: config.timeoutMs,
-    logLevel: 'off',
-  });
 }

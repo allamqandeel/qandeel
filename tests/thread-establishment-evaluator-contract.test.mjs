@@ -29,7 +29,7 @@ const FOCUS_DIR = 'apps/api/src/conversational-focus';
 const PRODUCTION_FILES = [
   'fake-thread-establishment.provider.ts',
   'index.ts',
-  'openai-thread-establishment.provider.ts',
+  'deepseek-thread-establishment.provider.ts',
   'thread-establishment-evaluator.service.ts',
   'thread-establishment-provider.config.ts',
   'thread-establishment-provider.types.ts',
@@ -37,12 +37,12 @@ const PRODUCTION_FILES = [
   'thread-establishment.types.ts',
 ];
 const SPEC_FILES = [
-  'openai-thread-establishment.provider.spec.ts',
+  'deepseek-thread-establishment.provider.spec.ts',
   'thread-establishment-evaluator.service.spec.ts',
   'thread-establishment-validator.spec.ts',
 ];
 /** Everything but the OpenAI adapter: the pure semantic surface. */
-const SEMANTIC_FILES = PRODUCTION_FILES.filter((name) => name !== 'openai-thread-establishment.provider.ts');
+const SEMANTIC_FILES = PRODUCTION_FILES.filter((name) => name !== 'deepseek-thread-establishment.provider.ts');
 
 function listFiles(dir) {
   const out = [];
@@ -64,7 +64,7 @@ const providerTypes = code['thread-establishment-provider.types.ts'];
 const config = code['thread-establishment-provider.config.ts'];
 const validator = code['thread-establishment-validator.ts'];
 const evaluator = code['thread-establishment-evaluator.service.ts'];
-const openai = code['openai-thread-establishment.provider.ts'];
+const adapter = code['deepseek-thread-establishment.provider.ts'];
 const evaluatorSpec = read(`${THREAD_DIR}/thread-establishment-evaluator.service.spec.ts`);
 
 const rootPackage = readJson('package.json');
@@ -152,9 +152,9 @@ test('the frozen promotion vocabulary is exactly TE-01 / TE-02 / TE-03, two deci
   assert.doesNotMatch(allCode, /TE-0[4-9]|TE-[1-9]\d|'TE-0[1-3][a-z]'/u, 'no path beyond the three frozen ones');
   assert.doesNotMatch(allCode, /PARTIAL_ESTABLISHMENT|PROVISIONAL|CANDIDATE_THREAD|WEAK_|STRONG_|LIKELY|MAYBE/u, 'no graded or provisional decision');
   // The provider schema uses those same vocabularies as enums, and nothing wider.
-  assert.match(openai, /enum: \[\.\.\.THREAD_ESTABLISHMENT_DECISIONS\]/u);
-  assert.match(openai, /enum: \[\.\.\.THREAD_ESTABLISHMENT_PATHS\]/u);
-  assert.doesNotMatch(openai, /enum: \[\s*'/u, 'no ad-hoc enum literal exists in the schema');
+  assert.match(adapter, /enum: \[\.\.\.THREAD_ESTABLISHMENT_DECISIONS\]/u);
+  assert.match(adapter, /enum: \[\.\.\.THREAD_ESTABLISHMENT_PATHS\]/u);
+  assert.doesNotMatch(adapter, /enum: \[\s*'/u, 'no ad-hoc enum literal exists in the schema');
   // The B1 attention vocabulary is consumed, never re-declared.
   assert.doesNotMatch(allCode, /export const ATTENTION_KINDS|export const ATTENTION_REASONS|export const CLAIM_FRAMES/u);
   assert.match(evaluator, /ATTENTION_REASONS_BY_KIND\[/u, 'history reasons are checked against the frozen per-kind vocabulary');
@@ -204,13 +204,13 @@ test('no database, Supabase, Nest, runtime, mobile or B1 runtime import; only th
       const specifier = match[1];
       if (specifier.startsWith('./')) continue;
       assert.ok(
-        specifier === 'openai' ||
+        specifier === '../model-router/providers/deepseek/deepseek-client' ||
           specifier === '../conversation-unit/cu-anchor-mapper' ||
           specifier === '../conversational-focus/conversational-focus.types' ||
           specifier === '../conversational-focus/durable-focus-payload.types',
-        `${name} imports ${specifier}; only ./*, openai, the pure T-03A1 anchor helper and the two B1 type modules are allowed`,
+        `${name} imports ${specifier}; only ./*, the shared DeepSeek client (S8A-03), the pure T-03A1 anchor helper and the two B1 type modules are allowed`,
       );
-      if (specifier === 'openai') assert.equal(name, 'openai-thread-establishment.provider.ts', 'only the adapter reaches the SDK');
+      if (specifier === '../model-router/providers/deepseek/deepseek-client') assert.ok(['deepseek-thread-establishment.provider.ts', 'thread-establishment-provider.config.ts', 'thread-establishment-binding.ts'].includes(name), `only the adapter, its configuration and its binding reach the DeepSeek client (${name})`);
     }
     assert.doesNotMatch(text, /require\(/u, `${name} uses no require()`);
     assert.doesNotMatch(text, /\bimport\(/u, `${name} uses no dynamic import()`);
@@ -238,7 +238,7 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     'only the FINAL-chain wiring in ConversationModule (and the bootstrap spec that proves its factory symbols) references the directory');
   assert.doesNotMatch(stripComments(read('apps/api/src/conversation/conversation-temporal.controller.spec.ts')), /thread-establishment|ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal/u,
     'the bootstrap spec names the factory symbol only, never the evaluator');
-  assert.doesNotMatch(stripComments(read('apps/api/src/conversation/conversation.module.ts')), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|thread-establishment-evaluator|thread-establishment-validator/u,
+  assert.doesNotMatch(stripComments(read('apps/api/src/conversation/conversation.module.ts')), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|DeepSeekThreadEstablishmentProvider|thread-establishment-evaluator|thread-establishment-validator/u,
     'ConversationModule registers a binding factory, never the evaluator, a provider adapter or the validator');
   // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
   // RUNS this frozen evaluator through the same seams T-03B2b3 uses. It may
@@ -264,14 +264,14 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     for (const match of source.matchAll(/from\s+'([^']*thread-establishment[^']*)'/gu)) {
       assert.ok(B3_ALLOWED_THREAD_IMPORTS.has(match[1]), `${file} may import only the listed T-03B2 pieces; found ${match[1]}`);
     }
-    assert.doesNotMatch(stripComments(source), /validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|FakeThreadEstablishmentProvider/u, `${file} never reaches the T-03B2a validator or provider adapters`);
-    if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /openAiThreadEstablishmentBinding/u, `${file} constructs no production T-03B2a binding of its own`);
+    assert.doesNotMatch(stripComments(source), /validateThreadEstablishmentProposal|DeepSeekThreadEstablishmentProvider|FakeThreadEstablishmentProvider/u, `${file} never reaches the T-03B2a validator or provider adapters`);
+    if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /deepSeekThreadEstablishmentBinding/u, `${file} constructs no production T-03B2a binding of its own`);
   }
   // T-03D wires the FINAL chain in ConversationModule (the lazy Thread binding
   // FACTORY only) and calls it from ConversationService; neither reaches the
   // evaluator, the validator, a provider adapter or a promotion path itself.
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService]]) {
-    assert.doesNotMatch(stripComments(text), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|OpenAiThreadEstablishmentProvider|thread-establishment-evaluator|thread-establishment-validator|TE-0[1-3]/u, `${name} never reaches the T-03B2a evaluator directly`);
+    assert.doesNotMatch(stripComments(text), /ThreadEstablishmentEvaluatorService|validateThreadEstablishmentProposal|DeepSeekThreadEstablishmentProvider|thread-establishment-evaluator|thread-establishment-validator|TE-0[1-3]/u, `${name} never reaches the T-03B2a evaluator directly`);
   }
   assert.doesNotMatch(stripComments(conversationService), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT/u, 'ConversationService is untouched by T-03B2a');
   for (const [name, text] of [['AppModule', appModule], ['the T-03A2 establishment service', establishment], ['the T-03B1b2 focus establishment service', focusEstablishment]]) {
@@ -417,40 +417,46 @@ test('the provider request is the one-CU input and nothing wider: no analytical 
   // One history entry is exactly attention kind, reason and stable focus id: no timestamp, no score, no count.
   assert.match(types, /export interface FocusAttentionHistoryEntry \{\s*readonly cuId: string;\s*readonly attentionKind: AttentionKind;\s*readonly attentionReason: AttentionReason;\s*readonly emergingFocusId: string \| null;\s*\}/u);
   // The adapter forwards exactly the request fields inside the untrusted envelope.
-  assert.match(openai, /<thread_establishment_source>\$\{escapeData\(\{\s*schemaVersion: request\.schemaVersion,\s*currentCu: request\.currentCu,\s*currentFocusSemantics: request\.currentFocusSemantics,\s*priorCus: request\.priorCus,\s*focusAttentionHistory: request\.focusAttentionHistory,\s*\}\)\}<\/thread_establishment_source>/u);
+  assert.match(adapter, /<thread_establishment_source>\$\{escapeDeepSeekData\(\{\s*schemaVersion: request\.schemaVersion,\s*currentCu: request\.currentCu,\s*currentFocusSemantics: request\.currentFocusSemantics,\s*priorCus: request\.priorCus,\s*focusAttentionHistory: request\.focusAttentionHistory,\s*\}\)\}<\/thread_establishment_source>/u);
 });
 
 test('the provider schema is strict, closed and structurally incapable of an offset, score, rationale, Thread id, Home or LF (task §8)', () => {
-  assert.match(openai, /type: 'json_schema',\s*name: 'thread_establishment_evidence_path_v1',\s*strict: true/u);
-  const opened = (openai.match(/type: 'object'/gu) ?? []).length;
-  const closed = (openai.match(/additionalProperties: false/gu) ?? []).length;
+  // S8A-03: DeepSeek JSON Output carries the same closed schema inside the system instruction (the shared request
+  // builder); the exported fail-closed parser enforces every part of it.
+  assert.match(adapter, /schema: threadEstablishmentSchema\(request\),/u);
+  assert.match(adapter, /this\.client\.chat\.completions\.create\(\s*deepSeekJsonRequest\(\{/u);
+  assert.match(adapter, /deepSeekJsonContent\(response\)/u);
+  const opened = (adapter.match(/type: 'object'/gu) ?? []).length;
+  const closed = (adapter.match(/additionalProperties: false/gu) ?? []).length;
   assert.ok(opened >= 2 && opened === closed, `every schema object (${opened}) is closed (${closed})`);
-  assert.match(openai, /required: \['decision', 'path', 'evidenceCuIds', 'explicitSelectionAnchor'\]/u, 'exactly the four proposal keys');
-  assert.match(openai, /required: \['text', 'occurrence'\]/u, 'an anchor is text + occurrence, nothing else');
-  assert.doesNotMatch(openai, /\b(?:start|end|offset|spanStart|spanEnd|score|confidence|probability|weight|rank|importance|similarity|rationale|reason|explanation|speaker|sourceRole|threadId|thread_id|homeAnchorId|home_anchor_id|canonicalSpatialAddress|x|y|liveFocus|emergingFocusId):/u,
+  assert.match(adapter, /required: \['decision', 'path', 'evidenceCuIds', 'explicitSelectionAnchor'\]/u, 'exactly the four proposal keys');
+  assert.match(adapter, /required: \['text', 'occurrence'\]/u, 'an anchor is text + occurrence, nothing else');
+  assert.doesNotMatch(adapter, /\b(?:start|end|offset|spanStart|spanEnd|score|confidence|probability|weight|rank|importance|similarity|rationale|reason|explanation|speaker|sourceRole|threadId|thread_id|homeAnchorId|home_anchor_id|canonicalSpatialAddress|x|y|liveFocus|emergingFocusId):/u,
     'no such key can be authored');
-  assert.match(openai, /maximum: maxOccurrenceFor\(request\)/u, 'the occurrence domain is the current CU source');
-  assert.match(openai, /return codePointLength\(request\.currentCu\.committedText\);/u);
-  assert.match(openai, /maxItems: maxEvidenceFor\(request\)/u, 'the evidence list is bounded by the supplied committed CUs');
-  assert.match(openai, /return request\.priorCus\.length \+ 1;/u);
-  assert.match(openai, /store: false/u);
-  assert.match(openai, /maxRetries: 0/u);
-  assert.match(openai, /new AbortController\(\)/u);
-  assert.match(openai, /catch \{\s*throw new ThreadEstablishmentProviderError\('INVALID_STRUCTURED_OUTPUT'\);\s*\}/u, 'the parser fails closed');
-  assert.doesNotMatch(openai, /retry|backoff|fallback|default(?:Proposal|Decision)/iu, 'no hidden retry or guessing fallback');
-  assert.match(openai, /export function parseThreadEstablishmentOutput\(/u);
-  assert.match(read(`${THREAD_DIR}/openai-thread-establishment.provider.spec.ts`), /parseThreadEstablishmentOutput\(/u, 'the parser is tested apart from API invocation');
-  // Config is never read at bootstrap: only the explicit environment loader
-  // reads the credential, and only `fromEnvironment()` calls the loader.
+  assert.match(adapter, /maximum: maxOccurrenceFor\(request\)/u, 'the occurrence domain is the current CU source');
+  assert.match(adapter, /return codePointLength\(request\.currentCu\.committedText\);/u);
+  assert.match(adapter, /maxItems: maxEvidenceFor\(request\)/u, 'the evidence list is bounded by the supplied committed CUs');
+  assert.match(adapter, /return request\.priorCus\.length \+ 1;/u);
+  assert.match(adapter, /maxRetries: 0/u);
+  assert.match(adapter, /new AbortController\(\)/u);
+  assert.match(adapter, /catch \{\s*throw new ThreadEstablishmentProviderError\('INVALID_STRUCTURED_OUTPUT'\);\s*\}/u, 'the parser fails closed');
+  assert.doesNotMatch(adapter, /retry|backoff|fallback|default(?:Proposal|Decision)/iu, 'no hidden retry or guessing fallback');
+  assert.doesNotMatch(adapter, /fromEnvironment/u, 'the adapter cannot compose itself unaccounted');
+  assert.match(adapter, /export function parseThreadEstablishmentOutput\(/u);
+  assert.match(read(`${THREAD_DIR}/deepseek-thread-establishment.provider.spec.ts`), /parseThreadEstablishmentOutput\(/u, 'the parser is tested apart from API invocation');
+  // Config is never read at bootstrap: only the explicit environment loader reads the credential. S8A-03: the adapter
+  // has no fromEnvironment, so the loader is declared once and called only by the lazy binding.
   const outsideLoader = Object.entries(code).filter(([name]) => name !== 'thread-establishment-provider.config.ts').map(([, text]) => text).join('\n');
-  assert.doesNotMatch(outsideLoader, /process\.env\.|OPENAI_API_KEY|THREAD_ESTABLISHMENT_PROVIDER\b|THREAD_ESTABLISHMENT_MODEL\b|THREAD_ESTABLISHMENT_TIMEOUT_MS/u, 'no ambient credential or environment read outside the explicit loader');
-  assert.equal((allCode.match(/loadThreadEstablishmentOpenAIConfig\(/gu) ?? []).length, 2, 'declared once, called once (fromEnvironment)');
-  assert.match(config, /environment\.THREAD_ESTABLISHMENT_PROVIDER/u);
-  assert.match(config, /environment\.OPENAI_API_KEY/u);
-  assert.match(config, /environment\.THREAD_ESTABLISHMENT_MODEL/u);
+  assert.doesNotMatch(outsideLoader, /process\.env\.|DEEPSEEK_API_KEY|OPENAI_API_KEY|THREAD_ESTABLISHMENT_PROVIDER\b|THREAD_ESTABLISHMENT_MODEL\b|THREAD_ESTABLISHMENT_TIMEOUT_MS/u, 'no ambient credential or environment read outside the explicit loader');
+  assert.equal((allCode.match(/loadThreadEstablishmentDeepSeekConfig\(/gu) ?? []).length, 1, 'declared once; the adapter itself never loads configuration');
+  // S8A-03 (D1): DeepSeek Flash only, behind the SYNTHETIC_ONLY qualification gate; a leftover provider or model
+  // selection fails loudly through the shared assertion.
+  assert.match(config, /assertDeepSeekFlashSelection\(environment, 'THREAD_ESTABLISHMENT'\);/u);
+  assert.match(config, /requireDeepSeekQualification\(environment, 'Thread establishment evaluation'\)/u);
+  assert.match(config, /model: DEEPSEEK_FLASH_MODEL,/u);
   assert.match(config, /environment\.THREAD_ESTABLISHMENT_TIMEOUT_MS/u);
-  assert.match(config, /export const DEFAULT_THREAD_ESTABLISHMENT_MODEL = 'gpt-5-mini';/u);
-  assert.match(config, /export const THREAD_ESTABLISHMENT_PROMPT_VERSION = 'thread-establishment-evidence-path-v1';/u);
+  assert.doesNotMatch(config, /OPENAI_API_KEY|gpt-/u);
+  assert.match(config, /export const THREAD_ESTABLISHMENT_PROMPT_VERSION = 'thread-establishment-evidence-path-deepseek-v1';/u);
   assert.match(types, /export const THREAD_ESTABLISHMENT_EVALUATOR_VERSION = 'thread-establishment-evaluator-v1';/u);
   assert.match(types, /export const THREAD_ESTABLISHMENT_POLICY_VERSION = 'stage-1.3-thread-establishment-v1';/u);
   assert.match(providerTypes, /export const THREAD_ESTABLISHMENT_SCHEMA_VERSION = 1 as const;/u);

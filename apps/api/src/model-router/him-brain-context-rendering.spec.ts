@@ -205,9 +205,9 @@ describe('QHIA-012 Brain Context provider rendering under the QHIA-013 envelope'
   });
 
   it('is rendered through the ONE shared composition both providers call', () => {
-    const claude = readFileSync(`${__dirname}/providers/anthropic/claude-model-router.ts`, 'utf8');
-    const openai = readFileSync(`${__dirname}/providers/openai/openai-model-router.ts`, 'utf8');
-    for (const provider of [claude, openai]) {
+    // S8A-03 (D1): the DeepSeek router is the only provider adapter left; it must still call the one composition.
+    const deepseek = readFileSync(`${__dirname}/providers/deepseek/deepseek-model-router.ts`, 'utf8');
+    for (const provider of [deepseek]) {
       expect(provider).toContain('composeServerGuidance(request)');
       // No provider-specific Brain Context semantics exist anywhere.
       expect(provider).not.toContain('himBrainContext');

@@ -633,7 +633,7 @@ describe('fail closed (fixtures 40-46) and input gates', () => {
     });
     expect(THREAD_ESTABLISHMENT_EVALUATOR_VERSION).toBe('thread-establishment-evaluator-v1');
     expect(THREAD_ESTABLISHMENT_POLICY_VERSION).toBe('stage-1.3-thread-establishment-v1');
-    expect(THREAD_ESTABLISHMENT_PROMPT_VERSION).toBe('thread-establishment-evidence-path-v1');
+    expect(THREAD_ESTABLISHMENT_PROMPT_VERSION).toBe('thread-establishment-evidence-path-deepseek-v1');
     expect(JSON.stringify(result)).not.toMatch(/threadId|thread_id|homeAnchor|home_anchor|spatial|sessionPosition|session_position|liveFocus|createdAt|timestamp|\d{4}-\d{2}-\d{2}T/u);
   });
 });

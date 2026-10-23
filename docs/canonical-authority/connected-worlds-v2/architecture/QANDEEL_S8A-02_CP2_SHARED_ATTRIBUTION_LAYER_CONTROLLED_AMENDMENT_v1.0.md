@@ -1,7 +1,8 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-02 CP2 — Shared Attribution Layer (selective S+R) — Narrow Controlled Amendment v1.0
 
-**Status:** `CANONICAL CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`. It binds from the merge of the S8A-02 pull
+**Status:** `CANONICAL CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`. Effective and frozen since the merge of PR #354
+as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23); reconciled by S8A-03. As written before the merge: it binds from the merge of the S8A-02 pull
 request that carries it, and the Founder merges only after approving it. CA-S1 and CA-S3 are approved in direction (2026-10-23).
 CA-S2's final production copy (§5) is presented verbatim in that pull request for the Founder's approval, and the merge is
 that approval  

@@ -184,9 +184,9 @@ test('the API temporal boundary exists and holds no conversation-lifecycle autho
   assert.match(code, /this\.binding \?\?= this\.createBinding\(\);/u);
   assert.doesNotMatch(code, /OPENAI_API_KEY/u, 'no provider credential is read here');
   // RE-ANCHORED by PROD-SEC-02: the lazy factory is registered inside guardForegroundBinding(...), which is itself lazy.
-  assert.match(conversationModule, /useValue: guardForegroundBinding\(openAiSegmentationBinding\)/u,
+  assert.match(conversationModule, /useValue: guardForegroundBinding\(deepSeekSegmentationBinding\)/u,
     'the module registers the FACTORY, never its product, so nothing is constructed at bootstrap');
-  assert.doesNotMatch(stripComments(conversationModule), /useValue: openAiSegmentationBinding\(\)/u);
+  assert.doesNotMatch(stripComments(conversationModule), /useValue: deepSeekSegmentationBinding\(\)/u);
 });
 
 test('turn handling is two distinct technical phases', () => {

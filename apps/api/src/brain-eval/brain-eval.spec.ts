@@ -6,7 +6,7 @@ import { candidateAProvider, createReviewArtifacts, EVALUATION_ARTIFACT_DIRECTOR
 import { REPOSITORY_ROOT } from './brain-eval.paths';
 import { estimateCostUsd } from './brain-eval.pricing';
 import { BRAIN_EVALUATION_SUITE } from './brain-eval.suite';
-import { assertPaidRunAllowed, validateEvaluationSuite } from './brain-eval.validation';
+import { validateEvaluationSuite } from './brain-eval.validation';
 
 const result = { content: 'synthetic response', routingMetadata: { path: 'FAST' as const }, usage: { inputTokens: 40, outputTokens: 10 } };
 const router = (requests: ModelRouterRequest[]): ModelRouter => ({ generate: jest.fn(async (request) => { requests.push(request); return { ...result, routingMetadata: { path: request.path } }; }) });
@@ -16,12 +16,6 @@ describe('Brain Bake-off evaluation harness', () => {
     const report = validateEvaluationSuite(BRAIN_EVALUATION_SUITE);
     expect(report.expectedPaidRequests).toBe(BRAIN_EVALUATION_SUITE.length * 2);
     expect(expectedRequestCount(BRAIN_EVALUATION_SUITE)).toBe(48);
-  });
-
-  it('refuses paid execution without acknowledgement or either credential', () => {
-    expect(() => assertPaidRunAllowed({ ANTHROPIC_API_KEY: 'a', OPENAI_API_KEY: 'o' })).toThrow('QANDEEL_ALLOW_PAID_EVAL=1');
-    expect(() => assertPaidRunAllowed({ QANDEEL_ALLOW_PAID_EVAL: '1', OPENAI_API_KEY: 'o' })).toThrow('ANTHROPIC_API_KEY');
-    expect(() => assertPaidRunAllowed({ QANDEEL_ALLOW_PAID_EVAL: '1', ANTHROPIC_API_KEY: 'a' })).toThrow('OPENAI_API_KEY');
   });
 
   it('sends identical context, production guidance, path, and bounds to corresponding profiles', async () => {

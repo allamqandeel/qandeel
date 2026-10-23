@@ -15,24 +15,24 @@ const code = (path) => read(path).replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s
 
 // The reply routers carry the guard themselves; the four semantic providers are frozen byte-identical by their own
 // contracts, so they are guarded at the binding seam the semantic chain already uses.
+// RE-ANCHORED by S8A-03 (D1): the OpenAI and Anthropic reply routers were removed; DeepSeek is the one reply router.
 const REPLY_ROUTERS = [
-  ['apps/api/src/model-router/providers/openai/openai-model-router.ts', 'this.client.responses.create('],
-  ['apps/api/src/model-router/providers/anthropic/claude-model-router.ts', 'this.client.messages.create('],
+  ['apps/api/src/model-router/providers/deepseek/deepseek-model-router.ts', 'this.client.chat.completions.create('],
 ];
 // Re-anchored by AI-COST-01: each binding factory now also receives the provider-call accounting decorator for its
 // transport client. The PROD-SEC-02 property is unchanged: every semantic binding is still wrapped by
 // guardForegroundBinding, so no provider request opens after the deadline.
 const SEMANTIC_BINDINGS = [
-  ['CU_SEGMENTATION_BINDING_FACTORY', 'openAiSegmentationBinding'],
-  ['FOCUS_RESOLUTION_BINDING_FACTORY', "openAiFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))"],
-  ['THREAD_ESTABLISHMENT_BINDING_FACTORY', "openAiThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))"],
-  ['THREAD_CONTINUITY_BINDING_FACTORY', "openAiThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))"],
+  ['CU_SEGMENTATION_BINDING_FACTORY', 'deepSeekSegmentationBinding'],
+  ['FOCUS_RESOLUTION_BINDING_FACTORY', "deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))"],
+  ['THREAD_ESTABLISHMENT_BINDING_FACTORY', "deepSeekThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))"],
+  ['THREAD_CONTINUITY_BINDING_FACTORY', "deepSeekThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))"],
 ];
 const FROZEN_SEMANTIC_PROVIDERS = [
-  'apps/api/src/conversation-unit/openai-cu-segmentation.provider.ts',
-  'apps/api/src/conversational-focus/openai-focus-resolution.provider.ts',
-  'apps/api/src/thread-lifecycle/openai-thread-continuity.provider.ts',
-  'apps/api/src/thread-establishment/openai-thread-establishment.provider.ts',
+  'apps/api/src/conversation-unit/deepseek-cu-segmentation.provider.ts',
+  'apps/api/src/conversational-focus/deepseek-focus-resolution.provider.ts',
+  'apps/api/src/thread-lifecycle/deepseek-thread-continuity.provider.ts',
+  'apps/api/src/thread-establishment/deepseek-thread-establishment.provider.ts',
 ];
 
 test('every foreground provider is reached only behind the deadline check', () => {

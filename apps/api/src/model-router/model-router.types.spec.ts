@@ -426,9 +426,9 @@ describe('composeServerGuidance Human Intelligence session reasoning DATA lane (
 
 describe('composeServerGuidance provider parity (QHIA-013)', () => {
   it('is the ONE shared composition both provider adapters call', () => {
-    const claude = readFileSync(`${__dirname}/providers/anthropic/claude-model-router.ts`, 'utf8');
-    const openai = readFileSync(`${__dirname}/providers/openai/openai-model-router.ts`, 'utf8');
-    for (const provider of [claude, openai]) {
+    // S8A-03 (D1): the DeepSeek router is the only provider adapter left; it must still call the one composition.
+    const deepseek = readFileSync(`${__dirname}/providers/deepseek/deepseek-model-router.ts`, 'utf8');
+    for (const provider of [deepseek]) {
       expect(provider).toContain('composeServerGuidance(request)');
       // No provider-specific Human Intelligence semantics exist anywhere: no
       // legacy field, no envelope field, no instruction ID, no data container.

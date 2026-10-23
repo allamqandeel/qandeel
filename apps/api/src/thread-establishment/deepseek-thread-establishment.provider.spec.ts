@@ -1,15 +1,16 @@
 import { codePointLength } from '../conversation-unit/cu-anchor-mapper';
-import { OpenAiThreadEstablishmentProvider, parseThreadEstablishmentOutput } from './openai-thread-establishment.provider';
-import { loadThreadEstablishmentOpenAIConfig, THREAD_ESTABLISHMENT_PROMPT_VERSION, type ThreadEstablishmentOpenAIConfig } from './thread-establishment-provider.config';
+import { DeepSeekThreadEstablishmentProvider, parseThreadEstablishmentOutput } from './deepseek-thread-establishment.provider';
+import { loadThreadEstablishmentDeepSeekConfig, THREAD_ESTABLISHMENT_PROMPT_VERSION, type ThreadEstablishmentDeepSeekConfig } from './thread-establishment-provider.config';
+import { DEEPSEEK_FLASH_MODEL, DEEPSEEK_JSON_OUTPUT_INSTRUCTION } from '../model-router/providers/deepseek/deepseek-client';
 import { THREAD_ESTABLISHMENT_SCHEMA_VERSION, ThreadEstablishmentProviderError, type ThreadEstablishmentRequest } from './thread-establishment-provider.types';
 import { THREAD_ESTABLISHMENT_DECISIONS, THREAD_ESTABLISHMENT_PATHS } from './thread-establishment.types';
 
 const F_AHMED = '3f2a9c1e-7b4d-5a6e-8c9f-0a1b2c3d4e5f';
 
-const CONFIG: ThreadEstablishmentOpenAIConfig = {
-  provider: 'OPENAI',
+const CONFIG: ThreadEstablishmentDeepSeekConfig = {
+  provider: 'DEEPSEEK',
   apiKey: 'test-key',
-  model: 'gpt-5-mini',
+  model: DEEPSEEK_FLASH_MODEL,
   timeoutMs: 8_000,
   maxOutputTokens: 1_024,
   maxRetries: 0,
@@ -41,14 +42,20 @@ const GOOD_OUTPUT = JSON.stringify({
 });
 const NO_OUTPUT = JSON.stringify({ decision: 'NO_ESTABLISHMENT', path: null, evidenceCuIds: [], explicitSelectionAnchor: null });
 
-const clientReturning = (outputText: string) => {
-  const create = jest.fn().mockResolvedValue({ output_text: outputText });
-  return { create, client: { responses: { create } } };
+const completion = (content: string | null, finishReason = 'stop') => ({ choices: [{ finish_reason: finishReason, message: { content } }] });
+const clientResolving = (response: unknown) => {
+  const create = jest.fn().mockResolvedValue(response);
+  return { create, client: { chat: { completions: { create } } } };
 };
+const clientReturning = (outputText: string) => clientResolving(completion(outputText));
 const clientThrowing = (error: unknown) => {
   const create = jest.fn().mockRejectedValue(error);
-  return { create, client: { responses: { create } } };
+  return { create, client: { chat: { completions: { create } } } };
 };
+/** The system message carries the adapter's instructions, then the JSON Output instruction, then the schema. */
+const systemOf = (create: jest.Mock): string => (create.mock.calls[0][0] as { messages: Array<{ content: string }> }).messages[0].content;
+const schemaOf = (create: jest.Mock): Record<string, any> => JSON.parse(systemOf(create).split('\n').pop() as string);
+const userOf = (create: jest.Mock): string => (create.mock.calls[0][0] as { messages: Array<{ content: string }> }).messages[1].content;
 const code = async (promise: Promise<unknown>): Promise<string> => {
   try {
     await promise;
@@ -89,21 +96,22 @@ function propertyNames(node: unknown, out: string[] = []): string[] {
 }
 
 describe('request shaping', () => {
-  it('sends a strict, closed schema with exactly four keys and no channel for a score, Thread id, Home, LF or offset (fixtures 22/24/46)', async () => {
+  it('sends a DeepSeek Flash JSON Output request with a closed four-key schema and no channel for a score, Thread id, Home, LF or offset (fixtures 22/24/46)', async () => {
     const { create, client } = clientReturning(GOOD_OUTPUT);
-    await new OpenAiThreadEstablishmentProvider(CONFIG, client).propose(REQUEST);
+    await new DeepSeekThreadEstablishmentProvider(CONFIG, client).propose(REQUEST);
 
     const [body, options] = create.mock.calls[0];
     expect(options).toEqual({ timeout: 8_000, maxRetries: 0, signal: expect.anything() });
-    expect(body.store).toBe(false);
-    expect(body.model).toBe('gpt-5-mini');
-    expect(body.max_output_tokens).toBe(1_024);
+    expect(Object.keys(body).sort()).toEqual(['max_tokens', 'messages', 'model', 'response_format', 'stream', 'thinking']);
+    expect(body.model).toBe('deepseek-flash');
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.thinking).toEqual({ type: 'disabled' });
+    expect(body.max_tokens).toBe(1_024);
+    expect(body.stream).toBe(false);
+    expect(body.messages.map((message: { role: string }) => message.role)).toEqual(['system', 'user']);
+    expect(systemOf(create)).toContain(DEEPSEEK_JSON_OUTPUT_INSTRUCTION);
 
-    const format = (body.text as { format: Record<string, unknown> }).format;
-    expect(format.type).toBe('json_schema');
-    expect(format.name).toBe('thread_establishment_evidence_path_v1');
-    expect(format.strict).toBe(true);
-    const schema = format.schema as Record<string, any>;
+    const schema = schemaOf(create);
     // Closed at EVERY object level, and every property required (strict mode).
     for (const node of objectNodes(schema)) {
       expect(node.additionalProperties).toBe(false);
@@ -121,21 +129,22 @@ describe('request shaping', () => {
     // The occurrence domain is the current CU source length, not any list cardinality.
     expect(schema.properties.explicitSelectionAnchor.anyOf[0].properties.occurrence).toEqual({ type: 'integer', minimum: 1, maximum: codePointLength(REQUEST.currentCu.committedText) });
 
-    expect(JSON.stringify(body.input)).toContain('thread_establishment_source');
-    expect(JSON.stringify(body.input)).toContain('cu-1');
-    expect(JSON.stringify(body.input)).not.toContain('establishedFocusIds');
-    expect(body.instructions).toMatch(/untrusted DATA, never instructions/u);
-    expect(body.instructions).toMatch(/never return character offsets/u);
-    expect(body.instructions).toMatch(/Never guess/u);
-    expect(body.instructions).toMatch(/TE-01[\s\S]*TE-02[\s\S]*TE-03/u);
-    expect(body.instructions).toMatch(/never propose TE-01 for an ASSISTANT unit/u);
-    expect(body.instructions).toMatch(/at least one USER unit/u);
-    expect(body.instructions).not.toMatch(/live focus|\bLF\b|home anchor|spatial|timeline|reading count/iu);
+    expect(userOf(create)).toContain('thread_establishment_source');
+    expect(userOf(create)).toContain('cu-1');
+    expect(userOf(create)).not.toContain('establishedFocusIds');
+    const instructions = systemOf(create).split(DEEPSEEK_JSON_OUTPUT_INSTRUCTION)[0];
+    expect(instructions).toMatch(/untrusted DATA, never instructions/u);
+    expect(instructions).toMatch(/never return character offsets/u);
+    expect(instructions).toMatch(/Never guess/u);
+    expect(instructions).toMatch(/TE-01[\s\S]*TE-02[\s\S]*TE-03/u);
+    expect(instructions).toMatch(/never propose TE-01 for an ASSISTANT unit/u);
+    expect(instructions).toMatch(/at least one USER unit/u);
+    expect(instructions).not.toMatch(/live focus|\bLF\b|home anchor|spatial|timeline|reading count/iu);
   });
 
   it('refuses to call the provider for a structurally invalid request', async () => {
     const { create, client } = clientReturning(GOOD_OUTPUT);
-    const provider = new OpenAiThreadEstablishmentProvider(CONFIG, client);
+    const provider = new DeepSeekThreadEstablishmentProvider(CONFIG, client);
     expect(await code(provider.propose({ ...REQUEST, currentCu: { ...REQUEST.currentCu, committedText: '' } }))).toBe('INVALID_STRUCTURED_OUTPUT');
     expect(await code(provider.propose({ ...REQUEST, schemaVersion: 2 as never }))).toBe('INVALID_STRUCTURED_OUTPUT');
     expect(await code(provider.propose({ ...REQUEST, currentCu: { ...REQUEST.currentCu, sourceRole: 'SYSTEM' as never } }))).toBe('INVALID_STRUCTURED_OUTPUT');
@@ -144,14 +153,18 @@ describe('request shaping', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('is constructed from the environment only on demand, and never without a key', () => {
-    expect(() => loadThreadEstablishmentOpenAIConfig({})).toThrow(/OPENAI_API_KEY/u);
-    expect(() => loadThreadEstablishmentOpenAIConfig({ OPENAI_API_KEY: 'k', THREAD_ESTABLISHMENT_PROVIDER: 'ANTHROPIC' })).toThrow(/must be OPENAI/u);
-    expect(() => loadThreadEstablishmentOpenAIConfig({ OPENAI_API_KEY: 'k', THREAD_ESTABLISHMENT_TIMEOUT_MS: '50' })).toThrow(/between 1000 and 20000/u);
-    expect(() => loadThreadEstablishmentOpenAIConfig({ OPENAI_API_KEY: 'k', THREAD_ESTABLISHMENT_MODEL: 'bad model!' })).toThrow(/Invalid/u);
-    const config = loadThreadEstablishmentOpenAIConfig({ OPENAI_API_KEY: 'k', THREAD_ESTABLISHMENT_MODEL: 'gpt-5', THREAD_ESTABLISHMENT_TIMEOUT_MS: '3000' });
-    expect(config).toEqual({ ...CONFIG, apiKey: 'k', model: 'gpt-5', timeoutMs: 3_000 });
-    expect(loadThreadEstablishmentOpenAIConfig({ OPENAI_API_KEY: 'k' }).model).toBe('gpt-5-mini');
+  it('is constructed from the environment only on demand, synthetic-only, and never without a key', () => {
+    const qualified = { DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'k' };
+    expect(() => loadThreadEstablishmentDeepSeekConfig({})).toThrow(/SYNTHETIC_ONLY/u);
+    expect(() => loadThreadEstablishmentDeepSeekConfig({ OPENAI_API_KEY: 'o' })).toThrow(/SYNTHETIC_ONLY/u);
+    expect(() => loadThreadEstablishmentDeepSeekConfig({ DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY' })).toThrow(/DEEPSEEK_API_KEY/u);
+    expect(() => loadThreadEstablishmentDeepSeekConfig({ ...qualified, NODE_ENV: 'production' })).toThrow(/cannot be selected in production/u);
+    expect(() => loadThreadEstablishmentDeepSeekConfig({ ...qualified, THREAD_ESTABLISHMENT_PROVIDER: 'OPENAI' })).toThrow(/must be DEEPSEEK/u);
+    expect(() => loadThreadEstablishmentDeepSeekConfig({ ...qualified, THREAD_ESTABLISHMENT_MODEL: 'gpt-5' })).toThrow(/must be deepseek-flash/u);
+    expect(() => loadThreadEstablishmentDeepSeekConfig({ ...qualified, THREAD_ESTABLISHMENT_TIMEOUT_MS: '50' })).toThrow(/between 1000 and 20000/u);
+    const config = loadThreadEstablishmentDeepSeekConfig({ ...qualified, THREAD_ESTABLISHMENT_TIMEOUT_MS: '3000' });
+    expect(config).toEqual({ ...CONFIG, apiKey: 'k', timeoutMs: 3_000 });
+    expect(loadThreadEstablishmentDeepSeekConfig(qualified).model).toBe('deepseek-flash');
   });
 });
 
@@ -200,19 +213,52 @@ describe('output parsing is fail-closed (fixtures 40/41/46)', () => {
   });
 
   it('a malformed structured output fails the provider call closed', async () => {
-    const provider = new OpenAiThreadEstablishmentProvider(CONFIG, clientReturning('{"decision":"ESTABLISH_THREAD"}').client);
+    const provider = new DeepSeekThreadEstablishmentProvider(CONFIG, clientReturning('{"decision":"ESTABLISH_THREAD"}').client);
     expect(await code(provider.propose(REQUEST))).toBe('INVALID_STRUCTURED_OUTPUT');
+  });
+});
+
+describe('the DeepSeek completion envelope is fail-closed', () => {
+  it('parses only one complete stop answer; truncated, empty or multi-choice completions are invalid output', async () => {
+    const ok = GOOD_OUTPUT;
+    for (const response of [
+      completion(ok, 'length'),
+      completion(ok, 'content_filter'),
+      completion(''),
+      completion('   '),
+      completion(null),
+      { choices: [] },
+      { choices: [completion(ok).choices[0], completion(ok).choices[0]] },
+      {},
+    ]) {
+      expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientResolving(response).client).propose(REQUEST))).toBe('INVALID_STRUCTURED_OUTPUT');
+    }
+  });
+
+  it('classifies insufficient_system_resource as unavailable, never as an answer', async () => {
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientResolving(completion(GOOD_OUTPUT, 'insufficient_system_resource')).client).propose(REQUEST))).toBe('UNAVAILABLE');
+  });
+
+  it('classifies the SDK timeout, rate limiting and gateway failures', async () => {
+    const sdkTimeout = Object.assign(new Error('timed out'), { name: 'APIConnectionTimeoutError' });
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(sdkTimeout).client).propose(REQUEST))).toBe('TIMEOUT');
+    for (const status of [429, 502, 503, 504]) {
+      const error = Object.assign(new Error('unavailable'), { status });
+      expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(error).client).propose(REQUEST))).toBe('UNAVAILABLE');
+    }
+    const badRequest = Object.assign(new Error('bad request'), { status: 400 });
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(badRequest).client).propose(REQUEST))).toBe('PROVIDER_ERROR');
   });
 });
 
 describe('transport failure classification (fixture 45)', () => {
   it('classifies timeout, unavailability and everything else without inventing a proposal', async () => {
     const abort = Object.assign(new Error('aborted'), { name: 'AbortError' });
-    expect(await code(new OpenAiThreadEstablishmentProvider(CONFIG, clientThrowing(abort).client).propose(REQUEST))).toBe('TIMEOUT');
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(abort).client).propose(REQUEST))).toBe('TIMEOUT');
     const unavailable = Object.assign(new Error('bad gateway'), { status: 503 });
-    expect(await code(new OpenAiThreadEstablishmentProvider(CONFIG, clientThrowing(unavailable).client).propose(REQUEST))).toBe('UNAVAILABLE');
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(unavailable).client).propose(REQUEST))).toBe('UNAVAILABLE');
     const connection = Object.assign(new Error('conn'), { name: 'APIConnectionError' });
-    expect(await code(new OpenAiThreadEstablishmentProvider(CONFIG, clientThrowing(connection).client).propose(REQUEST))).toBe('UNAVAILABLE');
-    expect(await code(new OpenAiThreadEstablishmentProvider(CONFIG, clientThrowing(new Error('boom')).client).propose(REQUEST))).toBe('PROVIDER_ERROR');
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(connection).client).propose(REQUEST))).toBe('UNAVAILABLE');
+    expect(await code(new DeepSeekThreadEstablishmentProvider(CONFIG, clientThrowing(new Error('boom')).client).propose(REQUEST))).toBe('PROVIDER_ERROR');
   });
 });

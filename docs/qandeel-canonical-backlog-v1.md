@@ -3905,9 +3905,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality`, under the Product Owner's CP1 Controlled Amendment & Closure Gate (2026-10-22) and the
   Founder's S8A-02 closure decision (2026-10-23).
-- **PR / SHA:** the S8A-02 pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
+- **PR / SHA:** PR #354, merged as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), from branch
+  `s8a/s8a-02-personality-deepseek-quality`; no migration; not deployed. *(As first written, before the merge: "the S8A-02
+  pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
   `d566a7e7dc4d01e698df2fe48cd16c8765edf6ed` (the merge of PR #353, S8A-01). The closing change is that pull request's final head; the merge SHA is filled in at merge.
-  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.
+  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.";
+  the merge SHA was filled in by S8A-03's reconciliation.)*
 - **Disposition:** completed by S8A-02 CP1 (Trusted Speaker & Message Provenance), under the narrow controlled amendment in
   the [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §5.3.
   - The Shared reply input carries each person's message as its own model message, under the author the frozen `0089`
@@ -3926,9 +3929,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality`, under the Product Owner's CP1 Controlled Amendment & Closure Gate (2026-10-22) and the
   Founder's S8A-02 closure decision (2026-10-23).
-- **PR / SHA:** the S8A-02 pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
+- **PR / SHA:** PR #354, merged as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), from branch
+  `s8a/s8a-02-personality-deepseek-quality`; no migration; not deployed. *(As first written, before the merge: "the S8A-02
+  pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
   `d566a7e7dc4d01e698df2fe48cd16c8765edf6ed` (the merge of PR #353, S8A-01). The closing change is that pull request's final head; the merge SHA is filled in at merge.
-  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.
+  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.";
+  the merge SHA was filled in by S8A-03's reconciliation.)*
 - **Disposition:** completed by S8A-02 CP1, under the same §5.3 amendment as `QAN-BL-AI-06`. Different people without a
   Name keep the fixed label `A participant`, now with the collision-only " (1)", " (2)", derived inside the server from
   the `0089` author and never an identifier. The proof is the same CP1 spec. No migration, RPC, Router, adapter or frame
@@ -3939,9 +3945,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality`, under the Founder's S8A-02 closure decision (2026-10-23): CP2's direction and
   implementation approved as a product, and closure without further research or paid rounds.
-- **PR / SHA:** the S8A-02 pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
+- **PR / SHA:** PR #354, merged as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), from branch
+  `s8a/s8a-02-personality-deepseek-quality`; no migration; not deployed. *(As first written, before the merge: "the S8A-02
+  pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
   `d566a7e7dc4d01e698df2fe48cd16c8765edf6ed` (the merge of PR #353, S8A-01). The closing change is that pull request's final head; the merge SHA is filled in at merge.
-  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.
+  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.";
+  the merge SHA was filled in by S8A-03's reconciliation.)*
 - **Disposition:** **accepted for the first release by the Founder's product decision.** It is not closed on a guarantee,
   and not on a passed criterion. What production now does:
   - CP1: the server, not the text, states who sent each message, and a «Name:» line stays inside its sender's own model
@@ -5131,6 +5140,14 @@ This is the BG-08 reconciliation under the Founder's closure decision (2026-10-2
   - The three defects the final engineering review found were corrected within S8A-02 (§8: closed work): the Safety
     gate's Arabic binding, the notes' label escaping, and the notes' echo check.
 - **Untouched:** every other item, owner, severity and status.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
+**S8A-03 reconciliation F10 (2026-10-23; the S8A-03 pull request, not yet opened; documentation only).** S8A-02 merged
+through PR #354 as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), so its closing change above is effective. The
+paragraphs above stay as written.
+- **Filled in (§6):** the PR and merge SHA of the `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-09` tombstones.
+- **Untouched:** every item, owner, severity and status. S8A-03 owns no item at kickoff; nothing is admitted, tombstoned
+  or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
 ## 8. What is deliberately not in this backlog

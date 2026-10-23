@@ -278,15 +278,15 @@ test('THE CUTOVER: ONLY the FINAL chain is wired, the temporary T-03A2-only writ
   assert.match(moduleCode, /new ConversationSemanticRuntimeRepository\(serviceApi\)/u, 'the FINAL repository runs as service_role');
   // RE-ANCHORED by PROD-SEC-02: each lazy factory is registered inside guardForegroundBinding(...), itself a lazy factory
   // that constructs nothing at bootstrap and adds only the request-deadline check in front of the same provider.
-  assert.match(moduleCode, /\{ provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiSegmentationBinding\) \}/u, 'the segmentation FACTORY, never its product');
+  assert.match(moduleCode, /\{ provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding\(deepSeekSegmentationBinding\) \}/u, 'the segmentation FACTORY, never its product');
   // RE-ANCHORED by AI-COST-01: each lazy factory also receives the provider-call accounting decorator for its transport
   // client. Creating the decorator constructs nothing, so the factory is still registered, never its product.
-  assert.match(moduleCode, /\{ provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiFocusResolutionBinding\(process\.env, costLedgerDecorator\('FOCUS_RESOLUTION'\)\)\) \}/u);
-  assert.match(moduleCode, /\{ provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiThreadEstablishmentBinding\(process\.env, costLedgerDecorator\('THREAD_FORMATION'\)\)\) \}/u);
-  assert.match(moduleCode, /\{ provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiThreadContinuityBinding\(process\.env, costLedgerDecorator\('THREAD_CONTINUITY'\)\)\) \}/u);
+  assert.match(moduleCode, /\{ provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding\(deepSeekFocusResolutionBinding\(process\.env, costLedgerDecorator\('FOCUS_RESOLUTION'\)\)\) \}/u);
+  assert.match(moduleCode, /\{ provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding\(deepSeekThreadEstablishmentBinding\(process\.env, costLedgerDecorator\('THREAD_FORMATION'\)\)\) \}/u);
+  assert.match(moduleCode, /\{ provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding\(deepSeekThreadContinuityBinding\(process\.env, costLedgerDecorator\('THREAD_CONTINUITY'\)\)\) \}/u);
   assert.doesNotMatch(moduleCode, /ConversationTemporalEstablishmentService|ConversationUnitRepository|ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|ConversationThreadLifecycleEstablishmentService|ConversationThreadLifecycleRuntimeRepository/u,
     'no superseded runtime and no temporal-only fallback is registered');
-  assert.doesNotMatch(moduleCode, /OpenAiFocusResolutionProvider|OpenAiThreadEstablishmentProvider|OpenAiThreadContinuityProvider|loadFocusResolutionOpenAIConfig|loadThreadEstablishmentOpenAIConfig|loadThreadContinuityOpenAIConfig/u,
+  assert.doesNotMatch(moduleCode, /DeepSeekFocusResolutionProvider|DeepSeekThreadEstablishmentProvider|DeepSeekThreadContinuityProvider|loadFocusResolutionDeepSeekConfig|loadThreadEstablishmentDeepSeekConfig|loadThreadContinuityDeepSeekConfig/u,
     'no provider adapter and no credential is constructed at bootstrap');
   // (T-03C added its own authenticated historical disclosure controller beside the temporal one; the temporal controller itself is unchanged.)
   assert.match(conversationModule, /controllers: \[ConversationController, ConversationContextActivationController, ConversationTemporalController, ConversationHistoricalProjectionController\]/u);

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import YAML from 'yaml';
@@ -10,8 +11,6 @@ const packageJson = JSON.parse(await readFile(new URL('package.json', root), 'ut
 const packageLock = JSON.parse(await readFile(new URL('package-lock.json', root), 'utf8'));
 const preflight = await readFile(new URL('scripts/preflight.mjs', root), 'utf8');
 const diagnostic = await readFile(new URL('scripts/diagnose-integrations.mjs', root), 'utf8');
-const claudeSmoke = await readFile(new URL('apps/api/scripts/verify-claude-smoke.ts', root), 'utf8');
-const openAISmoke = await readFile(new URL('apps/api/scripts/verify-openai-smoke.ts', root), 'utf8');
 const apiCi = await readFile(new URL('.github/workflows/api-ci.yml', root), 'utf8');
 
 function isIgnored(path) {
@@ -47,40 +46,27 @@ test('keeps verification commands explicit and non-destructive', () => {
     'verify:integrations:diagnose',
     'verify:database:integration',
     'verify:auth:smoke',
-    'verify:claude:smoke',
-    'verify:openai:smoke',
     'eval:brain:validate',
-    'eval:brain:run',
     'eval:brain:dry-run',
     'eval:brain:summarize',
   ]) assert.equal(typeof packageJson.scripts[name], 'string', `missing ${name}`);
 
-  assert.doesNotMatch(packageJson.scripts['test:api'], /eval:brain:run/iu);
 
   const commands = Object.values(packageJson.scripts).join('\n');
   assert.doesNotMatch(commands, /(?:rm|rmdir|remove-item|rename-item|mv|move).*node_modules/iu);
 });
 
-test('keeps the real Claude smoke explicit, single-attempt, and privacy-safe', () => {
-  assert.doesNotMatch(packageJson.scripts['test:api'], /claude|anthropic/iu);
-  assert.match(claudeSmoke, /ANTHROPIC_API_KEY/u);
-  assert.match(claudeSmoke, /NOT RUN/u);
-  assert.match(claudeSmoke, /ClaudeModelRouter\.fromEnvironment\(\)\.generate/u);
-  assert.doesNotMatch(
-    claudeSmoke,
-    /console\.(?:log|error)\([^\n]*(?:\$\{|result\.content|process\.env|apiKey)/u,
-  );
-});
-
-test('keeps the real OpenAI smoke explicit, single-attempt, and privacy-safe', () => {
-  assert.doesNotMatch(packageJson.scripts['test:api'], /openai/iu);
-  assert.match(openAISmoke, /OPENAI_API_KEY/u);
-  assert.match(openAISmoke, /NOT RUN/u);
-  assert.match(openAISmoke, /OpenAIModelRouter\.fromEnvironment\(\)\.generate/u);
-  assert.doesNotMatch(
-    openAISmoke,
-    /console\.(?:log|error)\([^\n]*(?:\$\{|result\.content|process\.env|apiKey)/u,
-  );
+// RE-ANCHORED by S8A-03 (D1): DeepSeek is the only production AI provider, so the paid Claude and OpenAI smokes and
+// the live bake-off runner were removed with their providers. No live-provider command remains, and none is reachable
+// from the API test command.
+test('keeps no live paid-provider smoke or bake-off runner after the DeepSeek-only migration', () => {
+  for (const name of ['verify:claude:smoke', 'verify:openai:smoke', 'eval:brain:run']) {
+    assert.equal(packageJson.scripts[name], undefined, `${name} is removed`);
+  }
+  for (const file of ['apps/api/scripts/verify-claude-smoke.ts', 'apps/api/scripts/verify-openai-smoke.ts']) {
+    assert.equal(existsSync(new URL(file, root)), false, `${file} is removed`);
+  }
+  assert.doesNotMatch(packageJson.scripts['test:api'], /claude|anthropic|openai|gemini|deepseek|eval:brain/iu);
 });
 
 test('keeps preflight and diagnostics privacy-safe', () => {

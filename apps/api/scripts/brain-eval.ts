@@ -1,9 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ClaudeModelRouter } from '../src/model-router/providers/anthropic/claude-model-router';
-import { OpenAIModelRouter } from '../src/model-router/providers/openai/openai-model-router';
-import { expectedRequestCount, runEvaluation, writeEvaluationArtifacts } from '../src/brain-eval/brain-eval.harness';
 import {
   assertGuidanceMatchesLabel, attemptKey, inconclusiveCaseIds, createGuidanceComparisonArtifacts, plannedAttempts, currentMessageOf, deepSeekEvaluationRequest, isDeepSeekEvaluationLabel,
   runDeepSeekEvaluation, summarizeDeepSeekRun, type DeepSeekEvaluationResult,
@@ -18,7 +15,7 @@ import {
 } from '../src/brain-eval/brain-eval.cp3-review';
 import { GOLDEN_ROUND3_PERSONALITY_ARTIFACT_DIRECTORY } from '../src/brain-eval/brain-eval.paths';
 import { summarizeResults } from '../src/brain-eval/brain-eval.summary';
-import { assertDeepSeekRunAllowed, assertPaidRunAllowed } from '../src/brain-eval/brain-eval.validation';
+import { assertDeepSeekRunAllowed } from '../src/brain-eval/brain-eval.validation';
 import type { BrainEvaluationCase, CandidateResult } from '../src/brain-eval/brain-eval.types';
 import { decideFastDeepRoute } from '../src/intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { attributionLayerCommand } from './brain-eval-attribution-layer';
@@ -252,16 +249,8 @@ async function main(): Promise<void> {
     console.log('ZERO CALLS: validation/dry-run never constructs a provider client.');
     return;
   }
-  if (command === 'run') {
-    const planned = expectedRequestCount(suite.cases);
-    console.log(`PLANNED PAID REQUESTS (${suite.name}): ${planned}. This command will incur provider cost.`);
-    assertPaidRunAllowed(process.env);
-    suite.validate(suite.cases);
-    const results = await runEvaluation(suite.cases, { ANTHROPIC: ClaudeModelRouter.fromEnvironment(), OPENAI: OpenAIModelRouter.fromEnvironment() });
-    await writeEvaluationArtifacts(suite.cases, results, suite.artifactDirectory, suite.rubric);
-    console.log(`COMPLETE: ${results.length} attempts. Local artifacts written under ${suite.artifactDirectory}.`);
-    return;
-  }
+  // S8A-03 (D1): the Anthropic / OpenAI bake-off `run` was removed with those providers; its recorded artifacts and the
+  // offline commands over them (validate, dry-run, summarize) remain. Paid evaluation is DeepSeek only (`deepseek-run`).
   if (command === 'summarize') {
     const results = JSON.parse(await readFile(join(suite.artifactDirectory, 'results.json'), 'utf8')) as CandidateResult[];
     const reviews = JSON.parse(await readFile(join(suite.artifactDirectory, 'blinded-review.json'), 'utf8')) as Record<string, unknown>[];
@@ -270,7 +259,7 @@ async function main(): Promise<void> {
     console.log(`SUMMARY COMPLETE: evidence written to ${join(suite.artifactDirectory, 'summary.json')}; no production winner was selected.`);
     return;
   }
-  throw new Error('Usage: brain-eval.ts validate|dry-run|run|summarize|deepseek-plan|deepseek-run|deepseek-compare [brain-bakeoff|golden-conversations|golden-conversations-extended|golden-round2|golden-round2-paths] [label]');
+  throw new Error('Usage: brain-eval.ts validate|dry-run|summarize|deepseek-plan|deepseek-run|deepseek-compare [brain-bakeoff|golden-conversations|golden-conversations-extended|golden-round2|golden-round2-paths] [label]');
 }
 
 main().catch((error: unknown) => {

@@ -48,14 +48,16 @@ const SPEC_FILES = ['home-placement-engine.spec.ts', 'home-placement-stress.spec
 const ENGINE_FILES = PRODUCTION_FILES.filter((name) => name !== 'home-placement-scenario.ts' && name !== 'home-placement-vectors.ts');
 
 /** T-03B2a at canonical main 2a4209fe: byte-identical, by git blob id. */
+// RE-PINNED by S8A-03 (D1): the adapter moved to DeepSeek Flash JSON Output (renamed file, index re-export,
+// configuration, adapter spec and evaluator spec); the validator and evaluator service keep their original pins.
 const T03B2A_BLOBS = {
   'fake-thread-establishment.provider.ts': 'cb6245af8b2dc2f9db773cf3e3078276a4e82694',
-  'index.ts': '6e7e8fa4223413873185fe85ed6df92438cd98ec',
-  'openai-thread-establishment.provider.spec.ts': 'e64dd08c083019bfa3f3088f62ac702fa8e1df83',
-  'openai-thread-establishment.provider.ts': '5135e056beb4ca5facb761422703f4b69d922a81',
-  'thread-establishment-evaluator.service.spec.ts': '800f3e2580c5624106f25ba93621f14d80b0e2ee',
+  'index.ts': '8d0efe1447d9d19322efbd498661560286cca52e',
+  'deepseek-thread-establishment.provider.spec.ts': 'ae63b0bd42fb38b35419915c839c7f42d116a725',
+  'deepseek-thread-establishment.provider.ts': 'e34c43cbfa8b583d14daeb66255b733f49bcdc85',
+  'thread-establishment-evaluator.service.spec.ts': 'a3331c50154270796ba6979677d4ae914bbac2dd',
   'thread-establishment-evaluator.service.ts': '8440bf21a042ced27c710eee06ea5e016f122e86',
-  'thread-establishment-provider.config.ts': 'f80bc72dbb75f54841ca42678755206c41c907d3',
+  'thread-establishment-provider.config.ts': '264e3e30d2ed40a2bcf3e0cbc5b20d060cb9ffe6',
   'thread-establishment-provider.types.ts': 'e3d26e9554f50c597763c49b1676d5d123368aac',
   'thread-establishment-validator.spec.ts': 'b830569f4ff73c15139490738f305671527641d9',
   'thread-establishment-validator.ts': '9b515e4eb15491e6899a87a887683ebf1a33a92a',

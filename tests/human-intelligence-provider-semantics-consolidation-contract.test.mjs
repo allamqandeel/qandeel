@@ -53,8 +53,9 @@ const SOURCES = Object.freeze({
   providerSemanticsTypes: 'apps/api/src/model-router/human-intelligence-provider-semantics.types.ts',
   modelRouter: 'apps/api/src/model-router/model-router.types.ts',
   orchestrator: 'apps/api/src/conversation/conversation-orchestrator.service.ts',
-  claudeAdapter: 'apps/api/src/model-router/providers/anthropic/claude-model-router.ts',
-  openaiAdapter: 'apps/api/src/model-router/providers/openai/openai-model-router.ts',
+  // RE-ANCHORED by S8A-03 (D1): the Anthropic and OpenAI reply adapters were removed; the one DeepSeek reply adapter
+  // carries the same blindness rule and the same shared composition.
+  deepseekAdapter: 'apps/api/src/model-router/providers/deepseek/deepseek-model-router.ts',
   fakeRouter: 'apps/api/src/model-router/fake-model-router.ts',
   smokeRuntime: 'apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts',
 });
@@ -359,7 +360,7 @@ function assertProviderSemanticsConsolidationContract(sources) {
   }
 
   // 10. Provider adapters stay semantically blind and share one composer.
-  for (const [name, adapter] of [['Anthropic', exe.claudeAdapter], ['OpenAI', exe.openaiAdapter]]) {
+  for (const [name, adapter] of [['DeepSeek', exe.deepseekAdapter]]) {
     if (!adapter.includes('composeServerGuidance(request)'))
       violated(`the ${name} adapter renders through the one shared composition`);
     for (const forbidden of [
@@ -578,9 +579,9 @@ test('C2 - anti-vacuity: the real guard rejects every named regression', () => {
       ),
     }],
     ['a provider adapter rendered Human Intelligence independently', {
-      claudeAdapter: shipped.claudeAdapter.replace(
-        '          system: composeServerGuidance(request),',
-        '          system: `${composeServerGuidance(request)}${request.humanIntelligence ? \'HI\' : \'\'}`,',
+      deepseekAdapter: shipped.deepseekAdapter.replace(
+        '    const serverGuidance = composeServerGuidance(request);',
+        '    const serverGuidance = `${composeServerGuidance(request)}${request.humanIntelligence ? \'HI\' : \'\'}`;',
       ),
     }],
     ['the Orchestrator compiled the envelope more than once', {

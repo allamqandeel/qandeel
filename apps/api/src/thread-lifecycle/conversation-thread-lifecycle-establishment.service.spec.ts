@@ -28,7 +28,7 @@ import {
 } from './conversation-thread-lifecycle-runtime.types';
 import { durableThreadFocusBindingId, durableThreadLifecycleEventId } from './durable-thread-lifecycle-canonicalizer';
 import { FakeThreadContinuityProvider } from './fake-thread-continuity.provider';
-import { openAiThreadContinuityBinding, type ThreadContinuityBinding } from './thread-continuity-binding';
+import { deepSeekThreadContinuityBinding, type ThreadContinuityBinding } from './thread-continuity-binding';
 import { ThreadContinuityProviderError, type ThreadContinuityProvider, type ThreadContinuityResolutionProposal } from './thread-continuity-provider.types';
 import type { ThreadIdentityDossier } from './thread-continuity.types';
 
@@ -176,10 +176,10 @@ const THREAD_SCENARIO = (request: ThreadEstablishmentRequest): ThreadEstablishme
 };
 const DISTINCT: ThreadContinuityResolutionProposal = { decision: 'DISTINCT_NEW', threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] };
 
-const segmentationBinding = (provider: CuSegmentationProvider): CuSegmentationBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
-const focusBinding = (provider: FocusResolutionProvider): FocusResolutionBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
-const threadBinding = (provider: ThreadEstablishmentProvider): ThreadEstablishmentBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
-const continuityBinding = (provider: ThreadContinuityProvider): ThreadContinuityBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
+const segmentationBinding = (provider: CuSegmentationProvider): CuSegmentationBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
+const focusBinding = (provider: FocusResolutionProvider): FocusResolutionBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
+const threadBinding = (provider: ThreadEstablishmentProvider): ThreadEstablishmentBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
+const continuityBinding = (provider: ThreadContinuityProvider): ThreadContinuityBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
 
 const EMPTY_CONTEXT: ConversationThreadLifecycleRuntimeContext = {
   sessionId: SESSION, token: { currentSp: null, sameSpEventSequence: 0 },
@@ -571,7 +571,7 @@ describe('the finalized-exchange final Thread-layer chain (cases 70-81)', () => 
     const [request] = b.h.commitRequests;
     expect([request.expectedCurrentSp, request.expectedSameSpEventSequence, request.expectedWorldThreadIdentityVersion]).toEqual([7, 2, 5]);
     expect([request.continuityEvaluatorVersion, request.continuityPolicyVersion, request.continuityProvider, request.continuityModel, request.continuityPromptVersion, request.continuitySchemaVersion, request.lifecycleReducerVersion])
-      .toEqual(['thread-continuity-evaluator-v1', 'stage-1.3-thread-lifecycle-v1', 'OPENAI', 'gpt-5-mini', 'thread-continuity-identity-v1', 1, 'thread-lifecycle-reducer-v1']);
+      .toEqual(['thread-continuity-evaluator-v1', 'stage-1.3-thread-lifecycle-v1', 'DEEPSEEK', 'deepseek-flash', 'thread-continuity-identity-deepseek-v1', 1, 'thread-lifecycle-reducer-v1']);
     expect(request.threadEvaluatorVersion).toBe('thread-establishment-evaluator-v1');
     expect(request.focusEvaluatorVersion).toBe('conversational-focus-evaluator-v1');
   });
@@ -704,9 +704,9 @@ describe('Session-local lifecycle over prior history (cases 82-85)', () => {
   });
 
   it('85. every continuity decision of one exchange must carry the SAME provenance, or the capture is refused', () => {
-    const provenance = { continuityEvaluatorVersion: 'thread-continuity-evaluator-v1', continuityPolicyVersion: 'stage-1.3-thread-lifecycle-v1', continuityProvider: 'OPENAI', continuityModel: 'gpt-5-mini', continuityPromptVersion: 'thread-continuity-identity-v1', continuitySchemaVersion: 1, lifecycleReducerVersion: 'thread-lifecycle-reducer-v1' };
+    const provenance = { continuityEvaluatorVersion: 'thread-continuity-evaluator-v1', continuityPolicyVersion: 'stage-1.3-thread-lifecycle-v1', continuityProvider: 'DEEPSEEK', continuityModel: 'deepseek-flash', continuityPromptVersion: 'thread-continuity-identity-deepseek-v1', continuitySchemaVersion: 1, lifecycleReducerVersion: 'thread-lifecycle-reducer-v1' };
     const agreeing = { sessionId: SESSION, cuId: U1_ID, emergingFocusId: F_AHMED, decision: 'DISTINCT_NEW' as const, threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [], screenedThreadIds: [],
-      provenance: { evaluatorVersion: 'thread-continuity-evaluator-v1', policyVersion: 'stage-1.3-thread-lifecycle-v1', provider: 'OPENAI', model: 'gpt-5-mini', promptVersion: 'thread-continuity-identity-v1', schemaVersion: 1 } };
+      provenance: { evaluatorVersion: 'thread-continuity-evaluator-v1', policyVersion: 'stage-1.3-thread-lifecycle-v1', provider: 'DEEPSEEK', model: 'deepseek-flash', promptVersion: 'thread-continuity-identity-deepseek-v1', schemaVersion: 1 } };
     expect(() => assertContinuityProvenanceAgreement([agreeing], provenance)).not.toThrow();
     for (const drift of [{ model: 'other' }, { provider: 'ANOTHER' }, { promptVersion: 'v9' }, { schemaVersion: 2 }, { evaluatorVersion: 'v9' }, { policyVersion: 'v9' }]) {
       const error = () => assertContinuityProvenanceAgreement([{ ...agreeing, provenance: { ...agreeing.provenance, ...drift } }], provenance);
@@ -822,11 +822,11 @@ describe('bounded recovery, laziness and phase separation (cases 86-95)', () => 
     expect(explode).not.toHaveBeenCalled();
     // The production continuity factory reads no key when called; a zero-CU, no-focus or already-bound exchange therefore needs none.
     const environment = {} as NodeJS.ProcessEnv;
-    const binding = openAiThreadContinuityBinding(environment)();
-    expect([binding.providerName, binding.providerModel]).toEqual(['OPENAI', 'gpt-5-mini']);
+    const binding = deepSeekThreadContinuityBinding(environment, (client) => client)();
+    expect([binding.providerName, binding.providerModel]).toEqual(['DEEPSEEK', 'deepseek-flash']);
     await expect(binding.provider.screen({ schemaVersion: 1, currentCu: { cuId: U1_ID, sourceTurnId: USER_TURN, sourceRole: 'USER', committedText: U1, ordinalWithinTurn: 0 },
       currentFocusSemantics: { unit_id: U1_ID, functions: ['INFORM_REPORT'], sequence_position: 'UNMARKED', target_cu_id: null, references: [], claim_attributions: [], attention: { kind: 'START_NEW_FOCUS', reason: 'DIRECT_SUBJECT', emerging_focus_id: F_AHMED, creates_focus: true, grounding_reference_index: 0 } },
-      currentFocusGrounding: { emergingFocusId: F_AHMED, groundingSurfaces: [] }, candidates: [] })).rejects.toThrow(/OPENAI_API_KEY/u);
+      currentFocusGrounding: { emergingFocusId: F_AHMED, groundingSurfaces: [] }, candidates: [] })).rejects.toThrow(/SYNTHETIC_ONLY/u);
     const zero = build(harness(), new RoleScriptedSegmentation(NO_SEGMENTS), new RecordingFocusProvider(FOCUS_SCENARIO), new RecordingThreadProvider(THREAD_SCENARIO), FakeThreadContinuityProvider.failing('PROVIDER_ERROR'));
     await zero.service.establish(USER, exchange);
     expect([zero.continuity.screeningRequests.length, zero.continuity.resolutionRequests.length]).toEqual([0, 0]);

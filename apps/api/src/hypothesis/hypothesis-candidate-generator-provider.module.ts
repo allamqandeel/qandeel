@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { FakeHypothesisCandidateGenerator } from './fake-hypothesis-candidate.generator';
-import { GeminiHypothesisCandidateGenerator } from './gemini-hypothesis-candidate.generator';
-import { loadHypothesisCandidateGenerationGeminiConfig } from './hypothesis-candidate-generator-provider.config';
-import { accountedGeminiTransport } from '../ai-usage/accounted-provider-clients';
+import { DeepSeekHypothesisCandidateGenerator } from './deepseek-hypothesis-candidate.generator';
+import { loadHypothesisCandidateGenerationDeepSeekConfig } from './hypothesis-candidate-generator-provider.config';
+import { accountedDeepSeekChatCompletionsClient } from '../ai-usage/accounted-provider-clients';
+import { createDeepSeekClient } from '../model-router/providers/deepseek/deepseek-client';
 import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
 import { HYPOTHESIS_CANDIDATE_GENERATOR, type BoundHypothesisCandidateGenerator } from './hypothesis-candidate-generator-provider.types';
 
@@ -10,16 +11,16 @@ export function createConfiguredHypothesisCandidateGenerator(
   environment: NodeJS.ProcessEnv = process.env,
 ): BoundHypothesisCandidateGenerator {
   if (environment.NODE_ENV === 'test') return new FakeHypothesisCandidateGenerator();
-  // AI-COST-01: the same configuration and transport as `fromEnvironment`, with every generation attempt passing the
-  // one accounting boundary. The adapter is unchanged.
-  const config = loadHypothesisCandidateGenerationGeminiConfig(environment);
-  return new GeminiHypothesisCandidateGenerator(config, accountedGeminiTransport(
-    (url, init) => fetch(url, init), config.model, 'HYPOTHESIS_CANDIDATE_GENERATION', productionAiProviderCallAccounting()));
+  // AI-COST-01: every generation attempt passes the one accounting boundary. S8A-03: DeepSeek Flash, behind the
+  // SYNTHETIC_ONLY qualification gate; this is the adapter's only composition.
+  const config = loadHypothesisCandidateGenerationDeepSeekConfig(environment);
+  return new DeepSeekHypothesisCandidateGenerator(config, accountedDeepSeekChatCompletionsClient(
+    createDeepSeekClient(config), 'HYPOTHESIS_CANDIDATE_GENERATION', productionAiProviderCallAccounting()));
 }
 
 /**
  * Defers candidate-generator construction to the first generation. Same repair as
- * `deferredModelRouter`: Nest calls `useFactory` at bootstrap, so reading `GOOGLE_AI_API_KEY` there
+ * `deferredModelRouter`: Nest calls `useFactory` at bootstrap, so reading a provider key there
  * made a provider credential a precondition of STARTING the API — and therefore of serving auth,
  * Session, temporal and projection, none of which generate a hypothesis candidate.
  *

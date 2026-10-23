@@ -346,7 +346,9 @@ test('stale recovery is bounded to one, checks the database winner first, and ne
 test('both semantic bindings are lazy and no Thread, Home or Origin payload reaches the wire', () => {
   // RE-ANCHORED by AI-COST-01: the factory gains an optional transport-client decorator (provider-call accounting,
   // identity by default); it is still lazy - the config is read only inside the returned closure.
-  assert.match(binding, /export function openAiThreadEstablishmentBinding\(\s*environment: NodeJS\.ProcessEnv = process\.env,\s*decorateClient: ThreadEstablishmentClientDecorator = \(client\) => client,\s*\): ThreadEstablishmentBindingFactory \{\s*return \(\) => \{\s*const config = loadThreadEstablishmentOpenAIConfig\(environment\);/u);
+  // RE-ANCHORED by S8A-03 (D1): the environment and the accounting decorator are both REQUIRED (no ambient default,
+  // no unaccounted identity decorator); the factory is still lazy - the config is read only inside the returned closure.
+  assert.match(binding, /export function deepSeekThreadEstablishmentBinding\(\s*environment: NodeJS\.ProcessEnv,\s*decorateClient: ThreadEstablishmentClientDecorator,\s*\): ThreadEstablishmentBindingFactory \{\s*return \(\) => \{\s*const config = loadThreadEstablishmentDeepSeekConfig\(environment\);/u);
   assert.match(service, /this\.focus \?\?= this\.createFocusBinding\(\);/u);
   assert.match(service, /this\.thread \?\?= this\.createThreadBinding\(\);/u);
   assert.equal((service.match(/this\.createThreadBinding\(\)/gu) ?? []).length, 1);
@@ -357,7 +359,7 @@ test('both semantic bindings are lazy and no Thread, Home or Origin payload reac
   assert.ok(service.indexOf('const replayed = this.canonicalDelivery(snapshots);') < service.indexOf('await this.repository.readRuntimeContext('),
     'the replay / partial gate precedes the context read');
   assert.ok(service.indexOf('await this.repository.readRuntimeContext(') < service.indexOf('this.segment(userId, userTurn'), 'the context is read before any provider');
-  assert.doesNotMatch(runtimeCode, /OPENAI_API_KEY|process\.env\./u, 'no ambient credential read in the runtime');
+  assert.doesNotMatch(runtimeCode, /DEEPSEEK_API_KEY|OPENAI_API_KEY|process\.env\./u, 'no ambient credential read in the runtime');
   // The delivery carries only LH and the frozen committed events.
   assert.match(service, /\.map\(toCommittedWireEvent\)/u);
   const deliveryMethod = service.slice(service.indexOf('private delivery('), service.indexOf('private async segment('));

@@ -9,7 +9,7 @@ import { automaticCommitBatchId, automaticCommitUnitId } from '../conversation-u
 import { StaleConversationalFocusContextError } from '../conversational-focus/conversation-focus-runtime.types';
 import { PREPARED_ID_PREFIX } from '../conversational-focus/conversational-focus-evaluator.service';
 import { durableEmergingFocusId, durableReferenceHandleId } from '../conversational-focus/durable-focus-canonicalizer';
-import { openAiFocusResolutionBinding, type FocusResolutionBinding } from '../conversational-focus/focus-resolution-binding';
+import { deepSeekFocusResolutionBinding, type FocusResolutionBinding } from '../conversational-focus/focus-resolution-binding';
 import { FocusResolutionProviderError, type FocusResolutionProposal, type FocusResolutionProvider, type FocusResolutionRequest } from '../conversational-focus/focus-resolution-provider.types';
 import { assertThreadProvenanceAgreement, buildPreparedThreadCuInputs, ConversationThreadEstablishmentService } from './conversation-thread-establishment.service';
 import { ConversationThreadRuntimeRepository, type ConversationThreadRuntimeBoundary } from './conversation-thread-runtime.repository';
@@ -22,7 +22,7 @@ import {
   type IntegratedFocusThreadBatchSnapshot,
 } from './conversation-thread-runtime.types';
 import { durableThreadId } from './durable-thread-canonicalizer';
-import { openAiThreadEstablishmentBinding, type ThreadEstablishmentBinding } from './thread-establishment-binding';
+import { deepSeekThreadEstablishmentBinding, type ThreadEstablishmentBinding } from './thread-establishment-binding';
 import { ThreadEstablishmentProviderError, type ThreadEstablishmentProposal, type ThreadEstablishmentProvider, type ThreadEstablishmentRequest } from './thread-establishment-provider.types';
 
 const SESSION = '33333333-3333-4333-8333-333333333333';
@@ -174,9 +174,9 @@ const THREAD_SCENARIO = (request: ThreadEstablishmentRequest): ThreadEstablishme
   return { decision: 'NO_ESTABLISHMENT', path: null, evidenceCuIds: [], explicitSelectionAnchor: null };
 };
 
-const segmentationBinding = (provider: CuSegmentationProvider): CuSegmentationBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
-const focusBinding = (provider: FocusResolutionProvider): FocusResolutionBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
-const threadBinding = (provider: ThreadEstablishmentProvider): ThreadEstablishmentBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
+const segmentationBinding = (provider: CuSegmentationProvider): CuSegmentationBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
+const focusBinding = (provider: FocusResolutionProvider): FocusResolutionBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
+const threadBinding = (provider: ThreadEstablishmentProvider): ThreadEstablishmentBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
 
 const EMPTY_CONTEXT: ConversationThreadRuntimeContext = {
   sessionId: SESSION, token: { currentSp: null, sameSpEventSequence: 0 },
@@ -536,7 +536,7 @@ describe('the finalized-exchange semantic chain (cases 51-62)', () => {
     expect(request.threadEvaluatorVersion).toBe('thread-establishment-evaluator-v1');
     expect(request.threadPolicyVersion).toBe('stage-1.3-thread-establishment-v1');
     expect([request.threadProvider, request.threadModel, request.threadPromptVersion, request.threadSchemaVersion])
-      .toEqual(['OPENAI', 'gpt-5-mini', 'thread-establishment-evidence-path-v1', 1]);
+      .toEqual(['DEEPSEEK', 'deepseek-flash', 'thread-establishment-evidence-path-deepseek-v1', 1]);
   });
 
   it('62. a zero / zero exchange proposes no focus and no Thread, yet still commits its technical capture once', async () => {
@@ -640,9 +640,9 @@ describe('bounded recovery and phase separation (cases 63-73)', () => {
     expect(explode).not.toHaveBeenCalled();
     // And the production factories read the environment only when CALLED.
     const environment = {} as NodeJS.ProcessEnv;
-    expect(() => openAiThreadEstablishmentBinding(environment)).not.toThrow();
-    expect(() => openAiFocusResolutionBinding(environment)).not.toThrow();
-    expect(() => openAiThreadEstablishmentBinding(environment)()).toThrow(/OPENAI_API_KEY/u);
+    expect(() => deepSeekThreadEstablishmentBinding(environment, (client) => client)).not.toThrow();
+    expect(() => deepSeekFocusResolutionBinding(environment, (client) => client)).not.toThrow();
+    expect(() => deepSeekThreadEstablishmentBinding(environment, (client) => client)()).toThrow(/SYNTHETIC_ONLY/u);
   });
 
   it('71. every Thread decision of one exchange must carry the SAME provenance, or the capture is refused', async () => {
@@ -650,16 +650,16 @@ describe('bounded recovery and phase separation (cases 63-73)', () => {
     await service.establish(USER, exchange);
     const [request] = h.commitRequests;
     // One binding and one evaluator make agreement structural in the happy path.
-    expect(request.threadProvider).toBe('OPENAI');
+    expect(request.threadProvider).toBe('DEEPSEEK');
     const provenance = {
       threadEvaluatorVersion: 'thread-establishment-evaluator-v1', threadPolicyVersion: 'stage-1.3-thread-establishment-v1',
-      threadProvider: 'OPENAI', threadModel: 'gpt-5-mini', threadPromptVersion: 'thread-establishment-evidence-path-v1', threadSchemaVersion: 1,
+      threadProvider: 'DEEPSEEK', threadModel: 'deepseek-flash', threadPromptVersion: 'thread-establishment-evidence-path-deepseek-v1', threadSchemaVersion: 1,
     };
     const agreeing = {
       sessionId: SESSION, cuId: U1_ID, sourceTurnId: USER_TURN, sourceRole: 'USER' as const, emergingFocusId: null,
       decision: 'NO_ESTABLISHMENT' as const, path: null, noEstablishmentReason: 'NO_INDEPENDENT_FOCUS' as const,
       evidenceCuIds: [], explicitSelectionGrounding: null,
-      provenance: { evaluatorVersion: 'thread-establishment-evaluator-v1', policyVersion: 'stage-1.3-thread-establishment-v1', provider: 'OPENAI', model: 'gpt-5-mini', promptVersion: 'thread-establishment-evidence-path-v1', schemaVersion: 1 },
+      provenance: { evaluatorVersion: 'thread-establishment-evaluator-v1', policyVersion: 'stage-1.3-thread-establishment-v1', provider: 'DEEPSEEK', model: 'deepseek-flash', promptVersion: 'thread-establishment-evidence-path-deepseek-v1', schemaVersion: 1 },
     };
     expect(() => assertThreadProvenanceAgreement([agreeing], provenance)).not.toThrow();
     for (const drift of [{ model: 'another-model' }, { provider: 'ANOTHER' }, { promptVersion: 'v9' }, { schemaVersion: 2 }, { evaluatorVersion: 'v9' }, { policyVersion: 'v9' }]) {

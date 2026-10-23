@@ -1,5 +1,6 @@
 import { ModelRouterProviderError, composeServerGuidance, type ModelRouterRequest } from '../../model-router.types';
-import { createDeepSeekClient, DeepSeekModelRouter } from './deepseek-model-router';
+import { DeepSeekModelRouter } from './deepseek-model-router';
+import { createDeepSeekClient } from './deepseek-client';
 import {
   DEEPSEEK_MAX_OUTPUT_TOKENS,
   loadDeepSeekModelRouterConfig,

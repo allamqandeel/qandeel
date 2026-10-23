@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { FakeHypothesisIntentExtractionProvider } from './fake-hypothesis-intent-extraction.provider';
-import { createOpenAIExtractionClient, OpenAIHypothesisIntentExtractionProvider } from './openai-hypothesis-intent-extraction.provider';
-import { loadHypothesisIntentExtractionOpenAIConfig } from './hypothesis-intent-extraction-provider.config';
-import { accountedOpenAIResponsesClient } from '../ai-usage/accounted-provider-clients';
+import { DeepSeekHypothesisIntentExtractionProvider } from './deepseek-hypothesis-intent-extraction.provider';
+import { loadHypothesisIntentExtractionDeepSeekConfig } from './hypothesis-intent-extraction-provider.config';
+import { accountedDeepSeekChatCompletionsClient } from '../ai-usage/accounted-provider-clients';
+import { createDeepSeekClient } from '../model-router/providers/deepseek/deepseek-client';
 import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
 import { HYPOTHESIS_INTENT_EXTRACTION_PROVIDER, type HypothesisIntentExtractionProvider } from './hypothesis-intent-extraction-provider.types';
 
@@ -10,21 +11,21 @@ export function createConfiguredHypothesisIntentExtractionProvider(
   environment: NodeJS.ProcessEnv = process.env,
 ): HypothesisIntentExtractionProvider {
   if (environment.NODE_ENV === 'test') return new FakeHypothesisIntentExtractionProvider();
-  // AI-COST-01: the same configuration and client as `fromEnvironment`, with every extraction attempt passing the one
-  // accounting boundary. The adapter is unchanged.
-  const config = loadHypothesisIntentExtractionOpenAIConfig(environment);
-  return new OpenAIHypothesisIntentExtractionProvider(config, accountedOpenAIResponsesClient(
-    createOpenAIExtractionClient(config), 'HYPOTHESIS_INTENT_EXTRACTION', productionAiProviderCallAccounting()));
+  // AI-COST-01: every extraction attempt passes the one accounting boundary. S8A-03: DeepSeek Flash, behind the
+  // SYNTHETIC_ONLY qualification gate; this is the adapter's only composition.
+  const config = loadHypothesisIntentExtractionDeepSeekConfig(environment);
+  return new DeepSeekHypothesisIntentExtractionProvider(config, accountedDeepSeekChatCompletionsClient(
+    createDeepSeekClient(config), 'HYPOTHESIS_INTENT_EXTRACTION', productionAiProviderCallAccounting()));
 }
 
 /**
  * Defers extraction-provider construction to the first extraction. Same reasoning and the same
  * one-method shape as `deferredModelRouter`: Nest calls `useFactory` at bootstrap, so reading
- * `OPENAI_API_KEY` there made a provider credential a precondition of STARTING the API — and
+ * a provider key there made a provider credential a precondition of STARTING the API — and
  * therefore of serving auth, Session, temporal and projection, none of which extract anything.
  *
- * `OpenAIHypothesisIntentExtractionProvider.fromEnvironment` is unchanged and validates exactly as
- * before; an absent or invalid credential still throws the same error, at the first extraction.
+ * Configuration validates at the first extraction; an absent credential or an undeclared
+ * qualification mode throws there.
  * Extraction still fails closed.
  */
 export function deferredHypothesisIntentExtractionProvider(

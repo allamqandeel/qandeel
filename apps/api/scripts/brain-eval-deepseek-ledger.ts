@@ -3,7 +3,8 @@ import { AiProviderCallAccounting } from '../src/ai-usage/ai-provider-call-accou
 import { SupabaseAiProviderCallLedger, type AiLedgerRpc } from '../src/ai-usage/ai-provider-call-ledger.repository';
 import { runWithAiUsageAttribution } from '../src/ai-usage/ai-usage-attribution';
 import { accountedDeepSeekChatCompletionsClient } from '../src/ai-usage/accounted-provider-clients';
-import { createDeepSeekClient, DeepSeekModelRouter } from '../src/model-router/providers/deepseek/deepseek-model-router';
+import { DeepSeekModelRouter } from '../src/model-router/providers/deepseek/deepseek-model-router';
+import { createDeepSeekClient } from '../src/model-router/providers/deepseek/deepseek-client';
 import { loadDeepSeekModelRouterConfig } from '../src/model-router/providers/deepseek/deepseek-model-router.config';
 import { correlation } from '../src/observability/shared-correlation';
 import { TelemetryService } from '../src/observability/telemetry.service';

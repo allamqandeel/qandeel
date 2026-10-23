@@ -1,22 +1,31 @@
-// T-03B3 - the OpenAI Thread Continuity adapter.
+// T-03B3 - the Thread Continuity adapter. S8A-03 (D1): DeepSeek Flash.
 //
-// Follows the proven T-03A1 / T-03B1a / T-03B2a structured-output posture
-// exactly: strict json_schema with additionalProperties:false at every level,
-// every property required, exact enums, store:false, zero SDK retries, an
-// explicit AbortController timeout, the request wrapped in an untrusted-data
-// envelope, and fail-closed parsers tested separately from API invocation. No
-// live provider request ever runs in CI.
+// Follows the proven T-03A1 / T-03B1a / T-03B2a posture: DeepSeek JSON Output
+// with each step's schema (thread_continuity_screening_v1,
+// thread_continuity_resolution_v1; every property required, exact enums) in the
+// system instruction, zero SDK retries, an explicit AbortController timeout,
+// the request wrapped in an untrusted-data envelope, and fail-closed parsers
+// tested separately from API invocation. No live provider request ever runs in
+// CI.
 //
-// The schema is the enforcement, not the instructions: there is no key for a
-// score, a confidence, a rationale, a rank, a new Thread id, a Home or spatial
-// value, an LF or a relation, so the model cannot author one even if it tried.
-// Chunk membership, dossier membership, evidence grounding and decision shape
-// are enforced by the deterministic validator; the parsers enforce SHAPE only.
+// The parsers are the shape enforcement, not the instructions: they accept the
+// exact key sets, so there is no key for a score, a confidence, a rationale, a
+// rank, a new Thread id, a Home or spatial value, an LF or a relation, and the
+// model cannot author one even if it tried. Chunk membership, dossier
+// membership, evidence grounding and decision shape are enforced by the
+// deterministic validator; the parsers enforce SHAPE only.
 
-import OpenAI from 'openai';
 import { codePointLength } from '../conversation-unit/cu-anchor-mapper';
 import { MAX_FOCUS_SOURCE_CHARS } from '../conversational-focus/conversational-focus.types';
-import { loadThreadContinuityOpenAIConfig, type ThreadContinuityOpenAIConfig } from './thread-continuity-provider.config';
+import type { ThreadContinuityDeepSeekConfig } from './thread-continuity-provider.config';
+import {
+  deepSeekJsonContent,
+  deepSeekJsonRequest,
+  escapeDeepSeekData,
+  isDeepSeekTimeout,
+  isDeepSeekUnavailable,
+  type DeepSeekJsonClient,
+} from '../model-router/providers/deepseek/deepseek-client';
 import {
   THREAD_CONTINUITY_SCHEMA_VERSION,
   ThreadContinuityProviderError,
@@ -28,74 +37,51 @@ import {
 } from './thread-continuity-provider.types';
 import { THREAD_CONTINUITY_DECISIONS } from './thread-continuity.types';
 
-interface OpenAIContinuityResponse {
-  output_text: string;
-}
-
-interface OpenAIContinuityClient {
-  responses: {
-    create(
-      body: Record<string, unknown>,
-      options: { timeout: number; maxRetries: 0; signal: AbortSignal },
-    ): Promise<OpenAIContinuityResponse>;
-  };
-}
-
-export class OpenAiThreadContinuityProvider implements ThreadContinuityProvider {
-  static fromEnvironment(environment: NodeJS.ProcessEnv = process.env): OpenAiThreadContinuityProvider {
-    const config = loadThreadContinuityOpenAIConfig(environment);
-    return new OpenAiThreadContinuityProvider(config, createOpenAiThreadContinuityClient(config));
-  }
-
+/** AI-COST-01: composed only with an accounted client (`thread-continuity-binding.ts`); there is no unaccounted factory. */
+export class DeepSeekThreadContinuityProvider implements ThreadContinuityProvider {
   constructor(
-    private readonly config: ThreadContinuityOpenAIConfig,
-    private readonly client: OpenAIContinuityClient,
+    private readonly config: ThreadContinuityDeepSeekConfig,
+    private readonly client: DeepSeekJsonClient,
   ) {}
 
   async screen(request: ThreadContinuityScreeningRequest): Promise<ThreadContinuityScreeningProposal> {
     if (!isValidRequest(request)) throw new ThreadContinuityProviderError('INVALID_STRUCTURED_OUTPUT');
-    const output = await this.call(SCREENING_INSTRUCTIONS, 'thread_continuity_screening_v1', screeningSchema(request), request);
+    const output = await this.call(SCREENING_INSTRUCTIONS, screeningSchema(request), request);
     return parseThreadContinuityScreeningOutput(output, request);
   }
 
   async resolve(request: ThreadContinuityResolutionRequest): Promise<ThreadContinuityResolutionProposal> {
     if (!isValidRequest(request)) throw new ThreadContinuityProviderError('INVALID_STRUCTURED_OUTPUT');
-    const output = await this.call(RESOLUTION_INSTRUCTIONS, 'thread_continuity_resolution_v1', resolutionSchema(request), request);
+    const output = await this.call(RESOLUTION_INSTRUCTIONS, resolutionSchema(request), request);
     return parseThreadContinuityResolutionOutput(output, request);
   }
 
-  private async call(instructions: string, name: string, schema: object, request: ThreadContinuityScreeningRequest | ThreadContinuityResolutionRequest): Promise<string> {
+  /** The JSON text of one complete answer, or `undefined` (which the parsers refuse). */
+  private async call(instructions: string, schema: object, request: ThreadContinuityScreeningRequest | ThreadContinuityResolutionRequest): Promise<string | undefined> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
-      const response = await this.client.responses.create(
-        {
-          model: this.config.model,
+      const response = await this.client.chat.completions.create(
+        deepSeekJsonRequest({
           instructions,
-          input: [
-            {
-              role: 'user',
-              // The input firewall (task section 20): exactly these four fields, nothing spatial, graded or later.
-              content: `<thread_continuity_source>${escapeData({
-                schemaVersion: request.schemaVersion,
-                currentCu: request.currentCu,
-                currentFocusSemantics: request.currentFocusSemantics,
-                currentFocusGrounding: request.currentFocusGrounding,
-                candidates: request.candidates,
-              })}</thread_continuity_source>`,
-            },
-          ],
-          text: { format: { type: 'json_schema', name, strict: true, schema } },
-          max_output_tokens: this.config.maxOutputTokens,
-          store: false,
-        },
+          schema,
+          // The input firewall (task section 20): exactly these four fields, nothing spatial, graded or later.
+          data: `<thread_continuity_source>${escapeDeepSeekData({
+            schemaVersion: request.schemaVersion,
+            currentCu: request.currentCu,
+            currentFocusSemantics: request.currentFocusSemantics,
+            currentFocusGrounding: request.currentFocusGrounding,
+            candidates: request.candidates,
+          })}</thread_continuity_source>`,
+          maxTokens: this.config.maxOutputTokens,
+        }),
         { timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal },
       );
-      return response.output_text;
+      return deepSeekJsonContent(response);
     } catch (error) {
       if (error instanceof ThreadContinuityProviderError) throw error;
-      if (controller.signal.aborted || isTimeout(error)) throw new ThreadContinuityProviderError('TIMEOUT');
-      if (isUnavailable(error)) throw new ThreadContinuityProviderError('UNAVAILABLE');
+      if (controller.signal.aborted || isDeepSeekTimeout(error)) throw new ThreadContinuityProviderError('TIMEOUT');
+      if (isDeepSeekUnavailable(error)) throw new ThreadContinuityProviderError('UNAVAILABLE');
       throw new ThreadContinuityProviderError('PROVIDER_ERROR');
     } finally {
       clearTimeout(timer);
@@ -246,21 +232,4 @@ export function parseThreadContinuityResolutionOutput(value: unknown, request: T
   } catch {
     throw new ThreadContinuityProviderError('INVALID_STRUCTURED_OUTPUT');
   }
-}
-
-function escapeData(value: unknown): string {
-  return JSON.stringify(value).replace(/&/gu, '\\u0026').replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
-}
-
-function isTimeout(error: unknown): boolean {
-  return error instanceof Error && (error.name === 'AbortError' || error.name === 'APIConnectionTimeoutError');
-}
-
-function isUnavailable(error: unknown): boolean {
-  const value = error as { name?: unknown; status?: unknown };
-  return value?.name === 'APIConnectionError' || value?.status === 502 || value?.status === 503 || value?.status === 504;
-}
-
-export function createOpenAiThreadContinuityClient(config: ThreadContinuityOpenAIConfig): OpenAI {
-  return new OpenAI({ apiKey: config.apiKey, maxRetries: 0, timeout: config.timeoutMs, logLevel: 'off' });
 }

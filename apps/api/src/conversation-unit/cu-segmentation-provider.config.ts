@@ -1,11 +1,11 @@
 // T-03A1 - CU segmentation provider configuration.
 //
-// Mirrors the existing hypothesis intent-extraction provider binding: one
-// configured provider, an explicit model allowlist shape, a bounded timeout and
-// zero provider-side retries. No new dependency is introduced - the existing
-// `openai` package is reused.
+// S8A-03 (D1): the one configured provider is DeepSeek Flash, through the shared DeepSeek client and its SYNTHETIC_ONLY
+// qualification gate. The provider and the model are fixed in code; a bounded timeout and zero provider-side retries
+// are unchanged. No new dependency is introduced.
 
-export const DEFAULT_CU_SEGMENTATION_MODEL = 'gpt-5-mini';
+import { assertDeepSeekFlashSelection, DEEPSEEK_FLASH_MODEL, requireDeepSeekQualification } from '../model-router/providers/deepseek/deepseek-client';
+
 export const DEFAULT_CU_SEGMENTATION_TIMEOUT_MS = 5_000;
 export const CU_SEGMENTATION_MAX_OUTPUT_TOKENS = 2_048;
 export const CU_SEGMENTATION_MAX_RETRIES = 0 as const;
@@ -13,14 +13,15 @@ export const CU_SEGMENTATION_MAX_RETRIES = 0 as const;
 /**
  * The prompt identity recorded on every commitment batch. It changes whenever
  * the instructions that shaped a boundary decision change, so provenance can
- * never silently drift under a stored batch.
+ * never silently drift under a stored batch. S8A-03: the schema now travels in
+ * the instruction (DeepSeek JSON Output), so the identity changed.
  */
-export const CU_SEGMENTATION_PROMPT_VERSION = 'cu-segmentation-anchored-v1';
+export const CU_SEGMENTATION_PROMPT_VERSION = 'cu-segmentation-anchored-deepseek-v1';
 
-export interface CuSegmentationOpenAIConfig {
-  provider: 'OPENAI';
+export interface CuSegmentationDeepSeekConfig {
+  provider: 'DEEPSEEK';
   apiKey: string;
-  model: string;
+  model: typeof DEEPSEEK_FLASH_MODEL;
   timeoutMs: number;
   maxOutputTokens: typeof CU_SEGMENTATION_MAX_OUTPUT_TOKENS;
   maxRetries: typeof CU_SEGMENTATION_MAX_RETRIES;
@@ -28,20 +29,16 @@ export interface CuSegmentationOpenAIConfig {
   schemaVersion: 1;
 }
 
-export function loadCuSegmentationOpenAIConfig(
+export function loadCuSegmentationDeepSeekConfig(
   environment: NodeJS.ProcessEnv = process.env,
-): CuSegmentationOpenAIConfig {
-  const provider = environment.CU_SEGMENTATION_PROVIDER?.trim().toUpperCase() || 'OPENAI';
-  if (provider !== 'OPENAI') throw new Error('CU_SEGMENTATION_PROVIDER must be OPENAI.');
-  const apiKey = environment.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new Error('OPENAI_API_KEY is required for conversational unit segmentation.');
-  const model = environment.CU_SEGMENTATION_MODEL?.trim() || DEFAULT_CU_SEGMENTATION_MODEL;
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(model)) throw new Error('Invalid conversational unit segmentation model.');
+): CuSegmentationDeepSeekConfig {
+  assertDeepSeekFlashSelection(environment, 'CU_SEGMENTATION');
   const timeoutMs = readTimeout(environment.CU_SEGMENTATION_TIMEOUT_MS);
+  const apiKey = requireDeepSeekQualification(environment, 'conversational unit segmentation');
   return {
-    provider: 'OPENAI',
+    provider: 'DEEPSEEK',
     apiKey,
-    model,
+    model: DEEPSEEK_FLASH_MODEL,
     timeoutMs,
     maxOutputTokens: CU_SEGMENTATION_MAX_OUTPUT_TOKENS,
     maxRetries: CU_SEGMENTATION_MAX_RETRIES,

@@ -318,7 +318,9 @@ const DETECTORS = {
     // S8A-01 RE-ANCHOR (2026-10-21): S7-05 merged through PR #351; the current task is S8A-01, and S7-05 stands beneath it
     // as the previous task, as written at its closing change.
     // S8A-02 RE-ANCHOR (2026-10-23): S8A-01 merged through PR #353; the current task is S8A-02, and S8A-01 stands beneath it.
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality\*\*/mu.test(w.map)) out.push('the Project Map names S8A-02 as current');
+    // S8A-03 RE-ANCHOR (2026-10-23): S8A-02 merged through PR #354; the current task is S8A-03, and S8A-02 stands beneath it.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8A-03 — Personal Understanding Reality\*\*/mu.test(w.map)) out.push('the Project Map names S8A-03 as current');
+    if (w.map !== null && !/^> \*\(Previous, S8A-02, as written at its closing change; merged through PR #354:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality\*\*/mu.test(w.map)) out.push('the Project Map keeps S8A-02 as the previous task');
     if (w.map !== null && !/^> \*\(Previous, S8A-01, as written at its closing change; merged through PR #353:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-01 — DeepSeek Production Integration & First Real Conversation\*\*/mu.test(w.map)) out.push('the Project Map keeps S8A-01 as the previous task');
     if (w.map !== null && !/^> \*\(Previous, S7-05, as written at its closing change; merged through PR #351:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-05 — Replay Final Integration, Device Proof & Stage Closure\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-05 as the previous task');
     if (w.map !== null && !/^> \*\(Previous, S7-04, as written at its closing change; merged through PR #350:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-04 — Production Replay Player & Navigation\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-04 as the previous task');

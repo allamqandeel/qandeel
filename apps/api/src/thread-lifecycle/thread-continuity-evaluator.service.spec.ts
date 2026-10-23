@@ -1,9 +1,9 @@
 import type { CurrentCuInput } from '../conversational-focus/conversational-focus.types';
 import type { CanonicalCuFocusSemanticPayload } from '../conversational-focus/durable-focus-payload.types';
 import { FakeThreadContinuityProvider } from './fake-thread-continuity.provider';
-import { parseThreadContinuityResolutionOutput, parseThreadContinuityScreeningOutput } from './openai-thread-continuity.provider';
-import { openAiThreadContinuityBinding } from './thread-continuity-binding';
-import { loadThreadContinuityOpenAIConfig, loadThreadContinuityProviderIdentity } from './thread-continuity-provider.config';
+import { parseThreadContinuityResolutionOutput, parseThreadContinuityScreeningOutput } from './deepseek-thread-continuity.provider';
+import { deepSeekThreadContinuityBinding } from './thread-continuity-binding';
+import { loadThreadContinuityDeepSeekConfig, loadThreadContinuityProviderIdentity, THREAD_CONTINUITY_PROMPT_VERSION } from './thread-continuity-provider.config';
 import { THREAD_CONTINUITY_SCHEMA_VERSION, ThreadContinuityProviderError, type ThreadContinuityResolutionProposal, type ThreadContinuityResolutionRequest } from './thread-continuity-provider.types';
 import { chunkDossiers, ThreadContinuityEvaluatorService } from './thread-continuity-evaluator.service';
 import { validateThreadContinuityResolution, validateThreadContinuityScreening } from './thread-continuity-validator';
@@ -39,7 +39,7 @@ const handles = { groundingHandleIds: [HANDLE] };
 const bind = (id: string): ThreadContinuityResolutionProposal => ({ decision: 'BIND_EXISTING', threadId: id, candidateThreadIds: [], currentEvidenceReferenceIndexes: [0], priorEvidenceRefs: [{ cuId: PRIOR_CU, exactSurface: 'أحمد' }] });
 const ambiguous = (ids: string[]): ThreadContinuityResolutionProposal => ({ decision: 'AMBIGUOUS_EXISTING', threadId: null, candidateThreadIds: ids, currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] });
 const distinct: ThreadContinuityResolutionProposal = { decision: 'DISTINCT_NEW', threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] };
-const service = (provider: FakeThreadContinuityProvider) => new ThreadContinuityEvaluatorService(provider, 'OPENAI', 'gpt-5-mini');
+const service = (provider: FakeThreadContinuityProvider) => new ThreadContinuityEvaluatorService(provider, 'DEEPSEEK', 'deepseek-flash');
 const rejection = async (promise: Promise<unknown>) => {
   try { await promise; } catch (error) { return error; }
   throw new Error('expected a rejection');
@@ -152,7 +152,8 @@ describe('final resolution validation (cases 41-48)', () => {
   it('42. the same Thread with strong grounding binds, with exact current and prior evidence', async () => {
     const result = await service(FakeThreadContinuityProvider.nominatingAll(bind(threadId(2)))).resolveOne(input(), handles);
     expect(result).toMatchObject({ decision: 'BIND_EXISTING', threadId: threadId(2), candidateThreadIds: [], currentEvidenceReferenceIndexes: [0], priorEvidenceRefs: [{ cuId: PRIOR_CU, exactSurface: 'أحمد' }] });
-    expect(result.provenance).toEqual({ evaluatorVersion: 'thread-continuity-evaluator-v1', policyVersion: 'stage-1.3-thread-lifecycle-v1', provider: 'OPENAI', model: 'gpt-5-mini', promptVersion: 'thread-continuity-identity-v1', schemaVersion: 1 });
+    expect(result.provenance).toEqual({ evaluatorVersion: 'thread-continuity-evaluator-v1', policyVersion: 'stage-1.3-thread-lifecycle-v1', provider: 'DEEPSEEK', model: 'deepseek-flash', promptVersion: 'thread-continuity-identity-deepseek-v1', schemaVersion: 1 });
+    expect(THREAD_CONTINUITY_PROMPT_VERSION).toBe('thread-continuity-identity-deepseek-v1');
   });
 
   it('43. prior evidence must be an EXACT existing dossier item of the bound Thread: no alias, no normalization, no other Thread', async () => {
@@ -195,7 +196,7 @@ describe('final resolution validation (cases 41-48)', () => {
     expect(JSON.stringify(resolution).toLowerCase()).not.toMatch(/score|rank|confidence|rationale|similarity/u);
   });
 
-  it('48. the parsers enforce shape only, fail closed, and are tested apart from any API invocation', () => {
+  it('48. the parsers enforce shape only, fail closed, and are tested apart from any API invocation', async () => {
     const request: ThreadContinuityResolutionRequest = { schemaVersion: THREAD_CONTINUITY_SCHEMA_VERSION, currentCu, currentFocusSemantics: bundle(), currentFocusGrounding: input().currentFocusGrounding, candidates: dossiers(2) };
     expect(parseThreadContinuityScreeningOutput(JSON.stringify({ possibleSameThreadIds: [threadId(1)] }), request)).toEqual({ possibleSameThreadIds: [threadId(1)] });
     expect(parseThreadContinuityResolutionOutput(JSON.stringify(bind(threadId(1))), request)).toEqual(bind(threadId(1)));
@@ -211,12 +212,20 @@ describe('final resolution validation (cases 41-48)', () => {
     }
     // The production binding reads only the provider identity; the credential is read on the first real call.
     const environment = {} as NodeJS.ProcessEnv;
-    expect(() => openAiThreadContinuityBinding(environment)).not.toThrow();
-    const binding = openAiThreadContinuityBinding(environment)();
-    expect([binding.providerName, binding.providerModel]).toEqual(['OPENAI', 'gpt-5-mini']);
-    expect(loadThreadContinuityProviderIdentity(environment)).toEqual({ provider: 'OPENAI', model: 'gpt-5-mini' });
-    expect(() => loadThreadContinuityOpenAIConfig(environment)).toThrow(/OPENAI_API_KEY/u);
-    expect(() => loadThreadContinuityProviderIdentity({ THREAD_CONTINUITY_PROVIDER: 'ANTHROPIC' } as NodeJS.ProcessEnv)).toThrow(/OPENAI/u);
-    expect(() => loadThreadContinuityOpenAIConfig({ OPENAI_API_KEY: 'k', THREAD_CONTINUITY_TIMEOUT_MS: '5' } as NodeJS.ProcessEnv)).toThrow(/TIMEOUT/u);
+    const decorate = jest.fn((client) => client);
+    expect(() => deepSeekThreadContinuityBinding(environment, decorate)).not.toThrow();
+    const binding = deepSeekThreadContinuityBinding(environment, decorate)();
+    expect([binding.providerName, binding.providerModel]).toEqual(['DEEPSEEK', 'deepseek-flash']);
+    expect(decorate).not.toHaveBeenCalled();
+    await expect(binding.provider.screen(request)).rejects.toThrow(/SYNTHETIC_ONLY/u);
+    expect(decorate).not.toHaveBeenCalled();
+    expect(loadThreadContinuityProviderIdentity(environment)).toEqual({ provider: 'DEEPSEEK', model: 'deepseek-flash' });
+    expect(() => loadThreadContinuityDeepSeekConfig(environment)).toThrow(/SYNTHETIC_ONLY/u);
+    expect(() => loadThreadContinuityDeepSeekConfig({ OPENAI_API_KEY: 'k' } as NodeJS.ProcessEnv)).toThrow(/SYNTHETIC_ONLY/u);
+    expect(() => loadThreadContinuityDeepSeekConfig({ DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY' } as NodeJS.ProcessEnv)).toThrow(/DEEPSEEK_API_KEY/u);
+    expect(() => loadThreadContinuityDeepSeekConfig({ DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'k', NODE_ENV: 'production' } as NodeJS.ProcessEnv)).toThrow(/production/u);
+    expect(() => loadThreadContinuityProviderIdentity({ THREAD_CONTINUITY_PROVIDER: 'OPENAI' } as NodeJS.ProcessEnv)).toThrow(/must be DEEPSEEK/u);
+    expect(() => loadThreadContinuityProviderIdentity({ THREAD_CONTINUITY_MODEL: 'gpt-5-mini' } as NodeJS.ProcessEnv)).toThrow(/must be deepseek-flash/u);
+    expect(() => loadThreadContinuityDeepSeekConfig({ DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'k', THREAD_CONTINUITY_TIMEOUT_MS: '5' } as NodeJS.ProcessEnv)).toThrow(/TIMEOUT/u);
   });
 });

@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ClaudeModelRouter } from './providers/anthropic/claude-model-router';
 import { FakeModelRouter } from './fake-model-router';
 import { MODEL_ROUTER, type ModelRouter } from './model-router.types';
-import { OpenAIModelRouter } from './providers/openai/openai-model-router';
 import { DeepSeekModelRouter } from './providers/deepseek/deepseek-model-router';
 import { ObservabilityModule } from '../observability/observability.module';
 import { TelemetryService } from '../observability/telemetry.service';
@@ -16,16 +14,13 @@ export function createConfiguredModelRouter(
   if (!telemetry) throw new Error('TelemetryService is required for a production model router.');
 
   // AI-COST-01: every production reply attempt passes the one accounting boundary.
+  // S8A-03 (D1): DeepSeek is the only provider; there is no other router to select or fall back to. It stays
+  // qualification-only (synthetic data): its configuration refuses production and an undeclared mode.
   switch (environment.MODEL_PROVIDER?.trim().toLowerCase()) {
-    case 'anthropic':
-      return ClaudeModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
-    case 'openai':
-      return OpenAIModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
-    // S8A-01: qualification-only (synthetic data); its configuration refuses production and an undeclared mode.
     case 'deepseek':
       return DeepSeekModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
     default:
-      throw new Error('MODEL_PROVIDER must be one of anthropic, openai or deepseek.');
+      throw new Error('MODEL_PROVIDER must be deepseek.');
   }
 }
 
