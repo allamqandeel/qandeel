@@ -27,6 +27,26 @@ describe('S8A-03 CP2 capture pre-screen', () => {
   ])('%s -> %s', (message, sent) => {
     expect(capturableMessage(message) !== null).toBe(sent);
   });
+
+  // S8A-03 CP3 D-1 / D-2: MSA first person is read, and a negation that restates nothing is a disclosure, not a command.
+  // Every correction that restates its predicate, "I'm not X, I'm Y", a natural reversal and a forget stay the foreground's.
+  it.each([
+    ['أعمل حاليًا ممرضة في مستشفى حكومي', true],
+    ['أسكن في الإسكندرية', true],
+    ['لديّ ابنتان', true],
+    ['يعمل أخي ممرضًا في مستشفى حكومي', false],
+    ['أنا مش بدخن خالص، ومش متجوز', true],
+    ["I don't like my job, but I need the money", true],
+    ['لا، مش ساكن في أكتوبر، ساكن في طنطا', false],
+    ['أنا مبقتش ساكن في أكتوبر، أنا دلوقتي ساكن في طنطا', false],
+    ['غيرت رأيي، مش بحب الشاي، بحب القهوة', false],
+    ["I'm not a teacher, I'm a nurse", false],
+    ["I don't live in Cairo anymore, I live in Giza", false],
+    ['انسى إني مش بدخن', false],
+    ['افتكر إني مش متجوز', false],
+  ])('CP3 %s -> %s', (message, sent) => {
+    expect(capturableMessage(message) !== null).toBe(sent);
+  });
 });
 
 describe('PersonalUnderstandingCaptureService (S8A-03 CP2)', () => {

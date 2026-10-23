@@ -13,6 +13,7 @@ import type { BackgroundIntelligenceExecutionContext } from '../background-intel
 import { BackgroundIntelligenceEnrichmentService } from '../background-intelligence/background-intelligence-enrichment.service';
 import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
 import { interpretMemoryControl } from '../memory/memory-control.interpreter';
+import { distinctiveWords } from '../memory/memory-control.resolution';
 import { containsObviousSecret } from '../memory/memory-write-evaluator.service';
 import type { MemoryRecord, MemoryType } from '../memory/memory.types';
 import { MAX_UNDERSTANDING_MEMORY_CHARS } from './deepseek-personal-understanding-capture.provider';
@@ -48,9 +49,23 @@ export interface PersonalUnderstandingCapturePlan {
 export function capturableMessage(content: string): string | null {
   const text = content.normalize('NFKC').trim();
   if (text.length < 4 || [...text].length > MAX_UNDERSTANDING_MESSAGE_CHARS) return null;
-  if (interpretMemoryControl(text) || interpretInteractionPreferenceCommand(text)) return null;
+  if (isMemoryCommand(text) || interpretInteractionPreferenceCommand(text)) return null;
   if (containsObviousSecret(text) || !carriesFirstPersonSignal(text)) return null;
   return text;
+}
+
+/**
+ * S8A-03 CP3 D-2: a negation is not always a correction. «أنا مش بدخن خالص، ومش متجوز» has the shape of one («مش X، Y»)
+ * but restates nothing, and the foreground already treats a correction whose old and new words share no distinctive word
+ * as ordinary talk (memory-control.service, the same test); so it is the user's natural disclosure and is read here like
+ * any other message. A correction that restates its predicate («مش ساكن في أكتوبر، ساكن في طنطا»), "I'm not X, I'm Y",
+ * and every other Memory command stay the foreground's, exactly as before. The interpreter itself is unchanged.
+ */
+function isMemoryCommand(text: string): boolean {
+  const intent = interpretMemoryControl(text);
+  if (intent?.kind !== 'CORRECT' || intent.natural || intent.copula) return intent !== null;
+  const replacement = distinctiveWords(intent.replacement);
+  return [...distinctiveWords(intent.previous)].some((word) => replacement.has(word));
 }
 
 @Injectable()

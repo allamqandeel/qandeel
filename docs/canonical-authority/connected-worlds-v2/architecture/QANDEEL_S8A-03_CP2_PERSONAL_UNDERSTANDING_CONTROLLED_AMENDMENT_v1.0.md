@@ -78,7 +78,10 @@ after `MEMORY_WRITE`, in its own effect, so the deterministic Memory's fresh Evi
 
 The stage has three parts:
 1. **Pre-screen.** It decides whether a message is worth a proposal. The pre-screen is deliberately broad: any
-   first-person signal. A Memory or Interaction Preference command, a secret, or an out-of-bounds length is never sent.
+   first-person signal, Egyptian or Modern Standard Arabic («أعمل», «أسكن», «لديّ»; §7.5). A Memory or Interaction
+   Preference command, a secret, or an out-of-bounds length is never sent. A correction-shaped negation that restates
+   nothing («أنا مش بدخن خالص، ومش متجوز») is not a command: the foreground already treats it as ordinary talk, so it is
+   sent like any other message (§7.5).
 2. **Proposal.** DeepSeek Flash proposes at most six facts. Each names a verbatim span of the current message and how
    the model read it: subject, modality, polarity, time, type, optional slot and search keys.
 3. **Deterministic server verification.** A proposal is kept only when the words agree with every reading:
@@ -310,6 +313,34 @@ Focused proofs:
 - the capture service spec: three R3 cases (settled with no provider call; a secret under no term and a long Memory
   under its own words only; never sent, and still settled on a provider failure);
 - the Router spec: the `UNSETTLED` sentence, verbatim.
+
+**7.5 Pre-CP3 acquisition corrections** (Founder, *S8A-03 CP3 Final Plan Adjustment*, 2026-10-23). Two real defects of
+natural acquisition, found deterministically while CP3 was prepared, with no paid call:
+- **D-1, Modern Standard Arabic first person.** «أعمل حاليًا ممرضة في مستشفى حكومي», «أسكن في الإسكندرية» and «لديّ
+  ابنتان» carried no first-person signal, so they never reached the provider. The one first-person test, shared by the
+  pre-screen and the verifier, now also reads:
+  - «لديّ»;
+  - the MSA first-person imperfect «أفعل», only as written with its hamza, only at the head of a clause (after «و» /
+    «ف», a closed adverb or a negation), and never in a closed list of words of that shape that are not a first-person
+    verb (kin, pronouns, adverbs, the comparative at a clause head, names, months).
+
+  The MSA kin («أخي», «زوجي», «زوجتي», «ابنتي», «صديقي», …) join the third-party list, so a first-person MSA clause never
+  carries the user over to someone else's. «يـ» / «تـ» / «نـ» (he, she or you, we), «لديه» and «لديك» never match.
+  Known limit: MSA written without the hamza («اعمل», «اسكن») is still not read; a bare «ا» opens the article and most
+  nouns.
+- **D-2, a negation is not always a correction.** «أنا مش بدخن خالص، ومش متجوز» has the shape of a correction («مش X،
+  Y»), so the capture pre-screen dropped it as a Memory command. The foreground already treats a correction whose old and
+  new words share no distinctive word as ordinary talk; the pre-screen now applies that same test, and sends such a
+  message like any other. The verifier then keeps each negation only with its negating words. Unchanged: the
+  interpreter, every CORRECT / FORGET / DISABLE / REMEMBER path, MEM-AR-01B natural reversals and MEM-AR-01C subjects;
+  a correction that restates its predicate («مش ساكن في أكتوبر، ساكن في طنطا») and "I'm not X, I'm Y" stay the
+  foreground's. Known limit: the deterministic `MEMORY_WRITE` effect and the Hypothesis generation eligibility keep
+  their own unchanged Memory-command exclusion.
+
+Focused proofs: the verifier spec (the MSA signal table; MSA statements kept as said; MSA third-party, second-person and
+negation refusals; the natural negated disclosure kept as negations only) and the capture service spec (the pre-screen
+table: MSA sent, disclosure sent, every correction shape and command still the foreground's). No model-visible text
+changed.
 
 # 8. Explicit non-amendments, implementation and status
 

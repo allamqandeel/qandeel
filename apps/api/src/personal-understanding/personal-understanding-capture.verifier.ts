@@ -53,6 +53,8 @@ const FIRST_PERSON = wordList([
   'شغلي', 'وظيفتي', 'شغلانتي', 'مهنتي', 'بيتي', 'شقتي', 'سكني', 'دراستي', 'كليتي', 'جامعتي', 'مدرستي', 'تخصصي',
   'حياتي', 'هدفي', 'حلمي', 'اسمي', 'سني', 'عمري', 'صحتي', 'هوايتي', 'هواياتي', 'شركتي', 'عيلتي', 'اسرتي', 'مرتبي',
   'راتبي', 'عربيتي', 'اكلي', 'نومي', 'وزني', 'رياضتي', 'خطتي', 'مشروعي',
+  // S8A-03 CP3 D-1: Modern Standard Arabic «لديّ» («I have»); «لديه» / «لديك» are other people and never match.
+  'لدي',
   'i', "i'm", 'im', "i've", 'ive', 'my', 'me', 'myself', 'mine',
 ]);
 /** Egyptian first-person verb forms: «بـ» / «هـ» + a stem that is not «ي / ت / ن» (he / you / we), or a past «…ت». */
@@ -67,6 +69,9 @@ const THIRD_PARTY = wordList([
   'اخويا', 'اخوي', 'اختي', 'ابويا', 'ابوي', 'بابا', 'ماما', 'امي', 'والدي', 'والدتي', 'ابني', 'بنتي', 'مراتي', 'جوزي',
   'خطيبي', 'خطيبتي', 'صاحبي', 'صاحبتي', 'صحبتي', 'عمي', 'عمتي', 'خالي', 'خالتي', 'جدي', 'جدتي', 'جاري', 'جارتي',
   'زميلي', 'زميلتي', 'مديري', 'مديرتي', 'ولادي', 'عيالي', 'اهلي', 'اصحابي', 'حماتي', 'حمايا',
+  // S8A-03 CP3 D-1: the Modern Standard Arabic kin, so a first-person MSA clause never carries the user over to theirs
+  // («أسكن في القاهرة، وزوجي يعمل مهندسًا»).
+  'اخي', 'ابي', 'زوجي', 'زوجتي', 'ابنتي', 'صديقي', 'صديقتي', 'اولادي', 'اطفالي', 'ابنائي', 'بناتي', 'اصدقائي', 'زملائي',
   'هو', 'هي', 'هما', 'هم', 'انت', 'انتي', 'انتو', 'انتم',
   'he', 'she', 'they', 'you', 'his', 'her', 'their', 'your',
   'brother', 'sister', 'mother', 'father', 'mom', 'dad', 'son', 'daughter', 'wife', 'husband', 'fiance', 'fiancee',
@@ -130,9 +135,38 @@ function verbForms(text: string): boolean {
     (IMPERFECT_FIRST_PERSON.test(token) || PAST_FIRST_PERSON.test(token)));
 }
 
+// S8A-03 CP3 D-1: the Modern Standard Arabic first-person imperfect («أعمل حاليًا ممرضة», «أسكن في الإسكندرية», «لا أدخن»).
+// Its «أ» prefix is read only as written, with the hamza (folding erases it, and a bare «ا» opens the article and most
+// nouns), only at the head of a clause (after «و» / «ف», a closed adverb or a negation), and never in a closed list of
+// words of that shape that are not a first-person verb: kin («أختي»), pronouns («أنت», «أنها»), adverbs («أيضًا»), the
+// comparative at a clause head («أحسن», «أكثر»), names and months. «يـ» / «تـ» / «نـ» (he, she or you, we) never match.
+const MSA_IMPERFECT_FIRST_PERSON = /^أ[\p{L}]{3,5}$/u;
+const MSA_CLAUSE_LEAD = new Set(['حاليا', 'الآن', 'الان', 'أيضا', 'ايضا', 'كذلك', 'لكن', 'ولكن', 'بل', 'ثم', 'كما', 'لا', 'لم', 'لن']);
+const NOT_AN_MSA_VERB = new Set([
+  'أنت', 'أنتي', 'أنتم', 'أنتما', 'أنتن', 'أنتو', 'أنها', 'أنهم', 'أنهما', 'أنكم', 'أنكن', 'أننا', 'أنني',
+  'أيضا', 'أحيانا', 'أخيرا', 'أولا', 'أصلا', 'أساسا', 'أبدا', 'أكيد', 'أمام', 'أثناء', 'أسفل', 'أخرى', 'أخري', 'أمبارح',
+  'أكثر', 'أقل', 'أكبر', 'أصغر', 'أحسن', 'أفضل', 'أسوأ', 'أجمل', 'أحلى', 'أطول', 'أقصر', 'أقرب', 'أبعد', 'أهم', 'أغلى',
+  'أرخص', 'أسرع', 'أصعب', 'أسهل', 'أعلى', 'أولى',
+  'أختي', 'أخويا', 'أخوي', 'أبويا', 'أبوي', 'أهلي', 'أولاد', 'أولادي', 'أطفال', 'أطفالي', 'أبنائي', 'أصحاب', 'أصحابي',
+  'أصدقاء', 'أصدقائي', 'أقارب', 'أقاربي', 'أخواتي', 'أسرة', 'أسرتي', 'أستاذ', 'أستاذة', 'أسبوع', 'أسابيع', 'أيام', 'أشهر',
+  'أحمد', 'أشرف', 'أسامة', 'أيمن', 'أسماء', 'أميرة', 'أنور', 'أكرم', 'أمين', 'أمينة', 'أحلام', 'أمجد', 'أدهم',
+  'أكتوبر', 'أبريل', 'أغسطس', 'أمريكا', 'أوروبا', 'ألمانيا', 'أسيوط', 'أسوان',
+]);
+function msaFirstPerson(text: string): boolean {
+  const raw = text.normalize('NFKC').replace(/[ـً-ٰٟ]/gu, '');
+  return raw.split(CLAUSE_BREAK).some((clause) => {
+    for (const token of clause.match(/[\p{L}]+/gu) ?? []) {
+      const word = token.replace(/^[وف](?=أ)/u, '');
+      if (MSA_IMPERFECT_FIRST_PERSON.test(word) && !NOT_AN_MSA_VERB.has(word)) return true;
+      if (!MSA_CLAUSE_LEAD.has(word)) return false;
+    }
+    return false;
+  });
+}
+
 /** Whether a message carries any first-person signal at all: the pre-screen that decides if it is worth a proposal. */
 export function carriesFirstPersonSignal(message: string): boolean {
-  return hasWord(FIRST_PERSON, message) || verbForms(message);
+  return hasWord(FIRST_PERSON, message) || verbForms(message) || msaFirstPerson(message);
 }
 
 function enumValue<T extends string>(value: unknown, values: readonly T[]): value is T {

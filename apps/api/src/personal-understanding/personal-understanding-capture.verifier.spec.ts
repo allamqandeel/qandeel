@@ -222,3 +222,46 @@ describe('S8A-03 CP2 first-person pre-screen', () => {
     expect(carriesFirstPersonSignal(message)).toBe(expected);
   });
 });
+
+// S8A-03 CP3 D-1: Modern Standard Arabic first person, read the same way by the pre-screen and the verifier.
+describe('S8A-03 CP3 D-1 - Modern Standard Arabic first person', () => {
+  it.each([
+    ['أعمل حاليًا ممرضة في مستشفى حكومي', true], ['أسكن في الإسكندرية', true], ['لديّ ابنتان', true],
+    ['حاليًا أعمل ممرضة', true], ['وأعمل مهندسًا في القاهرة', true], ['لا أدخن', true],
+    // he / she / you, someone else's «لديه», kin, and the same «أفعل» shape that is not a first-person verb
+    ['يعمل أخي ممرضًا في مستشفى حكومي', false], ['تعمل ممرضة في مستشفى حكومي', false], ['تسكن في الإسكندرية', false],
+    ['لديه ابنتان', false], ['لديكِ ابنتان', false], ['أختي تعمل ممرضة', false], ['أنت تسكن في الإسكندرية', false],
+    ['الجو أحلى النهارده', false], ['أكثر الناس يسكنون هنا', false], ['أحمد يعمل في بنك', false], ['اسكن في الإسكندرية', false],
+  ])('%s -> %s', (message, expected) => {
+    expect(carriesFirstPersonSignal(message)).toBe(expected);
+  });
+
+  it('keeps the user\'s own MSA statements, as said', () => {
+    expect(kept(fact('أعمل حاليًا ممرضة في مستشفى حكومي'), 'أعمل حاليًا ممرضة في مستشفى حكومي').content).toBe('أعمل حاليًا ممرضة في مستشفى حكومي.');
+    expect(kept(fact('أسكن في الإسكندرية'), 'أسكن في الإسكندرية').content).toBe('أسكن في الإسكندرية.');
+    expect(kept(fact('لديّ ابنتان'), 'لديّ ابنتان').content).toBe('لديّ ابنتان.');
+    expect(kept(fact('لا أدخن', { polarity: 'NEGATED' }), 'لا أدخن').content).toBe('لا أدخن.');
+  });
+
+  it('never takes someone else\'s MSA fact, or a second-person one, as the user\'s', () => {
+    expect(rejected(fact('يعمل أخي ممرضًا'), 'يعمل أخي ممرضًا في مستشفى حكومي')).toBe('THIRD_PARTY');
+    expect(rejected(fact('زوجي يعمل مهندسًا'), 'أسكن في القاهرة، وزوجي يعمل مهندسًا')).toBe('THIRD_PARTY');
+    expect(rejected(fact('يعمل مهندسًا'), 'أسكن في القاهرة، وزوجي يعمل مهندسًا')).toBe('THIRD_PARTY');
+    expect(rejected(fact('تعمل ممرضة في مستشفى حكومي'), 'تعمل ممرضة في مستشفى حكومي')).toBe('NO_FIRST_PERSON');
+    expect(rejected(fact('لديه ابنتان'), 'لديه ابنتان')).toBe('NO_FIRST_PERSON');
+    expect(rejected(fact('تسكن في الإسكندرية'), 'أنت تسكن في الإسكندرية')).toBe('THIRD_PARTY');
+    expect(rejected(fact('أدخن'), 'لا أدخن')).toBe('TOO_SHORT_OR_LONG');
+    expect(rejected(fact('لا أدخن'), 'لا أدخن')).toBe('NEGATION_MISMATCH');
+  });
+});
+
+// S8A-03 CP3 D-2: a natural disclosure in the shape «أنا مش X، ومش Y» is kept as the negations the user said.
+describe('S8A-03 CP3 D-2 - a natural negated disclosure', () => {
+  const message = 'أنا مش بدخن خالص، ومش متجوز';
+  it('keeps each negation with its negating words, and never its opposite', () => {
+    expect(kept(fact('أنا مش بدخن خالص', { polarity: 'NEGATED' }), message).content).toBe('أنا مش بدخن خالص.');
+    expect(kept(fact('مش متجوز', { polarity: 'NEGATED' }), message).content).toBe('مش متجوز.');
+    expect(rejected(fact('بدخن خالص'), message)).toBe('NEGATION_MISMATCH');
+    expect(rejected(fact('ومش متجوز'), message)).toBe('NEGATION_MISMATCH');
+  });
+});

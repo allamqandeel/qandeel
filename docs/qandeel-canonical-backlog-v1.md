@@ -5159,7 +5159,9 @@ Understanding Controlled Amendment (migration 0171, local only). The paragraphs 
 - **Not admitted:** the task-local residues stay with S8A-03 itself, which is still open and must dispose of them at its
   closing change: real-model capture and paraphrase quality (CP3), and composing the capture stage into the hand-built
   A2 / Full Intelligence / Integrated Brain end-to-end harnesses. Hosted application of 0171 rides the existing hosted
-  deployment items.
+  deployment items. The pre-CP3 corrections D-1 / D-2 (amendment §7.5, local) leave two more task-local limits with
+  S8A-03: MSA first person written without the hamza, and the unchanged Memory-command exclusion of `MEMORY_WRITE` and
+  Hypothesis generation eligibility.
 - **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
