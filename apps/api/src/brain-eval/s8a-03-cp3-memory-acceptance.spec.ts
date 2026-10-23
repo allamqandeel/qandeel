@@ -59,9 +59,9 @@ describe('S8A-03 CP3 memory acceptance harness', () => {
     });
   });
 
-  it('the guard holds round 11 at 41 attempts and USD 0.15, locked against a live run until the Founder authorizes it', () => {
+  it('the guard holds round 11 at 41 attempts and USD 0.15 (lock lifted for the one paid run, Founder authorization 2026-10-23)', () => {
     const caps = /const ROUND_CAPS = \{([\s\S]*?)\} \};/u.exec(read('scripts', 's8a-02', 'network-guard.cjs'))?.[1] ?? '';
-    expect(caps).toMatch(/\b11: \{ maxAttempts: 41, costCapUsd: 0\.15, authorized: false $/u);
+    expect(caps).toMatch(/\b11: \{ maxAttempts: 41, costCapUsd: 0\.15 $/u);
     const driver = read('scripts', 's8a-03', 'cp3-memory-acceptance.ts');
     expect(driver).toContain('const MAX_ATTEMPTS = 41;');
     expect(driver).toContain('const COST_CAP_USD = 0.15;');
