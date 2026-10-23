@@ -14,7 +14,7 @@ describe('PersonalUnderstandingModule composition (S8A-03 CP2)', () => {
     const service = moduleRef.get(PersonalUnderstandingCaptureService);
     expect(service).toBeInstanceOf(PersonalUnderstandingCaptureService);
     const provider = (service as unknown as { provider: { capture: (r: unknown) => Promise<unknown> } }).provider;
-    await expect(provider.capture({ schemaVersion: 1, currentUserText: 'أنا ساكن في المعادي', memories: [] })).resolves.toEqual({ facts: [], memories: [] });
+    await expect(provider.capture({ schemaVersion: 1, currentUserText: 'أنا ساكن في المعادي', memories: [] })).resolves.toEqual({ facts: [], memories: [], context: [] });
     await moduleRef.close();
   });
 

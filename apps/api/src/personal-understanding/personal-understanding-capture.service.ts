@@ -17,9 +17,16 @@ import { distinctiveWords } from '../memory/memory-control.resolution';
 import { containsObviousSecret } from '../memory/memory-write-evaluator.service';
 import type { MemoryRecord, MemoryType } from '../memory/memory.types';
 import { MAX_UNDERSTANDING_MEMORY_CHARS } from './deepseek-personal-understanding-capture.provider';
-import { carriesFirstPersonSignal, verifyFactProposals, verifyMemoryProposals } from './personal-understanding-capture.verifier';
+import {
+  carriesFirstPersonSignal,
+  verifyContextProposals,
+  verifyFactProposals,
+  verifyMemoryProposals,
+  type UnderstandingCurrentItem,
+} from './personal-understanding-capture.verifier';
 import {
   MAX_UNDERSTANDING_BACKFILL,
+  MAX_UNDERSTANDING_CURRENT_ITEMS,
   MAX_UNDERSTANDING_MESSAGE_CHARS,
   PERSONAL_UNDERSTANDING_CAPTURE_PROVIDER,
   PERSONAL_UNDERSTANDING_CAPTURE_SCHEMA_VERSION,
@@ -37,7 +44,12 @@ export interface PersonalUnderstandingCapturePlan {
    * bounded backfill window instead of holding it forever and starving every older eligible Memory.
    */
   readonly settle: ReadonlyArray<VerifiedUnderstandingIndex>;
-  readonly current: ReadonlyArray<Pick<MemoryRecord, 'type' | 'content'>>;
+  readonly current: ReadonlyArray<Pick<MemoryRecord, 'type' | 'content'> & Partial<Pick<MemoryRecord, 'id' | 'subject'>>>;
+  /**
+   * S8A-03 Living Personal Memory: with a message only, the owner's current-state Memories (handles c1-c10) the message
+   * may restate or end. Never sent when there is no message.
+   */
+  readonly currentItems: ReadonlyArray<UnderstandingCurrentItem>;
 }
 
 /**
@@ -87,23 +99,33 @@ export class PersonalUnderstandingCaptureService {
     });
     if (message === null && backlog.length === 0 && settle.length === 0) return undefined;
     const current = message === null ? [] : await this.data.listCaptureScreenMemories(context, now);
-    return { message, backlog, settle, current };
+    const currentItems = message === null ? [] : (await this.data.listCurrentStateMemories(context, MAX_UNDERSTANDING_CURRENT_ITEMS))
+      .filter(sendable).slice(0, MAX_UNDERSTANDING_CURRENT_ITEMS).map((memory, index) => ({ handle: `c${index + 1}`, ...memory }));
+    return { message, backlog, settle, current, currentItems };
   }
 
   async propose(plan: PersonalUnderstandingCapturePlan, now = new Date()): Promise<PersonalUnderstandingCaptureCommand> {
     // CP2 R3: settling needs no model, so a plan with nothing to send makes no provider call at all.
-    if (plan.message === null && plan.backlog.length === 0) return { items: [], index: [...plan.settle] };
+    if (plan.message === null && plan.backlog.length === 0) return { items: [], index: [...plan.settle], reaffirmed: [], ended: [] };
     let output;
     try {
       output = await this.provider.capture({
         schemaVersion: PERSONAL_UNDERSTANDING_CAPTURE_SCHEMA_VERSION,
         currentUserText: plan.message,
         memories: plan.backlog.map((memory) => ({ handle: memory.handle, type: memory.type, content: memory.content })),
+        current: plan.message === null ? [] : plan.currentItems.map((item) => ({ handle: item.handle, type: item.type, content: item.content })),
       });
     } catch {
-      return { items: [], index: [...plan.settle] };
+      return { items: [], index: [...plan.settle], reaffirmed: [], ended: [] };
     }
-    const items = plan.message === null ? [] : verifyFactProposals(output.facts, plan.message, plan.current, now).kept;
-    return { items, index: [...verifyMemoryProposals(output.memories, plan.backlog), ...plan.settle] };
+    const index = [...verifyMemoryProposals(output.memories, plan.backlog), ...plan.settle];
+    if (plan.message === null) return { items: [], index, reaffirmed: [], ended: [] };
+    const facts = verifyFactProposals(output.facts, plan.message, plan.current, now);
+    const context = verifyContextProposals(output.context, plan.message, plan.currentItems);
+    // An ending wins over a restatement of the same Memory in the same message; together at most ten (0172).
+    const ended = context.ended.slice(0, MAX_UNDERSTANDING_CURRENT_ITEMS);
+    const reaffirmed = [...new Set([...facts.restated, ...context.reaffirmed])].filter((id) => !ended.includes(id))
+      .slice(0, MAX_UNDERSTANDING_CURRENT_ITEMS - ended.length);
+    return { items: facts.kept, index, reaffirmed, ended };
   }
 }

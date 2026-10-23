@@ -44,6 +44,28 @@ export interface SemanticMemoryCandidate {
   unsettled: boolean;
 }
 
+/**
+ * S8A-03 Living Personal Memory (migration 0172): one row the knowledge picture is projected from - an eligible Memory
+ * of the caller with its subject, optional slot and time standing, and its living state (when the user last stated it,
+ * how often a later turn restated it, whether the user explicitly ended it). `unsettled` is the 0171 same-slot rule.
+ */
+export interface PersonalKnowledgeSource {
+  id: string;
+  type: MemoryType;
+  content: string;
+  source: MemorySource;
+  importance: number;
+  created_at: string;
+  expires_at: string | null;
+  subject: MemorySubject | null;
+  slot: string | null;
+  temporal: string | null;
+  last_stated_at: string;
+  restated_count: number;
+  ended: boolean;
+  unsettled: boolean;
+}
+
 export interface MemoryRecord {
   id: string;
   user_id: string;

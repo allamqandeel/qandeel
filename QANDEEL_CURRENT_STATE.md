@@ -103,7 +103,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
   - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
 
-### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP2 delivered, at the independent CP2 review gate; one pull request at the end, not merged)
+### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP3 FAIL as run; Living Personal Memory design corrections implemented locally, at the Founder's review; one pull request at the end, not merged)
 
 - Started 2026-10-23 on `s8a/s8a-03-personal-understanding-reality` from `main` at `37812845` (the merge of PR #354,
   S8A-02). CP0, an independent read-only review, was delivered and reviewed by the Founder, who approved its direction
@@ -139,6 +139,22 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     verbatim), which binds on the merge of the one S8A-03 pull request;
   - the real-model quality of spans, readings and keys is CP3's to measure. No paid call, and no backlog ownership has
     moved; `QAN-BL-AI-02` stays open.
+- **CP3, the one authorized live run (`cbe682c2`): FAIL.**
+  - Results: P1 17 / 17; P2 5 / 13 (C07 PASS); P3 5 / 10; H1–H6 all zero.
+  - Cost: 39 of 41 calls, peak-rate cost $0.00799.
+  - Cause: every retrieval miss was in the exact-stem index, not in the model.
+  - The result, its preregistration and its criteria stand unchanged.
+- **Living Personal Memory — design corrections (Founder, 2026-10-23; local commit, not pushed, no PR):**
+  - a read-time CORE / CURRENT / HISTORICAL picture of the live Memories, with no stored summary;
+  - family and relationships are core knowledge: kept as `OTHER`, never as the user's own fact;
+  - restatements and explicit endings come from the same background DeepSeek Flash call and are verified
+    deterministically. No new call, no call before the reply, and no new model;
+  - the three tiers share the unchanged 8,192-byte MEMORY slice: CORE has a floor of 40 % and CURRENT of 20 %, and the
+    two together take at most 60 %;
+  - migration `0172_s8a_03_living_personal_memory_v1.sql` is **local only**, proven by
+    `database/verify-migration-0172.mjs`;
+  - the two Copy Gate texts are recorded verbatim in [amendment §9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
+  - A final acceptance test needs its own authorization.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
 ### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)

@@ -281,6 +281,7 @@
     "verify:replay-personal-secure-integration:integration": "node --env-file-if-exists=.env database/verify-migration-0169.mjs",
     "verify:ai-usage-deepseek-admission:integration": "node --env-file-if-exists=.env database/verify-migration-0170.mjs",
     "verify:personal-understanding:integration": "node --env-file-if-exists=.env database/verify-migration-0171.mjs",
+    "verify:living-personal-memory:integration": "node --env-file-if-exists=.env database/verify-migration-0172.mjs",
     "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",
     "test:a3-02-native-push-platform-delivery-contract": "node --test tests/a3-02-native-push-platform-delivery-contract.test.mjs",
     "test:s4-01-shared-world-reachability-contract": "node --test tests/s4-01-shared-world-reachability-contract.test.mjs",

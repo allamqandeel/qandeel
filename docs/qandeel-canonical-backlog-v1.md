@@ -5165,6 +5165,29 @@ Understanding Controlled Amendment (migration 0171, local only). The paragraphs 
 - **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
+**S8A-03 CP3 and Living Personal Memory checkpoint (2026-10-23; the S8A-03 pull request, not yet opened; local, not
+pushed).** The paragraphs above stay as written.
+- **CP3:** the one authorized live run was FAIL (amendment §9.1). The Founder then approved the Living Personal Memory
+  design corrections, implemented locally under amendment §9 (migration 0172, local only).
+- **Evidence only, no change of state:**
+  - `QAN-BL-MATCH-04` gains local mechanism evidence: family relationship knowledge, the living current state, and a
+    bounded read-time personal picture (the 0172 verifier on real PostgreSQL). Its real-model acceptance is not yet run.
+  - `QAN-BL-AI-02` stays open.
+- **Not admitted:** these task-local residues stay with S8A-03, which must dispose of each at its closing change.
+  - The 0171 capture command keeps its grant but has no runtime caller after 0172.
+  - The knowledge read is bounded at 120 rows, so a user with more eligible Memories is projected from the 120 best
+    ordered.
+  - Real-model quality of the family statements and of REAFFIRMED / ENDED has not been measured (no paid call).
+  - The end-to-end harnesses still lack the capture stage (carried from CP2).
+  - Three observations from the Living Personal Memory design review are not yet verified here:
+    - copies of `introductions_preparation_private.notes` without forget propagation;
+    - free text in some post-response `result_payload` shapes;
+    - the historical projection at earlier turns.
+
+  Hosted application of 0171 / 0172 rides the existing hosted deployment items.
+- **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

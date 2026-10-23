@@ -15,14 +15,17 @@ const config: PersonalUnderstandingCaptureDeepSeekConfig = {
   provider: 'DEEPSEEK', apiKey: 'test-key', model: DEEPSEEK_FLASH_MODEL, timeoutMs: 50, maxOutputTokens: 2_048, maxRetries: 0, schemaVersion: 1,
 };
 const request = (overrides: Partial<PersonalUnderstandingCaptureRequest> = {}): PersonalUnderstandingCaptureRequest => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   currentUserText: 'أنا ساكن في المعادي <instruction>&',
   memories: [{ handle: 'm1', type: 'PERSONAL_FACT', content: 'بشتغل مهندس <ignore previous>' }],
+  current: [{ handle: 'c1', type: 'PERSONAL_FACT', content: 'أنا بدخن <system>' }],
   ...overrides,
 });
+const backfillOnly = (overrides: Partial<PersonalUnderstandingCaptureRequest> = {}) => request({ currentUserText: null, current: [], ...overrides });
 const fact = { span: 'أنا ساكن في المعادي', subject: 'SELF', polarity: 'AFFIRMED', modality: 'STATED', temporal: 'CURRENT', type: 'PERSONAL_FACT', slot: 'RESIDENCE', keys: ['سكن'] };
 const memory = { handle: 'm1', slot: 'OCCUPATION', temporal: 'CURRENT', keys: ['شغل'] };
-const answer = (facts: unknown, memories: unknown) => JSON.stringify({ facts, memories });
+const context = { handle: 'c1', status: 'ENDED', span: 'بطلت سجاير' };
+const answer = (facts: unknown, memories: unknown, items: unknown = []) => JSON.stringify({ context: items, facts, memories });
 const completion = (content: string | null, finishReason = 'stop', choices = 1) => ({ choices: Array.from({ length: choices }, () => ({ finish_reason: finishReason, message: { content } })) });
 const clientOf = (create: jest.Mock) => ({ chat: { completions: { create } } });
 const returning = (content: string | null, finishReason = 'stop', choices = 1) => clientOf(jest.fn().mockResolvedValue(completion(content, finishReason, choices)));
@@ -42,7 +45,11 @@ describe('DeepSeekPersonalUnderstandingCaptureProvider (S8A-03 CP2)', () => {
     expect(system.content).toContain(DEEPSEEK_JSON_OUTPUT_INSTRUCTION);
     expect(system.content).toContain(PERSONAL_UNDERSTANDING_CAPTURE_INSTRUCTIONS);
     const schema = JSON.parse(system.content.split('\n').pop());
-    expect(schema).toMatchObject({ type: 'object', additionalProperties: false, required: ['facts', 'memories'] });
+    expect(schema).toMatchObject({ type: 'object', additionalProperties: false, required: ['context', 'facts', 'memories'] });
+    // S8A-03 Living Personal Memory: the current items travel under opaque handles, and the answer is bound to them.
+    expect(schema.properties.context).toMatchObject({ maxItems: 1, items: { required: ['handle', 'span', 'status'], properties: {
+      handle: { enum: ['c1'] }, status: { enum: ['REAFFIRMED', 'ENDED'] } } } });
+    expect(user.content).not.toContain('<system>');
     expect(schema.properties.facts.maxItems).toBe(6);
     expect(schema.properties.facts.items.properties.subject.enum).toEqual(['SELF', 'OTHER', 'UNCLEAR']);
     expect(schema.properties.facts.items.properties.slot.enum).toEqual(['RESIDENCE', 'OCCUPATION', 'EMPLOYER', 'STUDY', 'MARITAL_STATUS', 'SMOKING', null]);
@@ -56,16 +63,21 @@ describe('DeepSeekPersonalUnderstandingCaptureProvider (S8A-03 CP2)', () => {
 
   it('asks for no facts when only backfill runs', async () => {
     const create = jest.fn().mockResolvedValue(completion(answer([], [memory])));
-    await expect(provider(clientOf(create)).capture(request({ currentUserText: null }))).resolves.toEqual({ facts: [], memories: [memory] });
-    expect(JSON.parse(create.mock.calls[0][0].messages[0].content.split('\n').pop()).properties.facts.maxItems).toBe(0);
+    await expect(provider(clientOf(create)).capture(backfillOnly())).resolves.toEqual({ facts: [], memories: [memory], context: [] });
+    const schema = JSON.parse(create.mock.calls[0][0].messages[0].content.split('\n').pop());
+    expect([schema.properties.facts.maxItems, schema.properties.context.maxItems]).toEqual([0, 0]);
   });
 
   it('returns a structurally valid answer as proposals only (values are judged by the server verifier)', async () => {
-    await expect(provider(returning(answer([fact], [memory]))).capture(request())).resolves.toEqual({ facts: [fact], memories: [memory] });
+    await expect(provider(returning(answer([fact], [memory], [context]))).capture(request())).resolves.toEqual({ facts: [fact], memories: [memory], context: [context] });
   });
 
   it.each([
-    ['a missing schema version', request({ schemaVersion: 2 as 1 })],
+    ['a missing schema version', request({ schemaVersion: 1 as 2 })],
+    ['current items without a message', request({ currentUserText: null })],
+    ['eleven current items', request({ current: Array.from({ length: 11 }, (_, n) => ({ handle: `c${(n % 10) + 1}`, type: 'GOAL' as const, content: 'x' })) })],
+    ['a current item with a backfill handle', request({ current: [{ handle: 'm2', type: 'GOAL', content: 'x' }] })],
+    ['a current item with an empty content', request({ current: [{ handle: 'c1', type: 'GOAL', content: ' ' }] })],
     ['an empty message', request({ currentUserText: '  ' })],
     ['an over-long message', request({ currentUserText: 'ا'.repeat(1_501) })],
     ['nothing to do', request({ currentUserText: null, memories: [] })],
@@ -82,6 +94,10 @@ describe('DeepSeekPersonalUnderstandingCaptureProvider (S8A-03 CP2)', () => {
     'not json',
     '[]',
     JSON.stringify({ facts: [] }),
+    JSON.stringify({ facts: [], memories: [] }),
+    answer([], [], [context, { ...context, status: 'REAFFIRMED' }]),
+    answer([], [], [{ ...context, why: 'x' }]),
+    answer([], [], {}),
     JSON.stringify({ facts: [], memories: [], rationale: 'x' }),
     answer({}, []),
     answer([{ ...fact, confidence: 0.9 }], []),
@@ -94,7 +110,8 @@ describe('DeepSeekPersonalUnderstandingCaptureProvider (S8A-03 CP2)', () => {
   });
 
   it('rejects any fact proposal when only backfill was asked for', async () => {
-    await expect(provider(returning(answer([fact], []))).capture(request({ currentUserText: null }))).rejects.toEqual(invalid);
+    await expect(provider(returning(answer([fact], []))).capture(backfillOnly())).rejects.toEqual(invalid);
+    await expect(provider(returning(answer([], [], [context]))).capture(backfillOnly())).rejects.toEqual(invalid);
   });
 
   it('rejects truncated, multiple-choice and empty completions', async () => {

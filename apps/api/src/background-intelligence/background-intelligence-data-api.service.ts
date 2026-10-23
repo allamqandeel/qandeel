@@ -122,6 +122,24 @@ export class BackgroundIntelligenceDataApiService {
     });
   }
 
+  // S8A-03 Living Personal Memory (migration 0172): the bounded current-state read. The source turn names the RUNNING
+  // execution, and the database answers at most ten of its owner's own current-state Memories, with their index terms.
+  async listCurrentStateMemories(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ memoryId: string; type: MemoryType; content: string; terms: string[] }>> {
+    this.assertExecutionContext(context);
+    const rows = await this.request<Array<{ memory_id: unknown; type: unknown; content: unknown; terms: unknown }>>('rpc/background_current_state_memories_v1', {
+      method: 'POST', body: JSON.stringify({ p_source_turn_id: context.sourceTurnId, p_limit: limit }),
+    });
+    if (!Array.isArray(rows) || rows.length > limit) throw new Error('BACKGROUND_UNDERSTANDING_STATE_INTEGRITY');
+    return rows.map((row) => {
+      if (typeof row?.memory_id !== 'string' || !BACKGROUND_UUID.test(row.memory_id) || typeof row.type !== 'string' ||
+          !(MEMORY_TYPES as readonly string[]).includes(row.type) || typeof row.content !== 'string' ||
+          !Array.isArray(row.terms) || !row.terms.every((term) => typeof term === 'string')) {
+        throw new Error('BACKGROUND_UNDERSTANDING_STATE_INTEGRITY');
+      }
+      return { memoryId: row.memory_id, type: row.type as MemoryType, content: row.content, terms: row.terms as string[] };
+    });
+  }
+
   async listActiveMemories(context: BackgroundIntelligenceExecutionContext, limit:number, now=new Date()):Promise<MemoryRecord[]> {
     this.assertExecutionContext(context);
     const query=new URLSearchParams({select:MEMORY_FIELDS,user_id:`eq.${context.userId}`,status:'eq.ACTIVE',or:`(expires_at.is.null,expires_at.gt.${now.toISOString()})`,order:'updated_at.desc,id.desc',limit:String(limit)});

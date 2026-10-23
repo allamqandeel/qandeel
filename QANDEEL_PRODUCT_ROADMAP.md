@@ -7,7 +7,7 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered and accepted, CP2 delivered (local; migration 0171 local only) and at the independent CP2 review gate, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
+> **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered and accepted, CP2 delivered (local; migration 0171 local only), CP3 run once and FAIL (unchanged), Living Personal Memory design corrections implemented locally (migration 0172 local only) and at the Founder's review, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
 >
 > *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
 >
@@ -878,7 +878,7 @@ stay as written.
   - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
   - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
 
-### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP2 delivered, at the independent CP2 review gate; one pull request at the end, not merged)
+### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP3 FAIL as run; Living Personal Memory design corrections implemented locally, at the Founder's review; one pull request at the end, not merged)
 
 - Started 2026-10-23 on `s8a/s8a-03-personal-understanding-reality` from `main` at `37812845` (the merge of PR #354,
   S8A-02). CP0, an independent read-only review, was delivered and reviewed by the Founder, who approved its direction
@@ -914,4 +914,20 @@ stay as written.
     verbatim), which binds on the merge of the one S8A-03 pull request;
   - the real-model quality of spans, readings and keys is CP3's to measure. No paid call, and no backlog ownership has
     moved; `QAN-BL-AI-02` stays open.
+- **CP3, the one authorized live run (`cbe682c2`): FAIL.**
+  - Results: P1 17 / 17; P2 5 / 13 (C07 PASS); P3 5 / 10; H1–H6 all zero.
+  - Cost: 39 of 41 calls, peak-rate cost $0.00799.
+  - Cause: every retrieval miss was in the exact-stem index, not in the model.
+  - The result, its preregistration and its criteria stand unchanged.
+- **Living Personal Memory — design corrections (Founder, 2026-10-23; local commit, not pushed, no PR):**
+  - a read-time CORE / CURRENT / HISTORICAL picture of the live Memories, with no stored summary;
+  - family and relationships are core knowledge: kept as `OTHER`, never as the user's own fact;
+  - restatements and explicit endings come from the same background DeepSeek Flash call and are verified
+    deterministically. No new call, no call before the reply, and no new model;
+  - the three tiers share the unchanged 8,192-byte MEMORY slice: CORE has a floor of 40 % and CURRENT of 20 %, and the
+    two together take at most 60 %;
+  - migration `0172_s8a_03_living_personal_memory_v1.sql` is **local only**, proven by
+    `database/verify-migration-0172.mjs`;
+  - the two Copy Gate texts are recorded verbatim in [amendment §9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
+  - A final acceptance test needs its own authorization.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

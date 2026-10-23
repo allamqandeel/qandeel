@@ -132,6 +132,8 @@ export class BackgroundIntelligenceEnrichmentService {
  // stays private to this module): the bounded backlog of Memories whose semantic keys are not indexed yet, and the
  // current Memories its duplicate / reversal screen reads (the same bound the deterministic writer reads).
  async listUnindexedMemories(context:BackgroundIntelligenceExecutionContext,limit:number):Promise<Array<{memoryId:string;type:MemoryType;content:string}>>{this.assert(context);return this.data.listUnindexedMemories(context,limit);}
+ /** S8A-03 Living Personal Memory (0172): the owner's current-state Memories a capture may find restated or ended. */
+ async listCurrentStateMemories(context:BackgroundIntelligenceExecutionContext,limit:number):Promise<Array<{memoryId:string;type:MemoryType;content:string;terms:string[]}>>{this.assert(context);return this.data.listCurrentStateMemories(context,limit);}
  async listCaptureScreenMemories(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<MemoryRecord[]>{this.assert(context);return this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT,now);}
 
  async listEligibleEvidence(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<ReadonlyArray<EvidenceItem>>{this.assert(context);return projectEligibleEvidence(context.userId,await this.data.listActiveMemories(context,EVIDENCE_CANDIDATE_LIMIT,now),now).slice(0,MAX_ELIGIBLE_EVIDENCE);}

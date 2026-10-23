@@ -11,10 +11,13 @@ import {
 @Injectable()
 export class FakePersonalUnderstandingCaptureProvider implements PersonalUnderstandingCaptureProvider {
   readonly calls: PersonalUnderstandingCaptureRequest[] = [];
-  private output: PersonalUnderstandingCaptureOutput = { facts: [], memories: [] };
+  private output: PersonalUnderstandingCaptureOutput = { facts: [], memories: [], context: [] };
   private failure?: PersonalUnderstandingCaptureErrorCode;
 
-  setOutput(output: PersonalUnderstandingCaptureOutput): void { this.output = structuredClone(output); this.failure = undefined; }
+  /** An answer without `context` (written before S8A-03 Living Personal Memory) restates and ends nothing. */
+  setOutput(output: Omit<PersonalUnderstandingCaptureOutput, 'context'> & Partial<Pick<PersonalUnderstandingCaptureOutput, 'context'>>): void {
+    this.output = structuredClone({ context: [], ...output }); this.failure = undefined;
+  }
   setFailure(code: PersonalUnderstandingCaptureErrorCode): void { this.failure = code; }
 
   async capture(request: PersonalUnderstandingCaptureRequest): Promise<PersonalUnderstandingCaptureOutput> {

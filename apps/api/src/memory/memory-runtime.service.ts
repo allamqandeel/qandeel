@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { MemoryRepository } from './memory.repository';
 import { MemoryRetrievalIndexRepository } from './memory-retrieval-index.repository';
-import type { MemoryRecord, SemanticMemoryCandidate } from './memory.types';
+import type { MemoryRecord, PersonalKnowledgeSource, SemanticMemoryCandidate } from './memory.types';
 
 // MEM-AR-01C (migration 0152): the Memory Runtime's reads. Its former create / markDeleted / supersede had no runtime
 // caller and wrote through the legacy server commands, whose EXECUTE is now revoked; they are removed. A Memory changes
@@ -30,5 +30,11 @@ export class MemoryRuntimeService {
   retrieveSemanticCandidates(userId: string, accessToken: string, terms: readonly string[], limit: number): Promise<SemanticMemoryCandidate[]> {
     if (!this.index) return Promise.reject(new Error('MEMORY_RETRIEVAL_INDEX_UNAVAILABLE'));
     return this.index.retrieveSemanticCandidates(accessToken, userId, terms, limit);
+  }
+
+  /** S8A-03 Living Personal Memory: the caller's rows the knowledge picture is projected from (migration 0172). */
+  readPersonalKnowledgeSources(accessToken: string, limit: number): Promise<PersonalKnowledgeSource[]> {
+    if (!this.index) return Promise.reject(new Error('MEMORY_RETRIEVAL_INDEX_UNAVAILABLE'));
+    return this.index.readPersonalKnowledgeSources(accessToken, limit);
   }
 }

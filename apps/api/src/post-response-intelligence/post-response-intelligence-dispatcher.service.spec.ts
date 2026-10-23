@@ -964,7 +964,9 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
    expect(s.association.prepare).not.toHaveBeenCalled();});
 
   it('S8A-03 v2 - redelivery recovers a valid durable capture result without a second call or claim',async()=>{
-   for(const durable of[recordedCapture(),recordedCapture({result_code:'NO_UNDERSTANDING_RECORDED',result_payload:null})]){
+   // S8A-03 Living Personal Memory (0172): the payload may also name the existing Memories restated or ended.
+   for(const durable of[recordedCapture(),recordedCapture({result_code:'NO_UNDERSTANDING_RECORDED',result_payload:null}),
+    recordedCapture({result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[id.evidence]}})]){
     const s=withCapture(capturePlan,[memoryWriteEffect(),durable]);maximalRun(s);
     await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
     expect(s.understanding.prepare).not.toHaveBeenCalled();
@@ -977,6 +979,9 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
    {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[]}},
    {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:['not-a-uuid'],indexedMemoryIds:[]}},
    {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[id.evidence],indexedMemoryIds:[],content:'x'}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[]}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:['not-a-uuid']}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:Array.from({length:14},(_,n)=>id.evidence.slice(0,-2)+String(n).padStart(2,'0'))}},
    {result_code:'NO_UNDERSTANDING_RECORDED',result_payload:{memoryIds:[id.evidence],indexedMemoryIds:[]}},
    {result_code:'UNDERSTANDING_RECORDED',result_reference:`memory:${id.evidence}`},
    {result_code:null,result_payload:null},

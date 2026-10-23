@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import type { ModelRouterMemoryContext } from '../model-router/model-router.types';
-import type { MemoryRecord, SemanticMemoryCandidate } from './memory.types';
+import { MEMORY_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
+import {
+  memoryContextFixedBytes,
+  memoryContextItemBytes,
+  renderMemoryContextGuidance,
+  type ModelRouterMemoryContext,
+} from '../model-router/model-router.types';
+import type { MemoryRecord, PersonalKnowledgeSource, SemanticMemoryCandidate } from './memory.types';
+import {
+  isHistoricalKnowledge,
+  PERSONAL_KNOWLEDGE_SOURCE_LIMIT,
+  projectPersonalKnowledge,
+  type KnowledgeUnit,
+} from './personal-knowledge.projection';
 import { MemoryRuntimeService } from './memory-runtime.service';
 import { normalizeArabicComparison } from './arabic-text';
 import { lexicalMemoryTokens, MAX_RETRIEVAL_QUERY_TERMS, memoryRetrievalTerms } from './memory-retrieval-terms';
@@ -10,6 +22,14 @@ export const MAX_SELECTED_MEMORIES = 4;
 export const MAX_MEMORY_CONTEXT_CHARACTERS = 2400;
 /** S8A-03 CP2: the most indexed Memories one semantic read asks for (0171 caps it at 12, plus the other UNSETTLED Memories of a matched slot). */
 export const SEMANTIC_CANDIDATE_LIMIT = 12;
+/**
+ * S8A-03 Living Personal Memory: the floors of the three tiers inside the ONE existing MEMORY slice (MEMORY_BUDGET_BYTES,
+ * unchanged), as shares of the bytes left after the fixed preamble. CORE and CURRENT together never take more than
+ * their 60 %, so RECALLED always keeps at least 40 % - and RECALLED also keeps its own MAX_SELECTED_MEMORIES /
+ * MAX_MEMORY_CONTEXT_CHARACTERS caps. Bytes CORE / CURRENT leave unused flow to RECALLED.
+ */
+export const CORE_BUDGET_SHARE = 0.4;
+export const CURRENT_BUDGET_SHARE = 0.2;
 
 const RECALL_CUES = [
   /\bremember\b/u, /\brecall\b/u, /\bwhat did i tell you\b/u, /\bwe discussed\b/u,
@@ -35,6 +55,9 @@ export class MemoryRetrieverService {
     return RECALL_CUES.some((cue) => cue.test(normalized)) || PERSONAL_SIGNALS.some((signal) => signal.test(normalized));
   }
 
+  // S8A-03 Living Personal Memory: and on EVERY turn the knowledge picture (CORE + CURRENT), projected from one more
+  // read launched in parallel with the two paths - still no model call at read time, and no serial stage. The picture
+  // is fail-soft too: a failed knowledge read serves exactly the CP2 selection below.
   // S8A-03 CP2 (Founder option B): two paths, and no model call at read time.
   //   * The recall path, unchanged: an explicit recall cue or personal signal still reads the 32 most recent eligible
   //     Memories and ranks them lexically.
@@ -45,12 +68,21 @@ export class MemoryRetrieverService {
   async retrieve(userId: string, accessToken: string, content: string): Promise<ReadonlyArray<ModelRouterMemoryContext>> {
     const recall = this.shouldRetrieve(content);
     const terms = memoryRetrievalTerms(content).slice(0, MAX_RETRIEVAL_QUERY_TERMS);
-    if (!recall && terms.length === 0) return [];
-    const [recent, semantic] = await Promise.all([
+    const [knowledge, recent, semantic] = await Promise.all([
+      this.knowledge(accessToken),
       recall ? this.runtime.listActiveForUser(userId, accessToken, MEMORY_CANDIDATE_LIMIT) : Promise.resolve([]),
       terms.length > 0 ? this.semantic(userId, accessToken, terms) : Promise.resolve([]),
     ]);
-    return selectMemories(content, recent, semantic);
+    if (knowledge === undefined) return recall || terms.length > 0 ? selectMemories(content, recent, semantic) : [];
+    return composeMemoryContext(content, knowledge, recent, semantic);
+  }
+
+  private async knowledge(accessToken: string): Promise<PersonalKnowledgeSource[] | undefined> {
+    try {
+      return await this.runtime.readPersonalKnowledgeSources(accessToken, PERSONAL_KNOWLEDGE_SOURCE_LIMIT);
+    } catch {
+      return undefined;
+    }
   }
 
   private async semantic(userId: string, accessToken: string, terms: readonly string[]): Promise<SemanticMemoryCandidate[]> {
@@ -62,10 +94,71 @@ export class MemoryRetrieverService {
   }
 }
 
+/**
+ * S8A-03 Living Personal Memory: the reply's memory context - CORE, then CURRENT, then RECALLED - inside the ONE
+ * existing MEMORY slice, so the assembler never has to cut it and a secondary detail never displaces the picture:
+ *   1. CORE fills up to its floor, then CURRENT up to its floor, then CORE and CURRENT share what is left of their 60 %
+ *      (CORE first). A unit (one item, or a whole UNSETTLED slot) is served whole or skipped, never cut.
+ *   2. RECALLED is the existing selection - its 4-Memory and 2,400-character caps unchanged - over the Memories the
+ *      picture did not already serve, within every byte still left (at least 40 %), each marked RECALLED and, when it is
+ *      history, HISTORICAL.
+ * Every byte is measured as the provider guidance renders it (the same renderer the assembler measures), against an
+ * exact upper bound, and the whole section is checked once more at the end.
+ */
+export function composeMemoryContext(
+  query: string,
+  knowledge: ReadonlyArray<PersonalKnowledgeSource>,
+  recent: ReadonlyArray<MemoryRecord>,
+  semantic: ReadonlyArray<SemanticMemoryCandidate>,
+): ReadonlyArray<ModelRouterMemoryContext> {
+  const picture = projectPersonalKnowledge(knowledge);
+  const room = MEMORY_BUDGET_BYTES - memoryContextFixedBytes();
+  const unitBytes = (unit: KnowledgeUnit) => unit.items.reduce((sum, item) => sum + memoryContextItemBytes(item), 0);
+  const served = new Map<KnowledgeUnit, number>();
+  let used = 0;
+  const fill = (units: readonly KnowledgeUnit[], limit: number) => {
+    for (const unit of units) {
+      if (served.has(unit)) continue;
+      const bytes = unitBytes(unit);
+      if (used + bytes > limit) continue;
+      served.set(unit, bytes);
+      used += bytes;
+    }
+  };
+  fill(picture.core, Math.floor(room * CORE_BUDGET_SHARE));
+  const coreUsed = used;
+  fill(picture.current, coreUsed + Math.floor(room * CURRENT_BUDGET_SHARE));
+  const pictureLimit = Math.floor(room * (CORE_BUDGET_SHARE + CURRENT_BUDGET_SHARE));
+  fill(picture.core, pictureLimit);
+  fill(picture.current, pictureLimit);
+
+  const ordered = [...picture.core, ...picture.current].filter((unit) => served.has(unit));
+  const servedIds = new Set(ordered.flatMap((unit) => unit.ids));
+  const recalled = selectMemories(query, recent, semantic, {
+    exclude: servedIds, historical: picture.historical, tier: 'RECALLED', maxBytes: room - used,
+  });
+  const context = [...ordered.flatMap((unit) => unit.items), ...recalled];
+  // The exact bound above makes this unreachable; it is kept so the slice can never be exceeded whatever changes.
+  while (context.length > 0 && Buffer.byteLength(renderMemoryContextGuidance(context), 'utf8') > MEMORY_BUDGET_BYTES) context.pop();
+  return context;
+}
+
+/** S8A-03 Living Personal Memory: how RECALLED is selected around the knowledge picture. Absent: the CP2 selection. */
+export interface MemorySelectionOptions {
+  /** Memories the picture already served: never served twice. */
+  readonly exclude?: ReadonlySet<string>;
+  /** Memories known to be PAST or ended: served with standing HISTORICAL (so is anything said in the past tense). */
+  readonly historical?: ReadonlySet<string>;
+  readonly tier?: 'RECALLED';
+  /** The bytes left in the MEMORY slice, measured per item as rendered; a unit that does not fit is skipped whole. */
+  readonly maxBytes?: number;
+}
+
 export function selectMemories(
   query: string,
   allCandidates: ReadonlyArray<MemoryRecord>,
   semantic: ReadonlyArray<SemanticMemoryCandidate> = [],
+  options: MemorySelectionOptions = {},
 ): ReadonlyArray<ModelRouterMemoryContext> {
   // S8A-03 CP2: one candidate per Memory; an indexed row adds how many query terms it is indexed under and its same-slot
   // standing. With no indexed rows this is exactly the MEM-AR-01A selection.
@@ -75,7 +168,7 @@ export function selectMemories(
   // IP-IMP-01 (WP4): a legacy INTERACTION_PREFERENCE Memory never steers a reply. The canonical Interaction Preferences
   // record is the ONE preference authority, so an old Memory can neither override it nor revive a preference the owner
   // reset. The Memory itself is untouched: still listed, exported, correctable and forgettable by its owner.
-  const candidates = [...byId.values()].filter(({ memory }) => memory.type !== 'INTERACTION_PREFERENCE');
+  const candidates = [...byId.values()].filter(({ memory }) => memory.type !== 'INTERACTION_PREFERENCE' && !options.exclude?.has(memory.id));
   const queryTokens = tokens(query);
   const termCount = memoryRetrievalTerms(query).length;
   const distinctive = new Set([...queryTokens].filter((token) => !NON_DISTINCTIVE_STEMS.has(token)));
@@ -85,6 +178,17 @@ export function selectMemories(
   const selected: ModelRouterMemoryContext[] = [];
   const seen = new Set<string>();
   let characters = 0;
+  let bytes = 0;
+  const served = (member: Candidate): ModelRouterMemoryContext => {
+    const { memory } = member;
+    const historical = options.tier !== undefined && !member.unsettled &&
+      (options.historical?.has(memory.id) === true || isHistoricalKnowledge({ ended: false, temporal: null, content: memory.content }));
+    return {
+      type: memory.type, content: memory.content, source: memory.source, about: aboutOf(memory),
+      ...(member.unsettled ? { standing: 'UNSETTLED' as const } : historical ? { standing: 'HISTORICAL' as const } : {}),
+      ...(options.tier !== undefined ? { tier: options.tier } : {}),
+    };
+  };
   const keyOf = (candidate: Candidate) => normalize(candidate.memory.content).trim().replace(/\s+/gu, ' ');
   for (const candidate of ranked) {
     if (selected.length >= MAX_SELECTED_MEMORIES) break;
@@ -98,19 +202,17 @@ export function selectMemories(
       : [candidate];
     const fresh = unit.filter((member, index) => !seen.has(keyOf(member)) && unit.findIndex((other) => keyOf(other) === keyOf(member)) === index);
     const length = fresh.reduce((sum, member) => sum + member.memory.content.length, 0);
-    if (selected.length + fresh.length > MAX_SELECTED_MEMORIES || characters + length > MAX_MEMORY_CONTEXT_CHARACTERS) {
+    const items = fresh.map(served);
+    const size = options.maxBytes === undefined ? 0 : items.reduce((sum, item) => sum + memoryContextItemBytes(item), 0);
+    if (selected.length + fresh.length > MAX_SELECTED_MEMORIES || characters + length > MAX_MEMORY_CONTEXT_CHARACTERS ||
+        (options.maxBytes !== undefined && bytes + size > options.maxBytes)) {
       if (unit.length === 1) seen.add(keyOf(candidate));
       continue;
     }
-    for (const member of fresh) {
-      const { memory } = member;
-      seen.add(keyOf(member));
-      selected.push({
-        type: memory.type, content: memory.content, source: memory.source, about: aboutOf(memory),
-        ...(member.unsettled ? { standing: 'UNSETTLED' as const } : {}),
-      });
-    }
+    fresh.forEach((member) => seen.add(keyOf(member)));
+    selected.push(...items);
     characters += length;
+    bytes += size;
   }
   return selected;
 }

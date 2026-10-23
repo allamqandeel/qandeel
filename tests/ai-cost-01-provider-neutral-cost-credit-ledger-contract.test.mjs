@@ -123,7 +123,9 @@ const CENSUS = [
   { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts', family: 'HYPOTHESIS_EVIDENCE_ASSOCIATION', frozen: '00216737d23ebd67f7fb43f7b7359062886923d7' },
   { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts', family: 'HYPOTHESIS_CANDIDATE_GENERATION', frozen: 'efc828ad938e1765b5bf2deb7f0e32c4c423a011' },
   // S8A-03 CP2 (2026-10-23): the background Personal Understanding capture, the QIR-005 v2 fourth provider effect.
-  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: '3bb59a829117541e48a2330db16f823940a104cb' },
+  // S8A-03 Living Personal Memory (2026-10-23): re-pinned for the schema-v2 capture (current items, family statements,
+  // restatements and endings; amendment §9.5.1). Same call, same family, same accounting and SYNTHETIC_ONLY gate.
+  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'f1148a35aa463c210af2de17f8332545675ec24d' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.

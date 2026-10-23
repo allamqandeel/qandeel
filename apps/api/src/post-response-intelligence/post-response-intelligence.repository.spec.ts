@@ -112,20 +112,26 @@ describe('PostResponseIntelligenceRepository.completeUnderstandingCapture', () =
     return mock;
   };
   const command = {
-    items: [{ memoryId: 'a1', type: 'PERSONAL_FACT' as const, content: 'أنا ساكن في المعادي.', importance: 0.65, expiresAt: null, slot: 'RESIDENCE' as const, temporal: 'CURRENT' as const, terms: ['ساكن', 'معاد'] }],
+    items: [{ memoryId: 'a1', type: 'PERSONAL_FACT' as const, content: 'أنا ساكن في المعادي.', importance: 0.65, expiresAt: null, slot: 'RESIDENCE' as const, temporal: 'CURRENT' as const, subject: 'SELF' as const, terms: ['ساكن', 'معاد'] },
+      { memoryId: 'a2', type: 'RELATIONSHIP_CONTEXT' as const, content: 'مراتي اسمها سارة.', importance: 0.75, expiresAt: null, slot: null, temporal: 'CURRENT' as const, subject: 'OTHER' as const, terms: ['سارة'] }],
     index: [{ memoryId: 'b2', slot: null, temporal: 'CURRENT' as const, terms: ['شغل'] }],
+    reaffirmed: ['c3'],
+    ended: ['d4'],
   };
 
+  // S8A-03 Living Personal Memory: the v2 command (0172) - the subjects aligned with the items, and the restated / ended Memories.
   it('sends one service-role RPC with aligned parallel arrays and the flattened terms', async () => {
     const fetchMock = respond('COMPLETED');
     await expect(new PostResponseIntelligenceRepository().completeUnderstandingCapture(executionId, command)).resolves.toBe('COMPLETED');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://database.example.test/rest/v1/rpc/complete_post_response_personal_capture_v1');
+    expect(url).toBe('https://database.example.test/rest/v1/rpc/complete_post_response_personal_capture_v2');
     expect(JSON.parse(init.body)).toEqual({
-      p_execution_id: executionId, p_memory_ids: ['a1'], p_types: ['PERSONAL_FACT'], p_contents: ['أنا ساكن في المعادي.'], p_importances: [0.65],
-      p_expires_at: [null], p_slots: ['RESIDENCE'], p_temporals: ['CURRENT'], p_index_memory_ids: ['b2'], p_index_slots: [null],
-      p_index_temporals: ['CURRENT'], p_term_memory_ids: ['a1', 'a1', 'b2'], p_terms: ['ساكن', 'معاد', 'شغل'],
+      p_execution_id: executionId, p_memory_ids: ['a1', 'a2'], p_types: ['PERSONAL_FACT', 'RELATIONSHIP_CONTEXT'],
+      p_contents: ['أنا ساكن في المعادي.', 'مراتي اسمها سارة.'], p_importances: [0.65, 0.75], p_expires_at: [null, null],
+      p_slots: ['RESIDENCE', null], p_temporals: ['CURRENT', 'CURRENT'], p_subjects: ['SELF', 'OTHER'], p_index_memory_ids: ['b2'],
+      p_index_slots: [null], p_index_temporals: ['CURRENT'], p_term_memory_ids: ['a1', 'a1', 'a2', 'b2'], p_terms: ['ساكن', 'معاد', 'سارة', 'شغل'],
+      p_reaffirmed_memory_ids: ['c3'], p_ended_memory_ids: ['d4'],
     });
     expect(JSON.parse(init.body)).not.toHaveProperty('p_user_id');
   });
