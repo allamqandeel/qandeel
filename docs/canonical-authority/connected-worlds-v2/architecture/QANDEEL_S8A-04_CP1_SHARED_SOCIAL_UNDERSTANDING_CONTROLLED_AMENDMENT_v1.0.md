@@ -179,10 +179,8 @@ two places (one per person) rather than one shared disagreement place; the other
 **Stop (D5).** The report-vs-fact failure repeated (3 / 3), so no further stage was run and the remaining 40 attempts were
 not used. The prompt was not changed after seeing results: no test example, criterion or expected answer reached it.
 
-**Open for the Product Owner (not decided here):**
-- the S3 report-vs-fact defect: accept for CP1, or authorize one change to the instructions (§5.2) and a re-test;
-- a numbered label («محمد (2)») can appear inside a durable meaning, while its number is derived per reading (the order
-  of first appearance in that reading's window), so the same person may carry a different number in a later meaning.
+**Decided by the Product Owner's CP1 review (§9):** the S3 report-vs-fact defect is not accepted (one bounded instruction
+change, §9.1); the per-reading numbered label is accepted as a reading aid and becomes a binding CP2 precondition (§9.2).
 
 ---
 
@@ -208,3 +206,41 @@ not used. The prompt was not changed after seeing results: no test example, crit
 - No durable social memory; no Personal World recall in the Shared World (`QAN-BL-CW-02` / SHARED-CTX-01 stay later S8A-04
   work); no real user's data reaches DeepSeek (`SYNTHETIC_ONLY`); 0174 is not authorized for a hosted database.
 - In-app place production waits for CP2 (the placer binding).
+
+---
+
+# 9. The Product Owner's CP1 review decisions (2026-10-24)
+
+## 9.1 R1 — a relayed statement is not a fact (Copy Gate: `PROPOSED`, NOT APPLIED)
+
+The Product Owner does not accept a statement relayed about a person becoming a settled fact about them. One bounded
+change to the instructions is authorized: the general semantic principle of keeping who said something and how certain it
+is — no word list and no rigid rule. Nothing changes before this text is approved.
+
+**The sentence it changes** (the third block of §5.2; nothing else in §5 changes):
+
+> A meaning must stay true to its sources: what one person says about another remains that person's view; a position
+> someone withdrew is not their current position; two people who share a name are two different people.
+
+**Proposed:**
+
+> A meaning must stay true to its sources: it keeps who said each thing and how certain it is. What one person says about
+> another, or reports that someone else said, remains that person's view or report — as certain as they left it, never a
+> settled fact — unless the conversation itself confirms it; a position someone withdrew is not their current position;
+> two people who share a name are two different people.
+
+**Then, once approved:** the adapter text is changed by exactly that sentence, the AI-COST-01 census pin is re-anchored, and
+one test round runs (guard round 18, cumulative: at most the 40 remaining attempts, inside the 64 / USD 0.15 total):
+- arm B only: S3 three times, and three NEW independent scenarios twice each, written only after this text is approved
+  (so they cannot have shaped it), with preregistered criteria in the same form;
+- the five other existing scenarios once each, so the change is checked not to break what passed;
+- about 14 calls; the same two-rater blind rating and the same strict pass rule.
+If the defect persists after this one change, the run stops with a short diagnosis; no second change is made.
+
+## 9.2 R2 — the per-reading number is a reading aid, never an identity (binding CP2 precondition)
+
+The numbered label («محمد (1)» / «محمد (2)») and the speaker token exist only to let DeepSeek tell people apart inside one
+reading; the number can differ between readings. Accepted for CP1 as such. **Before CP2 enables any production
+persistence:** every saved place or piece of knowledge is tied to the trusted author identity the server holds (the
+existing S8A-02 / 0089 provenance) and to the source materials of its messages — never to a speaker token or a label
+number — and CP2 proves that with a test. No new identity system; the S8A-02 identity is reused as it is.
