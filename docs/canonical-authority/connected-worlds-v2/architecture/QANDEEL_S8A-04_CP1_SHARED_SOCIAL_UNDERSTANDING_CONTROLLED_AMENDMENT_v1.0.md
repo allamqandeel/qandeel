@@ -4,7 +4,7 @@
 **Status:** `CANDIDATE CONTROLLED AMENDMENT — AT THE S8A-04 CP1 REVIEW GATE — NOT EFFECTIVE`. It binds from the merge of the
 S8A-04 pull request that carries it, and only after the Product Owner approves it. D1–D5 below are the Product Owner's
 decisions (2026-10-24). The model-facing provider text in §5 is presented verbatim for approval (Copy Gate §5:
-`PROPOSED`)  
+`PROPOSED`, except the §5.2 source-fidelity sentence, `APPROVED` by the Product Owner on 2026-10-24, §9.1)  
 **Scope:** the Shared Semantic Interpreter's input and its provider binding only. The Shared reply, the Spatial Placer, the
 graphics engine, Personal and Public are outside it  
 **Amends, narrowly and only in that scope:** the one SHARED-VIS-01 sentence quoted in §3 (before and after)  
@@ -94,7 +94,7 @@ I-03 / I-04G chain and the NO_PROVIDER guard.
 
 ---
 
-# 5. Model-facing provider text (Copy Gate — `PROPOSED`)
+# 5. Model-facing provider text (Copy Gate — `PROPOSED`; the §5.2 source-fidelity sentence `APPROVED`, §9.1)
 
 Never shown to a person. Recorded verbatim from `apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts`.
 
@@ -115,9 +115,15 @@ Never shown to a person. Recorded verbatim from `apps/api/src/shared-world/deeps
 
 > Read the people as an attentive, socially intelligent participant would: who says what, and about whom; what is
 > someone's own view, what is reported or quoted from someone else, and what is plain fact; where people agree, differ,
-> change their minds or take something back. A meaning must stay true to its sources: what one person says about another
-> remains that person's view; a position someone withdrew is not their current position; two people who share a name are
-> two different people.
+> change their minds or take something back. A meaning must stay true to its sources: it keeps who said each thing and how
+> certain it is. What one person says about another, or reports that someone else said, remains that person's view or
+> report — as certain as they left it, never a settled fact — unless the underlying claim is directly confirmed in the
+> conversation by someone with first-hand knowledge; a position someone withdrew is not their current position; two people
+> who share a name are two different people.
+
+*(The source-fidelity sentence above, from «A meaning must stay true to its sources», is the text the Product Owner approved
+at the CP1 Copy Gate on 2026-10-24 (§9.1); it replaced the CP1 sentence quoted there. Stages 1 and 2 of §6.1 ran on the
+earlier sentence.)*
 
 > "existing" lists the meanings this World already holds, each with the contributions it rests on. Propose only meanings
 > that are new: at most three, and none when nothing new has formed. An empty "places" list is a good answer.
@@ -211,7 +217,7 @@ change, §9.1); the per-reading numbered label is accepted as a reading aid and 
 
 # 9. The Product Owner's CP1 review decisions (2026-10-24)
 
-## 9.1 R1 — a relayed statement is not a fact (Copy Gate: `PROPOSED`, NOT APPLIED)
+## 9.1 R1 — a relayed statement is not a fact (Copy Gate: `APPROVED` with one wording change, 2026-10-24; APPLIED)
 
 The Product Owner does not accept a statement relayed about a person becoming a settled fact about them. One bounded
 change to the instructions is authorized: the general semantic principle of keeping who said something and how certain it
@@ -222,14 +228,22 @@ is — no word list and no rigid rule. Nothing changes before this text is appro
 > A meaning must stay true to its sources: what one person says about another remains that person's view; a position
 > someone withdrew is not their current position; two people who share a name are two different people.
 
-**Proposed:**
+**Proposed (2026-10-24):** as approved below, except that its confirmation clause read «unless the conversation itself
+confirms it».
+
+**Approved by the Product Owner (2026-10-24), verbatim, and applied:**
 
 > A meaning must stay true to its sources: it keeps who said each thing and how certain it is. What one person says about
 > another, or reports that someone else said, remains that person's view or report — as certain as they left it, never a
-> settled fact — unless the conversation itself confirms it; a position someone withdrew is not their current position;
-> two people who share a name are two different people.
+> settled fact — unless the underlying claim is directly confirmed in the conversation by someone with first-hand
+> knowledge; a position someone withdrew is not their current position; two people who share a name are two different
+> people.
 
-**Then, once approved:** the adapter text is changed by exactly that sentence, the AI-COST-01 census pin is re-anchored, and
+The Product Owner's purpose for the wording change: a relayed statement does not become fact because it is repeated or
+because the participants agree on it, while DeepSeek stays free to understand and phrase — no word lists, no answer
+templates. §5.1 and the rest of the instructions are unchanged.
+
+**Then (done, §9.3):** the adapter text is changed by exactly that sentence, the AI-COST-01 census pin is re-anchored, and
 one test round runs (guard round 18, cumulative: at most the 40 remaining attempts, inside the 64 / USD 0.15 total):
 - arm B only: S3 three times, and three NEW independent scenarios twice each, written only after this text is approved
   (so they cannot have shaped it), with preregistered criteria in the same form;

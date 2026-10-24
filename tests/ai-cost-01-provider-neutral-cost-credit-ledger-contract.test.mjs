@@ -135,8 +135,9 @@ const CENSUS = [
   // family, same accounting and SYNTHETIC_ONLY gate.
   { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'dd4babad6b6a27ce44b7e6354cbcc0f25d6c23a1' },
   // S8A-04 CP1 (2026-10-24, Product Owner D3 / D4): the Shared semantic reading under its own family (migration 0174), through
-  // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate.
-  { transport: 'apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts', family: 'SHARED_SEMANTIC_READING', frozen: 'c0e9c3dfd0178f39acabf3481dbbcc96bf2531a9' },
+  // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate. Re-pinned 2026-10-24 for the
+  // one §5.2 sentence the Product Owner approved at the CP1 Copy Gate (amendment §9.1); nothing else in the file changed.
+  { transport: 'apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts', family: 'SHARED_SEMANTIC_READING', frozen: '1bea8c65d392da0881c811d282b090eb2a5acdc2' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.

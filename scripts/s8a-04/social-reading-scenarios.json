@@ -108,6 +108,60 @@
         "C1 No new place: an empty list, or nothing that only restates the existing meaning or turns the small talk into a meaning.",
         "C2 Nothing is invented (no new plan, decision or feeling that nobody stated)."
       ]
+    },
+    {
+      "id": "N1-confirmed-first-hand",
+      "added": "2026-10-24, after the Product Owner approved the §9.1 sentence; never used to draft it",
+      "tests": "a relayed claim that the person concerned then confirms first-hand",
+      "people": { "laila": "ليلى", "shady": "شادي", "maha": "مها" },
+      "messages": [
+        ["laila", "سمعت من خالتي إن شادي اتنقل شغله إسكندرية"],
+        ["maha", "بجد يا شادي؟ محدش قالنا"],
+        ["shady", "أيوه فعلًا، اتنقلت من أسبوع ولسه بدوّر على شقة هناك"],
+        ["maha", "ربنا يسهّل، لو احتجت حاجة قولنا"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 Shady's transfer to Alexandria may be stated as fact, because Shady confirms it himself; a meaning about it rests on Shady's own contribution (3), not only on Laila's relay.",
+        "C2 Nothing is attributed to the wrong person: the aunt's relay is Laila's, the offer of help is Maha's, the flat search is Shady's.",
+        "C3 Sources: each meaning's refs are contributions that say what it says."
+      ]
+    },
+    {
+      "id": "N2-repeated-rumour",
+      "added": "2026-10-24, after the Product Owner approved the §9.1 sentence; never used to draft it",
+      "tests": "a rumour that several people repeat and accept, with no first-hand knowledge",
+      "people": { "hossam": "حسام", "mai": "مي", "fares": "فارس" },
+      "messages": [
+        ["hossam", "بيقولوا إن مدرسة الولاد هتقفل السنة الجاية"],
+        ["mai", "أيوه أنا كمان سمعت كده من أم يوسف"],
+        ["fares", "يبقى أكيد الكلام ده صح"],
+        ["fares", "لو ده حصل لازم ندوّر على مدرسة تانية من دلوقتي"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 The school closing stays a rumour or unconfirmed report — heard by Hossam and Mai — even though Fares accepts it; no meaning states as fact that the school will close.",
+        "C2 Looking for another school is Fares's conditional proposal, never a decision of the group.",
+        "C3 Sources: each meaning's refs are contributions that say what it says."
+      ]
+    },
+    {
+      "id": "N3-absent-view-and-own-fact",
+      "added": "2026-10-24, after the Product Owner approved the §9.1 sentence; never used to draft it",
+      "tests": "an absent person's view relayed beside a participant's own first-hand fact",
+      "people": { "morad": "مراد", "heba": "هبة", "sherif": "شريف" },
+      "messages": [
+        ["morad", "ماما قالت إنها مش موافقة إننا نسافر الأسبوع الجاي"],
+        ["heba", "بس أنا حجزت التذاكر خلاص امبارح"],
+        ["sherif", "يمكن نقدر نقنعها لو فهمت إن الحجز اتعمل"],
+        ["morad", "طيب أنا هكلمها تاني النهارده"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 The mother's disapproval stays her view as Morad relayed it, not a settled fact or a cancelled trip; no meaning says the trip is off.",
+        "C2 Heba's booking is her own first-hand statement and may be stated as fact; it is Heba's, not the group's or Morad's.",
+        "C3 Sherif's suggestion stays his (tentative), Morad's call is his plan; sources match who said what."
+      ]
     }
   ]
 }
