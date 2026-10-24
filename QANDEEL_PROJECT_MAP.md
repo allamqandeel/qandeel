@@ -372,7 +372,11 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
   - **the Spatial Placer is not bound, so in-app place production still waits for CP2** (the pass returns `NO_PROVIDER`);
   - the isolated real-model proof (amendment §6.1): 24 of 64 DeepSeek calls, USD 0.006 at peak; arm B (CP1) had no
     identity confusion in 18 readings, against 2 of 6 for the words-only arm; it stopped on a repeated report-vs-fact
-    failure (a relayed statement read as fact, 3 / 3), presented to the Product Owner, not fixed.
+    failure (a relayed statement read as fact, 3 / 3), presented to the Product Owner;
+  - the Product Owner's CP1 review (amendment §9): one approved §5.2 sentence (source fidelity), applied in `22e14f6c`; its one
+    test round (14 calls; 38 of 64 in all, USD 0.0101 at peak) fixed S3 (3 / 3) and the repeated rumour (2 / 2) but not an
+    absent person's relayed view (0 / 2), so it STOPPED with a diagnosis, no second change; the per-reading label number is
+    a reading aid, and tying saved knowledge to the trusted identity and sources is a binding CP2 precondition (§9.2);
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open). CP2 has not started.
 
 ### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)

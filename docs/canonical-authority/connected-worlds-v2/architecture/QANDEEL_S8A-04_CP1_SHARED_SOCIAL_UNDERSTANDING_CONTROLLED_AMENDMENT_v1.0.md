@@ -258,3 +258,30 @@ reading; the number can differ between readings. Accepted for CP1 as such. **Bef
 persistence:** every saved place or piece of knowledge is tied to the trusted author identity the server holds (the
 existing S8A-02 / 0089 provenance) and to the source materials of its messages — never to a speaker token or a label
 number — and CP2 proves that with a test. No new identity system; the S8A-02 identity is reused as it is.
+
+## 9.3 The one test round after the change (2026-10-24) — STOPPED, diagnosis below
+
+Run on the local commit `22e14f6c` (the approved sentence; census re-pinned; N1–N3 added after the approval), arm B only,
+14 calls: S3 × 3, N1–N3 × 2, and S1 / S2 / S4 / S5 / S6 × 1. The same two-rater blind rating and strict rule as §6.1, plus a
+language flag. Spend after the round: **38 of 64 attempts, USD 0.010100 at peak** (14 calls, USD 0.004146 in this round).
+Every call succeeded, passed the production decoder and has its `SHARED_SEMANTIC_READING` ledger row.
+
+| Case | Result (both raters) |
+|---|---|
+| S3 report vs fact (the defect) | **fixed: 3 / 3** «سارة نقلت أن كريم قال …» (was 0 / 3) |
+| N2 a rumour repeated and accepted | **2 / 2**: kept as a rumour; Fares's certainty and plan stay his |
+| N1 a relayed claim confirmed first-hand | the fact rests on Shady's confirmation 2 / 2; **but** one reading gives Maha's welcome and offer to Laila too (identity confusion), and both cite Maha's question (ref 2) for a meaning it does not say |
+| N3 an absent person's view relayed | **FAIL 0 / 2**: «ماما غير موافقة / ماما ترفض …» — the mother's view stated directly, Morad's relay dropped; Heba's own booking kept as hers 2 / 2 |
+| Regression S4 / S5 / S6 | unchanged, all pass |
+| Regression S1 / S2 | identities kept apart (no confusion); S1 C2 failed by both raters (the two Mohameds' positions split into two places, one each — as in §6.1, now failed by both); S2 C2 failed by one rater (an «apology» Ahmed did not make) |
+| Language | one S3 reading written in English (both raters), against "in the language the people use" |
+
+Totals for the round: 33 / 41 criteria passed by both raters; answers flagged — identity confusion 1 / 14, misattribution
+3 / 14, token leak 0, language 1 / 14.
+
+**Diagnosis (short).** The change fixed what it targeted when the relayed thing is an act or a fact about someone (S3) and
+when a rumour is repeated and agreed on (N2). It did not hold when the relayed thing is the absent person's OWN view
+(N3): «remains that person's view or report» can be satisfied by keeping the view as the mother's, so the model keeps whose
+view it is and drops who relayed it and how sure that is. The remaining cost is a source-fidelity loss of the relay layer,
+not a confusion of who is who. Per the Product Owner's instruction no second change was made and the remaining 26 attempts
+were not used.
