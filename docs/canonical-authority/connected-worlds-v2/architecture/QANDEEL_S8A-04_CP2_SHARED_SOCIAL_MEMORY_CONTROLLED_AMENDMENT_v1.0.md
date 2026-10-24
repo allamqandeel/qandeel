@@ -1,7 +1,14 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-04 CP2 — Shared Social Memory, Recall & Living Analysis — Controlled Amendment v1.0
 
-**Status:** `DESIGN APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R3) — COPY GATE AWAITING ITS FINAL REVIEW OF THE §10.1
+**Status:** `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
+IMPLEMENTED ON s8a/s8a-04-cp2 (LOCAL); STAGE 0 (FREE) PASSED; THE PAID STAGES AWAIT THE PRODUCT OWNER'S APPROVAL — NOT YET
+EFFECTIVE / EFFECTIVE ON MERGE`.
+- The implementation record is §13.
+- No paid model call is made before the Product Owner approves the paid stages (§11), within 66 calls and USD 0.08.
+
+*(Status at the design approval, kept verbatim:)*
+`DESIGN APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R3) — COPY GATE AWAITING ITS FINAL REVIEW OF THE §10.1
 DATA SHAPES AND SCHEMAS — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
 - No code, migration or paid model call is made before the Copy Gate closes.
 
@@ -11,7 +18,11 @@ DATA SHAPES AND SCHEMAS — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
 - Nothing here binds until the Product Owner approves this record and it is merged.
 - No code, migration or paid model call is made before that approval.
 
-**Copy Gate:** `OPEN` for one item only: the §10.1 data shapes and JSON Schemas, presented for the final review.
+**Copy Gate:** `CLOSED` (2026-10-24).
+- **APPROVED (2026-10-24, Final Implementation Authorization, §1 R4):** the §10.1.5 data shapes and JSON Schemas, as
+  presented.
+- *(At the design approval:)* `OPEN` for one item only: the §10.1 data shapes and JSON Schemas, presented for the final
+  review.
 - **APPROVED (2026-10-24):** M1, M2, M4 and P1–P6, verbatim.
 - **APPROVED (2026-10-24):** M3, with the one sentence the Product Owner replaced, verbatim (§1 R3).
 - **Unchanged and still `APPROVED`:** the CP1 texts (S8A-04 CP1 amendment §5). CP2 adds texts next to them and edits none
@@ -107,6 +118,27 @@ DATA SHAPES AND SCHEMAS — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
 - **What stays open:** the §10.1 data shapes and JSON Schemas, for the final Copy Gate review.
 - **What happens after:** CP2 moves straight to implementation. Non-critical recall-quality improvements stay in Future
   Improvements.
+
+**R4 — the Final Implementation Authorization (2026-10-24).**
+- **Approved:** the design, the Copy Gate (M1–M4 with M3 corrected, P1–P6) and the §10.1.5 data shapes and JSON Schemas.
+  The Copy Gate is closed.
+- **Authorized:** CP2 and its free tests, on `s8a/s8a-04-cp2`:
+  - A. migration 0175;
+  - B. the M1 decoder V2;
+  - C. recall and `world_knowledge` in the reply (8 KB / 48 KB, the safe path, never blocking the reply);
+  - D. the M4 placer V2: anchors from DeepSeek, the geometry the server's, deterministic;
+  - E. `safe_meaning_v1` and the Public World / Replay closure, proven on real PostgreSQL;
+  - F. the AI-COST-01 correlation per trusted payer and causing message.
+- **Gates:** the build; the free tests (Jest, TypeScript, the contracts, real PostgreSQL); then the real DeepSeek stages
+  (§11, at most 66 calls and USD 0.08).
+  - The paid stages are not run automatically. After the free tests pass, a short report with the ready version goes to
+    the Product Owner, who approves their start. They then run gradually, and their results and actual cost are recorded.
+- **Delivery:** one pull request to `main`, merged only with the Product Owner's approval.
+- **Blockers:** a privacy leak; mixed attribution; a non-atomic save; corruption; an accounting defect; a broken frozen
+  contract; a broken core path.
+- **Not blockers:** recall below 7 / 8 and ordering quality. They go to the Future Improvements log.
+- **Out of scope:** CP3 (Personal World context); `QAN-BL-CW-05`; re-implementing identity, Memory or the graphics; production;
+  credits.
 
 ---
 
@@ -494,7 +526,7 @@ As narrowed:
 
 ---
 
-# 10. Copy Gate (`APPROVED`: M1–M4 and P1–P6; `OPEN`: the §10.1.5 data shapes and JSON Schemas, for the final review)
+# 10. Copy Gate (`CLOSED`, 2026-10-24: M1–M4, P1–P6 and the §10.1.5 data shapes and JSON Schemas `APPROVED`)
 
 ## 10.1 Model-facing texts (never shown to a person)
 
@@ -559,7 +591,7 @@ to what is written there about anyone.»)*
 > — that it belongs near, with how close: 1 is the same matter, 2 is related, 3 is the same broad area. Choose anchors by
 > meaning only, never by time or order. When nothing on the map is related, give its own region as its only anchor.
 
-## 10.1.5 Data shapes and JSON Schemas (`OPEN`, for the final review)
+## 10.1.5 Data shapes and JSON Schemas (`APPROVED`, 2026-10-24, §1 R4)
 
 The examples are synthetic. In each schema, a word in angle brackets is filled per request by the server, from that
 request only. Every object is closed (`additionalProperties: false`). A key marked *optional* is omitted when it has no
@@ -867,3 +899,108 @@ Controlled Amendment and Copy Gate.
 - **A subject's authority over a place about them** (the "protected human subject" source that the 0090 header leaves to
   "an already-reviewed server-owned authority source") is not resolved here. This is why §6 closes Public World and Replay
   instead.
+
+---
+
+# 13. Implementation record (2026-10-24, `s8a/s8a-04-cp2`, local)
+
+Everything below was built under §1 R4, on the branch's base `43e67229`, with no paid model call.
+
+## 13.1 What was built
+
+- **A. Migration `0175_s8a_04_shared_social_memory_v1.sql` (not hosted).** The attribution tables (§2.1), the atomic
+  `complete_shared_semantic_place_v2` with every §2.2 check inside the write and the deferred attribution check at commit,
+  `read_shared_semantic_context_v2`, `list_shared_world_knowledge_v1`, `safe_meaning_v1` and the member reads v2, the
+  closures of §6, the two families and `begin_ai_provider_call_v2`. The v1 writer, the v1 context read and the three bare
+  v1 member reads are revoked. The active and closed conversation reads no longer return `QANDEEL_ANALYSIS` (the reply's
+  50-row page, §8).
+- **B. The reading V2** (`SHARED_SEMANTIC_INTERPRETATION_V2`): `shared-semantic-interpreter.ts` and
+  `deepseek-shared-semantic-interpreter.ts`. The CP1 instructions are sent unchanged, followed by M1. The decoder refuses
+  every shape M1 excludes, a numbered label in a meaning, and an `existing` ref revised twice.
+- **C. The World's knowledge in the reply:** `shared-world-knowledge.ts`, `shared-knowledge-recall.ts`,
+  `deepseek-shared-knowledge-recall.ts`, `shared-social-memory-provider.ts` and `.config.ts`, in the reply generator and
+  the reply service.
+  - Entries carry labels of this request only. A `SUPERSEDED` position appears only as the `earlier` of its successor,
+    or as `current: false` history when its successor is not available.
+  - The path follows §3.2. Recall starts with the turn, before the reply call. With an attribution reading its deadline is
+    that reading's 2.5 s, and the reply keeps the turn cap minus the time both took. Without one, its deadline is
+    `min(2 500 ms, cap − the reply's budget)`, so DEEP has none and recall is not started.
+  - Any failure is the safe path, and no failure withholds the reply. The recalled places go to the reading after the
+    reply (§3.2.6).
+  - The recall request numbers its refs `K1…Kn` over the index it offers, and the chosen refs are read back through
+    the entries they stand for. A defect found in Stage 0: above 48 KB the index is a subset of the entries, and refs
+    numbered over all the entries had gaps that M2's decoder refuses, so every recall above 48 KB would have taken the
+    safe path. Fixed, with a regression test through the DeepSeek adapter.
+- **D. The placer V2** (`SHARED_SPATIAL_PLACEMENT_V2`): `shared-spatial-placer.ts`, `deepseek-shared-spatial-placer.ts`
+  and the pure geometry `shared-field-geometry.ts` (layout `shared_field_anchor_v1`). The pass makes one placement
+  call for all its new places. The application's placer stays the refusing one until §7's conditions hold;
+  `createQualificationSharedSpatialPlacer` is for the synthetic harness only.
+- **E. The safe representation on every surface.** The API reads the v2 member reads and passes `meaning` through as
+  the database composes it. No locale is sent: the Shared routes take no query object (the frozen S4-01 / S4-02 / S4-03
+  rule), so the database's default, Arabic, applies (§13.4).
+- **F. AI-COST-01.** `AiUsageAttribution` gains `sourceWorldId` / `sourceSharedMaterialId`: both or neither, never with
+  a session or turn. Shared work begins through `begin_ai_provider_call_v2`, and a Personal correlation never fills it.
+  Personal work is unchanged.
+
+## 13.2 Narrowed in code, within this amendment
+
+- CP1's reading request required every writer to have a contribution. CP2 gives the reading, as writers, the members that
+  existing meanings name (§3.2.6), so the rule is now that every contribution's speaker is a writer. No canonical sentence
+  states the CP1 rule.
+
+## 13.3 Stage 0 (free) — verification
+
+- **Build:** `nest build` passes; TypeScript (`tsc --noEmit`) is clean.
+- **API Jest:** 288 suites, 6 799 tests passed (1 skipped, unchanged). New: `shared-field-geometry.spec.ts` (the exact points of §4.2, 200 seeded Worlds: deterministic, independent of input order, spaced and bounded; no clock, random generator, hash or floating-point trigonometry), `shared-world-knowledge.spec.ts` (entries, history, labels, the 8 / 48 / 8 / 3 KB bounds, the safe path, the recall decoder and deadline, both adapters, the generator: DEEP at tier 0 starts no recall), the integrated path in `shared-qandeel-reply.service.spec.ts` (a position from before the window recalled into the reply as its holder’s, uncertain, with its earlier position as history; no identity reaches a provider), the pass (identity mapping, refusals, `revises`, one placement call, exact points) and the Shared cost correlation.
+- **Real PostgreSQL 17** (0001–0175): `verify-migration-0175.mjs` passes every stage, including condition 9 (54 catalogued surfaces and the behavioural marker sweep). The re-anchored 0148, 0150, 0155 and 0174 verifiers pass on 0001–0175 and on 0001–0174; 0115, 0139, 0140, 0160 and 0164 pass unchanged.
+- **Static database tests:** 1 310 of 1 310 passed.
+- **Root contracts:** 1 639 of 1 639 passed (`node --test tests/*.test.mjs`, the forward-safety mirror runs included).
+
+Re-anchored, each with a dated note and nothing weakened:
+- the verifiers of 0148, 0150, 0155 and 0174: where 0175 is applied, its revocations, its two entry points and its
+  page rule; 0148's v1 behaviour is re-granted only inside its rolled-back transaction;
+- the contracts AI-COST-01 (the census with the two new adapters, the reading re-pinned, the v2 ledger names, the Shared
+  attribution scope), ACE-SP-01 and S4-02 (the reply sends `budgeted` inside the one attributed scope), and PROD-RETRY-01
+  (0175's one PT409, the same ledger conflict);
+- the API specs of the reading, the field, the pass and the reply.
+
+CI: `npm run verify:shared-social-memory:integration` in API CI, and the focused group `s8a-04-cp2`.
+
+## 13.4 Residue (for the S8A-04 closing reconciliation, BG-08)
+
+- **The locale of the composed meaning.** The mobile client sends no locale, and the Shared routes take none, so every
+  reader is served the Arabic frame of P1–P6. English (P1–P6 `en`) is composed by the database and proven, but no client
+  reaches it. Serving it needs a mobile change and a controlled change to the S4 route rule, neither in CP2.
+
+## 13.5 The zero-cost rehearsal of §11 (round-19 harness)
+
+The harness (`scripts/s8a-04/cp2-*`, committed on its own with guard round 19) runs the production composition: the
+reply service, the conversation service, the pass, the decoders, the accounting and the ledger, against a disposable
+PostgreSQL 17 migrated through 0175, behind an in-process Data API (one transaction per request, under the request's own
+role and claims). Its declared test shortcuts are named in the driver. Round 19 is locked (`authorized: false`): no
+paid call is possible until the Product Owner approves, and lifting the lock is the single change.
+
+Each stage ran with a local DeepSeek stand-in under the guard (no network, USD 0). The stand-in proves no quality; it
+exercises the paths, the stop rules and the ceilings. Findings for the Product Owner's approval of §11:
+
+- **R1 — stage R needs 24 calls, not 16.** Every probe's reply runs the S8A-02 attribution reading as well as the recall
+  and the reply: 3 calls per probe, 24 for 8 probes. Under 16, probes 6–8 were refused by the stage ceiling (and
+  answered UNAVAILABLE, as the frozen path requires). Its USD stays within 0.035 (about 0.0026 per probe at peak in the
+  rehearsal).
+- **R2 — stage 3 can need up to 32 calls.** Its 8 replies each run up to 4 calls (attribution reading, reply, reading,
+  placement). The rehearsal used 26, with the attribution reading on 2 of the 8 replies; a live model can run it on more.
+- **R3 — the 48 KB index binds at stage R's scale (the §3.3 known limit).** With 300 positions at the scenario's
+  meaning lengths, the World's knowledge is 57.6 KB. The index offers the newest 256 of the 300 entries (49 039 of 49 152
+  bytes); the oldest 44 are not offered. 5 of the 8 probe targets are older and are not offered, so stage R
+  can find at most 3 / 8 whatever the model does. Not a blocker under the authorization; the recorded alternative
+  (two-level recall, §3.3) is the Future Improvements candidate.
+- **Stop rules and accounting.** The reading stage stopped on "N3 or the relayed view failing twice", as the stand-in
+  cannot relay. Stages 2, R and 3 completed with no binding stop: no earlier position offered as current, no relayer
+  dropped, no deleted or unauthorized knowledge used. Every ledger row, refused calls included, carries the sender as
+  payer and the message as its source; a refused call is recorded `FAILED_USAGE_UNKNOWN` with usage `ABSENT`.
+
+## 13.6 Not yet done
+
+- The paid stages of §11 (round 19). They await the Product Owner's approval and have not run.
+- The placer binding of §7, the last change of CP2, after the paid stages.
+- The pull request to `main`.

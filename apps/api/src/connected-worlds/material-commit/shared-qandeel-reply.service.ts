@@ -15,6 +15,9 @@
 //                                         hidden and deleted material never reach the model; each message keeps the
 //                                         author that resolver returns for its material_id, as a request-local token
 //                                         (S8A-02 CP1)
+//   2b the World's knowledge (S8A-04 CP2) the saved positions EVERY current recipient may see now (0175's knowledge read,
+//                                         membership read now), labelled with this request's labels; a failed read is no
+//                                         knowledge, never a refusal of the reply
 //   3  generation                         the Shared World boundary's generator over the provider-neutral Model Router
 //   4  delivery readiness (I-03G → I-03F) the Source Disclosure Gate, then authority / audience revalidation, in order
 //   5  the commit binding (I-04G FIX-B)   `bindSharedQandeelMaterialCommit` refuses evidence of another World, another
@@ -33,6 +36,8 @@ import { SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority
 import { SharedEffectiveContextService } from '../effective-context/shared-effective-context.service';
 import type { SharedWorldId } from '../kernel/world.types';
 import { SharedPrivacyAuthorityDeliveryReadinessService } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
+import { sharedConversationLabels } from '../../shared-world/shared-conversation-model-input';
+import { decodeSharedWorldKnowledge, extendSharedLabels, sharedKnowledgeEntries, type SharedKnowledge } from '../../shared-world/shared-world-knowledge';
 import { bindSharedQandeelMaterialCommit } from './shared-qandeel-material-commit-binding';
 import {
   SHARED_QANDEEL_REPLY_GENERATOR,
@@ -47,6 +52,8 @@ export const SHARED_MATERIAL_VISIBILITY_RPC = 'resolve_shared_world_material_v1'
 export const SHARED_QANDEEL_REPLY_WORK_BEGIN_RPC = 'begin_shared_qandeel_reply_work_v1' as const;
 export const SHARED_QANDEEL_REPLY_WORK_END_RPC = 'end_shared_qandeel_reply_work_v1' as const;
 export const SHARED_QANDEEL_REPLY_COMMIT_RPC = 'complete_shared_world_qandeel_reply_v1' as const;
+/** S8A-04 CP2 (0175): the World's saved positions every current recipient may see (service_role only). */
+export const SHARED_WORLD_KNOWLEDGE_RPC = 'list_shared_world_knowledge_v1' as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -143,17 +150,28 @@ export class SharedQandeelReplyService {
     if (conversation.some((material, index) => (material.producer === 'HUMAN') !== (typeof authors[index] === 'string'))) return refused('HISTORY_UNRESOLVED');
     const speakerRefs = new Map<string, string>();
     for (const author of authors) if (typeof author === 'string' && !speakerRefs.has(author)) speakerRefs.set(author, `S${speakerRefs.size + 1}`);
+    const turns = Object.freeze(conversation.map((material, index) => Object.freeze({
+      producer: material.producer, authorName: material.authorName, text: material.text,
+      messageRef: `M${index + 1}`, speakerRef: typeof authors[index] === 'string' ? speakerRefs.get(authors[index] as string) as string : null,
+    })));
 
-    // 3. The words. Only request-local tokens leave this composition: no account, material or World identity.
+    // 2b. S8A-04 CP2: what the World already knows, labelled exactly as this request labels its people.
+    const knowledge = await this.knowledge(worldId, request.requesterUserId.toLowerCase(), turns, authors);
+
+    // 3. The words. Only request-local tokens and labels leave this composition: no account, material or World identity
+    //    reaches a provider (the source below only correlates the spend, AI-COST-01).
     const generated = await this.generator.generate(Object.freeze({
       requesterUserId: request.requesterUserId,
-      conversation: Object.freeze(conversation.map((material, index) => Object.freeze({
-        producer: material.producer, authorName: material.authorName, text: material.text,
-        messageRef: `M${index + 1}`, speakerRef: typeof authors[index] === 'string' ? speakerRefs.get(authors[index] as string) as string : null,
-      }))),
+      source: Object.freeze({ worldId, materialId: request.humanMaterialId.toLowerCase() }),
+      conversation: turns,
+      knowledge: knowledge.entries,
     }));
     if (generated.state !== 'GENERATED' || generated.text.trim().length === 0) return refused('GENERATION_UNAVAILABLE');
     const text = generated.text;
+    const recalledPlaceIds = Object.freeze((generated.knowledgeRefs ?? []).flatMap((ref) => {
+      const placeId = knowledge.placeIdOf.get(ref);
+      return placeId === undefined ? [] : [placeId];
+    }));
 
     // 4. Delivery readiness in the frozen order, then the revalidation the binder checks it against.
     const readiness = await this.readiness.evaluate(envelope, text);
@@ -196,9 +214,33 @@ export class SharedQandeelReplyService {
     const row = Array.isArray(rows) ? rows[0] : undefined;
     if (!isRecord(row)) return refused('COMMIT_REFUSED');
     if (row.outcome === 'MATERIAL_COMMITTED' && typeof row.material_id === 'string' && UUID.test(row.material_id)) {
-      return Object.freeze({ state: 'COMMITTED', materialId: row.material_id } as const);
+      return Object.freeze({ state: 'COMMITTED', materialId: row.material_id, ...(recalledPlaceIds.length === 0 ? {} : { recalledPlaceIds }) } as const);
     }
     return refused(row.outcome === 'STALE' ? 'COMMIT_STALE' : 'COMMIT_REFUSED');
+  }
+
+  /**
+   * S8A-04 CP2 — the World's knowledge for this request: the knowledge read (every current recipient, now), its people
+   * labelled with the conversation's own labels (`sharedConversationLabels`), and anyone else by their Name, numbered on
+   * collision, never relabelling the conversation. The window's people are the conversation's authors. Never throws: a read
+   * that fails or is not exactly its shape is no knowledge, and the reply goes on without it.
+   */
+  private async knowledge(
+    worldId: SharedWorldId, requesterUserId: string, turns: ReadonlyArray<{ producer: 'HUMAN' | 'QANDEEL'; authorName: string | null; text: string; speakerRef: string | null }>,
+    authors: ReadonlyArray<string | null | undefined>,
+  ): Promise<SharedKnowledge> {
+    const none: SharedKnowledge = Object.freeze({ entries: Object.freeze([]), placeIdOf: new Map() });
+    try {
+      const positions = decodeSharedWorldKnowledge(await this.server.rpc<unknown>(SHARED_WORLD_KNOWLEDGE_RPC, { p_world_id: worldId, p_viewer_user_id: requesterUserId }));
+      if (positions === null || positions.length === 0) return none;
+      const labels = sharedConversationLabels(turns);
+      const taken = new Map<string, string>();
+      authors.forEach((author, index) => { if (typeof author === 'string' && typeof labels[index] === 'string') taken.set(author, labels[index] as string); });
+      const labelOf = extendSharedLabels(taken, positions.flatMap((position) => position.people));
+      return sharedKnowledgeEntries(positions, labelOf, new Set(taken.keys()));
+    } catch {
+      return none;
+    }
   }
 
   /**

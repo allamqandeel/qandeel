@@ -138,8 +138,10 @@ test('Shared and Public keep Text v1 + their frame as the literal prefix, locale
 test('BLOCK still returns before the assembler and the ONE provider call in both generators', () => {
   // S8A-02 CP2 (CA-S3): the Shared reply call sends the request the attribution layer returns (`reply`); the attribution
   // reading, when the gate needs it, is made by that layer AFTER this call site's BLOCK return and assembler.
+  // S8A-04 CP2 (2026-10-24, re-anchored): the Shared call sends `budgeted` — that request with the World's knowledge (M3)
+  // appended and, with an attribution reading, the turn's remaining budget; recall too runs after BLOCK and the assembler.
   for (const [name, source, assemble, sent] of [
-    ['Shared', sharedGenerator, 'assembleSharedConversationRequest(', 'reply'],
+    ['Shared', sharedGenerator, 'assembleSharedConversationRequest(', 'budgeted'],
     ['Public', publicGenerator, 'assemblePublicQandeelRequest(', 'request'],
   ]) {
     const block = source.indexOf("if (gate.disposition === 'BLOCK')");

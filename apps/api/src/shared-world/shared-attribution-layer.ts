@@ -33,6 +33,15 @@ export interface SharedAttributionOutcome {
 
 const monotonic = () => Number(process.hrtime.bigint()) / 1e6;
 
+/** S8A-04 CP2: the tier this conversation's reply runs at, before it runs (0 when the deterministic scan fails). */
+export function sharedAttributionTier(conversation: ReadonlyArray<SharedReplyGenerationTurn>): AttributionTier {
+  try {
+    return scanAttribution(conversation).tier;
+  } catch {
+    return 0;
+  }
+}
+
 export async function withSharedAttribution(
   conversation: ReadonlyArray<SharedReplyGenerationTurn>, request: ModelRouterRequest, reader: SharedAttributionReader, now: () => number = monotonic,
 ): Promise<SharedAttributionOutcome> {

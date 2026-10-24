@@ -1237,6 +1237,12 @@ jobs:
       # the 0171 list plus exactly that one value, admitted and recorded by begin, an unknown family still refused.
       - name: Verify S8A-04 Shared semantic reading cost family against real PostgreSQL
         run: npm run verify:shared-semantic-reading-cost-family:integration
+      # S8A-04 CP2: migration 0175 (Shared Social Memory Controlled Amendment, Product Owner Final Implementation
+      # Authorization 2026-10-24) - the private pinned boundary with the v1 writer, context and bare member reads revoked;
+      # the atomic attributed write and its refusals; the composed meaning (P1-P6, ar/en); revision, deletion and SUPERSEDED;
+      # membership and World isolation; the Shared AI-COST-01 begin; and condition 9 over every surface serving Shared material.
+      - name: Verify S8A-04 Shared Social Memory against real PostgreSQL
+        run: npm run verify:shared-social-memory:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

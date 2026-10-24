@@ -5,6 +5,8 @@ import { runWithAiUsageAttribution } from './ai-usage-attribution';
 import { SupabaseAiProviderCallLedger } from './ai-provider-call-ledger.repository';
 
 const USER = '11111111-1111-4111-8111-111111111111';
+const WORLD = '22222222-2222-4222-8222-222222222222';
+const MATERIAL = '33333333-3333-4333-8333-333333333333';
 
 function recordingAccounting(beginFails = false) {
   const begun: AiProviderCallBeginRecord[] = [];
@@ -96,8 +98,49 @@ describe('AI-COST-01 ledger repository (service-role channel)', () => {
     await new SupabaseAiProviderCallLedger({ rpc }).settle({ callId: 'c', userId: USER, outcome: 'FAILED', usage: { completeness: 'ABSENT' } });
     expect(rpc.mock.calls[0][1]).toMatchObject({ p_usage_completeness: 'ABSENT', p_usage: {} });
   });
+  it('S8A-04 CP2 (0175): Shared World work begins through v2 with its World and causing message, never a session or turn', async () => {
+    const rpc = jest.fn().mockResolvedValue([{ begin_outcome: 'BEGUN', attempt_number: 1 }]);
+    await new SupabaseAiProviderCallLedger({ rpc }).begin({ ...begin, featureFamily: 'SHARED_KNOWLEDGE_RECALL', sourceWorldId: WORLD, sourceSharedMaterialId: MATERIAL });
+    expect(rpc).toHaveBeenCalledWith('begin_ai_provider_call_v2', {
+      p_call_id: 'c', p_user_id: USER, p_source_world_id: WORLD, p_source_shared_material_id: MATERIAL, p_provider: 'DEEPSEEK', p_requested_model: 'm',
+      p_operation: 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', p_feature_family: 'SHARED_KNOWLEDGE_RECALL', p_processing_path: 'FAST',
+    });
+  });
   it('anything else is an integrity failure', async () => {
     await expect(new SupabaseAiProviderCallLedger({ rpc: jest.fn().mockResolvedValue([{ begin_outcome: 'MAYBE' }]) }).begin(begin)).rejects.toThrow('AI_PROVIDER_CALL_BEGIN_INTEGRITY');
     await expect(new SupabaseAiProviderCallLedger({ rpc: jest.fn().mockResolvedValue([]) }).settle({ callId: 'c', userId: USER, outcome: 'FAILED', usage: { completeness: 'ABSENT' } })).rejects.toThrow('AI_PROVIDER_CALL_SETTLE_INTEGRITY');
+  });
+});
+
+describe('S8A-04 CP2 — AI-COST-01 Shared correlation (Controlled Amendment §5)', () => {
+  const completion = { choices: [{ finish_reason: 'stop', message: { content: '{}' } }], usage: { prompt_tokens: 3, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 3, completion_tokens: 1 } };
+  it.each(['SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] as const)('%s: the begin record carries the payer, the World and the causing message', async (family) => {
+    const r = recordingAccounting();
+    const create = jest.fn(async (_body: unknown, _options?: unknown) => completion);
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, family, r.accounting);
+    await runWithAiUsageAttribution({ userId: USER, sourceWorldId: WORLD, sourceSharedMaterialId: MATERIAL }, () => client.chat.completions.create({ model: 'deepseek-flash' } as never));
+    expect(r.begun[0]).toMatchObject({ userId: USER, sessionId: null, sourceTurnId: null, sourceWorldId: WORLD, sourceSharedMaterialId: MATERIAL, featureFamily: family });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+  it('Personal work keeps the v1 record exactly: no Shared field at all', async () => {
+    const r = recordingAccounting();
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create: jest.fn(async (_body: unknown) => completion) } } }, 'CONVERSATION_REPLY', r.accounting);
+    await attributed(() => client.chat.completions.create({ model: 'deepseek-flash' } as never));
+    expect(Object.keys(r.begun[0])).not.toContain('sourceWorldId');
+    expect(Object.keys(r.begun[0])).not.toContain('sourceSharedMaterialId');
+  });
+  it.each([
+    ['only the World', { sourceWorldId: WORLD }],
+    ['only the message', { sourceSharedMaterialId: MATERIAL }],
+    ['with a session', { sourceWorldId: WORLD, sourceSharedMaterialId: MATERIAL, sessionId: '44444444-4444-4444-8444-444444444444' }],
+    ['not identities', { sourceWorldId: 'world', sourceSharedMaterialId: 'message' }],
+  ])('%s: no attribution, so no request', async (_case, extra) => {
+    const r = recordingAccounting();
+    const create = jest.fn(async (_body: unknown) => completion);
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'SHARED_KNOWLEDGE_RECALL', r.accounting);
+    await expect(runWithAiUsageAttribution({ userId: USER, ...extra } as never, () => client.chat.completions.create({ model: 'deepseek-flash' } as never)))
+      .rejects.toBeInstanceOf(AiProviderCallAccountingUnavailableError);
+    expect(create).not.toHaveBeenCalled();
+    expect(r.begun).toHaveLength(0);
   });
 });

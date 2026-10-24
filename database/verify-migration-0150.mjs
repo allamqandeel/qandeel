@@ -129,6 +129,10 @@ const RETAINED = {
 const ABSORBED = [
   'complete_shared_world_qandeel_reply_v1', 'approve_shared_world_proposal_v1', 'accept_shared_membership_request_v1',
   'approve_shared_world_history_share_v1', 'complete_shared_semantic_place_v1', 'approve_own_public_package_v1',
+  // RE-ANCHORED by S8A-04 CP2 (migration 0175, 2026-10-24): the V2 place writer reaches the same frozen chain the v1 writer
+  // did and absorbs its 40001 refusals into the bounded STALE answer from a handler that names PT409 too, exactly as v1.
+  // 0175 revokes the v1 writer from service_role, so where 0175 is applied v1 is no entry point and v2 stands in its place.
+  'complete_shared_semantic_place_v2',
   'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',
   'accept_my_matching_proposal_v1',
   'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',
@@ -147,7 +151,9 @@ const ABSORBED = [
   'finalize_my_replay_version_v1', 'reopen_my_replay_for_revision_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
-const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1'];
+const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1',
+  // RE-ANCHORED by S8A-04 CP2 (migration 0175, 2026-10-24): the Shared begin raises the same 0135 ledger conflict, PT409.
+  'public.begin_ai_provider_call_v2'];
 
 // ------------------------------------------------------------------ session helpers
 /** A Data-API-shaped session inside the caller's transaction: the role PostgREST switches to, with its claims. */
@@ -240,7 +246,9 @@ async function verifyCatalog(report) {
   await report.section('PT409_CENSUS PT409 is raised by exactly the eleven and the two 0135 AI-usage conflicts', async () => {
     const analysis = await analyse();
     const raisers = [...new Set(raiseCensus(analysis).filter((r) => r.code === 'PT409').map((r) => r.signature.slice(0, r.signature.indexOf('('))))].sort();
-    const expected = [...PRIOR_PT409, ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
+    const [{ shared }] = await rows("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid, uuid, uuid, uuid, text, text, text, text, text)') IS NOT NULL AS shared");
+    const prior = PRIOR_PT409.filter((name) => shared || name !== 'public.begin_ai_provider_call_v2');
+    const expected = [...prior, ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
     assert.deepEqual(raisers, expected);
     assert.equal(raiseCensus(analysis).filter((r) => r.code === 'PT409' && !PRIOR_PT409.some((p) => r.signature.startsWith(`${p}(`))).length, 23, '23 stale-state sites');
   });
@@ -393,7 +401,9 @@ async function verifyGuard(analysis = null) {
     assert.deepEqual(e.retryable.map((x) => `${x.code}|${x.message}|${x.origin}`), [RETAINED[e.name][0]], `${e.name} lets exactly its classified raise escape`);
   }
   const absorbed = [...entries.values()].filter((e) => e.reachesRetryableRaise && e.retryable.length === 0 && !(e.name in DETERMINISTIC));
-  assert.deepEqual(absorbed.map((e) => e.name).sort(), [...ABSORBED].sort(), 'every other entry point that reaches a 40001 absorbs it');
+  const writerV2 = entries.has('complete_shared_semantic_place_v2');
+  const expectedAbsorbed = ABSORBED.filter((name) => name !== (writerV2 ? 'complete_shared_semantic_place_v1' : 'complete_shared_semantic_place_v2'));
+  assert.deepEqual(absorbed.map((e) => e.name).sort(), [...expectedAbsorbed].sort(), 'every other entry point that reaches a 40001 absorbs it');
   for (const e of absorbed) assert.ok(e.absorbed.length > 0, `${e.name} names its handler`);
   assert.deepEqual(raiseCensus(a).filter((r) => r.code === '40P01'), [], 'nothing raises 40P01');
   return a;

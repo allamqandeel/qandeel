@@ -3,7 +3,7 @@ import { DataApiError, SupabaseDataApiService } from '../conversation/supabase-d
 import { isCanonicalCoordinateText } from '../public-world/public-spatial-placer';
 import { SharedWorldRepository } from './shared-world.repository';
 
-/** Exactly the migration 0148 member-read shapes. */
+/** Exactly the member-read shapes (0148, served as v2 by 0175). */
 interface SharedFieldRow { readonly place_id: string; readonly world_x: string; readonly world_y: string; readonly meaning: string; readonly semantic_region: string }
 interface SharedPlaceRow extends SharedFieldRow { readonly primary_themes: string[]; readonly secondary_themes: string[]; readonly established_at: string }
 interface SharedPlaceSourceRow {
@@ -34,6 +34,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const unavailable = (): never => { throw new ServiceUnavailableException('Shared World is unavailable.'); };
 const isTextList = (value: unknown): value is string[] => Array.isArray(value) && value.every((entry) => typeof entry === 'string');
 
+
 function placeOf(row: SharedFieldRow): SharedFieldPlaceView {
   if (typeof row?.place_id !== 'string' || !UUID.test(row.place_id) || !isCanonicalCoordinateText(row.world_x) || !isCanonicalCoordinateText(row.world_y)
     || typeof row.meaning !== 'string' || row.meaning.length === 0 || typeof row.semantic_region !== 'string' || row.semantic_region.length === 0) return unavailable();
@@ -54,6 +55,12 @@ function sourceOf(row: SharedPlaceSourceRow): SharedPlaceSourceView {
  * ALLOW, and then only what the database serves this reader now: a place whose every source the reader may see. A place
  * that is not served — another World's, a source deleted, a source the reader cannot see, a guessed id — is one neutral
  * ABSENT, never a reason. Nothing ranks, counts or is logged.
+ *
+ * S8A-04 CP2 (Shared Social Memory Controlled Amendment §2.5): the reads are 0175's v2 versions. A place's `meaning` is
+ * ALWAYS the safe representation the database composes (P1–P6: whose it is, relayed by whom, uncertain, earlier), never the
+ * bare text; a place whose attribution cannot be shown whole is not served. This service passes `meaning` through as a
+ * string, so the field projection, the renderer and the mobile decoders are unchanged. No locale is passed (the S4-01 rule:
+ * the Shared routes take no query object), so the database composes in its default, Arabic.
  */
 @Injectable()
 export class SharedSemanticFieldService {
@@ -84,7 +91,7 @@ export class SharedSemanticFieldService {
     if (!UUID.test(worldId)) return Promise.resolve({ outcome: 'UNAVAILABLE' });
     return this.guard(async () => {
       if (!(await this.allowed(token, worldId))) return { outcome: 'UNAVAILABLE' };
-      const rows = await this.rpc<SharedFieldRow>(token, 'list_own_shared_semantic_field_v1', { p_world_id: worldId });
+      const rows = await this.rpc<SharedFieldRow>(token, 'list_own_shared_semantic_field_v2', { p_world_id: worldId, p_locale: null });
       if (rows.length > SHARED_FIELD_MAX) return unavailable();
       return { outcome: 'ALLOW', places: rows.map(placeOf) };
     });
@@ -96,8 +103,8 @@ export class SharedSemanticFieldService {
     return this.guard(async () => {
       if (!(await this.allowed(token, worldId))) return { outcome: 'UNAVAILABLE' };
       const [rows, sourceRows] = await Promise.all([
-        this.rpc<SharedPlaceRow>(token, 'read_own_shared_semantic_place_v1', { p_world_id: worldId, p_place_id: placeId }),
-        this.rpc<SharedPlaceSourceRow>(token, 'list_own_shared_semantic_place_sources_v1', { p_world_id: worldId, p_place_id: placeId }),
+        this.rpc<SharedPlaceRow>(token, 'read_own_shared_semantic_place_v2', { p_world_id: worldId, p_place_id: placeId, p_locale: null }),
+        this.rpc<SharedPlaceSourceRow>(token, 'list_own_shared_semantic_place_sources_v2', { p_world_id: worldId, p_place_id: placeId }),
       ]);
       const [row] = rows;
       // Served now, or not at all: a place without its sources (one was deleted between the two reads) is not served.

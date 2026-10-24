@@ -4,6 +4,9 @@
 // SHARED_SEMANTIC_READING; begin_ai_provider_call_v1 admits a DeepSeek call under the new family and records it there, and
 // still refuses a family that does not exist; every earlier family is still admitted. Every fixture is written inside one
 // transaction that is rolled back.
+//
+// S8A-04 CP2 (2026-10-24, re-anchored): migration 0175 adds exactly SHARED_KNOWLEDGE_RECALL and SHARED_SPATIAL_PLACEMENT to the
+// same CHECK. On a database migrated through 0175 the CHECK must be this list plus exactly those two; nothing else may differ.
 
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -37,7 +40,9 @@ async function verify() {
   stage = 'catalog: the feature-family CHECK is the 0171 list plus exactly SHARED_SEMANTIC_READING';
   const { def } = await one(`SELECT pg_get_constraintdef(c.oid) AS def FROM pg_constraint c
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
-  assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...FAMILIES].sort());
+  const { later } = await one("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid, uuid, uuid, uuid, text, text, text, text, text)') IS NOT NULL AS later");
+  const expected = later ? [...FAMILIES, 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : FAMILIES;
+  assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...expected].sort());
 
   await q('BEGIN');
   try {

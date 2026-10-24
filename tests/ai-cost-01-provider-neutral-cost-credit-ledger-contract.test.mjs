@@ -93,6 +93,14 @@ const FILES = {
   sharedReadingConfig: 'apps/api/src/shared-world/shared-semantic-interpreter-provider.config.ts',
   sharedReadingModule: 'apps/api/src/shared-world/shared-semantic-interpreter-provider.ts',
   sharedPlacePass: 'apps/api/src/connected-worlds/material-commit/shared-semantic-place.service.ts',
+  // S8A-04 CP2 (2026-10-24, Product Owner Final Implementation Authorization): the Shared knowledge recall and the Shared
+  // spatial placer, their config, their one composition, the 0175 Shared begin command and the reply generator.
+  sharedRecallAdapter: 'apps/api/src/shared-world/deepseek-shared-knowledge-recall.ts',
+  sharedPlacerAdapter: 'apps/api/src/shared-world/deepseek-shared-spatial-placer.ts',
+  sharedMemoryConfig: 'apps/api/src/shared-world/shared-social-memory-provider.config.ts',
+  sharedMemoryModule: 'apps/api/src/shared-world/shared-social-memory-provider.ts',
+  sharedReplyGenerator: 'apps/api/src/shared-world/shared-conversation-reply.generator.ts',
+  migration0175: 'database/migrations/0175_s8a_04_shared_social_memory_v1.sql',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
 };
@@ -137,13 +145,21 @@ const CENSUS = [
   // S8A-04 CP1 (2026-10-24, Product Owner D3 / D4): the Shared semantic reading under its own family (migration 0174), through
   // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate. Re-pinned 2026-10-24 for the
   // one §5.2 sentence the Product Owner approved at the CP1 Copy Gate (amendment §9.1); nothing else in the file changed.
-  { transport: 'apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts', family: 'SHARED_SEMANTIC_READING', frozen: '1bea8c65d392da0881c811d282b090eb2a5acdc2' },
+  // S8A-04 CP2 (2026-10-24): re-pinned for the V2 reading — M1 appended to the CP1 text, unchanged, and the V2 data and schema
+  // (Controlled Amendment §10.1, APPROVED at the CP2 Copy Gate). Same call, same family, same accounting and gate.
+  { transport: 'apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts', family: 'SHARED_SEMANTIC_READING', frozen: '3304ea502b00aba978b42203301900cdc6731f79' },
+  // S8A-04 CP2 (2026-10-24): the Shared knowledge recall (M2) and the Shared spatial placer (M4), each under its own 0175
+  // family, through the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate.
+  { transport: 'apps/api/src/shared-world/deepseek-shared-knowledge-recall.ts', family: 'SHARED_KNOWLEDGE_RECALL', frozen: '21798d25753125f0ffb0fe00684c8d1278b5b088' },
+  { transport: 'apps/api/src/shared-world/deepseek-shared-spatial-placer.ts', family: 'SHARED_SPATIAL_PLACEMENT', frozen: 'a4431b99f3f05bca3211ab5b67c0b4df4ca06101' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
-const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter', 'sharedReadingAdapter'];
-const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig', 'sharedReadingConfig'];
+const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter', 'sharedReadingAdapter',
+  'sharedRecallAdapter', 'sharedPlacerAdapter'];
+const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig', 'sharedReadingConfig',
+  'sharedMemoryConfig'];
 /** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
 const FOREIGN_PROVIDER = /OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_AI_API_KEY|GEMINI_API_KEY|@anthropic-ai\/|@google\/(?:genai|generative-ai)|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|\bnew Anthropic\(|OpenAIModelRouter|ClaudeModelRouter|accountedOpenAIResponsesClient|accountedAnthropicMessagesClient|accountedGeminiTransport/u;
 
@@ -178,6 +194,13 @@ function censusViolations(world) {
     if (!new RegExp(`accountedDeepSeekChatCompletionsClient\\(\\s*createDeepSeekClient\\(config\\), '${family}', productionAiProviderCallAccounting\\(\\)\\)`, 'u').test(ts(world[key]))) out.push(`${family} is not accounted`);
     if (/\.fromEnvironment\(environment\)/u.test(ts(world[key]))) out.push(`${key} composes the unaccounted fromEnvironment adapter in production`);
   }
+  // S8A-04 CP2: the recall is composed through the boundary; the placer only for the synthetic harness, with the accounting
+  // it is handed — the application's placer stays the refusing one (§7), so it composes no client at all.
+  const memory = ts(world.sharedMemoryModule);
+  if (!/accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_KNOWLEDGE_RECALL', productionAiProviderCallAccounting\(\)\)/u.test(memory)) out.push('SHARED_KNOWLEDGE_RECALL is not accounted');
+  if (!/accountedDeepSeekChatCompletionsClient\(createDeepSeekClient\(config\), 'SHARED_SPATIAL_PLACEMENT', accounting\)/u.test(memory)
+    || !/createQualificationSharedSpatialPlacer\(\s*environment: NodeJS\.ProcessEnv, accounting: AiProviderCallAccounting,\s*\)/u.test(memory)) out.push('SHARED_SPATIAL_PLACEMENT is not accounted');
+  if ((memory.match(/createDeepSeekClient\(/gu) ?? []).length !== 2 || /\.fromEnvironment\(/u.test(memory)) out.push('the Shared memory composition builds an unaccounted client');
   // No structured adapter can build its own client: each receives the accounted one by injection.
   for (const key of ADAPTERS) {
     if (/fromEnvironment|createDeepSeekClient\(|new OpenAI\(/u.test(ts(world[key]))) out.push(`${key} can build an unaccounted client`);
@@ -321,11 +344,16 @@ function privacyViolations(world) {
   }
   const ledger = ts(world.ledger);
   const keys = [...ledger.matchAll(/\b(p_\w+):/gu)].map((m) => m[1]).sort();
-  const allowed = ['p_call_id', 'p_call_id', 'p_feature_family', 'p_operation', 'p_outcome', 'p_processing_path', 'p_provider', 'p_requested_model', 'p_session_id', 'p_source_turn_id', 'p_usage', 'p_usage_completeness', 'p_user_id', 'p_user_id'].sort();
+  // S8A-04 CP2 (0175): the Shared begin sends the same identities and names, with the World and the causing message in place
+  // of the session and the turn — identities only.
+  const allowed = ['p_call_id', 'p_call_id', 'p_call_id', 'p_feature_family', 'p_feature_family', 'p_operation', 'p_operation', 'p_outcome', 'p_processing_path', 'p_processing_path',
+    'p_provider', 'p_provider', 'p_requested_model', 'p_requested_model', 'p_session_id', 'p_source_shared_material_id', 'p_source_turn_id', 'p_source_world_id', 'p_usage',
+    'p_usage_completeness', 'p_user_id', 'p_user_id', 'p_user_id'].sort();
   if (JSON.stringify(keys) !== JSON.stringify(allowed)) out.push(`(13/14/28) the ledger sends more than identities and normalized numbers: ${keys.join(',')}`);
   if (!/p_usage: record\.usage\.completeness === 'ABSENT' \? \{\} : \{ \.\.\.record\.usage\.quantities \},/u.test(ledger)) out.push('(14) the ledger sends something other than the normalized quantities');
   if (!/settle_ai_provider_call_v1\(\s*p_call_id uuid, p_user_id uuid, p_outcome text, p_usage_completeness text, p_usage jsonb\s*\)/u.test(migration)) out.push('(28) the settlement command accepts more than outcome and normalized usage');
   if (!/begin_ai_provider_call_v1\(\s*p_call_id uuid, p_user_id uuid, p_session_id uuid, p_source_turn_id uuid, p_provider text, p_requested_model text,\s*p_operation text, p_feature_family text, p_processing_path text\s*\)/u.test(migration)) out.push('(28) the begin command accepts more than identities');
+  if (!/begin_ai_provider_call_v2\(\s*p_call_id uuid, p_user_id uuid, p_source_world_id uuid, p_source_shared_material_id uuid, p_provider text,\s*p_requested_model text, p_operation text, p_feature_family text, p_processing_path text\s*\)/u.test(sql(world.migration0175))) out.push('(28) the Shared begin command accepts more than identities');
   const accountingSource = ts(world.accounting);
   if (/output_text|\.content\b|messages|instructions|prompt/u.test(between(accountingSource, 'async track<T>(', 'private signal('))) out.push('(13) the boundary reads provider request or response content');
   return out;
@@ -434,11 +462,17 @@ function attributionViolations(world) {
   if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) =>\s*runForegroundTurnWork\(/u.test(ts(world.conversationService))) out.push('the foreground request does not attribute its provider calls to the authenticated reader');
   if (!/withPostResponseAiUsageAttribution\(entry\.envelope, \(\) => this\.dispatcher\.dispatch\(entry\.envelope\)\)/u.test(ts(world.consumer))) out.push('post-response provider calls are not attributed');
   // S8A-04 CP1: the Shared semantic reading is charged to the sender the 0089 resolver names as the author of its message.
+  // S8A-04 CP2 (0175): with the World and the causing message, for the reading and the placement alike.
   const pass = ts(world.sharedPlacePass);
-  if (!/runWithAiUsageAttribution\(\{ userId: payer \}, \(\) => this\.interpreter\.read\(input, signal\)\)/u.test(pass)
+  if (!/const scope: AiUsageAttribution = \{ userId: payer, sourceWorldId: worldId, sourceSharedMaterialId: request\.humanMaterialId\.toLowerCase\(\) \};/u.test(pass)
+    || !/runWithAiUsageAttribution\(scope, \(\) => this\.interpreter\.read\(input, signal\)\)/u.test(pass)
+    || !/runWithAiUsageAttribution\(scope, \(\) => this\.placer\.place\(placementInput\.input, signal\)\)/u.test(pass)
     || !/if \(trigger === undefined \|\| trigger\.kind !== 'HUMAN_TEXT' \|\| trigger\.author !== payer\) return refused\('SENDER_UNVERIFIED'\);/u.test(pass)) {
     out.push('the Shared semantic reading is not attributed to its verified sender');
   }
+  // S8A-04 CP2: the Shared reply (and its recall) is charged to the requester, correlated with the World and its message.
+  if (!/\{ userId: input\.requesterUserId, sourceWorldId: input\.source\.worldId, sourceSharedMaterialId: input\.source\.materialId \}/u.test(ts(world.sharedReplyGenerator))
+    || !/runWithAiUsageAttribution\(attribution, async \(\) => \{/u.test(ts(world.sharedReplyGenerator))) out.push('the Shared reply is not attributed to its requester and message');
   if (!/return valid \? attributions\.run\(Object\.freeze\(\{ \.\.\.attribution \}\), work\) : attributions\.exit\(work\);/u.test(ts(world.attribution))) out.push('an invalid attribution is not fail-closed');
   return out;
 }
@@ -580,7 +614,7 @@ const PLANTED = [
   ['7 missing rate treated as zero', 'unknownViolations', () => plant('migration', "IF v_unpriced > 0 THEN\n      v_state := 'UNPRICED'; v_reason := 'NO_EFFECTIVE_PRICE_CARD';", "IF false THEN\n      v_state := 'UNPRICED'; v_reason := 'NO_EFFECTIVE_PRICE_CARD';")],
   ['8 success without usage treated as free', 'unknownViolations', () => plant('accounting', '} catch {\n      usage = ABSENT_AI_USAGE;\n    }', "} catch {\n      usage = { completeness: 'COMPLETE', quantities: {} };\n    }")],
   ['9 failure treated as free without evidence', 'unknownViolations', () => plant('accounting', "await settle('FAILED', ABSENT_AI_USAGE);\n      throw error;", "await settle('FAILED', { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 0, OUTPUT_TOKEN: 0 } });\n      throw error;")],
-  ['10 provider call starts before durable intent', 'boundaryViolations', () => plant('accounting', 'const correlation = safely(this.correlation);', 'const early = await invoke();\n    void early;\n    const correlation = safely(this.correlation);')],
+  ['10 provider call starts before durable intent', 'boundaryViolations', () => plant('accounting', 'const correlation = shared ? undefined : safely(this.correlation);', 'const early = await invoke();\n    void early;\n    const correlation = shared ? undefined : safely(this.correlation);')],
   ['11 a retry shares one call id', 'boundaryViolations', () => plant('accounting', 'const callId = this.newCallId();', 'const callId = this.callId;')],
   ['12 a replay creates a duplicate charge', 'boundaryViolations', () => plant('migration', "RAISE EXCEPTION 'AI_PROVIDER_CALL_SETTLEMENT_CONFLICT' USING ERRCODE = 'PT409';", 'NULL;')],
   ['13 user content stored in the cost ledger', 'privacyViolations', () => plant('migration', '  source_turn_id uuid,\n  provider text NOT NULL,', '  source_turn_id uuid,\n  prompt_text text,\n  provider text NOT NULL,')],

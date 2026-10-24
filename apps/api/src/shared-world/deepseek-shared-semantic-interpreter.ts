@@ -7,6 +7,9 @@
 // may come back. This adapter enforces the shape only; the port's decoder (`decodeSharedSemanticReading`) is what the
 // pass trusts, and the frozen I-03 / I-04G chain still decides whether a place is committed. The instructions are
 // model-facing provider text, never shown to a person, recorded verbatim in the S8A-04 CP1 Controlled Amendment.
+//
+// S8A-04 CP2 (Shared Social Memory Controlled Amendment §2, M1): the CP1 instructions stand unchanged; the two approved M1
+// paragraphs are appended after them, and the data and the schema carry the attribution (§10.1.5).
 import {
   deepSeekJsonContent,
   deepSeekJsonRequest,
@@ -16,6 +19,7 @@ import {
   type DeepSeekJsonClient,
 } from '../model-router/providers/deepseek/deepseek-client';
 import { SEMANTIC_MEANING_MAX, SEMANTIC_PRIMARY_THEMES, SEMANTIC_SECONDARY_THEMES, SEMANTIC_THEME_MAX } from '../public-world/public-semantic-interpreter';
+import { SHARED_SEMANTIC_ABOUT_MAX, SHARED_SEMANTIC_ABSENT_HOLDER_MAX, SHARED_SEMANTIC_EXISTING_BYTES, SHARED_SEMANTIC_HOLDERS_MAX, SHARED_SEMANTIC_RELAYERS_MAX } from './shared-semantic-interpreter';
 import type { SharedSemanticReadingDeepSeekConfig } from './shared-semantic-interpreter-provider.config';
 import {
   SHARED_SEMANTIC_CONTRIBUTIONS_MAX, SHARED_SEMANTIC_INTERPRETATION_CONTRACT, SHARED_SEMANTIC_PLACES_PER_READING, SHARED_SEMANTIC_SOURCES_PER_PLACE,
@@ -26,6 +30,7 @@ import {
 export const MAX_SHARED_READING_CONTRIBUTION_CHARS = 4_000;
 export const MAX_SHARED_READING_NAME_CHARS = 120;
 export const MAX_SHARED_READING_EXISTING = 200;
+const EXISTING_REF = /^E[1-9][0-9]*$/u;
 
 export type SharedSemanticReadingFailure = 'INVALID_REQUEST' | 'INVALID_STRUCTURED_OUTPUT' | 'TIMEOUT' | 'UNAVAILABLE' | 'PROVIDER_ERROR';
 
@@ -51,12 +56,28 @@ export const SHARED_SEMANTIC_READING_INSTRUCTIONS = [
   'For each place: "meaning" is one short line of at most 120 characters, in the language the people use; "primaryThemes" (1-3) and "secondaryThemes" (0-3) are short theme words, none in both lists; "sourceRefs" are the refs of exactly the contributions the meaning is read from, all of them and no other; "lensKey" is a short lowercase key naming the region of meaning (a-z, 0-9, "_", "-", "."), such as family, work or plans.',
 ].join(' ');
 
+/** S8A-04 CP2 — M1 (`APPROVED`, 2026-10-24), verbatim: the two paragraphs appended after the CP1 instructions. */
+export const SHARED_SEMANTIC_READING_ATTRIBUTION = [
+  'For each place, also say whose it is; these fields keep who said each thing and how certain it is. "nature" is "VIEW" when the place is someone\'s view, feeling, wish, plan, proposal or agreement, and "CLAIM" when it says that something is or was so. "holders" are the speaker tokens of the writers whose view or claim it is. When it belongs to someone who is not among the writers, put how they are referred to — their name, or a short description when they are not named — in "absentHolder", and leave "holders" empty. "relayedBy" lists the speaker tokens of the writers who reported it when its holder did not say it here themselves. "about" lists the speaker tokens of the writers it is about, if any. "hedged" is true when whoever said or relayed it left it uncertain. Write "meaning" as what is held, without naming who holds or relayed it and without words such as "thinks" or "said": the server always shows it together with those fields. Speaker tokens belong only in these fields, never in "meaning". If you cannot tell whose a meaning is, propose no place for it.',
+  'Each "existing" meaning has a ref ("E1", "E2", …), the same fields, and the contributions of this reading it rests on, if any are still in it; one with none listed is still held. When a new place is a writer\'s changed, replaced or withdrawn position on what an existing meaning holds, set "revises" to that ref; the earlier meaning stays as history. Otherwise leave "revises" out.',
+].join('\n\n');
+
+/** The instructions the reading sends: the CP1 text unchanged, then M1. */
+export const SHARED_SEMANTIC_READING_INSTRUCTIONS_V2 = `${SHARED_SEMANTIC_READING_INSTRUCTIONS}\n\n${SHARED_SEMANTIC_READING_ATTRIBUTION}`;
+
+/** One existing meaning as the model receives it (§10 M1 data): `absentHolder` only when it has one. */
+const existingData = (meaning: SharedSemanticInput['existing'][number]) => ({
+  ref: meaning.ref, meaning: meaning.meaning, nature: meaning.nature, holders: [...meaning.holders],
+  ...(meaning.absentHolder === null ? {} : { absentHolder: meaning.absentHolder }),
+  relayedBy: [...meaning.relayedBy], about: [...meaning.about], hedged: meaning.hedged, sourceRefs: [...meaning.sourceRefs],
+});
+
 /** What the model receives: the reading's tokens, words and existing meanings. No identifier exists in it. */
 export function sharedSemanticReadingData(input: SharedSemanticInput): object {
   return {
     writers: input.writers.map((writer) => ({ speaker: writer.speaker, name: writer.name })),
     contributions: input.contributions.map((contribution) => ({ ref: contribution.ref, from: contribution.from, text: contribution.text })),
-    existing: input.existing.map((meaning) => ({ meaning: meaning.meaning, sourceRefs: [...meaning.sourceRefs] })),
+    existing: input.existing.map(existingData),
   };
 }
 
@@ -64,18 +85,31 @@ const THEMES = (bounds: { readonly min: number; readonly max: number }) => ({
   type: 'array', minItems: bounds.min, maxItems: bounds.max, items: { type: 'string', minLength: 1, maxLength: SEMANTIC_THEME_MAX },
 });
 
+const TOKENS = (input: SharedSemanticInput, max: number) => ({
+  type: 'array', minItems: 0, maxItems: max, uniqueItems: true, items: { type: 'string', enum: input.writers.map((writer) => writer.speaker) },
+});
+
+/** §10.1.5 M1 schema, filled from this request only; `revises` is left out when there is no existing meaning. */
 export function sharedSemanticReadingSchema(input: SharedSemanticInput): object {
   return {
     type: 'object', additionalProperties: false, required: ['places'],
     properties: {
       places: { type: 'array', maxItems: SHARED_SEMANTIC_PLACES_PER_READING, items: {
-        type: 'object', additionalProperties: false, required: ['meaning', 'primaryThemes', 'secondaryThemes', 'sourceRefs', 'lensKey'],
+        type: 'object', additionalProperties: false,
+        required: ['meaning', 'primaryThemes', 'secondaryThemes', 'sourceRefs', 'lensKey', 'nature', 'holders', 'relayedBy', 'about', 'hedged'],
         properties: {
           meaning: { type: 'string', minLength: 1, maxLength: SEMANTIC_MEANING_MAX },
           primaryThemes: THEMES(SEMANTIC_PRIMARY_THEMES),
           secondaryThemes: THEMES(SEMANTIC_SECONDARY_THEMES),
           sourceRefs: { type: 'array', minItems: 1, maxItems: SHARED_SEMANTIC_SOURCES_PER_PLACE, items: { type: 'integer', enum: input.contributions.map((contribution) => contribution.ref) } },
           lensKey: { type: 'string', pattern: '^[a-z0-9][a-z0-9_.-]{0,63}$' },
+          nature: { type: 'string', enum: ['VIEW', 'CLAIM'] },
+          holders: TOKENS(input, SHARED_SEMANTIC_HOLDERS_MAX),
+          absentHolder: { type: 'string', minLength: 1, maxLength: SHARED_SEMANTIC_ABSENT_HOLDER_MAX },
+          relayedBy: TOKENS(input, SHARED_SEMANTIC_RELAYERS_MAX),
+          about: TOKENS(input, SHARED_SEMANTIC_ABOUT_MAX),
+          hedged: { type: 'boolean' },
+          ...(input.existing.length === 0 ? {} : { revises: { type: 'string', enum: input.existing.map((meaning) => meaning.ref) } }),
         },
       } },
     },
@@ -84,7 +118,11 @@ export function sharedSemanticReadingSchema(input: SharedSemanticInput): object 
 
 const text = (value: unknown, max: number): value is string => typeof value === 'string' && value.trim().length > 0 && [...value].length <= max;
 
-/** The reading the place pass composes: refs 1…n in order, every token a writer's and every writer used, nothing else. */
+/**
+ * The reading the place pass composes: refs 1…n in order, every contribution's writer a writer, every existing meaning
+ * E1…En with its attribution in this reading's tokens, within 200 entries and 24 KB. S8A-04 CP2 narrows CP1's rule that
+ * every writer has a contribution: the members an existing meaning names are writers too.
+ */
 function validRequest(input: SharedSemanticInput): boolean {
   if (!input || input.contract !== SHARED_SEMANTIC_INTERPRETATION_CONTRACT || !Array.isArray(input.contributions) || !Array.isArray(input.writers)
     || !Array.isArray(input.existing)) return false;
@@ -96,12 +134,16 @@ function validRequest(input: SharedSemanticInput): boolean {
       || !text(writer.name, MAX_SHARED_READING_NAME_CHARS)) return false;
     speakers.add(writer.speaker);
   }
-  const used = new Set<string>();
   const contributionsValid = input.contributions.every((contribution, index) => contribution && contribution.ref === index + 1
-    && speakers.has(contribution.from) && used.add(contribution.from) && text(contribution.text, MAX_SHARED_READING_CONTRIBUTION_CHARS));
-  if (!contributionsValid || used.size !== speakers.size) return false;
-  return input.existing.every((meaning) => meaning && text(meaning.meaning, SEMANTIC_MEANING_MAX) && Array.isArray(meaning.sourceRefs)
-    && meaning.sourceRefs.length > 0 && meaning.sourceRefs.every((ref: unknown) => Number.isInteger(ref) && typeof ref === 'number' && ref >= 1 && ref <= count));
+    && speakers.has(contribution.from) && text(contribution.text, MAX_SHARED_READING_CONTRIBUTION_CHARS));
+  if (!contributionsValid) return false;
+  const tokens = (value: unknown, max: number) => Array.isArray(value) && value.length <= max && value.every((token) => speakers.has(token as string));
+  const existingValid = input.existing.every((meaning, index) => meaning && meaning.ref === `E${index + 1}` && EXISTING_REF.test(meaning.ref)
+    && text(meaning.meaning, SEMANTIC_MEANING_MAX) && (meaning.nature === 'VIEW' || meaning.nature === 'CLAIM') && typeof meaning.hedged === 'boolean'
+    && tokens(meaning.holders, SHARED_SEMANTIC_HOLDERS_MAX) && tokens(meaning.relayedBy, SHARED_SEMANTIC_RELAYERS_MAX) && tokens(meaning.about, SHARED_SEMANTIC_ABOUT_MAX)
+    && (meaning.absentHolder === null || text(meaning.absentHolder, SHARED_SEMANTIC_ABSENT_HOLDER_MAX))
+    && Array.isArray(meaning.sourceRefs) && meaning.sourceRefs.every((ref: unknown) => Number.isInteger(ref) && typeof ref === 'number' && ref >= 1 && ref <= count));
+  return existingValid && Buffer.byteLength(escapeDeepSeekData(input.existing.map(existingData)), 'utf8') <= SHARED_SEMANTIC_EXISTING_BYTES;
 }
 
 function parseOutput(content: string | undefined): unknown {
@@ -130,7 +172,7 @@ export class DeepSeekSharedSemanticInterpreter implements SharedSemanticInterpre
     const timer = setTimeout(abort, this.config.timeoutMs);
     try {
       const response = await this.client.chat.completions.create(deepSeekJsonRequest({
-        instructions: SHARED_SEMANTIC_READING_INSTRUCTIONS,
+        instructions: SHARED_SEMANTIC_READING_INSTRUCTIONS_V2,
         schema: sharedSemanticReadingSchema(input),
         data: `<shared_semantic_data>${escapeDeepSeekData(sharedSemanticReadingData(input))}</shared_semantic_data>`,
         maxTokens: this.config.maxOutputTokens,

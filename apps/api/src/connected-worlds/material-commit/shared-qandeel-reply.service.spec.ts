@@ -13,6 +13,10 @@ import { SharedSourceDisclosureGateService } from '../source-disclosure/shared-s
 import { SharedQandeelReplyService, type SharedQandeelReplyRequest } from './shared-qandeel-reply.service';
 import type { SharedConversationMaterial, SharedQandeelReplyGenerator, SharedReplyGenerationInput } from './shared-qandeel-reply.types';
 import { UnimplementedPrivateSourceState, UnimplementedSourceDisclosureDetector } from './shared-unavailable-private-context-boundaries';
+import { SafetyResponseGateService } from '../../conversation/safety-response-gate.service';
+import type { ModelRouter, ModelRouterRequest } from '../../model-router/model-router.types';
+import { SharedConversationReplyGenerator } from '../../shared-world/shared-conversation-reply.generator';
+import type { SharedKnowledgeRecallInput, SharedKnowledgeRecaller } from '../../shared-world/shared-knowledge-recall';
 
 const WORLD = '10000000-0000-4000-8000-00000000000a';
 const OTHER_WORLD = '10000000-0000-4000-8000-00000000000b';
@@ -55,6 +59,9 @@ function harness(options: {
   generation?: () => Promise<{ state: 'GENERATED'; text: string } | { state: 'UNAVAILABLE' }>;
   commitRow?: (body: Record<string, unknown>) => unknown;
   begin?: () => unknown;
+  /** S8A-04 CP2: the knowledge read's rows, and the generator in place of the double. */
+  knowledge?: unknown[];
+  generator?: SharedQandeelReplyGenerator;
 } = {}): Harness {
   const worldState = {
     async resolveCurrent(worldId: SharedWorldId) {
@@ -80,6 +87,11 @@ function harness(options: {
   const visibility = options.visibility ?? { [AMAL]: [M_OLD, M_HIDDEN, M_NOW], [BASSEM]: [M_OLD, M_NOW] };
   const server = {
     async rpc(name: string, body: Record<string, unknown>) {
+      // S8A-04 CP2 (2026-10-24): the reply also reads the World's knowledge (0175); this World holds none.
+      if (name === 'list_shared_world_knowledge_v1') {
+        rpcs.push({ name, body });
+        return options.knowledge ?? [];
+      }
       rpcs.push({ name, body });
       if (name === 'begin_shared_qandeel_reply_work_v1') {
         return [options.begin ? options.begin() : { work_outcome: 'GRANTED', work_lease_id: LEASE, reply_material_id: null }];
@@ -96,6 +108,7 @@ function harness(options: {
   const generator: SharedQandeelReplyGenerator = {
     async generate(input) {
       generated.push(input);
+      if (options.generator) return options.generator.generate(input);
       return options.generation ? options.generation() : { state: 'GENERATED', text: OUTPUT };
     },
   };
@@ -249,5 +262,58 @@ describe('S4-02 fail-closed private-context boundaries', () => {
   it('the unimplemented detector and source-state never answer CLEAR / AVAILABLE', async () => {
     expect(await new UnimplementedSourceDisclosureDetector().assess({} as never)).toEqual({ state: 'UNRESOLVED', failure: 'DETECTOR_UNAVAILABLE' });
     expect(await new UnimplementedPrivateSourceState().resolveCurrent({} as never)).toEqual({ state: 'UNRESOLVED', failure: 'SOURCE_STATE_UNAVAILABLE' });
+  });
+});
+
+// S8A-04 CP2 (2026-10-24): a position established long before the window reaches the reply, with its history and status —
+// through the real generator, the real knowledge composition and a recall written by the test (zero provider calls).
+describe('S8A-04 CP2 — the World’s knowledge in the Shared reply', () => {
+  const placeId = (n: number) => `70000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const row = (n: number, overrides: Record<string, unknown> = {}) => ({
+    place_id: placeId(n), meaning: `موقف قديم رقم ${n} ${'و'.repeat(120)}`, nature: 'VIEW', absent_holder_label: null, hedged: false, standing: 'CURRENT',
+    people: [{ role: 'HOLDER', user: AMAL, name: 'Amal' }], earlier_place_id: null, later_place_id: null, semantic_region: 'plans',
+    committed_at: new Date(Date.UTC(2026, 0, 1) + n * 86_400_000).toISOString(), ...overrides,
+  });
+  // Forty positions (over the 8 KB inline bound); Bassem's travel position was revised in February.
+  const KNOWLEDGE = [
+    ...Array.from({ length: 38 }, (_, index) => row(index + 3)),
+    row(1, { meaning: 'Bassem is against travelling this summer', standing: 'SUPERSEDED', later_place_id: placeId(2), people: [{ role: 'HOLDER', user: BASSEM, name: 'Bassem' }], committed_at: '2026-01-02T00:00:00Z' }),
+    row(2, { meaning: 'Bassem would travel if it is in August', hedged: true, earlier_place_id: placeId(1), people: [{ role: 'HOLDER', user: BASSEM, name: 'Bassem' }], committed_at: '2026-02-02T00:00:00Z' }),
+  ];
+
+  it('recall finds the old position beyond the window: the reply receives it as Bassem’s, uncertain, with the earlier one as history', async () => {
+    const recalls: SharedKnowledgeRecallInput[] = [];
+    const recaller: SharedKnowledgeRecaller = {
+      async recall(input) {
+        recalls.push(input);
+        return { refs: input.knowledge.filter((entry) => entry.meaning.startsWith('Bassem')).map((entry) => entry.ref) };
+      },
+    };
+    const requests: ModelRouterRequest[] = [];
+    const router = { generate: jest.fn(async (body: ModelRouterRequest) => { requests.push(body); return { content: OUTPUT }; }) } as unknown as ModelRouter;
+    const h = harness({ knowledge: KNOWLEDGE, generator: new SharedConversationReplyGenerator(router, new SafetyResponseGateService(), recaller) });
+    const outcome = await h.service.reply(request());
+    expect(outcome).toEqual({ state: 'COMMITTED', materialId: REPLY, recalledPlaceIds: [placeId(2)] });
+    expect(h.rpcs.find((call) => call.name === 'list_shared_world_knowledge_v1')?.body).toEqual({ p_world_id: WORLD, p_viewer_user_id: AMAL });
+    expect(recalls).toHaveLength(1);
+    // The SUPERSEDED position is never an entry of its own.
+    expect(recalls[0].knowledge.filter((entry) => entry.meaning.startsWith('Bassem'))).toEqual([expect.objectContaining({ heldBy: ['Bassem'], current: true, uncertain: true })]);
+    const guidance = requests[0].behavioralGuidance;
+    const block = /<world_knowledge>(.*)<\/world_knowledge>/su.exec(guidance)?.[1] as string;
+    expect(JSON.parse(block)).toEqual([{
+      kind: 'view', heldBy: ['Bassem'], relayedBy: [], about: [], uncertain: true, since: '2026-02', current: true, meaning: 'Bassem would travel if it is in August',
+      earlier: [{ since: '2026-01', kind: 'view', uncertain: false, meaning: 'Bassem is against travelling this summer' }],
+    }]);
+    // No identity reaches the provider.
+    expect(JSON.stringify(requests[0])).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}/u);
+    expect(JSON.stringify(recalls[0])).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}/u);
+  });
+
+  it('a knowledge read that fails or is malformed is no knowledge: the reply still commits', async () => {
+    for (const knowledge of [[{ place_id: 'not a place' }], 'rows' as unknown as unknown[]]) {
+      const h = harness({ knowledge });
+      expect(await h.service.reply(request())).toEqual({ state: 'COMMITTED', materialId: REPLY });
+      expect(h.generated[0].knowledge).toEqual([]);
+    }
   });
 });

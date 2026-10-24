@@ -161,7 +161,13 @@ const setAlerts = async (uid, world, muted) => {
   await as(uid);
   return (await one1('SELECT * FROM public.set_own_shared_world_alerts_v1($1, $2)', [world, muted])).outcome;
 };
-const fieldOf = async (uid, world) => { await as(uid); return rows('SELECT * FROM public.list_own_shared_semantic_field_v1($1)', [world]); };
+// RE-ANCHORED by S8A-04 CP2 (2026-10-24): migration 0175 revokes the bare v1 field read from members and serves the field
+// through list_own_shared_semantic_field_v2 (the composed meaning). The refusal proven here is the same on either read.
+const fieldOf = async (uid, world) => {
+  await as(uid);
+  const v2 = (await one1("SELECT to_regprocedure('public.list_own_shared_semantic_field_v2(uuid, text)') IS NOT NULL AS v2")).v2;
+  return rows(v2 ? 'SELECT * FROM public.list_own_shared_semantic_field_v2($1, NULL)' : 'SELECT * FROM public.list_own_shared_semantic_field_v1($1)', [world]);
+};
 const closedMembersOf = async (uid) => { await as(uid); return rows('SELECT * FROM public.list_own_closed_shared_world_members_v1()'); };
 const closedMaterialOf = async (uid, world) => {
   await as(uid);

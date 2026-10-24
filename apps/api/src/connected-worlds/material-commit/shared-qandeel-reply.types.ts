@@ -9,6 +9,12 @@
 // reviewed collector of Personal Standing Context exists, and neither does a Source Disclosure detector or a private
 // source-state resolver (CW2-02 §58 defers them). So no Personal context can enter a Shared model call, and the two
 // dependency contracts are bound to fail-closed implementations that are never reached with zero candidates.
+//
+// S8A-04 CP2 (Shared Social Memory Controlled Amendment §3): the generator also receives what the World already knows — the
+// saved positions every current recipient may see, as labelled entries with no identity in them — and chooses, within the
+// turn's existing slack, what the reply is given. It says which entries it gave; the composition maps them to places.
+
+import type { SharedKnowledgeEntry } from '../../shared-world/shared-world-knowledge';
 
 /** One Shared material as the REQUESTING member's Product read returns it (migration 0139). */
 export interface SharedConversationMaterial {
@@ -47,10 +53,18 @@ export interface SharedReplyGenerationInput {
   readonly conversation: ReadonlyArray<SharedReplyGenerationTurn>;
   /** The account the provider spend is attributed to (AI-COST-01): the human whose request started the generation. */
   readonly requesterUserId: string;
+  /**
+   * S8A-04 CP2 (AI-COST-01 as narrowed, §5): the World and the HUMAN_TEXT message the spend is correlated with. The begin
+   * command verifies the requester wrote it; these identities only correlate spend and never reach a provider.
+   */
+  readonly source?: { readonly worldId: string; readonly materialId: string };
+  /** S8A-04 CP2: the World's knowledge (K1…Kn, commit order), labelled with this request's labels. Empty: none. */
+  readonly knowledge?: ReadonlyArray<SharedKnowledgeEntry>;
 }
 
 export type SharedReplyGeneration =
-  | { readonly state: 'GENERATED'; readonly text: string }
+  /** `knowledgeRefs`: the knowledge entries the reply was given (S8A-04 CP2), possibly none. */
+  | { readonly state: 'GENERATED'; readonly text: string; readonly knowledgeRefs?: ReadonlyArray<string> }
   | { readonly state: 'UNAVAILABLE' };
 
 /** The words of one QANDEEL reply. Implemented by the Shared World Product boundary over the Model Router. */
@@ -79,5 +93,6 @@ export const SHARED_QANDEEL_REPLY_REFUSALS = [
 export type SharedQandeelReplyRefusal = (typeof SHARED_QANDEEL_REPLY_REFUSALS)[number];
 
 export type SharedQandeelReplyOutcome =
-  | { readonly state: 'COMMITTED'; readonly materialId: string }
+  /** `recalledPlaceIds` (S8A-04 CP2): the saved positions the reply was given; the reading after it receives them. */
+  | { readonly state: 'COMMITTED'; readonly materialId: string; readonly recalledPlaceIds?: ReadonlyArray<string> }
   | { readonly state: 'UNAVAILABLE'; readonly reason: SharedQandeelReplyRefusal };

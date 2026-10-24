@@ -1,6 +1,10 @@
 // SHARED-VIS-01 — one Shared semantic pass, composed over the REAL frozen I-03 chain: the real EffectiveContext, the real
 // Source Disclosure Gate, the real I-03F revalidator, the real readiness boundary and the real commit binder. Only the
 // service-role resolvers, the server channel, the interpreter and the placer are doubles.
+//
+// S8A-04 CP2 (2026-10-24, re-anchored): the pass reads the attributed context (0175 v2), writes through the atomic V2
+// command, and places through ONE placement call whose anchors the server's geometry turns into a point. The fixtures carry
+// the V2 attribution; the CP1 assertions stand, except where CP2 narrows them (each says so).
 import type { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
 import {
   FakeSharedSemanticInterpreter, UnconfiguredSharedSemanticInterpreter, type SharedSemanticInput, type SharedSemanticInterpreter,
@@ -33,7 +37,14 @@ const OLD_PLACE = '50000000-0000-4000-8000-000000000002';
 const LEASE = '60000000-0000-4000-8000-000000000001';
 
 const place = (overrides: Record<string, unknown> = {}) => ({
-  meaning: 'Moving keeps being postponed', primaryThemes: ['home'], secondaryThemes: ['trust'], sourceRefs: [1, 2], lensKey: 'home', ...overrides,
+  meaning: 'Moving keeps being postponed', primaryThemes: ['home'], secondaryThemes: ['trust'], sourceRefs: [1, 2], lensKey: 'home',
+  nature: 'VIEW', holders: ['S1', 'S2'], relayedBy: [], about: [], hedged: false, ...overrides,
+});
+/** S8A-04 CP2: one saved position as the attributed context (0175 `read_shared_semantic_context_v2`) returns it. */
+const saved = (material_id: string, overrides: Record<string, unknown> = {}) => ({
+  material_id, meaning: 'Visible to all', nature: 'VIEW', absent_holder_label: null, hedged: false, standing: 'CURRENT',
+  people: [{ role: 'HOLDER', user: AMAL, name: 'Amal' }], earlier_place_id: null, later_place_id: null, source_material_ids: [M1],
+  primary_themes: ['home'], semantic_region: 'home', world_x: '0', world_y: '0', committed_at: '2026-10-08T10:05:00Z', ...overrides,
 });
 
 const members = [{ userId: AMAL, membershipEpisodeId: '70000000-0000-4000-8000-000000000001' }, { userId: BASSEM, membershipEpisodeId: '70000000-0000-4000-8000-000000000002' }];
@@ -74,7 +85,7 @@ function harness(options: {
       if (name === 'begin_shared_semantic_work_v1') return [options.begin ?? { work_outcome: 'GRANTED', work_lease_id: LEASE }];
       if (name === 'end_shared_semantic_work_v1') return true;
       if (name === 'resolve_shared_world_material_v1') return visibility[body.p_user_id as string] ?? [];
-      if (name === 'read_shared_semantic_context_v1') return options.existing ?? [];
+      if (name === 'read_shared_semantic_context_v2') return options.existing ?? [];
       return [options.commit ? options.commit(body) : { outcome: 'MATERIAL_COMMITTED', material_id: PLACE, established_at: '2026-10-08T10:06:00Z' }];
     },
   } as unknown as SupabaseServiceRoleApiService;
@@ -100,19 +111,22 @@ describe('SHARED-VIS-01 — one semantic pass over the frozen I-03 chain', () =>
     expect(reads[0].contributions.map((c) => c.text)).toEqual(['words 1', 'words 4']);
     expect(JSON.stringify(reads[0])).not.toMatch(new RegExp(`${AMAL}|${BASSEM}|${M1}|${M2}|${WORLD}`, 'u'));
     expect(reads[0].contributions.map((c) => c.from)).toEqual(['S1', 'S2']);
-    const commit = rpcs.find((call) => call.name === 'complete_shared_semantic_place_v1');
+    const commit = rpcs.find((call) => call.name === 'complete_shared_semantic_place_v2');
     expect(commit?.body).toMatchObject({ p_lease_id: LEASE, p_pass_command_id: COMMAND, p_place_ordinal: 1, p_world_id: WORLD, p_material_source_ids: [M1, M2] });
     expect(String(commit?.body.p_world_x)).toMatch(/^-?\d+$/u);
     expect(rpcs.at(-1)).toEqual({ name: 'end_shared_semantic_work_v1', body: { p_pass_command_id: COMMAND, p_lease_id: LEASE, p_completed: true } });
   });
 
   it('shows the reader only existing meanings read entirely from what everyone may see now', async () => {
+    // S8A-04 CP2 (re-anchored): the existing meaning carries its ref and attribution in this reading's tokens.
     const { service, reads } = harness({ existing: [
-      { material_id: OLD_PLACE, meaning: 'Visible to all', source_material_ids: [M1] },
-      { material_id: PLACE, meaning: 'Rests on hidden words', source_material_ids: [M1, M_HIDDEN] },
+      saved(OLD_PLACE),
+      saved(PLACE, { meaning: 'Rests on hidden words', source_material_ids: [M1, M_HIDDEN] }),
     ] });
     await service.weave(REQUEST);
-    expect(reads[0].existing).toEqual([{ meaning: 'Visible to all', sourceRefs: [1] }]);
+    expect(reads[0].existing).toEqual([{
+      ref: 'E1', meaning: 'Visible to all', nature: 'VIEW', holders: ['S1'], absentHolder: null, relayedBy: [], about: [], hedged: false, sourceRefs: [1],
+    }]);
   });
 
   it('a busy, done or limited World starts nothing; a refusal commits nothing and records no completed pass', async () => {
@@ -124,7 +138,7 @@ describe('SHARED-VIS-01 — one semantic pass over the frozen I-03 chain', () =>
     const invented: SharedSemanticInterpreter = { read: async () => ({ places: [place({ sourceRefs: [9] })] }) };
     const malformed = harness({ interpreter: invented });
     expect(await malformed.service.weave(REQUEST)).toEqual({ state: 'REFUSED', reason: 'READING_UNAVAILABLE' });
-    expect(malformed.rpcs.some((call) => call.name === 'complete_shared_semantic_place_v1')).toBe(false);
+    expect(malformed.rpcs.some((call) => call.name === 'complete_shared_semantic_place_v2')).toBe(false);
     expect(malformed.rpcs.at(-1)?.body.p_completed).toBe(false);
     const stale = harness({ commit: () => ({ outcome: 'STALE', material_id: null, established_at: null }) });
     expect(await stale.service.weave(REQUEST)).toEqual({ state: 'REFUSED', reason: 'COMMIT_STALE' });
@@ -183,7 +197,8 @@ describe('S8A-04 CP1 — the reading knows who wrote each contribution, from the
     const recording: SharedSemanticInterpreter = { read: async () => { seen.push(currentAiUsageAttribution()); return { places: [] }; } };
     const { service } = harness({ visibility: everyone, interpreter: recording });
     expect(await service.weave(request)).toEqual({ state: 'WOVEN', placeIds: [] });
-    expect(seen).toEqual([{ userId: SAME_1 }]);
+    // S8A-04 CP2 (re-anchored, §5): the scope also correlates the spend with the World and the sender's message.
+    expect(seen).toEqual([{ userId: SAME_1, sourceWorldId: WORLD, sourceSharedMaterialId: M4 }]);
   });
 
   it('refuses rather than guesses: a sender who is not the author, a disputed or missing author, reads nothing', async () => {
@@ -197,16 +212,131 @@ describe('S8A-04 CP1 — the reading knows who wrote each contribution, from the
       const { service, reads, rpcs } = harness({ visibility: visibility as Record<string, unknown[]> });
       expect(await service.weave(given)).toEqual({ state: 'REFUSED', reason });
       expect(reads).toEqual([]);
-      expect(rpcs.some((call) => call.name === 'complete_shared_semantic_place_v1')).toBe(false);
+      expect(rpcs.some((call) => call.name === 'complete_shared_semantic_place_v2')).toBe(false);
     }
   });
 
   it('a meaning may name a person; a meaning that carries a speaker token of the reading is refused whole', async () => {
-    const naming: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'محمد (2) ضد السفر ومحمد (1) متمسك به', sourceRefs: [1, 2, 4] })] }) };
+    // S8A-04 CP2 (re-anchored, M1): a meaning names a person by Name; a numbered label this reading sent («محمد (2)») is
+    // request-local and is now refused whole, like a token.
+    const naming: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'محمد ضد السفر ومحمد التاني متمسك به', sourceRefs: [1, 2, 4], holders: ['S1', 'S2'] })] }) };
     expect((await harness({ visibility: everyone, interpreter: naming }).service.weave(request)).state).toBe('WOVEN');
-    const leaking: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'S2 ضد السفر', sourceRefs: [2] })] }) };
+    const labelled: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'محمد (2) ضد السفر', sourceRefs: [2], holders: ['S2'] })] }) };
+    expect(await harness({ visibility: everyone, interpreter: labelled }).service.weave(request)).toEqual({ state: 'REFUSED', reason: 'READING_UNAVAILABLE' });
+    const leaking: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'S2 ضد السفر', sourceRefs: [2], holders: ['S2'] })] }) };
     const refused = harness({ visibility: everyone, interpreter: leaking });
     expect(await refused.service.weave(request)).toEqual({ state: 'REFUSED', reason: 'READING_UNAVAILABLE' });
-    expect(refused.rpcs.some((call) => call.name === 'complete_shared_semantic_place_v1')).toBe(false);
+    expect(refused.rpcs.some((call) => call.name === 'complete_shared_semantic_place_v2')).toBe(false);
+  });
+});
+
+
+describe('S8A-04 CP2 — the saved position: whose it is, written whole, placed by its anchors', () => {
+  const MONA = AMAL;
+  const MORAD = BASSEM;
+  const AHMED = '20000000-0000-4000-8000-000000000003';
+  const commitOf = (rpcs: { name: string; body: Record<string, unknown> }[]) => rpcs.filter((call) => call.name === 'complete_shared_semantic_place_v2');
+
+  it('maps every token to the identity the server derived it from: a direct view, and N3 (an absent holder, relayed)', async () => {
+    const reading: SharedSemanticInterpreter = { read: async () => ({ places: [
+      place({ meaning: 'السفر مناسب', sourceRefs: [1], holders: ['S1'] }),
+      place({ meaning: 'مش موافقة على السفر', sourceRefs: [2], holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'], lensKey: 'family' }),
+    ] }) };
+    const { service, rpcs } = harness({ interpreter: reading });
+    expect((await service.weave(REQUEST)).state).toBe('WOVEN');
+    const [direct, relayed] = commitOf(rpcs).map((call) => call.body);
+    expect(direct).toMatchObject({ p_nature: 'VIEW', p_holder_user_ids: [MONA], p_absent_holder_label: null, p_relayer_user_ids: [], p_revises_place_id: null });
+    // The numbered labels this reading sent go to the write, which refuses a meaning that carries one.
+    expect(direct.p_reading_labels).toEqual(['A participant (1)', 'A participant (2)']);
+    expect(relayed).toMatchObject({ p_holder_user_ids: [], p_absent_holder_label: 'والدة مراد', p_relayer_user_ids: [MORAD], p_material_source_ids: [M2] });
+    for (const body of [direct, relayed]) expect(JSON.stringify(body)).not.toMatch(/"S\d+"/u);
+  });
+
+  it('refuses the whole reading on any attribution rule, and writes nothing', async () => {
+    for (const broken of [
+      place({ holders: [], relayedBy: [] }),
+      place({ holders: [], absentHolder: 'والدة مراد', relayedBy: [] }),
+      place({ holders: ['S1'], relayedBy: ['S1'], sourceRefs: [1] }),
+      place({ holders: ['S2'], sourceRefs: [1] }),
+      place({ holders: ['S1'], relayedBy: ['S2'], sourceRefs: [1] }),
+      place({ holders: ['S9'] }),
+      place({ nature: 'FACT' }),
+      place({ revises: 'E1' }),
+    ]) {
+      const { service, rpcs } = harness({ interpreter: { read: async () => ({ places: [broken] }) } });
+      expect(await service.weave(REQUEST)).toEqual({ state: 'REFUSED', reason: 'READING_UNAVAILABLE' });
+      expect(commitOf(rpcs)).toEqual([]);
+      expect(rpcs.some((call) => call.name === 'placeholder')).toBe(false);
+    }
+  });
+
+  it('a revision names its existing ref, and the write receives the earlier place it revises', async () => {
+    const reading: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'Moving is settled now', sourceRefs: [1], holders: ['S1'], revises: 'E1' })] }) };
+    const { service, rpcs } = harness({ interpreter: reading, existing: [saved(OLD_PLACE)] });
+    expect((await service.weave(REQUEST)).state).toBe('WOVEN');
+    expect(commitOf(rpcs)[0].body.p_revises_place_id).toBe(OLD_PLACE);
+  });
+
+  it('the members an existing meaning names get tokens of their own; its sources are this reading’s refs', async () => {
+    const older = '40000000-0000-4000-8000-0000000000a1';
+    const visibility = {
+      [AMAL]: [{ ...row(older, 'HUMAN_TEXT', 0), author_user_id: AMAL }, row(M1, 'HUMAN_TEXT', 1), row(M2, 'HUMAN_TEXT', 4), row(OLD_PLACE, 'QANDEEL_ANALYSIS', 5)],
+      [BASSEM]: [{ ...row(older, 'HUMAN_TEXT', 0), author_user_id: AMAL }, row(M1, 'HUMAN_TEXT', 1), row(M2, 'HUMAN_TEXT', 4), row(OLD_PLACE, 'QANDEEL_ANALYSIS', 5)],
+    };
+    const existing = [saved(OLD_PLACE, { people: [{ role: 'HOLDER', user: AMAL, name: 'Amal' }, { role: 'ABOUT', user: AHMED, name: 'أحمد' }], source_material_ids: [older] })];
+    const { service, reads } = harness({ visibility, existing });
+    await service.weave(REQUEST);
+    expect(reads[0].writers).toEqual([{ speaker: 'S1', name: 'A participant (1)' }, { speaker: 'S2', name: 'A participant (2)' }, { speaker: 'S3', name: 'أحمد' }]);
+    expect(reads[0].existing).toEqual([{ ref: 'E1', meaning: 'Visible to all', nature: 'VIEW', holders: ['S1'], absentHolder: null, relayedBy: [], about: ['S3'], hedged: false, sourceRefs: [1] }]);
+  });
+
+  it('the positions the reply was given come first, and only CURRENT ones with no successor are shown', async () => {
+    const A = '50000000-0000-4000-8000-0000000000a1';
+    const B = '50000000-0000-4000-8000-0000000000a2';
+    const C = '50000000-0000-4000-8000-0000000000a3';
+    const visibility = Object.fromEntries([AMAL, BASSEM].map((user) => [user, [row(M1, 'HUMAN_TEXT', 1), row(M2, 'HUMAN_TEXT', 4),
+      ...[A, B, C].map((id) => ({ world_id: WORLD, material_id: id, material_kind: 'QANDEEL_ANALYSIS', established_at: '2026-10-08T10:05:00Z', text_body: 'x', author_user_id: null }))]]));
+    const existing = [
+      saved(A, { meaning: 'Superseded', standing: 'SUPERSEDED', later_place_id: B, people: [{ role: 'HOLDER', user: BASSEM, name: 'B' }] }),
+      saved(B, { meaning: 'Current', earlier_place_id: A, people: [{ role: 'HOLDER', user: BASSEM, name: 'B' }] }),
+      saved(C, { meaning: 'Recalled, about nobody here', people: [{ role: 'HOLDER', user: AHMED, name: 'أحمد' }], source_material_ids: [] }),
+    ];
+    const { service, reads } = harness({ visibility, existing });
+    await service.weave({ ...REQUEST, recalledPlaceIds: [C] });
+    expect(reads[0].existing.map((meaning) => meaning.meaning)).toEqual(['Current', 'Recalled, about nobody here']);
+  });
+
+  it('places the pass in ONE call, by meaning anchors; the server derives the points; a refused placement writes nothing', async () => {
+    const seen: unknown[] = [];
+    const placements: unknown[] = [];
+    const reading: SharedSemanticInterpreter = { read: async () => ({ places: [
+      place({ meaning: 'ب — second by meaning', sourceRefs: [1], holders: ['S1'], lensKey: 'plans' }),
+      place({ meaning: 'أ — first by meaning', sourceRefs: [2], holders: ['S2'], lensKey: 'plans' }),
+    ] }) };
+    const placer: SharedSpatialPlacer = { place: async (input) => {
+      placements.push(input);
+      seen.push(currentAiUsageAttribution());
+      return { placements: [{ new: 'N1', anchors: [{ to: 'R:plans', closeness: 2 }] }, { new: 'N2', anchors: [{ to: 'N1', closeness: 1 }] }] };
+    } };
+    const { service, rpcs } = harness({ interpreter: reading, placer, existing: [saved(OLD_PLACE, { world_x: '5', world_y: '5' })] });
+    expect((await service.weave(REQUEST)).state).toBe('WOVEN');
+    expect(placements).toHaveLength(1);
+    expect((placements[0] as { new: { ref: string; meaning: string }[] }).new.map((entry) => [entry.ref, entry.meaning]))
+      .toEqual([['N1', 'أ — first by meaning'], ['N2', 'ب — second by meaning']]);
+    expect(JSON.stringify(placements[0])).not.toMatch(new RegExp(`${AMAL}|${BASSEM}|${OLD_PLACE}|${WORLD}`, 'u'));
+    expect(seen).toEqual([{ userId: BASSEM, sourceWorldId: WORLD, sourceSharedMaterialId: M2 }]);
+    const points = commitOf(rpcs).map((call) => [call.body.p_meaning, call.body.p_world_x, call.body.p_world_y]);
+    // «أ» founds the new region at the first ring point; «ب» lies at closeness 1 from it (r(1) = 4U, angle 0).
+    expect(points).toEqual([['ب — second by meaning', String(64n * 2n ** 20n + 4n * 2n ** 20n), '0'], ['أ — first by meaning', String(64n * 2n ** 20n), '0']]);
+    const refusing: SharedSpatialPlacer = { place: async () => ({ placements: [{ new: 'N1', anchors: [{ to: 'N1', closeness: 1 }] }] }) };
+    const refused = harness({ interpreter: reading, placer: refusing });
+    expect(await refused.service.weave(REQUEST)).toEqual({ state: 'REFUSED', reason: 'PLACEMENT_UNAVAILABLE' });
+    expect(commitOf(refused.rpcs)).toEqual([]);
+  });
+
+  it('the database refusing an attribution refuses the place, and the pass is not recorded as completed', async () => {
+    const { service, rpcs } = harness({ commit: () => ({ outcome: 'ATTRIBUTION_REFUSED', material_id: null, established_at: null }) });
+    expect(await service.weave(REQUEST)).toEqual({ state: 'REFUSED', reason: 'ATTRIBUTION_REFUSED' });
+    expect(rpcs.at(-1)?.body.p_completed).toBe(false);
   });
 });

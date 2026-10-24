@@ -40,6 +40,9 @@ export interface AiProviderCallBeginRecord {
   readonly operation: AiProviderOperation;
   readonly featureFamily: AiFeatureFamily;
   readonly processingPath: AiProcessingPath | null;
+  /** S8A-04 CP2 (0175): the Shared World and its causing message, both or neither; never with a session or turn. */
+  readonly sourceWorldId?: string;
+  readonly sourceSharedMaterialId?: string;
 }
 
 export interface AiProviderCallSettleRecord {
@@ -108,7 +111,9 @@ export class AiProviderCallAccounting {
       this.signal('begin', 'failure');
       throw new AiProviderCallAccountingUnavailableError();
     }
-    const correlation = safely(this.correlation);
+    // Shared World work carries its own correlation; a Personal request correlation never fills it (0175 CHECK).
+    const shared = attribution.sourceWorldId !== undefined;
+    const correlation = shared ? undefined : safely(this.correlation);
     const callId = this.newCallId();
     try {
       await this.ledger.begin({
@@ -121,6 +126,7 @@ export class AiProviderCallAccounting {
         operation: AI_PROVIDER_OPERATION[descriptor.provider],
         featureFamily: descriptor.featureFamily,
         processingPath: attribution.processingPath ?? null,
+        ...(shared ? { sourceWorldId: attribution.sourceWorldId, sourceSharedMaterialId: attribution.sourceSharedMaterialId } : {}),
       });
     } catch {
       this.signal('begin', 'failure');

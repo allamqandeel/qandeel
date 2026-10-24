@@ -86,7 +86,9 @@ test('3 — QANDEEL\'s reply is the server\'s act over the frozen chain: one com
 test('4 — no Personal intelligence enters a Shared model call; the provider is reached only through the Model Router, attributed', () => {
   // S8A-02 CP2 (CA-S3): the Shared attribution layer and its two modules are part of the Shared model input, under the same rules.
   const files = [`${API}/shared-conversation-model-input.ts`, `${API}/shared-conversation-reply.generator.ts`, `${API}/shared-world-conversation.service.ts`, `${CW}/shared-qandeel-reply.service.ts`,
-    `${API}/shared-attribution-layer.ts`, `${API}/shared-attribution-notes.ts`, `${API}/shared-attribution-reading.ts`];
+    `${API}/shared-attribution-layer.ts`, `${API}/shared-attribution-notes.ts`, `${API}/shared-attribution-reading.ts`,
+    // S8A-04 CP2 (2026-10-24, re-anchored): the World's knowledge and its recall are part of the Shared model input too.
+    `${API}/shared-world-knowledge.ts`, `${API}/shared-knowledge-recall.ts`, `${API}/deepseek-shared-knowledge-recall.ts`];
   for (const file of files) {
     const text = code(file);
     assert.doesNotMatch(text, /from '\.\.\/(?:\.\.\/)?(?:memory|human-model|hypothesis|recommendation|question|background-intelligence|post-response-intelligence)\//u, `${file} reads no Personal intelligence`);
@@ -97,7 +99,16 @@ test('4 — no Personal intelligence enters a Shared model call; the provider is
   const generator = code(`${API}/shared-conversation-reply.generator.ts`);
   assert.match(generator, /@Inject\(MODEL_ROUTER\)/u);
   // S8A-02 CP2 (CA-S3): the attribution reading and the reply are both made inside the ONE requester-attributed scope.
-  assert.match(generator, /runWithAiUsageAttribution\(\{ userId: input\.requesterUserId \}, async \(\) => \{\s*const reply = \(await withSharedAttribution\(input\.conversation, request, this\.reader\)\)\.request;\s*return this\.router\.generate\(reply\);\s*\}\)/u, 'every provider call is attributed (AI-COST-01)');
+  // S8A-04 CP2 (2026-10-24, re-anchored): the same ONE scope, correlated with the World and its message (AI-COST-01 as
+  // narrowed, amendment §5), now also holds the knowledge recall; the reply sends `budgeted` (the request with M3 appended).
+  assert.match(generator, /const attribution = input\.source === undefined\s*\? \{ userId: input\.requesterUserId \}\s*: \{ userId: input\.requesterUserId, sourceWorldId: input\.source\.worldId, sourceSharedMaterialId: input\.source\.materialId \};/u, 'the scope is the requester');
+  const scope = generator.slice(generator.indexOf('runWithAiUsageAttribution(attribution, async () => {'));
+  assert.ok(generator.split('runWithAiUsageAttribution(').length === 2 && scope.length < generator.length, 'one attributed scope');
+  const inside = scope.slice(0, scope.indexOf('\n      });'));
+  for (const call of ['chooseSharedKnowledge(', 'withSharedAttribution(input.conversation, request, this.reader)', 'this.router.generate(budgeted)']) {
+    assert.ok(inside.includes(call), `every provider call is attributed (AI-COST-01): ${call}`);
+  }
+  assert.equal(generator.split('chooseSharedKnowledge(').length - 1, 2, 'recall is chosen once, inside the attributed scope (plus its definition)');
   assert.equal(generator.split('withSharedAttribution(').length - 1, 1, 'the attribution layer is reached once, only inside the attributed scope');
   assert.equal(generator.split('this.router.generate(').length - 1, 1, 'one reply call');
   const reading = code(`${API}/shared-attribution-reading.ts`);
