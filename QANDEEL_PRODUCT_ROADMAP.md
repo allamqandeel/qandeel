@@ -971,6 +971,8 @@ stay as written.
     failure (a relayed statement read as fact, 3 / 3), presented to the Product Owner;
   - the Product Owner's CP1 review (amendment §9): one approved §5.2 sentence (source fidelity), applied in `22e14f6c`; its one
     test round (14 calls; 38 of 64 in all, USD 0.0101 at peak) fixed S3 (3 / 3) and the repeated rumour (2 / 2) but not an
-    absent person's relayed view (0 / 2), so it STOPPED with a diagnosis, no second change; the per-reading label number is
-    a reading aid, and tying saved knowledge to the trusted identity and sources is a binding CP2 precondition (§9.2);
+    absent person's relayed view (0 / 2), so it STOPPED with a diagnosis, no second change; N3 is a known CP1 limit, not an
+    accepted product error; with the per-reading label number (a reading aid) it is a CP2 acceptance condition before
+    production persistence: saved knowledge tied to the speaker, the relayer and the trusted sources, report kept apart from
+    confirmed fact (§9.2, §9.4);
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open). CP2 has not started.

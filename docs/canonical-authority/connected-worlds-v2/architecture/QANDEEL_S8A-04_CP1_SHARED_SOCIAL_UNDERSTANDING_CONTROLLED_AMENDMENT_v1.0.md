@@ -285,3 +285,30 @@ when a rumour is repeated and agreed on (N2). It did not hold when the relayed t
 view it is and drops who relayed it and how sure that is. The remaining cost is a source-fidelity loss of the relay layer,
 not a confusion of who is who. Per the Product Owner's instruction no second change was made and the remaining 26 attempts
 were not used.
+
+**What the CP1 runs prove, and what they do not (Product Owner D3 of the final review, 2026-10-24).** Over all 32 CP1
+(arm B) readings — 6 in stage 1, 12 in stage 2, 14 in the round above:
+- **two people who share a name were never merged**: the S1 readings, 4 / 4. That is a narrow claim about same-name
+  people, not a claim of perfect identity handling;
+- **identity confusion of other kinds: 1 / 32** (N1, round above: Maha's welcome and offer of help also given to Laila —
+  two different names, one action given to both);
+- **misattribution of sources: 4 / 32** (stage 2: one S2 reading cites Hala for a meaning she did not say; the round above:
+  both N1 readings cite Maha's question for a meaning it does not say, and the English S3 reading cites Omar's follow-up for
+  a meaning that does not express it);
+- **token leak: 0 / 32**.
+The comparison arm (words only, stage 1) had identity confusion in 2 / 6 and misattribution in 3 / 6.
+
+## 9.4 N3 — a known CP1 limit, carried into the CP2 acceptance conditions (Product Owner, 2026-10-24)
+
+N3 (an absent person's view relayed by a participant, read as that person's view with the relay dropped) is recorded as a
+**known limit of CP1, not as an accepted error of the final product.** No second prompt change and no further DeepSeek run
+are made in CP1. It is carried, with §9.2, into **CP2's acceptance conditions, which must hold before production
+persistence is enabled**:
+1. every saved place or piece of knowledge is tied to the trusted identity of the person who said it (the existing S8A-02 /
+   0089 provenance), never to a speaker token or a per-reading label number;
+2. when knowledge is relayed, it keeps both the person it is about or who holds the view AND the participant who relayed
+   it, with the trusted source materials of its messages;
+3. a relayed report stays distinguishable from a confirmed fact (first-hand confirmation in the conversation) in what is
+   saved;
+4. CP2 proves 1–3 with its own tests and its own real-model evidence before persistence is switched on.
+No new linguistic rule engine is built for this, and S8A-02's identity is reused, not reimplemented.
