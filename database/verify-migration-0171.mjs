@@ -220,7 +220,9 @@ async function verifyCatalog() {
   assert.match(await constraintDef('public.post_response_intelligence_effects', 'post_response_intelligence_effects_effect_key_check'), /'UNDERSTANDING_CAPTURE_PROVIDER'::text/u);
   assert.equal((await constraintDef('public.post_response_intelligence_effects', 'post_response_intelligence_effects_effect_key_check')).match(/'[A-Z_]+'::text/gu).length, 9);
   assert.match(await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check'), /'PERSONAL_UNDERSTANDING_CAPTURE'::text/u);
-  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 9);
+  // RE-ANCHORED by S8A-04 CP1 (2026-10-24, Product Owner D3): migration 0174 adds SHARED_SEMANTIC_READING after this one
+  // value, so a database migrated through the current tree holds ten families (0174's own verifier pins the full list).
+  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 10);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_basis_check'), /'MODEL_ASSISTED_CAPTURE'::text/u);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_capture_self_check'), /MODEL_ASSISTED_CAPTURE.*OR \(subject = 'SELF'::text\)/u);
 }

@@ -4,9 +4,10 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import type { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SharedSemanticFieldService } from './shared-semantic-field.service';
 import {
-  FakeSharedSemanticInterpreter, SHARED_SEMANTIC_INTERPRETATION_CONTRACT, UnconfiguredSharedSemanticInterpreter, createConfiguredSharedSemanticInterpreter,
+  FakeSharedSemanticInterpreter, SHARED_SEMANTIC_INTERPRETATION_CONTRACT, UnconfiguredSharedSemanticInterpreter,
   decodeSharedSemanticReading, type SharedSemanticInput, type SharedSemanticInterpreter,
 } from './shared-semantic-interpreter';
+import { createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter-provider';
 import {
   FakeSharedSpatialPlacer, SHARED_SPATIAL_PLACEMENT_CONTRACT, UnconfiguredSharedSpatialPlacer, createConfiguredSharedSpatialPlacer, decodeSharedSpatialPlacement,
   type SharedSpatialPlacer,
@@ -29,7 +30,8 @@ const LEASE = '60000000-0000-4000-8000-000000000001';
 
 const input = (texts: string[], existing: SharedSemanticInput['existing'] = []): SharedSemanticInput => ({
   contract: SHARED_SEMANTIC_INTERPRETATION_CONTRACT,
-  contributions: texts.map((text, index) => ({ ref: index + 1, text })),
+  writers: [{ speaker: 'S1', name: 'Amal' }],
+  contributions: texts.map((text, index) => ({ ref: index + 1, from: 'S1', text })),
   existing,
 });
 const place = (overrides: Record<string, unknown> = {}) => ({
@@ -56,6 +58,16 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     ]) expect(decodeSharedSemanticReading(malformed, given)).toBeNull();
   });
 
+  it('S8A-04 CP1: a meaning may name a person, never carry a speaker token of its reading (meaning or theme)', () => {
+    const given: SharedSemanticInput = { ...input(['a', 'b']), writers: [{ speaker: 'S1', name: 'منى' }, { speaker: 'S2', name: 'أحمد' }],
+      contributions: [{ ref: 1, from: 'S1', text: 'a' }, { ref: 2, from: 'S2', text: 'b' }] };
+    expect(decodeSharedSemanticReading({ places: [place({ meaning: 'منى ترى أن أحمد يتأخر، وأحمد يعترض' })] }, given)?.places).toHaveLength(1);
+    expect(decodeSharedSemanticReading({ places: [place({ meaning: 'Galaxy S10 or S3?' })] }, given)?.places).toHaveLength(1);
+    for (const leaking of [place({ meaning: 'S1 ترى أن S2 يتأخر' }), place({ meaning: '(S2) يعترض' }), place({ primaryThemes: ['S1'] })]) {
+      expect(decodeSharedSemanticReading({ places: [leaking] }, given)).toBeNull();
+    }
+  });
+
   it('the test interpreter is deterministic, copies no text, and reads only what no existing meaning reads', async () => {
     const fake = new FakeSharedSemanticInterpreter();
     const given = input(['we keep postponing', 'it becomes a fight', 'let us pick a time']);
@@ -68,11 +80,13 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     expect(await fake.read(input(['a', 'b', 'c'], [{ meaning: 'read', sourceRefs: [1, 2] }]))).toEqual({ places: [] });
   });
 
-  it('refuses in production until Stage 8A binds a provider', async () => {
+  it('S8A-04 CP1: binds DeepSeek behind the SYNTHETIC_ONLY gate (a production process refuses every reading); the placer still refuses', async () => {
     expect(createConfiguredSharedSemanticInterpreter({ NODE_ENV: 'test' })).toBeInstanceOf(FakeSharedSemanticInterpreter);
-    const production = createConfiguredSharedSemanticInterpreter({ NODE_ENV: 'production' });
-    expect(production).toBeInstanceOf(UnconfiguredSharedSemanticInterpreter);
-    await expect(production.read(input(['a', 'b']), new AbortController().signal)).rejects.toThrow('unavailable');
+    const production = createConfiguredSharedSemanticInterpreter({ NODE_ENV: 'production', DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'sk-test' });
+    await expect(production.read(input(['a', 'b']), new AbortController().signal)).rejects.toThrow('cannot be selected in production');
+    const undeclared = createConfiguredSharedSemanticInterpreter({ NODE_ENV: 'development', DEEPSEEK_API_KEY: 'sk-test' });
+    await expect(undeclared.read(input(['a', 'b']), new AbortController().signal)).rejects.toThrow('SYNTHETIC_ONLY');
+    await expect(new UnconfiguredSharedSemanticInterpreter().read()).rejects.toThrow('unavailable');
     expect(createConfiguredSharedSpatialPlacer({ NODE_ENV: 'production' })).toBeInstanceOf(UnconfiguredSharedSpatialPlacer);
   });
 });

@@ -9,7 +9,9 @@
 //   2  what EVERY recipient may see       the frozen 0089 resolver for each human of that audience, intersected (CW2-02
 //                                         §15): hidden, deleted and partially visible material never reaches the reader;
 //                                         only HUMAN_TEXT is an eligible source (QANDEEL's own output is UNRESOLVED, 0119)
-//   3  the reading                        the provider-neutral Shared interpreter (refuses until Stage 8A)
+//   3  the reading                        the provider-neutral Shared interpreter (S8A-04 CP1: DeepSeek Flash), told who
+//                                         wrote each contribution by request-local speaker tokens from the author the
+//                                         frozen resolver holds, inside the AI-COST-01 scope of the verified sender
 //   4  the place                          the provider-neutral Shared placer (refuses until Stage 8A)
 //   5  delivery readiness (I-03G → I-03F) the Source Disclosure Gate, then authority / audience revalidation, per meaning
 //   6  the commit binding (I-04G FIX-B)   QANDEEL_ANALYSIS with the exact source identities
@@ -17,8 +19,8 @@
 //                                         re-derives the audience and approvers and refuses stale evidence on its own
 //
 // A refusal at any step commits nothing and fabricates nothing; the human's message and QANDEEL's reply are already
-// committed and stay. While no provider is bound (production today), the pass returns before step 0: no lease, no read,
-// no spend. No content, provider output or private context is logged, persisted or returned outside the canonical body.
+// committed and stay. While the placer has no provider (production until S8A-04 CP2), the pass returns before step 0: no
+// lease, no read, no spend. No content, provider output or private context is logged, persisted or returned outside the canonical body.
 
 import { Inject, Injectable } from '@nestjs/common';
 import { SharedHumanAudienceResolverService } from '../audience/shared-human-audience-resolver.service';
@@ -28,6 +30,8 @@ import type { SharedWorldId } from '../kernel/world.types';
 import { bindSharedQandeelMaterialCommit } from './shared-qandeel-material-commit-binding';
 import { SharedPrivacyAuthorityDeliveryReadinessService } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
 import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
+import { runWithAiUsageAttribution } from '../../ai-usage/ai-usage-attribution';
+import { sharedConversationLabels } from '../../shared-world/shared-conversation-model-input';
 import {
   SHARED_SEMANTIC_CONTRIBUTIONS_MAX, SHARED_SEMANTIC_INTERPRETATION_CONTRACT, SHARED_SEMANTIC_INTERPRETER, UnconfiguredSharedSemanticInterpreter,
   decodeSharedSemanticReading, type SharedSemanticInput, type SharedSemanticInterpreter,
@@ -51,16 +55,28 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 export type SharedSemanticPassOutcome =
   | { readonly state: 'WOVEN'; readonly placeIds: ReadonlyArray<string> }
   | { readonly state: 'NOT_RUN'; readonly reason: 'NO_PROVIDER' | 'MALFORMED_REQUEST' | 'DONE' | 'IN_PROGRESS' | 'LIMITED' | 'UNAVAILABLE' }
-  | { readonly state: 'REFUSED'; readonly reason: 'CONTEXT_NOT_READY' | 'HISTORY_UNRESOLVED' | 'READING_UNAVAILABLE' | 'PLACEMENT_UNAVAILABLE'
+  | { readonly state: 'REFUSED'; readonly reason: 'CONTEXT_NOT_READY' | 'HISTORY_UNRESOLVED' | 'SENDER_UNVERIFIED' | 'READING_UNAVAILABLE' | 'PLACEMENT_UNAVAILABLE'
     | 'DELIVERY_NOT_READY' | 'BINDING_REFUSED' | 'COMMIT_STALE' | 'COMMIT_REFUSED' };
 
 export interface SharedSemanticPassRequest {
   readonly worldId: string;
   /** The committed HUMAN_TEXT command this pass rides on (the pass identity). */
   readonly humanCommandId: string;
+  /** S8A-04 CP1: that command's material, and the authenticated member who sent it (the reading is their AI-COST-01 work). */
+  readonly humanMaterialId: string;
+  readonly requesterUserId: string;
+  /**
+   * S8A-04 CP1: the visible Names of the sender's own Product read, per material. A Name only labels an author the resolver
+   * already identified; it never decides who wrote anything.
+   */
+  readonly authorNames: ReadonlyArray<{ readonly materialId: string; readonly authorName: string | null }>;
 }
 
-interface VisibleMaterial { readonly materialId: string; readonly kind: string; readonly text: string | null; readonly establishedAt: string }
+interface VisibleMaterial {
+  readonly materialId: string; readonly kind: string; readonly text: string | null; readonly establishedAt: string;
+  /** The author identity the frozen resolver holds for this material (null: QANDEEL). It never leaves this composition. */
+  readonly author: string | null;
+}
 
 @Injectable()
 export class SharedSemanticPlaceService {
@@ -80,7 +96,8 @@ export class SharedSemanticPlaceService {
     if (this.interpreter instanceof UnconfiguredSharedSemanticInterpreter || this.placer instanceof UnconfiguredSharedSpatialPlacer) {
       return Object.freeze({ state: 'NOT_RUN', reason: 'NO_PROVIDER' } as const);
     }
-    if (![request.worldId, request.humanCommandId].every((id) => typeof id === 'string' && UUID.test(id))) {
+    if (![request.worldId, request.humanCommandId, request.humanMaterialId, request.requesterUserId].every((id) => typeof id === 'string' && UUID.test(id))
+      || !Array.isArray(request.authorNames)) {
       return Object.freeze({ state: 'NOT_RUN', reason: 'MALFORMED_REQUEST' } as const);
     }
     const worldId = request.worldId.toLowerCase() as SharedWorldId;
@@ -93,7 +110,7 @@ export class SharedSemanticPlaceService {
       const leaseId = work.work_lease_id;
       let completed = false;
       try {
-        const outcome = await this.composeUnderLease(request.humanCommandId, worldId, leaseId);
+        const outcome = await this.composeUnderLease(request, worldId, leaseId);
         completed = outcome.state === 'WOVEN';
         return outcome;
       } finally {
@@ -107,7 +124,8 @@ export class SharedSemanticPlaceService {
     }
   }
 
-  private async composeUnderLease(passCommandId: string, worldId: SharedWorldId, leaseId: string): Promise<SharedSemanticPassOutcome> {
+  private async composeUnderLease(request: SharedSemanticPassRequest, worldId: SharedWorldId, leaseId: string): Promise<SharedSemanticPassOutcome> {
+    const passCommandId = request.humanCommandId;
     // 1. The pre-model envelope. No private candidate is offered: Personal context never enters a Shared reading.
     const context = await this.effectiveContext.resolve(worldId, []);
     if (context.state !== 'READY' || context.effectiveContext.privateReasoningContexts.length !== 0) return refused('CONTEXT_NOT_READY');
@@ -116,9 +134,17 @@ export class SharedSemanticPlaceService {
     // 2. What EVERY current recipient may see, in canonical order; the eligible sources are its human text.
     const visible = await this.visibleToEveryRecipient(worldId, envelope.audienceSnapshot.humans.map((human) => human.humanId));
     if (visible === null) return refused('HISTORY_UNRESOLVED');
+    // S8A-04 CP1: a person's text has its author and QANDEEL's material none; anything else is a history no reading can trust.
+    if (visible.some((material) => (material.kind === 'HUMAN_TEXT' && material.author === null)
+      || (material.kind.startsWith('QANDEEL_') && material.author !== null))) return refused('HISTORY_UNRESOLVED');
+    // The reading is the sender's AI-COST-01 work only when the resolver itself names them the author of the message it rides on.
+    const payer = request.requesterUserId.toLowerCase();
+    const trigger = visible.find((material) => material.materialId === request.humanMaterialId.toLowerCase());
+    if (trigger === undefined || trigger.kind !== 'HUMAN_TEXT' || trigger.author !== payer) return refused('SENDER_UNVERIFIED');
     const eligible = visible.filter((material) => material.kind === 'HUMAN_TEXT' && typeof material.text === 'string' && material.text.trim().length > 0)
       .slice(-SHARED_SEMANTIC_CONTRIBUTIONS_MAX);
     if (eligible.length === 0) return woven([]);
+    const speakers = sharedSemanticSpeakers(eligible, visible, request.authorNames);
     const refOf = new Map(eligible.map((material, index) => [material.materialId, index + 1]));
     const existingRows = await this.server.rpc<unknown>(SHARED_SEMANTIC_CONTEXT_RPC, { p_lease_id: leaseId, p_world_id: worldId });
     if (!Array.isArray(existingRows)) return refused('HISTORY_UNRESOLVED');
@@ -132,12 +158,14 @@ export class SharedSemanticPlaceService {
     }
     const input: SharedSemanticInput = Object.freeze({
       contract: SHARED_SEMANTIC_INTERPRETATION_CONTRACT,
-      contributions: Object.freeze(eligible.map((material, index) => Object.freeze({ ref: index + 1, text: material.text as string }))),
+      writers: speakers.writers,
+      contributions: Object.freeze(eligible.map((material, index) => Object.freeze({ ref: index + 1, from: speakers.tokens[index], text: material.text as string }))),
       existing: Object.freeze(existing.map((meaning) => Object.freeze({ meaning: meaning.meaning, sourceRefs: Object.freeze(meaning.sourceRefs) }))),
     });
 
-    // 3. The reading.
-    const reading = decodeSharedSemanticReading(await withTimeout((signal) => this.interpreter.read(input, signal)), input);
+    // 3. The reading, charged to the verified sender.
+    const reading = decodeSharedSemanticReading(
+      await withTimeout((signal) => runWithAiUsageAttribution({ userId: payer }, () => this.interpreter.read(input, signal))), input);
     if (reading === null) return refused('READING_UNAVAILABLE');
 
     const placeIds: string[] = [];
@@ -182,7 +210,11 @@ export class SharedSemanticPlaceService {
     return woven(placeIds);
   }
 
-  /** The material every human of the audience may see, through the frozen resolver, oldest first; null when any read fails. */
+  /**
+   * The material every human of the audience may see, through the frozen resolver, oldest first, each with the author that
+   * resolver holds for it. Null when any read fails, a row carries no valid author field, or two reads disagree about one
+   * material's author.
+   */
   private async visibleToEveryRecipient(worldId: SharedWorldId, humanIds: ReadonlyArray<string>): Promise<VisibleMaterial[] | null> {
     if (humanIds.length === 0) return null;
     let intersection = null as Map<string, VisibleMaterial> | null;
@@ -193,14 +225,50 @@ export class SharedSemanticPlaceService {
       for (const row of rows) {
         if (!isRecord(row) || typeof row.material_id !== 'string' || row.world_id !== worldId || typeof row.material_kind !== 'string'
           || typeof row.established_at !== 'string') return null;
+        const author = row.author_user_id;
+        if (author !== null && (typeof author !== 'string' || !UUID.test(author))) return null;
         const id = row.material_id.toLowerCase();
-        visible.set(id, { materialId: id, kind: row.material_kind, text: typeof row.text_body === 'string' ? row.text_body : null, establishedAt: row.established_at });
+        visible.set(id, {
+          materialId: id, kind: row.material_kind, text: typeof row.text_body === 'string' ? row.text_body : null, establishedAt: row.established_at,
+          author: author === null ? null : author.toLowerCase(),
+        });
       }
-      intersection = intersection === null ? visible : new Map([...intersection.entries()].filter(([id]) => visible.has(id)));
+      const previous: Map<string, VisibleMaterial> | null = intersection;
+      if (previous !== null && [...previous].some(([id, material]) => visible.has(id) && visible.get(id)?.author !== material.author)) return null;
+      intersection = previous === null ? visible : new Map([...previous.entries()].filter(([id]) => visible.has(id)));
     }
     return [...(intersection ?? new Map<string, VisibleMaterial>()).values()]
       .sort((l, r) => (l.establishedAt < r.establishedAt ? -1 : l.establishedAt > r.establishedAt ? 1 : l.materialId < r.materialId ? -1 : 1));
   }
+}
+
+/**
+ * S8A-04 CP1 — who wrote each contribution, for this one reading. The speaker is the author the frozen resolver holds
+ * (`S1`, `S2`, … by first appearance among the contributions), never a Name or the words. Each speaker's label is the
+ * visible Name the sender's own read shows on their messages, or `A participant`, numbered by the S8A-02 reply's own
+ * rule (`sharedConversationLabels`) when different people share it. Only tokens and labels leave; no identity does.
+ */
+export function sharedSemanticSpeakers(
+  eligible: ReadonlyArray<VisibleMaterial>, visible: ReadonlyArray<VisibleMaterial>, authorNames: SharedSemanticPassRequest['authorNames'],
+): { readonly tokens: ReadonlyArray<string>; readonly writers: ReadonlyArray<{ readonly speaker: string; readonly name: string }> } {
+  const authorOf = new Map(visible.map((material) => [material.materialId, material.author]));
+  const nameOf = new Map<string, string>();
+  for (const entry of authorNames) {
+    const author = typeof entry?.materialId === 'string' ? authorOf.get(entry.materialId.toLowerCase()) : undefined;
+    if (typeof author === 'string' && typeof entry.authorName === 'string' && entry.authorName.trim().length > 0) nameOf.set(author, entry.authorName);
+  }
+  const tokenOf = new Map<string, string>();
+  for (const material of eligible) if (!tokenOf.has(material.author as string)) tokenOf.set(material.author as string, `S${tokenOf.size + 1}`);
+  const tokens = eligible.map((material) => tokenOf.get(material.author as string) as string);
+  const labels = sharedConversationLabels(eligible.map((material, index) => ({
+    producer: 'HUMAN' as const, authorName: nameOf.get(material.author as string) ?? null, text: material.text ?? '', speakerRef: tokens[index],
+  })));
+  const writers = new Map<string, string>();
+  tokens.forEach((token, index) => { if (!writers.has(token)) writers.set(token, labels[index] as string); });
+  return Object.freeze({
+    tokens: Object.freeze(tokens),
+    writers: Object.freeze([...writers].map(([speaker, name]) => Object.freeze({ speaker, name }))),
+  });
 }
 
 function notRun(reason: Extract<SharedSemanticPassOutcome, { state: 'NOT_RUN' }>['reason']): SharedSemanticPassOutcome {

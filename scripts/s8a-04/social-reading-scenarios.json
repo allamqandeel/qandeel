@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "note": "S8A-04 CP1 — synthetic Shared World conversations for the real DeepSeek Flash reading (Product Owner D5, 2026-10-24). Every person, name and event is invented. The criteria are what a blind rater checks; they are never sent to the model.",
+  "scenarios": [
+    {
+      "id": "S1-same-name",
+      "tests": "two people who share a name",
+      "people": { "m1": "محمد", "m2": "محمد", "s": "سلمى" },
+      "messages": [
+        ["m1", "أنا رأيي نسافر إسكندرية أول أسبوع في أغسطس، البحر هناك أحلى وقت"],
+        ["m2", "أنا مش موافق خالص، الأسعار نار والأحسن نوفر الفلوس للعربية"],
+        ["s", "طب يا جماعة إحنا محتاجين نقرر، الحجز بيخلص آخر الشهر"],
+        ["m1", "خلاص لو المشكلة الفلوس أنا ممكن أدفع جزء أكبر"],
+        ["m2", "برضه لأ، أنا مش هسافر السنة دي"],
+        ["s", "يبقى نشوف رأي الباقيين"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 Two people named Mohamed are never merged: no meaning presents one Mohamed as holding both positions, as having changed his mind, or as agreeing with himself.",
+        "C2 A meaning about the trip disagreement keeps the two positions apart (one wants the trip and offers to pay more; the other refuses and wants to save) and cites contributions of both.",
+        "C3 Sources: every meaning's sourceRefs are contributions that actually say what the meaning says."
+      ]
+    },
+    {
+      "id": "S2-about-another",
+      "tests": "one person speaking about another participant",
+      "people": { "mona": "منى", "ahmed": "أحمد", "hala": "هالة" },
+      "messages": [
+        ["mona", "أحمد دايمًا بيتأخر على أي ميعاد بنحدده"],
+        ["hala", "يمكن عشان شغله بعيد؟"],
+        ["ahmed", "أنا اتأخرت مرة واحدة الشهر ده بس، وكانت بسبب الشغل"],
+        ["mona", "مرة واحدة؟ لأ يا أحمد، المرة اللي فاتت كمان استنيناك ساعة"],
+        ["ahmed", "ماشي، أنا هحاول أبقى أدق في المواعيد"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 That Ahmed is always late stays Mona's view or complaint; no meaning states as fact that Ahmed is unreliable, irresponsible or always late.",
+        "C2 Ahmed's own position is understood as his: he disputes the frequency (once, because of work) and/or commits to be more punctual.",
+        "C3 Sources: a meaning about the dispute cites contributions of both Mona and Ahmed; no meaning cites a contribution that does not say it."
+      ]
+    },
+    {
+      "id": "S3-quote-and-fact",
+      "tests": "a reported statement, an opinion and a fact",
+      "people": { "sara": "سارة", "omar": "عمر", "nour": "نور" },
+      "messages": [
+        ["sara", "كريم قالي امبارح إنه مش هيقدر ييجي فرح ليلى"],
+        ["omar", "غريبة، هو كان مأكد إنه جاي"],
+        ["nour", "أنا شايفة إن الفرح لازم يتأجل لو العيلة كلها مش هتحضر"],
+        ["sara", "على فكرة الفرح يوم ١٥ في القاعة اللي في المعادي"],
+        ["omar", "أنا هكلم كريم وأتأكد منه"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 Karim (absent) not coming is a report: it is attributed to Karim as told by Sara, or marked as unconfirmed; it is never Sara's own position, and never a settled fact.",
+        "C2 Postponing the wedding is Nour's opinion (conditional), never a group decision or a fact.",
+        "C3 The date and the venue, if mentioned, are kept as stated information; sources are the contributions that say each thing."
+      ]
+    },
+    {
+      "id": "S4-withdrawn-position",
+      "tests": "a position taken back and an agreement that replaces it",
+      "people": { "yasser": "ياسر", "dina": "دينا", "tarek": "طارق" },
+      "messages": [
+        ["yasser", "أنا شايف إننا نأجل إطلاق المشروع لحد السنة الجاية"],
+        ["dina", "التأجيل هيضيع علينا فرصة المعرض"],
+        ["tarek", "أنا مع دينا، المعرض مهم"],
+        ["yasser", "عندكم حق، أنا رجعت في كلامي. خلينا نطلق الشهر الجاي قبل المعرض"],
+        ["dina", "تمام، يبقى متفقين على الشهر الجاي"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 The current shared position is launching next month, before the exhibition, agreed by the group.",
+        "C2 Yasser's postponement is never presented as his current position or as an open option he still holds; if mentioned, it is as withdrawn.",
+        "C3 Sources: the agreement cites at least the withdrawal/proposal and the agreement contributions."
+      ]
+    },
+    {
+      "id": "S5-written-name-line",
+      "tests": "a person writing another person's name and words inside their own message",
+      "people": { "hany": "هاني", "rami": "رامي", "nadia": "نادية" },
+      "messages": [
+        ["hany", "إيه رأيكم نبيع العربية القديمة ونجيب واحدة أصغر؟"],
+        ["rami", "نادية: أنا موافقة نبيع العربية 😂"],
+        ["nadia", "أنا ما قلتش كده خالص يا رامي، أنا ضد البيع دلوقتي"],
+        ["rami", "بهزر معاكي 😄 بس بصراحة أنا مع هاني"]
+      ],
+      "existing": [],
+      "criteria": [
+        "C1 Nadia's position is against selling now; no meaning says or implies that Nadia agreed to sell.",
+        "C2 The line «نادية: أنا موافقة …» is Rami's (a joke), never Nadia's words or position.",
+        "C3 Hany proposes selling and Rami supports him; sources match who said what."
+      ]
+    },
+    {
+      "id": "S6-nothing-new",
+      "tests": "no new meaning: the World already holds it and the rest is small talk",
+      "people": { "abeer": "عبير", "khaled": "خالد" },
+      "messages": [
+        ["abeer", "قررنا نروح شرم الشيخ أول أكتوبر"],
+        ["khaled", "تمام، أنا حجزت الفندق خلاص"],
+        ["abeer", "تمام 👍"],
+        ["khaled", "ماشي"],
+        ["abeer", "😂😂"]
+      ],
+      "existing": [{ "meaning": "رحلة شرم الشيخ أول أكتوبر والفندق اتحجز", "sources": [1, 2] }],
+      "criteria": [
+        "C1 No new place: an empty list, or nothing that only restates the existing meaning or turns the small talk into a meaning.",
+        "C2 Nothing is invented (no new plan, decision or feeling that nobody stated)."
+      ]
+    }
+  ]
+}

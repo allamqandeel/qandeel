@@ -52,15 +52,26 @@ test('2 — the place is the frozen I-04G vocabulary: QANDEEL_ANALYSIS through t
 });
 
 test('3 — provider-neutral and fail-closed: both Shared ports refuse outside tests; the I-03 chain stays inside Connected Worlds', () => {
+  // RE-ANCHORED by S8A-04 CP1 (2026-10-24; Product Owner D1 / D4, Shared Social Understanding Controlled Amendment): Stage 8A
+  // binds the interpreter to DeepSeek Flash. Both PORTS still name no provider; the interpreter's one composition
+  // (`shared-semantic-interpreter-provider.ts`) binds the test fake only in tests and otherwise the accounted DeepSeek
+  // adapter behind the SYNTHETIC_ONLY gate. The placer is NOT bound (D4): it still refuses outside tests, so the pass still
+  // returns NO_PROVIDER before any lease, read or spend, and no place is produced until CP2.
   for (const port of ['apps/api/src/shared-world/shared-semantic-interpreter.ts', 'apps/api/src/shared-world/shared-spatial-placer.ts']) {
-    const source = code(port);
-    assert.match(source, /environment\.NODE_ENV === 'test'/u, `${port} binds its fake only in tests`);
-    assert.match(source, /return new Unconfigured\w+\(\);\s*\}\s*$/u, `${port} refuses everywhere else`);
-    assert.doesNotMatch(source, /ModelRouter|model-router|fetch\(|https?:\/\//u, `${port} reaches no provider`);
+    assert.doesNotMatch(code(port), /ModelRouter|model-router|fetch\(|https?:\/\//u, `${port} reaches no provider`);
   }
+  const placer = code('apps/api/src/shared-world/shared-spatial-placer.ts');
+  assert.match(placer, /environment\.NODE_ENV === 'test'/u, 'the placer binds its fake only in tests');
+  assert.match(placer, /return new Unconfigured\w+\(\);\s*\}\s*$/u, 'the placer refuses everywhere else');
+  const composition = code('apps/api/src/shared-world/shared-semantic-interpreter-provider.ts');
+  assert.match(composition, /if \(environment\.NODE_ENV === 'test'\) return new FakeSharedSemanticInterpreter\(\);/u);
+  assert.match(composition, /accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_SEMANTIC_READING', productionAiProviderCallAccounting\(\)\)/u);
+  assert.match(code('apps/api/src/shared-world/shared-semantic-interpreter-provider.config.ts'), /requireDeepSeekQualification\(environment, /u);
+  assert.match(code('apps/api/src/shared-world/shared-world.module.ts'), /\{ provide: SHARED_SEMANTIC_INTERPRETER, useFactory: \(\) => createConfiguredSharedSemanticInterpreter\(\) \}/u);
   const pass = code('apps/api/src/connected-worlds/material-commit/shared-semantic-place.service.ts');
   assert.match(pass, /materialKind: 'QANDEEL_ANALYSIS'/u);
   assert.match(pass, /reason: 'NO_PROVIDER'/u, 'nothing is leased, read or spent while no provider is bound');
+  assert.match(pass, /this\.placer instanceof UnconfiguredSharedSpatialPlacer/u, 'an unbound placer still stops the pass before any lease');
   assert.ok(!existsSync(new URL('apps/api/src/shared-world/shared-semantic-place.service.ts', root)), 'the pass composes I-03 inside Connected Worlds only');
 });
 

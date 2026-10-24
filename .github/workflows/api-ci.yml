@@ -1233,6 +1233,10 @@ jobs:
       # capture command's restatements and endings, the current-state read and the RLS-bound knowledge read, and erasure.
       - name: Verify S8A-03 Living Personal Memory against real PostgreSQL
         run: npm run verify:living-personal-memory:integration
+      # S8A-04 CP1: migration 0174 (Product Owner D3, 2026-10-24) - the AI-COST-01 feature family SHARED_SEMANTIC_READING:
+      # the 0171 list plus exactly that one value, admitted and recorded by begin, an unknown family still refused.
+      - name: Verify S8A-04 Shared semantic reading cost family against real PostgreSQL
+        run: npm run verify:shared-semantic-reading-cost-family:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

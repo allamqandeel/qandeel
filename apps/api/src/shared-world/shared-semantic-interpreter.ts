@@ -2,19 +2,23 @@
 // exact Shared World said, as the meaningful units («places») of that World's Living Analysis geography.
 //
 // It is the Shared counterpart of the S5-03A Public interpreter and is shaped like it — a port, a deterministic test
-// implementation and a factory — with the SAME shape rules (`../public-world/public-semantic-interpreter`: one trimmed line,
+// implementation and a decoder — with the SAME shape rules (`../public-world/public-semantic-interpreter`: one trimmed line,
 // bounded themes, a lens key, no identifier). What differs is only what the Shared World is: there is no publisher who
 // closed a package, so QANDEEL also says WHICH of the given contributions each meaning is read from. That provenance is
 // exact — a subset of the contributions it was given — and becomes the place's MATERIAL_DEPENDENCY sources.
 //
-// It is NOT the conversational Model Router: a reading is not a turn and carries no reply text. No production provider is
-// bound. Choosing it is Stage 8A. Until then the factory returns an interpreter that REFUSES — never a fallback, never a
-// canned answer — so outside tests no place is produced and no provider is called.
+// It is NOT the conversational Model Router: a reading is not a turn and carries no reply text. The port names no
+// provider. Stage 8A binds one: S8A-04 CP1 composes DeepSeek Flash in `shared-semantic-interpreter-provider.ts`.
 //
-// The port receives only `SharedSemanticInput`: the human contributions every current member may see (their words only —
-// no author, Name, account, member list or identifier; each is addressed by an opaque ordinal), and the meanings the World
-// already holds with the ordinals they were read from. It returns `unknown`, decoded strictly HERE, so no adapter can
-// widen the shape, invent a source or smuggle a coordinate in. Nothing here logs anything.
+// The port receives only `SharedSemanticInput`: the human contributions every current member may see, each addressed by an
+// opaque ordinal, and the meanings the World already holds with the ordinals they were read from. SHARED-VIS-01 gave it the
+// words only. The S8A-04 CP1 Shared Social Understanding Controlled Amendment (Product Owner D1, 2026-10-24) adds WHO wrote
+// each contribution, the way the S8A-02 reply already tells the model: a speaker token (`S1`, `S2`, …) that the server
+// derives from the author identity the frozen 0089 resolver holds for that exact material, and the visible Name shown for
+// each token. Never an account, material or World identity, and never derived from a Name or the words. A token lives for
+// ONE reading and is never a durable identity: the stable identity stays with the server, reachable through each place's
+// MATERIAL_DEPENDENCY sources. The answer is unchanged: it returns `unknown`, decoded strictly HERE, so no adapter can
+// widen the shape, invent a source, smuggle a coordinate in or carry a speaker token out. Nothing here logs anything.
 
 import { createHash } from 'node:crypto';
 import {
@@ -32,7 +36,15 @@ export const SHARED_SEMANTIC_CONTRIBUTIONS_MAX = 40;
 export interface SharedSemanticContribution {
   /** An opaque ordinal, 1-based, in canonical order (oldest first). Never an identity. */
   readonly ref: number;
+  /** S8A-04 CP1: the speaker token of its trusted author in this reading (`S1`, `S2`, … by first appearance). */
+  readonly from: string;
   readonly text: string;
+}
+
+/** S8A-04 CP1: one writer of this reading — their token, and the visible Name shown for them (numbered when Names collide). */
+export interface SharedSemanticWriter {
+  readonly speaker: string;
+  readonly name: string;
 }
 
 export interface SharedSemanticExistingMeaning {
@@ -44,6 +56,8 @@ export interface SharedSemanticExistingMeaning {
 /** The interpreter's ENTIRE input. */
 export interface SharedSemanticInput {
   readonly contract: typeof SHARED_SEMANTIC_INTERPRETATION_CONTRACT;
+  /** Every speaker token `contributions` uses, once each, in order of first appearance. */
+  readonly writers: ReadonlyArray<SharedSemanticWriter>;
   readonly contributions: ReadonlyArray<SharedSemanticContribution>;
   readonly existing: ReadonlyArray<SharedSemanticExistingMeaning>;
 }
@@ -82,12 +96,25 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
 
-function placeOf(value: unknown, refs: ReadonlySet<number>): SharedSemanticPlaceProposal | null {
+/** S8A-04 CP1: a speaker token, as the server writes it. */
+export const SHARED_SPEAKER_TOKEN = /^S[1-9][0-9]*$/u;
+const TOKEN_WORD = /(?<![\p{L}\p{N}])S[1-9][0-9]*(?![\p{L}\p{N}])/gu;
+
+/**
+ * S8A-04 CP1: does `text` carry one of this reading's speaker tokens as a word of its own? A token means nothing outside
+ * its reading, so a meaning or a theme written with one would turn a request-local label into durable text.
+ */
+function carriesSpeakerToken(text: string, tokens: ReadonlySet<string>): boolean {
+  return (text.match(TOKEN_WORD) ?? []).some((token) => tokens.has(token));
+}
+
+function placeOf(value: unknown, refs: ReadonlySet<number>, tokens: ReadonlySet<string>): SharedSemanticPlaceProposal | null {
   if (!isRecord(value) || !exactKeys(value, ['meaning', 'primaryThemes', 'secondaryThemes', 'sourceRefs', 'lensKey'])) return null;
   const { meaning, primaryThemes, secondaryThemes, sourceRefs, lensKey } = value;
   if (!isSemanticText(meaning, SEMANTIC_MEANING_MAX) || !isSemanticThemeSet(primaryThemes, SEMANTIC_PRIMARY_THEMES)
     || !isSemanticThemeSet(secondaryThemes, SEMANTIC_SECONDARY_THEMES) || !areDisjointThemes(primaryThemes, secondaryThemes)
     || typeof lensKey !== 'string' || !LENS_KEY.test(lensKey)) return null;
+  if ([meaning, ...primaryThemes, ...secondaryThemes].some((text) => carriesSpeakerToken(text, tokens))) return null;
   if (!Array.isArray(sourceRefs) || sourceRefs.length < 1 || sourceRefs.length > SHARED_SEMANTIC_SOURCES_PER_PLACE
     || !sourceRefs.every((ref) => Number.isInteger(ref) && refs.has(ref as number)) || new Set(sourceRefs).size !== sourceRefs.length) return null;
   return Object.freeze({
@@ -99,13 +126,15 @@ function placeOf(value: unknown, refs: ReadonlySet<number>): SharedSemanticPlace
 /**
  * An interpreter's reading of exactly `input`, or null. Exactly `{ places }`, each place exactly its five fields, every
  * source one of the given ordinals; anything more — a coordinate, a score, an author — or anything invented is malformed.
+ * A meaning may name a person (Product Owner D2, S8A-04 CP1); it never carries one of this reading's speaker tokens.
  */
 export function decodeSharedSemanticReading(value: unknown, input: SharedSemanticInput): SharedSemanticReading | null {
   if (!isRecord(value) || !exactKeys(value, ['places']) || !Array.isArray(value.places) || value.places.length > SHARED_SEMANTIC_PLACES_PER_READING) return null;
   const refs = new Set(input.contributions.map((contribution) => contribution.ref));
+  const tokens = new Set(input.writers.map((writer) => writer.speaker));
   const places: SharedSemanticPlaceProposal[] = [];
   for (const entry of value.places) {
-    const place = placeOf(entry, refs);
+    const place = placeOf(entry, refs, tokens);
     if (place === null) return null;
     places.push(place);
   }
@@ -140,15 +169,12 @@ export class FakeSharedSemanticInterpreter implements SharedSemanticInterpreter 
   }
 }
 
-/** Until Stage 8A binds a production provider: refuse. Never a fallback, never a canned answer. */
+/**
+ * Refuses: never a fallback, never a canned answer. The interpreter for a reading that has no provider. S8A-04 CP1 moved
+ * the factory to `shared-semantic-interpreter-provider.ts`, so this port still reaches no provider.
+ */
 export class UnconfiguredSharedSemanticInterpreter implements SharedSemanticInterpreter {
   async read(): Promise<unknown> {
     throw new SharedSemanticInterpreterUnavailableError();
   }
-}
-
-export function createConfiguredSharedSemanticInterpreter(environment: NodeJS.ProcessEnv = process.env): SharedSemanticInterpreter {
-  if (environment.NODE_ENV === 'test') return new FakeSharedSemanticInterpreter();
-  // Stage 8A owns the production provider. No provider is selected here, and no other interpreter stands in for one.
-  return new UnconfiguredSharedSemanticInterpreter();
 }
