@@ -281,7 +281,7 @@ describe('S8A-04 CP2 — the World’s knowledge in the Shared reply', () => {
     row(2, { meaning: 'Bassem would travel if it is in August', hedged: true, earlier_place_id: placeId(1), people: [{ role: 'HOLDER', user: BASSEM, name: 'Bassem' }], committed_at: '2026-02-02T00:00:00Z' }),
   ];
 
-  it('recall finds the old position beyond the window: the reply receives it as Bassem’s, uncertain, with the earlier one as history', async () => {
+  it('recall finds the old position beyond the window: the reply receives it as Bassem’s, uncertain, and never his replaced one (F2)', async () => {
     const recalls: SharedKnowledgeRecallInput[] = [];
     const recaller: SharedKnowledgeRecaller = {
       async recall(input) {
@@ -302,8 +302,10 @@ describe('S8A-04 CP2 — the World’s knowledge in the Shared reply', () => {
     const block = /<world_knowledge>(.*)<\/world_knowledge>/su.exec(guidance)?.[1] as string;
     expect(JSON.parse(block)).toEqual([{
       kind: 'view', heldBy: ['Bassem'], relayedBy: [], about: [], uncertain: true, since: '2026-02', current: true, meaning: 'Bassem would travel if it is in August',
-      earlier: [{ since: '2026-01', kind: 'view', uncertain: false, meaning: 'Bassem is against travelling this summer' }],
+      earlier: [],
     }]);
+    // F2 (2026-10-25): the replaced position reaches neither recall nor the reply.
+    expect(JSON.stringify([requests[0], recalls[0]])).not.toContain('Bassem is against travelling this summer');
     // No identity reaches the provider.
     expect(JSON.stringify(requests[0])).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}/u);
     expect(JSON.stringify(recalls[0])).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}/u);

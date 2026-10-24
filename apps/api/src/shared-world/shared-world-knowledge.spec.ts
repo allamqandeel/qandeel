@@ -72,7 +72,7 @@ describe('S8A-04 CP2 — the World knowledge entries', () => {
     expect(decodeSharedWorldKnowledge('rows')).toBeNull();
   });
 
-  it('a CURRENT position carries its SUPERSEDED predecessors as earlier (newest first); a predecessor is never a current entry', () => {
+  it('F2 (2026-10-25): only the CURRENT position is an entry, with no earlier history; its SUPERSEDED predecessors reach no model', () => {
     const chain = positions([
       row({ place_id: place(1), meaning: 'لا للسفر', standing: 'SUPERSEDED', later_place_id: place(2), committed_at: '2026-01-10T00:00:00Z' }),
       row({ place_id: place(2), meaning: 'ربما نسافر', standing: 'SUPERSEDED', hedged: true, earlier_place_id: place(1), later_place_id: place(3), committed_at: '2026-02-10T00:00:00Z' }),
@@ -80,16 +80,29 @@ describe('S8A-04 CP2 — the World knowledge entries', () => {
     ]);
     const { entries, placeIdOf } = sharedKnowledgeEntries(chain, labels, new Set([MONA]));
     expect(entries.map(replyEntry)).toEqual([{
-      kind: 'view', heldBy: ['منى'], relayedBy: [], about: [], uncertain: false, since: '2026-03', current: true, meaning: 'نسافر في الصيف',
-      earlier: [{ since: '2026-02', kind: 'view', uncertain: true, meaning: 'ربما نسافر' }, { since: '2026-01', kind: 'view', uncertain: false, meaning: 'لا للسفر' }],
+      kind: 'view', heldBy: ['منى'], relayedBy: [], about: [], uncertain: false, since: '2026-03', current: true, meaning: 'نسافر في الصيف', earlier: [],
     }]);
     expect(placeIdOf).toEqual(new Map([['K1', place(3)]]));
+    const sent = JSON.stringify([entries.map(replyEntry), entries.map(recallEntry)]);
+    expect(sent).not.toContain('لا للسفر');
+    expect(sent).not.toContain('ربما نسافر');
   });
 
-  it('a SUPERSEDED position whose successor is not available is history: current false, nothing earlier', () => {
-    const { entries } = sharedKnowledgeEntries(positions([row({ standing: 'SUPERSEDED', later_place_id: place(9) })]), labels, new Set());
-    expect(entries.map(recallEntry)).toEqual([{ ref: 'K1', kind: 'view', heldBy: ['منى'], relayedBy: [], about: [], uncertain: false, since: '2026-03', current: false, meaning: 'السفر في الصيف أفضل' }]);
-    expect(entries[0].earlier).toEqual([]);
+  it('F2 (2026-10-25): a SUPERSEDED position whose successor is not available (deleted or not visible) is no entry at all', () => {
+    const { entries, placeIdOf } = sharedKnowledgeEntries(positions([row({ standing: 'SUPERSEDED', later_place_id: place(9) })]), labels, new Set());
+    expect(entries).toEqual([]);
+    expect(placeIdOf.size).toBe(0);
+  });
+
+  it('F2: every entry is current, in every path (inline, recall index, safe path)', () => {
+    const { entries } = sharedKnowledgeEntries(positions([
+      row({ place_id: place(1), meaning: 'ضد النقل', standing: 'SUPERSEDED', later_place_id: place(2), committed_at: '2026-01-10T00:00:00Z' }),
+      row({ place_id: place(2), meaning: 'مع النقل', earlier_place_id: place(1), committed_at: '2026-02-10T00:00:00Z' }),
+      row({ place_id: place(3), meaning: 'السفر في الشتاء', standing: 'SUPERSEDED', later_place_id: place(9), committed_at: '2026-03-10T00:00:00Z' }),
+    ]), labels, new Set([MONA]));
+    for (const chosen of [inlineSharedKnowledge(entries) ?? [], sharedRecallIndex(entries), safeSharedKnowledge(entries)]) {
+      expect(chosen.map((entry) => [entry.meaning, entry.current, entry.earlier.length])).toEqual([['مع النقل', true, 0]]);
+    }
   });
 
   it('an absent holder is held by its label and relayed by the member; people are labels of this request, never identities', () => {

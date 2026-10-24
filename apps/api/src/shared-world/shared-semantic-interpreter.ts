@@ -213,6 +213,10 @@ function placeOf(value: unknown, rules: ReadingRules): SharedSemanticPlacePropos
  * ordinals and every token one of the given writers; anything more — a coordinate, a score, an identity — or anything
  * invented is malformed. A meaning may name a person (Product Owner D2, S8A-04 CP1); it never carries one of this
  * reading's speaker tokens or numbered labels. Each existing ref is revised at most once in the reading.
+ *
+ * A well-formed place held by MORE THAN ONE member is not kept (the Product Owner's F1 correction, 2026-10-25): the server
+ * cannot prove that several people hold one meaning, and readings folded one person's view into another's that way. Not
+ * saving it is better than saving a wrong attribution. The reading's other places stay; an absent holder is one holder.
  */
 export function decodeSharedSemanticReading(value: unknown, input: SharedSemanticInput): SharedSemanticReading | null {
   if (!isRecord(value) || !exactKeys(value, ['places']) || !Array.isArray(value.places) || value.places.length > SHARED_SEMANTIC_PLACES_PER_READING) return null;
@@ -227,6 +231,7 @@ export function decodeSharedSemanticReading(value: unknown, input: SharedSemanti
   for (const entry of value.places) {
     const place = placeOf(entry, rules);
     if (place === null) return null;
+    if (place.attribution.holders.length > 1) continue;
     places.push(place);
   }
   const revised = places.flatMap((place) => (place.revises === null ? [] : [place.revises]));
@@ -257,9 +262,9 @@ export class FakeSharedSemanticInterpreter implements SharedSemanticInterpreter 
         secondaryThemes: [secondary],
         sourceRefs: unread.map((contribution) => contribution.ref),
         lensKey: primary,
-        // S8A-04 CP2: a view held by the writers it was read from (at most four), as they left it.
+        // S8A-04 CP2: a view held by the writer of the newest contribution it was read from (one holder: F1).
         nature: 'VIEW',
-        holders: [...new Set(unread.map((contribution) => contribution.from))].slice(0, SHARED_SEMANTIC_HOLDERS_MAX),
+        holders: [unread[unread.length - 1].from],
         relayedBy: [],
         about: [],
         hedged: false,

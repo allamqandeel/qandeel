@@ -2,10 +2,16 @@
 ## S8A-04 CP2 — Shared Social Memory, Recall & Living Analysis — Controlled Amendment v1.0
 
 **Status:** `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
-IMPLEMENTED ON s8a/s8a-04-cp2 (LOCAL); STAGE 0 (FREE) PASSED; THE PAID STAGES AWAIT THE PRODUCT OWNER'S APPROVAL — NOT YET
-EFFECTIVE / EFFECTIVE ON MERGE`.
+IMPLEMENTED ON s8a/s8a-04-cp2 (DRAFT PR #357); STAGE 0 (FREE) PASSED; THE PAID STAGES RAN (ROUND 19, 2026-10-25); THE F1 / F2
+CORRECTION MADE (§13.8) — CP2 NOT CLOSED — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
 - The implementation record is §13.
-- No paid model call is made before the Product Owner approves the paid stages (§11), within 66 calls and USD 0.08.
+- The placer stays unbound (§7) until the correction is accepted, the device check of §8 passes and the Product Owner gives
+  final approval.
+
+*(Status before the paid stages, kept verbatim:)*
+`IMPLEMENTED ON s8a/s8a-04-cp2 (LOCAL); STAGE 0 (FREE) PASSED; THE PAID STAGES AWAIT THE PRODUCT OWNER'S APPROVAL — NOT YET
+EFFECTIVE / EFFECTIVE ON MERGE`; no paid model call before the Product Owner approves the paid stages (§11), within 66
+calls and USD 0.08.
 
 *(Status at the design approval, kept verbatim:)*
 `DESIGN APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R3) — COPY GATE AWAITING ITS FINAL REVIEW OF THE §10.1
@@ -947,6 +953,11 @@ Everything below was built under §1 R4, on the branch's base `43e67229`, with n
 - CP1's reading request required every writer to have a contribution. CP2 gives the reading, as writers, the members that
   existing meanings name (§3.2.6), so the rule is now that every contribution's speaker is a writer. No canonical sentence
   states the CP1 rule.
+- §2.1 lets a place be held by up to four members. Under the Product Owner's correction (2026-10-25, §13.8, F1) the
+  decoder keeps no place held by more than one member; the shape still allows four, so such a reading is not refused.
+- §3.2 offers a replaced position as history beside its successor. Under the same correction (F2) the World's knowledge
+  holds only current positions, in every path (whole, the recall index and the safe path); the field `earlier` stays in
+  the data shape, always empty, and M2 / M3's sentences on earlier positions stay approved and unchanged, now unused.
 
 ## 13.3 Stage 0 (free) — verification
 
@@ -1045,5 +1056,42 @@ unauthorized knowledge reached a reply.
 ## 13.7 Not yet done
 
 - The placer binding of §7, the last change of CP2. Its §11 conditions hold (no binding stop fired), but the findings
-  above and the device check of §8 are for the Product Owner first; it has not been made.
-- The pull request to `main`.
+  above, the correction of §13.8 and the device check of §8 are for the Product Owner first; it has not been made.
+- CP2's closure. The pull request to `main` is open as Draft PR #357 (2026-10-25), kept as a draft, not merged.
+
+## 13.8 The Product Owner's correction: F1 and F2 (2026-10-25)
+
+**Decision.** The Product Owner accepted the paid results as they are and held two findings as blockers before closure
+and activation: no saved social meaning may mix one person's view with another's (F1), and no earlier or withdrawn
+position may be presented as current (F2). F3 is reviewed within the same correction where a dropped relayer or holder
+would mislead. The correction is the smallest one inside M1 – M3, with no change to the memory or field design, WP0, the
+Copy Gate or the frozen contracts; when attribution cannot be proven, the place is not saved.
+
+**F1 — the reading.** `decodeSharedSemanticReading` keeps no well-formed place held by more than one member and keeps
+the rest of the reading; a malformed place still refuses the whole reading. The server cannot prove that one meaning is
+jointly held (a Name is never identity and the meaning is free text), so a joint holding is never saved. Replayed over the
+live reading stage, the rule removes 9 of its 35 stored places (V1, V3, S4 and N3 twice each, S6 once), among them every
+place a blind rater flagged as mixing people, and keeps the other 26; V3 and S6 then save nothing. The test interpreter names
+one holder.
+
+**F2 — the knowledge.** `sharedKnowledgeEntries` serves only `CURRENT` positions: a replaced or withdrawn position is
+never an entry and never history (`earlier` is always empty), so it reaches neither the recall model nor the reply. In
+the live recall stage, R2's knowledge was the only one to carry an earlier position; under the rule none does. A
+position's own current text may still say that it changed (R2's «بعد ما كان ضده»): that is the current position.
+
+**F3.** No change: I2's reply named the concern anonymously; it attributed it to no one wrongly, and both its holder and
+its relayer reached the reply. Nothing in the data dropped them.
+
+**Verification (free).** `tsc`; the full API suite, 288 suites (6 803 tests), with new tests for both rules (the decoder
+and the semantic pass for F1; the three knowledge paths and the Shared reply for F2); the root contracts; a zero-cost
+simulated run of stages 1, R and 3 on the production composition (`simulated-f1f2-a`): no knowledge entry is anything
+but current in any path, and stage 1 stops on N3 exactly as in the rehearsal, since the stand-in never relays. No paid call
+was made: both rules are server rules, proven without the model.
+
+**CI.** The first API CI run of Draft PR #357 (head `51ae6d03`) failed one static contract: an I-07D test keeps the
+0115 – 0118 verifiers out of `database/focused-verifiers.json`, and the `s8a-04-cp2` group named 0115. The group no longer
+names it; API CI still runs it, and it stays selectable as `migration-0115`.
+
+**Residual risks (the model's quality, not storage).** A position withdrawn inside the same reading may still be saved as
+a new place (S4's kind), since the server cannot see the withdrawal without a change to M1's text; a single-holder place
+may cite another member's contribution; a member may still be stored as an absent holder (V2's relayed view).

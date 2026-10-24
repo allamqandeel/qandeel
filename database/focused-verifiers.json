@@ -16,7 +16,7 @@
   "version": 1,
   "groups": {
     "s8a-04-cp2": {
-      "title": "S8A-04 CP2 - Shared Social Memory (migration 0175) with the Shared semantic, conversation, governance, Introduction, retry-hazard, cost-family, Replay and Public verifiers it re-anchors or must leave unchanged",
+      "title": "S8A-04 CP2 - Shared Social Memory (migration 0175) with the Shared semantic, conversation, governance, retry-hazard, cost-family, Replay and Public verifiers it re-anchors or must leave unchanged",
       "verifiers": [
         "database/verify-migration-0175.mjs",
         "database/verify-migration-0174.mjs",
@@ -26,8 +26,7 @@
         "database/verify-migration-0139.mjs",
         "database/verify-migration-0140.mjs",
         "database/verify-migration-0160.mjs",
-        "database/verify-migration-0164.mjs",
-        "database/verify-migration-0115.mjs"
+        "database/verify-migration-0164.mjs"
       ]
     },
     "s7-01": {

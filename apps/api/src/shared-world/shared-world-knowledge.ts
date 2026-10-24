@@ -6,9 +6,10 @@
 // entries a model may receive — labelled for ONE request, with no identity in them — and chooses, by size alone, what the
 // reply is given:
 //
-//   - an entry is a CURRENT position with its SUPERSEDED predecessors as `earlier` (newest first), or a SUPERSEDED
-//     position whose successor is not available (deleted, or not visible to everyone), with `current: false` and nothing
-//     earlier: it is history, never anyone's current position (§2.3);
+//   - an entry is a CURRENT position, and only that: no SUPERSEDED position ever reaches a model, neither as `earlier` of
+//     its successor nor as `current: false` history (the Product Owner's F2 correction, 2026-10-25: a historical or
+//     withdrawn position must never be presented as current, and a model given history once did; so `earlier` is always
+//     empty and `current` always true);
 //   - up to 8 KB of rendered entries go to the reply whole (no extra call); a larger World is recalled (M2) from an index
 //     of at most 48 KB; and when recall cannot run or fails, the SAFE PATH gives the CURRENT positions of the window's
 //     people, newest first, within 8 KB — drawn from the same permission-filtered read, never beyond it.
@@ -147,38 +148,26 @@ export interface SharedKnowledge {
 
 /**
  * The entries of `positions`, labelled by `labelOf`, in commit order. `windowPeople` are the account identities of the
- * window's people. A SUPERSEDED position appears only as `earlier` of its CURRENT successor chain, or — when its successor
- * is not available — as history with `current: false`; never as current.
+ * window's people. Only CURRENT positions become entries, with no `earlier`: a SUPERSEDED position — replaced, withdrawn,
+ * or left behind by a successor that is no longer available — is never given to a model (F2, 2026-10-25).
  */
 export function sharedKnowledgeEntries(
   positions: ReadonlyArray<SharedKnowledgePosition>, labelOf: ReadonlyMap<string, string>, windowPeople: ReadonlySet<string>,
 ): SharedKnowledge {
-  const byId = new Map(positions.map((position) => [position.placeId, position]));
   const label = (person: SharedKnowledgePerson) => labelOf.get(person.userId) ?? person.name ?? UNNAMED_PARTICIPANT;
   const named = (position: SharedKnowledgePosition, role: SharedPersonRole) => position.people.filter((person) => person.role === role).map(label);
   const entries: SharedKnowledgeEntry[] = [];
   const placeIdOf = new Map<string, string>();
   const ordered = [...positions].sort((l, r) => (l.committedAt < r.committedAt ? -1 : l.committedAt > r.committedAt ? 1 : l.placeId < r.placeId ? -1 : 1));
   for (const position of ordered) {
-    const successorAvailable = position.laterPlaceId !== null && byId.has(position.laterPlaceId);
-    if (position.standing === 'SUPERSEDED' && successorAvailable) continue;
-    const current = position.standing === 'CURRENT';
-    const earlier: SharedKnowledgeEarlier[] = [];
-    if (current) {
-      const seen = new Set([position.placeId]);
-      for (let step = byId.get(position.earlierPlaceId ?? ''); step !== undefined && step.standing === 'SUPERSEDED' && !seen.has(step.placeId);
-        step = byId.get(step.earlierPlaceId ?? '')) {
-        seen.add(step.placeId);
-        earlier.push(Object.freeze({ since: since(step.committedAt), kind: kind(step.nature), uncertain: step.hedged, meaning: step.meaning }));
-      }
-    }
+    if (position.standing !== 'CURRENT') continue;
     const ref = `K${entries.length + 1}`;
     placeIdOf.set(ref, position.placeId);
     entries.push(Object.freeze({
       ref, kind: kind(position.nature),
       heldBy: Object.freeze(position.absentHolderLabel === null ? named(position, 'HOLDER') : [position.absentHolderLabel]),
       relayedBy: Object.freeze(named(position, 'RELAYER')), about: Object.freeze(named(position, 'ABOUT')),
-      uncertain: position.hedged, since: since(position.committedAt), current, meaning: position.meaning, earlier: Object.freeze(earlier),
+      uncertain: position.hedged, since: since(position.committedAt), current: true, meaning: position.meaning, earlier: Object.freeze([]),
       concernsWindow: position.people.some((person) => windowPeople.has(person.userId)),
     }));
   }

@@ -219,8 +219,8 @@ describe('S8A-04 CP1 — the reading knows who wrote each contribution, from the
   it('a meaning may name a person; a meaning that carries a speaker token of the reading is refused whole', async () => {
     // S8A-04 CP2 (re-anchored, M1): a meaning names a person by Name; a numbered label this reading sent («محمد (2)») is
     // request-local and is now refused whole, like a token.
-    const naming: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'محمد ضد السفر ومحمد التاني متمسك به', sourceRefs: [1, 2, 4], holders: ['S1', 'S2'] })] }) };
-    expect((await harness({ visibility: everyone, interpreter: naming }).service.weave(request)).state).toBe('WOVEN');
+    const naming: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'محمد ضد السفر ومحمد التاني متمسك به', sourceRefs: [1, 2, 4], holders: ['S1'] })] }) };
+    expect(await harness({ visibility: everyone, interpreter: naming }).service.weave(request)).toEqual({ state: 'WOVEN', placeIds: [PLACE] });
     const labelled: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'محمد (2) ضد السفر', sourceRefs: [2], holders: ['S2'] })] }) };
     expect(await harness({ visibility: everyone, interpreter: labelled }).service.weave(request)).toEqual({ state: 'REFUSED', reason: 'READING_UNAVAILABLE' });
     const leaking: SharedSemanticInterpreter = { read: async () => ({ places: [place({ meaning: 'S2 ضد السفر', sourceRefs: [2], holders: ['S2'] })] }) };
@@ -250,6 +250,27 @@ describe('S8A-04 CP2 — the saved position: whose it is, written whole, placed 
     expect(direct.p_reading_labels).toEqual(['A participant (1)', 'A participant (2)']);
     expect(relayed).toMatchObject({ p_holder_user_ids: [], p_absent_holder_label: 'والدة مراد', p_relayer_user_ids: [MORAD], p_material_source_ids: [M2] });
     for (const body of [direct, relayed]) expect(JSON.stringify(body)).not.toMatch(/"S\d+"/u);
+  });
+
+  it('F1 (2026-10-25): a place held by more than one member is never saved; the reading’s other places are', async () => {
+    // The server cannot prove that one meaning is jointly held, so it keeps no place that would mix one person's view
+    // with another's. A single holder, and an absent holder relayed by a member, are kept.
+    const reading: SharedSemanticInterpreter = { read: async () => ({ places: [
+      place({ meaning: 'رأي منى ومراد في السفر', sourceRefs: [1, 2], holders: ['S1', 'S2'] }),
+      place({ meaning: 'السفر مناسب', sourceRefs: [1], holders: ['S1'] }),
+      place({ meaning: 'مش موافقة على السفر', sourceRefs: [2], holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'], lensKey: 'family' }),
+    ] }) };
+    const kept = harness({ interpreter: reading });
+    expect((await kept.service.weave(REQUEST)).state).toBe('WOVEN');
+    const bodies = commitOf(kept.rpcs).map((call) => call.body);
+    expect(bodies.map((body) => body.p_holder_user_ids)).toEqual([[MONA], []]);
+    expect(JSON.stringify(bodies)).not.toContain('رأي منى ومراد');
+    // A reading whose every place is jointly held saves nothing: the pass completes with no place.
+    const joint: SharedSemanticInterpreter = { read: async () => ({ places: [place({ holders: ['S1', 'S2'] })] }) };
+    const none = harness({ interpreter: joint });
+    expect(await none.service.weave(REQUEST)).toEqual({ state: 'WOVEN', placeIds: [] });
+    expect(commitOf(none.rpcs)).toEqual([]);
+    expect(none.rpcs.at(-1)?.body.p_completed).toBe(true);
   });
 
   it('refuses the whole reading on any attribution rule, and writes nothing', async () => {

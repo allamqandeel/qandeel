@@ -74,6 +74,17 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     }
   });
 
+  it('F1 (2026-10-25): the decoder keeps no place held by more than one member, and keeps the rest of the reading', () => {
+    const given: SharedSemanticInput = { ...input(['a', 'b']), writers: [{ speaker: 'S1', name: 'هالة' }, { speaker: 'S2', name: 'كريم' }],
+      contributions: [{ ref: 1, from: 'S1', text: 'a' }, { ref: 2, from: 'S2', text: 'b' }] };
+    const joint = place({ meaning: 'رأي كريم وهالة في المواعيد', sourceRefs: [1, 2], holders: ['S1', 'S2'] });
+    const own = place({ meaning: 'هالة شايفة إن المواعيد بتتنسي', sourceRefs: [1], holders: ['S1'] });
+    expect(decodeSharedSemanticReading({ places: [joint, own] }, given)?.places.map((p) => p.meaning)).toEqual(['هالة شايفة إن المواعيد بتتنسي']);
+    expect(decodeSharedSemanticReading({ places: [joint] }, given)).toEqual({ places: [] });
+    // A malformed joint place still refuses the whole reading: the drop is never a way round the rules.
+    expect(decodeSharedSemanticReading({ places: [{ ...joint, holders: ['S1', 'S9'] }, own] }, given)).toBeNull();
+  });
+
   it('the test interpreter is deterministic, copies no text, and reads only what no existing meaning reads', async () => {
     const fake = new FakeSharedSemanticInterpreter();
     const given = input(['we keep postponing', 'it becomes a fight', 'let us pick a time']);
@@ -82,6 +93,8 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     const decoded = decodeSharedSemanticReading(first, given);
     expect(decoded?.places).toHaveLength(1);
     expect(decoded?.places[0].sourceRefs).toEqual([1, 2, 3]);
+    // F1: the test interpreter names one holder, never a joint one.
+    expect(decoded?.places[0].attribution.holders).toHaveLength(1);
     expect(JSON.stringify(first)).not.toMatch(/postponing|fight|pick a time/u);
     expect(await fake.read(input(['a', 'b', 'c'], [{ ref: 'E1', meaning: 'read', nature: 'VIEW', holders: ['S1'], absentHolder: null, relayedBy: [], about: [], hedged: false, sourceRefs: [1, 2] }])))
       .toEqual({ places: [] });
