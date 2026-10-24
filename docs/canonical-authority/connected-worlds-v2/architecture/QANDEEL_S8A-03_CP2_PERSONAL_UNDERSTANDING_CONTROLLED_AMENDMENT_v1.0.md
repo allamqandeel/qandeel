@@ -598,13 +598,13 @@ also the approval of the two Copy Gate texts in §10.4. This implementation made
 - **The seven known limits are deferred.** The experiment found seven limits. The Product Owner accepted them as known
   limitations, deferred until after launch, and recorded them only in the Future Improvements log
   (`docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`, items 003–009):
-  - 003: a correct fact about someone else is refused when the name stands outside the span;
-  - 004: an incomplete or premature span is accepted;
-  - 005: the deterministic writer's compound Memory;
-  - 006: a whole turn's capture is lost on one malformed structured answer;
-  - 007: reply honesty about a correction or forget;
-  - 008: the address form and gender;
-  - 009: humour under a «no jokes» preference, and the advice tail.
+  - 003: the reply announces that a forget or correction succeeded before it has actually run;
+  - 004: forgotten information comes back through the conversation history;
+  - 005: incomplete information is stored, or a future state is promoted to a current one;
+  - 006: correct facts about family or hobbies are refused by the remaining verification rules;
+  - 007: the user is addressed with the wrong gender or called by a wrong name;
+  - 008: joking despite the «no jokes» preference;
+  - 009: a capture is lost on an invalid structured answer.
 
   They are not in the canonical backlog, they open no task or test round, and none of their fixes is in this scope.
 
@@ -775,3 +775,24 @@ reply.
 
 No new API, model, embedding or parallel Memory system is added. No hosted deployment or live-environment change is
 made.
+
+**10.9 Other findings — recorded, not admitted** (Product Owner, *S8A-03 Final Documentation Reconciliation*,
+2026-10-24). S8A-03 opens no new improvement commitment. These findings are therefore not register items and not
+deferrals to a task, and this section is their record (backlog BG-01 / BG-06; the S8A-03 closing note).
+- **A background forget / correct is invisible to the 0152 background Memory writer.** This is a proven risk, stated
+  here so it is not hidden.
+  - `public.background_record_memory_v1` (0152, frozen, byte-pinned) skips a write when a later forget / correct exists.
+    It looks only in the foreground `memory_control_commands`, not in 0173's `background_memory_commands`.
+  - Failure: an OLDER turn's `MEMORY_WRITE` effect runs after a NEWER turn's background forget / correct, for example
+    after recovery. It can write the withdrawn words again as a new ACTIVE Memory, with the same type and equivalence
+    key.
+  - Within one execution, `MEMORY_WRITE` runs before the capture effect. The 0173 command itself never brings forgotten
+    words back (its verifier's G-1), and a foreground forget / correct is fully guarded.
+  - It is to be weighed again before `QAN-BL-AI-01` lets any real user reach DeepSeek.
+- **The end-to-end runtime harnesses** (A2, Full Intelligence, Integrated Brain) **do not run the capture.** This is a
+  verification gap, not a known defect. The capture is proven by:
+  - its unit and module specs;
+  - the dispatcher's effect specs;
+  - the 0171–0173 verifiers on real PostgreSQL.
+- **The deterministic writer's compound Memory.** The experiment found that `MEMORY_WRITE` sometimes keeps a whole
+  multi-fact sentence beside the capture's atomic facts, so a meaning repeats. It is recorded as a finding only.

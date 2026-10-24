@@ -944,9 +944,7 @@ stay as written.
   - The two Copy Gate texts are presented verbatim in [amendment §10.4](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
   - The seven known limits are accepted by the Product Owner and deferred until after launch. They are recorded only as
     Future Improvements 003–009, not in the backlog, and open no task or test round.
-  - BG-08:
-    - `QAN-BL-AI-10` admitted: a background forget / correct is invisible to the 0152 background writer;
-    - `QAN-BL-AI-11` admitted: the end-to-end harnesses lack the capture;
-    - every S8A-03 residue is disposed of (backlog §7).
-  - The register holds 89 items: 44 / 4 / 9 / 32 by status.
+  - BG-08: every S8A-03 residue is disposed of (backlog §7), and nothing is admitted. The background-forget risk to the
+    0152 writer is recorded in amendment §10.9, not hidden.
+  - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
