@@ -129,14 +129,14 @@
     "revised": [["moving", 0], ["gym", 0], ["internet", 1], ["study", 0], ["travel", 0], ["cooking", 1]],
     "deletedSuccessor": [["summer", 0], ["tech", 0]],
     "probes": [
-      { "id": "R1-car", "by": "nada", "text": "المشاوير بقت كتير ومرهقة وأوبر غالي، تفتكروا نعمل إيه عشان نتحرك براحتنا؟", "target": ["car", 0, "salma"], "kind": "old" },
       { "id": "R2-moving-revised", "by": "salma", "text": "المكان هنا بقى ضيق علينا قوي ومحتاجين مساحة أكبر نعيش فيها، لسه في حد معترض؟", "target": ["moving", 0, "karim"], "kind": "revised" },
+      { "id": "R7-hobby", "by": "nada", "text": "نفسي أبدأ حاجة فنية في وقت الفراغ، يمكن آلة موسيقية؟", "target": ["hobby", 0, "salma"], "kind": "old" },
+      { "id": "R8-bakery", "by": "salma", "text": "بفكر نعمل مصدر دخل تاني من حاجة بنعرف نعملها في البيت زي العيش والكيك", "target": ["bakery", 0, "nada"], "kind": "distractor" },
+      { "id": "R1-car", "by": "nada", "text": "المشاوير بقت كتير ومرهقة وأوبر غالي، تفتكروا نعمل إيه عشان نتحرك براحتنا؟", "target": ["car", 0, "salma"], "kind": "old" },
       { "id": "R3-summer-successor-deleted", "by": "nada", "text": "الحر السنة دي صعب، نفسنا نقضي كام يوم جنب البحر، مين لسه مش موافق؟", "target": ["summer", 0, "salma"], "kind": "deleted-successor" },
       { "id": "R4-savings", "by": "karim", "text": "عايزين نحوش فلوس كل شهر بطريقة نلتزم بيها مع ناس نعرفهم، إيه رأيكم؟", "target": ["savings", 0, "salma"], "kind": "distractor" },
       { "id": "R5-pets", "by": "karim", "text": "البيت هادي قوي، حد لسه بيفكر نجيب حيوان أليف صغير يونسنا؟", "target": ["pets", 0, "nada"], "kind": "old" },
-      { "id": "R6-school", "by": "nada", "text": "ليلى كبرت ولازم نقرر هتتعلم فين السنة الجاية", "target": ["school", 0, "karim"], "kind": "distractor" },
-      { "id": "R7-hobby", "by": "nada", "text": "نفسي أبدأ حاجة فنية في وقت الفراغ، يمكن آلة موسيقية؟", "target": ["hobby", 0, "salma"], "kind": "old" },
-      { "id": "R8-bakery", "by": "salma", "text": "بفكر نعمل مصدر دخل تاني من حاجة بنعرف نعملها في البيت زي العيش والكيك", "target": ["bakery", 0, "nada"], "kind": "distractor" }
+      { "id": "R6-school", "by": "nada", "text": "ليلى كبرت ولازم نقرر هتتعلم فين السنة الجاية", "target": ["school", 0, "karim"], "kind": "distractor" }
     ],
     "criteria": [
       "C1 The reply engages with what the group already said about this matter, when it bears on the message — naturally, without listing records.",

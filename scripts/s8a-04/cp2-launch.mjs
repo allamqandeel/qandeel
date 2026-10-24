@@ -1,12 +1,12 @@
 // S8A-04 CP2 — operator launcher for the paid stages of the Shared Social Memory Controlled Amendment §11 (guard round 19:
-// 66 calls, USD 0.08 at peak in all; a ceiling, not a target). Never a CI step.
+// 80 calls, USD 0.08 at peak in all; a ceiling, not a target). Never a CI step.
 //
 //   node scripts/s8a-04/cp2-launch.mjs --dry --stage=<stage>               zero cost: the guard refuses the first call
 //   node scripts/s8a-04/cp2-launch.mjs --simulate=<tag> --stage=<stage>    zero cost: a local DeepSeek stand-in answers
 //   node scripts/s8a-04/cp2-launch.mjs --live --stage=<stage>              paid, inside guard round 19
 //
-// Stages, in order (amendment §11): reading (14 calls, USD 0.010), placement (10, 0.006), recall (16, 0.035), integrated
-// (26, 0.029). Every live stage spends from the SAME round-19 spend-state file; each stage runs live once, and only after
+// Stages, in order (amendment §11): reading (14 calls, USD 0.010), placement (10, 0.006), recall (24, 0.035), integrated
+// (32, 0.029). Every live stage spends from the SAME round-19 spend-state file; each stage runs live once, and only after
 // the stage before it passed: its live results exist and the operator recorded its gate
 // (.s8a-04-reports/cp2/gates/<stage>.passed, written by `cp2-blind.mjs gate` after the two blind ratings). The Product Owner
 // approves the live runs.

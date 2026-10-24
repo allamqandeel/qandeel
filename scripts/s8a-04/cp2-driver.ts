@@ -1,4 +1,4 @@
-// S8A-04 CP2 — the paid stages of the Shared Social Memory Controlled Amendment §11 (guard round 19: 66 calls, USD 0.08 at
+// S8A-04 CP2 — the paid stages of the Shared Social Memory Controlled Amendment §11 (guard round 19: 80 calls, USD 0.08 at
 // peak, a ceiling and not a target; synthetic data only; no automatic retry). Operator-only: never a CI step, never imported
 // by production code. Launched only by cp2-launch.mjs under scripts/s8a-02/network-guard.cjs.
 //
@@ -61,11 +61,11 @@ type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 class StopError extends Error {}
 
 const ROUND = 19;
-const MAX_ATTEMPTS = 66;
+const MAX_ATTEMPTS = 80;
 const COST_CAP_USD = 0.08;
 /** Amendment §11: each stage's own ceiling; together they are the round's. */
 const STAGES = {
-  reading: { calls: 14, usd: 0.010 }, placement: { calls: 10, usd: 0.006 }, recall: { calls: 16, usd: 0.035 }, integrated: { calls: 26, usd: 0.029 },
+  reading: { calls: 14, usd: 0.010 }, placement: { calls: 10, usd: 0.006 }, recall: { calls: 24, usd: 0.035 }, integrated: { calls: 32, usd: 0.029 },
 } as const;
 type StageName = keyof typeof STAGES;
 const PROVIDER_FAILURES_STOP = 2;
@@ -511,7 +511,10 @@ async function recallStage(api: LocalDataApi, h: Harness, data: Json): Promise<J
   }
   h.ports.pass = 'run';
   const found = probes.filter((probe) => probe.chosen).length;
-  return { diagnostics, probes, found, of: probes.length, ledger: await ledgerOf(api, worldId).then((rows) => rows.filter((row: Json) => row.family !== 'SHARED_SEMANTIC_READING')) };
+  // The Product Owner's split (2026-10-25): the probes whose target the 48 KB index offers measure the choice; the others
+  // measure the system at the limit, never DeepSeek's quality.
+  const split = (inIndex: boolean) => { const group = probes.filter((probe) => probe.inIndex === inIndex); return { found: group.filter((probe) => probe.chosen).length, of: group.length, probes: group.map((probe) => probe.probe) }; };
+  return { diagnostics, probes, found, of: probes.length, inIndex: split(true), outsideIndex: split(false), ledger: await ledgerOf(api, worldId).then((rows) => rows.filter((row: Json) => row.family !== 'SHARED_SEMANTIC_READING')) };
 }
 
 // ------------------------------------------------------------------------------------------- stage 3: integrated
