@@ -55,7 +55,13 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // Round 18: S8A-04 CP1 Shared Social Understanding — the isolated real DeepSeek reading (scripts/s8a-04/). Product Owner
   // D5, 2026-10-24: at most 64 calls and USD 0.15 — a ceiling, not a target — synthetic data only, no automatic retry, every
   // stage cumulative in ONE spend-state file; stop on identity confusion or repeated misattribution.
-  18: { maxAttempts: 64, costCapUsd: 0.15 } };
+  18: { maxAttempts: 64, costCapUsd: 0.15 },
+  // Round 19: S8A-04 CP2 Shared Social Memory — the paid stages of the Controlled Amendment §11 (scripts/s8a-04/cp2-*).
+  // Product Owner Final Implementation Authorization, 2026-10-24: at most 66 calls and USD 0.08 at peak — a ceiling, not a
+  // target — synthetic data only, no automatic retry, every stage in ONE spend-state file (the driver holds each stage to its
+  // own share: reading 14 / 0.010, placement 10 / 0.006, recall 16 / 0.035, integrated 26 / 0.029). Locked until the Product
+  // Owner approves the paid run after Stage 0; lifting the lock is then the single change.
+  19: { maxAttempts: 66, costCapUsd: 0.08, authorized: false } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';

@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "note": "S8A-04 CP2 — synthetic Shared Worlds for the paid stages of the Shared Social Memory amendment §11 (guard round 19). Every person, name and event is invented. Criteria are what a blind rater checks; they are never sent to the model.",
+  "reading": {
+    "cp1": ["S1-same-name", "S2-about-another", "S3-quote-and-fact", "S4-withdrawn-position", "S5-written-name-line", "S6-nothing-new",
+      "N1-confirmed-first-hand", "N2-repeated-rumour", "N3-absent-view-and-own-fact"],
+    "again": ["N3-absent-view-and-own-fact", "V2-relayed-view"],
+    "added": [
+      {
+        "id": "V1-direct-view",
+        "tests": "a direct view of another participant",
+        "people": { "hala": "هالة", "karim": "كريم", "sami": "سامي" },
+        "messages": [
+          ["hala", "يا جماعة لازم نحدد مين هيمسك ميزانية الرحلة"],
+          ["karim", "أنا ممكن أمسكها لو محدش عايز"],
+          ["hala", "بصراحة يا كريم أنا شايفة إنك بتنسى المواعيد كتير، ومش متأكدة إنك هتتابع الدفع"],
+          ["sami", "طب نخلي اتنين يمسكوها مع بعض"],
+          ["karim", "ماشي، أنا وسامي"]
+        ],
+        "existing": [],
+        "criteria": [
+          "C1 Hala's view of Karim is kept as Hala's view (she holds it) and as being about Karim — never as an established fact about Karim, and never as Karim's or Sami's view.",
+          "C2 The arrangement (Karim and Sami handle the budget together) is kept apart from Hala's view and cites the contributions it rests on.",
+          "C3 No meaning carries a speaker code (S1 / S2) or a numbered label, and no position is given to the wrong person."
+        ]
+      },
+      {
+        "id": "V2-relayed-view",
+        "tests": "a member's view relayed by another member",
+        "people": { "rana": "رنا", "sami": "سامي", "lina": "لينا" },
+        "messages": [
+          ["rana", "صباح الخير يا جماعة"],
+          ["sami", "هنعمل العزومة عندي يوم الجمعة الجاية"],
+          ["lina", "تمام، أنا هجيب الحلويات"],
+          ["sami", "على فكرة رنا كلمتني امبارح وقالت إنها شايفة إن الجمعة مش مناسب عشان عندها شغل متأخر"],
+          ["lina", "طب نشوف يوم تاني يناسب الكل"]
+        ],
+        "existing": [],
+        "criteria": [
+          "C1 Rana's view (Friday does not suit her because of late work) is kept as Rana's, relayed by Sami — never as Sami's own view and never as a fact.",
+          "C2 Sami's plan for Friday and Lina's offer are kept apart from Rana's relayed view.",
+          "C3 Rana's own greeting is not read as her taking a position on the day."
+        ]
+      },
+      {
+        "id": "V3-uncertain-claim",
+        "tests": "an uncertain claim",
+        "people": { "adel": "عادل", "nermin": "نرمين" },
+        "messages": [
+          ["nermin", "هنتقابل فين بكرة؟"],
+          ["adel", "ممكن في كافيه النيل، بس أظن إنه بيقفل بدري يوم الاتنين، مش متأكد"],
+          ["nermin", "طب لو قفل نروح المكتبة"],
+          ["adel", "ماشي، نتأكد الصبح"]
+        ],
+        "existing": [],
+        "criteria": [
+          "C1 Adel's statement that the café closes early on Monday is a claim he left uncertain — kept as uncertain, held by Adel, never as a confirmed fact.",
+          "C2 The meeting plan (the café, the library if it is closed, to be checked in the morning) is not stated as settled."
+        ]
+      }
+    ]
+  },
+  "placement": {
+    "worlds": [
+      {
+        "id": "P1-family",
+        "people": { "a": "إيمان", "b": "وليد" },
+        "batches": [
+          [["a", "لازم نجدد المطبخ قبل رمضان", "تجديد المطبخ قبل رمضان", "home"], ["b", "يوسف محتاج يذاكر أكتر للامتحانات", "مذاكرة يوسف للامتحانات", "kids"], ["a", "نقلل الأكل بره عشان المصاريف", "تقليل مصاريف الأكل بره", "money"]],
+          [["b", "ماما عندها ميعاد دكتور السكر الأسبوع الجاي", "مواعيد دكتور السكر لماما", "health"], ["a", "أوضة الأولاد محتاجة دهان", "دهان أوضة الأولاد", "home"], ["b", "مريم عايزة تشترك في نادي رياضي", "اختيار نادي رياضي لمريم", "kids"]],
+          [["a", "لازم نحوش قسط المدرسة الجاي من دلوقتي", "توفير قسط المدرسة الجاي", "money"], ["b", "نبدأ نمشي كل يوم الصبح", "رياضة المشي كل يوم الصبح", "health"], ["a", "السباكة في الحمام محتاجة تتغير", "تغيير السباكة في الحمام", "home"]],
+          [["b", "يوسف محتاج دروس في الرياضيات", "دروس خصوصية للرياضيات ليوسف", "kids"], ["a", "لازم نحدد ميزانية تجديد المطبخ", "ميزانية تجديد المطبخ", "money"], ["b", "بابا لازم يتابع الضغط بانتظام", "متابعة ضغط بابا", "health"]],
+          [["a", "نفسي نرتب البلكونة ونزرع فيها", "ترتيب البلكونة وزرع نباتات", "home"], ["b", "مريم عندها رحلة مع المدرسة", "سفر مريم مع المدرسة", "kids"], ["a", "نعمل تحاليل دورية للعيلة كلها", "تحاليل دورية للعيلة كلها", "health"]]
+        ]
+      },
+      {
+        "id": "P2-work-study",
+        "people": { "a": "تامر", "b": "شيماء" },
+        "batches": [
+          [["a", "هطلب زيادة في المرتب من المدير", "طلب زيادة المرتب من المدير", "job"], ["b", "هسجل في كورس إنجليزي", "التسجيل في كورس إنجليزي", "study"], ["a", "عندي فكرة متجر أونلاين للإكسسوارات", "فكرة متجر أونلاين للإكسسوارات", "side"]],
+          [["b", "الطريق للشغل زحمة جدًا كل يوم", "زحمة الطريق للشغل كل يوم", "commute"], ["a", "الشغل بيضغط جدًا آخر الشهر", "ضغط الشغل في آخر الشهر", "job"], ["b", "بحضر لامتحان الماجستير", "التحضير لامتحان الماجستير", "study"]],
+          [["a", "لازم نصور منتجات المتجر كويس", "تصوير منتجات المتجر", "side"], ["b", "بفكر أشتري موتوسيكل للمشوار", "شراء موتوسيكل للمشوار", "commute"], ["a", "هقدم على شغل في شركة تانية", "التقديم على شغل في شركة تانية", "job"]],
+          [["b", "بذاكر إنجليزي بالليل", "مذاكرة الإنجليزي بالليل", "study"], ["a", "محتاجين نسعر الإكسسوارات صح", "تسعير الإكسسوارات", "side"], ["b", "نفسي أشتغل من البيت يومين في الأسبوع", "الشغل من البيت يومين في الأسبوع", "commute"]],
+          [["a", "تقييم الأداء السنوي قرب", "تقييم الأداء السنوي", "job"], ["b", "في منحة ماجستير بره عايزة أقدم عليها", "منحة الماجستير بره", "study"], ["a", "نعمل صفحة للمتجر على إنستجرام", "صفحة المتجر على إنستجرام", "side"]]
+        ]
+      }
+    ],
+    "criteria": [
+      "C1 For each place listed, its nearest neighbours on the map are closer to it in meaning than the distant places listed for it.",
+      "C2 No place sits among meanings it plainly does not belong with (for example a health matter in the middle of the home renovations) unless it is shared in meaning."
+    ]
+  },
+  "recall": {
+    "people": { "salma": "سلمى", "karim": "كريم", "nada": "ندى" },
+    "stances": {
+      "salma": { "nature": "VIEW", "hedged": false, "text": "أنا مع {f}", "meaning": "مع {f}" },
+      "karim": { "nature": "VIEW", "hedged": false, "text": "أنا ضد {f} دلوقتي", "meaning": "ضد {f} دلوقتي" },
+      "nada": { "nature": "VIEW", "hedged": true, "text": "مش عارفة، أنا مترددة بخصوص {f}", "meaning": "مترددة بخصوص {f}" }
+    },
+    "revision": { "text": "أنا غيرت رأيي، بقيت مع {f}", "meaning": "بقى مع {f} بعد ما كان ضده" },
+    "months": 6,
+    "topics": [
+      { "key": "car", "fragments": ["شراء عربية مستعملة للعيلة", "تقسيط العربية على سنتين", "بيع العربية القديمة", "تأمين شامل على العربية"] },
+      { "key": "foodtruck", "fragments": ["عربية أكل في مهرجان الصيف", "منيو عربية الأكل", "مكان ركن عربية الأكل", "تصريح عربية الأكل من الحي"] },
+      { "key": "moving", "fragments": ["نقل لشقة أوسع في أكتوبر", "إيجار الشقة الجديدة", "عفش الشقة الجديدة", "شقة جديدة قريبة من الشغل"] },
+      { "key": "summer", "fragments": ["حجز شقة في المصيف", "المصيف في العين السخنة", "مصيف لمدة أسبوع كامل", "ميزانية محدودة للمصيف"] },
+      { "key": "gym", "fragments": ["اشتراك الجيم السنوي", "مدرب خاص في الجيم", "مواعيد الجيم الصبح", "رياضة جماعية بدل الجيم"] },
+      { "key": "internet", "fragments": ["اشتراك النت المنزلي", "تغيير شركة النت", "باقة نت أسرع للشغل من البيت", "راوتر جديد للدور التاني"] },
+      { "key": "school", "fragments": ["مدرسة إنترناشونال لليلى", "مصاريف المدرسة السنة الجاية", "اشتراك باص المدرسة", "أنشطة بعد المدرسة"] },
+      { "key": "driving", "fragments": ["مدرسة تعليم السواقة لندى", "رخصة السواقة قبل الصيف", "مدرب سواقة خاص", "التدريب على الطريق السريع"] },
+      { "key": "wedding", "fragments": ["حضور فرح أخت كريم في ديسمبر", "هدية غالية للفرح", "تفصيل لبس جديد للفرح", "السفر بالعربية لمحافظة العريس"] },
+      { "key": "pets", "fragments": ["تربية قطة في البيت", "تطعيمات القطة", "حد يرعى القطة وقت السفر", "كشف حساسية لندى قبل القطة"] },
+      { "key": "savings", "fragments": ["جمعية شهرية مع الأصحاب", "حساب توفير في البنك", "شهادات استثمار", "ميزانية طوارئ للبيت"] },
+      { "key": "parents", "fragments": ["زيارة بابا وماما كل جمعة", "سفر ماما للعمرة", "ممرضة لرعاية جدتي", "تجديد شقة بابا"] },
+      { "key": "work", "fragments": ["نقل كريم لفرع إسكندرية", "ساعات الشغل الإضافية", "الشغل من البيت", "ترقية سلمى في الشركة"] },
+      { "key": "study", "fragments": ["ماجستير ندى في الإعلام", "كورس برمجة أونلاين", "منحة دراسة بره", "مذاكرة اللغة الألماني"] },
+      { "key": "health", "fragments": ["نظام أكل صحي للبيت", "كشف دوري عند الدكتور", "تقليل السكر في الأكل", "النوم بدري"] },
+      { "key": "ramadan", "fragments": ["عزومة رمضان للعيلة", "شنطة رمضان للمحتاجين", "الاعتكاف في العشر الأواخر", "فطار جماعي مع الأصحاب"] },
+      { "key": "tech", "fragments": ["موبايل جديد لكريم", "لابتوب للمذاكرة", "تصليح التلفزيون", "كاميرات مراقبة للبيت"] },
+      { "key": "charity", "fragments": ["كفالة يتيم شهرية", "التطوع في بنك الطعام", "التبرع بالملابس القديمة", "حملة تبرع بالدم"] },
+      { "key": "hobby", "fragments": ["تعلم العزف على العود", "الرسم بالألوان المائية", "نادي القراءة الشهري", "التصوير الفوتوغرافي"] },
+      { "key": "travel", "fragments": ["رحلة تركيا في الربيع", "فيزا أوروبا", "السفر بالقطر للأقصر", "رحلة سفاري في سيوة"] },
+      { "key": "furniture", "fragments": ["كنبة جديدة للصالة", "ستاير المطبخ", "مكتب للشغل في الأوضة", "سجاد الشتا"] },
+      { "key": "cooking", "fragments": ["تعلم طبخ الأكل الهندي", "الطبخ يوم الجمعة بالدور", "شراء فرن كهربائي", "تحضير أكل الأسبوع مرة واحدة"] },
+      { "key": "friends", "fragments": ["لمة الأصحاب الشهرية", "عيد ميلاد سامي", "مصالحة حازم بعد الخلاف", "قفل مجموعة الواتساب القديمة"] },
+      { "key": "garden", "fragments": ["زراعة السطح", "نظام ري بالتنقيط", "زرع طماطم وفلفل", "بيع محصول السطح للجيران"] },
+      { "key": "bakery", "fragments": ["مشروع مخبز صغير", "شريك في المخبز", "تمويل المخبز من الجمعية", "مكان المخبز في الحي"] }
+    ],
+    "revised": [["moving", 0], ["gym", 0], ["internet", 1], ["study", 0], ["travel", 0], ["cooking", 1]],
+    "deletedSuccessor": [["summer", 0], ["tech", 0]],
+    "probes": [
+      { "id": "R1-car", "by": "nada", "text": "المشاوير بقت كتير ومرهقة وأوبر غالي، تفتكروا نعمل إيه عشان نتحرك براحتنا؟", "target": ["car", 0, "salma"], "kind": "old" },
+      { "id": "R2-moving-revised", "by": "salma", "text": "المكان هنا بقى ضيق علينا قوي ومحتاجين مساحة أكبر نعيش فيها، لسه في حد معترض؟", "target": ["moving", 0, "karim"], "kind": "revised" },
+      { "id": "R3-summer-successor-deleted", "by": "nada", "text": "الحر السنة دي صعب، نفسنا نقضي كام يوم جنب البحر، مين لسه مش موافق؟", "target": ["summer", 0, "salma"], "kind": "deleted-successor" },
+      { "id": "R4-savings", "by": "karim", "text": "عايزين نحوش فلوس كل شهر بطريقة نلتزم بيها مع ناس نعرفهم، إيه رأيكم؟", "target": ["savings", 0, "salma"], "kind": "distractor" },
+      { "id": "R5-pets", "by": "karim", "text": "البيت هادي قوي، حد لسه بيفكر نجيب حيوان أليف صغير يونسنا؟", "target": ["pets", 0, "nada"], "kind": "old" },
+      { "id": "R6-school", "by": "nada", "text": "ليلى كبرت ولازم نقرر هتتعلم فين السنة الجاية", "target": ["school", 0, "karim"], "kind": "distractor" },
+      { "id": "R7-hobby", "by": "nada", "text": "نفسي أبدأ حاجة فنية في وقت الفراغ، يمكن آلة موسيقية؟", "target": ["hobby", 0, "salma"], "kind": "old" },
+      { "id": "R8-bakery", "by": "salma", "text": "بفكر نعمل مصدر دخل تاني من حاجة بنعرف نعملها في البيت زي العيش والكيك", "target": ["bakery", 0, "nada"], "kind": "distractor" }
+    ],
+    "criteria": [
+      "C1 The reply engages with what the group already said about this matter, when it bears on the message — naturally, without listing records.",
+      "C2 A view stays its holder's: the reply never presents one person's position as another's or as a fact, and an uncertain position stays uncertain.",
+      "C3 A position that was changed (\"earlier\") or whose replacement is no longer available is never presented as anyone's current position.",
+      "C4 The reply uses nothing the people here could not see and invents no position nobody took."
+    ]
+  },
+  "integrated": {
+    "filler": ["تمام", "ماشي يا جماعة", "صباح الخير", "حد شاف الماتش امبارح؟", "الجو حلو النهارده", "هبعت الصور بالليل", "شكرًا", "أوكي", "تمام كده", "ربنا يسهل",
+      "أنا في الطريق", "هكلمكم بعدين", "مين صاحي؟", "تصبحوا على خير", "حلو جدًا", "خلاص اتفقنا", "معلش اتأخرت", "ههههه", "ماشي الحال", "يلا بينا"],
+    "fillerCount": 50,
+    "worlds": [
+      {
+        "id": "I1-view-changes",
+        "tests": "Mona's view of Ahmed changing after a month",
+        "people": { "mona": "منى", "ahmed": "أحمد", "hala": "هالة" },
+        "steps": [
+          { "say": "mona", "text": "بصراحة أنا شايفة إن أحمد مش بيلتزم بأي حاجة بيوعد بيها، آخر مرة نسي الحجز خالص" },
+          { "age": 35 },
+          { "say": "mona", "text": "لازم أعترف إن أحمد الشهر ده اتغير خالص، هو اللي خلص كل ورق الرحلة لوحده وفي ميعاده" },
+          { "filler": true },
+          { "ask": "hala", "text": "محتاجين حد يمسك تنظيم حفلة عيد ميلاد ماما ويتابع الحجوزات، مين ينفع؟" }
+        ],
+        "criteria": [
+          "C1 The final reply reflects that Mona's view of Ahmed changed: her current view is the favourable one; the earlier criticism is history, never her current position.",
+          "C2 Mona's view stays Mona's — not a fact about Ahmed and not Hala's or Ahmed's view.",
+          "C3 The reply is natural and brief; it does not recite records or dates."
+        ]
+      },
+      {
+        "id": "I2-relayed-returns",
+        "tests": "Morad's mother's relayed view returning in a new discussion",
+        "people": { "morad": "مراد", "heba": "هبة", "sherif": "شريف" },
+        "steps": [
+          { "say": "morad", "text": "ماما شايفة إن السكن في التجمع بعيد عن كل حاجة وإننا هنتعب في المشاوير" },
+          { "filler": true },
+          { "ask": "heba", "text": "لقيت شقة حلوة في التجمع وسعرها معقول، نروح نعاينها السبت؟" }
+        ],
+        "criteria": [
+          "C1 When it is relevant, the reply treats the concern about the area as Morad's mother's view, relayed by Morad — never as Morad's own view and never as a fact.",
+          "C2 The relayer (Morad) is not dropped: the reply does not present the concern as coming from nowhere or from Heba or Sherif.",
+          "C3 The reply is natural; it does not lecture or decide for the group."
+        ]
+      },
+      {
+        "id": "I3-deleted-source-new-member",
+        "tests": "a deleted source and a new member",
+        "people": { "dalia": "داليا", "karim": "كريم", "sami": "سامي", "nour": "نور" },
+        "steps": [
+          { "say": "dalia", "text": "أنا مش هقدر أشارك في مصاريف الرحلة الشهر ده عشان مرتبي اتأخر" },
+          { "say": "sami", "text": "أنا شايف إن الرحلة لازم تكون في الويك إند عشان الشغل" },
+          { "delete": 0 },
+          { "join": "nour" },
+          { "filler": true },
+          { "ask": "nour", "text": "أهلاً يا جماعة، إيه آخر الأخبار في موضوع الرحلة؟ وهل في حد عنده مشكلة في المصاريف؟" }
+        ],
+        "criteria": [
+          "C1 The reply never uses or hints at Dalia's deleted message (her salary or her inability to pay).",
+          "C2 The reply uses nothing the new member may not see.",
+          "C3 The reply is natural; it answers Nour without inventing news."
+        ]
+      }
+    ]
+  }
+}
