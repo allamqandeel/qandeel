@@ -64,6 +64,9 @@ export interface PersonalKnowledgeSource {
   restated_count: number;
   ended: boolean;
   unsettled: boolean;
+  /** S8A-03 Open Understanding (0173): whom an OTHER Memory is about, in the user's own words; absent before 0173. */
+  person_name?: string | null;
+  person_relation?: string | null;
 }
 
 export interface MemoryRecord {

@@ -221,6 +221,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-07` | Shared World Participants Without a Name All Reach the Model as One "A participant" | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-AI-08` | QANDEEL's Earlier Shared Replies Reach the Model Without the Person They Answered | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-09` | Text Inside One Participant's Shared Message Can Pose as Another Participant Speaking | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-AI-10` | A Background Forget or Correction Is Invisible to the 0152 Background Memory Writer's Later-Command Guard | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-AI-11` | The End-to-End Runtime Harnesses Do Not Run the Background Personal Understanding Capture | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -3303,6 +3305,69 @@ authorizes implementation (BG-07).
   reaches a production model.
 - **Status:** `DEFERRED — OWNED`
 
+### `QAN-BL-AI-10` — A Background Forget or Correction Is Invisible to the 0152 Background Memory Writer's Later-Command Guard
+
+Admitted under BG-06 / BG-08 by S8A-03's closing change (2026-10-24; PR #355; effective from its merge), as a Stage 8A
+item with no separate task. Nothing here authorizes implementation (BG-07).
+
+- **Title / Finding:** since migration 0173, the background Open Understanding capture can forget or correct a Memory and
+  records that in `public.background_memory_commands`. The deterministic `MEMORY_WRITE` effect writes through
+  `public.background_record_memory_v1` (0152, frozen). That writer's later-command guard (`SUPERSEDED_BY_LATER_COMMAND`)
+  reads only the foreground `public.memory_control_commands`.
+  - Failure: an OLDER turn's `MEMORY_WRITE` effect runs after a NEWER turn's background forget / correct, for example on
+    recovery. It can write the withdrawn words again as a new ACTIVE Memory.
+  - The 0173 command itself does refuse that case. Its verifier's G-1 proves an older message's capture never brings
+    forgotten words back.
+- **Source:** S8A-03 closing-change review of the writer census (`database/migrations/0152_*.sql`,
+  `background_record_memory_v1`) against [amendment §10.5](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
+- **Current truth:**
+  - Within one execution, `MEMORY_WRITE` runs before the capture effect. The gap needs out-of-order execution across two
+    turns of the same owner, with the same type and the same equivalence key.
+  - A foreground forget / correct is fully guarded.
+  - No real user reaches DeepSeek (`QAN-BL-AI-01`).
+- **Anti-duplication:**
+  - `QAN-BL-INTEL-02` is the retention of free text in the 0029 / 0033 result payloads, not a Memory re-creation.
+  - Future Improvement 005 (the compound Memory, in the Future Improvements log) is a product limit, not this guard.
+- **Why deferred:** 0152 is frozen and byte-pinned, so closing the gap needs a new writer version with its own controlled
+  change. The Product Owner kept S8A-03's scope to the adopted direction.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `MEDIUM` — a forget could be undone, but only under out-of-order recovery of an older turn with identical
+  words.
+- **Reopen condition:** before `QAN-BL-AI-01` lets any real user reach DeepSeek, or with any change to the background
+  Memory writer. The fix makes every background Memory writer honour a later background forget / correct as it honours
+  a foreground one. It is proven on real PostgreSQL with two turns run out of order.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-AI-11` — The End-to-End Runtime Harnesses Do Not Run the Background Personal Understanding Capture
+
+Admitted under BG-06 / BG-08 by S8A-03's closing change (2026-10-24; PR #355; effective from its merge), as a Stage 8A
+item with no separate task. Nothing here authorizes implementation (BG-07).
+
+- **Title / Finding:** three hand-built end-to-end harnesses compose the post-response dispatcher without the fourth
+  provider effect, `UNDERSTANDING_CAPTURE_PROVIDER`:
+  - the A2 runtime smoke;
+  - the Full Intelligence smoke;
+  - the Integrated Brain harness.
+
+  The capture is proven by:
+  - its unit and module specs;
+  - the dispatcher's effect specs;
+  - the 0171 / 0172 / 0173 verifiers on real PostgreSQL;
+  - the S8A-03 experiment (synthetic, local).
+
+  No CI end-to-end run passes a real turn through the capture into a later reply.
+- **Source:** the S8A-03 CP2 checkpoint (carried as a task-local residue) and S8A-03's closing change.
+- **Current truth:** the composition is pinned by `personal-understanding.module.spec.ts`, which shows the dispatcher's
+  tenth dependency is the capture service. Nothing is deployed, and no real user reaches DeepSeek.
+- **Anti-duplication:** `QAN-BL-MATCH-04` is understanding readiness before real Matching, not harness composition.
+- **Why deferred:** extending the frozen end-to-end harnesses is outside the adopted direction's scope. The cross-world
+  exit proof of Stage 8A is where an end-to-end run belongs.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `MEDIUM` — a verification gap, not a known defect.
+- **Reopen condition:** the Stage 8A cross-world exit proof, or before `QAN-BL-AI-01` lets any real user reach DeepSeek,
+  whichever is first.
+- **Status:** `DEFERRED — OWNED`
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3990,16 +4055,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 42 |
+| `DEFERRED — OWNED` | 44 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 32 |
-| **Total** | **87** |
+| **Total** | **89** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 51 |
-| `MEDIUM` | 34 |
+| `MEDIUM` | 36 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -5188,6 +5253,54 @@ pushed).** The paragraphs above stay as written.
 - **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
+**S8A-03 closing change (2026-10-24; PR #355, from `main` at `378128452177508c5700a3ac3e86346c4eb33067`; effective from its
+merge).** This is the BG-08 reconciliation under the Product Owner's Open Understanding decision (2026-10-24,
+[amendment §10](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md)).
+The paragraphs above stay as written. CP3 stays FAIL as run.
+
+- **Admitted (BG-06), owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`, `DEFERRED — OWNED`:**
+  - `QAN-BL-AI-10` (`MEDIUM`): a background forget / correct is invisible to the 0152 background writer's later-command
+    guard.
+  - `QAN-BL-AI-11` (`MEDIUM`): the end-to-end runtime harnesses do not run the capture. This disposes of the CP2
+    harness residue.
+- **Disposed of within S8A-03 (task-local, not admitted):**
+  - **Real-model quality** of capture, family statements and REAFFIRMED / ENDED (CP2 / CP3 residues). It was measured by
+    the S8A-03 two-arm experiment (synthetic). The Product Owner adopted Open Understanding and accepted its seven
+    remaining limits as known limitations deferred until after launch. They are recorded only as Future Improvements
+    003–009 in `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`: Founder product acceptances, not
+    deferrals to a task, and not in this register.
+  - **MSA first person without the hamza** (D-1). Closed: Open Understanding removed the first-person word gate, so
+    such a message is now read by the model and verified by grounding.
+  - **The `MEMORY_WRITE` / Hypothesis eligibility exclusion of Memory commands** (D-2). Unchanged by design: the
+    foreground Memory commands stay first and the capture never runs on a command turn (amendment §10.2).
+  - **Superseded versions with no runtime caller:**
+    - the 0171 / 0172 capture commands;
+    - `background_current_state_memories_v1`;
+    - `personal_knowledge_sources_v1`;
+    - their API read (`listCurrentStateMemories`);
+    - the v2 verifier's fact / context functions.
+
+    They are kept unchanged, with their grants and their verifiers, as the record of what each version did
+    (amendment §10.5).
+  - **The 120-row knowledge bound.** An approved design bound (amendment §9.2 / §9.3), not a defect.
+  - **The three Living Personal Memory review observations**, now verified:
+    1. `introductions_preparation_private.notes` keeps a body the owner confirmed from an earlier understanding. By the
+       CW2-06A design (0154) it is the owner's own draft note: it leaves with the draft or the account, and it is not a
+       Memory that a forget targets.
+    2. The free text in the `INTENT_PROVIDER` / `CANDIDATE_PROVIDER` result payloads is already `QAN-BL-INTEL-02`. The
+       capture result (0171–0173) holds identifiers only.
+    3. The personal picture is read at reply time, so a turn generated later (an idempotency replay of a RECEIVED turn)
+       sees what is known then. That is the read-time design shared by every Memory read, not a defect.
+  - **The person labels are not in the Personal export** (0168, frozen), like the subject attributions and the index
+    rows. The export carries every Memory's words (amendment §10.5).
+- **Evidence only, no change of state:**
+  - `QAN-BL-MATCH-04` gains Open Understanding mechanism evidence: someone else's facts kept as that person's, plus
+    background forget / correct (the 0173 verifier on real PostgreSQL).
+  - `QAN-BL-AI-02` stays open.
+- **Hosted application** of 0171–0173 rides the existing hosted deployment items. No hosted application is authorized.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 89 items; 44 / 4 / 9 / 32 by status, 51 / 36 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5261,7 +5374,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
-| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13); `QAN-BL-AI-01`, `QAN-BL-AI-02` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-AI-04` (admitted by S8A-01's closing change); `QAN-BL-AI-05` (admitted by S8A-02 at the Product Owner's Round 2 review); `QAN-BL-AI-06`, `QAN-BL-AI-07`, `QAN-BL-AI-08` (admitted by S8A-02 at the Product Owner's Shared Attribution Engineering Decision, D5); `QAN-BL-AI-09` (admitted by S8A-02 at the Product Owner's Shared Attribution Integrity decision). *S8A-02 closing change (2026-10-23; effective from its merge):* `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-09` tombstoned and re-owned in §4 to S8A-02; the others above stay this row's |
+| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13); `QAN-BL-AI-01`, `QAN-BL-AI-02` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-AI-04` (admitted by S8A-01's closing change); `QAN-BL-AI-05` (admitted by S8A-02 at the Product Owner's Round 2 review); `QAN-BL-AI-06`, `QAN-BL-AI-07`, `QAN-BL-AI-08` (admitted by S8A-02 at the Product Owner's Shared Attribution Engineering Decision, D5); `QAN-BL-AI-09` (admitted by S8A-02 at the Product Owner's Shared Attribution Integrity decision). *S8A-02 closing change (2026-10-23; effective from its merge):* `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-09` tombstoned and re-owned in §4 to S8A-02; the others above stay this row's. *S8A-03 closing change (2026-10-24; effective from its merge):* `QAN-BL-AI-10` and `QAN-BL-AI-11` admitted to this row |
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |

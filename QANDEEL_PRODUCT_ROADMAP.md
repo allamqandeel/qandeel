@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered and accepted, CP2 delivered (local; migration 0171 local only), CP3 run once and FAIL (unchanged), Living Personal Memory design corrections implemented locally (migration 0172 local only) and at the Founder's review, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
+> **CURRENT TASK (2026-10-24):** S8A-03 — Personal Understanding Reality; CLOSED at its final review & merge gate: CP3 FAIL as run (unchanged), Open Understanding adopted by the Product Owner (migration 0173, not hosted), BG-08 / BG-09 reconciled, PR #355, not merged (the S8A-03 note after §6.29). S8A-04 … S8A-08 have not started.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered and accepted, CP2 delivered (local; migration 0171 local only), CP3 run once and FAIL (unchanged), Living Personal Memory design corrections implemented locally (migration 0172 local only) and at the Founder's review, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
 >
 > *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
 >
@@ -878,7 +880,7 @@ stay as written.
   - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
   - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
 
-### S8A-03 — Personal Understanding Reality (2026-10-23 …; current task; CP3 FAIL as run; Living Personal Memory design corrections implemented locally, at the Founder's review; one pull request at the end, not merged)
+### S8A-03 — Personal Understanding Reality (2026-10-23 … 2026-10-24; current task; CLOSED at its final review & merge gate: CP3 FAIL as run, Open Understanding adopted by the Product Owner, BG-08 / BG-09 reconciled; PR #355, not merged)
 
 - Started 2026-10-23 on `s8a/s8a-03-personal-understanding-reality` from `main` at `37812845` (the merge of PR #354,
   S8A-02). CP0, an independent read-only review, was delivered and reviewed by the Founder, who approved its direction
@@ -930,4 +932,21 @@ stay as written.
     `database/verify-migration-0172.mjs`;
   - the two Copy Gate texts are recorded verbatim in [amendment §9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
   - A final acceptance test needs its own authorization.
+- **Open Understanding — the Product Owner's product decision and S8A-03's closing change (2026-10-24; PR #355, not
+  merged):**
+  - Open Understanding is QANDEEL's mind. In the same one background capture call, DeepSeek Flash reads the meaning
+    with the recent turns and at most 40 known Memories. The linguistic gates that blocked understanding are removed.
+  - The server still proves grounding, ownership, statement and structure. Someone else's facts are kept as that
+    person's, with a person label from the user's own words. Forget / correct run in the background under every 0152 rule.
+  - Living Personal Memory is kept whole. No address form is adopted.
+  - Migration `0173_s8a_03_open_understanding_v1.sql` is **not hosted**. It is proven by
+    `database/verify-migration-0173.mjs`.
+  - The two Copy Gate texts are presented verbatim in [amendment §10.4](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
+  - The seven known limits are accepted by the Product Owner and deferred until after launch. They are recorded only as
+    Future Improvements 003–009, not in the backlog, and open no task or test round.
+  - BG-08:
+    - `QAN-BL-AI-10` admitted: a background forget / correct is invisible to the 0152 background writer;
+    - `QAN-BL-AI-11` admitted: the end-to-end harnesses lack the capture;
+    - every S8A-03 residue is disposed of (backlog §7).
+  - The register holds 89 items: 44 / 4 / 9 / 32 by status.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

@@ -2,7 +2,9 @@
 // existing MEMORY slice, and the privacy rules it must keep. Pure fixtures: no database, no provider, no clock.
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { MEMORY_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
-import { composeServerGuidance, renderMemoryContextGuidance, type ModelRouterMemoryContext } from '../model-router/model-router.types';
+import {
+  composeServerGuidance, MEMORY_PERSON_GUIDANCE, memoryContextFixedBytes, renderMemoryContextGuidance, type ModelRouterMemoryContext,
+} from '../model-router/model-router.types';
 import type { TelemetryService } from '../observability/telemetry.service';
 import {
   composeMemoryContext, CORE_BUDGET_SHARE, CURRENT_BUDGET_SHARE, MAX_MEMORY_CONTEXT_CHARACTERS, MAX_SELECTED_MEMORIES,
@@ -218,5 +220,28 @@ describe('S8A-03 Living Personal Memory - the read path', () => {
   it('is fail-soft: a failed knowledge read serves exactly the CP2 selection', async () => {
     const r = runtime(async () => { throw new Error('PERSONAL_KNOWLEDGE_READ_INTEGRITY'); });
     await expect(new MemoryRetrieverService(r as unknown as MemoryRuntimeService).retrieve('user-a', 'token-a', 'تمام')).resolves.toEqual([]);
+  });
+});
+
+describe('S8A-03 Open Understanding - person labels (0173, CP2 amendment §10)', () => {
+  it('someone else\'s fact is placed by its grounded person label, never by a kin-word list, and stays that person\'s', () => {
+    const salma = row('سلمى بقت مدرسة إنجليزي.', { subject: 'OTHER', person_name: 'سلمى', person_relation: 'مراتي' });
+    const unlabelled = row('صاحبي أحمد بيشتغل في بنك.', { subject: 'OTHER' });
+    const mine = row('أنا ساكن في المعادي.', { slot: 'RESIDENCE', person_name: null, person_relation: null });
+    const items = projectPersonalKnowledge([salma, unlabelled, mine]).core.flatMap((unit) => unit.items);
+    expect(items.map((item) => [item.content, item.about, item.person])).toEqual([
+      ['أنا ساكن في المعادي.', 'USER', undefined],
+      ['سلمى بقت مدرسة إنجليزي.', 'SOMEONE_ELSE', 'سلمى (مراتي)'],
+    ]);
+  });
+
+  it('a recalled SOMEONE_ELSE item names its person too; the guidance sentence is rendered only when an item names one', () => {
+    const moved = row('حسام اتنقل الدوحة.', { subject: 'OTHER', person_name: 'حسام', person_relation: 'أخويا', temporal: 'PAST', ended: true });
+    const context = composeMemoryContext('حسام', [moved], [], [hit(moved)]);
+    expect(context).toEqual([expect.objectContaining({ content: moved.content, tier: 'RECALLED', standing: 'HISTORICAL', person: 'حسام (أخويا)' })]);
+    expect(renderMemoryContextGuidance(context)).toContain(MEMORY_PERSON_GUIDANCE);
+    expect(renderMemoryContextGuidance([{ type: 'PERSONAL_FACT', content: 'أنا ممرضة.', about: 'USER', tier: 'CORE' }])).not.toContain(MEMORY_PERSON_GUIDANCE);
+    // The fixed cost of the section counts the sentence, so the exact bound of the ONE MEMORY slice still holds.
+    expect(memoryContextFixedBytes()).toBeGreaterThanOrEqual(Buffer.byteLength(MEMORY_PERSON_GUIDANCE, 'utf8'));
   });
 });

@@ -13,8 +13,9 @@ describe('PersonalUnderstandingModule composition (S8A-03 CP2)', () => {
     const moduleRef = await Test.createTestingModule({ imports: [PersonalUnderstandingModule] }).compile();
     const service = moduleRef.get(PersonalUnderstandingCaptureService);
     expect(service).toBeInstanceOf(PersonalUnderstandingCaptureService);
-    const provider = (service as unknown as { provider: { capture: (r: unknown) => Promise<unknown> } }).provider;
-    await expect(provider.capture({ schemaVersion: 1, currentUserText: 'أنا ساكن في المعادي', memories: [] })).resolves.toEqual({ facts: [], memories: [], context: [] });
+    const provider = (service as unknown as { provider: { captureV3: (r: unknown) => Promise<unknown> } }).provider;
+    await expect(provider.captureV3({ schemaVersion: 3, currentUserText: 'أنا ساكن في المعادي', recentTurns: [], memories: [], known: [] }))
+      .resolves.toEqual({ facts: [], memories: [], context: [], commands: [] });
     await moduleRef.close();
   });
 

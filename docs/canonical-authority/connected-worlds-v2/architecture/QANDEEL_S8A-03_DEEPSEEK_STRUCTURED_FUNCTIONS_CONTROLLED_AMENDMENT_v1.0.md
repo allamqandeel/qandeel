@@ -1,8 +1,8 @@
 # QANDEEL — Stage 8A
 ## S8A-03 CP1 — DeepSeek Flash for the Seven Structured Functions — Narrow Controlled Amendment v1.0
 
-**Status:** `CANDIDATE CONTROLLED AMENDMENT — FOR FOUNDER REVIEW`. It binds from the merge of the one S8A-03 pull
-request that carries it, and the Founder merges only after approving it. Its model-visible texts (§5) are presented
+**Status:** `CANONICAL CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE` (S8A-03 closing change, 2026-10-24). It binds
+from the merge of the one S8A-03 pull request that carries it (PR #355), and the Founder merges only after approving it. Its model-visible texts (§5) are presented
 verbatim for that approval  
 **Scope:** the provider, model, transport and output mechanism of the seven structured AI functions, and the removal of
 every non-DeepSeek production AI path. The semantics, ports, requests, validators, ledgers and budgets of those functions

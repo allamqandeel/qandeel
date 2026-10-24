@@ -2,25 +2,25 @@ import { Injectable } from '@nestjs/common';
 import {
   PersonalUnderstandingCaptureProviderError,
   type PersonalUnderstandingCaptureErrorCode,
-  type PersonalUnderstandingCaptureOutput,
-  type PersonalUnderstandingCaptureProvider,
-  type PersonalUnderstandingCaptureRequest,
+  type PersonalUnderstandingCaptureOutputV3,
+  type PersonalUnderstandingCaptureProviderV3,
+  type PersonalUnderstandingCaptureRequestV3,
 } from './personal-understanding.types';
 
-/** The test double. With no programmed answer it proposes nothing (an empty, valid answer). */
+/** The test double (capture schema v3). With no programmed answer it proposes nothing (an empty, valid answer). */
 @Injectable()
-export class FakePersonalUnderstandingCaptureProvider implements PersonalUnderstandingCaptureProvider {
-  readonly calls: PersonalUnderstandingCaptureRequest[] = [];
-  private output: PersonalUnderstandingCaptureOutput = { facts: [], memories: [], context: [] };
+export class FakePersonalUnderstandingCaptureProvider implements PersonalUnderstandingCaptureProviderV3 {
+  readonly calls: PersonalUnderstandingCaptureRequestV3[] = [];
+  private output: PersonalUnderstandingCaptureOutputV3 = { facts: [], memories: [], context: [], commands: [] };
   private failure?: PersonalUnderstandingCaptureErrorCode;
 
-  /** An answer without `context` (written before S8A-03 Living Personal Memory) restates and ends nothing. */
-  setOutput(output: Omit<PersonalUnderstandingCaptureOutput, 'context'> & Partial<Pick<PersonalUnderstandingCaptureOutput, 'context'>>): void {
-    this.output = structuredClone({ context: [], ...output }); this.failure = undefined;
+  /** Omitted lists propose nothing. */
+  setOutput(output: Partial<PersonalUnderstandingCaptureOutputV3>): void {
+    this.output = structuredClone({ facts: [], memories: [], context: [], commands: [], ...output }); this.failure = undefined;
   }
   setFailure(code: PersonalUnderstandingCaptureErrorCode): void { this.failure = code; }
 
-  async capture(request: PersonalUnderstandingCaptureRequest): Promise<PersonalUnderstandingCaptureOutput> {
+  async captureV3(request: PersonalUnderstandingCaptureRequestV3): Promise<PersonalUnderstandingCaptureOutputV3> {
     this.calls.push(structuredClone(request));
     if (this.failure) throw new PersonalUnderstandingCaptureProviderError(this.failure);
     return structuredClone(this.output);

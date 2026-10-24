@@ -10,6 +10,7 @@ import type { MemoryRecord, PersonalKnowledgeSource, SemanticMemoryCandidate } f
 import {
   isHistoricalKnowledge,
   PERSONAL_KNOWLEDGE_SOURCE_LIMIT,
+  personOf,
   projectPersonalKnowledge,
   type KnowledgeUnit,
 } from './personal-knowledge.projection';
@@ -137,7 +138,12 @@ export function composeMemoryContext(
   const recalled = selectMemories(query, recent, semantic, {
     exclude: servedIds, historical: picture.historical, tier: 'RECALLED', maxBytes: room - used,
   });
-  const context = [...ordered.flatMap((unit) => unit.items), ...recalled];
+  // Open Understanding (0173): a recalled SOMEONE_ELSE item names its person too (the label read with the knowledge rows).
+  const people = new Map<string, string>(knowledge.flatMap((row) => { const person = personOf(row); return person ? [[`${row.type}\u0000${row.content}`, person] as const] : []; }));
+  const context = [...ordered.flatMap((unit) => unit.items), ...recalled.map((item) => {
+    const person = item.about === 'SOMEONE_ELSE' ? people.get(`${item.type}\u0000${item.content}`) : undefined;
+    return person ? { ...item, person } : item;
+  })];
   // The exact bound above makes this unreachable; it is kept so the slice can never be exceeded whatever changes.
   while (context.length > 0 && Buffer.byteLength(renderMemoryContextGuidance(context), 'utf8') > MEMORY_BUDGET_BYTES) context.pop();
   return context;

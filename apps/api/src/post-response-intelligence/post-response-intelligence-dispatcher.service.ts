@@ -353,7 +353,7 @@ export class PostResponseIntelligenceDispatcherService{
  private async terminal(execution:IntelligenceExecution,state:'COMPLETED'|'SKIPPED'|'QUARANTINED',outcome:string,stage:string):Promise<true>{await this.ledger.finish(execution.id,state,outcome,stage);return true;}
 }
 function validEvidenceReference(value:string|null):value is `memory:${string}`{return typeof value==='string'&&/^memory:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value);}
-/** S8A-03 CP2: a recoverable UNDERSTANDING_CAPTURE_PROVIDER row is COMPLETED with one of its two typed results (0171 / 0172 enforce the payload itself); anything else - CLAIMED included - is indeterminate. The payload is the 0171 shape or, since 0172, the same plus updatedMemoryIds (existing Memories restated or ended). */
+/** S8A-03 CP2: a recoverable UNDERSTANDING_CAPTURE_PROVIDER row is COMPLETED with one of its two typed results (0171 / 0172 / 0173 enforce the payload itself); anything else - CLAIMED included - is indeterminate. The payload is the 0171 shape; since 0172, the same plus updatedMemoryIds (existing Memories restated or ended); since 0173 (Open Understanding), the same plus retiredMemoryIds (Memories forgotten or replaced by a correction), with the v3 bounds (new 6 + corrected 2, retired 3 + 2, living updates 20). Earlier shapes stay valid: a completed row is never rewritten. */
 function validUnderstandingCaptureResult(effect:IntelligenceEffectState):boolean{
  if(effect.state!=='COMPLETED'||effect.result_reference!==null)return false;
  if(effect.result_code==='NO_UNDERSTANDING_RECORDED')return effect.result_payload===null;
@@ -362,4 +362,5 @@ function validUnderstandingCaptureResult(effect:IntelligenceEffectState):boolean
  const ids=(value:unknown,max:number):value is string[]=>Array.isArray(value)&&value.length<=max&&value.every(id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(id));
  if(!payload||typeof payload!=='object')return false;const keys=Object.keys(payload).sort().join();
  if(keys==='indexedMemoryIds,memoryIds')return ids(payload.memoryIds,3)&&ids(payload.indexedMemoryIds,4)&&payload.memoryIds.length+payload.indexedMemoryIds.length>0;
+ if(keys==='indexedMemoryIds,memoryIds,retiredMemoryIds,updatedMemoryIds'){const p=payload as{memoryIds?:unknown;indexedMemoryIds?:unknown;updatedMemoryIds?:unknown;retiredMemoryIds?:unknown};return ids(p.memoryIds,8)&&ids(p.indexedMemoryIds,4)&&ids(p.updatedMemoryIds,20)&&ids(p.retiredMemoryIds,5)&&p.memoryIds.length+p.indexedMemoryIds.length+p.updatedMemoryIds.length+p.retiredMemoryIds.length>0;}
  return keys==='indexedMemoryIds,memoryIds,updatedMemoryIds'&&ids(payload.memoryIds,3)&&ids(payload.indexedMemoryIds,4)&&ids(payload.updatedMemoryIds,13)&&payload.memoryIds.length+payload.indexedMemoryIds.length+payload.updatedMemoryIds.length>0;}

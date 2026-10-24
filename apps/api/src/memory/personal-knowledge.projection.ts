@@ -65,7 +65,8 @@ export function projectPersonalKnowledge(rows: readonly PersonalKnowledgeSource[
   const slotted = coreSelf.filter((row) => row.slot !== null && row.temporal === 'CURRENT').sort(byStanding);
   const family = live.filter((row) => !isCurrentState(row) && (
     (row.subject === 'SELF' && (row.type === 'RELATIONSHIP_CONTEXT' || (row.type === 'PERSONAL_FACT' && namesFamilyMember(row.content)))) ||
-    (row.subject === 'OTHER' && (row.type === 'RELATIONSHIP_CONTEXT' || row.type === 'PERSONAL_FACT') && namesFamilyMember(row.content))
+    // Open Understanding (amendment §10): someone else's fact is placed by its grounded person label, not by a kin-word list.
+    (row.subject === 'OTHER' && (personOf(row) !== undefined || ((row.type === 'RELATIONSHIP_CONTEXT' || row.type === 'PERSONAL_FACT') && namesFamilyMember(row.content))))
   )).sort(byStanding);
   const goals = coreSelf.filter((row) => row.type === 'GOAL').sort(byStanding);
   const other = coreSelf.filter((row) => row.type === 'PERSONAL_FACT' || row.type === 'STABLE_PREFERENCE').sort(byStanding);
@@ -87,6 +88,7 @@ export function projectPersonalKnowledge(rows: readonly PersonalKnowledgeSource[
       ids: members.map((member) => member.id),
       items: members.map((member) => ({
         type: member.type, content: member.content, source: member.source, about: aboutOf(member),
+        ...(personOf(member) !== undefined ? { person: personOf(member) } : {}),
         ...(member.unsettled && member.slot !== null ? { standing: 'UNSETTLED' as const } : {}),
         tier: 'CORE' as const,
       })),
@@ -114,6 +116,12 @@ function byStanding(left: PersonalKnowledgeSource, right: PersonalKnowledgeSourc
     right.last_stated_at.localeCompare(left.last_stated_at) ||
     right.importance - left.importance ||
     left.id.localeCompare(right.id);
+}
+
+/** The person label of an OTHER row («سلمى (مراتي)»), or undefined (0173). */
+export function personOf(row: Pick<PersonalKnowledgeSource, 'subject' | 'person_name' | 'person_relation'>): string | undefined {
+  if (row.subject !== 'OTHER' || (!row.person_name && !row.person_relation)) return undefined;
+  return [row.person_name, row.person_relation ? `(${row.person_relation})` : null].filter(Boolean).join(' ');
 }
 
 function aboutOf(row: PersonalKnowledgeSource): NonNullable<ModelRouterMemoryContext['about']> {

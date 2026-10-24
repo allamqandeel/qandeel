@@ -314,10 +314,16 @@ async function verifyCatalog() {
   // the same command with family relationship statements (OTHER / MODEL_ASSISTED_RELATION_CAPTURE) and the verified
   // restatements / endings of existing Memories - service_role only, under the same lock and rules. The 0171 command is
   // unchanged and keeps its grant (its own verifier still proves it); the runtime calls only v2.
+  // S8A-03 Open Understanding re-anchor (2026-10-24, CP2 amendment §10): migration 0173 adds
+  // complete_post_response_personal_capture_v3, the same command with person-labelled OTHER facts and the background
+  // forget / correct of the owner's earlier ACTIVE Memories - service_role only, under the same lock and the same
+  // command-turn / later-command / equivalence rules. The 0171 and 0172 commands are unchanged and keep their grants;
+  // the runtime calls only v3.
   assert.deepEqual([...executable].sort(), ['personal_data_private.erase_personal_account_v1', 'public.background_record_memory_v1',
     'public.complete_post_response_personal_capture_v1', 'public.complete_post_response_personal_capture_v2',
+    'public.complete_post_response_personal_capture_v3',
     'public.server_erase_personal_account_v1', 'public.server_finalize_memory_control_turn_v2'],
-  'the writable set is exactly {v2, background_record_memory_v1, the 0171 and 0172 capture commands, governed erasure}');
+  'the writable set is exactly {v2, background_record_memory_v1, the 0171, 0172 and 0173 capture commands, governed erasure}');
 
   stage = 'W-1 catalog: CC-M1 is the 0028 L2 body plus exactly one marked line';
   const l2Live = await liveBody('public.canonical_eligible_memory_ids_v1(uuid,timestamp with time zone)');

@@ -49,7 +49,11 @@ describe('S8A-03 CP3 memory acceptance harness', () => {
   it('the preregistered deterministic facts still hold: the pre-screen and the question terms (PREREGISTRATION §3)', () => {
     const notSent = suite.cases.flatMap((testCase: { id: string; turns: Array<{ text: string; session: string }> }) =>
       testCase.turns.flatMap((turn, index) => (capturableMessage(turn.text) === null ? [`${testCase.id}/${index + 1}`] : [])));
-    expect(notSent).toEqual(['C03/2', 'C10/2', 'C11/2']);
+    // Re-anchored 2026-10-24 (S8A-03 Open Understanding, CP2 amendment §10): PREREGISTRATION §3 recorded C03/2 as not sent
+    // because the first-person word gate refused the question «بتعلّم لغة إيه حاليًا؟». The Product Owner removed that gate;
+    // the question is now read and refused by the semantic verifier (a QUESTION is never a fact). The two Memory commands
+    // stay the foreground's. The CP3 run, its preregistration and its FAIL are unchanged history.
+    expect(notSent).toEqual(['C10/2', 'C11/2']);
     const terms = Object.fromEntries(suite.cases.map((testCase: { id: string; turns: Array<{ text: string; question?: boolean }> }) =>
       [testCase.id, testCase.turns.filter((turn) => turn.question).map((turn) => memoryRetrievalTerms(turn.text))]));
     expect(terms).toEqual({

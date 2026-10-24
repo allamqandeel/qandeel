@@ -30,7 +30,7 @@ export class MemoryRetrievalIndexRepository {
   // under the caller's own RLS; eligibility (ACTIVE, unexpired, the caller's own, never an Interaction Preference or a
   // Derived Insight) is decided from public.memories at read time. A malformed row is an integrity failure.
   async readPersonalKnowledgeSources(accessToken: string, limit: number): Promise<PersonalKnowledgeSource[]> {
-    const rows = await this.dataApi.request<unknown>(accessToken, 'rpc/personal_knowledge_sources_v1', {
+    const rows = await this.dataApi.request<unknown>(accessToken, 'rpc/personal_knowledge_sources_v2', {
       method: 'POST', body: JSON.stringify({ p_limit: limit }),
     });
     if (!Array.isArray(rows) || rows.length > limit) throw new Error('PERSONAL_KNOWLEDGE_READ_INTEGRITY');
@@ -41,7 +41,8 @@ export class MemoryRetrievalIndexRepository {
           !(MEMORY_SOURCES as readonly unknown[]).includes(row.source) || typeof row.importance !== 'number' || !text(row.created_at) ||
           !nullableText(row.expires_at) || !(row.subject === null || row.subject === 'SELF' || row.subject === 'OTHER') ||
           !nullableText(row.slot) || !nullableText(row.temporal) || !text(row.last_stated_at) || typeof row.restated_count !== 'number' ||
-          typeof row.ended !== 'boolean' || typeof row.unsettled !== 'boolean') throw new Error('PERSONAL_KNOWLEDGE_READ_INTEGRITY');
+          typeof row.ended !== 'boolean' || typeof row.unsettled !== 'boolean' ||
+          !nullableText(row.person_name) || !nullableText(row.person_relation)) throw new Error('PERSONAL_KNOWLEDGE_READ_INTEGRITY');
       return row as unknown as PersonalKnowledgeSource;
     });
   }

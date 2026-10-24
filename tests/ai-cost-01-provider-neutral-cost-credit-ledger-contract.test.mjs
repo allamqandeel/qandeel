@@ -125,7 +125,10 @@ const CENSUS = [
   // S8A-03 CP2 (2026-10-23): the background Personal Understanding capture, the QIR-005 v2 fourth provider effect.
   // S8A-03 Living Personal Memory (2026-10-23): re-pinned for the schema-v2 capture (current items, family statements,
   // restatements and endings; amendment §9.5.1). Same call, same family, same accounting and SYNTHETIC_ONLY gate.
-  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'f1148a35aa463c210af2de17f8332545675ec24d' },
+  // S8A-03 Open Understanding (2026-10-24, Product Owner decision; amendment §10): re-pinned for the schema-v3 capture
+  // (what QANDEEL already knows, the recent turns, person labels, forget / correct; no address form). Same call, same
+  // family, same accounting and SYNTHETIC_ONLY gate.
+  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'dd4babad6b6a27ce44b7e6354cbcc0f25d6c23a1' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
