@@ -7,7 +7,7 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-24):** S8A-04 — Shared Social Understanding & Trusted Identity; CP1 merged through PR #356 as `43e67229`; CP2 implemented locally under the Product Owner's Final Implementation Authorization (Copy Gate CLOSED, migration 0175 not hosted, Stage 0 passed); the paid stages await the Product Owner's approval; not merged (the S8A-04 note at the end). *(As written at CP1:)* CP1 APPROVED by the Product Owner as an engineering candidate for merge, not as the final production qualification of social understanding (Controlled Amendment approved, Copy Gate CLOSED, migration 0174 not hosted, the interpreter bound to DeepSeek Flash, the placer not bound so no place is produced in the app before CP2); one pull request to `main`, not merged. S8A-03 merged through PR #355 as `4e1e0b78` (2026-10-24).
+> **CURRENT TASK (2026-10-24):** S8A-04 — Shared Social Understanding & Trusted Identity; CP1 merged through PR #356 as `43e67229`; CP2 implemented locally under the Product Owner's Final Implementation Authorization (Copy Gate CLOSED, migration 0175 not hosted, Stage 0 passed); the paid stages ran (round 19, 2026-10-25) and their results await the Product Owner's review; not merged (the S8A-04 note at the end). *(As written at CP1:)* CP1 APPROVED by the Product Owner as an engineering candidate for merge, not as the final production qualification of social understanding (Controlled Amendment approved, Copy Gate CLOSED, migration 0174 not hosted, the interpreter bound to DeepSeek Flash, the placer not bound so no place is produced in the app before CP2); one pull request to `main`, not merged. S8A-03 merged through PR #355 as `4e1e0b78` (2026-10-24).
 >
 > *(Previous:)* **CURRENT TASK (2026-10-24):** S8A-03 — Personal Understanding Reality; CLOSED at its final review & merge gate: CP3 FAIL as run (unchanged), Open Understanding adopted by the Product Owner (migration 0173, not hosted), BG-08 / BG-09 reconciled, PR #355, not merged (the S8A-03 note after §6.29). S8A-04 … S8A-08 have not started.
 >
@@ -951,7 +951,7 @@ stay as written.
   - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 MERGED through PR #356 as `43e67229`; CP2 IMPLEMENTED locally under the Product Owner's Final Implementation Authorization — Copy Gate CLOSED, Stage 0 (free) passed, the paid stages awaiting the Product Owner's approval; not merged)
+### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 MERGED through PR #356 as `43e67229`; CP2 IMPLEMENTED locally under the Product Owner's Final Implementation Authorization — Copy Gate CLOSED, Stage 0 (free) passed, the paid stages run (2026-10-25), their results awaiting the Product Owner's review; not merged)
 
 - Started 2026-10-24 on `s8a/s8a-04-shared-social-understanding` from `main` at `4e1e0b78b1216f73595b0040f84f4fc51bdd6ce2`
   (the merge of PR #355, 2026-10-24): **S8A-03 is merged**, so its closing change is effective. S8A-04 owns no backlog
@@ -990,6 +990,8 @@ stay as written.
     pure server geometry; the Shared cost correlation. The placer stays unbound in production (amendment §7); mobile is
     unchanged;
   - Stage 0 (free) passed: the build, TypeScript, 288 API suites (6 799 tests), `verify-migration-0175.mjs` and the re-anchored verifiers on real PostgreSQL 17, 1 310 static database tests and the 1 639 root contracts; a zero-cost rehearsal of the paid stages through the production composition (amendment §13.5);
-  - the paid stages (amendment §11; at most 66 calls and USD 0.08, guard round 19) have not run: they await the Product
-    Owner's approval. One residue is recorded in amendment §13.4 for the S8A-04 closing reconciliation.
+  - the paid stages ran under the Product Owner's approval (2026-10-25; guard round 19, at most 80 calls and USD 0.08): 58
+    calls, USD 0.048 at peak, no binding stop; the strict blind ratings and the findings (F1 joint-holder merges in the
+    reading, F2 a reply presenting an earlier position as current) are in amendment §13.6 for the Product Owner's review;
+    the placer is not bound. One residue is recorded in amendment §13.4 for the S8A-04 closing reconciliation.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

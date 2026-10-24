@@ -999,8 +999,51 @@ exercises the paths, the stop rules and the ceilings. Findings for the Product O
   dropped, no deleted or unauthorized knowledge used. Every ledger row, refused calls included, carries the sender as
   payer and the message as its source; a refused call is recorded `FAILED_USAGE_UNKNOWN` with usage `ABSENT`.
 
-## 13.6 Not yet done
+## 13.6 The paid stages (round 19, 2026-10-25)
 
-- The paid stages of §11 (round 19). They await the Product Owner's approval and have not run.
-- The placer binding of §7, the last change of CP2, after the paid stages.
+**Approval.** The Product Owner approved the paid stages after the rehearsal (2026-10-25): at most 80 calls and USD 0.08
+at peak; stage call ceilings 14 / 10 / 24 / 32 with the USD shares unchanged (0.010 / 0.006 / 0.035 / 0.029); synthetic
+data only; no ceiling exceeded even if a stage cannot complete; stage R reported in two groups (the probes whose target the
+48 KB index offers, for the quality of the choice; the others, for the behaviour at the limit); the 48 KB coverage kept as a
+Future Improvement (item 010), with no reopening of the recall design. Stage R's three in-index probes ran first, so that
+the stage's USD share would refuse boundary probes before them.
+
+**Method.** Each stage ran once, live, in order, from the same round-19 spend state, on the committed harness (`81e1c214`).
+Each was rated blind by two independent raters (AI agents given only the packet, neutral labels, no key), under the strict
+rule (a criterion passes only when both raters pass it). The results, packets, ratings and gates are kept locally in
+`.s8a-04-reports/cp2/`.
+
+**Spend.** 58 of 80 attempts, USD 0.0477 at peak (0.0348 applicable). No ceiling was exceeded.
+
+| Stage | Calls · USD at peak | Objective result | Strict blind |
+|---|---|---|---|
+| 1. Reading | 14 · 0.0060 | 13 / 14 decoded; 1 refused structurally (S3: a holder named as its own relayer; nothing saved). The two Mohameds kept apart; no token or label stored; N3 0 / 2 failed; the relayed view 1 / 2 failed | 4 / 14 |
+| 2. Placement | 10 · 0.0031 | 10 / 10 placements decoded | 1 / 2 (P2: one meaning placed in the wrong cluster) |
+| R. Recall | 10 · 0.0315 | In the index: 1 / 3 targets found (R2 found; R7 chose none; R8's recall refused by the stage share, so the safe path). Outside the index: 0 / 5; all five turns unavailable, their calls refused by the stage share | R2 fails C2–C4; R8 fails C1; five not applicable |
+| 3. Integrated | 24 · 0.0071 | Relayers kept; no earlier position offered as current; no unauthorized or deleted knowledge used | 1 / 3 |
+
+No binding stop fired in any stage. Every ledger row carries the sender as payer and the message as source; refused and
+aborted calls are recorded `FAILED_USAGE_UNKNOWN` with usage `ABSENT`. No token or label was stored, and no deleted or
+unauthorized knowledge reached a reply.
+
+**Findings for the Product Owner's review** (the model's quality; storage, identity, privacy and accounting held):
+
+- **F1 — joint-holder merges in the reading.** In V1, V3, S4 and N3 (twice), the reading folded different people's
+  contributions into one meaning held by all of them, against M1. V1 is shown to members as «رأي كريم وهالة: … وهالة
+  شايفة إنه بينسى المواعيد», so Hala's view of Karim reads as Karim's too. The decoder cannot see it: a Name is never
+  identity, and the meaning is free text.
+- **F2 — a reply presents an earlier position as current.** R2's reply was given Karim's revised position as current with
+  his earlier one as history, and still called him the objector. The knowledge was right; the reply used it wrongly.
+- **F3 — a relayed concern returns without its holder.** I2's reply brought back the mother's concern as «نقطة اتقالت قبل
+  كده», naming neither her nor Morad, although both were in the knowledge it was given.
+- **F4 — the S8A-02 attribution reading hit its 2.5 s deadline** on all five live calls of stage R (none in stage 3). With
+  no usage reported, the guard settles each at its worst case, which spent most of stage R's share.
+- **F5 — smaller quality points.** A changed view refused by the decoder, so it was not saved (I1); a meaning saved again
+  instead of nothing (S6); a withdrawn position left current (S4); a member stored as an absent holder (the relayed view);
+  two members who share a Name are shown with the same Name (S1; display only, storage kept them apart).
+
+## 13.7 Not yet done
+
+- The placer binding of §7, the last change of CP2. Its §11 conditions hold (no binding stop fired), but the findings
+  above and the device check of §8 are for the Product Owner first; it has not been made.
 - The pull request to `main`.
