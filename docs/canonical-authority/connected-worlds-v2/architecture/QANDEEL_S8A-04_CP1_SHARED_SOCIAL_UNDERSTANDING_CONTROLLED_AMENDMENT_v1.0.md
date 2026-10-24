@@ -1,10 +1,14 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-04 CP1 — Shared Social Understanding & Trusted Identity — Narrow Controlled Amendment v1.0
 
-**Status:** `CANDIDATE CONTROLLED AMENDMENT — AT THE S8A-04 CP1 REVIEW GATE — NOT EFFECTIVE`. It binds from the merge of the
-S8A-04 pull request that carries it, and only after the Product Owner approves it. D1–D5 below are the Product Owner's
-decisions (2026-10-24). The model-facing provider text in §5 is presented verbatim for approval (Copy Gate §5:
-`PROPOSED`, except the §5.2 source-fidelity sentence, `APPROVED` by the Product Owner on 2026-10-24, §9.1)  
+**Status:** `CANONICAL CONTROLLED AMENDMENT — APPROVED BY THE PRODUCT OWNER (2026-10-24) — EFFECTIVE / FROZEN ON MERGE`. It
+binds from the merge of the S8A-04 pull request that carries it. S8A-04 CP1 is approved as an engineering deliverable that is
+a candidate for merge, NOT as the final production qualification of social-understanding accuracy (§9.5). D1–D5 below are
+the Product Owner's decisions (2026-10-24). **Copy Gate §5: `CLOSED` — every model-facing text in §5, the instructions and
+the JSON Schema included, `APPROVED` verbatim by the Product Owner on 2026-10-24** (the §5.2 source-fidelity sentence first,
+§9.1; the rest at the final review, §9.5)  
+*(As written before the approval:)* `CANDIDATE CONTROLLED AMENDMENT — AT THE S8A-04 CP1 REVIEW GATE — NOT EFFECTIVE`; Copy
+Gate §5 `PROPOSED`, except the §5.2 source-fidelity sentence, `APPROVED` on 2026-10-24 (§9.1)  
 **Scope:** the Shared Semantic Interpreter's input and its provider binding only. The Shared reply, the Spatial Placer, the
 graphics engine, Personal and Public are outside it  
 **Amends, narrowly and only in that scope:** the one SHARED-VIS-01 sentence quoted in §3 (before and after)  
@@ -94,7 +98,7 @@ I-03 / I-04G chain and the NO_PROVIDER guard.
 
 ---
 
-# 5. Model-facing provider text (Copy Gate — `PROPOSED`; the §5.2 source-fidelity sentence `APPROVED`, §9.1)
+# 5. Model-facing provider text (Copy Gate — `CLOSED`: every text below `APPROVED` verbatim, 2026-10-24, §9.1 and §9.5)
 
 Never shown to a person. Recorded verbatim from `apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts`.
 
@@ -312,3 +316,21 @@ persistence is enabled**:
    saved;
 4. CP2 proves 1–3 with its own tests and its own real-model evidence before persistence is switched on.
 No new linguistic rule engine is built for this, and S8A-02's identity is reused, not reimplemented.
+
+## 9.5 Final review: Copy Gate closed and CP1 approved (Product Owner, 2026-10-24)
+
+- **Copy Gate §5: `CLOSED`.** The Product Owner approved the rest of §5 exactly as presented verbatim in the Copy Gate
+  report (the full system message: the instructions of §5.2 with the §5.1 sentences, the shared JSON Output instruction
+  and the JSON Schema; and the §5.3 data container), with no further change. With §9.1 every model-facing text of this
+  record is `APPROVED`. The shared JSON Output instruction is S8A-03's, unchanged; the schema's `sourceRefs` enum is the
+  reading's own refs.
+- **S8A-04 CP1 is approved as an engineering deliverable that is a candidate for merge — not as the final production
+  qualification of social-understanding accuracy.** The results recorded in §6.1 and §9.3 are accepted as accurate for
+  this step: people who share a name were kept apart and attribution improved, while N3 and the other identity and
+  attribution errors stay documented as recorded.
+- **The CP2 acceptance conditions are confirmed without dilution** (§9.2, §9.4): a relayed statement is never turned into
+  a confirmed fact; the identity of the view's holder, of its relayer and the message sources are kept; neither S1 / S2 nor
+  a per-reading label number is ever the identity of saved knowledge; and all of this is proven before any production
+  social persistence is enabled.
+- No further prompt change and no further paid DeepSeek run are made in CP1. The pull request is opened for review; it is
+  not merged without the Product Owner's approval, and CP2 does not start before it.

@@ -234,7 +234,10 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // S8A-01 RE-ANCHOR (2026-10-21): S7-05 merged through PR #351; the current task is S8A-01.
     // S8A-02 RE-ANCHOR (2026-10-23): S8A-01 merged through PR #353; the current task is S8A-02, and S8A-01 stands beneath it.
     // S8A-03 RE-ANCHOR (2026-10-23): S8A-02 merged through PR #354; the current task is S8A-03, and S8A-02 stands beneath it.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-03 — Personal Understanding Reality\*\*/mu);
+    // S8A-04 RE-ANCHOR (2026-10-24): S8A-03 merged through PR #355; the current task is S8A-04, and S8A-03 stands beneath it.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-04 — Shared Social Understanding & Trusted Identity\*\*/mu);
+    assert.match(map, /^> \*\(Previous, S8A-03, as written at its closing change; merged through PR #355:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-03 — Personal Understanding Reality\*\*/mu);
+    assert.doesNotMatch(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-03/mu, 'the merged S8A-03 is no longer the current task');
     assert.match(map, /^> \*\(Previous, S8A-02, as written at its closing change; merged through PR #354:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality\*\*/mu);
     assert.doesNotMatch(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-02/mu, 'the merged S8A-02 is no longer the current task');
     assert.match(map, /^> \*\(Previous, S8A-01, as written at its closing change; merged through PR #353:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-01 — DeepSeek Production Integration & First Real Conversation\*\*/mu);

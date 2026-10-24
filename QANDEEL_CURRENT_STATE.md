@@ -172,7 +172,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 delivered locally, at the Product Owner's CP1 review; not pushed, no pull request)
+### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 APPROVED by the Product Owner as an engineering candidate for merge — not as the final production qualification of social understanding; Copy Gate CLOSED; one pull request to `main`, not merged; CP2 not started)
 
 - Started 2026-10-24 on `s8a/s8a-04-shared-social-understanding` from `main` at `4e1e0b78b1216f73595b0040f84f4fc51bdd6ce2`
   (the merge of PR #355, 2026-10-24): **S8A-03 is merged**, so its closing change is effective. S8A-04 owns no backlog
@@ -180,7 +180,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
 - **CP1 (Product Owner decisions D1–D5, 2026-10-24), local commits `20c88dae` and `d329a231`:**
   - governed by the candidate [S8A-04 CP1 Shared Social Understanding Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP1_SHARED_SOCIAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md),
     which narrows one SHARED-VIS-01 sentence (the interpreter input) and binds on the merge of the S8A-04 pull request;
-    the SHARED-VIS-01 record is not edited. Its model-facing text (§5) is at the Copy Gate, `PROPOSED`;
+    the SHARED-VIS-01 record is not edited. Its model-facing text (§5) is APPROVED verbatim, Copy Gate CLOSED (2026-10-24, §9.5);
   - the Shared Semantic Interpreter receives a per-reading speaker token for each contribution's trusted author (the
     frozen 0089 resolver) and the authorized visible Names; never an account id, never a Name as identity; the output
     contract is unchanged and a token in a meaning is refused;
@@ -617,7 +617,7 @@ An entry authorizes no implementation (BG-07).
 
 ## 7. Forward roadmap
 
-> **S8A-04 (2026-10-24):** the current task; CP1 delivered locally and at the Product Owner's CP1 review (candidate Controlled Amendment, migration 0174 not hosted, the placer not bound until CP2), not pushed. S8A-03 merged through PR #355 as `4e1e0b78` (2026-10-24).
+> **S8A-04 (2026-10-24):** the current task; CP1 APPROVED by the Product Owner as an engineering candidate for merge, not as the final production qualification (Controlled Amendment approved, Copy Gate CLOSED, migration 0174 not hosted, the placer not bound until CP2); one pull request to `main`, not merged. S8A-03 merged through PR #355 as `4e1e0b78` (2026-10-24).
 >
 > *(Previous:)* **S8A-03 (2026-10-24):** the current task; CLOSED at its final review & merge gate: CP3 FAIL as run, Open Understanding adopted by the Product Owner (migration 0173, not hosted), BG-08 / BG-09 reconciled, PR #355, not merged (§0).
 >
