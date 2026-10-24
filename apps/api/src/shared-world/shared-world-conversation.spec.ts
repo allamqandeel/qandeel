@@ -103,7 +103,9 @@ describe('S4-02 Shared conversation Product boundary', () => {
     expect(f.conversation.sendText).toHaveBeenCalledWith('token', COMMAND, WORLD, 'مرحبا');
     expect(f.replies.reply).toHaveBeenCalledWith(expect.objectContaining({ worldId: WORLD, humanCommandId: COMMAND, humanMaterialId: MINE, requesterUserId: USER }));
     // SHARED-VIS-01: QANDEEL's semantic pass rides on the same committed message, after the answer is decided.
-    expect(f.places.weave).toHaveBeenCalledWith({ worldId: WORLD, humanCommandId: COMMAND });
+    // S8A-04 CP1: the pass also receives the sender (verified against the resolver inside it) and the read's visible Names.
+    expect(f.places.weave).toHaveBeenCalledWith(expect.objectContaining({ worldId: WORLD, humanCommandId: COMMAND, humanMaterialId: MINE, requesterUserId: USER }));
+    expect((f.places.weave.mock.calls[0] as unknown[])[0]).toHaveProperty('authorNames', expect.arrayContaining([{ materialId: MINE, authorName: 'Amal' }]));
   });
 
   it('SHARED-VIS-01: a semantic place is never a message — not in the conversation, not in what the reply reads', async () => {

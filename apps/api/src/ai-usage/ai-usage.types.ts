@@ -31,6 +31,8 @@ export const AI_FEATURE_FAMILIES = [
   'HYPOTHESIS_CANDIDATE_GENERATION',
   // S8A-03 CP2 (migration 0171): the background Personal Understanding capture.
   'PERSONAL_UNDERSTANDING_CAPTURE',
+  // S8A-04 CP1 (migration 0174): the Shared semantic reading of one World's conversation.
+  'SHARED_SEMANTIC_READING',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 

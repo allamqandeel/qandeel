@@ -12,7 +12,8 @@ import { SharedActivityRepository } from './shared-activity.repository';
 import { SharedConversationReplyGenerator } from './shared-conversation-reply.generator';
 import { SharedIdSealing } from './shared-id-sealing';
 import { SharedSemanticFieldService } from './shared-semantic-field.service';
-import { SHARED_SEMANTIC_INTERPRETER, createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter';
+import { SHARED_SEMANTIC_INTERPRETER } from './shared-semantic-interpreter';
+import { createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter-provider';
 import { SharedSemanticPlaceService } from '../connected-worlds/material-commit/shared-semantic-place.service';
 import { SHARED_SPATIAL_PLACER, createConfiguredSharedSpatialPlacer } from './shared-spatial-placer';
 import { SharedWorldAlertsRepository } from './shared-world-alerts.repository';
@@ -45,7 +46,8 @@ import { SharedWorldService } from './shared-world.service';
  * SHARED-VIS-01 — the Shared World's Living Analysis geography: the member's field and place reads over migration 0148 on
  * the caller's own token, and QANDEEL's semantic places, produced by the server through the same frozen I-03 / I-04G
  * chain as the reply and committed through 0148's server-owned pass commands. The interpreter and the placer are
- * provider-neutral ports that refuse until Stage 8A binds a provider.
+ * provider-neutral ports. S8A-04 CP1 binds the interpreter to DeepSeek Flash (`shared-semantic-interpreter-provider.ts`);
+ * the placer still refuses, so no place is produced until CP2.
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],

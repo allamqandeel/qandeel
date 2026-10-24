@@ -51,7 +51,11 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // 10 reply calls at most, no retries). Founder CP3 Final Preparation Approval, 2026-10-23: 41 attempts and USD 0.15, its
   // own spend-state file. The lock is lifted by the Founder's CP3 Final Real-Model Execution Authorization (2026-10-23):
   // ONE paid run within these caps, no retries, no raised limit; the launcher refuses a second (the state file exists).
-  11: { maxAttempts: 41, costCapUsd: 0.15 } };
+  11: { maxAttempts: 41, costCapUsd: 0.15 },
+  // Round 18: S8A-04 CP1 Shared Social Understanding — the isolated real DeepSeek reading (scripts/s8a-04/). Product Owner
+  // D5, 2026-10-24: at most 64 calls and USD 0.15 — a ceiling, not a target — synthetic data only, no automatic retry, every
+  // stage cumulative in ONE spend-state file; stop on identity confusion or repeated misattribution.
+  18: { maxAttempts: 64, costCapUsd: 0.15 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';

@@ -149,10 +149,15 @@ export class SharedWorldConversationService {
       // A retry of a command whose reply already committed: the one reply is the answer; nothing is generated again.
       if (typeof sent.qandeel_reply_material_id === 'string') return { outcome: 'COMMITTED', materialId: sent.material_id, qandeel: 'COMMITTED' };
       // The human's words are committed. QANDEEL's reply is a separate outcome and never undoes them.
-      const qandeel = await this.reply(userId, token, worldId, commandId, sent.material_id);
+      const view = await this.requesterView(token, worldId);
+      const qandeel = view === null ? 'UNAVAILABLE' : await this.reply(userId, worldId, commandId, sent.material_id, view);
       // SHARED-VIS-01: QANDEEL then reads the World's semantic places, after the answer is decided and without delaying it.
-      // It never changes this answer, and it does nothing at all while no provider is bound (Stage 8A).
-      void this.places.weave({ worldId, humanCommandId: commandId }).catch(() => undefined);
+      // It never changes this answer, and it does nothing at all while the placer has no provider (S8A-04 CP2). S8A-04 CP1:
+      // the pass verifies the sender against the resolver itself; the read's Names only label authors it identified.
+      void this.places.weave({
+        worldId, humanCommandId: commandId, humanMaterialId: sent.material_id, requesterUserId: userId,
+        authorNames: (view ?? []).map((material) => ({ materialId: material.materialId, authorName: material.authorName })),
+      }).catch(() => undefined);
       return { outcome: 'COMMITTED', materialId: sent.material_id, qandeel };
     });
   }
@@ -167,17 +172,28 @@ export class SharedWorldConversationService {
     });
   }
 
-  private async reply(userId: string, token: string, worldId: string, commandId: string, materialId: string): Promise<'COMMITTED' | 'PENDING' | 'UNAVAILABLE'> {
+  /** The sender's own Product read of the conversation, or null when it cannot be read whole. */
+  private async requesterView(token: string, worldId: string): Promise<SharedConversationMaterial[] | null> {
     try {
       const rows = await this.conversation.material(token, worldId);
       const requesterView: SharedConversationMaterial[] = [];
       for (const row of rows.filter(isConversation)) {
-        if (typeof row.text_body !== 'string' || typeof row.material_id !== 'string' || typeof row.established_at !== 'string') return 'UNAVAILABLE';
+        if (typeof row.text_body !== 'string' || typeof row.material_id !== 'string' || typeof row.established_at !== 'string') return null;
         requesterView.push({
           materialId: row.material_id, producer: row.producer_kind === 'QANDEEL' ? 'QANDEEL' : 'HUMAN',
           authorName: row.producer_kind === 'QANDEEL' ? null : row.author_name ?? null, text: row.text_body, establishedAt: row.established_at,
         });
       }
+      return requesterView;
+    } catch {
+      return null;
+    }
+  }
+
+  private async reply(
+    userId: string, worldId: string, commandId: string, materialId: string, requesterView: SharedConversationMaterial[],
+  ): Promise<'COMMITTED' | 'PENDING' | 'UNAVAILABLE'> {
+    try {
       const outcome = await this.replies.reply({ worldId, humanCommandId: commandId, humanMaterialId: materialId, requesterUserId: userId, requesterView });
       if (outcome.state === 'COMMITTED') return 'COMMITTED';
       return outcome.reason === 'WORK_IN_PROGRESS' ? 'PENDING' : 'UNAVAILABLE';

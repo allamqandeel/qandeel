@@ -88,6 +88,11 @@ const FILES = {
   associationModule: 'apps/api/src/hypothesis/hypothesis-evidence-association-provider.module.ts',
   candidateModule: 'apps/api/src/hypothesis/hypothesis-candidate-generator-provider.module.ts',
   understandingModule: 'apps/api/src/personal-understanding/personal-understanding-capture-provider.module.ts',
+  // S8A-04 CP1 (Product Owner D3, 2026-10-24): the Shared semantic reading, its config, its one composition and its pass.
+  sharedReadingAdapter: 'apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts',
+  sharedReadingConfig: 'apps/api/src/shared-world/shared-semantic-interpreter-provider.config.ts',
+  sharedReadingModule: 'apps/api/src/shared-world/shared-semantic-interpreter-provider.ts',
+  sharedPlacePass: 'apps/api/src/connected-worlds/material-commit/shared-semantic-place.service.ts',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
 };
@@ -129,12 +134,16 @@ const CENSUS = [
   // (what QANDEEL already knows, the recent turns, person labels, forget / correct; no address form). Same call, same
   // family, same accounting and SYNTHETIC_ONLY gate.
   { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'dd4babad6b6a27ce44b7e6354cbcc0f25d6c23a1' },
+  // S8A-04 CP1 (2026-10-24, Product Owner D3 / D4): the Shared semantic reading under its own family (migration 0174), through
+  // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate. Re-pinned 2026-10-24 for the
+  // one §5.2 sentence the Product Owner approved at the CP1 Copy Gate (amendment §9.1); nothing else in the file changed.
+  { transport: 'apps/api/src/shared-world/deepseek-shared-semantic-interpreter.ts', family: 'SHARED_SEMANTIC_READING', frozen: '1bea8c65d392da0881c811d282b090eb2a5acdc2' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
-const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter'];
-const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig'];
+const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter', 'sharedReadingAdapter'];
+const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig', 'sharedReadingConfig'];
 /** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
 const FOREIGN_PROVIDER = /OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_AI_API_KEY|GEMINI_API_KEY|@anthropic-ai\/|@google\/(?:genai|generative-ai)|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|\bnew Anthropic\(|OpenAIModelRouter|ClaudeModelRouter|accountedOpenAIResponsesClient|accountedAnthropicMessagesClient|accountedGeminiTransport/u;
 
@@ -165,7 +174,7 @@ function censusViolations(world) {
     if (/decorateClient\?:|decorateClient: \w+ = |decorateClient \?\?/u.test(ts(world[key]))) out.push(`${key} makes its accounting decorator optional`);
   }
   if (!ts(world.production).includes('return (client) => accountedDeepSeekChatCompletionsClient(client, featureFamily, productionAiProviderCallAccounting());')) out.push('the semantic cost-ledger decorator is not the DeepSeek accounting wrapper');
-  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION'], ['understandingModule', 'PERSONAL_UNDERSTANDING_CAPTURE']]) {
+  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION'], ['understandingModule', 'PERSONAL_UNDERSTANDING_CAPTURE'], ['sharedReadingModule', 'SHARED_SEMANTIC_READING']]) {
     if (!new RegExp(`accountedDeepSeekChatCompletionsClient\\(\\s*createDeepSeekClient\\(config\\), '${family}', productionAiProviderCallAccounting\\(\\)\\)`, 'u').test(ts(world[key]))) out.push(`${family} is not accounted`);
     if (/\.fromEnvironment\(environment\)/u.test(ts(world[key]))) out.push(`${key} composes the unaccounted fromEnvironment adapter in production`);
   }
@@ -424,6 +433,12 @@ function attributionViolations(world) {
   const out = [];
   if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) =>\s*runForegroundTurnWork\(/u.test(ts(world.conversationService))) out.push('the foreground request does not attribute its provider calls to the authenticated reader');
   if (!/withPostResponseAiUsageAttribution\(entry\.envelope, \(\) => this\.dispatcher\.dispatch\(entry\.envelope\)\)/u.test(ts(world.consumer))) out.push('post-response provider calls are not attributed');
+  // S8A-04 CP1: the Shared semantic reading is charged to the sender the 0089 resolver names as the author of its message.
+  const pass = ts(world.sharedPlacePass);
+  if (!/runWithAiUsageAttribution\(\{ userId: payer \}, \(\) => this\.interpreter\.read\(input, signal\)\)/u.test(pass)
+    || !/if \(trigger === undefined \|\| trigger\.kind !== 'HUMAN_TEXT' \|\| trigger\.author !== payer\) return refused\('SENDER_UNVERIFIED'\);/u.test(pass)) {
+    out.push('the Shared semantic reading is not attributed to its verified sender');
+  }
   if (!/return valid \? attributions\.run\(Object\.freeze\(\{ \.\.\.attribution \}\), work\) : attributions\.exit\(work\);/u.test(ts(world.attribution))) out.push('an invalid attribution is not fail-closed');
   return out;
 }
@@ -433,7 +448,7 @@ function attributionViolations(world) {
 // Output request shape and one fail-closed completion envelope for every structured adapter.
 // ---------------------------------------------------------------------------------------------------------------
 const AI_PATH_KEYS = ['clients', 'production', 'deepseekRouter', 'deepseekClient', 'routerConfig', 'routerModule', 'healthProbe', 'conversationModule',
-  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', 'understandingModule', ...ADAPTERS, ...CONFIGS];
+  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', 'understandingModule', 'sharedReadingModule', ...ADAPTERS, ...CONFIGS];
 
 function deepSeekOnlyViolations(world) {
   const out = [];
