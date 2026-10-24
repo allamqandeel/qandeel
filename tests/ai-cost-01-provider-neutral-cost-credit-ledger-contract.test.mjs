@@ -10,6 +10,14 @@ import { test } from 'node:test';
 // fails on each planted defect of the task's §21 list (28 of them). It also holds the provider-call census (§20): every
 // production provider transport in apps/api/src is listed here, and each listed one is composed through the ONE
 // accounting boundary. Real database behaviour is proven by database/verify-migration-0135.mjs on real PostgreSQL.
+//
+// S8A-03 (D1): every production AI call is DeepSeek Flash. The census is now the DeepSeek reply router, the seven
+// structured adapters and the one shared DeepSeek client module; the OpenAI, Anthropic and Gemini transports and their
+// wrappers were removed. The ledger stays provider-neutral (0135 / 0170 vocabulary). The S8A-03 detectors below also hold
+// that no other provider is reachable, that every DeepSeek adapter passes the SYNTHETIC_ONLY qualification gate, and that
+// the structured adapters share one JSON Output request and one fail-closed completion envelope.
+// S8A-03 CP2 (2026-10-23): an eighth structured adapter, the background Personal Understanding capture, joins the census
+// under the same rules (family PERSONAL_UNDERSTANDING_CAPTURE, accounted, SYNTHETIC_ONLY, shared JSON envelope).
 
 const rootUrl = new URL('../', import.meta.url);
 const rootPath = decodeURIComponent(rootUrl.pathname).replace(/^\/([A-Za-z]:)/u, '$1');
@@ -48,9 +56,26 @@ const FILES = {
   simulation: 'apps/api/src/ai-usage/ai-cost-simulation.ts',
   worker: 'apps/api/src/ai-usage/ai-usage-operations.worker.ts',
   telemetry: 'apps/api/src/observability/telemetry.service.ts',
-  openaiRouter: 'apps/api/src/model-router/providers/openai/openai-model-router.ts',
-  claudeRouter: 'apps/api/src/model-router/providers/anthropic/claude-model-router.ts',
   deepseekRouter: 'apps/api/src/model-router/providers/deepseek/deepseek-model-router.ts',
+  deepseekClient: 'apps/api/src/model-router/providers/deepseek/deepseek-client.ts',
+  routerConfig: 'apps/api/src/model-router/providers/deepseek/deepseek-model-router.config.ts',
+  healthProbe: 'apps/api/src/health/model-provider-health.probe.ts',
+  cuAdapter: 'apps/api/src/conversation-unit/deepseek-cu-segmentation.provider.ts',
+  focusAdapter: 'apps/api/src/conversational-focus/deepseek-focus-resolution.provider.ts',
+  threadAdapter: 'apps/api/src/thread-establishment/deepseek-thread-establishment.provider.ts',
+  continuityAdapter: 'apps/api/src/thread-lifecycle/deepseek-thread-continuity.provider.ts',
+  intentAdapter: 'apps/api/src/hypothesis/deepseek-hypothesis-intent-extraction.provider.ts',
+  associationAdapter: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts',
+  candidateAdapter: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts',
+  understandingAdapter: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts',
+  cuConfig: 'apps/api/src/conversation-unit/cu-segmentation-provider.config.ts',
+  focusConfig: 'apps/api/src/conversational-focus/focus-resolution-provider.config.ts',
+  threadConfig: 'apps/api/src/thread-establishment/thread-establishment-provider.config.ts',
+  continuityConfig: 'apps/api/src/thread-lifecycle/thread-continuity-provider.config.ts',
+  intentConfig: 'apps/api/src/hypothesis/hypothesis-intent-extraction-provider.config.ts',
+  associationConfig: 'apps/api/src/hypothesis/hypothesis-evidence-association-provider.config.ts',
+  candidateConfig: 'apps/api/src/hypothesis/hypothesis-candidate-generator-provider.config.ts',
+  understandingConfig: 'apps/api/src/personal-understanding/personal-understanding-capture-provider.config.ts',
   routerTypes: 'apps/api/src/model-router/model-router.types.ts',
   routerModule: 'apps/api/src/model-router/model-router.module.ts',
   conversationModule: 'apps/api/src/conversation/conversation.module.ts',
@@ -62,6 +87,7 @@ const FILES = {
   intentModule: 'apps/api/src/hypothesis/hypothesis-intent-extraction-provider.module.ts',
   associationModule: 'apps/api/src/hypothesis/hypothesis-evidence-association-provider.module.ts',
   candidateModule: 'apps/api/src/hypothesis/hypothesis-candidate-generator-provider.module.ts',
+  understandingModule: 'apps/api/src/personal-understanding/personal-understanding-capture-provider.module.ts',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
 };
@@ -84,20 +110,33 @@ const SERVICE_GRANTS = [
 // ---------------------------------------------------------------------------------------------------------------
 // The provider-call census (§20). Each production transport, the adapter that owns it, and how it is accounted.
 // ---------------------------------------------------------------------------------------------------------------
+// S8A-03 (D1): the seven structured adapters were re-pinned when they moved to DeepSeek Flash; a later change to any of
+// them is a deliberate re-pin, never a drift. The client module is where the one SDK client is constructed.
 const CENSUS = [
-  { transport: 'apps/api/src/model-router/providers/openai/openai-model-router.ts', family: 'CONVERSATION_REPLY' },
-  { transport: 'apps/api/src/model-router/providers/anthropic/claude-model-router.ts', family: 'CONVERSATION_REPLY' },
-  // S8A-01: the tenth transport, admitted with the 0170 ledger widening.
+  { transport: 'apps/api/src/model-router/providers/deepseek/deepseek-client.ts', family: null },
   { transport: 'apps/api/src/model-router/providers/deepseek/deepseek-model-router.ts', family: 'CONVERSATION_REPLY' },
-  { transport: 'apps/api/src/conversation-unit/openai-cu-segmentation.provider.ts', family: 'CU_SEGMENTATION', frozen: 'c792f7a5abdf5dc0129db9db4c8fdfcd45d5e95e' },
-  { transport: 'apps/api/src/conversational-focus/openai-focus-resolution.provider.ts', family: 'FOCUS_RESOLUTION', frozen: 'ee832a66075509261d6e23f813d496c6c48f8e60' },
-  { transport: 'apps/api/src/thread-establishment/openai-thread-establishment.provider.ts', family: 'THREAD_FORMATION', frozen: '5135e056beb4ca5facb761422703f4b69d922a81' },
-  { transport: 'apps/api/src/thread-lifecycle/openai-thread-continuity.provider.ts', family: 'THREAD_CONTINUITY', frozen: '5eacb7942a8696237562dcc974d6d40b3af97aad' },
-  { transport: 'apps/api/src/hypothesis/openai-hypothesis-intent-extraction.provider.ts', family: 'HYPOTHESIS_INTENT_EXTRACTION', frozen: 'bf5b82737583e17e0defbd8a260ac63fb8e451e6' },
-  { transport: 'apps/api/src/hypothesis/gemini-hypothesis-evidence-association.provider.ts', family: 'HYPOTHESIS_EVIDENCE_ASSOCIATION', frozen: '9b8b2f00fc6811b7aa03974fe08671a9083936d2' },
-  { transport: 'apps/api/src/hypothesis/gemini-hypothesis-candidate.generator.ts', family: 'HYPOTHESIS_CANDIDATE_GENERATION', frozen: '3e4791757f58f95ad7288f27caa82d24136ed0c5' },
+  { transport: 'apps/api/src/conversation-unit/deepseek-cu-segmentation.provider.ts', family: 'CU_SEGMENTATION', frozen: '695bf77505e6ba1fa32a5b32312e102f77b45caf' },
+  { transport: 'apps/api/src/conversational-focus/deepseek-focus-resolution.provider.ts', family: 'FOCUS_RESOLUTION', frozen: '22cd4f2ed3871156e07fd715ebe208ccbb61a021' },
+  { transport: 'apps/api/src/thread-establishment/deepseek-thread-establishment.provider.ts', family: 'THREAD_FORMATION', frozen: 'e34c43cbfa8b583d14daeb66255b733f49bcdc85' },
+  { transport: 'apps/api/src/thread-lifecycle/deepseek-thread-continuity.provider.ts', family: 'THREAD_CONTINUITY', frozen: '94e0005eea59fd2233ec5bab927bc4f9fcd22b2a' },
+  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-intent-extraction.provider.ts', family: 'HYPOTHESIS_INTENT_EXTRACTION', frozen: 'eed991a4a3b2642fef982d5d7c3595e5789296c1' },
+  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts', family: 'HYPOTHESIS_EVIDENCE_ASSOCIATION', frozen: '00216737d23ebd67f7fb43f7b7359062886923d7' },
+  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts', family: 'HYPOTHESIS_CANDIDATE_GENERATION', frozen: 'efc828ad938e1765b5bf2deb7f0e32c4c423a011' },
+  // S8A-03 CP2 (2026-10-23): the background Personal Understanding capture, the QIR-005 v2 fourth provider effect.
+  // S8A-03 Living Personal Memory (2026-10-23): re-pinned for the schema-v2 capture (current items, family statements,
+  // restatements and endings; amendment §9.5.1). Same call, same family, same accounting and SYNTHETIC_ONLY gate.
+  // S8A-03 Open Understanding (2026-10-24, Product Owner decision; amendment §10): re-pinned for the schema-v3 capture
+  // (what QANDEEL already knows, the recent turns, person labels, forget / correct; no address form). Same call, same
+  // family, same accounting and SYNTHETIC_ONLY gate.
+  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'dd4babad6b6a27ce44b7e6354cbcc0f25d6c23a1' },
 ];
+// Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
+// that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
+const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter'];
+const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig'];
+/** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
+const FOREIGN_PROVIDER = /OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_AI_API_KEY|GEMINI_API_KEY|@anthropic-ai\/|@google\/(?:genai|generative-ai)|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|\bnew Anthropic\(|OpenAIModelRouter|ClaudeModelRouter|accountedOpenAIResponsesClient|accountedAnthropicMessagesClient|accountedGeminiTransport/u;
 
 function listFiles(dir) {
   return readdirSync(dir).flatMap((name) => {
@@ -110,28 +149,29 @@ function listFiles(dir) {
 function censusViolations(world) {
   const out = [];
   // Composition: the one place each production adapter is built passes its client through the boundary.
-  if (!/case 'anthropic':\s*return ClaudeModelRouter\.fromEnvironment\(telemetry, productionAiProviderCallAccounting\(\)\);/u.test(ts(world.routerModule))
-    || !/case 'openai':\s*return OpenAIModelRouter\.fromEnvironment\(telemetry, productionAiProviderCallAccounting\(\)\);/u.test(ts(world.routerModule))
-    || !/case 'deepseek':\s*return DeepSeekModelRouter\.fromEnvironment\(telemetry, productionAiProviderCallAccounting\(\)\);/u.test(ts(world.routerModule))) {
+  if (!/case 'deepseek':\s*return DeepSeekModelRouter\.fromEnvironment\(telemetry, productionAiProviderCallAccounting\(\)\);/u.test(ts(world.routerModule))) {
     out.push('the production Model Router is not composed with the accounting boundary');
   }
-  if (!ts(world.openaiRouter).includes("accounting ? accountedOpenAIResponsesClient(client, 'CONVERSATION_REPLY', accounting) : client")) out.push('the OpenAI reply client is not accounted');
-  if (!ts(world.claudeRouter).includes("accounting ? accountedAnthropicMessagesClient(client, 'CONVERSATION_REPLY', accounting) : client")) out.push('the Anthropic reply client is not accounted');
   if (!ts(world.deepseekRouter).includes("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)")
     || !/static fromEnvironment\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(ts(world.deepseekRouter))) out.push('the DeepSeek reply client is not accounted');
   const module = ts(world.conversationModule);
-  if (!module.includes("costLedgerDecorator('CU_SEGMENTATION')(createOpenAiSegmentationClient(config))")) out.push('CU segmentation is not accounted');
-  for (const [factory, family] of [['openAiFocusResolutionBinding', 'FOCUS_RESOLUTION'], ['openAiThreadEstablishmentBinding', 'THREAD_FORMATION'], ['openAiThreadContinuityBinding', 'THREAD_CONTINUITY']]) {
+  if (!module.includes("costLedgerDecorator('CU_SEGMENTATION')(createDeepSeekClient(config))")) out.push('CU segmentation is not accounted');
+  for (const [factory, family] of [['deepSeekFocusResolutionBinding', 'FOCUS_RESOLUTION'], ['deepSeekThreadEstablishmentBinding', 'THREAD_FORMATION'], ['deepSeekThreadContinuityBinding', 'THREAD_CONTINUITY']]) {
     if (!module.includes(`guardForegroundBinding(${factory}(process.env, costLedgerDecorator('${family}')))`)) out.push(`${factory} is not accounted`);
   }
-  for (const [key, create] of [['focusBinding', 'decorateClient(createOpenAiFocusClient(config))'], ['threadBinding', 'decorateClient(createOpenAiThreadClient(config))'], ['continuityBinding', 'decorateClient(createOpenAiThreadContinuityClient(config))']]) {
-    if (!ts(world[key]).includes(create)) out.push(`${key} does not apply its client decorator`);
+  for (const key of ['focusBinding', 'threadBinding', 'continuityBinding']) {
+    if (!ts(world[key]).includes('decorateClient(createDeepSeekClient(config))')) out.push(`${key} does not apply its client decorator`);
+    // S8A-03: the decorator is required, so no composition of a binding can reach DeepSeek unaccounted.
+    if (/decorateClient\?:|decorateClient: \w+ = |decorateClient \?\?/u.test(ts(world[key]))) out.push(`${key} makes its accounting decorator optional`);
   }
-  if (!/accountedOpenAIResponsesClient\(\s*createOpenAIExtractionClient\(config\), 'HYPOTHESIS_INTENT_EXTRACTION', productionAiProviderCallAccounting\(\)\)/u.test(ts(world.intentModule))) out.push('intent extraction is not accounted');
-  if (!/accountedGeminiTransport\(\s*\(url, init\) => fetch\(url, init\), config\.model, 'HYPOTHESIS_EVIDENCE_ASSOCIATION', productionAiProviderCallAccounting\(\)\)/u.test(ts(world.associationModule))) out.push('evidence association is not accounted');
-  if (!/accountedGeminiTransport\(\s*\(url, init\) => fetch\(url, init\), config\.model, 'HYPOTHESIS_CANDIDATE_GENERATION', productionAiProviderCallAccounting\(\)\)/u.test(ts(world.candidateModule))) out.push('candidate generation is not accounted');
-  for (const key of ['intentModule', 'associationModule', 'candidateModule']) {
+  if (!ts(world.production).includes('return (client) => accountedDeepSeekChatCompletionsClient(client, featureFamily, productionAiProviderCallAccounting());')) out.push('the semantic cost-ledger decorator is not the DeepSeek accounting wrapper');
+  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION'], ['understandingModule', 'PERSONAL_UNDERSTANDING_CAPTURE']]) {
+    if (!new RegExp(`accountedDeepSeekChatCompletionsClient\\(\\s*createDeepSeekClient\\(config\\), '${family}', productionAiProviderCallAccounting\\(\\)\\)`, 'u').test(ts(world[key]))) out.push(`${family} is not accounted`);
     if (/\.fromEnvironment\(environment\)/u.test(ts(world[key]))) out.push(`${key} composes the unaccounted fromEnvironment adapter in production`);
+  }
+  // No structured adapter can build its own client: each receives the accounted one by injection.
+  for (const key of ADAPTERS) {
+    if (/fromEnvironment|createDeepSeekClient\(|new OpenAI\(/u.test(ts(world[key]))) out.push(`${key} can build an unaccounted client`);
   }
   return out;
 }
@@ -212,7 +252,7 @@ function arithmeticViolations(world) {
 
 function unknownViolations(world) {
   const out = [];
-  for (const key of ['normalization', 'accounting', 'clients', 'openaiRouter', 'claudeRouter', 'deepseekRouter']) {
+  for (const key of ['normalization', 'accounting', 'clients', 'deepseekRouter']) {
     if (/\?\?\s*0\b|\|\|\s*0\b/u.test(ts(world[key]))) out.push(`(6) ${key} turns missing usage into zero`);
   }
   if (!/inputTokens: number \| null;\s*outputTokens: number \| null;/u.test(ts(world.routerTypes))) out.push('(6) the router result cannot express unknown usage');
@@ -244,10 +284,10 @@ function boundaryViolations(world) {
   if (!/\} catch \{\s*this\.signal\('begin', 'failure'\);\s*throw new AiProviderCallAccountingUnavailableError\(\);\s*\}/u.test(track)) out.push('(25) an accounting failure lets the provider call proceed');
   if (!/if \(!attribution\) \{\s*this\.signal\('begin', 'unattributed'\);\s*throw new AiProviderCallAccountingUnavailableError\(\);\s*\}/u.test(track)) out.push('(25) an unattributed provider call is allowed');
   if (!/const callId = this\.newCallId\(\);/u.test(track) || /private (?:readonly )?callId|this\.callId\b/u.test(accounting)) out.push('(11) one call id is shared by several provider attempts');
-  for (const [key, fn] of [['clients', 'accountedOpenAIResponsesClient'], ['clients', 'accountedAnthropicMessagesClient'], ['clients', 'accountedGeminiTransport'], ['clients', 'accountedDeepSeekChatCompletionsClient']]) {
-    const body = between(ts(world[key]), `export function ${fn}`, 'export ');
-    if (!/accounting\.track\(/u.test(body)) out.push(`(25) ${fn} reaches the provider outside the boundary`);
-  }
+  const clientsCode = ts(world.clients);
+  if (!/accounting\.track\(/u.test(between(clientsCode, 'export function accountedDeepSeekChatCompletionsClient', 'export '))) out.push('(25) accountedDeepSeekChatCompletionsClient reaches the provider outside the boundary');
+  // S8A-03 (D1): the DeepSeek wrapper is the only accounted transport; no other provider wrapper exists to compose.
+  if ((clientsCode.match(/^export /gmu) ?? []).length !== 1) out.push('(25) a second accounted transport wrapper exists');
   const settle = sql(fnBody(world.migration, 'public.settle_ai_provider_call_v1'));
   if (!/IF c\.call_state <> 'PENDING' THEN\s+IF c\.settlement_digest = v_digest THEN/u.test(settle) || !/RAISE EXCEPTION 'AI_PROVIDER_CALL_SETTLEMENT_CONFLICT' USING ERRCODE = 'PT409';/u.test(settle)
     || !/FOR UPDATE;/u.test(settle)) {
@@ -333,9 +373,7 @@ function authorityViolations(world) {
   if (/SECURITY DEFINER/u.test(register)) out.push('(18) price-card registration runs with elevated rights for its caller');
   // (17) Identity from server authority only: each wrapper fixes its provider; the turn body carries content only.
   const clients = ts(world.clients);
-  for (const provider of ["{ provider: 'OPENAI', requestedModel: modelOf(body), featureFamily }", "{ provider: 'ANTHROPIC', requestedModel: modelOf(body), featureFamily }", "{ provider: 'GEMINI', requestedModel, featureFamily }", "{ provider: 'DEEPSEEK', requestedModel: modelOf(body), featureFamily }"]) {
-    if (!clients.includes(provider)) out.push('(17) the provider identity is not fixed by the server-side wrapper');
-  }
+  if (!clients.includes("{ provider: 'DEEPSEEK', requestedModel: modelOf(body), featureFamily }")) out.push('(17) the provider identity is not fixed by the server-side wrapper');
   if (/body\.provider|\bprovider:\s*\(?body/u.test(clients)) out.push('(17) the provider identity is read from a request body');
   if (!ts(world.conversationService).includes("const allowed = new Set(['content', 'idempotencyKey']);")) out.push('(17) a client turn body can carry provider or model identity');
   return out;
@@ -360,7 +398,7 @@ function prodSec02Violations(world) {
   const out = [];
   if (gitBlobId(world.migration0131) !== 'e5da1036c62487fd3aae6529f84de9c203c32d6e') out.push('(23) migration 0131 changed');
   if (gitBlobId(world.foreground) !== '22873e1b58963ca5fff41df13ceed6698041239f') out.push('(23) the foreground deadline / work-lease scope changed');
-  for (const key of ['openaiRouter', 'claudeRouter', 'deepseekRouter']) {
+  for (const key of ['deepseekRouter']) {
     const code = world[key];
     const guardAt = code.indexOf('assertForegroundProviderBudget();');
     const callAt = code.search(/this\.client\.(?:responses|messages|chat\.completions)\.create\(/u);
@@ -390,7 +428,75 @@ function attributionViolations(world) {
   return out;
 }
 
-const DETECTORS = { censusViolations, creditViolations, pricingViolations, arithmeticViolations, unknownViolations, boundaryViolations, privacyViolations, telemetryViolations, operationsScanViolations, authorityViolations, deletionViolations, prodSec02Violations, simulatorViolations, attributionViolations };
+// ---------------------------------------------------------------------------------------------------------------
+// S8A-03 (D1 / F3 / SYNTHETIC_ONLY) - DeepSeek Flash is the only provider, behind the qualification gate, with one JSON
+// Output request shape and one fail-closed completion envelope for every structured adapter.
+// ---------------------------------------------------------------------------------------------------------------
+const AI_PATH_KEYS = ['clients', 'production', 'deepseekRouter', 'deepseekClient', 'routerConfig', 'routerModule', 'healthProbe', 'conversationModule',
+  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', 'understandingModule', ...ADAPTERS, ...CONFIGS];
+
+function deepSeekOnlyViolations(world) {
+  const out = [];
+  for (const key of AI_PATH_KEYS) {
+    if (FOREIGN_PROVIDER.test(ts(world[key]))) out.push(`(D1) ${key} reaches a provider other than DeepSeek`);
+    if (/\bfetch\(/u.test(ts(world[key]))) out.push(`(D1) ${key} opens a raw HTTP path beside the one client`);
+  }
+  const router = ts(world.routerModule);
+  if ((router.match(/\bcase '/gu) ?? []).length !== 1 || !/default:\s*throw new Error\('MODEL_PROVIDER must be deepseek\.'\);/u.test(router)) out.push('(D1) the Model Router selects or falls back to something other than DeepSeek');
+  const health = ts(world.healthProbe);
+  if (/case\s*'(?!deepseek')/u.test(health)) out.push('(D1) the health probe still configures another provider');
+  const client = ts(world.deepseekClient);
+  if (!client.includes("export const DEEPSEEK_API_BASE_URL = 'https://api.deepseek.com';") || !client.includes("export const DEEPSEEK_FLASH_MODEL = 'deepseek-flash';")) out.push('(D1) the DeepSeek endpoint or the Flash model is not a fixed constant');
+  const factory = between(client, 'export function createDeepSeekClient(', '\n}\n');
+  if (!/baseURL: DEEPSEEK_API_BASE_URL,/u.test(factory) || !/maxRetries: 0,/u.test(factory) || !/organization: null,\s*project: null,/u.test(factory)) out.push('(D1) the one DeepSeek client can leave DeepSeek, retry silently, or forward OpenAI organization headers');
+  if ((client.match(/new OpenAI\(/gu) ?? []).length !== 1) out.push('(D1) a second SDK client is constructed');
+  return out;
+}
+
+function syntheticOnlyViolations(world) {
+  const out = [];
+  const client = ts(world.deepseekClient);
+  if (!client.includes("export const DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'SYNTHETIC_ONLY';")) out.push('(QUAL) the qualification mode is not SYNTHETIC_ONLY');
+  const gate = between(client, 'export function requireDeepSeekQualification(', '\n}\n');
+  if (!/if \(environment\.NODE_ENV === 'production'\) \{\s*throw new Error\(/u.test(gate)) out.push('(QUAL) the qualification gate admits a production process');
+  if (!/if \(environment\.DEEPSEEK_QUALIFICATION_MODE\?\.trim\(\) !== DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE\) \{\s*throw new Error\(/u.test(gate)) out.push('(QUAL) the qualification gate admits an undeclared mode');
+  if (!/if \(!apiKey\) throw new Error\(/u.test(gate)) out.push('(QUAL) the qualification gate admits a missing key');
+  for (const key of CONFIGS) {
+    const config = ts(world[key]);
+    if (!/requireDeepSeekQualification\(environment, '[^']+'\)/u.test(config)) out.push(`(QUAL) ${key} skips the SYNTHETIC_ONLY qualification gate`);
+    if (/environment\.DEEPSEEK_API_KEY/u.test(config)) out.push(`(QUAL) ${key} reads the DeepSeek key around the gate`);
+  }
+  for (const key of CONFIGS.filter((name) => name !== 'routerConfig')) {
+    const config = ts(world[key]);
+    if (!/assertDeepSeekFlashSelection\(environment, '[A-Z_]+'\)/u.test(config) || !/model: (?:DEEPSEEK_FLASH_MODEL|typeof DEEPSEEK_FLASH_MODEL)/u.test(config)) out.push(`(D1) ${key} lets an operator select another provider or model`);
+  }
+  return out;
+}
+
+function jsonOutputViolations(world) {
+  const out = [];
+  const client = ts(world.deepseekClient);
+  const request = between(client, 'export function deepSeekJsonRequest(', '\n}\n');
+  for (const field of ['model: DEEPSEEK_FLASH_MODEL,', "response_format: { type: 'json_object' },", "thinking: { type: 'disabled' },", 'max_tokens: input.maxTokens,', 'stream: false,']) {
+    if (!request.includes(field)) out.push(`(F3) the structured request lost ${field}`);
+  }
+  if (!/\$\{input\.instructions\}\\n\\n\$\{DEEPSEEK_JSON_OUTPUT_INSTRUCTION\}\\n\$\{JSON\.stringify\(input\.schema\)\}/u.test(request) || /tools|tool_choice|user:/u.test(request)) out.push('(JSON) the system message is not instructions + JSON Output instruction + schema, or the request carries more');
+  if (!/'Respond with exactly one json object/u.test(client)) out.push('(JSON) the JSON Output instruction lost the required word json');
+  const content = between(client, 'export function deepSeekJsonContent(', '\n}\n');
+  if (!/response\?\.choices\?\.length === 1/u.test(content) || !/choice\?\.finish_reason === 'stop' && typeof content === 'string' && content\.trim\(\)\.length > 0 \? content : undefined/u.test(content)
+    || !/if \(choice\?\.finish_reason === 'insufficient_system_resource'\) throw new DeepSeekUnavailableError\(\);/u.test(content)) {
+    out.push('(JSON) a truncated, empty, multi-choice or resource-starved completion can be parsed as an answer');
+  }
+  for (const key of ADAPTERS) {
+    const adapter = ts(world[key]);
+    if (!adapter.includes('this.client.chat.completions.create(') || !adapter.includes('deepSeekJsonRequest({') || !/deepSeekJsonContent\(response\)/u.test(adapter)) out.push(`(JSON) ${key} bypasses the shared request or completion envelope`);
+    if (!/\{ timeout: this\.config\.timeoutMs, maxRetries: 0, signal: controller\.signal \}/u.test(adapter)) out.push(`(JSON) ${key} lost its bounded, retry-free, abortable call`);
+    if (!/if \(isDeepSeekUnavailable\(error\)\) throw new \w+Error\('UNAVAILABLE'\);/u.test(adapter)) out.push(`(JSON) ${key} no longer classifies unavailability`);
+  }
+  return out;
+}
+
+const DETECTORS = { deepSeekOnlyViolations, syntheticOnlyViolations, jsonOutputViolations, censusViolations, creditViolations, pricingViolations, arithmeticViolations, unknownViolations, boundaryViolations, privacyViolations, telemetryViolations, operationsScanViolations, authorityViolations, deletionViolations, prodSec02Violations, simulatorViolations, attributionViolations };
 
 // ---------------------------------------------------------------------------------------------------------------
 // The shipped tree.
@@ -412,12 +518,29 @@ test('the provider-call census is complete: every production provider transport 
     .filter((file) => PROVIDER_TRANSPORT.test(ts(read(file))));
   assert.deepEqual(production.sort(), CENSUS.map((entry) => entry.transport).sort(), 'no production provider transport exists outside the census');
   for (const entry of CENSUS.filter((e) => e.frozen)) assert.equal(gitBlobId(read(entry.transport)), entry.frozen, `${entry.transport} is unchanged`);
+  for (const entry of CENSUS.filter((e) => e.family)) assert.ok(read(entry.transport).includes('chat.completions.create('), `${entry.transport} is a DeepSeek Chat Completions transport`);
   // Health probes reach no provider; the operator-only evaluation harness is not production and is not imported by it.
   for (const file of listFiles(join(rootPath, 'apps/api/src/health'))) assert.doesNotMatch(read(file.slice(rootPath.length).replace(/\\/gu, '/').replace(/^\//u, '')), PROVIDER_TRANSPORT);
   const importsBrainEval = listFiles(join(rootPath, 'apps/api/src')).map((file) => file.slice(rootPath.length).replace(/\\/gu, '/').replace(/^\//u, ''))
     .filter((file) => !file.includes('/brain-eval/') && /from '[^']*brain-eval/u.test(read(file)));
   assert.deepEqual(importsBrainEval, [], 'nothing in production imports the evaluation harness');
   assert.deepEqual(censusViolations(src), []);
+});
+
+test('S8A-03 (D1): no production file reaches OpenAI, Anthropic or Gemini, reads their credentials or imports their SDKs', () => {
+  const production = listFiles(join(rootPath, 'apps/api/src'))
+    .map((file) => file.slice(rootPath.length).replace(/\\/gu, '/').replace(/^\//u, ''))
+    .filter((file) => file.endsWith('.ts') && !file.endsWith('.spec.ts') && !file.includes('/brain-eval/'));
+  assert.deepEqual(production.filter((file) => FOREIGN_PROVIDER.test(ts(read(file)))), []);
+  assert.deepEqual(production.filter((file) => /\/providers\/(?:openai|anthropic|gemini)\//u.test(file) || /\/(?:openai|gemini|claude)-[\w.-]+\.ts$/u.test(file)), [], 'no OpenAI / Anthropic / Gemini adapter file remains');
+  // The historical bake-off harness keeps its recorded artifacts and labels, but reaches no provider but DeepSeek.
+  const harness = listFiles(join(rootPath, 'apps/api/src/brain-eval')).map((file) => file.slice(rootPath.length).replace(/\\/gu, '/').replace(/^\//u, ''))
+    .filter((file) => file.endsWith('.ts') && !file.endsWith('.spec.ts'));
+  assert.deepEqual(harness.filter((file) => /OpenAIModelRouter|ClaudeModelRouter|providers\/(?:openai|anthropic)\//u.test(read(file))), []);
+  const apiPackage = JSON.parse(read('apps/api/package.json'));
+  assert.equal(apiPackage.dependencies?.['@anthropic-ai/sdk'], undefined, 'the Anthropic SDK is no longer a dependency');
+  const rootPackage = JSON.parse(read('package.json'));
+  for (const script of ['verify:openai:smoke', 'verify:claude:smoke', 'eval:brain:run']) assert.equal(rootPackage.scripts[script], undefined, `${script} is removed`);
 });
 
 test('the shipped tree is clean under every detector', () => {
@@ -438,7 +561,7 @@ const PLANTED = [
   ['5 JS float used for money', 'arithmeticViolations', () => plant('simulation', 'return shiftExact(multiplyExact(exactInteger(quantity), parseExactDecimal(unitPrice)), exponent);', 'return parseExactDecimal(String(quantity * Number(unitPrice) / 1_000_000));')],
   ['6 missing usage treated as zero', 'unknownViolations', () => plant('normalization', 'const input = count(usage.input_tokens);', 'const input = count(usage.input_tokens) ?? 0;')],
   ['6b missing cache fields assumed uncached', 'unknownViolations', () => plant('normalization', 'const cacheWrite = count(details?.cache_write_tokens);', 'const cacheWrite = count(details?.cache_write_tokens) ?? 0;')],
-  ['6c the router fabricates zero tokens', 'unknownViolations', () => plant('openaiRouter', 'inputTokens: response.usage?.input_tokens ?? null,', 'inputTokens: response.usage?.input_tokens ?? 0,')],
+  ['6c the router fabricates zero tokens', 'unknownViolations', () => plant('deepseekRouter', 'inputTokens: response.usage?.prompt_tokens ?? null,', 'inputTokens: response.usage?.prompt_tokens ?? 0,')],
   ['7 missing rate treated as zero', 'unknownViolations', () => plant('migration', "IF v_unpriced > 0 THEN\n      v_state := 'UNPRICED'; v_reason := 'NO_EFFECTIVE_PRICE_CARD';", "IF false THEN\n      v_state := 'UNPRICED'; v_reason := 'NO_EFFECTIVE_PRICE_CARD';")],
   ['8 success without usage treated as free', 'unknownViolations', () => plant('accounting', '} catch {\n      usage = ABSENT_AI_USAGE;\n    }', "} catch {\n      usage = { completeness: 'COMPLETE', quantities: {} };\n    }")],
   ['9 failure treated as free without evidence', 'unknownViolations', () => plant('accounting', "await settle('FAILED', ABSENT_AI_USAGE);\n      throw error;", "await settle('FAILED', { completeness: 'COMPLETE', quantities: { INPUT_TOKEN: 0, OUTPUT_TOKEN: 0 } });\n      throw error;")],
@@ -450,7 +573,7 @@ const PLANTED = [
   ['14b the ledger sends the raw response', 'privacyViolations', () => plant('ledger', 'p_outcome: record.outcome,', 'p_outcome: record.outcome,\n      p_raw_response: record,')],
   ['15 user id emitted as a telemetry label', 'telemetryViolations', () => plant('telemetry', "this.aiUsageAccounting.add?.(1,{stage,outcome,policy_version:AI_USAGE_POLICY_VERSION});", "this.aiUsageAccounting.add?.(1,{stage,outcome,user_id:stage,policy_version:AI_USAGE_POLICY_VERSION});")],
   ['16 price-card intervals overlap', 'pricingViolations', () => plant('migration', "RAISE EXCEPTION 'AI_PRICE_CARD_OVERLAP' USING ERRCODE = '23P01';", 'NULL;')],
-  ['17 provider identity supplied by a client body', 'authorityViolations', () => plant('clients', "{ provider: 'OPENAI', requestedModel: modelOf(body), featureFamily }", "{ provider: (body as { provider: 'OPENAI' }).provider, requestedModel: modelOf(body), featureFamily }")],
+  ['17 provider identity supplied by a client body', 'authorityViolations', () => plant('clients', "{ provider: 'DEEPSEEK', requestedModel: modelOf(body), featureFamily }", "{ provider: (body as { provider: 'DEEPSEEK' }).provider, requestedModel: modelOf(body), featureFamily }")],
   ['17b the turn body may carry a model', 'authorityViolations', () => plant('conversationService', "const allowed = new Set(['content', 'idempotencyKey']);", "const allowed = new Set(['content', 'idempotencyKey', 'model']);")],
   ['18 an authenticated client can modify price cards', 'authorityViolations', () => plant('migration', '\nCOMMIT;', '\nGRANT EXECUTE ON FUNCTION public.register_ai_price_card_v1(text, text, text, text, text, numeric, bigint, text, timestamptz, text) TO authenticated;\nCOMMIT;')],
   ['19 an authenticated client can write provider usage', 'authorityViolations', () => plant('migration', '\nCOMMIT;', '\nGRANT EXECUTE ON FUNCTION public.settle_ai_provider_call_v1(uuid, uuid, text, text, jsonb) TO authenticated;\nCOMMIT;')],
@@ -458,7 +581,7 @@ const PLANTED = [
   ['21 a production fake / test price card is active', 'pricingViolations', () => plant('migration', "  CONSTRAINT ai_price_cards_test_isolation_check CHECK ((card_class = 'TEST_ONLY') = (provider = 'TEST_PROVIDER')),\n", '')],
   ['22 no policy turns into zero Credits', 'creditViolations', () => plant('simulation', "!policy\n    ? { state: 'CREDIT_POLICY_NOT_SUPPLIED' }", "!policy\n    ? { state: 'SIMULATED', policyKey: '', policyVersion: 0, credits: '0' }")],
   ['23 PROD-SEC-02 limits weakened', 'prodSec02Violations', () => plant('migration0131', 'SELECT 1, 2, interval', 'SELECT 9, 9, interval')],
-  ['23b a reply router loses its deadline guard', 'prodSec02Violations', () => plant('openaiRouter', '    assertForegroundProviderBudget();\n', '\n')],
+  ['23b a reply router loses its deadline guard', 'prodSec02Violations', () => plant('deepseekRouter', '    assertForegroundProviderBudget();\n', '\n')],
   ['24 account deletion leaves directly linked orphan cost rows', 'deletionViolations', () => plant('migration', 'user_id uuid NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,', 'user_id uuid NOT NULL,')],
   ['24b an accounting guard blocks the erasure cascade', 'deletionViolations', () => plant('migration', "  IF TG_OP = 'DELETE' AND pg_catalog.pg_trigger_depth() > 1 THEN RETURN OLD; END IF;\n", '')],
   ['25 an accounting failure silently allows untracked provider calls', 'boundaryViolations', () => plant('accounting', "      this.signal('begin', 'failure');\n      throw new AiProviderCallAccountingUnavailableError();", "      this.signal('begin', 'failure');\n      return invoke();")],
@@ -466,9 +589,31 @@ const PLANTED = [
   ['26 the simulator mutates a live balance', 'simulatorViolations', () => plant('simulation', "} from './exact-decimal';", "} from './exact-decimal';\nimport { SupabaseAiProviderCallLedger } from './ai-provider-call-ledger.repository';")],
   ['27 historical Credit ratings rewritten after a policy change', 'creditViolations', () => plant('migration', 'CREATE TRIGGER reject_ai_credit_rating_mutation_v1 BEFORE UPDATE OR DELETE ON public.ai_credit_ratings', 'CREATE TRIGGER reject_ai_credit_rating_mutation_v1 BEFORE DELETE ON public.ai_credit_ratings')],
   ['28 the cost ledger accepts prompt / response text', 'privacyViolations', () => plant('migration', 'p_call_id uuid, p_user_id uuid, p_outcome text, p_usage_completeness text, p_usage jsonb\n)', 'p_call_id uuid, p_user_id uuid, p_outcome text, p_usage_completeness text, p_usage jsonb, p_response_text text\n)')],
-  ['census: a new production provider path bypasses the boundary', 'censusViolations', () => plant('associationModule', "accountedGeminiTransport(\n    (url, init) => fetch(url, init), config.model, 'HYPOTHESIS_EVIDENCE_ASSOCIATION', productionAiProviderCallAccounting())", '(url, init) => fetch(url, init)')],
+  ['census: a new production provider path bypasses the boundary', 'censusViolations', () => plant('associationModule', "accountedDeepSeekChatCompletionsClient(\n    createDeepSeekClient(config), 'HYPOTHESIS_EVIDENCE_ASSOCIATION', productionAiProviderCallAccounting())", 'createDeepSeekClient(config)')],
+  ['census: the semantic decorator stops accounting', 'censusViolations', () => plant('production', 'return (client) => accountedDeepSeekChatCompletionsClient(client, featureFamily, productionAiProviderCallAccounting());', 'return (client) => client;')],
+  ['census: a binding makes its accounting decorator optional', 'censusViolations', () => plant('focusBinding', 'decorateClient: FocusResolutionClientDecorator,', 'decorateClient?: FocusResolutionClientDecorator,')],
+  ['census: an adapter regains an unaccounted factory', 'censusViolations', () => plant('cuAdapter', 'export class DeepSeekCuSegmentationProvider implements CuSegmentationProvider {', 'export class DeepSeekCuSegmentationProvider implements CuSegmentationProvider {\n  static fromEnvironment(): void {}')],
+  ['census: a second accounted transport wrapper returns', 'boundaryViolations', () => plant('clients', 'export function accountedDeepSeekChatCompletionsClient', 'export function accountedOpenAIResponsesClient(): void {}\nexport function accountedDeepSeekChatCompletionsClient')],
+  ['D1: the Model Router selects OpenAI again', 'deepSeekOnlyViolations', () => plant('routerModule', "case 'deepseek':", "case 'openai':\n    case 'deepseek':")],
+  ['D1: the Model Router falls back instead of refusing', 'deepSeekOnlyViolations', () => plant('routerModule', "throw new Error('MODEL_PROVIDER must be deepseek.');", 'return DeepSeekModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());')],
+  ['D1: a hidden fallback reads the OpenAI key', 'deepSeekOnlyViolations', () => plant('focusConfig', "const apiKey = requireDeepSeekQualification(environment, 'conversational focus resolution');", "const apiKey = requireDeepSeekQualification(environment, 'conversational focus resolution') || environment.OPENAI_API_KEY;")],
+  ['D1: an adapter calls Gemini over raw HTTP', 'deepSeekOnlyViolations', () => plant('candidateAdapter', 'const MAX_RESPONSE_CHARACTERS = 1_000_000;', "const MAX_RESPONSE_CHARACTERS = 1_000_000;\nvoid fetch('https://generativelanguage.googleapis.com/v1beta/models');")],
+  ['D1: the one client is pointed away from DeepSeek', 'deepSeekOnlyViolations', () => plant('deepseekClient', '    baseURL: DEEPSEEK_API_BASE_URL,', '    baseURL: process.env.OPENAI_BASE_URL,')],
+  ['D1: the one client retries silently', 'deepSeekOnlyViolations', () => plant('deepseekClient', '    maxRetries: 0,\n    timeout: config.timeoutMs,', '    maxRetries: 2,\n    timeout: config.timeoutMs,')],
+  ['D1: the health probe configures another provider', 'deepSeekOnlyViolations', () => plant('healthProbe', "case'deepseek':", "case'openai':return'configured';case'deepseek':")],
+  ['D1: a structured adapter lets the operator pick another model', 'syntheticOnlyViolations', () => plant('intentConfig', "assertDeepSeekFlashSelection(environment, 'HYPOTHESIS_INTENT_EXTRACTION');", '')],
+  ['QUAL: an adapter config skips the SYNTHETIC_ONLY gate', 'syntheticOnlyViolations', () => plant('associationConfig', "const apiKey = requireDeepSeekQualification(environment, 'hypothesis evidence association');", "const apiKey = environment.DEEPSEEK_API_KEY ?? '';")],
+  ['QUAL: the gate admits a production process', 'syntheticOnlyViolations', () => plant('deepseekClient', "  if (environment.NODE_ENV === 'production') {\n    throw new Error('DeepSeek is qualification-only and cannot be selected in production.');\n  }\n", '')],
+  ['QUAL: the gate admits an undeclared mode', 'syntheticOnlyViolations', () => plant('deepseekClient', 'if (environment.DEEPSEEK_QUALIFICATION_MODE?.trim() !== DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE) {', 'if (false) {')],
+  ['F3: thinking is enabled for the structured functions', 'jsonOutputViolations', () => plant('deepseekClient', "    thinking: { type: 'disabled' },\n    max_tokens: input.maxTokens,", "    thinking: { type: 'enabled' },\n    max_tokens: input.maxTokens,")],
+  ['JSON: the request leaves JSON Output', 'jsonOutputViolations', () => plant('deepseekClient', "    response_format: { type: 'json_object' },\n    thinking:", "    response_format: { type: 'text' },\n    thinking:")],
+  ['JSON: the schema leaves the system message', 'jsonOutputViolations', () => plant('deepseekClient', '${input.instructions}\\n\\n${DEEPSEEK_JSON_OUTPUT_INSTRUCTION}\\n${JSON.stringify(input.schema)}', '${input.instructions}')],
+  ['JSON: a truncated completion is parsed as an answer', 'jsonOutputViolations', () => plant('deepseekClient', "return choice?.finish_reason === 'stop' && typeof content === 'string'", "return typeof content === 'string'")],
+  ['JSON: insufficient resources become an answer', 'jsonOutputViolations', () => plant('deepseekClient', "  if (choice?.finish_reason === 'insufficient_system_resource') throw new DeepSeekUnavailableError();\n", '')],
+  ['JSON: an adapter bypasses the completion envelope', 'jsonOutputViolations', () => plant('cuAdapter', 'return parseProposal(deepSeekJsonContent(response), request);', 'return parseProposal((response as any).choices[0].message.content, request);')],
+  ['JSON: an adapter retries behind the SDK', 'jsonOutputViolations', () => plant('threadAdapter', '{ timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal }', '{ timeout: this.config.timeoutMs, maxRetries: 2, signal: controller.signal }')],
   ['census: the DeepSeek reply client is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)", 'createDeepSeekClient(config)')],
-  ['census: a semantic binding is composed unaccounted', 'censusViolations', () => plant('conversationModule', "openAiFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))", 'openAiFocusResolutionBinding()')],
+  ['census: a semantic binding is composed unaccounted', 'censusViolations', () => plant('conversationModule', "deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))", 'deepSeekFocusResolutionBinding()')],
   ['ops: a failed operations scan is swallowed by a silent catch', 'operationsScanViolations', () => plant('worker', "} catch (error) {\n        this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');\n        return;\n      }", '} catch {\n        return;\n      }')],
   ['ops: a silent outer catch {} returns around the scan', 'operationsScanViolations', () => plant('worker', '    } finally {\n      this.running = false;', '    } catch {\n      // retried on the next cycle\n    } finally {\n      this.running = false;')],
   ['ops: error text reaches the operations signal', 'operationsScanViolations', () => plant('worker', "this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');", 'this.signal((error as Error).message as never);')],

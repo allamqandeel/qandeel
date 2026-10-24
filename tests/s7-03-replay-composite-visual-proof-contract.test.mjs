@@ -263,7 +263,9 @@ const DETECTORS = {
     // S7-05 RE-ANCHOR (2026-10-20): S7-04 merged through PR #350; the current task is S7-05.
     // S8A-01 RE-ANCHOR (2026-10-21): S7-05 merged through PR #351; the current task is S8A-01.
     // S8A-02 RE-ANCHOR (2026-10-23): S8A-01 merged through PR #353; the current task is S8A-02, and S8A-01 stands beneath it.
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality\*\*/mu.test(w.map)) out.push('the Project Map names S8A-02 as current');
+    // S8A-03 RE-ANCHOR (2026-10-23): S8A-02 merged through PR #354; the current task is S8A-03, and S8A-02 stands beneath it.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8A-03 — Personal Understanding Reality\*\*/mu.test(w.map)) out.push('the Project Map names S8A-03 as current');
+    if (w.map !== null && !/^> \*\(Previous, S8A-02, as written at its closing change; merged through PR #354:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality\*\*/mu.test(w.map)) out.push('the Project Map keeps S8A-02 as the previous task');
     if (w.map !== null && !/^> \*\(Previous, S8A-01, as written at its closing change; merged through PR #353:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-01 — DeepSeek Production Integration & First Real Conversation\*\*/mu.test(w.map)) out.push('the Project Map keeps S8A-01 as the previous task');
     if (w.map !== null && !/^> \*\(Previous, S7-03, as written at its closing change; merged through PR #349:\)\* \*\*CURRENT IMPLEMENTATION TASK: S7-03 — Historical Replay Composite Visual Proof\*\*/mu.test(w.map)) out.push('the Project Map keeps S7-03 as the previous task');
     return out;

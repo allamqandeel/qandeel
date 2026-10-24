@@ -1,8 +1,7 @@
 import { AiProviderCallAccounting, type AiProviderCallBeginRecord } from './ai-provider-call-accounting';
-import { accountedAnthropicMessagesClient, accountedOpenAIResponsesClient } from './accounted-provider-clients';
+import { accountedDeepSeekChatCompletionsClient } from './accounted-provider-clients';
 import { currentAiUsageAttribution, runWithAiUsageAttribution } from './ai-usage-attribution';
-import { OpenAIModelRouter } from '../model-router/providers/openai/openai-model-router';
-import { ClaudeModelRouter } from '../model-router/providers/anthropic/claude-model-router';
+import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
 import { ModelRouterProviderError, type ModelRouterRequest } from '../model-router/model-router.types';
 import { withPostResponseAiUsageAttribution } from '../post-response-intelligence/post-response-intelligence-consumer.service';
 
@@ -24,38 +23,37 @@ function ledger(fail = false) {
   }) };
 }
 
-const openAIConfig = { apiKey: 'k', resolveModel: (path: 'FAST' | 'DEEP') => ({ model: path === 'FAST' ? 'gpt-fast' : 'gpt-deep', reasoningEffort: 'none' as const }), maxOutputTokens: 10, timeoutMs: 1000, maxRetries: 0 as const };
+const deepSeekConfig = { apiKey: 'k', resolveModel: () => ({ model: 'deepseek-flash' }), maxOutputTokens: { FAST: 10, DEEP: 10 }, timeoutMs: 1000, maxRetries: 0 as const };
+const reply = (usage?: unknown) => ({ choices: [{ finish_reason: 'stop', message: { content: 'hi' } }], ...(usage ? { usage } : {}) });
 
 describe('AI-COST-01 Model Router integration', () => {
   it('every reply attempt is one accounted CONVERSATION_REPLY call carrying its FAST / DEEP path', async () => {
     const l = ledger();
-    const create = jest.fn(async () => ({ output_text: 'hi', usage: { input_tokens: 5, input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 }, output_tokens: 1 } }));
-    const router = new OpenAIModelRouter(openAIConfig as never, accountedOpenAIResponsesClient({ responses: { create } }, 'CONVERSATION_REPLY', l.accounting) as never);
+    const create = jest.fn(async () => reply({ prompt_tokens: 5, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 5, completion_tokens: 1 }));
+    const router = new DeepSeekModelRouter(deepSeekConfig as never, accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'CONVERSATION_REPLY', l.accounting) as never);
     const result = await runWithAiUsageAttribution({ userId: USER }, () => router.generate(request('DEEP')));
     expect(result.content).toBe('hi');
-    expect(l.begun).toEqual([expect.objectContaining({ featureFamily: 'CONVERSATION_REPLY', processingPath: 'DEEP', requestedModel: 'gpt-deep', provider: 'OPENAI' })]);
+    expect(l.begun).toEqual([expect.objectContaining({ featureFamily: 'CONVERSATION_REPLY', processingPath: 'DEEP', requestedModel: 'deepseek-flash', provider: 'DEEPSEEK' })]);
   });
 
   it('a reply whose accounting intent cannot be written fails through the existing bounded provider failure, with no provider call', async () => {
     const l = ledger(true);
     const create = jest.fn();
-    const router = new OpenAIModelRouter(openAIConfig as never, accountedOpenAIResponsesClient({ responses: { create } }, 'CONVERSATION_REPLY', l.accounting) as never);
+    const router = new DeepSeekModelRouter(deepSeekConfig as never, accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'CONVERSATION_REPLY', l.accounting) as never);
     await expect(runWithAiUsageAttribution({ userId: USER }, () => router.generate(request('FAST')))).rejects.toBeInstanceOf(ModelRouterProviderError);
     expect(create).not.toHaveBeenCalled();
   });
 
   it('a reply with no reported usage is no longer turned into zero tokens', async () => {
-    const router = new OpenAIModelRouter(openAIConfig as never, { responses: { create: async () => ({ output_text: 'hi' }) } } as never);
+    const router = new DeepSeekModelRouter(deepSeekConfig as never, { chat: { completions: { create: async () => reply() } } } as never);
     expect((await router.generate(request('FAST'))).usage).toEqual({ inputTokens: null, outputTokens: null });
   });
 
-  it('Claude: the same boundary, the same path attribution', async () => {
+  it('S8A-03 (D1): the FAST path is attributed the same way, through the same one boundary', async () => {
     const l = ledger();
-    const config = { apiKey: 'k', resolveModel: () => ({ model: 'claude-x' }), maxOutputTokens: 10, timeoutMs: 1000, maxRetries: 0 as const };
-    const message = { content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 2, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } };
-    const router = new ClaudeModelRouter(config as never, accountedAnthropicMessagesClient({ messages: { create: async () => message } }, 'CONVERSATION_REPLY', l.accounting) as never);
+    const router = new DeepSeekModelRouter(deepSeekConfig as never, accountedDeepSeekChatCompletionsClient({ chat: { completions: { create: async () => reply() } } }, 'CONVERSATION_REPLY', l.accounting) as never);
     await runWithAiUsageAttribution({ userId: USER }, () => router.generate(request('FAST')));
-    expect(l.begun[0]).toMatchObject({ provider: 'ANTHROPIC', processingPath: 'FAST', requestedModel: 'claude-x' });
+    expect(l.begun[0]).toMatchObject({ provider: 'DEEPSEEK', processingPath: 'FAST', requestedModel: 'deepseek-flash' });
   });
 });
 

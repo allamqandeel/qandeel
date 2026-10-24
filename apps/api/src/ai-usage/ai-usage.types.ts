@@ -29,6 +29,8 @@ export const AI_FEATURE_FAMILIES = [
   'HYPOTHESIS_INTENT_EXTRACTION',
   'HYPOTHESIS_EVIDENCE_ASSOCIATION',
   'HYPOTHESIS_CANDIDATE_GENERATION',
+  // S8A-03 CP2 (migration 0171): the background Personal Understanding capture.
+  'PERSONAL_UNDERSTANDING_CAPTURE',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 

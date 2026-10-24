@@ -231,4 +231,36 @@ describe('MemoryWriteEvaluatorService', () => {
       expect(screenMemoryCapture({ type: 'PERSONAL_FACT', content: 'بطلت بحب السهر.' }, [memory('STABLE_PREFERENCE', 'أنا بحب الشاي.')])).toBeUndefined();
     });
   });
+
+  describe('S8A-03 CP3 D-3: a question is never background-captured as a fact', () => {
+    it.each([
+      'أنا عايش فين؟', 'أنا ساكن فين؟', 'أنا عايش إزاي؟', 'أنا ساكنة فين؟', 'بالمناسبة أنا ساكن فين؟', 'أنا ساكن في القاهرة؟',
+      'هدفي إيه؟', 'قررت إيه؟', 'أنا بحب إيه؟', 'أنا بفضل إيه؟', 'أحمد أخويا؟', 'أنا مسافر فين بكرة؟',
+      'I live in where?', 'My goal is what?', 'I prefer what?',
+    ])('a message that asks is not written: %s', (text) => {
+      expect(evaluator.evaluate(text, now)).toEqual({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' });
+    });
+
+    it.each([
+      'أنا عايش فين', 'أنا ساكن فين', 'انا عايش ازاي', 'أنا ساكن منين', 'أنا عايش في انهي مدينة', 'أنا ساكن في فين', 'أنا عايشة إزاي',
+    ])('an interrogative in the place of the residence clause is not a residence: %s', (text) => {
+      expect(evaluator.evaluate(text, now)).toEqual({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' });
+    });
+
+    it.each([
+      ['أنا عايش في القاهرة', 'أنا عايش في القاهرة.'],
+      ['أنا ساكن في المعادي', 'أنا ساكن في المعادي.'],
+      ['أنا ساكنة في إسكندرية.', 'أنا ساكنة في إسكندرية.'],
+      ['أنا عايش في فينيسيا', 'أنا عايش في فينيسيا.'],
+      ['أنا ساكن في طنطا، ومتجوز، وعندي بنتين', 'أنا ساكن في طنطا، ومتجوز، وعندي بنتين.'],
+      ['بالمناسبة أنا ساكن في أكتوبر من 3 سنين.', 'أنا ساكن في أكتوبر من 3 سنين.'],
+    ])('a residence statement is still captured as said: %s', (text, stored) => {
+      expect(evaluator.evaluate(text, now)).toMatchObject({ decision: 'WRITE', candidate: { type: 'PERSONAL_FACT', content: stored, confidence: 0.95 } });
+    });
+
+    it('the explicit «افتكر» path is unchanged for a statement', () => {
+      expect(evaluator.explicitStatementCandidate('إني ساكن في طنطا', now)).toMatchObject({ decision: 'WRITE', candidate: { content: 'أنا ساكن في طنطا.', confidence: 0.98 } });
+      expect(evaluator.recognizesFirstPersonStatement('إني ساكن في طنطا', now)).toBe(true);
+    });
+  });
 });

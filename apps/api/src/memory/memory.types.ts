@@ -31,6 +31,44 @@ export type MemorySource = (typeof MEMORY_SOURCES)[number];
 export type MemoryStatus = (typeof MEMORY_STATUSES)[number];
 export type MemorySubject = 'SELF' | 'OTHER';
 
+/**
+ * S8A-03 CP2 (migration 0171): one row of the semantic read - an eligible Memory of the caller, how many of the query's
+ * terms it is indexed under, its optional slot, and whether it shares that slot with another CURRENT SELF Memory. Such a
+ * Memory is UNSETTLED, never a confirmed conflict: the server cannot tell whether both still hold (two employers) or one
+ * replaced the other (a move), so neither is served as the settled answer (CP2 R1).
+ */
+export interface SemanticMemoryCandidate {
+  memory: MemoryRecord;
+  hits: number;
+  slot: string | null;
+  unsettled: boolean;
+}
+
+/**
+ * S8A-03 Living Personal Memory (migration 0172): one row the knowledge picture is projected from - an eligible Memory
+ * of the caller with its subject, optional slot and time standing, and its living state (when the user last stated it,
+ * how often a later turn restated it, whether the user explicitly ended it). `unsettled` is the 0171 same-slot rule.
+ */
+export interface PersonalKnowledgeSource {
+  id: string;
+  type: MemoryType;
+  content: string;
+  source: MemorySource;
+  importance: number;
+  created_at: string;
+  expires_at: string | null;
+  subject: MemorySubject | null;
+  slot: string | null;
+  temporal: string | null;
+  last_stated_at: string;
+  restated_count: number;
+  ended: boolean;
+  unsettled: boolean;
+  /** S8A-03 Open Understanding (0173): whom an OTHER Memory is about, in the user's own words; absent before 0173. */
+  person_name?: string | null;
+  person_relation?: string | null;
+}
+
 export interface MemoryRecord {
   id: string;
   user_id: string;

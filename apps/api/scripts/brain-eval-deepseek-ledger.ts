@@ -3,7 +3,8 @@ import { AiProviderCallAccounting } from '../src/ai-usage/ai-provider-call-accou
 import { SupabaseAiProviderCallLedger, type AiLedgerRpc } from '../src/ai-usage/ai-provider-call-ledger.repository';
 import { runWithAiUsageAttribution } from '../src/ai-usage/ai-usage-attribution';
 import { accountedDeepSeekChatCompletionsClient } from '../src/ai-usage/accounted-provider-clients';
-import { createDeepSeekClient, DeepSeekModelRouter } from '../src/model-router/providers/deepseek/deepseek-model-router';
+import { DeepSeekModelRouter } from '../src/model-router/providers/deepseek/deepseek-model-router';
+import { createDeepSeekClient } from '../src/model-router/providers/deepseek/deepseek-client';
 import { loadDeepSeekModelRouterConfig } from '../src/model-router/providers/deepseek/deepseek-model-router.config';
 import { correlation } from '../src/observability/shared-correlation';
 import { TelemetryService } from '../src/observability/telemetry.service';
@@ -35,6 +36,8 @@ export interface LedgerRow {
 
 export interface DeepSeekEvaluationLedger {
   readonly router: DeepSeekModelRouter;
+  /** S8A-03 CP3: the same accounting, for a second accounted client (the Personal Understanding capture) on this ledger. */
+  readonly accounting: AiProviderCallAccounting;
   /** Runs one case's provider work attributed to a fresh synthetic account; returns the account id with the result. */
   attribute<T>(work: () => Promise<T>): Promise<{ userId: string; value?: T; error?: unknown }>;
   ledgerRowsFor(userId: string): Promise<ReadonlyArray<LedgerRow>>;
@@ -112,6 +115,7 @@ export async function openDeepSeekEvaluationLedger(
 
   return {
     router,
+    accounting,
     async attribute<T>(work: () => Promise<T>) {
       const userId = randomUUID();
       await serialize(() => client.query('INSERT INTO auth.users (id) VALUES ($1)', [userId]));

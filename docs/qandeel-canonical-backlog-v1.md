@@ -3905,9 +3905,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality`, under the Product Owner's CP1 Controlled Amendment & Closure Gate (2026-10-22) and the
   Founder's S8A-02 closure decision (2026-10-23).
-- **PR / SHA:** the S8A-02 pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
+- **PR / SHA:** PR #354, merged as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), from branch
+  `s8a/s8a-02-personality-deepseek-quality`; no migration; not deployed. *(As first written, before the merge: "the S8A-02
+  pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
   `d566a7e7dc4d01e698df2fe48cd16c8765edf6ed` (the merge of PR #353, S8A-01). The closing change is that pull request's final head; the merge SHA is filled in at merge.
-  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.
+  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.";
+  the merge SHA was filled in by S8A-03's reconciliation.)*
 - **Disposition:** completed by S8A-02 CP1 (Trusted Speaker & Message Provenance), under the narrow controlled amendment in
   the [S8A-02 amendment record](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md) §5.3.
   - The Shared reply input carries each person's message as its own model message, under the author the frozen `0089`
@@ -3926,9 +3929,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality`, under the Product Owner's CP1 Controlled Amendment & Closure Gate (2026-10-22) and the
   Founder's S8A-02 closure decision (2026-10-23).
-- **PR / SHA:** the S8A-02 pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
+- **PR / SHA:** PR #354, merged as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), from branch
+  `s8a/s8a-02-personality-deepseek-quality`; no migration; not deployed. *(As first written, before the merge: "the S8A-02
+  pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
   `d566a7e7dc4d01e698df2fe48cd16c8765edf6ed` (the merge of PR #353, S8A-01). The closing change is that pull request's final head; the merge SHA is filled in at merge.
-  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.
+  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.";
+  the merge SHA was filled in by S8A-03's reconciliation.)*
 - **Disposition:** completed by S8A-02 CP1, under the same §5.3 amendment as `QAN-BL-AI-06`. Different people without a
   Name keep the fixed label `A participant`, now with the collision-only " (1)", " (2)", derived inside the server from
   the `0089` author and never an identifier. The proof is the same CP1 spec. No migration, RPC, Router, adapter or frame
@@ -3939,9 +3945,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality`, under the Founder's S8A-02 closure decision (2026-10-23): CP2's direction and
   implementation approved as a product, and closure without further research or paid rounds.
-- **PR / SHA:** the S8A-02 pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
+- **PR / SHA:** PR #354, merged as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), from branch
+  `s8a/s8a-02-personality-deepseek-quality`; no migration; not deployed. *(As first written, before the merge: "the S8A-02
+  pull request from branch `s8a/s8a-02-personality-deepseek-quality`, from `main` at
   `d566a7e7dc4d01e698df2fe48cd16c8765edf6ed` (the merge of PR #353, S8A-01). The closing change is that pull request's final head; the merge SHA is filled in at merge.
-  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.
+  The tombstone holds from that pull request's merge; until then this item is not closed. No migration; not deployed.";
+  the merge SHA was filled in by S8A-03's reconciliation.)*
 - **Disposition:** **accepted for the first release by the Founder's product decision.** It is not closed on a guarantee,
   and not on a passed criterion. What production now does:
   - CP1: the server, not the text, states who sent each message, and a «Name:» line stays inside its sender's own model
@@ -5131,6 +5140,109 @@ This is the BG-08 reconciliation under the Founder's closure decision (2026-10-2
   - The three defects the final engineering review found were corrected within S8A-02 (§8: closed work): the Safety
     gate's Arabic binding, the notes' label escaping, and the notes' echo check.
 - **Untouched:** every other item, owner, severity and status.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
+**S8A-03 reconciliation F10 (2026-10-23; the S8A-03 pull request, not yet opened; documentation only).** S8A-02 merged
+through PR #354 as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23), so its closing change above is effective. The
+paragraphs above stay as written.
+- **Filled in (§6):** the PR and merge SHA of the `QAN-BL-AI-06`, `QAN-BL-AI-07` and `QAN-BL-AI-09` tombstones.
+- **Untouched:** every item, owner, severity and status. S8A-03 owns no item at kickoff; nothing is admitted, tombstoned
+  or re-owned.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
+**S8A-03 CP2 checkpoint (2026-10-23; the S8A-03 pull request, not yet opened; local, not pushed).** CP2 delivered
+background natural acquisition and a semantic Memory retrieval index under the candidate S8A-03 CP2 Personal
+Understanding Controlled Amendment (migration 0171, local only). The paragraphs above stay as written.
+- **Evidence only, no change of state:** `QAN-BL-MATCH-04` gains local mechanism evidence for natural acquisition and
+  cross-session retrieval (the 0171 verifier on real PostgreSQL); real-model behaviour is CP3's. `QAN-BL-AI-02` stays
+  open.
+- **Not admitted:** the task-local residues stay with S8A-03 itself, which is still open and must dispose of them at its
+  closing change: real-model capture and paraphrase quality (CP3), and composing the capture stage into the hand-built
+  A2 / Full Intelligence / Integrated Brain end-to-end harnesses. Hosted application of 0171 rides the existing hosted
+  deployment items. The pre-CP3 corrections D-1 / D-2 (amendment §7.5, local) leave two more task-local limits with
+  S8A-03: MSA first person written without the hamza, and the unchanged Memory-command exclusion of `MEMORY_WRITE` and
+  Hypothesis generation eligibility.
+- **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
+**S8A-03 CP3 and Living Personal Memory checkpoint (2026-10-23; the S8A-03 pull request, not yet opened; local, not
+pushed).** The paragraphs above stay as written.
+- **CP3:** the one authorized live run was FAIL (amendment §9.1). The Founder then approved the Living Personal Memory
+  design corrections, implemented locally under amendment §9 (migration 0172, local only).
+- **Evidence only, no change of state:**
+  - `QAN-BL-MATCH-04` gains local mechanism evidence: family relationship knowledge, the living current state, and a
+    bounded read-time personal picture (the 0172 verifier on real PostgreSQL). Its real-model acceptance is not yet run.
+  - `QAN-BL-AI-02` stays open.
+- **Not admitted:** these task-local residues stay with S8A-03, which must dispose of each at its closing change.
+  - The 0171 capture command keeps its grant but has no runtime caller after 0172.
+  - The knowledge read is bounded at 120 rows, so a user with more eligible Memories is projected from the 120 best
+    ordered.
+  - Real-model quality of the family statements and of REAFFIRMED / ENDED has not been measured (no paid call).
+  - The end-to-end harnesses still lack the capture stage (carried from CP2).
+  - Three observations from the Living Personal Memory design review are not yet verified here:
+    - copies of `introductions_preparation_private.notes` without forget propagation;
+    - free text in some post-response `result_payload` shapes;
+    - the historical projection at earlier turns.
+
+  Hosted application of 0171 / 0172 rides the existing hosted deployment items.
+- **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
+- **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
+
+**S8A-03 closing change (2026-10-24; PR #355, from `main` at `378128452177508c5700a3ac3e86346c4eb33067`; effective from its
+merge).** This is the BG-08 reconciliation under the Product Owner's Open Understanding decision (2026-10-24,
+[amendment §10](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md)).
+The paragraphs above stay as written. CP3 stays FAIL as run.
+
+- **Checked and not admitted (BG-06), under the Product Owner's decision of 2026-10-24 that S8A-03 opens no new
+  improvement commitment.** No canonical document defers either finding to a task. Both are recorded with their evidence
+  in [amendment §10.9](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md),
+  and that disposition, not a register entry, is the record (BG-01).
+  - **A background forget / correct is invisible to the 0152 background Memory writer.** This is a proven risk.
+    - `public.background_record_memory_v1` (0152, frozen) checks only the foreground `memory_control_commands` for a
+      later forget / correct.
+    - Failure: an OLDER turn's `MEMORY_WRITE` effect runs after a NEWER turn's background forget / correct, for example
+      on recovery. It can write the withdrawn words again as a new ACTIVE Memory with the same type and equivalence key.
+    - The 0173 command itself refuses this (its verifier's G-1), and a foreground forget / correct is fully guarded.
+    - It is to be weighed again before `QAN-BL-AI-01` lets any real user reach DeepSeek.
+  - **The end-to-end runtime harnesses do not run the capture** (the CP2 harness residue). This is a verification gap,
+    not a defect. The capture is proven by its specs and by the 0171–0173 verifiers on real PostgreSQL.
+  - If the Product Owner later wants either tracked as a task obligation, it is admitted then, under a new identifier.
+- **Disposed of within S8A-03 (task-local, not admitted):**
+  - **Real-model quality** of capture, family statements and REAFFIRMED / ENDED (CP2 / CP3 residues). It was measured by
+    the S8A-03 two-arm experiment (synthetic). The Product Owner adopted Open Understanding and accepted its seven
+    remaining limits as known limitations deferred until after launch. They are recorded only as Future Improvements
+    003–009 in `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`: Founder product acceptances, not
+    deferrals to a task, and not in this register.
+  - **MSA first person without the hamza** (D-1). Closed: Open Understanding removed the first-person word gate, so
+    such a message is now read by the model and verified by grounding.
+  - **The `MEMORY_WRITE` / Hypothesis eligibility exclusion of Memory commands** (D-2). Unchanged by design: the
+    foreground Memory commands stay first and the capture never runs on a command turn (amendment §10.2).
+  - **Superseded versions with no runtime caller:**
+    - the 0171 / 0172 capture commands;
+    - `background_current_state_memories_v1`;
+    - `personal_knowledge_sources_v1`;
+    - their API read (`listCurrentStateMemories`);
+    - the v2 verifier's fact / context functions.
+
+    They are kept unchanged, with their grants and their verifiers, as the record of what each version did
+    (amendment §10.5).
+  - **The 120-row knowledge bound.** An approved design bound (amendment §9.2 / §9.3), not a defect.
+  - **The three Living Personal Memory review observations**, now verified:
+    1. `introductions_preparation_private.notes` keeps a body the owner confirmed from an earlier understanding. By the
+       CW2-06A design (0154) it is the owner's own draft note: it leaves with the draft or the account, and it is not a
+       Memory that a forget targets.
+    2. The free text in the `INTENT_PROVIDER` / `CANDIDATE_PROVIDER` result payloads is already `QAN-BL-INTEL-02`. The
+       capture result (0171–0173) holds identifiers only.
+    3. The personal picture is read at reply time, so a turn generated later (an idempotency replay of a RECEIVED turn)
+       sees what is known then. That is the read-time design shared by every Memory read, not a defect.
+  - **The person labels are not in the Personal export** (0168, frozen), like the subject attributions and the index
+    rows. The export carries every Memory's words (amendment §10.5).
+- **Evidence only, no change of state:**
+  - `QAN-BL-MATCH-04` gains Open Understanding mechanism evidence: someone else's facts kept as that person's, plus
+    background forget / correct (the 0173 verifier on real PostgreSQL).
+  - `QAN-BL-AI-02` stays open.
+- **Hosted application** of 0171–0173 rides the existing hosted deployment items. No hosted application is authorized.
+- **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
 ## 8. What is deliberately not in this backlog

@@ -30,14 +30,12 @@ import { QuestionForegroundSelectionService } from '../question/question-foregro
 import { ConversationTemporalController } from './conversation-temporal.controller';
 import type { CuSegmentationBinding, CuSegmentationBindingFactory } from '../conversation-unit/conversation-temporal-establishment.service';
 import { TemporalDeliveryRepository } from '../conversation-unit/temporal-delivery.repository';
-import {
-  createOpenAiSegmentationClient,
-  OpenAiCuSegmentationProvider,
-} from '../conversation-unit/openai-cu-segmentation.provider';
-import { loadCuSegmentationOpenAIConfig } from '../conversation-unit/cu-segmentation-provider.config';
-import { openAiFocusResolutionBinding, type FocusResolutionBindingFactory } from '../conversational-focus/focus-resolution-binding';
-import { openAiThreadEstablishmentBinding, type ThreadEstablishmentBindingFactory } from '../thread-establishment/thread-establishment-binding';
-import { openAiThreadContinuityBinding, type ThreadContinuityBindingFactory } from '../thread-lifecycle/thread-continuity-binding';
+import { DeepSeekCuSegmentationProvider } from '../conversation-unit/deepseek-cu-segmentation.provider';
+import { loadCuSegmentationDeepSeekConfig } from '../conversation-unit/cu-segmentation-provider.config';
+import { deepSeekFocusResolutionBinding, type FocusResolutionBindingFactory } from '../conversational-focus/focus-resolution-binding';
+import { deepSeekThreadEstablishmentBinding, type ThreadEstablishmentBindingFactory } from '../thread-establishment/thread-establishment-binding';
+import { deepSeekThreadContinuityBinding, type ThreadContinuityBindingFactory } from '../thread-lifecycle/thread-continuity-binding';
+import { createDeepSeekClient } from '../model-router/providers/deepseek/deepseek-client';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
@@ -48,18 +46,18 @@ import { costLedgerDecorator } from '../ai-usage/production-ai-provider-call-acc
  * T-03A2: the LAZY CU segmentation binding.
  *
  * `useValue` registers the FACTORY, never its product, so nothing is
- * constructed and no configuration is read at Nest bootstrap. The real OpenAI
- * adapter - and therefore the `OPENAI_API_KEY` requirement - materializes only
+ * constructed and no configuration is read at Nest bootstrap. The real DeepSeek
+ * adapter - and therefore the `DEEPSEEK_API_KEY` requirement - materializes only
  * on the first actual CU evaluation, so starting the application and running
  * unrelated tests never depends on a provider credential.
  */
 export const CU_SEGMENTATION_BINDING_FACTORY = Symbol('CU_SEGMENTATION_BINDING_FACTORY');
 
-function openAiSegmentationBinding(): CuSegmentationBinding {
-  const config = loadCuSegmentationOpenAIConfig();
+function deepSeekSegmentationBinding(): CuSegmentationBinding {
+  const config = loadCuSegmentationDeepSeekConfig();
   return {
-    // AI-COST-01: every segmentation attempt passes the one accounting boundary; the frozen adapter is unchanged.
-    provider: new OpenAiCuSegmentationProvider(config, costLedgerDecorator('CU_SEGMENTATION')(createOpenAiSegmentationClient(config))),
+    // AI-COST-01: every segmentation attempt passes the one accounting boundary.
+    provider: new DeepSeekCuSegmentationProvider(config, costLedgerDecorator('CU_SEGMENTATION')(createDeepSeekClient(config))),
     providerName: config.provider,
     providerModel: config.model,
   };
@@ -145,10 +143,10 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     // PROD-SEC-02: each foreground semantic provider is reached only through a binding guarded by the request's
     // foreground deadline, so no provider request opens after it. The frozen provider classes stay untouched.
     // AI-COST-01: and each one's transport client passes the one provider-call accounting boundary.
-    { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiSegmentationBinding) },
-    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))) },
-    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))) },
-    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))) },
+    { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding(deepSeekSegmentationBinding) },
+    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding(deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))) },
+    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding(deepSeekThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))) },
+    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding(deepSeekThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))) },
     {
       provide: ConversationSemanticRuntimeRepository,
       useFactory: (serviceApi: SupabaseServiceRoleApiService) => new ConversationSemanticRuntimeRepository(serviceApi),

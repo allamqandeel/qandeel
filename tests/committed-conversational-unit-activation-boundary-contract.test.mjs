@@ -46,7 +46,7 @@ const T03A1_FILES = [
   'cu-segmentation-provider.types.ts',
   'cu-span-validator.ts',
   'fake-cu-segmentation.provider.ts',
-  'openai-cu-segmentation.provider.ts',
+  'deepseek-cu-segmentation.provider.ts',
 ];
 /** The T-03A2 boundary, and the ONLY authorized addition to this directory. */
 const T03A2_FILES = [
@@ -355,7 +355,7 @@ test('offsets are computed from code points, never UTF-16 code units (REV03A1-04
     'the mapper never indexes the raw string');
   assert.match(mapper, /codePointLength/u);
   // The provider proposes anchors, never coordinates.
-  const provider = stripComments(read('../apps/api/src/conversation-unit/openai-cu-segmentation.provider.ts'));
+  const provider = stripComments(read('../apps/api/src/conversation-unit/deepseek-cu-segmentation.provider.ts'));
   assert.match(provider, /required: \['text', 'occurrence'\]/u, 'the strict schema admits only extractive anchors');
   assert.match(provider, /additionalProperties: false/u);
   assert.doesNotMatch(provider, /span_start|span_end|spanStart|spanEnd/u, 'the provider never handles a coordinate');
@@ -367,7 +367,7 @@ test('replay and read paths never invoke a provider (case 30)', () => {
   // provenance, but imports no provider, no adapter and no mapper: a read or a
   // replay can never re-run segmentation inference.
   assert.doesNotMatch(repository, /^import .*(?:provider|anchor|mapper|openai)/imu, 'the durable seam imports no provider or mapper');
-  assert.doesNotMatch(repository, /CuSegmentationProvider|OpenAiCuSegmentationProvider|mapAnchorsToSpans|propose\(/u,
+  assert.doesNotMatch(repository, /CuSegmentationProvider|DeepSeekCuSegmentationProvider|mapAnchorsToSpans|propose\(/u,
     'the durable seam invokes no segmentation');
   assert.doesNotMatch(executableMigration, /openai|anthropic|gemini|provider_call|http|fetch/iu, 'the database re-runs no inference');
   assert.doesNotMatch(stripSqlComments(activation), /openai|anthropic|gemini|provider_call|http|fetch/iu,

@@ -26,21 +26,24 @@ exactly one `assistantTurn`.
 
 Conversation Orchestrator owns this TEXT lifecycle. It claims a new user turn once,
 uses Fast by default, selects Deep only for the explicit input-size threshold, and
-calls a provider-independent Model Router contract. Runtime generation supports
-Anthropic and OpenAI through separate official-SDK adapters. Select exactly one with
-the server-owned `MODEL_PROVIDER=anthropic|openai` setting and provide the matching
-`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in the ignored local environment before
-starting the API. Missing, invalid, or incomplete provider configuration fails closed.
-The selected server-owned profile maps the Orchestrator's already-selected path as follows:
+calls a provider-independent Model Router contract. Since S8A-03 (Founder decision D1) every
+AI call - the reply and the seven structured semantic adapters - runs on DeepSeek Flash
+through one shared client; the Anthropic, OpenAI and Gemini adapters were removed. Set the
+server-owned `MODEL_PROVIDER=deepseek`, `DEEPSEEK_API_KEY` and
+`DEEPSEEK_QUALIFICATION_MODE=SYNTHETIC_ONLY` in the ignored local environment before
+starting the API. DeepSeek is qualification-only: it may process synthetic data only, and a
+production process refuses it. Missing, invalid, or incomplete provider configuration fails closed.
+The server-owned profile maps the Orchestrator's already-selected path as follows:
 
 | Provider profile | FAST | DEEP | Reasoning |
 | --- | --- | --- | --- |
-| `anthropic` | `claude-haiku-4-5-20251001` | `claude-sonnet-4-6` | Thinking disabled for both paths |
-| `openai` | `gpt-5.6-luna` | `gpt-5.6-terra` | FAST `none`; DEEP `low` |
+| `deepseek` | `deepseek-flash` | `deepseek-flash` | FAST thinking disabled; DEEP thinking enabled, effort `low` |
+
+The structured adapters run DeepSeek Flash with thinking disabled and JSON Output; their own
+fail-closed parsers and deterministic validators remain the enforcement.
 
 Provider activation remains static for the process. There is no fallback, per-turn
-provider switching, client override, adaptive reasoning, or extended/adaptive Claude
-thinking. Model and reasoning configuration remain internal to the Model Router and
+provider switching, client override, or adaptive reasoning. Model and reasoning configuration remain internal to the Model Router and
 are not returned in client or domain contracts.
 Tests use an in-process fake and never make paid provider calls. Database-atomic
 finalization suppresses late output after cancellation or
@@ -79,25 +82,7 @@ Tests:
 npm run test:api
 ```
 
-An explicit local Claude smoke gate is available:
-
-```bash
-npm run verify:claude:smoke
-```
-
-It reads `ANTHROPIC_API_KEY` from the process or ignored root `.env`, makes exactly
-one minimal request with SDK retries disabled, and verifies only that normalized
-text and token usage are present. It is not part of ordinary CI. Its output never
-includes the prompt, context, credential, raw provider response, transcript, or
-private identifiers; without a credential it reports `NOT RUN` without making a call.
-
-The equivalent explicit OpenAI gate is:
-
-```bash
-npm run verify:openai:smoke
-```
-
-It uses the centralized OpenAI text baseline through the Responses API, makes one
-bounded attempt with retries disabled, and applies the same safe output rules. It is
-never invoked by tests or CI and reports `NOT RUN` when `OPENAI_API_KEY` is absent.
+The former Claude and OpenAI smoke gates (`verify:claude:smoke`, `verify:openai:smoke`) were
+removed with those providers in S8A-03. Paid DeepSeek evaluation stays an explicit,
+operator-only, synthetic-data command and is never invoked by tests or CI.
 

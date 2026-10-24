@@ -1,31 +1,28 @@
+// S8A-03 (D1): hypothesis evidence association runs on DeepSeek Flash only, through the shared DeepSeek client and its
+// SYNTHETIC_ONLY qualification gate. The provider and the model are fixed in code; thinking is disabled (as Gemini's
+// thinking budget was 0); the timeout and output bounds and zero retries are unchanged.
 import { HYPOTHESIS_EVIDENCE_ASSOCIATION_PROVIDER_SCHEMA_VERSION } from './hypothesis-evidence-association-provider.types';
+import { assertDeepSeekFlashSelection, DEEPSEEK_FLASH_MODEL, requireDeepSeekQualification } from '../model-router/providers/deepseek/deepseek-client';
 
-export const DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_MODEL = 'gemini-2.5-flash-lite';
 export const DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS = 5_000;
 export const DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS = 256;
 export const MAX_HYPOTHESIS_EVIDENCE_ASSOCIATION_OUTPUT_TOKENS = 512;
-export const HYPOTHESIS_EVIDENCE_ASSOCIATION_THINKING_BUDGET = 0 as const;
 export const HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_RETRIES = 0 as const;
 
-export interface HypothesisEvidenceAssociationGeminiConfig {
-  provider: 'GEMINI'; apiKey: string; model: string; timeoutMs: number; maxOutputTokens: number;
-  thinkingBudget: typeof HYPOTHESIS_EVIDENCE_ASSOCIATION_THINKING_BUDGET;
+export interface HypothesisEvidenceAssociationDeepSeekConfig {
+  provider: 'DEEPSEEK'; apiKey: string; model: typeof DEEPSEEK_FLASH_MODEL; timeoutMs: number; maxOutputTokens: number;
   maxRetries: typeof HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_RETRIES;
   schemaVersion: typeof HYPOTHESIS_EVIDENCE_ASSOCIATION_PROVIDER_SCHEMA_VERSION;
 }
 
-export function loadHypothesisEvidenceAssociationGeminiConfig(environment: NodeJS.ProcessEnv = process.env): HypothesisEvidenceAssociationGeminiConfig {
-  const provider = environment.HYPOTHESIS_EVIDENCE_ASSOCIATION_PROVIDER?.trim().toUpperCase() || 'GEMINI';
-  if (provider !== 'GEMINI') throw new Error('HYPOTHESIS_EVIDENCE_ASSOCIATION_PROVIDER must be GEMINI.');
-  const apiKey = environment.GOOGLE_AI_API_KEY?.trim();
-  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is required for hypothesis evidence association.');
-  const model = environment.HYPOTHESIS_EVIDENCE_ASSOCIATION_MODEL?.trim() || DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_MODEL;
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(model)) throw new Error('Invalid hypothesis evidence association model.');
+export function loadHypothesisEvidenceAssociationDeepSeekConfig(environment: NodeJS.ProcessEnv = process.env): HypothesisEvidenceAssociationDeepSeekConfig {
+  assertDeepSeekFlashSelection(environment, 'HYPOTHESIS_EVIDENCE_ASSOCIATION');
+  const timeoutMs = bounded(environment.HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS, DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS, 1_000, 10_000, 'HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS');
+  const maxOutputTokens = bounded(environment.HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS, DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS, 1, MAX_HYPOTHESIS_EVIDENCE_ASSOCIATION_OUTPUT_TOKENS, 'HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS');
+  const apiKey = requireDeepSeekQualification(environment, 'hypothesis evidence association');
   return {
-    provider: 'GEMINI', apiKey, model,
-    timeoutMs: bounded(environment.HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS, DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS, 1_000, 10_000, 'HYPOTHESIS_EVIDENCE_ASSOCIATION_TIMEOUT_MS'),
-    maxOutputTokens: bounded(environment.HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS, DEFAULT_HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS, 1, MAX_HYPOTHESIS_EVIDENCE_ASSOCIATION_OUTPUT_TOKENS, 'HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_OUTPUT_TOKENS'),
-    thinkingBudget: HYPOTHESIS_EVIDENCE_ASSOCIATION_THINKING_BUDGET, maxRetries: HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_RETRIES,
+    provider: 'DEEPSEEK', apiKey, model: DEEPSEEK_FLASH_MODEL, timeoutMs, maxOutputTokens,
+    maxRetries: HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_RETRIES,
     schemaVersion: HYPOTHESIS_EVIDENCE_ASSOCIATION_PROVIDER_SCHEMA_VERSION,
   };
 }

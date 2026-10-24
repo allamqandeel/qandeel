@@ -1,16 +1,13 @@
-import {
-  resolveAnthropicModel,
-  resolveOpenAIModel,
-} from './model-profile.registry';
+import * as registry from './model-profile.registry';
+import { resolveDeepSeekModel } from './model-profile.registry';
 
 describe('Model Profile Registry', () => {
-  it('maps the Anthropic profile deterministically', () => {
-    expect(resolveAnthropicModel('FAST')).toEqual({ model: 'claude-haiku-4-5-20251001' });
-    expect(resolveAnthropicModel('DEEP')).toEqual({ model: 'claude-sonnet-4-6' });
+  it('maps the DeepSeek Flash profile and its server-owned thinking deterministically', () => {
+    expect(resolveDeepSeekModel('FAST')).toEqual({ model: 'deepseek-flash', thinking: 'disabled' });
+    expect(resolveDeepSeekModel('DEEP')).toEqual({ model: 'deepseek-flash', thinking: 'enabled', reasoningEffort: 'low' });
   });
 
-  it('maps the OpenAI profile and server-owned reasoning deterministically', () => {
-    expect(resolveOpenAIModel('FAST')).toEqual({ model: 'gpt-5.6-luna', reasoningEffort: 'none' });
-    expect(resolveOpenAIModel('DEEP')).toEqual({ model: 'gpt-5.6-terra', reasoningEffort: 'low' });
+  it('S8A-03 (D1): holds no Anthropic or OpenAI profile', () => {
+    expect(Object.keys(registry).sort()).toEqual(['DEEPSEEK_MODEL_PROFILE', 'resolveDeepSeekModel']);
   });
 });

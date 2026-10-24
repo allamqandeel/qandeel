@@ -1,30 +1,30 @@
-export const DEFAULT_HYPOTHESIS_INTENT_EXTRACTION_MODEL = 'gpt-5-mini';
+// S8A-03 (D1): hypothesis intent extraction runs on DeepSeek Flash only, through the shared DeepSeek client and its
+// SYNTHETIC_ONLY qualification gate. The provider and the model are fixed in code; the timeout bounds, the output
+// bound and zero retries are unchanged.
+import { assertDeepSeekFlashSelection, DEEPSEEK_FLASH_MODEL, requireDeepSeekQualification } from '../model-router/providers/deepseek/deepseek-client';
+
 export const DEFAULT_HYPOTHESIS_INTENT_EXTRACTION_TIMEOUT_MS = 5_000;
 export const HYPOTHESIS_INTENT_EXTRACTION_MAX_OUTPUT_TOKENS = 256;
 export const HYPOTHESIS_INTENT_EXTRACTION_MAX_RETRIES = 0 as const;
 
-export interface HypothesisIntentExtractionOpenAIConfig {
-  provider: 'OPENAI';
+export interface HypothesisIntentExtractionDeepSeekConfig {
+  provider: 'DEEPSEEK';
   apiKey: string;
-  model: string;
+  model: typeof DEEPSEEK_FLASH_MODEL;
   timeoutMs: number;
   maxOutputTokens: typeof HYPOTHESIS_INTENT_EXTRACTION_MAX_OUTPUT_TOKENS;
   maxRetries: typeof HYPOTHESIS_INTENT_EXTRACTION_MAX_RETRIES;
   schemaVersion: 1;
 }
 
-export function loadHypothesisIntentExtractionOpenAIConfig(
+export function loadHypothesisIntentExtractionDeepSeekConfig(
   environment: NodeJS.ProcessEnv = process.env,
-): HypothesisIntentExtractionOpenAIConfig {
-  const provider = environment.HYPOTHESIS_INTENT_EXTRACTION_PROVIDER?.trim().toUpperCase() || 'OPENAI';
-  if (provider !== 'OPENAI') throw new Error('HYPOTHESIS_INTENT_EXTRACTION_PROVIDER must be OPENAI.');
-  const apiKey = environment.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new Error('OPENAI_API_KEY is required for hypothesis intent extraction.');
-  const model = environment.HYPOTHESIS_INTENT_EXTRACTION_MODEL?.trim() || DEFAULT_HYPOTHESIS_INTENT_EXTRACTION_MODEL;
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(model)) throw new Error('Invalid hypothesis intent extraction model.');
+): HypothesisIntentExtractionDeepSeekConfig {
+  assertDeepSeekFlashSelection(environment, 'HYPOTHESIS_INTENT_EXTRACTION');
   const timeoutMs = readTimeout(environment.HYPOTHESIS_INTENT_EXTRACTION_TIMEOUT_MS);
+  const apiKey = requireDeepSeekQualification(environment, 'hypothesis intent extraction');
   return {
-    provider: 'OPENAI', apiKey, model, timeoutMs,
+    provider: 'DEEPSEEK', apiKey, model: DEEPSEEK_FLASH_MODEL, timeoutMs,
     maxOutputTokens: HYPOTHESIS_INTENT_EXTRACTION_MAX_OUTPUT_TOKENS,
     maxRetries: HYPOTHESIS_INTENT_EXTRACTION_MAX_RETRIES,
     schemaVersion: 1,

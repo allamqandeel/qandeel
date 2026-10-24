@@ -24,6 +24,9 @@ const sqlCode = (text) => text.replace(/--[^\n]*/gu, '');
 
 const ROUTER = 'apps/api/src/model-router/providers/deepseek/deepseek-model-router.ts';
 const CONFIG = 'apps/api/src/model-router/providers/deepseek/deepseek-model-router.config.ts';
+// RE-ANCHORED by S8A-03 (D1): the client posture and the qualification gate moved into the one shared DeepSeek client
+// module, which the reply router and all seven structured adapters use. Every property below is unchanged.
+const CLIENT = 'apps/api/src/model-router/providers/deepseek/deepseek-client.ts';
 const M0135 = 'database/migrations/0135_ai_usage_cost_credit_ledger_v1.sql';
 const M0170 = 'database/migrations/0170_s8a_01_deepseek_provider_ledger_admission_v1.sql';
 const RECORD = 'docs/e2e/QANDEEL_S8A_01_DEEPSEEK_PRODUCTION_INTEGRATION_IMPLEMENTATION_RECORD_v1.md';
@@ -37,7 +40,7 @@ const ADMITTED = {
 };
 
 const world = () => ({
-  router: read(ROUTER), config: read(CONFIG), m0135: read(M0135), m0170: read(M0170),
+  router: read(ROUTER), config: read(CONFIG), client: read(CLIENT), m0135: read(M0135), m0170: read(M0170),
   record: readIfPresent(RECORD) ?? '', backlog: read(BACKLOG),
   state: readIfPresent('QANDEEL_CURRENT_STATE.md'), map: readIfPresent('QANDEEL_PROJECT_MAP.md'),
   roadmap: readIfPresent('QANDEEL_PRODUCT_ROADMAP.md'),
@@ -56,11 +59,12 @@ const detectors = {
   routerViolations(w) {
     const out = [];
     const code = tsCode(w.router);
+    const client = tsCode(w.client);
     if (/reasoning_content/u.test(code)) out.push('the router never reads the reasoning trace');
     if (/\buser(_id)?\s*:/u.test(code) || /safety_identifier|metadata\s*:/u.test(code)) out.push('the router sends no end-user identifier');
-    if (!/baseURL: DEEPSEEK_API_BASE_URL,/u.test(code)) out.push('the client talks to the fixed DeepSeek base URL');
+    if (!/baseURL: DEEPSEEK_API_BASE_URL,/u.test(client)) out.push('the client talks to the fixed DeepSeek base URL');
     for (const header of ['organization', 'project', 'adminAPIKey', 'webhookSecret']) {
-      if (!new RegExp(`\\b${header}: null,`, 'u').test(code)) out.push(`the client nulls the SDK's ${header} source`);
+      if (!new RegExp(`\\b${header}: null,`, 'u').test(client)) out.push(`the client nulls the SDK's ${header} source`);
     }
     if (!/static fromEnvironment\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(code)) out.push('the environment composition requires the accounting');
     if (!/accountedDeepSeekChatCompletionsClient\(createDeepSeekClient\(config\), 'CONVERSATION_REPLY', accounting\)/u.test(code)) out.push('the environment composition is accounted');
@@ -72,7 +76,7 @@ const detectors = {
 
   configViolations(w) {
     const out = [];
-    const code = tsCode(w.config);
+    const code = `${tsCode(w.config)}\n${tsCode(w.client)}`;
     if (!/environment\.NODE_ENV === 'production'\) \{\s*throw/u.test(code)) out.push('the router refuses to start in production');
     if (!/DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'SYNTHETIC_ONLY'/u.test(code) || !/environment\.DEEPSEEK_QUALIFICATION_MODE\?\.trim\(\) !== DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE\)/u.test(code)) out.push('the router starts only in SYNTHETIC_ONLY');
     if (!/DEEPSEEK_API_BASE_URL = 'https:\/\/api\.deepseek\.com'/u.test(code)) out.push('the base URL is DeepSeek\'s, fixed in code');
@@ -132,10 +136,10 @@ test('every detector catches a planted defect', () => {
   const planted = [
     ['routerViolations', (w) => ({ ...w, router: w.router.replace('const candidate = choice?.message?.content;', 'const candidate = choice?.message?.content ?? (choice?.message as never as { reasoning_content: string }).reasoning_content;') }), 'the router never reads the reasoning trace'],
     ['routerViolations', (w) => ({ ...w, router: w.router.replace('stream: false,', 'stream: false, user: SYNTHETIC,') }), 'the router sends no end-user identifier'],
-    ['routerViolations', (w) => ({ ...w, router: w.router.replace('    project: null,\n', '') }), "the client nulls the SDK's project source"],
+    ['routerViolations', (w) => ({ ...w, client: w.client.replace('    project: null,\n', '') }), "the client nulls the SDK's project source"],
     ['routerViolations', (w) => ({ ...w, router: w.router.replace('content: releaseModelOutput(candidate, serverGuidance),', 'content: candidate.trim(),') }), 'the reply passes the output release guard'],
-    ['configViolations', (w) => ({ ...w, config: w.config.replace("environment.NODE_ENV === 'production'", "environment.NODE_ENV === 'staging'") }), 'the router refuses to start in production'],
-    ['configViolations', (w) => ({ ...w, config: w.config.replace("DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'SYNTHETIC_ONLY'", "DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'REAL_USERS'") }), 'the router starts only in SYNTHETIC_ONLY'],
+    ['configViolations', (w) => ({ ...w, client: w.client.replace("environment.NODE_ENV === 'production'", "environment.NODE_ENV === 'staging'") }), 'the router refuses to start in production'],
+    ['configViolations', (w) => ({ ...w, client: w.client.replace("DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'SYNTHETIC_ONLY'", "DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'REAL_USERS'") }), 'the router starts only in SYNTHETIC_ONLY'],
     ['migrationViolations', (w) => ({ ...w, m0170: w.m0170.replace("IF p_provider NOT IN ('OPENAI', 'ANTHROPIC', 'GEMINI', 'DEEPSEEK') THEN", "IF p_provider NOT IN ('OPENAI', 'ANTHROPIC', 'GEMINI', 'DEEPSEEK', 'QWEN') THEN") }), '0170 changes only the begin allow-list line'],
     ['migrationViolations', (w) => ({ ...w, m0170: w.m0170.replace('    ELSE ARRAY[]::text[]\n', '') }), 'an unlisted provider gets an empty usage partition (fails closed)'],
     ['migrationViolations', (w) => ({ ...w, m0170: w.m0170.replace('COMMIT;', 'GRANT EXECUTE ON FUNCTION public.begin_ai_provider_call_v1 TO authenticated;\nCOMMIT;') }), '0170 grants, alters and writes nothing'],

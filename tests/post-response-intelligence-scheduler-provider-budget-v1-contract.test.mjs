@@ -32,6 +32,17 @@ import { readFileSync, readdirSync } from 'node:fs';
 //     frozen post-response provider registry;
 //   * future migrations (a later, separately reviewed migration in ANY domain
 //     stays legal; the guard bans no future migration number or filename).
+//
+// RE-ANCHORED, S8A-03 CP2 (2026-10-23) - QIR-005 v2. The Founder's option B
+// decision and the S8A-03 CP2 Controlled Amendment are the "separately
+// reviewed, versioned provider-budget contract" the v1 document requires for a
+// fourth provider effect: the registry and the cap moved TOGETHER, to exactly
+// ASSOCIATION / INTENT / CANDIDATE / UNDERSTANDING_CAPTURE_PROVIDER and 4. This
+// guard therefore freezes the CURRENT (v2) registry, cap and classification,
+// keeps proving the v1 registry and cap as the unchanged historical record, and
+// rejects a silent FIFTH provider effect exactly as it rejected a silent fourth.
+// Every other QIR-005 rule below is unchanged. The v1 normative document is not
+// edited; the amendment record is read for the v2 statements.
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8').replace(/\r\n/gu, '\n');
 
@@ -44,6 +55,7 @@ const CONTRACT_DOC = 'docs/post-response-intelligence-scheduler-provider-budget-
 // them (proven in B5).
 const SOURCES = Object.freeze({
   contractDoc: CONTRACT_DOC,
+  v2Amendment: 'docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md',
   docsReadme: 'docs/README.md',
   packageJson: 'package.json',
   ci: '.github/workflows/api-ci.yml',
@@ -58,6 +70,7 @@ const SOURCES = Object.freeze({
   associationProviderConfig: 'apps/api/src/hypothesis/hypothesis-evidence-association-provider.config.ts',
   intentProviderConfig: 'apps/api/src/hypothesis/hypothesis-intent-extraction-provider.config.ts',
   candidateProviderConfig: 'apps/api/src/hypothesis/hypothesis-candidate-generator-provider.config.ts',
+  understandingProviderConfig: 'apps/api/src/personal-understanding/personal-understanding-capture-provider.config.ts',
   a2Smoke: 'apps/api/scripts/verify-a2-end-to-end-runtime-smoke.ts',
   fullIntelligenceSmoke: 'apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts',
 });
@@ -69,10 +82,20 @@ const shipped = Object.freeze({
 const CONTRACT_SCRIPT = 'test:post-response-intelligence-scheduler-provider-budget-v1-contract';
 const CONTRACT_COMMAND = 'node --test tests/post-response-intelligence-scheduler-provider-budget-v1-contract.test.mjs';
 
-// The EXACT frozen v1 provider-backed registry and cap, quoted here
+// The EXACT current (QIR-005 v2) provider-backed registry and cap, quoted here
 // independently of the implementation so a silent widening fails this guard.
-const PROVIDER_EFFECTS = Object.freeze(['ASSOCIATION_PROVIDER', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER']);
-const PROVIDER_BUDGET = 3;
+const PROVIDER_EFFECTS = Object.freeze(['ASSOCIATION_PROVIDER', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER', 'UNDERSTANDING_CAPTURE_PROVIDER']);
+const PROVIDER_BUDGET = 4;
+// The frozen v1 registry and cap, kept byte-for-byte as the historical record.
+const V1_PROVIDER_EFFECTS = Object.freeze(['ASSOCIATION_PROVIDER', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER']);
+const V1_PROVIDER_BUDGET = 3;
+// The v2 statements of the S8A-03 CP2 Controlled Amendment.
+const REQUIRED_V2_STATEMENTS = Object.freeze([
+  '**2.2 QIR-005 v2 — four provider effects.**',
+  '`POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 4`',
+  'exactly four canonical post-response effects cross an external provider boundary',
+  'The v1 constants are kept byte-for-byte as history; the runtime reads v2.',
+]);
 // The canonical durable effects that cross NO provider boundary and must never
 // consume a slot.
 const NON_PROVIDER_EFFECTS = Object.freeze([
@@ -84,6 +107,7 @@ const PROVIDER_TRANSPORTS = Object.freeze({
   ASSOCIATION_PROVIDER: 'this.association.proposeAndAuthorize(',
   INTENT_PROVIDER: 'this.extraction.extract(',
   CANDIDATE_PROVIDER: 'this.enrichment.generateHypothesisCandidatePlan(',
+  UNDERSTANDING_CAPTURE_PROVIDER: 'this.understanding.propose(',
 });
 // The frozen zero-retry constant of each canonical v1 provider boundary. Only
 // the retry constant is read from these modules: no model, vendor, timeout or
@@ -92,6 +116,7 @@ const ZERO_RETRY_CONSTANTS = Object.freeze({
   associationProviderConfig: 'HYPOTHESIS_EVIDENCE_ASSOCIATION_MAX_RETRIES',
   intentProviderConfig: 'HYPOTHESIS_INTENT_EXTRACTION_MAX_RETRIES',
   candidateProviderConfig: 'HYPOTHESIS_CANDIDATE_GENERATION_MAX_RETRIES',
+  understandingProviderConfig: 'PERSONAL_UNDERSTANDING_CAPTURE_MAX_RETRIES',
 });
 
 // Required statements of the normative document, checked against
@@ -214,14 +239,27 @@ function assertPostResponseProviderBudgetContract(world) {
   }
   if (!world.docsReadme.includes('post-response-intelligence-scheduler-provider-budget-v1.md'))
     violated('docs/README.md links the QIR-005 normative document');
+  // 1b. The v2 registry and cap are the reviewed, versioned amendment's.
+  if (typeof world.v2Amendment !== 'string') violated('the QIR-005 v2 amendment record exists');
+  const amendment = world.v2Amendment.replace(/\n>\s*/gu, '\n').replace(/\s+/gu, ' ');
+  for (const statement of REQUIRED_V2_STATEMENTS) {
+    if (!amendment.includes(statement)) violated(`the QIR-005 v2 amendment records: ${statement}`);
+  }
 
   // 2. The hard cap is declared exactly once, centrally, and is never redefined
-  //    away from 3 anywhere in the QIR-005 production surface.
-  if (!world.budgetContract.includes(`export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = ${PROVIDER_BUDGET};`))
-    violated(`the hard provider budget is declared exactly: POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = ${PROVIDER_BUDGET}`);
-  if (new RegExp(`POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = (?!${PROVIDER_BUDGET};)`, 'u')
+  //    away from 4 anywhere in the QIR-005 production surface. The v1 cap stays
+  //    declared at 3 as the historical record.
+  if (!world.budgetContract.includes(`export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = ${PROVIDER_BUDGET};`))
+    violated(`the hard provider budget is declared exactly: POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = ${PROVIDER_BUDGET}`);
+  if (new RegExp(`POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = (?!${PROVIDER_BUDGET};)`, 'u')
     .test(exe.budgetContract + exe.budgetService + exe.dispatcher + exe.telemetry))
     violated(`the hard provider budget is never redefined away from ${PROVIDER_BUDGET}`);
+  if (!world.budgetContract.includes(`export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = ${V1_PROVIDER_BUDGET};`)
+    || new RegExp(`POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = (?!${V1_PROVIDER_BUDGET};)`, 'u')
+      .test(exe.budgetContract + exe.budgetService + exe.dispatcher + exe.telemetry))
+    violated(`the historical v1 cap stays declared exactly: POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = ${V1_PROVIDER_BUDGET}`);
+  if (!world.budgetContract.includes("export const POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION = '2';"))
+    violated('the provider-budget policy version is exactly 2');
   // The cap is a compile-time constant: never an environment variable, never a
   // per-deployment or per-path value.
   if (/process\.env/u.test(exe.budgetContract + exe.budgetService))
@@ -229,8 +267,13 @@ function assertPostResponseProviderBudgetContract(world) {
 
   // 3. The EXACT provider-backed registry, parsed from the literal so a fourth
   //    member cannot be added silently and a member cannot be renamed away.
-  const registry = /export const POST_RESPONSE_PROVIDER_EFFECTS_V1 = \[([\s\S]*?)\] as const;/u.exec(world.budgetContract);
+  const v1Registry = /export const POST_RESPONSE_PROVIDER_EFFECTS_V1 = \[([\s\S]*?)\] as const;/u.exec(world.budgetContract);
+  if (!v1Registry || v1Registry[1] !== `\n${V1_PROVIDER_EFFECTS.map((effect) => `  '${effect}',\n`).join('')}`)
+    violated(`the historical v1 registry stays exactly ${V1_PROVIDER_EFFECTS.join(', ')}`);
+  const registry = /export const POST_RESPONSE_PROVIDER_EFFECTS_V2 = \[([\s\S]*?)\] as const;/u.exec(world.budgetContract);
   if (!registry) violated('the frozen provider-backed effect registry is declared as one explicit literal');
+  if (!world.budgetContract.includes('export type PostResponseProviderEffect = typeof POST_RESPONSE_PROVIDER_EFFECTS_V2[number];'))
+    violated('the provider-backed effect type is the current v2 registry');
   const members = [...registry[1].matchAll(/'([A-Z_]+)'/gu)].map((match) => match[1]);
   if (members.length !== PROVIDER_EFFECTS.length || PROVIDER_EFFECTS.some((effect, index) => members[index] !== effect))
     violated(`the frozen provider-backed registry is exactly ${PROVIDER_EFFECTS.join(', ')}`);
@@ -272,7 +315,7 @@ function assertPostResponseProviderBudgetContract(world) {
   }
   if (!world.budgetContract.includes("export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER';"))
     violated('the classification domain is exactly PROVIDER | NON_PROVIDER');
-  const classificationBlock = /export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 = \{([\s\S]*?)\} as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;/u
+  const classificationBlock = /export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2 = \{([\s\S]*?)\} as const satisfies Record<IntelligenceEffect, PostResponseProviderClassification>;/u
     .exec(world.budgetContract);
   if (!classificationBlock)
     violated('the exhaustive provider classification is declared with its compile-time totality clause');
@@ -287,9 +330,9 @@ function assertPostResponseProviderBudgetContract(world) {
     violated('the classification key set equals the CURRENT canonical INTELLIGENCE_EFFECTS set exactly');
   const providerClassified = classified.filter((entry) => entry.classification === 'PROVIDER').map((entry) => entry.effect);
   if (sorted(providerClassified) !== sorted(PROVIDER_EFFECTS))
-    violated('the effects classified PROVIDER are exactly the frozen three provider-backed effects');
+    violated('the effects classified PROVIDER are exactly the frozen four provider-backed effects');
   if (sorted(providerClassified) !== sorted(members))
-    violated('the classification PROVIDER half and the frozen v1 registry literal agree exactly');
+    violated('the classification PROVIDER half and the frozen v2 registry literal agree exactly');
   if (providerClassified.length !== PROVIDER_BUDGET)
     violated('the number of effects classified PROVIDER equals the hard provider budget');
   const nonProviderClassified = classified.filter((entry) => entry.classification === 'NON_PROVIDER').map((entry) => entry.effect);
@@ -314,7 +357,7 @@ function assertPostResponseProviderBudgetContract(world) {
     violated('a durably spent provider slot is never refunded');
   if (!exe.budgetContract.includes('  recover(effect: PostResponseProviderEffect): void {\n    this.record(effect, \'RECOVERED\');\n  }'))
     violated('durable recovery records telemetry only and never frees or spends a slot');
-  if (!exe.budgetContract.includes('if (this.spentSlots.has(effect) || this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V1) {'))
+  if (!exe.budgetContract.includes('if (this.spentSlots.has(effect) || this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V2) {'))
     violated('authorization is refused for an already spent effect and once the hard cap is reached');
   if (!exe.budgetContract.includes("      this.record(effect, 'EXHAUSTED');\n      return 'EXHAUSTED';"))
     violated('the exhaustion decision is recorded BEFORE the refusal returns, ahead of any transport');
@@ -373,6 +416,7 @@ function assertPostResponseProviderBudgetContract(world) {
   const dispatchBody = slice(exe.dispatcher, ' async dispatch(raw:string)', ' private async materializeHimBrainContext(');
   if (dispatchBody.length === 0) violated('the dispatch composition body is identifiable');
   const stageOrder = [
+    ['Understanding capture provider', 'const understanding=await this.captureUnderstanding(execution,effects,completed,budget,'],
     ['Association provider', 'this.completeAssociation(execution,budget,'],
     ['Intent provider', "budget.authorize('INTENT_PROVIDER')"],
     ['Candidate provider', "budget.authorize('CANDIDATE_PROVIDER')"],
@@ -447,7 +491,13 @@ function assertPostResponseProviderBudgetContract(world) {
     violated('the narrow provider-budget service is wired into the post-response module');
   if (!exe.dispatcher.includes('private readonly providerBudget:PostResponseProviderBudgetService'))
     violated('the dispatcher consumes the narrow provider-budget service by injection');
-  for (const source of ['budgetSpec', 'dispatcherSpec', 'a2Smoke', 'fullIntelligenceSmoke']) {
+  // The unit and dispatcher proofs assert the current v2 cap; the hand-composed
+  // E2E smokes run no capture stage and keep proving the three v1 slots.
+  for (const source of ['budgetSpec', 'dispatcherSpec']) {
+    if (!world[source].includes('POST_RESPONSE_PROVIDER_CALL_BUDGET_V2'))
+      violated(`the frozen cap is proven, not restated, in: ${SOURCES[source]}`);
+  }
+  for (const source of ['a2Smoke', 'fullIntelligenceSmoke']) {
     if (!world[source].includes('POST_RESPONSE_PROVIDER_CALL_BUDGET_V1'))
       violated(`the frozen cap is proven, not restated, in: ${SOURCES[source]}`);
   }
@@ -473,15 +523,26 @@ test('B1 - the shipped repository satisfies the QIR-005 contract', () => {
 // QIR-005 Fix 01 drift helpers. Both FAIL LOUDLY if their fixture goes stale, so
 // a classification drift can never degrade into a no-op that proves nothing.
 const addCanonicalEffect = (effect) => {
-  const anchor = "'HIM_BRAIN_CONTEXT_MATERIALIZATION']as const;";
+  const anchor = "'UNDERSTANDING_CAPTURE_PROVIDER']as const;";
   if (!shipped.effectTypes.includes(anchor)) throw new Error('B2 canonical-effect fixture is stale');
-  return shipped.effectTypes.replace(anchor, `'HIM_BRAIN_CONTEXT_MATERIALIZATION','${effect}']as const;`);
+  return shipped.effectTypes.replace(anchor, `'UNDERSTANDING_CAPTURE_PROVIDER','${effect}']as const;`);
 };
 const classifyEffect = (effect, classification) => {
-  const anchor = "  MEMORY_WRITE: 'NON_PROVIDER',";
+  const anchor = "  UNDERSTANDING_CAPTURE_PROVIDER: 'PROVIDER',";
   if (!shipped.budgetContract.includes(anchor)) throw new Error('B2 classification fixture is stale');
   return shipped.budgetContract.replace(anchor, `${anchor}\n  ${effect}: '${classification}',`);
 };
+
+// S8A-03 CP2: the v1 registry and classification are kept as history, so a
+// drift must land in the CURRENT v2 block. Both helpers FAIL LOUDLY if stale.
+const inBlock = (marker, close) => (find, replacement) => {
+  const from = shipped.budgetContract.indexOf(marker);
+  const to = shipped.budgetContract.indexOf(close, from);
+  if (from < 0 || to < 0 || !shipped.budgetContract.slice(from, to).includes(find)) throw new Error(`B2 v2 fixture is stale: ${find}`);
+  return shipped.budgetContract.slice(0, from) + shipped.budgetContract.slice(from, to).replace(find, replacement) + shipped.budgetContract.slice(to);
+};
+const inClassification = inBlock('export const POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2 = {', '} as const satisfies');
+const inRegistry = inBlock('export const POST_RESPONSE_PROVIDER_EFFECTS_V2 = [', '] as const;');
 
 const rewriteDoc = (find, replacement) => {
   const pattern = new RegExp(find.trim().split(/\s+/u)
@@ -530,14 +591,34 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
       docsReadme: shipped.docsReadme.replaceAll('post-response-intelligence-scheduler-provider-budget-v1.md', 'missing.md'),
     }],
     ['the hard cap was raised', {
+      budgetContract: shipped.budgetContract.replace('export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 4;', 'export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 5;'),
+    }],
+    ['the historical v1 cap was rewritten', {
       budgetContract: shipped.budgetContract.replace('export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = 3;', 'export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = 4;'),
     }],
+    ['the historical v1 registry was rewritten', {
+      budgetContract: shipped.budgetContract.replace("  'CANDIDATE_PROVIDER',\n] as const;", "  'CANDIDATE_PROVIDER',\n  'UNDERSTANDING_CAPTURE_PROVIDER',\n] as const;"),
+    }],
+    ['the provider effect type stopped being the current registry', {
+      budgetContract: shipped.budgetContract.replace('typeof POST_RESPONSE_PROVIDER_EFFECTS_V2[number];', 'typeof POST_RESPONSE_PROVIDER_EFFECTS_V1[number];'),
+    }],
+    ['the policy version was rolled back', {
+      budgetContract: shipped.budgetContract.replace("POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION = '2';", "POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION = '1';"),
+    }],
+    ['the QIR-005 v2 amendment record was deleted', { v2Amendment: '' }],
+    ['the QIR-005 v2 amendment record lost its cap', {
+      v2Amendment: shipped.v2Amendment.replaceAll('POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 4', 'POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 5'),
+    }],
+    ['the capture stage moved after Association', {
+      dispatcher: shipped.dispatcher.replace('const understanding=await this.captureUnderstanding(execution,effects,completed,budget,', 'const understanding=await this.later(execution,effects,completed,budget,')
+        .replace("let association:Exclude<AssociationRecovery,{status:'INDETERMINATE'}>|undefined;", "let association:Exclude<AssociationRecovery,{status:'INDETERMINATE'}>|undefined;const late=await this.captureUnderstanding(execution,effects,completed,budget,context,turn.content);"),
+    }],
     ['the hard cap became environment-configurable', {
-      budgetContract: shipped.budgetContract.replace('export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = 3;',
-        'export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 = Number(process.env.POST_RESPONSE_PROVIDER_CALL_BUDGET ?? 3);'),
+      budgetContract: shipped.budgetContract.replace('export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = 4;',
+        'export const POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 = Number(process.env.POST_RESPONSE_PROVIDER_CALL_BUDGET ?? 4);'),
     }],
     ['a fourth provider-backed effect was added silently', {
-      budgetContract: shipped.budgetContract.replace("  'CANDIDATE_PROVIDER',\n] as const;", "  'CANDIDATE_PROVIDER',\n  'QUESTION_PROVIDER',\n] as const;"),
+      budgetContract: shipped.budgetContract.replace("  'UNDERSTANDING_CAPTURE_PROVIDER',\n] as const;", "  'UNDERSTANDING_CAPTURE_PROVIDER',\n  'QUESTION_PROVIDER',\n] as const;"),
     }],
     // QIR-005 Fix 01 - the drift cases that live OUTSIDE the protected registry.
     // A..E are the real silent-drift shapes: the previous matrix only edited the
@@ -545,26 +626,26 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
     ['A - a new canonical effect entered INTELLIGENCE_EFFECTS with no classification entry', {
       effectTypes: addCanonicalEffect('QUESTION_GAP_SYNC'),
     }],
-    ['B - a new canonical effect was classified PROVIDER while the frozen v1 registry stayed at three', {
+    ['B - a new canonical effect was classified PROVIDER while the frozen v2 registry stayed at four', {
       effectTypes: addCanonicalEffect('QUESTION_GAP_SYNC'),
       budgetContract: classifyEffect('QUESTION_GAP_SYNC', 'PROVIDER'),
     }],
     ['C - an existing provider effect was reclassified NON_PROVIDER', {
-      budgetContract: shipped.budgetContract.replace("  INTENT_PROVIDER: 'PROVIDER',", "  INTENT_PROVIDER: 'NON_PROVIDER',"),
+      budgetContract: inClassification("  INTENT_PROVIDER: 'PROVIDER',", "  INTENT_PROVIDER: 'NON_PROVIDER',"),
     }],
     ['C - a second existing provider effect was reclassified NON_PROVIDER', {
-      budgetContract: shipped.budgetContract.replace("  ASSOCIATION_PROVIDER: 'PROVIDER',", "  ASSOCIATION_PROVIDER: 'NON_PROVIDER',"),
+      budgetContract: inClassification("  ASSOCIATION_PROVIDER: 'PROVIDER',", "  ASSOCIATION_PROVIDER: 'NON_PROVIDER',"),
     }],
     ['D - a current non-provider effect was reclassified PROVIDER', {
-      budgetContract: shipped.budgetContract.replace("  MEMORY_WRITE: 'NON_PROVIDER',", "  MEMORY_WRITE: 'PROVIDER',"),
+      budgetContract: inClassification("  MEMORY_WRITE: 'NON_PROVIDER',", "  MEMORY_WRITE: 'PROVIDER',"),
     }],
     ['D - the managed Brain Context effect was reclassified PROVIDER', {
-      budgetContract: shipped.budgetContract.replace("  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',", "  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'PROVIDER',"),
+      budgetContract: inClassification("  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'NON_PROVIDER',", "  HIM_BRAIN_CONTEXT_MATERIALIZATION: 'PROVIDER',"),
     }],
     ['E - the provider registry was widened to a fourth member with a matching classification', {
       effectTypes: addCanonicalEffect('QUESTION_GAP_SYNC'),
       budgetContract: classifyEffect('QUESTION_GAP_SYNC', 'PROVIDER')
-        .replace("  'CANDIDATE_PROVIDER',\n] as const;", "  'CANDIDATE_PROVIDER',\n  'QUESTION_GAP_SYNC',\n] as const;"),
+        .replace("  'UNDERSTANDING_CAPTURE_PROVIDER',\n] as const;", "  'UNDERSTANDING_CAPTURE_PROVIDER',\n  'QUESTION_GAP_SYNC',\n] as const;"),
     }],
     ['F - the compile-time totality clause was removed from the classification', {
       budgetContract: shipped.budgetContract.replace(
@@ -576,19 +657,19 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
         "export type PostResponseProviderClassification = 'PROVIDER' | 'NON_PROVIDER' | 'UNKNOWN';"),
     }],
     ['G - classification became effect-name inference', {
-      budgetContract: shipped.budgetContract.replace("  MEMORY_WRITE: 'NON_PROVIDER',", "  MEMORY_WRITE: effect.endsWith('_PROVIDER') ? 'PROVIDER' : 'NON_PROVIDER',"),
+      budgetContract: inClassification("  MEMORY_WRITE: 'NON_PROVIDER',", "  MEMORY_WRITE: effect.endsWith('_PROVIDER') ? 'PROVIDER' : 'NON_PROVIDER',"),
     }],
     ['G - a classification entry was dropped, leaving a canonical effect unclassified', {
-      budgetContract: shipped.budgetContract.replace("  CONFIDENCE_BATCH: 'NON_PROVIDER',\n", ''),
+      budgetContract: inClassification("  CONFIDENCE_BATCH: 'NON_PROVIDER',\n", ''),
     }],
     ['G - the canonical effect union literal was hidden from the guard', {
       effectTypes: shipped.effectTypes.replace('export const INTELLIGENCE_EFFECTS=', 'export const INTELLIGENCE_EFFECTS:readonly string[]=derive();\nconst _unused='),
     }],
     ['a provider-backed effect was dropped from the registry', {
-      budgetContract: shipped.budgetContract.replace("  'INTENT_PROVIDER',\n", ''),
+      budgetContract: inRegistry("  'INTENT_PROVIDER',\n", ''),
     }],
     ['a non-provider effect was pulled into the provider registry', {
-      budgetContract: shipped.budgetContract.replace("  'ASSOCIATION_PROVIDER',", "  'MEMORY_WRITE',\n  'ASSOCIATION_PROVIDER',"),
+      budgetContract: inRegistry("  'ASSOCIATION_PROVIDER',", "  'MEMORY_WRITE',\n  'ASSOCIATION_PROVIDER',"),
     }],
     ['membership became effect-name inference', {
       budgetContract: shipped.budgetContract.replace('  return POST_RESPONSE_PROVIDER_EFFECT_KEYS.has(value);', "  return value.endsWith('_PROVIDER');"),
@@ -612,8 +693,8 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
       budgetContract: shipped.budgetContract.replace("      this.record(effect, 'EXHAUSTED');\n      return 'EXHAUSTED';", "      return 'EXHAUSTED';"),
     }],
     ['the local duplicate-consumption guard was removed', {
-      budgetContract: shipped.budgetContract.replace('if (this.spentSlots.has(effect) || this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V1) {',
-        'if (this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V1 + 1) {'),
+      budgetContract: shipped.budgetContract.replace('if (this.spentSlots.has(effect) || this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V2) {',
+        'if (this.spentSlots.size >= POST_RESPONSE_PROVIDER_CALL_BUDGET_V2 + 1) {'),
     }],
     ['telemetry stopped being fail-soft inside the budget', {
       budgetContract: shipped.budgetContract.replace('try { this.recorder(effect, decision); } catch { /* fail-soft */ }', 'this.recorder(effect, decision);'),
@@ -706,7 +787,7 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
       a2Smoke: shipped.a2Smoke.replaceAll('POST_RESPONSE_PROVIDER_CALL_BUDGET_V1', '3'),
     }],
     ['the behavioural proof stopped asserting the frozen cap', {
-      dispatcherSpec: shipped.dispatcherSpec.replaceAll('POST_RESPONSE_PROVIDER_CALL_BUDGET_V1', '3'),
+      dispatcherSpec: shipped.dispatcherSpec.replaceAll('POST_RESPONSE_PROVIDER_CALL_BUDGET_V2', '4'),
     }],
     ['the entry migration baseline vanished', { migrations: Object.freeze([]) }],
   ];
@@ -737,7 +818,7 @@ test('B3 - forward safety: every change a later QIR task is expected to make sta
   // QIR-005 Fix 01 forward safety. The exhaustive classification must NOT freeze
   // the current NUMBER of canonical durable effects. A later reviewed task may
   // add a new IntelligenceEffect and classify it NON_PROVIDER; the provider
-  // budget of three is untouched and no QIR-005 v2 is required.
+  // budget of four is untouched and no further QIR-005 version is required.
   for (const future of ['QUESTION_GAP_SYNC', 'RECOMMENDATION_MATERIALIZATION', 'FUTURE_MANAGED_EFFECT']) {
     const futureEffectTypes = addCanonicalEffect(future);
     const futureClassification = classifyEffect(future, 'NON_PROVIDER');
@@ -748,9 +829,9 @@ test('B3 - forward safety: every change a later QIR task is expected to make sta
     }), `a future reviewed NON-provider durable effect stays legal: ${future}`);
   }
   // Several at once stays legal too: the guard freezes the PROVIDER half only.
-  const manyEffects = shipped.effectTypes.replace("'HIM_BRAIN_CONTEXT_MATERIALIZATION']as const;",
-    "'HIM_BRAIN_CONTEXT_MATERIALIZATION','FUTURE_ONE','FUTURE_TWO']as const;");
-  const manyClassified = shipped.budgetContract.replace("  MEMORY_WRITE: 'NON_PROVIDER',",
+  const manyEffects = shipped.effectTypes.replace("'UNDERSTANDING_CAPTURE_PROVIDER']as const;",
+    "'UNDERSTANDING_CAPTURE_PROVIDER','FUTURE_ONE','FUTURE_TWO']as const;");
+  const manyClassified = inClassification("  MEMORY_WRITE: 'NON_PROVIDER',",
     "  MEMORY_WRITE: 'NON_PROVIDER',\n  FUTURE_ONE: 'NON_PROVIDER',\n  FUTURE_TWO: 'NON_PROVIDER',");
   assert.doesNotThrow(() => assertPostResponseProviderBudgetContract({
     ...shipped, effectTypes: manyEffects, budgetContract: manyClassified,

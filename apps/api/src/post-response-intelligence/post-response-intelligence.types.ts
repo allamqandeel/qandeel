@@ -4,7 +4,7 @@ import type{ConfidenceBatchEffectResultCode}from'./durable-confidence-batch-resu
 import type{CandidateProviderEffectResultCode,HypothesisPersistenceEffectResultCode}from'./durable-generation-result';
 import type{HypothesisUpdateBatchEffectResultCode}from'./durable-hypothesis-update-batch-result';
 import type{HimBrainContextEffectResultCode}from'./durable-him-brain-context-result';
-export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION']as const;
+export const INTELLIGENCE_EFFECTS=['MEMORY_WRITE','INTENT_PROVIDER','CANDIDATE_PROVIDER','ASSOCIATION_PROVIDER','HYPOTHESIS_UPDATE_BATCH','HYPOTHESIS_PERSISTENCE','CONFIDENCE_BATCH','HIM_BRAIN_CONTEXT_MATERIALIZATION','UNDERSTANDING_CAPTURE_PROVIDER']as const;
 export type IntelligenceEffect=typeof INTELLIGENCE_EFFECTS[number];
 /** The managed effects. Each one's work and typed completion happen inside ONE database transaction driven by its specialized command, so the ordinary claim path can never touch any of them: A2.3c HYPOTHESIS_UPDATE_BATCH (migration 0034), QAN-AUD-06 CONFIDENCE_BATCH (migration 0035, which additionally owns the durable per-target item plan), and QHIA-012 HIM_BRAIN_CONTEXT_MATERIALIZATION (migration 0061, which is inserted DIRECTLY as COMPLETED so no CLAIMED Brain Context state exists even transiently). */
 export type ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'|'CONFIDENCE_BATCH'|'HIM_BRAIN_CONTEXT_MATERIALIZATION';
@@ -12,7 +12,9 @@ export type ManagedIntelligenceEffect='HYPOTHESIS_UPDATE_BATCH'|'CONFIDENCE_BATC
 export type ClaimableIntelligenceEffect=Exclude<IntelligenceEffect,ManagedIntelligenceEffect>;
 export type MemoryWriteEffectResultCode='NO_FRESH_EVIDENCE'|'FRESH_EVIDENCE_CREATED';
 export type IntentProviderEffectResultCode='INTENT_AUTHORIZED'|'INTENT_NOT_AUTHORIZED';
-export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode|HypothesisUpdateBatchEffectResultCode|ConfidenceBatchEffectResultCode|HimBrainContextEffectResultCode;
+/** S8A-03 CP2 (migration 0171): the typed UNDERSTANDING_CAPTURE_PROVIDER result. It carries identifiers only, never content. */
+export type UnderstandingCaptureEffectResultCode='NO_UNDERSTANDING_RECORDED'|'UNDERSTANDING_RECORDED';
+export type IntelligenceEffectResultCode=MemoryWriteEffectResultCode|IntentProviderEffectResultCode|UnderstandingCaptureEffectResultCode|AssociationEffectResultCode|CandidateProviderEffectResultCode|HypothesisPersistenceEffectResultCode|HypothesisUpdateBatchEffectResultCode|ConfidenceBatchEffectResultCode|HimBrainContextEffectResultCode;
 /** Typed outcome of the managed QHIA-012 Brain Context materialization command. COMPLETED means this call durably wrote the typed result; ALREADY_COMPLETED means a valid first durable result already existed and was NOT overwritten; QUARANTINED means an existing Brain effect row is not a valid typed COMPLETED result; NO_OP is a race/missing/terminal condition that requires a durable reread before deciding. */
 export const HIM_BRAIN_CONTEXT_COMMAND_STATUSES=['COMPLETED','ALREADY_COMPLETED','QUARANTINED','NO_OP']as const;
 export type HimBrainContextCommandStatus=typeof HIM_BRAIN_CONTEXT_COMMAND_STATUSES[number];

@@ -1,5 +1,7 @@
 # QANDEEL Brain Bake-off Harness v1
 
+> **S8A-03 (2026-10-23), historical record.** Founder decision D1 moved every QANDEEL AI call to DeepSeek Flash and removed the Anthropic and OpenAI adapters and profiles. The paid `eval:brain:run` command described below was removed with them; `validate`, `dry-run` and `summarize` still work over the recorded suite and artifacts, whose Anthropic / OpenAI model labels are kept for provenance only. Paid evaluation is DeepSeek only (`deepseek-plan` / `deepseek-run`). The text below is as written for the bake-off.
+
 This local, evaluation-only harness compares Anthropic FAST with OpenAI FAST and Anthropic DEEP with OpenAI DEEP across 24 deterministic synthetic QANDEEL conversations. It reuses the production model profiles, provider adapters, output-token bounds, and `BehavioralResponsePolicyService`. It does not use production data, databases, client contracts, fallback, retries, provider-specific prompt tuning, or production routing.
 
 ## Commands

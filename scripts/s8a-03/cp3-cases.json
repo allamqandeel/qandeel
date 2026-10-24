@@ -1,0 +1,159 @@
+{
+  "suite": "s8a-03-cp3-memory-acceptance",
+  "version": 1,
+  "note": "Fixed before any DeepSeek call (PREREGISTRATION_CP3.md). Synthetic only. Session A holds the acquisition and control turns; every graded question is asked in a NEW session B of the same user, so a reply can know a fact only through Memory. Tokens are compared after normalizeArabicComparison.",
+  "fillers": [
+    "بحب الشاي بالنعناع الصبح.", "بشرب قهوة سادة بعد الضهر.", "عندي عربية لونها فضي.", "بحب الأكل البيتي.",
+    "بسمع أم كلثوم بالليل.", "بقرا روايات بوليسي.", "بحب البحر في الصيف.", "بكره الزحمة.", "بنام بدري.",
+    "بحب الكشري.", "بطبخ مكرونة بشاميل.", "بحب الأفلام القديمة.", "عندي نباتات في البلكونة.", "بحب اللون الأزرق.",
+    "بشتري الخضار من السوق.", "بحب ريحة المطر.", "بكتب يومياتي.", "بحب الفول والطعمية.", "بحب أزور إسكندرية في العيد.",
+    "بحب المانجو.", "بستخدم المترو.", "بحب الهدوء.", "بحب الحلويات الشرقية.", "بتفرج على برامج طبخ.",
+    "بحب العصافير.", "بلبس نضارة.", "بحب الشتا.", "بحب الكتب القديمة.", "بشرب مية كتير.", "بحب السمك المشوي.",
+    "بحب الورد البلدي.", "بحب أصحى على صوت الراديو.", "بحب الشوربة في البرد.", "بحب أرتب الدولاب."
+  ],
+  "cases": [
+    {
+      "id": "C01", "criteria": [1, 8, 12],
+      "turns": [
+        { "session": "A", "text": "على فكرة أنا شغال محاسب في شركة أدوية في مدينة نصر بقالي تلات سنين" },
+        { "session": "B", "text": "هي إيه مهنتي؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "محاسب" }],
+      "retrieval": [{ "turn": 1, "targets": ["محاسب"] }],
+      "reply": { "turn": 1, "mustInclude": [["محاسب"]], "mustNot": [] }
+    },
+    {
+      "id": "C02", "criteria": [2, 8],
+      "turns": [
+        { "session": "A", "text": "أنا ساكن في طنطا، ومتجوز، وعندي بنتين" },
+        { "session": "B", "text": "عندي كام عيل؟", "question": true }
+      ],
+      "keyFacts": [{ "token": "طنطا" }, { "token": "متجوز" }, { "token": "بنتين" }],
+      "retrieval": [{ "turn": 1, "targets": ["بنتين"] }]
+    },
+    {
+      "id": "C03", "criteria": [3],
+      "turns": [
+        { "session": "A", "text": "نفسي أسافر ألمانيا، وناوي أقدّم على ماجستير السنة الجاية، وأنا بدرس ألماني دلوقتي" },
+        { "session": "B", "text": "بتعلّم لغة إيه حاليًا؟", "question": true }
+      ],
+      "keyFacts": [{ "token": "بدرس الماني" }],
+      "forbiddenCurrent": [{ "token": "اسافر", "allowTypes": ["GOAL"], "allowTemporals": ["PLANNED"] }, { "token": "ماجستير", "allowTypes": ["GOAL", "DECISION_COMMITMENT"], "allowTemporals": ["PLANNED"] }],
+      "retrieval": [{ "turn": 1, "targets": ["الماني"] }]
+    },
+    {
+      "id": "C04", "criteria": [4, 12],
+      "turns": [
+        { "session": "A", "text": "أخويا الكبير دكتور أسنان في إسكندرية، وأنا شغال مهندس كهربا في القاهرة" },
+        { "session": "B", "text": "وظيفتي إيه؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "مهندس" }],
+      "forbiddenSelf": ["اسنان"],
+      "retrieval": [{ "turn": 1, "targets": ["مهندس"], "mustNotServe": ["اسنان"] }],
+      "reply": { "turn": 1, "mustInclude": [["مهندس"]], "mustNot": ["اسنان"] }
+    },
+    {
+      "id": "C05", "criteria": [5],
+      "turns": [
+        { "session": "A", "text": "أنا مش بدخن خالص، ومش متجوز" },
+        { "session": "B", "text": "أنا بشرب سجاير؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "بدخن", "negated": true }, { "token": "متجوز", "negated": true }],
+      "forbiddenAffirmed": ["بدخن", "متجوز"],
+      "retrieval": [{ "turn": 1, "targets": ["بدخن"] }],
+      "reply": { "turn": 1, "mustInclude": [["مش", "لا", "مبتدخن", "ما بتدخنش", "متدخنش"]], "mustNot": [], "review": "must not say or imply that the user smokes" }
+    },
+    {
+      "id": "C06", "criteria": [6],
+      "turns": [
+        { "session": "A", "text": "لو سافرت دبي واشتغلت هناك المرتب هيبقى كام؟ وهل ممكن أكون عندي حساسية من القمح؟" }
+      ],
+      "expectNoMemory": true
+    },
+    {
+      "id": "C07", "criteria": [7, 8],
+      "turns": [
+        { "session": "A", "text": "أنا بلعب اسكواش كل يوم جمعة في نادي الصيد", "fixtureAfter": "FILLERS" },
+        { "session": "B", "text": "بمارس رياضة إيه؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "اسكواش" }],
+      "retrieval": [{ "turn": 1, "targets": ["اسكواش"], "outsideRecent32": true, "mandatory": true }],
+      "reply": { "turn": 1, "mustInclude": [["اسكواش"]], "mustNot": [] }
+    },
+    {
+      "id": "C08", "criteria": [8, 9],
+      "turns": [
+        { "session": "A", "text": "أنا بشتغل مدرّس رياضيات في مدرسة إعدادي" },
+        { "session": "B", "text": "ما هي وظيفتي الحالية؟", "question": true, "graded": true },
+        { "session": "B", "text": "أنا معلّم إيه للعيال؟", "question": true }
+      ],
+      "keyFacts": [{ "token": "مدرس رياضيات" }],
+      "retrieval": [{ "turn": 1, "targets": ["مدرس"] }, { "turn": 2, "targets": ["مدرس"] }],
+      "reply": { "turn": 1, "mustInclude": [["مدرس", "معلم", "تدريس", "بتدرس"], ["رياضيات"]], "mustNot": [] }
+    },
+    {
+      "id": "C09", "criteria": [9],
+      "turns": [
+        { "session": "A", "text": "أعمل حاليًا ممرضة في مستشفى حكومي" },
+        { "session": "B", "text": "أنا شغلانتي إيه؟", "question": true }
+      ],
+      "keyFacts": [{ "token": "ممرضه" }],
+      "retrieval": [{ "turn": 1, "targets": ["ممرضه"] }]
+    },
+    {
+      "id": "C10", "criteria": [10, 9],
+      "turns": [
+        { "session": "A", "text": "أنا ساكن في المعادي" },
+        { "session": "A", "text": "انسى إني ساكن في المعادي", "control": "FORGET" },
+        { "session": "B", "text": "أنا عايش فين؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "المعادي", "beforeTurn": 1 }],
+      "retrieval": [{ "turn": 2, "targets": [], "mustNotServe": ["المعادي"] }],
+      "reply": { "turn": 2, "mustInclude": [], "mustNot": ["المعادي"] }
+    },
+    {
+      "id": "C11", "criteria": [10],
+      "turns": [
+        { "session": "A", "text": "أنا شغال في شركة اتصالات" },
+        { "session": "A", "text": "لا، مبقتش شغال في شركة الاتصالات، أنا دلوقتي شغال في بنك", "control": "CORRECT" },
+        { "session": "B", "text": "أنا بشتغل فين دلوقتي؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "اتصالات", "beforeTurn": 1 }],
+      "retrieval": [{ "turn": 2, "targets": ["بنك"], "mustNotServe": ["اتصالات"] }],
+      "reply": { "turn": 2, "mustInclude": [["بنك"]], "mustNot": ["اتصالات"] }
+    },
+    {
+      "id": "C12", "criteria": [11],
+      "turns": [
+        { "session": "A", "text": "أنا بشتغل الصبح في صيدلية" },
+        { "session": "A", "text": "وبالليل بشتغل في كول سنتر" },
+        { "session": "B", "text": "بشتغل فين؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "صيدليه" }, { "token": "كول سنتر" }],
+      "retrieval": [{ "turn": 2, "targets": ["صيدليه", "كول سنتر"] }],
+      "reply": { "turn": 2, "mustInclude": [["صيدليه"], ["كول سنتر", "الكول"]], "mustNot": ["تناقض", "متناقض"], "review": "both jobs, or one brief question; never one as the only answer" }
+    },
+    {
+      "id": "C13", "criteria": [4, 12],
+      "turns": [
+        { "session": "A", "text": "أنا عندي قطة اسمها لولي، وأختي عندها كلب اسمه ماكس" },
+        { "session": "B", "text": "أنا مربّي حيوان أليف إيه؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "لولي" }],
+      "forbiddenSelf": ["ماكس", "كلب"],
+      "retrieval": [{ "turn": 1, "targets": ["لولي"], "mustNotServe": ["ماكس"] }],
+      "reply": { "turn": 1, "mustInclude": [["لولي"]], "mustNot": ["ماكس", "كلب"] }
+    },
+    {
+      "id": "C14", "criteria": [3, 10],
+      "turns": [
+        { "session": "A", "text": "زمان كنت ساكن في أسيوط، دلوقتي ساكن في القاهرة" },
+        { "session": "B", "text": "أنا مقيم في أنهي مدينة؟", "question": true, "graded": true }
+      ],
+      "keyFacts": [{ "token": "القاهره" }],
+      "forbiddenCurrent": [{ "token": "اسيوط", "allowTypes": [], "allowTemporals": ["PAST"] }],
+      "retrieval": [{ "turn": 1, "targets": ["القاهره"] }],
+      "reply": { "turn": 1, "mustInclude": [["القاهره"]], "mustNot": [], "review": "Asyut only as the past, never as the current home" }
+    }
+  ]
+}

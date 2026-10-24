@@ -80,4 +80,35 @@ describe('BackgroundIntelligenceDataApiService',()=>{
   expect(new URL(relianceUrl).pathname).toMatch(/\/rpc\/background_hypothesis_evidence_reliance_v1$/u);expect(JSON.parse(relianceInit.body)).toEqual({p_user_id:context.userId,p_hypothesis_ids:['h-1','h-2']});
   expect(new URL(housekeepingUrl).pathname).toMatch(/\/rpc\/background_reevaluate_withdrawn_hypothesis_evidence_v1$/u);expect(JSON.parse(housekeepingInit.body)).toEqual({p_user_id:context.userId,p_limit:32});
   await expect(service.readHypothesisEvidenceReliance({...context},['h-1'])).rejects.toThrow();});
+ it('S8A-03 CP2: reads the bounded unindexed backlog through the execution-scoped definer and fails closed on a malformed row',async()=>{const service=new BackgroundIntelligenceDataApiService(),context=await authorize(),m='20000000-0000-4000-8000-000000000001';
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>[{memory_id:m,type:'GOAL',content:'عايز أتعلم ألماني.'}]}as Response);
+  await expect(service.listUnindexedMemories(context,4)).resolves.toEqual([{memoryId:m,type:'GOAL',content:'عايز أتعلم ألماني.'}]);
+  const[url,init]=(fetch as jest.Mock).mock.calls[0];expect(url).toBe('https://database.invalid/rest/v1/rpc/background_unindexed_memories_v1');
+  expect(JSON.parse(init.body)).toEqual({p_source_turn_id:context.sourceTurnId,p_limit:4});
+  for(const rows of [[{memory_id:'x',type:'GOAL',content:'c'}],[{memory_id:m,type:'SECRET',content:'c'}],[{memory_id:m,type:'GOAL',content:1}],{},Array(5).fill({memory_id:m,type:'GOAL',content:'c'})]){
+   (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>rows}as Response);
+   await expect(service.listUnindexedMemories(context,4)).rejects.toThrow('BACKGROUND_UNDERSTANDING_BACKFILL_INTEGRITY');}});
+ it('S8A-03 Open Understanding: reads what QANDEEL knows through the execution-scoped definer, with person labels, and fails closed on a malformed row',async()=>{const service=new BackgroundIntelligenceDataApiService(),context=await authorize(),m='20000000-0000-4000-8000-000000000001';
+  const good={memory_id:m,type:'PERSONAL_FACT',content:'سلمى بقت مدرسة.',subject:'OTHER',person_name:'سلمى',person_relation:'مراتي',temporal:'CURRENT',ended:false,terms:['مدرس']};
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>[good]}as Response);
+  await expect(service.listKnownMemories(context,40)).resolves.toEqual([{memoryId:m,type:'PERSONAL_FACT',content:'سلمى بقت مدرسة.',subject:'OTHER',personName:'سلمى',personRelation:'مراتي',temporal:'CURRENT',ended:false,terms:['مدرس']}]);
+  const[url,init]=(fetch as jest.Mock).mock.calls[0];expect(url).toBe('https://database.invalid/rest/v1/rpc/background_known_memories_v1');
+  // The source turn names the RUNNING execution; the owner is the database's, never the caller's.
+  expect(JSON.parse((init as RequestInit).body as string)).toEqual({p_source_turn_id:context.sourceTurnId,p_limit:40});
+  for(const rows of [[{...good,memory_id:'x'}],[{...good,subject:'ME'}],[{...good,person_name:3}],[{...good,ended:'no'}],[{...good,terms:[1]}],[{...good,type:'SECRET'}],Array(41).fill(good),{}]){
+   (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>rows}as Response);
+   await expect(service.listKnownMemories(context,40)).rejects.toThrow('BACKGROUND_UNDERSTANDING_KNOWN_INTEGRITY');}});
+ it('S8A-03 Open Understanding: reads only the completed turns of the same Session BEFORE the source turn, oldest first, owner-scoped',async()=>{const service=new BackgroundIntelligenceDataApiService(),context=await authorize();
+  const later={id:'30000000-0000-4000-8000-000000000009',role:'USER',content:'بعدها'};
+  const rows=[later,{id:context.sourceTurnId,role:'USER',content:'الرسالة نفسها'},{id:'30000000-0000-4000-8000-000000000003',role:'ASSISTANT',content:'رد قنديل'},
+   {id:'30000000-0000-4000-8000-000000000002',role:'USER',content:'مراتي سلمى'},{id:'30000000-0000-4000-8000-000000000001',role:'USER',content:'أقدم'}];
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>rows}as Response);
+  await expect(service.listRecentTurns(context,2)).resolves.toEqual([{role:'USER',content:'مراتي سلمى'},{role:'ASSISTANT',content:'رد قنديل'}]);
+  const params=new URL((fetch as jest.Mock).mock.calls[0][0]).searchParams;
+  expect([params.get('user_id'),params.get('session_id'),params.get('status')]).toEqual([`eq.${context.userId}`,`eq.${context.sessionId}`,'eq.COMPLETED']);
+  // The source turn not found in the window: nothing is sent rather than a guess.
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>[later]}as Response);
+  await expect(service.listRecentTurns(context,2)).resolves.toEqual([]);
+  (fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>({})}as Response);
+  await expect(service.listRecentTurns(context,2)).rejects.toThrow('BACKGROUND_UNDERSTANDING_TURNS_INTEGRITY');});
 });

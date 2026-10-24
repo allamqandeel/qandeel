@@ -17,9 +17,9 @@ import type { ConversationTurn } from './conversation.types';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import type { ModelRouter, ModelRouterRequest } from '../model-router/model-router.types';
-import { OpenAIModelRouter } from '../model-router/providers/openai/openai-model-router';
-import type { OpenAIModelRouterConfig } from '../model-router/providers/openai/openai-model-router.config';
-import { resolveOpenAIModel } from '../model-router/model-profile.registry';
+import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
+import { DEEPSEEK_MAX_OUTPUT_TOKENS, type DeepSeekModelRouterConfig } from '../model-router/providers/deepseek/deepseek-model-router.config';
+import { resolveDeepSeekModel } from '../model-router/model-profile.registry';
 
 // PROD-SEC-02 - the request-scoped foreground work context: the deadline that stops NEW provider calls, and the
 // database work lease that must be held before provider-bearing work starts.
@@ -127,7 +127,7 @@ describe('the foreground scope', () => {
 });
 
 describe('the deadline stops NEW provider calls - it never races or abandons a call already in flight', () => {
-  const routerConfig: OpenAIModelRouterConfig = { apiKey: 'test-only', resolveModel: resolveOpenAIModel, maxOutputTokens: 1024, timeoutMs: 10_000, maxRetries: 0 };
+  const routerConfig: DeepSeekModelRouterConfig = { apiKey: 'test-only', resolveModel: resolveDeepSeekModel, maxOutputTokens: DEEPSEEK_MAX_OUTPUT_TOKENS, timeoutMs: 10_000, maxRetries: 0 };
   const routerRequest: ModelRouterRequest = {
     task: 'CONVERSATIONAL_RESPONSE', path: 'FAST', complexity: 'LOW', behavioralGuidance: 'policy',
     context: [{ role: 'USER', content: 'hello' }], locale: 'und', modality: 'TEXT', latencyBudgetMs: 3_000,
@@ -135,7 +135,7 @@ describe('the deadline stops NEW provider calls - it never races or abandons a c
   };
   it('the reply router opens no provider request once the deadline has passed', async () => {
     const create = jest.fn();
-    const router = new OpenAIModelRouter(routerConfig, { responses: { create } });
+    const router = new DeepSeekModelRouter(routerConfig, { chat: { completions: { create } } });
     const time = clock();
     await runForegroundTurnWork(gateAnswering(), 30_000, async () => {
       time.advance(30_000);
@@ -148,9 +148,9 @@ describe('the deadline stops NEW provider calls - it never races or abandons a c
     const time = clock();
     const create = jest.fn(async () => {
       time.advance(60_000); // the deadline passes while this call is in flight
-      return { output_text: 'reply', usage: { input_tokens: 1, output_tokens: 1 } };
+      return { choices: [{ finish_reason: 'stop', message: { content: 'reply' } }], usage: { prompt_tokens: 1, completion_tokens: 1 } };
     });
-    const router = new OpenAIModelRouter(routerConfig, { responses: { create } });
+    const router = new DeepSeekModelRouter(routerConfig, { chat: { completions: { create } } });
     await runForegroundTurnWork(gateAnswering(), 30_000, async () => {
       await expect(router.generate(routerRequest)).resolves.toMatchObject({ content: 'reply' });
     }, time.now);
@@ -165,7 +165,7 @@ describe('guardForegroundBinding - the semantic providers are guarded at their b
     readonly label = 'counting';
     async propose(input: string): Promise<string> { this.calls += 1; return `${this.label}:${input}`; }
   }
-  const binding = () => ({ provider: new CountingProvider(), providerName: 'OPENAI', providerModel: 'model-x' });
+  const binding = () => ({ provider: new CountingProvider(), providerName: 'DEEPSEEK', providerModel: 'model-x' });
 
   it('delegates unchanged before the deadline, keeping the provider\'s own `this` and the binding identity', async () => {
     const guarded = guardForegroundBinding(binding)();
@@ -174,7 +174,7 @@ describe('guardForegroundBinding - the semantic providers are guarded at their b
     });
     expect(guarded.provider.calls).toBe(1);
     expect(guarded.provider.label).toBe('counting');
-    expect({ name: guarded.providerName, model: guarded.providerModel }).toEqual({ name: 'OPENAI', model: 'model-x' });
+    expect({ name: guarded.providerName, model: guarded.providerModel }).toEqual({ name: 'DEEPSEEK', model: 'model-x' });
   });
 
   it('refuses with the typed deadline error before entering the provider once the deadline has passed', async () => {

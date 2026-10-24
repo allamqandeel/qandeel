@@ -7,5 +7,5 @@ export * from './thread-establishment-provider.types';
 export * from './thread-establishment-provider.config';
 export * from './thread-establishment-validator';
 export * from './fake-thread-establishment.provider';
-export * from './openai-thread-establishment.provider';
+export * from './deepseek-thread-establishment.provider';
 export * from './thread-establishment-evaluator.service';

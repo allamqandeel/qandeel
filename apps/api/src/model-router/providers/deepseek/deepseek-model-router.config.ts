@@ -1,9 +1,10 @@
 import { resolveDeepSeekModel } from '../../model-profile.registry';
 import type { ProcessingPath } from '../../model-router.types';
+import { requireDeepSeekQualification } from './deepseek-client';
 
-// S8A-01: the one DeepSeek endpoint. It is a constant, never read from the environment, so no deployment variable
-// (OPENAI_BASE_URL included) can send a QANDEEL request anywhere else.
-export const DEEPSEEK_API_BASE_URL = 'https://api.deepseek.com';
+// S8A-03: the fixed endpoint, the SYNTHETIC_ONLY qualification gate and the client moved, unchanged, to
+// `deepseek-client.ts`, which all eight DeepSeek adapters share.
+export { DEEPSEEK_API_BASE_URL, DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE } from './deepseek-client';
 // DEEP thinks before it answers, and DeepSeek counts the thinking inside max_tokens, so DEEP needs room for both.
 // S8A-02 CP3 correction (Product Owner, 2026-10-22): DEEP 2800 (was 2048). DEEP stopped at `length` in 7 / 108 attempts
 // before CP3 and 1 / 6 in Round 8, each time with the reasoning holding 1 700–2 048 of the 2 048 tokens and the answer cut
@@ -16,13 +17,6 @@ export const DEEPSEEK_MAX_OUTPUT_TOKENS = { FAST: 1024, DEEP: 2800 } as const sa
 export const DEEPSEEK_PROVIDER_TIMEOUT_MS = 25_000;
 export const DEEPSEEK_MAX_RETRIES = 0;
 
-/**
- * S8A-01 qualification boundary. DeepSeek may process synthetic qualification data only: no real user's data may reach
- * it until third-party AI disclosure, consent, a privacy policy and in-app reporting exist (canonical backlog). The
- * operator must declare this mode explicitly, and a production process refuses DeepSeek whatever it declares.
- */
-export const DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE = 'SYNTHETIC_ONLY';
-
 export interface DeepSeekModelRouterConfig {
   apiKey: string;
   resolveModel: typeof resolveDeepSeekModel;
@@ -34,14 +28,8 @@ export interface DeepSeekModelRouterConfig {
 export function loadDeepSeekModelRouterConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): DeepSeekModelRouterConfig {
-  if (environment.NODE_ENV === 'production') {
-    throw new Error('DeepSeek is qualification-only and cannot be selected in production.');
-  }
-  if (environment.DEEPSEEK_QUALIFICATION_MODE?.trim() !== DEEPSEEK_SYNTHETIC_QUALIFICATION_MODE) {
-    throw new Error('DEEPSEEK_QUALIFICATION_MODE must be SYNTHETIC_ONLY: DeepSeek may process synthetic qualification data only.');
-  }
-  const apiKey = environment.DEEPSEEK_API_KEY?.trim();
-  if (!apiKey) throw new Error('DEEPSEEK_API_KEY is required for the configured model router.');
+  // S8A-01 qualification boundary: production refused, SYNTHETIC_ONLY declared, key present.
+  const apiKey = requireDeepSeekQualification(environment, 'the configured model router');
 
   return {
     apiKey,

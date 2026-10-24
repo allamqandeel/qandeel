@@ -11,7 +11,7 @@ import type { ModelAssistedHypothesisAssociationService } from './model-assisted
 import { PostResponseIntelligenceDispatcherService } from './post-response-intelligence-dispatcher.service';
 import type { TelemetryService } from '../observability/telemetry.service';
 import { DataApiError } from '../conversation/supabase-data-api.service';
-import { POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_OUTCOME, POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE, POST_RESPONSE_PROVIDER_CALL_BUDGET_V1, POST_RESPONSE_PROVIDER_EFFECTS_V1, PostResponseProviderBudget, reconstructSpentProviderSlots } from './post-response-provider-budget';
+import { POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_OUTCOME, POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE, POST_RESPONSE_PROVIDER_CALL_BUDGET_V1, POST_RESPONSE_PROVIDER_CALL_BUDGET_V2, POST_RESPONSE_PROVIDER_EFFECTS_V1, POST_RESPONSE_PROVIDER_EFFECTS_V2, PostResponseProviderBudget, reconstructSpentProviderSlots } from './post-response-provider-budget';
 import { PostResponseProviderBudgetService } from './post-response-provider-budget.service';
 import type { PostResponseIntelligenceRepository } from './post-response-intelligence.repository';
 
@@ -28,7 +28,7 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
  // enrichment boundary returns for the fresh generation path.
  const himContext=()=>({contractVersion:1 as const,source:'HIM_STRUCTURED_STATE' as const,contextKind:'CONVERSATION_SESSION' as const,metrics:[{metricKey:'hse.stress' as const,knowledgeState:'KNOWN' as const,ordinalCategory:'HIGH' as const},{metricKey:'hse.energy' as const,knowledgeState:'UNKNOWN' as const,ordinalCategory:null},{metricKey:'hse.attention' as const,knowledgeState:'UNKNOWN' as const,ordinalCategory:null}]});
  const emptyHimContext=()=>({...himContext(),metrics:himContext().metrics.map(metric=>({...metric,knowledgeState:'UNKNOWN' as const,ordinalCategory:null}))});
- const setup=(overrides:{effects?:unknown[];state?:string;confidence?:unknown;telemetry?:TelemetryService}={})=>{const rows:unknown[]=[...(overrides.effects??[])];const durableConfidence='confidence'in overrides?overrides.confidence:noConfidenceTargets();const ledger={acquire:jest.fn().mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'ALLOW',state:overrides.state??'RUNNING',attempt_count:1}),effects:jest.fn().mockImplementation(async()=>[...rows]),claim:jest.fn().mockResolvedValue(true),completeMemory:jest.fn().mockResolvedValue(true),completeIntent:jest.fn().mockResolvedValue(true),completeAssociation:jest.fn().mockResolvedValue(true),buildSubjectGroundingUniverse:jest.fn().mockResolvedValue({status:'ESTABLISHED',universe:{executionId:id.execution,frontierSp:null,entries:[]}}),completeCandidateProvider:jest.fn().mockResolvedValue(true),persistHypothesisGeneration:jest.fn().mockResolvedValue(true),executeHypothesisUpdateBatch:jest.fn().mockResolvedValue(true),executeConfidenceBatch:jest.fn().mockImplementation(async()=>{if(durableConfidence!==null)rows.push(durableConfidence);return'COMPLETED';}),completeHimBrainContextMaterialization:jest.fn().mockResolvedValue('COMPLETED'),syncInformationGaps:jest.fn().mockResolvedValue({status:'NO_INFORMATION_GAPS',gaps:[]}),finish:jest.fn().mockResolvedValue(true)}as unknown as jest.Mocked<PostResponseIntelligenceRepository>;const ownership={findSession:jest.fn().mockResolvedValue({id:id.session,status:'ACTIVE',channel:'TEXT'}),findSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null}),findCompletedAssistant:jest.fn().mockResolvedValue({id:'assistant',session_id:id.session,role:'ASSISTANT',status:'COMPLETED',source_turn_id:id.turn})}as unknown as BackgroundIntelligenceDataApiService;const authority=new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(),ownership);const enrichment={readCanonicalSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'Why do I repeat this pattern?',processing_path:'FAST',routing_reason:'FAST_DEFAULT'}),readHimBrainContextMaterialization:jest.fn().mockResolvedValue({code:'NO_HIM_BRAIN_CONTEXT'}),evaluateAndWriteMemory:jest.fn().mockResolvedValue({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'}),evaluateGenerationEligibility:jest.fn().mockResolvedValue({eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}}),readHimHypothesisGenerationContext:jest.fn().mockResolvedValue(himContext()),generateHypothesisCandidatePlan:jest.fn(),evaluateHypothesisConfidence:jest.fn(),applyAuthorizedHypothesisUpdate:jest.fn()}as unknown as jest.Mocked<BackgroundIntelligenceEnrichmentService>;const extraction={extract:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;const assembler={assemble:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;const generator={generate:jest.fn()}as BoundHypothesisCandidateGenerator;const association={prepare:jest.fn(),proposeAndAuthorize:jest.fn()}as unknown as jest.Mocked<ModelAssistedHypothesisAssociationService>;const budgetTelemetry={recordPostResponseProviderBudget:jest.fn()}as unknown as jest.Mocked<TelemetryService>;const providerBudget=new PostResponseProviderBudgetService(budgetTelemetry);return{ledger,enrichment,association,extraction,assembler,budgetTelemetry,providerBudget,service:new PostResponseIntelligenceDispatcherService(ledger,authority,enrichment,extraction,assembler,generator,association,providerBudget,overrides.telemetry)};};
+ const setup=(overrides:{effects?:unknown[];state?:string;confidence?:unknown;telemetry?:TelemetryService;understanding?:unknown}={})=>{const rows:unknown[]=[...(overrides.effects??[])];const durableConfidence='confidence'in overrides?overrides.confidence:noConfidenceTargets();const ledger={acquire:jest.fn().mockResolvedValue({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:'ALLOW',state:overrides.state??'RUNNING',attempt_count:1}),effects:jest.fn().mockImplementation(async()=>[...rows]),claim:jest.fn().mockResolvedValue(true),completeMemory:jest.fn().mockResolvedValue(true),completeIntent:jest.fn().mockResolvedValue(true),completeAssociation:jest.fn().mockResolvedValue(true),buildSubjectGroundingUniverse:jest.fn().mockResolvedValue({status:'ESTABLISHED',universe:{executionId:id.execution,frontierSp:null,entries:[]}}),completeCandidateProvider:jest.fn().mockResolvedValue(true),persistHypothesisGeneration:jest.fn().mockResolvedValue(true),executeHypothesisUpdateBatch:jest.fn().mockResolvedValue(true),executeConfidenceBatch:jest.fn().mockImplementation(async()=>{if(durableConfidence!==null)rows.push(durableConfidence);return'COMPLETED';}),completeHimBrainContextMaterialization:jest.fn().mockResolvedValue('COMPLETED'),syncInformationGaps:jest.fn().mockResolvedValue({status:'NO_INFORMATION_GAPS',gaps:[]}),finish:jest.fn().mockResolvedValue(true),completeUnderstandingCapture:jest.fn().mockResolvedValue('COMPLETED')}as unknown as jest.Mocked<PostResponseIntelligenceRepository>;const ownership={findSession:jest.fn().mockResolvedValue({id:id.session,status:'ACTIVE',channel:'TEXT'}),findSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null}),findCompletedAssistant:jest.fn().mockResolvedValue({id:'assistant',session_id:id.session,role:'ASSISTANT',status:'COMPLETED',source_turn_id:id.turn})}as unknown as BackgroundIntelligenceDataApiService;const authority=new BackgroundIntelligenceAuthorityService(new BackgroundIntelligenceContextFactory(),ownership);const enrichment={readCanonicalSourceTurn:jest.fn().mockResolvedValue({id:id.turn,session_id:id.session,role:'USER',status:'COMPLETED',source_turn_id:null,content:'Why do I repeat this pattern?',processing_path:'FAST',routing_reason:'FAST_DEFAULT'}),readHimBrainContextMaterialization:jest.fn().mockResolvedValue({code:'NO_HIM_BRAIN_CONTEXT'}),evaluateAndWriteMemory:jest.fn().mockResolvedValue({decision:'SKIP',reason:'NO_SUPPORTED_EXPLICIT_PATTERN'}),evaluateGenerationEligibility:jest.fn().mockResolvedValue({eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}}),readHimHypothesisGenerationContext:jest.fn().mockResolvedValue(himContext()),generateHypothesisCandidatePlan:jest.fn(),evaluateHypothesisConfidence:jest.fn(),applyAuthorizedHypothesisUpdate:jest.fn()}as unknown as jest.Mocked<BackgroundIntelligenceEnrichmentService>;const extraction={extract:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;const assembler={assemble:jest.fn()}as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;const generator={generate:jest.fn()}as BoundHypothesisCandidateGenerator;const association={prepare:jest.fn(),proposeAndAuthorize:jest.fn()}as unknown as jest.Mocked<ModelAssistedHypothesisAssociationService>;const budgetTelemetry={recordPostResponseProviderBudget:jest.fn()}as unknown as jest.Mocked<TelemetryService>;const providerBudget=new PostResponseProviderBudgetService(budgetTelemetry);return{ledger,enrichment,association,extraction,assembler,budgetTelemetry,providerBudget,service:new PostResponseIntelligenceDispatcherService(ledger,authority,enrichment,extraction,assembler,generator,association,providerBudget,overrides.telemetry,overrides.understanding as never)};};
  const intent=()=>({problem:{text:'Why do I repeat this pattern?',source:'CURRENT_USER_TURN' as const,sourceTurnId:id.turn},domain:'GENERAL' as const,scope:{kind:'CONVERSATION_SESSION' as const,sessionId:id.session,serialized:`CONVERSATION_SESSION:${id.session}`},evidenceIds:[`memory:${id.evidence}`]});
  const eligible=()=>({eligibility:{status:'ELIGIBLE',reason:'TRIGGER_AND_EVIDENCE_AVAILABLE'},triggerClassification:{status:'TRIGGERED',reason:'RECURRING_PATTERN'},eligibleEvidence:[{evidenceId:`memory:${id.evidence}`,originatingMemoryId:id.evidence}]});
  const eligibleRun=(s:ReturnType<typeof setup>)=>{s.enrichment.evaluateGenerationEligibility.mockResolvedValue(eligible() as never);s.assembler.assemble.mockReturnValue({status:'READY',request:{problem:intent().problem.text,domain:'GENERAL',scope:intent().scope.serialized,evidenceIds:intent().evidenceIds}} as never);s.enrichment.generateHypothesisCandidatePlan.mockResolvedValue({code:'NO_ACCEPTED_CANDIDATES'} as never);return s;};
@@ -904,6 +904,115 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
     expect(call).toHaveLength(3);
     for(const secret of forbidden) expect(JSON.stringify(call)).not.toContain(secret);
    }});
+
+  // S8A-03 CP2 (QIR-005 v2): the background Personal Understanding capture is the fourth provider effect. It runs after
+  // the deterministic MEMORY_WRITE and before Association, under the same durable claim / recovery / budget rules.
+  const capturePlan={message:'أنا ساكن في المعادي',backlog:[],current:[]};
+  const captureCommand={items:[],index:[]};
+  const withCapture=(plan:unknown=capturePlan,effects:unknown[]=[])=>{
+   const understanding={prepare:jest.fn().mockResolvedValue(plan),propose:jest.fn().mockResolvedValue(captureCommand)};
+   return{...setup({understanding,effects,confidence:singleTargetConfidence()}),understanding};};
+  const recordedCapture=(overrides:Record<string,unknown>={})=>({effect_key:'UNDERSTANDING_CAPTURE_PROVIDER',state:'COMPLETED',result_code:'UNDERSTANDING_RECORDED',result_reference:null,result_payload:{memoryIds:[id.evidence],indexedMemoryIds:[]},...overrides});
+
+  it('S8A-03 v2 - the maximal execution spends exactly four slots: capture, then the three v1 effects, never a fifth',async()=>{
+   const s=withCapture();maximalRun(s);
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'COMPLETED','COMPLETED','DONE');
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual(['UNDERSTANDING_CAPTURE_PROVIDER','ASSOCIATION_PROVIDER','INTENT_PROVIDER','CANDIDATE_PROVIDER']);
+   expect(decisionsFor(s,'AUTHORIZED')).toHaveLength(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
+   expect(decisionsFor(s,'EXHAUSTED')).toEqual([]);
+   for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) expect(claimsFor(s,effect)).toBe(1);
+   expect(s.understanding.propose).toHaveBeenCalledTimes(1);
+   expect(s.ledger.completeUnderstandingCapture).toHaveBeenCalledWith(id.execution,captureCommand);
+   const order=(mock:jest.Mock)=>mock.mock.invocationCallOrder[0];
+   // After the unchanged deterministic MEMORY_WRITE (its fresh Evidence still drives Association), before Association.
+   expect(order(s.enrichment.evaluateAndWriteMemory as jest.Mock)).toBeLessThan(order(s.understanding.prepare));
+   expect(order(s.understanding.prepare)).toBeLessThan(order(s.understanding.propose));
+   expect(order(s.ledger.completeUnderstandingCapture as jest.Mock)).toBeLessThan(order(s.association.prepare as jest.Mock));
+   expect(s.understanding.prepare).toHaveBeenCalledWith(expect.objectContaining({userId:id.user}),'Why do I repeat this pattern?');});
+
+  it('S8A-03 v2 - nothing to capture means no claim, no slot and no provider call',async()=>{
+   const s=withCapture(null);maximalRun(s);
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(claimsFor(s,'UNDERSTANDING_CAPTURE_PROVIDER')).toBe(0);
+   expect(s.understanding.propose).not.toHaveBeenCalled();
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual(['ASSOCIATION_PROVIDER','INTENT_PROVIDER','CANDIDATE_PROVIDER']);});
+
+  it('S8A-03 v2 - a read failure before the claim leaves the execution retryable and claims nothing',async()=>{
+   const s=withCapture();s.understanding.prepare.mockRejectedValueOnce(new Error('read failed'));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(false);
+   expect(claimsFor(s,'UNDERSTANDING_CAPTURE_PROVIDER')).toBe(0);
+   expect(s.association.prepare).not.toHaveBeenCalled();
+   expect(s.ledger.finish).not.toHaveBeenCalled();});
+
+  it('S8A-03 v2 - a lost claim or a lost completion stops without a provider replay or a later stage',async()=>{
+   const lostClaim=withCapture();lostClaim.ledger.claim.mockImplementation(async(_execution,key)=>key!=='UNDERSTANDING_CAPTURE_PROVIDER');
+   await expect(lostClaim.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(lostClaim.understanding.propose).not.toHaveBeenCalled();
+   expect(lostClaim.association.prepare).not.toHaveBeenCalled();
+   const lostCompletion=withCapture();lostCompletion.ledger.completeUnderstandingCapture.mockResolvedValueOnce('NO_OP');
+   await expect(lostCompletion.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(lostCompletion.understanding.propose).toHaveBeenCalledTimes(1);
+   expect(lostCompletion.association.prepare).not.toHaveBeenCalled();
+   expect(lostCompletion.ledger.finish).not.toHaveBeenCalled();});
+
+  it('S8A-03 v2 - a failure after the claim quarantines the execution; the slot stays spent',async()=>{
+   const s=withCapture();s.ledger.completeUnderstandingCapture.mockRejectedValueOnce(new Error('55000'));
+   await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','UNDERSTANDING_CAPTURE_PROVIDER');
+   expect(decisionsFor(s,'AUTHORIZED')).toEqual(['UNDERSTANDING_CAPTURE_PROVIDER']);
+   expect(s.association.prepare).not.toHaveBeenCalled();});
+
+  it('S8A-03 v2 - redelivery recovers a valid durable capture result without a second call or claim',async()=>{
+   // S8A-03 Living Personal Memory (0172): the payload may also name the existing Memories restated or ended.
+   for(const durable of[recordedCapture(),recordedCapture({result_code:'NO_UNDERSTANDING_RECORDED',result_payload:null}),
+    recordedCapture({result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[id.evidence]}}),
+    // S8A-03 Open Understanding (0173): the payload may also name the Memories forgotten or replaced by a correction.
+    recordedCapture({result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[],retiredMemoryIds:[id.evidence]}})]){
+    const s=withCapture(capturePlan,[memoryWriteEffect(),durable]);maximalRun(s);
+    await expect(s.service.dispatch(JSON.stringify(event()))).resolves.toBe(true);
+    expect(s.understanding.prepare).not.toHaveBeenCalled();
+    expect(s.understanding.propose).not.toHaveBeenCalled();
+    expect(claimsFor(s,'UNDERSTANDING_CAPTURE_PROVIDER')).toBe(0);
+    expect(decisionsFor(s,'RECOVERED')).toContain('UNDERSTANDING_CAPTURE_PROVIDER');
+    expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'COMPLETED','COMPLETED','DONE');}});
+
+  it.each([
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[]}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:['not-a-uuid'],indexedMemoryIds:[]}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[id.evidence],indexedMemoryIds:[],content:'x'}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[]}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:['not-a-uuid']}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:Array.from({length:14},(_,n)=>id.evidence.slice(0,-2)+String(n).padStart(2,'0'))}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[],retiredMemoryIds:[]}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[],retiredMemoryIds:['not-a-uuid']}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:[],indexedMemoryIds:[],updatedMemoryIds:[],retiredMemoryIds:Array.from({length:6},(_,n)=>id.evidence.slice(0,-2)+String(n).padStart(2,'0'))}},
+   {result_code:'UNDERSTANDING_RECORDED',result_payload:{memoryIds:Array.from({length:9},(_,n)=>id.evidence.slice(0,-2)+String(n).padStart(2,'0')),indexedMemoryIds:[],updatedMemoryIds:[],retiredMemoryIds:[]}},
+   {result_code:'NO_UNDERSTANDING_RECORDED',result_payload:{memoryIds:[id.evidence],indexedMemoryIds:[]}},
+   {result_code:'UNDERSTANDING_RECORDED',result_reference:`memory:${id.evidence}`},
+   {result_code:null,result_payload:null},
+  ])('S8A-03 v2 - quarantines an invalid durable capture result without a provider replay: %o',async overrides=>{
+   const s=withCapture(capturePlan,[memoryWriteEffect(),recordedCapture(overrides)]);
+   await s.service.dispatch(JSON.stringify(event()));
+   expect(s.understanding.propose).not.toHaveBeenCalled();
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','UNDERSTANDING_CAPTURE_PROVIDER');});
+
+  it('S8A-03 v2 - a claimed capture on redelivery is indeterminate and quarantined before any work',async()=>{
+   const s=withCapture(capturePlan,[{effect_key:'UNDERSTANDING_CAPTURE_PROVIDER',state:'CLAIMED',result_code:null,result_reference:null,result_payload:null}]);
+   await s.service.dispatch(JSON.stringify(event()));
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED','INDETERMINATE_EFFECT','EFFECT_RECOVERY');
+   expect(s.understanding.prepare).not.toHaveBeenCalled();
+   expect(s.understanding.propose).not.toHaveBeenCalled();});
+
+  it('S8A-03 v2 - an exhausted budget is a terminal budget outcome, never a fifth call',async()=>{
+   const s=withCapture();
+   jest.spyOn(s.providerBudget,'open').mockImplementation(()=>new PostResponseProviderBudget(
+    new Set(POST_RESPONSE_PROVIDER_EFFECTS_V2),(effect,decision)=>s.budgetTelemetry.recordPostResponseProviderBudget(effect,decision,'FAST')));
+   await s.service.dispatch(JSON.stringify(event()));
+   expect(s.understanding.propose).not.toHaveBeenCalled();
+   expect(claimsFor(s,'UNDERSTANDING_CAPTURE_PROVIDER')).toBe(0);
+   expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'QUARANTINED',POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_OUTCOME,POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE);});
+
  });
 
  // INTEL-TM-01 (CC-4): the ONE fail-soft step. It runs once for every ALLOW execution, after the canonical reread and

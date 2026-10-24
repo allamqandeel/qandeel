@@ -1,35 +1,38 @@
 // T-03B3 - Thread Continuity provider configuration.
 //
-// Mirrors the T-03B1a / T-03B2a bindings: one configured provider, an
-// explicit model shape, a bounded timeout and zero provider-side retries. The
-// existing `openai` dependency is reused; no new dependency is introduced.
+// S8A-03 (D1): the one configured provider is DeepSeek Flash, through the shared DeepSeek client and its SYNTHETIC_ONLY
+// qualification gate. The provider and the model are fixed in code; a bounded timeout and zero provider-side retries
+// are unchanged. No new dependency is introduced.
 //
 // The provider IDENTITY (provider name + model) is readable WITHOUT a key so
 // that the capture provenance of an exchange that never needs a continuity
 // call (zero-CU, no independent focus, same-Session already-bound focus,
-// replay) is recorded without touching OPENAI_API_KEY. The key is read only
-// when an adapter is actually constructed for a real call.
+// replay) is recorded without touching DEEPSEEK_API_KEY. The key - and the
+// qualification gate - are read only when an adapter is actually constructed
+// for a real call.
 //
-// Nothing reads this at Nest bootstrap. T-03B3 is not wired into the
-// application, so starting the API never requires a continuity-provider key.
+// Nothing reads this at Nest bootstrap, so starting the API never requires a
+// continuity-provider key.
 
-export const DEFAULT_THREAD_CONTINUITY_MODEL = 'gpt-5-mini';
+import { assertDeepSeekFlashSelection, DEEPSEEK_FLASH_MODEL, requireDeepSeekQualification } from '../model-router/providers/deepseek/deepseek-client';
+
 export const DEFAULT_THREAD_CONTINUITY_TIMEOUT_MS = 8_000;
 export const THREAD_CONTINUITY_MAX_OUTPUT_TOKENS = 1_024;
 export const THREAD_CONTINUITY_MAX_RETRIES = 0 as const;
 
 /**
  * The prompt identity recorded on every prepared result. It changes whenever
- * the instructions that shaped a continuity decision change.
+ * the instructions that shaped a continuity decision change. S8A-03: the schema
+ * now travels in the instruction (DeepSeek JSON Output), so the identity changed.
  */
-export const THREAD_CONTINUITY_PROMPT_VERSION = 'thread-continuity-identity-v1';
+export const THREAD_CONTINUITY_PROMPT_VERSION = 'thread-continuity-identity-deepseek-v1';
 
 export interface ThreadContinuityProviderIdentity {
-  provider: 'OPENAI';
-  model: string;
+  provider: 'DEEPSEEK';
+  model: typeof DEEPSEEK_FLASH_MODEL;
 }
 
-export interface ThreadContinuityOpenAIConfig extends ThreadContinuityProviderIdentity {
+export interface ThreadContinuityDeepSeekConfig extends ThreadContinuityProviderIdentity {
   apiKey: string;
   timeoutMs: number;
   maxOutputTokens: typeof THREAD_CONTINUITY_MAX_OUTPUT_TOKENS;
@@ -40,20 +43,16 @@ export interface ThreadContinuityOpenAIConfig extends ThreadContinuityProviderId
 
 /** The provider identity alone. Reads NO credential. */
 export function loadThreadContinuityProviderIdentity(environment: NodeJS.ProcessEnv = process.env): ThreadContinuityProviderIdentity {
-  const provider = environment.THREAD_CONTINUITY_PROVIDER?.trim().toUpperCase() || 'OPENAI';
-  if (provider !== 'OPENAI') throw new Error('THREAD_CONTINUITY_PROVIDER must be OPENAI.');
-  const model = environment.THREAD_CONTINUITY_MODEL?.trim() || DEFAULT_THREAD_CONTINUITY_MODEL;
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(model)) throw new Error('Invalid Thread continuity model.');
-  return { provider: 'OPENAI', model };
+  assertDeepSeekFlashSelection(environment, 'THREAD_CONTINUITY');
+  return { provider: 'DEEPSEEK', model: DEEPSEEK_FLASH_MODEL };
 }
 
-export function loadThreadContinuityOpenAIConfig(
+export function loadThreadContinuityDeepSeekConfig(
   environment: NodeJS.ProcessEnv = process.env,
-): ThreadContinuityOpenAIConfig {
+): ThreadContinuityDeepSeekConfig {
   const identity = loadThreadContinuityProviderIdentity(environment);
-  const apiKey = environment.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new Error('OPENAI_API_KEY is required for Thread continuity evaluation.');
   const timeoutMs = readTimeout(environment.THREAD_CONTINUITY_TIMEOUT_MS);
+  const apiKey = requireDeepSeekQualification(environment, 'Thread continuity evaluation');
   return {
     ...identity,
     apiKey,

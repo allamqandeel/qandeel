@@ -7,7 +7,11 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
+> **CURRENT TASK (2026-10-24):** S8A-03 — Personal Understanding Reality; CLOSED at its final review & merge gate: CP3 FAIL as run (unchanged), Open Understanding adopted by the Product Owner (migration 0173, not hosted), BG-08 / BG-09 reconciled, PR #355, not merged (the S8A-03 note after §6.29). S8A-04 … S8A-08 have not started.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-03 — Personal Understanding Reality; CP0 delivered and reviewed by the Founder, CP1 delivered and accepted, CP2 delivered (local; migration 0171 local only), CP3 run once and FAIL (unchanged), Living Personal Memory design corrections implemented locally (migration 0172 local only) and at the Founder's review, one pull request at the end, not merged (the S8A-03 note after §6.29). S8A-02 merged through PR #354 as `37812845` (2026-10-23). S8A-04 … S8A-08 have not started.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-23):** S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality; CLOSED at its final review & merge gate: CP1–CP3 delivered, BG-08 / BG-09 reconciled, one pull request, not merged (the S8A-02 note after §6.29). S8A-01 merged through PR #353 as `d566a7e7` (2026-10-21). The rest of Stage 8A (S8A-03 … S8A-08) has not started.
 >
 > *(Previous:)* **CURRENT TASK (2026-10-21):** S8A-01 — DeepSeek Production Integration & First Real Conversation; CLOSED at its final review & merge gate: CP1–CP4 delivered, CP4 passed, not merged (§6.29).
 
@@ -809,7 +813,9 @@ stay as written.
 - **Next:** the Product Owner's final review and merge decision on the S8A-01 pull request. No merge, S8A-02 or
   deployment without the Product Owner's explicit approval. *(Merged through PR #353 as `d566a7e7`, 2026-10-21.)*
 
-### S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (2026-10-21 … 2026-10-23; current task, closed at its final review & merge gate; one pull request, not merged)
+### S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (2026-10-21 … 2026-10-23; MERGED through PR #354 as `37812845`)
+
+*S8A-02 merged through PR #354 as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23); not deployed, closed to users. Reconciled by S8A-03 (2026-10-23). The bullets below are as written at its checkpoints and its closing change.*
 
 - **Evaluated on DeepSeek Flash, synthetic data, the accounted AI-COST-01 path:** Round 1 (60 calls) and Round 2 (200
   calls, USD 0.209 at the peak rate). The branch renders core v3 ([amendment record](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-02_PERSONALITY_CORE_V2_CONTROLLED_AMENDMENT_v1.0.md)).
@@ -873,3 +879,72 @@ stay as written.
     notes' label escaping and the notes' echo check); all three were corrected with tests, and no paid call was made.
   - The Future Improvements log is `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
   - S8A-03 … S8A-08 have not started. No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
+
+### S8A-03 — Personal Understanding Reality (2026-10-23 … 2026-10-24; current task; CLOSED at its final review & merge gate: CP3 FAIL as run, Open Understanding adopted by the Product Owner, BG-08 / BG-09 reconciled; PR #355, not merged)
+
+- Started 2026-10-23 on `s8a/s8a-03-personal-understanding-reality` from `main` at `37812845` (the merge of PR #354,
+  S8A-02). CP0, an independent read-only review, was delivered and reviewed by the Founder, who approved its direction
+  and F1 / F2 / F3 / F10. S8A-03 owns no backlog item at kickoff.
+- Founder decisions:
+  - D1: every production AI call goes to DeepSeek Flash; no OpenAI, Gemini or Anthropic fallback, and no Pro model.
+  - D2: semantic cross-session retrieval, Egyptian Arabic included, is a precondition of the first launch, on DeepSeek
+    only.
+  - D3: closed systems are consumed; only narrow controlled amendments.
+  - D4: acquisition, correction and semantic recall are proven; no invented or forgotten knowledge.
+- **CP1 delivered, pushed and accepted** (`932dabb8`):
+  - every production AI call is on DeepSeek Flash, and the OpenAI / Anthropic / Gemini production paths are removed;
+  - the seven structured functions use Chat Completions with JSON Output, the shared DeepSeek client and the
+    `SYNTHETIC_ONLY` gate, with their ports, validators, accounting families and timeouts unchanged;
+  - governed by the candidate [S8A-03 DeepSeek Structured Functions Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_DEEPSEEK_STRUCTURED_FUNCTIONS_CONTROLLED_AMENDMENT_v1.0.md), which binds on the
+    merge of the one S8A-03 pull request and records the Founder's eight CP2 corrections.
+  - No migration, paid call or live-environment change. `QAN-BL-AI-02` stays open until the migration is proven
+    complete, and no backlog ownership has moved.
+- **CP2 delivered (pushed as `369ba841`, then `dd906d96` with the Founder's review corrections R1–R3; no PR; CP2
+  engineering closed by the Founder; the pre-CP3 corrections D-1 / D-2 and D-3 applied locally, amendment §7.5 / §7.6;
+  CP3 harness prepared and simulated at zero cost, no paid call yet)** under the
+  Founder's option B (DeepSeek Flash acquisition at write time, a semantic index at read time with no model call):
+  - a separate background `UNDERSTANDING_CAPTURE_PROVIDER` effect (QIR-005 v2, four provider effects) proposes up to six
+    facts per message plus search keys for at most four unindexed Memories; deterministic server verification keeps at
+    most three, written at 0.80 by ONE atomic command; the deterministic Memory Write Evaluator is unchanged;
+  - Memory retrieval gains a fail-soft semantic index path, beyond the 32 most recent Memories and with no recall cue
+    needed; eligibility is read at read time, and same-slot current facts are served together as `UNSETTLED` (never a
+    confirmed conflict), whole or not at all inside the context bounds (CP2 review R1 / R2);
+  - migration `0171_s8a_03_personal_understanding_v1.sql`, **local only**, proven by `database/verify-migration-0171.mjs`
+    on real PostgreSQL 17;
+  - governed by the candidate [S8A-03 CP2 Personal Understanding Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md)
+    (QIR-001 §7 background exception, QIR-005 v2, the extraction stage, the semantic retrieval path; model texts
+    verbatim), which binds on the merge of the one S8A-03 pull request;
+  - the real-model quality of spans, readings and keys is CP3's to measure. No paid call, and no backlog ownership has
+    moved; `QAN-BL-AI-02` stays open.
+- **CP3, the one authorized live run (`cbe682c2`): FAIL.**
+  - Results: P1 17 / 17; P2 5 / 13 (C07 PASS); P3 5 / 10; H1–H6 all zero.
+  - Cost: 39 of 41 calls, peak-rate cost $0.00799.
+  - Cause: every retrieval miss was in the exact-stem index, not in the model.
+  - The result, its preregistration and its criteria stand unchanged.
+- **Living Personal Memory — design corrections (Founder, 2026-10-23; local commit, not pushed, no PR):**
+  - a read-time CORE / CURRENT / HISTORICAL picture of the live Memories, with no stored summary;
+  - family and relationships are core knowledge: kept as `OTHER`, never as the user's own fact;
+  - restatements and explicit endings come from the same background DeepSeek Flash call and are verified
+    deterministically. No new call, no call before the reply, and no new model;
+  - the three tiers share the unchanged 8,192-byte MEMORY slice: CORE has a floor of 40 % and CURRENT of 20 %, and the
+    two together take at most 60 %;
+  - migration `0172_s8a_03_living_personal_memory_v1.sql` is **local only**, proven by
+    `database/verify-migration-0172.mjs`;
+  - the two Copy Gate texts are recorded verbatim in [amendment §9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
+  - A final acceptance test needs its own authorization.
+- **Open Understanding — the Product Owner's product decision and S8A-03's closing change (2026-10-24; PR #355, not
+  merged):**
+  - Open Understanding is QANDEEL's mind. In the same one background capture call, DeepSeek Flash reads the meaning
+    with the recent turns and at most 40 known Memories. The linguistic gates that blocked understanding are removed.
+  - The server still proves grounding, ownership, statement and structure. Someone else's facts are kept as that
+    person's, with a person label from the user's own words. Forget / correct run in the background under every 0152 rule.
+  - Living Personal Memory is kept whole. No address form is adopted.
+  - Migration `0173_s8a_03_open_understanding_v1.sql` is **not hosted**. It is proven by
+    `database/verify-migration-0173.mjs`.
+  - The two Copy Gate texts are presented verbatim in [amendment §10.4](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-03_CP2_PERSONAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md).
+  - The seven known limits are accepted by the Product Owner and deferred until after launch. They are recorded only as
+    Future Improvements 003–009, not in the backlog, and open no task or test round.
+  - BG-08: every S8A-03 residue is disposed of (backlog §7), and nothing is admitted. The background-forget risk to the
+    0152 writer is recorded in amendment §10.9, not hidden.
+  - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
+- `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

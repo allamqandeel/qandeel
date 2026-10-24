@@ -6,8 +6,11 @@ import {
   POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE,
   POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION,
   POST_RESPONSE_PROVIDER_CALL_BUDGET_V1,
+  POST_RESPONSE_PROVIDER_CALL_BUDGET_V2,
   POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1,
+  POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2,
   POST_RESPONSE_PROVIDER_EFFECTS_V1,
+  POST_RESPONSE_PROVIDER_EFFECTS_V2,
   PostResponseProviderBudget,
   isPostResponseProviderEffect,
   reconstructSpentProviderSlots,
@@ -26,12 +29,22 @@ describe('QIR-005 post-response provider budget contract', () => {
     expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(3);
     expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(POST_RESPONSE_PROVIDER_EFFECTS_V1.length);
     expect(new Set(POST_RESPONSE_PROVIDER_EFFECTS_V1).size).toBe(POST_RESPONSE_PROVIDER_EFFECTS_V1.length);
-    expect(POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION).toBe('1');
     expect(POST_RESPONSE_PROVIDER_BUDGET_DECISIONS).toEqual(['AUTHORIZED', 'RECOVERED', 'EXHAUSTED']);
   });
 
+  // S8A-03 CP2 (QIR-005 v2 Controlled Amendment): the v1 declaration above is kept byte-for-byte as history; the runtime
+  // registry is v2 - the three v1 effects plus the background Personal Understanding capture, at most four calls.
+  it('QIR-005 v2 adds exactly one provider effect, keeps the v1 three in order, and caps the run at four', () => {
+    expect(POST_RESPONSE_PROVIDER_EFFECTS_V2).toEqual([...POST_RESPONSE_PROVIDER_EFFECTS_V1, 'UNDERSTANDING_CAPTURE_PROVIDER']);
+    expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2).toBe(4);
+    expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2).toBe(POST_RESPONSE_PROVIDER_EFFECTS_V2.length);
+    expect(new Set(POST_RESPONSE_PROVIDER_EFFECTS_V2).size).toBe(POST_RESPONSE_PROVIDER_EFFECTS_V2.length);
+    expect(POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION).toBe('2');
+    expect(isPostResponseProviderEffect('UNDERSTANDING_CAPTURE_PROVIDER')).toBe(true);
+  });
+
   it('is a strict subset of the canonical effect registry and excludes every non-provider effect', () => {
-    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) {
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) {
       expect(INTELLIGENCE_EFFECTS as readonly string[]).toContain(effect);
     }
     // Membership is explicit, never inferred: these are the canonical effects
@@ -44,7 +57,7 @@ describe('QIR-005 post-response provider budget contract', () => {
     for (const effect of ['QUESTION_PROVIDER', 'RECOMMENDATION_PROVIDER', 'ASSOCIATION_PROVIDER_V2', 'association_provider', '']) {
       expect(isPostResponseProviderEffect(effect)).toBe(false);
     }
-    expect(POST_RESPONSE_PROVIDER_EFFECTS_V1.every(isPostResponseProviderEffect)).toBe(true);
+    expect(POST_RESPONSE_PROVIDER_EFFECTS_V2.every(isPostResponseProviderEffect)).toBe(true);
   });
 
   it('reconstructs spent slots from durable effect state alone', () => {
@@ -52,7 +65,7 @@ describe('QIR-005 post-response provider budget contract', () => {
     expect(reconstructSpentProviderSlots([]).size).toBe(0);
     expect(reconstructSpentProviderSlots([completed('ASSOCIATION_PROVIDER')]).size).toBe(1);
     expect(reconstructSpentProviderSlots([completed('ASSOCIATION_PROVIDER'), completed('INTENT_PROVIDER')]).size).toBe(2);
-    expect(reconstructSpentProviderSlots(POST_RESPONSE_PROVIDER_EFFECTS_V1.map(completed)).size).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+    expect(reconstructSpentProviderSlots(POST_RESPONSE_PROVIDER_EFFECTS_V2.map(completed)).size).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
     // Non-provider effects never consume a slot, however many of them exist.
     expect(reconstructSpentProviderSlots([
       completed('MEMORY_WRITE'), completed('HYPOTHESIS_UPDATE_BATCH'), completed('HYPOTHESIS_PERSISTENCE'),
@@ -63,7 +76,7 @@ describe('QIR-005 post-response provider budget contract', () => {
   });
 
   it('counts a CLAIMED provider effect as permanently spent, exactly like a COMPLETED one', () => {
-    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) {
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) {
       expect(reconstructSpentProviderSlots([{ effect_key: effect, state: 'CLAIMED' }]).has(effect)).toBe(true);
       expect(reconstructSpentProviderSlots([{ effect_key: effect, state: 'COMPLETED' }]).has(effect)).toBe(true);
     }
@@ -79,7 +92,7 @@ describe('QIR-005 post-response provider budget contract', () => {
   it('authorizes fresh work only while a slot remains, and spends only on an explicit spend', () => {
     const { budget, recorded } = open();
     expect(budget.spent).toBe(0);
-    expect(budget.remaining).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+    expect(budget.remaining).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
     // Authorization alone is not a spend: a mere intention to call a provider,
     // or a failed durable claim, must consume nothing.
     expect(budget.authorize('ASSOCIATION_PROVIDER')).toBe('AUTHORIZED');
@@ -88,7 +101,7 @@ describe('QIR-005 post-response provider budget contract', () => {
     expect(recorded).toEqual([]);
     budget.spend('ASSOCIATION_PROVIDER');
     expect(budget.spent).toBe(1);
-    expect(budget.remaining).toBe(2);
+    expect(budget.remaining).toBe(3);
     expect(budget.isSpent('ASSOCIATION_PROVIDER')).toBe(true);
     expect(recorded).toEqual([['ASSOCIATION_PROVIDER', 'AUTHORIZED']]);
   });
@@ -105,13 +118,13 @@ describe('QIR-005 post-response provider budget contract', () => {
     expect(recorded.filter(([, decision]) => decision === 'AUTHORIZED')).toHaveLength(1);
   });
 
-  it('refuses every further authorization once all three slots are spent, and never raises the cap', () => {
-    const { budget, recorded } = open(POST_RESPONSE_PROVIDER_EFFECTS_V1);
-    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+  it('refuses every further authorization once all four slots are spent, and never raises the cap', () => {
+    const { budget, recorded } = open(POST_RESPONSE_PROVIDER_EFFECTS_V2);
+    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
     expect(budget.remaining).toBe(0);
-    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(budget.authorize(effect)).toBe('EXHAUSTED');
-    expect(recorded).toEqual(POST_RESPONSE_PROVIDER_EFFECTS_V1.map((effect) => [effect, 'EXHAUSTED']));
-    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) expect(budget.authorize(effect)).toBe('EXHAUSTED');
+    expect(recorded).toEqual(POST_RESPONSE_PROVIDER_EFFECTS_V2.map((effect) => [effect, 'EXHAUSTED']));
+    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
     expect(budget.remaining).toBe(0);
   });
 
@@ -126,10 +139,11 @@ describe('QIR-005 post-response provider budget contract', () => {
     for (const _delivery of ['first', 'duplicate', 'reclaim', 'restart']) {
       const budget = new PostResponseProviderBudget(reconstructSpentProviderSlots(durable), () => undefined);
       expect(budget.spent).toBe(2);
-      expect(budget.remaining).toBe(1);
+      expect(budget.remaining).toBe(2);
       expect(budget.authorize('ASSOCIATION_PROVIDER')).toBe('EXHAUSTED');
       expect(budget.authorize('INTENT_PROVIDER')).toBe('EXHAUSTED');
       expect(budget.authorize('CANDIDATE_PROVIDER')).toBe('AUTHORIZED');
+      expect(budget.authorize('UNDERSTANDING_CAPTURE_PROVIDER')).toBe('AUTHORIZED');
     }
   });
 
@@ -138,7 +152,7 @@ describe('QIR-005 post-response provider budget contract', () => {
     budget.recover('CANDIDATE_PROVIDER');
     expect(recorded).toEqual([['CANDIDATE_PROVIDER', 'RECOVERED']]);
     expect(budget.spent).toBe(1);
-    expect(budget.remaining).toBe(2);
+    expect(budget.remaining).toBe(3);
     expect(budget.authorize('CANDIDATE_PROVIDER')).toBe('EXHAUSTED');
   });
 
@@ -169,7 +183,9 @@ describe('QIR-005 post-response provider budget contract', () => {
 // the CURRENT canonical effect union, so a future durable effect cannot enter
 // INTELLIGENCE_EFFECTS without an explicit provider-ownership decision.
 describe('QIR-005 Fix 01 exhaustive provider classification', () => {
-  const entries = Object.entries(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1) as ReadonlyArray<[string, string]>;
+  // S8A-03 CP2: the exhaustive classification over the CURRENT union is v2; the v1 record is frozen history and equals
+  // v2 without the one effect v2 added.
+  const entries = Object.entries(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2) as ReadonlyArray<[string, string]>;
   const classifiedAs = (value: string) => entries.filter(([, classification]) => classification === value).map(([effect]) => effect);
   const CANONICAL_NON_PROVIDER_EFFECTS = ['MEMORY_WRITE', 'HYPOTHESIS_UPDATE_BATCH', 'HYPOTHESIS_PERSISTENCE', 'CONFIDENCE_BATCH', 'HIM_BRAIN_CONTEXT_MATERIALIZATION'];
 
@@ -179,7 +195,7 @@ describe('QIR-005 Fix 01 exhaustive provider classification', () => {
     expect([...keys].sort()).toEqual([...INTELLIGENCE_EFFECTS].sort());
     expect(keys).toHaveLength(INTELLIGENCE_EFFECTS.length);
     for (const effect of INTELLIGENCE_EFFECTS) {
-      const classification: string | undefined = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1[effect];
+      const classification: string | undefined = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2[effect];
       expect(classification).toBeDefined();
       expect(['PROVIDER', 'NON_PROVIDER']).toContain(classification);
     }
@@ -188,12 +204,16 @@ describe('QIR-005 Fix 01 exhaustive provider classification', () => {
     for (const key of keys) expect(INTELLIGENCE_EFFECTS as readonly string[]).toContain(key);
   });
 
-  it('2 - the effects classified PROVIDER are exactly the frozen v1 provider-backed registry', () => {
-    expect(classifiedAs('PROVIDER').sort()).toEqual([...POST_RESPONSE_PROVIDER_EFFECTS_V1].sort());
-    expect(classifiedAs('PROVIDER')).toHaveLength(POST_RESPONSE_PROVIDER_EFFECTS_V1.length);
+  it('2 - the effects classified PROVIDER are exactly the v2 provider-backed registry', () => {
+    expect(classifiedAs('PROVIDER').sort()).toEqual([...POST_RESPONSE_PROVIDER_EFFECTS_V2].sort());
+    expect(classifiedAs('PROVIDER')).toHaveLength(POST_RESPONSE_PROVIDER_EFFECTS_V2.length);
     // Both directions, so neither set can drift past the other.
-    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1[effect]).toBe('PROVIDER');
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) expect(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2[effect]).toBe('PROVIDER');
     for (const effect of classifiedAs('PROVIDER')) expect(isPostResponseProviderEffect(effect)).toBe(true);
+    // The frozen v1 record is v2 minus the one added effect, entry for entry.
+    const { UNDERSTANDING_CAPTURE_PROVIDER: added, ...v1 } = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2;
+    expect(added).toBe('PROVIDER');
+    expect(POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1).toEqual(v1);
   });
 
   it('3 - the effects classified NON_PROVIDER contain the five canonical non-provider durable effects', () => {
@@ -208,7 +228,7 @@ describe('QIR-005 Fix 01 exhaustive provider classification', () => {
   });
 
   it('5 - classification is an exact keyed decision, never inferred from the effect name', () => {
-    const lookup = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V1 as Record<string, string | undefined>;
+    const lookup = POST_RESPONSE_EFFECT_PROVIDER_CLASSIFICATION_V2 as Record<string, string | undefined>;
     // A plausible provider-suffixed name that is not a canonical effect gets NO
     // classification at all and NO registry membership: nothing is derived from
     // the `_PROVIDER` suffix or any other string pattern.
@@ -226,16 +246,16 @@ describe('QIR-005 Fix 01 exhaustive provider classification', () => {
   it('6 - the runtime registry, cap and budget behaviour are unchanged by the classification', () => {
     expect(POST_RESPONSE_PROVIDER_EFFECTS_V1).toEqual(['ASSOCIATION_PROVIDER', 'INTENT_PROVIDER', 'CANDIDATE_PROVIDER']);
     expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(3);
-    expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1).toBe(classifiedAs('PROVIDER').length);
+    expect(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2).toBe(classifiedAs('PROVIDER').length);
     // The classification plans no work and changes no decision: a fresh budget
-    // still authorizes exactly the three registered slots and nothing else.
+    // authorizes exactly the four registered v2 slots and nothing else.
     const { budget } = open();
-    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) {
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) {
       expect(budget.authorize(effect)).toBe('AUTHORIZED');
       budget.spend(effect);
     }
-    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V1);
+    expect(budget.spent).toBe(POST_RESPONSE_PROVIDER_CALL_BUDGET_V2);
     expect(budget.remaining).toBe(0);
-    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1) expect(budget.authorize(effect)).toBe('EXHAUSTED');
+    for (const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2) expect(budget.authorize(effect)).toBe('EXHAUSTED');
   });
 });

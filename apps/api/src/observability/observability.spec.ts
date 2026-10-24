@@ -5,16 +5,16 @@ import { classifyOperationalFailure } from './operational-failure';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { DataApiError } from '../conversation/supabase-data-api.service';
 import { sanitizeSentryEvent,sentryOptions } from './sentry';
-import { OpenAIModelRouter } from '../model-router/providers/openai/openai-model-router';
-import { ClaudeModelRouter } from '../model-router/providers/anthropic/claude-model-router';
-import { resolveOpenAIModel,resolveAnthropicModel } from '../model-router/model-profile.registry';
+import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
+import { DEEPSEEK_MAX_OUTPUT_TOKENS } from '../model-router/providers/deepseek/deepseek-model-router.config';
+import { resolveDeepSeekModel } from '../model-router/model-profile.registry';
 import type { ModelRouterRequest } from '../model-router/model-router.types';
 import { hasExplicitMetricEndpoint,hasExplicitTraceEndpoint,initializeTelemetry,PrivacySafeSpanExporter,sanitizeAutomaticHttpSpan,sanitizeHttpSpanAttributes } from './instrumentation';
 import { SpanKind,SpanStatusCode,type SpanContext } from '@opentelemetry/api';
 import type { ReadableSpan,SpanExporter } from '@opentelemetry/sdk-trace-base';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { RUNTIME_ROUTING_V2_REASONS } from '../intelligence-runtime/fast-deep-routing-contract';
-import { POST_RESPONSE_PROVIDER_BUDGET_DECISIONS, POST_RESPONSE_PROVIDER_EFFECTS_V1 } from '../post-response-intelligence/post-response-provider-budget';
+import { POST_RESPONSE_PROVIDER_BUDGET_DECISIONS, POST_RESPONSE_PROVIDER_EFFECTS_V2 } from '../post-response-intelligence/post-response-provider-budget';
 
 const request:ModelRouterRequest={task:'CONVERSATIONAL_RESPONSE',path:'FAST',complexity:'LOW',behavioralGuidance:'secret prompt',context:[{role:'USER',content:'private message'}],locale:'und',modality:'TEXT',latencyBudgetMs:3000,costBudget:'LOW',safetyLevel:'STANDARD'};
 // QIR-004 Fix 01 / QIR-006: the frozen LEGAL source/outcome relation, quoted
@@ -51,8 +51,7 @@ describe('Correlation and telemetry foundation v1',()=>{
  it('recognizes generic and signal-specific OTLP endpoints without constructing exporters in tests',()=>{expect(hasExplicitTraceEndpoint({OTEL_EXPORTER_OTLP_ENDPOINT:'http://collector:4318'})).toBe(true);expect(hasExplicitMetricEndpoint({OTEL_EXPORTER_OTLP_ENDPOINT:'http://collector:4318'})).toBe(true);expect(hasExplicitTraceEndpoint({OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:'http://collector/custom-traces'})).toBe(true);expect(hasExplicitMetricEndpoint({OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:'http://collector/custom-metrics'})).toBe(true);expect(hasExplicitTraceEndpoint({})).toBe(false);expect(hasExplicitMetricEndpoint({})).toBe(false);});
  it('keeps successful and failing work authoritative when every telemetry primitive throws',async()=>{const c=new CorrelationService(),t=new TelemetryService(c),success=jest.fn().mockResolvedValue('ok'),original=new Error('original provider failure'),failure=jest.fn().mockRejectedValue(original);(t as any).tracer={startActiveSpan:(_n:string,_o:any,callback:any)=>callback({setAttribute:()=>{throw new Error('attribute');},setStatus:()=>{throw new Error('status');},end:()=>{throw new Error('end');}})};for(const key of ['providerCalls','providerErrors','providerDuration','inputTokens','outputTokens'])(t as any)[key]={add:()=>{throw new Error('metric');},record:()=>{throw new Error('metric');}};await expect(c.runRequest(()=>t.withProvider('openai','model','FAST',1,success,()=>{throw new Error('usage');}))).resolves.toBe('ok');await expect(c.runRequest(()=>t.withProvider('openai','model','FAST',1,failure))).rejects.toBe(original);expect(success).toHaveBeenCalledTimes(1);expect(failure).toHaveBeenCalledTimes(1);});
  it('executes work once when span creation itself fails',async()=>{const c=new CorrelationService(),t=new TelemetryService(c),work=jest.fn().mockResolvedValue(42);(t as any).tracer={startActiveSpan:()=>{throw new Error('tracer unavailable');}};await expect(c.runRequest(()=>t.withEngine('engine','FAST',work))).resolves.toBe(42);expect(work).toHaveBeenCalledTimes(1);});
- it('wraps OpenAI with a provider ID upstream but never sends correlation IDs in payload or headers',async()=>{const c=new CorrelationService(),t=new TelemetryService(c);let seen:any;const create=jest.fn().mockImplementation(async(body:any,options:any)=>{seen=c.current();expect(JSON.stringify({body,options})).not.toMatch(/request_id|provider_call_id|engine_call_id/);return{output_text:'ok',usage:{input_tokens:2,output_tokens:1}};});const router=new OpenAIModelRouter({apiKey:'x',resolveModel:resolveOpenAIModel,maxOutputTokens:10,timeoutMs:3000,maxRetries:0},{responses:{create}},t);await c.runRequest(()=>c.withOrchestration(()=>router.generate(request)));expect(seen.provider_call_id).toBeTruthy();expect(create).toHaveBeenCalledTimes(1);});
- it('wraps Anthropic consistently and uses only returned token usage',async()=>{const c=new CorrelationService(),t=new TelemetryService(c);let seen:any;const create=jest.fn().mockImplementation(async()=>{seen=c.current();return{content:[{type:'text',text:'ok'}],usage:{input_tokens:3,output_tokens:2}};});const router=new ClaudeModelRouter({apiKey:'x',resolveModel:resolveAnthropicModel,maxOutputTokens:10,timeoutMs:3000,maxRetries:0},{messages:{create}},t);await c.runRequest(()=>c.withOrchestration(()=>router.generate(request)));expect(seen.provider_call_id).toBeTruthy();expect(create).toHaveBeenCalledTimes(1);});
+ it('wraps DeepSeek with a provider ID upstream but never sends correlation IDs in payload or headers, and uses only returned token usage',async()=>{const c=new CorrelationService(),t=new TelemetryService(c);let seen:any;const create=jest.fn().mockImplementation(async(body:any,options:any)=>{seen=c.current();expect(JSON.stringify({body,options})).not.toMatch(/request_id|provider_call_id|engine_call_id/);return{choices:[{finish_reason:'stop',message:{content:'ok'}}],usage:{prompt_tokens:3,completion_tokens:2}};});const router=new DeepSeekModelRouter({apiKey:'x',resolveModel:resolveDeepSeekModel,maxOutputTokens:DEEPSEEK_MAX_OUTPUT_TOKENS,timeoutMs:3000,maxRetries:0},{chat:{completions:{create}}},t);await expect(c.runRequest(()=>c.withOrchestration(()=>router.generate(request)))).resolves.toMatchObject({content:'ok',usage:{inputTokens:3,outputTokens:2}});expect(seen.provider_call_id).toBeTruthy();expect(create).toHaveBeenCalledTimes(1);});
  it('keeps telemetry attributes bounded and never needs content payloads',async()=>{const c=new CorrelationService(),t=new TelemetryService(c);await expect(c.runRequest(()=>t.withEngine('context_builder','FAST',async()=>{expect(JSON.stringify(c.current())).not.toContain('private message');return 42;}))).resolves.toBe(42);});
  it('records eligibility with low-cardinality metadata only',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).hypothesisEligibilityOutcomes={add};t.recordHypothesisGenerationEligibility('eligible','FAST');expect(add).toHaveBeenCalledWith(1,{outcome:'eligible',processing_path:'FAST',contract_version:'1'});expect(JSON.stringify(add.mock.calls)).not.toMatch(/user|content|evidence|memory|session|turn|provider/i);});
  it('records intent extraction with low-cardinality outcomes only',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).hypothesisIntentExtractionOutcomes={add};t.recordHypothesisIntentExtraction('authority_rejected','DEEP');expect(add).toHaveBeenCalledWith(1,{outcome:'authority_rejected',processing_path:'DEEP',contract_version:'1'});expect(JSON.stringify(add.mock.calls)).not.toMatch(/user|content|evidence|memory|session|turn|provider_error/i);});
@@ -135,16 +134,16 @@ describe('Correlation and telemetry foundation v1',()=>{
  // QIR-005 post-response provider-budget telemetry: the SAME frozen registries
  // the production gate uses, four finite dimensions, no identifier or payload,
  // and fail-soft under any meter failure.
- it('records exactly the 3 x 3 x 2 legal QIR-005 provider-budget dimensions and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).postResponseProviderBudgetDecisions={add};
-  for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V1)for(const decision of POST_RESPONSE_PROVIDER_BUDGET_DECISIONS)for(const path of['FAST','DEEP'])t.recordPostResponseProviderBudget(effect,decision,path);
-  expect(POST_RESPONSE_PROVIDER_EFFECTS_V1).toHaveLength(3);
+ it('records exactly the 4 x 3 x 2 legal QIR-005 v2 provider-budget dimensions and no content',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).postResponseProviderBudgetDecisions={add};
+  for(const effect of POST_RESPONSE_PROVIDER_EFFECTS_V2)for(const decision of POST_RESPONSE_PROVIDER_BUDGET_DECISIONS)for(const path of['FAST','DEEP'])t.recordPostResponseProviderBudget(effect,decision,path);
+  expect(POST_RESPONSE_PROVIDER_EFFECTS_V2).toHaveLength(4);
   expect(POST_RESPONSE_PROVIDER_BUDGET_DECISIONS).toHaveLength(3);
-  expect(add).toHaveBeenCalledTimes(18);
+  expect(add).toHaveBeenCalledTimes(24);
   for(const call of add.mock.calls){const labels=call[1] as Record<string,string>;expect(call[0]).toBe(1);
    expect(Object.keys(labels).sort()).toEqual(['decision','effect','policy_version','processing_path']);
-   expect(POST_RESPONSE_PROVIDER_EFFECTS_V1 as readonly string[]).toContain(labels.effect);
+   expect(POST_RESPONSE_PROVIDER_EFFECTS_V2 as readonly string[]).toContain(labels.effect);
    expect(POST_RESPONSE_PROVIDER_BUDGET_DECISIONS as readonly string[]).toContain(labels.decision);
-   expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('1');}
+   expect(['FAST','DEEP']).toContain(labels.processing_path);expect(labels.policy_version).toBe('2');}
   expect(JSON.stringify(add.mock.calls)).not.toMatch(/hello|content|session|turn|user|hypothesis|evidence|\d{3,}|claude|gpt|anthropic|openai/i);});
  it('drops any QIR-005 provider-budget decision outside the finite registries, including a fourth provider effect',()=>{const c=new CorrelationService(),t=new TelemetryService(c),add=jest.fn();(t as any).postResponseProviderBudgetDecisions={add};
   for(const [effect,decision,path] of [

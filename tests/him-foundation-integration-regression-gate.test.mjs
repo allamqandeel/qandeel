@@ -22,7 +22,7 @@ test('keeps dedicated model-facing HIM and Memory containers with no provider di
   assert.match(router, /humanIntelligence\?: HumanIntelligenceProviderSemantics/);
   assert.match(providerSemanticsTypes, /sessionReasoningContext\?: HimProviderSessionReasoningContext/);
   assert.match(router, /<user_memory_context>/); assert.match(router, /<him_reasoning_context>/);
-  for (const path of ['apps/api/src/model-router/providers/openai/openai-model-router.ts','apps/api/src/model-router/providers/anthropic/claude-model-router.ts']) assert.doesNotMatch(read(path), /himContext|humanIntelligence|him_reasoning_context/);
+  for (const path of ['apps/api/src/model-router/providers/deepseek/deepseek-model-router.ts']) assert.doesNotMatch(read(path), /himContext|humanIntelligence|him_reasoning_context/);
 });
 
 test('keeps projection free of trends/provenance and selector free of content inference', () => {

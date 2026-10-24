@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { BehavioralResponsePolicyService } from '../conversation/behavioral-response-policy.service';
 import { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
 import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
-import { resolveAnthropicModel, resolveOpenAIModel } from '../model-router/model-profile.registry';
 import type { ModelRouter, ModelRouterRequest, ProcessingPath } from '../model-router/model-router.types';
 import { estimateCostUsd } from './brain-eval.pricing';
 import { EVALUATION_ARTIFACT_DIRECTORY } from './brain-eval.paths';
@@ -79,8 +78,17 @@ export function buildEvaluationRequest(testCase: BrainEvaluationCase, guidance: 
   };
 }
 
+/**
+ * S8A-03 (D1): the 2026 Anthropic / OpenAI bake-off is historical. Its model identities are kept here only to label its
+ * recorded artifacts; the providers' routers and profiles were removed, so nothing here can reach either provider.
+ */
+const BAKEOFF_MODEL_LABELS: Readonly<Record<EvaluationProvider, Readonly<Record<ProcessingPath, string>>>> = {
+  ANTHROPIC: { FAST: 'claude-haiku-4-5-20251001', DEEP: 'claude-sonnet-4-6' },
+  OPENAI: { FAST: 'gpt-5.6-luna', DEEP: 'gpt-5.6-terra' },
+};
+
 function modelId(provider: EvaluationProvider, path: ProcessingPath): string {
-  return provider === 'ANTHROPIC' ? resolveAnthropicModel(path).model : resolveOpenAIModel(path).model;
+  return BAKEOFF_MODEL_LABELS[provider][path];
 }
 
 export async function runEvaluation(

@@ -4,6 +4,7 @@ import type { HimSnapshotSourceRow } from '../human-model/him-intelligence-snaps
 import type { HimBrainContextSourceRow } from '../human-model/him-brain-context.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
 import { MEMORY_SUBJECT_EMBED, withMemorySubject } from '../memory/memory-subject';
+import { MEMORY_TYPES } from '../memory/memory.types';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
@@ -102,6 +103,77 @@ export class BackgroundIntelligenceDataApiService {
     this.assertExecutionContext(context);
     const query=new URLSearchParams({select:SOURCE_TURN_FIELDS,id:`eq.${context.sourceTurnId}`,session_id:`eq.${context.sessionId}`,user_id:`eq.${context.userId}`,role:'eq.USER',status:'eq.COMPLETED',limit:'1'});
     return (await this.request<BackgroundCanonicalSourceTurn[]>(`conversation_turns?${query}`))[0];
+  }
+
+  // S8A-03 CP2 (migration 0171): the bounded backfill read. The source turn names the RUNNING execution, and the
+  // database answers at most four of its owner's eligible Memories whose semantic keys are not indexed yet.
+  async listUnindexedMemories(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ memoryId: string; type: MemoryType; content: string }>> {
+    this.assertExecutionContext(context);
+    const rows = await this.request<Array<{ memory_id: unknown; type: unknown; content: unknown }>>('rpc/background_unindexed_memories_v1', {
+      method: 'POST', body: JSON.stringify({ p_source_turn_id: context.sourceTurnId, p_limit: limit }),
+    });
+    if (!Array.isArray(rows) || rows.length > limit) throw new Error('BACKGROUND_UNDERSTANDING_BACKFILL_INTEGRITY');
+    return rows.map((row) => {
+      if (typeof row?.memory_id !== 'string' || !BACKGROUND_UUID.test(row.memory_id) || typeof row.type !== 'string' ||
+          !(MEMORY_TYPES as readonly string[]).includes(row.type) || typeof row.content !== 'string') {
+        throw new Error('BACKGROUND_UNDERSTANDING_BACKFILL_INTEGRITY');
+      }
+      return { memoryId: row.memory_id, type: row.type as MemoryType, content: row.content };
+    });
+  }
+
+  // S8A-03 Living Personal Memory (migration 0172): the bounded current-state read. The source turn names the RUNNING
+  // execution, and the database answers at most ten of its owner's own current-state Memories, with their index terms.
+  async listCurrentStateMemories(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ memoryId: string; type: MemoryType; content: string; terms: string[] }>> {
+    this.assertExecutionContext(context);
+    const rows = await this.request<Array<{ memory_id: unknown; type: unknown; content: unknown; terms: unknown }>>('rpc/background_current_state_memories_v1', {
+      method: 'POST', body: JSON.stringify({ p_source_turn_id: context.sourceTurnId, p_limit: limit }),
+    });
+    if (!Array.isArray(rows) || rows.length > limit) throw new Error('BACKGROUND_UNDERSTANDING_STATE_INTEGRITY');
+    return rows.map((row) => {
+      if (typeof row?.memory_id !== 'string' || !BACKGROUND_UUID.test(row.memory_id) || typeof row.type !== 'string' ||
+          !(MEMORY_TYPES as readonly string[]).includes(row.type) || typeof row.content !== 'string' ||
+          !Array.isArray(row.terms) || !row.terms.every((term) => typeof term === 'string')) {
+        throw new Error('BACKGROUND_UNDERSTANDING_STATE_INTEGRITY');
+      }
+      return { memoryId: row.memory_id, type: row.type as MemoryType, content: row.content, terms: row.terms as string[] };
+    });
+  }
+
+  // S8A-03 Open Understanding (0173): the owner's live Memories the capture may ground people on, restate, end, forget or
+  // correct - at most forty, SELF and OTHER, with person labels. The source turn names the RUNNING execution.
+  async listKnownMemories(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ memoryId: string; type: MemoryType; content: string;
+    subject: 'SELF' | 'OTHER' | 'UNATTRIBUTED'; personName: string | null; personRelation: string | null; temporal: string | null; ended: boolean; terms: string[] }>> {
+    this.assertExecutionContext(context);
+    const rows = await this.request<Array<Record<string, unknown>>>('rpc/background_known_memories_v1', {
+      method: 'POST', body: JSON.stringify({ p_source_turn_id: context.sourceTurnId, p_limit: limit }),
+    });
+    if (!Array.isArray(rows) || rows.length > limit) throw new Error('BACKGROUND_UNDERSTANDING_KNOWN_INTEGRITY');
+    const nullableText = (value: unknown): value is string | null => value === null || typeof value === 'string';
+    return rows.map((row) => {
+      if (typeof row?.memory_id !== 'string' || !BACKGROUND_UUID.test(row.memory_id) || typeof row.type !== 'string' ||
+          !(MEMORY_TYPES as readonly string[]).includes(row.type) || typeof row.content !== 'string' ||
+          !(row.subject === 'SELF' || row.subject === 'OTHER' || row.subject === 'UNATTRIBUTED') || !nullableText(row.person_name) ||
+          !nullableText(row.person_relation) || !nullableText(row.temporal) || typeof row.ended !== 'boolean' ||
+          !Array.isArray(row.terms) || !row.terms.every((term) => typeof term === 'string')) {
+        throw new Error('BACKGROUND_UNDERSTANDING_KNOWN_INTEGRITY');
+      }
+      return { memoryId: row.memory_id, type: row.type as MemoryType, content: row.content, subject: row.subject, personName: row.person_name,
+        personRelation: row.person_relation, temporal: row.temporal, ended: row.ended, terms: row.terms as string[] };
+    });
+  }
+
+  // S8A-03 Open Understanding: the completed turns of the same Session just before the source turn (oldest first), so the capture
+  // can understand a short answer or a person named a moment ago. Owner, Session and source come from the execution.
+  async listRecentTurns(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ role: 'USER' | 'ASSISTANT'; content: string }>> {
+    this.assertExecutionContext(context);
+    const query = new URLSearchParams({ select: 'id,role,content', session_id: `eq.${context.sessionId}`, user_id: `eq.${context.userId}`,
+      status: 'eq.COMPLETED', order: 'created_at.desc,id.desc', limit: String(limit + 2) });
+    const rows = await this.request<Array<{ id: unknown; role: unknown; content: unknown }>>(`conversation_turns?${query}`);
+    if (!Array.isArray(rows)) throw new Error('BACKGROUND_UNDERSTANDING_TURNS_INTEGRITY');
+    const at = rows.findIndex((row) => row?.id === context.sourceTurnId);
+    return rows.slice(at < 0 ? rows.length : at + 1).slice(0, limit).reverse().flatMap((row) =>
+      (row.role === 'USER' || row.role === 'ASSISTANT') && typeof row.content === 'string' ? [{ role: row.role, content: row.content }] : []);
   }
 
   async listActiveMemories(context: BackgroundIntelligenceExecutionContext, limit:number, now=new Date()):Promise<MemoryRecord[]> {

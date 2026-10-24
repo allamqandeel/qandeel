@@ -20,7 +20,7 @@ import {
 } from './conversation-focus-runtime.types';
 import { PREPARED_ID_PREFIX } from './conversational-focus-evaluator.service';
 import { durableEmergingFocusId, durableReferenceHandleId } from './durable-focus-canonicalizer';
-import { openAiFocusResolutionBinding, type FocusResolutionBinding } from './focus-resolution-binding';
+import { deepSeekFocusResolutionBinding, type FocusResolutionBinding } from './focus-resolution-binding';
 import { FocusResolutionProviderError, type FocusResolutionProposal, type FocusResolutionProvider, type FocusResolutionRequest } from './focus-resolution-provider.types';
 
 const SESSION = '33333333-3333-4333-8333-333333333333';
@@ -114,8 +114,8 @@ const SCENARIO = (request: FocusResolutionRequest): FocusResolutionProposal => {
   return NO_FOCUS;
 };
 
-const segmentationBinding = (provider: CuSegmentationProvider): CuSegmentationBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
-const focusBinding = (provider: FocusResolutionProvider): FocusResolutionBinding => ({ provider, providerName: 'OPENAI', providerModel: 'gpt-5-mini' });
+const segmentationBinding = (provider: CuSegmentationProvider): CuSegmentationBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
+const focusBinding = (provider: FocusResolutionProvider): FocusResolutionBinding => ({ provider, providerName: 'DEEPSEEK', providerModel: 'deepseek-flash' });
 
 const EMPTY_CONTEXT: ConversationFocusRuntimeContext = {
   sessionId: SESSION, token: { currentSp: null, sameSpEventSequence: 0 },
@@ -382,9 +382,9 @@ describe('fresh exchange orchestration (cases 7-17, 27, 28, 35)', () => {
     const request = later.h.commitFinalizedExchangeWithFocus.mock.calls[0][0] as CommitFinalizedExchangeWithFocusRequest;
     expect(request).toMatchObject({
       sessionId: SESSION, userId: USER, userSourceTurnId: USER_TURN, userBatchId: USER_BATCH, assistantSourceTurnId: ASSISTANT_TURN, assistantBatchId: ASSISTANT_BATCH,
-      evaluatorVersion: 'cu-anchor-mapper-v1', segmentationProvider: 'OPENAI', segmentationModel: 'gpt-5-mini',
+      evaluatorVersion: 'cu-anchor-mapper-v1', segmentationProvider: 'DEEPSEEK', segmentationModel: 'deepseek-flash',
       focusEvaluatorVersion: 'conversational-focus-evaluator-v1', focusPolicyVersion: 'stage-1.2-1.3-reference-attention-v1',
-      focusProvider: 'OPENAI', focusModel: 'gpt-5-mini', focusPromptVersion: 'focus-resolution-anchored-v2', focusSchemaVersion: 1,
+      focusProvider: 'DEEPSEEK', focusModel: 'deepseek-flash', focusPromptVersion: 'focus-resolution-anchored-deepseek-v1', focusSchemaVersion: 1,
     });
   });
 
@@ -537,7 +537,8 @@ describe('provider failure, context validation and lazy binding (cases 23-26, 29
   });
 
   it('29/30. the focus binding is created only on first actual need, and construction needs no provider key', async () => {
-    const factory = openAiFocusResolutionBinding({});
+    const decorate = jest.fn((client) => client);
+    const factory = deepSeekFocusResolutionBinding({}, decorate);
     const h = harness();
     // Creating the factory and the service reads no environment.
     const service = new ConversationFocusEstablishmentService(h.boundary, () => segmentationBinding(new RoleScriptedSegmentation(SEGMENTS)), factory);
@@ -552,10 +553,12 @@ describe('provider failure, context validation and lazy binding (cases 23-26, 29
     // Only a fresh exchange reaches the factory, and with no key it fails closed as unavailability.
     const error = await rejection(service.establish(USER, exchange));
     expect(error).toBeInstanceOf(ConversationFocusEstablishmentUnavailableError);
-    expect(String((error as Error).cause)).toMatch(/OPENAI_API_KEY/u);
-    // With a key, the factory yields the OpenAI binding without any network call.
-    const bound = openAiFocusResolutionBinding({ OPENAI_API_KEY: 'k', FOCUS_RESOLUTION_MODEL: 'gpt-5' })();
-    expect([bound.providerName, bound.providerModel]).toEqual(['OPENAI', 'gpt-5']);
+    expect(String((error as Error).cause)).toMatch(/SYNTHETIC_ONLY/u);
+    expect(decorate).not.toHaveBeenCalled();
+    // With the synthetic qualification and a key, the factory yields the accounted DeepSeek binding without any network call.
+    const bound = deepSeekFocusResolutionBinding({ DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'k' }, decorate)();
+    expect([bound.providerName, bound.providerModel]).toEqual(['DEEPSEEK', 'deepseek-flash']);
+    expect(decorate).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -567,7 +570,7 @@ describe('zero-CU behaviour (cases 31-33)', () => {
     expect(focus.requests).toHaveLength(0);
     const request = h.commitFinalizedExchangeWithFocus.mock.calls[0][0] as CommitFinalizedExchangeWithFocusRequest;
     expect([request.userUnits, request.userFocusUnits, request.assistantUnits, request.assistantFocusUnits]).toEqual([[], [], [], []]);
-    expect(request.focusProvider).toBe('OPENAI');
+    expect(request.focusProvider).toBe('DEEPSEEK');
     expect(focusFactory).toHaveBeenCalledTimes(1);
     expect(result.temporal).toEqual({ liveHead: null, committedEvents: [] });
   });

@@ -35,7 +35,7 @@ const EVALUATOR_FILES = [
   'focus-resolution-provider.types.ts',
   'focus-resolution-validator.ts',
   'index.ts',
-  'openai-focus-resolution.provider.ts',
+  'deepseek-focus-resolution.provider.ts',
 ];
 /** The T-03B1b1 pure canonicalization boundary: prepared results -> the durable payload. */
 const CANONICALIZER_FILES = ['durable-focus-canonicalizer.ts', 'durable-focus-payload.types.ts'];
@@ -62,7 +62,7 @@ const SPEC_FILES = [
   'focus-anchor-mapper.spec.ts',
   'focus-resolution-binding.spec.ts',
   'focus-resolution-validator.spec.ts',
-  'openai-focus-resolution.provider.spec.ts',
+  'deepseek-focus-resolution.provider.spec.ts',
 ];
 
 function listFiles(dir) {
@@ -89,7 +89,7 @@ const validator = code['focus-resolution-validator.ts'];
 const mapper = code['focus-anchor-mapper.ts'];
 const types = code['conversational-focus.types.ts'];
 const providerTypes = code['focus-resolution-provider.types.ts'];
-const openai = code['openai-focus-resolution.provider.ts'];
+const adapter = code['deepseek-focus-resolution.provider.ts'];
 
 const rootPackage = await readJson('package.json');
 const apiPackage = await readJson('apps/api/package.json');
@@ -136,9 +136,9 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
     // registers the lazy focus binding FACTORY for it (never a provider, never
     // the evaluator itself). Both are pinned by the T-03D contract.
     .filter((file) => !file.startsWith('apps/api/src/live-focus/'))
-    .filter((file) => /conversational-focus|ConversationalFocusEvaluatorService|FocusResolutionProvider|OpenAiFocusResolutionProvider|validateFocusResolutionProposal/u.test(stripComments(readFileSyncUtf8(file))));
+    .filter((file) => /conversational-focus|ConversationalFocusEvaluatorService|FocusResolutionProvider|DeepSeekFocusResolutionProvider|validateFocusResolutionProposal/u.test(stripComments(readFileSyncUtf8(file))));
   assert.deepEqual(referencing, ['apps/api/src/conversation/conversation.module.ts'], 'only the FINAL-chain wiring in ConversationModule references the directory');
-  assert.doesNotMatch(stripComments(readFileSyncUtf8('apps/api/src/conversation/conversation.module.ts')), /ConversationalFocusEvaluatorService|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
+  assert.doesNotMatch(stripComments(readFileSyncUtf8('apps/api/src/conversation/conversation.module.ts')), /ConversationalFocusEvaluatorService|DeepSeekFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
     'ConversationModule registers a binding factory, never the evaluator, a provider adapter or the validator');
   // The T-03B2a / T-03B2b1 / T-03B2b2 SEMANTIC files may import only the two
   // pure type modules of this directory - never the evaluator service, a
@@ -180,13 +180,13 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
           `${file} may import only the B1 type authorities; found ${match[1]}`);
       }
     }
-    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|DeepSeekFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
       `${file} does not reach the B1 orchestration service, its repository, the provider adapter, the validator or the anchor mapper`);
     if (!runtime) {
-      assert.doesNotMatch(stripComments(source), /ConversationalFocusEvaluatorService|FocusResolutionProvider|canonicalizePreparedFocusSequence|openAiFocusResolutionBinding/u,
+      assert.doesNotMatch(stripComments(source), /ConversationalFocusEvaluatorService|FocusResolutionProvider|canonicalizePreparedFocusSequence|deepSeekFocusResolutionBinding/u,
         `${file} does not reach the B1 evaluator, providers or canonicalizer`);
     } else if (!file.endsWith('.spec.ts')) {
-      assert.doesNotMatch(stripComments(source), /openAiFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
+      assert.doesNotMatch(stripComments(source), /deepSeekFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
     }
   }
   // T-03B3's production-inert FINAL Thread-layer runtime (thread-lifecycle)
@@ -199,14 +199,14 @@ test('nothing outside the directory imports it: no ConversationModule, Conversat
     for (const match of source.matchAll(/from\s+'([^']*conversational-focus[^']*)'/gu)) {
       assert.ok(B2B3_ALLOWED_FOCUS_IMPORTS.has(match[1]), `${file} may import only the listed B1 pieces; found ${match[1]}`);
     }
-    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
+    assert.doesNotMatch(stripComments(source), /ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|DeepSeekFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor/u,
       `${file} does not reach the B1 orchestration service, its repository, the provider adapter, the validator or the anchor mapper`);
-    if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /openAiFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
+    if (!file.endsWith('.spec.ts')) assert.doesNotMatch(stripComments(source), /deepSeekFocusResolutionBinding/u, `${file} constructs no production B1 binding of its own`);
   }
   // T-03D wires the FINAL chain in ConversationModule / ConversationService;
   // neither reaches the evaluator, a provider adapter or the validator directly.
   for (const [name, text] of [['ConversationModule', conversationModule], ['ConversationService', conversationService]]) {
-    assert.doesNotMatch(stripComments(text), /ConversationalFocusEvaluatorService|OpenAiFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor|conversational-focus-evaluator/u, `${name} never reaches the T-03B1a evaluator directly`);
+    assert.doesNotMatch(stripComments(text), /ConversationalFocusEvaluatorService|DeepSeekFocusResolutionProvider|validateFocusResolutionProposal|mapFocusAnchor|conversational-focus-evaluator/u, `${name} never reaches the T-03B1a evaluator directly`);
   }
   for (const [name, text] of [['AppModule', appModule], ['the T-03A2 establishment service', establishment]]) {
     assert.doesNotMatch(stripComments(text), /conversational-focus|Focus|focus/u, `${name} is untouched by T-03B1a`);
@@ -422,8 +422,9 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
         '../conversation-unit/deterministic-runtime-id',
         '../conversation-unit/temporal-delivery.repository',
       ].includes(specifier);
-      assert.ok(specifier === 'openai' || specifier === '../conversation-unit/cu-anchor-mapper' || specifier === '../runtime-identity/uuid-v5' || runtimeAllowed,
-        `${name} imports ${specifier}; only ./*, openai, ../conversation-unit/cu-anchor-mapper, the neutral ../runtime-identity/uuid-v5 helper, and (runtime files only) the T-03A2 runtime pieces are allowed`);
+      // S8A-03 (D1): the one shared DeepSeek client module replaces the direct OpenAI SDK import.
+      assert.ok(specifier === '../model-router/providers/deepseek/deepseek-client' || specifier === '../conversation-unit/cu-anchor-mapper' || specifier === '../runtime-identity/uuid-v5' || runtimeAllowed,
+        `${name} imports ${specifier}; only ./*, the shared DeepSeek client, ../conversation-unit/cu-anchor-mapper, the neutral ../runtime-identity/uuid-v5 helper, and (runtime files only) the T-03A2 runtime pieces are allowed`);
       if (specifier === '../runtime-identity/uuid-v5') {
         assert.ok(CANONICALIZER_FILES.includes(name), `only the T-03B1b1 canonicalizer derives durable identity; ${name} may not`);
       }
@@ -431,11 +432,11 @@ test('the slice reaches nothing later: no Thread, Home, lifecycle, LF, mobile, M
     assert.doesNotMatch(text, /require\(/u, `${name} uses no require()`);
     assert.doesNotMatch(text, /\bimport\(/u, `${name} uses no dynamic import()`);
   }
-  assert.doesNotMatch(semanticCode, /ConversationUnitRepository|ConversationUnitCommitmentService|CuSegmentationProvider|OpenAiCuSegmentationProvider|conversation-unit\.repository|conversation-unit-commitment/u);
+  assert.doesNotMatch(semanticCode, /ConversationUnitRepository|ConversationUnitCommitmentService|CuSegmentationProvider|DeepSeekCuSegmentationProvider|conversation-unit\.repository|conversation-unit-commitment/u);
   // The runtime orchestration reuses the T-03A2 segmentation evaluator and
   // identity derivation exactly, but never the durable unit repository, the
   // legacy producer RPC, or the live T-03A2 establishment service itself.
-  assert.doesNotMatch(runtimeCode, /ConversationUnitRepository|conversation-unit\.repository|commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|new ConversationTemporalEstablishmentService|OpenAiCuSegmentationProvider/u);
+  assert.doesNotMatch(runtimeCode, /ConversationUnitRepository|conversation-unit\.repository|commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|new ConversationTemporalEstablishmentService|DeepSeekCuSegmentationProvider/u);
   assert.match(code['conversation-focus-establishment.service.ts'], /import type \{ CuSegmentationBinding, CuSegmentationBindingFactory \} from '\.\.\/conversation-unit\/conversation-temporal-establishment\.service';/u,
     'only the binding TYPES of the T-03A2 establishment module are consumed');
   // No mobile file knows this boundary.
@@ -454,9 +455,9 @@ test('the frozen vocabularies are consumed exactly (CU-04/05/06, CU-10, THR-01/0
   assert.deepEqual(vocabulary('CLAIMANT_KINDS'), ['CURRENT_CONVERSATIONAL_SPEAKER', 'REFERENCE_HANDLE', 'NEW_CURRENT_CU_REFERENCE', 'UNRESOLVED']);
   // The provider schema uses those same vocabularies as enums, and nothing wider.
   for (const name of ['CONVERSATIONAL_FUNCTIONS', 'SEQUENCE_POSITIONS', 'REFERENCE_RESOLUTION_STATES', 'CLAIMANT_KINDS', 'CLAIM_FRAMES', 'ATTENTION_KINDS', 'ATTENTION_REASONS']) {
-    assert.match(openai, new RegExp(`enum: \\[\\.\\.\\.${name}\\]`, 'u'), `the schema enumerates ${name} verbatim`);
+    assert.match(adapter, new RegExp(`enum: \\[\\.\\.\\.${name}\\]`, 'u'), `the schema enumerates ${name} verbatim`);
   }
-  assert.doesNotMatch(openai, /enum: \[\s*'/u, 'no ad-hoc enum literal exists in the schema');
+  assert.doesNotMatch(adapter, /enum: \[\s*'/u, 'no ad-hoc enum literal exists in the schema');
   // The validator judges cardinality by the three states and never picks a candidate.
   assert.match(validator, /case 'RESOLVED':[\s\S]*case 'AMBIGUOUS':[\s\S]*case 'UNRESOLVED':/u);
   assert.match(validator, /distinct >= 2/u, 'AMBIGUOUS needs at least two distinct allowlisted handles');
@@ -465,34 +466,39 @@ test('the frozen vocabularies are consumed exactly (CU-04/05/06, CU-10, THR-01/0
 });
 
 test('the provider schema is strict, closed and structurally incapable of an offset, score, speaker, Thread or LF', async () => {
-  assert.match(openai, /type: 'json_schema',\s*name: 'conversational_focus_resolution_v1',\s*strict: true/u);
-  const opened = (openai.match(/type: 'object'/gu) ?? []).length;
-  const closed = (openai.match(/additionalProperties: false/gu) ?? []).length;
+  // S8A-03: DeepSeek JSON Output carries the same closed schema inside the system instruction (the shared request
+  // builder); the exported fail-closed parser below enforces every part of it.
+  assert.match(adapter, /schema: focusResolutionSchema\(request\),/u);
+  assert.match(adapter, /this\.client\.chat\.completions\.create\(\s*deepSeekJsonRequest\(\{/u);
+  assert.match(adapter, /return parseProposal\(deepSeekJsonContent\(response\), request\);/u);
+  const opened = (adapter.match(/type: 'object'/gu) ?? []).length;
+  const closed = (adapter.match(/additionalProperties: false/gu) ?? []).length;
   assert.ok(opened >= 6 && opened === closed, `every schema object (${opened}) is closed (${closed})`);
-  assert.match(openai, /required: \['functions', 'sequencePosition', 'targetCuId', 'references', 'claimAttributions', 'attention'\]/u);
-  assert.match(openai, /required: \['text', 'occurrence'\]/u, 'an anchor is text + occurrence, nothing else');
-  assert.doesNotMatch(openai, /\b(?:start|end|offset|spanStart|spanEnd|score|confidence|probability|weight|speaker|sourceRole|threadId|liveFocus|emergingFocusId):/u,
+  assert.match(adapter, /required: \['functions', 'sequencePosition', 'targetCuId', 'references', 'claimAttributions', 'attention'\]/u);
+  assert.match(adapter, /required: \['text', 'occurrence'\]/u, 'an anchor is text + occurrence, nothing else');
+  assert.doesNotMatch(adapter, /\b(?:start|end|offset|spanStart|spanEnd|score|confidence|probability|weight|speaker|sourceRole|threadId|liveFocus|emergingFocusId):/u,
     'no such key can be authored');
-  assert.match(openai, /maximum: maxOccurrenceFor\(request\)/u, 'the occurrence domain is the current CU source');
-  assert.match(openai, /return codePointLength\(request\.currentCu\.committedText\);/u);
-  assert.match(openai, /store: false/u);
-  assert.match(openai, /maxRetries: 0/u);
-  assert.match(openai, /new AbortController\(\)/u);
-  assert.match(openai, /<conversational_focus_source>/u, 'the request is an untrusted-data envelope');
-  assert.match(openai, /catch \{\s*throw new FocusResolutionProviderError\('INVALID_STRUCTURED_OUTPUT'\);\s*\}/u, 'the parser fails closed');
-  assert.doesNotMatch(openai, /retry|backoff|fallback|default(?:Proposal|Attention)/iu, 'no hidden retry or guessing fallback');
+  assert.match(adapter, /maximum: maxOccurrenceFor\(request\)/u, 'the occurrence domain is the current CU source');
+  assert.match(adapter, /return codePointLength\(request\.currentCu\.committedText\);/u);
+  assert.match(adapter, /maxRetries: 0/u);
+  assert.match(adapter, /new AbortController\(\)/u);
+  assert.match(adapter, /<conversational_focus_source>/u, 'the request is an untrusted-data envelope');
+  assert.match(adapter, /catch \{\s*throw new FocusResolutionProviderError\('INVALID_STRUCTURED_OUTPUT'\);\s*\}/u, 'the parser fails closed');
+  assert.doesNotMatch(adapter, /retry|backoff|fallback|default(?:Proposal|Attention)/iu, 'no hidden retry or guessing fallback');
   // The parser is exported and tested apart from API invocation.
-  assert.match(openai, /export function parseFocusResolutionOutput\(/u);
-  assert.match(await read(`${FOCUS_DIR}/openai-focus-resolution.provider.spec.ts`), /parseFocusResolutionOutput\(/u);
+  assert.match(adapter, /export function parseFocusResolutionOutput\(/u);
+  assert.match(await read(`${FOCUS_DIR}/deepseek-focus-resolution.provider.spec.ts`), /parseFocusResolutionOutput\(/u);
   // Config is never read at bootstrap: only the explicit environment loader
   // reads the credential, and only `fromEnvironment()` calls the loader.
   const outsideLoader = Object.entries(code).filter(([name]) => name !== 'focus-resolution-provider.config.ts').map(([, text]) => text).join('\n');
-  assert.doesNotMatch(outsideLoader, /process\.env\.|OPENAI_API_KEY/u, 'no ambient credential read outside the explicit environment loader');
-  assert.equal((semanticCode.match(/loadFocusResolutionOpenAIConfig\(/gu) ?? []).length, 2, 'declared once, called once (fromEnvironment)');
+  assert.doesNotMatch(outsideLoader, /process\.env\.|DEEPSEEK_API_KEY|OPENAI_API_KEY/u, 'no ambient credential read outside the explicit environment loader');
+  // S8A-03: the adapter has no fromEnvironment (no unaccounted composition), so the loader is only declared here.
+  assert.equal((semanticCode.match(/loadFocusResolutionDeepSeekConfig\(/gu) ?? []).length, 1, 'declared once; the adapter itself never loads configuration');
+  assert.doesNotMatch(adapter, /fromEnvironment/u, 'the adapter cannot compose itself unaccounted');
   // The T-03B1b2 lazy binding factory is the only other caller, and it calls
   // the loader inside the deferred closure, never at module or construction time.
-  assert.equal((runtimeCode.match(/loadFocusResolutionOpenAIConfig\(/gu) ?? []).length, 1, 'called once more, lazily, by the runtime binding factory');
-  assert.match(code['focus-resolution-binding.ts'], /return \(\) => \{\s*const config = loadFocusResolutionOpenAIConfig\(environment\);/u);
+  assert.equal((runtimeCode.match(/loadFocusResolutionDeepSeekConfig\(/gu) ?? []).length, 1, 'called once more, lazily, by the runtime binding factory');
+  assert.match(code['focus-resolution-binding.ts'], /return \(\) => \{\s*const config = loadFocusResolutionDeepSeekConfig\(environment\);/u);
 });
 
 test('the one-CU provider input holds no later CU (§6/§16)', () => {
@@ -577,7 +583,7 @@ test('the gate is registered at the root and in API CI, and MOB-CI-01 is untouch
   // behind its own producer.
   assert.equal((mobileCi.match(/needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/gu) ?? []).length,
     (mobileCi.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
-  // No new dependency: the adapter reuses the installed OpenAI SDK.
+  // No new dependency: the shared DeepSeek client reuses the installed OpenAI-format SDK.
   assert.ok('openai' in apiPackage.dependencies);
   for (const name of ['zod', 'ajv', 'uuid', 'nanoid', '@anthropic-ai/sdk-focus', 'natural', 'compromise', 'franc']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}), false, `${name} must not be introduced`);

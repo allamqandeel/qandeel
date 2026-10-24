@@ -1,6 +1,6 @@
 import {
   MAX_MEMORY_CONTEXT_CHARACTERS, MAX_SELECTED_MEMORIES, MEMORY_CANDIDATE_LIMIT,
-  MemoryRetrieverService, selectMemories,
+  MemoryRetrieverService, SEMANTIC_CANDIDATE_LIMIT, selectMemories,
 } from './memory-retriever.service';
 import { MemoryRuntimeService } from './memory-runtime.service';
 import type { MemoryRecord } from './memory.types';
@@ -17,7 +17,7 @@ describe('MemoryRetrieverService', () => {
   let retriever: MemoryRetrieverService;
 
   beforeEach(() => {
-    runtime = { listActiveForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<MemoryRuntimeService>;
+    runtime = { listActiveForUser: jest.fn().mockResolvedValue([]), retrieveSemanticCandidates: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<MemoryRuntimeService>;
     retriever = new MemoryRetrieverService(runtime);
   });
 
@@ -162,5 +162,114 @@ describe('MemoryRetrieverService', () => {
     ];
     expect(selectMemories('فاكر الأكل المصري؟', candidates).map((m) => m.content)).toEqual(['بحب الأكل المصري.']);
     expect(selectMemories('do you remember: speak to me in English', candidates)).toEqual([]);
+  });
+  // S8A-03 CP2 (Founder option B): the semantic index path. No model call at read time; eligibility is the database's.
+  describe('S8A-03 CP2 semantic retrieval', () => {
+    const row = (record: MemoryRecord, hits: number, slot: string | null = null, unsettled = false) => ({ memory: record, hits, slot, unsettled });
+
+    it('finds a fact by a paraphrase with no recall cue, through the index, and never reads the recent window for it', async () => {
+      runtime.retrieveSemanticCandidates.mockResolvedValue([row(memory('m1', 'أنا ساكن في المعادي.'), 1, 'RESIDENCE')]);
+      const served = await retriever.retrieve('user-a', 'token-a', 'هو أنا عايش في أنهي منطقة؟');
+      expect(served).toEqual([{ type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', source: 'USER_STATED', about: 'USER' }]);
+      expect(runtime.listActiveForUser).not.toHaveBeenCalled();
+      const [user, token, terms, limit] = runtime.retrieveSemanticCandidates.mock.calls[0];
+      expect([user, token, limit]).toEqual(['user-a', 'token-a', SEMANTIC_CANDIDATE_LIMIT]);
+      expect(terms.length).toBeGreaterThan(0);
+      expect(terms.length).toBeLessThanOrEqual(32);
+    });
+
+    it('serves an indexed Memory older than the 32 most recent alongside the recall path', async () => {
+      runtime.listActiveForUser.mockResolvedValue(Array.from({ length: 32 }, (_, n) => memory(`recent-${n}`, `ملاحظة رقم ${n}`)));
+      runtime.retrieveSemanticCandidates.mockResolvedValue([row(memory('old', 'بشتغل مهندس في فودافون.', { updated_at: '2020-01-01T00:00:00.000Z' }), 2, 'EMPLOYER')]);
+      const served = await retriever.retrieve('user-a', 'token-a', 'فاكر أنا بشتغل فين؟');
+      expect(served.map((item) => item.content)).toContain('بشتغل مهندس في فودافون.');
+    });
+
+    it('is fail-soft: an index failure serves the recall path alone', async () => {
+      runtime.listActiveForUser.mockResolvedValue([memory('1', 'شغلي في التصميم')]);
+      runtime.retrieveSemanticCandidates.mockRejectedValue(new Error('index down'));
+      await expect(retriever.retrieve('user-a', 'token-a', 'فاكر شغلي؟')).resolves.toEqual([
+        { type: 'PERSONAL_FACT', content: 'شغلي في التصميم', source: 'USER_STATED', about: 'USER' },
+      ]);
+    });
+
+    it('never serves an UNSETTLED current fact alone: the other facts of its slot follow it, all marked UNSETTLED', () => {
+      const served = selectMemories('أنا ساكن فين؟', [], [
+        row(memory('a', 'أنا ساكن في المعادي.'), 1, 'RESIDENCE', true),
+        row(memory('b', 'أنا عايش في مدينة نصر.'), 0, 'RESIDENCE', true),
+        row(memory('c', 'بشتغل مهندس.'), 0, 'OCCUPATION', false),
+      ]);
+      expect(served).toEqual([
+        { type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', source: 'USER_STATED', about: 'USER', standing: 'UNSETTLED' },
+        { type: 'PERSONAL_FACT', content: 'أنا عايش في مدينة نصر.', source: 'USER_STATED', about: 'USER', standing: 'UNSETTLED' },
+      ]);
+    });
+
+    // CP2 R1: two employers held at once are not a confirmed conflict. They are served together, UNSETTLED, and nothing
+    // the retriever emits names a conflict.
+    it('R1 - two simultaneous employers are served together as UNSETTLED, never as CONFLICTING', () => {
+      const served = selectMemories('بشتغل فين؟', [], [
+        row(memory('bank', 'بشتغل في بنك مصر الصبح.'), 1, 'EMPLOYER', true),
+        row(memory('clinic', 'وبشتغل كمان في عيادة بالليل.'), 1, 'EMPLOYER', true),
+      ]);
+      expect(served.map((item) => item.standing)).toEqual(['UNSETTLED', 'UNSETTLED']);
+      expect(JSON.stringify(served)).not.toMatch(/CONFLICT/u);
+    });
+
+    // CP2 R2: the same-slot unit is served whole or not at all, inside MAX_SELECTED_MEMORIES and
+    // MAX_MEMORY_CONTEXT_CHARACTERS.
+    describe('R2 - the same-slot unit never breaks the explicit bounds', () => {
+      it('three Memories served first leave one place: a two-Memory unit does not fit, so neither side is served', () => {
+        const served = selectMemories('أنا ساكن فين؟', [], [
+          row(memory('s1', 'أنا ساكن جنب النادي.', { importance: 0.9 }), 3),
+          row(memory('s2', 'أنا ساكن قريب من الشغل.', { importance: 0.9 }), 3),
+          row(memory('s3', 'أنا ساكن في الدور التالت.', { importance: 0.9 }), 3),
+          row(memory('a', 'أنا ساكن في المعادي.', { importance: 0.1 }), 1, 'RESIDENCE', true),
+          row(memory('b', 'أنا عايش في مدينة نصر.', { importance: 0.1 }), 1, 'RESIDENCE', true),
+        ]);
+        expect(served.map((item) => item.content)).toEqual(['أنا ساكن جنب النادي.', 'أنا ساكن قريب من الشغل.', 'أنا ساكن في الدور التالت.']);
+        expect(served.some((item) => item.standing === 'UNSETTLED')).toBe(false);
+      });
+
+      it('a unit larger than the places left is skipped whole, and a later Memory still gets its place', () => {
+        const unit = ['أ', 'ب', 'ج', 'د', 'ه'].map((label, n) => row(memory(`u${n}`, `أنا ساكن في الحي ${label}.`), 2, 'RESIDENCE', true));
+        const served = selectMemories('أنا ساكن فين؟', [], [...unit, row(memory('free', 'أنا ساكن لوحدي.'), 1)]);
+        expect(served).toEqual([{ type: 'PERSONAL_FACT', content: 'أنا ساكن لوحدي.', source: 'USER_STATED', about: 'USER' }]);
+      });
+
+      it('a unit whose second side would pass the character budget is not served half: neither side appears', () => {
+        const served = selectMemories('أنا ساكن فين؟', [], [
+          row(memory('a', `أنا ساكن في ${'س'.repeat(MAX_MEMORY_CONTEXT_CHARACTERS - 40)}`), 2, 'RESIDENCE', true),
+          row(memory('b', 'أنا عايش في مدينة نصر في شارع طويل اسمه مكتوب بالكامل هنا.'), 1, 'RESIDENCE', true),
+        ]);
+        expect(served).toEqual([]);
+      });
+
+      it('a unit that fits is served whole, and the total stays inside both bounds', () => {
+        const served = selectMemories('أنا ساكن فين؟', [], [
+          row(memory('a', 'أنا ساكن في المعادي.'), 2, 'RESIDENCE', true),
+          row(memory('b', 'أنا عايش في مدينة نصر.'), 1, 'RESIDENCE', true),
+          row(memory('c', 'أنا ساكن مع صحابي.'), 1),
+          row(memory('d', 'أنا ساكن في الدور التالت.'), 1),
+          row(memory('e', 'أنا ساكن من سنتين.'), 1),
+        ]);
+        expect(served).toHaveLength(MAX_SELECTED_MEMORIES);
+        expect(served.filter((item) => item.standing === 'UNSETTLED').map((item) => item.content)).toEqual(['أنا ساكن في المعادي.', 'أنا عايش في مدينة نصر.']);
+        expect(served.reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(MAX_MEMORY_CONTEXT_CHARACTERS);
+      });
+    });
+
+    it('adds no standing to a settled fact and never serves a legacy Interaction Preference', () => {
+      const served = selectMemories('بشتغل إيه؟', [], [
+        row(memory('a', 'بشتغل مهندس.'), 1, 'OCCUPATION'),
+        row(memory('p', 'كلمني بالإنجليزي.', { type: 'INTERACTION_PREFERENCE' }), 3),
+      ]);
+      expect(served).toEqual([{ type: 'PERSONAL_FACT', content: 'بشتغل مهندس.', source: 'USER_STATED', about: 'USER' }]);
+    });
+
+    it('with no indexed rows the selection is exactly the MEM-AR-01A lexical selection', () => {
+      const candidates = [memory('1', 'شغلي في التصميم'), memory('2', 'بحب الشاي')];
+      expect(selectMemories('فاكر شغلي؟', candidates, [])).toEqual(selectMemories('فاكر شغلي؟', candidates));
+    });
   });
 });

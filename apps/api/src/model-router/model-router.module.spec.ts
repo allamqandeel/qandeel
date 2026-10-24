@@ -1,7 +1,5 @@
 import { FakeModelRouter } from './fake-model-router';
 import { createConfiguredModelRouter } from './model-router.module';
-import { ClaudeModelRouter } from './providers/anthropic/claude-model-router';
-import { OpenAIModelRouter } from './providers/openai/openai-model-router';
 import { DeepSeekModelRouter } from './providers/deepseek/deepseek-model-router';
 import { CorrelationService } from '../observability/correlation.service';
 import { TelemetryService } from '../observability/telemetry.service';
@@ -14,21 +12,20 @@ describe('ModelRouter provider activation', () => {
     expect(createConfiguredModelRouter({ NODE_ENV: 'test' })).toBeInstanceOf(FakeModelRouter);
   });
 
-  it.each([
-    ['anthropic', ClaudeModelRouter],
-    ['openai', OpenAIModelRouter],
-    ['deepseek', DeepSeekModelRouter],
-  ] as const)('selects only the server-owned %s configuration', (provider, Router) => {
-    const instance = {} as InstanceType<typeof Router>;
-    jest.spyOn(Router, 'fromEnvironment').mockReturnValue(instance);
+  it.each(['deepseek', 'DeepSeek', ' deepseek '])('selects only the server-owned DeepSeek configuration (%p)', (provider) => {
+    const instance = {} as DeepSeekModelRouter;
+    jest.spyOn(DeepSeekModelRouter, 'fromEnvironment').mockReturnValue(instance);
     expect(createConfiguredModelRouter({ NODE_ENV: 'production', MODEL_PROVIDER: provider },telemetry)).toBe(instance);
   });
 
-  it.each([undefined, '', 'client-choice', 'claude'])('fails closed for invalid production configuration: %s', (provider) => {
+  // S8A-03 (D1): the former providers are no longer selectable, and nothing falls back to DeepSeek either.
+  it.each([undefined, '', 'client-choice', 'claude', 'anthropic', 'openai', 'gemini'])('fails closed for invalid production configuration: %s', (provider) => {
+    const fromEnvironment = jest.spyOn(DeepSeekModelRouter, 'fromEnvironment');
     expect(() => createConfiguredModelRouter({
       NODE_ENV: 'production',
       ...(provider === undefined ? {} : { MODEL_PROVIDER: provider }),
-    },telemetry)).toThrow('MODEL_PROVIDER must be one of anthropic, openai or deepseek.');
+    },telemetry)).toThrow('MODEL_PROVIDER must be deepseek.');
+    expect(fromEnvironment).not.toHaveBeenCalled();
   });
 
   it('S8A-01: composes DeepSeek accounted, and its qualification configuration refuses a production process', () => {
@@ -42,6 +39,6 @@ describe('ModelRouter provider activation', () => {
   });
 
   it('requires canonical telemetry for every production provider',()=>{
-    expect(()=>createConfiguredModelRouter({NODE_ENV:'production',MODEL_PROVIDER:'openai'})).toThrow('TelemetryService is required');
+    expect(()=>createConfiguredModelRouter({NODE_ENV:'production',MODEL_PROVIDER:'deepseek'})).toThrow('TelemetryService is required');
   });
 });

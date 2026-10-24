@@ -1,7 +1,8 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-02 — QANDEEL Personality Core v2, then v3, in Personal, Shared and Public — Narrow Controlled Amendment of ACE-SP-01 v1.0
 
-**Status:** `CANONICAL CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`  
+**Status:** `CANONICAL CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`. Effective and frozen since the merge of PR #354
+as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23); reconciled by S8A-03  
 **Amends:** the [ACE-SP-01 Shared / Public QANDEEL Personality Core controlled amendment](QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md),
 exactly: §2 "The approved core" and "The world-neutral core", CG-1's world-neutral paragraph (§5) and CG-5's "the
 approved ACE-01 Gate A wording" (§5) — the core the world-neutral derivation is taken from, and the world-neutral
@@ -33,7 +34,8 @@ H28 change and the budgets it names, recorded in §5.4. The Shared attribution l
 [S8A-02 CP2 Shared Attribution Layer controlled amendment](QANDEEL_S8A-02_CP2_SHARED_ATTRIBUTION_LAYER_CONTROLLED_AMENDMENT_v1.0.md)  
 **Task:** `S8A-02` — QANDEEL Conversational Personality & DeepSeek Real-Model Quality (Stage 8A). It carries the evidence of
 `QAN-BL-ACE-02` and `QAN-BL-IP-02`. This is a controlled amendment, not a new Connected Worlds phase
-**Task status:** `S8A-02 — CLOSED / AT THE S8A-02 FINAL REVIEW & MERGE GATE (2026-10-23) — CP1–CP3 DELIVERED — BG-08 / BG-09
+**Task status:** **`CLOSED / MERGED` through PR #354 as `378128452177508c5700a3ac3e86346c4eb33067` (2026-10-23); NOT DEPLOYED / CLOSED TO
+USERS** (reconciled by S8A-03). As written at its closing change: `S8A-02 — CLOSED / AT THE S8A-02 FINAL REVIEW & MERGE GATE (2026-10-23) — CP1–CP3 DELIVERED — BG-08 / BG-09
 RECONCILED — NOT MERGED / NOT DEPLOYED / SYNTHETIC QUALIFICATION ONLY / CLOSED TO USERS` (§7, closure)  
 **Implementation:** S8A-02, in the pull request that carries this record
 

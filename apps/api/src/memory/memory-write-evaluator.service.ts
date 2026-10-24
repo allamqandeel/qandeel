@@ -39,6 +39,14 @@ const SPECULATION = /\b(?:maybe|perhaps|i guess|i might be)\b|(?:يمكن|ممك
 const TRANSIENT_EMOTION = /\b(?:i(?:'m| am) (?:upset|sad|angry|annoyed) today)\b|(?:أنا|انا)\s+(?:متضايق|متضايقة|زعلان|زعلانة|غضبان|غضبانة)\s+(?:النهارده|اليوم)/iu;
 const QUOTED_OR_THIRD_PARTY = /^(?:he|she|they)\s+(?:said|told me)\b|^(?:هو|هي|هما)\s+(?:قال|قالت|قالوا)\b|^["“'«].+["”'»]$/iu;
 const MULTI_SENTENCE = /[.!؟]\s+\S/u;
+// S8A-03 CP3 D-3: a question is never a fact to keep. Every background pattern below ends in an optional «؟», so
+// «أنا عايش فين؟», «هدفي إيه؟» or «أحمد أخويا؟» were written as statements with the question mark dropped. A message
+// that asks anything is not background-captured; the explicit «افتكر» / correction paths are unchanged (their
+// interpreter already refuses a question).
+const QUESTION = /[?؟]/u;
+// S8A-03 CP3 D-3: the residence clause names a place; an interrogative in that place («أنا ساكن فين», «أنا عايش
+// إزاي», «أنا عايش في انهي مدينة») is a question without its mark, never a residence.
+const NOT_A_PLACE = /^(?:في\s+)?(?:فين|وين|منين|إزاي|ازاي|إزاى|ازاى|إمتى|امتى|ليه|إيه|ايه|أنهي|انهي|أنهى|انهى)(?![\p{L}\p{M}])/u;
 // W3-MEGA-M: Unicode-aware boundaries. JavaScript's \b is ASCII-only, so the Arabic alternatives inside \b…\b could
 // never match and Arabic secrets passed this screen. Arabic attaches و / ب / ل / ف / ال to the keyword («وكلمة السر»,
 // «والباسورد»), so those clitics are allowed in front of it. Card, account, IBAN, passport and PIN / CVV identifiers are
@@ -64,6 +72,7 @@ export class MemoryWriteEvaluatorService {
     if (SPECULATION.test(content)) return { decision: 'SKIP', reason: 'AMBIGUOUS_OR_SPECULATIVE' };
     if (TRANSIENT_EMOTION.test(content)) return { decision: 'SKIP', reason: 'TRANSIENT_OR_LOW_VALUE' };
     if (MULTI_SENTENCE.test(content)) return { decision: 'SKIP', reason: 'AMBIGUOUS_OR_SPECULATIVE' };
+    if (QUESTION.test(content)) return { decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' };
 
     const rememberRequested = REMEMBER_CUE.test(content);
     const evaluable = rememberRequested ? prepareRememberContent(content.replace(REMEMBER_CUE, '')) : content;
@@ -142,8 +151,8 @@ export class MemoryWriteEvaluatorService {
     match = content.match(/^(?:by the way,?\s+)?i live in\s+(.+?)(?:\s+for\s+\d+\s+(?:years?|months?))?[.!؟]?$/iu);
     if (match) return candidate('PERSONAL_FACT', `I live in ${trimValue(match[1])}.`);
     // MEM-AR-01A (PD-4): the user's own clause, never re-gendered or re-verbed («أنا ساكنة …», «أنا عايشة …»).
-    match = content.match(/^(?:بالمناسبة\s+)?((?:أنا|انا)\s+(?:ساكن|ساكنة|عايش|عايشة)\s+(?:في\s+)?\S.*?)[.!؟]?$/u);
-    if (match) return candidate('PERSONAL_FACT', asSaid(match[1]));
+    match = content.match(/^(?:بالمناسبة\s+)?((?:أنا|انا)\s+(?:ساكن|ساكنة|عايش|عايشة)\s+((?:في\s+)?\S.*?))[.!؟]?$/u);
+    if (match && !NOT_A_PLACE.test(match[2])) return candidate('PERSONAL_FACT', asSaid(match[1]));
 
     match = content.match(/^([\p{L}][\p{L}\p{M}' -]{0,60})\s+is my\s+(brother|sister|friend|wife|husband|mother|father|son|daughter)[.!؟]?$/iu);
     if (match) return candidate('RELATIONSHIP_CONTEXT', `${trimValue(match[1])} is my ${match[2].toLocaleLowerCase('en')}.`);
@@ -235,6 +244,12 @@ export function screenMemoryCapture(
     }
   }
   return undefined;
+}
+
+/** S8A-03 CP2: the same secret / sensitive-identifier screen, read by the model-assisted capture and its pre-screen. */
+export function containsObviousSecret(value: string): boolean {
+  const content = clean(value);
+  return OBVIOUS_SECRET.some((pattern) => pattern.test(content));
 }
 
 function clean(value: string): string { return value.normalize('NFKC').trim().replace(/\s+/gu, ' '); }

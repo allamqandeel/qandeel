@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { composeServerGuidance } from './model-router.types';
+import { composeServerGuidance, MEMORY_UNSETTLED_GUIDANCE } from './model-router.types';
 import { buildHumanIntelligenceProviderSemantics } from './human-intelligence-provider-semantics';
 import type { HumanIntelligenceProviderSemantics } from './human-intelligence-provider-semantics.types';
 import type { HimModelContext } from '../human-model/him-fast-deep-consumption.types';
@@ -426,9 +426,9 @@ describe('composeServerGuidance Human Intelligence session reasoning DATA lane (
 
 describe('composeServerGuidance provider parity (QHIA-013)', () => {
   it('is the ONE shared composition both provider adapters call', () => {
-    const claude = readFileSync(`${__dirname}/providers/anthropic/claude-model-router.ts`, 'utf8');
-    const openai = readFileSync(`${__dirname}/providers/openai/openai-model-router.ts`, 'utf8');
-    for (const provider of [claude, openai]) {
+    // S8A-03 (D1): the DeepSeek router is the only provider adapter left; it must still call the one composition.
+    const deepseek = readFileSync(`${__dirname}/providers/deepseek/deepseek-model-router.ts`, 'utf8');
+    for (const provider of [deepseek]) {
       expect(provider).toContain('composeServerGuidance(request)');
       // No provider-specific Human Intelligence semantics exist anywhere: no
       // legacy field, no envelope field, no instruction ID, no data container.
@@ -536,5 +536,24 @@ describe('composeServerGuidance recommendation grounding boundary', () => {
     });
     expect(guidance.indexOf('<hypothesis_reasoning_context>')).toBeLessThan(guidance.indexOf('<recommendation_grounding_context>'));
     expect(guidance.indexOf('</hypothesis_reasoning_context>')).toBeLessThan(guidance.indexOf('<recommendation_grounding_context>'));
+  });
+});
+
+// S8A-03 CP2 (R1): the same-slot sentence is rendered only when a served Memory is UNSETTLED, verbatim (Copy Gate). It
+// claims no conflict: two current facts on one topic may both hold.
+describe('S8A-03 CP2 memory unsettled guidance', () => {
+  it('adds the exact UNSETTLED sentence only when some served Memory is UNSETTLED, and never asserts a contradiction', () => {
+    const settled = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [{ type: 'PERSONAL_FACT', content: 'أنا ساكن في المعادي.', about: 'USER' }] });
+    expect(settled).not.toContain(MEMORY_UNSETTLED_GUIDANCE);
+    expect(settled).not.toContain('UNSETTLED');
+    const unsettled = composeServerGuidance({ behavioralGuidance: 'behavior', memoryContext: [
+      { type: 'PERSONAL_FACT', content: 'بشتغل في بنك مصر الصبح.', about: 'USER', standing: 'UNSETTLED' },
+      { type: 'PERSONAL_FACT', content: 'وبشتغل كمان في عيادة بالليل.', about: 'USER', standing: 'UNSETTLED' },
+    ] });
+    expect(MEMORY_UNSETTLED_GUIDANCE).toBe('An item whose standing is UNSETTLED is one of two or more current facts the user stated on the same topic (for example two homes, two jobs or two employers). They may all be true at once, or a newer one may have replaced an older one; nothing here says which. Do not treat them as a contradiction, and do not choose, drop or merge them or present any one of them as the only answer; if it matters to the reply, ask the user briefly.');
+    expect(unsettled.split(MEMORY_UNSETTLED_GUIDANCE)).toHaveLength(2);
+    expect(unsettled.indexOf(MEMORY_UNSETTLED_GUIDANCE)).toBeLessThan(unsettled.indexOf('<user_memory_context>'));
+    expect(unsettled).toContain('"standing":"UNSETTLED"');
+    expect(unsettled).not.toContain('CONFLICTING');
   });
 });
