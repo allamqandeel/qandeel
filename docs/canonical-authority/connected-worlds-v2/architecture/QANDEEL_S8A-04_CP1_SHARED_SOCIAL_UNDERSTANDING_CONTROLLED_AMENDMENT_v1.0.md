@@ -144,7 +144,45 @@ case before it is sent). Results and the blind ratings: §6.1.
 
 ## 6.1 Results
 
-*(Filled in by the CP1 checkpoint change; see §8.)*
+Run on the local commits `20c88dae` (stage 1) and `d329a231` (stage 2; adds only the operator tally tool), 2026-10-24,
+DeepSeek Flash, `SYNTHETIC_ONLY`. Two independent blind raters (separate model sessions that read only the packet: true
+authors, criteria, unlabelled answers in random order; never the arm, the prompt, the key or each other). A criterion counts
+as passed only when BOTH raters passed it. Results and ratings: `.s8a-04-reports/cp1/` (local, not committed).
+
+| Stage | Calls | Arm | Criteria passed by both raters | Answers with identity confusion | with misattribution | token leak |
+|---|---|---|---|---|---|---|
+| 1 (6 scenarios × A/B) | 12 | **B** (CP1) | **15 / 17** | **0 / 6** | **0 / 6** | 0 |
+| 1 | — | A (words only) | 11 / 17 | 2 / 6 | 3 / 6 | 0 |
+| 2 (6 scenarios × B × 2; reason: one sample cannot show stability) | 12 | **B** | **29 / 34** | **0 / 12** | **1 / 12** | 0 |
+
+Every call succeeded, every answer passed the production decoder, and every call has its `SHARED_SEMANTIC_READING` ledger
+row on the real 0174 schema. Spend: 24 of 64 attempts, USD 0.005954 at peak rates. Latency 0.75–2.5 s.
+
+Against the six things D5 asks to prove (arm B, 18 readings):
+1. **Two people who share a name are never confused** — S1, 3 / 3: «محمد (1)» and «محمد (2)» each hold only their own
+   position. Arm A, without identity, could not name either.
+2. **Who speaks and about whom** — S2, 3 / 3: «منى ترى أن أحمد …» keeps the complaint as Mona's and Ahmed's answer as his.
+   Arm A wrote «أحمد بيتأخر … وإحنا بنعاتبه» (both raters: identity confusion and misattribution).
+3. **View vs report vs fact** — **FAIL, repeated: S3, 0 / 3.** Every B reading states as fact that Karim will not come
+   («كريم اعتذر …», «كريم لن يحضر …»), dropping that it is Sara's unconfirmed report; arm A did the same. Nour's conditional
+   opinion is kept as hers 3 / 3.
+4. **Withdrawn and changed positions** — S4, 3 / 3 for the withdrawal; one rater failed one reading for giving the
+   agreement to Dina and Tarek only. Arm A gave Yasser's postponement to «الفريق» (both raters: identity confusion).
+5. **Meanings tied to their exact sources** — S5, 3 / 3: Rami's «نادية: أنا موافقة …» is read as Rami's joke and Nadia's
+   denial as hers (arm A's sources missed Hany's proposal). One S2 reading cited Hala's contribution for a meaning that
+   does not say it (both raters).
+6. **No new place when nothing new is said** — S6, 3 / 3 empty (both arms).
+
+Not counted as a defect: in stage 2 one rater failed S1 C2 twice because the two Mohameds' positions were split into
+two places (one per person) rather than one shared disagreement place; the other rater passed them.
+
+**Stop (D5).** The report-vs-fact failure repeated (3 / 3), so no further stage was run and the remaining 40 attempts were
+not used. The prompt was not changed after seeing results: no test example, criterion or expected answer reached it.
+
+**Open for the Product Owner (not decided here):**
+- the S3 report-vs-fact defect: accept for CP1, or authorize one change to the instructions (§5.2) and a re-test;
+- a numbered label («محمد (2)») can appear inside a durable meaning, while its number is derived per reading (the order
+  of first appearance in that reading's window), so the same person may carry a different number in a later meaning.
 
 ---
 

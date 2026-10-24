@@ -355,6 +355,26 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
   - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
+### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 delivered locally, at the Product Owner's CP1 review; not pushed, no pull request)
+
+- Started 2026-10-24 on `s8a/s8a-04-shared-social-understanding` from `main` at `4e1e0b78b1216f73595b0040f84f4fc51bdd6ce2`
+  (the merge of PR #355, 2026-10-24): **S8A-03 is merged**, so its closing change is effective. S8A-04 owns no backlog
+  item at kickoff; it read (BG-05) `QAN-BL-CW-05`, `CW-02`, `AI-04` and `AI-05`, and none moves at CP1.
+- **CP1 (Product Owner decisions D1–D5, 2026-10-24), local commits `20c88dae` and `d329a231`:**
+  - governed by the candidate [S8A-04 CP1 Shared Social Understanding Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP1_SHARED_SOCIAL_UNDERSTANDING_CONTROLLED_AMENDMENT_v1.0.md),
+    which narrows one SHARED-VIS-01 sentence (the interpreter input) and binds on the merge of the S8A-04 pull request;
+    the SHARED-VIS-01 record is not edited. Its model-facing text (§5) is at the Copy Gate, `PROPOSED`;
+  - the Shared Semantic Interpreter receives a per-reading speaker token for each contribution's trusted author (the
+    frozen 0089 resolver) and the authorized visible Names; never an account id, never a Name as identity; the output
+    contract is unchanged and a token in a meaning is refused;
+  - the interpreter is bound to DeepSeek Flash under the new AI-COST-01 family `SHARED_SEMANTIC_READING` (migration
+    `0174`, not hosted), charged to the verified sender of the triggering message;
+  - **the Spatial Placer is not bound, so in-app place production still waits for CP2** (the pass returns `NO_PROVIDER`);
+  - the isolated real-model proof (amendment §6.1): 24 of 64 DeepSeek calls, USD 0.006 at peak; arm B (CP1) had no
+    identity confusion in 18 readings, against 2 of 6 for the words-only arm; it stopped on a repeated report-vs-fact
+    failure (a relayed statement read as fact, 3 / 3), presented to the Product Owner, not fixed.
+- `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open). CP2 has not started.
+
 ### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)
 
 - **Stage 7 DONE / MERGED (engineering only):** S7-01 through S7-05; final PR [#351](https://github.com/allamqandeel/qandeel/pull/351), merge `daa5c415cb1d3bbbb987ea6e9ce750ceb43768dd` (2026-10-20). Personal text Replay remains **NOT DEPLOYED / CLOSED TO USERS / NOT LAUNCH READY**. The Product Owner waived TalkBack for S7-05: neither a pass nor a future blocker; the Arabic visual proof was accepted. Do not reopen Stage 7.
