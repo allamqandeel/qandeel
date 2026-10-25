@@ -5,8 +5,8 @@
 (2026-10-25) — EFFECTIVE`.
 - The placer was still unbound at the merge (§7, §13.7), so CP2 merged as engineering, not as a functionally complete
   checkpoint. §13.10 reached `main` only through S8A-04 CP3's branch `s8a/s8a-04-cp3`, which first completes CP2 (§13.11).
-- *(2026-10-25, `s8a/s8a-04-cp3`:)* the placer is bound and its integrated free proof passed (§13.11); a paid confirmation
-  awaits the Product Owner's budget approval.
+- *(2026-10-25, `s8a/s8a-04-cp3`:)* the placer is bound and its integrated free proof passed (§13.11); its paid confirmation
+  (round 20) passed 34 / 34: CP2 is functionally complete.
 
 *(Status at the Product Owner's final gate, kept verbatim:)*
 `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
@@ -1256,13 +1256,22 @@ stand-in requests.
   lease grant and no place; no request reaches DeepSeek and no ledger row is written; the message stays committed and the
   reply is refused safely.
 
-The stand-in proves the wiring, the rules and the refusals; it proves no model quality. **A paid confirmation is not run:**
-round 20 is locked (12 calls, USD 0.02 at peak, proposed), and only the Product Owner can approve its budget; with it,
-scenario A alone runs live (the refusals need injected faults and stay free).
+The stand-in proves the wiring, the rules and the refusals; it proves no model quality.
+
+**The paid confirmation (2026-10-25).** The Product Owner approved round 20 (synthetic data only, at most 12 DeepSeek
+Flash calls and USD 0.02, `SYNTHETIC_ONLY` and the launch gates unchanged); lifting its lock was the single change
+(`3f618ff5`). Scenario A alone ran live, one run at head `3f618ff5`, 34 / 34 checks, 6 DeepSeek Flash calls, USD 0.0012 at peak pricing (worst-case reservation USD 0.016), every call HTTP
+200 with `finish_reason` stop, no retry, no second run. All 34 checks of scenario A passed against the real model: two
+readings, each one valid meaning held by its sender's token; two placement calls carrying meanings only; the second
+meaning anchored by DeepSeek to the first place (`P1`, closeness 2) and both to the `travel` region; both saved points
+equal to the pure geometry; meaning, attribution, people, region and source saved together; one ledger row per call,
+paid by the sender; display, panel, deletion, leave and outsider as in the free run; both QANDEEL replies committed.
+The refusals (C) and the gate (D) need injected faults or another environment and stay proven by the free run. Results:
+`.s8a-04-reports/cp2-binding/results/live.json` (local), the guard's spend state under `artifacts/evals/` (ignored).
 
 **Verification.** `tsc` (the API and the new driver); the full API suite, 288 suites (6 809 tests, 1 skipped), with the
 new factory tests and the pass test (the application's placer where DeepSeek may not run stops the pass before its lease);
-the root contracts (1 639 of 1 639); the task-closure governance contract. No migration, no paid call, no hosted change.
+the root contracts (1 639 of 1 639); the task-closure governance contract. No migration and no hosted change; the one paid run above.
 
 **What this does not change.** `SYNTHETIC_ONLY` and `QAN-BL-AI-01` stand: no real user's text reaches DeepSeek. The known
 limits of §13.6 – §13.10 are unchanged (S4's remaining case deferred to V2, Future Improvement 011; V2's a recorded known
