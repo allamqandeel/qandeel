@@ -1,9 +1,9 @@
 # QANDEEL — S8A-04 CP3 — Personal Knowledge in Shared World — Controlled Amendment v1.0
 
-**Status:** `R3 APPROVED FOR IMPLEMENTATION BY THE PRODUCT OWNER (2026-10-25) WITH TWO BINDING CORRECTIONS (§10) — CP3-A
-AND CP3-B IMPLEMENTED ON THE LOCAL BRANCH s8a/s8a-04-cp3 (NOT PUSHED, NO PR, NOT MERGED) — CP3-C AND CP3-D NOT STARTED —
-COPY GATE PROPOSED (0 of 6 approved) — 0176 NOT APPLIED TO ANY HOSTED DATABASE — NO PAID CALL`. §10 binds over every
-earlier section it names. Scope, gates and closure conditions: the Task Contract
+**Status:** `R3 APPROVED FOR IMPLEMENTATION BY THE PRODUCT OWNER (2026-10-25) WITH TWO BINDING CORRECTIONS (§10) — CP3-A,
+CP3-B AND CP3-C IMPLEMENTED ON THE LOCAL BRANCH s8a/s8a-04-cp3 (NOT PUSHED, NO PR, NOT MERGED) — CP3-D NOT STARTED —
+COPY GATE APPROVED 6/6 (Product Owner, 2026-10-25) — D-1 APPROVED WITH CONDITIONS (§10.5) — 0176 AND 0177 NOT APPLIED
+TO ANY HOSTED DATABASE — NO PAID CALL`. §10 binds over every earlier section it names. Scope, gates and closure conditions: the Task Contract
 `docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md`.
 
 **Delivers:** `SHARED-CTX-01` / `QAN-BL-CW-02` (the private-context portion of `G-08`).
@@ -177,7 +177,7 @@ the alternative, not recommended.
   automatic prompt ever re-opens it.
 - The one-hour window is an operational config value (initial 1 hour), never a product rule; tests prove the bound of §5.
 
-## 7. R3-05 — Copy Gate (verbatim; PROPOSED; none APPROVED before the Product Owner's explicit review)
+## 7. R3-05 — Copy Gate (verbatim; APPROVED 6/6 by the Product Owner, 2026-10-25 — §10.5)
 Placeholders: `{world}` the World's name; `{item}` the memory's exact wording; `{members}` the other current members'
 names joined «، » / ", " with «و» / "and" before the last; `{reason}` one of CG-5's endings.
 
@@ -337,3 +337,106 @@ implementation with the two binding corrections below. No R4, no new WP0, no new
   partial write and a cooldown, revoke / join / leave / correct / forget during generation STALE with nothing written,
   the sender paying every call, a non-author payer refused. Run `simulated-r4`: 90 of 90 checks passed, 100 simulated
   requests, nothing sent. The judge's quality is **not** proved by any of this: that is CP3-D's preregistered set (§4).
+
+### 10.5 CP3-C — the Product Owner's decisions and the implementation record (2026-10-25)
+**Authorization.** The Product Owner's "S8A-04 / CP3-C Product Owner Authorization — Permission UX & End-to-End
+Integration" (2026-10-25) closes the two open decisions and authorizes CP3-C on the same branch. It does not authorize
+CP3-D's paid evaluation, a push, a PR or a merge.
+- **D1 — Local Relevance Authority: APPROVED, with conditions.** The local pre-consent memory read
+  (`propose_shared_knowledge_request_v1`, §10.1) may be used **only** to detect relevance and to open a private request to
+  the item's owner. Conditions, binding: server-only, inside this dedicated path; `service_role` grants nothing else; no
+  unauthorized knowledge content to DeepSeek; nothing enters the shared reply, the map or Activity; the request is visible
+  to its owner alone; relevance detection creates no consent; any widening of its use needs a separate approval.
+- **D2 — Copy Gate: APPROVED 6/6.** CG-1 – CG-6 of §7 are approved verbatim in Arabic and English. No rephrasing; a
+  technical rendering or placeholder fix that keeps the meaning is allowed; any material change returns to the Product
+  Owner.
+
+**Implementation record (CP3-C).** Where this differs from §3 – §8 in name or placement, it binds.
+- **Migration 0177** (`0177_s8a_04_shared_knowledge_owner_surface_v2.sql`, verifier `verify-migration-0177.mjs`, CI step
+  "Verify S8A-04 Shared Knowledge owner surface against real PostgreSQL"): the owner's read and two commands in a form a
+  client may hold — `list_own_shared_knowledge_v2`, `answer_own_shared_knowledge_request_v2`,
+  `allow_own_shared_knowledge_v2` (`authenticated` only; invoker wrappers over pinned private definers). The other members
+  come as **names** (S6-02 `shared_person_name_v1`, join order), `NEEDS_RECONFIRMATION` names the new members, and the
+  audience is an **opaque reference** (`sha256` of the World and the sorted member set under
+  `QANDEEL_S8A04_CP3_SHARED_KNOWLEDGE_AUDIENCE_V2`); a command carries the reference, never a user id, and a reference that
+  is not the current audience is `AUDIENCE_CHANGED` with nothing written. The v2 read also shows a grant of an earlier
+  membership episode as ENDED / LEFT until a fresh event or request exists in the current episode. 0177 writes through the
+  0176 commands only (asserted at apply).
+- **The 0176 id-carrying owner surface is retired for a person (0177 §D.2).** `list_own_shared_knowledge_v1` returned the
+  co-members' user ids (its ceiling), which no other member-facing read exposes (0138 lists members by name only), and the
+  two v1 ALLOW commands take them. 0177 revokes all three (public and private) from every application role and asserts it
+  at apply; they remain the private building blocks the v2 definers call as their owner. `revoke_own_shared_knowledge_v1`
+  carries no user id and stays the owner's. `verify-migration-0176.mjs` is re-anchored (it proves their logic under the
+  owner's own claims where 0177 is applied) and the integrated proof's earlier scenarios use the v2 surface.
+- **0176 correction (same branch, before any hosting).** The exact-ceiling test compared `array_agg` of an empty ceiling
+  (NULL) with `=`, so `NOT (NULL)` let an **empty** ceiling through as if it were the audience. It is now
+  `IS DISTINCT FROM`; `verify-migration-0176.mjs` asserts that an empty ceiling is `AUDIENCE_CHANGED`.
+- **API** (`apps/api/src/shared-world/shared-world-permissions.{repository,service}.ts`, four routes on the Shared World
+  controller): `GET /shared/worlds/:worldId/permissions`; `POST …/permissions/requests/:requestId/answer`
+  `{ commandId, decision, audienceRef? }`; `POST …/permissions/items/:itemId/allow` `{ commandId, audienceRef }`;
+  `POST …/permissions/items/:itemId/withdraw` `{ commandId }`. Each checks the entry verdict first, runs on the caller's own
+  token (the database derives the owner from `auth.uid()`), takes and returns no user id, accepts exactly its keys
+  (anything else is the neutral `400 INVALID_REQUEST`), answers another member's or an unknown request / item / World with
+  the one neutral `UNAVAILABLE`, and produces no Activity, notification, message or log line. Rate census: the read and
+  withdraw `AUTHENTICATED`, answer and allow `SECURITY_SENSITIVE`.
+- **Endings, as CG-5 words them** (a technical rendering, recorded for the Product Owner): LEFT, CORRECTED, FORGOTTEN and
+  TURNED_OFF take their own `{reason}`; EXPIRED, and the two database endings CG-5 has no words for — INELIGIBLE (the item
+  is no longer an eligible personal fact) and WORLD_CLOSED — take the expiry sentence ("no longer current"). A forgotten
+  item's ended row carries no words. A member the World cannot name makes the whole read UNAVAILABLE: consent is never
+  asked over an audience the owner cannot be shown.
+- **Mobile** (`apps/mobile/src/shared-world/permissions/`, the transport in `runtime-entry/shared-permissions-api.ts`):
+  the CG-1 request is **pinned** in the World's conversation screen between its header and the conversation — outside the
+  conversation's scroll, so a long history never carries it out of sight — one request at a time (the next once it is
+  answered; Manage World lists them all), its words bounded to 30% of the window and scrolling with a visible scrollbar,
+  «اسمح» and «لا» beneath them and always in sight, so the conversation and its composer stay usable — never in the
+  thread, the map or Activity. «ما سمحت به هنا» /
+  "What you've allowed here" (CG-3 – CG-5) sits in Manage World before the members: first what waits for reconfirmation
+  (no longer in use, so not under «مسموح»), then «مسموح», «رفضته» and the endings. The permissions are read only after an
+  ALLOWed conversation or Manage read (never by a surface, never before authority), closed on denial or on leaving the
+  World. One command per act (`answer|request|decision|ref`, `allow|item|ref`, `withdraw|item`), reused only after no
+  answer. A CG-2 confirmation stays on the screen of its act; reopening the World never repeats it. Existing components
+  only (`Control`, `MIN_TARGET`, `typeStyle`). Every inserted value — `{world}`, `{item}`, each name — is a bidi-isolated
+  run (FSI … PDI), so a Latin word or a number never reorders the sentence around it; `{members}` is joined «، » / ", " with
+  «و» / "and" before the last. No push notification exists (no approved text); nothing was added to the Living Analysis
+  map (graphics untouched), so a World opened on its map shows the request once its conversation is opened.
+
+### 10.6 CP3-C verification (free; synthetic; no paid call)
+- `database/verify-migration-0177.mjs` on real PostgreSQL 17: the boundary (the v2 surface for a person only, the
+  reference derivation for no one, the v1 read and ceiling commands for no application role, the withdrawal kept); names
+  and the independently recomputed reference, nothing of another member; stale / foreign / malformed references, replay,
+  decline and allow-later, withdraw; growth (new member names, the earlier reference refused, growth during the answer);
+  the endings (LEFT on rejoin and its replacement by a fresh request; CORRECTED / FORGOTTEN / TURNED_OFF / EXPIRED, a
+  forgotten item without words). 0176 (re-anchored), 0150, 0164, 0171, 0174 and 0175 re-run green.
+- API: `shared-world-permissions.spec.ts` (routes, strict bodies, decoding, the neutral answers); the whole API suite and
+  the type check. Mobile: `permissions.test.tsx` (copy verbatim, controller, both surfaces, AR and EN, the pinned request
+  with its answers in sight, the confirmation not repeated), `runtime-entry/__tests__/shared-permissions-api.test.ts` (the
+  decoder and the exact command bodies; the World client names no audience — S4-02 contract), `s8a-04-proof-permissions.test.ts` (the device fixture), the shared-world and S4-01
+  integration suites, the type check.
+- **The end-to-end journey** — `scripts/s8a-04/cp3-launch.mjs --simulate=c5` (a fresh PostgreSQL 17 with every migration;
+  scenario C through the Shared World controller's own routes under each member's token; every message through the send
+  route, so the S4-04 Activity producer runs; local DeepSeek stand-ins under the network guard, round 21; nothing sent):
+  127 of 127 checks, 37 of them CP3-C's. Hala asks → the server opens ONE private request for Mohamed locally → the reply
+  commits without any item → only Mohamed's read shows it (Hala's and Sara's are empty; no route answer carries a user
+  id) → another member answering, allowing or withdrawing it, an unknown request and a foreign World all get the same
+  neutral UNAVAILABLE → a stale reference is AUDIENCE_CHANGED, a malformed body or a smuggled user-id ceiling the neutral
+  400 → Mohamed allows → a later turn uses the item → one judge call, his item only, paid by Hala → the grant ACTIVE at
+  commit, one use, the REASONING_DEPENDENCY on the opaque grant reference → the reply names the item as Mohamed's with no
+  word of consent, request or source, and no member's conversation read shows the grant, the request, the item id or the
+  dependency. Then decline (no repeated request, never used) and «اسمح الآن»; withdraw (future use stops, what was said
+  stays); correct and forget (ended, never used, shown to the owner only); audience growth (no widening, the new member
+  named privately, the earlier reference refused, «اسمح للجميع» restores use); leave (the departed owner reads the neutral
+  UNAVAILABLE) and the governed rejoin through the routes (the earlier permission shown as ended because he left; nothing
+  revived). Dry mode: the guard refuses the first request and the reply is withheld safely.
+- **Activity / notifications, separately (scenario A):** every permission act — refused, stale and replayed ones included
+  — leaves Activity items, their members, push delivery attempts and the runtime outbox byte-identical; the Activity
+  channel is live in the run (the send, leave and rejoin routes produced 17 items); the turns that opened, answered and used
+  Mohamed's permission told Mohamed exactly what they told Sara; no attention row carries an item's words, an item /
+  request / grant id or a permission word; every provider call is charged to the member who spoke; and a whole-database
+  scan finds an item's words only in its memory, the private lane and the consented replies, and its ids only in the
+  private lane, the memory (and the owner's own memory history) and the opaque dependency. Error paths: one neutral
+  UNAVAILABLE for every foreign or unknown target, one neutral 400 for every malformed body; the AI-COST-01 refusal of a
+  non-author payer reveals no item, name or id (P6).
+- **Device (Android emulator, API 36, the S4-01 proof build with the validation-only permissions stand-in
+  `s8a04-proof-permissions.ts`):** recorded in the Task Contract's verification record.
+- **What none of this proves:** the judge's quality and the mention quality of a real model (CP3-D's preregistered set,
+  budget first); the hosted database (0176 / 0177 are applied nowhere hosted); iOS and screen readers (not run).

@@ -9,7 +9,8 @@
 //   * the in-process Data API over the disposable PostgreSQL 17 migrated through every migration, 0176 included
 //     (cp2-local-data-api.ts), and the CP2 fixtures for people and Worlds (cp2-worlds.ts);
 //   * synthetic memories written as the database owner with their 0171 index terms (the production term function);
-//   * every consent through the owner's own `authenticated` 0176 command, with the owner's token — never as the server;
+//   * every consent through the owner's own `authenticated` command (0177's v2, over the 0176 one), with the owner's token —
+//     never as the server;
 //   * spies that only RECORD (the reply's outcome, the fire-and-forget pass and relevance read, what crossed the DeepSeek
 //     URL) and, at that URL, injected judge answers and faults, and consent changes made WHILE the judge is being asked
 //     (a revoke, a join, a leave, a correction, a forget) — the boundary the free unit suites cannot reach end to end.
@@ -18,8 +19,11 @@
 // with the real command (the relevance read itself is proved in scenario P); a correction and a forget move the memory to
 // SUPERSEDED / DELETED as the database owner, the transitions the memory runtime makes (as verify-migration-0176.mjs
 // does). Nothing is logged but bounded outcomes; the results file holds synthetic texts only.
+// CP3-C (Product Owner authorization of 2026-10-25, §6): scenario C drives the owner's permission surface through the Shared World
+// controller's own routes under each member's token, and scenario A proves, separately, that no Activity, push or outbox row
+// and no other table outside the private lane carries a private item, a request, a decision or its owner.
 import 'reflect-metadata';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { NestFactory } from '@nestjs/core';
@@ -36,6 +40,7 @@ import { SHARED_SEMANTIC_READING_INSTRUCTIONS_V2 } from '../../apps/api/src/shar
 import { SHARED_SPATIAL_PLACEMENT_INSTRUCTIONS } from '../../apps/api/src/shared-world/deepseek-shared-spatial-placer';
 import { SHARED_DISCLOSURE_JUDGE_INSTRUCTIONS, SHARED_MEMBER_KNOWLEDGE_INSTRUCTIONS } from '../../apps/api/src/shared-world/shared-member-knowledge-texts';
 import { SharedWorldConversationService } from '../../apps/api/src/shared-world/shared-world-conversation.service';
+import { SharedWorldController } from '../../apps/api/src/shared-world/shared-world.controller';
 import { SharedWorldModule } from '../../apps/api/src/shared-world/shared-world.module';
 import { LOCAL_DATA_API_URL, openLocalDataApi, type LocalDataApi } from './cp2-local-data-api';
 import { addMember, enableSharedConversation, ledgerOf, placesOf, signUp, worldOf, type Person } from './cp2-worlds';
@@ -202,13 +207,16 @@ async function requestFor(api: LocalDataApi, worldId: string, owner: Person, mem
     RETURNING id`, [worldId, owner.userId, memoryId]);
   return row.id;
 }
-const audienceOf = async (api: LocalDataApi, worldId: string): Promise<string[]> =>
-  (await rows(api, 'SELECT user_id FROM public.shared_world_membership_episodes WHERE world_id = $1 AND ended_at IS NULL ORDER BY user_id', [worldId])).map((row) => row.user_id);
 
-/** The owner's own consent through the real command: ALLOW with the exact current members. */
-async function allowRequest(api: LocalDataApi, worldId: string, owner: Person, requestId: string): Promise<string | null> {
-  return outcomeOf(await asMember(owner, 'answer_own_shared_knowledge_request_v1', {
-    p_command_id: randomUUID(), p_request_id: requestId, p_decision: 'ALLOW', p_ceiling_user_ids: await audienceOf(api, worldId),
+/** The opaque reference of the audience a member's own read shows them now (0177), or null when they have nothing here. */
+async function refOf(person: Person, worldId: string): Promise<string | null> {
+  const view = await asMember(person, 'list_own_shared_knowledge_v2', { p_world_id: worldId });
+  return Array.isArray(view) ? view[0]?.audience_ref ?? null : null;
+}
+/** The owner's own consent through the real command: ALLOW over the audience their own read shows them. */
+async function allowRequest(worldId: string, owner: Person, requestId: string): Promise<string | null> {
+  return outcomeOf(await asMember(owner, 'answer_own_shared_knowledge_request_v2', {
+    p_command_id: randomUUID(), p_request_id: requestId, p_decision: 'ALLOW', p_audience_ref: await refOf(owner, worldId),
   }));
 }
 
@@ -275,13 +283,13 @@ async function scenarioP(api: LocalDataApi, app: App) {
   const open1 = await rows(api, "SELECT owner_user_id, memory_id FROM shared_knowledge_private.requests WHERE world_id = $1 AND state = 'OPEN'", [t.worldId]);
   check('the local relevance read opens ONE private request, for the strongest item (Mohamed\'s)',
     open1.length === 1 && open1[0].owner_user_id === t.mohamed.userId && open1[0].memory_id === t.items.mohamed, { open: open1.length });
-  const mohamedView = await asMember(t.mohamed, 'list_own_shared_knowledge_v1', { p_world_id: t.worldId });
-  const halaView = await asMember(t.hala, 'list_own_shared_knowledge_v1', { p_world_id: t.worldId });
-  const saraView = await asMember(t.sara, 'list_own_shared_knowledge_v1', { p_world_id: t.worldId });
+  const mohamedView = await asMember(t.mohamed, 'list_own_shared_knowledge_v2', { p_world_id: t.worldId });
+  const halaView = await asMember(t.hala, 'list_own_shared_knowledge_v2', { p_world_id: t.worldId });
+  const saraView = await asMember(t.sara, 'list_own_shared_knowledge_v2', { p_world_id: t.worldId });
   check('the owner alone sees the request; the sender and the other member see nothing',
     Array.isArray(mohamedView) && mohamedView.length === 1 && mohamedView[0].section === 'REQUEST' && mohamedView[0].content === ITEMS.mohamed
     && Array.isArray(halaView) && halaView.length === 0 && Array.isArray(saraView) && saraView.length === 0, { mohamed: mohamedView?.length, hala: halaView, sara: saraView });
-  const stolen = await asMember(t.sara, 'answer_own_shared_knowledge_request_v1', { p_command_id: randomUUID(), p_request_id: mohamedView[0]?.request_id, p_decision: 'ALLOW', p_ceiling_user_ids: await audienceOf(api, t.worldId) });
+  const stolen = await asMember(t.sara, 'answer_own_shared_knowledge_request_v2', { p_command_id: randomUUID(), p_request_id: mohamedView[0]?.request_id, p_decision: 'ALLOW', p_audience_ref: mohamedView[0]?.audience_ref });
   check('another member cannot answer the owner\'s request (UNAVAILABLE, nothing written)',
     outcomeOf(stolen) === 'UNAVAILABLE' && (await rows(api, 'SELECT 1 FROM shared_knowledge_private.reasoning_grants WHERE world_id = $1', [t.worldId])).length === 0, { stolen });
 
@@ -295,14 +303,14 @@ async function scenarioP(api: LocalDataApi, app: App) {
 
   scenarioNow = 'P3';
   const requestId = mohamedView[0]?.request_id;
-  const narrow = await asMember(t.mohamed, 'answer_own_shared_knowledge_request_v1', { p_command_id: randomUUID(), p_request_id: requestId, p_decision: 'ALLOW', p_ceiling_user_ids: [t.mohamed.userId, t.hala.userId] });
-  check('an ALLOW whose ceiling is not the exact current members is AUDIENCE_CHANGED and writes nothing',
+  const narrow = await asMember(t.mohamed, 'answer_own_shared_knowledge_request_v2', { p_command_id: randomUUID(), p_request_id: requestId, p_decision: 'ALLOW', p_audience_ref: `sha256:${'0'.repeat(64)}` });
+  check('an ALLOW over a reference that is not the exact current members\' is AUDIENCE_CHANGED and writes nothing',
     outcomeOf(narrow) === 'AUDIENCE_CHANGED' && (await rows(api, 'SELECT 1 FROM shared_knowledge_private.reasoning_grants WHERE world_id = $1', [t.worldId])).length === 0, { narrow });
-  check('the owner allows through the real authenticated command', (await allowRequest(api, t.worldId, t.mohamed, requestId)) === 'ALLOWED');
+  check('the owner allows through the real authenticated command', (await allowRequest(t.worldId, t.mohamed, requestId)) === 'ALLOWED');
   // Sara declines her item: through her own request when the relevance read opened one, else a request made for the test.
   const saraOpen = (await rows(api, "SELECT id, memory_id FROM shared_knowledge_private.requests WHERE world_id = $1 AND owner_user_id = $2 AND state = 'OPEN'", [t.worldId, t.sara.userId]))[0];
   const saraRequest = saraOpen?.memory_id === t.items.sara ? saraOpen.id : await requestFor(api, t.worldId, t.sara, t.items.sara);
-  const declined = outcomeOf(await asMember(t.sara, 'answer_own_shared_knowledge_request_v1', { p_command_id: randomUUID(), p_request_id: saraRequest, p_decision: 'DECLINE', p_ceiling_user_ids: null }));
+  const declined = outcomeOf(await asMember(t.sara, 'answer_own_shared_knowledge_request_v2', { p_command_id: randomUUID(), p_request_id: saraRequest, p_decision: 'DECLINE', p_audience_ref: null }));
   check('the other member declines through the real command (no grant)', declined === 'DECLINED'
     && (await rows(api, 'SELECT 1 FROM shared_knowledge_private.reasoning_grants WHERE owner_user_id = $1', [t.sara.userId])).length === 0, { declined, viaRelevance: saraOpen?.memory_id === t.items.sara });
 
@@ -334,7 +342,7 @@ async function scenarioP(api: LocalDataApi, app: App) {
   check('after "no", no automatic request ever re-opens the declined item', afterDecline[0].n === 1);
 
   scenarioNow = 'P5';
-  const later = outcomeOf(await asMember(t.sara, 'allow_own_shared_knowledge_v1', { p_command_id: randomUUID(), p_world_id: t.worldId, p_memory_id: t.items.sara, p_ceiling_user_ids: await audienceOf(api, t.worldId) }));
+  const later = outcomeOf(await asMember(t.sara, 'allow_own_shared_knowledge_v2', { p_command_id: randomUUID(), p_world_id: t.worldId, p_memory_id: t.items.sara, p_audience_ref: await refOf(t.sara, t.worldId) }));
   check('the member who declined allows it later herself («اسمح الآن»)', later === 'ALLOWED');
   const fourth = await say(app, t.hala, t.worldId, ASK_AGAIN);
   const judged4 = fourth.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE');
@@ -371,7 +379,7 @@ async function scenarioP(api: LocalDataApi, app: App) {
 let short = 0; // fixture keys stay within the login-id shape
 async function consented(api: LocalDataApi, tag: string): Promise<Trio> {
   const t = await trio(api, tag);
-  const allowed = await allowRequest(api, t.worldId, t.mohamed, await requestFor(api, t.worldId, t.mohamed, t.items.mohamed));
+  const allowed = await allowRequest(t.worldId, t.mohamed, await requestFor(api, t.worldId, t.mohamed, t.items.mohamed));
   if (allowed !== 'ALLOWED') throw new Error(`setup: the consent was not written (${allowed})`);
   return t;
 }
@@ -435,10 +443,10 @@ async function scenarioG(api: LocalDataApi, app: App) {
     newcomers.push(newcomer);
     await addMember(api, t.worldId, newcomer, [t.hala, t.mohamed, t.sara]);
   }, async (t) => {
-    const view = await asMember(t.mohamed, 'list_own_shared_knowledge_v1', { p_world_id: t.worldId });
+    const view = await asMember(t.mohamed, 'list_own_shared_knowledge_v2', { p_world_id: t.worldId });
     check('the owner sees the item as NEEDS_RECONFIRMATION (the audience grew)', Array.isArray(view) && view.some((row: Json) => row.section === 'NEEDS_RECONFIRMATION' && row.memory_id === t.items.mohamed));
     await nextWithout(t);
-    const again = outcomeOf(await asMember(t.mohamed, 'allow_own_shared_knowledge_v1', { p_command_id: randomUUID(), p_world_id: t.worldId, p_memory_id: t.items.mohamed, p_ceiling_user_ids: await audienceOf(api, t.worldId) }));
+    const again = outcomeOf(await asMember(t.mohamed, 'allow_own_shared_knowledge_v2', { p_command_id: randomUUID(), p_world_id: t.worldId, p_memory_id: t.items.mohamed, p_audience_ref: await refOf(t.mohamed, t.worldId) }));
     const used = await say(app, t.hala, t.worldId, ASK);
     check('after the owner reconfirms for the new audience, a later turn uses the item again', again === 'ALLOWED' && used.sent.qandeel === 'COMMITTED'
       && used.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE').length === 1, { again, reply: used.reply });
@@ -454,6 +462,328 @@ async function scenarioG(api: LocalDataApi, app: App) {
     async (t) => nextWithout(t));
   await during(api, app, 'forget', 'the owner forgets the memory', (t) => rows(api, "UPDATE public.memories SET status = 'DELETED' WHERE id = $1 AND user_id = $2 RETURNING status", [t.items.mohamed, t.mohamed.userId]),
     async (t) => nextWithout(t));
+}
+
+// ------------------------------------------------------------------------------------------- C. CP3-C: the owner's permission surface, end to end
+// The CP3-C authorization §6: every permission act through the APPLICATION's own routes (the Shared World controller, under
+// each member's own token — standing in for the auth guard is the only harness part), every message through the send route
+// (so the S4-04 Activity producer runs exactly as in production), and a separate Activity / notification proof (A).
+// DECLARED TEST SHORTCUTS (as above): the memories; a correction and a forget as the database owner; the governance launch
+// capability for the governed rejoin (the 0176 verifier's own fixture); a new member joined through the fixture's governed
+// add path; the returning member's fresh Shared ID (no sealing key in the harness). The rejoin's proposal, approvals and
+// acceptance, every permission act and every message go through the routes.
+type Ctl = SharedWorldController;
+const as = (person: Person) => ({ authenticatedUser: { userId: person.userId, accessToken: person.token } }) as never;
+const cmd = (extra: Record<string, unknown> = {}) => ({ commandId: randomUUID(), ...extra });
+/** What a route answered, or the HTTP status and body of the exception it threw (the client's view of an error). */
+async function route(work: () => Promise<unknown>): Promise<Json> {
+  try {
+    return await work();
+  } catch (error) {
+    return { status: (error as Json)?.getStatus?.() ?? 'THREW', body: (error as Json)?.getResponse?.() ?? null };
+  }
+}
+async function sayVia(app: App, ctl: Ctl, person: Person, worldId: string, text: string) {
+  const crossed = crossings.length;
+  const replied = app.replies.length;
+  const sent: Json = await ctl.send(as(person), worldId, cmd({ content: text }));
+  await app.settle();
+  return { sent, reply: app.replies[replied] ?? null, calls: crossings.slice(crossed) };
+}
+const view = (ctl: Ctl, person: Person, worldId: string): Promise<Json> => route(() => ctl.permissionsOf(as(person), worldId));
+const emptyView = (seen: Json) => seen?.outcome === 'READ' && ['requests', 'allowed', 'reconfirm', 'declined', 'ended'].every((key) => Array.isArray(seen[key]) && seen[key].length === 0);
+const NEUTRAL = '{"outcome":"UNAVAILABLE"}';
+/** A member's own read that shows nothing of another member's item (they may have a request of their own). */
+const blind = (seen: Json, needles: ReadonlyArray<string>) => seen?.outcome === 'READ' && needles.every((needle) => !JSON.stringify(seen).includes(needle));
+
+/** Everything a member could be told outside the conversation: Activity (items and their members), push, the outbox. */
+async function attention(api: LocalDataApi): Promise<string> {
+  const [snapshot] = await rows(api, `SELECT
+      (SELECT coalesce(jsonb_agg(to_jsonb(a) ORDER BY a.id), '[]') FROM public.activity_items a)::text AS items,
+      (SELECT coalesce(jsonb_agg(to_jsonb(m) ORDER BY m.user_id, m.candidate_key), '[]') FROM public.activity_item_members m)::text AS members,
+      (SELECT coalesce(jsonb_agg(to_jsonb(p) ORDER BY to_jsonb(p)::text), '[]') FROM public.push_delivery_attempts p)::text AS push,
+      (SELECT coalesce(jsonb_agg(to_jsonb(o) ORDER BY to_jsonb(o)::text), '[]') FROM public.runtime_event_outbox o)::text AS outbox`);
+  return JSON.stringify(snapshot);
+}
+/** Permission acts that must leave every attention surface exactly as it was. */
+const quiet: { label: string; same: boolean }[] = [];
+async function silently<T>(api: LocalDataApi, label: string, act: () => Promise<T>): Promise<T> {
+  const before = await attention(api);
+  const result = await act();
+  quiet.push({ label, same: (await attention(api)) === before });
+  return result;
+}
+/** Each recipient's Activity for one World, without ids and times: what each member was told. */
+async function toldIn(api: LocalDataApi, worldId: string): Promise<Map<string, string[]>> {
+  const told = await rows(api, `SELECT m.user_id, a.kind, a.category, a.interruption_class, a.speaker, a.entry_destination, a.body_ar, a.body_en, a.secondary_ar,
+      a.secondary_en, a.context_label_ar, a.context_label_en, a.disclosure_max, a.actionable, a.member_count, m.candidate_key
+    FROM public.activity_items a JOIN public.activity_item_members m ON m.item_id = a.id WHERE a.context_ref = $1 ORDER BY m.candidate_key`, [worldId.toLowerCase()]);
+  const out = new Map<string, string[]>();
+  for (const row of told) out.set(row.user_id, [...(out.get(row.user_id) ?? []), JSON.stringify({ ...row, user_id: undefined })]);
+  return out;
+}
+/** Every base table whose rows mention `needle` (schema.table → rows). */
+async function whereIs(api: LocalDataApi, tables: ReadonlyArray<Json>, needle: string): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  for (const { s, t } of tables) {
+    const [hit] = await rows(api, `SELECT count(*)::int AS n FROM "${s}"."${t}" x WHERE strpos(x::text, $1) > 0`, [needle]);
+    if (hit.n > 0) out[`${s}.${t}`] = hit.n;
+  }
+  return out;
+}
+
+/**
+ * DECLARED TEST SHORTCUT: a fresh Shared ID for `member`, rotated as the database owner under the member's claims (the 0176
+ * verifier's own fixture) — the harness has no Shared ID sealing key, so the identity route cannot show one here.
+ */
+async function sharedIdOf(api: LocalDataApi, member: Person): Promise<string> {
+  const sharedId = Array.from({ length: 12 }, () => '0123456789ABCDEFGHJKMNPQRSTVWXYZ'[randomInt(32)]).join('').replace(/^(.{4})(.{4})/u, '$1-$2-');
+  const client = await (api.owner as Json).connect();
+  try {
+    await client.query('BEGIN');
+    const [state] = (await client.query('SELECT epoch FROM public.shared_world_invite_credential_state WHERE user_id = $1', [member.userId])).rows;
+    await client.query("SELECT set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: member.userId })]);
+    await client.query('SELECT * FROM public.rotate_shared_world_invite_credential_v1($1, $2, $3)',
+      [randomUUID(), `sid1:${createHash('sha256').update(sharedId, 'utf8').digest('hex')}`, state ? state.epoch : null]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+  return sharedId;
+}
+
+/** The governed REJOIN (0140) through the routes: the proposal by Shared ID, every approval, the returning member's acceptance. */
+async function rejoinVia(api: LocalDataApi, ctl: Ctl, worldId: string, member: Person, current: ReadonlyArray<Person>): Promise<string> {
+  const sharedId = await sharedIdOf(api, member);
+  const proposed: Json = await route(() => ctl.proposeMember(as(current[0]), worldId, cmd({ sharedId })));
+  if (proposed?.outcome !== 'SUBMITTED') return `proposed ${JSON.stringify(proposed)}`;
+  const listed = await asMember(current[0], 'list_own_shared_world_proposals_v1', { p_world_id: worldId });
+  const proposal = (Array.isArray(listed) ? listed : []).find((row: Json) => row.operation_kind === 'REJOIN_MEMBER')?.proposal_id;
+  if (!proposal) return 'no rejoin proposal';
+  for (const human of current) {
+    const approved: Json = await route(() => ctl.approve(as(human), worldId, proposal, cmd()));
+    if (!['APPROVED', 'INVITED'].includes(approved?.outcome)) return `approved ${JSON.stringify(approved)}`;
+  }
+  const joined: Json = await route(() => ctl.acceptMembershipRequest(as(member), worldId, proposal, cmd()));
+  return joined?.outcome === 'JOINED' ? 'JOINED' : `accepted ${JSON.stringify(joined)}`;
+}
+/**
+ * The lane did not serve the item to this turn: no judge was asked and no reply request carried the member-knowledge block.
+ * (Words QANDEEL already said in the World stay in its history — CG-4 "What was already said stays as it is" — so a later
+ * request may quote that earlier reply; that is the conversation, not a new use.)
+ */
+const noUse = (calls: ReadonlyArray<Crossing>) => calls.every((call) => call.family !== 'SHARED_DISCLOSURE_JUDGE' && !call.text.includes('<member_knowledge>'));
+const usage = (calls: ReadonlyArray<Crossing>) => calls.map((call) => ({ family: call.family, block: call.text.includes('<member_knowledge>'), words: call.text.includes(ITEMS.mohamed) }));
+const grantsIn = async (api: LocalDataApi, worldId: string) => (await rows(api, 'SELECT 1 FROM shared_knowledge_private.reasoning_grants WHERE world_id = $1', [worldId])).length;
+
+async function scenarioC(api: LocalDataApi, app: App) {
+  const ctl = app.context.get(SharedWorldController);
+  await rows(api, 'SELECT * FROM shared_private.set_shared_launch_capability_v1($1, $2, $3, $4, $5)',
+    ['SHARED_GOVERNANCE', 'ENABLED', 'SATISFIED', 's8a-04-cp3c-harness', 'synthetic fixture (the governed rejoin)']);
+  const trios: Trio[] = [];
+  const ids: string[] = [];
+  const started = async (tag: string) => {
+    const made = await trio(api, tag);
+    trios.push(made);
+    ids.push(made.items.mohamed, made.items.sara, made.items.hala);
+    return made;
+  };
+  /** Hala asks; Mohamed reads his request and allows it over the audience he is shown. */
+  const consentedVia = async (made: Trio) => {
+    await sayVia(app, ctl, made.hala, made.worldId, ASK);
+    const seen = await view(ctl, made.mohamed, made.worldId);
+    ids.push(...(seen?.requests ?? []).map((row: Json) => row.requestId));
+    return route(() => ctl.answerPermission(as(made.mohamed), made.worldId, seen?.requests?.[0]?.requestId, cmd({ decision: 'ALLOW', audienceRef: seen?.audienceRef })));
+  };
+
+  // ---------------------------------------------------------------- C1. the ten-step journey (§6)
+  scenarioNow = 'C1';
+  const t = await started('c');
+  const ask = await sayVia(app, ctl, t.hala, t.worldId, ASK);
+  check('1/3. Hala asks; the reply commits WITHOUT any member\'s item (no judge, no item text to DeepSeek)',
+    ask.sent.outcome === 'COMMITTED' && ask.sent.qandeel === 'COMMITTED' && ask.calls.every((call) => call.family !== 'SHARED_DISCLOSURE_JUDGE') && none(ask.calls, Object.values(ITEMS)),
+    { sent: ask.sent, families: ask.calls.map((call) => call.family) });
+  const asked = await rows(api, "SELECT id, owner_user_id, memory_id FROM shared_knowledge_private.requests WHERE world_id = $1 AND state = 'OPEN'", [t.worldId]);
+  check('2. the server found Mohamed\'s relevant item locally and opened ONE private request, for him',
+    asked.length === 1 && asked[0].owner_user_id === t.mohamed.userId && asked[0].memory_id === t.items.mohamed, { open: asked.length });
+  ids.push(...asked.map((row) => row.id));
+  const mohamedSees = await view(ctl, t.mohamed, t.worldId);
+  const halaSees = await view(ctl, t.hala, t.worldId);
+  const saraSees = await view(ctl, t.sara, t.worldId);
+  check('4. GET permissions: the request reaches Mohamed — his item, the other members by name in join order, an opaque audience reference',
+    mohamedSees?.outcome === 'READ' && mohamedSees.requests.length === 1 && mohamedSees.requests[0].text === ITEMS.mohamed
+    && mohamedSees.requests[0].itemId === t.items.mohamed && JSON.stringify(mohamedSees.members) === JSON.stringify(['هالة', 'سارة'])
+    && /^sha256:[0-9a-f]{64}$/u.test(mohamedSees.audienceRef), { members: mohamedSees?.members, requests: mohamedSees?.requests?.length });
+  check('4. Hala (who asked) and Sara see nothing of it', emptyView(halaSees) && emptyView(saraSees)
+    && ![JSON.stringify(halaSees), JSON.stringify(saraSees)].some((seen) => seen.includes(ITEMS.mohamed) || seen.includes(asked[0]?.id) || seen.includes(t.items.mohamed)),
+    { hala: halaSees, sara: saraSees });
+  check('4. no route answer carries a user id', [mohamedSees, halaSees, saraSees].every((seen) => [t.hala, t.mohamed, t.sara].every((p) => !JSON.stringify(seen).includes(p.userId))));
+  const requestId: string = mohamedSees.requests[0].requestId;
+  const ref: string = mohamedSees.audienceRef;
+  const foreignAnswer = await silently(api, 'another member answers the owner\'s request', () => route(() => ctl.answerPermission(as(t.sara), t.worldId, requestId, cmd({ decision: 'ALLOW', audienceRef: ref }))));
+  const unknownAnswer = await silently(api, 'an unknown request is answered', () => route(() => ctl.answerPermission(as(t.sara), t.worldId, randomUUID(), cmd({ decision: 'ALLOW', audienceRef: ref }))));
+  const foreignAllow = await silently(api, 'another member allows the owner\'s item', () => route(() => ctl.allowPermission(as(t.sara), t.worldId, t.items.mohamed, cmd({ audienceRef: ref }))));
+  const foreignWithdraw = await silently(api, 'another member withdraws the owner\'s item', () => route(() => ctl.withdrawPermission(as(t.sara), t.worldId, t.items.mohamed, cmd())));
+  const foreignWorld = await view(ctl, t.mohamed, randomUUID());
+  check('no member can answer, allow or withdraw another member\'s request or item: the same neutral UNAVAILABLE as an unknown request or World, nothing written',
+    [foreignAnswer, unknownAnswer, foreignAllow, foreignWithdraw, foreignWorld].every((answer) => JSON.stringify(answer) === NEUTRAL)
+    && (await rows(api, 'SELECT 1 FROM shared_knowledge_private.consent_events WHERE world_id = $1', [t.worldId])).length === 0,
+    { foreignAnswer, unknownAnswer, foreignAllow, foreignWithdraw, foreignWorld });
+  const stale = await silently(api, 'the owner answers over a reference that is not this audience', () => route(() => ctl.answerPermission(as(t.mohamed), t.worldId, requestId,
+    cmd({ decision: 'ALLOW', audienceRef: `sha256:${'0'.repeat(64)}` }))));
+  const malformed = await route(() => ctl.answerPermission(as(t.mohamed), t.worldId, requestId, cmd({ decision: 'ALLOW' })));
+  const smuggled = await route(() => ctl.answerPermission(as(t.mohamed), t.worldId, requestId, cmd({ decision: 'ALLOW', audienceRef: ref, ceiling: [t.hala.userId] })));
+  check('a stale reference is AUDIENCE_CHANGED and writes nothing; a malformed body or an extra field (a user-id ceiling) is the neutral 400',
+    stale?.outcome === 'AUDIENCE_CHANGED' && malformed?.status === 400 && JSON.stringify(malformed.body) === '{"outcome":"INVALID_REQUEST"}'
+    && smuggled?.status === 400 && JSON.stringify(smuggled.body) === '{"outcome":"INVALID_REQUEST"}' && (await grantsIn(api, t.worldId)) === 0, { stale, malformed, smuggled });
+  const allowed = await silently(api, 'the owner allows', () => route(() => ctl.answerPermission(as(t.mohamed), t.worldId, requestId, cmd({ decision: 'ALLOW', audienceRef: ref }))));
+  const afterAllow = await view(ctl, t.mohamed, t.worldId);
+  check('5. Mohamed allows through POST …/answer over the audience he was shown; the item moves to «ما سمحت به هنا»',
+    allowed?.outcome === 'ALLOWED' && afterAllow.requests.length === 0 && afterAllow.allowed.length === 1 && afterAllow.allowed[0].itemId === t.items.mohamed, { allowed, afterAllow });
+  const replay = await silently(api, 'the answered request is answered again', () => route(() => ctl.answerPermission(as(t.mohamed), t.worldId, requestId, cmd({ decision: 'ALLOW', audienceRef: ref }))));
+  check('the answered request cannot be answered again (UNAVAILABLE); one consent event only', JSON.stringify(replay) === NEUTRAL
+    && (await rows(api, 'SELECT 1 FROM shared_knowledge_private.consent_events WHERE world_id = $1', [t.worldId])).length === 1, { replay });
+  const used = await sayVia(app, ctl, t.hala, t.worldId, ASK_AGAIN);
+  const judged = used.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE');
+  check('6. a LATER turn uses the item within the consent (its reply request carries it; no other member\'s item)',
+    used.sent.qandeel === 'COMMITTED' && used.calls.some((call) => call.family === 'REPLY' && call.text.includes(ITEMS.mohamed)) && none(used.calls, [ITEMS.sara, ITEMS.hala]), { reply: used.reply });
+  check('7. the judge checks the reply: one call, Mohamed\'s item only, paid by Hala (attempt 1)', judged.length === 1 && JSON.stringify(judgeItems(judged[0])) === JSON.stringify([ITEMS.mohamed])
+    && (await judgeRows(api, t.worldId)).filter((row) => row.message === used.sent.materialId).every((row) => row.payer === t.hala.userId && row.attempt === 1));
+  const uses = await rows(api, 'SELECT reasoning_grant_id FROM shared_knowledge_private.uses WHERE material_id = $1', [used.reply?.materialId]);
+  const deps = await rows(api, "SELECT source_context_ref FROM public.shared_world_material_dependencies WHERE target_material_id = $1 AND dependency_kind = 'REASONING_DEPENDENCY'", [used.reply?.materialId]);
+  const grant = await rows(api, 'SELECT r.id, s.state FROM shared_knowledge_private.reasoning_grants r CROSS JOIN LATERAL shared_knowledge_private.grant_state_v1(r.id) s WHERE r.world_id = $1', [t.worldId]);
+  check('8/9. consent and audience revalidated at commit (the grant is ACTIVE for this audience); one use and the REASONING_DEPENDENCY on the opaque grant reference',
+    uses.length === 1 && deps.length === 1 && deps[0].source_context_ref === `shared-knowledge:${uses[0].reasoning_grant_id}` && grant.length === 1 && grant[0].state === 'ACTIVE', { uses, deps, grant });
+  ids.push(...grant.map((row) => row.id));
+  const [body] = await rows(api, 'SELECT body_text FROM public.shared_world_text_material_bodies WHERE material_id = $1', [used.reply?.materialId]);
+  const SOURCE_WORDS = ['إذن', 'سمح', 'طلب', 'خاص', 'أخبرني', 'قال لي', 'ذكرت لي', 'محادثة', 'permission', 'allow', 'request', 'private'];
+  check('10. the reply reads naturally: the item as Mohamed\'s, and no word of consent, request, source or private talk',
+    typeof body?.body_text === 'string' && body.body_text.includes(ITEMS.mohamed) && SOURCE_WORDS.every((word) => !body.body_text.includes(word)), { body: body?.body_text });
+  for (const reader of [t.hala, t.sara, t.mohamed]) {
+    const seen = JSON.stringify(await route(() => ctl.materials(as(reader), t.worldId)));
+    check(`10. ${reader.key}'s conversation read shows the reply and nothing of the grant, the request, the item id or the dependency`,
+      seen.includes(ITEMS.mohamed) && ![uses[0]?.reasoning_grant_id, requestId, t.items.mohamed, 'shared-knowledge:', 'REASONING_DEPENDENCY'].some((needle) => needle && seen.includes(needle)));
+  }
+
+  // ---------------------------------------------------------------- C2. decline, «اسمح الآن», withdraw
+  scenarioNow = 'C2';
+  const d = await started('cd');
+  await sayVia(app, ctl, d.hala, d.worldId, ASK);
+  const dView = await view(ctl, d.mohamed, d.worldId);
+  ids.push(...(dView?.requests ?? []).map((row: Json) => row.requestId));
+  const declined = await silently(api, 'the owner declines', () => route(() => ctl.answerPermission(as(d.mohamed), d.worldId, dView.requests[0]?.requestId, cmd({ decision: 'DECLINE' }))));
+  const dAfter = await view(ctl, d.mohamed, d.worldId);
+  check('decline: DECLINED, no grant, the item listed under «رفضته»', declined?.outcome === 'DECLINED' && dAfter.declined.length === 1 && dAfter.declined[0].itemId === d.items.mohamed
+    && dAfter.allowed.length === 0 && (await grantsIn(api, d.worldId)) === 0, { declined, dAfter });
+  const dAgain = await sayVia(app, ctl, d.hala, d.worldId, ASK_AGAIN);
+  const dRequests = await rows(api, 'SELECT count(*)::int AS n FROM shared_knowledge_private.requests WHERE world_id = $1 AND owner_user_id = $2', [d.worldId, d.mohamed.userId]);
+  check('decline: no repeated automatic request, and the item is never used', dRequests[0].n === 1 && noUse(dAgain.calls) && (await view(ctl, d.mohamed, d.worldId)).requests.length === 0);
+  const nowRef = (await view(ctl, d.mohamed, d.worldId)).audienceRef;
+  const later = await silently(api, 'the owner allows now («اسمح الآن»)', () => route(() => ctl.allowPermission(as(d.mohamed), d.worldId, d.items.mohamed, cmd({ audienceRef: nowRef }))));
+  const dUsed = await sayVia(app, ctl, d.hala, d.worldId, ASK);
+  check('«اسمح الآن»: ALLOWED, and a later turn uses the item', later?.outcome === 'ALLOWED' && dUsed.sent.qandeel === 'COMMITTED'
+    && dUsed.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE').length === 1, { later, reply: dUsed.reply });
+  const saidBefore = await rows(api, "SELECT count(*)::int AS n FROM public.shared_world_materials WHERE world_id = $1 AND material_kind = 'QANDEEL_OUTPUT'", [d.worldId]);
+  const withdrawn = await silently(api, 'the owner withdraws', () => route(() => ctl.withdrawPermission(as(d.mohamed), d.worldId, d.items.mohamed, cmd())));
+  const wView = await view(ctl, d.mohamed, d.worldId);
+  const wNext = await sayVia(app, ctl, d.hala, d.worldId, ASK_AGAIN);
+  const saidAfter = await rows(api, "SELECT count(*)::int AS n FROM public.shared_world_materials WHERE world_id = $1 AND material_kind = 'QANDEEL_OUTPUT'", [d.worldId]);
+  check('withdraw: WITHDRAWN, the item leaves «مسموح», future use stops', withdrawn?.outcome === 'WITHDRAWN' && wView.allowed.length === 0
+    && wNext.sent.qandeel === 'COMMITTED' && noUse(wNext.calls), { withdrawn, wView, calls: usage(wNext.calls) });
+  check('withdraw: what was already said stays (no QANDEEL message deleted)', saidAfter[0].n === saidBefore[0].n + 1
+    && JSON.stringify(await route(() => ctl.materials(as(d.hala), d.worldId))).includes(ITEMS.mohamed), { before: saidBefore[0].n, after: saidAfter[0].n });
+
+  // ---------------------------------------------------------------- C3. correct and forget
+  for (const [tag, status, reason] of [['cc', 'SUPERSEDED', 'CORRECTED'], ['cf', 'DELETED', 'FORGOTTEN']] as const) {
+    scenarioNow = `C3-${reason}`;
+    const e = await started(tag);
+    const consent = await consentedVia(e);
+    await rows(api, 'UPDATE public.memories SET status = $3 WHERE id = $1 AND user_id = $2', [e.items.mohamed, e.mohamed.userId, status]);
+    const ended = await view(ctl, e.mohamed, e.worldId);
+    const next = await sayVia(app, ctl, e.hala, e.worldId, ASK_AGAIN);
+    check(`${reason.toLowerCase()}: the permission ends, shown to the owner only (${reason}), and the item is never used again`,
+      consent?.outcome === 'ALLOWED' && ended.allowed.length === 0 && ended.ended.some((row: Json) => row.itemId === e.items.mohamed && row.reason === reason)
+      && noUse(next.calls) && blind(await view(ctl, e.hala, e.worldId), [ITEMS.mohamed, e.items.mohamed]) && blind(await view(ctl, e.sara, e.worldId), [ITEMS.mohamed, e.items.mohamed]),
+      { consent, ended: ended.ended, calls: usage(next.calls) });
+    if (reason === 'FORGOTTEN') check('forget: the ended row no longer carries the forgotten words', ended.ended.every((row: Json) => row.text !== ITEMS.mohamed), ended.ended);
+  }
+
+  // ---------------------------------------------------------------- C4. audience growth
+  scenarioNow = 'C4';
+  const g = await started('cg');
+  await sayVia(app, ctl, g.hala, g.worldId, ASK);
+  const gView = await view(ctl, g.mohamed, g.worldId);
+  const gAllowed = await route(() => ctl.answerPermission(as(g.mohamed), g.worldId, gView.requests[0]?.requestId, cmd({ decision: 'ALLOW', audienceRef: gView.audienceRef })));
+  const karim = await signUp(api, 'cg-karim', 'كريم');
+  await addMember(api, g.worldId, karim, [g.hala, g.mohamed, g.sara]);
+  const grown = await view(ctl, g.mohamed, g.worldId);
+  check('growth: no automatic widening — the item waits for reconfirmation, privately, naming the new member; the reference changed',
+    gAllowed?.outcome === 'ALLOWED' && grown.allowed.length === 0 && grown.reconfirm.length === 1 && JSON.stringify(grown.reconfirm[0].newMembers) === JSON.stringify(['كريم'])
+    && JSON.stringify(grown.members) === JSON.stringify(['هالة', 'سارة', 'كريم']) && grown.audienceRef !== gView.audienceRef, { grown });
+  check('growth: the newcomer and the other members see nothing of it', emptyView(await view(ctl, karim, g.worldId)) && emptyView(await view(ctl, g.sara, g.worldId)));
+  const waiting = await sayVia(app, ctl, g.hala, g.worldId, ASK_AGAIN);
+  check('growth: until the owner chooses, the item is not used', noUse(waiting.calls));
+  const oldRef = await silently(api, 'the owner reconfirms over the earlier audience', () => route(() => ctl.allowPermission(as(g.mohamed), g.worldId, g.items.mohamed, cmd({ audienceRef: gView.audienceRef }))));
+  const everyone = await silently(api, 'the owner allows for everyone («اسمح للجميع»)', () => route(() => ctl.allowPermission(as(g.mohamed), g.worldId, g.items.mohamed, cmd({ audienceRef: grown.audienceRef }))));
+  const widened = await sayVia(app, ctl, g.hala, g.worldId, ASK);
+  check('growth: the earlier reference is AUDIENCE_CHANGED; «اسمح للجميع» over the new one is ALLOWED and a later turn uses it',
+    oldRef?.outcome === 'AUDIENCE_CHANGED' && everyone?.outcome === 'ALLOWED' && widened.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE').length === 1, { oldRef, everyone });
+
+  // ---------------------------------------------------------------- C5. leave and rejoin
+  scenarioNow = 'C5';
+  const l = await started('cl');
+  const lConsent = await consentedVia(l);
+  const left: Json = await ctl.leave(as(l.mohamed), l.worldId, cmd());
+  const outside = await view(ctl, l.mohamed, l.worldId);
+  const lNext = await sayVia(app, ctl, l.hala, l.worldId, ASK_AGAIN);
+  check('leave: LEFT; the departed owner reads only the neutral UNAVAILABLE; the item is not used', lConsent?.outcome === 'ALLOWED' && left?.outcome === 'LEFT'
+    && JSON.stringify(outside) === NEUTRAL && noUse(lNext.calls), { lConsent, left, outside });
+  const rejoined = await rejoinVia(api, ctl, l.worldId, l.mohamed, [l.hala, l.sara]);
+  const back = await view(ctl, l.mohamed, l.worldId);
+  const lAfter = await sayVia(app, ctl, l.hala, l.worldId, ASK);
+  check('rejoin (governed, through the routes): the earlier permission shows as ended because he left; nothing is revived or used',
+    rejoined === 'JOINED' && back?.outcome === 'READ' && back.allowed.length === 0 && back.ended.some((row: Json) => row.itemId === l.items.mohamed && row.reason === 'LEFT')
+    && lAfter.calls.every((call) => call.family !== 'SHARED_DISCLOSURE_JUDGE'), { rejoined, ended: back?.ended, requests: back?.requests?.length });
+
+  // ---------------------------------------------------------------- A. Activity and notifications: a separate proof
+  scenarioNow = 'A';
+  const worlds = trios.map((made) => made.worldId);
+  check('A1. every permission act (allow, decline, «اسمح الآن», «اسمح للجميع», withdraw, refused, stale and replayed acts) left Activity, its members, push and the outbox byte-identical',
+    quiet.length >= 12 && quiet.every((entry) => entry.same), quiet);
+  const live = await rows(api, 'SELECT count(*)::int AS n FROM public.activity_items WHERE context_ref = ANY($1::text[])', [worlds.map((w) => w.toLowerCase())]);
+  check('A2. the Activity channel is live in this run (the send, leave and rejoin routes produced Activity), so the silence above is meaningful', live[0].n > 0, { items: live[0].n });
+  const told = await toldIn(api, t.worldId);
+  check('A3. the turns that opened, answered and used Mohamed\'s permission told Mohamed exactly what they told Sara (no sign of a request, a decision or its owner)',
+    (told.get(t.mohamed.userId)?.length ?? 0) > 0 && JSON.stringify(told.get(t.mohamed.userId)) === JSON.stringify(told.get(t.sara.userId)),
+    { mohamed: told.get(t.mohamed.userId)?.length ?? 0, sara: told.get(t.sara.userId)?.length ?? 0 });
+  const attentionText = await attention(api);
+  const CONSENT_WORDS = ['ما سمحت به هنا', 'سحب الإذن', 'اسمح', 'رفضته', 'allowed here', 'Withdraw', 'Allow', 'permission'];
+  check('A4. no Activity, push or outbox row carries any item\'s words, an item / request / grant id, or the permission words',
+    Object.values(ITEMS).every((item) => !attentionText.includes(item)) && ids.every((id) => !attentionText.includes(id)) && CONSENT_WORDS.every((word) => !attentionText.includes(word)));
+  const payers = await rows(api, 'SELECT DISTINCT user_id FROM public.ai_provider_calls WHERE source_world_id = ANY($1::uuid[])', [worlds]);
+  const speakers = new Set(trios.map((made) => made.hala.userId));
+  check('A5. accounting: every provider call of these Worlds is charged to the one who spoke; no owner who answered a request is ever named',
+    payers.length > 0 && payers.every((row) => speakers.has(row.user_id)), { payers: payers.length });
+  const tables = await rows(api, `SELECT table_schema AS s, table_name AS t FROM information_schema.tables
+    WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema') ORDER BY 1, 2`);
+  const homeOfWords = (table: string) => table.startsWith('shared_knowledge_private.') || table === 'public.memories' || table === 'public.shared_world_text_material_bodies';
+  // The owner's own memory history (0072) is keyed by the memory: personal, never shared — A7 checks it holds the owner's rows only.
+  const homeOfIds = (table: string) => table.startsWith('shared_knowledge_private.') || table.startsWith('public.memor') || table === 'public.shared_world_material_dependencies'
+    || table === 'public.historical_material_events';
+  const strays: Record<string, Record<string, number>> = {};
+  for (const [needle, home] of [...Object.values(ITEMS).map((item) => [item, homeOfWords] as const), ...ids.map((id) => [id, homeOfIds] as const)]) {
+    const found = await whereIs(api, tables, needle);
+    const stray = Object.keys(found).filter((table) => !home(table));
+    if (stray.length) strays[needle.slice(0, 12)] = Object.fromEntries(stray.map((table) => [table, found[table]]));
+  }
+  check('A6. a whole-database scan: an item\'s words live only in its memory, the private lane and the consented replies; its ids only in the private lane, the memory and the opaque dependency',
+    Object.keys(strays).length === 0, strays);
+  const [history] = await rows(api, `SELECT count(*)::int AS n FROM public.historical_material_events h JOIN public.memories m ON m.id = h.memory_id
+    WHERE h.memory_id = ANY($1::uuid[]) AND h.user_id <> m.user_id`, [ids]);
+  check('A7. the memory history that names an item is its owner\'s own, only', history.n === 0, history);
 }
 
 // ------------------------------------------------------------------------------------------- main
@@ -478,6 +808,7 @@ async function main() {
         await withheld(api, app, tag, fault);
       }
       await scenarioG(api, app);
+      await scenarioC(api, app);
       scenarioNow = 'end';
       check('every planned fault and consent change was consumed', faults.length === 0 && actions.length === 0, { faults, actions: actions.map((entry) => entry.label) });
     }

@@ -163,6 +163,12 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // SHARED-VIS-01: the Shared World's Living Analysis geography (migration 0148), reads only.
   'GET /shared/worlds/:worldId/field': 'AUTHENTICATED',
   'GET /shared/worlds/:worldId/field/places/:placeId': 'AUTHENTICATED',
+  // S8A-04 CP3-C: the owner's permissions for their own knowledge (migration 0177). Granting consent is classed like the
+  // S6-07 consent act; reading and withdrawing are ordinary own acts (a withdrawal is never throttled like a credential act).
+  'GET /shared/worlds/:worldId/permissions': 'AUTHENTICATED',
+  'POST /shared/worlds/:worldId/permissions/requests/:requestId/answer': 'SECURITY_SENSITIVE',
+  'POST /shared/worlds/:worldId/permissions/items/:itemId/allow': 'SECURITY_SENSITIVE',
+  'POST /shared/worlds/:worldId/permissions/items/:itemId/withdraw': 'AUTHENTICATED',
   'GET /shared/worlds/:worldId/materials': 'AUTHENTICATED',
   'GET /shared/worlds/:worldId/materials/before/:materialId/:establishedAt': 'AUTHENTICATED',
   'POST /shared/worlds/:worldId/messages': 'SECURITY_SENSITIVE',

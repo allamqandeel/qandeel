@@ -36,6 +36,11 @@
  */
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { decodeSharedField, decodeSharedPlace, type SharedFieldResult, type SharedPlaceResult } from './shared-field-api';
+import {
+  decodeSharedPermissionAllow, decodeSharedPermissionAnswer, decodeSharedPermissions, decodeSharedPermissionWithdraw, sharedPermissionAllowBody,
+  sharedPermissionAnswerBody,
+  type SharedPermissionAllowResult, type SharedPermissionAnswerResult, type SharedPermissionsResult, type SharedPermissionWithdrawResult,
+} from './shared-permissions-api';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const SHARED_ID = /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/u;
@@ -419,6 +424,32 @@ export class SharedWorldApiClient {
   async place(worldId: string, placeId: string): Promise<SharedPlaceResult> {
     const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/field/places/${encodeURIComponent(placeId)}`);
     return answer.kind === 'OK' ? decodeSharedPlace(answer.body, placeId) : { kind: 'UNAVAILABLE' };
+  }
+
+  /** S8A-04 CP3-C: the reader's OWN permissions in one World. */
+  async permissions(worldId: string): Promise<SharedPermissionsResult> {
+    const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/permissions`);
+    return answer.kind === 'OK' ? decodeSharedPermissions(answer.body) : { kind: 'UNAVAILABLE' };
+  }
+
+  /** S8A-04 CP3-C: Allow (over the members the reader was shown; `ref` is the server's opaque reference) or No, for one open
+   *  request. The body is the permissions module's. */
+  async answerPermission(worldId: string, requestId: string, commandId: string, decision: 'ALLOW' | 'DECLINE', ref: string | null): Promise<SharedPermissionAnswerResult> {
+    return decodeSharedPermissionAnswer(await this.outcome(this.exchange('POST',
+      `/shared/worlds/${encodeURIComponent(worldId)}/permissions/requests/${encodeURIComponent(requestId)}/answer`,
+      sharedPermissionAnswerBody(commandId, decision, ref))));
+  }
+
+  /** S8A-04 CP3-C: allow now / allow for everyone, over the members the reader was shown (`ref`, opaque). */
+  async allowPermission(worldId: string, itemId: string, commandId: string, ref: string): Promise<SharedPermissionAllowResult> {
+    return decodeSharedPermissionAllow(await this.outcome(this.exchange('POST',
+      `/shared/worlds/${encodeURIComponent(worldId)}/permissions/items/${encodeURIComponent(itemId)}/allow`, sharedPermissionAllowBody(commandId, ref))));
+  }
+
+  /** S8A-04 CP3-C: withdraw / stop using it. */
+  async withdrawPermission(worldId: string, itemId: string, commandId: string): Promise<SharedPermissionWithdrawResult> {
+    return decodeSharedPermissionWithdraw(await this.outcome(this.exchange('POST',
+      `/shared/worlds/${encodeURIComponent(worldId)}/permissions/items/${encodeURIComponent(itemId)}/withdraw`, { commandId })));
   }
 
   async send(worldId: string, commandId: string, content: string): Promise<SharedSendResult> {

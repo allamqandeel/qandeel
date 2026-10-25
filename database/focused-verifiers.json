@@ -16,8 +16,9 @@
   "version": 1,
   "groups": {
     "s8a-04-cp3": {
-      "title": "S8A-04 CP3 - Personal Knowledge in Shared World (migration 0176) with the Shared social memory, cost-family, Personal understanding, conversation, governance, retry-hazard and account-erasure verifiers it re-anchors or must leave unchanged",
+      "title": "S8A-04 CP3 - Personal Knowledge in Shared World (migrations 0176 and 0177) with the Shared social memory, cost-family, Personal understanding, conversation, governance, retry-hazard and account-erasure verifiers it re-anchors or must leave unchanged",
       "verifiers": [
+        "database/verify-migration-0177.mjs",
         "database/verify-migration-0176.mjs",
         "database/verify-migration-0175.mjs",
         "database/verify-migration-0174.mjs",

@@ -206,20 +206,26 @@ const resolveItem = async (worldId, owner, memoryId) => {
   await asOwner();
   return out;
 };
+// RE-ANCHORED by S8A-04 CP3-C (migration 0177, 2026-10-25): 0177 retires the v1 read and the two ceiling commands for a
+// person (they carry user ids; the v2 surface replaces them, pinned by 0177's verifier). Where 0177 is applied this file
+// still proves their logic — the building blocks the v2 functions call — under the owner's own claims (auth.uid() is the
+// owner), as the database owner; the boundary below proves no application role executes them.
+let V1_RETIRED = false;
+const asPerson = (owner) => (V1_RETIRED ? asOwner(owner) : actAs('authenticated', owner));
 const view = async (owner, worldId) => {
-  await actAs('authenticated', owner);
+  await asPerson(owner);
   const out = await rows('SELECT * FROM public.list_own_shared_knowledge_v1($1)', [worldId]);
   await asOwner();
   return out;
 };
 const answer = async (owner, requestId, decision, ceiling, command = randomUUID()) => {
-  await actAs('authenticated', owner);
+  await asPerson(owner);
   const out = await first('SELECT * FROM public.answer_own_shared_knowledge_request_v1($1, $2, $3, $4)', [command, requestId, decision, ceiling]);
   await asOwner();
   return out.outcome;
 };
 const allow = async (owner, worldId, memoryId, ceiling, command = randomUUID()) => {
-  await actAs('authenticated', owner);
+  await asPerson(owner);
   const out = await first('SELECT * FROM public.allow_own_shared_knowledge_v1($1, $2, $3, $4)', [command, worldId, memoryId, ceiling]);
   await asOwner();
   return out.outcome;
@@ -263,6 +269,11 @@ async function completeReply(on, started, grants, { refs = grants.map((g) => `sh
 // ------------------------------------------------------------------------------------------------- 1. the boundary
 const OWNER_FUNCTIONS = ['list_own_shared_knowledge_v1', 'answer_own_shared_knowledge_request_v1', 'allow_own_shared_knowledge_v1',
   'revoke_own_shared_knowledge_v1'];
+// RE-ANCHORED by S8A-04 CP3-C (migration 0177, 2026-10-25): the owner's v2 read and commands (member names and an
+// audience reference instead of user ids) are the owner's, for a person only; the v1 read and the two ceiling commands
+// are retired for every application role; 0177's own verifier pins both.
+const OWNER_V2 = ['list_own_shared_knowledge_v2', 'answer_own_shared_knowledge_request_v2', 'allow_own_shared_knowledge_v2'];
+const RETIRED_V1 = ['list_own_shared_knowledge_v1', 'answer_own_shared_knowledge_request_v1', 'allow_own_shared_knowledge_v1'];
 const SERVER_FUNCTIONS = ['propose_shared_knowledge_request_v1', 'list_shared_knowledge_for_reply_v1', 'resolve_shared_knowledge_item_v1',
   'cool_down_shared_knowledge_v1', 'complete_shared_world_qandeel_reply_v2'];
 const INTERNAL = ['item_v1', 'audience_v1', 'grant_state_v1', 'open_episode_v1', 'write_grant_v1', 'reasoning_ref_v1', 'guard_history_v1',
@@ -272,13 +283,16 @@ const RELATIONS = ['consent_events', 'reasoning_grants', 'disclosure_grants', 'r
 async function verifyBoundary() {
   stage = 'boundary: who executes what';
   await asOwner();
+  const v2 = (await first("SELECT to_regprocedure('public.list_own_shared_knowledge_v2(uuid)') IS NOT NULL AS v2")).v2;
+  V1_RETIRED = v2;
+  const OWNER = v2 ? [...OWNER_FUNCTIONS.filter((name) => !RETIRED_V1.includes(name)), ...OWNER_V2] : OWNER_FUNCTIONS;
   const executable = await rows(`SELECT r.rolname, n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) AS r(rolname)
     WHERE (n.nspname = 'shared_knowledge_private' OR (n.nspname = 'public' AND p.proname = ANY($1::text[])))
-      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [[...OWNER_FUNCTIONS, ...SERVER_FUNCTIONS]]);
+      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [[...OWNER, ...SERVER_FUNCTIONS, ...RETIRED_V1]]);
   const key = (r) => `${r.rolname} ${r.nspname}.${r.proname}`;
   const both = (rolname, names) => names.flatMap((proname) => ['public', 'shared_knowledge_private'].map((nspname) => key({ rolname, nspname, proname })));
-  assert.deepEqual(executable.map(key).sort(), [...both('authenticated', OWNER_FUNCTIONS), ...both('service_role', SERVER_FUNCTIONS)].sort(),
+  assert.deepEqual(executable.map(key).sort(), [...both('authenticated', OWNER), ...both('service_role', SERVER_FUNCTIONS)].sort(),
     'the owner\'s read and commands for a person, the server\'s reads and acts for the server; nothing for anon; no internal derivation');
   for (const proname of INTERNAL) {
     assert.equal(await count(`SELECT count(*) n FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -290,8 +304,8 @@ async function verifyBoundary() {
     assert.ok(d.prosecdef && d.owner === 'postgres' && JSON.stringify(d.proconfig) === JSON.stringify(['search_path=""']), `${d.proname} is a pinned definer`);
   }
   const wrappers = await rows(`SELECT p.proname, p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])`, [[...OWNER_FUNCTIONS, ...SERVER_FUNCTIONS]]);
-  assert.equal(wrappers.length, OWNER_FUNCTIONS.length + SERVER_FUNCTIONS.length);
+    WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])`, [[...OWNER, ...SERVER_FUNCTIONS, ...(v2 ? RETIRED_V1 : [])]]);
+  assert.equal(wrappers.length, OWNER.length + SERVER_FUNCTIONS.length + (v2 ? RETIRED_V1.length : 0));
   for (const w of wrappers) assert.equal(w.prosecdef, false, `public.${w.proname} is SECURITY INVOKER`);
 
   stage = 'boundary: the relations are private, unreachable, erased with their owner, and registered for erasure';
@@ -386,6 +400,7 @@ async function verifyRelevanceAndConsent(h, w, m) {
   stage = 'consent: the ceiling must be exactly the current members, otherwise nothing is written';
   assert.equal(await answer(h.mohamed, mohamedRequest.id, 'ALLOW', [h.hala, h.mohamed]), 'AUDIENCE_CHANGED');
   assert.equal(await answer(h.mohamed, mohamedRequest.id, 'ALLOW', [h.hala, h.mohamed, h.sara, h.nour]), 'AUDIENCE_CHANGED');
+  assert.equal(await answer(h.mohamed, mohamedRequest.id, 'ALLOW', []), 'AUDIENCE_CHANGED', 'an empty ceiling is no ceiling');
   assert.deepEqual(await tally(), preAnswer, 'no partial write on refusal');
 
   stage = 'consent: one answer writes one event and one pair of two families';

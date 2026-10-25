@@ -40,6 +40,7 @@ import type {
   SharedLeaveResult, SharedManage, SharedManageResult, SharedProposeResult, SharedProposeMemberResult, SharedJoinResult,
 } from '../runtime-entry';
 import { createSharedFieldController, type SharedFieldController, type SharedFieldTransport } from './field/shared-field-controller';
+import { createSharedPermissionsController, type SharedPermissionsController, type SharedPermissionsTransport } from './permissions/shared-permissions-controller';
 
 export interface SharedWorldTransport {
   root(): Promise<SharedRootResult>;
@@ -192,6 +193,8 @@ export interface SharedWorldController {
   loadOlderClosed(): void;
   /** SHARED-VIS-01: the open World's Living Analysis field; null where the host provides no field transport. */
   readonly field: SharedFieldController | null;
+  /** S8A-04 CP3-C: the reader's OWN permissions in the open World; null where the host provides no permissions transport. */
+  readonly permissions: SharedPermissionsController | null;
   /** SHARED-VIS-01: the World's existing conversation, from the World's chrome (D7). */
   openConversation(): void;
   /** SHARED-VIS-01: back from the conversation to the same World's field, read again at the same camera and focus. */
@@ -207,6 +210,8 @@ export interface SharedWorldControllerOptions {
   readonly foreground?: ForegroundSignal;
   /** SHARED-VIS-01: the Shared field reads (`/shared/worlds/:worldId/field`); without it no field is drawn. */
   readonly fieldTransport?: SharedFieldTransport | null;
+  /** S8A-04 CP3-C: the owner's permission reads and commands (`/shared/worlds/:worldId/permissions`); without it none is drawn. */
+  readonly permissionsTransport?: SharedPermissionsTransport | null;
 }
 
 /** A v4-shaped command identity. */
@@ -278,6 +283,10 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     ? createSharedFieldController({ transport: options.fieldTransport, isCurrent, foreground: options.foreground,
       onDenied: (worldId) => { if (openWorldId() === worldId) denied(worldId); } })
     : null;
+  // S8A-04 CP3-C: the reader's own permissions; read (again) whenever the ALLOWed World's conversation or Manage World is read.
+  const permissions: SharedPermissionsController | null = options.permissionsTransport
+    ? createSharedPermissionsController({ transport: options.permissionsTransport, isCurrent, newCommandId })
+    : null;
   const publish = (next: SharedAreaState) => {
     if (!live()) return;
     state = next;
@@ -306,6 +315,8 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     if (ticket !== threadRead || state.thread.worldId !== worldId) return;
     if (result.kind === 'READ') {
       olderRead += 1;
+      // S8A-04 CP3-C: the reader's own permissions are read only after the World's ALLOW, with its conversation.
+      permissions?.open(worldId);
       publishThread(worldId, {
         status: 'READY', conversation: result.conversation, loadingOlder: false,
         ...joinNewest(state.thread.materials, state.thread.hasOlder, result.materials, result.hasOlder),
@@ -323,6 +334,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
   /** Authority was lost since entry: nothing of the World stays on screen. */
   function denied(worldId: string): void {
     field?.forget(worldId);
+    permissions?.close();
     entryRead += 1;
     olderRead += 1;
     sendCommand = null;
@@ -386,6 +398,8 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     const leaving = state.place.kind === 'ROOT' ? null : state.place.worldId;
     if (leaving !== null && (lost || notice === 'LEFT')) field?.forget(leaving);
     else field?.close();
+    // S8A-04 CP3-C: nothing of the reader's permissions in a World stays once they are back at the root.
+    permissions?.close();
     entryRead += 1;
     threadRead += 1;
     olderRead += 1;
@@ -403,6 +417,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     if (ticket !== manageRead || state.manage.worldId !== worldId) return;
     if (result.kind === 'READ') {
       publishManage(worldId, { status: 'READY', data: result.manage });
+      permissions?.open(worldId);
       return;
     }
     // The World is no longer the reader's to manage (left, removed, or ended): nothing of it stays on screen.
@@ -705,6 +720,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       void readClosed(state.place.worldId, { materialId: oldest.materialId, establishedAt: oldest.establishedAt });
     },
     field,
+    permissions,
     openConversation() {
       const worldId = openWorldId();
       if (worldId === null) return;
@@ -721,6 +737,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       retired = true;
       unsubscribeForeground?.();
       field?.retire();
+      permissions?.retire();
       listeners.clear();
     },
   };

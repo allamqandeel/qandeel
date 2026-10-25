@@ -26,6 +26,8 @@ import { SharedWorldConversationRepository } from './shared-world-conversation.r
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import { SharedWorldLifecycleRepository } from './shared-world-lifecycle.repository';
 import { SharedWorldLifecycleService } from './shared-world-lifecycle.service';
+import { SharedWorldPermissionsRepository } from './shared-world-permissions.repository';
+import { SharedWorldPermissionsService } from './shared-world-permissions.service';
 import { SharedWorldController } from './shared-world.controller';
 import { SharedWorldRepository } from './shared-world.repository';
 import { SharedWorldService } from './shared-world.service';
@@ -65,6 +67,8 @@ import { SharedWorldService } from './shared-world.service';
     SharedWorldConversationRepository, SharedWorldConversationService, SharedWorldLifecycleRepository, SharedWorldLifecycleService,
     SafetyResponseGateService,
     SharedActivityRepository, SharedActivityProducer, SharedWorldAlertsRepository, SharedWorldAlertsService,
+    // S8A-04 CP3-C: the owner's permissions for their own knowledge (migration 0177), on the caller's own token.
+    SharedWorldPermissionsRepository, SharedWorldPermissionsService,
     ...SHARED_QANDEEL_REPLY_PROVIDERS,
     { provide: SHARED_QANDEEL_REPLY_GENERATOR, useClass: SharedConversationReplyGenerator },
     SharedSemanticFieldService, SharedSemanticPlaceService,

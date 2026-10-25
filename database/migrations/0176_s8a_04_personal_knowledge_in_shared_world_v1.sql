@@ -414,7 +414,7 @@ BEGIN
   SELECT * INTO i FROM shared_knowledge_private.item_v1(v_user, q.memory_id);
   IF i.availability <> 'AVAILABLE' THEN RETURN QUERY SELECT 'UNAVAILABLE'::text; RETURN; END IF;
   IF p_decision = 'ALLOW' THEN
-    IF NOT (SELECT array_agg(DISTINCT c ORDER BY c) FROM unnest(p_ceiling_user_ids) c) = shared_knowledge_private.audience_v1(q.world_id) THEN
+    IF (SELECT array_agg(DISTINCT c ORDER BY c) FROM unnest(p_ceiling_user_ids) c) IS DISTINCT FROM shared_knowledge_private.audience_v1(q.world_id) THEN
       RETURN QUERY SELECT 'AUDIENCE_CHANGED'::text; RETURN;
     END IF;
     v_event := shared_knowledge_private.write_grant_v1(p_command_id, q.world_id, v_user, v_episode, q.memory_id,
@@ -457,7 +457,7 @@ BEGIN
   END IF;
   SELECT * INTO i FROM shared_knowledge_private.item_v1(v_user, p_memory_id);
   IF i.availability <> 'AVAILABLE' THEN RETURN QUERY SELECT 'UNAVAILABLE'::text; RETURN; END IF;
-  IF NOT (SELECT array_agg(DISTINCT c ORDER BY c) FROM unnest(p_ceiling_user_ids) c) = shared_knowledge_private.audience_v1(p_world_id) THEN
+  IF (SELECT array_agg(DISTINCT c ORDER BY c) FROM unnest(p_ceiling_user_ids) c) IS DISTINCT FROM shared_knowledge_private.audience_v1(p_world_id) THEN
     RETURN QUERY SELECT 'AUDIENCE_CHANGED'::text; RETURN;
   END IF;
   PERFORM shared_knowledge_private.write_grant_v1(p_command_id, p_world_id, v_user, v_episode, p_memory_id,

@@ -1250,6 +1250,11 @@ jobs:
       # consented reply commit v2 (STALE under every race) and the disclosure-judge family paid by the causing author.
       - name: Verify S8A-04 Personal Knowledge in Shared World against real PostgreSQL
         run: npm run verify:shared-knowledge-consent:integration
+      # S8A-04 CP3-C: migration 0177 (Copy Gate APPROVED 6/6, 2026-10-25) - the owner's permission read and commands by
+      # member names and an opaque audience reference, never a user id; stale references write nothing; growth names the
+      # new members; the endings shown to the owner alone.
+      - name: Verify S8A-04 Shared Knowledge owner surface against real PostgreSQL
+        run: npm run verify:shared-knowledge-owner-surface:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

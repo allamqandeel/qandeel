@@ -225,6 +225,10 @@ export type {
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
 export type { SharedFieldEntry, SharedFieldPlace, SharedFieldResult, SharedPlaceResult, SharedPlaceSource } from './shared-field-api';
+export type {
+  SharedPermissionAllowResult, SharedPermissionAnswerResult, SharedPermissionEnded, SharedPermissionEnding, SharedPermissionItem, SharedPermissionReconfirm,
+  SharedPermissionRequest, SharedPermissions, SharedPermissionsResult, SharedPermissionWithdrawResult,
+} from './shared-permissions-api';
 export type { PublicDisplay, PublicDisplayMode, PublicDisplayResult, PublicEntryResult, PublicSetDisplayResult } from './public-world-api';
 export { PublicWorldApiClient } from './public-world-api';
 export type {

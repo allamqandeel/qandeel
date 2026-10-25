@@ -87,6 +87,15 @@
  *     visible to the reader; `/field/places/:id` answers one such place with its exact sources, or one neutral ABSENT. A
  *     deletion of the reader's own line removes every place read from it at once.
  *
+ * S8A-04 CP3-C — the reader's permissions for their own knowledge in a Shared World, answered by the stand-in
+ * `s8a04-proof-permissions.ts` as `apps/api/src/shared-world/shared-world-permissions.*` and migration 0177 do, only after
+ * `knowledge('seed')` (every earlier leg meets exactly the answers it met before — no permission at all):
+ *
+ *   - `knowledge('seed')` seeds one named World of the reader and the other person, a short conversation, and the reader's
+ *     own items in it: one open private request, one allowed, one declined, two ended (left, forgotten);
+ *   - `knowledge('grow')` — the newcomer joins every such World, so what the reader allowed waits for their reconfirmation;
+ *   - `knowledge('correct')` — what the reader allowed ends because they corrected it.
+ *
  * Every Name, Login ID, Email, Public ID and conversation line here is SYNTHETIC test text, never Product copy and never
  * a real account.
  */
@@ -101,6 +110,7 @@ import { createS604ProofProposals } from './s604-proof-proposals';
 import { createS605ProofIntroductionWorld } from './s605-proof-introduction-world';
 import { createS606ProofIntroductionSharing } from './s606-proof-introduction-sharing';
 import { createS607ProofEnrollment, type S607ProofAction } from './s607-proof-enrollment';
+import { createS8a04ProofPermissions } from './s8a04-proof-permissions';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 /** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
@@ -126,6 +136,13 @@ export const S403_PROOF_LINES = Object.freeze({
   hiddenEarlier: 'Fixture words from before I joined',
   mineBeforeNewcomer: 'Fixture words before Rana joined',
   peerToDelete: 'Fixture peer words deleted after the end',
+});
+
+/** S8A-04 CP3-C — the SYNTHETIC World and lines of the permissions proof. Validation text, not copy. */
+export const S8A04_PROOF_LINES = Object.freeze({
+  world: { ar: 'رحلة الصيف الاختبارية', en: 'Fixture summer trip' },
+  peer: { ar: 'نسافر بالقطار ولا بالطيارة؟', en: 'Train or plane for the trip?' },
+  qandeel: { ar: 'رد اختباري ثابت من قنديل عن الرحلة', en: 'Fixture deterministic QANDEEL reply about the trip' },
 });
 
 /** S5-04 — SYNTHETIC discussion lines, the other person's Public display and the Activity body. Validation text, not copy. */
@@ -248,6 +265,8 @@ export interface S401ProofWorld {
   peerReply(): void;
   /** SHARED-VIS-01: two Worlds of the reader with their places, from the SYNTHETIC fixture `shared-vis-proof-field.ts`. */
   sharedField(): void;
+  /** S8A-04 CP3-C: the reader's own permissions in a seeded World; a newcomer joins it; what they allowed is corrected. */
+  knowledge(action: 'seed' | 'grow' | 'correct'): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -312,6 +331,12 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     text: line.text, establishedAt: line.establishedAt, canDelete: line.producer === 'SELF',
   });
   const readerSees = (worldId: string) => (threads.get(worldId) ?? []).filter((line) => line.visibleTo.includes('SELF'));
+  // S8A-04 CP3-C: answers nothing until knowledge('seed'), so every earlier leg meets the proof world exactly as before.
+  const knowledgeWorlds: string[] = [];
+  const permissions = createS8a04ProofPermissions(language, {
+    others: (worldId) => { const w = worldOf(worldId); return live(w) ? w.people.filter((person) => person !== 'SELF') : null; },
+    nameOf: (key) => nameOf(key as Person),
+  }, uuid);
 
   function commit(proposal: ProofProposal): void {
     const world = worldOf(proposal.worldId);
@@ -509,6 +534,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   }
 
   async function shared(path: string, method: string, body: Record<string, unknown> | undefined) {
+    const permissionAnswer = permissions.routes(path, method, body);
+    if (permissionAnswer !== null) return permissionAnswer;
     const fieldAnswer = fieldRoutes(path, method);
     if (fieldAnswer !== null) return fieldAnswer;
     const lifecycleAnswer = await lifecycleRoutes(path, method, body);
@@ -848,6 +875,21 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       };
       seedWorld(SHARED_VIS_WORLD_A);
       seedWorld(SHARED_VIS_WORLD_B);
+    },
+    knowledge: (action) => {
+      if (action === 'seed') {
+        const worldId = uuid();
+        worlds.push({ ...newWorld(worldId), name: S8A04_PROOF_LINES.world[language] });
+        threads.set(worldId, []);
+        say(worldId, 'HUMAN', S8A04_PROOF_LINES.peer[language]);
+        say(worldId, 'QANDEEL', S8A04_PROOF_LINES.qandeel[language]);
+        permissions.seed(worldId);
+        knowledgeWorlds.push(worldId);
+      } else if (action === 'grow') {
+        for (const worldId of knowledgeWorlds) { const w = worldOf(worldId); if (w !== undefined && !w.people.includes('NEWCOMER')) w.people.push('NEWCOMER'); }
+      } else {
+        permissions.correct();
+      }
     },
     peer: () => { for (const worldId of threads.keys()) if (isCurrent(worldId)) say(worldId, 'HUMAN', S402_PROOF_LINES.peerLater); },
     lifecycle: () => {

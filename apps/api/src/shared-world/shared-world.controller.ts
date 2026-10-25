@@ -6,6 +6,7 @@ import { SharedSemanticFieldService } from './shared-semantic-field.service';
 import { SharedWorldAlertsService } from './shared-world-alerts.service';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import { SharedWorldLifecycleService } from './shared-world-lifecycle.service';
+import { SharedWorldPermissionsService } from './shared-world-permissions.service';
 import { SharedWorldService } from './shared-world.service';
 
 /**
@@ -62,6 +63,21 @@ import { SharedWorldService } from './shared-world.service';
  *   GET  /shared/worlds/:worldId/field/places/:placeId                   — the entry verdict, then one place with its themes and
  *                                                                          its exact sources, or one neutral ABSENT
  *
+ * S8A-04 CP3-C — the owner's permissions for their own knowledge in one World, over migration 0177 (Copy Gate APPROVED 6/6):
+ *
+ *   GET  /shared/worlds/:worldId/permissions                             — the entry verdict, then the reader's OWN open request,
+ *                                                                          allowed, to-reconfirm, declined and ended items, the
+ *                                                                          other members by name and the audience's opaque reference
+ *   POST /shared/worlds/:worldId/permissions/requests/:requestId/answer  — { commandId, decision: ALLOW, audienceRef } |
+ *                                                                          { commandId, decision: DECLINE } → ALLOWED / DECLINED /
+ *                                                                          AUDIENCE_CHANGED / UNAVAILABLE
+ *   POST /shared/worlds/:worldId/permissions/items/:itemId/allow         — { commandId, audienceRef } → ALLOWED / AUDIENCE_CHANGED /
+ *                                                                          UNAVAILABLE (allow later; allow for everyone)
+ *   POST /shared/worlds/:worldId/permissions/items/:itemId/withdraw      — { commandId } → WITHDRAWN / UNAVAILABLE (withdraw;
+ *                                                                          stop using it)
+ *
+ *   None of these is a Shared fact for anyone else: no Activity producer is called, nothing is published or notified.
+ *
  * No route takes a user id, an inviter, a target, an author, a viewer or member list, an audience, a material kind, an
  * approver, an approval rule, a membership snapshot or a World authority.
  */
@@ -75,6 +91,7 @@ export class SharedWorldController {
     private readonly activity: SharedActivityProducer,
     private readonly alerts: SharedWorldAlertsService,
     private readonly field: SharedSemanticFieldService,
+    private readonly permissions: SharedWorldPermissionsService,
   ) {}
 
   @Get()
@@ -128,6 +145,32 @@ export class SharedWorldController {
   @Get('worlds/:worldId/field/places/:placeId')
   semanticPlace(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('placeId') placeId: string) {
     return this.field.place(request.authenticatedUser.accessToken, worldId, placeId);
+  }
+
+  @Get('worlds/:worldId/permissions')
+  permissionsOf(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string) {
+    return this.permissions.read(request.authenticatedUser.accessToken, worldId);
+  }
+
+  @Post('worlds/:worldId/permissions/requests/:requestId/answer')
+  @HttpCode(200)
+  answerPermission(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('requestId') requestId: string,
+    @Body() body: unknown) {
+    return this.permissions.answer(request.authenticatedUser.accessToken, worldId, requestId, body);
+  }
+
+  @Post('worlds/:worldId/permissions/items/:itemId/allow')
+  @HttpCode(200)
+  allowPermission(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('itemId') itemId: string,
+    @Body() body: unknown) {
+    return this.permissions.allow(request.authenticatedUser.accessToken, worldId, itemId, body);
+  }
+
+  @Post('worlds/:worldId/permissions/items/:itemId/withdraw')
+  @HttpCode(200)
+  withdrawPermission(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('itemId') itemId: string,
+    @Body() body: unknown) {
+    return this.permissions.withdraw(request.authenticatedUser.accessToken, worldId, itemId, body);
   }
 
   @Get('worlds/:worldId/materials')
