@@ -75,13 +75,17 @@ async function verify() {
   const reachable = (await q(`SELECT r AS role, p.oid::regprocedure::text AS fn FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       CROSS JOIN unnest(ARRAY['anon', 'authenticated', 'service_role']) r
      WHERE n.nspname = 'public' AND (p.proname LIKE 'ai\\_%' OR p.proname LIKE '%\\_ai\\_%') AND has_function_privilege(r, p.oid, 'EXECUTE')`)).rows;
+  // RE-ANCHORED by S8A-04 CP2 (2026-10-25, amendment §5): migration 0175 adds begin_ai_provider_call_v2 (the Shared
+  // correlation), executable by service_role alone; once it exists it is the one addition, and nothing else may be.
+  const beginV2 = (await q("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid,uuid,uuid,uuid,text,text,text,text,text)') IS NOT NULL AS present")).rows[0].present;
   assert.deepEqual(reachable.map((r) => `${r.role}:${r.fn}`).sort(), [
     'service_role:public.begin_ai_provider_call_v1(uuid,uuid,uuid,uuid,text,text,text,text,text)',
+    ...(beginV2 ? ['service_role:public.begin_ai_provider_call_v2(uuid,uuid,uuid,uuid,text,text,text,text,text)'] : []),
     'service_role:public.server_read_ai_cost_aggregates_v1(timestamp with time zone,timestamp with time zone)',
     'service_role:public.server_read_ai_credit_policy_state_v1()',
     'service_role:public.server_read_ai_usage_operations_summary_v1()',
     'service_role:public.settle_ai_provider_call_v1(uuid,uuid,text,text,jsonb)',
-  ], 'the executable surface is still exactly the five service-role functions');
+  ], 'the executable surface is still exactly the five service-role functions (six once 0175 adds the Shared begin)');
 
   stage = 'registries: DEEPSEEK admitted with its own operation and partition; every 0135 provider unchanged';
   const known = async (provider, operation) => (await one('SELECT public.ai_provider_operation_is_known_v1($1, $2) AS ok', [provider, operation])).ok;

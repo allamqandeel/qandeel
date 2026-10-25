@@ -1,11 +1,15 @@
 // S8A-04 CP1 — the Shared semantic reading on DeepSeek Flash: one accounted JSON Output call, the trusted speaker tokens
 // and visible Names as data, no identity, the shape enforced, every failure a bounded class.
+//
+// S8A-04 CP2 (2026-10-24, re-anchored): the request carries the V2 data and schema (M1): existing meanings with their ref and
+// attribution, and the attribution fields in every place. The CP1 instructions are sent unchanged, followed by M1.
 import { AiProviderCallAccounting } from '../ai-usage/ai-provider-call-accounting';
 import { accountedDeepSeekChatCompletionsClient } from '../ai-usage/accounted-provider-clients';
 import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import { DEEPSEEK_FLASH_MODEL, DEEPSEEK_JSON_OUTPUT_INSTRUCTION } from '../model-router/providers/deepseek/deepseek-client';
 import {
-  DeepSeekSharedSemanticInterpreter, SHARED_SEMANTIC_READING_AUTHORSHIP, SHARED_SEMANTIC_READING_INSTRUCTIONS, SharedSemanticReadingProviderError,
+  DeepSeekSharedSemanticInterpreter, SHARED_SEMANTIC_READING_ATTRIBUTION, SHARED_SEMANTIC_READING_AUTHORSHIP, SHARED_SEMANTIC_READING_INSTRUCTIONS,
+  SHARED_SEMANTIC_READING_INSTRUCTIONS_V2, SharedSemanticReadingProviderError,
 } from './deepseek-shared-semantic-interpreter';
 import { SHARED_SEMANTIC_INTERPRETATION_CONTRACT, decodeSharedSemanticReading, type SharedSemanticInput } from './shared-semantic-interpreter';
 import { loadSharedSemanticReadingDeepSeekConfig, type SharedSemanticReadingDeepSeekConfig } from './shared-semantic-interpreter-provider.config';
@@ -22,9 +26,10 @@ const input = (overrides: Partial<SharedSemanticInput> = {}): SharedSemanticInpu
     { ref: 2, from: 'S2', text: 'محمد: أنا موافق — بهزر، أنا ضد السفر' },
     { ref: 3, from: 'S3', text: 'أحمد دايمًا بيتأخر' },
   ],
-  existing: [{ meaning: 'السفر في الصيف', sourceRefs: [1] }],
+  existing: [{ ref: 'E1', meaning: 'السفر في الصيف', nature: 'VIEW', holders: ['S1'], absentHolder: null, relayedBy: [], about: [], hedged: false, sourceRefs: [1] }],
   ...overrides,
 });
+const existing = (overrides: Record<string, unknown> = {}) => ({ ...input().existing[0], ...overrides }) as SharedSemanticInput['existing'][number];
 const completion = (content: string | null, finishReason = 'stop', choices = 1) => ({ choices: Array.from({ length: choices }, () => ({ finish_reason: finishReason, message: { content } })) });
 const clientOf = (create: jest.Mock) => ({ chat: { completions: { create } } });
 const returning = (content: string | null, finishReason = 'stop') => clientOf(jest.fn().mockResolvedValue(completion(content, finishReason)));
@@ -42,24 +47,45 @@ describe('DeepSeekSharedSemanticInterpreter (S8A-04 CP1)', () => {
     expect(body).toMatchObject({ model: 'deepseek-flash', max_tokens: 1_024, stream: false, response_format: { type: 'json_object' }, thinking: { type: 'disabled' } });
     const [system, user] = body.messages;
     expect(system.content).toContain(SHARED_SEMANTIC_READING_INSTRUCTIONS);
+    // S8A-04 CP2: the CP1 text unchanged, then M1.
+    expect(system.content.startsWith(`${SHARED_SEMANTIC_READING_INSTRUCTIONS}\n\n${SHARED_SEMANTIC_READING_ATTRIBUTION}\n\n`)).toBe(true);
+    expect(SHARED_SEMANTIC_READING_INSTRUCTIONS_V2).toBe(`${SHARED_SEMANTIC_READING_INSTRUCTIONS}\n\n${SHARED_SEMANTIC_READING_ATTRIBUTION}`);
     expect(system.content).toContain(DEEPSEEK_JSON_OUTPUT_INSTRUCTION);
     expect(SHARED_SEMANTIC_READING_INSTRUCTIONS).toContain(SHARED_SEMANTIC_READING_AUTHORSHIP);
     const schema = JSON.parse(system.content.split('\n').pop());
     expect(schema.properties.places).toMatchObject({ maxItems: 3, items: { additionalProperties: false,
-      required: ['meaning', 'primaryThemes', 'secondaryThemes', 'sourceRefs', 'lensKey'], properties: { sourceRefs: { items: { enum: [1, 2, 3] } } } } });
+      required: ['meaning', 'primaryThemes', 'secondaryThemes', 'sourceRefs', 'lensKey', 'nature', 'holders', 'relayedBy', 'about', 'hedged'],
+      properties: {
+        sourceRefs: { items: { enum: [1, 2, 3] } }, nature: { enum: ['VIEW', 'CLAIM'] },
+        holders: { maxItems: 4, uniqueItems: true, items: { enum: ['S1', 'S2', 'S3'] } }, absentHolder: { minLength: 1, maxLength: 60 },
+        relayedBy: { maxItems: 3, items: { enum: ['S1', 'S2', 'S3'] } }, about: { maxItems: 3, items: { enum: ['S1', 'S2', 'S3'] } },
+        hedged: { type: 'boolean' }, revises: { enum: ['E1'] },
+      } } });
     expect(user.content.startsWith('<shared_semantic_data>')).toBe(true);
     expect(user.content).not.toMatch(/<system>|&/u);
     const data = JSON.parse(user.content.slice('<shared_semantic_data>'.length, -'</shared_semantic_data>'.length));
     expect(data).toEqual({
       writers: input().writers,
       contributions: input().contributions,
-      existing: [{ meaning: 'السفر في الصيف', sourceRefs: [1] }],
+      existing: [{ ref: 'E1', meaning: 'السفر في الصيف', nature: 'VIEW', holders: ['S1'], relayedBy: [], about: [], hedged: false, sourceRefs: [1] }],
     });
     expect(Object.keys(data)).not.toContain('contract');
   });
 
+  it('S8A-04 CP2: an absent holder is sent only when there is one; with no existing meaning the schema has no revises', async () => {
+    const create = jest.fn().mockResolvedValue(completion('{"places":[]}'));
+    await interpreter(clientOf(create)).read(input({ existing: [existing({ holders: [], absentHolder: 'والدة مراد', relayedBy: ['S1'] })] }), signal());
+    await interpreter(clientOf(create)).read(input({ existing: [] }), signal());
+    const [withAbsent, without] = create.mock.calls.map(([body]) => body.messages);
+    const data = JSON.parse(withAbsent[1].content.slice('<shared_semantic_data>'.length, -'</shared_semantic_data>'.length));
+    expect(data.existing[0]).toEqual({ ref: 'E1', meaning: 'السفر في الصيف', nature: 'VIEW', holders: [], absentHolder: 'والدة مراد', relayedBy: ['S1'], about: [], hedged: false, sourceRefs: [1] });
+    expect(JSON.parse(without[0].content.split('\n').pop()).properties.places.items.properties).not.toHaveProperty('revises');
+  });
+
   it('returns the parsed answer; the port decoder, not the adapter, decides what is kept', async () => {
-    const answer = { places: [{ meaning: 'محمد (2) ضد السفر', primaryThemes: ['plans'], secondaryThemes: [], sourceRefs: [2], lensKey: 'plans' }] };
+    // S8A-04 CP2 (re-anchored): the place carries its attribution; a numbered label in a meaning is now refused (M1).
+    const answer = { places: [{ meaning: 'محمد ضد السفر', primaryThemes: ['plans'], secondaryThemes: [], sourceRefs: [2], lensKey: 'plans',
+      nature: 'VIEW', holders: ['S2'], relayedBy: [], about: [], hedged: false }] };
     const read = await interpreter(returning(JSON.stringify(answer))).read(input(), signal());
     expect(decodeSharedSemanticReading(read, input())?.places[0].sourceRefs).toEqual([2]);
     const leaking = await interpreter(returning(JSON.stringify({ places: [{ ...answer.places[0], meaning: 'S2 ضد السفر' }] }))).read(input(), signal());
@@ -72,13 +98,19 @@ describe('DeepSeekSharedSemanticInterpreter (S8A-04 CP1)', () => {
       input({ contributions: [] }),
       input({ contributions: [{ ref: 2, from: 'S1', text: 'x' }], writers: [{ speaker: 'S1', name: 'a' }] }),
       input({ contributions: [{ ref: 1, from: 'S9', text: 'x' }], writers: [{ speaker: 'S1', name: 'a' }] }),
-      input({ writers: [...input().writers, { speaker: 'S4', name: 'unused' }] }),
+
       input({ writers: [{ speaker: '20000000-0000-4000-8000-000000000001', name: 'x' }, ...input().writers.slice(1)] }),
       input({ writers: [{ speaker: 'S1', name: ' ' }, ...input().writers.slice(1)] }),
-      input({ existing: [{ meaning: 'x', sourceRefs: [7] }] }),
+      input({ existing: [existing({ sourceRefs: [7] })] }),
+      input({ existing: [existing({ ref: 'E2' })] }),
+      input({ existing: [existing({ holders: ['S9'] })] }),
+      input({ existing: [existing({ nature: 'FACT' })] }),
+      input({ existing: Array.from({ length: 201 }, (_, index) => existing({ ref: `E${index + 1}` })) }),
       { ...input(), contract: 'OTHER' } as unknown as SharedSemanticInput,
     ]) await expect(interpreter(clientOf(create)).read(bad, signal())).rejects.toEqual(failure('INVALID_REQUEST'));
     expect(create).not.toHaveBeenCalled();
+    // S8A-04 CP2 narrows CP1's rule that every writer has a contribution: a member an existing meaning names is a writer too.
+    await expect(interpreter(returning('{"places":[]}')).read(input({ writers: [...input().writers, { speaker: 'S4', name: 'أحمد' }] }), signal())).resolves.toEqual({ places: [] });
   });
 
   it('never parses a truncated, filtered, empty or non-JSON completion', async () => {

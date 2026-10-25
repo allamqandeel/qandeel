@@ -16,6 +16,8 @@ import { SHARED_SEMANTIC_INTERPRETER } from './shared-semantic-interpreter';
 import { createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter-provider';
 import { SharedSemanticPlaceService } from '../connected-worlds/material-commit/shared-semantic-place.service';
 import { SHARED_SPATIAL_PLACER, createConfiguredSharedSpatialPlacer } from './shared-spatial-placer';
+import { SHARED_KNOWLEDGE_RECALLER } from './shared-knowledge-recall';
+import { createConfiguredSharedKnowledgeRecaller } from './shared-social-memory-provider';
 import { SharedWorldAlertsRepository } from './shared-world-alerts.repository';
 import { SharedWorldAlertsService } from './shared-world-alerts.service';
 import { SharedWorldConversationRepository } from './shared-world-conversation.repository';
@@ -48,6 +50,10 @@ import { SharedWorldService } from './shared-world.service';
  * chain as the reply and committed through 0148's server-owned pass commands. The interpreter and the placer are
  * provider-neutral ports. S8A-04 CP1 binds the interpreter to DeepSeek Flash (`shared-semantic-interpreter-provider.ts`);
  * the placer still refuses, so no place is produced until CP2.
+ *
+ * S8A-04 CP2 — Shared social memory: the reply is given what the World already knows, chosen by the provider-neutral
+ * knowledge recaller (`shared-social-memory-provider.ts`: DeepSeek Flash behind SYNTHETIC_ONLY). The placer stays unbound
+ * until the CP2 §11 binding conditions hold (§7).
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],
@@ -62,6 +68,7 @@ import { SharedWorldService } from './shared-world.service';
     SharedSemanticFieldService, SharedSemanticPlaceService,
     { provide: SHARED_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredSharedSemanticInterpreter() },
     { provide: SHARED_SPATIAL_PLACER, useFactory: () => createConfiguredSharedSpatialPlacer() },
+    { provide: SHARED_KNOWLEDGE_RECALLER, useFactory: () => createConfiguredSharedKnowledgeRecaller() },
   ],
 })
 export class SharedWorldModule {}

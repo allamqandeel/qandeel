@@ -1,5 +1,10 @@
 // SHARED-VIS-01 — the Shared World's semantic places: the provider-neutral interpreter and placer, the member reads.
 // (The server pass over the real frozen I-03 chain is proven beside it, in connected-worlds/material-commit.)
+//
+// S8A-04 CP2 (2026-10-24, re-anchored): the reading is V2 (every place carries its attribution; existing meanings carry
+// their ref and attribution), the placer is V2 (anchors only; the geometry is the server's, proven in
+// shared-field-geometry.spec.ts), and the member reads are 0175's v2 functions (the database's default locale: the
+// Shared routes take no query object, the S4-01 rule).
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import type { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SharedSemanticFieldService } from './shared-semantic-field.service';
@@ -10,7 +15,7 @@ import {
 import { createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter-provider';
 import {
   FakeSharedSpatialPlacer, SHARED_SPATIAL_PLACEMENT_CONTRACT, UnconfiguredSharedSpatialPlacer, createConfiguredSharedSpatialPlacer, decodeSharedSpatialPlacement,
-  type SharedSpatialPlacer,
+  sharedPlacementTargets, type SharedSpatialPlacementInput, type SharedSpatialPlacer,
 } from './shared-spatial-placer';
 import type { SharedWorldRepository } from './shared-world.repository';
 
@@ -35,11 +40,12 @@ const input = (texts: string[], existing: SharedSemanticInput['existing'] = []):
   existing,
 });
 const place = (overrides: Record<string, unknown> = {}) => ({
-  meaning: 'Moving keeps being postponed', primaryThemes: ['home'], secondaryThemes: ['trust'], sourceRefs: [1, 2], lensKey: 'home', ...overrides,
+  meaning: 'Moving keeps being postponed', primaryThemes: ['home'], secondaryThemes: ['trust'], sourceRefs: [1, 2], lensKey: 'home',
+  nature: 'VIEW', holders: ['S1'], relayedBy: [], about: [], hedged: false, ...overrides,
 });
 
 describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, decoded strictly)', () => {
-  it('decodes exactly { places } with at most three places, each exactly its five fields and real sources', () => {
+  it('decodes exactly { places } with at most three places, each exactly its fields and real sources', () => {
     const given = input(['a', 'b', 'c']);
     expect(decodeSharedSemanticReading({ places: [] }, given)).toEqual({ places: [] });
     expect(decodeSharedSemanticReading({ places: [place({ sourceRefs: [2, 1] })] }, given)?.places[0].sourceRefs).toEqual([1, 2]);
@@ -68,6 +74,84 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     }
   });
 
+  it('F1 (2026-10-25): the decoder keeps no place held by more than one member, and keeps the rest of the reading', () => {
+    const given: SharedSemanticInput = { ...input(['a', 'b', 'c']), writers: [{ speaker: 'S1', name: 'هالة' }, { speaker: 'S2', name: 'كريم' }, { speaker: 'S3', name: 'سامي' }],
+      contributions: [{ ref: 1, from: 'S1', text: 'a' }, { ref: 2, from: 'S2', text: 'b' }, { ref: 3, from: 'S3', text: 'c' }] };
+    const joint = place({ meaning: 'رأي كريم وهالة في المواعيد', sourceRefs: [1, 2], holders: ['S1', 'S2'] });
+    const own = place({ meaning: 'سامي شايف إن المواعيد بتتنسي', sourceRefs: [3], holders: ['S3'] });
+    expect(decodeSharedSemanticReading({ places: [joint, own] }, given)?.places.map((p) => p.meaning)).toEqual(['سامي شايف إن المواعيد بتتنسي']);
+    // A joint holder's own earlier place goes too (S4): the joint one is read from a later contribution.
+    expect(decodeSharedSemanticReading({ places: [joint, place({ meaning: 'هالة شايفة إن المواعيد بتتنسي', sourceRefs: [1], holders: ['S1'] })] }, given)).toEqual({ places: [] });
+    expect(decodeSharedSemanticReading({ places: [joint] }, given)).toEqual({ places: [] });
+    // A malformed joint place still refuses the whole reading: the drop is never a way round the rules.
+    expect(decodeSharedSemanticReading({ places: [{ ...joint, holders: ['S1', 'S9'] }, own] }, given)).toBeNull();
+  });
+
+  // Round 19's readings, as the model answered them (names and order exact; sources as the decoder receives them).
+  const reading = (writers: string[], from: string[]): SharedSemanticInput => ({
+    contract: SHARED_SEMANTIC_INTERPRETATION_CONTRACT,
+    writers: writers.map((name, index) => ({ speaker: `S${index + 1}`, name })),
+    contributions: from.map((speaker, index) => ({ ref: index + 1, from: speaker, text: `c${index + 1}` })),
+    existing: [],
+  });
+  const meanings = (decoded: ReturnType<typeof decodeSharedSemanticReading>) => decoded?.places.map((p) => p.meaning);
+
+  it('S4 (2026-10-25): a position withdrawn in the same reading is never saved as current', () => {
+    // ياسر (S1) wants to postpone, then (contribution 4) agrees to launch next month.
+    const s4 = reading(['ياسر', 'دينا', 'طارق'], ['S1', 'S2', 'S3', 'S1', 'S2']);
+    const postpone = place({ meaning: 'تأجيل إطلاق المشروع لحد السنة الجاية', sourceRefs: [1], holders: ['S1'] });
+    // Round 19 exactly: the replacement came back joint, so F1 alone would have left the withdrawn position as Yasser's.
+    expect(decodeSharedSemanticReading({ places: [
+      postpone,
+      place({ meaning: 'التأجيل هيضيع فرصة المعرض، والمعرض مهم', sourceRefs: [2, 3], holders: ['S2', 'S3'] }),
+      place({ meaning: 'إطلاق المشروع الشهر الجاي قبل المعرض', sourceRefs: [4, 5], holders: ['S1', 'S2'] }),
+    ] }, s4)).toEqual({ places: [] });
+    // Read as Yasser's own: only the latest is kept.
+    const launch = place({ meaning: 'إطلاق المشروع الشهر الجاي قبل المعرض', sourceRefs: [4], holders: ['S1'] });
+    expect(meanings(decodeSharedSemanticReading({ places: [postpone, launch] }, s4))).toEqual(['إطلاق المشروع الشهر الجاي قبل المعرض']);
+    // Two places of his read from the same latest contribution: neither can be shown to be the current one.
+    expect(decodeSharedSemanticReading({ places: [{ ...postpone, sourceRefs: [1, 4] }, launch] }, s4)).toEqual({ places: [] });
+    // Different people's places are not touched, whatever their order.
+    const own = reading(['منى', 'أحمد'], ['S1', 'S2', 'S1']);
+    expect(meanings(decodeSharedSemanticReading({ places: [
+      place({ meaning: 'أحمد دايمًا بيتأخر', sourceRefs: [1], holders: ['S1'] }),
+      place({ meaning: 'اتأخر مرة واحدة بسبب الشغل', sourceRefs: [2], holders: ['S2'] }),
+    ] }, own))).toEqual(['أحمد دايمًا بيتأخر', 'اتأخر مرة واحدة بسبب الشغل']);
+  });
+
+  it('V2 (2026-10-25): a member is never turned into someone absent by a Name; an absent person relayed correctly stays', () => {
+    // رنا (S1) is a writer; سامي (S2) relays her view (contribution 4).
+    const v2 = reading(['رنا', 'سامي', 'لينا'], ['S1', 'S2', 'S3', 'S2', 'S3']);
+    const plan = place({ meaning: 'العزومة يوم الجمعة الجاية عند سامي', sourceRefs: [2], holders: ['S2'] });
+    const sweets = place({ meaning: 'لينا هتجيب الحلويات', sourceRefs: [3], holders: ['S3'] });
+    const relayed = { meaning: 'الجمعة مش مناسبة ليها بسبب شغل متأخر', sourceRefs: [4], relayedBy: ['S2'], about: ['S1'] };
+    // Round 19, run 14 exactly: Rana stored as an absent holder. Not kept; the rest of the reading is.
+    expect(meanings(decodeSharedSemanticReading({ places: [plan, sweets, place({ ...relayed, holders: [], absentHolder: 'رنا' })] }, v2)))
+      .toEqual([plan.meaning, sweets.meaning]);
+    // Round 19, run 11: the member holds it, relayed by Sami. Kept.
+    expect(decodeSharedSemanticReading({ places: [place({ ...relayed, holders: ['S1'] })] }, v2)?.places[0].attribution)
+      .toMatchObject({ holders: ['S1'], absentHolder: null, relayedBy: ['S2'] });
+    // N3: someone who is not a writer, relayed by one, stays absent — even when their description names that writer.
+    const n3 = reading(['شريف', 'مراد'], ['S1', 'S2']);
+    expect(decodeSharedSemanticReading({ places: [place({ meaning: 'مش موافقة على السفر', sourceRefs: [2], holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'] })] }, n3)
+      ?.places[0].attribution).toMatchObject({ holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'] });
+  });
+
+  it('V2: two writers who share a Name stay two people; an absent holder with their Name, or part of a writer\'s Name, is not kept', () => {
+    const same = reading(['محمد (1)', 'محمد (2)', 'سلمى'], ['S1', 'S2', 'S3', 'S1']);
+    const decoded = decodeSharedSemanticReading({ places: [
+      place({ meaning: 'السفر أول أسبوع من أغسطس', sourceRefs: [1, 4], holders: ['S1'] }),
+      place({ meaning: 'رفض السفر السنة دي', sourceRefs: [2], holders: ['S2'] }),
+      place({ meaning: 'محمد مش هيقدر ييجي', sourceRefs: [3], holders: [], absentHolder: 'محمد', relayedBy: ['S3'] }),
+    ] }, same);
+    expect(decoded?.places.map((p) => p.attribution.holders)).toEqual([['S1'], ['S2']]);
+    // Ambiguous: the absent holder could be the writer whose Name contains it (normalized: «احمد» is «أحمد»).
+    for (const [writer, absent] of [['رنا أحمد', 'رنا'], ['أحمد', 'احمد'], ['Rana', 'rana']]) {
+      expect(decodeSharedSemanticReading({ places: [place({ sourceRefs: [2], holders: [], absentHolder: absent, relayedBy: ['S2'] })] }, reading([writer, 'سامي'], ['S1', 'S2'])))
+        .toEqual({ places: [] });
+    }
+  });
+
   it('the test interpreter is deterministic, copies no text, and reads only what no existing meaning reads', async () => {
     const fake = new FakeSharedSemanticInterpreter();
     const given = input(['we keep postponing', 'it becomes a fight', 'let us pick a time']);
@@ -76,8 +160,11 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     const decoded = decodeSharedSemanticReading(first, given);
     expect(decoded?.places).toHaveLength(1);
     expect(decoded?.places[0].sourceRefs).toEqual([1, 2, 3]);
+    // F1: the test interpreter names one holder, never a joint one.
+    expect(decoded?.places[0].attribution.holders).toHaveLength(1);
     expect(JSON.stringify(first)).not.toMatch(/postponing|fight|pick a time/u);
-    expect(await fake.read(input(['a', 'b', 'c'], [{ meaning: 'read', sourceRefs: [1, 2] }]))).toEqual({ places: [] });
+    expect(await fake.read(input(['a', 'b', 'c'], [{ ref: 'E1', meaning: 'read', nature: 'VIEW', holders: ['S1'], absentHolder: null, relayedBy: [], about: [], hedged: false, sourceRefs: [1, 2] }])))
+      .toEqual({ places: [] });
   });
 
   it('S8A-04 CP1: binds DeepSeek behind the SYNTHETIC_ONLY gate (a production process refuses every reading); the placer still refuses', async () => {
@@ -91,19 +178,38 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
   });
 });
 
-describe('SHARED-VIS-01 — the Shared spatial placer (one World, its own geography)', () => {
-  const at = (worldId: string, meaning = 'Moving keeps being postponed') => ({
-    contract: SHARED_SPATIAL_PLACEMENT_CONTRACT, worldId, meaning, primaryThemes: ['home'], secondaryThemes: ['trust'], semanticRegion: 'home',
-  });
-  it('places a meaning deterministically, within the exact bound, and never at the same point in another World', async () => {
+describe('SHARED-VIS-01 — the Shared spatial placer (S8A-04 CP2: anchors only, never a coordinate)', () => {
+  const given: SharedSpatialPlacementInput = {
+    contract: SHARED_SPATIAL_PLACEMENT_CONTRACT,
+    regions: [{ region: 'home', count: 1, examples: ['Moving keeps being postponed'] }],
+    map: [{ ref: 'P1', region: 'home', meaning: 'Moving keeps being postponed' }],
+    new: [{ ref: 'N1', region: 'home', meaning: 'A date is finally chosen' }, { ref: 'N2', region: 'work', meaning: 'The office is far' }],
+  };
+  const answer = (placements: unknown) => decodeSharedSpatialPlacement({ placements }, given);
+  it('the test placer is deterministic and anchors a meaning to its region, or to the region itself', async () => {
     const fake = new FakeSharedSpatialPlacer();
-    const one = decodeSharedSpatialPlacement(await fake.place(at(WORLD)));
-    expect(one).not.toBeNull();
-    expect(decodeSharedSpatialPlacement(await fake.place(at(WORLD)))).toEqual(one);
-    const other = decodeSharedSpatialPlacement(await fake.place(at(OTHER_WORLD)));
-    expect(other).not.toEqual(one);
-    expect(decodeSharedSpatialPlacement({ x: '4611686018427387904', y: '0', layoutVersion: 'v1' })).toBeNull();
-    expect(decodeSharedSpatialPlacement({ x: '1', y: '2', layoutVersion: 'v1', neighbour: 'x' })).toBeNull();
+    const one = decodeSharedSpatialPlacement(await fake.place(given), given);
+    expect(one).toEqual(new Map([['N1', [{ to: 'P1', closeness: 1 }]], ['N2', [{ to: 'R:work', closeness: 2 }]]]));
+    expect(decodeSharedSpatialPlacement(await fake.place(given), given)).toEqual(one);
+    expect(sharedPlacementTargets(given)).toEqual(['P1', 'N1', 'N2', 'R:home', 'R:work']);
+  });
+  it('refuses a coordinate, a score, an unknown target, a self or repeated anchor, a missing meaning, and a cycle', () => {
+    expect(answer([{ new: 'N1', anchors: [{ to: 'N2', closeness: 3 }] }, { new: 'N2', anchors: [{ to: 'R:work', closeness: 1 }] }])).not.toBeNull();
+    const n2 = { new: 'N2', anchors: [{ to: 'R:work', closeness: 1 }] };
+    for (const malformed of [
+      [{ new: 'N1', anchors: [{ to: 'P1', closeness: 1 }], x: '1' }, n2],
+      [{ new: 'N1', anchors: [{ to: 'P1', closeness: 1, score: 0.9 }] }, n2],
+      [{ new: 'N1', anchors: [{ to: 'P9', closeness: 1 }] }, n2],
+      [{ new: 'N1', anchors: [{ to: 'N1', closeness: 1 }] }, n2],
+      [{ new: 'N1', anchors: [{ to: 'P1', closeness: 1 }, { to: 'P1', closeness: 2 }] }, n2],
+      [{ new: 'N1', anchors: [{ to: 'P1', closeness: 4 }] }, n2],
+      [{ new: 'N1', anchors: [] }, n2],
+      [{ new: 'N1', anchors: [{ to: 'P1', closeness: 1 }] }],
+      [{ new: 'N1', anchors: [{ to: 'P1', closeness: 1 }] }, { new: 'N1', anchors: [{ to: 'P1', closeness: 1 }] }],
+      [{ new: 'N1', anchors: [{ to: 'N2', closeness: 1 }] }, { new: 'N2', anchors: [{ to: 'N1', closeness: 1 }] }],
+    ]) expect(answer(malformed)).toBeNull();
+    expect(decodeSharedSpatialPlacement({ x: '1', y: '2', layoutVersion: 'v1' }, given)).toBeNull();
+    expect(WORLD).not.toBe(OTHER_WORLD);
   });
 });
 
@@ -113,15 +219,17 @@ function fieldHarness(options: { entry?: 'ALLOW' | 'UNAVAILABLE'; field?: unknow
     resolveEntry: jest.fn(async () => [options.entry === 'UNAVAILABLE' ? { outcome: 'UNAVAILABLE', world_id: null } : { outcome: 'ALLOW', world_id: WORLD }]),
   };
   const calls: string[] = [];
+  const bodies: unknown[] = [];
   const dataApi = {
-    request: jest.fn(async (_token: string, path: string) => {
+    request: jest.fn(async (_token: string, path: string, init?: { body?: string }) => {
       calls.push(path);
-      if (path.endsWith('list_own_shared_semantic_field_v1')) return options.field ?? [];
-      if (path.endsWith('read_own_shared_semantic_place_v1')) return options.place ?? [];
+      bodies.push(init?.body === undefined ? undefined : JSON.parse(init.body));
+      if (path.endsWith('list_own_shared_semantic_field_v2')) return options.field ?? [];
+      if (path.endsWith('read_own_shared_semantic_place_v2')) return options.place ?? [];
       return options.sources ?? [];
     }),
   };
-  return { service: new SharedSemanticFieldService(shared as unknown as SharedWorldRepository, dataApi as unknown as SupabaseDataApiService), calls };
+  return { service: new SharedSemanticFieldService(shared as unknown as SharedWorldRepository, dataApi as unknown as SupabaseDataApiService), calls, bodies };
 }
 const fieldRow = { place_id: PLACE, world_x: '123456789', world_y: '-4611686018427387904', meaning: 'Moving keeps being postponed', semantic_region: 'home' };
 
@@ -159,6 +267,18 @@ describe('SHARED-VIS-01 — the member reads', () => {
     expect(await fieldHarness({ place: [{ ...fieldRow, primary_themes: ['home'], secondary_themes: [], established_at: 'x' }], sources: [] })
       .service.place('token', WORLD, PLACE)).toEqual({ outcome: 'ABSENT' });
     expect(await fieldHarness().service.place('token', WORLD, 'guess')).toEqual({ outcome: 'ABSENT' });
+  });
+
+  it('S8A-04 CP2: reads the v2 functions (the composed meaning), in the database default locale', async () => {
+    const served = fieldHarness({ field: [fieldRow] });
+    await served.service.field('token', WORLD);
+    await served.service.place('token', WORLD, PLACE);
+    expect(served.calls.map((path) => path.split('/').pop())).toEqual([
+      'list_own_shared_semantic_field_v2', 'read_own_shared_semantic_place_v2', 'list_own_shared_semantic_place_sources_v2',
+    ]);
+    expect(served.bodies).toEqual([
+      { p_world_id: WORLD, p_locale: null }, { p_world_id: WORLD, p_place_id: PLACE, p_locale: null }, { p_world_id: WORLD, p_place_id: PLACE },
+    ]);
     expect(BadRequestException).toBeDefined();
   });
 });

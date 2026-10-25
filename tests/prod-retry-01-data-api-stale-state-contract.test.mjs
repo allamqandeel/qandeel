@@ -104,9 +104,14 @@ test('40P01 is never converted, and PT409 is raised only by the eleven and the t
   // S8A-01 RE-ANCHOR (2026-10-21): 0170 replaces 0135's begin_ai_provider_call_v1 in place (one allow-list line differs),
   // so it re-carries that function's one AI-usage identity conflict, and no other PT409.
   const m0170 = '0170_s8a_01_deepseek_provider_ledger_admission_v1.sql';
-  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170]);
-  const pt409In0170 = read(`${MIGRATIONS}/${m0170}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu);
-  assert.deepEqual(pt409In0170, ["RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"]);
+  // S8A-04 CP2 RE-ANCHOR (2026-10-24): 0175's begin_ai_provider_call_v2 (the Shared World begin) carries the same one
+  // AI-usage identity conflict, and no other PT409.
+  const m0175 = '0175_s8a_04_shared_social_memory_v1.sql';
+  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175]);
+  for (const name of [m0170, m0175]) {
+    const pt409 = read(`${MIGRATIONS}/${name}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu);
+    assert.deepEqual(pt409, ["RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"], name);
+  }
 });
 
 test('the guard lexes literals and comments as data, never as code', () => {

@@ -236,7 +236,9 @@ async function verifyShared(f) {
   const [manifest] = await rows(`SELECT * FROM ${R.MANIFESTS} WHERE id = $1`, [spec.manifest]);
   assert.equal(manifest.source_class, 'SHARED_WORLD'); assert.equal(manifest.creation_authority_basis, 'SHARED_HISTORY_VISIBILITY');
   assert.equal(manifest.shared_world_id, f.world); assert.equal(manifest.item_count, 2);
-  assert.equal(manifest.authorized_universe_item_count, 6, 'the authorized universe is exactly the visible set');
+  // S8A-04 CP2 (0175 G.5): a place (QANDEEL_ANALYSIS) is visible but never a Replay source, so the universe is the visible
+  // material Replay may capture: the fixture's six visible items less its two places.
+  assert.equal(manifest.authorized_universe_item_count, 4, 'the authorized universe is exactly the visible material Replay may capture');
   assert.equal(manifest.universe_complete, false);
   const items = await manifestItemsOf(spec.manifest);
   const truth = await rows(
@@ -250,14 +252,39 @@ async function verifyShared(f) {
     'S05 exact material, history item, kind, availability revision and body digest, in establishment order');
   assert.deepEqual(items.map((i) => i.shared_occurred_at), truth.map((t) => t.at), 'the anchor is the frozen establishment instant');
   for (const i of items) { assert.equal(i.personal_conversation_unit_id, null); assert.equal(i.public_package_item_id, null); }
-  // S25 FULL_SOURCE is not provable for a partial universe; over the complete visible universe it is.
+  // S25 FULL_SOURCE is not provable for a partial universe; over the complete capturable universe it is (0175: the
+  // fixture's two places are visible, never sources, and not part of the universe).
   await rejected(() => rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: [f.mohamedMaterial], coverage: 'FULL_SOURCE' })), ['22023'], /REPLAY_COVERAGE_NOT_PROVABLE/u);
-  const everything = [f.mohamedMaterial, f.hadirMaterial, f.unresolvedMaterial, f.noHumanMaterial, f.voiceMaterial, f.metadatalessMaterial];
+  const places = [f.unresolvedMaterial, f.metadatalessMaterial];
+  const everything = [f.mohamedMaterial, f.hadirMaterial, f.noHumanMaterial, f.voiceMaterial];
   await rejected(() => rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: everything, selected: [f.mohamedMaterial], coverage: 'FULL_SOURCE' })), ['22023'], /REPLAY_COVERAGE_NOT_PROVABLE/u);
+  // 0175 G.5: a place named by id is refused whole — alone, beside capturable material, or under a FULL_SOURCE claim over
+  // everything visible — and nothing of the attempt is written; the refusal names no item and no World.
+  await asRole('postgres');
+  const replayRows = async () => Promise.all(REPLAY_TABLES.map(async (table) => Number((await rows(`SELECT count(*) n FROM ${table}`))[0].n)));
+  const beforePlaces = await replayRows();
+  await actAs(f.mohamed);
+  for (const [items, coverage] of [[[places[0]], 'SELECTED_EXCERPT'], [[places[1]], 'SELECTED_EXCERPT'], [[f.mohamedMaterial, places[0]], 'SELECTED_EXCERPT'],
+    [[...everything, ...places], 'FULL_SOURCE']]) {
+    const attempt = fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items, coverage });
+    const refusal = await rejected(() => rt.createDraft(attempt), ['0A000'], /REPLAY_SOURCE_KIND_RESERVED/u);
+    for (const id of [...items, f.world]) assert.ok(!refusal.message.includes(id), '0175: the refusal discloses no item and no World');
+    await asRole('postgres');
+    const [{ n }] = await rows(`SELECT count(*) n FROM ${R.REPLAYS} WHERE id = $1`, [attempt.replay]);
+    assert.equal(Number(n), 0, '0175: a refused capture leaves no Replay');
+    await actAs(f.mohamed);
+  }
+  await asRole('postgres');
+  assert.deepEqual(await replayRows(), beforePlaces, '0175: a refused capture writes nothing anywhere in Replay');
+  await actAs(f.mohamed);
   const full = fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: everything, coverage: 'FULL_SOURCE' });
   const [fullCreated] = await rt.createDraft(full);
   assert.equal(fullCreated.resolved_coverage_class, 'FULL_SOURCE');
-  assert.equal(fullCreated.captured_item_count, 6);
+  assert.equal(fullCreated.captured_item_count, 4);
+  const [fullManifest] = await rows(`SELECT * FROM ${R.MANIFESTS} WHERE id = $1`, [full.manifest]);
+  assert.equal(fullManifest.authorized_universe_item_count, 4); assert.equal(fullManifest.universe_complete, true);
+  assert.deepEqual((await manifestItemsOf(full.manifest)).map((i) => Number(i.source_universe_rank)), [1, 2, 3, 4],
+    '0175: the universe ranks are contiguous over what Replay may capture, with no gap where a place sits');
   // S09 THE VOICE NOTE binds as original-audio identity and copies no handle anywhere.
   const [voice] = await rows(`SELECT * FROM ${R.MANIFEST_ITEMS} WHERE manifest_version_id = $1 AND shared_material_id = $2`, [full.manifest, f.voiceMaterial]);
   assert.equal(voice.original_medium, 'ORIGINAL_AUDIO'); assert.equal(voice.shared_material_kind, 'HUMAN_VOICE_NOTE');
@@ -281,6 +308,15 @@ async function verifyShared(f) {
   const noWorld = await rejected(() => rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: randomUUID(), items: [f.mohamedMaterial] })), ['P0002'], /REPLAY_SOURCE_NOT_AVAILABLE/u);
   assert.equal(hidden.message, absent.message, 'S08 a current member is told the same thing about hidden and nonexistent material');
   assert.equal(noWorld.message, absent.message);
+  // 0175 G.5: a place the creator cannot see is unavailable like any hidden item: the kind check never runs first, so
+  // a refusal never reveals that a hidden place exists.
+  const hiddenPlace = randomUUID();
+  await asRole('postgres');
+  await rt.commitMaterial(f.world, hiddenPlace, 'QANDEEL_ANALYSIS', null, 'a place over material Mohamed never saw',
+    'EXACT_HUMAN_APPROVER_SET', 'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.hadir], f.hadir);
+  await actAs(f.mohamed);
+  const hiddenPlaceRefusal = await rejected(() => rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: [hiddenPlace] })), ['P0002'], /REPLAY_SOURCE_NOT_AVAILABLE/u);
+  assert.equal(hiddenPlaceRefusal.message, absent.message, '0175: a hidden place is refused exactly like nonexistent material');
   await rejected(() => rt.createDraft(fresh({ sourceClass: 'SHARED_WORLD', context: f.world, items: [f.mohamedMaterial, f.hiddenMaterial] })), ['P0002'], /REPLAY_SOURCE_NOT_AVAILABLE/u);
   // A former member with no open episode sees nothing, even of material they own.
   await actAs(f.hadir);

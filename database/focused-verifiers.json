@@ -15,6 +15,20 @@
   ],
   "version": 1,
   "groups": {
+    "s8a-04-cp2": {
+      "title": "S8A-04 CP2 - Shared Social Memory (migration 0175) with the Shared semantic, conversation, governance, retry-hazard, cost-family, Replay and Public verifiers it re-anchors or must leave unchanged",
+      "verifiers": [
+        "database/verify-migration-0175.mjs",
+        "database/verify-migration-0174.mjs",
+        "database/verify-migration-0148.mjs",
+        "database/verify-migration-0150.mjs",
+        "database/verify-migration-0155.mjs",
+        "database/verify-migration-0139.mjs",
+        "database/verify-migration-0140.mjs",
+        "database/verify-migration-0160.mjs",
+        "database/verify-migration-0164.mjs"
+      ]
+    },
     "s7-01": {
       "title": "S7-01 - Personal Replay secure integration and account erasure (migration 0169) with the I-06 Replay, historical projection, governed erasure, forward dispatcher (which pins the coordinator), Personal erasure and retry-hazard verifiers it must leave unchanged",
       "verifiers": [

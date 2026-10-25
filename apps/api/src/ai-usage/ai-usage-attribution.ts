@@ -20,6 +20,12 @@ export interface AiUsageAttribution {
   readonly sessionId?: string;
   readonly sourceTurnId?: string;
   readonly processingPath?: AiProcessingPath;
+  /**
+   * S8A-04 CP2 (migration 0175): Shared World work is correlated by its World and the HUMAN_TEXT message that caused it,
+   * both or neither, and never together with a Personal session or turn. The begin command verifies the payer wrote it.
+   */
+  readonly sourceWorldId?: string;
+  readonly sourceSharedMaterialId?: string;
 }
 
 const attributions = new AsyncLocalStorage<AiUsageAttribution>();
@@ -32,8 +38,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
  * boundary before it starts (fail-closed, never an unattributed or mis-attributed call).
  */
 export function runWithAiUsageAttribution<T>(attribution: AiUsageAttribution, work: () => T): T {
+  const shared = [attribution.sourceWorldId, attribution.sourceSharedMaterialId];
   const valid = UUID.test(attribution.userId)
-    && [attribution.sessionId, attribution.sourceTurnId].every((value) => value === undefined || UUID.test(value));
+    && [attribution.sessionId, attribution.sourceTurnId, ...shared].every((value) => value === undefined || UUID.test(value))
+    && (shared[0] === undefined) === (shared[1] === undefined)
+    && (shared[0] === undefined || (attribution.sessionId === undefined && attribution.sourceTurnId === undefined));
   return valid ? attributions.run(Object.freeze({ ...attribution }), work) : attributions.exit(work);
 }
 

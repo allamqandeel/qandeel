@@ -77,6 +77,8 @@ async function run(cast: Cast, stored: ReadonlyArray<Stored>, answer: Answer, op
   const committed: string[] = [];
   const server = {
     async rpc(name: string, body: Record<string, unknown>) {
+      // S8A-04 CP2 (2026-10-24): the reply also reads the World's knowledge (0175); this World holds none.
+      if (name === 'list_shared_world_knowledge_v1') return [];
       if (name === 'begin_shared_qandeel_reply_work_v1') return [{ work_outcome: 'GRANTED', work_lease_id: LEASE, reply_material_id: null }];
       if (name === 'end_shared_qandeel_reply_work_v1') return true;
       if (name === 'resolve_shared_world_material_v1') {

@@ -21,6 +21,13 @@
 //   5. the ended World: the v2 closed read is the 0140 read without semantic places (the 0140 read is unchanged).
 //
 // Everything runs inside one transaction that is rolled back.
+//
+// RE-ANCHORED by S8A-04 CP2 (migration 0175, 2026-10-24): 0175 revokes the v1 writer, the v1 context read and the three bare
+// v1 member reads (the field is served only as the composed meaning, through 0175's v2 reads), and the active conversation
+// read no longer returns QANDEEL_ANALYSIS materials (a place never takes a row of the 50-row page). Where 0175 is applied,
+// the boundary is 0148's with exactly those revocations and 0175's own grants, and the v1 behaviour this verifier proves is
+// run by re-granting the v1 functions to their 0148 roles INSIDE the rolled-back transaction. 0175 itself is proven by
+// verify-migration-0175.mjs.
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -192,6 +199,16 @@ const SERVER_ACTS = {
   end_shared_semantic_work_v1: '(uuid,uuid,boolean)',
 };
 const RELATIONS = ['semantic_places', 'semantic_passes', 'semantic_work_leases', 'semantic_work_grants'];
+/** S8A-04 CP2: what 0175 revokes from the 0148 roles, and what it grants in shared_semantic_private (its public v2 wrappers are not 0148 names). */
+const REVOKED_BY_0175 = {
+  authenticated: ['list_own_shared_semantic_field_v1', 'read_own_shared_semantic_place_v1', 'list_own_shared_semantic_place_sources_v1'],
+  service_role: ['read_shared_semantic_context_v1', 'complete_shared_semantic_place_v1'],
+};
+const GRANTED_BY_0175 = {
+  authenticated: ['list_own_shared_semantic_field_v2', 'read_own_shared_semantic_place_v2', 'list_own_shared_semantic_place_sources_v2'],
+  service_role: ['complete_shared_semantic_place_v2', 'read_shared_semantic_context_v2', 'list_shared_world_knowledge_v1'],
+};
+let after0175 = false;
 
 // ------------------------------------------------------------------------------------------------------
 // Stage 1 — the boundary.
@@ -226,7 +243,13 @@ async function verifyBoundary() {
   const expected = [];
   for (const proname of Object.keys(MEMBER_READS)) for (const nspname of ['public', 'shared_semantic_private']) expected.push(key({ rolname: 'authenticated', nspname, proname }));
   for (const proname of Object.keys(SERVER_ACTS)) for (const nspname of ['public', 'shared_semantic_private']) expected.push(key({ rolname: 'service_role', nspname, proname }));
-  assert.deepEqual(executable.map(key).sort(), expected.sort());
+  const [{ later }] = await rows("SELECT to_regprocedure('shared_semantic_private.list_shared_world_knowledge_v1(uuid,uuid)') IS NOT NULL AS later");
+  after0175 = later;
+  const revoked = new Set(Object.entries(REVOKED_BY_0175).flatMap(([rolname, names]) => names.flatMap((proname) =>
+    ['public', 'shared_semantic_private'].map((nspname) => key({ rolname, nspname, proname })))));
+  const granted = Object.entries(GRANTED_BY_0175).flatMap(([rolname, names]) => names.map((proname) => key({ rolname, nspname: 'shared_semantic_private', proname })));
+  const boundary = after0175 ? [...expected.filter((entry) => !revoked.has(entry)), ...granted] : expected;
+  assert.deepEqual(executable.map(key).sort(), boundary.sort());
 
   stage = 'boundary: the relations are private, RLS-enabled and unreachable; no account reference';
   for (const table of RELATIONS) {
@@ -406,7 +429,8 @@ async function verifyVisibility(h, w, p) {
   stage = 'visibility: the active conversation carries the place\'s kind, so its Product projection can exclude it';
   await actAs('authenticated', h.a);
   const conversation = await rows('SELECT material_id, material_kind FROM public.list_own_shared_world_material_v1($1, NULL, NULL, 50)', [w.one]);
-  assert.equal(conversation.find((r) => r.material_id === p.placeId)?.material_kind, 'QANDEEL_ANALYSIS');
+  if (after0175) assert.equal(conversation.some((r) => r.material_id === p.placeId), false, '0175: a place takes no row of the conversation page');
+  else assert.equal(conversation.find((r) => r.material_id === p.placeId)?.material_kind, 'QANDEEL_ANALYSIS');
 
   stage = 'visibility: a newcomer who cannot see one source does not read the place (D3)';
   await addMember(w.one, h.d, [h.a, h.b]);
@@ -496,7 +520,9 @@ async function verifyClosed(h, w) {
   await actAs('authenticated', h.c);
   const v1 = await rows('SELECT material_id FROM public.list_own_closed_shared_world_material_v1($1, NULL, NULL, 50)', [w.two]);
   const v2 = await rows('SELECT material_id FROM public.list_own_closed_shared_world_material_v2($1, NULL, NULL, 50)', [w.two]);
-  assert.ok(v1.some((r) => r.material_id === placeId), 'the 0140 read is unchanged');
+  // S8A-04 CP2: 0175 gives the 0140 closed read the same page rule as the active one — no QANDEEL_ANALYSIS row.
+  if (after0175) assert.ok(!v1.some((r) => r.material_id === placeId) && v1.some((r) => r.material_id === said.material_id), '0175: the 0140 read takes no place row');
+  else assert.ok(v1.some((r) => r.material_id === placeId), 'the 0140 read is unchanged');
   assert.ok(!v2.some((r) => r.material_id === placeId) && v2.some((r) => r.material_id === said.material_id));
   assert.deepEqual(await field(w.two), [], 'an ended World has no active field');
   await actAs('authenticated', h.x);
@@ -509,6 +535,16 @@ async function main() {
     await client.query('BEGIN');
     try {
       await verifyBoundary();
+      if (after0175) {
+        stage = 'fixtures: the v1 functions re-granted to their 0148 roles inside this rolled-back transaction (0175)';
+        await asOwner();
+        for (const [role, names] of Object.entries(REVOKED_BY_0175)) {
+          for (const name of names) {
+            const signature = MEMBER_READS[name] ?? SERVER_ACTS[name];
+            for (const schema of ['public', 'shared_semantic_private']) await client.query(`GRANT EXECUTE ON FUNCTION ${schema}.${name}${signature} TO ${role}`);
+          }
+        }
+      }
       stage = 'fixtures';
       const h = { a: randomUUID(), b: randomUUID(), c: randomUUID(), d: randomUUID(), e: randomUUID(), x: randomUUID() };
       const suffix = randomUUID().slice(0, 8).replace(/[^a-z0-9]/gu, 'x');

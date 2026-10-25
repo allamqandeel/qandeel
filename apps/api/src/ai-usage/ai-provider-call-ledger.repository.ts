@@ -19,17 +19,30 @@ export class SupabaseAiProviderCallLedger implements AiProviderCallLedger {
   constructor(private readonly serviceApi: AiLedgerRpc) {}
 
   async begin(record: AiProviderCallBeginRecord): Promise<void> {
-    const rows = await this.serviceApi.rpc<Array<{ begin_outcome: string }>>('begin_ai_provider_call_v1', {
-      p_call_id: record.callId,
-      p_user_id: record.userId,
-      p_session_id: record.sessionId,
-      p_source_turn_id: record.sourceTurnId,
-      p_provider: record.provider,
-      p_requested_model: record.requestedModel,
-      p_operation: record.operation,
-      p_feature_family: record.featureFamily,
-      p_processing_path: record.processingPath,
-    });
+    // S8A-04 CP2 (0175): Shared World work begins through the command that verifies the payer wrote the causing message.
+    const rows = record.sourceWorldId !== undefined && record.sourceSharedMaterialId !== undefined
+      ? await this.serviceApi.rpc<Array<{ begin_outcome: string }>>('begin_ai_provider_call_v2', {
+        p_call_id: record.callId,
+        p_user_id: record.userId,
+        p_source_world_id: record.sourceWorldId,
+        p_source_shared_material_id: record.sourceSharedMaterialId,
+        p_provider: record.provider,
+        p_requested_model: record.requestedModel,
+        p_operation: record.operation,
+        p_feature_family: record.featureFamily,
+        p_processing_path: record.processingPath,
+      })
+      : await this.serviceApi.rpc<Array<{ begin_outcome: string }>>('begin_ai_provider_call_v1', {
+        p_call_id: record.callId,
+        p_user_id: record.userId,
+        p_session_id: record.sessionId,
+        p_source_turn_id: record.sourceTurnId,
+        p_provider: record.provider,
+        p_requested_model: record.requestedModel,
+        p_operation: record.operation,
+        p_feature_family: record.featureFamily,
+        p_processing_path: record.processingPath,
+      });
     const outcome = rows?.[0]?.begin_outcome;
     if (outcome !== 'BEGUN' && outcome !== 'ALREADY_BEGUN') throw new Error('AI_PROVIDER_CALL_BEGIN_INTEGRITY');
   }

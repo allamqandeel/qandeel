@@ -33,6 +33,9 @@ export const AI_FEATURE_FAMILIES = [
   'PERSONAL_UNDERSTANDING_CAPTURE',
   // S8A-04 CP1 (migration 0174): the Shared semantic reading of one World's conversation.
   'SHARED_SEMANTIC_READING',
+  // S8A-04 CP2 (migration 0175): the Shared knowledge recall and the Shared spatial placement.
+  'SHARED_KNOWLEDGE_RECALL',
+  'SHARED_SPATIAL_PLACEMENT',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 

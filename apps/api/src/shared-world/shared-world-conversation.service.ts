@@ -150,13 +150,16 @@ export class SharedWorldConversationService {
       if (typeof sent.qandeel_reply_material_id === 'string') return { outcome: 'COMMITTED', materialId: sent.material_id, qandeel: 'COMMITTED' };
       // The human's words are committed. QANDEEL's reply is a separate outcome and never undoes them.
       const view = await this.requesterView(token, worldId);
-      const qandeel = view === null ? 'UNAVAILABLE' : await this.reply(userId, worldId, commandId, sent.material_id, view);
+      const answer = view === null ? { qandeel: 'UNAVAILABLE' as const, recalledPlaceIds: [] } : await this.reply(userId, worldId, commandId, sent.material_id, view);
+      const qandeel = answer.qandeel;
       // SHARED-VIS-01: QANDEEL then reads the World's semantic places, after the answer is decided and without delaying it.
       // It never changes this answer, and it does nothing at all while the placer has no provider (S8A-04 CP2). S8A-04 CP1:
       // the pass verifies the sender against the resolver itself; the read's Names only label authors it identified.
+      // S8A-04 CP2 §3.2.6: the positions the reply was given reach the reading as existing; the pass re-checks every one.
       void this.places.weave({
         worldId, humanCommandId: commandId, humanMaterialId: sent.material_id, requesterUserId: userId,
         authorNames: (view ?? []).map((material) => ({ materialId: material.materialId, authorName: material.authorName })),
+        recalledPlaceIds: answer.recalledPlaceIds,
       }).catch(() => undefined);
       return { outcome: 'COMMITTED', materialId: sent.material_id, qandeel };
     });
@@ -192,13 +195,13 @@ export class SharedWorldConversationService {
 
   private async reply(
     userId: string, worldId: string, commandId: string, materialId: string, requesterView: SharedConversationMaterial[],
-  ): Promise<'COMMITTED' | 'PENDING' | 'UNAVAILABLE'> {
+  ): Promise<{ readonly qandeel: 'COMMITTED' | 'PENDING' | 'UNAVAILABLE'; readonly recalledPlaceIds: ReadonlyArray<string> }> {
     try {
       const outcome = await this.replies.reply({ worldId, humanCommandId: commandId, humanMaterialId: materialId, requesterUserId: userId, requesterView });
-      if (outcome.state === 'COMMITTED') return 'COMMITTED';
-      return outcome.reason === 'WORK_IN_PROGRESS' ? 'PENDING' : 'UNAVAILABLE';
+      if (outcome.state === 'COMMITTED') return { qandeel: 'COMMITTED', recalledPlaceIds: outcome.recalledPlaceIds ?? [] };
+      return { qandeel: outcome.reason === 'WORK_IN_PROGRESS' ? 'PENDING' : 'UNAVAILABLE', recalledPlaceIds: [] };
     } catch {
-      return 'UNAVAILABLE';
+      return { qandeel: 'UNAVAILABLE', recalledPlaceIds: [] };
     }
   }
 }

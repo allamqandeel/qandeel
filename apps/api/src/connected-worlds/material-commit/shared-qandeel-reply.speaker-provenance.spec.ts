@@ -96,6 +96,8 @@ async function run(stored: ReadonlyArray<Stored>, options: {
   const deleted = new Set(options.deleted ?? []);
   const server = {
     async rpc(name: string, body: Record<string, unknown>) {
+      // S8A-04 CP2 (2026-10-24): the reply also reads the World's knowledge (0175); this World holds none.
+      if (name === 'list_shared_world_knowledge_v1') return [];
       if (name === 'begin_shared_qandeel_reply_work_v1') return [{ work_outcome: 'GRANTED', work_lease_id: LEASE, reply_material_id: null }];
       if (name === 'end_shared_qandeel_reply_work_v1') return true;
       if (name === 'resolve_shared_world_material_v1') {
@@ -278,9 +280,12 @@ describe('S8A-02 CP1 — trusted speaker and message provenance at the Model Rou
     expect(isReading(reading)).toBe(true);
     const secrets = [WORLD, COMMAND, LEASE, ...MEMBERS, ...Array.from({ length: 9 }, (_, index) => `40000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`)];
     // The generator's input holds one identity, the requester's, only to attribute the spend (AI-COST-01); its conversation
-    // holds none.
-    expect(Object.keys(result.generated[0]).sort()).toEqual(['conversation', 'requesterUserId']);
-    for (const surface of [JSON.stringify(request), JSON.stringify(reading), JSON.stringify(body), JSON.stringify(result.generated[0].conversation)]) {
+    // holds none. S8A-04 CP2 (2026-10-24, re-anchored): it also holds the World and the answered message, only to correlate
+    // that spend (CP2 §5), and the World's knowledge, labelled with no identity (this World holds none).
+    expect(Object.keys(result.generated[0]).sort()).toEqual(['conversation', 'knowledge', 'requesterUserId', 'source']);
+    expect(Object.keys(result.generated[0].source ?? {}).sort()).toEqual(['materialId', 'worldId']);
+    for (const surface of [JSON.stringify(request), JSON.stringify(reading), JSON.stringify(body), JSON.stringify(result.generated[0].conversation),
+      JSON.stringify(result.generated[0].knowledge)]) {
       expect(surface).not.toMatch(UUID);
       for (const secret of secrets) expect(surface.toLowerCase()).not.toContain(secret.toLowerCase());
       expect(surface).not.toContain('خاص بسارة وحدها');
