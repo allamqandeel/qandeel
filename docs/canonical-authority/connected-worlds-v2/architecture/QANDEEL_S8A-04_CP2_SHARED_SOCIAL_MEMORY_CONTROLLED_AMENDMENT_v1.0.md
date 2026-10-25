@@ -6,7 +6,8 @@
 - The placer was still unbound at the merge (§7, §13.7), so CP2 merged as engineering, not as a functionally complete
   checkpoint. §13.10 reached `main` only through S8A-04 CP3's branch `s8a/s8a-04-cp3`, which first completes CP2 (§13.11).
 - *(2026-10-25, `s8a/s8a-04-cp3`:)* the placer is bound and its integrated free proof passed (§13.11); its paid confirmation
-  (round 20) passed 34 / 34: CP2 is functionally complete.
+  (round 20) passed 34 / 34: CP2 is functionally complete. The Product Owner closed CP2's functional gate on that
+  evidence (2026-10-25); the final code review and CI remain for the branch's push.
 
 *(Status at the Product Owner's final gate, kept verbatim:)*
 `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —

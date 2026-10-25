@@ -172,7 +172,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 MERGED through PR #356 as `43e67229`; CP2 MERGED through PR #357 as `b0839fd4` (2026-10-25) with the placer unbound; S4's remaining case deferred to V2 (Future Improvement 011); on CP3's branch `s8a/s8a-04-cp3` the placer is bound and its free and paid integrated proofs passed (amendment §13.11), so CP2 is functionally complete; CP3 WP0 R2 at the Product Owner's design gate)
+### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 MERGED through PR #356 as `43e67229`; CP2 MERGED through PR #357 as `b0839fd4` (2026-10-25) with the placer unbound; S4's remaining case deferred to V2 (Future Improvement 011); on CP3's branch `s8a/s8a-04-cp3` the placer is bound and its free and paid integrated proofs passed (amendment §13.11), so CP2 is functionally complete (its functional gate closed by the Product Owner, 2026-10-25; the final code review and CI at the push); CP3's controlled amendment PROPOSED at the Product Owner's design gate)
 
 - Started 2026-10-24 on `s8a/s8a-04-shared-social-understanding` from `main` at `4e1e0b78b1216f73595b0040f84f4fc51bdd6ce2`
   (the merge of PR #355, 2026-10-24): **S8A-03 is merged**, so its closing change is effective. S8A-04 owns no backlog
@@ -240,8 +240,9 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     `SYNTHETIC_ONLY`). API jest 288 suites, root contracts 1 639 / 1 639. The paid confirmation (guard round 20, approved
     by the Product Owner at 12 calls / USD 0.02) passed: one run at head `3f618ff5`, 34 / 34 checks, 6 DeepSeek Flash calls, USD 0.0012 at peak pricing. CP2 is
     functionally complete; no migration, no hosted change.
-- **CP3 — Personal Knowledge in Shared World** (`SHARED-CTX-01` / `QAN-BL-CW-02`): WP0 R2 (the Product Owner's review D1–D7
-  applied) at the Product Owner's design gate; no CP3 code, consent system, frozen-contract change or Copy Gate text before approval.
+- **CP3 — Personal Knowledge in Shared World** (`SHARED-CTX-01` / `QAN-BL-CW-02`): WP0 R2 done; the Product Owner's final
+  review (2026-10-25) is applied in the PROPOSED CP3 controlled amendment (two separate authorities, the final-reply
+  check, the cheapest-first private request, Copy Gate 0 / 6 approved), at the Product Owner's design gate; no CP3 code, consent system, frozen-contract change or Copy Gate text before approval.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
 ### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)
@@ -663,7 +664,7 @@ An entry authorizes no implementation (BG-07).
 
 ## 7. Forward roadmap
 
-> **S8A-04 CP3 (2026-10-25):** the current checkpoint, on `s8a/s8a-04-cp3` from `b0839fd4`; CP2 merged through PR #357 as `b0839fd4` with the placer unbound; CP3 first completes CP2 (the placer binding, amendment §7, and the S4 deferral record, §13.10 / Future Improvement 011), then runs its WP0 (Personal Knowledge in Shared World, `SHARED-CTX-01` / `QAN-BL-CW-02`) to the Product Owner's gate; one pull request to `main` after CP3, not merged. *(Update, same day:)* the placer is bound and its integrated free proof passed (amendment §13.11); its paid confirmation passed (round 20, 34 / 34, 6 calls, USD 0.0012), so CP2 is functionally complete; WP0 R2 is at the design gate.
+> **S8A-04 CP3 (2026-10-25):** the current checkpoint, on `s8a/s8a-04-cp3` from `b0839fd4`; CP2 merged through PR #357 as `b0839fd4` with the placer unbound; CP3 first completes CP2 (the placer binding, amendment §7, and the S4 deferral record, §13.10 / Future Improvement 011), then runs its WP0 (Personal Knowledge in Shared World, `SHARED-CTX-01` / `QAN-BL-CW-02`) to the Product Owner's gate; one pull request to `main` after CP3, not merged. *(Update, same day:)* the placer is bound and its integrated free proof passed (amendment §13.11); its paid confirmation passed (round 20, 34 / 34, 6 calls, USD 0.0012), so CP2 is functionally complete and the Product Owner closed its functional gate; the CP3 controlled amendment is PROPOSED at the design gate.
 >
 > *(Previous:)* **S8A-04 CP2 (2026-10-24):** the current task; CP1 merged through PR #356 as `43e67229`; CP2 implemented locally under the Product Owner's Final Implementation Authorization (Copy Gate CLOSED, migration 0175 not hosted, Stage 0 passed); the paid stages ran (round 19, 2026-10-25) and were accepted; the F1 / F2 correction and the final corrective pass made, S4's remaining case deferred to V2 (Future Improvement 011), API CI green; CP2 at the Product Owner's final gate (the placer binding and the merge) (amendment §13.8 – §13.10); Draft PR #357; one pull request to `main` after them, not merged.
 >
