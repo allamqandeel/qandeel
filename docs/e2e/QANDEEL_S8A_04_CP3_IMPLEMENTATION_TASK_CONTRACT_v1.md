@@ -97,6 +97,15 @@ database; any real user's data; SYNTHETIC_ONLY (unchanged).
   contract findings on the new mobile files were fixed: the test reached the runtime entry past its barrel, and the World
   client named the audience reference — the decoder tests moved into `runtime-entry/__tests__/`, the command bodies into
   `shared-permissions-api.ts`).
+- **PR #358 Mobile CI correction (Jest did not exit).** On GitHub the Fast mobile contract gate ran Jest in one process
+  (231 / 231 passed, 2 918 tests) and then stayed open until the job timeout. Cause, proven by an in-band run with a
+  per-file timer probe (temporary, not committed) under the runner's en-US locale: two existing integration suites —
+  `w3-mega-s-privacy-data` (4) and `w3-mega-a-account-security` (3) — never disposed the runtime they built, so the Account
+  & Identity and Privacy & Data read retries (15 s, while LOADING) stayed armed after the run. `main` leaks the same 7: its
+  last run used Jest workers, and the log shows the worker «force exited»; none comes from the CP3-C suites. Fix: both suites
+  dispose every runtime a test built after each test (no `--forceExit`, no timeout change, no production change). After the
+  fix: the whole suite in band 231 / 231 (2 918 tests) and Jest exited by itself with code 0; with workers the same, and no
+  forced worker exit; `--detectOpenHandles` on the two suites exits 0 (unfixed: still open at 120 s).
 - Integrated proof `simulated-c5` (fresh cluster): 127 / 127 checks — scenario C (the ten-step journey through the
   controller's own routes; decline and «اسمح الآن»; withdraw; correct and forget; audience growth; leave and the governed
   rejoin) and scenario A (Activity, its members, push attempts and the outbox byte-identical under every permission act;
