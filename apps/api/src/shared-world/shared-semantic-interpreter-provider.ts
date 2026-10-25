@@ -6,8 +6,9 @@
 //                   It is built on the first reading, so the API starts without a credential; where DeepSeek may not run
 //                   (a production process, an undeclared mode, no key) every reading is refused before any request.
 //
-// Only the interpreter is bound. The Shared spatial placer still refuses (D4), so the place pass returns NO_PROVIDER before
-// it leases, reads or spends anything, and no place is produced in the application until CP2.
+// CP1 bound only the interpreter (D4). S8A-04 CP2 §7 binds the Shared spatial placer too (`shared-social-memory-provider.ts`);
+// where DeepSeek may not run, that placer is the refusing one, so the place pass still returns NO_PROVIDER before it leases,
+// reads or spends anything.
 import { accountedDeepSeekChatCompletionsClient } from '../ai-usage/accounted-provider-clients';
 import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
 import { createDeepSeekClient } from '../model-router/providers/deepseek/deepseek-client';

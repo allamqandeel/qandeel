@@ -13,8 +13,8 @@
 //                                         wrote each contribution by request-local speaker tokens from the author the
 //                                         frozen resolver holds, inside the AI-COST-01 scope of the verified sender
 //   4  the place                          the provider-neutral Shared placer: ONE call names each new meaning's anchors,
-//                                         and the server's pure geometry derives its point (S8A-04 CP2 §4); unbound in
-//                                         production until the CP2 §11 conditions hold
+//                                         and the server's pure geometry derives its point (S8A-04 CP2 §4); bound to
+//                                         DeepSeek Flash behind SYNTHETIC_ONLY (CP2 §7), refusing everywhere else
 //   5  delivery readiness (I-03G → I-03F) the Source Disclosure Gate, then authority / audience revalidation, per meaning
 //   6  the commit binding (I-04G FIX-B)   QANDEEL_ANALYSIS with the exact source identities
 //   7  the server-owned commit (0175)     the conversation gate, the current lease holder only; the frozen 0090 core
@@ -27,8 +27,8 @@
 // what every current recipient may see — with their attribution in this reading's tokens, and answers whose each place is.
 //
 // A refusal at any step commits nothing and fabricates nothing; the human's message and QANDEEL's reply are already
-// committed and stay. While the placer has no provider (production until S8A-04 CP2), the pass returns before step 0: no
-// lease, no read, no spend. No content, provider output or private context is logged, persisted or returned outside the canonical body.
+// committed and stay. Where the interpreter or the placer has no provider (wherever DeepSeek may not run, S8A-04 CP2 §7), the pass
+// returns before step 0: no lease, no read, no spend. No content, provider output or private context is logged, persisted or returned outside the canonical body.
 
 import { Inject, Injectable } from '@nestjs/common';
 import { SharedHumanAudienceResolverService } from '../audience/shared-human-audience-resolver.service';
@@ -119,7 +119,7 @@ export class SharedSemanticPlaceService {
 
   /** Never throws: every failure is one bounded outcome, and nothing is committed by a refusal. */
   async weave(request: SharedSemanticPassRequest): Promise<SharedSemanticPassOutcome> {
-    // Production today: no provider is bound, so nothing is leased, read or spent.
+    // Where DeepSeek may not run, no provider is bound, so nothing is leased, read or spent.
     if (this.interpreter instanceof UnconfiguredSharedSemanticInterpreter || this.placer instanceof UnconfiguredSharedSpatialPlacer) {
       return Object.freeze({ state: 'NOT_RUN', reason: 'NO_PROVIDER' } as const);
     }

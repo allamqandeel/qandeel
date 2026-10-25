@@ -196,7 +196,10 @@ function censusViolations(world) {
   }
   // S8A-04 CP2: the recall is composed through the boundary; the placer only for the synthetic harness, with the accounting
   // it is handed — the application's placer stays the refusing one (§7), so it composes no client at all.
+  // RE-ANCHORED by S8A-04 CP2 §7 (2026-10-25, the placer binding): the application's placer and the harness's share ONE
+  // composition, so one accounted client is still built for the family; the application hands it the production accounting.
   const memory = ts(world.sharedMemoryModule);
+  if (!/return deepSeekSharedSpatialPlacer\(config, productionAiProviderCallAccounting\(\)\);/u.test(memory)) out.push('the application placer is not accounted in production');
   if (!/accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_KNOWLEDGE_RECALL', productionAiProviderCallAccounting\(\)\)/u.test(memory)) out.push('SHARED_KNOWLEDGE_RECALL is not accounted');
   if (!/accountedDeepSeekChatCompletionsClient\(createDeepSeekClient\(config\), 'SHARED_SPATIAL_PLACEMENT', accounting\)/u.test(memory)
     || !/createQualificationSharedSpatialPlacer\(\s*environment: NodeJS\.ProcessEnv, accounting: AiProviderCallAccounting,\s*\)/u.test(memory)) out.push('SHARED_SPATIAL_PLACEMENT is not accounted');

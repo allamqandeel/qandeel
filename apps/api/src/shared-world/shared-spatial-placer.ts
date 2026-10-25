@@ -14,9 +14,10 @@
 // of two Worlds, and a committed place is never moved. The answer is `unknown`, decoded strictly HERE, so no adapter can
 // widen the shape or smuggle a coordinate in.
 //
-// No production provider is bound (§7): the factory returns a placer that REFUSES outside tests — never a hash, a random
-// point, a chronological spiral or any other fake geography — until the binding conditions of §11 hold. The DeepSeek Flash
-// adapter is `deepseek-shared-spatial-placer.ts`. Nothing here logs anything.
+// This port reaches no provider. The application's composition is `createConfiguredSharedSpatialPlacer` in
+// `shared-social-memory-provider.ts` (S8A-04 CP2 §7, bound 2026-10-25): DeepSeek Flash (`deepseek-shared-spatial-placer.ts`)
+// where the SYNTHETIC_ONLY gate lets DeepSeek run, and the refusing placer below everywhere else — never a hash, a random
+// point, a chronological spiral or any other fake geography. Nothing here logs anything.
 
 export const SHARED_SPATIAL_PLACEMENT_CONTRACT = 'SHARED_SPATIAL_PLACEMENT_V2' as const;
 export const SHARED_FIELD_COORDINATE_SCHEME = 'QANDEEL_SHARED_FIELD_V1' as const;
@@ -114,15 +115,9 @@ export class FakeSharedSpatialPlacer implements SharedSpatialPlacer {
   }
 }
 
-/** Until the binding conditions of S8A-04 CP2 §11 hold: refuse. Never fake geography, never a fallback. */
+/** Wherever DeepSeek may not run: refuse, so the pass stops before its lease. Never fake geography, never a fallback. */
 export class UnconfiguredSharedSpatialPlacer implements SharedSpatialPlacer {
   async place(): Promise<unknown> {
     throw new SharedSpatialPlacerUnavailableError();
   }
-}
-
-export function createConfiguredSharedSpatialPlacer(environment: NodeJS.ProcessEnv = process.env): SharedSpatialPlacer {
-  if (environment.NODE_ENV === 'test') return new FakeSharedSpatialPlacer();
-  // S8A-04 CP2 §7: the DeepSeek placer is bound only after the §11 conditions hold; binding it is CP2's last change.
-  return new UnconfiguredSharedSpatialPlacer();
 }
