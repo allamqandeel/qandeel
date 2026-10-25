@@ -27,6 +27,7 @@
 // tokens to the server's identities, and the 0175 write re-checks every rule. Nothing here logs anything.
 
 import { createHash } from 'node:crypto';
+import { normalizeArabicComparison } from '../memory/arabic-text';
 import {
   SEMANTIC_MEANING_MAX, SEMANTIC_PRIMARY_THEMES, SEMANTIC_SECONDARY_THEMES, areDisjointThemes, isSemanticText, isSemanticThemeSet,
 } from '../public-world/public-semantic-interpreter';
@@ -159,6 +160,11 @@ export function sharedSemanticReadingLabels(input: SharedSemanticInput): string[
   return input.writers.map((writer) => writer.name).filter((name) => NUMBERED_LABEL.test(name));
 }
 
+/** The words of a Name or an absent holder, for comparison only (MEM-AR-01A's normalizer; a reading's numbering removed). */
+function nameWords(name: string): string[] {
+  return normalizeArabicComparison(name.replace(NUMBERED_LABEL, '')).split(' ').filter((word) => word.length > 0);
+}
+
 interface ReadingRules {
   readonly refs: ReadonlySet<number>;
   readonly tokens: ReadonlySet<string>;
@@ -214,9 +220,14 @@ function placeOf(value: unknown, rules: ReadingRules): SharedSemanticPlacePropos
  * invented is malformed. A meaning may name a person (Product Owner D2, S8A-04 CP1); it never carries one of this
  * reading's speaker tokens or numbered labels. Each existing ref is revised at most once in the reading.
  *
- * A well-formed place held by MORE THAN ONE member is not kept (the Product Owner's F1 correction, 2026-10-25): the server
- * cannot prove that several people hold one meaning, and readings folded one person's view into another's that way. Not
- * saving it is better than saving a wrong attribution. The reading's other places stay; an absent holder is one holder.
+ * Some well-formed places are not kept, because the server cannot prove their attribution; not saving one is better than
+ * saving a wrong one (the Product Owner's corrections, 2026-10-25). The reading's other places stay.
+ *   - F1: a place held by MORE THAN ONE member. Readings folded one person's view into another's that way.
+ *   - S4: a member who holds more than one place in the reading (a joint one included) keeps only the one read from the
+ *     latest contribution, and none when that one is joint or two are equally late. A withdrawn position and the one that
+ *     replaced it are never both saved as current.
+ *   - V2: an absent holder whose every word is in the Name of one of this reading's writers. A member is never turned into
+ *     someone absent by a Name; the Name never decides who it is, so the place is not saved at all.
  */
 export function decodeSharedSemanticReading(value: unknown, input: SharedSemanticInput): SharedSemanticReading | null {
   if (!isRecord(value) || !exactKeys(value, ['places']) || !Array.isArray(value.places) || value.places.length > SHARED_SEMANTIC_PLACES_PER_READING) return null;
@@ -227,13 +238,29 @@ export function decodeSharedSemanticReading(value: unknown, input: SharedSemanti
     existing: new Set(input.existing.map((meaning) => meaning.ref)),
     labels: sharedSemanticReadingLabels(input),
   };
-  const places: SharedSemanticPlaceProposal[] = [];
+  const read: SharedSemanticPlaceProposal[] = [];
   for (const entry of value.places) {
     const place = placeOf(entry, rules);
     if (place === null) return null;
-    if (place.attribution.holders.length > 1) continue;
-    places.push(place);
+    read.push(place);
   }
+  const unproven = new Set<SharedSemanticPlaceProposal>(read.filter((place) => place.attribution.holders.length > 1));
+  const latest = (place: SharedSemanticPlaceProposal) => place.sourceRefs[place.sourceRefs.length - 1];
+  for (const token of rules.tokens) {
+    const held = read.filter((place) => place.attribution.holders.includes(token));
+    if (held.length < 2) continue;
+    const newest = Math.max(...held.map(latest));
+    const kept = held.filter((place) => latest(place) === newest);
+    for (const place of held) if (kept.length !== 1 || place !== kept[0]) unproven.add(place);
+  }
+  const writerNames = input.writers.map((writer) => new Set(nameWords(writer.name)));
+  for (const place of read) {
+    const absent = place.attribution.absentHolder;
+    if (absent === null) continue;
+    const words = nameWords(absent);
+    if (words.length > 0 && writerNames.some((name) => words.every((word) => name.has(word)))) unproven.add(place);
+  }
+  const places = read.filter((place) => !unproven.has(place));
   const revised = places.flatMap((place) => (place.revises === null ? [] : [place.revises]));
   if (new Set(revised).size !== revised.length) return null;
   return Object.freeze({ places: Object.freeze(places) });

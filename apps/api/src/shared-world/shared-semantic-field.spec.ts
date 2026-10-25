@@ -75,14 +75,81 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
   });
 
   it('F1 (2026-10-25): the decoder keeps no place held by more than one member, and keeps the rest of the reading', () => {
-    const given: SharedSemanticInput = { ...input(['a', 'b']), writers: [{ speaker: 'S1', name: 'هالة' }, { speaker: 'S2', name: 'كريم' }],
-      contributions: [{ ref: 1, from: 'S1', text: 'a' }, { ref: 2, from: 'S2', text: 'b' }] };
+    const given: SharedSemanticInput = { ...input(['a', 'b', 'c']), writers: [{ speaker: 'S1', name: 'هالة' }, { speaker: 'S2', name: 'كريم' }, { speaker: 'S3', name: 'سامي' }],
+      contributions: [{ ref: 1, from: 'S1', text: 'a' }, { ref: 2, from: 'S2', text: 'b' }, { ref: 3, from: 'S3', text: 'c' }] };
     const joint = place({ meaning: 'رأي كريم وهالة في المواعيد', sourceRefs: [1, 2], holders: ['S1', 'S2'] });
-    const own = place({ meaning: 'هالة شايفة إن المواعيد بتتنسي', sourceRefs: [1], holders: ['S1'] });
-    expect(decodeSharedSemanticReading({ places: [joint, own] }, given)?.places.map((p) => p.meaning)).toEqual(['هالة شايفة إن المواعيد بتتنسي']);
+    const own = place({ meaning: 'سامي شايف إن المواعيد بتتنسي', sourceRefs: [3], holders: ['S3'] });
+    expect(decodeSharedSemanticReading({ places: [joint, own] }, given)?.places.map((p) => p.meaning)).toEqual(['سامي شايف إن المواعيد بتتنسي']);
+    // A joint holder's own earlier place goes too (S4): the joint one is read from a later contribution.
+    expect(decodeSharedSemanticReading({ places: [joint, place({ meaning: 'هالة شايفة إن المواعيد بتتنسي', sourceRefs: [1], holders: ['S1'] })] }, given)).toEqual({ places: [] });
     expect(decodeSharedSemanticReading({ places: [joint] }, given)).toEqual({ places: [] });
     // A malformed joint place still refuses the whole reading: the drop is never a way round the rules.
     expect(decodeSharedSemanticReading({ places: [{ ...joint, holders: ['S1', 'S9'] }, own] }, given)).toBeNull();
+  });
+
+  // Round 19's readings, as the model answered them (names and order exact; sources as the decoder receives them).
+  const reading = (writers: string[], from: string[]): SharedSemanticInput => ({
+    contract: SHARED_SEMANTIC_INTERPRETATION_CONTRACT,
+    writers: writers.map((name, index) => ({ speaker: `S${index + 1}`, name })),
+    contributions: from.map((speaker, index) => ({ ref: index + 1, from: speaker, text: `c${index + 1}` })),
+    existing: [],
+  });
+  const meanings = (decoded: ReturnType<typeof decodeSharedSemanticReading>) => decoded?.places.map((p) => p.meaning);
+
+  it('S4 (2026-10-25): a position withdrawn in the same reading is never saved as current', () => {
+    // ياسر (S1) wants to postpone, then (contribution 4) agrees to launch next month.
+    const s4 = reading(['ياسر', 'دينا', 'طارق'], ['S1', 'S2', 'S3', 'S1', 'S2']);
+    const postpone = place({ meaning: 'تأجيل إطلاق المشروع لحد السنة الجاية', sourceRefs: [1], holders: ['S1'] });
+    // Round 19 exactly: the replacement came back joint, so F1 alone would have left the withdrawn position as Yasser's.
+    expect(decodeSharedSemanticReading({ places: [
+      postpone,
+      place({ meaning: 'التأجيل هيضيع فرصة المعرض، والمعرض مهم', sourceRefs: [2, 3], holders: ['S2', 'S3'] }),
+      place({ meaning: 'إطلاق المشروع الشهر الجاي قبل المعرض', sourceRefs: [4, 5], holders: ['S1', 'S2'] }),
+    ] }, s4)).toEqual({ places: [] });
+    // Read as Yasser's own: only the latest is kept.
+    const launch = place({ meaning: 'إطلاق المشروع الشهر الجاي قبل المعرض', sourceRefs: [4], holders: ['S1'] });
+    expect(meanings(decodeSharedSemanticReading({ places: [postpone, launch] }, s4))).toEqual(['إطلاق المشروع الشهر الجاي قبل المعرض']);
+    // Two places of his read from the same latest contribution: neither can be shown to be the current one.
+    expect(decodeSharedSemanticReading({ places: [{ ...postpone, sourceRefs: [1, 4] }, launch] }, s4)).toEqual({ places: [] });
+    // Different people's places are not touched, whatever their order.
+    const own = reading(['منى', 'أحمد'], ['S1', 'S2', 'S1']);
+    expect(meanings(decodeSharedSemanticReading({ places: [
+      place({ meaning: 'أحمد دايمًا بيتأخر', sourceRefs: [1], holders: ['S1'] }),
+      place({ meaning: 'اتأخر مرة واحدة بسبب الشغل', sourceRefs: [2], holders: ['S2'] }),
+    ] }, own))).toEqual(['أحمد دايمًا بيتأخر', 'اتأخر مرة واحدة بسبب الشغل']);
+  });
+
+  it('V2 (2026-10-25): a member is never turned into someone absent by a Name; an absent person relayed correctly stays', () => {
+    // رنا (S1) is a writer; سامي (S2) relays her view (contribution 4).
+    const v2 = reading(['رنا', 'سامي', 'لينا'], ['S1', 'S2', 'S3', 'S2', 'S3']);
+    const plan = place({ meaning: 'العزومة يوم الجمعة الجاية عند سامي', sourceRefs: [2], holders: ['S2'] });
+    const sweets = place({ meaning: 'لينا هتجيب الحلويات', sourceRefs: [3], holders: ['S3'] });
+    const relayed = { meaning: 'الجمعة مش مناسبة ليها بسبب شغل متأخر', sourceRefs: [4], relayedBy: ['S2'], about: ['S1'] };
+    // Round 19, run 14 exactly: Rana stored as an absent holder. Not kept; the rest of the reading is.
+    expect(meanings(decodeSharedSemanticReading({ places: [plan, sweets, place({ ...relayed, holders: [], absentHolder: 'رنا' })] }, v2)))
+      .toEqual([plan.meaning, sweets.meaning]);
+    // Round 19, run 11: the member holds it, relayed by Sami. Kept.
+    expect(decodeSharedSemanticReading({ places: [place({ ...relayed, holders: ['S1'] })] }, v2)?.places[0].attribution)
+      .toMatchObject({ holders: ['S1'], absentHolder: null, relayedBy: ['S2'] });
+    // N3: someone who is not a writer, relayed by one, stays absent — even when their description names that writer.
+    const n3 = reading(['شريف', 'مراد'], ['S1', 'S2']);
+    expect(decodeSharedSemanticReading({ places: [place({ meaning: 'مش موافقة على السفر', sourceRefs: [2], holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'] })] }, n3)
+      ?.places[0].attribution).toMatchObject({ holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'] });
+  });
+
+  it('V2: two writers who share a Name stay two people; an absent holder with their Name, or part of a writer\'s Name, is not kept', () => {
+    const same = reading(['محمد (1)', 'محمد (2)', 'سلمى'], ['S1', 'S2', 'S3', 'S1']);
+    const decoded = decodeSharedSemanticReading({ places: [
+      place({ meaning: 'السفر أول أسبوع من أغسطس', sourceRefs: [1, 4], holders: ['S1'] }),
+      place({ meaning: 'رفض السفر السنة دي', sourceRefs: [2], holders: ['S2'] }),
+      place({ meaning: 'محمد مش هيقدر ييجي', sourceRefs: [3], holders: [], absentHolder: 'محمد', relayedBy: ['S3'] }),
+    ] }, same);
+    expect(decoded?.places.map((p) => p.attribution.holders)).toEqual([['S1'], ['S2']]);
+    // Ambiguous: the absent holder could be the writer whose Name contains it (normalized: «احمد» is «أحمد»).
+    for (const [writer, absent] of [['رنا أحمد', 'رنا'], ['أحمد', 'احمد'], ['Rana', 'rana']]) {
+      expect(decodeSharedSemanticReading({ places: [place({ sourceRefs: [2], holders: [], absentHolder: absent, relayedBy: ['S2'] })] }, reading([writer, 'سامي'], ['S1', 'S2'])))
+        .toEqual({ places: [] });
+    }
   });
 
   it('the test interpreter is deterministic, copies no text, and reads only what no existing meaning reads', async () => {

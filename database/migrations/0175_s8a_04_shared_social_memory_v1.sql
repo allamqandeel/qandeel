@@ -902,8 +902,11 @@ BEGIN
                       r.item_count, r.required_approver_count;
 END$function$;
 
--- G.5 Replay capture (S7-01 / 0155): a place is refused by id. One change: the admitted kinds lose QANDEEL_ANALYSIS, so a
---     selected place takes the existing REPLAY_SOURCE_KIND_RESERVED refusal.
+-- G.5 Replay capture (S7-01 / 0155): a place is refused by id. Two changes: the admitted kinds lose QANDEEL_ANALYSIS, so a
+--     selected place takes the existing REPLAY_SOURCE_KIND_RESERVED refusal (after the visibility check, so a hidden place
+--     is still only unavailable); and a place is not part of the universe a Shared Replay is measured against, like
+--     Introduction-era material (S6-02), so FULL_SOURCE stays provable in a World that has places and the universe ranks
+--     stay contiguous over what Replay may capture.
 CREATE OR REPLACE FUNCTION public.replay_capture_source_manifest_v1(p_replay_id uuid, p_source_manifest_version_id uuid, p_manifest_revision integer, p_source_class text, p_source_context_id uuid, p_source_version_id uuid, p_source_item_ids uuid[], p_capture_instant timestamp with time zone)
  RETURNS TABLE(captured_item_count integer, captured_universe_item_count integer)
  LANGUAGE plpgsql
@@ -1031,6 +1034,11 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'REPLAY_SOURCE_NOT_AVAILABLE' USING ERRCODE='P0002';
     END IF;
+    visible := ARRAY(SELECT v.item FROM unnest(visible) WITH ORDINALITY AS v(item, rank)
+                      WHERE NOT EXISTS (SELECT 1 FROM public.shared_world_materials m
+                                         WHERE m.world_id = p_source_context_id AND m.history_item_id = v.item
+                                           AND m.material_kind = 'QANDEEL_ANALYSIS')
+                      ORDER BY v.rank);
     universe := cardinality(visible);
 
     INSERT INTO public.replay_source_manifest_versions

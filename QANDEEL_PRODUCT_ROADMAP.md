@@ -998,4 +998,7 @@ stay as written.
     correction (amendment §13.8) keeps no place held by more than one member and serves only current positions to recall
     and reply; it was proven free (no paid call). Draft PR #357 is open to `main`, kept as a draft; CP2 is not closed and
     the placer stays unbound until the Product Owner's final approval.
+  - the final corrective pass (amendment §13.9, 2026-10-25): a place is left out of the Shared Replay universe (0175 G.5)
+    so `FULL_SOURCE` stays provable, with 0101 re-aligned and 0135 / 0161 / 0170 / 0171 re-anchored; a member keeps only
+    their latest place of a reading (S4); an absent holder named as a writer is not saved (V2). Free proofs only.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).

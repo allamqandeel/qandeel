@@ -254,7 +254,7 @@ describe('S8A-04 CP2 — the saved position: whose it is, written whole, placed 
 
   it('F1 (2026-10-25): a place held by more than one member is never saved; the reading’s other places are', async () => {
     // The server cannot prove that one meaning is jointly held, so it keeps no place that would mix one person's view
-    // with another's. A single holder, and an absent holder relayed by a member, are kept.
+    // with another's. An absent holder relayed by a member is kept.
     const reading: SharedSemanticInterpreter = { read: async () => ({ places: [
       place({ meaning: 'رأي منى ومراد في السفر', sourceRefs: [1, 2], holders: ['S1', 'S2'] }),
       place({ meaning: 'السفر مناسب', sourceRefs: [1], holders: ['S1'] }),
@@ -263,7 +263,8 @@ describe('S8A-04 CP2 — the saved position: whose it is, written whole, placed 
     const kept = harness({ interpreter: reading });
     expect((await kept.service.weave(REQUEST)).state).toBe('WOVEN');
     const bodies = commitOf(kept.rpcs).map((call) => call.body);
-    expect(bodies.map((body) => body.p_holder_user_ids)).toEqual([[MONA], []]);
+    // Mona's own place goes too (S4): she also holds the joint one, read from a later contribution.
+    expect(bodies.map((body) => body.p_holder_user_ids)).toEqual([[]]);
     expect(JSON.stringify(bodies)).not.toContain('رأي منى ومراد');
     // A reading whose every place is jointly held saves nothing: the pass completes with no place.
     const joint: SharedSemanticInterpreter = { read: async () => ({ places: [place({ holders: ['S1', 'S2'] })] }) };
@@ -271,6 +272,32 @@ describe('S8A-04 CP2 — the saved position: whose it is, written whole, placed 
     expect(await none.service.weave(REQUEST)).toEqual({ state: 'WOVEN', placeIds: [] });
     expect(commitOf(none.rpcs)).toEqual([]);
     expect(none.rpcs.at(-1)?.body.p_completed).toBe(true);
+  });
+
+  it('S4 / V2 (2026-10-25): the saved positions map to the right identities; a withdrawn or misnamed one is not written', async () => {
+    // Mona (S1) wrote M1, Morad (S2) wrote M2, with their visible Names.
+    const named = { ...REQUEST, authorNames: [{ materialId: M1, authorName: 'منى' }, { materialId: M2, authorName: 'مراد' }] };
+    const reading: SharedSemanticInterpreter = { read: async () => ({ places: [
+      // Morad relays Mona's view: hers, relayed by him.
+      place({ meaning: 'السفر مش مناسب دلوقتي', sourceRefs: [2], holders: ['S1'], relayedBy: ['S2'], lensKey: 'plans' }),
+      // Mona (a writer) as an absent holder: not written.
+      place({ meaning: 'منى مش موافقة', sourceRefs: [2], holders: [], absentHolder: 'منى', relayedBy: ['S2'], lensKey: 'plans' }),
+      // Morad's mother, relayed by him: absent, and written.
+      place({ meaning: 'مش موافقة على السفر', sourceRefs: [2], holders: [], absentHolder: 'والدة مراد', relayedBy: ['S2'], lensKey: 'family' }),
+    ] }) };
+    const { service, rpcs } = harness({ interpreter: reading });
+    expect((await service.weave(named)).state).toBe('WOVEN');
+    expect(commitOf(rpcs).map((call) => [call.body.p_holder_user_ids, call.body.p_absent_holder_label, call.body.p_relayer_user_ids]))
+      .toEqual([[[MONA], null, [MORAD]], [[], 'والدة مراد', [MORAD]]]);
+    // S4: Mona's earlier position and the one that replaced it, in one reading — only the latest is written.
+    const changed: SharedSemanticInterpreter = { read: async () => ({ places: [
+      place({ meaning: 'ضد السفر', sourceRefs: [1], holders: ['S1'] }),
+      place({ meaning: 'موافقة على السفر في أغسطس', sourceRefs: [1, 2], holders: ['S1'], relayedBy: [] }),
+    ] }) };
+    const later = harness({ interpreter: changed });
+    expect((await later.service.weave(named)).state).toBe('WOVEN');
+    expect(commitOf(later.rpcs).map((call) => call.body.p_holder_user_ids)).toEqual([[MONA]]);
+    expect(JSON.stringify(commitOf(later.rpcs))).not.toContain('ضد السفر');
   });
 
   it('refuses the whole reading on any attribution rule, and writes nothing', async () => {

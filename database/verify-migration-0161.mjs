@@ -49,7 +49,9 @@ const FROZEN = [
   ['public', 'list_my_introduction_worlds_v1', '0164_account_deletion_matching_introductions_v1.sql'],
   ['public', 'read_my_introduction_messages_v1', '0164_account_deletion_matching_introductions_v1.sql'],
   ['public', 'send_my_introduction_text_v1', '0160_introduction_world_human_messaging_v1.sql'],
-  ['shared_private', 'list_own_closed_shared_world_material_v1', '0155_introduction_privacy_isolation_end_boundary_v1.sql'],
+  // RE-ANCHORED by S8A-04 CP2 (2026-10-25, amendment §6 / 0175 G.2): the closed member read leaves a Shared place out.
+  // 0175 is now its defining migration; the pin is as strict as before, byte for byte.
+  ['shared_private', 'list_own_closed_shared_world_material_v1', '0175_s8a_04_shared_social_memory_v1.sql'],
   ['shared_private', 'list_own_closed_shared_world_members_v1', '0155_introduction_privacy_isolation_end_boundary_v1.sql'],
 ];
 const MIGRATIONS = new URL('./migrations/', import.meta.url);

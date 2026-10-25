@@ -3,7 +3,7 @@
 
 **Status:** `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
 IMPLEMENTED ON s8a/s8a-04-cp2 (DRAFT PR #357); STAGE 0 (FREE) PASSED; THE PAID STAGES RAN (ROUND 19, 2026-10-25); THE F1 / F2
-CORRECTION MADE (§13.8) — CP2 NOT CLOSED — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
+CORRECTION (§13.8) AND THE FINAL CORRECTIVE PASS (§13.9) MADE — CP2 NOT CLOSED — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
 - The implementation record is §13.
 - The placer stays unbound (§7) until the correction is accepted, the device check of §8 passes and the Product Owner gives
   final approval.
@@ -958,6 +958,14 @@ Everything below was built under §1 R4, on the branch's base `43e67229`, with n
 - §3.2 offers a replaced position as history beside its successor. Under the same correction (F2) the World's knowledge
   holds only current positions, in every path (whole, the recall index and the safe path); the field `earlier` stays in
   the data shape, always empty, and M2 / M3's sentences on earlier positions stay approved and unchanged, now unused.
+- §2.1 lets a member hold several places of one reading. Under the final corrective pass (2026-10-25, §13.9, S4) a member
+  who holds more than one keeps only the one read from the latest contribution, and none when that one is joint or two are
+  equally late.
+- §2.1 takes an absent holder as the model names it. Under the same pass (V2) a place whose absent holder's every word is
+  in the Name of one of the reading's writers is not saved: a Name never decides identity, in either direction.
+- §6 closes Replay capture to a place by id. Under the same pass (A) a place is also not part of the universe a Shared
+  Replay is measured against (as Introduction-era material is not, S6-02), so `FULL_SOURCE` stays provable in a World that
+  has places; the refusal by id and its order after the visibility check are unchanged.
 
 ## 13.3 Stage 0 (free) — verification
 
@@ -1056,7 +1064,8 @@ unauthorized knowledge reached a reply.
 ## 13.7 Not yet done
 
 - The placer binding of §7, the last change of CP2. Its §11 conditions hold (no binding stop fired), but the findings
-  above, the correction of §13.8 and the device check of §8 are for the Product Owner first; it has not been made.
+  above, the corrections of §13.8 and §13.9 and the device check of §8 (run, §13.9 E) are for the Product Owner first; it
+  has not been made.
 - CP2's closure. The pull request to `main` is open as Draft PR #357 (2026-10-25), kept as a draft, not merged.
 
 ## 13.8 The Product Owner's correction: F1 and F2 (2026-10-25)
@@ -1094,4 +1103,61 @@ names it; API CI still runs it, and it stays selectable as `migration-0115`.
 
 **Residual risks (the model's quality, not storage).** A position withdrawn inside the same reading may still be saved as
 a new place (S4's kind), since the server cannot see the withdrawal without a change to M1's text; a single-holder place
-may cite another member's contribution; a member may still be stored as an absent holder (V2's relayed view).
+may cite another member's contribution; a member may still be stored as an absent holder (V2's relayed view). *(S4's
+kind and V2's are narrowed by §13.9.)*
+
+## 13.9 The final corrective pass (2026-10-25)
+
+**Decision.** The Product Owner ordered one bounded corrective pass on Draft PR #357, reviewed at head `51e1483a`: repair
+the confirmed API CI failure (A), keep a position withdrawn in the same reading from being saved as current (B, S4), keep a
+member from being turned into someone absent, or the reverse, by a Name (C, V2), keep F1 – F3 (D), and run the closing
+checks and the device check of §8 with the placer still unbound (E). No WP0, Copy Gate or recall, memory or field
+redesign; M1 – M4 and the JSON Schemas unchanged.
+
+**A — API CI.** On `51e1483a` API CI failed in `verify-migration-0101.mjs` (stage `shared source`): `0A000 /
+REPLAY_SOURCE_KIND_RESERVED` where `22023` was expected. The fixture's six visible items include two places, and the old
+proof captured all six for `FULL_SOURCE`. Changing the expected code would have hidden a real consequence: 0175 counted a
+place in the universe a Shared Replay is measured against while refusing to capture it, so no World with a place could
+ever reach `FULL_SOURCE` again. 0175 G.5 now leaves a place out of that universe and its ranks (§13.2), exactly as
+Introduction-era material is left out; the refusal by id, and the visibility check before it, are unchanged. The 0101
+proofs are re-aligned, not weakened: the universe is the four capturable items; a place by id is refused `0A000` alone,
+beside capturable material and under a `FULL_SOURCE` claim over everything visible, with nothing written in any Replay
+relation and no item or World in the message; a place the creator cannot see is refused exactly like nonexistent
+material; `FULL_SOURCE` over the four is provable with contiguous ranks 1 – 4. Running past 0101 found four more pins 0175
+forward-changes, re-anchored as earlier tasks did (dated comments, as strict as before): 0161 A03 (the closed member read
+is now defined by 0175, byte for byte), 0171 (twelve cost families), 0135 and 0170 (the executable accounting surface
+gains exactly `begin_ai_provider_call_v2`, service_role only, once it exists).
+
+**B — S4.** Round 19's S4 reading kept Yasser's postponement and folded his replacement («launch next month») into a
+place held jointly with Dina; F1 dropped the joint one and so left the withdrawn position as Yasser's only current one. A
+member who holds more than one place in a reading (a joint one included) now keeps only the place read from the latest
+contribution, and none when that one is joint or two are equally late. Round 19's S4 then saves nothing for Yasser,
+whatever the places' sources were. Replayed over the live reading stage, the rule touches six further places of three
+members (S2, N2, V1): each keeps at most the latest, so an earlier, still-current view of the same person may go unsaved
+— less knowledge, never a mixed one.
+
+**C — V2.** Round 19's V2 run 14 stored Rana, a writer, as an absent holder relayed by Sami. A place whose absent holder's
+every word is in the Name of one of the reading's writers (MEM-AR-01A's comparison normalizer; a reading's numbering
+removed) is now not saved; the Name never assigns an identity. Kept: a member's own view; Rana's view held by her and
+relayed by Sami (run 11); «والدة مراد» relayed by Morad; two writers named «محمد» kept apart. Not kept: «رنا» for the
+writer «رنا»; «محمد» beside two writers of that Name; «رنا» for «رنا أحمد»; «احمد» for «أحمد». The live replay removes
+exactly run 14's place.
+
+**D — F1, F2, F3.** Kept unchanged and re-proven: no joint place is saved (F1); only current positions reach recall and
+the reply (F2); a relayed view keeps its relayer and holder and is never a fact (F3).
+
+**E — verification (free; no paid call was made).** `tsc` (the API and its scripts) and `nest build`; the full API suite,
+288 suites (6 807 tests, 1 skipped), with round 19's S4 and V2 readings as regression tests in the decoder and the
+semantic pass; every API CI database verifier, in CI order, on a fresh real PostgreSQL 17 database carrying all 175
+migrations: all pass, 0100, 0101 and 0175 among them, except four that need what the local machine lacks (the two Redis
+verifiers, 0133's `psql`, and 0130's seven-day clock assertion); the root contracts and the task-closure governance
+contract. The device check of §8 ran on the Android emulator (no physical device): the proof build carries CP2's composed
+safe meanings in the Shared field; FAR, MID, a place's panel and Back pass in Arabic and English, a relayed meaning shows in
+full in the panel, with no crash and no application ANR (one emulator System UI dialog, as in SHARED-VIS-01). The placer is
+still not bound, and nothing leaves `SYNTHETIC_ONLY`.
+
+**Residual risks (narrowed, not removed).** S4: a position withdrawn inside the same reading with no replacement place is
+still saved if the model keeps it; the server cannot see a withdrawal that left no later place, and closing that needs a
+sentence in M1, a Copy Gate decision for the Product Owner. V2: a member who wrote nothing in the reading's window, or an
+absent person given a member's token, cannot be told apart by the server. Each is a model-quality limit; none mixes two
+people's views in one saved meaning.
