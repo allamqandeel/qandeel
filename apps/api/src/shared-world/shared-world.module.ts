@@ -4,12 +4,14 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SHARED_QANDEEL_REPLY_PROVIDERS } from '../connected-worlds/material-commit/shared-qandeel-reply.providers';
 import { SHARED_QANDEEL_REPLY_GENERATOR } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
+import { SHARED_DISCLOSURE_JUDGE } from '../connected-worlds/member-knowledge/shared-member-knowledge.types';
 import { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { ModelRouterModule } from '../model-router/model-router.module';
 import { SharedActivityProducer } from './shared-activity.producer';
 import { SharedActivityRepository } from './shared-activity.repository';
 import { SharedConversationReplyGenerator } from './shared-conversation-reply.generator';
+import { createConfiguredSharedDisclosureJudge } from './shared-disclosure-judge-provider';
 import { SharedIdSealing } from './shared-id-sealing';
 import { SharedSemanticFieldService } from './shared-semantic-field.service';
 import { SHARED_SEMANTIC_INTERPRETER } from './shared-semantic-interpreter';
@@ -69,6 +71,8 @@ import { SharedWorldService } from './shared-world.service';
     { provide: SHARED_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredSharedSemanticInterpreter() },
     { provide: SHARED_SPATIAL_PLACER, useFactory: () => createConfiguredSharedSpatialPlacer() },
     { provide: SHARED_KNOWLEDGE_RECALLER, useFactory: () => createConfiguredSharedKnowledgeRecaller() },
+    // S8A-04 CP3: the disclosure judge, or null where DeepSeek may not run (then no personal knowledge is collected).
+    { provide: SHARED_DISCLOSURE_JUDGE, useFactory: () => createConfiguredSharedDisclosureJudge() },
   ],
 })
 export class SharedWorldModule {}

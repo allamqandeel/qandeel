@@ -1243,6 +1243,13 @@ jobs:
       # membership and World isolation; the Shared AI-COST-01 begin; and condition 9 over every surface serving Shared material.
       - name: Verify S8A-04 Shared Social Memory against real PostgreSQL
         run: npm run verify:shared-social-memory:integration
+      # S8A-04 CP3 Personal Knowledge in Shared World: migration 0176 (Product Owner authorization 2026-10-25) - one owner
+      # answer writing one consent event and a reasoning + disclosure grant pair bound to one item, World, membership episode
+      # and exact audience; no implicit or server-made consent; the local relevance read (no AI before consent); the
+      # collector, the owner's view and commands; revoke, correction, forget, leave, rejoin and audience growth; the
+      # consented reply commit v2 (STALE under every race) and the disclosure-judge family paid by the causing author.
+      - name: Verify S8A-04 Personal Knowledge in Shared World against real PostgreSQL
+        run: npm run verify:shared-knowledge-consent:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

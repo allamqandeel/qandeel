@@ -60,6 +60,11 @@ export interface SharedReplyGenerationInput {
   readonly source?: { readonly worldId: string; readonly materialId: string };
   /** S8A-04 CP2: the World's knowledge (K1…Kn, commit order), labelled with this request's labels. Empty: none. */
   readonly knowledge?: ReadonlyArray<SharedKnowledgeEntry>;
+  /**
+   * S8A-04 CP3: the items their owners allowed QANDEEL to use and mention here, admitted by I-03E for this exact audience,
+   * each under its owner's label in this request. Absent when none was admitted.
+   */
+  readonly memberKnowledge?: ReadonlyArray<{ readonly owner: string; readonly item: string }>;
 }
 
 export type SharedReplyGeneration =

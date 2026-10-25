@@ -9,6 +9,7 @@ import { SafetyResponseGateService } from '../conversation/safety-response-gate.
 import { MODEL_ROUTER, type ModelRouter, type ModelRouterContextMessage } from '../model-router/model-router.types';
 import { SHARED_ATTRIBUTION_READING_BUDGET_MS, SHARED_ATTRIBUTION_TURN_BUDGET_MS, sharedAttributionTier, withSharedAttribution } from './shared-attribution-layer';
 import { ModelRouterAttributionReader, type SharedAttributionReader } from './shared-attribution-reading';
+import { sharedMemberKnowledgeBlock } from './shared-member-knowledge-texts';
 import { assembleSharedConversationRequest, sharedConversationLabels } from './shared-conversation-model-input';
 import {
   SHARED_KNOWLEDGE_RECALLER, SHARED_KNOWLEDGE_RECALL_CONTRACT, UnconfiguredSharedKnowledgeRecaller, decodeSharedKnowledgeRecall, type SharedKnowledgeRecaller,
@@ -137,7 +138,10 @@ export class SharedConversationReplyGenerator implements SharedQandeelReplyGener
         const attributed = (await withSharedAttribution(input.conversation, request, this.reader)).request;
         const chosen = await knowledge;
         const block = sharedWorldKnowledgeBlock(chosen.entries);
-        const reply = block === null ? attributed : { ...attributed, behavioralGuidance: `${attributed.behavioralGuidance}\n\n${block}` };
+        const withKnowledge = block === null ? attributed : { ...attributed, behavioralGuidance: `${attributed.behavioralGuidance}\n\n${block}` };
+        // S8A-04 CP3: the items their owners allowed here, after the World's knowledge (CG-6a, PROPOSED).
+        const members = sharedMemberKnowledgeBlock(input.memberKnowledge ?? []);
+        const reply = members === null ? withKnowledge : { ...withKnowledge, behavioralGuidance: `${withKnowledge.behavioralGuidance}\n\n${members}` };
         // With an attribution reading, the reply keeps what remains of the reading turn, measured after recall too.
         const budgeted = tier > 0 ? { ...reply, latencyBudgetMs: Math.max(0, Math.floor(cap - (monotonic() - started))) } : reply;
         return { generated: await this.router.generate(budgeted), knowledgeRefs: chosen.entries.map((entry) => entry.ref) };

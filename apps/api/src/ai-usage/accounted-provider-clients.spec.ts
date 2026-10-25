@@ -114,7 +114,8 @@ describe('AI-COST-01 ledger repository (service-role channel)', () => {
 
 describe('S8A-04 CP2 — AI-COST-01 Shared correlation (Controlled Amendment §5)', () => {
   const completion = { choices: [{ finish_reason: 'stop', message: { content: '{}' } }], usage: { prompt_tokens: 3, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 3, completion_tokens: 1 } };
-  it.each(['SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] as const)('%s: the begin record carries the payer, the World and the causing message', async (family) => {
+  // S8A-04 CP3 (0176): the Shared disclosure judge too, paid by the sender of the answered message.
+  it.each(['SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE'] as const)('%s: the begin record carries the payer, the World and the causing message', async (family) => {
     const r = recordingAccounting();
     const create = jest.fn(async (_body: unknown, _options?: unknown) => completion);
     const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, family, r.accounting);

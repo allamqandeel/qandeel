@@ -67,7 +67,11 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // zero-cost runs (dry, simulated) need no approval. A paid run needs the Product Owner's approval of its budget; until
   // then the round is locked, and lifting the lock is the single change. Synthetic data only, no automatic retry. Lifted
   // by the Product Owner's approval of 2026-10-25: at most 12 DeepSeek Flash calls and USD 0.02, scenario A only, one run.
-  20: { maxAttempts: 12, costCapUsd: 0.02 } };
+  20: { maxAttempts: 12, costCapUsd: 0.02 },
+  // Round 21: S8A-04 CP3 — the free integrated proof of Personal Knowledge in a Shared World (scripts/s8a-04/cp3-*). Product
+  // Owner Final Implementation Authorization, 2026-10-25: dry and simulated runs only; no paid call is authorized (CP3-D's
+  // budget request comes first), so the round is locked for a live run and has no paid allowance at all.
+  21: { maxAttempts: 0, costCapUsd: 0, authorized: false } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';

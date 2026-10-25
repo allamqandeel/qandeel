@@ -36,6 +36,8 @@ export const AI_FEATURE_FAMILIES = [
   // S8A-04 CP2 (migration 0175): the Shared knowledge recall and the Shared spatial placement.
   'SHARED_KNOWLEDGE_RECALL',
   'SHARED_SPATIAL_PLACEMENT',
+  // S8A-04 CP3 (migration 0176): the Shared disclosure judge, paid by the sender of the answered message.
+  'SHARED_DISCLOSURE_JUDGE',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 

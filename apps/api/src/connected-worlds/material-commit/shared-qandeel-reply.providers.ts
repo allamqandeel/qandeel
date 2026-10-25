@@ -17,6 +17,7 @@ import { SharedPreModelWorldStateResolverService } from '../effective-context/sh
 import { SharedPrivacyAuthorityDeliveryReadinessService } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
 import { SHARED_SOURCE_DISCLOSURE_DETECTOR } from '../source-disclosure/shared-source-disclosure-detector.types';
 import { SharedSourceDisclosureGateService } from '../source-disclosure/shared-source-disclosure-gate.service';
+import { SharedMemberKnowledgeService } from '../member-knowledge/shared-member-knowledge.service';
 import { SharedQandeelReplyService } from './shared-qandeel-reply.service';
 import { UnimplementedPrivateSourceState, UnimplementedSourceDisclosureDetector } from './shared-unavailable-private-context-boundaries';
 
@@ -31,5 +32,8 @@ export const SHARED_QANDEEL_REPLY_PROVIDERS: ReadonlyArray<Provider> = Object.fr
   SharedSourceDisclosureGateService,
   SharedDeliveryAuthorityRevalidatorService,
   SharedPrivacyAuthorityDeliveryReadinessService,
+  // S8A-04 CP3: the consented items, the authorized-disclosure lane and the local relevance read (its judge is the
+  // Shared World module's SHARED_DISCLOSURE_JUDGE).
+  SharedMemberKnowledgeService,
   SharedQandeelReplyService,
 ]);

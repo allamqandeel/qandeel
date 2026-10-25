@@ -1,7 +1,10 @@
 # QANDEEL — S8A-04 CP3 — Personal Knowledge in Shared World — Controlled Amendment v1.0
 
-**Status:** `PROPOSED R3 — FOR THE PRODUCT OWNER'S FINAL DESIGN REVIEW (2026-10-25) — NOT APPROVED — NOT IMPLEMENTED —
-COPY GATE PROPOSED (0 of 6 approved)`. No code, migration or paid call exists for it; CP3-A does not start before approval.
+**Status:** `R3 APPROVED FOR IMPLEMENTATION BY THE PRODUCT OWNER (2026-10-25) WITH TWO BINDING CORRECTIONS (§10) — CP3-A
+AND CP3-B IMPLEMENTED ON THE LOCAL BRANCH s8a/s8a-04-cp3 (NOT PUSHED, NO PR, NOT MERGED) — CP3-C AND CP3-D NOT STARTED —
+COPY GATE PROPOSED (0 of 6 approved) — 0176 NOT APPLIED TO ANY HOSTED DATABASE — NO PAID CALL`. §10 binds over every
+earlier section it names. Scope, gates and closure conditions: the Task Contract
+`docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md`.
 
 **Delivers:** `SHARED-CTX-01` / `QAN-BL-CW-02` (the private-context portion of `G-08`).
 **Binds over (when approved):** CW2-02 §16–§22, §32; CW2-03 §23, §39, §40; I-03G and the I-03G readiness boundary, only
@@ -10,7 +13,7 @@ D1–D7, the final review PO-1 – PO-5 and the R3 review (R3-01 – R3-05), all
 **Unchanged and not reopened:** CP2 (functional gate closed by the Product Owner), round 20's results, Future
 Improvement 011 and §13.10 of the CP2 amendment.
 
-## 1. Decisions (approved principles; the design stays PROPOSED)
+## 1. Decisions (approved principles; PO-3's Flash stage and the payer of the judge are corrected by §10)
 - **PO-1** One clear consent action by the knowledge's owner creates two separate, bounded authorities — reasoning and
   disclosure; neither ever grants the other. Bound to the current membership episode; leave ends use; a wider audience
   or a rejoin needs a fresh consent.
@@ -62,7 +65,7 @@ disclosureAuthorization)` — the third argument is optional; omitted, the metho
    the same `(effectiveContextRef, outputDigest, protectedSourceSetRef)` and carrying only that owner's items, the exact
    output and the audience's member tokens. (Today: once per operation. Per owner keeps two members' private items out of
    one call and lets each owner pay for their own check — see §5.) The judge sees no grant: it judges disclosure, never
-   permission.
+   permission. **[Payer superseded by §10.2: every judge call is paid by the sender of the causing message.]**
 4. **The v2 assessment** (new shape, accepted only in this lane): `{ state: 'ASSESSED', assessmentRef,
    detectorPolicyRef, binding, sources: [{ contentDigest, findings: Category[], attributedTo: 'OWNER' | 'OTHER' | 'NONE'
    | 'UNCLEAR', unsupportedOwnerClaim: boolean }] }`, one entry for each of that owner's items, no other key. Any missing,
@@ -151,7 +154,7 @@ reply (a new turn, not a regeneration) is generated without it and QANDEEL does 
    included). **Stage 1 (free):** a 0176 service-role read applies the existing semantic index (0171's terms and scoring,
    `memoryRetrievalTerms` over Hala's message, which every member already sees) to each member's **eligible** items not
    consented, declined, pending or in a withheld cooldown; it returns refs and hit counts only, never content.
-3. **Stage 2 (Flash, only if stage 1 found any candidate):** for the single strongest member not in their one-hour
+3. **[Removed by §10.1: there is no Stage 2 and no relevance call; stage 1 alone opens the request.]** **Stage 2 (Flash, only if stage 1 found any candidate):** for the single strongest member not in their one-hour
    window — at most **one call per reply** — one call with Hala's message and that member's (Mohamed's) top 3 candidates;
    it answers at most one ref, validated server-side as one of those. Accounted as `SHARED_PRIVATE_RELEVANCE`, **paid by
    Mohamed** (the owner), tied to Hala's message and the World: if Hala paid, her own usage would reveal that someone had
@@ -259,3 +262,78 @@ commit wrapper) and its real-PostgreSQL verifier. CP3-B the disclosure evaluator
 branch, judge and relevance adapters, collector, reply plumbing; the free suite of §8. CP3-C routes and the mobile
 surfaces after the Copy Gate closes; device check. CP3-D the preregistered judge evaluation of §4 and a small relevance /
 mention quality stage (budget requests first), then the S8A-04 BG-08 / BG-09 closure and the one PR.
+**[Relevance stage of CP3-D removed by §10.1: there is no relevance model to evaluate.]**
+
+## 10. Product Owner approval and implementation record (2026-10-25)
+**Approval.** The Product Owner's "S8A-04 / CP3 Final Implementation Authorization" (2026-10-25) approves R3 for
+implementation with the two binding corrections below. No R4, no new WP0, no new design round. The six Copy Gate texts of
+§7 are **not** approved: they are wired verbatim so the free tests exercise their exact bytes, and they must be approved
+(linguistic correction only) before CP3-C. No paid call is authorized; CP3-D starts with a budget request.
+
+### 10.1 Correction 1 — privacy before consent (binds over PO-3, §5 steps 2–3, §8 "Relevance and requests", §9)
+- **No AI call of any kind before consent.** The Flash relevance stage (§5 step 3, `SHARED_PRIVATE_RELEVANCE`) does not
+  exist: no family, no adapter, no prompt. Relevance is the local, server-side 0171 index read only:
+  `propose_shared_knowledge_request_v1` (0176), entirely in SQL, after a committed reply, returning one word
+  (`REQUESTED` | `NONE`).
+- No item text, summary or derivative leaves the database before the owner's consent; the read's result enters no reply,
+  analysis, reading, placement, recall or map — it writes one request row only the owner can read.
+- The sender and the other members learn nothing: the request is visible to its owner alone (`list_own_…`), another
+  member cannot answer it, and a withheld reply is indistinguishable from any provider failure (§3).
+- An item is used only from a **later** turn after the owner's own `authenticated` answer; DECLINED and the one-hour
+  window (`SHARED_KNOWLEDGE_REQUEST_WINDOW_SECONDS`, default 3600) and cooldown (`SHARED_KNOWLEDGE_COOLDOWN_SECONDS`,
+  default 3600) are enforced; one open request per member and World; no candidate → no request and no call.
+- **Authority of the internal read.** The Product Owner's condition: if the authority for this internal memory read
+  cannot be proved, the path stays closed; no implicit new permission, and service-role is never the user's consent.
+  The implementation's basis, recorded for the Product Owner's confirmation (Task Contract §7, decision D-1): the read
+  is the one this amendment's §5 defines and the authorization approves; it is purpose-bound (it can only open a private
+  request to the item's own owner), `service_role`-only (the 0171 `background_unindexed_memories_v1` posture), creates
+  no grant and admits nothing into any reply; only the owner's `authenticated` command writes a grant
+  (`auth.uid()` is the grantor; verify-migration-0176 proves no server path can). If the Product Owner does not confirm
+  this basis, closing the path is the single change of not calling it (the reply path does not depend on it).
+
+### 10.2 Correction 2 — cost attribution (binds over §3 step 3's payer, §5 step 3's payer, §8's payer clauses)
+- Every AI call after consent — the reply and each judge call (one per owner) — is paid by the **verified author of the
+  causing HUMAN_TEXT** through the unchanged `begin_ai_provider_call_v2`. The owner never pays for another member's
+  message. One new family, `SHARED_DISCLOSURE_JUDGE`; no Stage 9 economics, Credits, usage budget or launch gate changed.
+- The judge runs inside `runWithAiUsageAttribution({ userId: sender, sourceWorldId, sourceSharedMaterialId })`, through
+  `accountedDeepSeekChatCompletionsClient`; a call that cannot be attributed is refused before any provider request
+  (free proof P6). Exactly one ledger row per attempt; nothing about another member is revealed through usage, charges or
+  accounting errors.
+
+### 10.3 Implementation record (CP3-A, CP3-B) — where it differs from §3 – §8 in name or placement, this binds
+- **Placement.** The authorized-disclosure lane is a sibling composition in `apps/api/src/connected-worlds/member-knowledge/`
+  (`shared-member-knowledge-lane.ts`, `.service.ts`, `.types.ts`), not an edit of I-03G: every frozen I-03A / I-03E /
+  I-03F / I-03G file stays byte-identical. Per request it composes the frozen I-03E and I-03F with a grant resolver that
+  answers only with the owner's one item reasoning grant (0176), and the frozen I-03G gate with an adapter detector that
+  asks the judge once per owner and maps the v2 assessment fail-closed (§3 step 2.5). The result is
+  `AUTHORIZED_DISCLOSURE` (only where the frozen gate itself answered BLOCKED for an acceptable mention) or the frozen
+  `CLEAR`; never a relabelled CLEAR. With no DA, the reply path is the frozen one byte for byte.
+- **Readiness.** Lane order DA → gate → I-03F (unchanged) → disclosure revalidation. `readinessRef` keeps the v1 formula
+  (`fingerprintSharedPrivacyAuthorityDeliveryReadiness`), because the frozen 0090 / 0119 commit recomputes exactly it; the
+  DA and the disclosed set are bound into the lane's `gateRef` (`QANDEEL_S8A04_SHARED_AUTHORIZED_DISCLOSURE_GATE_V1`),
+  which `readinessRef` covers.
+- **One item per owner per reply.** The collector (`list_shared_knowledge_for_reply_v1`) returns at most one consented
+  item per owner, because I-03E resolves one grant per owner.
+- **Judge composition.** `NODE_ENV=test` → the deterministic fake; DeepSeek Flash only behind SYNTHETIC_ONLY with a key
+  and the Flash model; anywhere else there is **no judge**, and with no judge nothing is collected and the reply is
+  exactly the pre-CP3 reply. Bound: 6 s, 400 output tokens, zero retries, at most 8 items.
+- **Names.** The commit wrapper is `complete_shared_world_qandeel_reply_v2` (§3 step 4's
+  `commit_shared_world_qandeel_material_v2`); the use record is `shared_knowledge_private.uses` (§3's
+  `shared_private_knowledge_uses`). A command id replayed for another act is `23505`.
+- **Re-anchors.** `verify-migration-0150.mjs` names the v2 commit as an absorber (where 0176 is applied);
+  `verify-migration-0171 / 0174 / 0175.mjs` and the AI-COST-01 contract census name the new objects; the network guard
+  gains round 21 (dry and simulated only; no paid allowance).
+
+### 10.4 Verification (free; synthetic; no paid call)
+- `database/verify-migration-0176.mjs` on real PostgreSQL 17 (§6 of the authorization: no implicit consent, no server
+  grant, no cross-World or cross-episode transfer, no audience widening without reconfirmation, no partial write,
+  revoke / correct / forget stop use, every race STALE with nothing written).
+- API unit and composition suites: the lane (37), the reply with member knowledge (12), the judge (17); the whole API
+  suite, the type check and the root contracts.
+- The integrated proof `scripts/s8a-04/cp3-launch.mjs --simulate=<tag>` (Nest `SharedWorldModule`, the in-process Data
+  API over a disposable PostgreSQL 17 with every migration, local DeepSeek stand-ins under the network guard, round 21):
+  three members with different consents, the private request to a non-sender, no item before consent, decline and
+  allow later, quote / misattribution / source reveal / unsupported claim / HTTP 500 / malformed answers withheld with no
+  partial write and a cooldown, revoke / join / leave / correct / forget during generation STALE with nothing written,
+  the sender paying every call, a non-author payer refused. Run `simulated-r4`: 90 of 90 checks passed, 100 simulated
+  requests, nothing sent. The judge's quality is **not** proved by any of this: that is CP3-D's preregistered set (§4).

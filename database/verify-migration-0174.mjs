@@ -7,6 +7,9 @@
 //
 // S8A-04 CP2 (2026-10-24, re-anchored): migration 0175 adds exactly SHARED_KNOWLEDGE_RECALL and SHARED_SPATIAL_PLACEMENT to the
 // same CHECK. On a database migrated through 0175 the CHECK must be this list plus exactly those two; nothing else may differ.
+//
+// S8A-04 CP3 (2026-10-25, re-anchored): migration 0176 adds exactly SHARED_DISCLOSURE_JUDGE (the Shared disclosure judge, paid
+// by the author of the causing message). On a database migrated through 0176 the CHECK is the 0175 list plus exactly that one.
 
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -41,7 +44,8 @@ async function verify() {
   const { def } = await one(`SELECT pg_get_constraintdef(c.oid) AS def FROM pg_constraint c
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
   const { later } = await one("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid, uuid, uuid, uuid, text, text, text, text, text)') IS NOT NULL AS later");
-  const expected = later ? [...FAMILIES, 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : FAMILIES;
+  const { judged } = await one(`SELECT to_regprocedure('public.complete_shared_world_qandeel_reply_v2(uuid, uuid, uuid, text, text, text, text, text, text, text, uuid[], text[], uuid[], boolean[])') IS NOT NULL AS judged`);
+  const expected = [...FAMILIES, ...(later ? ['SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : []), ...(judged ? ['SHARED_DISCLOSURE_JUDGE'] : [])];
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...expected].sort());
 
   await q('BEGIN');
