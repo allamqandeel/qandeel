@@ -417,6 +417,19 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # The emulator refuses to create its data partition with less than 1.2 x its size free where the AVD lives, but
+      # the action below would still wait out the whole 900 s boot allowance. This says so in seconds instead:
+      # the 3072M data partition set below needs 3072 x 1.2 = 3687 MiB free under $HOME.
+      - name: Check the disk the emulator's data partition needs (3072M)
+        run: |
+          df -h "$HOME" "$RUNNER_TEMP"
+          avail=$(df --output=avail -m "$HOME" | tail -1 | tr -d ' ')
+          need=3687
+          echo "Available under $HOME: ${avail} MiB; the 3072M data partition needs ${need} MiB."
+          if [ "$avail" -lt "$need" ]; then
+            echo "::error::Not enough disk for the emulator's data partition: ${avail} MiB free, ${need} MiB needed."
+            exit 1
+          fi
       # Bounded at the STEP, not only by the job's hour: a hung Maestro launch must fail fast instead of
       # holding the runner. The bound covers emulator boot + install + smoke, so it sits above the 900 s
       # boot allowance rather than undercutting it. A timeout is a failure like any other — it stays red,
@@ -434,6 +447,9 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_7
+          # pixel_7's default 6144M data partition needs 7373 MiB free, more than the runner now has. 3072M holds the
+          # ~63 MB Release APK and its compiled code, the Maestro driver and the first boot's own data with room to spare.
+          disk-size: 3072M
           disable-animations: true
           emulator-boot-timeout: 900
           script: |
