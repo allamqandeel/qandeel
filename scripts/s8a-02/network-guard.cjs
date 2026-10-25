@@ -71,7 +71,12 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // Round 21: S8A-04 CP3 — the free integrated proof of Personal Knowledge in a Shared World (scripts/s8a-04/cp3-*). Product
   // Owner Final Implementation Authorization, 2026-10-25: dry and simulated runs only; no paid call is authorized (CP3-D's
   // budget request comes first), so the round is locked for a live run and has no paid allowance at all.
-  21: { maxAttempts: 0, costCapUsd: 0, authorized: false } };
+  21: { maxAttempts: 0, costCapUsd: 0, authorized: false },
+  // Round 22: S8A-04 CP3-D — the preregistered evaluation of the Shared disclosure judge (scripts/s8a-04/cp3d-*; amendment §4).
+  // Product Owner CP3-D Final Evaluation Authorization, 2026-10-25: ONE run of the 120 preregistered synthetic cases, DeepSeek
+  // Flash, at most 120 calls and USD 0.05 in total, no automatic retry, no second run; the launcher refuses a second (the
+  // spend state exists).
+  22: { maxAttempts: 120, costCapUsd: 0.05 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
