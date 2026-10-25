@@ -5,6 +5,8 @@
 (2026-10-25) — EFFECTIVE`.
 - The placer was still unbound at the merge (§7, §13.7), so CP2 merged as engineering, not as a functionally complete
   checkpoint. §13.10 reached `main` only through S8A-04 CP3's branch `s8a/s8a-04-cp3`, which first completes CP2 (§13.11).
+- *(2026-10-25, `s8a/s8a-04-cp3`:)* the placer is bound and its integrated free proof passed (§13.11); a paid confirmation
+  awaits the Product Owner's budget approval.
 
 *(Status at the Product Owner's final gate, kept verbatim:)*
 `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
@@ -1198,3 +1200,70 @@ branch, which the Product Owner opened from `b0839fd4` with no revert and no sep
 (§13.9, residual risks: a member who wrote nothing in the reading's window, or an absent person given a member's token)
 stays recorded there as a known model-quality limit; no decision of the Product Owner defers it, and none is made here.
 
+
+## 13.11 The placer binding — CP2's functional completion (2026-10-25, `s8a/s8a-04-cp3`)
+
+**Decision.** After the merge, an independent review of `main` found CP2 not functionally complete: outside tests
+`createConfiguredSharedSpatialPlacer` still returned the refusing placer, so `SharedSemanticPlaceService.weave` answered
+`NO_PROVIDER` before it read, analysed or saved anything, and no place was ever produced in the application. The device
+check of §8 proved the display, not that the production path was wired. The Product Owner ordered the smallest correct
+binding, on S8A-04 CP3's branch before any CP3 work, with no revert and no separate pull request: DeepSeek Flash only,
+through the approved client; `SYNTHETIC_ONLY` unchanged; no real user's data; AI-COST-01 kept; no unaccounted call and
+no retry; no fallback point; no change to the graphics engine, the coordinate system or a frozen contract; a safe refusal
+whenever the provider fails or may not run; no launch gate or hosted deployment.
+
+**The change.** The placer port (`shared-spatial-placer.ts`) now composes nothing. The application's one composition is
+`createConfiguredSharedSpatialPlacer` in `shared-social-memory-provider.ts`, beside the recall's: the deterministic test
+placer under `NODE_ENV=test`; otherwise the M4 DeepSeek adapter through the accounted client (family
+`SHARED_SPATIAL_PLACEMENT`, the production accounting), where the `SYNTHETIC_ONLY` gate lets DeepSeek run; and the
+refusing placer everywhere else (a production process, an undeclared mode, no key, a provider or model other than DeepSeek
+Flash, an out-of-range timeout). The gate is read when the placer is composed, so wherever DeepSeek may not run the pass
+still returns `NO_PROVIDER` before its lease, read or spend, exactly as before. The harness's
+`createQualificationSharedSpatialPlacer` shares the same single composition. Nothing else changes: the pass, the decoders,
+the geometry, 0175 and the mobile client are untouched.
+
+**Re-anchored** (dated notes, nothing weakened): the SHARED-VIS-01 contract test 3 (the port composes nothing; the fake
+only in tests; DeepSeek only behind the gate, refusing otherwise; the module provides that composition) and the AI-COST-01
+census (the application placer is accounted with the production accounting; still two accounted clients in the module).
+
+**The integrated proof (free).** `scripts/s8a-04/cp2-binding-proof.ts`, launched by `cp2-binding-launch.mjs` under guard
+round 20, boots the application's own `SharedWorldModule` through Nest — every provider composed from the environment, none
+by hand — against a disposable PostgreSQL 17 carrying every migration, behind the in-process Data API; DeepSeek is the
+local stand-in under the guard (no network, USD 0). Its only harness parts are recording spies and, in the zero-cost run,
+a fault injector at the DeepSeek URL. Run `simulated-final` at head ``dfbb31cf``: **84 of 84 checks passed**, 32
+stand-in requests.
+
+- **A — the production path** (one World of three members, two messages): each message is committed and its pass runs on
+  it; one reading call returns a valid meaning held by the sender's token; one placement call per pass, carrying meanings
+  only (no identity, no coordinate); the second meaning is anchored to the first place by meaning; the pass is `WOVEN` with
+  one place; the saved point equals the pure geometry applied to the placer's anchors; meaning, attribution, people, region
+  and the exact source message are saved together; the reading and the placement are each one ledger row, attempt 1,
+  `SUCCEEDED`, paid by the sender on their message in that World, and every call of the message has exactly one row. The
+  approved display route serves every place to every member at its point, only in the composed frame (P1), and the panel
+  serves its exact source. Deleting the source removes the place, its attribution and its people, the other place stays,
+  and the panel answers `ABSENT`; a member who left reads `UNAVAILABLE`; an outsider can neither send nor read, with no
+  pass, no call and no ledger row.
+- **B — privacy before the save:** after two places, a newcomer joins without the history; their pass sends DeepSeek
+  neither the earlier words nor the earlier meanings, the newcomer is served only the place of what they may see, and the
+  earlier members still see all three.
+- **C — refusals:** no new meaning (`WOVEN`, no place, the pass recorded once); a reading failing with HTTP 500, timing out
+  on its own bound, or answering an attribution the decoder refuses (`READING_UNAVAILABLE`, no placement call); a
+  placement failing with HTTP 500, timing out, or naming no valid anchor (`PLACEMENT_UNAVAILABLE`). In every case the
+  human's message stays committed, nothing is written (no place, attribution, people or analysis material, no completed
+  pass, the lease returned), every call made has its one ledger row paid by the sender, attempt 1 with no retry, and a
+  failed call is never reported as used.
+- **D — outside `SYNTHETIC_ONLY`:** the application composes the refusing placer; the pass returns `NO_PROVIDER` with no
+  lease grant and no place; no request reaches DeepSeek and no ledger row is written; the message stays committed and the
+  reply is refused safely.
+
+The stand-in proves the wiring, the rules and the refusals; it proves no model quality. **A paid confirmation is not run:**
+round 20 is locked (12 calls, USD 0.02 at peak, proposed), and only the Product Owner can approve its budget; with it,
+scenario A alone runs live (the refusals need injected faults and stay free).
+
+**Verification.** `tsc` (the API and the new driver); the full API suite, 288 suites (6 809 tests, 1 skipped), with the
+new factory tests and the pass test (the application's placer where DeepSeek may not run stops the pass before its lease);
+the root contracts (1 639 of 1 639); the task-closure governance contract. No migration, no paid call, no hosted change.
+
+**What this does not change.** `SYNTHETIC_ONLY` and `QAN-BL-AI-01` stand: no real user's text reaches DeepSeek. The known
+limits of §13.6 – §13.10 are unchanged (S4's remaining case deferred to V2, Future Improvement 011; V2's a recorded known
+limit). Model quality of placement was measured in §13.6 (stage 2, strict blind 1 / 2).
