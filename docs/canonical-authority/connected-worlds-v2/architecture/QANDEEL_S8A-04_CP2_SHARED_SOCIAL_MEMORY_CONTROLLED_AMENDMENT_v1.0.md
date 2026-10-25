@@ -1,12 +1,20 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-04 CP2 — Shared Social Memory, Recall & Living Analysis — Controlled Amendment v1.0
 
-**Status:** `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
+**Status:** `APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4) — COPY GATE CLOSED — MERGED THROUGH PR #357 AS b0839fd4
+(2026-10-25) — EFFECTIVE`.
+- The placer was still unbound at the merge (§7, §13.7), so CP2 merged as engineering, not as a functionally complete
+  checkpoint. §13.10 reached `main` only through S8A-04 CP3's branch `s8a/s8a-04-cp3`, which first completes CP2 (§13.11).
+
+*(Status at the Product Owner's final gate, kept verbatim:)*
+`APPROVED BY THE PRODUCT OWNER (2026-10-24, §1 R4 — FINAL IMPLEMENTATION AUTHORIZATION) — COPY GATE CLOSED —
 IMPLEMENTED ON s8a/s8a-04-cp2 (DRAFT PR #357); STAGE 0 (FREE) PASSED; THE PAID STAGES RAN (ROUND 19, 2026-10-25); THE F1 / F2
-CORRECTION (§13.8) AND THE FINAL CORRECTIVE PASS (§13.9) MADE — CP2 NOT CLOSED — NOT YET EFFECTIVE / EFFECTIVE ON MERGE`.
+CORRECTION (§13.8) AND THE FINAL CORRECTIVE PASS (§13.9) MADE; S4'S REMAINING CASE DEFERRED TO V2 BY THE PRODUCT OWNER (§13.10);
+EVERY CLOSING CHECK DONE, API CI GREEN — READY FOR THE PRODUCT OWNER'S FINAL GATE (THE PLACER BINDING AND THE MERGE) — NOT YET
+EFFECTIVE / EFFECTIVE ON MERGE`.
 - The implementation record is §13.
-- The placer stays unbound (§7) until the correction is accepted, the device check of §8 passes and the Product Owner gives
-  final approval.
+- The placer stays unbound (§7) until the Product Owner approves its binding; no merge before the Product Owner's explicit
+  approval.
 
 *(Status before the paid stages, kept verbatim:)*
 `IMPLEMENTED ON s8a/s8a-04-cp2 (LOCAL); STAGE 0 (FREE) PASSED; THE PAID STAGES AWAIT THE PRODUCT OWNER'S APPROVAL — NOT YET
@@ -1066,7 +1074,10 @@ unauthorized knowledge reached a reply.
 - The placer binding of §7, the last change of CP2. Its §11 conditions hold (no binding stop fired), but the findings
   above, the corrections of §13.8 and §13.9 and the device check of §8 (run, §13.9 E) are for the Product Owner first; it
   has not been made.
-- CP2's closure. The pull request to `main` is open as Draft PR #357 (2026-10-25), kept as a draft, not merged.
+- CP2's closure. The pull request to `main` is open as Draft PR #357 (2026-10-25), kept as a draft, not merged; every
+  other closing step is done (§13.10).
+- *(2026-10-25, after the merge:)* PR #357 was merged as `b0839fd4` with the placer unbound. The binding is made on S8A-04
+  CP3's branch as CP2's functional completion (§13.11).
 
 ## 13.8 The Product Owner's correction: F1 and F2 (2026-10-25)
 
@@ -1150,8 +1161,8 @@ the reply (F2); a relayed view keeps its relayer and holder and is never a fact 
 288 suites (6 807 tests, 1 skipped), with round 19's S4 and V2 readings as regression tests in the decoder and the
 semantic pass; every API CI database verifier, in CI order, on a fresh real PostgreSQL 17 database carrying all 175
 migrations: all pass, 0100, 0101 and 0175 among them, except four that need what the local machine lacks (the two Redis
-verifiers, 0133's `psql`, and 0130's seven-day clock assertion); the root contracts and the task-closure governance
-contract. The device check of §8 ran on the Android emulator (no physical device): the proof build carries CP2's composed
+verifiers, 0133's `psql`, and 0130's seven-day clock assertion); the task-closure governance contract; the root contracts, where only the forward-safety
+mirror scenarios failed on the loaded local machine, and each of them passes when run alone. The device check of §8 ran on the Android emulator (no physical device): the proof build carries CP2's composed
 safe meanings in the Shared field; FAR, MID, a place's panel and Back pass in Arabic and English, a relayed meaning shows in
 full in the panel, with no crash and no application ANR (one emulator System UI dialog, as in SHARED-VIS-01). The placer is
 still not bound, and nothing leaves `SYNTHETIC_ONLY`.
@@ -1161,3 +1172,29 @@ still saved if the model keeps it; the server cannot see a withdrawal that left 
 sentence in M1, a Copy Gate decision for the Product Owner. V2: a member who wrote nothing in the reading's window, or an
 absent person given a member's token, cannot be told apart by the server. Each is a model-quality limit; none mixes two
 people's views in one saved meaning.
+
+## 13.10 The Product Owner's decision: S4's remaining case deferred to V2 (2026-10-25)
+
+**Decision.** The Product Owner deferred S4's remaining case (§13.9, residual risks) to the second release (V2) and does
+not hold it as a blocker to CP2's closure or merge. A position its holder explicitly withdrew inside the same reading,
+with no replacement position, may still be saved as that person's current position. The deferral is the Product Owner's
+deliberate acceptance of the first release's limits, not a claim that the case is fixed: no code change is made for it,
+no paid test is run for it, and M1's approved text is unchanged. S4 is accepted as a known, non-blocking limit.
+
+**Recorded** as Future Improvement 011 in `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`: the case, its possible
+effect on the accuracy of the World's social knowledge (a withdrawn view shown or recalled as the person's current one;
+never a mix of two people's views, never a relayed view as fact), and V2's direction: tell a withdrawal from a change in
+the reading, and never keep a withdrawn position as current. It is not admitted to the canonical backlog (no duplicate).
+
+**Closing state.** On head `7301da0c` API CI is green (`verify-api` and every check that ran; the others were skipped by
+the change-aware plan), the device check of §8 passed (§13.9 E), and F1 – F3 hold. What remains is the Product Owner's:
+the placer binding of §7 and the merge. The S8A-04 closing reconciliation (BG-08, §13.4) belongs to its last checkpoint,
+CP3.
+
+**After the merge (2026-10-25).** The Product Owner merged PR #357 as `b0839fd4dec150f79e6292da991ef93dcca34d72` (head
+`7301da0c`, GitHub CI green) before this section reached `main`: it was committed as `01100297` on the merged branch only.
+This section, Future Improvement 011 and the locator entries reach `main` unchanged in substance through S8A-04 CP3's
+branch, which the Product Owner opened from `b0839fd4` with no revert and no separate pull request. V2's remaining case
+(§13.9, residual risks: a member who wrote nothing in the reading's window, or an absent person given a member's token)
+stays recorded there as a known model-quality limit; no decision of the Product Owner defers it, and none is made here.
+

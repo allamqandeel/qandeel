@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-24):** S8A-04 — Shared Social Understanding & Trusted Identity; CP1 merged through PR #356 as `43e67229`; CP2 implemented locally under the Product Owner's Final Implementation Authorization (Copy Gate CLOSED, migration 0175 not hosted, Stage 0 passed); the paid stages ran (round 19, 2026-10-25) and were accepted; the F1 / F2 correction made (amendment §13.8); Draft PR #357, CP2 not closed; not merged (the S8A-04 note at the end). *(As written at CP1:)* CP1 APPROVED by the Product Owner as an engineering candidate for merge, not as the final production qualification of social understanding (Controlled Amendment approved, Copy Gate CLOSED, migration 0174 not hosted, the interpreter bound to DeepSeek Flash, the placer not bound so no place is produced in the app before CP2); one pull request to `main`, not merged. S8A-03 merged through PR #355 as `4e1e0b78` (2026-10-24).
+> **CURRENT TASK (2026-10-25):** S8A-04 — Shared Social Understanding & Trusted Identity; CP1 merged through PR #356 as `43e67229`; CP2 merged through PR #357 as `b0839fd4` (2026-10-25) with the placer unbound; CP3 (Personal Knowledge in Shared World) on `s8a/s8a-04-cp3` first completes CP2 (the placer binding, amendment §7; the S4 deferral record, §13.10), then runs its WP0 to the Product Owner's gate; one pull request after CP3, not merged.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-24):** S8A-04 — Shared Social Understanding & Trusted Identity; CP1 merged through PR #356 as `43e67229`; CP2 implemented locally under the Product Owner's Final Implementation Authorization (Copy Gate CLOSED, migration 0175 not hosted, Stage 0 passed); the paid stages ran (round 19, 2026-10-25) and were accepted; the F1 / F2 correction and the final corrective pass made, S4's remaining case deferred to V2 (Future Improvement 011), API CI green; CP2 at the Product Owner's final gate (the placer binding and the merge) (amendment §13.8 – §13.10); Draft PR #357; not merged (the S8A-04 note at the end). *(As written at CP1:)* CP1 APPROVED by the Product Owner as an engineering candidate for merge, not as the final production qualification of social understanding (Controlled Amendment approved, Copy Gate CLOSED, migration 0174 not hosted, the interpreter bound to DeepSeek Flash, the placer not bound so no place is produced in the app before CP2); one pull request to `main`, not merged. S8A-03 merged through PR #355 as `4e1e0b78` (2026-10-24).
 >
 > *(Previous:)* **CURRENT TASK (2026-10-24):** S8A-03 — Personal Understanding Reality; CLOSED at its final review & merge gate: CP3 FAIL as run (unchanged), Open Understanding adopted by the Product Owner (migration 0173, not hosted), BG-08 / BG-09 reconciled, PR #355, not merged (the S8A-03 note after §6.29). S8A-04 … S8A-08 have not started.
 >
@@ -951,7 +953,7 @@ stay as written.
   - The register holds 87 items: 42 / 4 / 9 / 32 by status (unchanged).
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 MERGED through PR #356 as `43e67229`; CP2 IMPLEMENTED under the Product Owner's Final Implementation Authorization on Draft PR #357 — Copy Gate CLOSED, Stage 0 (free) passed, the paid stages run (2026-10-25) and accepted, the F1 / F2 correction made; CP2 NOT CLOSED; not merged)
+### S8A-04 — Shared Social Understanding & Trusted Identity (2026-10-24; current task; CP1 MERGED through PR #356 as `43e67229`; CP2 MERGED through PR #357 as `b0839fd4` (2026-10-25) with the placer still unbound, so CP2 is not yet functionally complete; S4's remaining case deferred to V2 (Future Improvement 011); CP3 on `s8a/s8a-04-cp3` from `b0839fd4` first completes CP2 (the placer binding, amendment §7), then runs its WP0)
 
 - Started 2026-10-24 on `s8a/s8a-04-shared-social-understanding` from `main` at `4e1e0b78b1216f73595b0040f84f4fc51bdd6ce2`
   (the merge of PR #355, 2026-10-24): **S8A-03 is merged**, so its closing change is effective. S8A-04 owns no backlog
@@ -1001,4 +1003,14 @@ stay as written.
   - the final corrective pass (amendment §13.9, 2026-10-25): a place is left out of the Shared Replay universe (0175 G.5)
     so `FULL_SOURCE` stays provable, with 0101 re-aligned and 0135 / 0161 / 0170 / 0171 re-anchored; a member keeps only
     their latest place of a reading (S4); an absent holder named as a writer is not saved (V2). Free proofs only.
+  - the Product Owner's S4 decision (amendment §13.10, 2026-10-25): S4's remaining case (a position withdrawn inside the
+    same reading with no replacement may still be saved as current) is deferred to V2 as Future Improvement 011, a known,
+    non-blocking limit, not a fix and not a backlog item; M1 unchanged. API CI is green on `7301da0c` and the device check
+    of §8 passed: CP2 is at the Product Owner's final gate (the placer binding and the merge), the placer still unbound.
+  - **CP2 merged** through PR #357 as `b0839fd4dec150f79e6292da991ef93dcca34d72` (2026-10-25, by the Product Owner, head
+    `7301da0c`, GitHub CI green) before the §13.10 record reached `main`. The placer was still unbound, so CP2 merged as
+    engineering, not as a functionally complete checkpoint. That record (amendment §13.10, Future Improvement 011 and these
+    entries, prepared as `01100297` on the merged branch) reaches `main` through S8A-04 CP3's branch `s8a/s8a-04-cp3`, which
+    first completes CP2: the placer binding of amendment §7. V2's remaining case (amendment §13.9) stays a recorded known
+    limit; no decision defers it.
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
