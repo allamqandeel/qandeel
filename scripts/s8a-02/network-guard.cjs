@@ -65,8 +65,9 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   19: { maxAttempts: 80, costCapUsd: 0.08 },
   // Round 20: S8A-04 CP2 — the integrated proof of the placer binding (scripts/s8a-04/cp2-binding-*; amendment §7). The
   // zero-cost runs (dry, simulated) need no approval. A paid run needs the Product Owner's approval of its budget; until
-  // then the round is locked, and lifting the lock is the single change. Synthetic data only, no automatic retry.
-  20: { maxAttempts: 12, costCapUsd: 0.02, authorized: false } };
+  // then the round is locked, and lifting the lock is the single change. Synthetic data only, no automatic retry. Lifted
+  // by the Product Owner's approval of 2026-10-25: at most 12 DeepSeek Flash calls and USD 0.02, scenario A only, one run.
+  20: { maxAttempts: 12, costCapUsd: 0.02 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
