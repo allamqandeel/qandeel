@@ -76,7 +76,14 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // Product Owner CP3-D Final Evaluation Authorization, 2026-10-25: ONE run of the 120 preregistered synthetic cases, DeepSeek
   // Flash, at most 120 calls and USD 0.05 in total, no automatic retry, no second run; the launcher refuses a second (the
   // spend state exists).
-  22: { maxAttempts: 120, costCapUsd: 0.05 } };
+  22: { maxAttempts: 120, costCapUsd: 0.05 },
+  // Rounds 23 / 24: S8A-04 CP3-D V2 — the preregistered two-tier acceptance of Trusted Claim Spans (scripts/s8a-04/cp3d-v2/;
+  // amendment §11.6; the Product Owner's D-7 gate, 2026-10-26): 23 = Tier 1 (the check over 150 fixed replies), 24 = Tier 2
+  // (60 end-to-end scenarios and 20 runs without knowledge). Product Owner budget approval, 2026-10-26: Tier 1 at most 150
+  // calls and USD 0.08, Tier 2 at most 145 calls and USD 0.17 (the measured call lists; budget.mjs). One paid run per tier,
+  // no automatic retry; Tier 2 only after Tier 1 is ACCEPTED (launch.mjs enforces it).
+  23: { maxAttempts: 150, costCapUsd: 0.08 },
+  24: { maxAttempts: 145, costCapUsd: 0.17 } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';
