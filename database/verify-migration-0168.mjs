@@ -209,7 +209,14 @@ async function verifyPosture(report) {
     const defined0153 = body(migrationText('0153_interaction_preferences_v1.sql'), marker);
     const defined0168 = body(M0168, marker);
     const live = (await rows('SELECT prosrc FROM pg_proc WHERE oid = $1::regprocedure', [BUILDER]))[0].prosrc.replace(/\r\n/gu, '\n');
-    assert.equal(live, defined0168, 'A02 the live builder is the 0168 body');
+    // RE-ANCHORED by S8A-05 CP1 (validation only): migration 0179 re-states this body with ONE added section,
+    // `publicTopicDrafts`, immediately before the not-yet-included list. The live builder is the 0168 body with exactly
+    // that section removed - every 0168 line, byte for byte - and the 0179 body is the live one.
+    const defined0179 = body(migrationText('0179_s8a_05_public_authored_topics_v1.sql'), marker);
+    assert.equal(live, defined0179, 'A02 the live builder is the 0179 body');
+    const s8a05 = live.indexOf('        -- S8A-05 (0179)');
+    assert.equal(live.slice(0, s8a05) + live.slice(live.indexOf("        'notYetIncluded'")), defined0168,
+      'A02 the live builder is the 0168 body plus exactly the one S8A-05 section');
     const added = defined0168.indexOf('        -- S6-07 (0168)');
     const list = defined0168.indexOf("        'notYetIncluded'");
     assert.ok(added > 0 && list > added, 'A02 the section sits before the not-yet-included list');
@@ -248,8 +255,10 @@ async function verifyBehaviour(report, H) {
 
     await report.isolated('B01 a reader with no footprint: the new section is empty, the earlier sections are untouched', async () => {
       const exported = await exportOf(c);
+      // RE-ANCHORED by S8A-05 CP1 (validation only): 0179 adds `publicTopicDrafts`; it is empty for this reader.
       assert.deepEqual(Object.keys(exported).sort(), ['account', 'conversations', 'format', 'interactionPreferences', 'matchingAndIntroductions',
-        'memory', 'notYetIncluded', 'preparedAt', 'understanding'], 'B01 the earlier sections are all still there');
+        'memory', 'notYetIncluded', 'preparedAt', 'publicTopicDrafts', 'understanding'], 'B01 the earlier sections are all still there');
+      assert.deepEqual(exported.publicTopicDrafts, [], 'B01 no draft, none exported');
       assert.equal(exported.format, 'qandeel.personal-data-export.v1', 'B01 the format is unchanged');
       assert.deepEqual(exported.notYetIncluded, ['shared', 'public', 'replay'], 'B01 three categories left');
       assert.deepEqual(exported.matchingAndIntroductions, {

@@ -247,6 +247,19 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /public/field/experiences/:experienceId/discussion': 'AUTHENTICATED',
   'POST /public/field/experiences/:experienceId/discussion': 'SECURITY_SENSITIVE',
   'POST /public/field/experiences/:experienceId/discussion/:postId/qandeel': 'SECURITY_SENSITIVE',
+  // S8A-05 CP1 — «Write your topic» (0179). Saving, reading, previewing and deleting one's own private draft, changing a
+  // topic's section and discarding a never-published topic are ordinary own acts the database bounds itself (50 drafts,
+  // 100 / 5,000 characters). Preparing a draft for publication provisions the ONE Public Identity and creates durable
+  // Public state, so it takes the strict class, as starting an S5-02 Draft does (and it is closed until Stage 9). No new
+  // class.
+  'GET /public/compose/drafts': 'AUTHENTICATED',
+  'GET /public/compose/drafts/:draftId': 'AUTHENTICATED',
+  'PUT /public/compose/drafts/:draftId': 'AUTHENTICATED',
+  'POST /public/compose/drafts/:draftId/delete': 'AUTHENTICATED',
+  'GET /public/compose/drafts/:draftId/preview': 'AUTHENTICATED',
+  'POST /public/compose/drafts/:draftId/prepare': 'SECURITY_SENSITIVE',
+  'POST /public/compose/topics/:experienceId/discard': 'AUTHENTICATED',
+  'POST /public/compose/topics/:experienceId/section': 'AUTHENTICATED',
   // S7-01 — the Personal Replay (0169). Preparing a preview derives and seals the canonical historical projection once
   // per selected moment, the heaviest database work a human can ask for here, so it takes the strict class; the draft,
   // its revision, finalizing (a private version, never a distribution), reopening and every read are ordinary own acts

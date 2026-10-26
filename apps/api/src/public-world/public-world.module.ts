@@ -15,6 +15,9 @@ import { PublicQandeelGenerator, PublicQandeelReplyService } from './public-qand
 import { PublicAuthoringController } from './public-authoring.controller';
 import { PublicAuthoringRepository } from './public-authoring.repository';
 import { PublicAuthoringService } from './public-authoring.service';
+import { PublicComposeController } from './public-compose.controller';
+import { PublicComposeRepository } from './public-compose.repository';
+import { PublicComposeService } from './public-compose.service';
 import { PublicSemanticController } from './public-semantic.controller';
 import { PUBLIC_SEMANTIC_INTERPRETER, createConfiguredPublicSemanticInterpreter } from './public-semantic-interpreter';
 import { PublicSemanticRepository } from './public-semantic.repository';
@@ -46,18 +49,20 @@ import { PublicWorldService } from './public-world.service';
  * on the server channel; and through migration 0147 (S5-04: discussion, @qandeel, Public Activity) — the post command
  * and two discussion reads on the caller's own token, the four Public QANDEEL work commands and the Activity source read
  * on the server channel — with the provider-neutral Model Router (no provider selected here; Stage 8A), the canonical
- * Safety Response Gate and the ONE A3-01 Activity boundary, `ActivityPublisher` (imported from `ActivityModule`, never re-provided).
+ * Safety Response Gate and the ONE A3-01 Activity boundary, `ActivityPublisher` (imported from `ActivityModule`, never re-provided);
+ * and through migration 0179 (S8A-05 CP1: Write your topic) — eight owner commands and reads and two viewer reads (the
+ * human title and section, joined into the field), all on the caller's own token, and nothing on the server channel.
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],
   controllers: [PublicWorldController, PublicAuthoringController, PublicSemanticController, PublicSpatialController, PublicFieldController,
-    PublicRelationController, PublicDiscussionController],
+    PublicRelationController, PublicDiscussionController, PublicComposeController],
   providers: [SupabaseAuthService, SupabaseAuthGuard, SupabaseDataApiService, SupabaseServiceRoleApiService, PublicWorldRepository,
     PublicWorldService, PublicAuthoringRepository, PublicAuthoringService, PublicSemanticRepository, PublicSemanticService,
     { provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredPublicSemanticInterpreter(process.env) },
     PublicSpatialRepository, PublicSpatialService, PublicFieldRepository, PublicFieldService, PublicRelationRepository, PublicRelationService,
     { provide: PUBLIC_SPATIAL_PLACER, useFactory: () => createConfiguredPublicSpatialPlacer(process.env) },
     SafetyResponseGateService, PublicDiscussionRepository, PublicDiscussionService, PublicQandeelGenerator, PublicQandeelReplyService,
-    PublicActivityRepository, PublicActivityProducer],
+    PublicActivityRepository, PublicActivityProducer, PublicComposeRepository, PublicComposeService],
 })
 export class PublicWorldModule {}

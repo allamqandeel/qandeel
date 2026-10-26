@@ -376,3 +376,39 @@ describe('S5-03C — one Product Copy Gate, CLOSED by the Product Owner', () => 
     expect(publicRelationCopy('en').relationWith).toBe('Relation with {0}');
   });
 });
+
+// ------------------------------------------------------------------------------- S8A-05 CP1 R2: the human title
+describe('S8A-05 CP1 R2 — relations name a titled topic by its human title, as the field does', () => {
+  const TITLE_OWN = 'كيف أبدأ من جديد بعد الانتقال';
+  const TITLE_OTHER = 'أول سنة في مدينة جديدة';
+
+  it('the client accepts exactly one more key, a non-empty title; anything else is no answer', async () => {
+    const good = { experiences: [{ id: id(1), meaning: 'm1', title: TITLE_OWN }, { id: id(2), meaning: 'm2' }],
+      relations: [{ relationId: RELATION, experienceId: id(1), other: { id: id(3), meaning: 'm3', title: TITLE_OTHER }, state: 'ACTIVE' }] };
+    const fetchOf = (body: unknown) => new PublicWorldApiClient({ baseUrl: 'https://api.test', fetch: jest.fn(async () => ({ ok: true, status: 200, json: async () => body })) as never });
+    await expect(fetchOf(good).relation.relations()).resolves.toEqual(yes(good));
+    for (const bad of [
+      { experiences: [{ id: id(1), meaning: 'm1', title: '' }], relations: [] },
+      { experiences: [{ id: id(1), meaning: 'm1', title: TITLE_OWN, section: 'love' }], relations: [] },
+      { experiences: [], relations: [{ ...good.relations[0], other: { id: id(3), meaning: 'm3', title: 7 } }] },
+    ]) await expect(fetchOf(bad).relation.relations()).resolves.toEqual(NO);
+  });
+
+  it('the workspace shows the other topic and the reader\'s own by title; an untitled Experience keeps its meaning', async () => {
+    const relations: PublicRelation[] = [
+      { relationId: RELATION, experienceId: E1.id, other: { id: E3.id, meaning: E3.meaning, title: TITLE_OTHER }, state: 'REQUEST_RECEIVED' },
+      { relationId: id(41), experienceId: E1.id, other: { id: E2.id, meaning: E2.meaning }, state: 'REQUEST_RECEIVED' },
+    ];
+    const transport = { relations: jest.fn(async () => yes<PublicRelations>({ experiences: [{ id: E1.id, meaning: E1.meaning, title: TITLE_OWN }], relations })),
+      request: jest.fn(), act: jest.fn() } as unknown as PublicRelationTransport;
+    const c = createPublicAuthoringController({ transport: authoringTransport(), relation: transport, relationSearch: search([]), isCurrent: () => true, newCommandId: () => id(90) });
+    c.open();
+    await flush();
+    const view = await render(<PublicAuthoringWorkspace controller={c} language="en" palette={CANONICAL_VISUAL.palettes.DARK.standard} bottomInset={0} />);
+    expect(view.getByText(TITLE_OTHER)).toBeTruthy();
+    expect(view.queryByText(E3.meaning)).toBeNull();
+    expect(view.getAllByText(`With your experience: ${TITLE_OWN}`).length).toBeGreaterThan(0);
+    expect(view.queryByText(`With your experience: ${E1.meaning}`)).toBeNull();
+    expect(view.getByText(E2.meaning)).toBeTruthy();
+  });
+});

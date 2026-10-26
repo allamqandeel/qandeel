@@ -11,6 +11,7 @@
  */
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { PublicAuthoringApiClient } from './public-authoring-api';
+import { PublicComposeApiClient } from './public-compose-api';
 import { PublicFieldApiClient, PublicSpatialApiClient } from './public-field-api';
 import { PublicRelationApiClient } from './public-relation-api';
 import { PublicDiscussionApiClient } from './public-discussion-api';
@@ -58,6 +59,8 @@ export class PublicWorldApiClient {
   readonly relation: PublicRelationApiClient;
   /** S5-04 — the dependent discussion of one Public Experience, on the same identity-bound transport. */
   readonly discussion: PublicDiscussionApiClient;
+  /** S8A-05 CP1 — Write your topic: the reader's own private topic drafts, on the same identity-bound transport. */
+  readonly compose: PublicComposeApiClient;
 
   constructor(private readonly config: PublicWorldApiConfig) {
     this.authoring = new PublicAuthoringApiClient(config);
@@ -66,6 +69,7 @@ export class PublicWorldApiClient {
     this.spatial = new PublicSpatialApiClient(config);
     this.relation = new PublicRelationApiClient(config);
     this.discussion = new PublicDiscussionApiClient(config);
+    this.compose = new PublicComposeApiClient(config);
   }
 
   async entry(): Promise<PublicEntryResult> {

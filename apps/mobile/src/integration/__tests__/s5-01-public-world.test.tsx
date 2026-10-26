@@ -129,7 +129,12 @@ describe('S5-01 A — the third Global Area', () => {
     const field = within(view.getByTestId('qandeel-public-field'));
     expect(within(field.getByTestId('qandeel-responsive-map-frame')).queryAllByRole('button')).toHaveLength(0);
     expect(within(field.getByTestId('qandeel-responsive-chrome-band')).queryAllByRole('button')).toHaveLength(0);
-    expect(field.queryAllByRole('button').map((button) => button.props.testID)).toEqual(['qandeel-activity-entry', 'qandeel-public-authoring-entry']);
+    // RE-ANCHORED by S8A-05 CP1 (validation only): the root's heading also carries the ONE way into «اكتب موضوعك» beside the
+    // authoring entry, both drawn only after ALLOW; the field itself still holds no control.
+    // RE-ANCHORED by S8A-05 CP1 R2 (2026-10-26, validation only): the top band also carries the ONE way to view a single
+    // section (WP1 §2.5), drawn while search is closed; the world frame and the chrome band still hold no control.
+    expect(field.queryAllByRole('button').map((button) => button.props.testID)).toEqual(['qandeel-activity-entry', 'qandeel-public-compose-entry', 'qandeel-public-authoring-entry',
+      'qandeel-public-section-control']);
     expect(view.getByTestId('qandeel-public-field-empty')).toBeTruthy();
     // The Personal world is untouched and still mounted beneath; only the Public routes were asked, on the reader's token.
     expect(runtime.store.getState()).toBe(storeBefore);

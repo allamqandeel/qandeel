@@ -192,8 +192,12 @@ async function verifyBoundary() {
   const destroyers = await rows(`SELECT n.nspname || '.' || p.proname fn FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') AND p.prorettype <> 'trigger'::regtype
       AND p.prosrc ~ 'DELETE FROM public\\.public_experience_text_derivative_bodies'`);
-  assert.deepEqual(destroyers.map((d) => d.fn), ['public_authoring_private.erase_owner_deleted_public_derivatives_v1'],
-    'B08 exactly one function destroys a Public derivative body');
+  // RE-ANCHORED by S8A-05 CP1 (validation only): migration 0179 adds the second, and only other, body destroyer - the
+  // never-published discard of an authored topic (S8A-05 controlled amendment A-2(c)) - whose erasure the package guard
+  // proves from its own discard command. The census stays an equality against the live catalog.
+  assert.deepEqual(destroyers.map((d) => d.fn).sort(), ['public.discard_never_published_public_experience_v1',
+    'public_authoring_private.erase_owner_deleted_public_derivatives_v1'],
+  'B08 exactly two functions destroy a Public derivative body: owner deletion and the never-published discard');
   // B09 the Name ceiling.
   const [label] = await rows(`SELECT pg_get_constraintdef(c.oid) d FROM pg_constraint c WHERE c.conrelid = $1::regclass
     AND c.conname = 'public_identity_display_label_check'`, [T.DISPLAY]);

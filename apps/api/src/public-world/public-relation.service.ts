@@ -2,14 +2,19 @@ import { BadRequestException, Injectable, ServiceUnavailableException } from '@n
 import type { PublicRelationAct, PublicRelationExperienceRow, PublicRelationRow } from './public-relation.repository';
 import { PublicRelationRepository } from './public-relation.repository';
 import { PublicActivityProducer } from './public-activity.producer';
+import { PublicFieldRepository } from './public-field.repository';
+import { readTopicHeaders, type TopicHeaders } from './public-field.service';
 
-/** One of the reader's own Experiences served in the Public World now, named by its reviewed meaning. */
-export interface PublicRelationExperienceView { readonly id: string; readonly meaning: string }
-/** One current relation from the reader's side; the other Experience is named by its reviewed meaning only. */
+/**
+ * One of the reader's own Experiences served in the Public World now, named by its reviewed meaning — and, for a topic its
+ * author wrote (S8A-05 CP1), by its human title, which a client shows in place of the meaning (as the field does).
+ */
+export interface PublicRelationExperienceView { readonly id: string; readonly meaning: string; readonly title?: string }
+/** One current relation from the reader's side; the other Experience is named by its reviewed meaning (or human title) only. */
 export interface PublicRelationView {
   readonly relationId: string;
   readonly experienceId: string;
-  readonly other: { readonly id: string; readonly meaning: string };
+  readonly other: { readonly id: string; readonly meaning: string; readonly title?: string };
   readonly state: 'ACTIVE' | 'REQUEST_SENT' | 'REQUEST_RECEIVED';
 }
 export interface PublicRelationsView {
@@ -61,7 +66,8 @@ function commandBody(body: unknown, keys: readonly string[]): Record<string, str
  */
 @Injectable()
 export class PublicRelationService {
-  constructor(private readonly repository: PublicRelationRepository, private readonly activity: PublicActivityProducer) {}
+  constructor(private readonly repository: PublicRelationRepository, private readonly activity: PublicActivityProducer,
+    private readonly field: PublicFieldRepository) {}
 
   private async guard<T>(work: () => Promise<T>): Promise<T> {
     try {
@@ -75,7 +81,11 @@ export class PublicRelationService {
   relations(token: string): Promise<PublicRelationsView> {
     return this.guard(async () => {
       const [experiences, relations] = await Promise.all([this.repository.experiences(token), this.repository.relations(token)]);
-      return { experiences: experiencesOf(experiences), relations: relationsOf(relations) };
+      const own = experiencesOf(experiences);
+      const current = relationsOf(relations);
+      // S8A-05 CP1: a topic is named by its author's title here too, from the same served-only header read as the field.
+      const headers = await readTopicHeaders(this.field, token, [...own.map((e) => e.id), ...current.map((r) => r.other.id)]);
+      return { experiences: own.map((e) => named(e, headers)), relations: current.map((r) => ({ ...r, other: named(r.other, headers) })) };
     });
   }
 
@@ -108,6 +118,11 @@ export class PublicRelationService {
       return { outcome: outcome as PublicRelationActView['outcome'] };
     });
   }
+}
+
+function named<T extends { readonly id: string; readonly meaning: string }>(experience: T, headers: TopicHeaders): T & { readonly title?: string } {
+  const header = headers.get(experience.id);
+  return header ? { ...experience, title: header.title } : experience;
 }
 
 function experiencesOf(rows: readonly PublicRelationExperienceRow[]): PublicRelationExperienceView[] {

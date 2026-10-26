@@ -98,7 +98,8 @@ test('4 — the boundary: authenticated only, the server channel holds nothing, 
 test('5 — API: one controller in the SAME Public module, the caller token only, the census classes', () => {
   const module = code(`${API}/public-world.module.ts`);
   // S5-04 re-anchor (validation only): the discussion controller joins the SAME Public module after this one.
-  assert.match(module, /PublicFieldController,\s+PublicRelationController(, PublicDiscussionController)?\]/u, 'the same Public module, not a parallel one');
+  // S8A-05 CP1 re-anchor (2026-10-26, validation only): the «Write your topic» compose controller joins the SAME module after it.
+  assert.match(module, /PublicFieldController,\s+PublicRelationController(, PublicDiscussionController(, PublicComposeController)?)?\]/u, 'the same Public module, not a parallel one');
   const repo = code(`${API}/public-relation.repository.ts`);
   assert.doesNotMatch(repo, /SupabaseServiceRoleApiService|server\.rpc/u, 'no server channel');
   const controller = code(`${API}/public-relation.controller.ts`);
@@ -235,7 +236,10 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // S8A-02 RE-ANCHOR (2026-10-23): S8A-01 merged through PR #353; the current task is S8A-02, and S8A-01 stands beneath it.
     // S8A-03 RE-ANCHOR (2026-10-23): S8A-02 merged through PR #354; the current task is S8A-03, and S8A-02 stands beneath it.
     // S8A-04 RE-ANCHOR (2026-10-24): S8A-03 merged through PR #355; the current task is S8A-04, and S8A-03 stands beneath it.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-04 — Shared Social Understanding & Trusted Identity\*\*/mu);
+    // S8A-05 RE-ANCHOR (2026-10-26): S8A-04 merged through PR #358; the current task is S8A-05, and S8A-04 stands beneath it.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-05 — Public World: Write Your Topic\*\*/mu);
+    assert.match(map, /^> \*\(Previous, S8A-04, as written at its closing change; merged through PR #358:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-04 — Shared Social Understanding & Trusted Identity\*\*/mu);
+    assert.doesNotMatch(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-04/mu, 'the merged S8A-04 is no longer the current task');
     assert.match(map, /^> \*\(Previous, S8A-03, as written at its closing change; merged through PR #355:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-03 — Personal Understanding Reality\*\*/mu);
     assert.doesNotMatch(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-03/mu, 'the merged S8A-03 is no longer the current task');
     assert.match(map, /^> \*\(Previous, S8A-02, as written at its closing change; merged through PR #354:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality\*\*/mu);

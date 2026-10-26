@@ -195,7 +195,15 @@ async function verifyCatalog() {
   // byte for byte up to its one added section, with `introductions` gone from the not-yet-included list (verify-0168 A02
   // proves the same slice against the live body).
   const defined0168 = body(migrationText('0168_personal_export_matching_introductions_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
-  assert.equal(live, defined0168, 'the live builder is the 0168 re-statement');
+  // RE-ANCHORED by S8A-05 CP1 (migration 0179, validation only): the live builder is the 0179 re-statement, which is the
+  // 0168 body byte for byte with ONE added section, `publicTopicDrafts`, before the not-yet-included list (verify-0168
+  // A02 proves the same). The 0168 body keeps every claim below.
+  const defined0179 = body(migrationText('0179_s8a_05_public_authored_topics_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
+  assert.equal(live, defined0179, 'the live builder is the 0179 re-statement');
+  const s8a05 = live.indexOf('        -- S8A-05 (0179)');
+  assert.ok(s8a05 > 0, 'the S8A-05 section is found');
+  assert.equal(live.slice(0, s8a05) + live.slice(live.indexOf("        'notYetIncluded'")), defined0168,
+    'the live builder is the 0168 re-statement plus exactly the one S8A-05 section');
   const s607 = defined0168.indexOf('        -- S6-07 (0168)');
   assert.ok(s607 > 0, 'the S6-07 section is found');
   assert.equal(defined0168.slice(0, s607) + "        'notYetIncluded', jsonb_build_array('shared', 'public', 'replay', 'introductions'));\n", defined0153,

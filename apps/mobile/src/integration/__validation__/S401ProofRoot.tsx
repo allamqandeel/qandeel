@@ -39,6 +39,9 @@
  *   qandeel://s401-proof/public/relation-accept   S5-03C smoke: the synthetic other side accepts the reader's relation requests
  *   qandeel://s401-proof/public/peer-reply        S5-04 smoke: a synthetic other person replies to the reader's latest own
  *                                                 discussion post, and its Public Activity item appears for the reader
+ *   qandeel://s401-proof/public/topics            S8A-05 CP1: «Write your topic» answers from the SYNTHETIC stand-in
+ *                                                 `s805-proof-compose.ts` (one saved draft; preparing answers that
+ *                                                 publishing is not open), and four fixture Experiences carry human titles
  *
  * SHARED-VIS-01 — the Product Visual Review of the Shared World's Living Analysis field:
  *
@@ -76,7 +79,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions|knowledge)\/(arrive|seed|grow|correct|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete|enroll-closed|enroll-open|enroll-outdated|enroll-enrolled)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions|knowledge)\/(arrive|seed|grow|correct|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|topics|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete|enroll-closed|enroll-open|enroll-outdated|enroll-enrolled)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -118,6 +121,7 @@ export function S401ProofRoot() {
       if (match[1] === 'public' && match[2] === 'seed') world.publicSeed();
       if (match[1] === 'public' && match[2] === 'relation-accept') world.relationAccept();
       if (match[1] === 'public' && match[2] === 'peer-reply') world.peerReply();
+      if (match[1] === 'public' && match[2] === 'topics') world.topics();
       if (match[1] === 'shared-field' && match[2] === 'seed') world.sharedField();
       if (match[1] === 'knowledge' && (match[2] === 'seed' || match[2] === 'grow' || match[2] === 'correct')) world.knowledge(match[2]);
       if (match[1] === 'introductions' && (match[2] === 'seed-new' || match[2] === 'seed-known' || match[2] === 'seed-mixed' || match[2] === 'seed-portrait' || match[2] === 'close')) {

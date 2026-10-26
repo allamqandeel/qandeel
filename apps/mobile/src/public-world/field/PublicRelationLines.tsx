@@ -25,6 +25,7 @@ import { WorldTether, type WorldContrast, type WorldResponse, type WorldSchedule
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { fill } from '../../public-authoring/relation-copy';
 import type { PublicFieldRelation } from '../../runtime-entry';
+import { publicEntryLabel } from '../../runtime-entry';
 import type { PublicFieldCamera } from './public-field-camera';
 import type { PublicWorldNode } from './public-field-projection';
 
@@ -57,7 +58,7 @@ export function explicitRelationSegments(
   for (const relation of relations) {
     const to = byId.get(relation.other.id);
     if (to === undefined || to.entry.id === focusId) continue;
-    segments.push(Object.freeze({ relationId: relation.relationId, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y, otherMeaning: relation.other.meaning }));
+    segments.push(Object.freeze({ relationId: relation.relationId, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y, otherMeaning: publicEntryLabel(relation.other) }));
   }
   return segments;
 }

@@ -307,12 +307,16 @@ async function verifyLifecycleLogComplete() {
         AND (pr.prosrc ~ 'UPDATE public\\.public_experiences e\\s+SET current_lifecycle = '''
           OR pr.prosrc ~ 'INSERT INTO public\\.public_experiences\\s+\\(id, public_world_singleton')
       ORDER BY pr.proname`);
+  // RE-ANCHORED by S8A-05 CP1 (validation only): migration 0179 adds the FIFTH mover, the never-published discard
+  // (S8A-05 controlled amendment A-2(c), R1-03), which writes the same immutable event under its command identity. The
+  // census stays an equality against the live catalog, so a sixth writer still cannot hide from it.
   assert.deepEqual(writers.map((w) => w.proname), [
     'apply_public_experience_disappearance_v1',
     'commit_public_experience_ready_for_review_v1',
     'create_public_experience_draft_v1',
+    'discard_never_published_public_experience_v1',
     'publish_public_experience_v1',
-  ], 'exactly four functions move a Public Experience lifecycle');
+  ], 'exactly five functions move a Public Experience lifecycle');
   for (const writer of writers) {
     assert.match(writer.prosrc, /INSERT INTO public\.public_experience_lifecycle_events/u,
       `${writer.proname} writes the immutable lifecycle event the historical derivation reads`);

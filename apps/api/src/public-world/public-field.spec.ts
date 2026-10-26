@@ -52,6 +52,10 @@ function fieldRepository(overrides: Partial<Record<keyof PublicFieldRepository, 
     nearby: jest.fn(async () => [entry(5)]),
     // S5-03C (re-anchor): the panel read also asks for the Experience's explicit relations; none by default.
     relations: jest.fn(async () => []),
+    // S8A-05 CP1 (re-anchor): every read also asks for the human titles of what it shows, and search also matches titles;
+    // none by default, so every Experience keeps showing its meaning.
+    topicHeaders: jest.fn(async () => []),
+    titleSearch: jest.fn(async () => []),
     ...overrides,
   };
 }
@@ -217,8 +221,11 @@ describe('S5-03B — the static boundary of the API', () => {
     const server = [...source('public-spatial.repository.ts').matchAll(/this\.server\.rpc<[^>]+>\('([a-z_]+_v1)'/gu)].map((m) => m[1]).sort();
     expect(server).toEqual(['commit_public_spatial_placement_v1', 'read_public_spatial_placement_input_v1']);
     const viewer = [...source('public-field.repository.ts').matchAll(/this\.rpc<[A-Za-z]+>\(token, '([a-z_]+_v1)'/gu)].map((m) => m[1]).sort();
-    expect(viewer).toEqual(['read_public_semantic_experience_content_v1', 'read_public_semantic_experience_v1', 'read_public_semantic_field_v1',
-      'read_public_semantic_nearby_v1', 'read_public_semantic_relations_v1', 'search_public_semantic_field_v1']);
+    // S8A-05 CP1 (controlled re-anchor): plus migration 0179's three viewer reads — the human title / section of served
+    // Experiences, the title search and the search inside one section — on the same viewer token.
+    expect(viewer).toEqual(['read_public_section_topic_matches_v1', 'read_public_semantic_experience_content_v1', 'read_public_semantic_experience_v1', 'read_public_semantic_field_v1',
+      'read_public_semantic_nearby_v1', 'read_public_semantic_relations_v1', 'read_public_topic_headers_v1', 'read_public_topic_title_matches_v1',
+      'search_public_semantic_field_v1']);
     expect(source('public-field.repository.ts')).not.toMatch(/server|p_viewer|p_user/u);
   });
 

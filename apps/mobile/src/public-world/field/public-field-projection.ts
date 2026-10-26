@@ -15,10 +15,13 @@
  *   NEAR  the focused place is selected; places that share its semantic region keep a quiet presence, the rest recede.
  *
  * A search result or the focused Experience is a place at every rung, so a reader can find what they asked for.
+ *
+ * S8A-05 CP1 — while the reader looks at ONE section (their own choice, never anything about a topic), every topic outside
+ * it recedes at every rung, so only that section's places are legible and labelled at MID; nothing leaves the field.
  */
 import { projectAddress, type ViewportEnvelope } from '../../map/camera';
 import { HOME_RADIUS_POINTS, type WorldSurfaceNode } from '../../map/renderer';
-import type { PublicFieldEntry } from '../../runtime-entry';
+import type { PublicFieldEntry, PublicTopicSection } from '../../runtime-entry';
 import type { PublicFieldCamera } from './public-field-camera';
 
 /** How one served Experience is present at the current disclosure. Decided by the field, from disclosure alone. */
@@ -47,6 +50,8 @@ export interface PublicFieldProjectionInput {
   /** The open search's results (places in the same field), or none. */
   readonly results: readonly PublicFieldEntry[];
   readonly focusId: string | null;
+  /** S8A-05 CP1 — the section the reader looks at, or null for every section. */
+  readonly section?: PublicTopicSection | null;
 }
 
 /**
@@ -54,13 +59,14 @@ export interface PublicFieldProjectionInput {
  * finitely representable from this camera is omitted (a fact about the projection, never about the World). Culling
  * against the glass is the generic surface's, not this adapter's.
  */
-export function placePublicField({ camera, envelope, entries, results, focusId }: PublicFieldProjectionInput): { readonly nodes: readonly PublicWorldNode[] } {
+export function placePublicField({ camera, envelope, entries, results, focusId, section = null }: PublicFieldProjectionInput): { readonly nodes: readonly PublicWorldNode[] } {
   const byId = new Map<string, PublicFieldEntry>();
   for (const entry of [...entries, ...results]) byId.set(entry.id, entry);
   const highlighted = new Set(results.map((entry) => entry.id));
   const focusedRegion = focusId === null ? null : byId.get(focusId)?.region ?? null;
   const presenceOf = (entry: PublicFieldEntry): PublicPresenceKind => {
     if (highlighted.has(entry.id) || entry.id === focusId) return 'PLACE';
+    if (section !== null && entry.section !== section) return 'RECEDED';
     if (camera.depth === 'FAR') return 'FIELD';
     if (camera.depth === 'MID') return 'PLACE';
     return focusedRegion !== null && entry.region === focusedRegion ? 'NEIGHBOURHOOD' : 'RECEDED';

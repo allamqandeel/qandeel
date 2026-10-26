@@ -1260,6 +1260,13 @@ jobs:
       # shown (else NULL), and nothing written.
       - name: Verify S8A-04 Shared audience Names against real PostgreSQL
         run: npm run verify:shared-audience-names:integration
+      # S8A-05 CP1: migration 0179 (Write your topic) - the private account-bound topic draft (save / edit / read from another
+      # session / delete, no other reader, account erasure), the preview equal to what preparing freezes, preparing CLOSED
+      # with nothing written and no Public Identity, and - in a controlled transaction only - the PUBLIC_AUTHORED package,
+      # the human title in place of meaning, a section change that never moves the place, and the never-published discard
+      # that erases every unpublished word; the launch gate untouched.
+      - name: Verify S8A-05 Write your topic against real PostgreSQL
+        run: npm run verify:public-authored-topics:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

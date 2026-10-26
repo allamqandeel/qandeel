@@ -26,6 +26,7 @@ import { typeStyle, usePalette } from '../../conversation';
 import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
+import { publicEntryLabel } from '../../runtime-entry';
 import type { PublicFieldCopy } from './field-copy';
 import { publicRelationCopy } from '../../public-authoring/relation-copy';
 import { PublicExperienceMark } from './PublicExperienceMark';
@@ -60,8 +61,9 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   const camera = state.camera;
   const focusId = state.focus?.id ?? null;
   const placed = useMemo(
-    () => (camera === null ? null : placePublicField({ camera, envelope, entries: state.entries, results: state.search.open ? state.search.results : [], focusId })),
-    [camera, envelope, focusId, state.entries, state.search.open, state.search.results],
+    () => (camera === null ? null : placePublicField({ camera, envelope, entries: state.entries, results: state.search.open ? state.search.results : [], focusId,
+      section: state.section.key })),
+    [camera, envelope, focusId, state.entries, state.search.open, state.search.results, state.section.key],
   );
   // The Public field's two camera acts, in ITS controller: one completed drag is one Public pan, one step is one rung.
   const pan = useCallback((translationX: number, translationY: number) => controller.pan(translationX, translationY), [controller]);
@@ -110,7 +112,8 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   // to rest, so a word is never left behind a moving place.
   const labelled = camera === null ? [] : presented.filter((node) => node.selected || (camera.depth === 'MID' && node.presence === 'PLACE'));
   const labels = worldMotion.atRest ? layoutFieldLabels(labelled, presented, envelope, language) : new Map<string, FieldLabel>();
-  const targets = worldMotion.atRest ? presented.filter((node) => node.presence !== 'FIELD') : [];
+  // At FAR a tap discloses the field at MID: a topic receding there (outside the reader's section) is not a target.
+  const targets = worldMotion.atRest ? presented.filter((node) => node.presence !== 'FIELD' && !(camera?.depth === 'FAR' && node.presence === 'RECEDED')) : [];
   const contrast = view.world?.contrast ?? 'standard';
 
   return (
@@ -157,7 +160,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                 controller.focus(node.entry.id);
               }}
               accessibilityRole="button"
-              accessibilityLabel={node.entry.meaning}
+              accessibilityLabel={publicEntryLabel(node.entry)}
               accessibilityLanguage={language}
               accessibilityState={{ selected: node.selected }}
               hitSlop={4}
@@ -189,7 +192,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                   textAlign: label.side === 'RIGHT' ? 'left' : 'right',
                 }}
               >
-                {node.entry.meaning}
+                {publicEntryLabel(node.entry)}
               </Text>
             );
           })}
@@ -242,7 +245,7 @@ export function layoutFieldLabels(
   const out = new Map<string, FieldLabel>();
   const sides: readonly ('LEFT' | 'RIGHT')[] = language === 'ar' ? ['LEFT', 'RIGHT'] : ['RIGHT', 'LEFT'];
   for (const node of ordered) {
-    const natural = Math.ceil(node.entry.meaning.length * type.fontSize * 0.62) + 4;
+    const natural = Math.ceil(publicEntryLabel(node.entry).length * type.fontSize * 0.62) + 4;
     const width = Math.min(LABEL_MAX_WIDTH, natural);
     // A meaning wider than one capped line takes a second one rather than being cut after a few words; the box the
     // collision rules test is the box the words occupy, centred on the place as before.

@@ -9,7 +9,8 @@
  *                            Public search.
  *
  * Everything drawn is what the server served on the last read, and every act re-reads it. Another Experience is named by
- * its reviewed meaning only — never its publisher, place, region, nearness or anything ranked. Nothing here suggests a
+ * its reviewed meaning only (S8A-05 CP1: or its author's human title, as the field names it) — never its publisher, place,
+ * region, nearness or anything ranked. Nothing here suggests a
  * relation: the reader asks, and it exists only once the other side accepts. Every word is the S5-03C copy module's.
  */
 import { useState } from 'react';
@@ -18,6 +19,7 @@ import { Keyboard, Text, TextInput, View } from 'react-native';
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { PublicRelation } from '../runtime-entry';
+import { publicEntryLabel } from '../runtime-entry';
 import { PUBLIC_RELATION_SEARCH_MAX, type PublicAuthoringController, type PublicAuthoringState } from './public-authoring-controller';
 import { fill, publicRelationCopy, type PublicRelationCopy } from './relation-copy';
 
@@ -59,13 +61,13 @@ function Action({ label, onPress, s, testID, emphasis = false }: {
   );
 }
 
-/** One row: the other Experience's reviewed meaning, an optional line naming the reader's own, then the side's acts. */
+/** One row: the other Experience's label (its human title, else its meaning), an optional line naming the reader's own, then the side's acts. */
 function RelationRow({ relation, own, s, controller }: {
   readonly relation: PublicRelation; readonly own: string | null; readonly s: Shared; readonly controller: PublicAuthoringController;
 }) {
   return (
     <View testID={`qandeel-public-relation-${relation.state.toLowerCase()}`} style={{ paddingVertical: 6 }}>
-      <Line text={relation.other.meaning} s={s} role="body" color={s.palette.primary} testID="qandeel-public-relation-other" />
+      <Line text={publicEntryLabel(relation.other)} s={s} role="body" color={s.palette.primary} testID="qandeel-public-relation-other" />
       {own !== null ? <Line text={fill(s.copy.withYours, own)} s={s} testID="qandeel-public-relation-own" /> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingStart: ROW_START - 16, columnGap: 4 }}>
         {relation.state === 'REQUEST_RECEIVED' ? (
@@ -94,7 +96,7 @@ export interface PublicRelationsProps {
 export function PublicRelationsSection({ state, controller, language, palette }: PublicRelationsProps) {
   const copy = publicRelationCopy(language);
   const s: Shared = { palette, language, copy, writing: language === 'ar' ? 'rtl' : 'ltr', busy: state.busy };
-  const meaningOf = (id: string) => state.relationExperiences.find((e) => e.id === id)?.meaning ?? null;
+  const meaningOf = (id: string) => { const own = state.relationExperiences.find((e) => e.id === id); return own === undefined ? null : publicEntryLabel(own); };
   const received = state.relations.filter((r) => r.state === 'REQUEST_RECEIVED');
   return (
     <View testID="qandeel-public-relations-section">
@@ -105,7 +107,7 @@ export function PublicRelationsSection({ state, controller, language, palette }:
       {state.relationExperiences.length > 0 ? <Heading text={copy.relationsHeading} s={s} testID="qandeel-public-relations-experiences" /> : null}
       {state.relationExperiences.map((experience) => (
         <View key={experience.id} style={{ paddingStart: ROW_START - 16 }}>
-          <Action label={experience.meaning} onPress={() => controller.openRelations(experience.id)} s={s} testID="qandeel-public-relations-experience" />
+          <Action label={publicEntryLabel(experience)} onPress={() => controller.openRelations(experience.id)} s={s} testID="qandeel-public-relations-experience" />
         </View>
       ))}
     </View>
@@ -129,7 +131,7 @@ export function PublicRelationsScreen({ state, controller, language, palette }: 
   const search = state.relationSearch;
   return (
     <View testID="qandeel-public-relations">
-      <Line text={own.meaning} s={s} role="body" color={s.palette.primary} testID="qandeel-public-relations-own" />
+      <Line text={publicEntryLabel(own)} s={s} role="body" color={s.palette.primary} testID="qandeel-public-relations-own" />
       {groups.map((group) => {
         const rows = mine.filter((r) => r.state === group.state);
         if (rows.length === 0) return null;
@@ -156,7 +158,7 @@ export function PublicRelationsScreen({ state, controller, language, palette }: 
       {search.status === 'UNAVAILABLE' ? <Line text={copy.actionUnavailable} s={s} testID="qandeel-public-relations-search-unavailable" /> : null}
       {search.results.map((entry) => (
         <View key={entry.id} testID="qandeel-public-relations-result" style={{ paddingVertical: 6 }}>
-          <Line text={entry.meaning} s={s} role="body" color={s.palette.primary} />
+          <Line text={publicEntryLabel(entry)} s={s} role="body" color={s.palette.primary} />
           <View style={{ paddingStart: ROW_START - 16, flexDirection: 'row' }}>
             <Action label={copy.requestAction} onPress={() => controller.requestRelation(entry.id)} s={s} emphasis testID="qandeel-public-relations-request" />
           </View>

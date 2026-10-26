@@ -1,10 +1,18 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { isCanonicalCoordinateText } from './public-spatial-placer';
-import type { PublicFieldContentRow, PublicFieldEntryRow, PublicFieldExperienceRow, PublicFieldRelationRow } from './public-field.repository';
+import { TOPIC_SECTIONS, type TopicSection } from './public-compose.service';
+import type { PublicFieldContentRow, PublicFieldEntryRow, PublicFieldExperienceRow, PublicFieldRelationRow, PublicTopicHeaderRow } from './public-field.repository';
 import { PublicFieldRepository } from './public-field.repository';
 
-/** One Experience in the field: its place (exact integer text), its reviewed meaning and its semantic region. */
-export interface PublicFieldEntryView { readonly id: string; readonly x: string; readonly y: string; readonly meaning: string; readonly region: string }
+/**
+ * One Experience in the field: its place (exact integer text), its reviewed meaning and its semantic region — and, for a
+ * topic its author wrote (S8A-05 CP1, migration 0179), its human title and section, which a client shows in place of the
+ * meaning. An Experience with no human title (every one before 0179) carries neither key and keeps showing its meaning.
+ */
+export interface PublicFieldEntryView {
+  readonly id: string; readonly x: string; readonly y: string; readonly meaning: string; readonly region: string;
+  readonly title?: string; readonly section?: TopicSection;
+}
 export interface PublicFieldView { readonly experiences: ReadonlyArray<PublicFieldEntryView> }
 export interface PublicFieldSearchView { readonly results: ReadonlyArray<PublicFieldEntryView> }
 export type PublicFieldExperienceView =
@@ -49,6 +57,36 @@ function entriesOf(rows: readonly PublicFieldEntryRow[], max: number): PublicFie
   if (!Array.isArray(rows) || rows.length > max) return unavailable();
   return rows.map(entryOf);
 }
+export type TopicHeaders = ReadonlyMap<string, { readonly title: string; readonly section: TopicSection | null }>;
+type Headers = TopicHeaders;
+/** S8A-05 CP1: the 0179 header rows, strictly — only for ids asked, a non-empty title, a known section. */
+function headersOf(rows: readonly PublicTopicHeaderRow[], asked: ReadonlySet<string>): Headers {
+  if (!Array.isArray(rows) || rows.length > asked.size) return unavailable();
+  const headers = new Map<string, { title: string; section: TopicSection | null }>();
+  for (const row of rows) {
+    if (!isUuid(row?.experience_id) || !asked.has(row.experience_id) || headers.has(row.experience_id)
+      || (row.section_key !== null && !(TOPIC_SECTIONS as readonly string[]).includes(row.section_key))) return unavailable();
+    if (row.title === null) continue;
+    if (typeof row.title !== 'string' || row.title.length === 0) return unavailable();
+    headers.set(row.experience_id, { title: row.title, section: row.section_key as TopicSection | null });
+  }
+  return headers;
+}
+function titled(entry: PublicFieldEntryView, headers: Headers): PublicFieldEntryView {
+  const header = headers.get(entry.id);
+  if (!header) return entry;
+  return header.section ? { ...entry, title: header.title, section: header.section } : { ...entry, title: header.title };
+}
+/**
+ * S8A-05 CP1: the human titles (and sections) of the served topics among `ids`, in one bounded read; no read for no id.
+ * Shared by every Public surface that names an Experience (the field, its search and panel, the relations list), so a
+ * topic is named by its author's title wherever it appears.
+ */
+export async function readTopicHeaders(repository: Pick<PublicFieldRepository, 'topicHeaders'>, token: string, ids: Iterable<string>): Promise<TopicHeaders> {
+  const asked = new Set(ids);
+  if (asked.size === 0) return new Map();
+  return headersOf(await repository.topicHeaders(token, [...asked]), asked);
+}
 
 /**
  * S5-03B — «العالم العام» / Public World as a World: the semantic field the viewer explores, search over the SAME field,
@@ -73,6 +111,11 @@ export class PublicFieldService {
     }
   }
 
+  /** S8A-05 CP1: the human titles of the entries about to be shown, in one bounded read; no read for no entry. */
+  private titles(token: string, entries: readonly PublicFieldEntryView[]): Promise<Headers> {
+    return readTopicHeaders(this.repository, token, entries.map((entry) => entry.id));
+  }
+
   /** The field inside one world rectangle: exactly { minX, minY, maxX, maxY }, exact integer text, min ≤ max. */
   field(token: string, query: unknown): Promise<PublicFieldView> {
     const value = query && typeof query === 'object' && !Array.isArray(query) ? query as Record<string, unknown> : {};
@@ -80,16 +123,39 @@ export class PublicFieldService {
     if (Object.keys(value).length !== keys.length || !keys.every((key) => isCanonicalCoordinateText(value[key]))) invalid();
     const [minX, minY, maxX, maxY] = keys.map((key) => value[key] as string);
     if (BigInt(minX) > BigInt(maxX) || BigInt(minY) > BigInt(maxY)) invalid();
-    return this.guard(async () => ({ experiences: entriesOf(await this.repository.field(token, minX, minY, maxX, maxY), PUBLIC_FIELD_MAX) }));
+    return this.guard(async () => {
+      const experiences = entriesOf(await this.repository.field(token, minX, minY, maxX, maxY), PUBLIC_FIELD_MAX);
+      const headers = await this.titles(token, experiences);
+      return { experiences: experiences.map((entry) => titled(entry, headers)) };
+    });
   }
 
-  /** Search over the same field: exactly { q }, one trimmed line of 1–120 characters. */
+  /**
+   * Search over the same field: exactly { q } or { q, section }, q one trimmed line of 1–120 characters. S8A-05 CP1: a
+   * topic whose human title matches comes first, then the matches of the reviewed meaning, themes and public text (the
+   * topic's own words), each Experience once, at most 20. With a section, only that section's topics are searched (title,
+   * meaning, themes and text in one read).
+   */
   search(token: string, query: unknown): Promise<PublicFieldSearchView> {
     const value = query && typeof query === 'object' && !Array.isArray(query) ? query as Record<string, unknown> : {};
-    const q = value.q;
-    if (Object.keys(value).length !== 1 || typeof q !== 'string' || q.length < 1 || q.length > PUBLIC_SEARCH_QUERY_MAX || q !== q.trim()
-      || /[\n\r\t]/u.test(q)) invalid();
-    return this.guard(async () => ({ results: entriesOf(await this.repository.search(token, q as string), PUBLIC_SEARCH_MAX) }));
+    const { q, section } = value;
+    const keys = Object.keys(value);
+    if (keys.length !== (section === undefined ? 1 : 2) || typeof q !== 'string' || q.length < 1 || q.length > PUBLIC_SEARCH_QUERY_MAX || q !== q.trim()
+      || /[\n\r\t]/u.test(q) || (section !== undefined && !(TOPIC_SECTIONS as readonly unknown[]).includes(section))) invalid();
+    return this.guard(async () => {
+      const results = section !== undefined
+        ? entriesOf(await this.repository.sectionSearch(token, q as string, section as TopicSection), PUBLIC_SEARCH_MAX)
+        : await this.fieldSearch(token, q as string);
+      const headers = await this.titles(token, results);
+      return { results: results.map((entry) => titled(entry, headers)) };
+    });
+  }
+
+  private async fieldSearch(token: string, q: string): Promise<PublicFieldEntryView[]> {
+    const [byTitle, byMeaning] = await Promise.all([this.repository.titleSearch(token, q), this.repository.search(token, q)]);
+    const seen = new Set<string>();
+    return [...entriesOf(byTitle, PUBLIC_SEARCH_MAX), ...entriesOf(byMeaning, PUBLIC_SEARCH_MAX)]
+      .filter((entry) => (seen.has(entry.id) ? false : (seen.add(entry.id), true))).slice(0, PUBLIC_SEARCH_MAX);
   }
 
   /** The contextual panel of one Experience the field showed: its meaning, public display, content and nearby context. */
@@ -101,7 +167,11 @@ export class PublicFieldService {
       if (rows.length === 0) return { state: 'UNAVAILABLE' as const };
       const [content, nearby, relations] = await Promise.all([this.repository.content(token, experienceId),
         this.repository.nearby(token, experienceId), this.repository.relations(token, experienceId)]);
-      return servedOf(rows[0], content, nearby, relations);
+      const served = servedOf(rows[0], content, nearby, relations);
+      if (served.state !== 'SERVED') return served;
+      const headers = await this.titles(token, [served.experience, ...served.nearby, ...served.relations.map((relation) => relation.other)]);
+      return { ...served, experience: titled(served.experience, headers) as typeof served.experience, nearby: served.nearby.map((near) => titled(near, headers)),
+        relations: served.relations.map((relation) => ({ ...relation, other: titled(relation.other, headers) })) };
     });
   }
 }

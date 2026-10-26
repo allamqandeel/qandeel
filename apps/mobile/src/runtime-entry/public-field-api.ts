@@ -19,13 +19,35 @@ import type { CanonicalWorldAddress } from '../map/world';
 import { canonicalWorldAddress, isCanonicalCoordinateText, parseCanonicalCoordinate } from '../map/world';
 import type { PublicAuthoringAnswer, PublicAuthoringApiConfig } from './public-authoring-api';
 
-/** One Experience in the field: its exact place, its reviewed meaning and its semantic region (never shown as text). */
+/**
+ * The fixed section keys (S8A-05 CP1, migration 0179): twelve sections and «حكايات مفتوحة» (`open`). Their names are
+ * copy (`public-compose/copy.ts`); the keys are never shown.
+ */
+export const PUBLIC_TOPIC_SECTIONS = [
+  'love', 'marriage', 'family', 'parenting', 'people', 'work_money', 'study_future', 'inner_self', 'health_body', 'loss_crisis',
+  'faith_meaning', 'life_changes', 'open',
+] as const;
+export type PublicTopicSection = typeof PUBLIC_TOPIC_SECTIONS[number];
+export const isPublicTopicSection = (value: unknown): value is PublicTopicSection =>
+  typeof value === 'string' && (PUBLIC_TOPIC_SECTIONS as readonly string[]).includes(value);
+
+/**
+ * One Experience in the field: its exact place, its reviewed meaning and its semantic region (never shown as text) —
+ * and, for a topic its author wrote (S8A-05 CP1), its human title and section. A titled Experience is shown by its title,
+ * never by QANDEEL's meaning; an untitled one (every one before 0179) keeps showing its meaning.
+ */
 export interface PublicFieldEntry {
   readonly id: string;
   readonly address: CanonicalWorldAddress;
   readonly meaning: string;
   readonly region: string;
+  /** Present only for a titled topic. */
+  readonly title?: string;
+  /** Present only for a titled topic whose section the server served. */
+  readonly section?: PublicTopicSection;
 }
+/** S8A-05 CP1: what the field, search and panel show for an Experience — its human title, else its meaning. */
+export const publicEntryLabel = (entry: Pick<PublicFieldEntry, 'title' | 'meaning'>): string => entry.title ?? entry.meaning;
 export interface PublicFieldRectangle { readonly minX: bigint; readonly minY: bigint; readonly maxX: bigint; readonly maxY: bigint }
 export interface PublicFieldExperience {
   readonly entry: PublicFieldEntry;
@@ -85,11 +107,22 @@ function addressOf(x: unknown, y: unknown): CanonicalWorldAddress | null {
   return address.ok ? address.address : null;
 }
 
+const ENTRY_KEYS = ['id', 'x', 'y', 'meaning', 'region'];
+/** S8A-05 CP1: the entry keys alone, or with a human title, or with a title and its section — nothing else. */
+const entryShapeOf = (value: Record<string, unknown>, extra: readonly string[] = []): boolean =>
+  hasExactly(value, [...ENTRY_KEYS, ...extra]) || hasExactly(value, [...ENTRY_KEYS, 'title', ...extra])
+  || hasExactly(value, [...ENTRY_KEYS, 'title', 'section', ...extra]);
+
 function entryOf(value: unknown): PublicFieldEntry | null {
-  if (!isRecord(value) || !hasExactly(value, ['id', 'x', 'y', 'meaning', 'region']) || !isUuid(value.id)
+  if (!isRecord(value) || !entryShapeOf(value) || !isUuid(value.id)
     || typeof value.meaning !== 'string' || value.meaning.length === 0 || typeof value.region !== 'string' || value.region.length === 0) return null;
+  if ('title' in value && (typeof value.title !== 'string' || value.title.length === 0)) return null;
+  if ('section' in value && !isPublicTopicSection(value.section)) return null;
   const address = addressOf(value.x, value.y);
-  return address ? Object.freeze({ id: value.id, address, meaning: value.meaning, region: value.region }) : null;
+  if (!address) return null;
+  const base = { id: value.id, address, meaning: value.meaning, region: value.region };
+  if (typeof value.title !== 'string') return Object.freeze(base);
+  return Object.freeze(isPublicTopicSection(value.section) ? { ...base, title: value.title, section: value.section } : { ...base, title: value.title });
 }
 
 function entriesOf(value: unknown, max: number): PublicFieldEntry[] | null {
@@ -120,8 +153,10 @@ export class PublicFieldApiClient {
     return entries ? yes(entries) : NO;
   }
 
-  async search(query: string): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>> {
-    const answer = await this.exchange('GET', `/public/field/search?q=${encodeURIComponent(query)}`);
+  /** S8A-05 CP1: with a section, the search is inside that section only (its title, meaning, themes and text). */
+  async search(query: string, section?: PublicTopicSection): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>> {
+    const within = section === undefined ? '' : `&section=${encodeURIComponent(section)}`;
+    const answer = await this.exchange('GET', `/public/field/search?q=${encodeURIComponent(query)}${within}`);
     if (answer.kind !== 'OK' || !isRecord(answer.body) || !hasExactly(answer.body, ['results'])) return NO;
     const entries = entriesOf(answer.body.results, PUBLIC_SEARCH_MAX);
     return entries ? yes(entries) : NO;
@@ -134,14 +169,15 @@ export class PublicFieldApiClient {
     if (b.state === 'UNAVAILABLE' && hasExactly(b, ['state'])) return yes({ kind: 'ABSENT' });
     if (b.state !== 'SERVED' || !hasExactly(b, ['state', 'experience', 'content', 'nearby', 'relations']) || !isRecord(b.experience)) return NO;
     const e = b.experience;
-    const entry = entryOf({ id: e.id, x: e.x, y: e.y, meaning: e.meaning, region: e.region });
+    const entry = entryOf({ id: e.id, x: e.x, y: e.y, meaning: e.meaning, region: e.region,
+      ...('title' in e ? { title: e.title } : {}), ...('section' in e ? { section: e.section } : {}) });
     const publisher = isRecord(e.publisher) && hasExactly(e.publisher, ['mode', 'label'])
       && (e.publisher.mode === 'PSEUDONYM' || e.publisher.mode === 'REAL_NAME')
       && (e.publisher.label === null || typeof e.publisher.label === 'string') ? e.publisher : null;
     const nearby = entriesOf(b.nearby, PUBLIC_NEARBY_MAX);
     const relations = relationsOf(b.relations);
     if (!entry || !publisher || !isTextList(e.primaryThemes) || !isTextList(e.secondaryThemes) || nearby === null
-      || !hasExactly(e, ['id', 'x', 'y', 'meaning', 'region', 'primaryThemes', 'secondaryThemes', 'publisher', 'publishedAt', 'discussionCount', 'qandeelResponseCount'])
+      || !entryShapeOf(e, ['primaryThemes', 'secondaryThemes', 'publisher', 'publishedAt', 'discussionCount', 'qandeelResponseCount'])
       || typeof e.publishedAt !== 'string' || !Number.isFinite(Date.parse(e.publishedAt)) || !isCount(e.discussionCount) || !isCount(e.qandeelResponseCount) || !Array.isArray(b.content)
       || relations === null) return NO;
     const content = b.content.map((item) => (isRecord(item) && hasExactly(item, ['ordinal', 'kind', 'text']) && isCount(item.ordinal)

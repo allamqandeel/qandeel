@@ -16,6 +16,11 @@
  * Back is local: it closes the panel (releasing focus), then the search, before anything else — and at the World's
  * own root nothing is registered, so Back never silently leaves Public World (S5-01).
  *
+ * S8A-05 CP1 — the reader may look at ONE section of the same field (WP1 §2.5). It is the reader's choice and nothing
+ * else: the whole field stays where it is and is still read whole, the other topics recede, the search asks inside that
+ * section only, and nothing is ranked, counted or moved. Its list is closed first by Back, and the chosen section is
+ * released last, before Back leaves the World's root. Every entry starts again from every section.
+ *
  * No cache is a source of display (R1). The field shows exactly what the LATEST read served — never an older read kept
  * for later — and every transition that could show a different part of the World asks again for EVERYTHING on display
  * (R2): the glass, the open search and the focused panel, on any camera move at any rung (FAR included), a return to
@@ -25,7 +30,9 @@
  */
 import { envelopeCenter, projectAddress, visibleFootprint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
 import type { CanonicalWorldAddress } from '../../map/world';
-import type { ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle } from '../../runtime-entry';
+import type {
+  ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle, PublicTopicSection,
+} from '../../runtime-entry';
 import {
   PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD, focusField, nearestTo, panField, wholeWorldCamera, zoomField, type PublicFieldCamera,
 } from './public-field-camera';
@@ -33,7 +40,8 @@ import type { PublicDiscussionController } from './public-discussion-controller'
 
 export interface PublicFieldTransport {
   field(rectangle: PublicFieldRectangle): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>>;
-  search(query: string): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>>;
+  /** S8A-05 CP1: with a section, inside that section only. */
+  search(query: string, section?: PublicTopicSection): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>>;
   experience(experienceId: string): Promise<PublicAuthoringAnswer<PublicFieldPanel>>;
 }
 
@@ -60,6 +68,13 @@ export interface PublicFieldState {
    */
   readonly focus: { readonly id: string; readonly panel: PublicFieldPanelState; readonly discussion?: boolean } | null;
   readonly search: PublicFieldSearchState;
+  /** S8A-05 CP1 — the section the reader looks at (null: every section), and whether its list is open. */
+  readonly section: PublicFieldSectionState;
+}
+
+export interface PublicFieldSectionState {
+  readonly key: PublicTopicSection | null;
+  readonly choosing: boolean;
 }
 
 /**
@@ -95,6 +110,11 @@ export interface PublicFieldController {
   /** Focus one Experience the field (or search) showed: the camera lands on it at NEAR and the panel opens. */
   focus(experienceId: string): void;
   openSearch(): void;
+  /** S8A-05 CP1 — open the list of sections. */
+  openSections(): void;
+  /** S8A-05 CP1 — look at one section (null: every section); the list closes and an open search asks again inside it. */
+  chooseSection(section: PublicTopicSection | null): void;
+  closeSections(): void;
   search(query: string): void;
   closeSearch(): void;
   /** S5-04 — open the focused Experience's dependent discussion (only while its panel is served). */
@@ -126,7 +146,8 @@ export interface PublicFieldControllerOptions {
 
 const WHOLE_WORLD: PublicFieldRectangle = Object.freeze({ minX: PUBLIC_FIELD_MIN_COORD, minY: PUBLIC_FIELD_MIN_COORD, maxX: PUBLIC_FIELD_MAX_COORD, maxY: PUBLIC_FIELD_MAX_COORD });
 const NO_SEARCH: PublicFieldSearchState = Object.freeze({ open: false, status: 'IDLE', results: [] });
-const INITIAL: PublicFieldState = Object.freeze({ status: 'IDLE', entries: [], camera: null, focus: null, search: NO_SEARCH });
+const EVERY_SECTION: PublicFieldSectionState = Object.freeze({ key: null, choosing: false });
+const INITIAL: PublicFieldState = Object.freeze({ status: 'IDLE', entries: [], camera: null, focus: null, search: NO_SEARCH, section: EVERY_SECTION });
 const APPLIED: PublicFieldOutcome = Object.freeze({ outcome: 'APPLIED' });
 const NOT_READY: PublicFieldOutcome = Object.freeze({ outcome: 'NOT_READY' });
 export const PUBLIC_SEARCH_QUERY_MAX = 120;
@@ -249,7 +270,8 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
     if (!transport) return;
     const mine = ++searchTicket;
     publish({ search: { open: true, status: 'SEARCHING', results: [] } });
-    void transport.search(q).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
+    const section = state.section.key ?? undefined;
+    void (section === undefined ? transport.search(q) : transport.search(q, section)).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
       if (mine !== searchTicket) return;
       if (answer.kind !== 'ANSWER') { publish({ search: { open: true, status: 'UNAVAILABLE', results: [] } }); return; }
       publish({ search: { open: true, status: answer.value.length === 0 ? 'NONE' : 'RESULTS', results: answer.value } });
@@ -403,6 +425,20 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
     openSearch() {
       publish({ search: { ...state.search, open: true } });
     },
+    openSections() {
+      if (state.status !== 'READY') return;
+      publish({ section: { key: state.section.key, choosing: true } });
+    },
+    chooseSection(section) {
+      if (state.status !== 'READY') return;
+      const changed = section !== state.section.key;
+      publish({ section: { key: section, choosing: false } });
+      // The open search asked inside the section it was asked in: ask again inside the new one, never keep the old answer.
+      if (changed && state.search.open && lastQuery !== null) runSearch(lastQuery);
+    },
+    closeSections() {
+      publish({ section: { key: state.section.key, choosing: false } });
+    },
     search(query) {
       const q = query.replace(/\s+/gu, ' ').trim();
       if (q.length === 0 || q.length > PUBLIC_SEARCH_QUERY_MAX || !transport) return;
@@ -415,6 +451,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
       publish({ search: NO_SEARCH });
     },
     back() {
+      if (state.section.choosing) {
+        publish({ section: { key: state.section.key, choosing: false } });
+        return true;
+      }
       if (state.focus !== null && state.focus.discussion === true) {
         leaveDiscussion();
         return true;
@@ -432,6 +472,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
         searchTicket += 1;
         lastQuery = null;
         publish({ search: NO_SEARCH });
+        return true;
+      }
+      if (state.section.key !== null) {
+        publish({ section: EVERY_SECTION });
         return true;
       }
       return false;
