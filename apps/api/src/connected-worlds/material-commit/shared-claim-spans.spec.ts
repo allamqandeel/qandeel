@@ -8,6 +8,8 @@
 // throw or timeout is proved through `SharedMemberKnowledgeLane.readiness`; group 6 runs the V2 lane end to end instead of
 // mirroring the V1 judge; and production uses 0178's Names only when they are exactly the envelope's audience, so group 1's
 // Name-collision cases put the other member into the World's audience too (the prototype took any list).
+// It lives under material-commit/ because group 6 composes the commit binder, and only this folder may import the binder (the
+// database contract shared-world-material-commit-owner-deletion-v1: "the evidence binder is imported by nothing").
 
 import type { HumanPrincipal } from '../kernel/principal.types';
 import type { SharedWorldBirthRequest } from '../kernel/shared-world.types';
@@ -18,15 +20,15 @@ import type { SharedHumanAudienceResolverService } from '../audience/shared-huma
 import type { SharedPreModelWorldStateResolverService } from '../effective-context/shared-pre-model-world-state-resolver.service';
 import { digestReasoningContent } from '../effective-context/shared-effective-context.service';
 import { digestProviderOutput } from '../delivery-authority/shared-delivery-authority-revalidator.service';
-import { bindSharedQandeelMaterialCommit } from '../material-commit/shared-qandeel-material-commit-binding';
-import { SharedMemberKnowledgeLane, buildSharedDisclosureAuthorization } from './shared-member-knowledge-lane';
+import { bindSharedQandeelMaterialCommit } from './shared-qandeel-material-commit-binding';
+import { SharedMemberKnowledgeLane, buildSharedDisclosureAuthorization } from '../member-knowledge/shared-member-knowledge-lane';
 import {
   SHARED_KNOWLEDGE_ITEM_RPC, sharedKnowledgeReasoningRef, type SharedDisclosureCheckRequest, type SharedDisclosureJudge, type SharedMemberKnowledgeItem,
-} from './shared-member-knowledge.types';
+} from '../member-knowledge/shared-member-knowledge.types';
 import {
   containsClaimName, decideSharedClaims, normalizeClaimText, parseSharedClaimSpans, prepareSharedClaimTable, renderSharedClaims, sharedClaimCheckerView,
   type SharedClaimCheckerAnswer, type SharedClaimCheckerView, type SharedClaimParse, type SharedClaimTable,
-} from './shared-claim-spans';
+} from '../member-knowledge/shared-claim-spans';
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Fixtures: one synthetic World — Rania (the sender), Mohamed and Karim; Mohamed's item, and Rania's.
