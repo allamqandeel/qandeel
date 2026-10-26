@@ -4,7 +4,7 @@
 CP3-B AND CP3-C IMPLEMENTED ON BRANCH s8a/s8a-04-cp3 (DRAFT PR #358, NOT MERGED) — CP3-D V1 RUN ONCE AND NOT ACCEPTED
 (§11.0) — CONTROLLED AMENDMENT R4 (TRUSTED CLAIM SPANS, §11) IMPLEMENTED LOCALLY UNDER THE PRODUCT OWNER'S CP3-D V2 FINAL
 IMPLEMENTATION CONTRACT (2026-10-26), FREE PROOFS ONLY, NOT PUSHED — CP3-D V2 NOT RUN (NO BUDGET) — COPY GATE: CG-1 – CG-5
-AND THE V1 CG-6a / CG-6b APPROVED 6/6 (2026-10-25); CG-6a′ / CG-6b′ PROPOSED, NOT APPROVED — D-1 APPROVED WITH CONDITIONS
+AND THE V1 CG-6a / CG-6b APPROVED 6/6 (2026-10-25); CG-6a′ / CG-6b′ APPROVED AT D-6 (2026-10-26; CG-6b′ WITH EDITS A AND B) — D-1 APPROVED WITH CONDITIONS
 (§10.5) — 0176, 0177 AND 0178 NOT APPLIED TO ANY HOSTED DATABASE`. §10 binds over every earlier section it names; §11
 (R4) binds over exactly the passages it names. Scope, gates and closure conditions: the Task Contract
 `docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md`.
@@ -506,10 +506,13 @@ addition inside a span it judges ENTAILED, or a co-subject by pronoun it misses,
 ownership of every span (the server writes the Name), the consent and audience of every claim, the absence of anonymous or
 forged spans, and the binding of every gate and of the commit to the delivered text — not the meaning of free text.
 
-### 11.5 R4-5 — Copy Gate: CG-6a′ / CG-6b′ — **PROPOSED, NOT APPROVED**
-They replace CG-6a / CG-6b (§7) and are wired verbatim so the free tests exercise their exact bytes; no paid call runs with
-them before the Product Owner approves them and a budget. The approved CG-6a / CG-6b stay the V1 record. Model-facing only
-(no user sees them); English, as CG-6 was.
+### 11.5 R4-5 — Copy Gate: CG-6a′ / CG-6b′ — **APPROVED BY THE PRODUCT OWNER AT D-6 (2026-10-26)**
+They replace CG-6a / CG-6b (§7) and run verbatim as below. **D-6:** CG-6a′ APPROVED AS IS; CG-6b′ APPROVED with two edits —
+**A** (approved as proposed: the owner's conversation, memory or record stays protected, not only how an item was learned)
+and **B** (approved with the Product Owner's refined wording: firm on personal claims and provenance under uncertainty,
+free for advice). No paid call runs with them before a budget is approved (D-7). The approved CG-6a / CG-6b stay the V1
+record. Model-facing only (no user sees them); English, as CG-6 was. The check's policy reference over the final CG-6b′:
+`QANDEEL_S8A04_SHARED_DISCLOSURE_CHECK_V2:sha256:03c9b1ffd728a03cae86b7bc550b45a7201aeeb701130716f85056528b003163`.
 - **CG-6a′ (to the reply generator, before the item block):** "MEMBER KNOWLEDGE. Each item below belongs to the member
   named with it, who allowed QANDEEL to use it in this World and to mention it as theirs. Use any item freely whenever it
   helps you think, choose or suggest; using an item needs no mark. Only when you STATE an item as a fact about its owner,
@@ -527,8 +530,13 @@ them before the Product Owner approves them and a budget. The approved CG-6a / C
   e.g. "and she too") or UNCLEAR. Then list every passage OUTSIDE the spans that states or clearly implies an item's
   content as true of any person, of the person addressed, of "someone" or of the group; copy each passage exactly.
   Suggestions, plans and questions shaped by an item are not statements. Then list every passage, anywhere, that quotes
-  the owner or says or implies how, when or where QANDEEL learned an item, that it was told privately, or that permission
-  was given. Answer only the JSON object of the schema."
+  the owner or says or implies how, when or where QANDEEL learned an item, that it was told privately, that permission was
+  given, or that QANDEEL has any conversation, memory or record about the owner. If uncertain whether a span is fully
+  entailed by its item or refers only to that item's owner, answer UNCLEAR. Outside spans, report passages that plausibly
+  assert an item's content as a personal fact, including indirect or pronoun-based attribution, even when the referent is
+  uncertain. Do not report advice, suggestions, plans or questions merely because they draw on an item. If uncertain
+  whether a passage quotes the owner or reveals protected provenance, report it. Answer only the JSON object of the
+  schema."
 - **Diff from the approved CG-6a:** "named by its token" → "named with it"; removed "Use an item only when it genuinely
   helps this turn. You may mention it naturally as that member's own, in your own words."; added the free-use sentence,
   the span rule (span syntax, "without their name, which QANDEEL adds", one span per item, nothing about anyone else
@@ -540,9 +548,14 @@ them before the Product Owner approves them and a budget. The approved CG-6a / C
   (OWNER)"), the four findings, `attributedTo` and `unsupportedOwnerClaim` are gone; added the per-span verdicts
   (ENTAILED / ADDS / OTHER_ITEM / OTHER_PERSON / UNCLEAR), the exact outside-span passages and the quote / provenance
   passages. Kept: "how, when or where QANDEEL learned …, that it was told privately, that permission was given" and
-  "Answer only the JSON object of the schema." **Not carried over (for the Product Owner's review):** V1's "or that QANDEEL
-  has a conversation, memory or record about the owner" and "When unsure, choose the stricter answer." CG-6a′ still forbids
-  the generator to refer to a conversation, memory or record; the checker is no longer asked to report it explicitly.
+  "Answer only the JSON object of the schema." V1's "or that QANDEEL has a conversation, memory or record about the owner"
+  is restored by edit A. V1's general "When unsure, choose the stricter answer." is replaced by edit B: uncertainty about a
+  span is UNCLEAR (which blocks), a plausible personal assertion outside the spans is reported even when its referent is
+  uncertain, a doubtful quote or provenance passage is reported, and advice, suggestions, plans and questions are not
+  reported merely because they draw on an item.
+- **The server's side of uncertainty (unchanged code):** every verdict but ENTAILED blocks that item; any answer that is
+  missing, extra, malformed, mismatched, not copied exactly, late or failed is UNRESOLVED and withholds the reply; only the
+  checker's silence lets a reply through (§11.4).
 
 ### 11.6 R4-6 — CP3-D V2 acceptance (proposed by the Product Owner; NOT RUN, no budget)
 | Tier | Cases | Accept |
@@ -561,7 +574,8 @@ synthetic only; one run per tier; no automatic retry; no prompt-tuning loop. The
   `readiness`), its types and service (`audienceNames`, `decodeSharedAudienceNames`); the reply service (claim refs to the
   generator, the rendered text committed, per-item cooldown); the V2 check adapter (one call, opaque ids, per-request
   schema, policy `QANDEEL_S8A04_SHARED_DISCLOSURE_CHECK_V2`, 600 output tokens, 6 s, zero retries, at most 8 items) and its
-  test checker; CG-6a′ / CG-6b′. AI-COST-01 re-pinned for the adapter (same family, client, payer and gate). The integrated
+  test checker; CG-6a′ / CG-6b′ (APPROVED at D-6, §11.5; the edit changes only `shared-member-knowledge-texts.ts`, so the
+  adapter's AI-COST-01 pin is unchanged and the policy reference follows the text). AI-COST-01 re-pinned for the adapter (same family, client, payer and gate). The integrated
   proof's stand-in and expectations moved to V2 (`cp3-simulated.cjs`, `cp3-proof.ts`); the free cost rehearsal is
   `scripts/s8a-04/cp3d-v2-cost-rehearsal.ts` (sends nothing).
 - **Verification:** the Task Contract's verification record (§8, "CP3-D V2").

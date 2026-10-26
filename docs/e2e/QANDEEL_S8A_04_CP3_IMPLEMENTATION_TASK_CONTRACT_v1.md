@@ -4,7 +4,7 @@
 DELIVERED LOCALLY · CP3-B DELIVERED LOCALLY · CP3-C DELIVERED LOCALLY (CP3-C authorization 2026-10-25; D-1 APPROVED WITH
 CONDITIONS; COPY GATE APPROVED 6/6) · CP3-D V1 RUN ONCE (D-3) AND NOT ACCEPTED · CP3-D V2 — CONTROLLED AMENDMENT R4,
 TRUSTED CLAIM SPANS — IMPLEMENTED LOCALLY UNDER THE PRODUCT OWNER'S CP3-D V2 FINAL IMPLEMENTATION CONTRACT (2026-10-26),
-FREE PROOFS ONLY, NOT PUSHED; CG-6a′ / CG-6b′ PROPOSED, NOT APPROVED; CP3-D V2 NOT RUN (no budget) · BRANCH
+FREE PROOFS ONLY, NOT PUSHED; CG-6a′ / CG-6b′ APPROVED AT D-6 (2026-10-26); CP3-D V2 NOT RUN (no budget) · BRANCH
 s8a/s8a-04-cp3, DRAFT PR #358 — NOT MERGED` · **Date:** 2026-10-25 (R4: 2026-10-26)
 **Design authority:** [CP3 Controlled Amendment v1.0](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)
 (R3, approved for implementation with two binding corrections, recorded in its §10; CP3-C's decisions and record in
@@ -33,7 +33,8 @@ database; any real user's data; SYNTHETIC_ONLY (unchanged).
 - No unrelated local edit is committed (the old `api-ci.yml` 0173 hunk and the guard's rounds 12–17 stay uncommitted).
 - The six Copy Gate texts are wired verbatim; APPROVED 6/6 by the Product Owner (2026-10-25). A material change returns to
   the Product Owner. Under R4, CG-6a′ / CG-6b′ (amendment §11.5) replace CG-6a / CG-6b in the code so the free tests run
-  their exact bytes; they are PROPOSED, not approved, and no paid call runs with them before their approval and a budget.
+  their exact bytes; APPROVED at D-6 (2026-10-26: CG-6a′ as is, CG-6b′ with edits A and B, amendment §11.5); no paid call
+  runs with them before a budget is approved (D-7).
 - CP3-D V2 contract limits (2026-10-26): no paid DeepSeek; no push before the Product Owner's gate; no GitHub CI and no
   Android (the PO-WAIVED Android CI record and `QAN-BL-CI-03` stay as decided, not reopened); no reopening of CP1, CP2 or
   CP3-A / B / C; no Foundation Freeze change, consent or audience widening, hosted database, new PR, merge or release; no
@@ -86,7 +87,11 @@ database; any real user's data; SYNTHETIC_ONLY (unchanged).
 - **D-4** Push / PR / merge. — Draft PR #358 opened on the Product Owner's instruction (2026-10-25); no merge.
 - **D-5** The V2 direction. — The Product Owner's CP3-D V2 Final Implementation Contract (2026-10-26) authorizes R4 —
   Trusted Claim Spans — locally, free proofs only, with the instruction to execute it to its end (amendment §11).
-- **D-6** Close the Copy Gate for CG-6a′ / CG-6b′ (amendment §11.5, full texts and diff). — **OPEN** (PROPOSED).
+- **D-6** Close the Copy Gate for CG-6a′ / CG-6b′ (amendment §11.5, full texts and diff). — **APPROVED / CLOSED**
+  (2026-10-26): CG-6a′ as is; CG-6b′ with edit A (the owner's conversation, memory or record) and edit B (the Product
+  Owner's refined wording on uncertainty). Applied to `shared-member-knowledge-texts.ts` only. Verified (free): `tsc`; the
+  CP3 suites 167 / 167; AI-COST-01 76 / 76 (its adapter pin unchanged; the policy reference follows the text);
+  `test:task-closure-governance-contract` 24 / 24; the integrated proof `--simulate=d6` 130 / 130, nothing sent.
 - **D-7** Approve the CP3-D V2 preregistration (Tier 1 / Tier 2 definitions, cases and SHA) and its budget. — **OPEN**.
 - **D-8** Push of the R4 commits to Draft PR #358 and the CI run (the plan in §8). — **OPEN**.
 
