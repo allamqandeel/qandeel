@@ -715,6 +715,13 @@ const CLASSIFICATION = Object.freeze({
   'public_spatial_private.read_public_semantic_nearby_v1': EXCLUDES,
   'public_spatial_private.request_own_public_spatial_placement_v1': EXCLUDES,
   'public_spatial_private.search_public_semantic_field_v1': EXCLUDES,
+  // S8A-05 CP1 / 0179: author-written topic freeze and public title/section reads. Freeze is closed by the
+  // Stage 9 clearance gate; the viewer reads use the admitted, served Public Experience (not Shared analysis text).
+  // Each private function has exactly one public wrapper, included by PUBLIC_WRAPPER_OF below.
+  'public_compose_private.freeze_own_topic_draft_v1': EXCLUDES,
+  'public_compose_private.read_public_topic_headers_v1': EXCLUDES,
+  'public_compose_private.read_public_topic_title_matches_v1': EXCLUDES,
+  'public_compose_private.read_public_section_topic_matches_v1': EXCLUDES,
   // Replay: a Shared body enters only through capture, closed to a place by 0175 G.5; a Shared Replay is never distributed.
   'replay_private.create_my_replay_draft_v1': EXCLUDES,
   'replay_private.finalize_my_replay_version_v1': EXCLUDES,
