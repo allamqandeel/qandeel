@@ -279,11 +279,15 @@ describe('S8A-05 CP1 — the human title in the field', () => {
 describe('S8A-05 CP1 — the Copy Gate', () => {
   const R2 = ['saving', 'saveFailed', 'allSections', 'sectionsHeading', 'sectionShown', 'inSection', 'showAllSections', 'sectionNear', 'sectionNoneHere'];
 
-  it('is approved: every row the gate presented and the thirteen sections; only the R2 rows are PROPOSED, in both languages', () => {
-    expect(PUBLIC_COMPOSE_COPY_GATE.status).toMatch(/APPROVED by the Product Owner on 2026-10-26/u);
-    expect([...PUBLIC_COMPOSE_COPY_GATE.proposed].sort()).toEqual([...R2].sort());
-    expect([...PUBLIC_COMPOSE_COPY_GATE.englishProposed].sort()).toEqual([...R2].sort());
-    expect(PUBLIC_COMPOSE_COPY_GATE.approved).toHaveLength(Object.keys(PUBLIC_COMPOSE_COPY_ROWS).length - R2.length + 13);
+  it('is closed: every row, the nine R2 rows and the thirteen sections APPROVED in both languages; none PROPOSED', () => {
+    expect(PUBLIC_COMPOSE_COPY_GATE.status).toMatch(/CLOSED: APPROVED by the Product Owner on 2026-10-26/u);
+    expect(PUBLIC_COMPOSE_COPY_GATE.proposed).toEqual([]);
+    expect(PUBLIC_COMPOSE_COPY_GATE.englishProposed).toEqual([]);
+    expect(PUBLIC_COMPOSE_COPY_GATE.approved).toHaveLength(Object.keys(PUBLIC_COMPOSE_COPY_ROWS).length + 13);
+    // The R2 rows exactly as presented to the Product Owner, approved unchanged.
+    for (const key of R2) expect(PUBLIC_COMPOSE_COPY_ROWS[key as keyof typeof PUBLIC_COMPOSE_COPY_ROWS].source).toMatch(/R2 .*APPROVED unchanged/u);
+    expect(PUBLIC_COMPOSE_COPY_ROWS.saveFailed.ar).toBe('تعذّر حفظ المسودة الآن، وما كُتب ما زال هنا.');
+    expect(PUBLIC_COMPOSE_COPY_ROWS.sectionNear.ar).toBe('من هذا القسم، قريبًا من هنا');
     for (const key of Object.keys(PUBLIC_SECTION_COPY_ROWS)) expect(PUBLIC_COMPOSE_COPY_GATE.approved).toContain(key);
   });
 

@@ -14,9 +14,11 @@
  *               presented and the 13 section names, four with the Owner's own Arabic (`privateNote`, `previewHeading`,
  *               `publicWarning`, and `notOpen` + `draftKept`, the Owner's one text in its two sentences, so that «مسودتك
  *               محفوظة.» is shown only after the account confirmed the save, as the Owner required) and their English
- *               adjusted to match, as the Owner asked; or an earlier approval reused verbatim (its source named on the row);
- *   PROPOSED  — not approved: the rows CP1's review corrections (R2, 2026-10-26) added after that decision — saving the
- *               draft automatically and the reader's view of one section. They await the Product Owner
+ *               adjusted to match, as the Owner asked; the nine rows CP1's review corrections (R2) added after that
+ *               decision — saving the draft automatically and the reader's view of one section — APPROVED by the Product
+ *               Owner unchanged in both languages (2026-10-26); or an earlier approval reused verbatim (its source named on
+ *               the row);
+ *   PROPOSED  — not approved; no row is PROPOSED now
  *               (`docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md` §6).
  *
  * Deliberately absent: any word saying the topic IS published (production publishing is closed until Stage 9 and the
@@ -39,9 +41,8 @@ interface Row {
 const GATE = 'S8A-05 CP1 Product Copy Gate — APPROVED (Product Owner, 2026-10-26)';
 const REVISED = 'S8A-05 CP1 Product Copy Gate — APPROVED with the Product Owner\'s own Arabic (2026-10-26); English adjusted to match, as the Owner asked';
 const SECTION = 'S8A-05 WP1 §2.2 section name — S8A-05 CP1 Product Copy Gate, APPROVED (Product Owner, 2026-10-26)';
-const R2 = 'S8A-05 CP1 R2 (review corrections, new); PROPOSED — awaiting the Product Owner';
+const R2 = 'S8A-05 CP1 R2 (review corrections) — APPROVED unchanged in Arabic and English (Product Owner, 2026-10-26)';
 const approved = (ar: string, en: string, source = GATE): Row => ({ ar, en, status: 'APPROVED', enStatus: 'APPROVED', source });
-const proposed = (ar: string, en: string): Row => ({ ar, en, status: 'PROPOSED', enStatus: 'PROPOSED', source: R2 });
 
 export const PUBLIC_COMPOSE_COPY_ROWS = Object.freeze({
   entry: approved('موضوع جديد', 'New topic'),
@@ -58,8 +59,8 @@ export const PUBLIC_COMPOSE_COPY_ROWS = Object.freeze({
   save: { ar: 'حفظ', en: 'Save', status: 'APPROVED', enStatus: 'APPROVED', source: 'S7-02 Product Copy Gate (Arabic 2026-10-19; English 2026-10-20, S7-05 D2)' },
   /** Shown only while the account holds exactly the words shown (`isDraftSaved`). */
   saved: approved('حُفظت المسودة.', 'The draft was saved.'),
-  saving: proposed('جارٍ حفظ المسودة…', 'Saving the draft…'),
-  saveFailed: proposed('تعذّر حفظ المسودة الآن، وما كُتب ما زال هنا.', "The draft couldn't be saved right now. What was written is still here."),
+  saving: approved('جارٍ حفظ المسودة…', 'Saving the draft…', R2),
+  saveFailed: approved('تعذّر حفظ المسودة الآن، وما كُتب ما زال هنا.', "The draft couldn't be saved right now. What was written is still here.", R2),
   stale: approved('تغيّرت هذه المسودة من مكان آخر، فأُعيد تحميلها.', 'This draft changed somewhere else, so it was reloaded.'),
   limitReached: approved('بلغت المسودات الحد الأقصى (50).', 'The draft limit (50) has been reached.'),
   deletionPending: approved('الحساب قيد الحذف.', 'The account is being deleted.'),
@@ -89,13 +90,13 @@ export const PUBLIC_COMPOSE_COPY_ROWS = Object.freeze({
   deleteNote: approved('يُمحى العنوان والنص نهائيًا.', 'The title and text are erased permanently.'),
   deleted: approved('حُذفت المسودة.', 'The draft was deleted.'),
   // The reader's view of ONE section of the Public field (WP1 §2.5). No word ranks, counts or calls it a lens.
-  allSections: proposed('كل الأقسام', 'All sections'),
-  sectionsHeading: proposed('الأقسام', 'Sections'),
-  sectionShown: proposed('القسم المعروض: {0}', 'Section shown: {0}'),
-  inSection: proposed('في: {0}', 'In: {0}'),
-  showAllSections: proposed('إظهار كل الأقسام', 'Show all sections'),
-  sectionNear: proposed('من هذا القسم، قريبًا من هنا', 'From this section, near here'),
-  sectionNoneHere: proposed('لا توجد مواضيع من هذا القسم هنا.', 'No topics from this section here.'),
+  allSections: approved('كل الأقسام', 'All sections', R2),
+  sectionsHeading: approved('الأقسام', 'Sections', R2),
+  sectionShown: approved('القسم المعروض: {0}', 'Section shown: {0}', R2),
+  inSection: approved('في: {0}', 'In: {0}', R2),
+  showAllSections: approved('إظهار كل الأقسام', 'Show all sections', R2),
+  sectionNear: approved('من هذا القسم، قريبًا من هنا', 'From this section, near here', R2),
+  sectionNoneHere: approved('لا توجد مواضيع من هذا القسم هنا.', 'No topics from this section here.', R2),
   back: { ar: 'رجوع', en: 'Back', status: 'APPROVED', enStatus: 'APPROVED', source: 'S4-01 Product Copy Gate (reused by S5-02)' },
   retry: { ar: 'إعادة المحاولة', en: 'Try again', status: 'APPROVED', enStatus: 'APPROVED', source: 'S4-01 Product Copy Gate (reused by S5-02)' },
   actionUnavailable: { ar: 'تعذّر ذلك الآن.', en: "That didn't work right now.", status: 'APPROVED', enStatus: 'APPROVED', source: 'S4-01 Product Copy Gate' },
@@ -121,8 +122,8 @@ export const PUBLIC_SECTION_COPY_ROWS = Object.freeze({
 const ALL: Readonly<Record<string, Row>> = { ...PUBLIC_COMPOSE_COPY_ROWS, ...PUBLIC_SECTION_COPY_ROWS };
 const keysWhere = (test: (row: Row) => boolean) => Object.entries(ALL).filter(([, row]) => test(row)).map(([key]) => key);
 export const PUBLIC_COMPOSE_COPY_GATE = Object.freeze({
-  status: 'S8A-05 CP1 PRODUCT COPY GATE — APPROVED by the Product Owner on 2026-10-26 (4 rows with the Owner\'s own Arabic); '
-    + 'the R2 rows added after that decision are PROPOSED; nothing approved by being shipped',
+  status: 'S8A-05 CP1 PRODUCT COPY GATE — CLOSED: APPROVED by the Product Owner on 2026-10-26 (4 rows with the Owner\'s own Arabic; '
+    + 'the nine R2 rows approved unchanged); nothing approved by being shipped',
   approved: keysWhere((row) => row.status === 'APPROVED'),
   revisedByProductOwner: ['privateNote', 'previewHeading', 'publicWarning', 'notOpen', 'draftKept'],
   proposed: keysWhere((row) => row.status === 'PROPOSED'),

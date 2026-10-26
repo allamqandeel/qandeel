@@ -1,8 +1,8 @@
 # QANDEEL — S8A-05 Public World: «اكتب موضوعك» / Write Your Topic — Implementation Record v1
 
 **Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** only
-**Status:** `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE APPROVED (Product
-Owner, 2026-10-26; nine R2 rows PROPOSED) — NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
+**Status:** `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE CLOSED (every row
+APPROVED by the Product Owner, 2026-10-26) — NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
 closed: CP2 – CP4 have not started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
 **Date:** 2026-10-26  
 **Branch / base:** `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`, the merge of PR #358
@@ -48,6 +48,26 @@ mobile client shows the honest outcome (`PUBLICATION_NOT_OPEN` → the Product O
 | 3b. Search inside the body | Yes | The 0145 search already reads `public_experience_text_derivative_bodies`, which holds the authored body, so the field search finds a published topic's body (proved in the 0179 verifier F04). New viewer read `read_public_section_topic_matches_v1` searches title, meaning, themes and public text inside one section |
 | 3c. Human titles in relations management | Yes | The relations read merges the title of each own and other topic through the same `read_public_topic_headers_v1`; the strict mobile client accepts exactly one more key, a non-empty `title`; `PublicRelations` names every topic by `publicEntryLabel` |
 | 4. The Copy Gate as an Arabic / English table, nothing APPROVED without approval | Yes | §6; the Product Owner's decision of 2026-10-26 is recorded there |
+
+### 1.2 R3 — the API CI correction (2026-10-26, same pull request)
+
+On `1b93de38`, `verify-api` failed in `verify-migration-0150.mjs`, the two GUARD scenarios. The topic freeze reaches the
+frozen authoring cores' `40001` refusals (the guard records the start's `ensure_public_identity_v1` path), and its
+one block handler caught only `QC179` and `23505`, so a `40001` could reach the Data API, where PostgREST before v16
+re-runs the whole request without bound. The Product Owner ordered the narrowest fix:
+
+- `0179` §D.7: the block handler also catches `40001` and `PT409`, answering the same bounded `NOT_PREPARED`. The
+  block is a subtransaction, so every write it made (identity, Experience, package, title, section) is rolled back
+  with it, exactly as for `QC179`; nothing is committed inside a function, so no failure after a commit is hidden. In
+  production the block is unreachable anyway: the clearance seam answers `PUBLICATION_NOT_OPEN` first.
+- `verify-migration-0150.mjs`: `freeze_own_topic_draft_v1` is added to `ABSORBED` with a dated comment. `RETAINED`
+  and every assertion are unchanged.
+
+Proof (local PostgreSQL 17 with 0179): `verify-migration-0150` passes 28 of 28, including the five weakening
+guards g1 – g5. The repository's own guard reports the freeze as reaching a `40001` raise with nothing retryable
+escaping, absorbed by the handler `WHEN QC179 OR 23505 OR 40001 OR PT409`. Negative control: with only that handler
+line reverted, the same verifier fails exactly the two GUARD scenarios CI failed (26 of 28). `verify-migration-0179`
+and `npm run test:database` (1,310 of 1,310) pass.
 
 ## 2. Database — migration `0179_s8a_05_public_authored_topics_v1.sql`
 
@@ -125,7 +145,7 @@ Forward-only; 0001 – 0178 byte-unchanged; not hosted (the next migration is `0
 | Frozen contracts and existing tests intact | §7 | PASS, with the recorded baseline exceptions |
 | Arabic / RTL visual check | §8 | see §8 |
 
-## 6. Copy Gate — S8A-05 CP1 Product Copy Gate: `APPROVED` (Product Owner, 2026-10-26); nine R2 rows `PROPOSED`
+## 6. Copy Gate — S8A-05 CP1 Product Copy Gate: `CLOSED` — every row `APPROVED` (Product Owner, 2026-10-26)
 
 The Product Owner approved every new CP1 row in Arabic and English and the 13 section names on 2026-10-26, with four
 edits in the Owner's own Arabic (★ below). The English of those rows was adjusted to match, as the Owner asked. The Owner's
@@ -190,11 +210,12 @@ Section names (WP1 §2.2, APPROVED): love الحب والارتباط · marriag
 parenting · Friends and people · Work and money · Study and the future · The self and feelings · Health and the body · Loss
 and crises · Faith and meaning · Living abroad and big changes · Open stories).
 
-**R2 rows — `PROPOSED`, awaiting the Product Owner.** The review corrections (§1.1) added nine rows after the decision
-above: the draft's save state, and the reader's view of one section. They are shipped as `PROPOSED` in both languages
-and are not approved by this record. No row names a lens, a rank, a count or a popularity.
+**R2 rows — `APPROVED` unchanged by the Product Owner (2026-10-26).** The review corrections (§1.1) added nine rows
+after the decision above: the draft's save state, and the reader's view of one section. They were presented as
+`PROPOSED`, and the Product Owner approved all nine in Arabic and English without edits, with the R3 CI correction.
+No row is `PROPOSED` now, so the gate is closed. No row names a lens, a rank, a count or a popularity.
 
-| Key | Arabic (PROPOSED) | English (PROPOSED) | Where it appears |
+| Key | Arabic (APPROVED) | English (APPROVED) | Where it appears |
 | --- | --- | --- | --- |
 | saving | جارٍ حفظ المسودة… | Saving the draft… | while a save is out |
 | saveFailed | تعذّر حفظ المسودة الآن، وما كُتب ما زال هنا. | The draft couldn't be saved right now. What was written is still here. | a save got no answer; the words stay on screen |

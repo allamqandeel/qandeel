@@ -1093,8 +1093,12 @@ BEGIN
     UPDATE public_compose_private.topic_drafts d SET prepared_experience_id = v_experience, updated_at = clock_timestamp()
      WHERE d.id = p_draft_id;
   EXCEPTION
-    WHEN SQLSTATE 'QC179' OR SQLSTATE '23505' THEN
+    WHEN SQLSTATE 'QC179' OR SQLSTATE '23505' OR SQLSTATE '40001' OR SQLSTATE 'PT409' THEN
       -- Everything this block wrote is rolled back with it: no identity, no Experience, no package.
+      -- 40001 / PT409 (PROD-RETRY-01, 0150): the frozen cores this block calls answer a stale state or a lost race with
+      -- 40001 (or PT409 where 0150 substituted it). Nothing is committed inside a function, so the same rollback holds and
+      -- the answer is the bounded NOT_PREPARED; no 40001 reaches the Data API, where PostgREST before v16 would re-run the
+      -- whole request without bound.
       RETURN QUERY SELECT 'NOT_PREPARED'::text, NULL::uuid, NULL::text;
       RETURN;
   END;
