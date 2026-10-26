@@ -139,7 +139,8 @@ export class SharedConversationReplyGenerator implements SharedQandeelReplyGener
         const chosen = await knowledge;
         const block = sharedWorldKnowledgeBlock(chosen.entries);
         const withKnowledge = block === null ? attributed : { ...attributed, behavioralGuidance: `${attributed.behavioralGuidance}\n\n${block}` };
-        // S8A-04 CP3: the items their owners allowed here, after the World's knowledge (CG-6a, PROPOSED).
+        // S8A-04 CP3: the items their owners allowed here, after the World's knowledge (CG-6a′, PROPOSED under R4), each with
+        // its claim reference only when it may be stated.
         const members = sharedMemberKnowledgeBlock(input.memberKnowledge ?? []);
         const reply = members === null ? withKnowledge : { ...withKnowledge, behavioralGuidance: `${withKnowledge.behavioralGuidance}\n\n${members}` };
         // With an attribution reading, the reply keeps what remains of the reading turn, measured after recall too.

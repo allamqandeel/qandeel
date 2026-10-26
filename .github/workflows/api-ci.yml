@@ -1255,6 +1255,11 @@ jobs:
       # new members; the endings shown to the owner alone.
       - name: Verify S8A-04 Shared Knowledge owner surface against real PostgreSQL
         run: npm run verify:shared-knowledge-owner-surface:integration
+      # S8A-04 CP3-D V2: migration 0178 (Controlled Amendment R4, 2026-10-26) - the Names a reply may write for its owners:
+      # service_role only, the exact current audience with its silent members, each member by the Name every other member is
+      # shown (else NULL), and nothing written.
+      - name: Verify S8A-04 Shared audience Names against real PostgreSQL
+        run: npm run verify:shared-audience-names:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

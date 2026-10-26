@@ -5,7 +5,10 @@
 //             message being answered (0176 collector). Without a configured judge nothing is collected: an item that
 //             could never be checked is never used, and the reply goes on exactly as before.
 //   lane      the authorized-disclosure lane for one request (`shared-member-knowledge-lane.ts`).
-//   coolDown  a withheld reply's items are not used again for an hour (an operational value, §4).
+//   names     R4-2 step 1 (0178): the Name every member of the World's exact current audience is shown, silent members
+//             included, or null — read-only; a missing or ambiguous Name only means that owner's item cannot be stated.
+//   coolDown  R4-3: only the items a checked reply proved unsafe rest for an hour (an operational value, §4); a failure
+//             cools nothing.
 //   propose   AFTER a reply is committed: the LOCAL relevance read (0176, SQL only). No model, no provider, no item words
 //             leave the database before consent; its only effect is one private request row the owner alone can read
 //             (Product Owner correction 1). It never delays or shapes a reply.
@@ -20,9 +23,10 @@ import { SharedHumanAudienceResolverService } from '../audience/shared-human-aud
 import { digestReasoningContent } from '../effective-context/shared-effective-context.service';
 import { SharedPreModelWorldStateResolverService } from '../effective-context/shared-pre-model-world-state-resolver.service';
 import type { SharedWorldId } from '../kernel/world.types';
+import type { SharedClaimAudienceMember } from './shared-claim-spans';
 import { SharedMemberKnowledgeLane } from './shared-member-knowledge-lane';
 import {
-  SHARED_DISCLOSURE_JUDGE, SHARED_KNOWLEDGE_COOL_DOWN_RPC, SHARED_KNOWLEDGE_FOR_REPLY_RPC, SHARED_KNOWLEDGE_PROPOSE_RPC,
+  SHARED_AUDIENCE_NAMES_RPC, SHARED_DISCLOSURE_JUDGE, SHARED_KNOWLEDGE_COOL_DOWN_RPC, SHARED_KNOWLEDGE_FOR_REPLY_RPC, SHARED_KNOWLEDGE_PROPOSE_RPC,
   type SharedDisclosureJudge, type SharedMemberKnowledgeItem,
 } from './shared-member-knowledge.types';
 
@@ -44,6 +48,19 @@ function seconds(value: string | undefined, fallback: number): number {
 
 /** The index terms of the message being answered: the 0171 terms, at most the 0171 query bound. */
 export const sharedKnowledgeTerms = (text: string): string[] => memoryRetrievalTerms(text).slice(0, MAX_RETRIEVAL_QUERY_TERMS);
+
+/** The 0178 rows, exactly `{ user_id, name }`, each member once, a Name non-blank or null; else none. */
+export function decodeSharedAudienceNames(rows: unknown): SharedClaimAudienceMember[] | null {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const members: SharedClaimAudienceMember[] = [];
+  for (const row of rows as ReadonlyArray<unknown>) {
+    if (!isRecord(row) || Object.keys(row).length !== 2 || !('user_id' in row) || !('name' in row) || !isUuid(row.user_id)) return null;
+    if (row.name !== null && (typeof row.name !== 'string' || row.name.trim().length === 0)) return null;
+    if (members.some((member) => member.userId === row.user_id)) return null;
+    members.push(Object.freeze({ userId: row.user_id as string, name: row.name as string | null }));
+  }
+  return members;
+}
 
 /** The 0176 collector's rows, exactly their shape, one per owner, each item's words matching its digest; else none. */
 export function decodeSharedMemberKnowledge(rows: unknown): SharedMemberKnowledgeItem[] | null {
@@ -106,7 +123,16 @@ export class SharedMemberKnowledgeService {
     return new SharedMemberKnowledgeLane(this.server, this.worldState, this.audience, worldId, items);
   }
 
-  /** §4: a withheld reply's items rest for the cooldown. Best effort. */
+  /** R4-2 step 1: the exact current audience's Names (0178), or null when the read fails or is not exactly its shape. */
+  async audienceNames(worldId: SharedWorldId): Promise<SharedClaimAudienceMember[] | null> {
+    try {
+      return decodeSharedAudienceNames(await this.server.rpc<unknown>(SHARED_AUDIENCE_NAMES_RPC, { p_world_id: worldId }));
+    } catch {
+      return null;
+    }
+  }
+
+  /** §4 under R4-3: the items a checked reply proved unsafe rest for the cooldown. Best effort. */
   async coolDown(worldId: SharedWorldId, items: ReadonlyArray<SharedMemberKnowledgeItem>): Promise<void> {
     if (items.length === 0) return;
     await this.server.rpc<unknown>(SHARED_KNOWLEDGE_COOL_DOWN_RPC, {

@@ -22,6 +22,12 @@
 // CP3-C (Product Owner authorization of 2026-10-25, §6): scenario C drives the owner's permission surface through the Shared World
 // controller's own routes under each member's token, and scenario A proves, separately, that no Activity, push or outbox row
 // and no other table outside the private lane carries a private item, a request, a decision or its owner.
+// CP3-D V2 (Controlled Amendment R4, Trusted Claim Spans; Product Owner CP3-D V2 Final Implementation Contract, §7): the
+// stand-in now answers CG-6b′ (one check per reply, `<check_data>`, opaque K-ids) and states an item only inside its claim
+// span ⟦ref: …⟧, so the server's rendering of the owner's Name, the one check, the rendered final text and its commit are
+// exercised end to end. Intended changes from the V1 run (R4-3): one check per reply carrying every checked item (P5); a
+// checker failure (HTTP 500, malformed answer) withholds the reply WITHOUT a cooldown, and the next turn uses the item again;
+// a proven-unsafe answer (sealed passage, OTHER_PERSON, ADDS) withholds it and cools that item only.
 import 'reflect-metadata';
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -52,7 +58,7 @@ const RESULTS = process.env.QANDEEL_S8A04_RESULTS_PATH ?? '';
 if (!RESULTS) throw new Error('NOT RUN: QANDEEL_S8A04_RESULTS_PATH is required');
 if (process.env.QANDEEL_EVAL_SIMULATE !== '1' && !DRY) throw new Error('NOT RUN: CP3 has no live mode (no paid call is authorized)');
 const ATTRIBUTION_READING_MARK = 'You read a group conversation for the server. You do not reply to anyone.';
-const CP3_SIMULATED_JUDGE_MARK = 'You check one reply written by QANDEEL in a group. You are given that reply and the private items of ONE member (OWNER).';
+const CP3_SIMULATED_JUDGE_MARK = 'You check one reply written by QANDEEL in a group, for private items only.';
 
 // ------------------------------------------------------------------------------------------- the DeepSeek URL: record, inject, act
 type Family = 'SHARED_DISCLOSURE_JUDGE' | 'SHARED_SEMANTIC_READING' | 'SHARED_SPATIAL_PLACEMENT' | 'SHARED_KNOWLEDGE_RECALL' | 'ATTRIBUTION_READING' | 'REPLY';
@@ -79,7 +85,13 @@ async function rewrite(response: Response, change: (content: string) => string):
   json.choices[0].message.content = change(json.choices[0].message.content);
   return new Response(JSON.stringify(json), { status: response.status, headers: { 'content-type': 'application/json' } });
 }
-const judgeAnswer = (change: (item: Json) => Json) => (content: string) => JSON.stringify({ items: JSON.parse(content).items.map(change) });
+/** The data block of one check request (CG-6b′): the reply under checker ids and the items under the same ids. */
+const checkDataOf = (text: string): Json => {
+  const data = /<check_data>([\s\S]*)<\/check_data>/u.exec(text);
+  return data === null ? null : JSON.parse(data[1]);
+};
+/** A V2 answer rewritten from the stand-in's, with the request's own data (its reply and items) at hand. */
+const checkAnswer = (data: Json, change: (answer: Json, data: Json) => Json) => (content: string) => JSON.stringify(change(JSON.parse(content), data));
 
 function installDeepSeekObserver(): void {
   const inner = globalThis.fetch;
@@ -104,10 +116,13 @@ function installDeepSeekObserver(): void {
     }
     let response: Response = await inner(input, init);
     if (fault === 'MALFORMED') response = await rewrite(response, () => 'not a JSON assessment');
-    if (fault === 'QUOTE') response = await rewrite(response, judgeAnswer((item) => ({ ...item, findings: ['PRIVATE_QUOTE'], attributedTo: 'OWNER' })));
-    if (fault === 'OTHER_PERSON') response = await rewrite(response, judgeAnswer((item) => ({ ...item, findings: ['DIRECT_PROTECTED_SOURCE_FACT', 'SOURCE_SPECIFIC_ATTRIBUTION'], attributedTo: 'OTHER' })));
-    if (fault === 'SEALED') response = await rewrite(response, judgeAnswer((item) => ({ ...item, findings: ['DIRECT_PROTECTED_SOURCE_FACT', 'SEALED_PROVENANCE_DISCLOSURE'], attributedTo: 'OWNER' })));
-    if (fault === 'UNSUPPORTED') response = await rewrite(response, judgeAnswer((item) => ({ ...item, unsupportedOwnerClaim: true })));
+    // V2 faults (R4): a quote of the owner or a sealed source is a `sealed` passage copied from the reply; a span about
+    // someone else too is OTHER_PERSON; a span adding a fact the item does not say is ADDS. Each is a proven-unsafe answer.
+    const data = checkDataOf(crossing.text);
+    if (fault === 'QUOTE') response = await rewrite(response, checkAnswer(data, (answer, d) => ({ ...answer, sealed: [{ id: d.items[0].id, passage: d.items[0].item }] })));
+    if (fault === 'OTHER_PERSON') response = await rewrite(response, checkAnswer(data, (answer) => ({ ...answer, spans: answer.spans.map((span: Json) => ({ ...span, verdict: 'OTHER_PERSON' })) })));
+    if (fault === 'SEALED') response = await rewrite(response, checkAnswer(data, (answer, d) => ({ ...answer, sealed: [{ id: d.items[0].id, passage: d.reply }] })));
+    if (fault === 'UNSUPPORTED') response = await rewrite(response, checkAnswer(data, (answer) => ({ ...answer, spans: answer.spans.map((span: Json) => ({ ...span, verdict: 'ADDS' })) })));
     crossing.status = response.status;
     return response;
   }) as typeof fetch;
@@ -240,11 +255,14 @@ const ASK = 'نفكر في السفر للرحلة الطويلة الجاية،
 const ASK_AGAIN = 'طيب نحسم السفر للرحلة الطويلة: بالقطار ولا بالطيارة؟';
 const SMALL_TALK = 'صباح الخير يا جماعة';
 const none = (calls: ReadonlyArray<Crossing>, texts: ReadonlyArray<string>) => calls.every((call) => texts.every((text) => !call.text.includes(text)));
-/** The items one judge request carries (its data block; the reply it judges is a separate field). */
+/** The items one check request carries (its data block; the reply it checks is a separate field). */
 const judgeItems = (call: Crossing): string[] => {
-  const data = /<judge_data>([\s\S]*)<\/judge_data>/u.exec(call.text);
-  return data === null ? [] : (JSON.parse(data[1]).items as Json[]).map((entry) => String(entry.item));
+  const data = checkDataOf(call.text);
+  return data === null ? [] : (data.items as Json[]).map((entry) => String(entry.item));
 };
+const NAMES = ['هالة', 'محمد', 'سارة'];
+/** No span marker, claim ref or checker id survives into a committed text. */
+const clean = (text: unknown) => typeof text === 'string' && !/[⟦⟧]|F[1-9][0-9]*·|K[1-9][0-9]*[@:]/u.test(text);
 
 interface Trio { readonly hala: Person; readonly mohamed: Person; readonly sara: Person; readonly worldId: string; readonly items: { mohamed: string; sara: string; hala: string } }
 async function trio(api: LocalDataApi, tag: string): Promise<Trio> {
@@ -263,7 +281,7 @@ async function trio(api: LocalDataApi, tag: string): Promise<Trio> {
 // ------------------------------------------------------------------------------------------- P. consent, requests, use, accounting
 async function scenarioP(api: LocalDataApi, app: App) {
   scenarioNow = 'P0';
-  check('the application composes the DeepSeek disclosure judge (SYNTHETIC_ONLY) and the stand-in recognises CG-6b',
+  check('the application composes the DeepSeek disclosure check (SYNTHETIC_ONLY) and the stand-in recognises CG-6b′',
     app.judge instanceof DeepSeekSharedDisclosureJudge && SHARED_DISCLOSURE_JUDGE_INSTRUCTIONS.startsWith(CP3_SIMULATED_JUDGE_MARK));
   const t = await trio(api, 'p');
   const allItems = Object.values(ITEMS);
@@ -319,11 +337,17 @@ async function scenarioP(api: LocalDataApi, app: App) {
   const judged = third.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE');
   const replyCalls = third.calls.filter((call) => call.family === 'REPLY');
   check('after consent, a LATER turn uses the allowed item: the reply commits', third.sent.qandeel === 'COMMITTED', { reply: third.reply });
-  check('the reply request carries CG-6a and the allowed item, and never the declined or unasked items',
-    replyCalls.some((call) => call.text.includes(SHARED_MEMBER_KNOWLEDGE_INSTRUCTIONS) && call.text.includes(ITEMS.mohamed)) && none(third.calls, [ITEMS.sara, ITEMS.hala]));
-  check('exactly one judge call (one per owner), carrying only that owner\'s item', judged.length === 1 && JSON.stringify(judgeItems(judged[0])) === JSON.stringify([ITEMS.mohamed]) && none(judged, [ITEMS.sara, ITEMS.hala]));
+  check('the reply request carries CG-6a′ and the allowed item with its claim ref, and never the declined or unasked items',
+    replyCalls.some((call) => call.text.includes(SHARED_MEMBER_KNOWLEDGE_INSTRUCTIONS) && call.text.includes(ITEMS.mohamed) && /"ref":"F1·[a-z2-7]{6}"/u.test(call.text)) && none(third.calls, [ITEMS.sara, ITEMS.hala]));
+  check('exactly one check call for the reply, carrying only the allowed item', judged.length === 1 && JSON.stringify(judgeItems(judged[0])) === JSON.stringify([ITEMS.mohamed]) && none(judged, [ITEMS.sara, ITEMS.hala]));
+  check('the check request carries opaque K-ids only: no member Name, no claim ref, no identity',
+    judged.length === 1 && none(judged, [...NAMES, t.hala.userId, t.mohamed.userId, t.sara.userId, t.items.mohamed]) && !/F[1-9][0-9]*·/u.test(judged[0].text) && checkDataOf(judged[0].text)?.reply.includes('⟦K1: '));
   const [committed] = await rows(api, 'SELECT b.body_text FROM public.shared_world_text_material_bodies b WHERE b.material_id = $1', [third.reply?.materialId]);
-  check('the committed reply mentions the item as its owner\'s (AUTHORIZED_DISCLOSURE, not CLEAR)', typeof committed?.body_text === 'string' && committed.body_text.includes(ITEMS.mohamed) && committed.body_text.includes('محمد'));
+  check('the committed reply is the RENDERED text: the server wrote the owner\'s Name before the item; no marker or ref survives',
+    typeof committed?.body_text === 'string' && committed.body_text.includes(`محمد ${ITEMS.mohamed}`) && clean(committed.body_text), { body: committed?.body_text });
+  const [digest] = await rows(api, 'SELECT e.output_digest FROM public.shared_world_qandeel_material_evidence e WHERE e.material_id = $1', [third.reply?.materialId]);
+  check('the I-03 evidence binds the digest of the rendered text (not of the generated one)',
+    typeof committed?.body_text === 'string' && digest?.output_digest === `sha256:${createHash('sha256').update(committed.body_text, 'utf8').digest('hex')}`, { digest: digest?.output_digest });
   const uses = await rows(api, 'SELECT owner_user_id, memory_id, disclosed, reasoning_grant_id FROM shared_knowledge_private.uses WHERE material_id = $1', [third.reply?.materialId]);
   const deps = await rows(api, "SELECT source_context_ref FROM public.shared_world_material_dependencies WHERE target_material_id = $1 AND dependency_kind = 'REASONING_DEPENDENCY'", [third.reply?.materialId]);
   check('one use record (disclosed) and the REASONING_DEPENDENCY on the opaque grant reference',
@@ -346,11 +370,16 @@ async function scenarioP(api: LocalDataApi, app: App) {
   check('the member who declined allows it later herself («اسمح الآن»)', later === 'ALLOWED');
   const fourth = await say(app, t.hala, t.worldId, ASK_AGAIN);
   const judged4 = fourth.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE');
-  check('two owners\' items: two judge calls, each with its own owner\'s item only, both paid by the sender',
-    fourth.sent.qandeel === 'COMMITTED' && judged4.length === 2
-    && judged4.filter((call) => JSON.stringify(judgeItems(call)) === JSON.stringify([ITEMS.mohamed])).length === 1
-    && judged4.filter((call) => JSON.stringify(judgeItems(call)) === JSON.stringify([ITEMS.sara])).length === 1
+  // R4-4: ONE check per reply, carrying every checked item (V1 asked once per owner).
+  check('two owners\' items: ONE check call carrying both items (and nothing else), paid by the sender',
+    fourth.sent.qandeel === 'COMMITTED' && judged4.length === 1
+    && JSON.stringify(judgeItems(judged4[0]).sort()) === JSON.stringify([ITEMS.mohamed, ITEMS.sara].sort())
+    && (await judgeRows(api, t.worldId)).filter((row) => row.message === fourth.sent.materialId).length === 1
     && (await judgeRows(api, t.worldId)).filter((row) => row.message === fourth.sent.materialId).every((row) => row.payer === t.hala.userId), { judged: judged4.length, reply: fourth.reply });
+  const [fourthBody] = await rows(api, 'SELECT b.body_text FROM public.shared_world_text_material_bodies b WHERE b.material_id = $1', [fourth.reply?.materialId]);
+  check('two owners: each item is written under its OWN owner\'s Name, never the other\'s',
+    typeof fourthBody?.body_text === 'string' && fourthBody.body_text.includes(`محمد ${ITEMS.mohamed}`) && fourthBody.body_text.includes(`سارة ${ITEMS.sara}`)
+    && !fourthBody.body_text.includes(`سارة ${ITEMS.mohamed}`) && !fourthBody.body_text.includes(`محمد ${ITEMS.sara}`) && clean(fourthBody.body_text), { body: fourthBody?.body_text });
   check('Hala\'s own item, never asked about or allowed, never reached DeepSeek in the whole scenario', none(crossings.filter((call) => call.scenario.startsWith('P')), [ITEMS.hala]));
 
   scenarioNow = 'P6';
@@ -360,8 +389,8 @@ async function scenarioP(api: LocalDataApi, app: App) {
   let refusal: Json = null;
   try {
     await runWithAiUsageAttribution({ userId: t.mohamed.userId, sourceWorldId: t.worldId, sourceSharedMaterialId: fourth.sent.materialId }, async () => app.judge?.judge({
-      binding: { effectiveContextRef: 'sha256:x', outputDigest: 'sha256:y', protectedSourceSetRef: 'sha256:z' }, reply: `محمد: ${ITEMS.mohamed}`, owner: 'محمد', members: ['هالة', 'سارة'],
-      items: [{ contentDigest: 'sha256:d', item: ITEMS.mohamed }],
+      binding: { effectiveContextRef: 'sha256:x', audienceSnapshotRef: 'sha256:a', disclosureAuthorizationRef: 'sha256:z', outputDigest: 'sha256:y' },
+      reply: `⟦K1: ${ITEMS.mohamed}⟧`, spans: ['K1'], items: [{ id: 'K1', item: ITEMS.mohamed }],
     }));
   } catch (error) {
     refusal = { name: (error as Json)?.name ?? 'Error', message: String((error as Json)?.message ?? '') };
@@ -397,10 +426,17 @@ async function withheld(api: LocalDataApi, app: App, tag: string, fault: Fault, 
   check(`${fault}: no QANDEEL material, no use record, no dependency (no partial write)`, after.qandeel === before.qandeel && after.uses === 0 && after.reasoning === before.reasoning, { before, after });
   check(`${fault}: one judge call and exactly one ledger row for it, paid by the sender, attempt 1`, judged.length === 1
     && (await judgeRows(api, t.worldId)).every((row) => row.payer === t.hala.userId && row.attempt === 1) && (await judgeRows(api, t.worldId)).length === 1);
-  check(`${fault}: ${expectCooldown ? 'the item rests for the one-hour cooldown' : 'no cooldown'}`, expectCooldown ? after.cooled === 1 : after.cooled === 0, { cooled: after.cooled });
+  check(`${fault}: ${expectCooldown ? 'the item rests for the one-hour cooldown (a proven-unsafe answer)' : 'no cooldown (a checker failure proves nothing about the item; R4-3)'}`,
+    expectCooldown ? after.cooled === 1 : after.cooled === 0, { cooled: after.cooled });
   const next = await say(app, t.hala, t.worldId, ASK_AGAIN);
-  check(`${fault}: the next turn is generated without the item (no judge) and commits; nothing is regenerated`,
-    next.sent.qandeel === 'COMMITTED' && next.calls.every((call) => call.family !== 'SHARED_DISCLOSURE_JUDGE') && none(next.calls.filter((call) => call.family === 'REPLY'), [ITEMS.mohamed]));
+  if (expectCooldown) {
+    check(`${fault}: the next turn is generated without the item (no check) and commits; nothing is regenerated`,
+      next.sent.qandeel === 'COMMITTED' && next.calls.every((call) => call.family !== 'SHARED_DISCLOSURE_JUDGE') && none(next.calls.filter((call) => call.family === 'REPLY'), [ITEMS.mohamed]));
+  } else {
+    check(`${fault}: the next turn (a new message, not a regeneration) uses the item again: one check, and it commits`,
+      next.sent.qandeel === 'COMMITTED' && next.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE').length === 1
+      && next.calls.some((call) => call.family === 'REPLY' && call.text.includes(ITEMS.mohamed)), { reply: next.reply });
+  }
   check(`${fault}: the reply was attempted once (no automatic regeneration)`, turn.calls.filter((call) => call.family === 'REPLY').length === 1);
 }
 
@@ -650,7 +686,7 @@ async function scenarioC(api: LocalDataApi, app: App) {
   const judged = used.calls.filter((call) => call.family === 'SHARED_DISCLOSURE_JUDGE');
   check('6. a LATER turn uses the item within the consent (its reply request carries it; no other member\'s item)',
     used.sent.qandeel === 'COMMITTED' && used.calls.some((call) => call.family === 'REPLY' && call.text.includes(ITEMS.mohamed)) && none(used.calls, [ITEMS.sara, ITEMS.hala]), { reply: used.reply });
-  check('7. the judge checks the reply: one call, Mohamed\'s item only, paid by Hala (attempt 1)', judged.length === 1 && JSON.stringify(judgeItems(judged[0])) === JSON.stringify([ITEMS.mohamed])
+  check('7. the check reads the reply: one call, Mohamed\'s item only, paid by Hala (attempt 1)', judged.length === 1 && JSON.stringify(judgeItems(judged[0])) === JSON.stringify([ITEMS.mohamed])
     && (await judgeRows(api, t.worldId)).filter((row) => row.message === used.sent.materialId).every((row) => row.payer === t.hala.userId && row.attempt === 1));
   const uses = await rows(api, 'SELECT reasoning_grant_id FROM shared_knowledge_private.uses WHERE material_id = $1', [used.reply?.materialId]);
   const deps = await rows(api, "SELECT source_context_ref FROM public.shared_world_material_dependencies WHERE target_material_id = $1 AND dependency_kind = 'REASONING_DEPENDENCY'", [used.reply?.materialId]);
@@ -660,8 +696,8 @@ async function scenarioC(api: LocalDataApi, app: App) {
   ids.push(...grant.map((row) => row.id));
   const [body] = await rows(api, 'SELECT body_text FROM public.shared_world_text_material_bodies WHERE material_id = $1', [used.reply?.materialId]);
   const SOURCE_WORDS = ['إذن', 'سمح', 'طلب', 'خاص', 'أخبرني', 'قال لي', 'ذكرت لي', 'محادثة', 'permission', 'allow', 'request', 'private'];
-  check('10. the reply reads naturally: the item as Mohamed\'s, and no word of consent, request, source or private talk',
-    typeof body?.body_text === 'string' && body.body_text.includes(ITEMS.mohamed) && SOURCE_WORDS.every((word) => !body.body_text.includes(word)), { body: body?.body_text });
+  check('10. the reply reads naturally: the item as Mohamed\'s (the server wrote his Name), and no word of consent, request, source or private talk',
+    typeof body?.body_text === 'string' && body.body_text.includes(`محمد ${ITEMS.mohamed}`) && clean(body.body_text) && SOURCE_WORDS.every((word) => !body.body_text.includes(word)), { body: body?.body_text });
   for (const reader of [t.hala, t.sara, t.mohamed]) {
     const seen = JSON.stringify(await route(() => ctl.materials(as(reader), t.worldId)));
     check(`10. ${reader.key}'s conversation read shows the reply and nothing of the grant, the request, the item id or the dependency`,
@@ -804,8 +840,9 @@ async function main() {
     } else {
       await scenarioP(api, app);
       await providerFailureShape(api, app);
-      for (const [tag, fault] of [['quote', 'QUOTE'], ['misattribution', 'OTHER_PERSON'], ['source', 'SEALED'], ['unsupported', 'UNSUPPORTED'], ['http500', 'HTTP500'], ['malformed', 'MALFORMED']] as const) {
-        await withheld(api, app, tag, fault);
+      for (const [tag, fault, cooled] of [['quote', 'QUOTE', true], ['misattribution', 'OTHER_PERSON', true], ['source', 'SEALED', true], ['unsupported', 'UNSUPPORTED', true],
+        ['http500', 'HTTP500', false], ['malformed', 'MALFORMED', false]] as const) {
+        await withheld(api, app, tag, fault, cooled);
       }
       await scenarioG(api, app);
       await scenarioC(api, app);

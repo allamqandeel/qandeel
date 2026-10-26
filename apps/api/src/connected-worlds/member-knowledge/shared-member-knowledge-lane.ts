@@ -1,4 +1,5 @@
-// S8A-04 CP3 — the authorized-disclosure lane, composed per request from the frozen I-03 classes (amendment §3).
+// S8A-04 CP3 — the authorized-disclosure lane, composed per request from the frozen I-03 classes (amendment §3; the claim
+// path of R4 / §11, the Product Owner's CP3-D V2 Final Implementation Contract of 2026-10-26).
 //
 // Nothing frozen is edited. Every frozen class is constructed here with request-scoped collaborators that answer ONLY
 // for the consented items this request collected:
@@ -6,12 +7,16 @@
 //   * the grant resolver answers I-03E / I-03F with the owner's ONE item reasoning grant (0176), or NOT_FOUND — never the
 //     general Standing Context Grant (0076), which no Shared path composes (amendment R-2);
 //   * the source-state resolver answers I-03F with the item's current digest (0176), digest only;
-//   * the detector answers the frozen I-03G gate after asking the judge ONCE PER OWNER, and maps the v2 assessment
-//     fail-closed (§3 step 2.5). The frozen gate keeps every structural check, every fingerprint and its binding check.
+//   * BEFORE generation the Disclosure Authorization (DA) and the request's claim table (`shared-claim-spans.ts`): a ref
+//     only for an item the DA covers and whose owner this audience can name unambiguously (0178);
+//   * AFTER generation the spans are parsed and the owners' Names written by the server; the frozen I-03G gate then runs on
+//     the RENDERED text over a detector that asks the checker ONCE per reply and maps the server's decision (R4-2 step 5).
+//     The frozen gate keeps every structural check, every fingerprint and its binding check.
 //
-// The lane's result is never the frozen gate's CLEAR when something was disclosed: it is AUTHORIZED_DISCLOSURE, which
-// the readiness below accepts only after I-03F (unchanged) AND the disclosure revalidation both say CURRENT for the same
-// operation. Every failure is a withheld reply. Nothing here logs, persists or returns private content.
+// The lane's result is never the frozen gate's CLEAR when something was stated: it is AUTHORIZED_DISCLOSURE, which the
+// readiness below accepts only after I-03F (unchanged) AND the disclosure revalidation both say CURRENT for the same
+// operation and the same rendered text. Every failure is a withheld reply. Nothing here logs, persists or returns private
+// content.
 
 import { createHash } from 'node:crypto';
 import { runWithAiUsageAttribution, type AiUsageAttribution } from '../../ai-usage/ai-usage-attribution';
@@ -21,7 +26,7 @@ import type { SharedWorldId } from '../kernel/world.types';
 import type { StandingContextGrantResolution } from '../authority/standing-context-authority.types';
 import { fingerprintStandingContextAuthority, StandingContextGrantResolverService } from '../authority-resolution/standing-context-grant-resolver.service';
 import { SharedHumanAudienceResolverService } from '../audience/shared-human-audience-resolver.service';
-import { digestProviderOutput, SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority/shared-delivery-authority-revalidator.service';
+import { SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority/shared-delivery-authority-revalidator.service';
 import type { SharedDeliveryAuthorityRevalidation } from '../delivery-authority/shared-delivery-authority.types';
 import type { SharedPrivateSourceStateResolution, SharedPrivateSourceStateResolver } from '../delivery-authority/shared-private-source-state-resolver.types';
 import { SharedEffectiveContextService } from '../effective-context/shared-effective-context.service';
@@ -30,17 +35,20 @@ import type {
   PrivateSourceContextRef, SharedEffectiveContext, SharedPrivateContextCandidate,
 } from '../effective-context/shared-effective-context.types';
 import { fingerprintSharedPrivacyAuthorityDeliveryReadiness } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
-import { SHARED_SOURCE_DISCLOSURE_FINDING_CATEGORIES } from '../source-disclosure/shared-source-disclosure-detector.types';
 import type {
-  SharedSourceDisclosureAssessmentBinding, SharedSourceDisclosureDetectionRequest, SharedSourceDisclosureDetector,
-  SharedSourceDisclosureDetectorAssessment, SharedSourceDisclosureFindingCategory,
+  SharedSourceDisclosureDetectionRequest, SharedSourceDisclosureDetector, SharedSourceDisclosureDetectorAssessment,
 } from '../source-disclosure/shared-source-disclosure-detector.types';
 import { fingerprintSharedProtectedSourceSet, SharedSourceDisclosureGateService } from '../source-disclosure/shared-source-disclosure-gate.service';
 import {
-  SHARED_DISCLOSURE_ATTRIBUTIONS, SHARED_KNOWLEDGE_DISCLOSURE_SCOPE, SHARED_KNOWLEDGE_ITEM_RPC,
+  decideSharedClaims, parseSharedClaimSpans, prepareSharedClaimTable, renderSharedClaims, sharedClaimCheckerView,
+  type SharedClaimAudienceMember, type SharedClaimDecision, type SharedClaimParse, type SharedClaimTable,
+} from './shared-claim-spans';
+import {
+  SHARED_KNOWLEDGE_DISCLOSURE_SCOPE, SHARED_KNOWLEDGE_ITEM_RPC,
   type SharedAuthorizedDisclosureGate, type SharedDisclosureAuthorization, type SharedDisclosureAuthorizationItem,
-  type SharedDisclosureJudge, type SharedDisclosureJudgePayer, type SharedDisclosureJudgeRequest, type SharedMemberKnowledgeGateResult,
-  type SharedMemberKnowledgeGateUnresolvedReason, type SharedMemberKnowledgeItem, type SharedMemberKnowledgeReadiness,
+  type SharedDisclosureCheckBinding, type SharedDisclosureCheckRequest, type SharedDisclosureJudge, type SharedDisclosureJudgePayer,
+  type SharedMemberKnowledgeGateResult, type SharedMemberKnowledgeGateUnresolvedReason, type SharedMemberKnowledgeItem,
+  type SharedMemberKnowledgeReadiness,
 } from './shared-member-knowledge.types';
 
 export const SHARED_KNOWLEDGE_ITEM_GRANT_SNAPSHOT_VERSION = 'QANDEEL_S8A04_SHARED_KNOWLEDGE_ITEM_GRANT_SNAPSHOT_V1' as const;
@@ -48,16 +56,15 @@ export const SHARED_DISCLOSURE_AUTHORIZATION_VERSION = 'QANDEEL_S8A04_SHARED_DIS
 export const SHARED_DISCLOSED_SOURCE_SET_VERSION = 'QANDEEL_S8A04_SHARED_DISCLOSED_SOURCE_SET_V1' as const;
 export const SHARED_AUTHORIZED_DISCLOSURE_GATE_VERSION = 'QANDEEL_S8A04_SHARED_AUTHORIZED_DISCLOSURE_GATE_V1' as const;
 export const SHARED_DISCLOSURE_REVALIDATION_VERSION = 'QANDEEL_S8A04_SHARED_DISCLOSURE_REVALIDATION_V1' as const;
+/** R4: the detector's assessment and policy references are those of the one claim check (V2). */
+export const SHARED_CLAIM_ASSESSMENT_VERSION = 'QANDEEL_S8A04_SHARED_CLAIM_ASSESSMENT_V2' as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const CONTENT_DIGEST = /^sha256:[0-9a-f]{64}$/u;
 const ITEM_ROW_KEYS = ['availability', 'current_content_digest', 'reasoning_grant_id', 'disclosure_grant_id', 'membership_episode_id',
   'grant_content_digest', 'ceiling_user_ids', 'grant_state', 'disclosure_status'] as const;
-const ASSESSMENT_KEYS = ['state', 'assessmentRef', 'detectorPolicyRef', 'binding', 'sources'] as const;
-const ASSESSMENT_BINDING_KEYS = ['effectiveContextRef', 'outputDigest', 'protectedSourceSetRef'] as const;
-const ASSESSMENT_SOURCE_KEYS = ['contentDigest', 'findings', 'attributedTo', 'unsupportedOwnerClaim'] as const;
-const MENTIONS = new Set<SharedSourceDisclosureFindingCategory>(['DIRECT_PROTECTED_SOURCE_FACT', 'SOURCE_SPECIFIC_ATTRIBUTION']);
-const NEVER = new Set<SharedSourceDisclosureFindingCategory>(['PRIVATE_QUOTE', 'SEALED_PROVENANCE_DISCLOSURE']);
+const CHECK_RESULT_KEYS = ['state', 'checkRef', 'policyRef', 'binding', 'answer'] as const;
+const CHECK_BINDING_KEYS = ['effectiveContextRef', 'audienceSnapshotRef', 'disclosureAuthorizationRef', 'outputDigest'] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isNonBlankString = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
@@ -206,7 +213,7 @@ export class SharedKnowledgeSourceStateResolver implements SharedPrivateSourceSt
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// The Disclosure Authorization (§3 step 1) and its revalidation (§3 step 3b).
+// The Disclosure Authorization (§3 step 1, built before generation under R4-2) and its revalidation (§3 step 3b).
 // ---------------------------------------------------------------------------------------------------------------------
 
 export function fingerprintSharedDisclosureAuthorization(facts: Omit<SharedDisclosureAuthorization, 'disclosureAuthorizationRef'>): string {
@@ -221,7 +228,7 @@ export function fingerprintSharedDisclosureAuthorization(facts: Omit<SharedDiscl
 /**
  * Builds the DA for exactly the envelope's admitted items: an item is in it only when its disclosure grant is the ACTIVE
  * pair of the collected consent, for this episode, with the item's words unchanged and the ceiling covering the exact
- * audience of the envelope. A failed read leaves the item out (a mention of it then blocks).
+ * audience of the envelope. A failed read leaves the item out (it is then not sent at all, R4-1).
  */
 export async function buildSharedDisclosureAuthorization(
   server: SupabaseServiceRoleApiService, envelope: SharedEffectiveContext, items: ReadonlyArray<SharedMemberKnowledgeItem>,
@@ -302,117 +309,129 @@ export async function revalidateSharedDisclosure(
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// The gate lane (§3 step 2).
+// The claim table (R4-2 step 1): before generation, from the DA and the audience's Names.
 // ---------------------------------------------------------------------------------------------------------------------
 
-type ItemOutcome = 'NOTHING' | 'DISCLOSED' | 'BLOCKED';
-type LaneOutcome =
-  | { readonly kind: 'JUDGED'; readonly outcomes: ReadonlyMap<string, ItemOutcome>; readonly findings: ReadonlyArray<SharedSourceDisclosureFindingCategory>;
-      readonly assessmentRefs: ReadonlyArray<string>; readonly policyRefs: ReadonlyArray<string> }
-  | { readonly kind: 'UNRESOLVED'; readonly reason: SharedMemberKnowledgeGateUnresolvedReason };
+/** What the reply composition carries from before generation to after it, for one request. */
+export interface SharedClaimPreparation {
+  readonly authorization: SharedDisclosureAuthorization;
+  readonly table: SharedClaimTable;
+}
 
 /**
- * One owner's v2 assessment, validated key by key against what was asked: the exact binding, one entry per item of the
- * request and nothing else. Null when it is not exactly that; 'MISMATCH' when it is about another operation.
+ * The claim table of one request. The Names are used only when they are exactly this envelope's audience (every member,
+ * no one else); otherwise no item may be stated (each still informs the reply). Never throws.
  */
-export function decodeSharedDisclosureAssessment(
-  value: unknown, binding: SharedSourceDisclosureAssessmentBinding, digests: ReadonlyArray<string>,
-): { readonly assessmentRef: string; readonly detectorPolicyRef: string; readonly sources: ReadonlyMap<string, { findings: ReadonlyArray<SharedSourceDisclosureFindingCategory>; attributedTo: string; unsupportedOwnerClaim: boolean }> } | null | 'MISMATCH' {
-  if (!isRecord(value) || !hasExactKeys(value, ASSESSMENT_KEYS) || value.state !== 'ASSESSED') return null;
-  if (!isNonBlankString(value.assessmentRef) || !isNonBlankString(value.detectorPolicyRef)) return null;
+export function prepareSharedClaims(input: {
+  readonly envelope: SharedEffectiveContext;
+  readonly authorization: SharedDisclosureAuthorization;
+  readonly items: ReadonlyArray<SharedMemberKnowledgeItem>;
+  readonly names: ReadonlyArray<SharedClaimAudienceMember> | null;
+  readonly labelOf: ReadonlyMap<string, string>;
+  readonly otherNames?: ReadonlyArray<string>;
+  readonly nonce?: string;
+}): SharedClaimPreparation {
+  const audience = input.envelope.audienceSnapshot.humans.map((human) => human.humanId);
+  const exact = input.names !== null && input.names.length === audience.length && new Set(input.names.map((member) => member.userId)).size === audience.length
+    && input.names.every((member) => audience.includes(member.userId));
+  const admitted = input.envelope.privateReasoningContexts.flatMap((entry) => {
+    const item = input.items.find((candidate) => candidate.ownerUserId === entry.source.originWorld.owner.humanId
+      && candidate.memoryId === entry.source.contextId && candidate.contentDigest === entry.contentDigest);
+    return item === undefined ? [] : [item];
+  });
+  const table = prepareSharedClaimTable({
+    admitted,
+    authorized: new Set(input.authorization.items.map((item) => item.contextId)),
+    audience: exact ? input.names : null,
+    labelOf: input.labelOf,
+    otherNames: input.otherNames,
+    binding: {
+      effectiveContextRef: input.envelope.effectiveContextRef,
+      audienceSnapshotRef: input.envelope.audienceSnapshot.snapshotRef,
+      disclosureAuthorizationRef: input.authorization.disclosureAuthorizationRef,
+    },
+    nonce: input.nonce,
+  });
+  return Object.freeze({ authorization: input.authorization, table });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The gate lane (R4-2 steps 4 – 6): the frozen I-03G gate over the rendered text, its detector the one claim check.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * The checker's result, validated against what was asked: the exact binding, the exact keys. Null when it is not exactly
+ * that; 'MISMATCH' when it is bound to another operation, audience, DA or output.
+ */
+export function decodeSharedDisclosureCheck(value: unknown, binding: SharedDisclosureCheckBinding):
+  { readonly checkRef: string; readonly policyRef: string; readonly answer: unknown } | null | 'MISMATCH' {
+  if (!isRecord(value) || !hasExactKeys(value, CHECK_RESULT_KEYS) || value.state !== 'CHECKED') return null;
+  if (!isNonBlankString(value.checkRef) || !isNonBlankString(value.policyRef)) return null;
   const bound = value.binding;
-  if (!isRecord(bound) || !hasExactKeys(bound, ASSESSMENT_BINDING_KEYS)) return null;
-  if (ASSESSMENT_BINDING_KEYS.some((key) => bound[key] !== binding[key])) return 'MISMATCH';
-  if (!Array.isArray(value.sources) || value.sources.length !== digests.length) return null;
-  const sources = new Map<string, { findings: ReadonlyArray<SharedSourceDisclosureFindingCategory>; attributedTo: string; unsupportedOwnerClaim: boolean }>();
-  for (const source of value.sources as ReadonlyArray<unknown>) {
-    if (!isRecord(source) || !hasExactKeys(source, ASSESSMENT_SOURCE_KEYS)) return null;
-    if (typeof source.contentDigest !== 'string' || !digests.includes(source.contentDigest) || sources.has(source.contentDigest)) return null;
-    if (!Array.isArray(source.findings) || new Set(source.findings).size !== source.findings.length) return null;
-    if (!source.findings.every((finding) => (SHARED_SOURCE_DISCLOSURE_FINDING_CATEGORIES as ReadonlyArray<unknown>).includes(finding))) return null;
-    if (!(SHARED_DISCLOSURE_ATTRIBUTIONS as ReadonlyArray<unknown>).includes(source.attributedTo) || typeof source.unsupportedOwnerClaim !== 'boolean') return null;
-    sources.set(source.contentDigest, { findings: source.findings as SharedSourceDisclosureFindingCategory[], attributedTo: source.attributedTo as string, unsupportedOwnerClaim: source.unsupportedOwnerClaim });
-  }
-  return { assessmentRef: value.assessmentRef, detectorPolicyRef: value.detectorPolicyRef, sources };
+  if (!isRecord(bound) || !hasExactKeys(bound, CHECK_BINDING_KEYS)) return null;
+  if (CHECK_BINDING_KEYS.some((key) => bound[key] !== binding[key])) return 'MISMATCH';
+  return { checkRef: value.checkRef, policyRef: value.policyRef, answer: value.answer };
 }
 
-/** §3 step 2.5, per item, fail-closed. */
-export function mapSharedDisclosureFinding(
-  source: { readonly findings: ReadonlyArray<SharedSourceDisclosureFindingCategory>; readonly attributedTo: string; readonly unsupportedOwnerClaim: boolean },
-  inAuthorization: boolean,
-): ItemOutcome {
-  if (source.findings.some((finding) => NEVER.has(finding))) return 'BLOCKED';
-  if (source.attributedTo === 'OTHER' || source.attributedTo === 'UNCLEAR') return 'BLOCKED';
-  if (source.unsupportedOwnerClaim) return 'BLOCKED';
-  if (source.findings.some((finding) => MENTIONS.has(finding))) return source.attributedTo === 'OWNER' && inAuthorization ? 'DISCLOSED' : 'BLOCKED';
-  return 'NOTHING';
-}
+type Rendered = { readonly text: string; readonly outputDigest: string };
+type CheckOutcome =
+  | { readonly kind: 'DECIDED'; readonly decision: SharedClaimDecision; readonly checkRef: string; readonly policyRef: string }
+  | { readonly kind: 'UNRESOLVED'; readonly reason: SharedMemberKnowledgeGateUnresolvedReason };
 
-/** The frozen gate's detector for this request: the judge once per owner, its answers mapped, the lane outcome kept. */
-class SharedMemberKnowledgeDetector implements SharedSourceDisclosureDetector {
-  outcome: LaneOutcome | undefined;
+/** The frozen gate's detector for this request: ONE checker call over the claim view, bound to the rendered text. */
+class SharedClaimDetector implements SharedSourceDisclosureDetector {
+  outcome: CheckOutcome | undefined;
 
   constructor(
-    private readonly judge: SharedDisclosureJudge,
-    private readonly da: SharedDisclosureAuthorization,
-    private readonly labelOf: ReadonlyMap<string, string>,
+    private readonly checker: SharedDisclosureJudge,
+    private readonly authorization: SharedDisclosureAuthorization,
+    private readonly table: SharedClaimTable,
+    private readonly parsed: Extract<SharedClaimParse, { ok: true }>,
+    private readonly marked: string,
+    private readonly rendered: Rendered,
     private readonly payer: SharedDisclosureJudgePayer,
   ) {}
 
   async assess(request: SharedSourceDisclosureDetectionRequest): Promise<SharedSourceDisclosureDetectorAssessment> {
-    this.outcome = await this.judgeEveryOwner(request);
-    if (this.outcome.kind === 'UNRESOLVED') return Object.freeze({ state: 'UNRESOLVED', failure: 'ASSESSMENT_UNAVAILABLE' } as const);
+    this.outcome = await this.check(request);
+    const unresolved = Object.freeze({ state: 'UNRESOLVED', failure: 'ASSESSMENT_UNAVAILABLE' } as const);
+    if (this.outcome.kind === 'UNRESOLVED') return unresolved;
+    const { decision } = this.outcome;
+    if (decision.state === 'UNRESOLVED' || decision.state === 'STALE') return unresolved;
     const binding = Object.freeze({ effectiveContextRef: request.effectiveContextRef, outputDigest: request.outputDigest, protectedSourceSetRef: request.protectedSourceSetRef });
-    const assessmentRef = sha256(['QANDEEL_S8A04_SHARED_MEMBER_KNOWLEDGE_ASSESSMENT_V1', ...this.outcome.assessmentRefs]);
-    const detectorPolicyRef = sha256(['QANDEEL_S8A04_SHARED_MEMBER_KNOWLEDGE_POLICY_V1', ...[...new Set(this.outcome.policyRefs)].sort(byCodeUnit)]);
-    // The frozen gate is told the truth: CLEAR only when the judge found nothing at all; otherwise the categories found.
-    if (this.outcome.findings.length === 0 && [...this.outcome.outcomes.values()].every((outcome) => outcome === 'NOTHING')) {
-      return Object.freeze({ state: 'CLEAR', assessmentRef, detectorPolicyRef, binding } as const);
-    }
-    if (this.outcome.findings.length === 0) return Object.freeze({ state: 'UNRESOLVED', failure: 'CONTRADICTORY_ASSESSMENT' } as const);
-    return Object.freeze({ state: 'DETECTED', assessmentRef, detectorPolicyRef, binding, findings: Object.freeze([...this.outcome.findings]) } as const);
+    const assessmentRef = sha256([SHARED_CLAIM_ASSESSMENT_VERSION, this.outcome.checkRef]);
+    const detectorPolicyRef = sha256([SHARED_CLAIM_ASSESSMENT_VERSION, this.outcome.policyRef]);
+    // The frozen gate is told the truth: CLEAR only when nothing was stated and nothing was reported.
+    if (decision.state === 'READY' && decision.disclosed.length === 0) return Object.freeze({ state: 'CLEAR', assessmentRef, detectorPolicyRef, binding } as const);
+    const findings = decision.state === 'READY'
+      ? (['DIRECT_PROTECTED_SOURCE_FACT', 'SOURCE_SPECIFIC_ATTRIBUTION'] as const)
+      : decision.sealed ? (['SEALED_PROVENANCE_DISCLOSURE'] as const) : (['DIRECT_PROTECTED_SOURCE_FACT'] as const);
+    return Object.freeze({ state: 'DETECTED', assessmentRef, detectorPolicyRef, binding, findings: Object.freeze([...findings]) } as const);
   }
 
-  private async judgeEveryOwner(request: SharedSourceDisclosureDetectionRequest): Promise<LaneOutcome> {
-    const binding = Object.freeze({ effectiveContextRef: request.effectiveContextRef, outputDigest: request.outputDigest, protectedSourceSetRef: request.protectedSourceSetRef });
-    const owners = [...new Set(request.protectedSources.map((source) => source.source.originWorld.owner.humanId))];
-    const outcomes = new Map<string, ItemOutcome>();
-    const findings = new Set<SharedSourceDisclosureFindingCategory>();
-    const assessmentRefs: string[] = [];
-    const policyRefs: string[] = [];
-    for (const owner of owners) {
-      const sources = request.protectedSources.filter((source) => source.source.originWorld.owner.humanId === owner);
-      const ownerLabel = this.labelOf.get(owner);
-      if (ownerLabel === undefined) return { kind: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' };
-      const judgeRequest: SharedDisclosureJudgeRequest = Object.freeze({
-        binding,
-        reply: request.outputText,
-        owner: ownerLabel,
-        members: Object.freeze([...this.labelOf].filter(([userId]) => userId !== owner).map(([, label]) => label)),
-        items: Object.freeze(sources.map((source) => Object.freeze({ contentDigest: source.contentDigest, item: source.reasoningContent }))),
-      });
-      // Correction 2: the sender pays, through the begin command that verifies they wrote the answered message.
-      const scope: AiUsageAttribution = { userId: this.payer.userId, sourceWorldId: this.payer.worldId, sourceSharedMaterialId: this.payer.materialId };
-      let raw: unknown;
-      try {
-        raw = await runWithAiUsageAttribution(scope, () => this.judge.judge(judgeRequest));
-      } catch {
-        return { kind: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' };
-      }
-      const assessment = decodeSharedDisclosureAssessment(raw, binding, sources.map((source) => source.contentDigest));
-      if (assessment === 'MISMATCH') return { kind: 'UNRESOLVED', reason: 'DETECTOR_BINDING_MISMATCH' };
-      if (assessment === null) return { kind: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' };
-      assessmentRefs.push(assessment.assessmentRef);
-      policyRefs.push(assessment.detectorPolicyRef);
-      for (const source of sources) {
-        const judged = assessment.sources.get(source.contentDigest);
-        if (judged === undefined) return { kind: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' };
-        for (const finding of judged.findings) findings.add(finding);
-        const inAuthorization = this.da.items.some((item) => item.ownerHumanId === owner && item.contextId === source.source.contextId && item.contentDigest === source.contentDigest);
-        outcomes.set(source.source.contextId, mapSharedDisclosureFinding(judged, inAuthorization));
-      }
+  private async check(request: SharedSourceDisclosureDetectionRequest): Promise<CheckOutcome> {
+    // The check is about the text that will be delivered, and about nothing else.
+    if (request.outputText !== this.rendered.text || request.outputDigest !== this.rendered.outputDigest
+      || request.effectiveContextRef !== this.table.binding.effectiveContextRef) return { kind: 'UNRESOLVED', reason: 'DETECTOR_BINDING_MISMATCH' };
+    const binding: SharedDisclosureCheckBinding = Object.freeze({ ...this.table.binding, outputDigest: this.rendered.outputDigest });
+    const view = sharedClaimCheckerView(this.marked, this.parsed, this.table);
+    const checkRequest: SharedDisclosureCheckRequest = Object.freeze({ binding, reply: view.text, spans: view.spanIds, items: view.items });
+    // Correction 2: the sender pays, through the begin command that verifies they wrote the answered message.
+    const scope: AiUsageAttribution = { userId: this.payer.userId, sourceWorldId: this.payer.worldId, sourceSharedMaterialId: this.payer.materialId };
+    let raw: unknown;
+    try {
+      raw = await runWithAiUsageAttribution(scope, () => this.checker.judge(checkRequest));
+    } catch {
+      return { kind: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' };
     }
-    return { kind: 'JUDGED', outcomes, findings: SHARED_SOURCE_DISCLOSURE_FINDING_CATEGORIES.filter((category) => findings.has(category)), assessmentRefs, policyRefs };
+    const checked = decodeSharedDisclosureCheck(raw, binding);
+    if (checked === 'MISMATCH') return { kind: 'UNRESOLVED', reason: 'DETECTOR_BINDING_MISMATCH' };
+    if (checked === null) return { kind: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' };
+    const decision = decideSharedClaims(checked.answer, view, this.parsed, this.table, {
+      binding: { effectiveContextRef: request.effectiveContextRef, audienceSnapshotRef: this.authorization.audienceSnapshotRef, disclosureAuthorizationRef: this.authorization.disclosureAuthorizationRef },
+      authorized: new Set(this.authorization.items.map((item) => item.contextId)),
+    });
+    return { kind: 'DECIDED', decision, checkRef: checked.checkRef, policyRef: checked.policyRef };
   }
 }
 
@@ -434,46 +453,60 @@ export function fingerprintSharedAuthorizedDisclosureGate(facts: {
 }
 
 /**
- * The gate lane: the frozen I-03G gate, unchanged, over this request's detector. The frozen gate's own answer decides
- * every structural question; the judge's mapped outcome decides the rest, and the two must agree.
+ * The gate lane: the frozen I-03G gate, unchanged, over the RENDERED text and this request's detector. The frozen gate's
+ * own answer decides every structural question; the server's claim decision decides the rest, and the two must agree.
  */
 export async function evaluateSharedMemberKnowledgeGate(input: {
   readonly envelope: SharedEffectiveContext;
-  readonly outputText: string;
   readonly authorization: SharedDisclosureAuthorization;
-  readonly judge: SharedDisclosureJudge;
-  readonly labelOf: ReadonlyMap<string, string>;
+  readonly table: SharedClaimTable;
+  /** The generator's text, its spans parsed against `table`. */
+  readonly marked: string;
+  readonly parsed: Extract<SharedClaimParse, { ok: true }>;
+  /** The text that will be delivered: the spans rendered with their owners' Names. */
+  readonly rendered: Rendered;
+  readonly checker: SharedDisclosureJudge;
   readonly payer: SharedDisclosureJudgePayer;
 }): Promise<SharedMemberKnowledgeGateResult> {
   const unresolved = (reason: SharedMemberKnowledgeGateUnresolvedReason): SharedMemberKnowledgeGateResult => Object.freeze({ state: 'UNRESOLVED', reason } as const);
   if (!isBoundAuthorization(input.authorization, input.envelope)) return unresolved('DISCLOSURE_AUTHORIZATION_MISMATCH');
-  const detector = new SharedMemberKnowledgeDetector(input.judge, input.authorization, input.labelOf, input.payer);
-  const frozen = await new SharedSourceDisclosureGateService(detector).evaluate(input.envelope, input.outputText);
+  if (input.table.binding.effectiveContextRef !== input.envelope.effectiveContextRef || input.table.binding.audienceSnapshotRef !== input.envelope.audienceSnapshot.snapshotRef
+    || input.table.binding.disclosureAuthorizationRef !== input.authorization.disclosureAuthorizationRef) return unresolved('DISCLOSURE_AUTHORIZATION_MISMATCH');
+  const detector = new SharedClaimDetector(input.checker, input.authorization, input.table, input.parsed, input.marked, input.rendered, input.payer);
+  const frozen = await new SharedSourceDisclosureGateService(detector).evaluate(input.envelope, input.rendered.text);
   if (frozen.state === 'UNRESOLVED' && detector.outcome === undefined) return unresolved(frozen.reason);
   if (frozen.state === 'CLEAR' && frozen.gate.basis === 'NO_PROTECTED_PRIVATE_CONTEXT') {
+    // Nothing was admitted: no span can be valid (the table is empty), and there is nothing to check.
+    if (input.parsed.spans.length > 0) return unresolved('MALFORMED_GENERATION_ARTIFACT');
     return Object.freeze({ state: 'CLEAR', gateRef: frozen.gate.gateRef, effectiveContextRef: frozen.gate.effectiveContextRef, outputDigest: frozen.gate.outputDigest } as const);
   }
   const outcome = detector.outcome;
   if (outcome === undefined) return unresolved('DETECTOR_UNRESOLVED');
   if (outcome.kind === 'UNRESOLVED') return unresolved(outcome.reason);
-  const outcomes = [...outcome.outcomes.values()];
-  if (outcomes.includes('BLOCKED')) return Object.freeze({ state: 'BLOCKED', reason: 'PROTECTED_SOURCE_DISCLOSURE_DETECTED' } as const);
-  if (outcomes.every((value) => value === 'NOTHING')) {
+  const { decision } = outcome;
+  if (decision.state === 'UNRESOLVED') return unresolved('DETECTOR_UNRESOLVED');
+  if (decision.state === 'STALE') return unresolved('DISCLOSURE_AUTHORIZATION_MISMATCH');
+  if (decision.state === 'BLOCKED') {
+    if (frozen.state !== 'BLOCKED') return unresolved('DETECTOR_UNRESOLVED');
+    return Object.freeze({ state: 'BLOCKED', reason: 'PROTECTED_SOURCE_DISCLOSURE_DETECTED', coolDown: decision.coolDown } as const);
+  }
+  if (decision.disclosed.length === 0) {
     if (frozen.state !== 'CLEAR') return unresolved('DETECTOR_UNRESOLVED');
     return Object.freeze({ state: 'CLEAR', gateRef: frozen.gate.gateRef, effectiveContextRef: frozen.gate.effectiveContextRef, outputDigest: frozen.gate.outputDigest } as const);
   }
-  // Something was disclosed, and every disclosure was within the authorization. The frozen gate, told DETECTED, blocked:
+  // Something was stated, every statement inside its own span and authorized. The frozen gate, told DETECTED, blocked:
   // that is the reasoning lane's answer, and it must be the one it gave.
   if (frozen.state !== 'BLOCKED') return unresolved('DETECTOR_UNRESOLVED');
   const protectedSourceSetRef = fingerprintSharedProtectedSourceSet({
     effectiveContextRef: input.envelope.effectiveContextRef,
     items: input.envelope.privateReasoningContexts.map((item) => ({ ownerHumanId: item.source.originWorld.owner.humanId, contextId: item.source.contextId, contentDigest: item.contentDigest })),
   });
-  const outputDigest = digestProviderOutput(input.outputText);
-  const disclosedItems = input.authorization.items.filter((item) => outcome.outcomes.get(item.contextId) === 'DISCLOSED');
+  const outputDigest = input.rendered.outputDigest;
+  const disclosedItems = input.authorization.items.filter((item) => decision.disclosed.includes(item.contextId));
+  if (disclosedItems.length !== decision.disclosed.length) return unresolved('DISCLOSURE_AUTHORIZATION_MISMATCH');
   const disclosedSourceSetRef = fingerprintSharedDisclosedSourceSet({ disclosureAuthorizationRef: input.authorization.disclosureAuthorizationRef, items: disclosedItems });
-  const assessmentRef = sha256(['QANDEEL_S8A04_SHARED_MEMBER_KNOWLEDGE_ASSESSMENT_V1', ...outcome.assessmentRefs]);
-  const detectorPolicyRef = sha256(['QANDEEL_S8A04_SHARED_MEMBER_KNOWLEDGE_POLICY_V1', ...[...new Set(outcome.policyRefs)].sort(byCodeUnit)]);
+  const assessmentRef = sha256([SHARED_CLAIM_ASSESSMENT_VERSION, outcome.checkRef]);
+  const detectorPolicyRef = sha256([SHARED_CLAIM_ASSESSMENT_VERSION, outcome.policyRef]);
   const gate: SharedAuthorizedDisclosureGate = Object.freeze({
     gateRef: fingerprintSharedAuthorizedDisclosureGate({
       frozenGateFacts: { effectiveContextRef: input.envelope.effectiveContextRef, outputDigest, protectedSourceSetRef },
@@ -533,20 +566,45 @@ export class SharedMemberKnowledgeLane {
     } as const)));
   }
 
-  /** §3 steps 1 – 3: the DA, the gate lane, I-03F, then the disclosure revalidation. Never throws. */
+  /** R4-2 step 1, first half: the DA of this envelope, before generation. A failed read leaves an item out. */
+  authorize(envelope: SharedEffectiveContext): Promise<SharedDisclosureAuthorization> {
+    return buildSharedDisclosureAuthorization(this.server, envelope, this.items);
+  }
+
+  /** R4-2 step 1, second half: the claim table over the DA and the audience's Names (null: none may be stated). */
+  claims(input: {
+    readonly envelope: SharedEffectiveContext; readonly authorization: SharedDisclosureAuthorization;
+    readonly names: ReadonlyArray<SharedClaimAudienceMember> | null; readonly labelOf: ReadonlyMap<string, string>;
+    readonly otherNames?: ReadonlyArray<string>; readonly nonce?: string;
+  }): SharedClaimPreparation {
+    return prepareSharedClaims({ ...input, items: this.items });
+  }
+
+  /**
+   * R4-2 steps 3 – 6: parse and render the generator's text, the gate lane over the rendered text, I-03F, then the
+   * disclosure revalidation. Never throws. READY carries the rendered text; BLOCKED carries only the unsafe items.
+   */
   async readiness(input: {
-    readonly envelope: SharedEffectiveContext; readonly outputText: string; readonly judge: SharedDisclosureJudge;
-    readonly labelOf: ReadonlyMap<string, string>; readonly payer: SharedDisclosureJudgePayer;
+    readonly envelope: SharedEffectiveContext; readonly preparation: SharedClaimPreparation; readonly generatedText: string;
+    readonly checker: SharedDisclosureJudge; readonly payer: SharedDisclosureJudgePayer;
   }): Promise<SharedMemberKnowledgeReadiness> {
     try {
-      const authorization = await buildSharedDisclosureAuthorization(this.server, input.envelope, this.items);
-      const gate = await evaluateSharedMemberKnowledgeGate({ ...input, authorization });
-      if (gate.state === 'BLOCKED') return { state: 'BLOCKED' };
+      const { authorization, table } = input.preparation;
+      // A malformed, foreign, duplicate or residual span, or a Name inside one: withheld before anything else, nothing cooled.
+      const parsed = parseSharedClaimSpans(input.generatedText, table);
+      if (!parsed.ok) return { state: 'UNRESOLVED' };
+      const rendered = renderSharedClaims(input.generatedText, parsed);
+      if (!rendered.ok) return { state: 'UNRESOLVED' };
+      const gate = await evaluateSharedMemberKnowledgeGate({
+        envelope: input.envelope, authorization, table, marked: input.generatedText, parsed, rendered, checker: input.checker, payer: input.payer,
+      });
+      if (gate.state === 'BLOCKED') return Object.freeze({ state: 'BLOCKED', coolDown: gate.coolDown } as const);
       if (gate.state === 'UNRESOLVED') return { state: 'UNRESOLVED' };
       const facts = gate.state === 'CLEAR'
         ? { gateRef: gate.gateRef, effectiveContextRef: gate.effectiveContextRef, outputDigest: gate.outputDigest, disclosed: [] as ReadonlyArray<string> }
         : { gateRef: gate.gate.gateRef, effectiveContextRef: gate.gate.effectiveContextRef, outputDigest: gate.gate.outputDigest, disclosed: gate.gate.disclosedContextIds };
-      const revalidation = await this.revalidator.revalidate(input.envelope, input.outputText);
+      if (facts.outputDigest !== rendered.outputDigest) return { state: 'UNRESOLVED' };
+      const revalidation = await this.revalidator.revalidate(input.envelope, rendered.text);
       const authority = currentAuthority(revalidation, facts.effectiveContextRef, facts.outputDigest);
       if (authority.kind !== 'CURRENT') return { state: authority.kind };
       let disclosureRevalidationRef: string | null = null;
@@ -557,6 +615,7 @@ export class SharedMemberKnowledgeLane {
       }
       return Object.freeze({
         state: 'READY_FOR_LATER_DELIVERY_GATES',
+        text: rendered.text,
         readiness: Object.freeze({
           // The v1 readiness formula: the frozen 0090 / 0119 commit recomputes exactly it from the four references it receives.
           readinessRef: fingerprintSharedPrivacyAuthorityDeliveryReadiness({

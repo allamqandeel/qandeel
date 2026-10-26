@@ -276,6 +276,9 @@ const OWNER_V2 = ['list_own_shared_knowledge_v2', 'answer_own_shared_knowledge_r
 const RETIRED_V1 = ['list_own_shared_knowledge_v1', 'answer_own_shared_knowledge_request_v1', 'allow_own_shared_knowledge_v1'];
 const SERVER_FUNCTIONS = ['propose_shared_knowledge_request_v1', 'list_shared_knowledge_for_reply_v1', 'resolve_shared_knowledge_item_v1',
   'cool_down_shared_knowledge_v1', 'complete_shared_world_qandeel_reply_v2'];
+// RE-ANCHORED by S8A-04 CP3-D V2 (migration 0178, 2026-10-26; Controlled Amendment R4): the audience Names read is one more
+// server read in this schema (service_role only; a pinned STABLE definer that writes nothing); 0178's own verifier pins it.
+const SERVER_V2 = ['list_shared_audience_names_v1'];
 const INTERNAL = ['item_v1', 'audience_v1', 'grant_state_v1', 'open_episode_v1', 'write_grant_v1', 'reasoning_ref_v1', 'guard_history_v1',
   'require_pair_v1'];
 const RELATIONS = ['consent_events', 'reasoning_grants', 'disclosure_grants', 'requests', 'cooldowns', 'uses'];
@@ -286,13 +289,15 @@ async function verifyBoundary() {
   const v2 = (await first("SELECT to_regprocedure('public.list_own_shared_knowledge_v2(uuid)') IS NOT NULL AS v2")).v2;
   V1_RETIRED = v2;
   const OWNER = v2 ? [...OWNER_FUNCTIONS.filter((name) => !RETIRED_V1.includes(name)), ...OWNER_V2] : OWNER_FUNCTIONS;
+  const names = (await first("SELECT to_regprocedure('public.list_shared_audience_names_v1(uuid)') IS NOT NULL AS names")).names;
+  const SERVER = names ? [...SERVER_FUNCTIONS, ...SERVER_V2] : SERVER_FUNCTIONS;
   const executable = await rows(`SELECT r.rolname, n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) AS r(rolname)
     WHERE (n.nspname = 'shared_knowledge_private' OR (n.nspname = 'public' AND p.proname = ANY($1::text[])))
-      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [[...OWNER, ...SERVER_FUNCTIONS, ...RETIRED_V1]]);
+      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [[...OWNER, ...SERVER, ...RETIRED_V1]]);
   const key = (r) => `${r.rolname} ${r.nspname}.${r.proname}`;
   const both = (rolname, names) => names.flatMap((proname) => ['public', 'shared_knowledge_private'].map((nspname) => key({ rolname, nspname, proname })));
-  assert.deepEqual(executable.map(key).sort(), [...both('authenticated', OWNER), ...both('service_role', SERVER_FUNCTIONS)].sort(),
+  assert.deepEqual(executable.map(key).sort(), [...both('authenticated', OWNER), ...both('service_role', SERVER)].sort(),
     'the owner\'s read and commands for a person, the server\'s reads and acts for the server; nothing for anon; no internal derivation');
   for (const proname of INTERNAL) {
     assert.equal(await count(`SELECT count(*) n FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -304,8 +309,8 @@ async function verifyBoundary() {
     assert.ok(d.prosecdef && d.owner === 'postgres' && JSON.stringify(d.proconfig) === JSON.stringify(['search_path=""']), `${d.proname} is a pinned definer`);
   }
   const wrappers = await rows(`SELECT p.proname, p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])`, [[...OWNER, ...SERVER_FUNCTIONS, ...(v2 ? RETIRED_V1 : [])]]);
-  assert.equal(wrappers.length, OWNER.length + SERVER_FUNCTIONS.length + (v2 ? RETIRED_V1.length : 0));
+    WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])`, [[...OWNER, ...SERVER, ...(v2 ? RETIRED_V1 : [])]]);
+  assert.equal(wrappers.length, OWNER.length + SERVER.length + (v2 ? RETIRED_V1.length : 0));
   for (const w of wrappers) assert.equal(w.prosecdef, false, `public.${w.proname} is SECURITY INVOKER`);
 
   stage = 'boundary: the relations are private, unreachable, erased with their owner, and registered for erasure';

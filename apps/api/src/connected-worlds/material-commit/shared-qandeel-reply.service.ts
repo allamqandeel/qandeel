@@ -31,11 +31,14 @@
 //
 // S8A-04 CP3 (amendment §3, approved 2026-10-25): the ONE governed exception to step 1. When members present now allowed
 // QANDEEL to use one of their items here (0176), at most one per owner, those items — and nothing else of theirs — are the
-// candidates of a per-request I-03E (`SharedMemberKnowledgeLane`); the reply's readiness is then the authorized-disclosure
-// lane (the judge once per owner, paid by this request's sender; I-03F; the disclosure revalidation), and the commit is
-// the 0176 wrapper that re-checks every consent under lock. With no consented item the path below is exactly as before.
-// A withheld reply is the same refusal as any other, and its items rest for an hour. After a committed reply, the local
-// relevance read may open one private request for an owner (no model, no provider; Product Owner correction 1).
+// candidates of a per-request I-03E (`SharedMemberKnowledgeLane`). Under R4 (§11, the claim spans): before generation the
+// Disclosure Authorization and the request's claim table (an item may be STATED only inside its span, and only when the
+// audience can name its owner unambiguously, 0178); after it the spans are parsed, the owners' Names written by the server,
+// and every later step — the one check per reply (paid by this request's sender), I-03G, I-03F, the disclosure
+// revalidation, the binder and the 0176 commit with consent — runs on that RENDERED text. With no consented item the path
+// below is exactly as before. A withheld reply is the same refusal as any other; only the items a check proved unsafe rest
+// for an hour, and nothing is regenerated. After a committed reply, the local relevance read may open one private request
+// for an owner (no model, no provider; Product Owner correction 1).
 
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
@@ -44,7 +47,7 @@ import { SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority
 import { SharedEffectiveContextService } from '../effective-context/shared-effective-context.service';
 import type { SharedWorldId } from '../kernel/world.types';
 import { SharedPrivacyAuthorityDeliveryReadinessService } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
-import { sharedConversationLabels } from '../../shared-world/shared-conversation-model-input';
+import { sharedConversationLabels, UNNAMED_PARTICIPANT } from '../../shared-world/shared-conversation-model-input';
 import { decodeSharedWorldKnowledge, extendSharedLabels, sharedKnowledgeEntries, type SharedKnowledge } from '../../shared-world/shared-world-knowledge';
 import { SharedMemberKnowledgeService } from '../member-knowledge/shared-member-knowledge.service';
 import { SHARED_QANDEEL_REPLY_COMMIT_V2_RPC, sharedKnowledgeReasoningRef, type SharedMemberKnowledgeItem } from '../member-knowledge/shared-member-knowledge.types';
@@ -147,14 +150,26 @@ export class SharedQandeelReplyService {
     const collected = this.memberKnowledge === undefined ? [] : await this.memberKnowledge.collect(worldId, request.humanMaterialId.toLowerCase(), answeredText);
     const judge = this.memberKnowledge?.judge ?? null;
     const lane = collected.length === 0 || judge === null || this.memberKnowledge === undefined ? null : this.memberKnowledge.lane(worldId, collected);
-    const context = lane === null ? await this.effectiveContext.resolve(worldId, []) : await lane.effectiveContext.resolve(worldId, lane.candidates);
-    if (context.state !== 'READY') return refused('CONTEXT_NOT_READY');
-    const envelope = context.effectiveContext;
+    const resolved = lane === null ? await this.effectiveContext.resolve(worldId, []) : await lane.effectiveContext.resolve(worldId, lane.candidates);
+    if (resolved.state !== 'READY') return refused('CONTEXT_NOT_READY');
+    let envelope = resolved.effectiveContext;
     // What I-03E admitted, exactly: an item it did not admit (its ceiling no longer covers the audience) is not used.
-    const admitted: ReadonlyArray<SharedMemberKnowledgeItem> = lane === null ? [] : collected.filter((item) => envelope.privateReasoningContexts.some((entry) =>
+    const admittedNow = envelope.privateReasoningContexts;
+    let admitted: ReadonlyArray<SharedMemberKnowledgeItem> = lane === null ? [] : collected.filter((item) => admittedNow.some((entry) =>
       entry.source.originWorld.owner.humanId === item.ownerUserId && entry.source.contextId === item.memoryId && entry.contentDigest === item.contentDigest));
-    if (admitted.length !== envelope.privateReasoningContexts.length) return refused('CONTEXT_NOT_READY');
-    const used = admitted.length === 0 ? null : lane;
+    if (admitted.length !== admittedNow.length) return refused('CONTEXT_NOT_READY');
+    // R4-1 / R4-2 step 1: the Disclosure Authorization of this exact envelope, before generation. An admitted item it does
+    // not list (its consent no longer covers this audience, or the read failed) must never reach the model: the reply then
+    // goes on exactly as if nothing had been collected (the 0176 pair invariant says this does not happen).
+    let authorization = admitted.length === 0 || lane === null ? null : await lane.authorize(envelope);
+    if (authorization !== null && authorization.items.length !== admitted.length) {
+      const plain = await this.effectiveContext.resolve(worldId, []);
+      if (plain.state !== 'READY') return refused('CONTEXT_NOT_READY');
+      envelope = plain.effectiveContext;
+      admitted = [];
+      authorization = null;
+    }
+    const used = authorization === null ? null : lane;
 
     // 2. The Shared history EVERY current recipient may see (CW2-02 §15), in canonical order.
     const visibleToAll = await this.visibleToEveryRecipient(worldId, envelope.audienceSnapshot.humans.map((human) => human.humanId));
@@ -181,7 +196,14 @@ export class SharedQandeelReplyService {
     const knowledge = await this.knowledge(worldId, request.requesterUserId.toLowerCase(), turns, authors);
     // 2c. S8A-04 CP3: the admitted items, each under its owner's label in this request (the conversation's labels first).
     const labelOf = this.peopleLabels(turns, authors, admitted);
-    const memberKnowledge = Object.freeze(admitted.map((item) => Object.freeze({ owner: labelOf.get(item.ownerUserId) as string, item: item.content })));
+    // R4-2 step 1: the claim table. A ref only for an item the DA lists whose owner this audience names unambiguously (0178,
+    // the exact audience or nothing); every label's Name is barred from the inside of a span.
+    const preparation = used === null || authorization === null ? null : used.claims({
+      envelope, authorization, names: (await this.memberKnowledge?.audienceNames(worldId)) ?? null, labelOf,
+      otherNames: [...labelOf.values()].map((label) => label.replace(/ \(\d+\)$/u, '')).filter((name) => name !== UNNAMED_PARTICIPANT),
+    });
+    if (preparation !== null && preparation.table.excluded.length > 0) return refused('CONTEXT_NOT_READY');
+    const memberKnowledge = Object.freeze((preparation?.table.generatorItems ?? []).map((entry) => Object.freeze({ owner: entry.member, ref: entry.ref, item: entry.item })));
 
     // 3. The words. Only request-local tokens and labels leave this composition: no account, material or World identity
     //    reaches a provider (the source below only correlates the spend, AI-COST-01).
@@ -193,22 +215,29 @@ export class SharedQandeelReplyService {
       ...(memberKnowledge.length === 0 ? {} : { memberKnowledge }),
     }));
     if (generated.state !== 'GENERATED' || generated.text.trim().length === 0) return refused('GENERATION_UNAVAILABLE');
-    const text = generated.text;
     const recalledPlaceIds = Object.freeze((generated.knowledgeRefs ?? []).flatMap((ref) => {
       const placeId = knowledge.placeIdOf.get(ref);
       return placeId === undefined ? [] : [placeId];
     }));
 
     // 4. Delivery readiness in the frozen order, then the revalidation the binder checks it against. S8A-04 CP3: with an
-    //    admitted item, the authorized-disclosure lane; the judge's spend is this request's sender's (correction 2).
+    //    admitted item, the authorized-disclosure lane over the claim spans; the check's spend is this request's sender's
+    //    (correction 2). From here on the only text is the lane's RENDERED text (R4-2 step 6).
     const payer = Object.freeze({ userId: request.requesterUserId.toLowerCase(), worldId, materialId: request.humanMaterialId.toLowerCase() });
-    const readiness = used === null || judge === null
-      ? await this.readiness.evaluate(envelope, text)
-      : await used.readiness({ envelope, outputText: text, judge, labelOf, payer });
-    if (readiness.state !== 'READY_FOR_LATER_DELIVERY_GATES') {
-      if (used !== null && (readiness.state === 'BLOCKED' || readiness.state === 'UNRESOLVED')) await this.memberKnowledge?.coolDown(worldId, admitted);
+    const laneReadiness = used === null || preparation === null || judge === null
+      ? null
+      : await used.readiness({ envelope, preparation, generatedText: generated.text, checker: judge, payer });
+    if (laneReadiness !== null && laneReadiness.state !== 'READY_FOR_LATER_DELIVERY_GATES') {
+      // R4-3: only the items the check proved unsafe rest; a failure, a malformed span or a stale consent cools nothing.
+      if (laneReadiness.state === 'BLOCKED') {
+        const unsafe = laneReadiness.coolDown;
+        await this.memberKnowledge?.coolDown(worldId, admitted.filter((item) => unsafe.includes(item.memoryId)));
+      }
       return refused('DELIVERY_NOT_READY');
     }
+    const text = laneReadiness === null ? generated.text : laneReadiness.text;
+    const readiness = laneReadiness ?? await this.readiness.evaluate(envelope, text);
+    if (readiness.state !== 'READY_FOR_LATER_DELIVERY_GATES') return refused('DELIVERY_NOT_READY');
     const revalidation = used !== null ? await used.revalidator.revalidate(envelope, text) : await this.revalidator.revalidate(envelope, text);
     const current = await this.audience.resolveCurrent(worldId);
     if (current.state !== 'RESOLVED') return refused('DELIVERY_NOT_READY');

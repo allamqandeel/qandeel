@@ -1,6 +1,17 @@
-// S8A-04 CP3 — the authorized-disclosure lane (amendment §3 – §4, §8): the frozen I-03 classes composed per request, the
-// judge's v2 assessment mapped fail-closed, the Disclosure Authorization bound to its operation, the sender paying, and
-// consent changing at every boundary. Free: no provider, no database; the 0176 item row is a fake that can change.
+// S8A-04 CP3 — the authorized-disclosure lane (amendment §3 – §4, §8, as R4 / §11 binds over them): the frozen I-03 classes
+// composed per request, the Disclosure Authorization built before generation and bound to its operation, the claim spans
+// parsed and rendered by the server, ONE check per reply paid by the sender, and consent changing at every boundary. Free:
+// no provider, no database; the 0176 item row is a fake that can change.
+//
+// R4 replaced the V1 judge (one call per owner, its v2 assessment mapped per item). Each V1 case below is kept as its V2
+// counterpart, and where the intended behaviour changed the test says so:
+//   * one check per reply, never one per owner (R4-2 step 4) — "one call per owner" became "one call per reply";
+//   * the §4 cases are decided from span verdicts and reported passages, not from findings / attributedTo (R4-2 step 5);
+//   * a withheld reply cools only the items the check proved unsafe; a failure cools nothing (R4-3) — BLOCKED carries them;
+//   * an owner the request cannot label, or whose Name the audience does not share, can never be STATED (no ref), where V1
+//     withheld the reply; the item may still shape the reply (R4-1);
+//   * READY carries the rendered text, which the delivery chain commits, so "nothing in the result" now excludes that text.
+
 import type { HumanPrincipal } from '../kernel/principal.types';
 import type { SharedWorldBirthRequest } from '../kernel/shared-world.types';
 import type { SharedWorldId } from '../kernel/world.types';
@@ -12,13 +23,16 @@ import type { SharedPreModelWorldStateResolverService } from '../effective-conte
 import { digestReasoningContent } from '../effective-context/shared-effective-context.service';
 import type { SharedEffectiveContext } from '../effective-context/shared-effective-context.types';
 import { digestProviderOutput } from '../delivery-authority/shared-delivery-authority-revalidator.service';
-import type { SharedSourceDisclosureFindingCategory } from '../source-disclosure/shared-source-disclosure-detector.types';
 import { fingerprintSharedPrivacyAuthorityDeliveryReadiness } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
+import { parseSharedClaimSpans, renderSharedClaims, sharedClaimCheckerView } from './shared-claim-spans';
 import {
-  SharedMemberKnowledgeLane, buildSharedDisclosureAuthorization, evaluateSharedMemberKnowledgeGate, mapSharedDisclosureFinding,
+  SharedMemberKnowledgeLane, buildSharedDisclosureAuthorization, decodeSharedDisclosureCheck, evaluateSharedMemberKnowledgeGate,
+  type SharedClaimPreparation,
 } from './shared-member-knowledge-lane';
+import { decodeSharedAudienceNames } from './shared-member-knowledge.service';
 import {
-  SHARED_KNOWLEDGE_ITEM_RPC, type SharedDisclosureJudge, type SharedDisclosureJudgeRequest, type SharedMemberKnowledgeItem,
+  SHARED_KNOWLEDGE_ITEM_RPC, type SharedDisclosureAuthorization, type SharedDisclosureCheckRequest, type SharedDisclosureJudge,
+  type SharedMemberKnowledgeItem,
 } from './shared-member-knowledge.types';
 
 const IDS = {
@@ -104,36 +118,51 @@ class Store {
   }
 }
 
-type Answer = { findings: SharedSourceDisclosureFindingCategory[]; attributedTo: string; unsupportedOwnerClaim: boolean };
-const NOTHING: Answer = { findings: [], attributedTo: 'NONE', unsupportedOwnerClaim: false };
-const MENTION: Answer = { findings: ['DIRECT_PROTECTED_SOURCE_FACT', 'SOURCE_SPECIFIC_ATTRIBUTION'], attributedTo: 'OWNER', unsupportedOwnerClaim: false };
+type Answer = { spans: Array<{ id: string; verdict: string }>; outside: Array<{ id: string; passage: string }>; sealed: Array<{ id: string; passage: string }> };
 
-/** A judge that answers per owner label; records every request and the AI-COST-01 scope it ran in. */
-class ScriptedJudge implements SharedDisclosureJudge {
-  calls: Array<{ request: SharedDisclosureJudgeRequest; scope: unknown }> = [];
-  constructor(private readonly answer: (request: SharedDisclosureJudgeRequest) => unknown) {}
-  async judge(request: SharedDisclosureJudgeRequest): Promise<unknown> {
+/** A checker that answers from the request it sees; records every request and the AI-COST-01 scope it ran in. */
+class ScriptedChecker implements SharedDisclosureJudge {
+  calls: Array<{ request: SharedDisclosureCheckRequest; scope: unknown }> = [];
+  constructor(private readonly result: (request: SharedDisclosureCheckRequest) => unknown) {}
+  async judge(request: SharedDisclosureCheckRequest): Promise<unknown> {
     this.calls.push({ request, scope: currentAiUsageAttribution() });
-    return this.answer(request);
+    return this.result(request);
   }
 }
-const assessed = (request: SharedDisclosureJudgeRequest, answers: Answer[]) => ({
-  state: 'ASSESSED', assessmentRef: `a:${request.owner}`, detectorPolicyRef: 'policy:test', binding: { ...request.binding },
-  sources: request.items.map((entry, index) => ({ contentDigest: entry.contentDigest, ...answers[index] })),
-});
-const answering = (byOwner: Record<string, Answer>) => new ScriptedJudge((request) => assessed(request, request.items.map(() => byOwner[request.owner] ?? NOTHING)));
+const checked = (request: SharedDisclosureCheckRequest, answer: unknown) => ({ state: 'CHECKED', checkRef: 'check:1', policyRef: 'policy:test', binding: { ...request.binding }, answer });
+const answering = (answer: (request: SharedDisclosureCheckRequest) => Answer) => new ScriptedChecker((request) => checked(request, answer(request)));
+const ENTAILED = (verdict = 'ENTAILED') => (request: SharedDisclosureCheckRequest): Answer => ({ spans: request.spans.map((id) => ({ id, verdict })), outside: [], sealed: [] });
+const SILENT = answering(ENTAILED());
 
+const NAMES = [{ userId: IDS.hala, name: 'Hala' }, { userId: IDS.mohamed, name: 'Mohamed' }, { userId: IDS.sara, name: 'Sara' }];
 const LABELS = new Map([[IDS.hala, 'Hala'], [IDS.mohamed, 'Mohamed'], [IDS.sara, 'Sara']]);
 const PAYER = { userId: IDS.hala, worldId: IDS.world, materialId: IDS.material };
+const NONCE = 'k7q2ab';
+const F1 = `F1·${NONCE}`;
+const F2 = `F2·${NONCE}`;
 
 async function setup(items: SharedMemberKnowledgeItem[] = [item('mohamed')]) {
   const store = new Store(items);
   const lane = new SharedMemberKnowledgeLane(store.server(), store.worldState(), store.audienceResolver(), WORLD, items);
   const context = await lane.effectiveContext.resolve(WORLD, lane.candidates);
   if (context.state !== 'READY') throw new Error('envelope not ready');
-  return { store, lane, envelope: context.effectiveContext, items };
+  const envelope = context.effectiveContext;
+  const authorization = await lane.authorize(envelope);
+  const preparation = lane.claims({ envelope, authorization, names: NAMES, labelOf: LABELS, nonce: NONCE });
+  return { store, lane, envelope, items, authorization, preparation };
 }
-const REPLY = `${'Mohamed'} ${MOHAMED_ITEM}، فممكن نشوف مواعيد القطار.`;
+/** The marked reply (Mohamed's item stated inside its span) and what the audience reads. */
+const MARKED = `⟦${F1}: ${MOHAMED_ITEM}⟧، فممكن نشوف مواعيد القطار.`;
+const RENDERED = `Mohamed ${MOHAMED_ITEM}، فممكن نشوف مواعيد القطار.`;
+
+/** The gate lane over one generated text, exactly as the readiness runs it. */
+async function gate(s: Awaited<ReturnType<typeof setup>>, text: string, checker: SharedDisclosureJudge, authorization: SharedDisclosureAuthorization = s.authorization, preparation: SharedClaimPreparation = s.preparation) {
+  const parsed = parseSharedClaimSpans(text, preparation.table);
+  if (!parsed.ok) throw new Error(parsed.reason);
+  const rendered = renderSharedClaims(text, parsed);
+  if (!rendered.ok) throw new Error(rendered.reason);
+  return evaluateSharedMemberKnowledgeGate({ envelope: s.envelope, authorization, table: preparation.table, marked: text, parsed, rendered, checker, payer: PAYER });
+}
 
 describe('S8A-04 CP3 — I-03E admits exactly the consented items, under their item grants', () => {
   it('admits one item per owner, bound to the reasoning grant, under the unchanged I-03A constraints', async () => {
@@ -164,123 +193,176 @@ describe('S8A-04 CP3 — I-03E admits exactly the consented items, under their i
   });
 });
 
-describe('S8A-04 CP3 — the §4 cases as the judge\'s answers', () => {
-  const CASES: Array<[string, Answer, string]> = [
-    ['natural mention (allowed)', MENTION, 'AUTHORIZED_DISCLOSURE'],
-    ['advice influenced, not stated (allowed)', NOTHING, 'CLEAR'],
-    ['provenance', { findings: ['SEALED_PROVENANCE_DISCLOSURE', 'DIRECT_PROTECTED_SOURCE_FACT'], attributedTo: 'OWNER', unsupportedOwnerClaim: false }, 'BLOCKED'],
-    ['quote', { findings: ['PRIVATE_QUOTE'], attributedTo: 'OWNER', unsupportedOwnerClaim: false }, 'BLOCKED'],
-    ['attribution to another', { findings: ['DIRECT_PROTECTED_SOURCE_FACT', 'SOURCE_SPECIFIC_ATTRIBUTION'], attributedTo: 'OTHER', unsupportedOwnerClaim: false }, 'BLOCKED'],
-    ['unsupported claim', { findings: ['DIRECT_PROTECTED_SOURCE_FACT'], attributedTo: 'OWNER', unsupportedOwnerClaim: true }, 'BLOCKED'],
-    ['subtle / dialect / English (unclear)', { findings: ['DIRECT_PROTECTED_SOURCE_FACT'], attributedTo: 'UNCLEAR', unsupportedOwnerClaim: false }, 'BLOCKED'],
-    ['a stated fact tied to no one', { findings: ['DIRECT_PROTECTED_SOURCE_FACT'], attributedTo: 'NONE', unsupportedOwnerClaim: false }, 'BLOCKED'],
+describe('S8A-04 CP3 — the Disclosure Authorization, before generation (R4-1, R4-2 step 1)', () => {
+  it('lists exactly the admitted items whose disclosure grant covers this exact audience', async () => {
+    const { authorization, envelope } = await setup([item('mohamed'), item('sara')]);
+    expect(authorization.items.map((entry) => [entry.ownerHumanId, entry.contextId, entry.disclosureGrantId, entry.scope]))
+      .toEqual([[IDS.mohamed, IDS.memM, IDS.dgM, 'MENTION_ATTRIBUTED_TO_OWNER'], [IDS.sara, IDS.memS, IDS.dgS, 'MENTION_ATTRIBUTED_TO_OWNER']]);
+    expect([authorization.effectiveContextRef, authorization.audienceSnapshotRef]).toEqual([envelope.effectiveContextRef, envelope.audienceSnapshot.snapshotRef]);
+  });
+
+  it.each([
+    ['the disclosure grant revoked', { disclosure_status: 'REVOKED' }],
+    ['another disclosure grant', { disclosure_grant_id: IDS.dgS }],
+    ['a ceiling short of the audience', { ceiling_user_ids: [IDS.hala, IDS.mohamed] }],
+    ['the words changed', { current_content_digest: digestReasoningContent('x') }],
+    ['an unreadable row', { broken: true }],
+  ])('%s → the item is not in the DA, and so is never sent (no ref, no influence)', async (_name, patch) => {
+    const store = new Store([item('mohamed')]);
+    const lane = new SharedMemberKnowledgeLane(store.server(), store.worldState(), store.audienceResolver(), WORLD, [item('mohamed')]);
+    const context = await lane.effectiveContext.resolve(WORLD, lane.candidates);
+    if (context.state !== 'READY') throw new Error('not ready');
+    store.set(IDS.mohamed, IDS.memM, patch);
+    const authorization = await lane.authorize(context.effectiveContext);
+    expect(authorization.items).toEqual([]);
+    const { table } = lane.claims({ envelope: context.effectiveContext, authorization, names: NAMES, labelOf: LABELS, nonce: NONCE });
+    expect([table.excluded, table.generatorItems, table.claims.size]).toEqual([[IDS.memM], [], 0]);
+  });
+
+  it('an owner whose Name the audience does not share (0178 NULL), or who has no label here, can never be stated', async () => {
+    const s = await setup([item('mohamed'), item('sara')]);
+    const nameless = s.lane.claims({ envelope: s.envelope, authorization: s.authorization, names: NAMES.map((n) => (n.userId === IDS.mohamed ? { ...n, name: null } : n)), labelOf: LABELS, nonce: NONCE });
+    expect(nameless.table.generatorItems).toEqual([{ ref: null, member: 'Mohamed', item: MOHAMED_ITEM }, { ref: F1, member: 'Sara', item: SARA_ITEM }]);
+    // V1 withheld the reply for an unlabelled owner; V2 never sends that item at all (R4-1).
+    const unlabelled = s.lane.claims({ envelope: s.envelope, authorization: s.authorization, names: NAMES, labelOf: new Map([[IDS.hala, 'Hala'], [IDS.sara, 'Sara']]), nonce: NONCE });
+    expect([unlabelled.table.excluded, unlabelled.table.generatorItems.map((g) => g.item)]).toEqual([[IDS.memM], [SARA_ITEM]]);
+  });
+});
+
+describe('S8A-04 CP3 — the §4 cases as the check\'s answers (R4-2 step 5)', () => {
+  const CASES: Array<[string, string, (request: SharedDisclosureCheckRequest) => Answer, string]> = [
+    ['natural mention (allowed): inside its span, ENTAILED', MARKED, ENTAILED(), 'AUTHORIZED_DISCLOSURE'],
+    ['advice influenced, not stated (allowed)', 'القطار ممكن يكون أنسب للمجموعة.', ENTAILED(), 'CLEAR'],
+    ['provenance', `⟦${F1}: قال لي إنه ${MOHAMED_ITEM}⟧`, (r) => ({ ...ENTAILED()(r), sealed: [{ id: 'K1', passage: 'قال لي' }] }), 'BLOCKED'],
+    ['quote', `⟦${F1}: قال بالحرف «${MOHAMED_ITEM}»⟧`, (r) => ({ ...ENTAILED()(r), sealed: [{ id: 'K1', passage: `«${MOHAMED_ITEM}»` }] }), 'BLOCKED'],
+    ['attribution to another (outside the span)', `Sara ${MOHAMED_ITEM}.`, (r) => ({ ...ENTAILED()(r), outside: [{ id: 'K1', passage: `Sara ${MOHAMED_ITEM}` }] }), 'BLOCKED'],
+    ['attribution to another (inside the span)', `⟦${F1}: ${MOHAMED_ITEM} وهي كمان⟧`, ENTAILED('OTHER_PERSON'), 'BLOCKED'],
+    ['unsupported claim', `⟦${F1}: عنده فوبيا من الطيران⟧`, ENTAILED('ADDS'), 'BLOCKED'],
+    ['subtle / dialect / English (unclear)', `⟦${F1}: زي ما كان فهمني قبل كده⟧`, ENTAILED('UNCLEAR'), 'BLOCKED'],
+    ['a stated fact tied to no one', `في حد هنا ${MOHAMED_ITEM}.`, (r) => ({ ...ENTAILED()(r), outside: [{ id: 'K1', passage: `في حد هنا ${MOHAMED_ITEM}` }] }), 'BLOCKED'],
   ];
-  it.each(CASES)('%s', async (_name, answer, expected) => {
-    const { store, envelope, items } = await setup();
-    const authorization = await buildSharedDisclosureAuthorization(store.server(), envelope, items);
-    const result = await evaluateSharedMemberKnowledgeGate({ envelope, outputText: REPLY, authorization, judge: answering({ Mohamed: answer }), labelOf: LABELS, payer: PAYER });
+  it.each(CASES)('%s', async (_name, text, answer, expected) => {
+    const s = await setup();
+    const result = await gate(s, text, answering(answer));
     expect(result.state).toBe(expected);
     if (result.state === 'AUTHORIZED_DISCLOSURE') {
       expect(result.gate).toMatchObject({ disclosedContextIds: [IDS.memM], basis: 'SERVER_DETECTOR_DETECTED_WITHIN_DISCLOSURE_AUTHORIZATION',
         sourceDisclosureStatus: 'PROTECTED_SOURCE_DISCLOSURE_DETECTED_WITHIN_AUTHORIZATION', directPrivateDisclosureAuthority: 'REQUIRES_DISCLOSURE_REVALIDATION',
-        provenanceDisclosure: 'SEALED', deliveryCommitAuthority: 'NOT_GRANTED_BY_THIS_BOUNDARY', outputDigest: digestProviderOutput(REPLY) });
+        provenanceDisclosure: 'SEALED', deliveryCommitAuthority: 'NOT_GRANTED_BY_THIS_BOUNDARY', outputDigest: digestProviderOutput(RENDERED) });
     }
+    if (result.state === 'BLOCKED') expect(result.coolDown).toEqual([IDS.memM]);
   });
 
-  it('the mapping never clears on a block-only signal, and never authorizes outside the DA', () => {
-    expect(mapSharedDisclosureFinding({ findings: [], attributedTo: 'NONE', unsupportedOwnerClaim: true }, true)).toBe('BLOCKED');
-    expect(mapSharedDisclosureFinding({ findings: [], attributedTo: 'OTHER', unsupportedOwnerClaim: false }, true)).toBe('BLOCKED');
-    expect(mapSharedDisclosureFinding(MENTION, false)).toBe('BLOCKED');
-    expect(mapSharedDisclosureFinding(MENTION, true)).toBe('DISCLOSED');
-    expect(mapSharedDisclosureFinding(NOTHING, false)).toBe('NOTHING');
+  it('only the unsafe item is returned to cool; the safe one is not (R4-3)', async () => {
+    const s = await setup([item('mohamed'), item('sara')]);
+    const text = `⟦${F1}: ${MOHAMED_ITEM}⟧، وإنتي ${SARA_ITEM}.`;
+    const result = await gate(s, text, answering((r) => ({ ...ENTAILED()(r), outside: [{ id: 'K2', passage: `وإنتي ${SARA_ITEM}` }] })));
+    expect(result).toEqual({ state: 'BLOCKED', reason: 'PROTECTED_SOURCE_DISCLOSURE_DETECTED', coolDown: [IDS.memS] });
   });
 });
 
-describe('S8A-04 CP3 — every judge failure withholds (UNRESOLVED)', () => {
-  const BROKEN: Array<[string, (request: SharedDisclosureJudgeRequest) => unknown]> = [
+describe('S8A-04 CP3 — every check failure withholds (UNRESOLVED), and cools nothing', () => {
+  const BROKEN: Array<[string, (request: SharedDisclosureCheckRequest) => unknown]> = [
     ['a throw (timeout, provider error)', () => { throw new Error('timeout'); }],
     ['malformed', () => 'not json'],
-    ['the v1 shape', (request) => ({ state: 'CLEAR', assessmentRef: 'a', detectorPolicyRef: 'p', binding: request.binding })],
-    ['an extra key', (request) => ({ ...assessed(request, [NOTHING]), extra: true })],
-    ['a missing item entry', (request) => ({ ...assessed(request, [NOTHING]), sources: [] })],
-    ['an unknown category', (request) => assessed(request, [{ findings: ['SOMETHING_ELSE' as SharedSourceDisclosureFindingCategory], attributedTo: 'OWNER', unsupportedOwnerClaim: false }])],
-    ['an extra source key', (request) => ({ ...assessed(request, [NOTHING]), sources: [{ ...assessed(request, [NOTHING]).sources[0], confidence: 1 }] })],
+    ['the V1 shape', (request) => ({ state: 'ASSESSED', assessmentRef: 'a', detectorPolicyRef: 'p', binding: request.binding, sources: [] })],
+    ['an extra key', (request) => ({ ...checked(request, ENTAILED()(request)), extra: true })],
+    ['a missing span verdict', (request) => checked(request, { spans: [], outside: [], sealed: [] })],
+    ['an unknown verdict', (request) => checked(request, ENTAILED('OWNER')(request))],
+    ['an extra answer key', (request) => checked(request, { ...ENTAILED()(request), confidence: 1 })],
+    ['a passage that is not in the reply', (request) => checked(request, { ...ENTAILED()(request), outside: [{ id: 'K1', passage: 'جملة مش موجودة' }] })],
   ];
   it.each(BROKEN)('%s', async (_name, answer) => {
-    const { store, envelope, items } = await setup();
-    const authorization = await buildSharedDisclosureAuthorization(store.server(), envelope, items);
-    const result = await evaluateSharedMemberKnowledgeGate({ envelope, outputText: REPLY, authorization, judge: new ScriptedJudge(answer), labelOf: LABELS, payer: PAYER });
-    expect(result).toEqual({ state: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' });
+    const s = await setup();
+    expect(await gate(s, MARKED, new ScriptedChecker(answer))).toEqual({ state: 'UNRESOLVED', reason: 'DETECTOR_UNRESOLVED' });
+    expect(await s.lane.readiness({ envelope: s.envelope, preparation: s.preparation, generatedText: MARKED, checker: new ScriptedChecker(answer), payer: PAYER }))
+      .toEqual({ state: 'UNRESOLVED' });
   });
 
-  it('an assessment of another output is a binding mismatch', async () => {
-    const { store, envelope, items } = await setup();
-    const authorization = await buildSharedDisclosureAuthorization(store.server(), envelope, items);
-    const judge = new ScriptedJudge((request) => ({ ...assessed(request, [MENTION]), binding: { ...request.binding, outputDigest: digestProviderOutput('another reply') } }));
-    const result = await evaluateSharedMemberKnowledgeGate({ envelope, outputText: REPLY, authorization, judge, labelOf: LABELS, payer: PAYER });
-    expect(result).toEqual({ state: 'UNRESOLVED', reason: 'DETECTOR_BINDING_MISMATCH' });
+  it('a check bound to another output, operation, audience or DA is a binding mismatch', async () => {
+    const s = await setup();
+    for (const key of ['outputDigest', 'effectiveContextRef', 'audienceSnapshotRef', 'disclosureAuthorizationRef'] as const) {
+      const checker = new ScriptedChecker((request) => ({ ...checked(request, ENTAILED()(request)), binding: { ...request.binding, [key]: digestProviderOutput('another') } }));
+      expect(await gate(s, MARKED, checker)).toEqual({ state: 'UNRESOLVED', reason: 'DETECTOR_BINDING_MISMATCH' });
+    }
+    expect(decodeSharedDisclosureCheck({ state: 'CHECKED', checkRef: 'c', policyRef: 'p', binding: { effectiveContextRef: 'x' }, answer: {} }, { effectiveContextRef: 'x', audienceSnapshotRef: 'a', disclosureAuthorizationRef: 'd', outputDigest: 'o' })).toBeNull();
   });
 
-  it('a DA bound to another operation, or tampered with, is DISCLOSURE_AUTHORIZATION_MISMATCH, and the judge is not asked', async () => {
-    const { store, envelope, items } = await setup();
-    const authorization = await buildSharedDisclosureAuthorization(store.server(), envelope, items);
+  it('a DA bound to another operation, or tampered with, is DISCLOSURE_AUTHORIZATION_MISMATCH, and the checker is not asked', async () => {
+    const s = await setup();
+    const authorization = s.authorization;
     for (const da of [{ ...authorization, effectiveContextRef: 'sha256:other' }, { ...authorization, audienceSnapshotRef: 'audience:2' },
       { ...authorization, items: [] }, { ...authorization, items: [{ ...authorization.items[0], contextId: IDS.memS }] }]) {
-      const judge = answering({ Mohamed: MENTION });
-      const result = await evaluateSharedMemberKnowledgeGate({ envelope, outputText: REPLY, authorization: da, judge, labelOf: LABELS, payer: PAYER });
-      expect(result).toEqual({ state: 'UNRESOLVED', reason: 'DISCLOSURE_AUTHORIZATION_MISMATCH' });
-      expect(judge.calls).toHaveLength(0);
+      const checker = SILENT_FRESH();
+      expect(await gate(s, MARKED, checker, da)).toEqual({ state: 'UNRESOLVED', reason: 'DISCLOSURE_AUTHORIZATION_MISMATCH' });
+      expect(checker.calls).toHaveLength(0);
     }
+  });
+
+  it('a claim table of another operation is DISCLOSURE_AUTHORIZATION_MISMATCH, and the checker is not asked', async () => {
+    const s = await setup();
+    const other = await setup();
+    other.store.audienceRef = 'audience:2';
+    const context = await other.lane.effectiveContext.resolve(WORLD, other.lane.candidates);
+    if (context.state !== 'READY') throw new Error('not ready');
+    const foreign = other.lane.claims({ envelope: context.effectiveContext, authorization: await other.lane.authorize(context.effectiveContext), names: NAMES, labelOf: LABELS, nonce: NONCE });
+    const checker = SILENT_FRESH();
+    expect(await gate(s, MARKED, checker, s.authorization, foreign)).toEqual({ state: 'UNRESOLVED', reason: 'DISCLOSURE_AUTHORIZATION_MISMATCH' });
+    expect(checker.calls).toHaveLength(0);
   });
 });
+function SILENT_FRESH() { return answering(ENTAILED()); }
 
-describe('S8A-04 CP3 — the judge sees one owner at a time, and the sender pays', () => {
-  it('one call per owner, each with only that owner\'s item; every call in the sender\'s AI-COST-01 scope', async () => {
-    const { store, envelope, items } = await setup([item('mohamed'), item('sara')]);
-    const authorization = await buildSharedDisclosureAuthorization(store.server(), envelope, items);
-    const judge = answering({ Mohamed: MENTION, Sara: NOTHING });
-    const result = await evaluateSharedMemberKnowledgeGate({ envelope, outputText: REPLY, authorization, judge, labelOf: LABELS, payer: PAYER });
+describe('S8A-04 CP3 — ONE check per reply, sealed from identity, and the sender pays', () => {
+  it('one call per reply with every sent item (V1: one per owner); in the sender\'s AI-COST-01 scope; no Name, id or ref in it', async () => {
+    const s = await setup([item('mohamed'), item('sara')]);
+    const checker = SILENT_FRESH();
+    const text = `⟦${F1}: ${MOHAMED_ITEM}⟧ و⟦${F2}: ${SARA_ITEM}⟧.`;
+    const result = await gate(s, text, checker);
     expect(result.state).toBe('AUTHORIZED_DISCLOSURE');
-    expect(judge.calls.map((call) => [call.request.owner, call.request.items.map((entry) => entry.item)])).toEqual([['Mohamed', [MOHAMED_ITEM]], ['Sara', [SARA_ITEM]]]);
-    for (const call of judge.calls) {
-      expect(call.scope).toEqual({ userId: IDS.hala, sourceWorldId: IDS.world, sourceSharedMaterialId: IDS.material });
-      expect(JSON.stringify(call.request)).not.toContain(IDS.mohamed);
-      expect(JSON.stringify(call.request)).not.toContain(IDS.hala);
-    }
-    expect(judge.calls[0].request.members).toEqual(['Hala', 'Sara']);
-    // Each owner's items reach only that owner's check (the reply itself is what everyone will read).
-    expect(JSON.stringify(judge.calls[0].request.items)).not.toContain(SARA_ITEM);
-    expect(JSON.stringify(judge.calls[1].request.items)).not.toContain(MOHAMED_ITEM);
+    expect(checker.calls).toHaveLength(1);
+    const [{ request, scope }] = checker.calls;
+    expect(scope).toEqual({ userId: IDS.hala, sourceWorldId: IDS.world, sourceSharedMaterialId: IDS.material });
+    expect(request.items).toEqual([{ id: 'K1', item: MOHAMED_ITEM }, { id: 'K2', item: SARA_ITEM }]);
+    expect(request.spans).toEqual(['K1', 'K2']);
+    expect(request.reply).toBe(`⟦K1: ${MOHAMED_ITEM}⟧ و⟦K2: ${SARA_ITEM}⟧.`);
+    expect(request.binding.outputDigest).toBe(digestProviderOutput(`Mohamed ${MOHAMED_ITEM} وSara ${SARA_ITEM}.`));
+    const sent = JSON.stringify(request);
+    for (const secret of [IDS.mohamed, IDS.sara, IDS.hala, IDS.memM, IDS.rgM, IDS.dgM, 'Mohamed', 'Sara', 'Hala', NONCE]) expect(sent).not.toContain(secret);
   });
 
-  it('with no admitted item the judge is never called (the frozen gate\'s own CLEAR)', async () => {
+  it('with no admitted item the checker is never called (the frozen gate\'s own CLEAR)', async () => {
     const store = new Store([item('mohamed')]);
     store.set(IDS.mohamed, IDS.memM, { grant_state: 'REVOKED' });
     const lane = new SharedMemberKnowledgeLane(store.server(), store.worldState(), store.audienceResolver(), WORLD, [item('mohamed')]);
     const context = await lane.effectiveContext.resolve(WORLD, lane.candidates);
     if (context.state !== 'READY') throw new Error('not ready');
-    const judge = answering({ Mohamed: MENTION });
-    const ready = await lane.readiness({ envelope: context.effectiveContext, outputText: REPLY, judge, labelOf: LABELS, payer: PAYER });
+    const authorization = await lane.authorize(context.effectiveContext);
+    const preparation = lane.claims({ envelope: context.effectiveContext, authorization, names: NAMES, labelOf: LABELS, nonce: NONCE });
+    const checker = SILENT_FRESH();
+    const ready = await lane.readiness({ envelope: context.effectiveContext, preparation, generatedText: 'القطار ممكن يكون أنسب.', checker, payer: PAYER });
     expect(ready.state).toBe('READY_FOR_LATER_DELIVERY_GATES');
-    expect(judge.calls).toHaveLength(0);
+    expect(checker.calls).toHaveLength(0);
   });
 
-  it('an owner without a label in this request is never judged anonymously: withheld', async () => {
-    const { store, envelope, items } = await setup();
-    const authorization = await buildSharedDisclosureAuthorization(store.server(), envelope, items);
-    const judge = answering({ Mohamed: MENTION });
-    const result = await evaluateSharedMemberKnowledgeGate({ envelope, outputText: REPLY, authorization, judge, labelOf: new Map([[IDS.hala, 'Hala']]), payer: PAYER });
-    expect(result.state).toBe('UNRESOLVED');
-    expect(judge.calls).toHaveLength(0);
+  it('a malformed, foreign or named span is withheld before any check (nothing paid, nothing cooled)', async () => {
+    const s = await setup();
+    for (const text of [`⟦F1·zzzzzz: ${MOHAMED_ITEM}⟧`, `⟦${F1}: Sara ${MOHAMED_ITEM}⟧`, `⟦${F1}: ${MOHAMED_ITEM}`, `${F1} ${MOHAMED_ITEM}`]) {
+      const checker = SILENT_FRESH();
+      expect(await s.lane.readiness({ envelope: s.envelope, preparation: s.preparation, generatedText: text, checker, payer: PAYER })).toEqual({ state: 'UNRESOLVED' });
+      expect(checker.calls).toHaveLength(0);
+    }
   });
 });
 
 describe('S8A-04 CP3 — readiness: I-03F unchanged, then the disclosure revalidation; consent moving at each boundary', () => {
-  it('READY with the v1 readiness formula and both references, for a mention within authorization', async () => {
-    const { lane, envelope } = await setup();
-    const ready = await lane.readiness({ envelope, outputText: REPLY, judge: answering({ Mohamed: MENTION }), labelOf: LABELS, payer: PAYER });
+  it('READY with the rendered text, the v1 readiness formula and both references, for a claim within authorization', async () => {
+    const { lane, envelope, preparation } = await setup();
+    const ready = await lane.readiness({ envelope, preparation, generatedText: MARKED, checker: SILENT_FRESH(), payer: PAYER });
     if (ready.state !== 'READY_FOR_LATER_DELIVERY_GATES') throw new Error(ready.state);
+    expect(ready.text).toBe(RENDERED);
     const detail = ready.readiness;
+    expect(detail.outputDigest).toBe(digestProviderOutput(RENDERED));
     expect(detail.sourceDisclosureStatus).toBe('AUTHORIZED_DISCLOSURE_ONLY');
     expect(detail.disclosedContextIds).toEqual([IDS.memM]);
     expect(detail.disclosureRevalidationRef).toMatch(/^sha256:[0-9a-f]{64}$/u);
@@ -290,27 +372,31 @@ describe('S8A-04 CP3 — readiness: I-03F unchanged, then the disclosure revalid
     }));
   });
 
-  it('used, not mentioned: READY with no disclosure and no disclosure revalidation', async () => {
-    const { lane, envelope } = await setup();
-    const ready = await lane.readiness({ envelope, outputText: 'القطار ممكن يكون أنسب للمجموعة.', judge: answering({ Mohamed: NOTHING }), labelOf: LABELS, payer: PAYER });
-    expect(ready.state === 'READY_FOR_LATER_DELIVERY_GATES' && [ready.readiness.sourceDisclosureStatus, ready.readiness.disclosureRevalidationRef, ready.readiness.disclosedContextIds])
-      .toEqual(['NO_PROTECTED_SOURCE_DISCLOSURE_DETECTED', null, []]);
+  it('used, not stated: READY with the text unchanged, no disclosure and no disclosure revalidation', async () => {
+    const { lane, envelope, preparation } = await setup();
+    const text = 'القطار ممكن يكون أنسب للمجموعة.';
+    const ready = await lane.readiness({ envelope, preparation, generatedText: text, checker: SILENT_FRESH(), payer: PAYER });
+    expect(ready.state === 'READY_FOR_LATER_DELIVERY_GATES' && [ready.text, ready.readiness.sourceDisclosureStatus, ready.readiness.disclosureRevalidationRef, ready.readiness.disclosedContextIds])
+      .toEqual([text, 'NO_PROTECTED_SOURCE_DISCLOSURE_DETECTED', null, []]);
   });
 
-  it('revoked before the DA: the item is absent from it, so its mention BLOCKS', async () => {
-    const { store, lane, envelope } = await setup();
-    store.set(IDS.mohamed, IDS.memM, { grant_state: 'REVOKED', disclosure_status: 'REVOKED' });
-    const ready = await lane.readiness({ envelope, outputText: REPLY, judge: answering({ Mohamed: MENTION }), labelOf: LABELS, payer: PAYER });
-    expect(ready.state).toBe('BLOCKED');
+  it('revoked before the DA: the item has no ref, so its span is withheld before any check', async () => {
+    const s = await setup();
+    s.store.set(IDS.mohamed, IDS.memM, { grant_state: 'REVOKED', disclosure_status: 'REVOKED' });
+    const authorization = await s.lane.authorize(s.envelope);
+    const preparation = s.lane.claims({ envelope: s.envelope, authorization, names: NAMES, labelOf: LABELS, nonce: NONCE });
+    const checker = SILENT_FRESH();
+    expect(await s.lane.readiness({ envelope: s.envelope, preparation, generatedText: MARKED, checker, payer: PAYER })).toEqual({ state: 'UNRESOLVED' });
+    expect(checker.calls).toHaveLength(0);
   });
 
-  it('revoked between the gate and the revalidation: STALE', async () => {
-    const { store, lane, envelope } = await setup();
-    const judge = new ScriptedJudge((request) => {
-      store.set(IDS.mohamed, IDS.memM, { grant_state: 'REVOKED', disclosure_status: 'REVOKED' });
-      return assessed(request, [MENTION]);
+  it('revoked between the check and the revalidation: STALE (nothing cooled)', async () => {
+    const s = await setup();
+    const checker = new ScriptedChecker((request) => {
+      s.store.set(IDS.mohamed, IDS.memM, { grant_state: 'REVOKED', disclosure_status: 'REVOKED' });
+      return checked(request, ENTAILED()(request));
     });
-    expect((await lane.readiness({ envelope, outputText: REPLY, judge, labelOf: LABELS, payer: PAYER })).state).toBe('STALE');
+    expect(await s.lane.readiness({ envelope: s.envelope, preparation: s.preparation, generatedText: MARKED, checker, payer: PAYER })).toEqual({ state: 'STALE' });
   });
 
   it.each([
@@ -318,27 +404,29 @@ describe('S8A-04 CP3 — readiness: I-03F unchanged, then the disclosure revalid
     ['the owner left (the episode ended)', (store: Store) => { store.set(IDS.mohamed, IDS.memM, { grant_state: 'ENDED' }); }],
     ['the item was corrected', (store: Store) => { store.set(IDS.mohamed, IDS.memM, { availability: 'UNAVAILABLE', current_content_digest: digestReasoningContent('x'), grant_state: 'ENDED' }); }],
     ['the item was forgotten', (store: Store) => { store.set(IDS.mohamed, IDS.memM, { availability: 'DELETED_BY_OWNER', current_content_digest: null, grant_state: 'ENDED' }); }],
+    ['only the disclosure grant was withdrawn', (store: Store) => { store.set(IDS.mohamed, IDS.memM, { disclosure_status: 'REVOKED' }); }],
   ])('%s → STALE (never delivered)', async (_name, change) => {
-    const { store, lane, envelope } = await setup();
-    const judge = new ScriptedJudge((request) => { change(store); return assessed(request, [MENTION]); });
-    expect((await lane.readiness({ envelope, outputText: REPLY, judge, labelOf: LABELS, payer: PAYER })).state).toBe('STALE');
+    const s = await setup();
+    const checker = new ScriptedChecker((request) => { change(s.store); return checked(request, ENTAILED()(request)); });
+    expect(await s.lane.readiness({ envelope: s.envelope, preparation: s.preparation, generatedText: MARKED, checker, payer: PAYER })).toEqual({ state: 'STALE' });
   });
 
   it('an unreadable item state is UNRESOLVED, never CURRENT', async () => {
-    const { store, lane, envelope } = await setup();
-    const judge = new ScriptedJudge((request) => { store.rows.set(`${IDS.mohamed}:${IDS.memM}`, { broken: true }); return assessed(request, [MENTION]); });
-    expect((await lane.readiness({ envelope, outputText: REPLY, judge, labelOf: LABELS, payer: PAYER })).state).toBe('UNRESOLVED');
+    const s = await setup();
+    const checker = new ScriptedChecker((request) => { s.store.rows.set(`${IDS.mohamed}:${IDS.memM}`, { broken: true }); return checked(request, ENTAILED()(request)); });
+    expect(await s.lane.readiness({ envelope: s.envelope, preparation: s.preparation, generatedText: MARKED, checker, payer: PAYER })).toEqual({ state: 'UNRESOLVED' });
   });
 });
 
 describe('S8A-04 CP3 — the lane never leaks through what it returns', () => {
-  it('no result names an item, an owner, a grant or a category', async () => {
-    const { lane, envelope } = await setup();
-    const QUOTE: Answer = { findings: ['PRIVATE_QUOTE'], attributedTo: 'OWNER', unsupportedOwnerClaim: false };
-    for (const answer of [MENTION, NOTHING, QUOTE]) {
-      const ready = await lane.readiness({ envelope, outputText: REPLY, judge: answering({ Mohamed: answer }), labelOf: LABELS, payer: PAYER });
-      const text = JSON.stringify(ready);
-      for (const secret of [MOHAMED_ITEM, IDS.mohamed, IDS.rgM, IDS.dgM, 'PRIVATE_QUOTE', 'Mohamed']) expect(text).not.toContain(secret);
+  it('no result names an item, an owner, a grant or a category — beyond the delivered text itself', async () => {
+    const s = await setup();
+    for (const answer of [ENTAILED(), ENTAILED('ADDS'), (r: SharedDisclosureCheckRequest) => ({ ...ENTAILED()(r), sealed: [{ id: 'K1', passage: MOHAMED_ITEM }] })]) {
+      const ready = await s.lane.readiness({ envelope: s.envelope, preparation: s.preparation, generatedText: MARKED, checker: answering(answer), payer: PAYER });
+      const { text: delivered, ...rest } = ready as { text?: string };
+      if (delivered !== undefined) expect(delivered).toBe(RENDERED);
+      const serialized = JSON.stringify(rest);
+      for (const secret of [MOHAMED_ITEM, IDS.mohamed, IDS.rgM, IDS.dgM, 'SEALED_PROVENANCE_DISCLOSURE', 'Mohamed', NONCE]) expect(serialized).not.toContain(secret);
     }
   });
 
@@ -347,5 +435,35 @@ describe('S8A-04 CP3 — the lane never leaks through what it returns', () => {
     const envelopeText = JSON.stringify(envelope as SharedEffectiveContext);
     expect(envelopeText).toContain(MOHAMED_ITEM);
     expect(envelopeText).not.toContain(SARA_ITEM);
+  });
+
+  it('the view the checker receives is the marked text with checker ids: the rendered Name never reaches it', async () => {
+    const s = await setup();
+    const parsed = parseSharedClaimSpans(MARKED, s.preparation.table);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(sharedClaimCheckerView(MARKED, parsed, s.preparation.table).text).toBe(`⟦K1: ${MOHAMED_ITEM}⟧، فممكن نشوف مواعيد القطار.`);
+  });
+
+  it('buildSharedDisclosureAuthorization is exactly the lane\'s DA', async () => {
+    const s = await setup();
+    expect(await buildSharedDisclosureAuthorization(s.store.server(), s.envelope, s.items)).toEqual(s.authorization);
+  });
+});
+
+describe('S8A-04 CP3 — R4-2 step 1: the 0178 Names, decoded exactly or not at all', () => {
+  const row = (userId: string, name: string | null) => ({ user_id: userId, name });
+  it('exactly its shape: one row per member, a Name or NULL', () => {
+    expect(decodeSharedAudienceNames([row(IDS.hala, 'هالة'), row(IDS.mohamed, null)])).toEqual([{ userId: IDS.hala, name: 'هالة' }, { userId: IDS.mohamed, name: null }]);
+  });
+  it.each([
+    ['a member twice', [row(IDS.hala, 'هالة'), row(IDS.mohamed, 'محمد'), row(IDS.hala, 'هالة')]],
+    ['a blank Name', [row(IDS.hala, '  ')]],
+    ['an extra key', [{ ...row(IDS.hala, 'هالة'), extra: 1 }]],
+    ['a missing Name key', [{ user_id: IDS.hala }]],
+    ['a user id that is not a uuid', [row('hala', 'هالة')]],
+    ['no row', []],
+    ['not a list', { user_id: IDS.hala, name: 'هالة' }],
+  ])('anything else (%s) is no Names at all', (_name, rows) => {
+    expect(decodeSharedAudienceNames(rows)).toBeNull();
   });
 });

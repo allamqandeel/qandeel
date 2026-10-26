@@ -37,11 +37,12 @@ export function loadSharedSpatialPlacementDeepSeekConfig(environment: NodeJS.Pro
 }
 
 /**
- * S8A-04 CP3 (amendment §4): the Shared disclosure judge, one call per owner of a reply that used personal knowledge,
- * after generation and before delivery. Its own bound; zero retries; a timeout withholds the reply.
+ * S8A-04 CP3 (amendment §4; R4 / §11): the Shared disclosure check, ONE call per reply that used personal knowledge,
+ * after generation and before delivery. Its own bound; zero retries; a timeout withholds the reply (nothing cooled). R4:
+ * 600 output tokens (was 400 for one owner's items) — the answer now carries a verdict per span and exact passages.
  */
 export const SHARED_DISCLOSURE_JUDGE_TIMEOUT_MS = 6_000;
-export const SHARED_DISCLOSURE_JUDGE_MAX_OUTPUT_TOKENS = 400;
+export const SHARED_DISCLOSURE_JUDGE_MAX_OUTPUT_TOKENS = 600;
 
 export function loadSharedDisclosureJudgeDeepSeekConfig(environment: NodeJS.ProcessEnv = process.env): SharedSocialMemoryDeepSeekConfig {
   assertDeepSeekFlashSelection(environment, 'SHARED_DISCLOSURE_JUDGE');
