@@ -153,7 +153,7 @@ export class SharedWorldConversationService {
       const answer = view === null ? { qandeel: 'UNAVAILABLE' as const, recalledPlaceIds: [] } : await this.reply(userId, worldId, commandId, sent.material_id, view);
       const qandeel = answer.qandeel;
       // SHARED-VIS-01: QANDEEL then reads the World's semantic places, after the answer is decided and without delaying it.
-      // It never changes this answer, and it does nothing at all while the placer has no provider (S8A-04 CP2). S8A-04 CP1:
+      // It never changes this answer, and it does nothing at all where the placer has no provider (S8A-04 CP2 §7). S8A-04 CP1:
       // the pass verifies the sender against the resolver itself; the read's Names only label authors it identified.
       // S8A-04 CP2 §3.2.6: the positions the reply was given reach the reading as existing; the pass re-checks every one.
       void this.places.weave({

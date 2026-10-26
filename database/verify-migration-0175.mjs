@@ -609,9 +609,11 @@ async function verifyLedger(h, w, p, iso) {
   const { def } = await first(`SELECT pg_get_constraintdef(c.oid) AS def FROM pg_constraint c
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
   const families = [...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort();
+  // RE-ANCHORED by S8A-04 CP3 (2026-10-25, Product Owner correction 2): migration 0176 adds exactly SHARED_DISCLOSURE_JUDGE
+  // (0176's own verifier pins the full list); nothing else in this list changes.
   assert.deepEqual(families, ['CONVERSATION_REPLY', 'CU_SEGMENTATION', 'FOCUS_RESOLUTION', 'THREAD_FORMATION', 'THREAD_CONTINUITY',
     'HYPOTHESIS_INTENT_EXTRACTION', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', 'HYPOTHESIS_CANDIDATE_GENERATION', 'PERSONAL_UNDERSTANDING_CAPTURE',
-    'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'].sort());
+    'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE'].sort());
   const begin = async (call, user, world, material, family, path = null) => {
     await actAs('service_role');
     const row = await first(BEGIN_V2, [call, user, world, material, 'DEEPSEEK', 'deepseek-flash', 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', family, path]);

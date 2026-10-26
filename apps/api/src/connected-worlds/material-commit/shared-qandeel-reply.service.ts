@@ -28,16 +28,29 @@
 //
 // A refusal at any step commits nothing and fabricates nothing: the human's message is already committed and stays.
 // No content, provider output or private context is logged, persisted or returned outside the canonical material body.
+//
+// S8A-04 CP3 (amendment §3, approved 2026-10-25): the ONE governed exception to step 1. When members present now allowed
+// QANDEEL to use one of their items here (0176), at most one per owner, those items — and nothing else of theirs — are the
+// candidates of a per-request I-03E (`SharedMemberKnowledgeLane`). Under R4 (§11, the claim spans): before generation the
+// Disclosure Authorization and the request's claim table (an item may be STATED only inside its span, and only when the
+// audience can name its owner unambiguously, 0178); after it the spans are parsed, the owners' Names written by the server,
+// and every later step — the one check per reply (paid by this request's sender), I-03G, I-03F, the disclosure
+// revalidation, the binder and the 0176 commit with consent — runs on that RENDERED text. With no consented item the path
+// below is exactly as before. A withheld reply is the same refusal as any other; only the items a check proved unsafe rest
+// for an hour, and nothing is regenerated. After a committed reply, the local relevance read may open one private request
+// for an owner (no model, no provider; Product Owner correction 1).
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
 import { SharedHumanAudienceResolverService } from '../audience/shared-human-audience-resolver.service';
 import { SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority/shared-delivery-authority-revalidator.service';
 import { SharedEffectiveContextService } from '../effective-context/shared-effective-context.service';
 import type { SharedWorldId } from '../kernel/world.types';
 import { SharedPrivacyAuthorityDeliveryReadinessService } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
-import { sharedConversationLabels } from '../../shared-world/shared-conversation-model-input';
+import { sharedConversationLabels, UNNAMED_PARTICIPANT } from '../../shared-world/shared-conversation-model-input';
 import { decodeSharedWorldKnowledge, extendSharedLabels, sharedKnowledgeEntries, type SharedKnowledge } from '../../shared-world/shared-world-knowledge';
+import { SharedMemberKnowledgeService } from '../member-knowledge/shared-member-knowledge.service';
+import { SHARED_QANDEEL_REPLY_COMMIT_V2_RPC, sharedKnowledgeReasoningRef, type SharedMemberKnowledgeItem } from '../member-knowledge/shared-member-knowledge.types';
 import { bindSharedQandeelMaterialCommit } from './shared-qandeel-material-commit-binding';
 import {
   SHARED_QANDEEL_REPLY_GENERATOR,
@@ -84,6 +97,7 @@ export class SharedQandeelReplyService {
     private readonly audience: SharedHumanAudienceResolverService,
     private readonly server: SupabaseServiceRoleApiService,
     @Inject(SHARED_QANDEEL_REPLY_GENERATOR) private readonly generator: SharedQandeelReplyGenerator,
+    @Optional() private readonly memberKnowledge?: SharedMemberKnowledgeService,
   ) {}
 
   /** Never throws: every failure is one bounded refusal, and nothing is committed by a refusal. */
@@ -129,10 +143,33 @@ export class SharedQandeelReplyService {
 
   private async composeUnderLease(request: SharedQandeelReplyRequest, worldId: SharedWorldId, leaseId: string): Promise<SharedQandeelReplyOutcome> {
 
-    // 1. The pre-model envelope. No private candidate is offered: Personal context never enters a Shared call here.
-    const context = await this.effectiveContext.resolve(worldId, []);
-    if (context.state !== 'READY' || context.effectiveContext.privateReasoningContexts.length !== 0) return refused('CONTEXT_NOT_READY');
-    const envelope = context.effectiveContext;
+    // 1. The pre-model envelope. No private candidate is offered: Personal context never enters a Shared call here —
+    //    except, S8A-04 CP3, the items their owners allowed here, each through its own consent (the lane below). The
+    //    items are collected only where a judge may check the reply; otherwise none is, and nothing changes.
+    const answeredText = request.requesterView.find((material) => material.materialId.toLowerCase() === request.humanMaterialId.toLowerCase())?.text ?? '';
+    const collected = this.memberKnowledge === undefined ? [] : await this.memberKnowledge.collect(worldId, request.humanMaterialId.toLowerCase(), answeredText);
+    const judge = this.memberKnowledge?.judge ?? null;
+    const lane = collected.length === 0 || judge === null || this.memberKnowledge === undefined ? null : this.memberKnowledge.lane(worldId, collected);
+    const resolved = lane === null ? await this.effectiveContext.resolve(worldId, []) : await lane.effectiveContext.resolve(worldId, lane.candidates);
+    if (resolved.state !== 'READY') return refused('CONTEXT_NOT_READY');
+    let envelope = resolved.effectiveContext;
+    // What I-03E admitted, exactly: an item it did not admit (its ceiling no longer covers the audience) is not used.
+    const admittedNow = envelope.privateReasoningContexts;
+    let admitted: ReadonlyArray<SharedMemberKnowledgeItem> = lane === null ? [] : collected.filter((item) => admittedNow.some((entry) =>
+      entry.source.originWorld.owner.humanId === item.ownerUserId && entry.source.contextId === item.memoryId && entry.contentDigest === item.contentDigest));
+    if (admitted.length !== admittedNow.length) return refused('CONTEXT_NOT_READY');
+    // R4-1 / R4-2 step 1: the Disclosure Authorization of this exact envelope, before generation. An admitted item it does
+    // not list (its consent no longer covers this audience, or the read failed) must never reach the model: the reply then
+    // goes on exactly as if nothing had been collected (the 0176 pair invariant says this does not happen).
+    let authorization = admitted.length === 0 || lane === null ? null : await lane.authorize(envelope);
+    if (authorization !== null && authorization.items.length !== admitted.length) {
+      const plain = await this.effectiveContext.resolve(worldId, []);
+      if (plain.state !== 'READY') return refused('CONTEXT_NOT_READY');
+      envelope = plain.effectiveContext;
+      admitted = [];
+      authorization = null;
+    }
+    const used = authorization === null ? null : lane;
 
     // 2. The Shared history EVERY current recipient may see (CW2-02 §15), in canonical order.
     const visibleToAll = await this.visibleToEveryRecipient(worldId, envelope.audienceSnapshot.humans.map((human) => human.humanId));
@@ -157,6 +194,16 @@ export class SharedQandeelReplyService {
 
     // 2b. S8A-04 CP2: what the World already knows, labelled exactly as this request labels its people.
     const knowledge = await this.knowledge(worldId, request.requesterUserId.toLowerCase(), turns, authors);
+    // 2c. S8A-04 CP3: the admitted items, each under its owner's label in this request (the conversation's labels first).
+    const labelOf = this.peopleLabels(turns, authors, admitted);
+    // R4-2 step 1: the claim table. A ref only for an item the DA lists whose owner this audience names unambiguously (0178,
+    // the exact audience or nothing); every label's Name is barred from the inside of a span.
+    const preparation = used === null || authorization === null ? null : used.claims({
+      envelope, authorization, names: (await this.memberKnowledge?.audienceNames(worldId)) ?? null, labelOf,
+      otherNames: [...labelOf.values()].map((label) => label.replace(/ \(\d+\)$/u, '')).filter((name) => name !== UNNAMED_PARTICIPANT),
+    });
+    if (preparation !== null && preparation.table.excluded.length > 0) return refused('CONTEXT_NOT_READY');
+    const memberKnowledge = Object.freeze((preparation?.table.generatorItems ?? []).map((entry) => Object.freeze({ owner: entry.member, ref: entry.ref, item: entry.item })));
 
     // 3. The words. Only request-local tokens and labels leave this composition: no account, material or World identity
     //    reaches a provider (the source below only correlates the spend, AI-COST-01).
@@ -165,24 +212,40 @@ export class SharedQandeelReplyService {
       source: Object.freeze({ worldId, materialId: request.humanMaterialId.toLowerCase() }),
       conversation: turns,
       knowledge: knowledge.entries,
+      ...(memberKnowledge.length === 0 ? {} : { memberKnowledge }),
     }));
     if (generated.state !== 'GENERATED' || generated.text.trim().length === 0) return refused('GENERATION_UNAVAILABLE');
-    const text = generated.text;
     const recalledPlaceIds = Object.freeze((generated.knowledgeRefs ?? []).flatMap((ref) => {
       const placeId = knowledge.placeIdOf.get(ref);
       return placeId === undefined ? [] : [placeId];
     }));
 
-    // 4. Delivery readiness in the frozen order, then the revalidation the binder checks it against.
-    const readiness = await this.readiness.evaluate(envelope, text);
+    // 4. Delivery readiness in the frozen order, then the revalidation the binder checks it against. S8A-04 CP3: with an
+    //    admitted item, the authorized-disclosure lane over the claim spans; the check's spend is this request's sender's
+    //    (correction 2). From here on the only text is the lane's RENDERED text (R4-2 step 6).
+    const payer = Object.freeze({ userId: request.requesterUserId.toLowerCase(), worldId, materialId: request.humanMaterialId.toLowerCase() });
+    const laneReadiness = used === null || preparation === null || judge === null
+      ? null
+      : await used.readiness({ envelope, preparation, generatedText: generated.text, checker: judge, payer });
+    if (laneReadiness !== null && laneReadiness.state !== 'READY_FOR_LATER_DELIVERY_GATES') {
+      // R4-3: only the items the check proved unsafe rest; a failure, a malformed span or a stale consent cools nothing.
+      if (laneReadiness.state === 'BLOCKED') {
+        const unsafe = laneReadiness.coolDown;
+        await this.memberKnowledge?.coolDown(worldId, admitted.filter((item) => unsafe.includes(item.memoryId)));
+      }
+      return refused('DELIVERY_NOT_READY');
+    }
+    const text = laneReadiness === null ? generated.text : laneReadiness.text;
+    const readiness = laneReadiness ?? await this.readiness.evaluate(envelope, text);
     if (readiness.state !== 'READY_FOR_LATER_DELIVERY_GATES') return refused('DELIVERY_NOT_READY');
-    const revalidation = await this.revalidator.revalidate(envelope, text);
+    const revalidation = used !== null ? await used.revalidator.revalidate(envelope, text) : await this.revalidator.revalidate(envelope, text);
     const current = await this.audience.resolveCurrent(worldId);
     if (current.state !== 'RESOLVED') return refused('DELIVERY_NOT_READY');
 
-    // 5. The commit inputs, or a refusal. No material and no reasoning dependency: a conversational reply reproduces no
-    //    source material (so an owner's later deletion of a message leaves the reply as historical discussion, CW2-02
-    //    §27) and no private context was admitted.
+    // 5. The commit inputs, or a refusal. No material dependency: a conversational reply reproduces no source material
+    //    (so an owner's later deletion of a message leaves the reply as historical discussion, CW2-02 §27). One reasoning
+    //    dependency per admitted item (S8A-04 CP3, D6), and none without one.
+    const reasoningSourceRefs = admitted.map((item) => sharedKnowledgeReasoningRef(item.reasoningGrantId));
     const binding = bindSharedQandeelMaterialCommit({
       targetWorldId: worldId,
       materialKind: 'QANDEEL_OUTPUT',
@@ -191,13 +254,13 @@ export class SharedQandeelReplyService {
       revalidation,
       readiness,
       materialSourceIds: [],
-      reasoningSourceRefs: [],
+      reasoningSourceRefs,
     });
     if (binding.state !== 'BOUND') return refused('BINDING_REFUSED');
     const input = binding.input;
 
     // 6. The server's commit. The database re-checks everything it can see and refuses stale evidence on its own.
-    const rows = await this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_COMMIT_RPC, {
+    const commit = {
       p_lease_id: leaseId,
       p_human_command_id: request.humanCommandId,
       p_world_id: input.worldId,
@@ -210,10 +273,22 @@ export class SharedQandeelReplyService {
       p_audience_snapshot_ref: input.audienceSnapshotRef,
       p_material_source_ids: [...input.materialSourceIds],
       p_reasoning_source_refs: [...input.reasoningSourceRefs],
-    });
+    };
+    // S8A-04 CP3: with admitted items, the 0176 commit with consent — the same commit, after every consent is re-checked
+    // under lock; a consent that moved first makes it STALE and nothing is written.
+    const disclosed = 'disclosedContextIds' in readiness.readiness ? readiness.readiness.disclosedContextIds : [];
+    const rows = used !== null
+      ? await this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_COMMIT_V2_RPC, {
+        ...commit,
+        p_reasoning_grant_ids: admitted.map((item) => item.reasoningGrantId),
+        p_disclosed: admitted.map((item) => disclosed.includes(item.memoryId)),
+      })
+      : await this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_COMMIT_RPC, commit);
     const row = Array.isArray(rows) ? rows[0] : undefined;
     if (!isRecord(row)) return refused('COMMIT_REFUSED');
     if (row.outcome === 'MATERIAL_COMMITTED' && typeof row.material_id === 'string' && UUID.test(row.material_id)) {
+      // S8A-04 CP3 §5: the local relevance read, after the reply and never shaping it (fire and forget; total).
+      this.memberKnowledge?.propose(worldId, request.humanMaterialId.toLowerCase(), answeredText).catch(() => undefined);
       return Object.freeze({ state: 'COMMITTED', materialId: row.material_id, ...(recalledPlaceIds.length === 0 ? {} : { recalledPlaceIds }) } as const);
     }
     return refused(row.outcome === 'STALE' ? 'COMMIT_STALE' : 'COMMIT_REFUSED');
@@ -241,6 +316,20 @@ export class SharedQandeelReplyService {
     } catch {
       return none;
     }
+  }
+
+  /**
+   * S8A-04 CP3 — the labels of this request's people: the conversation's own (as the knowledge block labels them), then
+   * the admitted items' owners by their Name, numbered on collision, never relabelling the conversation.
+   */
+  private peopleLabels(
+    turns: ReadonlyArray<{ producer: 'HUMAN' | 'QANDEEL'; authorName: string | null; text: string; speakerRef: string | null }>,
+    authors: ReadonlyArray<string | null | undefined>, admitted: ReadonlyArray<SharedMemberKnowledgeItem>,
+  ): Map<string, string> {
+    const labels = sharedConversationLabels(turns);
+    const taken = new Map<string, string>();
+    authors.forEach((author, index) => { if (typeof author === 'string' && typeof labels[index] === 'string') taken.set(author, labels[index] as string); });
+    return extendSharedLabels(taken, admitted.map((item) => ({ userId: item.ownerUserId, name: item.ownerName })));
   }
 
   /**

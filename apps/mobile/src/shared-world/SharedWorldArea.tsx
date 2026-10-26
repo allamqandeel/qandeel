@@ -30,6 +30,9 @@
  * ended one stands in «عوالم منتهية». An Introduction World opens its own surface (`../introductions`), never this
  * area's World screen: no Living Analysis, no Manage World, no members, no QANDEEL welcome.
  *
+ * S8A-04 CP3-C: in an ALLOWed World's own screen, above the conversation and apart from it, the reader's OWN private
+ * request to let QANDEEL use something about them here (`./permissions`); «ما سمحت به هنا» lives in Manage World.
+ *
  * Nothing here reads the Personal world: no Session, camera, focus or time is passed in, so none can transfer.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
@@ -50,6 +53,7 @@ import type { SharedWorldController } from './shared-world-controller';
 import { SharedLivingAnalysis } from './field/SharedLivingAnalysis';
 import { SharedClosedWorld } from './SharedClosedWorld';
 import { SharedManagePage } from './SharedManagePage';
+import { SharedPermissionRequestCards } from './permissions/SharedPermissions';
 import { SharedSendBar, SharedThread } from './SharedWorldThread';
 
 export const SHARED_AREA_TEST_ID = 'qandeel-shared-area';
@@ -186,7 +190,8 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" testID="qandeel-shared-manage-keyboard">
         {header(lifecycle.manageWorld, true, () => controller.closeManage())}
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingLeft: insets.left, paddingRight: insets.right }}>
-          <SharedManagePage controller={controller} language={language} palette={palette} bottomInset={insets.bottom} />
+          <SharedManagePage controller={controller} language={language} palette={palette} bottomInset={insets.bottom}
+            worldName={state.entry.world === null ? null : labelOfWorld(copy, state.entry.world)} />
         </ScrollView>
       </KeyboardAvoidingView>,
       'qandeel-shared-managing',
@@ -226,6 +231,11 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
         // resizes the window for the keyboard, and the composer and its Send must stay above it.
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {header(labelOfWorld(copy, world), true, fromConversation)}
+          {/* S8A-04 CP3-C: the reader's OWN private request — pinned above the conversation, outside it and never part of it. */}
+          {controller.permissions === null ? null : (
+            <SharedPermissionRequestCards permissions={controller.permissions} worldId={world.worldId} world={labelOfWorld(copy, world)}
+              language={language} palette={palette} insetLeft={insets.left} insetRight={insets.right} />
+          )}
           <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={followNewest}
             contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
             {/* QANDEEL's short, neutral welcome (S4-01 §1.6), then the World's real conversation (S4-02). */}

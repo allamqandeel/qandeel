@@ -176,7 +176,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-NOTIF-05` | Native Push Physical-Device Exit Gates (PD-01 … PD-09) | `Release Hardening & Launch — physical iOS / Android device validation` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-CW-04` | Public Lightweight Reactions Runtime (PG-07) | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-05` | QANDEEL Conversational Output Cannot Be a Shared Semantic-Place Source | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
@@ -221,6 +221,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-07` | Shared World Participants Without a Name All Reach the Model as One "A participant" | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-AI-08` | QANDEEL's Earlier Shared Replies Reach the Model Without the Person They Answered | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-09` | Text Inside One Participant's Shared Message Can Pose as Another Participant Speaking | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-CI-03` | Android API 36 Emulator Boot Smoke: GitHub Runner Emulator Infrastructure (PO-WAIVED) | `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1090,6 +1091,9 @@ S4-01's scope, and nothing here authorizes implementation (BG-07).
 ---
 
 ### `QAN-BL-CW-02` — Shared Standing Context Product & Private-Source Integration
+
+> **Historical pre-closure schema.** This block records the item as it stood before S8A-04's closing change; it is not the
+> current lifecycle state. The current state is the `CLOSED — TOMBSTONE` record of `QAN-BL-CW-02` in §6 (S8A-04).
 
 - **Title / Finding:** S4-02 delivers the request-driven Shared QANDEEL reply over the frozen I-03 chain with Shared-native
   history only. Its census (S4-02 record §7.1) found no canonical way for Personal context to reach a Shared reply: the
@@ -3303,6 +3307,40 @@ authorizes implementation (BG-07).
   reaches a production model.
 - **Status:** `DEFERRED — OWNED`
 
+### `QAN-BL-CI-03` — Android API 36 Emulator Boot Smoke: GitHub Runner Emulator Infrastructure (PO-WAIVED)
+
+- **Title / Finding:** on Draft PR #358 (S8A-04 CP3), Mobile CI's `Android (API 36 emulator boot smoke)` failed on three
+  heads: `3f6dcf72` (run `40213689273`), `064feab1` (run `40219860461`) and `80c2e527` (run `40264979205`). `Validation
+  evidence (VAL-01)` failed with it on each.
+  - The cause: the runner had too little free disk for the emulator's data partition. The pixel_7 default is 6144 MB,
+    and the emulator demands about 1.2× that free.
+  - `disk-size: 3072M` reached `config.ini`, but the emulator still demanded 7372.80 MB.
+  - On `06de0f1b` (run `40269916729`) the same job passed. The failure is intermittent infrastructure, not the app.
+- **Source:** the [S8A-04 CP3 Task Contract](e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md) §8 / §8.1; the
+  Product Owner's decision of 2026-10-25 (option C).
+- **Current truth:** **`PO-WAIVED: GITHUB_ANDROID_EMULATOR_INFRASTRUCTURE`** (the Product Owner, 2026-10-25).
+  - The Product Owner stopped all Android CI fixes on PR #358.
+  - On a head where this job fails, Mobile CI's Android evidence is recorded NOT GREEN for this reason alone.
+  - The waiver is not merge approval. The merge still needs the Product Owner's explicit order, which must name the
+    waiver against `AGENTS.md` §8 ("Do not merge a failing CI change") when that job is red on the head.
+  - The Android Release APK build producer did not fail in any of these four runs.
+- **Why deferred:** runner, emulator image and disk provisioning are infrastructure outside S8A-04's product scope, the
+  same shape as `QAN-BL-CI-01` (iOS, S4-01). No product contract is left violated (BG-01).
+- **Owner task:** `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` (identifier the Product Owner's; the
+  descriptive half is this closing change's).
+- **Severity:** `MEDIUM`. If reopened, it decides whether Mobile CI's Android boot smoke is dependable evidence. It gates
+  no product truth; physical-device validation stays separately owned (`QAN-BL-NOTIF-05`, `QAN-BL-LAUNCH-04`).
+- **Reopen condition:** the next Android API 36 boot smoke that fails for runner disk or emulator provisioning on any
+  head; or before any task that relies on that smoke as release evidence.
+- **Required future properties:**
+  - a diagnosed cause with evidence: runner disk, AVD data partition or image;
+  - a bounded change under VAL-01;
+  - no change that weakens what the smoke proves.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8A-04` at its closing change under BG-08 / BG-06, as the Product Owner directed on 2026-10-25. It is not
+part of S8A-04's scope, and nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3986,6 +4024,58 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   **Not covered:** `QAN-BL-AI-08` (still open). No real user's data reaches DeepSeek (`QAN-BL-AI-01`).
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-CW-02` — Shared Standing Context Product & Private-Source Integration
+
+- **Closing task:** `S8A-04 CP3 — Personal Knowledge in Shared World`, which delivers `SHARED-CTX-01` (its Task Contract
+  names it). It closes under the Product Owner's D-9 decision (2026-10-26): `PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER
+  FIRST LAUNCH`.
+- **PR / SHA:** Draft PR #358, from branch `s8a/s8a-04-cp3`, from `main` at `b0839fd4dec150f79e6292da991ef93dcca34d72` (the
+  merge of PR #357, S8A-04 CP2). The closing change is that pull request's final head; the merge SHA is filled in at merge.
+  - Migrations 0176, 0177 and 0178, not applied to any hosted database.
+  - **The tombstone holds from that pull request's merge; until then this item is not closed.**
+- **Disposition:** **delivered for its scope, and accepted with known risk by the Product Owner.** It is not closed on a
+  guarantee, and not on a passed criterion. Under the
+  [S8A-04 CP3 controlled amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)
+  (R3 + §10 + R4 §11, which bind over CW2-02 §16–§22 and §32 and CW2-03 §23, §39 and §40 as they state), production now:
+  - **Sources:** the owner's ACTIVE, current memories about themselves (PO-4) are the self-authored Personal source, read
+    by a server-owned collector.
+  - **Consent:**
+    - The owner is asked just in time, privately and alone (CG-1).
+    - One consent writes a reasoning grant and a disclosure grant (0176), bound to the membership episode and the human
+      audience.
+    - Consent is revocable, and leaving ends use.
+    - Only the owner's `authenticated` command grants; relevance never does (D-1).
+  - **Disclosure:**
+    - A Disclosure Authorization is built for one exact operation.
+    - A statement about an owner is a claim span whose owner Name the server writes (R4).
+    - One CG-6b′ check runs per reply, and a reply it does not clear is withheld.
+    - A digest-only source-state revalidation runs, and I-03F and the commit binder are bound to the delivered text.
+  - **Every part fails closed.** Every AI call is paid by the sender of the causing message (AI-COST-01).
+- **Evidence kept** (synthetic; DeepSeek Flash; the accounted path; amendment §11.0 and §11.8):
+  - **CP3-D V1:** 120 calls; NOT ACCEPTED (3 / 75 misses, 7 / 45 false blocks).
+  - **CP3-D V2 Tier 1:**
+    - 150 calls, USD 0.0177 at peak;
+    - **NOT ACCEPTED — original criteria failed:** leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150;
+    - every leak had an all-clear checker answer.
+  - **Tier 2:** NOT RUN, deferred by explicit Product Owner decision. Tier 1 was not repeated.
+- **Known limits, accepted until after the first launch:** Future Improvements 012 – 016 in
+  `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`, each `POST-FIRST-LAUNCH / DEFERRED / NON-BLOCKING`:
+  - 012 — disclosure outside the claim spans;
+  - 013 — attribution protection;
+  - 014 — dialect and hint semantics;
+  - 015 — false blocks;
+  - 016 — checker reliability, compound claims and the deferred end-to-end evaluation.
+
+  The probabilistic disclosure and attribution errors remain, and **V2 gives no absolute privacy guarantee.** The T-D2
+  failure alone is not a merge or first-launch blocker, by the Product Owner's exception (amendment §11.9).
+- **Not covered:**
+  - No real user's data reaches DeepSeek: `SYNTHETIC_ONLY` is unchanged, and `QAN-BL-AI-01` stays open.
+  - Hosted application rides the hosted deployment items.
+  - The exception removes no security, privacy or deployment gate.
+  - *Reasoning only* (PO-2) and the advance grant from the Personal World (PO-3) stay deferred by the amendment, not
+    admitted here.
+- **Status:** `CLOSED — TOMBSTONE`
+
 ## 7. Counts at this baseline
 
 | Status | Count |
@@ -3993,13 +4083,13 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | `DEFERRED — OWNED` | 42 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
-| `CLOSED — TOMBSTONE` | 32 |
-| **Total** | **87** |
+| `CLOSED — TOMBSTONE` | 33 |
+| **Total** | **88** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 51 |
-| `MEDIUM` | 34 |
+| `MEDIUM` | 35 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -5245,6 +5335,38 @@ The paragraphs above stay as written. CP3 stays FAIL as run.
 - **Untouched:** every item, owner, severity and status; nothing is admitted, tombstoned or re-owned.
 - **Latest index: 87 items; 42 / 4 / 9 / 32 by status, 51 / 34 / 2 by severity.**
 
+**S8A-04 closing change (2026-10-26; Draft PR #358, from `main` at `b0839fd4dec150f79e6292da991ef93dcca34d72`; effective
+from its merge).** This is the BG-08 reconciliation under the Product Owner's D-9 decision (2026-10-26):
+`PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH`
+([amendment §11.9](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)).
+S8A-04's CP1 and CP2 merged through PRs #356 and #357 with no entry here: they admitted, tombstoned and re-owned nothing.
+The paragraphs above stay as written. CP3-D V2 stays NOT ACCEPTED as run.
+- **Tombstoned (§6):** `QAN-BL-CW-02`.
+  - It was delivered for its scope by S8A-04 CP3 (`SHARED-CTX-01`), and accepted with known risk by the Product Owner.
+  - It is not closed on a passed criterion: Tier 1 is NOT ACCEPTED (leaks 36 / 90, false blocks 7 / 60, invalid
+    1 / 150), and Tier 2 is NOT RUN.
+  - Its evidence and limits are kept.
+- **Admitted (BG-06 / BG-08):** `QAN-BL-CI-03`.
+  - It is the Android API 36 emulator boot smoke's runner infrastructure, `PO-WAIVED:
+    GITHUB_ANDROID_EMULATOR_INFRASTRUCTURE`.
+  - `MEDIUM`, `DEFERRED — OWNED`, owner `CI-ANDROID-01`.
+  - The Product Owner directed it on 2026-10-25, for this closing change.
+- **Checked and not admitted (BG-06):** Future Improvements 012 – 016 in
+  `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`.
+  - They cover disclosure outside the claim spans, attribution protection, dialect and hint semantics, false blocks, and
+    checker reliability with the deferred end-to-end evaluation.
+  - They are the Product Owner's product acceptances, `POST-FIRST-LAUNCH / DEFERRED / NON-BLOCKING`. They are not
+    deferrals to a task, and by the Product Owner's decision they are not blocking items in this register.
+- **Read and left unchanged:**
+  - `QAN-BL-AI-01` — no real user's data reaches DeepSeek; `SYNTHETIC_ONLY` is unchanged.
+  - `QAN-BL-AI-08` and `QAN-BL-CW-05`.
+  - The hosted deployment items (0176 – 0178 applied to no hosted database).
+  - `QAN-BL-CI-01`.
+- **The Product Owner's exception** removes no security, privacy or deployment gate. The T-D2 failure alone is not a
+  merge or first-launch blocker. The probabilistic disclosure and attribution errors remain.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 88 items; 42 / 4 / 9 / 33 by status, 51 / 35 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5308,7 +5430,7 @@ Inherited after T-12 closure reconciliation:
 | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `QAN-BL-NOTIF-02` |
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
-| `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
+| `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` — delivered by `S8A-04 CP3` (Draft PR #358) and tombstoned by S8A-04's closing change under the Product Owner's D-9 known-risk acceptance (2026-10-26; effective from its merge) |
 | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03` — **delivered and merged through PR #321 (`5973123153e26494d702a4a859a79631ede225cd`, 2026-10-09); its closing change never landed, so `GOV-REC-01` tombstones it retroactively under BG-08 / BG-09; Issue #322 (physical-Android release evidence) stays OPEN, outside this item.** *As written on 2026-10-08:* ACTIVE since 2026-10-08 (Stage 5 DONE / MERGED); stays `DEFERRED — OWNED` until this task's closing change tombstones it; admitted `QAN-BL-CW-05` (owned by Stage 8A at the Product Owner's deferral), `QAN-BL-CW-06` and `QAN-BL-CW-07` (deferred by the Product Owner, unassigned); `QAN-BL-VIS-01` (Shared density at scale observed within `LA-SCALE-01`), `QAN-BL-ACCT-01` (0148 references no account) and `QAN-BL-VOICE-01` observed and left unchanged; the Stage-8A binding of the two Shared ports recorded |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
@@ -5330,6 +5452,8 @@ Inherited after T-12 closure reconciliation:
 | `S7-05 — Replay Final Integration, Device Proof & Stage Closure` | none owned at kickoff; `QAN-BL-NAV-02` claimed by the Product Owner's D4 and tombstoned by its closing change (PR #351; effective from its merge); admitted `QAN-BL-RSP-03` |
 | `S8A-01 — DeepSeek Production Integration & First Real Conversation` | none owned at kickoff; the Stage 8A items read and left as they stand; *CP2 (2026-10-21; the S8A-01 pull request, not merged; effective from its merge):* admitted `QAN-BL-AI-01`, `QAN-BL-AI-02` and `QAN-BL-AI-03`; *Closing change (2026-10-21; effective from its merge):* CP4 passed (seven synthetic calls; Personal DEEP 20 s by the Product Owner's controlled change); BG-08 reconciled; admitted `QAN-BL-AI-04` |
 | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | none owned at kickoff; the Stage 8A items read and left as they stand; admitted `QAN-BL-AI-05` (Round 2 review), `QAN-BL-AI-06` / `AI-07` / `AI-08` (D5) and `QAN-BL-AI-09` (Shared Attribution Integrity), all owned by Stage 8A. *Closing change (2026-10-23; the S8A-02 pull request; effective from its merge):* `QAN-BL-AI-06` / `AI-07` tombstoned (completed by CP1) and `QAN-BL-AI-09` tombstoned (Founder product acceptance for v1); dated notes on `QAN-BL-AI-04` / `AI-05`; `QAN-BL-AI-08`, `QAN-BL-ACE-02` and `QAN-BL-IP-02` left open with reasons; Future Improvements 001 / 002 checked and not admitted (§7). S8A-02 owns no open item |
+| `S8A-04 — Shared Social Understanding, Shared Social Memory and Personal Knowledge in Shared World (CP1 – CP3)` | none owned at kickoff; CP1 (PR #356) and CP2 (PR #357) admitted, tombstoned and re-owned nothing; CP3 delivers `SHARED-CTX-01`. *Closing change (2026-10-26; Draft PR #358; effective from its merge):* `QAN-BL-CW-02` tombstoned (the Product Owner's D-9 known-risk acceptance; CP3-D V2 Tier 1 NOT ACCEPTED, Tier 2 NOT RUN); admitted `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure); Future Improvements 012 – 016 checked and not admitted (§7). S8A-04 owns no open item |
+| `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `QAN-BL-CI-03` (admitted by S8A-04's closing change; identifier the Product Owner's) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project); `QAN-BL-PROD-10` (admitted by S6-07's closing change, 2026-10-18: a photo object lost from the store blocks its owner's export bundle) |

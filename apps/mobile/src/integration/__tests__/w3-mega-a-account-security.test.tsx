@@ -51,8 +51,16 @@ function server(h: IntegrationHarness) {
   return account;
 }
 
+/** Every runtime a test built, disposed when it ends: an undisposed one keeps its Settings read retries armed after the run. */
+const built: IntegrationHarness[] = [];
+
+afterEach(() => {
+  for (const h of built.splice(0)) h.dispose();
+});
+
 async function world() {
   const h = await harness({ initialSession: { userId: 'alice', accessToken: 'token-a' } });
+  built.push(h);
   h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })]) } : { status: 500, body: {} }));
   const account = server(h);
   const view = await render(

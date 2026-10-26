@@ -47,6 +47,7 @@
 import type { SharedDeliveryAuthorityRevalidation } from '../delivery-authority/shared-delivery-authority.types';
 import { digestProviderOutput } from '../delivery-authority/shared-delivery-authority-revalidator.service';
 import type { SharedPrivacyAuthorityDeliveryReadiness } from '../source-disclosure/shared-source-disclosure.types';
+import type { SharedMemberKnowledgeReadiness } from '../member-knowledge/shared-member-knowledge.types';
 
 /** The two QANDEEL material kinds I-04G implements a producer for. */
 export const QANDEEL_MATERIAL_KINDS = ['QANDEEL_OUTPUT', 'QANDEEL_ANALYSIS'] as const;
@@ -121,7 +122,8 @@ export function bindSharedQandeelMaterialCommit(request: {
   readonly outputText: string;
   readonly currentAudienceSnapshotRef: string;
   readonly revalidation: SharedDeliveryAuthorityRevalidation;
-  readonly readiness: SharedPrivacyAuthorityDeliveryReadiness;
+  /** I-03G's readiness, or (S8A-04 CP3) the authorized-disclosure lane's: the same five references are read from either. */
+  readonly readiness: SharedPrivacyAuthorityDeliveryReadiness | SharedMemberKnowledgeReadiness;
   readonly materialSourceIds: ReadonlyArray<string>;
   readonly reasoningSourceRefs: ReadonlyArray<string>;
 }): SharedQandeelMaterialCommitBinding {

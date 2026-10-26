@@ -15,6 +15,37 @@
   ],
   "version": 1,
   "groups": {
+    "s8a-04-cp3d-v2": {
+      "title": "S8A-04 CP3-D V2 - Trusted Claim Spans (migration 0178, the audience Names read) with every verifier of the S8A-04 CP3 group it must leave unchanged",
+      "verifiers": [
+        "database/verify-migration-0178.mjs",
+        "database/verify-migration-0177.mjs",
+        "database/verify-migration-0176.mjs",
+        "database/verify-migration-0175.mjs",
+        "database/verify-migration-0174.mjs",
+        "database/verify-migration-0171.mjs",
+        "database/verify-migration-0139.mjs",
+        "database/verify-migration-0140.mjs",
+        "database/verify-migration-0150.mjs",
+        "database/verify-migration-0155.mjs",
+        "database/verify-migration-0164.mjs"
+      ]
+    },
+    "s8a-04-cp3": {
+      "title": "S8A-04 CP3 - Personal Knowledge in Shared World (migrations 0176 and 0177) with the Shared social memory, cost-family, Personal understanding, conversation, governance, retry-hazard and account-erasure verifiers it re-anchors or must leave unchanged",
+      "verifiers": [
+        "database/verify-migration-0177.mjs",
+        "database/verify-migration-0176.mjs",
+        "database/verify-migration-0175.mjs",
+        "database/verify-migration-0174.mjs",
+        "database/verify-migration-0171.mjs",
+        "database/verify-migration-0139.mjs",
+        "database/verify-migration-0140.mjs",
+        "database/verify-migration-0150.mjs",
+        "database/verify-migration-0155.mjs",
+        "database/verify-migration-0164.mjs"
+      ]
+    },
     "s8a-04-cp2": {
       "title": "S8A-04 CP2 - Shared Social Memory (migration 0175) with the Shared semantic, conversation, governance, retry-hazard, cost-family, Replay and Public verifiers it re-anchors or must leave unchanged",
       "verifiers": [

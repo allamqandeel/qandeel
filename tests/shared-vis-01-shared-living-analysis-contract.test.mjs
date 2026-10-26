@@ -57,12 +57,21 @@ test('3 — provider-neutral and fail-closed: both Shared ports refuse outside t
   // (`shared-semantic-interpreter-provider.ts`) binds the test fake only in tests and otherwise the accounted DeepSeek
   // adapter behind the SYNTHETIC_ONLY gate. The placer is NOT bound (D4): it still refuses outside tests, so the pass still
   // returns NO_PROVIDER before any lease, read or spend, and no place is produced until CP2.
+  // RE-ANCHORED by S8A-04 CP2 §7 (2026-10-25, the placer binding, CP2's last change): the placer PORT still names no
+  // provider and now composes nothing; its one composition (`shared-social-memory-provider.ts`) binds the test fake only in
+  // tests, the accounted DeepSeek adapter where the SYNTHETIC_ONLY gate lets DeepSeek run, and the refusing placer
+  // everywhere else — so wherever DeepSeek may not run, the pass still returns NO_PROVIDER before any lease, read or spend.
   for (const port of ['apps/api/src/shared-world/shared-semantic-interpreter.ts', 'apps/api/src/shared-world/shared-spatial-placer.ts']) {
     assert.doesNotMatch(code(port), /ModelRouter|model-router|fetch\(|https?:\/\//u, `${port} reaches no provider`);
   }
-  const placer = code('apps/api/src/shared-world/shared-spatial-placer.ts');
-  assert.match(placer, /environment\.NODE_ENV === 'test'/u, 'the placer binds its fake only in tests');
-  assert.match(placer, /return new Unconfigured\w+\(\);\s*\}\s*$/u, 'the placer refuses everywhere else');
+  assert.doesNotMatch(code('apps/api/src/shared-world/shared-spatial-placer.ts'), /createConfigured|process\.env|NODE_ENV/u, 'the placer port composes nothing');
+  const placer = code('apps/api/src/shared-world/shared-social-memory-provider.ts');
+  assert.match(placer, /export function createConfiguredSharedSpatialPlacer\(environment: NodeJS\.ProcessEnv = process\.env\): SharedSpatialPlacer \{\s*if \(environment\.NODE_ENV === 'test'\) return new FakeSharedSpatialPlacer\(\);/u,
+    'the placer binds its fake only in tests');
+  assert.match(placer, /try \{\s*config = loadSharedSpatialPlacementDeepSeekConfig\(environment\);\s*\} catch \{\s*return new UnconfiguredSharedSpatialPlacer\(\);\s*\}\s*return deepSeekSharedSpatialPlacer\(config, productionAiProviderCallAccounting\(\)\);/u,
+    'the placer is DeepSeek only where the SYNTHETIC_ONLY gate lets it run, and refuses everywhere else');
+  assert.match(code('apps/api/src/shared-world/shared-social-memory-provider.config.ts'), /requireDeepSeekQualification\(environment, 'the Shared spatial placement'\)/u);
+  assert.match(code('apps/api/src/shared-world/shared-world.module.ts'), /\{ provide: SHARED_SPATIAL_PLACER, useFactory: \(\) => createConfiguredSharedSpatialPlacer\(\) \}/u);
   const composition = code('apps/api/src/shared-world/shared-semantic-interpreter-provider.ts');
   assert.match(composition, /if \(environment\.NODE_ENV === 'test'\) return new FakeSharedSemanticInterpreter\(\);/u);
   assert.match(composition, /accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_SEMANTIC_READING', productionAiProviderCallAccounting\(\)\)/u);

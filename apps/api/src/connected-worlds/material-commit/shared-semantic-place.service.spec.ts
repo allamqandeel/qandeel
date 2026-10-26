@@ -10,6 +10,7 @@ import {
   FakeSharedSemanticInterpreter, UnconfiguredSharedSemanticInterpreter, type SharedSemanticInput, type SharedSemanticInterpreter,
 } from '../../shared-world/shared-semantic-interpreter';
 import { FakeSharedSpatialPlacer, type SharedSpatialPlacer } from '../../shared-world/shared-spatial-placer';
+import { createConfiguredSharedSpatialPlacer } from '../../shared-world/shared-social-memory-provider';
 import { SharedHumanAudienceResolverService, fingerprintSharedHumanAudience } from '../audience/shared-human-audience-resolver.service';
 import type { StandingContextGrantResolverService } from '../authority-resolution/standing-context-grant-resolver.service';
 import { SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority/shared-delivery-authority-revalidator.service';
@@ -102,6 +103,15 @@ describe('SHARED-VIS-01 — one semantic pass over the frozen I-03 chain', () =>
     const { service, rpcs } = harness({ interpreter: new UnconfiguredSharedSemanticInterpreter() });
     expect(await service.weave(REQUEST)).toEqual({ state: 'NOT_RUN', reason: 'NO_PROVIDER' });
     expect(rpcs).toEqual([]);
+  });
+
+  it('S8A-04 CP2 §7: the application’s placer, where DeepSeek may not run, stops the pass before its lease, read or spend', async () => {
+    for (const environment of [{ NODE_ENV: 'production', DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'sk-test' }, { NODE_ENV: 'development' }]) {
+      const { service, rpcs, reads } = harness({ placer: createConfiguredSharedSpatialPlacer(environment) });
+      expect(await service.weave(REQUEST)).toEqual({ state: 'NOT_RUN', reason: 'NO_PROVIDER' });
+      expect(rpcs).toEqual([]);
+      expect(reads).toEqual([]);
+    }
   });
 
   it('reads only the human text EVERY recipient may see, and commits QANDEEL_ANALYSIS over the exact sources it named', async () => {

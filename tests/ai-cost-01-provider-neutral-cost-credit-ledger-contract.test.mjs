@@ -99,6 +99,10 @@ const FILES = {
   sharedPlacerAdapter: 'apps/api/src/shared-world/deepseek-shared-spatial-placer.ts',
   sharedMemoryConfig: 'apps/api/src/shared-world/shared-social-memory-provider.config.ts',
   sharedMemoryModule: 'apps/api/src/shared-world/shared-social-memory-provider.ts',
+  // S8A-04 CP3 (2026-10-25, Product Owner Final Implementation Authorization): the Shared disclosure judge and its one
+  // composition; its config loader lives in sharedMemoryConfig.
+  sharedJudgeAdapter: 'apps/api/src/shared-world/deepseek-shared-disclosure-judge.ts',
+  sharedJudgeModule: 'apps/api/src/shared-world/shared-disclosure-judge-provider.ts',
   sharedReplyGenerator: 'apps/api/src/shared-world/shared-conversation-reply.generator.ts',
   migration0175: 'database/migrations/0175_s8a_04_shared_social_memory_v1.sql',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
@@ -152,12 +156,18 @@ const CENSUS = [
   // family, through the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate.
   { transport: 'apps/api/src/shared-world/deepseek-shared-knowledge-recall.ts', family: 'SHARED_KNOWLEDGE_RECALL', frozen: '21798d25753125f0ffb0fe00684c8d1278b5b088' },
   { transport: 'apps/api/src/shared-world/deepseek-shared-spatial-placer.ts', family: 'SHARED_SPATIAL_PLACEMENT', frozen: 'a4431b99f3f05bca3211ab5b67c0b4df4ca06101' },
+  // S8A-04 CP3 (2026-10-25): the Shared disclosure judge under its own 0176 family, through the same shared client, JSON
+  // Output envelope, accounting boundary and SYNTHETIC_ONLY gate; paid by the sender of the answered message. Re-pinned
+  // 2026-10-26 for CP3-D V2 (Controlled Amendment R4, Trusted Claim Spans): ONE check per reply over opaque K-ids, the CG-6b′
+  // text (PROPOSED at the Copy Gate), the per-request schema and the V2 policy reference; same family, client, envelope,
+  // accounting boundary, payer and gate, zero retries.
+  { transport: 'apps/api/src/shared-world/deepseek-shared-disclosure-judge.ts', family: 'SHARED_DISCLOSURE_JUDGE', frozen: '08193972c2b94b2a53993a98f221acb8bd4fff86' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
 const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter', 'sharedReadingAdapter',
-  'sharedRecallAdapter', 'sharedPlacerAdapter'];
+  'sharedRecallAdapter', 'sharedPlacerAdapter', 'sharedJudgeAdapter'];
 const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig', 'sharedReadingConfig',
   'sharedMemoryConfig'];
 /** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
@@ -196,11 +206,19 @@ function censusViolations(world) {
   }
   // S8A-04 CP2: the recall is composed through the boundary; the placer only for the synthetic harness, with the accounting
   // it is handed — the application's placer stays the refusing one (§7), so it composes no client at all.
+  // RE-ANCHORED by S8A-04 CP2 §7 (2026-10-25, the placer binding): the application's placer and the harness's share ONE
+  // composition, so one accounted client is still built for the family; the application hands it the production accounting.
   const memory = ts(world.sharedMemoryModule);
+  if (!/return deepSeekSharedSpatialPlacer\(config, productionAiProviderCallAccounting\(\)\);/u.test(memory)) out.push('the application placer is not accounted in production');
   if (!/accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_KNOWLEDGE_RECALL', productionAiProviderCallAccounting\(\)\)/u.test(memory)) out.push('SHARED_KNOWLEDGE_RECALL is not accounted');
   if (!/accountedDeepSeekChatCompletionsClient\(createDeepSeekClient\(config\), 'SHARED_SPATIAL_PLACEMENT', accounting\)/u.test(memory)
     || !/createQualificationSharedSpatialPlacer\(\s*environment: NodeJS\.ProcessEnv, accounting: AiProviderCallAccounting,\s*\)/u.test(memory)) out.push('SHARED_SPATIAL_PLACEMENT is not accounted');
   if ((memory.match(/createDeepSeekClient\(/gu) ?? []).length !== 2 || /\.fromEnvironment\(/u.test(memory)) out.push('the Shared memory composition builds an unaccounted client');
+  // S8A-04 CP3: the judge is composed through the boundary, in its own module, with exactly one client; where DeepSeek may
+  // not run there is no judge at all (null), never an unaccounted one.
+  const judge = ts(world.sharedJudgeModule);
+  if (!/accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'SHARED_DISCLOSURE_JUDGE', productionAiProviderCallAccounting\(\)\)/u.test(judge)
+    || (judge.match(/createDeepSeekClient\(/gu) ?? []).length !== 1 || /\.fromEnvironment\(/u.test(judge)) out.push('SHARED_DISCLOSURE_JUDGE is not accounted');
   // No structured adapter can build its own client: each receives the accounted one by injection.
   for (const key of ADAPTERS) {
     if (/fromEnvironment|createDeepSeekClient\(|new OpenAI\(/u.test(ts(world[key]))) out.push(`${key} can build an unaccounted client`);

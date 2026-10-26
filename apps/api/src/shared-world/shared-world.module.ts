@@ -4,26 +4,30 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SHARED_QANDEEL_REPLY_PROVIDERS } from '../connected-worlds/material-commit/shared-qandeel-reply.providers';
 import { SHARED_QANDEEL_REPLY_GENERATOR } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
+import { SHARED_DISCLOSURE_JUDGE } from '../connected-worlds/member-knowledge/shared-member-knowledge.types';
 import { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { ModelRouterModule } from '../model-router/model-router.module';
 import { SharedActivityProducer } from './shared-activity.producer';
 import { SharedActivityRepository } from './shared-activity.repository';
 import { SharedConversationReplyGenerator } from './shared-conversation-reply.generator';
+import { createConfiguredSharedDisclosureJudge } from './shared-disclosure-judge-provider';
 import { SharedIdSealing } from './shared-id-sealing';
 import { SharedSemanticFieldService } from './shared-semantic-field.service';
 import { SHARED_SEMANTIC_INTERPRETER } from './shared-semantic-interpreter';
 import { createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter-provider';
 import { SharedSemanticPlaceService } from '../connected-worlds/material-commit/shared-semantic-place.service';
-import { SHARED_SPATIAL_PLACER, createConfiguredSharedSpatialPlacer } from './shared-spatial-placer';
+import { SHARED_SPATIAL_PLACER } from './shared-spatial-placer';
 import { SHARED_KNOWLEDGE_RECALLER } from './shared-knowledge-recall';
-import { createConfiguredSharedKnowledgeRecaller } from './shared-social-memory-provider';
+import { createConfiguredSharedKnowledgeRecaller, createConfiguredSharedSpatialPlacer } from './shared-social-memory-provider';
 import { SharedWorldAlertsRepository } from './shared-world-alerts.repository';
 import { SharedWorldAlertsService } from './shared-world-alerts.service';
 import { SharedWorldConversationRepository } from './shared-world-conversation.repository';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import { SharedWorldLifecycleRepository } from './shared-world-lifecycle.repository';
 import { SharedWorldLifecycleService } from './shared-world-lifecycle.service';
+import { SharedWorldPermissionsRepository } from './shared-world-permissions.repository';
+import { SharedWorldPermissionsService } from './shared-world-permissions.service';
 import { SharedWorldController } from './shared-world.controller';
 import { SharedWorldRepository } from './shared-world.repository';
 import { SharedWorldService } from './shared-world.service';
@@ -52,8 +56,8 @@ import { SharedWorldService } from './shared-world.service';
  * the placer still refuses, so no place is produced until CP2.
  *
  * S8A-04 CP2 — Shared social memory: the reply is given what the World already knows, chosen by the provider-neutral
- * knowledge recaller (`shared-social-memory-provider.ts`: DeepSeek Flash behind SYNTHETIC_ONLY). The placer stays unbound
- * until the CP2 §11 binding conditions hold (§7).
+ * knowledge recaller (`shared-social-memory-provider.ts`: DeepSeek Flash behind SYNTHETIC_ONLY). The placer is bound there
+ * too (§7, 2026-10-25): DeepSeek Flash behind SYNTHETIC_ONLY, and the refusing placer wherever DeepSeek may not run.
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],
@@ -63,12 +67,16 @@ import { SharedWorldService } from './shared-world.service';
     SharedWorldConversationRepository, SharedWorldConversationService, SharedWorldLifecycleRepository, SharedWorldLifecycleService,
     SafetyResponseGateService,
     SharedActivityRepository, SharedActivityProducer, SharedWorldAlertsRepository, SharedWorldAlertsService,
+    // S8A-04 CP3-C: the owner's permissions for their own knowledge (migration 0177), on the caller's own token.
+    SharedWorldPermissionsRepository, SharedWorldPermissionsService,
     ...SHARED_QANDEEL_REPLY_PROVIDERS,
     { provide: SHARED_QANDEEL_REPLY_GENERATOR, useClass: SharedConversationReplyGenerator },
     SharedSemanticFieldService, SharedSemanticPlaceService,
     { provide: SHARED_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredSharedSemanticInterpreter() },
     { provide: SHARED_SPATIAL_PLACER, useFactory: () => createConfiguredSharedSpatialPlacer() },
     { provide: SHARED_KNOWLEDGE_RECALLER, useFactory: () => createConfiguredSharedKnowledgeRecaller() },
+    // S8A-04 CP3: the disclosure judge, or null where DeepSeek may not run (then no personal knowledge is collected).
+    { provide: SHARED_DISCLOSURE_JUDGE, useFactory: () => createConfiguredSharedDisclosureJudge() },
   ],
 })
 export class SharedWorldModule {}

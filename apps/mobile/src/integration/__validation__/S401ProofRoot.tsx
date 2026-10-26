@@ -76,7 +76,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete|enroll-closed|enroll-open|enroll-outdated|enroll-enrolled)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions|knowledge)\/(arrive|seed|grow|correct|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete|enroll-closed|enroll-open|enroll-outdated|enroll-enrolled)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -119,6 +119,7 @@ export function S401ProofRoot() {
       if (match[1] === 'public' && match[2] === 'relation-accept') world.relationAccept();
       if (match[1] === 'public' && match[2] === 'peer-reply') world.peerReply();
       if (match[1] === 'shared-field' && match[2] === 'seed') world.sharedField();
+      if (match[1] === 'knowledge' && (match[2] === 'seed' || match[2] === 'grow' || match[2] === 'correct')) world.knowledge(match[2]);
       if (match[1] === 'introductions' && (match[2] === 'seed-new' || match[2] === 'seed-known' || match[2] === 'seed-mixed' || match[2] === 'seed-portrait' || match[2] === 'close')) {
         world.introductions(match[2]);
         // The entry reads its availability hint when the Personal world is drawn; a seed after launch asks it again.

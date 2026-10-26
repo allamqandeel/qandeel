@@ -18,7 +18,10 @@
  *   - leaving (a human exit right: never behind the governance capability) and ending the World, each behind a calm
  *     confirmation that states the consequence BEFORE the act.
  *
- * Every word is the S4-03 copy module's. Every nested panel returns the screen reader to the row that opened it.
+ *   - S8A-04 CP3-C: «ما سمحت به هنا» / "What you've allowed here" — the reader's OWN permissions for their own knowledge in
+ *     this World (`./permissions`, the CP3 Copy Gate's words).
+ *
+ * Every word is the S4-03 copy module's (CP3-C's section: its own approved module). Every nested panel returns the screen reader to the row that opened it.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Text, TextInput, View, findNodeHandle } from 'react-native';
@@ -26,8 +29,9 @@ import { AccessibilityInfo, Text, TextInput, View, findNodeHandle } from 'react-
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { SharedLifecycleMember, SharedProposal } from '../runtime-entry';
-import { fill } from './copy';
+import { fill, sharedCopy } from './copy';
 import { sharedLifecycleCopy, type SharedLifecycleCopy } from './lifecycle-copy';
+import { SharedPermissionsSection } from './permissions/SharedPermissions';
 import type { SharedManageNotice, SharedWorldController } from './shared-world-controller';
 
 const ROW_START = 24;
@@ -97,11 +101,13 @@ function Action({ label, onPress, palette, language, testID, busy = false, empha
   );
 }
 
-export function SharedManagePage({ controller, language, palette, bottomInset }: {
+export function SharedManagePage({ controller, language, palette, bottomInset, worldName = null }: {
   readonly controller: SharedWorldController;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
   readonly bottomInset: number;
+  /** The World's label as the reader sees it (its committed name, else its members' Names): CP3-C's {world}. */
+  readonly worldName?: string | null;
 }) {
   const copy = sharedLifecycleCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
@@ -251,6 +257,12 @@ export function SharedManagePage({ controller, language, palette, bottomInset }:
           ))}
         </View>
       ) : null}
+
+      {/* S8A-04 CP3-C: «ما سمحت به هنا» — the reader's OWN permissions in this World (nothing when there are none). */}
+      {controller.permissions === null || manage.worldId === null ? null : (
+        <SharedPermissionsSection permissions={controller.permissions} worldId={manage.worldId} language={language} palette={palette}
+          world={data.settings.name ?? worldName ?? sharedCopy(language).sharedWorld} />
+      )}
 
       {/* The current members: removal and sharing earlier messages are proposals about one exact member. */}
       <Heading text={copy.membersHeading} palette={palette} language={language} />

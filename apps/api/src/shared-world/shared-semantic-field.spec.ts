@@ -13,8 +13,10 @@ import {
   decodeSharedSemanticReading, type SharedSemanticInput, type SharedSemanticInterpreter,
 } from './shared-semantic-interpreter';
 import { createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter-provider';
+import { DeepSeekSharedSpatialPlacer } from './deepseek-shared-spatial-placer';
+import { createConfiguredSharedSpatialPlacer } from './shared-social-memory-provider';
 import {
-  FakeSharedSpatialPlacer, SHARED_SPATIAL_PLACEMENT_CONTRACT, UnconfiguredSharedSpatialPlacer, createConfiguredSharedSpatialPlacer, decodeSharedSpatialPlacement,
+  FakeSharedSpatialPlacer, SHARED_SPATIAL_PLACEMENT_CONTRACT, UnconfiguredSharedSpatialPlacer, decodeSharedSpatialPlacement,
   sharedPlacementTargets, type SharedSpatialPlacementInput, type SharedSpatialPlacer,
 } from './shared-spatial-placer';
 import type { SharedWorldRepository } from './shared-world.repository';
@@ -167,7 +169,7 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
       .toEqual({ places: [] });
   });
 
-  it('S8A-04 CP1: binds DeepSeek behind the SYNTHETIC_ONLY gate (a production process refuses every reading); the placer still refuses', async () => {
+  it('S8A-04 CP1: binds DeepSeek behind the SYNTHETIC_ONLY gate (a production process refuses every reading); a production placer refuses', async () => {
     expect(createConfiguredSharedSemanticInterpreter({ NODE_ENV: 'test' })).toBeInstanceOf(FakeSharedSemanticInterpreter);
     const production = createConfiguredSharedSemanticInterpreter({ NODE_ENV: 'production', DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'sk-test' });
     await expect(production.read(input(['a', 'b']), new AbortController().signal)).rejects.toThrow('cannot be selected in production');
@@ -175,6 +177,23 @@ describe('SHARED-VIS-01 — the Shared semantic interpreter (provider-neutral, d
     await expect(undeclared.read(input(['a', 'b']), new AbortController().signal)).rejects.toThrow('SYNTHETIC_ONLY');
     await expect(new UnconfiguredSharedSemanticInterpreter().read()).rejects.toThrow('unavailable');
     expect(createConfiguredSharedSpatialPlacer({ NODE_ENV: 'production' })).toBeInstanceOf(UnconfiguredSharedSpatialPlacer);
+  });
+
+  it('S8A-04 CP2 §7 (2026-10-25): the application binds the DeepSeek placer only where the SYNTHETIC_ONLY gate lets DeepSeek run', async () => {
+    const synthetic = { NODE_ENV: 'development', DEEPSEEK_QUALIFICATION_MODE: 'SYNTHETIC_ONLY', DEEPSEEK_API_KEY: 'sk-test' };
+    expect(createConfiguredSharedSpatialPlacer({ NODE_ENV: 'test' })).toBeInstanceOf(FakeSharedSpatialPlacer);
+    expect(createConfiguredSharedSpatialPlacer(synthetic)).toBeInstanceOf(DeepSeekSharedSpatialPlacer);
+    // Wherever DeepSeek may not run, the refusing placer: the pass then stops before its lease (never a fallback point).
+    for (const refused of [
+      { ...synthetic, NODE_ENV: 'production' },
+      { NODE_ENV: 'development', DEEPSEEK_API_KEY: 'sk-test' },
+      { ...synthetic, DEEPSEEK_QUALIFICATION_MODE: 'REAL_USERS' },
+      { ...synthetic, DEEPSEEK_API_KEY: ' ' },
+      { ...synthetic, SHARED_SPATIAL_PLACEMENT_PROVIDER: 'openai' },
+      { ...synthetic, SHARED_SPATIAL_PLACEMENT_MODEL: 'deepseek-reasoner' },
+      { ...synthetic, SHARED_SPATIAL_PLACEMENT_TIMEOUT_MS: '60000' },
+    ]) expect(createConfiguredSharedSpatialPlacer(refused)).toBeInstanceOf(UnconfiguredSharedSpatialPlacer);
+    await expect(new UnconfiguredSharedSpatialPlacer().place()).rejects.toThrow();
   });
 });
 

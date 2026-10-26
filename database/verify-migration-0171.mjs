@@ -224,7 +224,9 @@ async function verifyCatalog() {
   // value, so a database migrated through the current tree holds ten families (0174's own verifier pins the full list).
   // RE-ANCHORED by S8A-04 CP2 (2026-10-25, amendment §5): migration 0175 adds SHARED_KNOWLEDGE_RECALL and
   // SHARED_SPATIAL_PLACEMENT, so twelve (0175's own verifier pins the full list).
-  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 12);
+  // RE-ANCHORED by S8A-04 CP3 (2026-10-25, Product Owner correction 2): migration 0176 adds SHARED_DISCLOSURE_JUDGE, so
+  // thirteen (0176's own verifier pins the full list).
+  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 13);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_basis_check'), /'MODEL_ASSISTED_CAPTURE'::text/u);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_capture_self_check'), /MODEL_ASSISTED_CAPTURE.*OR \(subject = 'SELF'::text\)/u);
 }

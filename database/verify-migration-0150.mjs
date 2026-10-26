@@ -133,6 +133,10 @@ const ABSORBED = [
   // did and absorbs its 40001 refusals into the bounded STALE answer from a handler that names PT409 too, exactly as v1.
   // 0175 revokes the v1 writer from service_role, so where 0175 is applied v1 is no entry point and v2 stands in its place.
   'complete_shared_semantic_place_v2',
+  // RE-ANCHORED by S8A-04 CP3 (migration 0176, 2026-10-25): the reply commit with consent calls the frozen
+  // shared_private reply commit unchanged, whose own handler absorbs its 40001 into STALE (naming PT409 too); v2 raises
+  // neither itself. Where 0176 is not applied it is no entry point.
+  'complete_shared_world_qandeel_reply_v2',
   'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',
   'accept_my_matching_proposal_v1',
   'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',
@@ -402,7 +406,8 @@ async function verifyGuard(analysis = null) {
   }
   const absorbed = [...entries.values()].filter((e) => e.reachesRetryableRaise && e.retryable.length === 0 && !(e.name in DETERMINISTIC));
   const writerV2 = entries.has('complete_shared_semantic_place_v2');
-  const expectedAbsorbed = ABSORBED.filter((name) => name !== (writerV2 ? 'complete_shared_semantic_place_v1' : 'complete_shared_semantic_place_v2'));
+  const expectedAbsorbed = ABSORBED.filter((name) => name !== (writerV2 ? 'complete_shared_semantic_place_v1' : 'complete_shared_semantic_place_v2'))
+    .filter((name) => name !== 'complete_shared_world_qandeel_reply_v2' || entries.has(name));
   assert.deepEqual(absorbed.map((e) => e.name).sort(), [...expectedAbsorbed].sort(), 'every other entry point that reaches a 40001 absorbs it');
   for (const e of absorbed) assert.ok(e.absorbed.length > 0, `${e.name} names its handler`);
   assert.deepEqual(raiseCensus(a).filter((r) => r.code === '40P01'), [], 'nothing raises 40P01');
