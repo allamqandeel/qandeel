@@ -762,8 +762,13 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     if (publicField && (path === '/public/authoring/relations' || path.startsWith('/public/authoring/relations/'))) {
       if (path === '/public/authoring/relations' && method === 'GET') {
         const own = fixtureEntry(FIXTURE_OWN_EXPERIENCE_ID)!;
-        return json(200, { experiences: [{ id: own.id, meaning: own.meaning }], relations: relations.map((r) => ({
-          relationId: r.relationId, experienceId: r.own, other: { id: r.other, meaning: fixtureEntry(r.other)!.meaning }, state: r.state })) });
+        // S8A-05 CP1: a titled topic is named by its title here too (the relation shape carries the title only).
+        const named = (id: string, meaning: string) => {
+          const title = (compose.titled({ id }) as { title?: string }).title;
+          return title === undefined ? { id, meaning } : { id, meaning, title };
+        };
+        return json(200, { experiences: [named(own.id, own.meaning)], relations: relations.map((r) => ({
+          relationId: r.relationId, experienceId: r.own, other: named(r.other, fixtureEntry(r.other)!.meaning), state: r.state })) });
       }
       if (path === '/public/authoring/relations' && method === 'POST') {
         const body = JSON.parse(init?.body ?? '{}') as { experienceId?: string; otherExperienceId?: string };
@@ -801,7 +806,10 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       // S8A-05 CP1: after public/topics, the four titled fixture Experiences carry their SYNTHETIC title and section.
       if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, { experiences: answer.experiences.map(compose.titled) }) : json(400, {}); }
       if (path === '/public/field/search') {
-        return json(200, { results: fixtureSearch(decodeURIComponent((/(?:^|&)q=([^&]*)/u.exec(query)?.[1] ?? '').replace(/\+/gu, ' '))).results.map(compose.titled) });
+        const param = (name: string) => decodeURIComponent((new RegExp(`(?:^|&)${name}=([^&]*)`, 'u').exec(query)?.[1] ?? '').replace(/\+/gu, ' '));
+        const q = param('q');
+        // S8A-05 CP1: a title matches too, and `&section=` searches inside that section only.
+        return json(200, { results: compose.search(q, param('section') || null, fixtureSearch(q).results, fixtureEntry) });
       }
       const panel = /^\/public\/field\/experiences\/([^/]+)$/u.exec(path);
       if (panel) {

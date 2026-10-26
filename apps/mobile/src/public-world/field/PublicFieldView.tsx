@@ -61,8 +61,9 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   const camera = state.camera;
   const focusId = state.focus?.id ?? null;
   const placed = useMemo(
-    () => (camera === null ? null : placePublicField({ camera, envelope, entries: state.entries, results: state.search.open ? state.search.results : [], focusId })),
-    [camera, envelope, focusId, state.entries, state.search.open, state.search.results],
+    () => (camera === null ? null : placePublicField({ camera, envelope, entries: state.entries, results: state.search.open ? state.search.results : [], focusId,
+      section: state.section.key })),
+    [camera, envelope, focusId, state.entries, state.search.open, state.search.results, state.section.key],
   );
   // The Public field's two camera acts, in ITS controller: one completed drag is one Public pan, one step is one rung.
   const pan = useCallback((translationX: number, translationY: number) => controller.pan(translationX, translationY), [controller]);
@@ -111,7 +112,8 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   // to rest, so a word is never left behind a moving place.
   const labelled = camera === null ? [] : presented.filter((node) => node.selected || (camera.depth === 'MID' && node.presence === 'PLACE'));
   const labels = worldMotion.atRest ? layoutFieldLabels(labelled, presented, envelope, language) : new Map<string, FieldLabel>();
-  const targets = worldMotion.atRest ? presented.filter((node) => node.presence !== 'FIELD') : [];
+  // At FAR a tap discloses the field at MID: a topic receding there (outside the reader's section) is not a target.
+  const targets = worldMotion.atRest ? presented.filter((node) => node.presence !== 'FIELD' && !(camera?.depth === 'FAR' && node.presence === 'RECEDED')) : [];
   const contrast = view.world?.contrast ?? 'standard';
 
   return (

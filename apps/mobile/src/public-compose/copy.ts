@@ -1,21 +1,27 @@
 /**
  * S8A-05 CP1 — the ONE place the words of «اكتب موضوعك» / Write your topic are written: the private topic draft, its
- * editor, the preview with its privacy notes, preparing for publication, returning to the draft, and the names of the
- * twelve sections and «حكايات مفتوحة».
+ * editor and its saving, the preview with its privacy notes, preparing for publication, returning to the draft, the names
+ * of the twelve sections and «حكايات مفتوحة», and the reader's view of one section in the Public field.
  *
  * Fixed Arabic is simplified Modern Standard Arabic and gender-considerate (LANG-01): where a second-person verb would
- * mark gender, the row uses a noun or a passive form instead.
+ * mark gender, the row uses a noun or a passive form instead. The four rows the Product Owner revised are the Owner's own
+ * words, verbatim.
  *
  * Each row carries two statuses, and nothing here is promoted by being shipped. `status` is the Arabic row's; `enStatus`
  * is the English row's:
  *
- *   APPROVED  — an existing Product Owner approval, reused verbatim (its source named on the row);
- *   PROPOSED  — not approved. Every row new in S8A-05 CP1 is PROPOSED until the S8A-05 CP1 Product Copy Gate decides it
- *               (`docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md` §6, Copy Gate).
- *               The section names are the WP1 §2.2 proposal, which named them "final through the Copy Gate".
+ *   APPROVED  — the S8A-05 CP1 Product Copy Gate (Product Owner, 2026-10-26): every Arabic and English row the gate
+ *               presented and the 13 section names, four with the Owner's own Arabic (`privateNote`, `previewHeading`,
+ *               `publicWarning`, and `notOpen` + `draftKept`, the Owner's one text in its two sentences, so that «مسودتك
+ *               محفوظة.» is shown only after the account confirmed the save, as the Owner required) and their English
+ *               adjusted to match, as the Owner asked; or an earlier approval reused verbatim (its source named on the row);
+ *   PROPOSED  — not approved: the rows CP1's review corrections (R2, 2026-10-26) added after that decision — saving the
+ *               draft automatically and the reader's view of one section. They await the Product Owner
+ *               (`docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md` §6).
  *
  * Deliberately absent: any word saying the topic IS published (production publishing is closed until Stage 9 and the
- * honest line says so), any QANDEEL-suggested title or section, a count of readers, and any engineering term.
+ * honest line says so), any QANDEEL-suggested title or section, a count of readers, a rank or popularity, and any
+ * engineering term.
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { PublicTopicPrivacyNote, PublicTopicReadiness, PublicTopicSection } from '../runtime-entry';
@@ -30,49 +36,66 @@ interface Row {
   readonly source: string;
 }
 
-const NEW = 'S8A-05 CP1 (new); PROPOSED — awaiting the S8A-05 CP1 Product Copy Gate';
-const proposed = (ar: string, en: string, source = NEW): Row => ({ ar, en, status: 'PROPOSED', enStatus: 'PROPOSED', source });
-const SECTION = 'S8A-05 WP1 §2.2 section name; PROPOSED — awaiting the S8A-05 CP1 Product Copy Gate';
+const GATE = 'S8A-05 CP1 Product Copy Gate — APPROVED (Product Owner, 2026-10-26)';
+const REVISED = 'S8A-05 CP1 Product Copy Gate — APPROVED with the Product Owner\'s own Arabic (2026-10-26); English adjusted to match, as the Owner asked';
+const SECTION = 'S8A-05 WP1 §2.2 section name — S8A-05 CP1 Product Copy Gate, APPROVED (Product Owner, 2026-10-26)';
+const R2 = 'S8A-05 CP1 R2 (review corrections, new); PROPOSED — awaiting the Product Owner';
+const approved = (ar: string, en: string, source = GATE): Row => ({ ar, en, status: 'APPROVED', enStatus: 'APPROVED', source });
+const proposed = (ar: string, en: string): Row => ({ ar, en, status: 'PROPOSED', enStatus: 'PROPOSED', source: R2 });
 
 export const PUBLIC_COMPOSE_COPY_ROWS = Object.freeze({
-  entry: proposed('موضوع جديد', 'New topic'),
-  draftsHeading: proposed('مسوداتي', 'My drafts'),
-  noDrafts: proposed('لا توجد مسودات بعد.', 'No drafts yet.'),
-  newDraft: proposed('كتابة موضوع جديد', 'Write a new topic'),
-  untitled: proposed('بلا عنوان', 'Untitled'),
-  privateNote: proposed('المسودة محفوظة في الحساب، ولا يراها غير صاحبها.', 'The draft is saved to the account, and only its author can see it.'),
-  titleLabel: proposed('العنوان', 'Title'),
-  titleHint: proposed('من 8 إلى 100 حرف', '8 to 100 characters'),
-  textLabel: proposed('النص', 'Text'),
-  textCount: proposed('{0} من 5000', '{0} of 5,000'),
-  sectionLabel: proposed('القسم', 'Section'),
+  entry: approved('موضوع جديد', 'New topic'),
+  draftsHeading: approved('مسوداتي', 'My drafts'),
+  noDrafts: approved('لا توجد مسودات بعد.', 'No drafts yet.'),
+  newDraft: approved('كتابة موضوع جديد', 'Write a new topic'),
+  untitled: approved('بلا عنوان', 'Untitled'),
+  privateNote: approved('مسوداتك خاصة بيك، ومش ظاهرة لأي حد تاني.', 'Your drafts are private. No one else can see them.', REVISED),
+  titleLabel: approved('العنوان', 'Title'),
+  titleHint: approved('من 8 إلى 100 حرف', '8 to 100 characters'),
+  textLabel: approved('النص', 'Text'),
+  textCount: approved('{0} من 5000', '{0} of 5,000'),
+  sectionLabel: approved('القسم', 'Section'),
   save: { ar: 'حفظ', en: 'Save', status: 'APPROVED', enStatus: 'APPROVED', source: 'S7-02 Product Copy Gate (Arabic 2026-10-19; English 2026-10-20, S7-05 D2)' },
-  saved: proposed('حُفظت المسودة.', 'The draft was saved.'),
-  stale: proposed('تغيّرت هذه المسودة من مكان آخر، فأُعيد تحميلها.', 'This draft changed somewhere else, so it was reloaded.'),
-  limitReached: proposed('بلغت المسودات الحد الأقصى (50).', 'The draft limit (50) has been reached.'),
-  deletionPending: proposed('الحساب قيد الحذف.', 'The account is being deleted.'),
-  invalid: proposed('تعذّر حفظ هذا النص كما هو.', "This text couldn't be saved as it is."),
-  preview: proposed('معاينة', 'Preview'),
-  previewHeading: proposed('هكذا سيظهر الموضوع في العالم العام', 'This is how the topic would appear in Public World'),
-  publicWarning: proposed('كل ما في العنوان والنص سيصبح عامًا يقرؤه الناس.', 'Everything in the title and text would become public for people to read.'),
-  privacyHeading: proposed('قبل النشر', 'Before publishing'),
-  noteContactNumber: proposed('يبدو أن النص يحتوي على رقم هاتف.', 'The text seems to contain a phone number.'),
-  noteEmailAddress: proposed('يبدو أن النص يحتوي على بريد إلكتروني.', 'The text seems to contain an email address.'),
-  noteLink: proposed('النص يحتوي على رابط.', 'The text contains a link.'),
-  noteOwnName: proposed('يبدو أن النص يحتوي على اسم صاحب الحساب.', "The text seems to contain the account holder's name."),
-  noteRealName: proposed('سيظهر الموضوع بالاسم الحقيقي.', 'The topic would appear under the real name.'),
-  titleTooShort: proposed('يحتاج العنوان إلى 8 أحرف على الأقل.', 'The title needs at least 8 characters.'),
-  textRequired: proposed('نص الموضوع مطلوب.', 'The topic needs its text.'),
-  sectionRequired: proposed('اختيار القسم مطلوب.', 'A section needs to be chosen.'),
-  prepare: proposed('تجهيز للنشر', 'Prepare for publishing'),
-  notOpen: proposed('النشر في العالم العام لم يُفتح بعد. المسودة محفوظة كما هي.', "Publishing in Public World isn't open yet. The draft is kept as it is."),
-  preparedState: proposed('مُجهّز للنشر، ولم يُنشر بعد', 'Prepared for publishing, not published yet'),
-  backToDraft: proposed('العودة إلى المسودة', 'Back to the draft'),
-  backToDraftNote: proposed('تُمحى النسخة المجهّزة، وتبقى المسودة.', 'The prepared copy is erased; the draft stays.'),
-  delete: proposed('حذف المسودة', 'Delete draft'),
-  deleteConfirm: proposed('حذف نهائي', 'Delete permanently'),
-  deleteNote: proposed('يُمحى العنوان والنص نهائيًا.', 'The title and text are erased permanently.'),
-  deleted: proposed('حُذفت المسودة.', 'The draft was deleted.'),
+  /** Shown only while the account holds exactly the words shown (`isDraftSaved`). */
+  saved: approved('حُفظت المسودة.', 'The draft was saved.'),
+  saving: proposed('جارٍ حفظ المسودة…', 'Saving the draft…'),
+  saveFailed: proposed('تعذّر حفظ المسودة الآن، وما كُتب ما زال هنا.', "The draft couldn't be saved right now. What was written is still here."),
+  stale: approved('تغيّرت هذه المسودة من مكان آخر، فأُعيد تحميلها.', 'This draft changed somewhere else, so it was reloaded.'),
+  limitReached: approved('بلغت المسودات الحد الأقصى (50).', 'The draft limit (50) has been reached.'),
+  deletionPending: approved('الحساب قيد الحذف.', 'The account is being deleted.'),
+  invalid: approved('تعذّر حفظ هذا النص كما هو.', "This text couldn't be saved as it is."),
+  preview: approved('معاينة', 'Preview'),
+  previewHeading: approved('معاينة الموضوع قبل النشر', 'Preview the topic before publishing', REVISED),
+  publicWarning: approved('عند نشر الموضوع، هيقدر الآخرون يقرؤوا عنوانه ونصه.', 'Once the topic is published, others will be able to read its title and text.', REVISED),
+  privacyHeading: approved('قبل النشر', 'Before publishing'),
+  noteContactNumber: approved('يبدو أن النص يحتوي على رقم هاتف.', 'The text seems to contain a phone number.'),
+  noteEmailAddress: approved('يبدو أن النص يحتوي على بريد إلكتروني.', 'The text seems to contain an email address.'),
+  noteLink: approved('النص يحتوي على رابط.', 'The text contains a link.'),
+  noteOwnName: approved('يبدو أن النص يحتوي على اسم صاحب الحساب.', "The text seems to contain the account holder's name."),
+  noteRealName: approved('سيظهر الموضوع بالاسم الحقيقي.', 'The topic would appear under the real name.'),
+  titleTooShort: approved('يحتاج العنوان إلى 8 أحرف على الأقل.', 'The title needs at least 8 characters.'),
+  textRequired: approved('نص الموضوع مطلوب.', 'The topic needs its text.'),
+  sectionRequired: approved('اختيار القسم مطلوب.', 'A section needs to be chosen.'),
+  prepare: approved('تجهيز للنشر', 'Prepare for publishing'),
+  /** The Owner's text, first sentence: always true when preparing answers that publishing is not open. */
+  notOpen: approved('النشر في العالم العام مش متاح حاليًا.', "Publishing in Public World isn't available right now.", REVISED),
+  /** The Owner's text, second sentence: ONLY when the account confirmed the draft shown (`isDraftSaved`). */
+  draftKept: approved('مسودتك محفوظة.', 'Your draft is saved.', REVISED),
+  preparedState: approved('مُجهّز للنشر، ولم يُنشر بعد', 'Prepared for publishing, not published yet'),
+  backToDraft: approved('العودة إلى المسودة', 'Back to the draft'),
+  backToDraftNote: approved('تُمحى النسخة المجهّزة، وتبقى المسودة.', 'The prepared copy is erased; the draft stays.'),
+  delete: approved('حذف المسودة', 'Delete draft'),
+  deleteConfirm: approved('حذف نهائي', 'Delete permanently'),
+  deleteNote: approved('يُمحى العنوان والنص نهائيًا.', 'The title and text are erased permanently.'),
+  deleted: approved('حُذفت المسودة.', 'The draft was deleted.'),
+  // The reader's view of ONE section of the Public field (WP1 §2.5). No word ranks, counts or calls it a lens.
+  allSections: proposed('كل الأقسام', 'All sections'),
+  sectionsHeading: proposed('الأقسام', 'Sections'),
+  sectionShown: proposed('القسم المعروض: {0}', 'Section shown: {0}'),
+  inSection: proposed('في: {0}', 'In: {0}'),
+  showAllSections: proposed('إظهار كل الأقسام', 'Show all sections'),
+  sectionNear: proposed('من هذا القسم، قريبًا من هنا', 'From this section, near here'),
+  sectionNoneHere: proposed('لا توجد مواضيع من هذا القسم هنا.', 'No topics from this section here.'),
   back: { ar: 'رجوع', en: 'Back', status: 'APPROVED', enStatus: 'APPROVED', source: 'S4-01 Product Copy Gate (reused by S5-02)' },
   retry: { ar: 'إعادة المحاولة', en: 'Try again', status: 'APPROVED', enStatus: 'APPROVED', source: 'S4-01 Product Copy Gate (reused by S5-02)' },
   actionUnavailable: { ar: 'تعذّر ذلك الآن.', en: "That didn't work right now.", status: 'APPROVED', enStatus: 'APPROVED', source: 'S4-01 Product Copy Gate' },
@@ -80,27 +103,30 @@ export const PUBLIC_COMPOSE_COPY_ROWS = Object.freeze({
 
 /** The twelve sections and «حكايات مفتوحة», in the server's display order. */
 export const PUBLIC_SECTION_COPY_ROWS = Object.freeze({
-  love: proposed('الحب والارتباط', 'Love and relationships', SECTION),
-  marriage: proposed('الزواج والطلاق', 'Marriage and divorce', SECTION),
-  family: proposed('الأهل والعائلة', 'Parents and family', SECTION),
-  parenting: proposed('الأبناء والتربية', 'Children and parenting', SECTION),
-  people: proposed('الأصدقاء والناس', 'Friends and people', SECTION),
-  work_money: proposed('العمل والمال', 'Work and money', SECTION),
-  study_future: proposed('الدراسة والمستقبل', 'Study and the future', SECTION),
-  inner_self: proposed('النفس والمشاعر', 'The self and feelings', SECTION),
-  health_body: proposed('الصحة والجسد', 'Health and the body', SECTION),
-  loss_crisis: proposed('الفقد والأزمات', 'Loss and crises', SECTION),
-  faith_meaning: proposed('الإيمان والمعنى', 'Faith and meaning', SECTION),
-  life_changes: proposed('الغربة والتحولات', 'Living abroad and big changes', SECTION),
-  open: proposed('حكايات مفتوحة', 'Open stories', SECTION),
+  love: approved('الحب والارتباط', 'Love and relationships', SECTION),
+  marriage: approved('الزواج والطلاق', 'Marriage and divorce', SECTION),
+  family: approved('الأهل والعائلة', 'Parents and family', SECTION),
+  parenting: approved('الأبناء والتربية', 'Children and parenting', SECTION),
+  people: approved('الأصدقاء والناس', 'Friends and people', SECTION),
+  work_money: approved('العمل والمال', 'Work and money', SECTION),
+  study_future: approved('الدراسة والمستقبل', 'Study and the future', SECTION),
+  inner_self: approved('النفس والمشاعر', 'The self and feelings', SECTION),
+  health_body: approved('الصحة والجسد', 'Health and the body', SECTION),
+  loss_crisis: approved('الفقد والأزمات', 'Loss and crises', SECTION),
+  faith_meaning: approved('الإيمان والمعنى', 'Faith and meaning', SECTION),
+  life_changes: approved('الغربة والتحولات', 'Living abroad and big changes', SECTION),
+  open: approved('حكايات مفتوحة', 'Open stories', SECTION),
 } satisfies Record<PublicTopicSection, Row>);
 
 const ALL: Readonly<Record<string, Row>> = { ...PUBLIC_COMPOSE_COPY_ROWS, ...PUBLIC_SECTION_COPY_ROWS };
+const keysWhere = (test: (row: Row) => boolean) => Object.entries(ALL).filter(([, row]) => test(row)).map(([key]) => key);
 export const PUBLIC_COMPOSE_COPY_GATE = Object.freeze({
-  status: 'S8A-05 CP1 PRODUCT COPY GATE — OPEN — every new Arabic and English row PROPOSED; nothing approved by being shipped',
-  approved: Object.entries(ALL).filter(([, row]) => row.status === 'APPROVED').map(([key]) => key),
-  proposed: Object.entries(ALL).filter(([, row]) => row.status === 'PROPOSED').map(([key]) => key),
-  englishProposed: Object.entries(ALL).filter(([, row]) => row.enStatus === 'PROPOSED').map(([key]) => key),
+  status: 'S8A-05 CP1 PRODUCT COPY GATE — APPROVED by the Product Owner on 2026-10-26 (4 rows with the Owner\'s own Arabic); '
+    + 'the R2 rows added after that decision are PROPOSED; nothing approved by being shipped',
+  approved: keysWhere((row) => row.status === 'APPROVED'),
+  revisedByProductOwner: ['privateNote', 'previewHeading', 'publicWarning', 'notOpen', 'draftKept'],
+  proposed: keysWhere((row) => row.status === 'PROPOSED'),
+  englishProposed: keysWhere((row) => row.enStatus === 'PROPOSED'),
 });
 
 export type PublicComposeCopy = { readonly [K in keyof typeof PUBLIC_COMPOSE_COPY_ROWS]: string } & {

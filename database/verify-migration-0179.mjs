@@ -52,6 +52,7 @@ const COMMANDS = {
   set_own_topic_section_v1: 'uuid, uuid, text',
   read_public_topic_headers_v1: 'uuid[]',
   read_public_topic_title_matches_v1: 'text',
+  read_public_section_topic_matches_v1: 'text, text',
 };
 const INTERNAL = ['reject_compose_history_mutation_v1', 'resolve_topic_freeze_clearance_v1', 'derive_compose_identity_v1',
   'account_deletion_pending_v1', 'public_form_v1', 'draft_readiness_v1', 'privacy_notes_v1', 'prepare_authored_package_v1'];
@@ -85,6 +86,15 @@ const setSection = async (uid, experience, section) => {
 };
 const headers = async (uid, experiences) => { await as(uid); return rows('SELECT * FROM public.read_public_topic_headers_v1($1::uuid[])', [experiences]); };
 const titleMatches = async (uid, query) => { await as(uid); return rows('SELECT * FROM public.read_public_topic_title_matches_v1($1)', [query]); };
+const sectionMatches = async (uid, query, section) => {
+  await as(uid);
+  return rows('SELECT * FROM public.read_public_section_topic_matches_v1($1, $2)', [query, section]).then((r) => r.map((m) => m.experience_id));
+};
+/** The unchanged 0145 search over the same field (meaning, themes and every public text body). */
+const fieldSearch = async (uid, query) => {
+  await as(uid);
+  return rows('SELECT * FROM public.search_public_semantic_field_v1($1)', [query]).then((r) => r.map((m) => m.experience_id));
+};
 
 // ---- the S5-03A / S5-03B paths an authored topic reuses unchanged
 const requestProposal = async (uid, experience) => { await as(uid); return first('SELECT * FROM public.request_own_public_semantic_proposal_v1($1, $2)', [randomUUID(), experience]); };
@@ -173,7 +183,7 @@ async function verifyBoundary() {
       AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2`, [Object.keys(COMMANDS), APP_ROLES, SCHEMA]);
   assert.deepEqual(executable.map((e) => `${e.rolname} ${e.fn}`).sort(),
     Object.keys(COMMANDS).flatMap((n) => [`authenticated public.${n}`, `authenticated ${SCHEMA}.${n}`]).sort(),
-    'B03 authenticated runs the ten commands only; anon and the server channel run nothing; no helper is reachable');
+    'B03 authenticated runs the eleven commands only; anon and the server channel run nothing; no helper is reachable');
   for (const role of ['public', ...APP_ROLES]) {
     assert.equal(await rt.canExecute(role, DISCARD), false, `B03 ${role} must not execute the discard primitive`);
     assert.equal(await rt.canExecute(role, FREEZE_SEAM), false, `B03 ${role} must not execute the freeze seam`);
@@ -463,6 +473,8 @@ async function verifyControlled(f, cw208) {
     // F04 published only through the simulated CW2-08 seam: viewers get the human title and section, not the meaning.
     assert.deepEqual(await headers(f.reader, [f.t1]), [], 'F04 nothing before publication');
     assert.deepEqual(await titleMatches(f.reader, 'المساعدة'), [], 'F04');
+    assert.deepEqual(await sectionMatches(f.reader, f.bodyWord, 'parenting'), [], 'F04 nothing in its section before publication');
+    assert.deepEqual(await fieldSearch(f.reader, f.bodyWord), [], 'F04 nor in the field search');
     await asRole('postgres');
     const [published] = await rt.publishCleared(cw208, f.mohamed, randomUUID(), f.t1, f.t1v);
     assert.equal(published.outcome, 'PUBLISHED', 'fixture: an authored topic publishes through the unchanged frozen path');
@@ -475,6 +487,18 @@ async function verifyControlled(f, cw208) {
     assert.deepEqual((await titleMatches(f.reader, 'المساعدة')).map((r) => [r.experience_id, r.world_x, r.world_y]), [[f.t1, '1200000', '2200000']],
       'F04 title search finds it with its place');
     assert.deepEqual(await headers(f.stranger, [f.t1]).then((r) => r.length), 1, 'F04 any admitted viewer');
+    // F04 SEARCH INSIDE THE TOPIC'S TEXT: a word only the author's text holds finds it, in the field and in its section.
+    assert.deepEqual(await fieldSearch(f.reader, f.bodyWord), [f.t1], 'F04 THE BODY IS SEARCHABLE: the unchanged 0145 search reads the authored text');
+    assert.deepEqual(await sectionMatches(f.reader, f.bodyWord, 'parenting'), [f.t1], 'F04 SEARCH INSIDE ITS SECTION finds the body word');
+    assert.deepEqual(await sectionMatches(f.reader, 'المساعدة', 'parenting'), [f.t1], 'F04 and the title word');
+    assert.deepEqual(await sectionMatches(f.reader, f.bodyWord, 'family'), [], 'F04 another section holds nothing of it');
+    assert.deepEqual(await sectionMatches(f.stranger, f.bodyWord, 'parenting'), [f.t1], 'F04 any admitted viewer');
+    await as(f.reader);
+    for (const bad of [['x', 'politics'], ['x', null], [' x', 'family'], ['', 'family']]) {
+      await rejected(() => q('SELECT * FROM public.read_public_section_topic_matches_v1($1, $2)', bad), ['22023']);
+    }
+    await asRole('anon');
+    await rejected(() => q('SELECT * FROM public.read_public_section_topic_matches_v1($1, $2)', ['x', 'family']), ['42501']);
     await asRole('anon');
     await rejected(() => q('SELECT * FROM public.read_public_topic_headers_v1($1::uuid[])', [[f.t1]]), ['42501']);
     await as(f.reader);
@@ -483,6 +507,8 @@ async function verifyControlled(f, cw208) {
     assert.equal(moved.outcome, 'CHANGED');
     assert.deepEqual([(await field(f.reader)).find((r) => r.experience_id === f.t1)].map((r) => [r.world_x, r.world_y]), [['1200000', '2200000']],
       'F04 a section change after publication moves nothing either');
+    assert.deepEqual([await sectionMatches(f.reader, f.bodyWord, 'family'), await sectionMatches(f.reader, f.bodyWord, 'parenting')], [[f.t1], []],
+      'F04 the section view follows the section at once');
     assert.equal(await discard(f.mohamed, f.t1), 'NOT_DISCARDABLE', 'F04 a published topic is never discarded here (0099 removal owns it)');
 
     // F05 DISCARD a never-published topic: every Public byte, both digests, the title and derived semantics, one instant.
@@ -562,7 +588,8 @@ async function fixture() {
   await q("UPDATE public.users SET name = 'Mohsen Salah', login_id = $2 WHERE id = $1", [f.mohamed, `mohsen_${f.mohamed.slice(0, 8)}`]);
   f.mohamedFirstName = 'Mohsen';
   f.title1 = '  كيف تعلمت أن أطلب المساعدة من أهلي  ';
-  f.body1 = `\n كنت أظن أن طلب المساعدة ضعف، حتى جاء يوم لم أستطع فيه وحدي. ${marker()}\n`;
+  f.bodyWord = marker();
+  f.body1 = `\n كنت أظن أن طلب المساعدة ضعف، حتى جاء يوم لم أستطع فيه وحدي. ${f.bodyWord}\n`;
   f.title2 = `فقدت جدتي هذا الشتاء ${marker()}`;
   f.body2 = `ما زلت أسمع صوتها في المطبخ كل صباح ${marker()}`;
   f.meaning1 = 'Asking family for help after believing it was weakness';

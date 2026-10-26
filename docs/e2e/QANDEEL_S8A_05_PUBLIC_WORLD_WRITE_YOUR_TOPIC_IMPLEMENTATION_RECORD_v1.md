@@ -1,8 +1,8 @@
 # QANDEEL — S8A-05 Public World: «اكتب موضوعك» / Write Your Topic — Implementation Record v1
 
 **Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** only
-**Status:** `CP1 DELIVERED — AT THE S8A-05 CP1 REVIEW GATE — COPY GATE OPEN (every new row PROPOSED) — NOT MERGED / NOT
-DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
+**Status:** `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE APPROVED (Product
+Owner, 2026-10-26; nine R2 rows PROPOSED) — NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
 closed: CP2 – CP4 have not started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
 **Date:** 2026-10-26  
 **Branch / base:** `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`, the merge of PR #358
@@ -35,8 +35,19 @@ need the Product Owner's explicit approval. None is done here. No DeepSeek or ot
 
 The freeze (prepare for publication) is implemented and **closed in production**: its seam answers `NOT_EVALUATED` in every
 environment, so no Public Identity is created and nothing reaches `READY_FOR_REVIEW` outside the controlled verifier. The
-mobile client shows the honest outcome (`PUBLICATION_NOT_OPEN` → «النشر في العالم العام لم يُفتح بعد. المسودة محفوظة كما
-هي.», a PROPOSED row).
+mobile client shows the honest outcome (`PUBLICATION_NOT_OPEN` → the Product Owner's «النشر في العالم العام مش متاح حاليًا.
+مسودتك محفوظة.», whose second sentence appears only while the account has confirmed the draft shown, §6).
+
+### 1.1 R2 — the Product Owner's review corrections (2026-10-26, same pull request)
+
+| PO correction | Done | Where |
+| --- | --- | --- |
+| 1. The API CI failure (`introduction-lifecycle-progressive-disclosure-v1.test.mjs`) caused by a new focused group | Yes | `database/focused-verifiers.json` is back to `main` byte for byte; CI selects 0179 by the generic `migration-0179` selector. No historical contract is touched |
+| 2. Autosave; no text lost on an abrupt exit; an honest «saved» | Yes | `public-compose-controller.ts`: a save 1.2 s after typing rests; one save out at a time, the next at the confirmed revision (never STALE against itself); unsaved words saved at once on Back, on closing the workspace, on retiring the Public area and on leaving the foreground (the runtime's one `ForegroundSignal`); `isDraftSaved` drives «حُفظت المسودة.» / «مسودتك محفوظة.», shown only after the account confirmed exactly the words shown; a failed save says so and keeps the words |
+| 3a. The section view (WP1 §2.5) | Yes | One control in the top band («كل الأقسام ▾», on its own row under the search); the list in the chrome band; topics outside the section recede at every rung (nothing moves, nothing leaves the field, a FAR tap ignores them); search inside the section with «في: …» and ✕; up to three topics of the section nearest the centre, by distance alone; Back closes the list first and releases the section last; every entry starts from every section. The camera glide toward a section (optional in WP1) is not implemented |
+| 3b. Search inside the body | Yes | The 0145 search already reads `public_experience_text_derivative_bodies`, which holds the authored body, so the field search finds a published topic's body (proved in the 0179 verifier F04). New viewer read `read_public_section_topic_matches_v1` searches title, meaning, themes and public text inside one section |
+| 3c. Human titles in relations management | Yes | The relations read merges the title of each own and other topic through the same `read_public_topic_headers_v1`; the strict mobile client accepts exactly one more key, a non-empty `title`; `PublicRelations` names every topic by `publicEntryLabel` |
+| 4. The Copy Gate as an Arabic / English table, nothing APPROVED without approval | Yes | §6; the Product Owner's decision of 2026-10-26 is recorded there |
 
 ## 2. Database — migration `0179_s8a_05_public_authored_topics_v1.sql`
 
@@ -57,8 +68,9 @@ Forward-only; 0001 – 0178 byte-unchanged; not hosted (the next migration is `0
   discard command at the same instant.
 - **Owner commands** (the human from `auth.uid()` only; ten wrappers, `SECURITY INVOKER` → definer): list / read / save /
   delete drafts, preview, freeze, discard, change section; **viewer reads**: `read_public_topic_headers_v1` (title of
-  exactly the visible version + section, ≤ 400 served ids) and `read_public_topic_title_matches_v1` (≤ 20, through the one
-  0145 visibility predicate).
+  exactly the visible version + section, ≤ 400 served ids), `read_public_topic_title_matches_v1` (≤ 20, through the one
+  0145 visibility predicate) and, from R2, `read_public_section_topic_matches_v1` (≤ 20, one section; title, meaning,
+  themes and the public text of the visible version, through the same predicate).
 - **Preview privacy notes** are deterministic (no model, nothing stored) and never block: a phone-like number, an email
   address, a link, the account's own Name while publishing under a Public ID, and appearing under the real Name.
 - **Export My Data** (0168 body re-stated) gains one section, `publicTopicDrafts`.
@@ -73,7 +85,9 @@ Forward-only; 0001 – 0178 byte-unchanged; not hosted (the next migration is `0
   topics/:experienceId/discard`, `POST topics/:experienceId/section` (the others `AUTHENTICATED`).
 - The field, search and panel reads (`PublicFieldService`) merge the human title and section from the two new viewer reads
   (strictly validated: only the ids asked, only known sections, a non-empty title). Search lists title matches first, then
-  meaning matches, deduplicated, at most 20. The 0145 reads are unchanged.
+  meaning matches, deduplicated, at most 20. The 0145 reads are unchanged. R2: `GET /public/field/search` accepts exactly
+  `q` or `q` + `section` (a known section, else 400) and then answers inside that section only; the relations read
+  (`PublicRelationService`) merges the human title of each own and other topic.
 
 ## 4. Mobile (`apps/mobile/src/`)
 
@@ -82,7 +96,12 @@ Forward-only; 0001 – 0178 byte-unchanged; not hosted (the next migration is `0
   `PUBLIC_TOPIC_TITLE_MAX`, `publicEntryLabel`), recorded in its scope census; consumers import only through the barrel.
 - `public-compose/` — `copy.ts` (§6), `public-compose-controller.ts` (screens LIST / EDIT / PREVIEW, one command id per
   act until a definite answer, STALE reloads, save before preview and on Back, discard = «العودة إلى المسودة», delete with
-  confirmation), `PublicComposeWorkspace.tsx`.
+  confirmation; R2: autosave and `isDraftSaved`, §1.1), `PublicComposeWorkspace.tsx` (R2: the save state under the editor).
+- `public-world/field/` — R2: the section view (§1.1): `public-field-controller.ts` (`section` state, `openSections` /
+  `chooseSection` / `closeSections`, Back order), `public-field-projection.ts` (outside the section → `RECEDED`),
+  `public-field-camera.ts` (`nearestOf`), `PublicLivingAnalysis.tsx` (the control, the list, the search scope, the nearby
+  topics), `PublicFieldView.tsx`.
+- `public-authoring/PublicRelations.tsx` and `runtime-entry/public-relation-api.ts` — R2: relations named by title.
 - `public-world/` — the heading's «موضوع جديد» entry (`qandeel-public-compose-entry`), the workspace drawn over the area,
   `compose.retire()` with the area.
 - `runtime-entry/public-field-api.ts` — `title?` / `section?` on a field entry (present only when served);
@@ -106,19 +125,31 @@ Forward-only; 0001 – 0178 byte-unchanged; not hosted (the next migration is `0
 | Frozen contracts and existing tests intact | §7 | PASS, with the recorded baseline exceptions |
 | Arabic / RTL visual check | §8 | see §8 |
 
-## 6. Copy Gate — S8A-05 CP1 Product Copy Gate: `OPEN`
+## 6. Copy Gate — S8A-05 CP1 Product Copy Gate: `APPROVED` (Product Owner, 2026-10-26); nine R2 rows `PROPOSED`
 
-Every new row is `PROPOSED` in Arabic and English; nothing is approved by being shipped. Reused, already approved rows:
-`save` (S7-02), `back`, `retry`, `actionUnavailable` (S4-01), and the publisher display heading reused through `publicAuthoringCopy().shownAs` (S5-01 Product Copy Gate).
+The Product Owner approved every new CP1 row in Arabic and English and the 13 section names on 2026-10-26, with four
+edits in the Owner's own Arabic (★ below). The English of those rows was adjusted to match, as the Owner asked. The Owner's
+publishing-unavailable text «النشر في العالم العام مش متاح حاليًا. مسودتك محفوظة.» is carried as two rows, `notOpen` and
+`draftKept`, because the Owner's condition is that «مسودتك محفوظة» appears **only after the save is confirmed**: the
+mobile client adds `draftKept` only while `isDraftSaved` holds (the account confirmed exactly the words shown, nothing
+typed since, no save out or failed). Without that confirmation the notice is `notOpen` alone. The same rule governs
+`saved`, which is now a save state under the editor, not a one-time notice. The ★ rows use the Owner's colloquial,
+second-person wording verbatim («بيك», «هيقدر»), which departs from the gender-considerate rule the other fixed rows follow;
+this is recorded, not changed.
 
-| Key | Arabic (PROPOSED) | English (PROPOSED) |
+Reused, already approved rows: `save` (S7-02), `back`, `retry`, `actionUnavailable` (S4-01), and the publisher display
+heading reused through `publicAuthoringCopy().shownAs` (S5-01 Product Copy Gate). Status lives on each row in
+`apps/mobile/src/public-compose/copy.ts` (`status` for Arabic, `enStatus` for English); nothing is approved by being
+shipped.
+
+| Key | Arabic (APPROVED) | English (APPROVED) |
 | --- | --- | --- |
 | entry | موضوع جديد | New topic |
 | draftsHeading | مسوداتي | My drafts |
 | noDrafts | لا توجد مسودات بعد. | No drafts yet. |
 | newDraft | كتابة موضوع جديد | Write a new topic |
 | untitled | بلا عنوان | Untitled |
-| privateNote | المسودة محفوظة في الحساب، ولا يراها غير صاحبها. | The draft is saved to the account, and only its author can see it. |
+| privateNote ★ | مسوداتك خاصة بيك، ومش ظاهرة لأي حد تاني. | Your drafts are private. No one else can see them. |
 | titleLabel | العنوان | Title |
 | titleHint | من 8 إلى 100 حرف | 8 to 100 characters |
 | textLabel | النص | Text |
@@ -130,8 +161,8 @@ Every new row is `PROPOSED` in Arabic and English; nothing is approved by being 
 | deletionPending | الحساب قيد الحذف. | The account is being deleted. |
 | invalid | تعذّر حفظ هذا النص كما هو. | This text couldn't be saved as it is. |
 | preview | معاينة | Preview |
-| previewHeading | هكذا سيظهر الموضوع في العالم العام | This is how the topic would appear in Public World |
-| publicWarning | كل ما في العنوان والنص سيصبح عامًا يقرؤه الناس. | Everything in the title and text would become public for people to read. |
+| previewHeading ★ | معاينة الموضوع قبل النشر | Preview the topic before publishing |
+| publicWarning ★ | عند نشر الموضوع، هيقدر الآخرون يقرؤوا عنوانه ونصه. | Once the topic is published, others will be able to read its title and text. |
 | privacyHeading | قبل النشر | Before publishing |
 | noteContactNumber | يبدو أن النص يحتوي على رقم هاتف. | The text seems to contain a phone number. |
 | noteEmailAddress | يبدو أن النص يحتوي على بريد إلكتروني. | The text seems to contain an email address. |
@@ -142,7 +173,8 @@ Every new row is `PROPOSED` in Arabic and English; nothing is approved by being 
 | textRequired | نص الموضوع مطلوب. | The topic needs its text. |
 | sectionRequired | اختيار القسم مطلوب. | A section needs to be chosen. |
 | prepare | تجهيز للنشر | Prepare for publishing |
-| notOpen | النشر في العالم العام لم يُفتح بعد. المسودة محفوظة كما هي. | Publishing in Public World isn't open yet. The draft is kept as it is. |
+| notOpen ★ | النشر في العالم العام مش متاح حاليًا. | Publishing in Public World isn't available right now. |
+| draftKept ★ | مسودتك محفوظة. | Your draft is saved. |
 | preparedState | مُجهّز للنشر، ولم يُنشر بعد | Prepared for publishing, not published yet |
 | backToDraft | العودة إلى المسودة | Back to the draft |
 | backToDraftNote | تُمحى النسخة المجهّزة، وتبقى المسودة. | The prepared copy is erased; the draft stays. |
@@ -151,38 +183,67 @@ Every new row is `PROPOSED` in Arabic and English; nothing is approved by being 
 | deleteNote | يُمحى العنوان والنص نهائيًا. | The title and text are erased permanently. |
 | deleted | حُذفت المسودة. | The draft was deleted. |
 
-Section names (WP1 §2.2, PROPOSED): love الحب والارتباط · marriage الزواج والطلاق · family الأهل والعائلة · parenting
+Section names (WP1 §2.2, APPROVED): love الحب والارتباط · marriage الزواج والطلاق · family الأهل والعائلة · parenting
 الأبناء والتربية · people الأصدقاء والناس · work_money العمل والمال · study_future الدراسة والمستقبل · inner_self النفس
 والمشاعر · health_body الصحة والجسد · loss_crisis الفقد والأزمات · faith_meaning الإيمان والمعنى · life_changes الغربة
 والتحولات · open حكايات مفتوحة (English: Love and relationships · Marriage and divorce · Parents and family · Children and
 parenting · Friends and people · Work and money · Study and the future · The self and feelings · Health and the body · Loss
 and crises · Faith and meaning · Living abroad and big changes · Open stories).
 
+**R2 rows — `PROPOSED`, awaiting the Product Owner.** The review corrections (§1.1) added nine rows after the decision
+above: the draft's save state, and the reader's view of one section. They are shipped as `PROPOSED` in both languages
+and are not approved by this record. No row names a lens, a rank, a count or a popularity.
+
+| Key | Arabic (PROPOSED) | English (PROPOSED) | Where it appears |
+| --- | --- | --- | --- |
+| saving | جارٍ حفظ المسودة… | Saving the draft… | while a save is out |
+| saveFailed | تعذّر حفظ المسودة الآن، وما كُتب ما زال هنا. | The draft couldn't be saved right now. What was written is still here. | a save got no answer; the words stay on screen |
+| allSections | كل الأقسام | All sections | the section control by default, and the first choice of the list |
+| sectionsHeading | الأقسام | Sections | the heading of the list of sections |
+| sectionShown | القسم المعروض: {0} | Section shown: {0} | the section control's spoken name |
+| inSection | في: {0} | In: {0} | beside a search that runs inside one section |
+| showAllSections | إظهار كل الأقسام | Show all sections | the ✕ that searches every section again |
+| sectionNear | من هذا القسم، قريبًا من هنا | From this section, near here | above the (at most three) topics of the section nearest the centre |
+| sectionNoneHere | لا توجد مواضيع من هذا القسم هنا. | No topics from this section here. | when the section has no topic in the field |
+
 ## 7. Verification (all run locally on 2026-10-26; CI results are read on the pull request)
 
 **Real PostgreSQL 17 (local harness, fresh database per verifier).** The new `database/verify-migration-0179.mjs` passes:
 boundary B01 – B10, the second-session restore S01 / S02, private drafts D01 – D08, and — inside one transaction that it
 rolls back, with the freeze seam replaced by a probe and restored byte for byte — the controlled path F01 – F08 and L01 –
-L03 (the CW2-08 seam simulated only there). The focused group `s8a-05-cp1` (23 verifiers) was run: 22 pass; `0130` fails
+L03 (the CW2-08 seam simulated only there). R2 adds to F04: before publication nothing is found; after it the 0145 field
+search finds a word that appears only in the body, the section search finds it (and the title) inside the topic's section
+and nothing in another, a stranger finds it too, invalid input answers `22023`, `anon` is refused (`42501`), and the
+section view follows a section change. CI selects 0179 through the generic `migration-0179` selector; the R1 focused group
+`s8a-05-cp1` was removed (§1.1). At R1 a 23-verifier local run passed 22; `0130` failed
 on one millisecond-scale assertion ("grace period", 7.0000000347 against 7) caused by clock skew between PostgreSQL
 `clock_timestamp()` and Node `Date.now()` on the Windows harness. It fails identically on the `main` state without 0179
 (`SPLIT=0180`), so it is a harness flake, not caused by this change; CI runs it on Linux.
 
 Re-anchored verifiers (validation only, each with a dated comment): `0121` (five lifecycle movers), `0143` B08 (two
 destroyers), `0153` and `0168` (the live Export My Data builder is the 0179 re-statement; it equals the 0168 body plus the
-one marked `publicTopicDrafts` section).
+one marked `publicTopicDrafts` section). On the final R2 tree `0179`, `0121`, `0143`, `0153` and `0168` were run again
+locally and pass. `npm run test:database` (the repository's database contracts, including the focused-verifier ownership
+contracts that the R1 group broke in CI): 1,310 of 1,310 passed.
 
-**API.** Full jest: 294 suites passed, 7,007 tests passed (1 skipped); `nest build` and `tsc` clean. New
-`public-compose.spec.ts` (service validation and outcomes, title merge in field / search / panel, the static boundary and
-the route census). Re-anchored: `public-field.spec.ts` (the viewer RPC list gains the two title reads), `public-relation.spec.ts`
-(its field mock gains them).
+**API.** Full jest on the final R2 tree: 294 suites passed, 7,009 tests passed (1 skipped); `nest build` and `tsc` clean. New
+`public-compose.spec.ts` (service validation and outcomes, title merge in field / search / panel, R2 search inside one
+section, the static boundary and the route census). Re-anchored: `public-field.spec.ts` (the viewer RPC list gains the
+three topic reads), `public-relation.spec.ts` (its field mock gains them; R2: the relations read merges titles).
 
-**Mobile.** `tsc` clean. New `public-compose.test.tsx` (16 tests). Re-anchored: `s5-01-public-world.test.tsx` (the heading's
-buttons now include `qandeel-public-compose-entry`) and the runtime-entry `scope.test.ts` census (the four values above), and the proof-world stand-in guard `s8a-05-proof-compose.test.ts` (new, 2 tests). Full jest: 231 of 233 suites and 2,930 of 2,936 tests passed. The failures in `depth.test` and
+**Mobile.** `tsc` clean; `eslint` 0 errors. New `public-compose.test.tsx` (18 tests; R2: the save state and the Product
+Owner's Copy Gate), R2 `public-compose-autosave.test.ts` (6: debounce, SAVING / FAILED, a save during a save, close,
+retire, leaving the foreground), R2 `public-field-section.test.tsx` (12: projection, controller, surface in Arabic and
+English) and R2 tests in `public-relations.test.tsx` (2: strict titles, titles in the workspace). Re-anchored: `s5-01-public-world.test.tsx` (the heading's
+buttons now include `qandeel-public-compose-entry`, and from R2 `qandeel-public-section-control`) and the runtime-entry
+`scope.test.ts` census (the four values above), and the proof-world stand-in guard `s8a-05-proof-compose.test.ts` (new, 3
+tests). Full jest on the final R2 tree: 233 of 235 suites and 2,953 of 2,959 tests passed. The failures in `depth.test` and
 `w2-account-access` (6 tests) occur identically on the S8A-04 baseline `3987f6a1` (= the tree of `main` `9459245e`) and are
 not caused by this change.
 
-**Root contracts.** `node --test tests/*.test.mjs`: 1,639 of 1,639 passed. `npm run test:task-closure-governance-contract`: 24 of 24 passed.
+**Root contracts.** `node --test tests/*.test.mjs` on the final R2 tree: 1,639 of 1,639 passed (an intermediate R2 run
+caught two frozen S5-03B #13 anchors — a `maxHeight` on the section list and the one-line `placePublicField({ camera,
+envelope,` call — both fixed in the code, the contract unchanged). `npm run test:task-closure-governance-contract`: 24 of 24 passed.
 
 ## 8. Arabic / RTL visual check
 
@@ -223,6 +284,27 @@ The evidence stays untracked, in `.s8a-05-device-proof/` of the main checkout:
 TalkBack was not run. Typing Arabic through `adb` is not possible, so the editor was checked with the seeded Arabic
 draft. No physical device was used.
 
+**R2 device check (2026-10-26, same emulator, rebuilt validation-only APK sha256
+`f0ebb707666d674277c93ca718d8cd242f7f9bc04bfad54d0f99b3475c7d6eb9`).** Seen in Arabic, right to left:
+
+- «كل الأقسام ▾» on its own row at the start, under the search.
+- The list of sections in the chrome band, in catalogue order.
+- «الأهل والعائلة» chosen: the control names it, and «من هذا القسم، قريبًا من هنا» lists «حين خفت أن أخذل أهلي» by
+  its title.
+- A search opened inside the section shows «في: الأهل والعائلة ✕».
+- Back closes the search, and the next Back releases the section.
+- In the editor, one keystroke (a synthetic Latin `x`) was saved by itself, without pressing Save: «حُفظت المسودة.»
+  appeared under the section choices.
+- The preview carries the Owner's «معاينة الموضوع قبل النشر» and «عند نشر الموضوع، هيقدر الآخرون يقرؤوا عنوانه
+  ونصه.», and the drafts note is the Owner's «مسوداتك خاصة بيك، ومش ظاهرة لأي حد تاني.».
+- Preparing shows the Owner's whole text «النشر في العالم العام مش متاح حاليًا. مسودتك محفوظة.».
+
+One defect was found and fixed in this change: the first R2 build put the section control beside the search, which
+cut the search placeholder short («…أو شعور أو»); the control now has its own row and the placeholder reads whole
+again (compare `02-field-titled-ar`). The software-rendered emulator raised one "isn't responding" dialog while the
+world was first drawn (answered with Wait), as in earlier Public device checks. Evidence: `r2-01` … `r2-10` in
+`.s8a-05-device-proof/`. TalkBack was not run.
+
 ## 9. Deliberately not implemented in CP1
 
 - No production publishing, no Public Identity before the gates, no CW2-08 change, no Public discussion or commenting.
@@ -232,10 +314,8 @@ draft. No physical device was used.
   S5-03B path before a discard would leave its integer coordinates (no text); production cannot reach that before Stage 9.
 - No revision of a published topic and no edit note (CP4).
 - No mobile control to change the section of a prepared topic: the command exists in the database and the API only.
-- No section filter or lens on the map (A-1 §3.2 item 4); the section appears as a label in the panel only.
-- Search matches the human title (and, as before, the meaning), not the body.
-- The explicit-relations management list (`PublicRelations`) still names related topics by `meaning`: the relation API
-  carries no title. Its search results use the title.
+- No camera glide toward a chosen section (optional in WP1 §2.5); the field stays where the reader left it.
+- Sections are never separate pages or tabs; no section count, rank or popularity.
 - A legacy topic without a human title keeps showing its `meaning`.
 - Compare-and-set revisions and command identities are used instead of a separate command ledger.
 - No Replay, no Voice, no paid model call, no DeepSeek.

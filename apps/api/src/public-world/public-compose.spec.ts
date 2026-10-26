@@ -143,6 +143,7 @@ describe('S8A-05 CP1 — the human title in the field, search and panel', () => 
       relations: jest.fn(async () => []),
       topicHeaders: jest.fn(async () => [{ experience_id: id(3), title: TITLE, section_key: 'life_changes' }]),
       titleSearch: jest.fn(async () => [entry(3)]),
+      sectionSearch: jest.fn(async () => [entry(3)]),
       ...overrides,
     };
   }
@@ -162,6 +163,19 @@ describe('S8A-05 CP1 — the human title in the field, search and panel', () => 
     expect(results.map((r) => r.id)).toEqual([id(3), id(5)]);
     expect(results[0]).toMatchObject({ title: TITLE });
     expect(repo.titleSearch).toHaveBeenCalledWith(TOKEN, 'جديد');
+  });
+
+  it('searches inside ONE section with { q, section }: one read over title, meaning, themes and text; nothing else asked', async () => {
+    const repo = fieldRepository();
+    const { results } = await field(repo).search(TOKEN, { q: 'جديد', section: 'life_changes' });
+    expect(results).toEqual([{ id: id(3), x: '3', y: '-3', meaning: 'meaning 3', region: 'region.3', title: TITLE, section: 'life_changes' }]);
+    expect(repo.sectionSearch).toHaveBeenCalledWith(TOKEN, 'جديد', 'life_changes');
+    expect(repo.titleSearch).not.toHaveBeenCalled();
+    expect(repo.search).not.toHaveBeenCalled();
+    for (const query of [{ q: 'x', section: 'news' }, { q: 'x', section: '' }, { q: 'x', section: ['love'] }, { section: 'love' },
+      { q: 'x', section: 'love', lens: 'y' }]) {
+      expect(() => field(repo).search(TOKEN, query)).toThrow(BadRequestException);
+    }
   });
 
   it('titles the panel, its nearby and its relations', async () => {

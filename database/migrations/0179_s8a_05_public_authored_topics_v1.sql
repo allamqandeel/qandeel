@@ -38,7 +38,8 @@
 --      discard command at the same instant. MY_WORLD / SHARED_WORLD topics are not discardable here (S8A-05 CP2).
 --   4. Owner commands (authenticated; the human from auth.uid() only): list / read / save / delete drafts, preview,
 --      freeze (gated), discard, change section. Viewer reads (admitted REGISTERED viewers only; visible Experiences
---      only): the human title and section of served topics, and title search.
+--      only): the human title and section of served topics, title search, and search inside one section (title,
+--      meaning, themes and public text).
 --   5. Export My Data (0168 body re-stated) gains ONE section, `publicTopicDrafts`: the reader's own drafts.
 --
 -- ## What is deliberately NOT here
@@ -1201,6 +1202,48 @@ BEGIN
      LIMIT 20;
 END$$;
 
+-- E.3 Search INSIDE ONE SECTION (the reader's section view, WP1 §2.5 item 4): at most 20 served topics of that section
+--     whose human title, reviewed meaning, themes or public text match - the one 0145 document plus the title, built at
+--     read time and stored nowhere, ordered by relevance alone. A section is the reader's choice over the same field: it
+--     ranks nothing and moves nothing. An unknown section is invalid; a retired one still has its topics.
+CREATE FUNCTION public_compose_private.read_public_section_topic_matches_v1(p_query text, p_section_key text)
+RETURNS TABLE (experience_id uuid, world_x text, world_y text, meaning text, semantic_region text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_query tsquery;
+BEGIN
+  IF p_query IS NULL OR p_query <> btrim(p_query) OR length(p_query) NOT BETWEEN 1 AND 120 OR p_query ~ '[\n\r\t]'
+     OR p_section_key IS NULL
+     OR NOT EXISTS (SELECT 1 FROM public_compose_private.sections s WHERE s.section_key = p_section_key) THEN
+    RAISE EXCEPTION 'PUBLIC_COMPOSE_COMMAND_INVALID' USING ERRCODE = '22023';
+  END IF;
+  IF public_spatial_private.admitted_viewer_v1() IS NULL THEN
+    RETURN;
+  END IF;
+  v_query := plainto_tsquery('pg_catalog.simple', p_query);
+  IF numnode(v_query) = 0 THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+    SELECT ve.experience_id, ve.world_x::text, ve.world_y::text, ve.meaning, ve.semantic_region
+      FROM public_spatial_private.field_candidates_v1() c
+      JOIN public_compose_private.experience_sections es ON es.experience_id = c.experience_id AND es.section_key = p_section_key
+      CROSS JOIN LATERAL public_spatial_private.derive_visible_spatial_entry_v1(c.experience_id) ve
+      LEFT JOIN public_compose_private.version_titles t
+        ON t.experience_version_id = ve.experience_version_id AND t.title IS NOT NULL
+      CROSS JOIN LATERAL (
+        SELECT to_tsvector('pg_catalog.simple',
+                 coalesce(t.title, '') || ' ' || ve.meaning || ' ' || array_to_string(ve.primary_themes, ' ') || ' '
+                 || array_to_string(ve.secondary_themes, ' ') || ' '
+                 || coalesce(string_agg(b.public_text_body, ' ' ORDER BY it.item_ordinal), '')) AS document
+          FROM public.publication_package_manifest_items it
+          JOIN public.public_experience_text_derivative_bodies b ON b.package_item_id = it.package_item_id
+         WHERE it.manifest_version_id = ve.manifest_version_id AND it.content_state = 'CONTENT_PRESENT') d
+     WHERE d.document @@ v_query
+     ORDER BY ts_rank(d.document, v_query) DESC, ve.experience_id
+     LIMIT 20;
+END$$;
+
 -- =====================================================================================================================
 -- F. THE EXPOSED WRAPPERS: SECURITY INVOKER, each a one-line call into its definer.
 -- =====================================================================================================================
@@ -1257,6 +1300,11 @@ CREATE FUNCTION public.read_public_topic_title_matches_v1(p_query text)
 RETURNS TABLE (experience_id uuid, world_x text, world_y text, meaning text, semantic_region text)
 LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$
   SELECT * FROM public_compose_private.read_public_topic_title_matches_v1(p_query);
+$$;
+CREATE FUNCTION public.read_public_section_topic_matches_v1(p_query text, p_section_key text)
+RETURNS TABLE (experience_id uuid, world_x text, world_y text, meaning text, semantic_region text)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = '' AS $$
+  SELECT * FROM public_compose_private.read_public_section_topic_matches_v1(p_query, p_section_key);
 $$;
 
 -- =====================================================================================================================
@@ -1653,6 +1701,7 @@ DECLARE
     'public_compose_private.set_own_topic_section_v1(uuid, uuid, text)',
     'public_compose_private.read_public_topic_headers_v1(uuid[])',
     'public_compose_private.read_public_topic_title_matches_v1(text)',
+    'public_compose_private.read_public_section_topic_matches_v1(text, text)',
     'public.list_own_topic_drafts_v1()',
     'public.read_own_topic_draft_v1(uuid)',
     'public.save_own_topic_draft_v1(uuid, bigint, text, text, text)',
@@ -1662,7 +1711,8 @@ DECLARE
     'public.discard_own_unpublished_topic_v1(uuid, uuid)',
     'public.set_own_topic_section_v1(uuid, uuid, text)',
     'public.read_public_topic_headers_v1(uuid[])',
-    'public.read_public_topic_title_matches_v1(text)'];
+    'public.read_public_topic_title_matches_v1(text)',
+    'public.read_public_section_topic_matches_v1(text, text)'];
   v_internal text[] := ARRAY[
     'public.discard_never_published_public_experience_v1(uuid, uuid)',
     'public_compose_private.reject_compose_history_mutation_v1()',

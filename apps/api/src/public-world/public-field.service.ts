@@ -57,7 +57,8 @@ function entriesOf(rows: readonly PublicFieldEntryRow[], max: number): PublicFie
   if (!Array.isArray(rows) || rows.length > max) return unavailable();
   return rows.map(entryOf);
 }
-type Headers = ReadonlyMap<string, { readonly title: string; readonly section: TopicSection | null }>;
+export type TopicHeaders = ReadonlyMap<string, { readonly title: string; readonly section: TopicSection | null }>;
+type Headers = TopicHeaders;
 /** S8A-05 CP1: the 0179 header rows, strictly — only for ids asked, a non-empty title, a known section. */
 function headersOf(rows: readonly PublicTopicHeaderRow[], asked: ReadonlySet<string>): Headers {
   if (!Array.isArray(rows) || rows.length > asked.size) return unavailable();
@@ -75,6 +76,16 @@ function titled(entry: PublicFieldEntryView, headers: Headers): PublicFieldEntry
   const header = headers.get(entry.id);
   if (!header) return entry;
   return header.section ? { ...entry, title: header.title, section: header.section } : { ...entry, title: header.title };
+}
+/**
+ * S8A-05 CP1: the human titles (and sections) of the served topics among `ids`, in one bounded read; no read for no id.
+ * Shared by every Public surface that names an Experience (the field, its search and panel, the relations list), so a
+ * topic is named by its author's title wherever it appears.
+ */
+export async function readTopicHeaders(repository: Pick<PublicFieldRepository, 'topicHeaders'>, token: string, ids: Iterable<string>): Promise<TopicHeaders> {
+  const asked = new Set(ids);
+  if (asked.size === 0) return new Map();
+  return headersOf(await repository.topicHeaders(token, [...asked]), asked);
 }
 
 /**
@@ -101,10 +112,8 @@ export class PublicFieldService {
   }
 
   /** S8A-05 CP1: the human titles of the entries about to be shown, in one bounded read; no read for no entry. */
-  private async titles(token: string, entries: readonly PublicFieldEntryView[]): Promise<Headers> {
-    const asked = new Set(entries.map((entry) => entry.id));
-    if (asked.size === 0) return new Map();
-    return headersOf(await this.repository.topicHeaders(token, [...asked]), asked);
+  private titles(token: string, entries: readonly PublicFieldEntryView[]): Promise<Headers> {
+    return readTopicHeaders(this.repository, token, entries.map((entry) => entry.id));
   }
 
   /** The field inside one world rectangle: exactly { minX, minY, maxX, maxY }, exact integer text, min ≤ max. */
@@ -122,22 +131,31 @@ export class PublicFieldService {
   }
 
   /**
-   * Search over the same field: exactly { q }, one trimmed line of 1–120 characters. S8A-05 CP1: a topic whose human
-   * title matches comes first, then the reviewed-meaning matches, each Experience once, at most 20.
+   * Search over the same field: exactly { q } or { q, section }, q one trimmed line of 1–120 characters. S8A-05 CP1: a
+   * topic whose human title matches comes first, then the matches of the reviewed meaning, themes and public text (the
+   * topic's own words), each Experience once, at most 20. With a section, only that section's topics are searched (title,
+   * meaning, themes and text in one read).
    */
   search(token: string, query: unknown): Promise<PublicFieldSearchView> {
     const value = query && typeof query === 'object' && !Array.isArray(query) ? query as Record<string, unknown> : {};
-    const q = value.q;
-    if (Object.keys(value).length !== 1 || typeof q !== 'string' || q.length < 1 || q.length > PUBLIC_SEARCH_QUERY_MAX || q !== q.trim()
-      || /[\n\r\t]/u.test(q)) invalid();
+    const { q, section } = value;
+    const keys = Object.keys(value);
+    if (keys.length !== (section === undefined ? 1 : 2) || typeof q !== 'string' || q.length < 1 || q.length > PUBLIC_SEARCH_QUERY_MAX || q !== q.trim()
+      || /[\n\r\t]/u.test(q) || (section !== undefined && !(TOPIC_SECTIONS as readonly unknown[]).includes(section))) invalid();
     return this.guard(async () => {
-      const [byTitle, byMeaning] = await Promise.all([this.repository.titleSearch(token, q as string), this.repository.search(token, q as string)]);
-      const seen = new Set<string>();
-      const results = [...entriesOf(byTitle, PUBLIC_SEARCH_MAX), ...entriesOf(byMeaning, PUBLIC_SEARCH_MAX)]
-        .filter((entry) => (seen.has(entry.id) ? false : (seen.add(entry.id), true))).slice(0, PUBLIC_SEARCH_MAX);
+      const results = section !== undefined
+        ? entriesOf(await this.repository.sectionSearch(token, q as string, section as TopicSection), PUBLIC_SEARCH_MAX)
+        : await this.fieldSearch(token, q as string);
       const headers = await this.titles(token, results);
       return { results: results.map((entry) => titled(entry, headers)) };
     });
+  }
+
+  private async fieldSearch(token: string, q: string): Promise<PublicFieldEntryView[]> {
+    const [byTitle, byMeaning] = await Promise.all([this.repository.titleSearch(token, q), this.repository.search(token, q)]);
+    const seen = new Set<string>();
+    return [...entriesOf(byTitle, PUBLIC_SEARCH_MAX), ...entriesOf(byMeaning, PUBLIC_SEARCH_MAX)]
+      .filter((entry) => (seen.has(entry.id) ? false : (seen.add(entry.id), true))).slice(0, PUBLIC_SEARCH_MAX);
   }
 
   /** The contextual panel of one Experience the field showed: its meaning, public display, content and nearby context. */

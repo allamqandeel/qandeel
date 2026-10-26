@@ -659,7 +659,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
           discussion: createPublicDiscussionController({ transport: publicTransport.discussion ?? null, isCurrent, foreground: entry.foreground,
             newId: mintPublicCommandId }) }),
         // S8A-05 CP1 — «اكتب موضوعك»: the reader's own topic drafts, on the same identity-bound Public transport.
-        compose: createPublicComposeController({ transport: publicTransport.compose ?? null, isCurrent, newId: mintPublicCommandId }),
+        compose: createPublicComposeController({ transport: publicTransport.compose ?? null, isCurrent, newId: mintPublicCommandId,
+          // Leaving the foreground saves unsaved words of a draft at once (autosave).
+          foreground: entry.foreground }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,

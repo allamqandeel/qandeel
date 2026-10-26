@@ -9,7 +9,8 @@
  *     exactly the saved words with its deterministic notes, and preparation answering PUBLICATION_NOT_OPEN (production
  *     publishing is closed; nothing here prepares or publishes anything);
  *   - a few fixture Experiences of `s503b-visual-field.ts` carry a SYNTHETIC human title and section, as the 0179 viewer
- *     reads serve them, so the map, search and panel show the title instead of the meaning.
+ *     reads serve them, so the map, search and panel show the title instead of the meaning; search also finds a title,
+ *     and with `&section=` answers inside that section only, as `GET /public/field/search` does.
  *
  * Every title and text below is SYNTHETIC validation text — never Product copy, never a real person.
  */
@@ -45,6 +46,11 @@ export interface S805ProofCompose {
   route(path: string, method: string, body: Json | undefined): Answer | undefined;
   /** The fixture entry with its SYNTHETIC title and section once seeded; unchanged before. */
   titled<T extends { readonly id: string }>(entry: T): T;
+  /**
+   * The search answer: title matches first, then `byMeaning` (the fixture's meaning / theme matches), each once, titled;
+   * with a section, only that section's. `entryOf` reads one fixture entry by id.
+   */
+  search<T extends { readonly id: string }>(q: string, section: string | null, byMeaning: readonly T[], entryOf: (id: string) => T | null): T[];
 }
 
 /** `publisherLabel` answers the label the preview shows: the proof account's current Public ID or Name, as 0179 derives it. */
@@ -67,6 +73,14 @@ export function createS805ProofCompose(publisherLabel: () => { readonly mode: 'P
       drafts.push({ ...SEEDED_DRAFT });
     },
     titled: (entry) => (open && TITLES[entry.id] !== undefined ? { ...entry, ...TITLES[entry.id] } : entry),
+    search(q, section, byMeaning, entryOf) {
+      const needle = q.trim();
+      const byTitle = open ? Object.entries(TITLES).filter(([, t]) => t.title.includes(needle)).map(([id]) => entryOf(id)) : [];
+      const seen = new Set<string>();
+      const all = [...byTitle, ...byMeaning].filter((e): e is NonNullable<typeof e> => e !== null && !seen.has(e.id) && (seen.add(e.id), true));
+      const titled = all.map((e) => (open && TITLES[e.id] !== undefined ? { ...e, ...TITLES[e.id] } : e));
+      return (section === null ? titled : titled.filter((e) => (e as { section?: string }).section === section)).slice(0, 20);
+    },
     route(path, method, body) {
       if (!open || !path.startsWith('/public/compose/')) return undefined;
       if (path === '/public/compose/drafts' && method === 'GET') {

@@ -3,6 +3,8 @@
  * account-bound draft (read back from another session of the same account, compare-and-set, deleted with its words), the
  * preview equal to what was saved with its privacy notes, «تجهيز للنشر» answering honestly that publishing is not open,
  * the way back to the draft from a prepared topic, the strict client, the human title in the field, and the Copy Gate.
+ * R2 (2026-10-26): the draft saves itself and «حُفظت المسودة.» / «مسودتك محفوظة.» are shown only once the account confirmed
+ * exactly the words shown (`public-compose-autosave.test.ts` holds the timing proofs).
  */
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 
@@ -122,7 +124,12 @@ describe.each(['ar', 'en'] as const)('S8A-05 CP1 %s — writing a topic', (langu
     await fireEvent.press(view.getByTestId('qandeel-public-compose-save'));
     await flush();
     expect(t.save).toHaveBeenCalledWith(id(100), 0, TITLE, TEXT, 'life_changes');
-    expect(view.getByTestId('qandeel-public-compose-notice').props.children).toBe(words.saved);
+    // R2: the saved state is the account's confirmation of exactly these words, never a notice of an attempt.
+    expect(view.getByTestId('qandeel-public-compose-save-status').props.children).toBe(words.saved);
+    expect(view.queryByTestId('qandeel-public-compose-notice')).toBeNull();
+    await fireEvent.changeText(view.getByTestId('qandeel-public-compose-text'), `${TEXT}!`);
+    expect(view.queryByTestId('qandeel-public-compose-save-status')).toBeNull();
+    await fireEvent.changeText(view.getByTestId('qandeel-public-compose-text'), TEXT);
 
     // Another session of the same account: the draft is there, whole.
     const other = createPublicComposeController({ transport: t as unknown as PublicComposeTransport, isCurrent: () => true, newId: ids() });
@@ -165,7 +172,8 @@ describe.each(['ar', 'en'] as const)('S8A-05 CP1 %s — writing a topic', (langu
     await fireEvent.press(view.getByTestId('qandeel-public-compose-prepare'));
     await flush();
     expect(t.prepare).toHaveBeenCalledWith(id(100), id(101), 1);
-    expect(view.getByTestId('qandeel-public-compose-notice').props.children).toBe(words.notOpen);
+    // The Product Owner's text: «مسودتك محفوظة.» follows only because the account confirmed this draft.
+    expect(view.getByTestId('qandeel-public-compose-notice').props.children).toBe(`${words.notOpen} ${words.draftKept}`);
     expect(t.rows.get(id(100))).toMatchObject({ state: 'EDITING', title: TITLE });
   });
 
@@ -269,10 +277,28 @@ describe('S8A-05 CP1 — the human title in the field', () => {
 });
 
 describe('S8A-05 CP1 — the Copy Gate', () => {
-  it('is open: every new row PROPOSED in both languages, reused rows approved, thirteen sections in order', () => {
-    expect(PUBLIC_COMPOSE_COPY_GATE.status).toMatch(/OPEN/u);
-    expect(PUBLIC_COMPOSE_COPY_GATE.approved.sort()).toEqual(['actionUnavailable', 'back', 'retry', 'save']);
-    expect(PUBLIC_COMPOSE_COPY_GATE.proposed).toHaveLength(Object.keys(PUBLIC_COMPOSE_COPY_ROWS).length - 4 + 13);
+  const R2 = ['saving', 'saveFailed', 'allSections', 'sectionsHeading', 'sectionShown', 'inSection', 'showAllSections', 'sectionNear', 'sectionNoneHere'];
+
+  it('is approved: every row the gate presented and the thirteen sections; only the R2 rows are PROPOSED, in both languages', () => {
+    expect(PUBLIC_COMPOSE_COPY_GATE.status).toMatch(/APPROVED by the Product Owner on 2026-10-26/u);
+    expect([...PUBLIC_COMPOSE_COPY_GATE.proposed].sort()).toEqual([...R2].sort());
+    expect([...PUBLIC_COMPOSE_COPY_GATE.englishProposed].sort()).toEqual([...R2].sort());
+    expect(PUBLIC_COMPOSE_COPY_GATE.approved).toHaveLength(Object.keys(PUBLIC_COMPOSE_COPY_ROWS).length - R2.length + 13);
+    for (const key of Object.keys(PUBLIC_SECTION_COPY_ROWS)) expect(PUBLIC_COMPOSE_COPY_GATE.approved).toContain(key);
+  });
+
+  it('carries the Product Owner\'s own Arabic verbatim on the revised rows', () => {
+    expect(PUBLIC_COMPOSE_COPY_GATE.revisedByProductOwner).toEqual(['privateNote', 'previewHeading', 'publicWarning', 'notOpen', 'draftKept']);
+    expect(PUBLIC_COMPOSE_COPY_ROWS.privateNote.ar).toBe('مسوداتك خاصة بيك، ومش ظاهرة لأي حد تاني.');
+    expect(PUBLIC_COMPOSE_COPY_ROWS.previewHeading.ar).toBe('معاينة الموضوع قبل النشر');
+    expect(PUBLIC_COMPOSE_COPY_ROWS.publicWarning.ar).toBe('عند نشر الموضوع، هيقدر الآخرون يقرؤوا عنوانه ونصه.');
+    expect(`${PUBLIC_COMPOSE_COPY_ROWS.notOpen.ar} ${PUBLIC_COMPOSE_COPY_ROWS.draftKept.ar}`).toBe('النشر في العالم العام مش متاح حاليًا. مسودتك محفوظة.');
+    for (const key of PUBLIC_COMPOSE_COPY_GATE.revisedByProductOwner) {
+      expect(PUBLIC_COMPOSE_COPY_ROWS[key as keyof typeof PUBLIC_COMPOSE_COPY_ROWS]).toMatchObject({ status: 'APPROVED', enStatus: 'APPROVED' });
+    }
+  });
+
+  it('names the thirteen sections in order', () => {
     expect(Object.keys(PUBLIC_SECTION_COPY_ROWS)).toEqual(['love', 'marriage', 'family', 'parenting', 'people', 'work_money', 'study_future', 'inner_self',
       'health_body', 'loss_crisis', 'faith_meaning', 'life_changes', 'open']);
     expect(PUBLIC_SECTION_COPY_ROWS.open.ar).toBe('حكايات مفتوحة');

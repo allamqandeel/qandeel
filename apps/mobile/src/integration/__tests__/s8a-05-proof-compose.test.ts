@@ -43,4 +43,16 @@ describe('S8A-05 CP1 — the proof world «Write your topic» stand-in', () => {
     const panel = await field.experience(titled[0].id);
     expect(panel.kind === 'ANSWER' && panel.value.kind === 'SERVED' && panel.value.experience.entry.title).toBe(titled[0].title);
   });
+
+  it('R2: search finds a title first and, with a section, answers inside that section only', async () => {
+    const world = createS401ProofWorld('ar');
+    const field = new PublicWorldApiClient({ baseUrl: world.config.apiBaseUrl, fetch: world.fetch }).field;
+    world.publicSeed();
+    world.topics();
+    const all = await field.search('أخذل');
+    expect(all.kind === 'ANSWER' && all.value.map(publicEntryLabel)[0]).toBe('حين خفت أن أخذل أهلي');
+    const inFamily = await field.search('أخذل', 'family');
+    expect(inFamily.kind === 'ANSWER' && inFamily.value.map((e) => [publicEntryLabel(e), e.section])).toEqual([['حين خفت أن أخذل أهلي', 'family']]);
+    expect(await field.search('أخذل', 'love')).toEqual({ kind: 'ANSWER', value: [] });
+  });
 });

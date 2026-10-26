@@ -86,6 +86,19 @@ export function focusField(place: CanonicalWorldAddress): PublicFieldCamera {
 }
 
 /** The place nearest the camera's anchor among those given, by exact distance; null for none. */
+/**
+ * S8A-05 CP1 — the ids of at most `count` places nearest the anchor, nearest first (ties by id): distance on the glass and
+ * nothing else, so nothing about a topic orders it.
+ */
+export function nearestOf(anchor: CanonicalWorldAddress, places: ReadonlyArray<{ readonly id: string; readonly address: CanonicalWorldAddress }>, count: number): string[] {
+  const measured = places.map((place) => {
+    const dx = absBigInt(place.address.x - anchor.x); const dy = absBigInt(place.address.y - anchor.y);
+    return { id: place.id, d: dx * dx + dy * dy };
+  });
+  measured.sort((a, b) => (a.d === b.d ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) : a.d < b.d ? -1 : 1));
+  return measured.slice(0, count).map((place) => place.id);
+}
+
 export function nearestTo(anchor: CanonicalWorldAddress, places: ReadonlyArray<{ readonly id: string; readonly address: CanonicalWorldAddress }>): string | null {
   let best: { id: string; d: bigint } | null = null;
   for (const place of places) {

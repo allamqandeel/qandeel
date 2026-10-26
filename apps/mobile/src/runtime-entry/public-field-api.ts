@@ -153,8 +153,10 @@ export class PublicFieldApiClient {
     return entries ? yes(entries) : NO;
   }
 
-  async search(query: string): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>> {
-    const answer = await this.exchange('GET', `/public/field/search?q=${encodeURIComponent(query)}`);
+  /** S8A-05 CP1: with a section, the search is inside that section only (its title, meaning, themes and text). */
+  async search(query: string, section?: PublicTopicSection): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>> {
+    const within = section === undefined ? '' : `&section=${encodeURIComponent(section)}`;
+    const answer = await this.exchange('GET', `/public/field/search?q=${encodeURIComponent(query)}${within}`);
     if (answer.kind !== 'OK' || !isRecord(answer.body) || !hasExactly(answer.body, ['results'])) return NO;
     const entries = entriesOf(answer.body.results, PUBLIC_SEARCH_MAX);
     return entries ? yes(entries) : NO;

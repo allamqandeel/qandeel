@@ -11,7 +11,10 @@
  *   - a prepared, never-published topic shows that it is not published, and can go back to its draft;
  *   - deleting a draft asks once more, then erases its words.
  *
- * Every word is the S8A-05 CP1 copy module's (PROPOSED until its Copy Gate) or an approved word it reuses.
+ * The editor saves by itself (the controller's autosave) and says only what is known about it: saving, saved — only when
+ * the account holds exactly the words shown — or that the save failed and the words are still here.
+ *
+ * Every word is the S8A-05 CP1 copy module's (its Copy Gate) or an approved word it reuses.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, ScrollView, Text, TextInput, View } from 'react-native';
@@ -22,7 +25,7 @@ import { publicAuthoringCopy } from '../public-authoring';
 import type { PublicTopicPreview } from '../runtime-entry';
 import { PUBLIC_TOPIC_SECTIONS, PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX } from '../runtime-entry';
 import { fillCompose, publicComposeCopy, type PublicComposeCopy } from './copy';
-import type { PublicComposeController, PublicComposeDraft, PublicComposeNotice } from './public-compose-controller';
+import { isDraftSaved, type PublicComposeController, type PublicComposeDraft, type PublicComposeNotice, type PublicComposeState } from './public-compose-controller';
 
 export const PUBLIC_COMPOSE_TEST_ID = 'qandeel-public-compose';
 const ROW_START = 24;
@@ -34,14 +37,14 @@ const FIELD_RADIUS = 12;
 
 interface Shared { readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly copy: PublicComposeCopy; readonly writing: 'rtl' | 'ltr' }
 
-const noticeOf = (copy: PublicComposeCopy, notice: PublicComposeNotice): string | null => {
+const noticeOf = (copy: PublicComposeCopy, notice: PublicComposeNotice, saved: boolean): string | null => {
   switch (notice) {
-    case 'SAVED': return copy.saved;
     case 'STALE': return copy.stale;
     case 'LIMIT_REACHED': return copy.limitReached;
     case 'DELETION_PENDING': return copy.deletionPending;
     case 'INVALID': return copy.invalid;
-    case 'NOT_OPEN': return copy.notOpen;
+    // «مسودتك محفوظة.» only when the account confirmed exactly the draft shown (the Product Owner's condition).
+    case 'NOT_OPEN': return saved ? `${copy.notOpen} ${copy.draftKept}` : copy.notOpen;
     case 'TITLE_TOO_SHORT': return copy.readiness('TITLE_TOO_SHORT');
     case 'TEXT_REQUIRED': return copy.readiness('TEXT_REQUIRED');
     case 'SECTION_REQUIRED': return copy.readiness('SECTION_REQUIRED');
@@ -105,8 +108,22 @@ function Field({ label, hint, value, onChange, max, multiline, s, busy, testID }
   );
 }
 
-function Editor({ draft, s, busy, confirmingDelete, controller }: {
+/** What is known about saving, and nothing more: saving, saved (confirmed exactly), or failed with the words still here. */
+function SaveStatus({ state, s }: { readonly state: PublicComposeState; readonly s: Shared }) {
+  const text = state.saving === 'SAVING' ? s.copy.saving : state.saving === 'FAILED' ? s.copy.saveFailed : isDraftSaved(state) ? s.copy.saved : null;
+  if (text === null) return null;
+  return (
+    <Text testID="qandeel-public-compose-save-status" accessibilityLiveRegion="polite" accessibilityLanguage={s.language}
+      style={{ ...typeStyle('supporting'), color: state.saving === 'FAILED' ? s.palette.primary : s.palette.tertiary, paddingStart: ROW_START, paddingEnd: ROW_END,
+        paddingVertical: 4, writingDirection: s.writing }}>
+      {text}
+    </Text>
+  );
+}
+
+function Editor({ draft, s, busy, confirmingDelete, controller, state }: {
   readonly draft: PublicComposeDraft; readonly s: Shared; readonly busy: boolean; readonly confirmingDelete: boolean; readonly controller: PublicComposeController;
+  readonly state: PublicComposeState;
 }) {
   if (draft.state === 'PREPARED') {
     return (
@@ -141,6 +158,7 @@ function Editor({ draft, s, busy, confirmingDelete, controller }: {
           );
         })}
       </View>
+      <SaveStatus state={state} s={s} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingTop: 12 }}>
         <Action label={s.copy.save} onPress={controller.save} s={s} busy={busy} testID="qandeel-public-compose-save" />
         <Action label={s.copy.preview} onPress={controller.showPreview} s={s} busy={busy} emphasis testID="qandeel-public-compose-preview" />
@@ -195,7 +213,7 @@ export function PublicComposeWorkspace({ controller, language, palette, bottomIn
   const copy = publicComposeCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const s: Shared = { palette, language, copy, writing };
-  const said = noticeOf(copy, state.notice);
+  const said = noticeOf(copy, state.notice, isDraftSaved(state));
   useEffect(() => {
     if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [said]);
@@ -237,7 +255,7 @@ export function PublicComposeWorkspace({ controller, language, palette, bottomIn
             ))}
           </View>
         ) : state.screen === 'EDIT' && state.draft !== null ? (
-          <Editor draft={state.draft} s={s} busy={state.busy} confirmingDelete={state.confirmingDelete} controller={controller} />
+          <Editor draft={state.draft} s={s} busy={state.busy} confirmingDelete={state.confirmingDelete} controller={controller} state={state} />
         ) : state.screen === 'PREVIEW' && state.preview !== null ? (
           <Preview preview={state.preview} s={s} busy={state.busy} controller={controller} shownAs={publicAuthoringCopy(language).shownAs} />
         ) : null}

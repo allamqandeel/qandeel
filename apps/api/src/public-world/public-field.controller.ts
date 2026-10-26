@@ -9,6 +9,7 @@ import { PublicFieldService } from './public-field.service';
  *
  *   GET /public/field?minX&minY&maxX&maxY        the Experiences placed inside one world rectangle (exact integer text)
  *   GET /public/field/search?q                   search over the same field: each result carries its place in it
+ *                                                (S8A-05 CP1: &section=<key> searches inside one section only)
  *   GET /public/field/experiences/:experienceId  the contextual panel of one Experience the field showed
  *
  * No route takes a viewer, an audience, a visibility, a lifecycle, a version, a region, a rank or a coordinate to

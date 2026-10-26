@@ -65,4 +65,9 @@ export class PublicFieldRepository {
   titleSearch(token: string, query: string): Promise<PublicFieldEntryRow[]> {
     return this.rpc<PublicFieldEntryRow>(token, 'read_public_topic_title_matches_v1', { p_query: query });
   }
+
+  /** S8A-05 CP1: served topics of ONE section whose title, meaning, themes or public text match (the 0145 search shape). */
+  sectionSearch(token: string, query: string, section: string): Promise<PublicFieldEntryRow[]> {
+    return this.rpc<PublicFieldEntryRow>(token, 'read_public_section_topic_matches_v1', { p_query: query, p_section_key: section });
+  }
 }

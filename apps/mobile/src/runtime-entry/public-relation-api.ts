@@ -12,13 +12,16 @@
  */
 import type { PublicAuthoringAnswer, PublicAuthoringApiConfig } from './public-authoring-api';
 
-/** One of the reader's own Experiences served in the Public World now, named by its reviewed meaning. */
-export interface PublicRelationExperience { readonly id: string; readonly meaning: string }
-/** One current relation from the reader's side; the other Experience is named by its reviewed meaning only. */
+/**
+ * One of the reader's own Experiences served in the Public World now, named by its reviewed meaning — or, for a topic its
+ * author wrote (S8A-05 CP1), by its human title (`publicEntryLabel`), exactly as the field names it.
+ */
+export interface PublicRelationExperience { readonly id: string; readonly meaning: string; readonly title?: string }
+/** One current relation from the reader's side; the other Experience is named by its reviewed meaning (or human title) only. */
 export interface PublicRelation {
   readonly relationId: string;
   readonly experienceId: string;
-  readonly other: { readonly id: string; readonly meaning: string };
+  readonly other: PublicRelationExperience;
   readonly state: 'ACTIVE' | 'REQUEST_SENT' | 'REQUEST_RECEIVED';
 }
 export interface PublicRelations {
@@ -55,8 +58,11 @@ const ACT_OUTCOMES: Readonly<Record<PublicRelationAct, readonly string[]>> = Obj
 });
 
 function experienceOf(value: unknown): PublicRelationExperience | null {
-  return isRecord(value) && hasExactly(value, ['id', 'meaning']) && isUuid(value.id) && isMeaning(value.meaning)
-    ? Object.freeze({ id: value.id, meaning: value.meaning }) : null;
+  if (!isRecord(value) || !isUuid(value.id) || !isMeaning(value.meaning)) return null;
+  if (hasExactly(value, ['id', 'meaning'])) return Object.freeze({ id: value.id, meaning: value.meaning });
+  // S8A-05 CP1: a titled topic carries exactly one more key, a non-empty title.
+  return hasExactly(value, ['id', 'meaning', 'title']) && isMeaning(value.title)
+    ? Object.freeze({ id: value.id, meaning: value.meaning, title: value.title }) : null;
 }
 
 function relationOf(value: unknown): PublicRelation | null {

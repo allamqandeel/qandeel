@@ -27,7 +27,10 @@ function relationRepository(overrides: Partial<Record<keyof PublicRelationReposi
 }
 // S5-04 re-anchor (validation only): the service now also projects committed facts to Activity through the S5-04 producer.
 const activity = { relationRequested: jest.fn(async () => undefined), relationAccepted: jest.fn(async () => undefined), relationEnded: jest.fn(async () => undefined) };
-const service = (repo = relationRepository()) => new PublicRelationService(repo as unknown as PublicRelationRepository, activity as unknown as PublicActivityProducer);
+// S8A-05 CP1 re-anchor (validation only): the list names a topic by its author's title through the field's header read.
+const noHeaders = (): { topicHeaders: jest.Mock } => ({ topicHeaders: jest.fn(async () => []) });
+const service = (repo = relationRepository(), headers = noHeaders()) => new PublicRelationService(repo as unknown as PublicRelationRepository,
+  activity as unknown as PublicActivityProducer, headers as unknown as PublicFieldRepository);
 
 describe('S5-03C — explicit Public relations, managed by their controllers', () => {
   it('reads the reader\'s own served Experiences and current relations from their side — meanings only, nothing else', async () => {
@@ -47,6 +50,19 @@ describe('S5-03C — explicit Public relations, managed by their controllers', (
     }
     await expect(service(relationRepository({ experiences: jest.fn(async () => { throw new Error('down'); }) })).relations(TOKEN))
       .rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('S8A-05 CP1: names a topic its author wrote by its human title, on both sides, from the served-only header read', async () => {
+    const headers = { topicHeaders: jest.fn(async () => [{ experience_id: OTHER, title: 'How I learned to ask for help', section_key: 'inner_self' },
+      { experience_id: MINE, title: null, section_key: null }]) };
+    const view = await service(relationRepository(), headers).relations(TOKEN);
+    expect(headers.topicHeaders).toHaveBeenCalledWith(TOKEN, [MINE, OTHER]);
+    expect(view.experiences).toEqual([{ id: MINE, meaning: 'Fear for a family' }]);
+    expect(view.relations[0].other).toEqual({ id: OTHER, meaning: 'Courage in small choices', title: 'How I learned to ask for help' });
+    for (const bad of [[{ experience_id: 'guess', title: 't', section_key: null }], [{ experience_id: OTHER, title: '', section_key: null }],
+      [{ experience_id: OTHER, title: 't', section_key: 'politics' }]]) {
+      await expect(service(relationRepository(), { topicHeaders: jest.fn(async () => bad) }).relations(TOKEN)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    }
   });
 
   it('asks for a relation with exactly { commandId, experienceId, otherExperienceId } — never a side, type, strength or text', async () => {

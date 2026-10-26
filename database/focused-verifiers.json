@@ -15,34 +15,6 @@
   ],
   "version": 1,
   "groups": {
-    "s8a-05-cp1": {
-      "title": "S8A-05 CP1 - Write your topic (migration 0179: private topic drafts, the PUBLIC_AUTHORED package, the never-published discard, titles and sections) with the Public, Replay-bridge, lifecycle, export and account-erasure verifiers it re-anchors or must leave unchanged",
-      "verifiers": [
-        "database/verify-migration-0179.mjs",
-        "database/verify-migration-0092.mjs",
-        "database/verify-migration-0093.mjs",
-        "database/verify-migration-0095.mjs",
-        "database/verify-migration-0098.mjs",
-        "database/verify-migration-0099.mjs",
-        "database/verify-migration-0105.mjs",
-        "database/verify-migration-0115.mjs",
-        "database/verify-migration-0119.mjs",
-        "database/verify-migration-0121.mjs",
-        "database/verify-migration-0130.mjs",
-        "database/verify-migration-0132.mjs",
-        "database/verify-migration-0142.mjs",
-        "database/verify-migration-0143.mjs",
-        "database/verify-migration-0144.mjs",
-        "database/verify-migration-0145.mjs",
-        "database/verify-migration-0146.mjs",
-        "database/verify-migration-0147.mjs",
-        "database/verify-migration-0152.mjs",
-        "database/verify-migration-0153.mjs",
-        "database/verify-migration-0164.mjs",
-        "database/verify-migration-0168.mjs",
-        "database/verify-migration-0169.mjs"
-      ]
-    },
     "s8a-04-cp3d-v2": {
       "title": "S8A-04 CP3-D V2 - Trusted Claim Spans (migration 0178, the audience Names read) with every verifier of the S8A-04 CP3 group it must leave unchanged",
       "verifiers": [

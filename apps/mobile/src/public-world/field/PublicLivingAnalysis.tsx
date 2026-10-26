@@ -22,6 +22,11 @@
  * Back is local (see the controller): it is registered only while the panel or the search is open; at the World's
  * root nothing is registered.
  *
+ * S8A-05 CP1 — the reader may look at ONE section of the same field (WP1 §2.5): one small control in the top band names
+ * the section shown («كل الأقسام ▾» by default) and opens their list in the chrome band; choosing one lets the other
+ * topics recede (the field stays where it is), searches inside it (with «في: …» and a way back to every section), and
+ * shows up to three of its topics nearest the centre of the glass. Nothing ranks, counts or moves.
+ *
  * S5-04: the panel carries the Experience's publication date and its ONE dependent Discussion entry («النقاش · n» — the
  * human discussion count only; never QANDEEL's, never a ranking). Opening it draws the discussion in the same chrome band,
  * over the same panel; Back returns to the panel, then the field. Counts never move anything in the field.
@@ -35,8 +40,9 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import { formatDay } from '../../settings/PrivacyDataSection';
 import type { PublicFieldExperience } from '../../runtime-entry';
-import { publicEntryLabel } from '../../runtime-entry';
-import { publicComposeCopy } from '../../public-compose/copy';
+import { PUBLIC_TOPIC_SECTIONS, publicEntryLabel } from '../../runtime-entry';
+import { fillCompose, publicComposeCopy } from '../../public-compose/copy';
+import { nearestOf } from './public-field-camera';
 import { fillDiscussionCopy, publicDiscussionCopy } from './discussion-copy';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
 import { PublicDiscussion } from './PublicDiscussion';
@@ -45,6 +51,8 @@ import { PublicFieldView } from './PublicFieldView';
 
 export const PUBLIC_FIELD_TEST_ID = 'qandeel-public-field';
 export const PUBLIC_BAND_TEST_ID = 'qandeel-public-band';
+/** S8A-05 CP1: the most topics of the chosen section listed near the centre of the glass (WP1 §2.5 item 5). */
+const SECTION_NEAR_MAX = 3;
 /** The band's height before its first measurement: the heading's and the search field's minimum rows. */
 const BAND_SEED_HEIGHT = 48 + 44 + 10;
 
@@ -69,8 +77,8 @@ export function PublicLivingAnalysis({ controller, language, insets, heading }: 
     controller.enter();
   }, [controller]);
 
-  // Local Back: the panel (focus), then the search. At the World's root nothing is registered.
-  const local = state.focus !== null || state.search.open;
+  // Local Back: the section list, the panel (focus), the search, then the chosen section. At the World's root nothing is registered.
+  const local = state.focus !== null || state.search.open || state.section.choosing || state.section.key !== null;
   useEffect(() => {
     if (!local) return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => controller.back());
@@ -87,6 +95,9 @@ export function PublicLivingAnalysis({ controller, language, insets, heading }: 
           content: (
             <PublicBand insets={insets} onHeight={setBandHeight} heading={heading}>
               <SearchRow controller={controller} state={state} copy={copy} language={language} query={query} setQuery={setQuery} />
+              {/* S8A-05 CP1: the section row under the search — the section shown while the search is closed, its scope while open. */}
+              <SectionControl controller={controller} state={state} language={language} />
+              <SearchScope controller={controller} state={state} language={language} />
             </PublicBand>
           ),
           height: bandHeight,
@@ -141,6 +152,43 @@ function SearchRow({ controller, state, copy, language, query, setQuery }: {
 }
 
 /**
+ * S8A-05 CP1 — the one small control naming the section shown; it opens the list of sections. It stands on its own row at
+ * the start, under the search, so the search keeps its whole width (device check, R2); it gives way while a search is open.
+ */
+function SectionControl({ controller, state, language }: { readonly controller: PublicFieldController; readonly state: PublicFieldState; readonly language: ChromeLanguage }) {
+  const palette = usePalette();
+  if (state.search.open) return null;
+  const words = publicComposeCopy(language);
+  const shown = state.section.key === null ? words.allSections : words.section(state.section.key);
+  return (
+    <View style={{ alignItems: 'flex-start', paddingHorizontal: 12 }}>
+      <Control palette={palette} language={language} accessibilityLabel={fillCompose(words.sectionShown, shown)} testID="qandeel-public-section-control"
+        accessibilityState={{ expanded: state.section.choosing, disabled: state.status !== 'READY' }} onPress={() => { Keyboard.dismiss(); controller.openSections(); }}
+        style={{ paddingHorizontal: 10 }}>
+        <Text numberOfLines={1} style={{ ...typeStyle('supporting'), color: state.section.key === null ? palette.restInk : palette.primary }}>{`${shown} ▾`}</Text>
+      </Control>
+    </View>
+  );
+}
+
+/** S8A-05 CP1 — while a search runs inside one section: «في: …» and the way back to every section. */
+function SearchScope({ controller, state, language }: { readonly controller: PublicFieldController; readonly state: PublicFieldState; readonly language: ChromeLanguage }) {
+  const palette = usePalette();
+  if (!state.search.open || state.section.key === null) return null;
+  const words = publicComposeCopy(language);
+  const writing = language === 'ar' ? 'rtl' : 'ltr';
+  return (
+    <View testID="qandeel-public-search-scope" style={{ flexDirection: 'row', alignItems: 'center', columnGap: 4, paddingHorizontal: 16 }}>
+      <Text style={{ ...typeStyle('supporting'), color: palette.secondary, flexShrink: 1, writingDirection: writing }}>{fillCompose(words.inSection, words.section(state.section.key))}</Text>
+      <Control palette={palette} language={language} accessibilityLabel={words.showAllSections} testID="qandeel-public-search-scope-clear"
+        onPress={() => controller.chooseSection(null)} style={{ paddingHorizontal: 12 }}>
+        <Text style={{ ...typeStyle('action'), color: palette.restInk }}>✕</Text>
+      </Control>
+    </View>
+  );
+}
+
+/**
  * The chrome band's content: one thing the field says at a time. The focused Experience's panel; else the open search's
  * results (folded away once a result is chosen, so they never cover the panel); else the field's own state.
  */
@@ -153,7 +201,9 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
   const { search } = state;
   const resultsShown = search.open && state.focus === null && (search.status === 'RESULTS' || search.status === 'NONE' || search.status === 'UNAVAILABLE');
   let content: ReactNode = null;
-  if (state.focus !== null && state.focus.discussion === true && controller.discussion !== null) {
+  if (state.section.choosing) {
+    content = <SectionList controller={controller} state={state} copy={copy} language={language} />;
+  } else if (state.focus !== null && state.focus.discussion === true && controller.discussion !== null) {
     content = <PublicDiscussion controller={controller.discussion} language={language} onBack={() => controller.closeDiscussion()} />;
   } else if (state.focus !== null) {
     content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onFocus={(id) => controller.focus(id)}
@@ -174,6 +224,8 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
         )}
       </View>
     );
+  } else if (state.status === 'READY' && state.section.key !== null && !search.open && state.camera !== null) {
+    content = <SectionNear controller={controller} state={state} language={language} />;
   } else if (state.status === 'UNAVAILABLE') {
     content = (
       <View style={{ alignItems: 'center', rowGap: 12, paddingTop: 12 }}>
@@ -194,6 +246,65 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
   }
   if (content === null) return null;
   return <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: bottomInset + 8 }}>{content}</View>;
+}
+
+/** S8A-05 CP1 — the list of sections («كل الأقسام» first), names only: no count, no order but the catalogue's. */
+function SectionList({ controller, state, copy, language }: {
+  readonly controller: PublicFieldController; readonly state: PublicFieldState; readonly copy: PublicFieldCopy; readonly language: ChromeLanguage;
+}) {
+  const palette = usePalette();
+  const words = publicComposeCopy(language);
+  const writing = language === 'ar' ? 'rtl' : 'ltr';
+  const options: readonly { readonly key: (typeof PUBLIC_TOPIC_SECTIONS)[number] | null; readonly label: string }[] =
+    [{ key: null, label: words.allSections }, ...PUBLIC_TOPIC_SECTIONS.map((key) => ({ key, label: words.section(key) }))];
+  return (
+    <View testID="qandeel-public-sections" style={{ backgroundColor: palette.field, borderRadius: 20, paddingBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 6 }}>
+        <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={() => controller.closeSections()} testID="qandeel-public-sections-back">
+          <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.back}</Text>
+        </Control>
+        <Text accessibilityRole="header" style={{ ...typeStyle('metadata'), color: palette.tertiary, paddingHorizontal: 8, writingDirection: writing }}>{words.sectionsHeading}</Text>
+      </View>
+      {/* The chrome band scrolls what it holds; the list adds no geometry of its own. */}
+      <View accessibilityRole="radiogroup">
+        {options.map((option) => {
+          const chosen = option.key === state.section.key;
+          return (
+            <Pressable key={option.key ?? 'all'} testID={`qandeel-public-section-${option.key ?? 'all'}`} accessibilityRole="radio" accessibilityLabel={option.label}
+              accessibilityLanguage={language} accessibilityState={{ checked: chosen }} onPress={() => controller.chooseSection(option.key)}
+              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 20 }}>
+              <Text style={{ ...typeStyle('body'), color: chosen ? palette.primary : palette.secondary, writingDirection: writing }}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/** S8A-05 CP1 — up to three topics of the chosen section nearest the centre of the glass (by distance alone). */
+function SectionNear({ controller, state, language }: { readonly controller: PublicFieldController; readonly state: PublicFieldState; readonly language: ChromeLanguage }) {
+  const palette = usePalette();
+  const words = publicComposeCopy(language);
+  const writing = language === 'ar' ? 'rtl' : 'ltr';
+  const key = state.section.key;
+  const camera = state.camera;
+  if (key === null || camera === null) return null;
+  const inSection = state.entries.filter((entry) => entry.section === key);
+  const near = nearestOf(camera.anchor, inSection, SECTION_NEAR_MAX).map((id) => inSection.find((entry) => entry.id === id)!);
+  return (
+    <View testID="qandeel-public-section-near" style={{ backgroundColor: palette.field, borderRadius: 16, paddingVertical: 4 }}>
+      <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, paddingHorizontal: 16, paddingTop: 8, writingDirection: writing }}>
+        {near.length > 0 ? words.sectionNear : words.sectionNoneHere}
+      </Text>
+      {near.map((entry) => (
+        <Pressable key={entry.id} testID={`qandeel-public-section-near-${entry.id}`} accessibilityRole="button" accessibilityLabel={publicEntryLabel(entry)}
+          accessibilityLanguage={language} onPress={() => controller.focus(entry.id)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 16 }}>
+          <Text numberOfLines={1} style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{publicEntryLabel(entry)}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
 }
 
 function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion }: {

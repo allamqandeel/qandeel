@@ -75,8 +75,9 @@ PD §23: «لا نريد Tabs كثيرة تجعل العالم مجموعة صف
    chooses from twelve sections plus «حكايات مفتوحة». A section is a reading aid and a label. It is not a hard Category in
    §10's sense: it does not decide, move or bound the topic's place in the semantic field. Placement still comes from the
    published material alone (§22), and a change of section never moves a topic.
-4. **No tabbed world.** Sections are not separate pages or tabs of the world (§23). Whether and how a viewer filters by
-   section is a later presentation decision under the same principle; CP1 shows a section only as a label in the panel.
+4. **No tabbed world.** Sections are not separate pages or tabs of the world (§23). A viewer may look at one section of the
+   same field, by their own choice: the topics outside it recede, nothing moves and nothing leaves the field, and search
+   may run inside it. The section is also shown as a label in the panel.
 5. **QANDEEL never chooses for the person.** QANDEEL does not suggest the title or the section of a directly written topic.
 
 ---
