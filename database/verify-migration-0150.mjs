@@ -137,6 +137,11 @@ const ABSORBED = [
   // shared_private reply commit unchanged, whose own handler absorbs its 40001 into STALE (naming PT409 too); v2 raises
   // neither itself. Where 0176 is not applied it is no entry point.
   'complete_shared_world_qandeel_reply_v2',
+  // RE-ANCHORED by S8A-05 CP1 (migration 0179, 2026-10-26): the topic freeze reaches the frozen authoring cores
+  // (ensure_public_identity_v1 through the start, and the ready commit), whose 40001 refusals its one block handler
+  // absorbs into the bounded NOT_PREPARED answer, naming PT409 too and rolling back every write of the block; it raises
+  // neither itself.
+  'freeze_own_topic_draft_v1',
   'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',
   'accept_my_matching_proposal_v1',
   'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',
@@ -153,11 +158,6 @@ const ABSORBED = [
   // contract); each answers one bounded word from a handler that names PT409 too, and raises neither itself.
   'create_my_replay_draft_v1', 'revise_my_replay_draft_v1', 'prepare_my_replay_preview_v1',
   'finalize_my_replay_version_v1', 'reopen_my_replay_for_revision_v1',
-  // RE-ANCHORED by S8A-05 CP1 (migration 0179, 2026-10-26): the topic freeze reaches the frozen authoring cores
-  // (ensure_public_identity_v1 through the start, and the ready commit), whose 40001 refusals its one block handler
-  // absorbs into the bounded NOT_PREPARED answer, naming PT409 too and rolling back every write of the block; it raises
-  // neither itself.
-  'freeze_own_topic_draft_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1',
