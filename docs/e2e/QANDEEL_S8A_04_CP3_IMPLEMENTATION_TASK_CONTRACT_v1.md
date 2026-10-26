@@ -1,11 +1,11 @@
 # S8A-04 / CP3 — Personal Knowledge in Shared World — IMPLEMENTATION TASK CONTRACT
 
-**Status:** `TASK CONTRACT — WRITTEN UNDER THE PRODUCT OWNER'S FINAL IMPLEMENTATION AUTHORIZATION (2026-10-25) · CP3-A
-DELIVERED LOCALLY · CP3-B DELIVERED LOCALLY · CP3-C DELIVERED LOCALLY (CP3-C authorization 2026-10-25; D-1 APPROVED WITH
-CONDITIONS; COPY GATE APPROVED 6/6) · CP3-D V1 RUN ONCE (D-3) AND NOT ACCEPTED · CP3-D V2 — CONTROLLED AMENDMENT R4,
-TRUSTED CLAIM SPANS — IMPLEMENTED LOCALLY UNDER THE PRODUCT OWNER'S CP3-D V2 FINAL IMPLEMENTATION CONTRACT (2026-10-26),
-FREE PROOFS ONLY, NOT PUSHED; CG-6a′ / CG-6b′ APPROVED AT D-6 (2026-10-26); CP3-D V2 NOT RUN (no budget) · BRANCH
-s8a/s8a-04-cp3, DRAFT PR #358 — NOT MERGED` · **Date:** 2026-10-25 (R4: 2026-10-26)
+**Status:** `S8A-04 CLOSED / READY FOR PO MERGE DECISION (2026-10-26) · TASK CONTRACT WRITTEN UNDER THE PRODUCT OWNER'S
+FINAL IMPLEMENTATION AUTHORIZATION (2026-10-25) · CP3-A, CP3-B AND CP3-C DELIVERED (CP3-C authorization 2026-10-25; D-1
+APPROVED WITH CONDITIONS; COPY GATE APPROVED 6/6) · CP3-D V1 RUN ONCE (D-3) AND NOT ACCEPTED · CP3-D V2 — CONTROLLED
+AMENDMENT R4, TRUSTED CLAIM SPANS — DELIVERED; CG-6a′ / CG-6b′ APPROVED AT D-6 · T-D2 TIER 1 RUN ONCE (D-7) AND NOT
+ACCEPTED, TIER 2 NOT RUN · PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH (D-9, §6) · BRANCH s8a/s8a-04-cp3,
+DRAFT PR #358 — NOT MERGED; EFFECTIVE ON ITS MERGE` · **Date:** 2026-10-25 (R4: 2026-10-26; closure: 2026-10-26)
 **Design authority:** [CP3 Controlled Amendment v1.0](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)
 (R3, approved for implementation with two binding corrections, recorded in its §10; CP3-C's decisions and record in
 its §10.5 – §10.6). This contract creates no Product
@@ -20,7 +20,7 @@ before (§8).
 | CP3-B | `apps/api/src/connected-worlds/member-knowledge/` (collector, item grant resolver, source-state resolver, Disclosure Authorization evaluator, the I-03G authorized-disclosure lane, disclosure revalidator, lane readiness); `shared-world/deepseek-shared-disclosure-judge.ts`, `shared-disclosure-judge-provider.ts`, `shared-member-knowledge-texts.ts`; reply plumbing in `shared-qandeel-reply.service.ts` and the generator; AI-COST-01 family `SHARED_DISCLOSURE_JUDGE`; the free suites and the integrated proof `scripts/s8a-04/cp3-*` | delivered locally |
 | CP3-C | migration `0177_s8a_04_shared_knowledge_owner_surface_v2.sql` (the owner's v2 read and commands: names, an opaque audience reference, no user id; the v1 id-carrying surface retired for a person) and `database/verify-migration-0177.mjs`; the owner's four API routes (`shared-world-permissions.{repository,service}.ts`); the mobile surfaces in `apps/mobile/src/shared-world/permissions/` (CG-1 request pinned in the World's conversation screen; CG-3 – CG-5 in Manage World); scenario C and the Activity scenario A of the integrated proof; the emulator check in Arabic and English | delivered locally |
 | CP3-D | V1: the preregistered judge evaluation (§5, T-D) | run once (D-3), **NOT ACCEPTED** (amendment §11.0) |
-| CP3-D V2 | Controlled Amendment R4 — Trusted Claim Spans (amendment §11): migration `0178_s8a_04_shared_audience_names_v1.sql` + `database/verify-migration-0178.mjs` (the audience Names read; service_role only; read-only); `member-knowledge/shared-claim-spans.ts` (pure); the lane's `authorize` → `claims` → `readiness` path; the reply service (claim refs, the rendered text committed, per-item cooldown); the V2 check adapter (one call per reply, opaque ids) and its test checker; CG-6a′ / CG-6b′; the integrated proof's V2 stand-in; the free cost rehearsal `scripts/s8a-04/cp3d-v2-cost-rehearsal.ts`; then the two-tier evaluation (T-D2) | implemented locally, free proofs only; T-D2 not run, no budget |
+| CP3-D V2 | Controlled Amendment R4 — Trusted Claim Spans (amendment §11): migration `0178_s8a_04_shared_audience_names_v1.sql` + `database/verify-migration-0178.mjs` (the audience Names read; service_role only; read-only); `member-knowledge/shared-claim-spans.ts` (pure); the lane's `authorize` → `claims` → `readiness` path; the reply service (claim refs, the rendered text committed, per-item cooldown); the V2 check adapter (one call per reply, opaque ids) and its test checker; CG-6a′ / CG-6b′; the integrated proof's V2 stand-in; the free cost rehearsal `scripts/s8a-04/cp3d-v2-cost-rehearsal.ts`; then the two-tier evaluation (T-D2) | delivered (Draft PR #358); T-D2 Tier 1 run once and **NOT ACCEPTED**, Tier 2 NOT RUN; closed under the Product Owner's exception (§6, D-9) |
 
 **Out of scope:** the relevance model (removed, amendment §10.1); Public World and Matching; the graphics engine; CP2, round
 20 and Future Improvement 011 (not reopened); Stage 9 economics, Credits, usage budget and launch gates; any hosted
@@ -70,11 +70,21 @@ database; any real user's data; SYNTHETIC_ONLY (unchanged).
 | T-B2 | the integrated proof `node scripts/s8a-04/cp3-launch.mjs --simulate=<tag>` (and `--dry`) | free |
 | T-C | the Copy Gate (six texts) closed by the Product Owner (CLOSED 6/6); `verify-migration-0177.mjs`; the integrated proof's scenarios C and A; the emulator check (AR, EN) | free |
 | T-D | CP3-D V1: 120 preregistered synthetic cases (30 natural mentions, 15 influenced advice, 75 must-block); accept only with 0 / 75 misses, ≤ 3 / 45 false blocks, ≤ 2 malformed; any miss rejects the policy | run once (USD 0.0181 at peak): **NOT ACCEPTED** — 3 / 75 misses, 7 / 45 false blocks, 0 invalid |
-| T-D2 | CP3-D V2 (amendment §11.6): Tier 1 — 150 checks (90 block, 60 allow): 0 leaks, false blocks ≤ 3 / 60, invalid ≤ 2 / 150; Tier 2 — 60 end-to-end cases (40 relevant, 20 boundary): 0 unauthorized or misattributed, useful use ≥ 32 / 40, unjustified blocks ≤ 2 / 40, blind rating not worse ≥ 16 / 20; definitions, cases and SHA fixed before any paid call | free rehearsal (§8): expected ≈ USD 0.12, pessimistic ≈ USD 0.24, guard worst-case reservation ≈ USD 0.67 for both tiers; **not authorized** — budget approval first |
+| T-D2 | CP3-D V2 (amendment §11.6): Tier 1 — 150 checks (90 block, 60 allow): 0 leaks, false blocks ≤ 3 / 60, invalid ≤ 2 / 150; Tier 2 — 60 end-to-end cases (40 relevant, 20 boundary): 0 unauthorized or misattributed, useful use ≥ 32 / 40, unjustified blocks ≤ 2 / 40, blind rating not worse ≥ 16 / 20; definitions, cases and SHA fixed before any paid call | free rehearsal (§8): expected ≈ USD 0.12, pessimistic ≈ USD 0.24, guard worst-case reservation ≈ USD 0.67 for both tiers. D-7 approved (round 23: 150 calls / USD 0.08; round 24: 145 calls / USD 0.17). **Tier 1 run once (USD 0.0177 at peak): NOT ACCEPTED — original criteria failed**: leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150 (amendment §11.8). **Tier 2: NOT RUN — deferred by explicit Product Owner decision** (round 24 unspent) |
 
 ## 6. Close and merge conditions
 - CP3 closes only when T-A to T-D pass, the Copy Gate is closed, CP3-C's device check is recorded, and the S8A-04 BG-08 /
   BG-09 closure is made in the same change (the amendment's banner to its final state; `QAN-BL-CW-02` disposed).
+- **Controlled exception (D-9, the Product Owner, 2026-10-26; amendment §11.9):** T-D and T-D2 did not pass.
+  - T-D (V1) is superseded by R4 (D-5).
+  - For T-D2, its acceptance condition is replaced, **for this step only**, by the Product Owner's decision
+    `PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH`.
+  - The original result stays NOT ACCEPTED, and the historical criterion is not changed. The Foundation Freeze is not
+    changed.
+  - The exception removes no security, privacy or deployment gate, and it authorizes no real data (`SYNTHETIC_ONLY`,
+    `QAN-BL-AI-01`).
+  - The T-D2 failure alone does not block the merge or the first launch.
+  - The probabilistic disclosure and attribution errors remain. They are Future Improvements 012 – 016.
 - One PR for S8A-04 CP3, opened only on the Product Owner's instruction; merged only on the Product Owner's explicit
   order, on a green exact head.
 
@@ -92,8 +102,18 @@ database; any real user's data; SYNTHETIC_ONLY (unchanged).
   Owner's refined wording on uncertainty). Applied to `shared-member-knowledge-texts.ts` only. Verified (free): `tsc`; the
   CP3 suites 167 / 167; AI-COST-01 76 / 76 (its adapter pin unchanged; the policy reference follows the text);
   `test:task-closure-governance-contract` 24 / 24; the integrated proof `--simulate=d6` 130 / 130, nothing sent.
-- **D-7** Approve the CP3-D V2 preregistration (Tier 1 / Tier 2 definitions, cases and SHA) and its budget. — **OPEN**.
-- **D-8** Push of the R4 commits to Draft PR #358 and the CI run (the plan in §8). — **OPEN**.
+- **D-7** Approve the CP3-D V2 preregistration (Tier 1 / Tier 2 definitions, cases and SHA) and its budget. — **APPROVED**
+  (2026-10-26, with the CI fix), and Tier 1 run once: **NOT ACCEPTED**. Tier 2 was not run (amendment §11.8).
+- **D-8** Push of the R4 commits to Draft PR #358 and the CI run (the plan in §8). — **DONE**. The push was approved on
+  2026-10-26 for independent review (`064feab1..80c2e527`). The CI fix and the harness followed (`80c2e527..06de0f1b`).
+  PR #358 stays Draft.
+- **D-9** The CP3-D V2 outcome. — **PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH** (2026-10-26; §6,
+  amendment §11.9):
+  - accept the known limits;
+  - record the improvements as Future Improvements 012 – 016;
+  - do not hold the merge on this evaluation's results alone;
+  - no rerun, no Tier 2 and no paid call.
+- **D-10** Merge. — **OPEN**: only on the Product Owner's explicit order.
 
 ## 8. Verification record (2026-10-25, local, free)
 - `verify-migration-0176.mjs`: passed on the local PostgreSQL 17 cluster; `verify-migration-0150.mjs`: passed after the
@@ -206,3 +226,44 @@ database; any real user's data; SYNTHETIC_ONLY (unchanged).
   the re-anchored 0176 step and the whole API suite; the focused database gate can select `s8a-04-cp3d-v2`; Mobile CI also runs
   (the root `package.json` and `api-ci.yml` are in its triggers) although R4 changes no mobile file, and its Android job stays
   under the recorded PO waiver (`QAN-BL-CI-03`, at the CP3 closure); no merge without the Product Owner's order.
+
+### 8.1 D-7, the Product Owner's D-9 decision and the S8A-04 closure (2026-10-26)
+- **CI fix (`f762044c`, test only):**
+  - On `80c2e527`, verify-api failed the database contract
+    `database/tests/shared-world-material-commit-owner-deletion-v1.test.mjs` ("the evidence binder is imported by
+    nothing" outside `material-commit/`).
+  - The claim-spans spec moved under `material-commit/`.
+  - Verified locally: spec 67 / 67, the contract 31 / 31, `tsc` clean.
+- **D-7 harness (`06de0f1b`):**
+  - `scripts/s8a-04/cp3d-v2/`, with the frozen preregistration and the independent sets and their reviews;
+  - guard rounds 23 / 24 unlocked at the approved caps (only that hunk of the guard committed).
+  - Free runs before the paid one: the pre-flight (exact request bytes) and the zero-cost simulated runs of both tiers.
+- **Tier 1 live (round 23), once:** NOT ACCEPTED (amendment §11.8). Ledger sound, USD 0.0177 at peak. The evidence is kept
+  unmodified and uncommitted, with its SHA-256 in §11.8. Tier 2 not run.
+- **D-9 (the Product Owner):** `PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH`.
+  - It is recorded in §6 and amendment §11.9.
+  - Future Improvements 012 – 016 were appended to `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`. Items
+    001 – 011 are unchanged, and every other part of the file is byte-identical. Word opens and renders it.
+- **CI on `06de0f1b` (no rerun): all green.**
+  - API CI run `40269916625`: the change-aware plan and verify-api.
+  - focused-verification.
+  - Mobile CI run `40269916729`:
+    - the fast mobile gate;
+    - both native build producers;
+    - the Android API 36 emulator boot smoke;
+    - the iOS boot smoke;
+    - Validation evidence (VAL-01).
+- **Android:** the record `PO-WAIVED: GITHUB_ANDROID_EMULATOR_INFRASTRUCTURE` (the Product Owner, 2026-10-25) stays as
+  decided. Earlier heads failed the API 36 emulator on runner disk (the data partition), and the Product Owner stopped all
+  Android CI fixes. The infrastructure item is admitted here as `QAN-BL-CI-03`, owner `CI-ANDROID-01` (backlog §7). The
+  waiver is not merge approval.
+- **Closing change:** documentation only. It records the risk-acceptance decision and is not a test fix.
+  - It covers this contract, the amendment §11.8 – §11.10, the backlog (`QAN-BL-CW-02` tombstoned, `QAN-BL-CI-03`
+    admitted, Future Improvements 012 – 016 checked and not admitted), the four locators and the Future Improvements
+    file.
+  - Verified (free, local):
+    - `test:task-closure-governance-contract` 24 / 24;
+    - the 31 root contracts that read the changed documents 555 / 555;
+    - `database/tests/replay-distribution-reconciliation-closure-v1.test.mjs` 15 / 15;
+    - the §4 index recounted mechanically: 88 items, 42 / 4 / 9 / 33, 51 / 35 / 2.
+  - No production code, CG text, migration, guard or harness change. No paid call.

@@ -1,11 +1,12 @@
 # QANDEEL — S8A-04 CP3 — Personal Knowledge in Shared World — Controlled Amendment v1.0
 
-**Status:** `R3 APPROVED FOR IMPLEMENTATION BY THE PRODUCT OWNER (2026-10-25) WITH TWO BINDING CORRECTIONS (§10) — CP3-A,
-CP3-B AND CP3-C IMPLEMENTED ON BRANCH s8a/s8a-04-cp3 (DRAFT PR #358, NOT MERGED) — CP3-D V1 RUN ONCE AND NOT ACCEPTED
-(§11.0) — CONTROLLED AMENDMENT R4 (TRUSTED CLAIM SPANS, §11) IMPLEMENTED LOCALLY UNDER THE PRODUCT OWNER'S CP3-D V2 FINAL
-IMPLEMENTATION CONTRACT (2026-10-26), FREE PROOFS ONLY, NOT PUSHED — CP3-D V2 NOT RUN (NO BUDGET) — COPY GATE: CG-1 – CG-5
-AND THE V1 CG-6a / CG-6b APPROVED 6/6 (2026-10-25); CG-6a′ / CG-6b′ APPROVED AT D-6 (2026-10-26; CG-6b′ WITH EDITS A AND B) — D-1 APPROVED WITH CONDITIONS
-(§10.5) — 0176, 0177 AND 0178 NOT APPLIED TO ANY HOSTED DATABASE`. §10 binds over every earlier section it names; §11
+**Status:** `S8A-04 CLOSED / READY FOR PO MERGE DECISION (2026-10-26; §11.10) — EFFECTIVE ON THE MERGE OF DRAFT PR #358,
+NOT MERGED — R3 APPROVED FOR IMPLEMENTATION BY THE PRODUCT OWNER (2026-10-25) WITH TWO BINDING CORRECTIONS (§10) — CP3-A,
+CP3-B, CP3-C AND CONTROLLED AMENDMENT R4 (TRUSTED CLAIM SPANS, §11) IMPLEMENTED ON BRANCH s8a/s8a-04-cp3 — CP3-D V1 RUN
+ONCE AND NOT ACCEPTED (§11.0) — CP3-D V2: TIER 1 RUN ONCE AND NOT ACCEPTED, TIER 2 NOT RUN (§11.8) — PO-ACCEPTED-KNOWN-RISK
+— DEFERRED UNTIL AFTER FIRST LAUNCH (§11.9) — COPY GATE: CG-1 – CG-5 AND THE V1 CG-6a / CG-6b APPROVED 6/6 (2026-10-25);
+CG-6a′ / CG-6b′ APPROVED AT D-6 (2026-10-26; CG-6b′ WITH EDITS A AND B) — D-1 APPROVED WITH CONDITIONS (§10.5) — 0176,
+0177 AND 0178 NOT APPLIED TO ANY HOSTED DATABASE — SYNTHETIC_ONLY UNCHANGED`. §10 binds over every earlier section it names; §11
 (R4) binds over exactly the passages it names. Scope, gates and closure conditions: the Task Contract
 `docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md`.
 
@@ -557,7 +558,7 @@ record. Model-facing only (no user sees them); English, as CG-6 was. The check's
   missing, extra, malformed, mismatched, not copied exactly, late or failed is UNRESOLVED and withholds the reply; only the
   checker's silence lets a reply through (§11.4).
 
-### 11.6 R4-6 — CP3-D V2 acceptance (proposed by the Product Owner; NOT RUN, no budget)
+### 11.6 R4-6 — CP3-D V2 acceptance (proposed by the Product Owner; Tier 1 run once and NOT ACCEPTED, Tier 2 NOT RUN — §11.8; the Product Owner's exception, §11.9)
 | Tier | Cases | Accept |
 |---|---|---|
 | 1 — the checker over fixed marked replies | 150: 90 must-block, 60 must-allow | 0 leaks; false blocks ≤ 3 / 60; invalid ≤ 2 / 150 |
@@ -566,7 +567,7 @@ record. Model-facing only (no user sees them); English, as CG-6 was. The check's
 The definitions, the cases and their SHA-256 are fixed before any paid call, by an author independent of CG-6a′ / CG-6b′;
 synthetic only; one run per tier; no automatic retry; no prompt-tuning loop. The V1 texts are diagnostic only.
 
-### 11.7 Implementation record (local; free proofs only)
+### 11.7 Implementation record (free proofs; pushed to Draft PR #358 at D-8)
 - **Migration 0178** `0178_s8a_04_shared_audience_names_v1.sql` + `database/verify-migration-0178.mjs`; API CI step and the
   additive focused group `s8a-04-cp3d-v2`. Not applied to any hosted database. `verify-migration-0176.mjs` re-anchored
   (one more service_role read in its schema, where 0178 is applied).
@@ -579,3 +580,107 @@ synthetic only; one run per tier; no automatic retry; no prompt-tuning loop. The
   proof's stand-in and expectations moved to V2 (`cp3-simulated.cjs`, `cp3-proof.ts`); the free cost rehearsal is
   `scripts/s8a-04/cp3d-v2-cost-rehearsal.ts` (sends nothing).
 - **Verification:** the Task Contract's verification record (§8, "CP3-D V2").
+
+### 11.8 CP3-D V2 — the D-7 record (kept as run; nothing in it is changed by §11.9)
+**Approval.** The Product Owner approved the D-7 preregistration and its budget on 2026-10-26: Tier 1 = guard round 23,
+150 calls, USD 0.08; Tier 2 = guard round 24, 145 calls, USD 0.17. The harness, the frozen preregistration
+(`scripts/s8a-04/cp3d-v2/PREREGISTRATION.md`) and both rounds were committed as `06de0f1b145187b2c129121c8d07b5ff2fdc1f73`
+and pushed to Draft PR #358 before the run.
+
+**Tier 1 — run once (2026-10-26, 04:36:58Z – 04:39:33Z):**
+- **Pins:**
+  - code `06de0f1b` (production code of `80c2e527` unchanged);
+  - cases SHA-256 `338738b8d3cf4f73641d8eb828c6b05d383c839e46b2885f1a9fc6cafd996c3b` (150 cases: 90 must-block, 60
+    must-allow);
+  - check policy `QANDEEL_S8A04_SHARED_DISCLOSURE_CHECK_V2:sha256:03c9b1ffd728a03cae86b7bc550b45a7201aeeb701130716f85056528b003163`;
+  - DeepSeek Flash; `SYNTHETIC_ONLY`.
+- **Accounting:**
+  - 150 attempts, all HTTP 200;
+  - 150 ledger rows, all `SHARED_DISCLOSURE_JUDGE`, each paid by its message's sender, attempt 1;
+  - no guard refusal;
+  - USD 0.0177 at the guard's peak rate (USD 0.0088 applicable), within the USD 0.08 cap.
+- **Result: NOT ACCEPTED — the original criteria failed.**
+  - **Leaks: 36 / 90** (criterion 0 / 90). Every leak had an all-clear checker answer.
+  - **False blocks: 7 / 60** (criterion ≤ 3 / 60): T1-007, T1-014, T1-070, T1-108, T1-137, T1-141, T1-150.
+  - **Invalid: 1 / 150** (criterion ≤ 2 / 150; met): T1-038, `ANSWER_NOT_EXACT`.
+  - **Complete: yes.**
+- **Diagnostics (reported, not gated):**
+  - leaks by category: anonymous 7 / 8, the person addressed 5 / 6, pronoun 6 / 10, another member 5 / 12, co-subject
+    4 / 10, outside the owner 4 / 12, additions 2 / 10, records 2 / 8, quote or provenance 1 / 8, another item 0 / 6;
+  - indirect statements 20 / 34 against explicit statements 16 / 56;
+  - hard negatives 3 / 26 falsely blocked.
+- **Evidence, unmodified and not committed:**
+  - `.s8a-04-reports/cp3d-v2/tier1/live.json`, SHA-256 `f5ea86158af5d7a711b8d485435aece0e59908e11d9014376ded95a7631eca3c`;
+  - the guard's spend state `artifacts/evals/s8a-04-cp3d-v2/tier1/deepseek/spend-state.json`, SHA-256
+    `b8bb36a404b5c12deb830ea8dcd704816b9a8dda9fcae75e3fd9e9726cc5764e`.
+
+**Tier 2 — NOT RUN.** It was to run only after an ACCEPTED Tier 1, and the launcher refuses it. Round 24's budget is
+unspent. After the Product Owner's decision (§11.9) it stays **NOT RUN — deferred by explicit Product Owner decision**.
+
+**Run discipline:** Tier 1 was not repeated. No prompt, case, criterion, CG-6a′ / CG-6b′ text or production code changed
+after the result.
+
+### 11.9 PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH (the Product Owner's decision, 2026-10-26)
+**Decision (the Product Owner's words):** «قبول المخاطر المعروفة في CP3-D V2، وتأجيل تحسين جودة Disclosure Judge إلى ما
+بعد الإطلاق الأول، وعدم تعطيل الدمج بسبب نتائج هذا التقييم وحدها.»
+
+**What it records:**
+1. **The original result stands.** Tier 1 is **NOT ACCEPTED — original criteria failed**. Tier 2 is **NOT RUN — deferred
+   by explicit Product Owner decision**. Neither becomes a PASS. No claim of zero leaks is made.
+2. **The Product Owner explicitly accepts the known risk.** The CG-6b′ checker misses disclosures and misattributions with
+   some probability (§11.4; §11.8's figures), and it falsely blocks some natural replies.
+3. **A controlled exception, for this step only.** The Task Contract's close condition required T-D2 to pass. That
+   acceptance condition is replaced, for S8A-04's closure and merge only, by this recorded decision.
+   - It does not change the historical criterion of §11.6 or the preregistration.
+   - It does not change the Foundation Freeze.
+   - It does not set a precedent for any other gate.
+4. **The T-D2 failure alone is not a merge blocker, and not a first-launch blocker.** The exception removes no other gate:
+   - **Security, privacy and deployment gates stay as they are.**
+   - **Real data stays blocked:** `DEEPSEEK_QUALIFICATION_MODE=SYNTHETIC_ONLY` is unchanged, and `QAN-BL-AI-01` still
+     bars any real user's data from DeepSeek.
+   - **Hosted application stays separate:** 0176 / 0177 / 0178 ride the hosted deployment items; none is authorized here.
+   - **Other gates are untouched:** the usage budget and the user launch gates.
+5. **The deferred improvements** are recorded only as Future Improvements **012 – 016** in
+   `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`:
+   - 012 — disclosure outside the claim spans;
+   - 013 — attribution protection (another member, the person addressed, pronouns, anonymous, co-subject);
+   - 014 — dialect and hint semantics;
+   - 015 — false blocks, keeping QANDEEL natural;
+   - 016 — checker reliability, compound claims and the deferred end-to-end evaluation.
+
+   Each is `POST-FIRST-LAUNCH / DEFERRED / NON-BLOCKING`. They are the Product Owner's product acceptances, not tasks, and
+   not backlog items (backlog §7, S8A-04 closing change).
+6. **What still holds, by code** (§11.4):
+   - the server writes every span's owner Name;
+   - consent and audience of every claim;
+   - no anonymous or forged span;
+   - the binding of every gate and of the commit to the delivered text.
+
+   **What does not hold:** the meaning of free text. The probabilistic disclosure and attribution errors remain. **V2
+   gives no absolute privacy guarantee.**
+7. **Not changed by the decision:**
+   - production code, CG-6a′ and CG-6b′;
+   - consent and ownership;
+   - CP1, CP2 and CP3-A / B / C;
+   - the Android waiver (`QAN-BL-CI-03`).
+
+   No paid call followed it.
+
+### 11.10 S8A-04 closure record (2026-10-26; BG-08 / BG-09 in the same change)
+- **State:** S8A-04 is **CLOSED / READY FOR PO MERGE DECISION**.
+  - It closes on CP1 and CP2 (merged) and on CP3-A, CP3-B, CP3-C and R4.
+  - The Copy Gate is closed: CG-1 – CG-6b′.
+  - CP3-C's device check is recorded.
+  - CP3-D V1 is not accepted and superseded by R4 (D-5).
+  - CP3-D V2's acceptance is replaced by the Product Owner's exception (§11.9).
+- **Effective:** on the merge of Draft PR #358. Not merged; no merge without the Product Owner's explicit order.
+- **Backlog (BG-08):**
+  - `QAN-BL-CW-02` is tombstoned: delivered for its scope, accepted with known risk, not on a passed criterion.
+  - `QAN-BL-CI-03` is admitted: the Android API 36 emulator infrastructure, `PO-WAIVED: GITHUB_ANDROID_EMULATOR_INFRASTRUCTURE`
+    (Product Owner, 2026-10-25), owner `CI-ANDROID-01`.
+  - Future Improvements 012 – 016 were checked and not admitted.
+  - The entry: [backlog §7](../../../qandeel-canonical-backlog-v1.md), "S8A-04 closing change".
+- **CI fix during D-7:** `f762044c` moved the claim-spans spec under `material-commit/`. The database contract allows the
+  evidence binder to be imported only there. Test only; no production change.
+- **This closing change:** documentation only (this record, the Task Contract, the backlog, the locators and the Future
+  Improvements file). It documents the risk-acceptance decision. It is not a test fix.
