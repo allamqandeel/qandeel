@@ -12,6 +12,7 @@
  * S5-03B gives it the semantic field, through its own Public-only field controller (`./field`), held here and nowhere else.
  */
 import type { PublicAuthoringController } from '../public-authoring';
+import type { PublicComposeController } from '../public-compose';
 import type { PublicFieldController } from './field/public-field-controller';
 import type { PublicEntryResult, PublicEntryTarget } from '../runtime-entry';
 
@@ -38,6 +39,8 @@ export interface PublicWorldController {
   readonly authoring: PublicAuthoringController | null;
   /** S5-03B — the Public semantic field; null where the host provides none (the root then stays content-empty). */
   readonly field: PublicFieldController | null;
+  /** S8A-05 CP1 — «اكتب موضوعك»: the reader's own topic writing, drawn inside the root; null where the host provides none. */
+  readonly compose: PublicComposeController | null;
   retire(): void;
 }
 
@@ -46,11 +49,12 @@ export interface PublicWorldControllerOptions {
   readonly isCurrent: () => boolean;
   readonly authoring?: PublicAuthoringController | null;
   readonly field?: PublicFieldController | null;
+  readonly compose?: PublicComposeController | null;
 }
 
 const INITIAL: PublicAreaState = Object.freeze<PublicAreaState>({ entry: 'NONE' });
 
-export function createPublicWorldController({ transport, isCurrent, authoring = null, field = null }: PublicWorldControllerOptions): PublicWorldController {
+export function createPublicWorldController({ transport, isCurrent, authoring = null, field = null, compose = null }: PublicWorldControllerOptions): PublicWorldController {
   const listeners = new Set<() => void>();
   let state: PublicAreaState = INITIAL;
   let retired = false;
@@ -98,11 +102,13 @@ export function createPublicWorldController({ transport, isCurrent, authoring = 
     },
     authoring,
     field,
+    compose,
     retire() {
       retired = true;
       listeners.clear();
       authoring?.retire();
       field?.retire();
+      compose?.retire();
     },
   };
 }

@@ -35,6 +35,8 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import { formatDay } from '../../settings/PrivacyDataSection';
 import type { PublicFieldExperience } from '../../runtime-entry';
+import { publicEntryLabel } from '../../runtime-entry';
+import { publicComposeCopy } from '../../public-compose/copy';
 import { fillDiscussionCopy, publicDiscussionCopy } from './discussion-copy';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
 import { PublicDiscussion } from './PublicDiscussion';
@@ -160,10 +162,10 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
     content = (
       <View testID="qandeel-public-search-results" style={{ backgroundColor: palette.field, borderRadius: 16, paddingVertical: 4 }}>
         {search.status === 'RESULTS' ? search.results.map((entry) => (
-          <Pressable key={entry.id} testID={`qandeel-public-search-result-${entry.id}`} accessibilityRole="button" accessibilityLabel={entry.meaning}
+          <Pressable key={entry.id} testID={`qandeel-public-search-result-${entry.id}`} accessibilityRole="button" accessibilityLabel={publicEntryLabel(entry)}
             accessibilityLanguage={language} onPress={() => { Keyboard.dismiss(); controller.focus(entry.id); }}
             style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 16 }}>
-            <Text numberOfLines={1} style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{entry.meaning}</Text>
+            <Text numberOfLines={1} style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{publicEntryLabel(entry)}</Text>
           </Pressable>
         )) : (
           <Text accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.secondary, padding: 16, writingDirection: writing }}>
@@ -234,7 +236,11 @@ function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussio
   const text = (role: 'body' | 'supporting' | 'metadata' | 'statement', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
   return (
     <>
-      <Text testID="qandeel-public-panel-meaning" accessibilityRole="header" style={text('statement', palette.primary)}>{experience.entry.meaning}</Text>
+      {/* S8A-05 CP1: a topic its author wrote is shown by its human title, never by QANDEEL's meaning; then its section. */}
+      <Text testID="qandeel-public-panel-meaning" accessibilityRole="header" style={text('statement', palette.primary)}>{publicEntryLabel(experience.entry)}</Text>
+      {experience.entry.section !== undefined ? (
+        <Text testID="qandeel-public-panel-section" style={text('metadata', palette.secondary)}>{publicComposeCopy(language).section(experience.entry.section)}</Text>
+      ) : null}
       {experience.publisher.label !== null ? (
         <Text style={text('metadata', palette.secondary)}>{fillPublicFieldCopy(copy.sharedBy, experience.publisher.label)}</Text>
       ) : null}
@@ -259,9 +265,9 @@ function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussio
         <View style={{ rowGap: 2 }}>
           <Text style={text('metadata', palette.tertiary)}>{copy.nearHeading}</Text>
           {experience.nearby.map((near) => (
-            <Pressable key={near.id} testID={`qandeel-public-nearby-${near.id}`} accessibilityRole="button" accessibilityLabel={near.meaning}
+            <Pressable key={near.id} testID={`qandeel-public-nearby-${near.id}`} accessibilityRole="button" accessibilityLabel={publicEntryLabel(near)}
               accessibilityLanguage={language} onPress={() => onFocus(near.id)} style={{ minHeight: 44, justifyContent: 'center' }}>
-              <Text numberOfLines={1} style={text('body', palette.secondary)}>{near.meaning}</Text>
+              <Text numberOfLines={1} style={text('body', palette.secondary)}>{publicEntryLabel(near)}</Text>
             </Pressable>
           ))}
         </View>

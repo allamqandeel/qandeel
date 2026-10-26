@@ -16,6 +16,9 @@
  * ONE way, after ALLOW, into the authoring workspace (`../public-authoring`): the reader's own non-public work, drawn in
  * place of the field and left by its own Back. It places nothing in the field.
  *
+ * S8A-05 CP1 adds ONE more way, after ALLOW, into «اكتب موضوعك» (`../public-compose`): the reader's own topic writing, drawn
+ * in place of the field and left by its own Back, exactly as authoring is. It places nothing in the field.
+ *
  * Back at the root is local-only: nothing is registered, so Back never silently returns to the Personal world
  * (I-08A4 §4). Nothing here reads the Personal world or the Shared area: no Session, camera, focus, time or World is
  * passed in, so none can transfer.
@@ -29,6 +32,7 @@ import { Control, typeStyle, usePalette, useConversationTypeface } from '../conv
 import type { ChromeLanguage } from '../orientation-chrome';
 import { publicCopy } from './copy';
 import { PublicAuthoringWorkspace, publicAuthoringCopy, type PublicAuthoringScreen } from '../public-authoring';
+import { PublicComposeWorkspace, publicComposeCopy, type PublicComposeScreen } from '../public-compose';
 import type { PublicWorldController } from './public-world-controller';
 import { PublicLivingAnalysis } from './field/PublicLivingAnalysis';
 
@@ -37,6 +41,7 @@ const HEADER_MIN_HEIGHT = 48;
 const ROW_START = 24;
 const noSubscribe = () => () => undefined;
 const closedScreen = (): PublicAuthoringScreen => 'CLOSED';
+const closedCompose = (): PublicComposeScreen => 'CLOSED';
 
 export interface PublicWorldAreaProps {
   readonly controller: PublicWorldController;
@@ -54,11 +59,14 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
   const { entry } = useSyncExternalStore(controller.subscribe, controller.getState);
   const authoring = controller.authoring;
   const authoringScreen = useSyncExternalStore(authoring ? authoring.subscribe : noSubscribe, authoring ? () => authoring.getState().screen : closedScreen);
+  const compose = controller.compose;
+  const composeScreen = useSyncExternalStore(compose ? compose.subscribe : noSubscribe, compose ? () => compose.getState().screen : closedCompose);
 
   // Entering the area asks the entry verdict again — a previous ALLOW is never kept as authority.
   useEffect(() => {
     controller.enter();
     controller.authoring?.close();
+    controller.compose?.close();
   }, [controller]);
 
   // `analysis`: the root is the Living Analysis surface, whose place is dark under every preference, so the status bar
@@ -91,13 +99,15 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
   }
 
   const workspaceOpen = authoring !== null && authoringScreen !== 'CLOSED';
+  const composeOpen = compose !== null && composeScreen !== 'CLOSED';
   const heading = (
     <PublicHeading language={language} title={copy.publicWorld} activity={activity}
-      onAuthoring={!workspaceOpen && authoring !== null ? () => authoring.open() : null} />
+      onAuthoring={!workspaceOpen && !composeOpen && authoring !== null ? () => authoring.open() : null}
+      onCompose={!workspaceOpen && !composeOpen && compose !== null ? () => compose.open() : null} />
   );
 
   // S5-03B R2 — the field is analysed on the ONE Living Analysis surface; this root's heading is read first in its top band.
-  if (!workspaceOpen && controller.field !== null) {
+  if (!workspaceOpen && !composeOpen && controller.field !== null) {
     return frame('qandeel-public-root', (
       <PublicLivingAnalysis controller={controller.field} language={language} insets={insets} heading={heading} />
     ), true);
@@ -108,6 +118,8 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
       {heading}
       {authoring !== null && workspaceOpen ? (
         <PublicAuthoringWorkspace controller={authoring} language={language} palette={palette} bottomInset={insets.bottom} />
+      ) : compose !== null && composeOpen ? (
+        <PublicComposeWorkspace controller={compose} language={language} palette={palette} bottomInset={insets.bottom} />
       ) : (
         // Without a field controller, nothing stands in for the field.
         <View testID="qandeel-public-field" style={{ flex: 1 }} />
@@ -121,8 +133,9 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
  * appearance of the place it is drawn in — the reader's around the authoring workspace, the Analysis's in the Living
  * Analysis surface's top band.
  */
-function PublicHeading({ language, title, activity, onAuthoring }: {
+function PublicHeading({ language, title, activity, onAuthoring, onCompose }: {
   readonly language: ChromeLanguage; readonly title: string; readonly activity: PublicWorldAreaProps['activity']; readonly onAuthoring: (() => void) | null;
+  readonly onCompose: (() => void) | null;
 }) {
   const palette = usePalette();
   const writing = language === 'ar' ? 'rtl' : 'ltr';
@@ -135,12 +148,20 @@ function PublicHeading({ language, title, activity, onAuthoring }: {
           {title}
         </Text>
       </View>
-      {onAuthoring !== null ? (
-        <View style={{ paddingStart: ROW_START - 16 }}>
-          <Control palette={palette} language={language} accessibilityLabel={publicAuthoringCopy(language).entry} onPress={onAuthoring}
-            testID="qandeel-public-authoring-entry" style={{ alignSelf: 'flex-start', paddingHorizontal: 16 }}>
-            <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{publicAuthoringCopy(language).entry}</Text>
-          </Control>
+      {onAuthoring !== null || onCompose !== null ? (
+        <View style={{ paddingStart: ROW_START - 16, flexDirection: 'row', flexWrap: 'wrap' }}>
+          {onCompose !== null ? (
+            <Control palette={palette} language={language} accessibilityLabel={publicComposeCopy(language).entry} onPress={onCompose}
+              testID="qandeel-public-compose-entry" style={{ alignSelf: 'flex-start', paddingHorizontal: 16 }}>
+              <Text style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{publicComposeCopy(language).entry}</Text>
+            </Control>
+          ) : null}
+          {onAuthoring !== null ? (
+            <Control palette={palette} language={language} accessibilityLabel={publicAuthoringCopy(language).entry} onPress={onAuthoring}
+              testID="qandeel-public-authoring-entry" style={{ alignSelf: 'flex-start', paddingHorizontal: 16 }}>
+              <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{publicAuthoringCopy(language).entry}</Text>
+            </Control>
+          ) : null}
         </View>
       ) : null}
     </View>

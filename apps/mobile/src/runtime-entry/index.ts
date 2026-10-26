@@ -246,6 +246,14 @@ export type {
 export type {
   PublicFieldRelation,
 } from './public-field-api';
+export type { PublicTopicSection } from './public-field-api';
+export { PUBLIC_TOPIC_SECTIONS, publicEntryLabel } from './public-field-api';
+export { PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX } from './public-compose-api';
+export type {
+  PublicTopicDeleteOutcome, PublicTopicDiscardOutcome, PublicTopicDraft, PublicTopicDraftRead, PublicTopicDraftState, PublicTopicDraftSummary,
+  PublicTopicPrepareOutcome, PublicTopicPreview, PublicTopicPreviewRead, PublicTopicPrivacyNote, PublicTopicReadiness, PublicTopicSaveOutcome,
+  PublicTopicSaveResult, PublicTopicSectionOutcome,
+} from './public-compose-api';
 export type {
   PublicRelation, PublicRelationAct, PublicRelationActOutcome, PublicRelationExperience, PublicRelationRequestOutcome, PublicRelations,
 } from './public-relation-api';

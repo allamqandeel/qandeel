@@ -111,6 +111,7 @@ import { createS605ProofIntroductionWorld } from './s605-proof-introduction-worl
 import { createS606ProofIntroductionSharing } from './s606-proof-introduction-sharing';
 import { createS607ProofEnrollment, type S607ProofAction } from './s607-proof-enrollment';
 import { createS8a04ProofPermissions } from './s8a04-proof-permissions';
+import { createS805ProofCompose } from './s805-proof-compose';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 /** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
@@ -267,6 +268,8 @@ export interface S401ProofWorld {
   sharedField(): void;
   /** S8A-04 CP3-C: the reader's own permissions in a seeded World; a newcomer joins it; what they allowed is corrected. */
   knowledge(action: 'seed' | 'grow' | 'correct'): void;
+  /** S8A-05 CP1: «Write your topic» answers (one SYNTHETIC draft), and four fixture Experiences carry human titles. */
+  topics(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -645,6 +648,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
 
   // S5-04 — the discussion of one fixture Experience (0147 / `PublicDiscussionService`).
   const publicLabel = () => (publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId);
+  // S8A-05 CP1: answers nothing until public/topics, so every earlier leg meets the proof world exactly as before.
+  const compose = createS805ProofCompose(() => ({ mode: publicMode, label: publicLabel() }));
   const discussionOf = (experienceId: string) => posts.filter((p) => p.experienceId === experienceId).sort((a, b) => a.ordinal - b.ordinal);
   const addPost = (experienceId: string, author: ProofPublicPost['author'], text: string, parent: ProofPublicPost | null, commandId: string | null) => {
     const id = uuid();
@@ -780,6 +785,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
         return json(200, { outcome: acted[2] === 'cancel' ? 'CANCELLED' : 'REMOVED' });
       }
     }
+    const composed = compose.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
+    if (composed !== undefined) return composed;
     if (path === '/public/authoring' || path.startsWith('/public/authoring/')) return authoring(path, method);
     const discussed = /^\/public\/field\/experiences\/([^/]+)\/discussion(?:\/([^/]+)\/qandeel)?$/u.exec(path);
     if (publicField && discussed) {
@@ -791,14 +798,21 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     }
     if (publicField && method === 'GET' && (path === '/public/field' || path.startsWith('/public/field/'))) {
       const query = input.includes('?') ? input.slice(input.indexOf('?') + 1) : '';
-      if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, answer) : json(400, {}); }
-      if (path === '/public/field/search') return json(200, fixtureSearch(decodeURIComponent((/(?:^|&)q=([^&]*)/u.exec(query)?.[1] ?? '').replace(/\+/gu, ' '))));
+      // S8A-05 CP1: after public/topics, the four titled fixture Experiences carry their SYNTHETIC title and section.
+      if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, { experiences: answer.experiences.map(compose.titled) }) : json(400, {}); }
+      if (path === '/public/field/search') {
+        return json(200, { results: fixtureSearch(decodeURIComponent((/(?:^|&)q=([^&]*)/u.exec(query)?.[1] ?? '').replace(/\+/gu, ' '))).results.map(compose.titled) });
+      }
       const panel = /^\/public\/field\/experiences\/([^/]+)$/u.exec(path);
       if (panel) {
         const id = decodeURIComponent(panel[1]);
         const active = relations.filter((r) => r.state === 'ACTIVE' && (r.own === id || r.other === id))
           .map((r) => ({ relationId: r.relationId, otherId: r.own === id ? r.other : r.own }));
-        return json(200, fixtureExperience(id, active, discussionOf(id).length));
+        const served = fixtureExperience(id, active, discussionOf(id).length) as { state: string; experience?: { id: string }; nearby?: { id: string }[];
+          relations?: { relationId: string; other: { id: string } }[] };
+        if (served.state !== 'SERVED' || !served.experience || !served.nearby || !served.relations) return json(200, served);
+        return json(200, { ...served, experience: compose.titled(served.experience), nearby: served.nearby.map(compose.titled),
+          relations: served.relations.map((r) => ({ ...r, other: compose.titled(r.other) })) });
       }
     }
     // S6-06 first: a photo upload carries raw bytes, never JSON.
@@ -836,6 +850,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     },
     revoke: () => { for (const world of worlds) world.current = false; },
     publicSeed: () => { publicField = true; },
+    topics: () => { compose.seed(); },
     relationAccept: () => { relations = relations.map((r) => ({ ...r, state: 'ACTIVE' as const })); },
     peerReply: () => {
       const mine = posts.filter((p) => p.author === 'SELF').slice(-1)[0] as ProofPublicPost | undefined;

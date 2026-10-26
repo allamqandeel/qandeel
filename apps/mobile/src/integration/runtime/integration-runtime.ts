@@ -149,6 +149,7 @@ import {
 } from '../../public-world';
 import { createPublicDisplayController, type PublicDisplayController } from '../../settings/public-display-controller';
 import { createPublicAuthoringController, mintPublicCommandId } from '../../public-authoring';
+import { createPublicComposeController } from '../../public-compose';
 import { createPublicDiscussionController, createPublicFieldController } from '../../public-world/field';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
@@ -657,6 +658,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
           // S5-04 — the focused Experience's dependent discussion, on the same identity-bound transport.
           discussion: createPublicDiscussionController({ transport: publicTransport.discussion ?? null, isCurrent, foreground: entry.foreground,
             newId: mintPublicCommandId }) }),
+        // S8A-05 CP1 — «اكتب موضوعك»: the reader's own topic drafts, on the same identity-bound Public transport.
+        compose: createPublicComposeController({ transport: publicTransport.compose ?? null, isCurrent, newId: mintPublicCommandId }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,

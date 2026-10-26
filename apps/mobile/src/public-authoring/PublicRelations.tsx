@@ -18,6 +18,7 @@ import { Keyboard, Text, TextInput, View } from 'react-native';
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { PublicRelation } from '../runtime-entry';
+import { publicEntryLabel } from '../runtime-entry';
 import { PUBLIC_RELATION_SEARCH_MAX, type PublicAuthoringController, type PublicAuthoringState } from './public-authoring-controller';
 import { fill, publicRelationCopy, type PublicRelationCopy } from './relation-copy';
 
@@ -156,7 +157,7 @@ export function PublicRelationsScreen({ state, controller, language, palette }: 
       {search.status === 'UNAVAILABLE' ? <Line text={copy.actionUnavailable} s={s} testID="qandeel-public-relations-search-unavailable" /> : null}
       {search.results.map((entry) => (
         <View key={entry.id} testID="qandeel-public-relations-result" style={{ paddingVertical: 6 }}>
-          <Line text={entry.meaning} s={s} role="body" color={s.palette.primary} />
+          <Line text={publicEntryLabel(entry)} s={s} role="body" color={s.palette.primary} />
           <View style={{ paddingStart: ROW_START - 16, flexDirection: 'row' }}>
             <Action label={copy.requestAction} onPress={() => controller.requestRelation(entry.id)} s={s} emphasis testID="qandeel-public-relations-request" />
           </View>

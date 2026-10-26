@@ -40,6 +40,10 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // S7-02 added exactly one: ReplayApiClient, the Personal Replay entry transport (a plain class).
   // S7-03 added exactly one: ReplayHistoryApiClient, the read-only version / moments / moment-analysis transport (a plain class).
   // S7-04 added exactly one: ReplayLifecycleApiClient, the preview / finalize / reopen transport (a plain class).
+  // S8A-05 CP1 added exactly four, deliberately: the Public topic sections and the two text bounds of a topic draft
+  // (PUBLIC_TOPIC_SECTIONS, PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX; server keys and limits, not reader-facing copy)
+  // and publicEntryLabel, the one rule that names a Public topic by its human title, else its meaning, so the map, search,
+  // panel and relations surfaces never each carry a copy of it.
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
@@ -63,6 +67,9 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'LoginIdAvailabilityClient',
     'MAX_CATCH_UP_BACKOFF_MS',
     'MOBILE_PUBLIC_CONFIG_KEYS',
+    'PUBLIC_TOPIC_SECTIONS',
+    'PUBLIC_TOPIC_TEXT_MAX',
+    'PUBLIC_TOPIC_TITLE_MAX',
     'PublicAuthoringApiClient',
     'PublicWorldApiClient',
     'PushApiClient',
@@ -82,6 +89,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'createMobileRuntimeEntry',
     'describeConfigFailure',
     'isEmailIdentifier',
+    'publicEntryLabel',
     'readMobilePublicConfig',
   ]);
 

@@ -26,6 +26,7 @@ import { typeStyle, usePalette } from '../../conversation';
 import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
+import { publicEntryLabel } from '../../runtime-entry';
 import type { PublicFieldCopy } from './field-copy';
 import { publicRelationCopy } from '../../public-authoring/relation-copy';
 import { PublicExperienceMark } from './PublicExperienceMark';
@@ -157,7 +158,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                 controller.focus(node.entry.id);
               }}
               accessibilityRole="button"
-              accessibilityLabel={node.entry.meaning}
+              accessibilityLabel={publicEntryLabel(node.entry)}
               accessibilityLanguage={language}
               accessibilityState={{ selected: node.selected }}
               hitSlop={4}
@@ -189,7 +190,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                   textAlign: label.side === 'RIGHT' ? 'left' : 'right',
                 }}
               >
-                {node.entry.meaning}
+                {publicEntryLabel(node.entry)}
               </Text>
             );
           })}
@@ -242,7 +243,7 @@ export function layoutFieldLabels(
   const out = new Map<string, FieldLabel>();
   const sides: readonly ('LEFT' | 'RIGHT')[] = language === 'ar' ? ['LEFT', 'RIGHT'] : ['RIGHT', 'LEFT'];
   for (const node of ordered) {
-    const natural = Math.ceil(node.entry.meaning.length * type.fontSize * 0.62) + 4;
+    const natural = Math.ceil(publicEntryLabel(node.entry).length * type.fontSize * 0.62) + 4;
     const width = Math.min(LABEL_MAX_WIDTH, natural);
     // A meaning wider than one capped line takes a second one rather than being cut after a few words; the box the
     // collision rules test is the box the words occupy, centred on the place as before.

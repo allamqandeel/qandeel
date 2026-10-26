@@ -94,6 +94,8 @@ describe('S5-03C — the panel carries explicit relations only', () => {
     content: jest.fn(async () => [{ item_ordinal: 1, item_kind: 'SOURCE_CONTENT', item_text: 'w' }]),
     // The nearest Experience in the same region is NOT a relation: it comes back as nearby context, never as a line.
     nearby: jest.fn(async () => [entry(5)]), relations,
+    // S8A-05 CP1 (re-anchor): the panel also asks for the human titles of what it shows; none here.
+    topicHeaders: jest.fn(async () => []), titleSearch: jest.fn(async () => []),
   } as unknown as PublicFieldRepository);
 
   it('serves the other endpoint of each explicit relation the database served — and none when it served none', async () => {

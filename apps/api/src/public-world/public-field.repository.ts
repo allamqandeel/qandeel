@@ -14,6 +14,8 @@ export interface PublicFieldExperienceRow {
 export interface PublicFieldContentRow { readonly item_ordinal: number; readonly item_kind: string; readonly item_text: string }
 /** S5-03C (migration 0146): one explicit relation of a served Experience — the OTHER endpoint's served entry and the id. */
 export interface PublicFieldRelationRow extends PublicFieldEntryRow { readonly relation_id: string }
+/** S8A-05 CP1 (migration 0179): the human title and section of a served topic (NULL for an Experience that has none). */
+export interface PublicTopicHeaderRow { readonly experience_id: string; readonly title: string | null; readonly section_key: string | null }
 
 /**
  * S5-03B — the Public semantic field's only transport. Every call runs on the VIEWER's own token, so the database
@@ -52,5 +54,15 @@ export class PublicFieldRepository {
   /** S5-03C: the ACTIVE explicit relations of a served Experience whose two bound endpoints are both served now. */
   relations(token: string, experienceId: string): Promise<PublicFieldRelationRow[]> {
     return this.rpc<PublicFieldRelationRow>(token, 'read_public_semantic_relations_v1', { p_experience_id: experienceId });
+  }
+
+  /** S8A-05 CP1: the human title and section of up to 400 Experiences the field served — nothing for anything not served. */
+  topicHeaders(token: string, experienceIds: readonly string[]): Promise<PublicTopicHeaderRow[]> {
+    return this.rpc<PublicTopicHeaderRow>(token, 'read_public_topic_headers_v1', { p_experience_ids: [...experienceIds] });
+  }
+
+  /** S8A-05 CP1: served topics whose human title matches the query, each with its place (the 0145 search shape). */
+  titleSearch(token: string, query: string): Promise<PublicFieldEntryRow[]> {
+    return this.rpc<PublicFieldEntryRow>(token, 'read_public_topic_title_matches_v1', { p_query: query });
   }
 }
