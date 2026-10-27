@@ -13,7 +13,8 @@ import { PublicSemanticService } from './public-semantic.service';
  *                                                                     primaryThemes, secondaryThemes }
  *
  * No route takes a user id, a Public ref, a controller, a lifecycle, a readiness, a fingerprint, a lens, a coordinate,
- * a rank, a proximity target or a vector, and no route publishes: the lifecycle stays READY_FOR_REVIEW.
+ * a rank, a proximity target or a vector, and no route publishes: the lifecycle stays READY_FOR_REVIEW. A proposal or a
+ * correction is paid for by the verified user who asks for it (AI-COST-01, S8A-05 CP3).
  */
 @Controller('public/authoring/drafts/:experienceId/semantic')
 @UseGuards(SupabaseAuthGuard)
@@ -27,7 +28,7 @@ export class PublicSemanticController {
 
   @Post('proposal')
   proposal(@Req() request: AuthenticatedRequest, @Param('experienceId') experienceId: string, @Body() body: unknown) {
-    return this.semantic.proposal(request.authenticatedUser.accessToken, experienceId, body);
+    return this.semantic.proposal(request.authenticatedUser.accessToken, experienceId, body, request.authenticatedUser.userId);
   }
 
   @Post('accept')
@@ -37,6 +38,6 @@ export class PublicSemanticController {
 
   @Post('correction')
   correction(@Req() request: AuthenticatedRequest, @Param('experienceId') experienceId: string, @Body() body: unknown) {
-    return this.semantic.correction(request.authenticatedUser.accessToken, experienceId, body);
+    return this.semantic.correction(request.authenticatedUser.accessToken, experienceId, body, request.authenticatedUser.userId);
   }
 }

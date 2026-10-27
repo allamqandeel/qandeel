@@ -18,6 +18,12 @@
 // any other fake geography, never a fallback provider — so outside tests no Experience is placed and nothing is spent.
 // A later provider never moves a committed place: the database keeps the first placement of a revision forever.
 // Nothing here logs anything.
+//
+// S8A-05 CP3 (Controlled Amendment A-4) places by meaning WITHOUT this port: inside the publication transaction the
+// database takes the reviewed interpretation's dominant sub-region of the closed vocabulary QANDEEL_PUBLIC_REGIONS_V1 and
+// assigns the next free slot of its fixed lattice (`public_region_dominant_v1`, migration 0181), then commits it through
+// the same 0145 command. That rule is deterministic and free; this placer stays unbound and refusing, so no pre-publication
+// owner placement exists.
 
 import { createHash } from 'node:crypto';
 

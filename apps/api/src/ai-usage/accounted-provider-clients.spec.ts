@@ -130,6 +130,17 @@ describe('S8A-04 CP2 — AI-COST-01 Shared correlation (Controlled Amendment §5
     expect(Object.keys(r.begun[0])).not.toContain('sourceWorldId');
     expect(Object.keys(r.begun[0])).not.toContain('sourceSharedMaterialId');
   });
+  // S8A-05 CP3 (0181): the Public semantic interpretation is paid by the publisher who asked, on the v1 record — it has no
+  // World, no Shared message, no session and no turn; one attempt is one record.
+  it('PUBLIC_SEMANTIC_INTERPRETATION: the begin record carries the publisher and nothing Shared', async () => {
+    const r = recordingAccounting();
+    const create = jest.fn(async (_body: unknown) => completion);
+    const client = accountedDeepSeekChatCompletionsClient({ chat: { completions: { create } } }, 'PUBLIC_SEMANTIC_INTERPRETATION', r.accounting);
+    await attributed(() => client.chat.completions.create({ model: 'deepseek-flash' } as never));
+    expect(r.begun).toEqual([expect.objectContaining({ userId: USER, sessionId: null, sourceTurnId: null, featureFamily: 'PUBLIC_SEMANTIC_INTERPRETATION' })]);
+    expect(Object.keys(r.begun[0])).not.toContain('sourceWorldId');
+    expect(create).toHaveBeenCalledTimes(1);
+  });
   it.each([
     ['only the World', { sourceWorldId: WORLD }],
     ['only the message', { sourceSharedMaterialId: MATERIAL }],

@@ -104,6 +104,10 @@ const FILES = {
   sharedJudgeAdapter: 'apps/api/src/shared-world/deepseek-shared-disclosure-judge.ts',
   sharedJudgeModule: 'apps/api/src/shared-world/shared-disclosure-judge-provider.ts',
   sharedReplyGenerator: 'apps/api/src/shared-world/shared-conversation-reply.generator.ts',
+  // S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): the Public semantic interpretation, its config and its one composition.
+  publicSemanticAdapter: 'apps/api/src/public-world/deepseek-public-semantic-interpreter.ts',
+  publicSemanticConfig: 'apps/api/src/public-world/public-semantic-interpreter-provider.config.ts',
+  publicSemanticModule: 'apps/api/src/public-world/public-semantic-interpreter-provider.ts',
   migration0175: 'database/migrations/0175_s8a_04_shared_social_memory_v1.sql',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
@@ -162,14 +166,18 @@ const CENSUS = [
   // text (PROPOSED at the Copy Gate), the per-request schema and the V2 policy reference; same family, client, envelope,
   // accounting boundary, payer and gate, zero retries.
   { transport: 'apps/api/src/shared-world/deepseek-shared-disclosure-judge.ts', family: 'SHARED_DISCLOSURE_JUDGE', frozen: '08193972c2b94b2a53993a98f221acb8bd4fff86' },
+  // S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): the Public semantic interpretation under its own 0181 family, through
+  // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate; paid by the publisher who
+  // asked, zero retries. The Public placement is the database's deterministic rule: no transport, no family.
+  { transport: 'apps/api/src/public-world/deepseek-public-semantic-interpreter.ts', family: 'PUBLIC_SEMANTIC_INTERPRETATION', frozen: 'd5eedac546ccd570df63858dd44242ed77bf63fd' },
 ];
 // Kept wide on purpose: a reintroduced OpenAI Responses, Anthropic Messages or Gemini transport is still a census entry
 // that does not exist, so the census test fails on it.
 const PROVIDER_TRANSPORT = /\.responses\.create\(|\.messages\.create\(|\.chat\.completions\.create\(|generativelanguage\.googleapis\.com|new OpenAI\(|new Anthropic\(/u;
 const ADAPTERS = ['cuAdapter', 'focusAdapter', 'threadAdapter', 'continuityAdapter', 'intentAdapter', 'associationAdapter', 'candidateAdapter', 'understandingAdapter', 'sharedReadingAdapter',
-  'sharedRecallAdapter', 'sharedPlacerAdapter', 'sharedJudgeAdapter'];
+  'sharedRecallAdapter', 'sharedPlacerAdapter', 'sharedJudgeAdapter', 'publicSemanticAdapter'];
 const CONFIGS = ['routerConfig', 'cuConfig', 'focusConfig', 'threadConfig', 'continuityConfig', 'intentConfig', 'associationConfig', 'candidateConfig', 'understandingConfig', 'sharedReadingConfig',
-  'sharedMemoryConfig'];
+  'sharedMemoryConfig', 'publicSemanticConfig'];
 /** A provider other than DeepSeek, its credential, its SDK or its endpoint. */
 const FOREIGN_PROVIDER = /OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_AI_API_KEY|GEMINI_API_KEY|@anthropic-ai\/|@google\/(?:genai|generative-ai)|api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|\bnew Anthropic\(|OpenAIModelRouter|ClaudeModelRouter|accountedOpenAIResponsesClient|accountedAnthropicMessagesClient|accountedGeminiTransport/u;
 
@@ -200,7 +208,8 @@ function censusViolations(world) {
     if (/decorateClient\?:|decorateClient: \w+ = |decorateClient \?\?/u.test(ts(world[key]))) out.push(`${key} makes its accounting decorator optional`);
   }
   if (!ts(world.production).includes('return (client) => accountedDeepSeekChatCompletionsClient(client, featureFamily, productionAiProviderCallAccounting());')) out.push('the semantic cost-ledger decorator is not the DeepSeek accounting wrapper');
-  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION'], ['understandingModule', 'PERSONAL_UNDERSTANDING_CAPTURE'], ['sharedReadingModule', 'SHARED_SEMANTIC_READING']]) {
+  for (const [key, family] of [['intentModule', 'HYPOTHESIS_INTENT_EXTRACTION'], ['associationModule', 'HYPOTHESIS_EVIDENCE_ASSOCIATION'], ['candidateModule', 'HYPOTHESIS_CANDIDATE_GENERATION'], ['understandingModule', 'PERSONAL_UNDERSTANDING_CAPTURE'], ['sharedReadingModule', 'SHARED_SEMANTIC_READING'],
+    ['publicSemanticModule', 'PUBLIC_SEMANTIC_INTERPRETATION']]) {
     if (!new RegExp(`accountedDeepSeekChatCompletionsClient\\(\\s*createDeepSeekClient\\(config\\), '${family}', productionAiProviderCallAccounting\\(\\)\\)`, 'u').test(ts(world[key]))) out.push(`${family} is not accounted`);
     if (/\.fromEnvironment\(environment\)/u.test(ts(world[key]))) out.push(`${key} composes the unaccounted fromEnvironment adapter in production`);
   }
@@ -500,7 +509,7 @@ function attributionViolations(world) {
 // Output request shape and one fail-closed completion envelope for every structured adapter.
 // ---------------------------------------------------------------------------------------------------------------
 const AI_PATH_KEYS = ['clients', 'production', 'deepseekRouter', 'deepseekClient', 'routerConfig', 'routerModule', 'healthProbe', 'conversationModule',
-  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', 'understandingModule', 'sharedReadingModule', ...ADAPTERS, ...CONFIGS];
+  'focusBinding', 'threadBinding', 'continuityBinding', 'intentModule', 'associationModule', 'candidateModule', 'understandingModule', 'sharedReadingModule', 'publicSemanticModule', ...ADAPTERS, ...CONFIGS];
 
 function deepSeekOnlyViolations(world) {
   const out = [];

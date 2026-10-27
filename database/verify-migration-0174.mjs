@@ -45,7 +45,11 @@ async function verify() {
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
   const { later } = await one("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid, uuid, uuid, uuid, text, text, text, text, text)') IS NOT NULL AS later");
   const { judged } = await one(`SELECT to_regprocedure('public.complete_shared_world_qandeel_reply_v2(uuid, uuid, uuid, text, text, text, text, text, text, text, uuid[], text[], uuid[], boolean[])') IS NOT NULL AS judged`);
-  const expected = [...FAMILIES, ...(later ? ['SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : []), ...(judged ? ['SHARED_DISCLOSURE_JUDGE'] : [])];
+  // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): migration 0181 adds exactly PUBLIC_SEMANTIC_INTERPRETATION,
+  // detected by its closed-profile record command (0181's own verifier pins the full list).
+  const { publicReading } = await one("SELECT to_regprocedure('public.record_public_semantic_work_outcome_v2(uuid, text, text[], integer[], text, text[], text[], text)') IS NOT NULL AS \"publicReading\"");
+  const expected = [...FAMILIES, ...(later ? ['SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : []), ...(judged ? ['SHARED_DISCLOSURE_JUDGE'] : []),
+    ...(publicReading ? ['PUBLIC_SEMANTIC_INTERPRETATION'] : [])];
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...expected].sort());
 
   await q('BEGIN');

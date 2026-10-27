@@ -226,7 +226,9 @@ async function verifyCatalog() {
   // SHARED_SPATIAL_PLACEMENT, so twelve (0175's own verifier pins the full list).
   // RE-ANCHORED by S8A-04 CP3 (2026-10-25, Product Owner correction 2): migration 0176 adds SHARED_DISCLOSURE_JUDGE, so
   // thirteen (0176's own verifier pins the full list).
-  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 13);
+  // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): migration 0181 adds PUBLIC_SEMANTIC_INTERPRETATION,
+  // so fourteen (0181's own verifier pins the full list).
+  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 14);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_basis_check'), /'MODEL_ASSISTED_CAPTURE'::text/u);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_capture_self_check'), /MODEL_ASSISTED_CAPTURE.*OR \(subject = 'SELF'::text\)/u);
 }

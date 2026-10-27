@@ -17,14 +17,17 @@ const EXPERIENCE = id(2);
 const WORK = id(3);
 const INTERPRETATION = id(4);
 
+// RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): the placement intent is a closed region profile (was a free lens key), and the package arrives as ONE
+// bounded title-free text (was item rows). The protections below are unchanged: package-only input, strict decoding, no
+// coordinate, nothing recorded from a refused answer.
+const PROFILE = { regions: [{ key: 'family.parents', weight: 0.6 }, { key: 'work.money', weight: 0.4 }] };
 const PROPOSAL = {
   meaning: 'Fear for a family while work feels uncertain', primaryThemes: ['fear', 'family'], secondaryThemes: ['work'],
-  explanation: 'The words keep returning to the people who depend on the speaker.', placementIntent: { lensKey: 'family.fear' },
+  explanation: 'The words keep returning to the people who depend on the speaker.', placementIntent: PROFILE,
 };
+const PACKAGE_TEXT = 'SOURCE: the exact committed human sentence\nANALYSIS: the analysis QANDEEL produced';
 const inputRows = (kind: 'PROPOSAL' | 'CORRECTION' = 'PROPOSAL', correction: Record<string, unknown> = {}) => [
-  { work_kind: kind, item_ordinal: 1, item_kind: 'SOURCE_CONTENT', item_text: 'the exact committed human sentence',
-    correction_meaning: null, correction_primary_themes: null, correction_secondary_themes: null, ...correction },
-  { work_kind: kind, item_ordinal: 2, item_kind: 'ANALYSIS', item_text: 'the analysis QANDEEL produced',
+  { work_kind: kind, package_text: PACKAGE_TEXT,
     correction_meaning: null, correction_primary_themes: null, correction_secondary_themes: null, ...correction },
 ];
 const reviewRow = (extra: Record<string, unknown> = {}) => ({
@@ -48,7 +51,7 @@ function repository(overrides: Partial<Record<keyof PublicSemanticRepository, je
 function interpreter(overrides: Partial<Record<keyof PublicSemanticInterpreter, jest.Mock>> = {}) {
   return {
     propose: jest.fn(async () => PROPOSAL),
-    assessCorrection: jest.fn(async () => ({ verdict: 'CONSISTENT', placementIntent: { lensKey: 'parenthood.fear' } })),
+    assessCorrection: jest.fn(async () => ({ verdict: 'CONSISTENT', placementIntent: { regions: [{ key: 'parenthood.raising', weight: 1 }] } })),
     ...overrides,
   };
 }
@@ -63,12 +66,9 @@ describe('S5-03A — PUBLIC PACKAGE ONLY: the interpreter sees exactly what the 
     expect(repo.workInput).toHaveBeenCalledWith(WORK);
     expect(semantic.propose).toHaveBeenCalledTimes(1);
     const [given] = semantic.propose.mock.calls[0] as unknown as [PublicSemanticPackageInput];
-    expect(given).toEqual({ contract: PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, items: [
-      { ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the exact committed human sentence' },
-      { ordinal: 2, kind: 'ANALYSIS', text: 'the analysis QANDEEL produced' },
-    ] });
+    expect(given).toEqual({ contract: PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, packageText: PACKAGE_TEXT });
     expect(JSON.stringify(given)).not.toContain(TOKEN);
-    expect(Object.keys(given).sort()).toEqual(['contract', 'items']);
+    expect(Object.keys(given).sort()).toEqual(['contract', 'packageText']);
   });
 
   it('assesses a correction with the words the DATABASE stored, never the client body', async () => {
@@ -81,14 +81,17 @@ describe('S5-03A — PUBLIC PACKAGE ONLY: the interpreter sees exactly what the 
     await expect(service(repo, semantic).correction(TOKEN, EXPERIENCE, {
       commandId: COMMAND, interpretationId: INTERPRETATION, meaning: 'A parent afraid of losing work', primaryThemes: ['parenthood'], secondaryThemes: ['work'],
     })).resolves.toEqual({ outcome: 'CORRECTED' });
-    const [given] = semantic.assessCorrection.mock.calls[0] as unknown as [{ correction: unknown; items: unknown[] }];
+    const [given] = semantic.assessCorrection.mock.calls[0] as unknown as [{ correction: unknown; packageText: string }];
     expect(given.correction).toEqual({ meaning: stored.correction_meaning, primaryThemes: ['parenthood'], secondaryThemes: ['work'] });
-    expect(given.items).toHaveLength(2);
-    expect(repo.recordOutcome).toHaveBeenCalledWith(WORK, 'CONSISTENT', { lensKey: 'parenthood.fear', meaning: null, primaryThemes: null, secondaryThemes: null, explanation: null });
+    expect(given.packageText).toBe(PACKAGE_TEXT);
+    expect(repo.recordOutcome).toHaveBeenCalledWith(WORK, 'CONSISTENT', {
+      regions: { regions: [{ key: 'parenthood.raising', hundredths: 100 }] }, meaning: null, primaryThemes: null, secondaryThemes: null, explanation: null,
+    });
   });
 
   it('holds no Personal, Shared, memory, Human Intelligence or account source to give the interpreter', () => {
-    for (const file of ['public-semantic.service.ts', 'public-semantic.repository.ts', 'public-semantic-interpreter.ts', 'public-semantic.controller.ts']) {
+    for (const file of ['public-semantic.service.ts', 'public-semantic.repository.ts', 'public-semantic-interpreter.ts', 'public-semantic.controller.ts',
+      'deepseek-public-semantic-interpreter.ts', 'public-semantic-interpreter-provider.ts', 'public-semantic-regions.ts']) {
       const text = readFileSync(join(__dirname, file), 'utf8').replace(/^\s*(\/\/|\*|\/\*\*).*$/gmu, '');
       expect(text).not.toMatch(/memory|bhimb|humanIntelligence|hypothes|shared_world|SharedWorld|provenance|matching|MODEL_ROUTER|ModelRouter|console\.|Logger|telemetry/iu);
     }
@@ -158,10 +161,22 @@ describe('S5-03A — the proposal and the correction fail closed', () => {
     for (const propose of [
       jest.fn(async () => { throw new Error('provider down'); }),
       jest.fn(async () => ({ ...PROPOSAL, coordinates: { x: 1, y: 2 } })),
-      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { lensKey: 'family', x: 0.4 } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { ...PROFILE, x: 0.4 } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.parents', weight: 1, x: 12000, y: -8000 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.unknown', weight: 1 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family', weight: 1 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.parents', weight: 0.6 }, { key: 'work.money', weight: 0.3 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.parents', weight: 0.95 }, { key: 'work.money', weight: 0.05 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.parents', weight: 0.333 }, { key: 'work.money', weight: 0.667 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.parents', weight: 0.5 }, { key: 'family.parents', weight: 0.5 }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: ['family.parents', 'work.money', 'loss.grief', 'inner.anxiety'].map((key) => ({ key, weight: 0.25 })) } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'family.parents', weight: '1' }] } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { lensKey: 'family.parents' } })),
+      jest.fn(async () => ({ ...PROPOSAL, region: 'family.parents' })),
       jest.fn(async () => ({ ...PROPOSAL, meaning: 'two\nlines' })),
       jest.fn(async () => ({ ...PROPOSAL, primaryThemes: [] })),
-      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { lensKey: 'Not A Key' } })),
+      jest.fn(async () => ({ ...PROPOSAL, placementIntent: { regions: [{ key: 'Not A Key', weight: 1 }] } })),
       jest.fn(async () => 'free prose only'),
       jest.fn(async () => null),
     ]) {
@@ -201,7 +216,7 @@ describe('S5-03A — the proposal and the correction fail closed', () => {
     await expect(service(repo, semantic).correction(TOKEN, EXPERIENCE, {
       commandId: COMMAND, interpretationId: INTERPRETATION, meaning: 'A story about sailing', primaryThemes: ['sailing'],
     })).resolves.toEqual({ outcome: 'NOT_SUPPORTED' });
-    expect(repo.recordOutcome).toHaveBeenCalledWith(WORK, 'NOT_SUPPORTED', { lensKey: null, meaning: null, primaryThemes: null, secondaryThemes: null, explanation: null });
+    expect(repo.recordOutcome).toHaveBeenCalledWith(WORK, 'NOT_SUPPORTED', { regions: null, meaning: null, primaryThemes: null, secondaryThemes: null, explanation: null });
   });
 
   it('passes the correction refusals through unchanged', async () => {
@@ -241,7 +256,7 @@ describe('S5-03A — the review is decoded strictly and shows no internal state'
 });
 
 describe('S5-03A — the interpreter port is provider-neutral, deterministic in tests, and refuses outside them', () => {
-  const input: PublicSemanticPackageInput = { contract: PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, items: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'a public sentence' }] };
+  const input: PublicSemanticPackageInput = { contract: PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, packageText: 'AUTHOR_TEXT: a public sentence' };
 
   it('the test interpreter is deterministic and well formed', async () => {
     const fake: PublicSemanticInterpreter = new FakePublicSemanticInterpreter();
@@ -264,7 +279,11 @@ describe('S5-03A — the interpreter port is provider-neutral, deterministic in 
 
   it('decodes exactly five proposal fields and two assessment shapes', () => {
     expect(decodePublicSemanticProposal({ ...PROPOSAL, score: 0.9 })).toBeNull();
-    expect(decodePublicSemanticAssessment({ verdict: 'CONSISTENT', placementIntent: { lensKey: 'x' }, rank: 1 })).toBeNull();
+    expect(decodePublicSemanticAssessment({ verdict: 'CONSISTENT', placementIntent: PROFILE, rank: 1 })).toBeNull();
+    expect(decodePublicSemanticAssessment({ verdict: 'CONSISTENT', placementIntent: { lensKey: 'x' } })).toBeNull();
+    expect(decodePublicSemanticAssessment({ verdict: 'NOT_SUPPORTED_BY_PACKAGE', placementIntent: PROFILE })).toBeNull();
+    expect(decodePublicSemanticAssessment({ verdict: 'CONSISTENT', placementIntent: PROFILE }))
+      .toEqual({ verdict: 'CONSISTENT', placementIntent: { regions: [{ key: 'family.parents', hundredths: 60 }, { key: 'work.money', hundredths: 40 }] } });
     expect(decodePublicSemanticAssessment({ verdict: 'NOT_SUPPORTED_BY_PACKAGE' })).toEqual({ verdict: 'NOT_SUPPORTED_BY_PACKAGE' });
     expect(decodePublicSemanticAssessment({ verdict: 'MAYBE' })).toBeNull();
   });

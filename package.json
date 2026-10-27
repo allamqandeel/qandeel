@@ -290,6 +290,7 @@
     "verify:shared-audience-names:integration": "node --env-file-if-exists=.env database/verify-migration-0178.mjs",
     "verify:public-authored-topics:integration": "node --env-file-if-exists=.env database/verify-migration-0179.mjs",
     "verify:publish-from-qandeel:integration": "node --env-file-if-exists=.env database/verify-migration-0180.mjs",
+    "verify:public-semantic-placement:integration": "node --env-file-if-exists=.env database/verify-migration-0181.mjs",
     "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",
     "test:a3-02-native-push-platform-delivery-contract": "node --test tests/a3-02-native-push-platform-delivery-contract.test.mjs",
     "test:s4-01-shared-world-reachability-contract": "node --test tests/s4-01-shared-world-reachability-contract.test.mjs",

@@ -83,7 +83,12 @@ const ROUND_CAPS = { 1: { maxAttempts: 60, costCapUsd: 0.5 }, 2: { maxAttempts: 
   // calls and USD 0.08, Tier 2 at most 145 calls and USD 0.17 (the measured call lists; budget.mjs). One paid run per tier,
   // no automatic retry; Tier 2 only after Tier 1 is ACCEPTED (launch.mjs enforces it).
   23: { maxAttempts: 150, costCapUsd: 0.08 },
-  24: { maxAttempts: 145, costCapUsd: 0.17 } };
+  24: { maxAttempts: 145, costCapUsd: 0.17 },
+  // Round 25: S8A-05 CP3 — the preregistered Tier S / Tier P evaluation of the Public semantic interpretation
+  // (scripts/s8a-05/cp3/; Controlled Amendment A-4). Product Owner CP3 order, 2026-10-27: the paid evaluation is prepared,
+  // and no paid call is made before the Product Owner explicitly approves its ceiling. Until then the round is LOCKED for a
+  // live run and has no paid allowance at all; the approval's single change sets its caps and lifts the lock.
+  25: { maxAttempts: 0, costCapUsd: 0, authorized: false } };
 const ROUND = Number(process.env.QANDEEL_EVAL_ROUND);
 if (!Object.prototype.hasOwnProperty.call(ROUND_CAPS, ROUND)) throw new Error(`S8A_02_GUARD: QANDEEL_EVAL_ROUND must name an approved round (${Object.keys(ROUND_CAPS).join(', ')})`);
 const DRY = process.env.QANDEEL_EVAL_DRY === '1';

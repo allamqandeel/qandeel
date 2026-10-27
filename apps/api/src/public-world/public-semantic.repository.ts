@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import type { PublicRegionProfile } from './public-semantic-regions';
 
 /** Exactly the migration 0144 result shapes. */
 export interface PublicSemanticReviewRow {
@@ -12,8 +13,9 @@ export interface PublicSemanticReviewRow {
 export interface PublicSemanticWorkRow { readonly outcome: string; readonly work_id: string | null }
 export interface PublicSemanticCommitRow { readonly outcome: string; readonly interpretation_id: string | null; readonly interpretation_revision: number | null }
 export interface PublicSemanticOutcomeRow { readonly outcome: string }
+/** Exactly the migration 0181 v2 input shape: the package as ONE bounded text (S8A-05 CP3, A-4). */
 export interface PublicSemanticInputRow {
-  readonly work_kind: string; readonly item_ordinal: number; readonly item_kind: string; readonly item_text: string;
+  readonly work_kind: string; readonly package_text: string;
   readonly correction_meaning: string | null; readonly correction_primary_themes: string[] | null; readonly correction_secondary_themes: string[] | null;
 }
 
@@ -25,7 +27,8 @@ export interface PublicSemanticInputRow {
  *     fingerprint or a readiness. Every identity sent is the caller's own fresh command id or one the database returned;
  *   - the SERVER channel (service role, never a client credential) for the two server commands: the package-only input
  *     of one work, and the interpreter's answer for it. A client can call neither: what QANDEEL proposed can only arrive
- *     here.
+ *     here. S8A-05 CP3 (A-4): both are migration 0181's v2 commands — the input is one title-free bounded text, and the
+ *     answer carries a closed region profile from which the database derives the dominant sub-region (the lens key).
  */
 @Injectable()
 export class PublicSemanticRepository {
@@ -62,16 +65,18 @@ export class PublicSemanticRepository {
   }
 
   workInput(workId: string): Promise<PublicSemanticInputRow[]> {
-    return this.server.rpc<PublicSemanticInputRow[]>('read_public_semantic_work_input_v1', { p_work_id: workId });
+    return this.server.rpc<PublicSemanticInputRow[]>('read_public_semantic_work_input_v2', { p_work_id: workId });
   }
 
   recordOutcome(workId: string, outcome: 'PROPOSED' | 'CONSISTENT' | 'NOT_SUPPORTED', answer: {
-    readonly lensKey: string | null; readonly meaning: string | null; readonly primaryThemes: readonly string[] | null;
+    readonly regions: PublicRegionProfile | null; readonly meaning: string | null; readonly primaryThemes: readonly string[] | null;
     readonly secondaryThemes: readonly string[] | null; readonly explanation: string | null;
   }): Promise<PublicSemanticOutcomeRow[]> {
-    return this.server.rpc<PublicSemanticOutcomeRow[]>('record_public_semantic_work_outcome_v1', {
-      p_work_id: workId, p_outcome: outcome, p_lens_key: answer.lensKey, p_meaning: answer.meaning,
-      p_primary_themes: answer.primaryThemes ? [...answer.primaryThemes] : null,
+    return this.server.rpc<PublicSemanticOutcomeRow[]>('record_public_semantic_work_outcome_v2', {
+      p_work_id: workId, p_outcome: outcome,
+      p_region_keys: answer.regions ? answer.regions.regions.map((region) => region.key) : null,
+      p_region_weights: answer.regions ? answer.regions.regions.map((region) => region.hundredths) : null,
+      p_meaning: answer.meaning, p_primary_themes: answer.primaryThemes ? [...answer.primaryThemes] : null,
       p_secondary_themes: answer.secondaryThemes ? [...answer.secondaryThemes] : null, p_explanation: answer.explanation,
     });
   }

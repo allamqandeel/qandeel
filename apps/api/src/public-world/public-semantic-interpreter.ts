@@ -6,33 +6,34 @@
 // structured provider boundaries (hypothesis intent extraction, evidence association): a port, a deterministic test
 // implementation, and a factory.
 //
-// No production provider is bound here. Choosing the Production LLM is Stage 8A (QANDEEL AI Brain / Production LLM
-// Runtime). Until then the factory returns an interpreter that REFUSES — it never falls back to the conversational
-// router, to another provider, or to a canned answer — so outside tests no interpretation is produced and no provider
-// is called (and therefore no provider spend exists to account). When Stage 8A binds a provider, its adapter is composed
-// in this factory around an accounted transport (`ai-usage/accounted-provider-clients`), the one AI-COST-01 boundary,
-// exactly as the existing structured providers are; the ledger's feature family is added by that change.
+// No production provider is bound in THIS module: its own factory still returns the test interpreter under test and an
+// interpreter that REFUSES otherwise — never a fallback to the conversational router, another provider or a canned
+// answer. S8A-05 CP3 (Controlled Amendment A-4) composes the one production provider in its own module
+// (`public-semantic-interpreter-provider.ts`) around the accounted transport (`ai-usage/accounted-provider-clients`), the
+// one AI-COST-01 boundary, under the feature family PUBLIC_SEMANTIC_INTERPRETATION (migration 0181).
 //
-// The port receives only `PublicSemanticPackageInput`: the exact package items of the exact Experience Version, as the
-// database's one package-only reader served them, and — for a correction — the publisher's own words as the database
-// stored them. It returns `unknown`: whatever an implementation answers is decoded strictly by THIS module, so no
-// adapter can widen the result shape, smuggle a coordinate in, or skip validation. Nothing here logs anything.
+// The port receives only `PublicSemanticPackageInput`: the exact package of the exact Experience Version as ONE bounded
+// text (≤ 24,576 bytes, migration 0181; never the title or the section), as the database's one package-only reader
+// served it, and — for a correction — the publisher's own words as the database stored them. It returns `unknown`:
+// whatever an implementation answers is decoded strictly by THIS module, so no adapter can widen the result shape,
+// smuggle a coordinate in, name a region outside the closed vocabulary, or skip validation. Nothing here logs anything.
 
 import { createHash } from 'node:crypto';
+import { PUBLIC_SUB_REGIONS, decodePublicRegionProfile, type PublicRegionProfile } from './public-semantic-regions';
 
-export const PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT = 'PUBLIC_SEMANTIC_INTERPRETATION_V1' as const;
+/** V2 (A-4): the package arrives as one bounded text, and the placement intent is a closed region profile. */
+export const PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT = 'PUBLIC_SEMANTIC_INTERPRETATION_V2' as const;
+/** The bounded input's budget, exactly the database's (0180 `interpreter_input_bytes_v1`). */
+export const PUBLIC_SEMANTIC_INPUT_MAX_BYTES = 24_576;
 
-export interface PublicSemanticPackageItem {
-  readonly ordinal: number;
-  /** Whether the item is source content (a human's words, or a source-content-bearing copy) or QANDEEL's analysis. */
-  readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS';
-  readonly text: string;
-}
-
-/** The interpreter's ENTIRE input: the exact public package, nothing else — no author, no alias, no identifier. */
+/**
+ * The interpreter's ENTIRE input: the exact public package as one bounded text, nothing else — no title, no section, no
+ * author, no alias, no identifier. Each line begins with who wrote it (AUTHOR_TEXT, AUTHOR, QANDEEL,
+ * QANDEEL_UNDERSTANDING; SOURCE / ANALYSIS for an S5-02 package), and [EMPHASIZED] marks what the publisher emphasized.
+ */
 export interface PublicSemanticPackageInput {
   readonly contract: typeof PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT;
-  readonly items: ReadonlyArray<PublicSemanticPackageItem>;
+  readonly packageText: string;
 }
 
 /** The publisher's correction: a meaning and its themes. Never a location. */
@@ -47,12 +48,11 @@ export interface PublicSemanticCorrectionInput extends PublicSemanticPackageInpu
 }
 
 /**
- * Structured placement intent for S5-03B: a lens key — the semantic region the meaning is read under. It is not a
- * coordinate, a vector, a rank or a neighbour; S5-03B turns the reviewed interpretation into a stable spatial placement.
+ * Structured placement intent (A-4): a closed region profile — one to three sub-regions of QANDEEL_PUBLIC_REGIONS_V1
+ * with weights summing to 1. It is not a coordinate, a vector, a rank or a neighbour; the database keeps the dominant
+ * sub-region as the reviewed lens key and computes the place from it, at publication.
  */
-export interface PublicSemanticPlacementIntent {
-  readonly lensKey: string;
-}
+export type PublicSemanticPlacementIntent = PublicRegionProfile;
 
 export interface PublicSemanticProposal {
   /** The meaning, in one short line (≤ 120): it becomes the frozen 0096 semantic label. */
@@ -90,7 +90,6 @@ export const SEMANTIC_THEME_MAX = 40;
 export const SEMANTIC_EXPLANATION_MAX = 280;
 export const SEMANTIC_PRIMARY_THEMES = { min: 1, max: 3 } as const;
 export const SEMANTIC_SECONDARY_THEMES = { min: 0, max: 3 } as const;
-const LENS_KEY = /^[a-z0-9][a-z0-9_.-]{0,63}$/u;
 const IDENTIFIER = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/iu;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -113,9 +112,8 @@ export function areDisjointThemes(primary: readonly string[], secondary: readonl
   return secondary.every((theme) => !first.has(theme.toLowerCase()));
 }
 
-const intentOf = (value: unknown): PublicSemanticPlacementIntent | null =>
-  (isRecord(value) && exactKeys(value, ['lensKey']) && typeof value.lensKey === 'string' && LENS_KEY.test(value.lensKey)
-    ? { lensKey: value.lensKey } : null);
+/** The closed region profile (`public-semantic-regions.ts`): known sub-regions and exact weights, nothing else. */
+const intentOf = (value: unknown): PublicSemanticPlacementIntent | null => decodePublicRegionProfile(value);
 
 /** An interpreter's proposal, or null. Exactly these five fields; anything more — a coordinate, a score — is malformed. */
 export function decodePublicSemanticProposal(value: unknown): PublicSemanticProposal | null {
@@ -150,23 +148,32 @@ export function decodePublicSemanticAssessment(value: unknown): PublicSemanticCo
 export class FakePublicSemanticInterpreter implements PublicSemanticInterpreter {
   private static readonly THEMES = ['family', 'work', 'fear', 'loneliness', 'decisions', 'relationships', 'parenthood', 'hope'] as const;
 
+  /** A two-region profile of the closed vocabulary, chosen by the seed alone: 0.7 and 0.3. */
+  private static profileOf(seed: Buffer): unknown {
+    const count = PUBLIC_SUB_REGIONS.length;
+    const first = seed[1] % count;
+    const second = (first + 1 + (seed[2] % (count - 1))) % count;
+    return { regions: [{ key: PUBLIC_SUB_REGIONS[first].key, weight: 0.7 }, { key: PUBLIC_SUB_REGIONS[second].key, weight: 0.3 }] };
+  }
+
   async propose(input: PublicSemanticPackageInput): Promise<unknown> {
-    const seed = createHash('sha256').update(input.items.map((item) => `${item.ordinal}:${item.kind}:${item.text}`).join('\n'), 'utf8').digest();
+    const seed = createHash('sha256').update(input.packageText, 'utf8').digest();
     const themes = FakePublicSemanticInterpreter.THEMES;
     const primary = themes[seed[0] % themes.length];
     const secondary = themes[(seed[0] + 1) % themes.length];
+    const lines = input.packageText.split('\n').length;
     return {
-      meaning: `A test reading of ${input.items.length} public item${input.items.length === 1 ? '' : 's'}`,
+      meaning: `A test reading of ${lines} public line${lines === 1 ? '' : 's'}`,
       primaryThemes: [primary],
       secondaryThemes: [secondary],
       explanation: 'A deterministic test interpretation derived only from the public package.',
-      placementIntent: { lensKey: primary },
+      placementIntent: FakePublicSemanticInterpreter.profileOf(seed),
     };
   }
 
   async assessCorrection(input: PublicSemanticCorrectionInput): Promise<unknown> {
-    const digest = createHash('sha256').update(input.correction.primaryThemes.join('\n'), 'utf8').digest('hex').slice(0, 8);
-    return { verdict: 'CONSISTENT', placementIntent: { lensKey: `corrected.${digest}` } };
+    const seed = createHash('sha256').update(input.correction.primaryThemes.join('\n'), 'utf8').digest();
+    return { verdict: 'CONSISTENT', placementIntent: FakePublicSemanticInterpreter.profileOf(seed) };
   }
 }
 

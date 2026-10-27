@@ -22,6 +22,9 @@ const MOBILE = 'apps/mobile/src';
 const OWNER_COMMANDS = ['read_own_public_semantic_review_v1', 'request_own_public_semantic_proposal_v1',
   'request_own_public_semantic_correction_v1', 'commit_own_public_semantic_work_v1', 'accept_own_public_semantic_proposal_v1'];
 const SERVER_COMMANDS = ['read_public_semantic_work_input_v1', 'record_public_semantic_work_outcome_v1'];
+// RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): the API calls migration 0181's v2 server commands, which gate on and record through
+// the 0144 v1 commands above (verify-migration-0181 proves both); they are still server-channel only.
+const SERVER_COMMANDS_V2 = ['read_public_semantic_work_input_v2', 'record_public_semantic_work_outcome_v2'];
 const MAP_CONTROL = /coordinate|\bx\b|\by\b|latitude|longitude|position|rank|weight|popular|proxim|near|vector|embedding|lens/iu;
 
 test('1 — registered in the toolchain and both CI workflows; one forward migration after 0143', () => {
@@ -70,7 +73,8 @@ test('3 — PUBLIC PACKAGE ONLY: one server-channel reader that touches nothing 
   // The API composes only the reader's rows.
   const service = code(`${API}/public-semantic.service.ts`);
   assert.match(service, /this\.repository\.workInput\(workId\)/u);
-  for (const file of ['public-semantic.service.ts', 'public-semantic.repository.ts', 'public-semantic-interpreter.ts', 'public-semantic.controller.ts']) {
+  for (const file of ['public-semantic.service.ts', 'public-semantic.repository.ts', 'public-semantic-interpreter.ts', 'public-semantic.controller.ts',
+    'deepseek-public-semantic-interpreter.ts', 'public-semantic-interpreter-provider.ts', 'public-semantic-interpreter-provider.config.ts', 'public-semantic-regions.ts']) {
     assert.doesNotMatch(code(`${API}/${file}`), /memory|humanIntelligence|hypothes|SharedWorld|shared_world|provenance|matching|MODEL_ROUTER|ModelRouter|console\.|Logger/iu, `${file} holds no private context`);
   }
 });
@@ -106,7 +110,15 @@ test('5 — the provider boundary: neutral, deterministic under test, refusing o
     'the test implementation only under test; otherwise refuse — no fallback');
   assert.match(port, /throw new PublicSemanticInterpreterUnavailableError\(\);/u);
   assert.match(port, /exactKeys\(value, \['meaning', 'primaryThemes', 'secondaryThemes', 'explanation', 'placementIntent'\]\)/u, 'exactly the structured proposal');
-  assert.match(code(`${API}/public-world.module.ts`), /provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: \(\) => createConfiguredPublicSemanticInterpreter\(process\.env\)/u);
+  // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): the module binds the one production composition, which is the test interpreter
+  // under test and otherwise ONLY DeepSeek Flash through the accounted client behind the SYNTHETIC_ONLY gate — built on first
+  // use, refusing where DeepSeek may not run. Still no fallback: no Unconfigured stand-in, no other provider, no router.
+  assert.match(code(`${API}/public-world.module.ts`), /provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: \(\) => createProductionPublicSemanticInterpreter\(process\.env\)/u);
+  const provider = code(`${API}/public-semantic-interpreter-provider.ts`);
+  assert.match(provider, /if \(environment\.NODE_ENV === 'test'\) return new FakePublicSemanticInterpreter\(\);\n\s+return deferredPublicSemanticInterpreter\(\(\) => \{/u);
+  assert.match(provider, /accountedDeepSeekChatCompletionsClient\(\s*createDeepSeekClient\(config\), 'PUBLIC_SEMANTIC_INTERPRETATION', productionAiProviderCallAccounting\(\)\)/u);
+  assert.doesNotMatch(provider, /Unconfigured|ModelRouter|MODEL_PROVIDER|openai|anthropic|gemini|catch/iu, 'no stand-in, no other provider, no swallowed refusal');
+  assert.match(code(`${API}/public-semantic-interpreter-provider.config.ts`), /requireDeepSeekQualification\(environment, '[^']+'\)/u);
   const types = read('apps/api/src/model-router/model-router.types.ts');
   assert.match(types, /task: 'CONVERSATIONAL_RESPONSE';/u, 'the conversational contract is not widened');
 });
@@ -114,7 +126,7 @@ test('5 — the provider boundary: neutral, deterministic under test, refusing o
 test('6 — the API boundary: four routes, owner RPCs on the caller token, server RPCs on the server channel', () => {
   const repository = code(`${API}/public-semantic.repository.ts`);
   assert.deepEqual([...repository.matchAll(/this\.rpc<[A-Za-z]+>\(token, '([a-z_]+_v1)'/gu)].map((m) => m[1]).sort(), [...OWNER_COMMANDS].sort());
-  assert.deepEqual([...repository.matchAll(/this\.server\.rpc<[^>]+>\('([a-z_]+_v1)'/gu)].map((m) => m[1]).sort(), [...SERVER_COMMANDS].sort());
+  assert.deepEqual([...repository.matchAll(/this\.server\.rpc<[^>]+>\('([a-z_]+_v[0-9]+)'/gu)].map((m) => m[1]).sort(), [...SERVER_COMMANDS_V2].sort());
   assert.doesNotMatch(repository, /p_user|p_public_identity|p_controller|p_readiness|p_fingerprint/u);
   const controller = code(`${API}/public-semantic.controller.ts`);
   assert.match(controller, /@Controller\('public\/authoring\/drafts\/:experienceId\/semantic'\)\n@UseGuards\(SupabaseAuthGuard\)/u);
