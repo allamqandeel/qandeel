@@ -344,10 +344,12 @@ async function verifyBoundary() {
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
   // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): migration 0181 adds exactly PUBLIC_SEMANTIC_INTERPRETATION
   // (0181's own verifier pins the full list); the judge family is still admitted and nothing else in this list changes.
+  // RE-ANCHORED by S8A-05 CP4 (2026-10-27, Controlled Amendment A-5): migration 0182 adds exactly PUBLIC_QANDEEL_REPLY
+  // (0182's own verifier pins the full list); nothing else in this list changes.
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort(), ['CONVERSATION_REPLY', 'CU_SEGMENTATION', 'FOCUS_RESOLUTION',
     'THREAD_FORMATION', 'THREAD_CONTINUITY', 'HYPOTHESIS_INTENT_EXTRACTION', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', 'HYPOTHESIS_CANDIDATE_GENERATION',
     'PERSONAL_UNDERSTANDING_CAPTURE', 'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE',
-    'PUBLIC_SEMANTIC_INTERPRETATION'].sort());
+    'PUBLIC_SEMANTIC_INTERPRETATION', 'PUBLIC_QANDEEL_REPLY'].sort());
 }
 
 // ------------------------------------------------------------------------------------------------- 2–4. relevance and consent

@@ -108,6 +108,9 @@ const FILES = {
   publicSemanticAdapter: 'apps/api/src/public-world/deepseek-public-semantic-interpreter.ts',
   publicSemanticConfig: 'apps/api/src/public-world/public-semantic-interpreter-provider.config.ts',
   publicSemanticModule: 'apps/api/src/public-world/public-semantic-interpreter-provider.ts',
+  // S8A-05 CP4 (2026-10-27, Controlled Amendment A-5(d)): the Public QANDEEL reply's one composition — the same DeepSeek
+  // router under its own family, PUBLIC_QANDEEL_REPLY (migration 0182).
+  publicReplyModule: 'apps/api/src/public-world/public-reply-model-router.ts',
   migration0175: 'database/migrations/0175_s8a_04_shared_social_memory_v1.sql',
   consumer: 'apps/api/src/post-response-intelligence/post-response-intelligence-consumer.service.ts',
   brainEvalPricing: 'apps/api/src/brain-eval/brain-eval.pricing.ts',
@@ -197,6 +200,11 @@ function censusViolations(world) {
   }
   if (!ts(world.deepseekRouter).includes("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)")
     || !/static fromEnvironment\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(ts(world.deepseekRouter))) out.push('the DeepSeek reply client is not accounted');
+  // S8A-05 CP4: the Public QANDEEL reply is the same router under its own family, composed with the production accounting.
+  if (!ts(world.deepseekRouter).includes("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'PUBLIC_QANDEEL_REPLY', accounting)")
+    || !/static forPublicQandeel\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(ts(world.deepseekRouter))
+    || !/DeepSeekModelRouter\.forPublicQandeel\(undefined, productionAiProviderCallAccounting\(\)\)/u.test(ts(world.publicReplyModule))
+    || /createDeepSeekClient\(|new OpenAI\(|\.fromEnvironment\(/u.test(ts(world.publicReplyModule))) out.push('PUBLIC_QANDEEL_REPLY is not accounted');
   const module = ts(world.conversationModule);
   if (!module.includes("costLedgerDecorator('CU_SEGMENTATION')(createDeepSeekClient(config))")) out.push('CU segmentation is not accounted');
   for (const [factory, family] of [['deepSeekFocusResolutionBinding', 'FOCUS_RESOLUTION'], ['deepSeekThreadEstablishmentBinding', 'THREAD_FORMATION'], ['deepSeekThreadContinuityBinding', 'THREAD_CONTINUITY']]) {
@@ -689,6 +697,8 @@ const PLANTED = [
   ['JSON: an adapter bypasses the completion envelope', 'jsonOutputViolations', () => plant('cuAdapter', 'return parseProposal(deepSeekJsonContent(response), request);', 'return parseProposal((response as any).choices[0].message.content, request);')],
   ['JSON: an adapter retries behind the SDK', 'jsonOutputViolations', () => plant('threadAdapter', '{ timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal }', '{ timeout: this.config.timeoutMs, maxRetries: 2, signal: controller.signal }')],
   ['census: the DeepSeek reply client is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)", 'createDeepSeekClient(config)')],
+  ['census: the Public QANDEEL reply is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'PUBLIC_QANDEEL_REPLY', accounting)", 'createDeepSeekClient(config)')],
+  ['census: the Public reply composition drops its family', 'censusViolations', () => plant('publicReplyModule', 'DeepSeekModelRouter.forPublicQandeel(undefined, productionAiProviderCallAccounting())', 'DeepSeekModelRouter.fromEnvironment(undefined, productionAiProviderCallAccounting())')],
   ['census: a semantic binding is composed unaccounted', 'censusViolations', () => plant('conversationModule', "deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))", 'deepSeekFocusResolutionBinding()')],
   ['ops: a failed operations scan is swallowed by a silent catch', 'operationsScanViolations', () => plant('worker', "} catch (error) {\n        this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');\n        return;\n      }", '} catch {\n        return;\n      }')],
   ['ops: a silent outer catch {} returns around the scan', 'operationsScanViolations', () => plant('worker', '    } finally {\n      this.running = false;', '    } catch {\n      // retried on the next cycle\n    } finally {\n      this.running = false;')],

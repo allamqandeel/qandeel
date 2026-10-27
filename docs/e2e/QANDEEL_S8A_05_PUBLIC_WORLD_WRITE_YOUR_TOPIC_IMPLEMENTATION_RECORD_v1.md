@@ -1,8 +1,14 @@
 # QANDEEL — S8A-05 Public World: «اكتب موضوعك» / Write Your Topic — Implementation Record v1
 
 **Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** (§1 – §10), **CP2 — Publish
-from QANDEEL** (§11) and **CP3 — Public Semantic Intelligence & Deterministic Spatial Placement** (§12)
-**Status:** `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 MERGED THROUGH PR #360 AS 72898797 (2026-10-27) — CP3
+from QANDEEL** (§11), **CP3 — Public Semantic Intelligence & Deterministic Spatial Placement** (§12) and **CP4 — Public
+Discussion Threads & the @qandeel Context**, with S8A-05's closure (§13)
+**Status:** `S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27, the CP4 closing change; §13.10) — CP1 MERGED THROUGH PR #359
+AS 7c0356b7 (2026-10-26) — CP2 MERGED THROUGH PR #360 AS 72898797 (2026-10-27) — CP3 MERGED THROUGH PR #361 AS 4ff74a80
+(2026-10-27) — CP4 DELIVERED ON ITS DRAFT PULL REQUEST, NOT MERGED — CP4 PRODUCT COPY GATE CLOSED / APPROVED (2 ROWS, PRODUCT OWNER, 2026-10-27; §13.7) —
+TIER Q PREPARED, NOT RUN (NO BUDGET APPROVAL) — EDITING A PUBLISHED TOPIC DEFERRED TO QAN-BL-PUB-REV-01 (PRE-LAUNCH BLOCKER),
+NOT IMPLEMENTED — MIGRATIONS 0179 – 0182 NOT HOSTED — PRODUCTION PUBLISHING CLOSED / CLOSED TO USERS`. CP3's status as written
+at its review: `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 MERGED THROUGH PR #360 AS 72898797 (2026-10-27) — CP3
 DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP3 REVIEW GATE — NO NEW COPY — TIER S / TIER P RUN ONCE: NOT ACCEPTED
 — CP3 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED / CLOSED TO USERS` (§12). S8A-05 is not closed: CP4
 has not started. CP2's status as written at its review: `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP2
@@ -11,7 +17,7 @@ NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not closed: CP3 �
 are reconciled at S8A-05's last checkpoint, not here. CP1's status as written at its review: `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE CLOSED (every row
 APPROVED by the Product Owner, 2026-10-26) — NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
 closed: CP2 – CP4 have not started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
-**Date:** 2026-10-26 (CP1); 2026-10-27 (CP2, §11; CP3, §12)  
+**Date:** 2026-10-26 (CP1); 2026-10-27 (CP2, §11; CP3, §12; CP4 and the closure, §13)  
 **Branch / base:** `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`, the merge of PR #358
 (S8A-04, merged 2026-10-26)  
 **Authority:** the Product Owner's *S8A-05 CP1 order* (2026-10-26), which approves the S8A-05 WP1 design with its WP1-R1
@@ -635,7 +641,8 @@ under `publicTopicDrafts`), `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (the source colu
 
 ## 12. S8A-05 CP3 — Public Semantic Intelligence & Deterministic Spatial Placement
 
-**Checkpoint:** `S8A-05 CP3 — DELIVERED ON ITS DRAFT PULL REQUEST — AT THE PRODUCT OWNER'S CP3 REVIEW — CANDIDATE CONTROLLED
+**Checkpoint:** `S8A-05 CP3 — MERGED THROUGH PR #361 AS 4ff74a80 (2026-10-27)` (reconciled by the CP4 closing change). As
+written at its review: `S8A-05 CP3 — DELIVERED ON ITS DRAFT PULL REQUEST — AT THE PRODUCT OWNER'S CP3 REVIEW — CANDIDATE CONTROLLED
 AMENDMENT A-4 — MIGRATION 0181 NOT HOSTED — NO NEW COPY — TIER S / TIER P RUN ONCE: NOT ACCEPTED (FABRICATION 3 CONFIRMED BY
 BOTH RATERS; THE DETERMINISTIC HALF MET) — PRODUCTION PUBLISHING CLOSED — NOT MERGED`. S8A-05 is not closed: CP4 has not
 started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
@@ -845,3 +852,208 @@ CP3 admits, tombstones and re-owns nothing. Read and left as they stand: `QAN-BL
 `SYNTHETIC_ONLY` kept), `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (the region slots are bound to a published
 Experience, and nothing can publish yet). The findings of amendment §8 are recorded there; F-2 (the camera) stays with the
 S5-03B open gaps G04 / G05.
+
+---
+
+## 13. S8A-05 CP4 — Public Discussion Threads & the @qandeel Context
+
+**Checkpoint:** `S8A-05 CP4 — DELIVERED ON ITS DRAFT PULL REQUEST — S8A-05 CLOSED / READY FOR PO MERGE DECISION — CONTROLLED
+AMENDMENT A-5 EFFECTIVE ON MERGE — MIGRATION 0182 NOT HOSTED — CP4 PRODUCT COPY GATE CLOSED / APPROVED (2 ROWS, PRODUCT OWNER, 2026-10-27; §13.7) — TIER Q
+PREPARED, NOT RUN (NO BUDGET APPROVAL) — EDITING A PUBLISHED TOPIC DEFERRED TO QAN-BL-PUB-REV-01 (PRE-LAUNCH BLOCKER), NOT
+IMPLEMENTED — PRODUCTION PUBLISHING CLOSED — NOT MERGED`  
+**Date:** 2026-10-27  
+**Branch / base:** `s8a/s8a-05-cp4` from `main` at `c9715702`, the merge of PR #362, which follows PR #361 (S8A-05 CP3, merged
+2026-10-27 as `4ff74a80`) — so A-4 is effective  
+**Authority:** the Product Owner's *S8A-05 CP4 order* (2026-10-27): Public discussion and `@qandeel` on the existing S5-04
+system, the context contract, free proofs, a prepared paid evaluation, the Copy Gate and S8A-05's closure; the Product
+Owner's CP4 scope decision of the same day (§13.1); the
+[S8A-05 Public Discussion Controlled Amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_DISCUSSION_CONTROLLED_AMENDMENT_v1.0.md)
+(A-5), which binds from this pull request's merge.
+
+Merging, deploying, opening any publication gate, applying 0182 to a hosted database, any paid model call, starting
+`PUB-REV-01`, Stage 8B and Stage 9 each need the Product Owner's explicit approval. None is done here. No DeepSeek or other
+paid API was called in CP4. Synthetic data only.
+
+### 13.1 Census and the Product Owner's scope decision
+
+The census read WP1-R1 §3 (edit rules V-1 – V-14) against the frozen I-05 publication core and found its "additive only"
+premise wrong: a successor version of a PUBLISHED Experience cannot be prepared (DRAFT-only preparation in 0119 / 0179 /
+0180), reviewed or placed (the current-version pins of 0144 / 0145), published (`publication_state` keyed by the Experience
+and immutable, 0095; eligibility pinned to the published pointer, 0098) or removed (0099 / 0121) without replacing frozen
+functions that verifiers 0095 / 0098 / 0099 / 0107 / 0119 / 0121 pin. The Product Owner decided (2026-10-27, verbatim
+conditions): editing published topics and the discussion's continuity across versions become a **separate task with a
+clear owner, status `PRE-LAUNCH BLOCKER`**, not an optional future improvement; it is done and tested before Stage 9 opens
+production publishing; it keeps every approved WP1-R1 requirement, including the version history, placement stability while
+the dominant meaning is unchanged and the integrity of the discussion's binding to versions; CP4 completes the remaining
+scope by reusing the discussion system without redesigning the frozen publication core; at S8A-05's closure, editing is
+recorded as deferred to that task and never as implemented; no further scope and no paid call without approval. Recorded as
+`QAN-BL-PUB-REV-01`, owner `PUB-REV-01` (§13.10).
+
+### 13.2 What CP4 delivers
+
+| PO CP4 scope item | Delivered | Where |
+| --- | --- | --- |
+| Reuse the S5-04 discussion; no parallel engine | Yes | 0182 wraps the unchanged 0147 command and read; the 0147 lease, one-reply rule, completion and Safety Gate are reused |
+| A reply keeps whom it answers | Yes | 0182 B / C (`reply_targets`, immutable); the read, the context and the activity use the exact target (A-5(a)) |
+| The topic's author is distinguishable | Yes | 0182 D (`is_op` from the creating Public Identity); mobile tag (A-5(b)) |
+| `@qandeel`: at most one reply, lease, Safety Gate, AI-COST, cost to the invoker | Yes | unchanged 0147 path; family `PUBLIC_QANDEEL_REPLY` (0182 A; AI-COST-01 contract) |
+| DeepSeek Flash only through the S5-04 system; no synthetic reply in production; no new personality | Yes | `PublicWorldModule` composes `DeepSeekModelRouter.forPublicQandeel`; the Model Router's own test seam only under `NODE_ENV=test`; frame, core and composition unchanged |
+| Context: OP, asker, participants, QANDEEL's earlier replies; the OP's correction wins; the 6 KB topic | Yes | 0182 E; the assembler's branch layout (A-5(c)); verifier C03 – C10, spec |
+| No private identifier; no Personal / Shared / Matching data | Yes | 0182 I5 firewall; verifier B05; spec |
+| Context change through a controlled contract | Yes | A-5, quoted text verbatim; no guard chain |
+| Free deterministic tests; historical verifiers | Yes | §13.9 |
+| Paid evaluation prepared, with call count and ceiling, not run | Yes | §13.8 |
+| Copy Gate table shown once | Yes (CLOSED / APPROVED, 2026-10-27) | §13.7 |
+| Editing a published topic | **No — deferred** | `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`), by the Product Owner's decision (§13.1) |
+
+### 13.3 Database — migration `0182_s8a_05_public_discussion_replies_qandeel_context_v1.sql` (not hosted; the next is `0183`)
+
+- **A.** The AI-COST family list adds `PUBLIC_QANDEEL_REPLY` (15 families).
+- **B.** Schema `public_thread_private` (not exposed; RLS on, no policy): `reply_targets(post_id PK, experience_id,
+  reply_to_post_id, recorded_at)`, immutable by trigger; no text, account or label.
+- **C.** `post_own_public_discussion_v2`: the unchanged 0147 command, then — only for a committed reply with a target — the
+  exact target, which must be a served post of the same Experience. A retry records nothing twice.
+- **D.** `read_public_discussion_posts_v2`: the unchanged 0147 read plus `reply_to_post_id` (the exact target, or the thread
+  root for a reply made before 0182) and `is_op`.
+- **E.** `read_public_qandeel_context_v2(post, lease)`: under the live 0147 lease, the topic (CP2's bounded
+  `qandeel_context_v1` of the manifest, or the title and items in the same labels, ≤ 6 KB), meaning and themes, the branch
+  (the exact-target chain to the root, the root, at most 8 more posts of the thread before the invocation) with speaker roles
+  (`OP` wins over `ASKER`) and targets, and the served earlier answers attached to branch posts. Nothing after the invocation,
+  no other thread, no related topic.
+- **F.** The 0147 activity source is forward-replaced under its own name: `REPLY_TO_OWN_POST` goes to the author of the exact
+  post answered (never the actor); every other event is identical.
+- **G – H.** Public INVOKER wrappers; `authenticated` may post and read, `service_role` alone reads the context and the
+  activity source.
+- **I.** Assertions: both CW2-08 seams `NOT_EVALUATED`; still exactly five lifecycle movers (no successor-version path); the
+  0096 / 0097 primitives executable by no application role; every function a pinned postgres-owned definer and no relation
+  holding text; the Public context firewall; the family present.
+
+Re-anchored historical verifiers (each with a dated note, *RE-ANCHORED by S8A-05 CP4, Controlled Amendment A-5*): 0171
+(15 families), 0174 (the context v2 read and the family), 0175 (the family; the two v2 functions classified as excluded from
+Shared bodies), 0176 (the family list), 0181 (`PUBLIC_QANDEEL_REPLY` a later family), 0150 (the PROD-RETRY-01 census
+names `post_own_public_discussion_v2` under `RETAINED` as `RACE_CONVERGING`: it calls the unchanged 0147 v1 command first, so it
+reaches exactly v1's classified first-identity race raise; a re-run converges and records nothing twice). No assertion was
+weakened.
+
+### 13.4 API (NestJS, `apps/api/src/public-world/`)
+
+- `public-discussion.repository.ts` calls the three v2 RPCs; `public-discussion.service.ts` returns `replyToPostId` and
+  `isOp`, validated strictly.
+- `public-qandeel-reply.service.ts` (`publicQandeelContextOf`) reads the 0182 rows: every post's speaker and target, every
+  answer's post, which must be in the branch, or no context at all.
+- `public-qandeel-model-input.ts`: the branch layout and its exact words (A-5(c)); `latencyBudgetMs` DEEP 25 000, FAST 3 000.
+  The S5-04 frame, the composition literal and `locale: 'und'` are unchanged.
+- `public-reply-model-router.ts` and `public-world.module.ts`: the Public generator is handed its own router (no second
+  `MODEL_ROUTER` provider, so the application's stays the only one in the container), DeepSeek Flash under
+  `PUBLIC_QANDEEL_REPLY` (`DeepSeekModelRouter.forPublicQandeel`); the application's router is untouched.
+- `ai-usage.types.ts`: the family. `deepseek-model-router.ts`: `forPublicQandeel`. Brain-eval: Public DEEP 25 s in its
+  world budget.
+
+### 13.5 Mobile (`apps/mobile/src/`)
+
+- `runtime-entry/public-discussion-api.ts`: the strict decoder requires exactly the two new fields.
+- `public-world/field/PublicDiscussion.tsx`: the OP tag beside the author's display (words, read with the author); on a reply
+  to a reply, one line «ردًا على {author}» with a one-line excerpt of that post, a 44 pt button that scrolls to it. No count,
+  rank or colour-only signal.
+- `public-world/discussion-authorship-copy.ts`: the two CP4 rows (§13.7).
+
+### 13.6 Privacy, concurrency and cost
+
+- **Privacy.** The context carries post / response ids and text only; speaker roles are computed in the database from Public
+  Identities and never leave it as identities; no author, display, account, controller or related topic reaches the server
+  code or the model (B05, C05, spec). `is_op` is a boolean on the wire. `SYNTHETIC_ONLY` is unchanged: no real person's text
+  reaches DeepSeek (`QAN-BL-AI-01`).
+- **Concurrency.** A target is recorded once, in the same transaction as the reply, and is immutable (T04, B04). The 0147
+  lease still admits one generation per invocation and one recorded answer (C08); a context read after the lease ended is
+  nothing (C01).
+- **Cost.** One provider attempt is one `PUBLIC_QANDEEL_REPLY` record, inside the invoker's attribution scope (spec;
+  AI-COST-01 contract; B06). A provider failure ends the lease unanswered and records no words.
+
+### 13.7 Copy Gate — S8A-05 CP4 Product Copy Gate: `CLOSED / APPROVED` (Product Owner, 2026-10-27)
+
+| Key | Arabic | English | Status |
+| --- | --- | --- | --- |
+| `authorship.opTag` | صاحب الموضوع | Topic author | `APPROVED` |
+| `authorship.inReplyTo` | ردًا على {0} | In reply to {0} | `APPROVED` |
+
+The table was shown to the Product Owner once, with both rows `PROPOSED`. The Product Owner approved both rows in Arabic and
+English, without edits (2026-10-27): the gate is CLOSED, and no row is `PROPOSED`.
+
+`{0}` is the answered post's author display, as the discussion already shows it. No other user-visible string is added; the
+S5-04 copy (18 rows) and the CP1 – CP3 copy are unchanged. The model-facing words of A-5(c) are not user copy; they are
+fixed verbatim in the amendment and fingerprinted in the Tier Q preregistration.
+
+### 13.8 Tier Q — the paid quality evaluation: `PREPARED — NOT RUN — NO BUDGET APPROVAL`
+
+Prepared in `scripts/s8a-05/cp4/`: `AUTHOR_BRIEF.md`; `tier-q-cases.json` (30 synthetic threads, written by an independent
+agent session from the brief alone and reviewed blind by a second before freezing — three label defects fixed, Q09 / Q16 /
+Q25); `PREREGISTRATION.md`; `RATER_RUBRIC.md` (attribution, correction, identity, the question, language, restraint,
+fabrication; two blind raters); `rows.ts`, `tier-q-eval.ts` (the application's path from 0182's rows to the composed
+router), `tier-q-score.mjs`, `budget.ts` and `launch.mjs`; guard round 26, **LOCKED**.
+
+**Budget (measured, `budget.ts`):** 30 calls, all FAST (production routing); expected USD 0.011, pessimistic 0.037,
+all-worst-case reservation 0.119; **proposed ceiling 30 attempts and USD 0.05**. Known risk stated before any run:
+`QAN-BL-AI-05` (FAST at 3 s under DeepSeek).
+
+**Zero-cost runs:** `--dry` — the guard refuses the first call, 0 attempts; the live lock — the guard throws at load ("round
+26 is not authorized for a live run; nothing was sent") and the launcher refuses uncommitted code; `--simulate` — 30 / 30
+answered, 30 records under `PUBLIC_QANDEEL_REPLY`, all paid by the synthetic asker, nothing Shared, no identifier in any
+answer: deterministic half MET; `--simulate` with faults (HTTP 500, a cut-off answer, a malformed body, a hang) — each one
+attempt and one record, the hang cut at 3 s, never retried, counted NO_ANSWER (NOT MET, as it must be); the blind packet
+carries the case and the answer only; the tally gives PENDING AUDIT on an unresolved UNSURE, and ACCEPTED / NOT ACCEPTED
+once resolved.
+
+Until the Product Owner approves the ceiling and the run is ACCEPTED, A-5(c) is proven as a contract, not as model quality.
+
+### 13.9 Verification
+
+Final local run on the final tree, after the Copy Gate decision (2026-10-27), sequential, exit codes; GitHub CI on the pull
+request's head is the binding run.
+
+- **Root contracts:** 1,641 / 1,641 pass. A parallel run once failed the Windows temp-harness cleanup contract: another
+  file's replay harness was running at the same moment. That contract passes 14 / 14 alone, and the full suite passes with
+  concurrency 1.
+- **`test:database`:** 1,310 / 1,310 pass. **`test:task-closure-governance-contract`:** 24 / 24 pass.
+- **PostgreSQL 17 verifiers, each on a fresh database:** 0095, 0096, 0097, 0143, 0144, 0145, 0146, 0147, 0164, 0168,
+  0169, 0171, 0174, 0175, 0176, 0179, 0180, 0181 and 0182 all pass.
+- **CI round 1 (`71a69acc`):** verifier 0150 failed. CP4's `post_own_public_discussion_v2` was an entry point that the
+  PROD-RETRY-01 census did not classify. 0150 is re-anchored (§13.3) and passes 28 / 28 locally. The verifiers after it in
+  CI order also pass locally: 0151 – 0163, 0165 – 0167, 0170, 0172, 0177 and 0178.
+- **API:** `build:api` and `tsc --noEmit` are clean.
+  - The full jest run found one real failure. `api-http-bootstrap.spec.ts` resolves `MODEL_ROUTER` from the whole
+    application, and the Public World module's second `MODEL_ROUTER` provider made that lookup ambiguous.
+  - Fixed narrowly: the module now hands the Public generator its router through a factory, and registers no second
+    `MODEL_ROUTER`. The generator keeps `@Inject(MODEL_ROUTER)`, which the S5-04 contract pins.
+  - After the fix, the app-booting specs (`health/`, `http-security/`: 8 suites, 121 tests) pass. So do the Public World
+    and ACE-SP-01 specs (12 suites, 159 tests) and the S5-04, AI-COST-01 and ACE-SP-01 contracts (94 / 94).
+  - The full run otherwise passed: 296 of 297 suites, 7,046 tests, 1 skipped.
+- **Mobile:** `typecheck:mobile` is clean. `lint:mobile` reports 0 errors (106 warnings, all existing).
+  - jest: 239 / 241 suites and 3,003 / 3,009 tests pass, including the CP4 Copy Gate test at `APPROVED`.
+  - The 6 failures (`depth.test.tsx`, `w2-account-access.test.tsx`) are the machine-locale baseline: the sign-in
+    screen renders in Arabic where those tests expect English. The same 6 fail with CP4's mobile changes stashed.
+- **No paid call.** Tier Q stays LOCKED (§13.8).
+
+### 13.10 Closure of S8A-05 (BG-08 / BG-09)
+
+**S8A-05 is CLOSED / READY FOR PO MERGE DECISION in this change.** Its four checkpoints: CP1 (PR #359, `7c0356b7`), CP2
+(PR #360, `72898797`), CP3 (PR #361, `4ff74a80`) and CP4 (this pull request). **Editing a published topic, successor versions
+and the discussion across versions are NOT implemented: they are deferred, in full, to `QAN-BL-PUB-REV-01`
+(`PRE-LAUNCH BLOCKER`, owner `PUB-REV-01`), by the Product Owner's decision of 2026-10-27.**
+
+- **BG-08, inherited items:** S8A-05 owned none at kickoff, and CP1 – CP3 admitted, tombstoned and re-owned nothing. Read and
+  left as they stand, with reasons: `QAN-BL-AI-01` (`SYNTHETIC_ONLY`; the Public reply reaches DeepSeek only on synthetic
+  data), `QAN-BL-AI-05` (FAST 3 s; the Tier Q risk), `QAN-BL-PRIV-05` (the Public discussion's export stays that item's),
+  `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (`reply_targets` is keyed by a post and follows the post's existing erasure; nothing can
+  publish yet), `QAN-BL-VIS-01`.
+- **BG-08, dated note:** `QAN-BL-AI-04` — Public DEEP is set to 25 s from the S8A-02 CP3 measurement (A-5(d)); Shared DEEP
+  stays 10 s, so the item stays `DEFERRED — OWNED` for Shared.
+- **BG-08 / BG-06, admitted:** `QAN-BL-PUB-REV-01` — Published Topic Revisions and Version-Continuous Public Discussion
+  (`PRE-LAUNCH BLOCKER`), `HIGH`, `DEFERRED — OWNED`, owner `PUB-REV-01`; designated by the Product Owner.
+- **Not admitted:** the Tier Q run is not a backlog item — it is a prepared evaluation awaiting a budget decision, recorded
+  here and in its preregistration.
+- **BG-09:** this record's status banner, the A-1 – A-4 amendment banners and the authority index are brought to their final
+  state in this same change; A-5 carries it from its first line.
+
+**Deliberately not implemented in CP4:** editing a published topic and anything across versions (above); a paid call; any
+change to publication, Stage 9, CW2-08, the entitlement, QANDEEL COMPANY or LIVE; a deeper visible nesting, ranking or
+counts; a related-topic context; a hosted application of 0182.

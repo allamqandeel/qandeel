@@ -1,7 +1,8 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-05 CP1 — Public World: «اكتب موضوعك» / Write Your Topic — Narrow Controlled Amendment v1.0
 
-**Status:** `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP1 order, 2026-10-26) — AT THE
+**Status:** `EFFECTIVE SINCE THE MERGE OF PR #359 AS 7c0356b7 (2026-10-26) — S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27, the S8A-05 CP4 closing
+change; record §13.10)`. As written at its review: `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP1 order, 2026-10-26) — AT THE
 S8A-05 CP1 REVIEW GATE — NOT EFFECTIVE`. It binds from the merge of the S8A-05 pull request that carries it, after the
 Product Owner approves that pull request. Until then nothing below is in force.  
 **Scope:** directly written Public topics only — their private drafts, their human title, their user-chosen section, their

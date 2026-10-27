@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 
-/** Exactly the migration 0147 result shapes. */
+/** Exactly the migration 0147 result shapes; the read and the context are migration 0182's v2 (A-5). */
 export interface PublicDiscussionPostRow {
   readonly outcome: string; readonly post_id: string | null; readonly thread_root_id: string | null;
   readonly post_ordinal: number | null; readonly qandeel_invoked: boolean;
@@ -11,17 +11,27 @@ export interface PublicDiscussionReadRow {
   readonly post_id: string; readonly thread_root_id: string; readonly post_ordinal: number; readonly author_label_mode: string;
   readonly author_display_label: string | null; readonly post_body: string; readonly posted_at: string; readonly is_own: boolean;
   readonly qandeel_state: string; readonly qandeel_response_body: string | null; readonly qandeel_responded_at: string | null;
+  /** 0182: the exact post this reply answers (the thread root for a reply recorded before 0182); null for a top-level post. */
+  readonly reply_to_post_id: string | null;
+  /** 0182: the post's author is the topic's author (the Experience's creating Public Identity) — a boolean, never an id. */
+  readonly is_op: boolean;
 }
 export interface PublicDiscussionCapabilityRow { readonly can_contribute: boolean }
 export interface PublicQandeelWorkRow { readonly work_outcome: string; readonly work_lease_id: string | null }
 export interface PublicQandeelContextRow {
   readonly context_kind: string; readonly context_role: string | null; readonly context_ordinal: number;
   readonly context_ref: string | null; readonly context_text: string | null;
+  /** 0182: OP | ASKER | PARTICIPANT for a post, QANDEEL for an earlier answer; null otherwise. */
+  readonly speaker?: string | null;
+  /** 0182: the post a post replies to, or the post an earlier answer answered. */
+  readonly answers_ref?: string | null;
 }
 export interface PublicQandeelCompleteRow { readonly outcome: string; readonly response_id: string | null }
 
 /**
  * S5-04 — the Public discussion boundary's transport over migration 0147, which reaches the frozen 0096 runtime.
+ * S8A-05 CP4 — the post, the read and the QANDEEL context are migration 0182's v2: the unchanged 0147 command and read plus
+ * the exact reply target and the OP flag, and the branch-scoped context. The work lease and the completion stay 0147's.
  *
  * The human calls run on the HUMAN's own token: the database derives the author from `auth.uid()`, admits them, asks the
  * entitlement seam and decides the version, the thread root, the ordinal and the instant. No human call names a user, an
@@ -37,13 +47,13 @@ export class PublicDiscussionRepository {
   }
 
   post(token: string, commandId: string, experienceId: string, replyToPostId: string | null, text: string): Promise<PublicDiscussionPostRow[]> {
-    return this.rpc<PublicDiscussionPostRow>(token, 'post_own_public_discussion_v1', {
+    return this.rpc<PublicDiscussionPostRow>(token, 'post_own_public_discussion_v2', {
       p_command_id: commandId, p_experience_id: experienceId, p_reply_to_post_id: replyToPostId, p_body: text,
     });
   }
 
   posts(token: string, experienceId: string, afterOrdinal: number | null): Promise<PublicDiscussionReadRow[]> {
-    return this.rpc<PublicDiscussionReadRow>(token, 'read_public_discussion_posts_v1', { p_experience_id: experienceId, p_after_ordinal: afterOrdinal });
+    return this.rpc<PublicDiscussionReadRow>(token, 'read_public_discussion_posts_v2', { p_experience_id: experienceId, p_after_ordinal: afterOrdinal });
   }
 
   capability(token: string, experienceId: string): Promise<PublicDiscussionCapabilityRow[]> {
@@ -58,7 +68,7 @@ export class PublicDiscussionRepository {
 
   /** Server channel only. */
   async context(postId: string, leaseId: string): Promise<PublicQandeelContextRow[]> {
-    const rows = await this.server.rpc<PublicQandeelContextRow[]>('read_public_qandeel_context_v1', { p_post_id: postId, p_lease_id: leaseId });
+    const rows = await this.server.rpc<PublicQandeelContextRow[]>('read_public_qandeel_context_v2', { p_post_id: postId, p_lease_id: leaseId });
     return Array.isArray(rows) ? rows : [];
   }
 

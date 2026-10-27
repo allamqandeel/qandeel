@@ -1281,6 +1281,12 @@ jobs:
       # the World lock, through the unchanged 0145 commit; similar, compound, retry, older-place, capacity and lock checks.
       - name: Verify S8A-05 Public semantic placement against real PostgreSQL
         run: npm run verify:public-semantic-placement:integration
+      # S8A-05 CP4: migration 0182 (Controlled Amendment A-5) - a Public reply keeps the exact post it answers beside the
+      # unchanged 0096 thread root; the read adds that target and a boolean OP flag; REPLY_TO_OWN_POST reaches the exact
+      # author answered; the @qandeel context is the invoking branch with OP / ASKER / PARTICIPANT roles, earlier answers
+      # attached to their posts and the topic as one bounded text, public-visible truth only; PUBLIC_QANDEEL_REPLY admitted.
+      - name: Verify S8A-05 Public discussion threads and @qandeel context against real PostgreSQL
+        run: npm run verify:public-discussion-threads:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

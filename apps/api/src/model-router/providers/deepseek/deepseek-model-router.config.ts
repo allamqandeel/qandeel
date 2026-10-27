@@ -14,6 +14,8 @@ export const DEEPSEEK_MAX_OUTPUT_TOKENS = { FAST: 1024, DEEP: 2800 } as const sa
 // S8A-01 (Product Owner, 2026-10-21): 20 s, the DEEP budget measured at CP4. S8A-02 CP3 Final Correction Approval (Product
 // Owner, 2026-10-22): 25 s, the Personal DEEP budget. Every request is capped by its own budget, because the router applies
 // min(request budget, this ceiling): Personal FAST 10 s; Shared / Public FAST 3 s and DEEP 10 s, unchanged.
+// S8A-05 CP4 (QAN-BL-AI-04 for Public, Controlled Amendment A-5(d)): Public DEEP 25 s, from the same measurement as
+// Personal DEEP (same model, thinking and max_tokens 2800 ≈ 19.3 s); Shared DEEP stays 10 s.
 export const DEEPSEEK_PROVIDER_TIMEOUT_MS = 25_000;
 export const DEEPSEEK_MAX_RETRIES = 0;
 

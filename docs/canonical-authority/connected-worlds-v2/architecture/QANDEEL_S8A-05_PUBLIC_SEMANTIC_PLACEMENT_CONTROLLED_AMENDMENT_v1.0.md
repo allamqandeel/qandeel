@@ -1,7 +1,8 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-05 CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — Narrow Controlled Amendment A-4 v1.0
 
-**Status:** `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP3 order, 2026-10-27) — AT THE
+**Status:** `EFFECTIVE SINCE THE MERGE OF PR #361 AS 4ff74a80 (2026-10-27) — S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27, the S8A-05 CP4 closing
+change; record §13.10)`. As written at its review: `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP3 order, 2026-10-27) — AT THE
 S8A-05 CP3 REVIEW GATE — TIER S / TIER P RUN ONCE: NOT ACCEPTED (§10) — NOT EFFECTIVE`. It binds from the merge of the
 S8A-05 CP3 pull request that carries it, after the Product Owner approves that pull request. Until then nothing below is in
 force.  

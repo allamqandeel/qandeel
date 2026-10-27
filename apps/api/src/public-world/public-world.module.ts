@@ -12,6 +12,7 @@ import { PublicDiscussionController } from './public-discussion.controller';
 import { PublicDiscussionRepository } from './public-discussion.repository';
 import { PublicDiscussionService } from './public-discussion.service';
 import { PublicQandeelGenerator, PublicQandeelReplyService } from './public-qandeel-reply.service';
+import { createPublicQandeelModelRouter } from './public-reply-model-router';
 import { PublicAuthoringController } from './public-authoring.controller';
 import { PublicAuthoringRepository } from './public-authoring.repository';
 import { PublicAuthoringService } from './public-authoring.service';
@@ -56,6 +57,10 @@ import { PublicWorldService } from './public-world.service';
  * S8A-05 CP3 (migration 0181, Controlled Amendment A-4) binds the semantic interpreter to DeepSeek Flash behind the
  * SYNTHETIC_ONLY gate and AI-COST-01 (`public-semantic-interpreter-provider.ts`); the spatial placer stays unbound, since
  * the final place is computed by the database inside the publication transaction.
+ * S8A-05 CP4 (migration 0182, Controlled Amendment A-5) moves the discussion to 0182's v2 post, read and branch-scoped
+ * context, and binds the Public QANDEEL reply to DeepSeek Flash behind the SYNTHETIC_ONLY gate and AI-COST-01 under its own
+ * family (`public-reply-model-router.ts`), handed to the Public generator alone: no second MODEL_ROUTER provider is
+ * registered, so the application's router stays the only one the container knows.
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],
@@ -66,7 +71,9 @@ import { PublicWorldService } from './public-world.service';
     { provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: () => createProductionPublicSemanticInterpreter(process.env) },
     PublicSpatialRepository, PublicSpatialService, PublicFieldRepository, PublicFieldService, PublicRelationRepository, PublicRelationService,
     { provide: PUBLIC_SPATIAL_PLACER, useFactory: () => createConfiguredPublicSpatialPlacer(process.env) },
-    SafetyResponseGateService, PublicDiscussionRepository, PublicDiscussionService, PublicQandeelGenerator, PublicQandeelReplyService,
+    SafetyResponseGateService, PublicDiscussionRepository, PublicDiscussionService,
+    { provide: PublicQandeelGenerator, useFactory: (safety: SafetyResponseGateService) => new PublicQandeelGenerator(createPublicQandeelModelRouter(process.env), safety), inject: [SafetyResponseGateService] },
+    PublicQandeelReplyService,
     PublicActivityRepository, PublicActivityProducer, PublicComposeRepository, PublicComposeService],
 })
 export class PublicWorldModule {}

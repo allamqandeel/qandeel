@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-27, CP3):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26) and CP2 through PR #360 as `72898797` (2026-10-27); CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — delivered on its Draft pull request and at the Product Owner's CP3 review (candidate Controlled Amendment A-4; migration 0181 not hosted; NO NEW COPY; production publishing closed until Stage 9; the Tier S / Tier P quality evaluation run once and NOT ACCEPTED on fabrication, the deterministic half met), not merged; CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
+> **CURRENT TASK (2026-10-27, CP4):** S8A-05 — Public World: Write Your Topic; S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27): CP3 MERGED through PR #361 as `4ff74a80`; CP4 (Public Discussion Threads & the @qandeel Context) delivered on its Draft pull request, not merged (Controlled Amendment A-5; migration 0182 not hosted; CP4 Product Copy Gate CLOSED / APPROVED, 2 rows; Tier Q prepared, NOT RUN — no budget approval; production publishing closed); editing a published topic deferred to `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`, owner `PUB-REV-01`, before Stage 9 opens production publishing), NOT implemented. Sequencing recorded by the Product Owner's CP4 decision: `PUB-REV-01` (published topic revisions and version-continuous discussion) is a `PRE-LAUNCH BLOCKER` that must be done and tested before Stage 9 opens production publishing; it is not started and needs its own Task Contract. Stage 8B and Stage 9 are not started.
+>
+> *(As written at CP3's review:)* **CURRENT TASK (2026-10-27, CP3):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26) and CP2 through PR #360 as `72898797` (2026-10-27); CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — delivered on its Draft pull request and at the Product Owner's CP3 review (candidate Controlled Amendment A-4; migration 0181 not hosted; NO NEW COPY; production publishing closed until Stage 9; the Tier S / Tier P quality evaluation run once and NOT ACCEPTED on fabrication, the deterministic half met), not merged; CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
 >
 > *(As written at CP2's review:)* **CURRENT TASK (2026-10-27):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26); CP2 — Publish from QANDEEL — delivered on its Draft pull request and at the Product Owner's CP2 review (candidate Controlled Amendment A-3 + A-2(c) narrowing; migration 0180 not hosted; Copy Gate CLOSED / APPROVED (37 rows, 2026-10-27); production publishing closed until Stage 9), not merged; CP3 – CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
 >
@@ -1043,7 +1045,7 @@ stay as written.
 - **S8A-04 closing change (2026-10-26):** **S8A-04 CLOSED / READY FOR PO MERGE DECISION** (2026-10-26; Draft PR #358, not merged; effective from its merge): CP3-D V2 Tier 1 ran once (round 23, USD 0.0177 at peak) and is **NOT ACCEPTED — original criteria failed** (leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150); Tier 2 is **NOT RUN — deferred by explicit Product Owner decision**; the Product Owner's D-9 decision **PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH** replaces T-D2's acceptance for this step only ([amendment §11.9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)), so the T-D2 failure alone does not block the merge or the first launch; the probabilistic disclosure and attribution errors remain (Future Improvements 012 – 016, non-blocking) and V2 gives no absolute privacy guarantee; `QAN-BL-CW-02` tombstoned and `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure) admitted (backlog: 88 items; 42 / 4 / 9 / 33); no security, privacy or deployment gate removed; `SYNTHETIC_ONLY` and `QAN-BL-AI-01` unchanged; no merge without the Product Owner's explicit order. Recorded in the [Task Contract](docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md) §6 – §8.1, amendment §11.8 – §11.10 and the backlog's "S8A-04 closing change".
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-05 — Public World: Write Your Topic (2026-10-26; current task; CP1 MERGED through PR #359 as `7c0356b7` (2026-10-26); CP2 MERGED through PR #360 as `72898797` (2026-10-27); CP3 delivered on its Draft pull request, at the Product Owner's CP3 review, Tier S / Tier P run once and NOT ACCEPTED (2026-10-27); not merged)
+### S8A-05 — Public World: Write Your Topic (2026-10-26 … 2026-10-27; current task; CP1 MERGED through PR #359 as `7c0356b7`; CP2 MERGED through PR #360 as `72898797`; CP3 MERGED through PR #361 as `4ff74a80`; CP4 delivered on its Draft pull request; **S8A-05 CLOSED / READY FOR PO MERGE DECISION** (2026-10-27); editing a published topic deferred to `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`), NOT implemented; not merged)
 
 - Started 2026-10-26 on `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`
   (the merge of PR #358, 2026-10-26): **S8A-04 is merged**, so its closing change is effective. S8A-05 owns no backlog
@@ -1090,7 +1092,8 @@ stay as written.
   - **production publishing stays closed** (the freeze seam answers `NOT_EVALUATED`; CW2-08 untouched);
   - Copy Gate `CLOSED / APPROVED` by the Product Owner on 2026-10-27 — the 37 new rows verbatim in Arabic and English (three in the Product Owner's own Arabic), 2 reused approvals. Record:
     [S8A-05 implementation record §11](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
-- **CP3 — Public Semantic Intelligence & Deterministic Spatial Placement** (2026-10-27, on `s8a/s8a-05-cp3` from `main` at
+- **CP3 — Public Semantic Intelligence & Deterministic Spatial Placement** — **MERGED through PR #361 as `4ff74a80`
+  (2026-10-27)**, so A-4 is effective (reconciled by S8A-05 CP4); as written at its review (2026-10-27, on `s8a/s8a-05-cp3` from `main` at
   `72898797`, under the Product Owner's S8A-05 CP3 order):
   - **PO decision (2026-10-27): PRODUCT ACCEPTED / MERGE AUTHORIZED after manual review of the full Word report.** The paid round 25 remains historically **NOT ACCEPTED** against its original zero-fabrication benchmark; it is not relabelled as a passing run. Only one non-blocking future improvement was admitted: respect the source topic language (to be added to the Product Owner's locally maintained Word Future Improvements register) (English 0/15 in round 25). No other issue from this review is a blocker. No CP4, publication enablement, real-user provider traffic, prompt change, or rerun is authorized by this decision.
   - governed by the candidate [S8A-05 Public Semantic Placement Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_SEMANTIC_PLACEMENT_CONTROLLED_AMENDMENT_v1.0.md):
@@ -1112,5 +1115,28 @@ stay as written.
     both ways, similar-closer 38 / 40, compounds 9 / 10, invalid 1 / 100); fabrication 3 confirmed by both blind raters
     (S48, S53, S69) and 5 UNSURE against 0; English topics answered in Arabic (reported). No second run. Record:
     [S8A-05 implementation record §12](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
+- **CP4 — Public Discussion Threads & the @qandeel Context** (2026-10-27, on `s8a/s8a-05-cp4` from `main` at `c9715702`,
+  under the Product Owner's S8A-05 CP4 order and CP4 scope decision; S8A-05's last checkpoint):
+  - governed by [Controlled Amendment A-5](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_DISCUSSION_CONTROLLED_AMENDMENT_v1.0.md), effective on the CP4 pull request's merge: a reply keeps the exact post it
+    answers beside the unchanged thread root (one visible depth kept); the topic's author is tagged in words; `@qandeel` reads
+    only the invoking post's branch (the exact-target chain, the thread's first post, at most 8 more posts of that thread),
+    each post with its speaker role (OP / Asker / Participant) and target, earlier answers attached to the posts they
+    answered, and the topic as one bounded 6 KB text; the author's words decide what the author means;
+  - the S5-04 path reused (the 0147 lease, one answer per invocation, Safety Gate, completion); the answer is booked under
+    the new family `PUBLIC_QANDEEL_REPLY`, paid by the invoker; the Public World module composes DeepSeek Flash through the
+    shared router behind `SYNTHETIC_ONLY`; Public DEEP 25 s (`QAN-BL-AI-04` resolved for Public; Shared stays open);
+    migration `0182` (not hosted; the next is `0183`);
+  - free proofs: verifier 0182 (boundary, threads, OP, activity, context), the re-anchored verifiers 0171 / 0174 / 0175 /
+    0176 / 0181, the API and mobile specs; CP4 Product Copy Gate CLOSED / APPROVED: 2 rows (`صاحب الموضوع` / "Topic author", `ردًا على {0}` /
+    "In reply to {0}"), record §13.7;
+  - **Tier Q** (the model's reading of the thread) **prepared, NOT RUN**: 30 independently written synthetic threads,
+    preregistered, proposed ceiling 30 attempts / USD 0.05, guard round 26 LOCKED until the Product Owner's separate budget
+    approval;
+  - **editing a published topic, successor versions and the discussion across versions are NOT implemented**: deferred in
+    full, by the Product Owner's decision (2026-10-27), to `QAN-BL-PUB-REV-01` — `PRE-LAUNCH BLOCKER`, owner `PUB-REV-01`,
+    to be done and tested before Stage 9 opens production publishing;
+  - **S8A-05 CLOSED / READY FOR PO MERGE DECISION**: BG-08 reconciled (`QAN-BL-PUB-REV-01` admitted; `QAN-BL-AI-04` dated
+    note; register 89), BG-09 (the record and A-1 – A-4 banners brought to their final state). Record:
+    [S8A-05 implementation record §13](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
 - The only paid calls of S8A-05 are CP3's one authorized Tier S / Tier P run (100 DeepSeek Flash calls, USD 0.0346). CP4
-  has not started.
+  made none.

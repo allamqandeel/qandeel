@@ -110,6 +110,11 @@ const DETERMINISTIC = {
 const RETAINED = {
   start_own_public_experience_draft_v1: ['40001|PUBLIC_EXPERIENCE_STALE|public.ensure_public_identity_v1(uuid,uuid,text,text)', 'RACE_CONVERGING'],
   post_own_public_discussion_v1: ['40001|PUBLIC_EXPERIENCE_STALE|public.ensure_public_identity_v1(uuid,uuid,text,text)', 'RACE_CONVERGING'],
+  // RE-ANCHORED by S8A-05 CP4 (migration 0182, Controlled Amendment A-5, 2026-10-27): the v2 post wrapper calls the
+  // unchanged 0147 v1 command first, so it reaches exactly v1's classified first-identity race raise and nothing else; it
+  // records the exact reply target in the same transaction, after v1 commits the post, so the re-run converges like v1's
+  // (a retry records nothing twice). It is v1's C1 classification reached through its wrapper, not a fourth hazard.
+  post_own_public_discussion_v2: ['40001|PUBLIC_EXPERIENCE_STALE|public.ensure_public_identity_v1(uuid,uuid,text,text)', 'RACE_CONVERGING'],
   commit_own_public_experience_ready_v1: ['40001|PUBLIC_EXPERIENCE_STALE|public.commit_public_experience_ready_for_review_v1(uuid,uuid,uuid)', 'REPLAY_GUARDED'],
 };
 /**

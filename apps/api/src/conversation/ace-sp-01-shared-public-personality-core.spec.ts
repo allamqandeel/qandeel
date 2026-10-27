@@ -251,7 +251,8 @@ describe.each(WORLDS)('ACE-SP-01 — $world World QANDEEL request', ({ world, pr
     expect(evaluate(ALLOW_DEEP).disposition).toBe('ALLOW');
     const { calls } = await run(ALLOW_DEEP);
     expect(calls).toHaveLength(1);
-    expect(calls[0].request).toMatchObject({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: 10000 });
+    // RE-ANCHORED by S8A-05 CP4 (QAN-BL-AI-04 for Public, Controlled Amendment A-5(d)): Public DEEP 25 s; Shared DEEP 10 s.
+    expect(calls[0].request).toMatchObject({ path: 'DEEP', complexity: 'HIGH', latencyBudgetMs: world === 'Public' ? 25000 : 10000 });
     expect(calls[0].request.behavioralGuidance).toBe(withWorldNeutralPersonality(prefix, false));
   });
 

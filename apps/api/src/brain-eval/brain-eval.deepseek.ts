@@ -76,8 +76,13 @@ export function assertGuidanceMatchesLabel(cases: ReadonlyArray<BrainEvaluationC
 
 /** The Personal orchestrator's reply budgets (S8A-01, Product Owner 2026-10-21: DEEP 20 s; S8A-02 CP3 correction: FAST 10 s, DEEP 25 s). */
 export const PERSONAL_REPLY_LATENCY_BUDGET_MS = { FAST: 10_000, DEEP: 25_000 } as const satisfies Record<ProcessingPath, number>;
-/** The Shared and Public assemblers' reply budgets (DEEP stays 10 s: QAN-BL-AI-04). */
+/** The Shared assembler's reply budgets (DEEP stays 10 s: QAN-BL-AI-04). */
 export const WORLD_REPLY_LATENCY_BUDGET_MS = { FAST: 3_000, DEEP: 10_000 } as const satisfies Record<ProcessingPath, number>;
+/** S8A-05 CP4 (QAN-BL-AI-04 for Public, A-5(d)): the Public assembler's reply budgets — DEEP 25 s, FAST 3 s. */
+export const PUBLIC_REPLY_LATENCY_BUDGET_MS = { FAST: 3_000, DEEP: 25_000 } as const satisfies Record<ProcessingPath, number>;
+/** The production budget of a World case's path, by its World. */
+export const worldReplyLatencyBudgetMs = (testCase: BrainEvaluationCase, path: ProcessingPath): number =>
+  (testCase.world?.kind === 'PUBLIC' ? PUBLIC_REPLY_LATENCY_BUDGET_MS : WORLD_REPLY_LATENCY_BUDGET_MS)[path];
 
 /** The message production routing reads for a case: the last Personal turn, the answered Shared turn, the invoking post. */
 export function currentMessageOf(testCase: BrainEvaluationCase): string {
@@ -93,7 +98,7 @@ export function deepSeekEvaluationRequest(testCase: BrainEvaluationCase, label?:
   const path = testCase.path;
   const complexity = path === 'DEEP' ? 'HIGH' : 'LOW';
   if (testCase.world !== undefined) {
-    const request: ModelRouterRequest = { ...worldEvaluationRequest(testCase, safetyGuidance), path, complexity, latencyBudgetMs: WORLD_REPLY_LATENCY_BUDGET_MS[path] };
+    const request: ModelRouterRequest = { ...worldEvaluationRequest(testCase, safetyGuidance), path, complexity, latencyBudgetMs: worldReplyLatencyBudgetMs(testCase, path) };
     // The separated arm replaces only the context, with the candidate (a-1) of the same conversation; everything else is the
     // production request. S8A-02 CP1 (2026-10-22): production now sends the separated context itself, so the merged arm is
     // the one that replaces it — with the pre-CP1 merged context — and each label keeps the representation it was run with.

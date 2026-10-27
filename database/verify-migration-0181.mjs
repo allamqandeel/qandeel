@@ -55,6 +55,9 @@ const NO_ROLE = [
 const FAMILIES = ['CONVERSATION_REPLY', 'CU_SEGMENTATION', 'FOCUS_RESOLUTION', 'THREAD_FORMATION', 'THREAD_CONTINUITY',
   'HYPOTHESIS_INTENT_EXTRACTION', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', 'HYPOTHESIS_CANDIDATE_GENERATION', 'PERSONAL_UNDERSTANDING_CAPTURE',
   'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE', 'PUBLIC_SEMANTIC_INTERPRETATION'];
+// RE-ANCHORED by S8A-05 CP4 (2026-10-27, Controlled Amendment A-5): migration 0182 adds exactly PUBLIC_QANDEEL_REPLY, detected by its
+// branch-scoped context read (0182's own verifier pins the full list); nothing else in this list changes.
+const LATER_FAMILIES = ['PUBLIC_QANDEEL_REPLY'];
 const WORLD = ['-4611686018427387904', '-4611686018427387904', '4611686018427387903', '4611686018427387903'];
 const MAX = 4611686018427387903n;
 
@@ -201,7 +204,8 @@ async function verifyBoundary() {
   // B05 AI-COST-01: the 0176 list plus exactly PUBLIC_SEMANTIC_INTERPRETATION, and begin admits it for the paying user.
   const [{ def }] = await rows(`SELECT pg_get_constraintdef(c.oid) def FROM pg_constraint c
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
-  assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort(), [...FAMILIES].sort(), 'B05 the family list');
+  const [{ publicReply }] = await rows("SELECT to_regprocedure('public.read_public_qandeel_context_v2(uuid, uuid)') IS NOT NULL \"publicReply\"");
+  assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort(), [...FAMILIES, ...(publicReply ? LATER_FAMILIES : [])].sort(), 'B05 the family list');
   // B06 the only writer of a coordinate is still the 0145 commit; still five lifecycle movers; the seam is closed.
   const writers = await rows(`SELECT n.nspname || '.' || p.proname fn FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE p.prosrc ~* 'INSERT INTO public_spatial_private\\.spatial_placements' ORDER BY 1`);
