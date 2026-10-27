@@ -7,7 +7,7 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-27, CP3):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26) and CP2 through PR #360 as `72898797` (2026-10-27); CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — delivered on its Draft pull request and at the Product Owner's CP3 review (candidate Controlled Amendment A-4; migration 0181 not hosted; NO NEW COPY; production publishing closed until Stage 9; the Tier S / Tier P quality evaluation prepared, not run, awaiting the Product Owner's budget approval), not merged; CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
+> **CURRENT TASK (2026-10-27, CP3):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26) and CP2 through PR #360 as `72898797` (2026-10-27); CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — delivered on its Draft pull request and at the Product Owner's CP3 review (candidate Controlled Amendment A-4; migration 0181 not hosted; NO NEW COPY; production publishing closed until Stage 9; the Tier S / Tier P quality evaluation run once and NOT ACCEPTED on fabrication, the deterministic half met), not merged; CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
 >
 > *(As written at CP2's review:)* **CURRENT TASK (2026-10-27):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26); CP2 — Publish from QANDEEL — delivered on its Draft pull request and at the Product Owner's CP2 review (candidate Controlled Amendment A-3 + A-2(c) narrowing; migration 0180 not hosted; Copy Gate CLOSED / APPROVED (37 rows, 2026-10-27); production publishing closed until Stage 9), not merged; CP3 – CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
 >
@@ -1043,7 +1043,7 @@ stay as written.
 - **S8A-04 closing change (2026-10-26):** **S8A-04 CLOSED / READY FOR PO MERGE DECISION** (2026-10-26; Draft PR #358, not merged; effective from its merge): CP3-D V2 Tier 1 ran once (round 23, USD 0.0177 at peak) and is **NOT ACCEPTED — original criteria failed** (leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150); Tier 2 is **NOT RUN — deferred by explicit Product Owner decision**; the Product Owner's D-9 decision **PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH** replaces T-D2's acceptance for this step only ([amendment §11.9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)), so the T-D2 failure alone does not block the merge or the first launch; the probabilistic disclosure and attribution errors remain (Future Improvements 012 – 016, non-blocking) and V2 gives no absolute privacy guarantee; `QAN-BL-CW-02` tombstoned and `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure) admitted (backlog: 88 items; 42 / 4 / 9 / 33); no security, privacy or deployment gate removed; `SYNTHETIC_ONLY` and `QAN-BL-AI-01` unchanged; no merge without the Product Owner's explicit order. Recorded in the [Task Contract](docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md) §6 – §8.1, amendment §11.8 – §11.10 and the backlog's "S8A-04 closing change".
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-05 — Public World: Write Your Topic (2026-10-26; current task; CP1 MERGED through PR #359 as `7c0356b7` (2026-10-26); CP2 MERGED through PR #360 as `72898797` (2026-10-27); CP3 delivered on its Draft pull request, at the Product Owner's CP3 review, quality acceptance pending (2026-10-27); not merged)
+### S8A-05 — Public World: Write Your Topic (2026-10-26; current task; CP1 MERGED through PR #359 as `7c0356b7` (2026-10-26); CP2 MERGED through PR #360 as `72898797` (2026-10-27); CP3 delivered on its Draft pull request, at the Product Owner's CP3 review, Tier S / Tier P run once and NOT ACCEPTED (2026-10-27); not merged)
 
 - Started 2026-10-26 on `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`
   (the merge of PR #358, 2026-10-26): **S8A-04 is merged**, so its closing change is effective. S8A-05 owns no backlog
@@ -1106,7 +1106,10 @@ stay as written.
   - free proofs: verifier 0181 (boundary, geometry, server channel, placement, capacity 500 / 2,000 / 5,000, concurrency),
     the P-dom simulation on DEV / TEST / HOLDOUT2 seeds, adapter and contract tests; Copy Gate: NO NEW COPY (no mobile
     change);
-  - **quality acceptance is pending:** the preregistered Tier S / Tier P evaluation (`scripts/s8a-05/cp3/`, about 100
-    DeepSeek Flash calls, guard round 25 locked) has not run and needs the Product Owner's budget approval. Record:
+  - **Tier S / Tier P run once and NOT ACCEPTED** (2026-10-27, the Product Owner's ceiling 100 attempts / USD 0.14, guard
+    round 25; 100 calls, USD 0.0346): the deterministic half met (major 78 / 80, sub-region 76 / 78, corrections 10 / 10
+    both ways, similar-closer 38 / 40, compounds 9 / 10, invalid 1 / 100); fabrication 3 confirmed by both blind raters
+    (S48, S53, S69) and 5 UNSURE against 0; English topics answered in Arabic (reported). No second run. Record:
     [S8A-05 implementation record §12](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
-- No paid model call was made in CP1 – CP3. CP4 has not started.
+- The only paid calls of S8A-05 are CP3's one authorized Tier S / Tier P run (100 DeepSeek Flash calls, USD 0.0346). CP4
+  has not started.

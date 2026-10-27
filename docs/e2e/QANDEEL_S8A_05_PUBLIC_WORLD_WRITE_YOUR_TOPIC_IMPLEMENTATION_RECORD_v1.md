@@ -3,8 +3,8 @@
 **Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** (§1 – §10), **CP2 — Publish
 from QANDEEL** (§11) and **CP3 — Public Semantic Intelligence & Deterministic Spatial Placement** (§12)
 **Status:** `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 MERGED THROUGH PR #360 AS 72898797 (2026-10-27) — CP3
-DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP3 REVIEW GATE — NO NEW COPY — QUALITY ACCEPTANCE (TIER S / TIER P)
-PENDING — CP3 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED / CLOSED TO USERS` (§12). S8A-05 is not closed: CP4
+DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP3 REVIEW GATE — NO NEW COPY — TIER S / TIER P RUN ONCE: NOT ACCEPTED
+— CP3 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED / CLOSED TO USERS` (§12). S8A-05 is not closed: CP4
 has not started. CP2's status as written at its review: `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP2
 REVIEW GATE — CP2 COPY GATE CLOSED / APPROVED (37 rows, Product Owner, 2026-10-27) — CP2 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam
 NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not closed: CP3 – CP4 have not started, and BG-08 / BG-09
@@ -636,8 +636,8 @@ under `publicTopicDrafts`), `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (the source colu
 ## 12. S8A-05 CP3 — Public Semantic Intelligence & Deterministic Spatial Placement
 
 **Checkpoint:** `S8A-05 CP3 — DELIVERED ON ITS DRAFT PULL REQUEST — AT THE PRODUCT OWNER'S CP3 REVIEW — CANDIDATE CONTROLLED
-AMENDMENT A-4 — MIGRATION 0181 NOT HOSTED — NO NEW COPY — QUALITY ACCEPTANCE (TIER S / TIER P) PENDING: PREPARED, NOT RUN,
-AWAITING THE PRODUCT OWNER'S BUDGET APPROVAL — PRODUCTION PUBLISHING CLOSED — NOT MERGED`. S8A-05 is not closed: CP4 has not
+AMENDMENT A-4 — MIGRATION 0181 NOT HOSTED — NO NEW COPY — TIER S / TIER P RUN ONCE: NOT ACCEPTED (FABRICATION 3 CONFIRMED BY
+BOTH RATERS; THE DETERMINISTIC HALF MET) — PRODUCTION PUBLISHING CLOSED — NOT MERGED`. S8A-05 is not closed: CP4 has not
 started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
 **Date:** 2026-10-27  
 **Branch / base:** `s8a/s8a-05-cp3` from `main` at `72898797b2e9596d4c9940fefeca6c987461108b`, the merge of PR #360 (S8A-05
@@ -647,9 +647,15 @@ corrections; the candidate
 [S8A-05 Public Semantic Placement Controlled Amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_SEMANTIC_PLACEMENT_CONTROLLED_AMENDMENT_v1.0.md)
 (A-4), which binds from this pull request's merge.
 
-Merging, deploying, opening any publication gate, opening Public discussion, starting CP4 and any paid model call each
-need the Product Owner's explicit approval. None is done here. **No DeepSeek or other paid call was made in CP3**: every
-proof below is free, and the paid quality evaluation is prepared only (§12.7). Synthetic data only.
+Merging, deploying, opening any publication gate, opening Public discussion, starting CP4 and any further paid model call
+each need the Product Owner's explicit approval. None is done here. Every proof in §12.1 – §12.6 and §12.8 is free; the one paid
+call set is the Tier S / Tier P run the Product Owner authorized (§12.7: 100 DeepSeek Flash calls, USD 0.0346). Synthetic
+data only.
+
+**Tier S / Tier P — RUN ONCE (2026-10-27) — NOT ACCEPTED.** Run on head `4e16b455` after GitHub CI passed on it, guard
+round 25 (the Product Owner's ceiling: 100 attempts, USD 0.14): 100 attempts, every one HTTP 200, USD 0.0346 at peak. The
+deterministic half is MET; the raters' half is NOT MET on fabrication (both raters independently found additions in S48,
+S53 and S69; the criterion is 0). Nothing was re-tuned, re-run or relabelled.
 
 ### 12.1 Pre-implementation impact census
 
@@ -739,13 +745,54 @@ CP3 adds no user-visible string. Evidence: no file under `apps/mobile/` changes 
 is empty); no locale file changes; the panel's existing main and other themes carry the secondary meanings; region keys and
 names are never rendered (amendment F-5). The CP1 / CP2 copy is unchanged. No row is proposed, so nothing awaits approval.
 
-### 12.7 Tier S / Tier P — the paid quality evaluation: `PREPARED — NOT RUN`
+### 12.7 Tier S / Tier P — the paid quality evaluation: `RUN ONCE — NOT ACCEPTED`
 
 Prepared in `scripts/s8a-05/cp3/`: `AUTHOR_BRIEF.md` and the independently authored `tier-s-cases.json` (80 packages, 20
-corrections, 40 triplets, 10 compounds), `PREREGISTRATION.md` (criteria and fingerprints), `RATER_RUBRIC.md` (two
-independent blind raters, both required; the model never grades itself), `tier-s-eval.ts` (the driver), `tier-s-score.mjs`
-(the blind packet and the tally), `tier-s-simulated.cjs` (the zero-cost stand-in), `budget.ts` and `launch.mjs`; guard
-round 25 is locked with no allowance. The budget and the zero-cost rehearsals are in §12.8.
+corrections, 40 triplets, 10 compounds; reviewed blind before freezing), `PREREGISTRATION.md`, `RATER_RUBRIC.md`,
+`tier-s-eval.ts`, `tier-s-score.mjs`, `tier-s-simulated.cjs`, `budget.ts` and `launch.mjs`.
+
+**Authorization.** The Product Owner's Tier S/P decision (2026-10-27): ONE run on DeepSeek Flash, synthetic data only, the
+preregistered cases and criteria, at most 100 attempts and USD 0.14, no automatic retry; the authorization committed
+(`4e16b455`, the round 25 lock lifted at exactly that ceiling) and GitHub CI green on that head before the first call.
+
+**The run** (`launch.mjs --live`, head `4e16b455`, a clean tree): 100 attempts (80 proposals, 20 assessments), every one
+HTTP 200 and `finish_reason` stop, model `deepseek-flash`, thinking disabled; 218,962 input tokens (175,616 cache hits,
+43,346 misses), 17,117 output tokens (median 202, at most 246 of 1,024); latency median 2.2 s, p90 2.5 s, at most 3.2 s;
+**USD 0.0346** at the peak rate (the whole run fell in the peak window; budget expected 0.034, ceiling 0.14). The ledger is
+sound: 100 `PUBLIC_SEMANTIC_INTERPRETATION` records, all paid by the synthetic publisher, nothing Shared.
+
+**Deterministic half — MET**
+
+| Criterion | Result | Accept |
+| --- | --- | --- |
+| Major | **78 / 80** (S30 invalid, S39) | ≥ 72 |
+| Sub-region | **76 / 78** (S30, S39) | ≥ 75 % |
+| Corrections, fair → `CONSISTENT` | **10 / 10** | ≥ 9 |
+| Corrections, unsupported → `NOT_SUPPORTED_BY_PACKAGE` | **10 / 10** | ≥ 9 |
+| Tier P similar-closer | **38 / 40** (T34, T35 — both through S39) | ≥ 34 |
+| Compounds in their dominant major | **9 / 10** (S30 invalid) | ≥ 8 |
+| Invalid | **1 / 100** (S30: an answer the strict decoder refused) | ≤ 2 |
+
+Every trap held its major (section labels 3 / 3, injected instructions 4 / 4, thin 2 / 2, near misses 4 / 4, long 3 / 3,
+QANDEEL-heavy 3 / 3). S39 (a new graduate's first weeks as a teacher) was read mainly as work pressure (0.5) with first
+steps second (0.3). A fair correction's corrected profile stayed in the case's major 9 / 10.
+
+**Raters' half — NOT MET** (two independent blind agent sessions, R1 and R2; DeepSeek never rated)
+
+| Criterion | Result | Accept |
+| --- | --- | --- |
+| Fidelity, F = YES from both | **78 / 80** (S30 no proposal; S53) | ≥ 72 |
+| Fabrication, A = YES or unresolved UNSURE from either | **8** — YES from both raters: **S48** (the meaning adds guilt the author never states), **S53** (a theme takes up QANDEEL's reading of anger that the author rejects), **S69** (a theme turns one shared laugh into daily laughter); UNSURE: S14 (a spouse's gender assumed, R1), S32 (disgust named, R1), S33 (injuries called minor, R2), S37 (deadlines "late" where the text says brought forward, both), S59 (a son where the text says a daughter, R1) | **0** |
+| Compounds keep their secondary meaning, C = YES from both | **9 / 10** (S30 no proposal) | ≥ 8 |
+
+The three both-YES additions cannot be resolved by the Product Owner's audit of the UNSURE verdicts, so the evaluation is
+**NOT ACCEPTED as run** whatever that audit decides. **Reported, not criteria:** the meaning's language matched the topic in
+29 / 35 Egyptian, 15 / 15 MSA, 14 / 15 mixed and **0 / 15 English** topics (every English topic was answered in Arabic;
+some Egyptian topics in MSA); both raters also noted gender and small factual slips that they did not count as additions
+(e.g. S06 / S11 masculine forms for a woman writing, S10, S17, S76).
+
+The results and the raters' sheets are kept locally beside the run (`.s8a-05-reports/cp3/tier-s/`, outside the
+repository), with the guard's spend state (`artifacts/evals/s8a-05-cp3/deepseek/`, ignored).
 
 ### 12.8 Verification
 
@@ -780,7 +827,7 @@ one before it was frozen (one defect fixed: S59; PREREGISTRATION.md §2).
 
 ### 12.9 Deliberately not implemented in CP3
 
-- No paid call (the Tier S / Tier P run awaits the Product Owner's budget approval).
+- No paid call beyond the one authorized Tier S / Tier P run; no second run, no re-tuning of the instructions, cases or criteria.
 - No production publishing, no Stage 9, no CW2-08 change, no placement before publication.
 - No edit rules for a published topic and no successor-version placement change (CP4); no Public discussion, no `@qandeel`.
 - No field camera, scale or expansion rule (`LA-SCALE-01`); no old place moved.

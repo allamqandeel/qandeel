@@ -1,6 +1,8 @@
 # S8A-05 CP3 — Tier S / Tier P preregistration (fixed before any paid call)
 
-**Status:** `PREPARED — NOT RUN — BUDGET APPROVED BY THE PRODUCT OWNER (2026-10-27): ONE RUN, AT MOST 100 ATTEMPTS AND USD 0.14`.
+**Status:** `RUN ONCE (2026-10-27, head 4e16b455, round 25: 100 attempts, USD 0.0346) — NOT ACCEPTED` (the deterministic half
+MET; fabrication 3 confirmed by both raters and 5 UNSURE, against 0; implementation record §12.7). No second run.
+At approval: `PREPARED — NOT RUN — BUDGET APPROVED BY THE PRODUCT OWNER (2026-10-27): ONE RUN, AT MOST 100 ATTEMPTS AND USD 0.14`.
 Guard round 25 was locked (no live run, no paid allowance) until that approval; lifting the lock and setting those caps is the
 single change the approval made. The run starts only after GitHub CI passes on the head that carries this change. A quality
 failure is recorded NOT ACCEPTED; a stop by the guard (cost or attempts) is recorded INCOMPLETE, with no raised limit.  

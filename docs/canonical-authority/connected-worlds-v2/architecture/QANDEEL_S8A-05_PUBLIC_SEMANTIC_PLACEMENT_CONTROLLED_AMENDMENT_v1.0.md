@@ -2,7 +2,7 @@
 ## S8A-05 CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — Narrow Controlled Amendment A-4 v1.0
 
 **Status:** `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP3 order, 2026-10-27) — AT THE
-S8A-05 CP3 REVIEW GATE — QUALITY ACCEPTANCE (TIER S / TIER P) PENDING — NOT EFFECTIVE`. It binds from the merge of the
+S8A-05 CP3 REVIEW GATE — TIER S / TIER P RUN ONCE: NOT ACCEPTED (§10) — NOT EFFECTIVE`. It binds from the merge of the
 S8A-05 CP3 pull request that carries it, after the Product Owner approves that pull request. Until then nothing below is in
 force.  
 **Scope:** how a Public topic's reviewed meaning becomes its place in the one Public semantic field: the production Public
@@ -188,12 +188,17 @@ and never give coordinates; for a correction, "The publisher has the right to sa
 
 ---
 
-# 10. Quality acceptance (preregistered; not yet run)
+# 10. Quality acceptance (preregistered; run once — NOT ACCEPTED)
 
 The free proofs (simulation, verifier, contract tests; record §12) show the rule, not the model's reading. The model's
 reading is accepted only by the preregistered Tier S / Tier P evaluation (`scripts/s8a-05/cp3/PREREGISTRATION.md`): about
-100 DeepSeek Flash calls, one run, no re-tuning, two independent blind raters, and a failure stays NOT ACCEPTED. It runs only
-after the Product Owner approves its ceiling.
+100 DeepSeek Flash calls, one run, no re-tuning, two independent blind raters, and a failure stays NOT ACCEPTED.
+
+**Result (2026-10-27, the Product Owner's ceiling of 100 attempts and USD 0.14; spent USD 0.0346): NOT ACCEPTED.** The
+deterministic half is met — major 78 / 80, sub-region 76 / 78, corrections 10 / 10 both ways, similar-closer 38 / 40,
+compounds 9 / 10, invalid 1 / 100 — so the placement reading itself holds. The raters' half fails on fabrication: both
+raters found additions in the same three readings (S48, S53, S69) and five more were UNSURE, against a criterion of 0. Also
+reported: every English topic's meaning came back in Arabic. Details: implementation record §12.7.
 
 ---
 
