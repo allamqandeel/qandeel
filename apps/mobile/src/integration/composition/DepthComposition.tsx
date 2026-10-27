@@ -527,14 +527,15 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   useEffect(() => {
     if (pendingPublicDraft === null || area !== 'PUBLIC_WORLD' || depth !== 'CONVERSATION') return;
     publicWorld.compose?.openDraft(pendingPublicDraft);
-    setPendingPublicDraft(null);
+    // Cleared after the effect (as the Public link above is consumed), and only if no newer draft is waiting.
+    void Promise.resolve().then(() => setPendingPublicDraft((current) => (current === pendingPublicDraft ? null : current)));
   }, [area, depth, pendingPublicDraft, publicWorld]);
   const publicShare = runtime.publicShare;
   const shareHandoff = useSyncExternalStore(publicShare?.subscribe ?? noSubscribe, () => publicShare?.getState().handoff ?? null);
   useEffect(() => {
     if (shareHandoff === null || publicShare === null) return;
     publicShare.takeHandoff();
-    openPublicDraft(shareHandoff);
+    void Promise.resolve().then(() => openPublicDraft(shareHandoff));
   }, [shareHandoff, publicShare, openPublicDraft]);
   const shareUnderstanding = useCallback(async (ref: string, revision: string): Promise<UnderstandingShareResult> => {
     const compose = publicWorld.compose;
