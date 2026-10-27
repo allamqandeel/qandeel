@@ -1,7 +1,9 @@
 # S8A-05 CP3 — Tier S / Tier P preregistration (fixed before any paid call)
 
-**Status:** `PREPARED — NOT RUN — AWAITING THE PRODUCT OWNER'S EXPLICIT BUDGET APPROVAL`. Guard round 25 is locked (no live
-run, no paid allowance) until that approval; lifting the lock and setting its caps is the single change the approval makes.  
+**Status:** `PREPARED — NOT RUN — BUDGET APPROVED BY THE PRODUCT OWNER (2026-10-27): ONE RUN, AT MOST 100 ATTEMPTS AND USD 0.14`.
+Guard round 25 was locked (no live run, no paid allowance) until that approval; lifting the lock and setting those caps is the
+single change the approval made. The run starts only after GitHub CI passes on the head that carries this change. A quality
+failure is recorded NOT ACCEPTED; a stop by the guard (cost or attempts) is recorded INCOMPLETE, with no raised limit.  
 **Authority:** the Product Owner's S8A-05 CP3 order (2026-10-27): prepare the paid evaluation fully; ask for explicit approval
 of the ceiling before any paid call; one preregistered run; a failure stays NOT ACCEPTED. The criteria are WP1 §5.4 with the
 WP1-R1 correction: a compound is tested by its dominant region plus its secondary meanings, never as "between regions".  
