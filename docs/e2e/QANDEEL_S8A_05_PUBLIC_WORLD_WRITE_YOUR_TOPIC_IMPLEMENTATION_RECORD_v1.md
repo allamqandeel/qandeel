@@ -930,7 +930,10 @@ recorded as deferred to that task and never as implemented; no further scope and
 
 Re-anchored historical verifiers (each with a dated note, *RE-ANCHORED by S8A-05 CP4, Controlled Amendment A-5*): 0171
 (15 families), 0174 (the context v2 read and the family), 0175 (the family; the two v2 functions classified as excluded from
-Shared bodies), 0176 (the family list), 0181 (`PUBLIC_QANDEEL_REPLY` a later family). No assertion was weakened.
+Shared bodies), 0176 (the family list), 0181 (`PUBLIC_QANDEEL_REPLY` a later family), 0150 (the PROD-RETRY-01 census
+names `post_own_public_discussion_v2` under `RETAINED` as `RACE_CONVERGING`: it calls the unchanged 0147 v1 command first, so it
+reaches exactly v1's classified first-identity race raise; a re-run converges and records nothing twice). No assertion was
+weakened.
 
 ### 13.4 API (NestJS, `apps/api/src/public-world/`)
 
@@ -1013,6 +1016,9 @@ request's head is the binding run.
 - **`test:database`:** 1,310 / 1,310 pass. **`test:task-closure-governance-contract`:** 24 / 24 pass.
 - **PostgreSQL 17 verifiers, each on a fresh database:** 0095, 0096, 0097, 0143, 0144, 0145, 0146, 0147, 0164, 0168,
   0169, 0171, 0174, 0175, 0176, 0179, 0180, 0181 and 0182 all pass.
+- **CI round 1 (`71a69acc`):** verifier 0150 failed. CP4's `post_own_public_discussion_v2` was an entry point that the
+  PROD-RETRY-01 census did not classify. 0150 is re-anchored (§13.3) and passes 28 / 28 locally. The verifiers after it in
+  CI order also pass locally: 0151 – 0163, 0165 – 0167, 0170, 0172, 0177 and 0178.
 - **API:** `build:api` and `tsc --noEmit` are clean.
   - The full jest run found one real failure. `api-http-bootstrap.spec.ts` resolves `MODEL_ROUTER` from the whole
     application, and the Public World module's second `MODEL_ROUTER` provider made that lookup ambiguous.
