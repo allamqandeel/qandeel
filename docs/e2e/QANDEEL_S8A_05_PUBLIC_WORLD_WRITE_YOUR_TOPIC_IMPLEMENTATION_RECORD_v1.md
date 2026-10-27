@@ -745,6 +745,12 @@ CP3 adds no user-visible string. Evidence: no file under `apps/mobile/` changes 
 is empty); no locale file changes; the panel's existing main and other themes carry the secondary meanings; region keys and
 names are never rendered (amendment F-5). The CP1 / CP2 copy is unchanged. No row is proposed, so nothing awaits approval.
 
+### Product Owner human acceptance after the paid evaluation (2026-10-27)
+
+**Decision:** After reviewing the complete Word report of the 80 actual QANDEEL responses and 20 corrections, the Product Owner explicitly **accepts QANDEEL's answers as correct and suitable for the product** and authorizes the merge of **S8A-05 CP3 / PR #361 without a further quality gate**. **Exactly one future improvement** is admitted: the Public semantic interpreter must respect the source topic's language, especially the 0/15 English outputs that appeared in Arabic. The deferred item is tracked at [Public topic source-language improvement](../../future-improvements/QANDEEL_FI_PUBLIC_SEMANTIC_TOPIC_LANGUAGE_v1.md). No other quality improvement is admitted from this round.
+
+**Methodological distinction:** The original preregistered Tier S/P run remains **NOT ACCEPTED** because the two blind raters marked fabrications, and its data, scoring, results and audit trail are unchanged. The human Product Owner's **product acceptance is an explicit override of that gate for this version**, not a claim that the original zero-fabrication criterion passed. No second paid run or prompt/test change occurred. CP4 and production publication remain outside this decision.
+
 ### 12.7 Tier S / Tier P — the paid quality evaluation: `RUN ONCE — NOT ACCEPTED`
 
 Prepared in `scripts/s8a-05/cp3/`: `AUTHOR_BRIEF.md` and the independently authored `tier-s-cases.json` (80 packages, 20
