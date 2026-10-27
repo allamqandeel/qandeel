@@ -32,9 +32,12 @@ const RELATION = id(8);
 const OTHER_USER = id(9);
 const AT = '2026-10-08T10:00:00.000Z';
 
+// RE-ANCHORED by S8A-05 CP4 (migration 0182, Controlled Amendment A-5(a) / (b)): the read is 0182's v2 — the 0147 row plus
+// the exact reply target and the OP flag (`public-discussion-threads.spec.ts` proves both).
 const row = (overrides: Record<string, unknown> = {}) => ({
   post_id: POST, thread_root_id: ROOT, post_ordinal: 2, author_label_mode: 'PSEUDONYM', author_display_label: 'oliveisland38', post_body: 'A reply',
-  posted_at: AT, is_own: false, qandeel_state: 'NONE', qandeel_response_body: null, qandeel_responded_at: null, ...overrides,
+  posted_at: AT, is_own: false, qandeel_state: 'NONE', qandeel_response_body: null, qandeel_responded_at: null,
+  reply_to_post_id: ROOT, is_op: false, ...overrides,
 });
 const CONTEXT_ROWS: PublicQandeelContextRow[] = [
   { context_kind: 'VERSION', context_role: null, context_ordinal: 0, context_ref: VERSION, context_text: null },
@@ -78,8 +81,8 @@ describe('S5-04 — the dependent Public discussion over the frozen 0096 runtime
     const view = await discussion(repo).read(TOKEN, EXPERIENCE, {});
     expect(view).toEqual({
       state: 'SERVED', canContribute: true, nextAfter: null, posts: [
-        { id: POST, threadRootId: ROOT, ordinal: 2, author: { mode: 'PSEUDONYM', label: 'oliveisland38' }, text: 'A reply', postedAt: AT, own: false, qandeel: { state: 'NONE' } },
-        { id: id(11), threadRootId: ROOT, ordinal: 3, author: { mode: 'PSEUDONYM', label: 'oliveisland38' }, text: 'A reply', postedAt: AT, own: true,
+        { id: POST, threadRootId: ROOT, replyToPostId: ROOT, ordinal: 2, isOp: false, author: { mode: 'PSEUDONYM', label: 'oliveisland38' }, text: 'A reply', postedAt: AT, own: false, qandeel: { state: 'NONE' } },
+        { id: id(11), threadRootId: ROOT, replyToPostId: ROOT, ordinal: 3, isOp: false, author: { mode: 'PSEUDONYM', label: 'oliveisland38' }, text: 'A reply', postedAt: AT, own: true,
           qandeel: { state: 'RESPONDED', text: 'A public reading.', respondedAt: AT } },
       ],
     });

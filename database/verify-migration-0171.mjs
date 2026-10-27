@@ -228,7 +228,9 @@ async function verifyCatalog() {
   // thirteen (0176's own verifier pins the full list).
   // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): migration 0181 adds PUBLIC_SEMANTIC_INTERPRETATION,
   // so fourteen (0181's own verifier pins the full list).
-  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 14);
+  // RE-ANCHORED by S8A-05 CP4 (2026-10-27, Controlled Amendment A-5): migration 0182 adds exactly PUBLIC_QANDEEL_REPLY, so fifteen
+  // (0182's own verifier pins the full list).
+  assert.equal((await constraintDef('public.ai_provider_calls', 'ai_provider_calls_feature_family_check')).match(/'[A-Z_]+'::text/gu).length, 15);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_basis_check'), /'MODEL_ASSISTED_CAPTURE'::text/u);
   assert.match(await constraintDef('public.memory_subject_attributions', 'memory_subject_attributions_capture_self_check'), /MODEL_ASSISTED_CAPTURE.*OR \(subject = 'SELF'::text\)/u);
 }

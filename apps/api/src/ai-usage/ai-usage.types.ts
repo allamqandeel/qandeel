@@ -40,6 +40,8 @@ export const AI_FEATURE_FAMILIES = [
   'SHARED_DISCLOSURE_JUDGE',
   // S8A-05 CP3 (migration 0181): the Public semantic interpretation, paid by the publisher who asked.
   'PUBLIC_SEMANTIC_INTERPRETATION',
+  // S8A-05 CP4 (migration 0182): the Public QANDEEL reply, paid by the human who invoked @qandeel.
+  'PUBLIC_QANDEEL_REPLY',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 

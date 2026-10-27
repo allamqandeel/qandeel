@@ -1,7 +1,8 @@
 # QANDEEL — Connected Worlds v2
 ## S8A-05 CP2 — Public World: «انشر من قنديل» / Publish from QANDEEL — Narrow Controlled Amendment v1.0
 
-**Status:** `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP2 order, 2026-10-27) — AT THE
+**Status:** `EFFECTIVE SINCE THE MERGE OF PR #360 AS 72898797 (2026-10-27) — S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27, the S8A-05 CP4 closing
+change; record §13.10)`. As written at its review: `CANDIDATE CONTROLLED AMENDMENT — DIRECTION APPROVED BY THE PRODUCT OWNER (S8A-05 CP2 order, 2026-10-27) — AT THE
 S8A-05 CP2 REVIEW GATE — NOT EFFECTIVE`. It binds from the merge of the S8A-05 CP2 pull request that carries it, after the
 Product Owner approves that pull request. Until then nothing below is in force.  
 **Scope:** Public topics made from the publisher's own Personal World (`MY_WORLD`) — whole committed messages of their own

@@ -613,10 +613,12 @@ async function verifyLedger(h, w, p, iso) {
   // (0176's own verifier pins the full list); nothing else in this list changes.
   // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): migration 0181 adds exactly PUBLIC_SEMANTIC_INTERPRETATION
   // (0181's own verifier pins the full list); nothing else in this list changes.
+  // RE-ANCHORED by S8A-05 CP4 (2026-10-27, Controlled Amendment A-5): migration 0182 adds exactly PUBLIC_QANDEEL_REPLY
+  // (0182's own verifier pins the full list); nothing else in this list changes.
   assert.deepEqual(families, ['CONVERSATION_REPLY', 'CU_SEGMENTATION', 'FOCUS_RESOLUTION', 'THREAD_FORMATION', 'THREAD_CONTINUITY',
     'HYPOTHESIS_INTENT_EXTRACTION', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', 'HYPOTHESIS_CANDIDATE_GENERATION', 'PERSONAL_UNDERSTANDING_CAPTURE',
     'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE',
-    'PUBLIC_SEMANTIC_INTERPRETATION'].sort());
+    'PUBLIC_SEMANTIC_INTERPRETATION', 'PUBLIC_QANDEEL_REPLY'].sort());
   const begin = async (call, user, world, material, family, path = null) => {
     await actAs('service_role');
     const row = await first(BEGIN_V2, [call, user, world, material, 'DEEPSEEK', 'deepseek-flash', 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', family, path]);
@@ -728,6 +730,10 @@ const CLASSIFICATION = Object.freeze({
   // RE-ANCHORED by S8A-05 CP2 / 0180: the paged items of a served topic reach a body only through the canonical serving
   // resolver (0095), for an admitted viewer and a served field entry, exactly as 0145 E.4 above does.
   'public_compose_source_private.read_public_topic_items_v1': EXCLUDES,
+  // RE-ANCHORED by S8A-05 CP4 / 0182 (Controlled Amendment A-5): the v2 discussion command and read are the 0147 v1 command
+  // and read (classified above) plus a reply target and an OP flag; they reach a body only through them.
+  'public_thread_private.post_own_public_discussion_v2': EXCLUDES,
+  'public_thread_private.read_public_discussion_posts_v2': EXCLUDES,
   // Replay: a Shared body enters only through capture, closed to a place by 0175 G.5; a Shared Replay is never distributed.
   'replay_private.create_my_replay_draft_v1': EXCLUDES,
   'replay_private.finalize_my_replay_version_v1': EXCLUDES,

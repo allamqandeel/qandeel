@@ -39,8 +39,10 @@ const served = (count = 3): PublicFieldPanel => ({ kind: 'SERVED', experience: {
   entry: E1, primaryThemes: ['fear'], secondaryThemes: [], publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' }, publishedAt: PUBLISHED,
   discussionCount: count, content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }], nearby: [], relations: [],
 } });
+// RE-ANCHORED by S8A-05 CP4 (migration 0182, Controlled Amendment A-5(a) / (b)): every post now carries the exact post it
+// answers and the OP flag (`public-discussion-threads.test.tsx` proves both).
 const post = (n: number, overrides: Partial<PublicDiscussionPost> = {}): PublicDiscussionPost => ({
-  id: id(100 + n), threadRootId: id(100 + n), ordinal: n, author: { mode: 'PSEUDONYM', label: `walker${n}` }, text: `post ${n}`,
+  id: id(100 + n), threadRootId: id(100 + n), replyToPostId: null, ordinal: n, isOp: false, author: { mode: 'PSEUDONYM', label: `walker${n}` }, text: `post ${n}`,
   postedAt: PUBLISHED, own: false, qandeel: { state: 'NONE' }, ...overrides,
 });
 const ROOT = post(1);
@@ -79,7 +81,7 @@ describe('S5-04 — the strict discussion client', () => {
   } as never).discussion;
 
   it('decodes exactly the served page; anything more (a like, a rank, an account) is no answer', async () => {
-    const wire = { id: ROOT.id, threadRootId: ROOT.id, ordinal: 1, author: { mode: 'PSEUDONYM', label: 'walker1' }, text: 'post 1', postedAt: PUBLISHED,
+    const wire = { id: ROOT.id, threadRootId: ROOT.id, replyToPostId: null, ordinal: 1, isOp: false, author: { mode: 'PSEUDONYM', label: 'walker1' }, text: 'post 1', postedAt: PUBLISHED,
       own: false, qandeel: { state: 'NONE' } };
     await expect(client({ state: 'SERVED', canContribute: false, posts: [wire], nextAfter: null }).read(E1.id, null))
       .resolves.toEqual(yes({ kind: 'SERVED', canContribute: false, posts: [ROOT], nextAfter: null }));

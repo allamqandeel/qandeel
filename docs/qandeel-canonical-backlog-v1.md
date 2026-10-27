@@ -222,6 +222,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-08` | QANDEEL's Earlier Shared Replies Reach the Model Without the Person They Answered | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AI-09` | Text Inside One Participant's Shared Message Can Pose as Another Participant Speaking | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-CI-03` | Android API 36 Emulator Boot Smoke: GitHub Runner Emulator Infrastructure (PO-WAIVED) | `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-PUB-REV-01` | Published Topic Revisions and Version-Continuous Public Discussion (PRE-LAUNCH BLOCKER) | `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -3118,6 +3119,11 @@ from its merge). Nothing here authorizes implementation (BG-07).
   `max_tokens` 2800. The Shared and Public inputs still set `DEEP 10000`, so `min(request budget, 25 s)` still cuts them
   at 10 s. S8A-02 CP2's Shared attribution path keeps 10 000 ms in total on DEEP, reading included; it was not measured on
   DEEP. No change of state.
+- **Dated note (S8A-05 closing change, 2026-10-27; effective from its merge):** the Public half is resolved. Controlled
+  Amendment A-5(d) sets the Public request's DEEP budget to 25 s, from the S8A-02 CP3 measurement of the same model
+  (thinking, `max_tokens` 2800 ≈ 19.3 s). Tests pin it in the API spec, the ACE-SP-01 spec and the brain-eval budget.
+  Shared DEEP stays at 10 s, so the item stays open for Shared. No Public reply has run on DeepSeek outside the Tier Q
+  package, which is prepared and not run.
 - **Status:** `DEFERRED — OWNED`
 
 ### `QAN-BL-AI-05` — Complex Messages Routed FAST Rarely Complete Within the 3 s Budget Under DeepSeek
@@ -3340,6 +3346,43 @@ authorizes implementation (BG-07).
 
 Admitted by `S8A-04` at its closing change under BG-08 / BG-06, as the Product Owner directed on 2026-10-25. It is not
 part of S8A-04's scope, and nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-PUB-REV-01` — Published Topic Revisions and Version-Continuous Public Discussion (PRE-LAUNCH BLOCKER)
+
+- **Title / Finding:** a published Public topic cannot be edited. Its author cannot publish a successor version, and its
+  discussion has no continuity across versions. The S8A-05 CP4 census found WP1-R1 §3.3's "additive only" premise wrong:
+  every step of a successor version of a PUBLISHED Experience is locked in the frozen I-05 publication core:
+  - preparation is DRAFT-only (0119 / 0179 / 0180);
+  - the reviewed interpretation and the placement are pinned to the current version (0144 / 0145);
+  - `publication_state` is keyed by the Experience and immutable (0095);
+  - eligibility needs the pointer to be the published version (0098);
+  - removal semantics sit in 0099 / 0121;
+  - verifiers 0095 / 0098 / 0099 / 0107 / 0119 / 0121 pin those bodies.
+- **Source:** [S8A-05 record](e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md) §13.1 and §13.10; [Controlled Amendment A-5](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_DISCUSSION_CONTROLLED_AMENDMENT_v1.0.md) §5; the Product Owner's CP4
+  scope decision (2026-10-27); WP1-R1 §3 (edit rules V-1 – V-14; delivered to the Product Owner outside the repository);
+  CW2-04 §17; A-4(e).
+- **Canonical disposition:** **`PRE-LAUNCH BLOCKER`** (the Product Owner, 2026-10-27). It is not an optional future
+  improvement. It must be implemented and tested before Stage 9 opens production publishing.
+- **Current truth:** S8A-05 is closed with editing deferred and **not implemented**. Migration 0182 asserts that still
+  exactly five functions move a Public Experience's lifecycle, so no successor-version path exists. Production publishing
+  is closed (both CW2-08 seams answer `NOT_EVALUATED`), so no published topic exists to edit.
+- **Required future properties:** every approved WP1-R1 requirement (V-1 – V-14), including:
+  - a version history;
+  - an unchanged place while the dominant meaning is unchanged (A-4(e));
+  - the integrity of the discussion's binding to versions, including CP4's exact reply targets and `@qandeel` context
+    (A-5);
+  - a controlled change of the frozen I-05 core, with its verifiers re-anchored and nothing weakened.
+- **Why deferred:** the Product Owner's decision (2026-10-27). CP4 completes the remaining scope without redesigning the
+  frozen publication core, and this work becomes its own task with a clear owner.
+- **Owner task:** `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` (designated by the Product Owner's decision; the descriptive name is S8A-05's closing
+  change's).
+- **Severity:** `HIGH`. If reopened, it changes the frozen publication core and the truth of published topics.
+- **Reopen condition:** before Stage 9 (or any other task) opens production publishing, or earlier by the Product Owner's
+  order. Stage 9 cannot open production publishing while this item is open.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8A-05` at its closing change (CP4) under BG-08 / BG-06, as the Product Owner directed on 2026-10-27.
+Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -4080,15 +4123,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 42 |
+| `DEFERRED — OWNED` | 43 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 33 |
-| **Total** | **88** |
+| **Total** | **89** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 51 |
+| `HIGH` | 52 |
 | `MEDIUM` | 35 |
 | `LOW` | 2 |
 
@@ -5367,6 +5410,30 @@ The paragraphs above stay as written. CP3-D V2 stays NOT ACCEPTED as run.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 88 items; 42 / 4 / 9 / 33 by status, 51 / 35 / 2 by severity.**
 
+**S8A-05 closing change (2026-10-27; the S8A-05 CP4 Draft PR, from `main` at `c9715702`; effective from its merge).** This
+is the BG-08 reconciliation of S8A-05 (CP1 – CP4; record §13.10).
+- **S8A-05 inherited nothing at kickoff.** CP1 (PR #359), CP2 (PR #360) and CP3 (PR #361) admitted, tombstoned and re-owned
+  nothing.
+- **Editing a published topic is not implemented.** Editing, successor versions and the discussion across versions are
+  deferred, in full, to the item below.
+- **Admitted (BG-06 / BG-08):** `QAN-BL-PUB-REV-01`.
+  - It covers published topic revisions and version-continuous Public discussion.
+  - `PRE-LAUNCH BLOCKER`, `HIGH`, `DEFERRED — OWNED`, owner `PUB-REV-01`.
+  - The Product Owner designated it on 2026-10-27.
+- **Dated note:** `QAN-BL-AI-04`. Public DEEP is 25 s (A-5(d)), and Shared stays open.
+- **Read and left unchanged:**
+  - `QAN-BL-AI-01`: `SYNTHETIC_ONLY` is unchanged.
+  - `QAN-BL-AI-05`: the Tier Q package states this risk before any run.
+  - `QAN-BL-PRIV-05`.
+  - `QAN-BL-ACCT-01` / `QAN-BL-PROD-09`: `reply_targets` references posts only, no account; the account-erasure verifiers
+    0164 / 0168 / 0169 pass with 0182.
+  - `QAN-BL-VIS-01`.
+  - The hosted deployment items: 0179 – 0182 are applied to no hosted database.
+- **Not an item:** the Tier Q evaluation. It is prepared and not run, awaiting the Product Owner's budget decision, and it
+  is recorded in its preregistration and in record §13.8.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 89 items; 43 / 4 / 9 / 33 by status, 52 / 35 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5453,8 +5520,9 @@ Inherited after T-12 closure reconciliation:
 | `S8A-01 — DeepSeek Production Integration & First Real Conversation` | none owned at kickoff; the Stage 8A items read and left as they stand; *CP2 (2026-10-21; the S8A-01 pull request, not merged; effective from its merge):* admitted `QAN-BL-AI-01`, `QAN-BL-AI-02` and `QAN-BL-AI-03`; *Closing change (2026-10-21; effective from its merge):* CP4 passed (seven synthetic calls; Personal DEEP 20 s by the Product Owner's controlled change); BG-08 reconciled; admitted `QAN-BL-AI-04` |
 | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | none owned at kickoff; the Stage 8A items read and left as they stand; admitted `QAN-BL-AI-05` (Round 2 review), `QAN-BL-AI-06` / `AI-07` / `AI-08` (D5) and `QAN-BL-AI-09` (Shared Attribution Integrity), all owned by Stage 8A. *Closing change (2026-10-23; the S8A-02 pull request; effective from its merge):* `QAN-BL-AI-06` / `AI-07` tombstoned (completed by CP1) and `QAN-BL-AI-09` tombstoned (Founder product acceptance for v1); dated notes on `QAN-BL-AI-04` / `AI-05`; `QAN-BL-AI-08`, `QAN-BL-ACE-02` and `QAN-BL-IP-02` left open with reasons; Future Improvements 001 / 002 checked and not admitted (§7). S8A-02 owns no open item |
 | `S8A-04 — Shared Social Understanding, Shared Social Memory and Personal Knowledge in Shared World (CP1 – CP3)` | none owned at kickoff; CP1 (PR #356) and CP2 (PR #357) admitted, tombstoned and re-owned nothing; CP3 delivers `SHARED-CTX-01`. *Closing change (2026-10-26; Draft PR #358; effective from its merge):* `QAN-BL-CW-02` tombstoned (the Product Owner's D-9 known-risk acceptance; CP3-D V2 Tier 1 NOT ACCEPTED, Tier 2 NOT RUN); admitted `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure); Future Improvements 012 – 016 checked and not admitted (§7). S8A-04 owns no open item |
-| `S8A-05 — Public World (CP1 Write Your Topic, merged through PR #359; CP2 Publish from QANDEEL, merged through PR #360; CP3 Public Semantic Intelligence & Deterministic Spatial Placement; CP4 not started)` | none owned at kickoff (2026-10-26, from `main` at `9459245e`); *CP1 (the S8A-05 CP1 pull request, not merged):* admitted, tombstoned and re-owned nothing; observed and left as they stand: `QAN-BL-PRIV-05` (CP1 exports the reader's own topic drafts as `publicTopicDrafts`), `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (`public_compose_private.topic_drafts` is `ACCOUNT_CASCADE` and registered; a prepared topic exists only after the closed publication gate opens, then follows `ACCT-DEL-02`). *CP2 (2026-10-27; the S8A-05 CP2 pull request, not merged; effective from its merge):* admitted, tombstoned and re-owned nothing; read and left as they stand: `QAN-BL-CW-05` (Shared QANDEEL output stays unpublishable, outside A-3), `QAN-BL-PRIV-05` (each draft's source reference is exported under `publicTopicDrafts`), `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (the source lives on the `ACCOUNT_CASCADE` draft). *CP3 (2026-10-27; the S8A-05 CP3 pull request, not merged; effective from its merge):* admitted, tombstoned and re-owned nothing; read and left as they stand: `QAN-BL-AI-01` (the Public interpreter runs only under `SYNTHETIC_ONLY`; no real person's text reaches DeepSeek), `QAN-BL-VIS-01` (the field camera and scale stay `LA-SCALE-01`'s; A-4 finding F-2), `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (the 0181 region slots bind only a published Experience, and nothing can publish yet); the Tier S / Tier P quality evaluation ran once and is NOT ACCEPTED (fabrication; the deterministic half met). BG-08 / BG-09 at S8A-05's last checkpoint |
+| `S8A-05 — Public World (CP1 Write Your Topic, merged through PR #359; CP2 Publish from QANDEEL, merged through PR #360; CP3 Public Semantic Intelligence & Deterministic Spatial Placement, merged through PR #361; CP4 Public Discussion Threads & the @qandeel Context)` | none owned at kickoff (2026-10-26, from `main` at `9459245e`); *CP1 (the S8A-05 CP1 pull request, not merged):* admitted, tombstoned and re-owned nothing; observed and left as they stand: `QAN-BL-PRIV-05` (CP1 exports the reader's own topic drafts as `publicTopicDrafts`), `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (`public_compose_private.topic_drafts` is `ACCOUNT_CASCADE` and registered; a prepared topic exists only after the closed publication gate opens, then follows `ACCT-DEL-02`). *CP2 (2026-10-27; the S8A-05 CP2 pull request, not merged; effective from its merge):* admitted, tombstoned and re-owned nothing; read and left as they stand: `QAN-BL-CW-05` (Shared QANDEEL output stays unpublishable, outside A-3), `QAN-BL-PRIV-05` (each draft's source reference is exported under `publicTopicDrafts`), `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (the source lives on the `ACCOUNT_CASCADE` draft). *CP3 (2026-10-27; the S8A-05 CP3 pull request, not merged; effective from its merge):* admitted, tombstoned and re-owned nothing; read and left as they stand: `QAN-BL-AI-01` (the Public interpreter runs only under `SYNTHETIC_ONLY`; no real person's text reaches DeepSeek), `QAN-BL-VIS-01` (the field camera and scale stay `LA-SCALE-01`'s; A-4 finding F-2), `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (the 0181 region slots bind only a published Experience, and nothing can publish yet); the Tier S / Tier P quality evaluation ran once and is NOT ACCEPTED (fabrication; the deterministic half met). *Closing change (CP4, 2026-10-27; the S8A-05 CP4 Draft PR; effective from its merge):* admitted `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`; editing a published topic deferred, NOT implemented) to `PUB-REV-01`; dated note on `QAN-BL-AI-04` (Public DEEP 25 s; Shared open); Tier Q prepared, not run. S8A-05 owns no open item |
 | `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `QAN-BL-CI-03` (admitted by S8A-04's closing change; identifier the Product Owner's) |
+| `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` | `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`; admitted by S8A-05's closing change at the Product Owner's designation, 2026-10-27; must be done and tested before Stage 9 opens production publishing) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project); `QAN-BL-PROD-10` (admitted by S6-07's closing change, 2026-10-18: a photo object lost from the store blocks its owner's export bundle) |

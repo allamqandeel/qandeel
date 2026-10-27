@@ -7,7 +7,11 @@ import { PublicQandeelReplyService, type PublicQandeelReplyState } from './publi
 export interface PublicDiscussionPostView {
   readonly id: string;
   readonly threadRootId: string;
+  /** S8A-05 CP4 (0182): the exact post this reply answers; the thread root for a reply made before it; null at top level. */
+  readonly replyToPostId: string | null;
   readonly ordinal: number;
+  /** S8A-05 CP4 (0182): written by the topic's author (OP). A boolean only; the reader learns no identifier. */
+  readonly isOp: boolean;
   /** The Public Identity display, joined now — a mode and a label, never an account. */
   readonly author: { readonly mode: 'PSEUDONYM' | 'REAL_NAME'; readonly label: string | null };
   readonly text: string;
@@ -44,7 +48,8 @@ const isOrdinal = (value: unknown): value is number => typeof value === 'number'
 const isInstant = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
 
 /**
- * S5-04 — the ONE dependent discussion of a Public Experience at NEAR, over the frozen 0096 runtime (through 0147):
+ * S5-04 — the ONE dependent discussion of a Public Experience at NEAR, over the frozen 0096 runtime (through 0147; S8A-05
+ * CP4: through 0182's v2, which adds each reply's exact target and the OP flag):
  *
  *   - the discussion read: the served version's posts, paged, each with its Public Identity display and its one Public
  *     QANDEEL response state; whether the reader may contribute now;
@@ -135,7 +140,8 @@ function postOf(row: PublicDiscussionReadRow): PublicDiscussionPostView {
     || (row.author_label_mode !== 'PSEUDONYM' && row.author_label_mode !== 'REAL_NAME')
     || (row.author_display_label !== null && typeof row.author_display_label !== 'string')
     || typeof row.post_body !== 'string' || !isInstant(row.posted_at) || typeof row.is_own !== 'boolean'
-    || !QANDEEL_STATES.includes(row.qandeel_state)) return unavailable();
+    || !QANDEEL_STATES.includes(row.qandeel_state) || typeof row.is_op !== 'boolean'
+    || (row.reply_to_post_id !== null && !isUuid(row.reply_to_post_id))) return unavailable();
   let qandeel: PublicDiscussionPostView['qandeel'];
   if (row.qandeel_state === 'RESPONDED') {
     if (typeof row.qandeel_response_body !== 'string' || !isInstant(row.qandeel_responded_at)) return unavailable();
@@ -144,7 +150,7 @@ function postOf(row: PublicDiscussionReadRow): PublicDiscussionPostView {
     qandeel = { state: row.qandeel_state as 'NONE' | 'PENDING' | 'UNAVAILABLE' };
   }
   return {
-    id: row.post_id, threadRootId: row.thread_root_id, ordinal: row.post_ordinal,
+    id: row.post_id, threadRootId: row.thread_root_id, replyToPostId: row.reply_to_post_id, ordinal: row.post_ordinal, isOp: row.is_op,
     author: { mode: row.author_label_mode, label: row.author_display_label }, text: row.post_body, postedAt: row.posted_at, own: row.is_own, qandeel,
   };
 }

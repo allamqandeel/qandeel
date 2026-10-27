@@ -48,8 +48,11 @@ async function verify() {
   // RE-ANCHORED by S8A-05 CP3 (2026-10-27, Controlled Amendment A-4): migration 0181 adds exactly PUBLIC_SEMANTIC_INTERPRETATION,
   // detected by its closed-profile record command (0181's own verifier pins the full list).
   const { publicReading } = await one("SELECT to_regprocedure('public.record_public_semantic_work_outcome_v2(uuid, text, text[], integer[], text, text[], text[], text)') IS NOT NULL AS \"publicReading\"");
+  // RE-ANCHORED by S8A-05 CP4 (2026-10-27, Controlled Amendment A-5): migration 0182 adds exactly PUBLIC_QANDEEL_REPLY,
+  // detected by its branch-scoped context read (0182's own verifier pins the full list).
+  const { publicReply } = await one("SELECT to_regprocedure('public.read_public_qandeel_context_v2(uuid, uuid)') IS NOT NULL AS \"publicReply\"");
   const expected = [...FAMILIES, ...(later ? ['SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : []), ...(judged ? ['SHARED_DISCLOSURE_JUDGE'] : []),
-    ...(publicReading ? ['PUBLIC_SEMANTIC_INTERPRETATION'] : [])];
+    ...(publicReading ? ['PUBLIC_SEMANTIC_INTERPRETATION'] : []), ...(publicReply ? ['PUBLIC_QANDEEL_REPLY'] : [])];
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...expected].sort());
 
   await q('BEGIN');

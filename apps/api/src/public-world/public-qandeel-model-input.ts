@@ -14,13 +14,30 @@
  * discussion material, not a private conversation. After that unchanged prefix comes the ONE QANDEEL personality in its
  * world-neutral form, and on a Safety GUIDED turn the approved humour suspension (the ACE-SP-01 controlled amendment);
  * it reads no Personal preference, person or state. Pure; no I/O.
+ *
+ * S8A-05 CP4 (migration 0182, Controlled Amendment A-5(c)): the production context is 0182's BRANCH — the topic as one
+ * bounded labelled text, its reviewed meaning and themes, the invoking post's chain of replies to its thread root and at
+ * most 8 more posts of that thread, each with its speaker role (the topic's author, the asker, another participant) and
+ * the post it answers, and QANDEEL's earlier answers attached to the posts they answered. A context carrying `topic` is
+ * rendered that way (`branchBlock`); the older whole-discussion shape stays for the evaluation fixtures that build it.
+ * The roles are derived by the database from Public Identities and are never names; the frame above is unchanged.
  */
 import { TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { HISTORY_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
 import type { ModelRouterRequest } from '../model-router/model-router.types';
 
-export interface PublicQandeelPost { readonly id: string; readonly ordinal: number; readonly invoking: boolean; readonly text: string }
+/** S8A-05 CP4 (0182): who wrote a post, relative to the topic and to the human asking now — never a name. */
+export type PublicQandeelSpeaker = 'OP' | 'ASKER' | 'PARTICIPANT';
+export interface PublicQandeelPost {
+  readonly id: string; readonly ordinal: number; readonly invoking: boolean; readonly text: string;
+  /** 0182 only. */
+  readonly speaker?: PublicQandeelSpeaker;
+  /** 0182 only: the id of the post this one replies to, or null at the top of the thread. */
+  readonly replyTo?: string | null;
+}
+/** 0182: one earlier Public QANDEEL answer, attached to the post it answered. */
+export interface PublicQandeelEarlierAnswer { readonly answers: string; readonly text: string }
 export interface PublicQandeelContentItem { readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string }
 
 /** The assembler's ENTIRE input: public-visible truth only. */
@@ -33,6 +50,10 @@ export interface PublicQandeelContext {
   readonly posts: ReadonlyArray<PublicQandeelPost>;
   readonly earlierResponses: ReadonlyArray<string>;
   readonly related: ReadonlyArray<string>;
+  /** 0182: the topic as ONE bounded labelled text (≤ 6 KB, the database's bound); its presence selects the branch layout. */
+  readonly topic?: string;
+  /** 0182: earlier Public QANDEEL answers in the branch, each attached to the post it answered. */
+  readonly earlierAnswers?: ReadonlyArray<PublicQandeelEarlierAnswer>;
 }
 
 export const PUBLIC_QANDEEL_FRAME = [
@@ -75,8 +96,60 @@ export function boundedPublicDiscussion(posts: ReadonlyArray<PublicQandeelPost>)
   return [...(kept.length > 0 ? ['The public discussion so far:', ...kept] : []), `The participant asking you now: ${invoking.text}`].join('\n');
 }
 
+/** A-5(c): the labels the model reads. Speaker roles come from the database; posts are numbered in this message only. */
+export const TOPIC_HEADER = "The published topic. Lines marked AUTHOR or AUTHOR_TEXT are its author's own words; lines marked QANDEEL or QANDEEL_UNDERSTANDING are your own words the author chose to publish.";
+export const THREAD_HEADER = [
+  "This thread of the public discussion, oldest first. [OP] is the topic's author. [Asker] is the person asking you now. [Participant] is anyone else; two posts marked [Participant] may or may not be the same person.",
+  "[QANDEEL] is one of your own earlier public replies here: a reading, not a fact, and not the author's view. What the author says in the topic and in [OP] posts decides what the author means.",
+].join('\n');
+const SPEAKER_LABEL: Record<PublicQandeelSpeaker, string> = { OP: '[OP]', ASKER: '[Asker]', PARTICIPANT: '[Participant]' };
+
+/** The published topic, as the model reads it in the branch layout (A-5(c)). */
+function topicBlock(context: PublicQandeelContext): string {
+  const lines: string[] = [];
+  if (context.topic !== undefined && context.topic.trim().length > 0) lines.push(TOPIC_HEADER, context.topic);
+  lines.push(`Its reviewed meaning: ${context.meaning}`);
+  if (context.primaryThemes.length > 0) lines.push(`Themes: ${[...context.primaryThemes, ...context.secondaryThemes].join(', ')}`);
+  return lines.join('\n');
+}
+
+/**
+ * The branch, bounded (A-5(c)): the invoking post always; then its chain of replies up to the thread root, nearest first;
+ * then the other posts, newest first — each post with the earlier QANDEEL answers attached to it — while they fit the
+ * history budget; shown in their canonical order, numbered in this message only.
+ */
+export function branchBlock(context: PublicQandeelContext): string | null {
+  const invoking = context.posts.find((post) => post.invoking);
+  if (invoking === undefined || invoking.speaker === undefined) return null;
+  const posts = [...context.posts].sort((a, b) => a.ordinal - b.ordinal);
+  const byId = new Map(posts.map((post) => [post.id, post]));
+  const answersOf = (id: string) => (context.earlierAnswers ?? []).filter((answer) => answer.answers === id).map((answer) => answer.text);
+  const chain: PublicQandeelPost[] = [];
+  for (let at = byId.get(invoking.replyTo ?? ''); at !== undefined && !chain.includes(at); at = byId.get(at.replyTo ?? '')) chain.push(at);
+  const others = posts.filter((post) => post !== invoking && !chain.includes(post)).reverse();
+  const cost = (post: PublicQandeelPost) => bytes(post.text) + answersOf(post.id).reduce((sum, text) => sum + bytes(text), 0) + 48;
+  const kept = new Set<PublicQandeelPost>([invoking]);
+  let used = cost(invoking);
+  for (const post of [...chain, ...others]) {
+    if (used + cost(post) > HISTORY_BUDGET_BYTES) continue;
+    used += cost(post);
+    kept.add(post);
+  }
+  const shown = posts.filter((post) => kept.has(post));
+  const number = new Map(shown.map((post, index) => [post.id, index + 1]));
+  const lines = [THREAD_HEADER];
+  for (const post of shown) {
+    const target = post.replyTo === null || post.replyTo === undefined ? ''
+      : number.has(post.replyTo) ? ` replying to #${number.get(post.replyTo)}` : ' replying to an earlier post not shown';
+    const asking = post.invoking ? ' — asking you now' : '';
+    lines.push(`#${number.get(post.id)} ${SPEAKER_LABEL[post.speaker ?? 'PARTICIPANT']}${target}${asking}: ${post.text}`);
+    if (!post.invoking) for (const answer of answersOf(post.id)) lines.push(`   [QANDEEL] answering #${number.get(post.id)}: ${answer}`);
+  }
+  return lines.join('\n');
+}
+
 export function assemblePublicQandeelRequest(context: PublicQandeelContext, safetyGuidance?: string): ModelRouterRequest | null {
-  const discussion = boundedPublicDiscussion(context.posts);
+  const discussion = context.topic === undefined ? boundedPublicDiscussion(context.posts) : branchBlock(context);
   const invoking = context.posts.find((post) => post.invoking);
   if (discussion === null || invoking === undefined) return null;
   const path = decideFastDeepRoute(invoking.text).path;
@@ -86,10 +159,11 @@ export function assemblePublicQandeelRequest(context: PublicQandeelContext, safe
     complexity: path === 'DEEP' ? 'HIGH' : 'LOW',
     behavioralGuidance: withWorldNeutralPersonality(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}`, Boolean(safetyGuidance)),
     ...(safetyGuidance === undefined ? {} : { safetyGuidance }),
-    context: [{ role: 'USER', content: `${experienceBlock(context)}\n\n${discussion}` }],
+    context: [{ role: 'USER', content: `${context.topic === undefined ? experienceBlock(context) : topicBlock(context)}\n\n${discussion}` }],
     locale: 'und',
     modality: 'TEXT',
-    latencyBudgetMs: path === 'DEEP' ? 10000 : 3000,
+    // S8A-05 CP4 (QAN-BL-AI-04 for Public, A-5(d)): DEEP 25 s, the Personal DEEP measurement on the same model; FAST 3 s.
+    latencyBudgetMs: path === 'DEEP' ? 25000 : 3000,
     costBudget: 'LOW',
     safetyLevel: 'STANDARD',
   };

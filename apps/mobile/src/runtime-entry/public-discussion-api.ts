@@ -17,7 +17,11 @@ export type PublicQandeelState = 'NONE' | 'PENDING' | 'UNAVAILABLE' | 'RESPONDED
 export interface PublicDiscussionPost {
   readonly id: string;
   readonly threadRootId: string;
+  /** S8A-05 CP4 (0182): the exact post this reply answers (its thread root for a reply made before it); null at top level. */
+  readonly replyToPostId: string | null;
   readonly ordinal: number;
+  /** S8A-05 CP4 (0182): written by the topic's author. A boolean only — never an identifier. */
+  readonly isOp: boolean;
   /** The author's CURRENT Public Identity display — a mode and a label, never an account. */
   readonly author: { readonly mode: 'PSEUDONYM' | 'REAL_NAME'; readonly label: string | null };
   readonly text: string;
@@ -63,8 +67,9 @@ function qandeelOf(value: unknown): PublicDiscussionPost['qandeel'] | null {
 }
 
 function postOf(value: unknown): PublicDiscussionPost | null {
-  if (!isRecord(value) || !hasExactly(value, ['id', 'threadRootId', 'ordinal', 'author', 'text', 'postedAt', 'own', 'qandeel'])
-    || !isUuid(value.id) || !isUuid(value.threadRootId) || !isOrdinal(value.ordinal) || typeof value.text !== 'string'
+  if (!isRecord(value) || !hasExactly(value, ['id', 'threadRootId', 'replyToPostId', 'ordinal', 'isOp', 'author', 'text', 'postedAt', 'own', 'qandeel'])
+    || !isUuid(value.id) || !isUuid(value.threadRootId) || (value.replyToPostId !== null && !isUuid(value.replyToPostId))
+    || !isOrdinal(value.ordinal) || typeof value.isOp !== 'boolean' || typeof value.text !== 'string'
     || !isInstant(value.postedAt) || typeof value.own !== 'boolean') return null;
   const author = isRecord(value.author) && hasExactly(value.author, ['mode', 'label'])
     && (value.author.mode === 'PSEUDONYM' || value.author.mode === 'REAL_NAME')
@@ -72,7 +77,7 @@ function postOf(value: unknown): PublicDiscussionPost | null {
   const qandeel = qandeelOf(value.qandeel);
   if (author === null || qandeel === null) return null;
   return Object.freeze({
-    id: value.id, threadRootId: value.threadRootId, ordinal: value.ordinal,
+    id: value.id, threadRootId: value.threadRootId, replyToPostId: value.replyToPostId as string | null, ordinal: value.ordinal, isOp: value.isOp,
     author: { mode: author.mode as 'PSEUDONYM' | 'REAL_NAME', label: author.label as string | null },
     text: value.text, postedAt: value.postedAt, own: value.own, qandeel,
   });

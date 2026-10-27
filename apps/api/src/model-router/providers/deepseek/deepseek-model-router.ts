@@ -48,6 +48,15 @@ export class DeepSeekModelRouter implements ModelRouter {
     return new DeepSeekModelRouter(config, accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting), telemetry);
   }
 
+  /**
+   * S8A-05 CP4 (Controlled Amendment A-5(d)): the Public QANDEEL reply — the same router, the same SYNTHETIC_ONLY gate and
+   * the same accounting boundary, under its own family (migration 0182), paid by the human who invoked @qandeel.
+   */
+  static forPublicQandeel(telemetry: TelemetryService | undefined, accounting: AiProviderCallAccounting): DeepSeekModelRouter {
+    const config = loadDeepSeekModelRouterConfig();
+    return new DeepSeekModelRouter(config, accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'PUBLIC_QANDEEL_REPLY', accounting), telemetry);
+  }
+
   constructor(
     private readonly config: DeepSeekModelRouterConfig,
     private readonly client: DeepSeekChatCompletionsClient,

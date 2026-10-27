@@ -7,7 +7,7 @@ import { assemblePublicQandeelRequest } from '../public-world/public-qandeel-mod
 import { assembleSharedConversationRequest } from '../shared-world/shared-conversation-model-input';
 import {
   createGuidanceComparisonArtifacts, deepSeekEvaluationRequest, labelShownAsA, PERSONAL_REPLY_LATENCY_BUDGET_MS, replyShape,
-  runDeepSeekEvaluation, summarizeDeepSeekRun, WORLD_REPLY_LATENCY_BUDGET_MS,
+  runDeepSeekEvaluation, summarizeDeepSeekRun, WORLD_REPLY_LATENCY_BUDGET_MS, PUBLIC_REPLY_LATENCY_BUDGET_MS, worldReplyLatencyBudgetMs,
 } from './brain-eval.deepseek';
 import { GOLDEN_EXTENDED_SUITE, GOLDEN_SUPPLEMENT_CASES } from './brain-eval.golden-extended.suite';
 import { GOLDEN_CONVERSATION_SUITE } from './brain-eval.golden.suite';
@@ -70,11 +70,14 @@ describe('S8A-02 — the extended Golden suite and the DeepSeek-only path of the
     for (const testCase of GOLDEN_EXTENDED_SUITE) {
       const request = deepSeekEvaluationRequest(testCase);
       expect(request.path).toBe(testCase.path);
-      expect(request.latencyBudgetMs).toBe((testCase.world ? WORLD_REPLY_LATENCY_BUDGET_MS : PERSONAL_REPLY_LATENCY_BUDGET_MS)[testCase.path]);
+      // RE-ANCHORED by S8A-05 CP4 (QAN-BL-AI-04 for Public, Controlled Amendment A-5(d)): a World case's budget is its own
+      // World's — Public DEEP 25 s, Shared unchanged.
+      expect(request.latencyBudgetMs).toBe(testCase.world ? worldReplyLatencyBudgetMs(testCase, testCase.path) : PERSONAL_REPLY_LATENCY_BUDGET_MS[testCase.path]);
     }
     // S8A-02 CP3 correction (Product Owner, 2026-10-22): Personal FAST 10 s; the Worlds are unchanged.
     expect(PERSONAL_REPLY_LATENCY_BUDGET_MS).toEqual({ FAST: 10_000, DEEP: 25_000 });
     expect(WORLD_REPLY_LATENCY_BUDGET_MS).toEqual({ FAST: 3_000, DEEP: 10_000 });
+    expect(PUBLIC_REPLY_LATENCY_BUDGET_MS).toEqual({ FAST: 3_000, DEEP: 25_000 });
     const brevity = GOLDEN_CONVERSATION_SUITE.find((testCase) => testCase.id === 'deep-golden-declared-brevity-ar-eg')!;
     expect(deepSeekEvaluationRequest(brevity).behavioralGuidance).toBe(new BehavioralResponsePolicyService().buildTextGuidance({ preferences: brevity.interactionPreferences!, safetyGuided: false }));
   });

@@ -160,6 +160,8 @@ interface ProofPublicPost {
   id: string;
   experienceId: string;
   threadRootId: string;
+  /** S8A-05 CP4 (0182): the exact post a reply answers. */
+  replyToPostId: string | null;
   ordinal: number;
   author: 'SELF' | 'PEER';
   text: string;
@@ -654,7 +656,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const addPost = (experienceId: string, author: ProofPublicPost['author'], text: string, parent: ProofPublicPost | null, commandId: string | null) => {
     const id = uuid();
     // One visible depth (D2): a reply to a reply joins the same root.
-    const post: ProofPublicPost = { id, experienceId, threadRootId: parent === null ? id : parent.threadRootId, ordinal: discussionOf(experienceId).length + 1,
+    const post: ProofPublicPost = { id, experienceId, threadRootId: parent === null ? id : parent.threadRootId, replyToPostId: parent?.id ?? null,
+      ordinal: discussionOf(experienceId).length + 1,
       author, text, postedAt: at(), commandId, invoked: author === 'SELF' && INVOKES_QANDEEL.test(text), response: null };
     // VALIDATION-ONLY deterministic provider seam: the ONE Public QANDEEL response of an invoking post.
     if (post.invoked) post.response = { text: S504_PROOF_LINES.qandeel[language], respondedAt: at() };
@@ -662,7 +665,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     return post;
   };
   const postView = (p: ProofPublicPost) => ({
-    id: p.id, threadRootId: p.threadRootId, ordinal: p.ordinal,
+    // S8A-05 CP4 (0182): the exact target, and OP — no proof-world topic is the reader's or the peer's, so never OP here.
+    id: p.id, threadRootId: p.threadRootId, replyToPostId: p.replyToPostId, ordinal: p.ordinal, isOp: false,
     author: p.author === 'SELF' ? { mode: publicMode, label: publicLabel() } : { mode: 'PSEUDONYM', label: S504_PROOF_LINES.peerPublicId },
     text: p.text, postedAt: p.postedAt, own: p.author === 'SELF',
     qandeel: !p.invoked ? { state: 'NONE' } : p.response === null ? { state: 'PENDING' } : { state: 'RESPONDED', text: p.response.text, respondedAt: p.response.respondedAt },
