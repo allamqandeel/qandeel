@@ -61,7 +61,10 @@ export interface PublicFieldExperience {
    * QANDEEL response count is decoded and dropped: it is never a social metric. Neither moves anything in the field.
    */
   readonly discussionCount: number;
-  readonly content: ReadonlyArray<{ readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string }>;
+  /** The first page (at most 50) of the content. S8A-05 CP2: the rest is read page by page (`items`), never at once. */
+  readonly content: ReadonlyArray<PublicFieldContentItem>;
+  /** S8A-05 CP2: how much content there is. An answer without it (before CP2) is one page of what it carries. */
+  readonly contentPages?: { readonly itemCount: number; readonly pageCount: number };
   readonly nearby: ReadonlyArray<PublicFieldEntry>;
   /**
    * S5-03C: the Experience's ACTIVE explicit relations whose two bound endpoints the server serves now — each the OTHER
@@ -69,6 +72,41 @@ export interface PublicFieldExperience {
    * not relations.
    */
   readonly relations: ReadonlyArray<PublicFieldRelation>;
+}
+/**
+ * One item of an Experience's content, with its kind. S8A-05 CP2: an item of a topic made from a conversation or a
+ * «فهم قنديل» item also carries the role its topic sealed — the author's own message, QANDEEL's reply, QANDEEL's
+ * understanding or the author's written words — its message ordinal, its emphasis and whether a gap precedes it.
+ */
+export interface PublicFieldContentItem {
+  readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string;
+  readonly role?: 'WRITTEN' | 'YOUR_MESSAGE' | 'QANDEEL_REPLY' | 'QANDEEL_UNDERSTANDING';
+  readonly message?: number | null; readonly emphasized?: boolean; readonly gapBefore?: boolean;
+}
+/** S8A-05 CP2: one page of a served Experience's content. */
+export interface PublicFieldContentPage {
+  readonly itemCount: number; readonly page: number; readonly pageCount: number; readonly items: ReadonlyArray<PublicFieldContentItem>;
+}
+export type PublicFieldContentRead = { readonly kind: 'PAGE'; readonly page: PublicFieldContentPage } | { readonly kind: 'ABSENT' };
+const CONTENT_ROLES: readonly string[] = ['WRITTEN', 'YOUR_MESSAGE', 'QANDEEL_REPLY', 'QANDEEL_UNDERSTANDING'];
+/** The content items of one page, strictly: an item has its 0145 shape, or that shape and its sealed role, nothing else. */
+function contentOf(value: unknown): PublicFieldContentItem[] | null {
+  if (!Array.isArray(value) || value.length > 50) return null;
+  const items: PublicFieldContentItem[] = [];
+  let previous = 0;
+  for (const item of value as unknown[]) {
+    if (!isRecord(item) || !isCount(item.ordinal) || item.ordinal <= previous || (item.kind !== 'SOURCE_CONTENT' && item.kind !== 'ANALYSIS')
+      || typeof item.text !== 'string') return null;
+    previous = item.ordinal;
+    const base = { ordinal: item.ordinal, kind: item.kind as 'SOURCE_CONTENT' | 'ANALYSIS', text: item.text };
+    if (hasExactly(item, ['ordinal', 'kind', 'text'])) { items.push(base); continue; }
+    if (!hasExactly(item, ['ordinal', 'kind', 'text', 'role', 'message', 'emphasized', 'gapBefore']) || typeof item.role !== 'string'
+      || !CONTENT_ROLES.includes(item.role) || (item.message !== null && !(isCount(item.message) && item.message >= 1))
+      || typeof item.emphasized !== 'boolean' || typeof item.gapBefore !== 'boolean') return null;
+    items.push({ ...base, role: item.role as NonNullable<PublicFieldContentItem['role']>, message: item.message as number | null,
+      emphasized: item.emphasized, gapBefore: item.gapBefore });
+  }
+  return items;
 }
 /** S5-03C: one explicit relation as the field draws it — its identity and the other endpoint's served place. */
 export interface PublicFieldRelation { readonly relationId: string; readonly other: PublicFieldEntry }
@@ -167,7 +205,9 @@ export class PublicFieldApiClient {
     if (answer.kind !== 'OK' || !isRecord(answer.body)) return NO;
     const b = answer.body;
     if (b.state === 'UNAVAILABLE' && hasExactly(b, ['state'])) return yes({ kind: 'ABSENT' });
-    if (b.state !== 'SERVED' || !hasExactly(b, ['state', 'experience', 'content', 'nearby', 'relations']) || !isRecord(b.experience)) return NO;
+    const paged = 'contentPages' in b;
+    if (b.state !== 'SERVED' || !hasExactly(b, paged ? ['state', 'experience', 'content', 'contentPages', 'nearby', 'relations'] : ['state', 'experience', 'content', 'nearby', 'relations'])
+      || !isRecord(b.experience)) return NO;
     const e = b.experience;
     const entry = entryOf({ id: e.id, x: e.x, y: e.y, meaning: e.meaning, region: e.region,
       ...('title' in e ? { title: e.title } : {}), ...('section' in e ? { section: e.section } : {}) });
@@ -180,17 +220,31 @@ export class PublicFieldApiClient {
       || !entryShapeOf(e, ['primaryThemes', 'secondaryThemes', 'publisher', 'publishedAt', 'discussionCount', 'qandeelResponseCount'])
       || typeof e.publishedAt !== 'string' || !Number.isFinite(Date.parse(e.publishedAt)) || !isCount(e.discussionCount) || !isCount(e.qandeelResponseCount) || !Array.isArray(b.content)
       || relations === null) return NO;
-    const content = b.content.map((item) => (isRecord(item) && hasExactly(item, ['ordinal', 'kind', 'text']) && isCount(item.ordinal)
-      && (item.kind === 'SOURCE_CONTENT' || item.kind === 'ANALYSIS') && typeof item.text === 'string'
-      ? { ordinal: item.ordinal, kind: item.kind as 'SOURCE_CONTENT' | 'ANALYSIS', text: item.text } : null));
-    if (content.length === 0 || !content.every((item) => item !== null)) return NO;
+    const content = contentOf(b.content);
+    if (content === null || content.length === 0) return NO;
+    const pages = paged ? b.contentPages : { itemCount: content.length, pageCount: 1 };
+    if (!isRecord(pages) || !hasExactly(pages, ['itemCount', 'pageCount']) || !isCount(pages.itemCount) || pages.itemCount < content.length
+      || !isCount(pages.pageCount) || pages.pageCount < 1) return NO;
     return yes({ kind: 'SERVED', experience: {
       entry, primaryThemes: [...e.primaryThemes], secondaryThemes: [...e.secondaryThemes],
       publisher: { mode: publisher.mode as 'PSEUDONYM' | 'REAL_NAME', label: publisher.label as string | null },
       publishedAt: e.publishedAt as string, discussionCount: e.discussionCount as number,
-      content: content as PublicFieldExperience['content'], nearby: nearby.filter((near) => near.id !== entry.id),
+      content, contentPages: { itemCount: pages.itemCount as number, pageCount: pages.pageCount as number }, nearby: nearby.filter((near) => near.id !== entry.id),
       relations: relations.filter((relation) => relation.other.id !== entry.id),
     } });
+  }
+
+  /** S8A-05 CP2 — one page of 50 of a served Experience's content, in its sealed order. */
+  async items(experienceId: string, page: number): Promise<PublicAuthoringAnswer<PublicFieldContentRead>> {
+    if (!Number.isSafeInteger(page) || page < 1 || page > 1000) return NO;
+    const answer = await this.exchange('GET', `/public/compose/topics/${encodeURIComponent(experienceId)}/items?page=${page}`);
+    if (answer.kind !== 'OK' || !isRecord(answer.body)) return NO;
+    const b = answer.body;
+    if (b.state === 'UNAVAILABLE' && hasExactly(b, ['state'])) return yes({ kind: 'ABSENT' });
+    if (b.state !== 'SERVED' || !hasExactly(b, ['state', 'itemCount', 'page', 'pageCount', 'items']) || !isCount(b.itemCount) || b.page !== page
+      || !isCount(b.pageCount)) return NO;
+    const items = contentOf(b.items);
+    return items === null ? NO : yes({ kind: 'PAGE', page: { itemCount: b.itemCount, page, pageCount: b.pageCount, items } });
   }
 
   private async exchange(method: 'GET', path: string): Promise<Exchange> {

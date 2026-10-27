@@ -1267,6 +1267,14 @@ jobs:
       # that erases every unpublished word; the launch gate untouched.
       - name: Verify S8A-05 Write your topic against real PostgreSQL
         run: npm run verify:public-authored-topics:integration
+      # S8A-05 CP2: migration 0180 (Publish from QANDEEL) - a topic from my own conversation (whole, a range, separate whole
+      # messages, emphasized, with or without QANDEEL's replies) or from a «فهم قنديل» item exactly as shown, resolved by the
+      # server from references; the closed refusal list with nothing written; the paged preview equal to the sealed
+      # package; the one acknowledgement; preparing CLOSED, and - in a controlled transaction only - the A-3 package, the
+      # envelope refusal, the served pages, the bounded search document and model inputs, and the never-published discard
+      # of every class.
+      - name: Verify S8A-05 Publish from QANDEEL against real PostgreSQL
+        run: npm run verify:publish-from-qandeel:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

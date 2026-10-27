@@ -43,6 +43,12 @@ export interface UnderstandingResolutionRow {
   readonly resolved_version: number | null;
 }
 
+/** S8A-05 CP2 — choosing an item as a Public topic's source (migration 0180): one bounded answer. */
+export interface UnderstandingPublicTopicSourceRow {
+  readonly outcome: string;
+  readonly draft_revision: number | string | null;
+}
+
 /** U3 — the disagreement command's one bounded answer. */
 export interface UnderstandingDisagreementRow {
   readonly outcome: string;
@@ -109,6 +115,18 @@ export class UnderstandingRepository {
   recordDisagreement(token: string, commandId: string, hypothesisId: string, expectedVersion: number): Promise<UnderstandingDisagreementRow[]> {
     return this.dataApi.request<UnderstandingDisagreementRow[]>(token, 'rpc/record_understanding_disagreement_v1', {
       method: 'POST', body: JSON.stringify({ p_command_id: commandId, p_hypothesis_id: hypothesisId, p_expected_version: expectedVersion }),
+    });
+  }
+
+  /**
+   * S8A-05 CP2 — the reader's choice of this item, at the exact version they see, as the material of one of their own
+   * Public topic drafts (migration 0180), on the caller's own token. The database derives the owner, re-reads the
+   * item, refuses one that changed, is under review or is withheld, and stores a reference only: the summary is never
+   * sent and never copied into the draft.
+   */
+  setPublicTopicSource(token: string, draftId: string, expectedRevision: number, hypothesisId: string, version: number): Promise<UnderstandingPublicTopicSourceRow[]> {
+    return this.dataApi.request<UnderstandingPublicTopicSourceRow[]>(token, 'rpc/set_own_topic_understanding_source_v1', {
+      method: 'POST', body: JSON.stringify({ p_draft_id: draftId, p_expected_revision: expectedRevision, p_hypothesis_id: hypothesisId, p_hypothesis_version: version }),
     });
   }
 

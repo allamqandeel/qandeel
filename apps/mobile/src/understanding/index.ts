@@ -25,5 +25,5 @@ export type { UnderstandingEntryProps } from './UnderstandingEntry';
 export { UnderstandingEntry } from './UnderstandingEntry';
 export type { UnderstandingDiscussionStripProps } from './UnderstandingDiscussionStrip';
 export { UnderstandingDiscussionStrip } from './UnderstandingDiscussionStrip';
-export type { UnderstandingSurfaceProps } from './UnderstandingSurface';
+export type { UnderstandingShareResult, UnderstandingSurfaceProps } from './UnderstandingSurface';
 export { UNDERSTANDING_SURFACE_TEST_ID, UnderstandingSurface } from './UnderstandingSurface';

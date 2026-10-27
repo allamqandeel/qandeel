@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ROUTE_RATE_LIMIT_CENSUS } from '../http-security/route-rate-limit.census';
 import type { PublicComposeRepository } from './public-compose.repository';
+import { understandingItemRef, understandingRevision } from '../understanding/understanding-projection';
 import { PublicComposeService, TOPIC_SECTIONS } from './public-compose.service';
 import type { PublicFieldRepository } from './public-field.repository';
 import { PublicFieldService } from './public-field.service';
@@ -14,6 +15,12 @@ const COMMAND = id(2);
 const EXPERIENCE = id(3);
 const TITLE = 'كيف أبدأ من جديد بعد الانتقال';
 const TEXT = 'انتقلت إلى مدينة جديدة ولا أعرف أحدًا.\nأريد أن أسمع من مرّ بهذا.';
+
+const SESSION = id(4);
+const USER = id(7);
+const ITEM = (position: number, role: string, sp: number, emphasized: boolean, gapBefore = false) => ({
+  position, role, sessionPosition: sp, message: position, emphasized, gapBefore, text: `message ${position}`,
+});
 
 const ROW = {
   draft_id: DRAFT, draft_revision: 2, title: TITLE, body: TEXT, section_key: 'life_changes', draft_state: 'EDITING',
@@ -32,6 +39,14 @@ function repository(overrides: Partial<Record<keyof PublicComposeRepository, jes
     prepare: jest.fn(async () => [{ outcome: 'PUBLICATION_NOT_OPEN', experience_id: null, current_lifecycle: null }]),
     discard: jest.fn(async () => [{ outcome: 'DISCARDED' }]),
     section: jest.fn(async () => [{ outcome: 'CHANGED', section_revision: 2 }]),
+    // S8A-05 CP2 (0180).
+    setConversationSource: jest.fn(async () => [{ outcome: 'SAVED', draft_revision: 3 }]),
+    clearSource: jest.fn(async () => [{ outcome: 'SAVED', draft_revision: 4 }]),
+    acknowledgeSource: jest.fn(async () => [{ outcome: 'ACKNOWLEDGED', draft_revision: 3 }]),
+    source: jest.fn(async () => [{ draft_revision: 3, source_kind: 'CONVERSATION', session_id: SESSION, first_sp: 1, last_sp: 8, include_qandeel: true,
+      excluded_sps: [3], emphasized_sps: [5], hypothesis_id: null, hypothesis_version: null, acknowledged: false }]),
+    items: jest.fn(async () => [{ draft_revision: 3, draft_state: 'EDITING', outcome: 'RESOLVED', item_count: 2, text_bytes: 40, page: 1, page_count: 1,
+      items: [ITEM(1, 'YOUR_MESSAGE', 1, false), ITEM(2, 'QANDEEL_REPLY', 2, true)] }]),
     ...overrides,
   };
 }
@@ -129,6 +144,107 @@ describe('S8A-05 CP1 — preview, preparation and return to the draft', () => {
   });
 });
 
+describe('S8A-05 CP2 — publish from QANDEEL: the source by reference, the acknowledgement and the paged items', () => {
+  const CONVERSATION = { expectedRevision: 2, sessionId: SESSION, firstPosition: 1, lastPosition: 8, includeQandeelReplies: true,
+    excludedMessagePositions: [3], emphasizedMessagePositions: [5] };
+
+  it('sends positions only — never a text, a speaker or an order — and passes every bounded outcome through', async () => {
+    const repo = repository();
+    await expect(service(repo).setConversationSource(TOKEN, DRAFT, CONVERSATION)).resolves.toEqual({ outcome: 'SAVED', revision: 3 });
+    expect(repo.setConversationSource).toHaveBeenCalledWith(TOKEN, DRAFT, 2,
+      { sessionId: SESSION, firstSp: 1, lastSp: 8, includeQandeel: true, excludedSps: [3], emphasizedSps: [5] });
+    // A new draft from a conversation is revision 0 under a fresh id; the lists may be left out.
+    const { excludedMessagePositions: _e, emphasizedMessagePositions: _m, ...bare } = CONVERSATION;
+    await service(repo).setConversationSource(TOKEN, DRAFT, { ...bare, expectedRevision: 0 });
+    expect(repo.setConversationSource).toHaveBeenLastCalledWith(TOKEN, DRAFT, 0,
+      { sessionId: SESSION, firstSp: 1, lastSp: 8, includeQandeel: true, excludedSps: [], emphasizedSps: [] });
+    for (const outcome of ['CREATED', 'STALE', 'NOT_FOUND', 'PREPARED', 'LIMIT_REACHED', 'INVALID', 'ACCOUNT_DELETION_PENDING', 'SOURCE_UNAVAILABLE',
+      'NOT_WHOLE_MESSAGES', 'SELECTION_INVALID', 'NOTHING_SELECTED', 'TOO_LARGE']) {
+      await expect(service(repository({ setConversationSource: jest.fn(async () => [{ outcome, draft_revision: null }]) }))
+        .setConversationSource(TOKEN, DRAFT, CONVERSATION)).resolves.toEqual({ outcome, revision: null });
+    }
+    await expect(service(repository({ setConversationSource: jest.fn(async () => [{ outcome: 'PUBLISHED', draft_revision: null }]) }))
+      .setConversationSource(TOKEN, DRAFT, CONVERSATION)).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('refuses a malformed source before the database: no text, no speaker, no order, no foreign key, bounded lists', () => {
+    for (const body of [{ ...CONVERSATION, text: 'x' }, { ...CONVERSATION, speaker: 'USER' }, { ...CONVERSATION, order: [1, 2] },
+      { ...CONVERSATION, userId: id(9) }, { ...CONVERSATION, sessionId: 'guess' }, { ...CONVERSATION, firstPosition: 0 },
+      { ...CONVERSATION, lastPosition: 0 }, { ...CONVERSATION, firstPosition: 5, lastPosition: 4 }, { ...CONVERSATION, includeQandeelReplies: 'yes' },
+      { ...CONVERSATION, excludedMessagePositions: [0] }, { ...CONVERSATION, emphasizedMessagePositions: ['5'] },
+      { ...CONVERSATION, emphasizedMessagePositions: Array.from({ length: 10001 }, (_, i) => i + 1) }, { ...CONVERSATION, expectedRevision: -1 }]) {
+      expect(() => service().setConversationSource(TOKEN, DRAFT, body)).toThrow(BadRequestException);
+    }
+    expect(() => service().setConversationSource(TOKEN, 'guess', CONVERSATION)).toThrow(BadRequestException);
+  });
+
+  it('clears the source and records the ONE acknowledgement for the exact revision previewed', async () => {
+    const repo = repository();
+    await expect(service(repo).clearSource(TOKEN, DRAFT, { expectedRevision: 3 })).resolves.toEqual({ outcome: 'SAVED', revision: 4 });
+    expect(repo.clearSource).toHaveBeenCalledWith(TOKEN, DRAFT, 3);
+    await expect(service(repo).acknowledgeSource(TOKEN, DRAFT, { revision: 3 })).resolves.toEqual({ outcome: 'ACKNOWLEDGED', revision: 3 });
+    expect(repo.acknowledgeSource).toHaveBeenCalledWith(TOKEN, DRAFT, 3);
+    for (const outcome of ['STALE', 'NOT_FOUND', 'PREPARED', 'NO_SOURCE']) {
+      await expect(service(repository({ acknowledgeSource: jest.fn(async () => [{ outcome, draft_revision: 3 }]) })).acknowledgeSource(TOKEN, DRAFT, { revision: 3 }))
+        .resolves.toEqual({ outcome, revision: 3 });
+    }
+    expect(() => service().acknowledgeSource(TOKEN, DRAFT, { revision: 3, accepted: true })).toThrow(BadRequestException);
+    expect(() => service().acknowledgeSource(TOKEN, DRAFT, {})).toThrow(BadRequestException);
+    expect(() => service().clearSource(TOKEN, DRAFT, { expectedRevision: 0 })).toThrow(BadRequestException);
+  });
+
+  it('reads the source back as the author chose it; a «فهم قنديل» item only by its opaque ref and revision', async () => {
+    await expect(service().source(TOKEN, USER, DRAFT)).resolves.toEqual({ state: 'CURRENT', revision: 3, acknowledged: false, source: {
+      kind: 'CONVERSATION', sessionId: SESSION, firstPosition: 1, lastPosition: 8, includeQandeelReplies: true,
+      excludedMessagePositions: [3], emphasizedMessagePositions: [5] } });
+    const H = id(11);
+    const understanding = repository({ source: jest.fn(async () => [{ draft_revision: 1, source_kind: 'UNDERSTANDING', session_id: null, first_sp: null,
+      last_sp: null, include_qandeel: null, excluded_sps: null, emphasized_sps: null, hypothesis_id: H, hypothesis_version: 4, acknowledged: true }]) });
+    const read = await service(understanding).source(TOKEN, USER, DRAFT);
+    expect(read).toEqual({ state: 'CURRENT', revision: 1, acknowledged: true,
+      source: { kind: 'UNDERSTANDING', ref: understandingItemRef(USER, H), revision: understandingRevision(USER, H, 4) } });
+    expect(JSON.stringify(read)).not.toContain(H);
+    const none = repository({ source: jest.fn(async () => [{ draft_revision: 1, source_kind: null, session_id: null, first_sp: null, last_sp: null,
+      include_qandeel: null, excluded_sps: null, emphasized_sps: null, hypothesis_id: null, hypothesis_version: null, acknowledged: false }]) });
+    await expect(service(none).source(TOKEN, USER, DRAFT)).resolves.toMatchObject({ source: { kind: 'NONE' } });
+    await expect(service(repository({ source: jest.fn(async () => []) })).source(TOKEN, USER, DRAFT)).resolves.toEqual({ state: 'UNAVAILABLE' });
+  });
+
+  it('pages exactly what the topic would contain, with speakers, emphasis and gaps; a refusal carries no item', async () => {
+    const repo = repository();
+    await expect(service(repo).items(TOKEN, DRAFT, { page: '1' })).resolves.toEqual({ state: 'EDITING', revision: 3, outcome: 'RESOLVED', itemCount: 2,
+      page: 1, pageCount: 1, items: [ITEM(1, 'YOUR_MESSAGE', 1, false), ITEM(2, 'QANDEEL_REPLY', 2, true)] });
+    expect(repo.items).toHaveBeenCalledWith(TOKEN, DRAFT, 1);
+    await service(repo).items(TOKEN, DRAFT, {});
+    expect(repo.items).toHaveBeenLastCalledWith(TOKEN, DRAFT, 1);
+    const refused = repository({ items: jest.fn(async () => [{ draft_revision: 3, draft_state: 'EDITING', outcome: 'NOT_WHOLE_MESSAGES', item_count: null,
+      text_bytes: null, page: 1, page_count: 0, items: [] }]) });
+    await expect(service(refused).items(TOKEN, DRAFT, {})).resolves.toMatchObject({ outcome: 'NOT_WHOLE_MESSAGES', itemCount: 0, items: [] });
+    const leaking = repository({ items: jest.fn(async () => [{ draft_revision: 3, draft_state: 'EDITING', outcome: 'TOO_LARGE', item_count: 1,
+      text_bytes: 1, page: 1, page_count: 0, items: [ITEM(1, 'YOUR_MESSAGE', 1, false)] }]) });
+    await expect(service(leaking).items(TOKEN, DRAFT, {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    const evidence = repository({ items: jest.fn(async () => [{ draft_revision: 3, draft_state: 'EDITING', outcome: 'RESOLVED', item_count: 1,
+      text_bytes: 1, page: 1, page_count: 1, items: [{ ...ITEM(1, 'EVIDENCE', 1, false) }] }]) });
+    await expect(service(evidence).items(TOKEN, DRAFT, {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    const shuffled = repository({ items: jest.fn(async () => [{ draft_revision: 3, draft_state: 'EDITING', outcome: 'RESOLVED', item_count: 2,
+      text_bytes: 1, page: 1, page_count: 1, items: [ITEM(2, 'YOUR_MESSAGE', 2, false), ITEM(1, 'YOUR_MESSAGE', 1, false)] }]) });
+    await expect(service(shuffled).items(TOKEN, DRAFT, {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    for (const query of [{ page: '0' }, { page: '1001' }, { page: 'x' }, { page: '1', size: '500' }]) {
+      expect(() => service().items(TOKEN, DRAFT, query)).toThrow(BadRequestException);
+    }
+  });
+
+  it('previews and prepares a sourced draft with its own refusals and the acknowledgement it needs', async () => {
+    const pending = repository({ preview: jest.fn(async () => [{ draft_revision: 3, readiness: 'ACKNOWLEDGEMENT_REQUIRED', title: TITLE, body: '',
+      section_key: 'family', publisher_label_mode: 'PSEUDONYM', publisher_display_label: 'سائر', privacy_notes: ['CONTACT_NUMBER'] }]) });
+    await expect(service(pending).preview(TOKEN, DRAFT)).resolves.toMatchObject({ readiness: 'ACKNOWLEDGEMENT_REQUIRED', text: '', privacyNotes: ['CONTACT_NUMBER'] });
+    for (const outcome of ['ACKNOWLEDGEMENT_REQUIRED', 'SOURCE_UNAVAILABLE', 'UNDERSTANDING_CHANGED', 'TOO_LARGE']) {
+      await expect(service(repository({ prepare: jest.fn(async () => [{ outcome, experience_id: null, current_lifecycle: null }]) }))
+        .prepare(TOKEN, DRAFT, { commandId: COMMAND, expectedRevision: 3 })).resolves.toEqual({ outcome, experienceId: null });
+    }
+  });
+});
+
 describe('S8A-05 CP1 — the human title in the field, search and panel', () => {
   const entry = (n: number) => ({ experience_id: id(n), world_x: `${n}`, world_y: `-${n}`, meaning: `meaning ${n}`, semantic_region: `region.${n}` });
   const PANEL = { ...entry(3), version_ordinal: 1, primary_themes: [], secondary_themes: [], publisher_label_mode: 'PSEUDONYM',
@@ -138,7 +254,9 @@ describe('S8A-05 CP1 — the human title in the field, search and panel', () => 
       field: jest.fn(async () => [entry(3), entry(5)]),
       search: jest.fn(async () => [entry(5), entry(3)]),
       experience: jest.fn(async () => [PANEL]),
-      content: jest.fn(async () => [{ item_ordinal: 1, item_kind: 'SOURCE_CONTENT', item_text: TEXT }]),
+      // S8A-05 CP2 (controlled re-anchor): the panel's content is the first page of the 0180 paged read.
+      topicItems: jest.fn(async () => [{ item_count: 1, page: 1, page_count: 1, items: [{ position: 1, role: 'SOURCE_CONTENT', message: null,
+        emphasized: false, gapBefore: false, text: TEXT }] }]),
       nearby: jest.fn(async () => [entry(5)]),
       relations: jest.fn(async () => []),
       topicHeaders: jest.fn(async () => [{ experience_id: id(3), title: TITLE, section_key: 'life_changes' }]),
@@ -193,6 +311,37 @@ describe('S8A-05 CP1 — the human title in the field, search and panel', () => 
     await expect(field(none).field(TOKEN, { minX: '0', minY: '-9', maxX: '9', maxY: '0' })).resolves.toEqual({ experiences: [] });
     expect(none.topicHeaders).not.toHaveBeenCalled();
   });
+
+  // S8A-05 CP2 — a reader's pages of a served topic.
+  const sealed = (position: number, role: string, emphasized = false, gapBefore = false) =>
+    ({ position, role, message: position, emphasized, gapBefore, text: `item ${position}` });
+
+  it('serves the panel the first page only, each sealed item with its speaker, emphasis and gap — never a Session Position', async () => {
+    const repo = fieldRepository({ topicItems: jest.fn(async () => [{ item_count: 120, page: 1, page_count: 3,
+      items: [sealed(1, 'WRITTEN'), sealed(2, 'YOUR_MESSAGE', true), sealed(3, 'QANDEEL_REPLY', false, true)] }]) });
+    const served = await field(repo).experience(TOKEN, id(3));
+    expect(served).toMatchObject({ state: 'SERVED', contentPages: { itemCount: 120, pageCount: 3 }, content: [
+      { ordinal: 1, kind: 'SOURCE_CONTENT', text: 'item 1', role: 'WRITTEN', message: 1, emphasized: false, gapBefore: false },
+      { ordinal: 2, kind: 'SOURCE_CONTENT', text: 'item 2', role: 'YOUR_MESSAGE', message: 2, emphasized: true, gapBefore: false },
+      { ordinal: 3, kind: 'ANALYSIS', text: 'item 3', role: 'QANDEEL_REPLY', message: 3, emphasized: false, gapBefore: true }] });
+    expect(repo.topicItems).toHaveBeenCalledWith(TOKEN, id(3), 1);
+    expect(JSON.stringify(served)).not.toMatch(/sessionPosition/u);
+  });
+
+  it('pages a served topic by ?page=N, and refuses an author-side item shape or an unknown role', async () => {
+    const repo = fieldRepository({ topicItems: jest.fn(async () => [{ item_count: 120, page: 3, page_count: 3, items: [sealed(101, 'QANDEEL_UNDERSTANDING')] }]) });
+    await expect(field(repo).items(TOKEN, id(3), { page: '3' })).resolves.toEqual({ state: 'SERVED', itemCount: 120, page: 3, pageCount: 3, items: [
+      { ordinal: 101, kind: 'ANALYSIS', text: 'item 101', role: 'QANDEEL_UNDERSTANDING', message: 101, emphasized: false, gapBefore: false }] });
+    expect(repo.topicItems).toHaveBeenCalledWith(TOKEN, id(3), 3);
+    await expect(field(fieldRepository({ topicItems: jest.fn(async () => []) })).items(TOKEN, id(3), {})).resolves.toEqual({ state: 'UNAVAILABLE' });
+    await expect(field().items(TOKEN, 'guess', {})).resolves.toEqual({ state: 'UNAVAILABLE' });
+    const positioned = fieldRepository({ topicItems: jest.fn(async () => [{ item_count: 1, page: 1, page_count: 1,
+      items: [{ ...sealed(1, 'YOUR_MESSAGE'), sessionPosition: 7 }] }]) });
+    await expect(field(positioned).items(TOKEN, id(3), {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    const odd = fieldRepository({ topicItems: jest.fn(async () => [{ item_count: 1, page: 1, page_count: 1, items: [sealed(1, 'HIM')] }]) });
+    await expect(field(odd).items(TOKEN, id(3), {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(() => field().items(TOKEN, id(3), { page: '1', viewer: 'x' })).toThrow(BadRequestException);
+  });
 });
 
 describe('S8A-05 CP1 — the static boundary', () => {
@@ -210,8 +359,11 @@ describe('S8A-05 CP1 — the static boundary', () => {
 
   it('calls exactly the 0179 owner commands on the caller token', () => {
     const calls = [...source('public-compose.repository.ts').matchAll(/this\.rpc<[A-Za-z]+>\(token, '([a-z_]+_v1)'/gu)].map((m) => m[1]).sort();
-    expect(calls).toEqual(['delete_own_topic_draft_v1', 'discard_own_unpublished_topic_v1', 'freeze_own_topic_draft_v1', 'list_own_topic_drafts_v1',
-      'preview_own_topic_draft_v1', 'read_own_topic_draft_v1', 'save_own_topic_draft_v1', 'set_own_topic_section_v1']);
+    // S8A-05 CP2 (controlled re-anchor): plus the five 0180 owner commands and reads on the same caller token. The
+    // «فهم قنديل» source is chosen through the Understanding boundary, which alone resolves its opaque ref.
+    expect(calls).toEqual(['acknowledge_own_topic_source_v1', 'clear_own_topic_source_v1', 'delete_own_topic_draft_v1', 'discard_own_unpublished_topic_v1',
+      'freeze_own_topic_draft_v1', 'list_own_topic_drafts_v1', 'preview_own_topic_draft_v1', 'read_own_topic_draft_v1', 'read_own_topic_items_v1',
+      'read_own_topic_source_v1', 'save_own_topic_draft_v1', 'set_own_topic_conversation_source_v1', 'set_own_topic_section_v1']);
   });
 
   it('classifies every route, preparation strictly, and adds no publish route', () => {
@@ -225,6 +377,14 @@ describe('S8A-05 CP1 — the static boundary', () => {
       'POST /public/compose/drafts/:draftId/prepare': 'SECURITY_SENSITIVE',
       'POST /public/compose/topics/:experienceId/discard': 'AUTHENTICATED',
       'POST /public/compose/topics/:experienceId/section': 'AUTHENTICATED',
+      // S8A-05 CP2 (controlled re-anchor): the source, its acknowledgement and the paged items (0180).
+      'GET /public/compose/drafts/:draftId/source': 'AUTHENTICATED',
+      'PUT /public/compose/drafts/:draftId/source/conversation': 'SECURITY_SENSITIVE',
+      'POST /public/compose/drafts/:draftId/source/clear': 'AUTHENTICATED',
+      'POST /public/compose/drafts/:draftId/source/acknowledge': 'AUTHENTICATED',
+      'GET /public/compose/drafts/:draftId/items': 'AUTHENTICATED',
+      // A reader's page of a served topic: a viewer read, here so the frozen S5-03B field controller keeps its routes.
+      'GET /public/compose/topics/:experienceId/items': 'AUTHENTICATED',
     });
     expect(Object.keys(ROUTE_RATE_LIMIT_CENSUS).filter((route) => /publish/u.test(route))).toEqual([]);
   });

@@ -90,12 +90,13 @@ import {
 import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
-import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
+import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface, type UnderstandingShareResult } from '../../understanding';
 import { IntroductionsEntry, IntroductionsSurface, ProposalsSurface } from '../../introductions';
 import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
+import { PublicShareEntry, usePublicShareSelection } from '../../public-share';
 import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, useReplaySelection } from '../../replay-entry';
 import { ReplayAnalysisEntry, ReplayPlayer, ReplayPreviewAction } from '../../replay-player';
 import type { DirectEntryDestination } from '../../runtime-entry';
@@ -506,6 +507,46 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     void Promise.resolve().then(consume);
     return publicLinks.subscribe(consume);
   }, [publicLinks, publicWorld, cross, onSignOut, replayPlayer]);
+  // S8A-05 CP2 — «شارك في العالم العام»: a private topic draft made from this conversation or from a «فهم قنديل» item is
+  // opened in Public World, through the SAME Public entry (its verdict is asked again on mount). The area's mount closes
+  // whatever the compose controller held, and a child's effects run before its parent's, so the draft is opened here,
+  // after the area is in front. Nothing of the Personal world is touched.
+  const [pendingPublicDraft, setPendingPublicDraft] = useState<string | null>(null);
+  const openPublicDraft = useCallback((draftId: string) => {
+    replayPlayer.close();
+    setIntroductionsShown(false);
+    setActivityShown(false);
+    setReturnedFromActivity(false);
+    setSettingsShown(false);
+    setUnderstandingShown(false);
+    cross('CONVERSATION');
+    setPendingPublicDraft(draftId);
+    if (areaRef.current === 'PUBLIC_WORLD') publicWorld.enter();
+    setArea('PUBLIC_WORLD');
+  }, [cross, publicWorld, replayPlayer]);
+  useEffect(() => {
+    if (pendingPublicDraft === null || area !== 'PUBLIC_WORLD' || depth !== 'CONVERSATION') return;
+    publicWorld.compose?.openDraft(pendingPublicDraft);
+    setPendingPublicDraft(null);
+  }, [area, depth, pendingPublicDraft, publicWorld]);
+  const publicShare = runtime.publicShare;
+  const shareHandoff = useSyncExternalStore(publicShare?.subscribe ?? noSubscribe, () => publicShare?.getState().handoff ?? null);
+  useEffect(() => {
+    if (shareHandoff === null || publicShare === null) return;
+    publicShare.takeHandoff();
+    openPublicDraft(shareHandoff);
+  }, [shareHandoff, publicShare, openPublicDraft]);
+  const shareUnderstanding = useCallback(async (ref: string, revision: string): Promise<UnderstandingShareResult> => {
+    const compose = publicWorld.compose;
+    if (compose === null) return 'FAILED';
+    const result = await compose.createFromSource({ kind: 'UNDERSTANDING', ref, revision });
+    if (result.kind === 'CREATED') {
+      openPublicDraft(result.draftId);
+      return 'OPENED';
+    }
+    return result.kind === 'REFUSED' && (result.outcome === 'CHANGED' || result.outcome === 'ABSENT' || result.outcome.startsWith('UNDERSTANDING_'))
+      ? 'CHANGED' : 'FAILED';
+  }, [publicWorld, openPublicDraft]);
   const push = runtime.push;
   const { education, permission } = useSyncExternalStore(push.subscribe, push.getState);
   // S4-04 — P3 §11 / A3-02 G-12: the first LEGITIMATE Shared entry (a World's entry verdict is ALLOW, the reader is in
@@ -526,6 +567,16 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const shared = runtime.sharedWorld;
   // S7-02 — the Personal Replay entry: an action on THIS conversation, in the Personal world only, beside the depth control.
   const replaySelection = useReplaySelection(runtime.replayEntry, runtime.conversation, locale.language, conversationInsets);
+  // S8A-05 CP2 — choosing messages to share is the same selection seam; one selection at a time (the newer one stands).
+  const shareSelection = usePublicShareSelection(publicShare, runtime.conversation, locale.language, conversationInsets);
+  const sharing = shareSelection !== null;
+  const replaying = replaySelection !== null;
+  useEffect(() => {
+    if (sharing) runtime.replayEntry.cancel();
+  }, [sharing, runtime.replayEntry]);
+  useEffect(() => {
+    if (replaying) publicShare?.cancel();
+  }, [replaying, publicShare]);
 
   const layer = (which: WorldDepth, current: boolean): ReactNode =>
     which === 'CONVERSATION' ? (
@@ -542,7 +593,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           <UnderstandingEntry language={locale.language} onOpen={openUnderstanding} focus={returnedFromUnderstanding && !understandingShown} />
         )}
         personalSecondEntry={onSignOut === undefined ? null : (
-          <IntroductionsEntry controller={runtime.introductions} proposals={runtime.introductionProposals} language={locale.language} onOpen={openIntroductions} focus={returnedFromIntroductions && !introductionsShown} />
+          <>
+            <IntroductionsEntry controller={runtime.introductions} proposals={runtime.introductionProposals} language={locale.language} onOpen={openIntroductions} focus={returnedFromIntroductions && !introductionsShown} />
+            {publicShare === null ? null : <PublicShareEntry controller={publicShare} language={locale.language} />}
+          </>
         )}
         discussion={(
           <>
@@ -553,7 +607,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         )}
         chromeEnd={onSignOut === undefined ? null : <ReplayEntryControl controller={runtime.replayEntry} language={locale.language} />}
         overlay={onSignOut === undefined ? null : <ReplayEntryMenu controller={runtime.replayEntry} language={locale.language} insets={conversationInsets} />}
-        selection={onSignOut === undefined ? null : replaySelection}
+        selection={onSignOut === undefined ? null : shareSelection ?? replaySelection}
         chromeStart={onSignOut === undefined ? null : (
           <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
         )}
@@ -696,7 +750,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <UnderstandingSurface controller={runtime.understanding} language={locale.language} insets={edges} onBack={closeUnderstanding} onTalk={talkedAboutItem} />
+            <UnderstandingSurface controller={runtime.understanding} language={locale.language} insets={edges} onBack={closeUnderstanding} onTalk={talkedAboutItem}
+              onShare={publicWorld.compose === null ? undefined : shareUnderstanding} />
           </View>
         ) : null}
         {introductionsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
@@ -748,6 +803,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
 /** The non-Analysis upper chrome's height under the safe area (G1.1 / G3.2 proof geometry): where the strip attaches. */
 const CHROME_MIN_HEIGHT = 48;
+const noSubscribe = () => () => undefined;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

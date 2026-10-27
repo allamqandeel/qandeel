@@ -133,13 +133,15 @@ export const PUBLIC_COMPOSE_COPY_GATE = Object.freeze({
 export type PublicComposeCopy = { readonly [K in keyof typeof PUBLIC_COMPOSE_COPY_ROWS]: string } & {
   readonly section: (key: PublicTopicSection) => string;
   readonly note: (note: PublicTopicPrivacyNote) => string;
-  readonly readiness: (readiness: Exclude<PublicTopicReadiness, 'READY'>) => string;
+  /** CP1's three readiness rows; a source's own (S8A-05 CP2) are in `./source-copy`. */
+  readonly readiness: (readiness: PublicTopicWrittenReadiness) => string;
 };
 
 const NOTE_ROWS: Readonly<Record<PublicTopicPrivacyNote, keyof typeof PUBLIC_COMPOSE_COPY_ROWS>> = {
   CONTACT_NUMBER: 'noteContactNumber', EMAIL_ADDRESS: 'noteEmailAddress', LINK: 'noteLink', OWN_NAME: 'noteOwnName', SHOWN_UNDER_REAL_NAME: 'noteRealName',
 };
-const READINESS_ROWS: Readonly<Record<Exclude<PublicTopicReadiness, 'READY'>, keyof typeof PUBLIC_COMPOSE_COPY_ROWS>> = {
+export type PublicTopicWrittenReadiness = Extract<PublicTopicReadiness, 'TITLE_TOO_SHORT' | 'TEXT_REQUIRED' | 'SECTION_REQUIRED'>;
+const READINESS_ROWS: Readonly<Record<PublicTopicWrittenReadiness, keyof typeof PUBLIC_COMPOSE_COPY_ROWS>> = {
   TITLE_TOO_SHORT: 'titleTooShort', TEXT_REQUIRED: 'textRequired', SECTION_REQUIRED: 'sectionRequired',
 };
 
@@ -150,7 +152,7 @@ const build = (language: ChromeLanguage): PublicComposeCopy => {
     ...rows,
     section: (key: PublicTopicSection) => text(PUBLIC_SECTION_COPY_ROWS[key]),
     note: (note: PublicTopicPrivacyNote) => rows[NOTE_ROWS[note]],
-    readiness: (readiness: Exclude<PublicTopicReadiness, 'READY'>) => rows[READINESS_ROWS[readiness]],
+    readiness: (readiness: PublicTopicWrittenReadiness) => rows[READINESS_ROWS[readiness]],
   });
 };
 const AR = build('ar');

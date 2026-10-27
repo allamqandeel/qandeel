@@ -11,7 +11,8 @@ export interface PublicFieldExperienceRow {
   readonly publisher_display_label: string | null; readonly published_at: string; readonly discussion_post_count: number;
   readonly qandeel_response_count: number; readonly world_x: string; readonly world_y: string;
 }
-export interface PublicFieldContentRow { readonly item_ordinal: number; readonly item_kind: string; readonly item_text: string }
+/** S8A-05 CP2 (migration 0180): one page of a served topic's items, in their sealed order — the panel's content. */
+export interface PublicTopicItemsRow { readonly item_count: number; readonly page: number; readonly page_count: number; readonly items: unknown }
 /** S5-03C (migration 0146): one explicit relation of a served Experience — the OTHER endpoint's served entry and the id. */
 export interface PublicFieldRelationRow extends PublicFieldEntryRow { readonly relation_id: string }
 /** S8A-05 CP1 (migration 0179): the human title and section of a served topic (NULL for an Experience that has none). */
@@ -43,8 +44,13 @@ export class PublicFieldRepository {
     return this.rpc<PublicFieldExperienceRow>(token, 'read_public_semantic_experience_v1', { p_experience_id: experienceId });
   }
 
-  content(token: string, experienceId: string): Promise<PublicFieldContentRow[]> {
-    return this.rpc<PublicFieldContentRow>(token, 'read_public_semantic_experience_content_v1', { p_experience_id: experienceId });
+  /**
+   * S8A-05 CP2: one page of 50 of a served Experience's items, through the same visible-entry derivation and serving
+   * resolver as the 0145 content read it replaces here (a topic from a conversation may hold up to 10,000 items, so the
+   * panel never reads them all at once). Each item keeps its 0145 kind, or the role its topic sealed.
+   */
+  topicItems(token: string, experienceId: string, page: number): Promise<PublicTopicItemsRow[]> {
+    return this.rpc<PublicTopicItemsRow>(token, 'read_public_topic_items_v1', { p_experience_id: experienceId, p_page: page });
   }
 
   nearby(token: string, experienceId: string): Promise<PublicFieldEntryRow[]> {

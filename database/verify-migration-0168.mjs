@@ -213,7 +213,14 @@ async function verifyPosture(report) {
     // `publicTopicDrafts`, immediately before the not-yet-included list. The live builder is the 0168 body with exactly
     // that section removed - every 0168 line, byte for byte - and the 0179 body is the live one.
     const defined0179 = body(migrationText('0179_s8a_05_public_authored_topics_v1.sql'), marker);
-    assert.equal(live, defined0179, 'A02 the live builder is the 0179 body');
+    // RE-ANCHORED by S8A-05 CP2 (validation only): migration 0180 re-states the 0179 body with ONE change inside the S8A-05
+    // section (each draft gains its `source` reference); the live builder is the 0180 body.
+    const defined0180 = body(migrationText('0180_s8a_05_publish_from_qandeel_v1.sql'), marker);
+    assert.equal(live, defined0180, 'A02 the live builder is the 0180 body');
+    const cp2 = live.indexOf('                       -- S8A-05 CP2 (0180)');
+    const cp2End = live.indexOf('                   ORDER BY d.created_at, d.id)', cp2);
+    assert.equal(live.slice(0, cp2).replace(/,\n$/u, ')\n') + live.slice(cp2End), defined0179,
+      'A02 the 0180 body is the 0179 body plus exactly the one CP2 source reference');
     const s8a05 = live.indexOf('        -- S8A-05 (0179)');
     assert.equal(live.slice(0, s8a05) + live.slice(live.indexOf("        'notYetIncluded'")), defined0168,
       'A02 the live builder is the 0168 body plus exactly the one S8A-05 section');

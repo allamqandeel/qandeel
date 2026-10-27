@@ -46,6 +46,7 @@ import { nearestOf } from './public-field-camera';
 import { fillDiscussionCopy, publicDiscussionCopy } from './discussion-copy';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
 import { PublicDiscussion } from './PublicDiscussion';
+import { PublicTopicContent } from './PublicTopicContent';
 import { PUBLIC_SEARCH_QUERY_MAX, type PublicFieldController, type PublicFieldPanelState, type PublicFieldState } from './public-field-controller';
 import { PublicFieldView } from './PublicFieldView';
 
@@ -207,7 +208,8 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
     content = <PublicDiscussion controller={controller.discussion} language={language} onBack={() => controller.closeDiscussion()} />;
   } else if (state.focus !== null) {
     content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onFocus={(id) => controller.focus(id)}
-      onDiscussion={controller.discussion !== null ? () => controller.openDiscussion() : null} />;
+      onDiscussion={controller.discussion !== null ? () => controller.openDiscussion() : null}
+      readPage={controller.contentPage} />;
   } else if (resultsShown) {
     content = (
       <View testID="qandeel-public-search-results" style={{ backgroundColor: palette.field, borderRadius: 16, paddingVertical: 4 }}>
@@ -307,10 +309,11 @@ function SectionNear({ controller, state, language }: { readonly controller: Pub
   );
 }
 
-function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion }: {
+function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion, readPage }: {
   readonly copy: PublicFieldCopy; readonly palette: ConversationPalette; readonly language: ChromeLanguage;
   readonly panel: PublicFieldPanelState; readonly onBack: () => void; readonly onFocus: (id: string) => void;
   readonly onDiscussion: (() => void) | null;
+  readonly readPage: PublicFieldController['contentPage'] | null;
 }) {
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const text = (role: 'body' | 'supporting' | 'metadata' | 'statement' | 'action', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
@@ -323,7 +326,8 @@ function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion }
       </View>
       <View style={{ paddingHorizontal: 20, rowGap: 10 }}>
         {panel.status === 'SERVED' ? (
-          <ServedPanel experience={panel.experience} copy={copy} palette={palette} language={language} onFocus={onFocus} onDiscussion={onDiscussion} />
+          <ServedPanel experience={panel.experience} copy={copy} palette={palette} language={language} onFocus={onFocus} onDiscussion={onDiscussion}
+            readPage={readPage} />
         ) : panel.status === 'LOADING' ? (
           <View accessible accessibilityState={{ busy: true }} style={{ minHeight: 48 }} />
         ) : (
@@ -336,9 +340,10 @@ function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion }
   );
 }
 
-function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussion }: {
+function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussion, readPage }: {
   readonly experience: PublicFieldExperience; readonly copy: PublicFieldCopy; readonly palette: ConversationPalette;
   readonly language: ChromeLanguage; readonly onFocus: (id: string) => void; readonly onDiscussion: (() => void) | null;
+  readonly readPage: PublicFieldController['contentPage'] | null;
 }) {
   const discussionCopy = publicDiscussionCopy(language);
   const discussionLabel = experience.discussionCount > 0
@@ -366,12 +371,8 @@ function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussio
       ) : null}
       <Themes heading={copy.primaryHeading} themes={experience.primaryThemes} palette={palette} language={language} />
       <Themes heading={copy.secondaryHeading} themes={experience.secondaryThemes} palette={palette} language={language} />
-      {experience.content.map((item) => (
-        <View key={item.ordinal} style={{ rowGap: 2 }}>
-          {item.kind === 'ANALYSIS' ? <Text style={text('metadata', palette.tertiary)}>{copy.analysisItem}</Text> : null}
-          <Text style={text('body', palette.primary)}>{item.text}</Text>
-        </View>
-      ))}
+      {/* S8A-05 CP2: a topic made from a conversation (or longer than one page) is read page by page, with its speakers. */}
+      <PublicTopicContent key={experience.entry.id} experience={experience} copy={copy} palette={palette} language={language} readPage={readPage} />
       {experience.nearby.length > 0 ? (
         <View style={{ rowGap: 2 }}>
           <Text style={text('metadata', palette.tertiary)}>{copy.nearHeading}</Text>

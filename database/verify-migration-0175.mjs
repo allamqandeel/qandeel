@@ -722,6 +722,9 @@ const CLASSIFICATION = Object.freeze({
   'public_compose_private.read_public_topic_headers_v1': EXCLUDES,
   'public_compose_private.read_public_topic_title_matches_v1': EXCLUDES,
   'public_compose_private.read_public_section_topic_matches_v1': EXCLUDES,
+  // RE-ANCHORED by S8A-05 CP2 / 0180: the paged items of a served topic reach a body only through the canonical serving
+  // resolver (0095), for an admitted viewer and a served field entry, exactly as 0145 E.4 above does.
+  'public_compose_source_private.read_public_topic_items_v1': EXCLUDES,
   // Replay: a Shared body enters only through capture, closed to a place by 0175 G.5; a Shared Replay is never distributed.
   'replay_private.create_my_replay_draft_v1': EXCLUDES,
   'replay_private.finalize_my_replay_version_v1': EXCLUDES,

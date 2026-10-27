@@ -18,10 +18,19 @@
  * A prepared, never-published topic can go back to its draft: the prepared copy is erased. Deleting a draft erases its
  * words. Unsaved words live in memory only: nothing is stored on the device. The Personal world and the Shared area are
  * never read; nothing is logged.
+ *
+ * S8A-05 CP2 — «انشر من قنديل» / Publish from QANDEEL (`sources`, optional): a draft may take its material from the
+ * reader's own conversation or from one «فهم قنديل» item, by REFERENCE only — this controller never holds, sends or copies
+ * the conversation's words. A draft is created from a source (`createFromSource`) by the entry that chose it, then opened
+ * here like any draft. Its preview reads the items the topic would contain one page of 50 at a time — speakers, emphasis
+ * and gaps — the reader may emphasize or un-emphasize a whole message, and QANDEEL material asks the reader's ONE
+ * acknowledgement for the exact revision previewed. Removing the material keeps the draft and its words.
  */
 import type {
-  ForegroundSignal, PublicAuthoringAnswer, PublicTopicDeleteOutcome, PublicTopicDiscardOutcome, PublicTopicDraft, PublicTopicDraftRead,
-  PublicTopicDraftSummary, PublicTopicPrepareOutcome, PublicTopicPreview, PublicTopicPreviewRead, PublicTopicSaveResult, PublicTopicSection,
+  ForegroundSignal, PublicAuthoringAnswer, PublicTopicAcknowledgeOutcome, PublicTopicClearOutcome, PublicTopicConversationChoice, PublicTopicDeleteOutcome,
+  PublicTopicDiscardOutcome, PublicTopicDraft, PublicTopicDraftRead, PublicTopicDraftSummary, PublicTopicItem, PublicTopicItemsPage, PublicTopicItemsRead,
+  PublicTopicPrepareOutcome, PublicTopicPreview, PublicTopicPreviewRead, PublicTopicSaveResult, PublicTopicSection, PublicTopicSource,
+  PublicTopicSourceRead, PublicTopicSourceResult, PublicTopicUnderstandingOutcome,
 } from '../runtime-entry';
 import { PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX } from '../runtime-entry';
 
@@ -35,10 +44,38 @@ export interface PublicComposeTransport {
   discard(experienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicTopicDiscardOutcome>>;
 }
 
+/** S8A-05 CP2 — the source commands and reads (the S8A-05 CP2 `PublicComposeApiClient` methods). */
+export interface PublicComposeSourceTransport {
+  setConversationSource(draftId: string, expectedRevision: number, choice: PublicTopicConversationChoice): Promise<PublicAuthoringAnswer<PublicTopicSourceResult>>;
+  setUnderstandingSource(ref: string, revision: string, draftId: string, expectedRevision: number):
+  Promise<PublicAuthoringAnswer<{ readonly outcome: PublicTopicUnderstandingOutcome; readonly revision: number | null }>>;
+  clearSource(draftId: string, expectedRevision: number): Promise<PublicAuthoringAnswer<{ readonly outcome: PublicTopicClearOutcome; readonly revision: number | null }>>;
+  acknowledgeSource(draftId: string, revision: number): Promise<PublicAuthoringAnswer<PublicTopicAcknowledgeOutcome>>;
+  source(draftId: string): Promise<PublicAuthoringAnswer<PublicTopicSourceRead>>;
+  items(draftId: string, page: number): Promise<PublicAuthoringAnswer<PublicTopicItemsRead>>;
+}
+
+/** A source an entry chose: positions in the reader's own conversation, or one «فهم قنديل» item at the revision shown. */
+export type PublicComposeSourceChoice =
+  | { readonly kind: 'CONVERSATION'; readonly choice: PublicTopicConversationChoice }
+  | { readonly kind: 'UNDERSTANDING'; readonly ref: string; readonly revision: string };
+/** CREATED: a new draft holds the source; REFUSED: the account answered why not; FAILED: no definite answer. */
+export type PublicComposeCreateResult =
+  | { readonly kind: 'CREATED'; readonly draftId: string }
+  | { readonly kind: 'REFUSED'; readonly outcome: Exclude<PublicTopicUnderstandingOutcome, 'CREATED' | 'SAVED'> }
+  | { readonly kind: 'FAILED' };
+
+/** The page of items shown, and which items begin a whole message (the ones that can be emphasized). */
+export interface PublicComposeItems {
+  readonly page: PublicTopicItemsPage;
+  /** Item position → the Session Position of its message's first unit, for the items that begin a message. */
+  readonly messageStarts: ReadonlyMap<number, number>;
+}
+
 export type PublicComposeScreen = 'CLOSED' | 'LIST' | 'EDIT' | 'PREVIEW';
 export type PublicComposeNotice =
   | 'NONE' | 'STALE' | 'LIMIT_REACHED' | 'DELETION_PENDING' | 'INVALID' | 'NOT_OPEN' | 'TITLE_TOO_SHORT' | 'TEXT_REQUIRED'
-  | 'SECTION_REQUIRED' | 'DELETED' | 'ACTION_UNAVAILABLE';
+  | 'SECTION_REQUIRED' | 'DELETED' | 'ACTION_UNAVAILABLE' | 'ACKNOWLEDGED';
 /** What is known about saving the draft being edited (see the header). */
 export type PublicComposeSaving = 'IDLE' | 'SAVING' | 'FAILED';
 
@@ -55,6 +92,11 @@ export interface PublicComposeState {
   readonly busy: boolean;
   readonly notice: PublicComposeNotice;
   readonly saving: PublicComposeSaving;
+  /** S8A-05 CP2: the draft's source, once read (null: not read, or no source transport). */
+  readonly source: { readonly revision: number; readonly source: PublicTopicSource; readonly acknowledged: boolean } | null;
+  /** S8A-05 CP2: the page of items shown in the preview (or of a prepared topic), when the draft has a source. */
+  readonly items: PublicComposeItems | null;
+  readonly itemsStatus: 'IDLE' | 'LOADING' | 'UNAVAILABLE';
 }
 
 /** True only when the account confirmed exactly the words shown: the one condition for saying the draft is saved. */
@@ -81,6 +123,16 @@ export interface PublicComposeController {
   askDelete(): void;
   confirmDelete(): void;
   retire(): void;
+  /** S8A-05 CP2 — a new draft holding this source. Nothing is shown here: the entry opens the draft (`openDraft`). */
+  createFromSource(choice: PublicComposeSourceChoice): Promise<PublicComposeCreateResult>;
+  /** S8A-05 CP2 — one page of the items, 1-based. */
+  showItemsPage(page: number): void;
+  /** S8A-05 CP2 — emphasize or un-emphasize the whole message the item at this position begins. */
+  toggleEmphasis(itemPosition: number): void;
+  /** S8A-05 CP2 — the ONE acknowledgement, for the revision previewed. */
+  acknowledge(): void;
+  /** S8A-05 CP2 — remove the draft's source; the draft and its words stay. */
+  clearSource(): void;
 }
 
 export interface PublicComposeControllerOptions {
@@ -90,6 +142,8 @@ export interface PublicComposeControllerOptions {
   readonly newId: () => string;
   /** The runtime entry's ONE foreground signal (T-12P §2.7): leaving the foreground saves what is unsaved at once. */
   readonly foreground?: ForegroundSignal;
+  /** S8A-05 CP2: the source commands and reads. Absent: the controller is exactly CP1's. */
+  readonly sources?: PublicComposeSourceTransport | null;
 }
 
 /** How long typing rests before the draft is saved to the account. */
@@ -97,7 +151,22 @@ export const PUBLIC_COMPOSE_AUTOSAVE_MS = 1200;
 
 const CLOSED: PublicComposeState = Object.freeze<PublicComposeState>({
   screen: 'CLOSED', status: 'READY', drafts: [], draft: null, preview: null, confirmingDelete: false, busy: false, notice: 'NONE', saving: 'IDLE',
+  source: null, items: null, itemsStatus: 'IDLE',
 });
+const SOURCE_REFUSALS: readonly string[] = ['SOURCE_UNAVAILABLE', 'NOT_WHOLE_MESSAGES', 'SELECTION_INVALID', 'NOTHING_SELECTED', 'TOO_LARGE',
+  'UNDERSTANDING_CHANGED', 'UNDERSTANDING_UNDER_REVIEW', 'UNDERSTANDING_WITHHELD', 'ACKNOWLEDGEMENT_REQUIRED'];
+/** Which items of a page begin a whole message: the first unit of each message, by its message ordinal. */
+function messageStartsOf(items: readonly PublicTopicItem[], before: PublicTopicItem | null): ReadonlyMap<number, number> {
+  const starts = new Map<number, number>();
+  let previous = before;
+  for (const item of items) {
+    const begins = (item.role === 'YOUR_MESSAGE' || item.role === 'QANDEEL_REPLY') && item.message !== null && item.sessionPosition !== null
+      && (previous === null || previous.message !== item.message);
+    if (begins) starts.set(item.position, item.sessionPosition as number);
+    previous = item;
+  }
+  return starts;
+}
 const NO: { readonly kind: 'NO_ANSWER' } = Object.freeze({ kind: 'NO_ANSWER' as const });
 const SAVE_NOTICE: Readonly<Partial<Record<PublicTopicSaveResult['outcome'], PublicComposeNotice>>> = {
   LIMIT_REACHED: 'LIMIT_REACHED', INVALID: 'INVALID', ACCOUNT_DELETION_PENDING: 'DELETION_PENDING',
@@ -108,7 +177,7 @@ const PREPARE_NOTICE: Readonly<Partial<Record<PublicTopicPrepareOutcome, PublicC
 };
 const sameWords = (a: PublicTopicDraft, b: PublicTopicDraft) => a.title === b.title && a.text === b.text && a.section === b.section;
 
-export function createPublicComposeController({ transport, isCurrent, newId, foreground }: PublicComposeControllerOptions): PublicComposeController {
+export function createPublicComposeController({ transport, isCurrent, newId, foreground, sources = null }: PublicComposeControllerOptions): PublicComposeController {
   const listeners = new Set<() => void>();
   let state: PublicComposeState = CLOSED;
   let retired = false;
@@ -144,7 +213,7 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
 
   async function loadList(notice: PublicComposeNotice = 'NONE'): Promise<void> {
     const mine = ++ticket;
-    publish({ screen: 'LIST', status: 'LOADING', draft: null, preview: null, confirmingDelete: false, notice, saving: 'IDLE' });
+    publish({ screen: 'LIST', status: 'LOADING', draft: null, preview: null, confirmingDelete: false, notice, saving: 'IDLE', source: null, items: null, itemsStatus: 'IDLE' });
     if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
     const drafts = await call(() => transport.drafts());
     if (mine !== ticket) return;
@@ -161,7 +230,52 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
     // Not the reader's, or gone: back to the list, which is the truth now.
     if (read.value.kind === 'ABSENT') { await loadList('ACTION_UNAVAILABLE'); return; }
     confirmed.set(draftId, read.value.draft.revision);
-    publish({ status: 'READY', draft: { ...read.value.draft, dirty: false } });
+    const source = await readSource(draftId);
+    if (mine !== ticket) return;
+    publish({ status: 'READY', draft: { ...read.value.draft, dirty: false }, source, items: null, itemsStatus: 'IDLE' });
+    // A prepared topic made from a source shows its sealed items.
+    if (read.value.draft.state === 'PREPARED' && source !== null && source.source.kind !== 'NONE') await readItems(draftId, 1);
+  }
+
+  /** S8A-05 CP2: the draft's source; null without a source transport or a definite answer (shown as no source). */
+  async function readSource(draftId: string): Promise<PublicComposeState['source']> {
+    if (!sources) return null;
+    const read = await call(() => sources.source(draftId));
+    return read.kind === 'ANSWER' && read.value.kind === 'SOURCE'
+      ? { revision: read.value.revision, source: read.value.source, acknowledged: read.value.acknowledged } : null;
+  }
+
+  // Pages already read for the draft revision shown: the previous page tells whether a page's first item begins a message.
+  let pages = new Map<number, PublicTopicItemsPage>();
+  let pagesOf = '';
+  async function readItems(draftId: string, page: number): Promise<void> {
+    if (!sources) return;
+    const mine = ticket;
+    publish({ itemsStatus: 'LOADING' });
+    const read = await call(() => sources.items(draftId, page));
+    if (mine !== ticket) return;
+    if (read.kind !== 'ANSWER' || read.value.kind !== 'PAGE') { publish({ itemsStatus: 'UNAVAILABLE' }); return; }
+    const shown = read.value.page;
+    const key = `${draftId}:${shown.revision}`;
+    if (pagesOf !== key) { pages = new Map(); pagesOf = key; }
+    pages.set(page, shown);
+    let before: PublicTopicItem | null = null;
+    if (page > 1) {
+      let previous = pages.get(page - 1);
+      if (previous === undefined) {
+        const earlier = await call(() => sources.items(draftId, page - 1));
+        if (mine !== ticket) return;
+        if (earlier.kind === 'ANSWER' && earlier.value.kind === 'PAGE' && earlier.value.page.revision === shown.revision) {
+          previous = earlier.value.page;
+          pages.set(page - 1, previous);
+        }
+      }
+      // Unknown: the page's first item is not offered for emphasis, rather than guessed.
+      before = previous === undefined ? shown.items[0] ?? null : previous.items[previous.items.length - 1] ?? null;
+    }
+    const starts = new Map(messageStartsOf(shown.items, before));
+    if (page > 1 && pages.get(page - 1) === undefined && shown.items.length > 0) starts.delete(shown.items[0].position);
+    publish({ items: { page: shown, messageStarts: starts }, itemsStatus: 'IDLE' });
   }
 
   async function act(work: () => Promise<void>): Promise<void> {
@@ -248,8 +362,18 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
     if (mine !== ticket) return;
     if (read.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
     if (read.value.kind === 'ABSENT') { await loadList('ACTION_UNAVAILABLE'); return; }
-    publish({ status: 'READY', preview: read.value.preview });
+    const source = await readSource(draftId);
+    if (mine !== ticket) return;
+    publish({ status: 'READY', preview: read.value.preview, source, items: null, itemsStatus: 'IDLE' });
+    if (source !== null && source.source.kind !== 'NONE') await readItems(draftId, 1);
   }
+
+  /** The revision the account last confirmed for the draft shown (a source change moves it). */
+  const revisionNow = (draft: PublicComposeDraft) => Math.max(confirmed.get(draft.draftId) ?? 0, draft.revision);
+  const moved = (draft: PublicComposeDraft, revision: number) => {
+    confirmed.set(draft.draftId, revision);
+    if (shows(draft.draftId)) publish({ draft: { ...(state.draft as PublicComposeDraft), revision } });
+  };
 
   const close = () => {
     // Words not yet saved are saved on the way out: closing never loses them.
@@ -280,7 +404,7 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
     close,
     back() {
       if (state.busy) return;
-      if (state.screen === 'PREVIEW' && state.draft) { ticket += 1; publish({ screen: 'EDIT', status: 'READY', preview: null, notice: 'NONE' }); return; }
+      if (state.screen === 'PREVIEW' && state.draft) { ticket += 1; publish({ screen: 'EDIT', status: 'READY', preview: null, notice: 'NONE', items: null, itemsStatus: 'IDLE' }); return; }
       if (state.screen === 'EDIT') {
         // Words the reader wrote are kept: leaving saves them first, and stays if they could not be saved.
         if (unsaved() !== null) {
@@ -301,7 +425,7 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
     newDraft() {
       if (state.busy) return;
       ticket += 1;
-      publish({ screen: 'EDIT', status: 'READY', preview: null, confirmingDelete: false, notice: 'NONE', saving: 'IDLE',
+      publish({ screen: 'EDIT', status: 'READY', preview: null, confirmingDelete: false, notice: 'NONE', saving: 'IDLE', source: null, items: null, itemsStatus: 'IDLE',
         draft: { draftId: newId(), revision: 0, title: '', text: '', section: null, state: 'EDITING', experienceId: null, dirty: false } });
     },
     openDraft(draftId) { if (!state.busy) void loadDraft(draftId); },
@@ -329,6 +453,8 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
         if (outcome === 'PREPARED' || outcome === 'ALREADY_PREPARED') { await loadDraft(draft.draftId); return; }
         if (outcome === 'STALE') { await readPreview(draft.draftId); publish({ notice: 'STALE' }); return; }
         if (outcome === 'NOT_FOUND') { await loadList('ACTION_UNAVAILABLE'); return; }
+        // S8A-05 CP2: a source's own refusal, or the acknowledgement it needs, is the preview's readiness: read it again.
+        if (SOURCE_REFUSALS.includes(outcome)) { await readPreview(draft.draftId); return; }
         publish({ notice: PREPARE_NOTICE[outcome] ?? 'ACTION_UNAVAILABLE' });
       });
     },
@@ -361,6 +487,81 @@ export function createPublicComposeController({ transport, isCurrent, newId, for
         settle(key);
         if (answer.value === 'DELETED' || answer.value === 'NOT_FOUND') { confirmed.delete(draft.draftId); await loadList('DELETED'); return; }
         publish({ confirmingDelete: false, notice: answer.value === 'ACCOUNT_DELETION_PENDING' ? 'DELETION_PENDING' : 'ACTION_UNAVAILABLE' });
+      });
+    },
+    async createFromSource(choice) {
+      if (!sources) return { kind: 'FAILED' };
+      const draftId = newId();
+      const answer = choice.kind === 'CONVERSATION'
+        ? await call(() => sources.setConversationSource(draftId, 0, choice.choice))
+        : await call(() => sources.setUnderstandingSource(choice.ref, choice.revision, draftId, 0));
+      if (answer.kind !== 'ANSWER') return { kind: 'FAILED' };
+      const { outcome, revision } = answer.value;
+      if ((outcome === 'CREATED' || outcome === 'SAVED') && revision !== null) {
+        confirmed.set(draftId, revision);
+        return { kind: 'CREATED', draftId };
+      }
+      return { kind: 'REFUSED', outcome: outcome as Exclude<PublicTopicUnderstandingOutcome, 'CREATED' | 'SAVED'> };
+    },
+    showItemsPage(page) {
+      const draft = state.draft;
+      const items = state.items;
+      if (!draft || items === null || state.busy || page < 1 || page > items.page.pageCount) return;
+      void readItems(draft.draftId, page);
+    },
+    toggleEmphasis(itemPosition) {
+      void act(async () => {
+        const draft = state.draft;
+        const held = state.source;
+        const start = state.items?.messageStarts.get(itemPosition);
+        if (!sources || !draft || draft.state !== 'EDITING' || held === null || held.source.kind !== 'CONVERSATION' || start === undefined) return;
+        if (!(await persist())) return;
+        const current = held.source;
+        const emphasized = current.emphasizedMessagePositions.includes(start)
+          ? current.emphasizedMessagePositions.filter((sp: number) => sp !== start) : [...current.emphasizedMessagePositions, start].sort((a, b) => a - b);
+        const shownDraft = state.draft as PublicComposeDraft;
+        const answer = await call(() => sources.setConversationSource(draft.draftId, revisionNow(shownDraft), {
+          sessionId: current.sessionId, firstPosition: current.firstPosition, lastPosition: current.lastPosition,
+          includeQandeelReplies: current.includeQandeelReplies, excludedMessagePositions: current.excludedMessagePositions, emphasizedMessagePositions: emphasized,
+        }));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        const { outcome, revision } = answer.value;
+        if ((outcome === 'SAVED' || outcome === 'CREATED') && revision !== null) {
+          moved(shownDraft, revision);
+          const page = state.items?.page.page ?? 1;
+          await readPreview(draft.draftId);
+          if (page > 1) await readItems(draft.draftId, page);
+          return;
+        }
+        if (outcome === 'STALE' || outcome === 'PREPARED') { await loadDraft(draft.draftId, 'STALE'); return; }
+        await readPreview(draft.draftId);
+      });
+    },
+    acknowledge() {
+      void act(async () => {
+        const draft = state.draft;
+        const preview = state.preview;
+        if (!sources || !draft || !preview || state.screen !== 'PREVIEW') return;
+        const answer = await call(() => sources.acknowledgeSource(draft.draftId, preview.revision));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        if (answer.value === 'ACKNOWLEDGED') { await readPreview(draft.draftId); publish({ notice: 'ACKNOWLEDGED' }); return; }
+        if (answer.value === 'STALE') { await readPreview(draft.draftId); publish({ notice: 'STALE' }); return; }
+        if (answer.value === 'NOT_FOUND') { await loadList('ACTION_UNAVAILABLE'); return; }
+        publish({ notice: answer.value === 'ACCOUNT_DELETION_PENDING' ? 'DELETION_PENDING' : 'ACTION_UNAVAILABLE' });
+      });
+    },
+    clearSource() {
+      void act(async () => {
+        const draft = state.draft;
+        if (!sources || !draft || draft.state !== 'EDITING' || state.screen !== 'EDIT') return;
+        if (!(await persist())) return;
+        const shownDraft = state.draft as PublicComposeDraft;
+        const answer = await call(() => sources.clearSource(draft.draftId, revisionNow(shownDraft)));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        if (answer.value.outcome === 'SAVED') { await loadDraft(draft.draftId); return; }
+        if (answer.value.outcome === 'STALE' || answer.value.outcome === 'PREPARED') { await loadDraft(draft.draftId, 'STALE'); return; }
+        if (answer.value.outcome === 'NOT_FOUND') { await loadList('ACTION_UNAVAILABLE'); return; }
+        publish({ notice: 'DELETION_PENDING' });
       });
     },
     retire() {

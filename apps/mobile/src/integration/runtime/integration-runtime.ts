@@ -150,6 +150,7 @@ import {
 import { createPublicDisplayController, type PublicDisplayController } from '../../settings/public-display-controller';
 import { createPublicAuthoringController, mintPublicCommandId } from '../../public-authoring';
 import { createPublicComposeController } from '../../public-compose';
+import { createPublicShareController, type PublicShareController } from '../../public-share';
 import { createPublicDiscussionController, createPublicFieldController } from '../../public-world/field';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
@@ -276,6 +277,12 @@ export interface IntegrationSessionRuntime {
    * or unresolved command of one account reaches the next.
    */
   readonly replayEntry: ReplayEntryController;
+  /**
+   * S8A-05 CP2 — «شارك في العالم العام»: choosing messages of THIS Session's own conversation for a Public topic, proven
+   * on the same Replay reads; the draft is created by this generation's Public compose controller. `null` when the
+   * Public transport has no compose client. Retired with the generation.
+   */
+  readonly publicShare: PublicShareController | null;
   /**
    * S7-04: the Personal Replay player over THIS identity's own Replays — the S7-02 reads, the S7-04 lifecycle commands
    * and the S7-03 history reads, all on transports bound to this identity. Its passage is open only inside this
@@ -472,6 +479,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.recovery.writer.retire();
     session.replayPlayer.retire();
     session.replayEntry.retire();
+    session.publicShare?.retire();
     session.conversation.retire();
     session.account.retire();
     session.publicId.retire();
@@ -603,6 +611,11 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       conversation,
       // S7-02: the Replay entry reads THIS Session's conversation, by the same bundle Session id.
       replayEntry: createReplayEntryController({ sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent }),
+      // S8A-05 CP2: sharing from THIS conversation; the draft is created by this generation's compose controller (below).
+      publicShare: publicTransport.compose ? createPublicShareController({
+        sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent,
+        create: (choice) => built.publicWorld.compose?.createFromSource(choice) ?? Promise.resolve({ kind: 'FAILED' }),
+      }) : null,
       // S7-04: the Replay player, on the same identity's transports; it never touches the conversation.
       replayPlayer: createReplayPlayerController({
         sessionId: bundle.sessionId, reads: entry.replayFor(bundle), commands: entry.replayLifecycleFor(bundle), history: entry.replayHistoryFor(bundle), isCurrent,
@@ -661,7 +674,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         // S8A-05 CP1 — «اكتب موضوعك»: the reader's own topic drafts, on the same identity-bound Public transport.
         compose: createPublicComposeController({ transport: publicTransport.compose ?? null, isCurrent, newId: mintPublicCommandId,
           // Leaving the foreground saves unsaved words of a draft at once (autosave).
-          foreground: entry.foreground }),
+          foreground: entry.foreground,
+          // S8A-05 CP2 — «انشر من قنديل»: a draft's source, by reference only, and its paged items, on the same transport.
+          sources: publicTransport.compose ?? null }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,

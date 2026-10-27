@@ -1,10 +1,14 @@
 # QANDEEL — S8A-05 Public World: «اكتب موضوعك» / Write Your Topic — Implementation Record v1
 
-**Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** only
-**Status:** `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE CLOSED (every row
+**Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** (§1 – §10) and **CP2 — Publish
+from QANDEEL** (§11)
+**Status:** `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP2
+REVIEW GATE — CP2 COPY GATE CLOSED / APPROVED (37 rows, Product Owner, 2026-10-27) — CP2 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam
+NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not closed: CP3 – CP4 have not started, and BG-08 / BG-09
+are reconciled at S8A-05's last checkpoint, not here. CP1's status as written at its review: `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE CLOSED (every row
 APPROVED by the Product Owner, 2026-10-26) — NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
 closed: CP2 – CP4 have not started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
-**Date:** 2026-10-26  
+**Date:** 2026-10-26 (CP1); 2026-10-27 (CP2, §11)  
 **Branch / base:** `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`, the merge of PR #358
 (S8A-04, merged 2026-10-26)  
 **Authority:** the Product Owner's *S8A-05 CP1 order* (2026-10-26), which approves the S8A-05 WP1 design with its WP1-R1
@@ -348,3 +352,278 @@ S8A-05 owns no backlog item at kickoff. CP1 admits, tombstones and re-owns nothi
 with its owner), `QAN-BL-ACCT-01` and `QAN-BL-PROD-09` (`topic_drafts` is `ACCOUNT_CASCADE`, registered in the
 account-deletion coverage census; a prepared topic exists only after the closed gate opens and then follows the Public
 residue owner, `ACCT-DEL-02`).
+
+---
+
+## 11. S8A-05 CP2 — Publish from QANDEEL
+
+**Checkpoint:** `S8A-05 CP2 — «انشر من قنديل» / Publish from QANDEEL — DELIVERED ON ITS DRAFT PULL REQUEST — AT THE PRODUCT
+OWNER'S CP2 REVIEW — CANDIDATE CONTROLLED AMENDMENT A-3 + A-2(c) NARROWING — MIGRATION 0180 NOT HOSTED — COPY GATE CLOSED /
+APPROVED (37 rows, 2026-10-27) — PRODUCTION PUBLISHING CLOSED — NOT MERGED`. S8A-05 is not closed: CP3 and CP4 have not started, and
+BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
+**Date:** 2026-10-27  
+**Branch / base:** `s8a/s8a-05-cp2` from `main` at `7c0356b7`, the merge of PR #359 (S8A-05 CP1, merged 2026-10-26)  
+**Authority:** the Product Owner's *S8A-05 CP2 order* (2026-10-27), which applies the WP1 design with its WP1-R1
+corrections; the candidate
+[S8A-05 Publish from QANDEEL Controlled Amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLISH_FROM_QANDEEL_CONTROLLED_AMENDMENT_v1.0.md)
+(A-3 verbatim from WP1-R1 §6.3, and the WP1-R1 §8 narrowing of CP1's A-2(c)), which binds from this pull request's merge.
+The CP1 amendment (A-1, A-2) is effective since the merge of PR #359.
+
+Merging, deploying, opening any publication gate, opening Public discussion, starting CP3 and any paid model call each
+need the Product Owner's explicit approval. None is done here. No DeepSeek or other paid API was called. Synthetic data
+only.
+
+### 11.1 What CP2 delivers
+
+| PO CP2 order item | Delivered | Where |
+| --- | --- | --- |
+| 1. A whole conversation, a contiguous range, separate whole messages, emphasized messages | Yes | 0180 §A.1, §B.4, §G; mobile `public-share/` (selection by message, «المحادثة كاملة»), emphasis in the preview |
+| 2. Speakers shown clearly: the person by their public name, QANDEEL as «قنديل» | Yes | `PublicTopicItems` (author = the publisher display label; «صاحب الموضوع» only when the topic shows none) |
+| 3. QANDEEL's original replies, or the shown «فهم قنديل» summary | Yes | 0180 §B.3 – §B.4; `POST /understanding/items/:ref/public-topic`; the Understanding detail's share action |
+| 4. A faithful preview, privacy warnings, preparation through the existing Experience / Package / Manifest | Yes | 0180 §E.6 (one projection for preview and freeze), §F.1 (warnings read every item), §C (the 0179 freeze forward-replaced) |
+| 5. Long conversations paged, nothing dropped silently | Yes | pages of 50 everywhere (draft preview, sealed topic, reader panel); the envelope refuses before any write |
+| 4.1 Reuse `ConversationSelection` (S7-02) and `resolve_personal_range_v1` (0169) | Yes | the S7-02 anchor proof and the `ConversationSurface` selection seam; 0180 §B.5 |
+| 4.2 A reference-only source; the server trusts no text, speaker, order or owner; re-resolved at preparation | Yes | 0180 §A.1, §B.4 – §B.5, re-checked in the freeze under its own locks |
+| 4.3 A-3 exactly as WP1-R1 §6.3 | Yes | amendment §3.2 (verbatim), §3.3 (how) |
+| 5 Bounded search document 8 KB; interpreter input 24 KB (CP3); `@qandeel` context 6 KB (CP4) | Yes | 0180 §A.3, §G (executable by no application role; nothing calls a model) |
+| Performance gate (< 3 s at the envelope, local PG17) | Yes | §11.5 |
+| 6 Freeze atomic and closed in production; discard erases every class | Yes | 0180 §C, §D; verifier `0180` |
+| 7 Two mobile entries, CP1 drafts reused, RTL and accessibility, Copy Gate PROPOSED | Yes (the gate then CLOSED / APPROVED, 2026-10-27) | §11.4, §11.9 |
+
+### 11.2 Database — migration `0180_s8a_05_publish_from_qandeel_v1.sql` (not hosted; the next is `0181`)
+
+Forward-only; migrations 0001 – 0179 are byte-unchanged. A new schema `public_compose_source_private` (not exposed through
+the Data API; RLS on with no policy; postgres-owned) holds two relations — `item_presentation` (the sealed display order:
+display position, role, true Session Position, message, emphasis, gap; no text) and `version_search_documents` (one
+bounded document per sourced version) — both append-only behind rejecting triggers. The CP1 draft gains the source
+specification columns (references only) and the acknowledgement bound to one draft revision.
+
+**Security classification of every new or forward-replaced function** (each pinned by `database/verify-migration-0180.mjs`
+B01 – B07):
+
+| Function | Class | Executable by |
+| --- | --- | --- |
+| `public.set_own_topic_conversation_source_v1`, `public.set_own_topic_understanding_source_v1`, `public.clear_own_topic_source_v1`, `public.acknowledge_own_topic_source_v1` | `SECURITY INVOKER` wrapper, one-line call into its definer (VOLATILE) | `authenticated` |
+| `public.read_own_topic_source_v1`, `public.read_own_topic_items_v1`, `public.read_public_topic_items_v1` | `SECURITY INVOKER` wrapper (STABLE) | `authenticated` |
+| the seven definers behind them in `public_compose_source_private` | `SECURITY DEFINER`, `search_path = ''`, owner derived from `auth.uid()` (never a parameter) | no application role (reached only through the wrappers) |
+| `envelope_units_v1`, `envelope_bytes_v1`, `page_size_v1`, `search_document_bytes_v1`, `interpreter_input_bytes_v1`, `qandeel_context_bytes_v1`, `bounded_text_v1`, `understanding_state_v1`, `draft_source_items_v1`, `draft_source_outcome_v1`, `sourced_readiness_v1`, `prepare_sourced_package_v1`, `bounded_package_input_v1`, `interpreter_input_v1`, `qandeel_context_v1`, the two rejecting triggers | internal | no application role; `service_role` holds nothing in the schema |
+| forward-replaced: `public.derive_public_publication_authority_v1` (I-05A: `MY_WORLD` items, an Understanding item's own sealed body), `public.reject_publication_package_mutation_v1` (the discard's erasure exception), `public.discard_never_published_public_experience_v1` (A-2(c) narrowed), `public_compose_private.freeze_own_topic_draft_v1`, `public_compose_private.preview_own_topic_draft_v1`, `public_spatial_private.search_public_semantic_field_v1`, `public_compose_private.read_public_section_topic_matches_v1`, `personal_data_private.build_personal_export_v1` | unchanged class and grants of the replaced function | unchanged |
+
+Deploy-time self-assertions (0180 §K) fail the migration if the freeze seam stops answering `NOT_EVALUATED` first, if a
+sixth Public lifecycle mover appears, or if any CP2 relation or internal function becomes reachable by an application role.
+
+**Re-anchored historical verifiers (validation only, each with a dated comment):** `0153` and `0168` (the live Export My
+Data builder is the 0180 re-statement: the 0179 body plus exactly the one CP2 source reference), `0175` (its census of
+body-reaching reads gains `read_public_topic_items_v1`, which reaches a body only through the canonical serving resolver,
+like 0145 E.4), `0179` F08 (a never-published `MY_WORLD` topic is now `DISCARDED`, as A-2(c) is narrowed). `0150` (40001 / PT409 absorption) needs no change: the freeze is still the one ABSORBED entry, and
+the CP2 commands reach no frozen 40001 core.
+
+### 11.3 API (NestJS)
+
+| Route | Module | Census class |
+| --- | --- | --- |
+| `GET /public/compose/drafts/:draftId/source` | public-world (compose) | `AUTHENTICATED` |
+| `PUT /public/compose/drafts/:draftId/source/conversation` | public-world (compose) | `SECURITY_SENSITIVE` |
+| `POST /public/compose/drafts/:draftId/source/clear` | public-world (compose) | `AUTHENTICATED` |
+| `POST /public/compose/drafts/:draftId/source/acknowledge` | public-world (compose) | `AUTHENTICATED` |
+| `GET /public/compose/drafts/:draftId/items?page=` | public-world (compose) | `AUTHENTICATED` |
+| `POST /understanding/items/:ref/public-topic` | understanding | `SECURITY_SENSITIVE` |
+| `GET /public/compose/topics/:experienceId/items?page=` | public-world (compose controller, field service; a viewer read — the frozen S5-03B field controller keeps its three routes) | `AUTHENTICATED` |
+
+Every call runs on the caller's own token; the server holds no channel of its own. The Understanding item is named by its
+opaque ref and resolved only inside the Understanding module (a hypothesis id never leaves the API); a revision that is not
+the item's current version answers 409. The field panel now reads page 1 of `read_public_topic_items_v1` (replacing the
+unbounded 0145 content read) and states `contentPages`; further pages have their own route. A reader's items carry no
+Session Position (§11.6).
+
+### 11.4 Mobile
+
+- **From the conversation:** «شارك في العالم العام» in the Personal row (beside the Introductions entry) opens the S7-02
+  selection seam over the conversation's own messages: the reader toggles whole messages, or chooses «المحادثة كاملة».
+  The choice is proven with the S7-02 anchor proof and sent as two ends, the whole messages left out inside them and
+  whether QANDEEL's replies are in. A private draft is created and opened in Public World, through the same Public entry
+  verdict. One selection at a time: opening it cancels a Replay selection and the reverse.
+- **From «فهم قنديل»:** the item's detail offers the same action only while its summary is shown and not under review; it
+  sends the opaque ref at the exact revision shown. A changed item asks the reader to open it again; nothing opens.
+- **The draft** (the CP1 editor, reused): it names its material and can remove it while keeping its words; the text
+  becomes optional once the topic has material.
+- **The preview** pages the exact items, 50 a page, with the author's public name, «قنديل» or the fixed Understanding
+  label, the emphasis bar, «…» where messages were left out, an emphasis toggle on each whole message while the draft can
+  change, the privacy warnings, and the ONE acknowledgement whenever QANDEEL material is present (asked again after any
+  change of revision).
+- **The reader's panel** (`PublicTopicContent`) pages a served topic the same way, reading a later page only when asked
+  and reading the shown page again on every new panel read; content without sealed speakers is drawn exactly as before.
+  It lives in its own file, so the frozen S5-03B #13 anchors of `PublicLivingAnalysis.tsx` are unchanged.
+- Layout is logical (start / end), Arabic first; every control is at least 44 × 44 with its accessible name; the gap has
+  its own spoken label and an emphasized message is announced as such.
+
+### 11.5 Performance gate (binding; local PostgreSQL 17, synthetic data only)
+
+Measured on local PostgreSQL 17.10 (Windows) with production durability (`fsync`, `synchronous_commit` and
+`full_page_writes` on; `shared_buffers` 128 MB, `work_mem` 4 MB by default), on synthetic data only: one Personal
+conversation of **10,000 committed units** (5,000 messages, USER / ASSISTANT alternating) of 830 bytes each —
+**8,300,000 bytes**, at the envelope (10,000 units / 8 MiB = 8,388,608 bytes). The draft takes the whole conversation
+with QANDEEL's replies and every tenth message emphasized. The freeze runs through the real public wrapper
+`public.freeze_own_topic_draft_v1`; only the freeze clearance seam is opened inside the measured transaction and closed
+again before it ends (production keeps it `NOT_EVALUATED`). Seeding is not timed. Harness: a scratch script, not in
+the repository.
+
+**Final result (after the last 0180 change), five consecutive committed runs:**
+
+| Run | Freeze (whole wrapper) | Commit | Discard + commit | After discard (bodies / pointers / digests / documents) |
+| --- | --- | --- | --- | --- |
+| 1 (cold, right after the database was built) | 2,816 ms | 8 ms | 1,545 + 4 ms | 0 / 0 / 0 / 0 |
+| 2 | 2,359 ms | 14 ms | 1,422 + 1 ms | 0 / 0 / 0 / 0 |
+| 3 | 2,335 ms | 3 ms | 1,425 + 3 ms | 0 / 0 / 0 / 0 |
+| 4 | 2,320 ms | 1 ms | 1,387 + 4 ms | 0 / 0 / 0 / 0 |
+| 5 | 2,376 ms | 2 ms | 1,405 + 4 ms | 0 / 0 / 0 / 0 |
+
+- **Gate: under 3 s — PASS in every run** (median 2,359 ms, maximum 2,816 ms). The Public World singleton is held for the
+  freeze plus its commit, and for nothing else.
+- **Every run's package is exact.** It has 10,000 items, all distinct, with `item_ordinal` = display position. The
+  source positions rise strictly with no loss or duplicate, and the bytes total 8,300,000. There are 5,000
+  `ANALYTICAL_DERIVATIVE` items (QANDEEL's replies) and 1,000 emphasized. Every public body equals its committed text.
+- **Two plan findings, both fixed inside 0180's own new functions (no frozen function touched):**
+  1. With the statistics of a near-empty package table, PostgreSQL planned every foreign-key check of the one
+     preparation statement as a scan over the rows that statement had just written, which is quadratic at 10,000
+     items (about 4.3 s). `prepare_sourced_package_v1` therefore pins `enable_seqscan = off`.
+  2. The final measurement before the last change missed the gate in two of three runs (3,130, 3,129 and 2,844 ms).
+     A per-function profile found where the time went: the projection's windows and sorts, and the preparation's
+     materialized projection, carry every body (up to the 8 MB envelope). At the default 4 MB `work_mem` they spilled
+     to disk. `draft_source_items_v1` and `prepare_sourced_package_v1` now pin `work_mem = '32MB'` (per plan node;
+     the envelope bounds the data), and the projection's two calls fell from about 420 ms to about 146 ms.
+
+  Both settings are asserted by the 0180 verifier (B01).
+- **Beyond the envelope:** a 10,001-unit or 8 MiB + 1 byte selection is refused `TOO_LARGE` before any write
+  (verifier), and the reader is asked to choose a smaller part.
+
+### 11.6 Privacy, erasure and findings
+
+- **No conversation position is public.** The owner's read keeps `sessionPosition` (to emphasize a message); the public
+  read `read_public_topic_items_v1` never emits it, and both clients refuse it on a reader's page (verifier F08; mobile
+  `public-topic-source-api.test.ts`).
+- **Discard erases every class** at one instant: bodies, both digests, the personal source pointers, the version's title,
+  the sealed presentation rows and the bounded search document (verifier F09). The author's draft keeps its
+  reference only.
+- **There is no conversation-deletion feature today.** A source becomes unavailable only through account deletion (the
+  drafts cascade with the account) or through a range that no longer resolves; either way preview and freeze refuse
+  `SOURCE_UNAVAILABLE` and nothing is written.
+- **Shared QANDEEL output** stays unpublishable (S09): CP2 adds no path that can name Shared material at all; the verifier
+  models Shared output in the shape the frozen I-04G core records it (an additional human requirement left unresolved),
+  not through a Shared-World runtime fixture.
+- **Not exercised with two live sessions:** a freeze racing a source change. The source commands serialize on the draft
+  (proven: the second answers `STALE`), and the freeze re-resolves the source under its own locks; the race itself is
+  argued from those locks, not run.
+- **Two historical contracts caught two placements, and the code moved, not the contracts.** The first full root run
+  failed exactly two contracts (and, through the mirror, the forward-safety copies of the same two):
+  - S5-03B #6 pins the field controller to its three routes. The reader's page route had been added there, so it moved
+    to the CP2 compose controller as `GET /public/compose/topics/:experienceId/items`. It is the same viewer read on the
+    same field service, and the S5-03B controller is byte-identical to `main`.
+  - W3-MEGA-U1 forbids a `number` field in the Understanding Product types. The source command's answer
+    (`draftRevision`) is a draft's answer, so it moved beside the drafts in `public-compose.service.ts`, and
+    `understanding.types.ts` is byte-identical to `main`.
+
+  No historical test was edited or weakened.
+
+### 11.7 Verification
+
+Every result below was read from its own exit code and full log, locally on Windows with Node 24 and PostgreSQL 17.10.
+The suites ran one at a time. GitHub CI on the pull request's head is the binding run.
+
+| Gate | Result |
+| --- | --- |
+| Root contracts (`node --test tests/*.test.mjs`, mirror and forward-safety included) | **1,639 / 1,639 pass**, exit 0, on the final tree. The first run failed 2 contracts (and their 10 mirror copies); see §11.6 for the fixes in code. |
+| Database static contracts (`npm run test:database`) | **1,310 / 1,310 pass**, exit 0 |
+| Task-closure governance (`npm run test:task-closure-governance-contract`) | **24 / 24 pass**, exit 0 |
+| API (`npm run test:api`) | **294 suites, 7,019 pass, 1 skipped**, exit 0. After the route and type moves, the affected public-world, understanding and http-security suites passed again: 12 suites, 287 / 287. `tsc --noEmit` is clean. |
+| Mobile | The full run before the final changes: 2,995 of 3,001 pass. The 6 failures (`depth.test`, `w2-account-access`, locale) fail identically on `main` and are not CP2's. After the final changes, the affected suites (public-compose, public-share, understanding, public-world, runtime-entry, W3-MEGA-U) passed again in Arabic and English: **35 suites, 555 / 555**, exit 0. `tsc --noEmit` is clean. |
+| PG17 verifiers on a database built from zero (final 0180) | **0180, 0179, 0175, 0153, 0168, 0150, 0121, 0143, 0135 — all pass** (exit 0) |
+| 0135 | **Passes.** Its earlier local failure was the environment: the verifier builds `apps/api/dist` itself by spawning `npm.cmd` without a shell, which Node 24 on Windows refuses (`spawnSync npm.cmd EINVAL`, reproduced on its own). With `npm run build:api` first, as API CI does, it passes. The verifier is unchanged from `main`. |
+| 0130 | **Fails locally, and is not CP2's.** It fails at the same assertion (`available for a limited period (7 days)`) on a copy of the database built only up to 0179, without 0180. That assertion compares a database timestamp with the client clock, and this machine and its server run in `Africa/Cairo`. Nothing in 0130 was changed. |
+| Performance gate | §11.5: under 3 s in 5 / 5 runs |
+
+The local Supabase-compatible harness builds a fresh database from every migration, from 0001. It is a scratch tool and not in
+the repository.
+
+### 11.8 Arabic / RTL visual check
+
+**Not performed in CP2.** No device or emulator run was made for this checkpoint. A faithful device check of both
+entries would need a new proof-world stand-in for the source routes and the paged items, built on the S7-04 proof
+world. That is new harness scope, so it was not added here. The Arabic-first, right-to-left layout and the accessible
+names are covered by the Arabic and English component tests listed in §11.7 (logical start / end, every control at least
+44 × 44, the gap's own spoken label, an emphasized message announced as such). They are rendered in the test renderer,
+not on a device. A device visual check stays open for the Product Owner's review of this pull request; it is not claimed.
+
+### 11.9 Copy Gate — S8A-05 CP2 Product Copy Gate: `CLOSED / APPROVED` (Product Owner, 2026-10-27)
+
+**Closed by the Product Owner on 2026-10-27.** The Product Owner approved all 37 new CP2 rows exactly as presented, in
+Arabic and in English, with no edit, and kept the two reused rows as approved before: `shareWhole` (G1.1 / S7-05 D2)
+and `shareCancel` (S4-01). Three Arabic rows (★) are the Product Owner's own words from the CP2 order, verbatim. The
+Product Owner restated the language rule: QANDEEL's interface speaks simplified, neutral Modern Standard Arabic, and
+QANDEEL's conversations follow the user's dialect. No CP1 row is reopened or changed
+(`apps/mobile/src/public-compose/copy.ts` is unchanged in wording), and the approved rows are not to be reworded.
+Status lives on each row in `apps/mobile/src/public-compose/source-copy.ts` (`status` for Arabic, `enStatus` for
+English, the decision named in `source`), and `public-compose-source.test.tsx` pins the gate CLOSED with 37 approved
+rows and nothing proposed. Deliberately absent: any word saying the topic IS published, any QANDEEL-written summary, any score, evidence or
+memory word, a count of readers, and any engineering term.
+
+| Key | Arabic | English | Status |
+| --- | --- | --- | --- |
+| shareEntry ★ | شارك في العالم العام | Share in Public World | APPROVED (2026-10-27) |
+| shareTitle | اختيار الرسائل التي يصير منها الموضوع | Choose the messages the topic is made from | APPROVED (2026-10-27) |
+| shareHint | يُختار ما يُنشر رسالةً رسالة، كلامك وردود قنديل. | Choose what is shared message by message: your words and QANDEEL's replies. | APPROVED (2026-10-27) |
+| shareWhole | المحادثة كاملة | The whole conversation | APPROVED (reused) |
+| shareContinue | متابعة | Continue | APPROVED (2026-10-27) |
+| shareCancel | إلغاء | Cancel | APPROVED (reused) |
+| shareNothing | لم تُختر أي رسالة بعد. | No message is chosen yet. | APPROVED (2026-10-27) |
+| shareUnprovable | تعذّر التأكد من رسائل هذه المحادثة الآن. | The messages of this conversation couldn't be confirmed right now. | APPROVED (2026-10-27) |
+| understandingChanged | تغيّر هذا الفهم منذ عرضه. يُرجى فتحه من جديد. | This understanding changed since it was shown. Please open it again. | APPROVED (2026-10-27) |
+| sourceHeading | مادة الموضوع | The topic's material | APPROVED (2026-10-27) |
+| sourceConversation | من المحادثة مع قنديل | From the conversation with QANDEEL | APPROVED (2026-10-27) |
+| sourceUnderstanding | من «فهم قنديل» | From «QANDEEL Understanding» | APPROVED (2026-10-27) |
+| textOptional | النص اختياري حين تكون للموضوع مادة. | The text is optional when the topic has material. | APPROVED (2026-10-27) |
+| clearSource | إزالة المادة | Remove the material | APPROVED (2026-10-27) |
+| clearSourceNote | تبقى المسودة وما كُتب فيها. | The draft and what was written in it stay. | APPROVED (2026-10-27) |
+| understandingLabel ★ | فهم قنديل — استنتاج غير مؤكد، ليس حقيقة | QANDEEL Understanding — an unconfirmed inference, not a fact | APPROVED (2026-10-27) |
+| speakerQandeel | قنديل | QANDEEL | APPROVED (2026-10-27) |
+| speakerAuthor | صاحب الموضوع | The topic's author | APPROVED (2026-10-27) |
+| writtenLabel | النص المكتوب | Written text | APPROVED (2026-10-27) |
+| gap | رسائل غير مضمّنة | Messages not included | APPROVED (2026-10-27) |
+| emphasized | مُبرَز | Emphasized | APPROVED (2026-10-27) |
+| emphasize | إبراز | Emphasize | APPROVED (2026-10-27) |
+| unemphasize | إلغاء الإبراز | Remove emphasis | APPROVED (2026-10-27) |
+| page | صفحة {0} من {1} | Page {0} of {1} | APPROVED (2026-10-27) |
+| next | التالي | Next | APPROVED (2026-10-27) |
+| previous | السابق | Previous | APPROVED (2026-10-27) |
+| mentionWarning | قد يذكر هذا الكلام أشخاصًا آخرين أو يصفهم. | These words may mention or describe other people. | APPROVED (2026-10-27) |
+| acknowledgement ★ | كلام قنديل قد يصف أشخاصًا آخرين؛ نشره قرارك | QANDEEL's words may describe other people; publishing them is your decision | APPROVED (2026-10-27) |
+| acknowledge | أُقرّ بذلك | I acknowledge this | APPROVED (2026-10-27) |
+| acknowledged | تمّ الإقرار. | Acknowledged. | APPROVED (2026-10-27) |
+| sourceUnavailable | لم تعد مادة الموضوع متاحة. | The topic's material is no longer available. | APPROVED (2026-10-27) |
+| notWholeMessages | يجب أن يبدأ الاختيار وينتهي برسالة كاملة. | The selection must start and end with a whole message. | APPROVED (2026-10-27) |
+| selectionInvalid | تغيّر شيء في الاختيار؛ يُرجى الاختيار من جديد. | Something in the selection changed; please choose again. | APPROVED (2026-10-27) |
+| nothingSelected | لم تُختر أي رسالة. | No message is chosen. | APPROVED (2026-10-27) |
+| tooLarge | الاختيار أكبر من المسموح (10,000 جزء أو 8 ميغابايت). يُرجى اختيار جزء أصغر من المحادثة. | The selection is larger than allowed (10,000 parts or 8 MB). Please choose a smaller part of the conversation. | APPROVED (2026-10-27) |
+| understandingChangedReady | تغيّر هذا الفهم منذ اختياره. | This understanding changed since it was chosen. | APPROVED (2026-10-27) |
+| understandingUnderReview | هذا الفهم قيد المراجعة الآن. | This understanding is under review now. | APPROVED (2026-10-27) |
+| understandingWithheld | هذا الفهم غير معروض الآن. | This understanding isn't shown now. | APPROVED (2026-10-27) |
+| acknowledgementRequired | يلزم الإقرار قبل التجهيز للنشر. | The acknowledgement is needed before preparing. | APPROVED (2026-10-27) |
+
+### 11.10 Deliberately not implemented in CP2
+
+- No production publishing, no Public Identity before the gates, no CW2-08 change, no Public discussion.
+- No Shared World or Replay source; no voice (Stage 8B).
+- No excerpt inside a message (whole messages only, WP1-R1 §5.3 7).
+- No interpreter run and no `@qandeel` context use: the bounded inputs are CP3's and CP4's.
+- No revision of a published topic (CP4).
+- The reader's panel pages with controls inside the existing scroll view rather than a virtualized `FlatList`
+  (WP1-R1 §5.3 10): each page is at most 50 items, so nothing is unbounded, and a nested virtualized list inside the panel's
+  scroll view is avoided.
+- No paid model call, no DeepSeek.
+
+### 11.11 Backlog (BG-05 for CP2)
+
+CP2 admits, tombstones and re-owns nothing. Read and left as they stand: `QAN-BL-CW-05` (Shared QANDEEL output — still
+unpublishable, outside A-3), `QAN-BL-PRIV-05` (Export My Data across worlds — CP2 prints each draft's source reference
+under `publicTopicDrafts`), `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (the source columns live on `topic_drafts`, which is
+`ACCOUNT_CASCADE`). `REPLAY-DIST-01` keeps Replay artifacts.

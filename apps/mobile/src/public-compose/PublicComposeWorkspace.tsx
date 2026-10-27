@@ -15,6 +15,11 @@
  * the account holds exactly the words shown — or that the save failed and the words are still here.
  *
  * Every word is the S8A-05 CP1 copy module's (its Copy Gate) or an approved word it reuses.
+ *
+ * S8A-05 CP2 — a draft made from the reader's own conversation or from a «فهم قنديل» item names its material in the
+ * editor (and can remove it, keeping the draft); its preview shows, page by page, exactly the items the topic would
+ * contain, with their speakers, emphasis and gaps, lets the reader emphasize a whole message, and asks the ONE
+ * acknowledgement QANDEEL material needs. Those words are `./source-copy`'s (the S8A-05 CP2 Copy Gate, open).
  */
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, ScrollView, Text, TextInput, View } from 'react-native';
@@ -26,6 +31,8 @@ import type { PublicTopicPreview } from '../runtime-entry';
 import { PUBLIC_TOPIC_SECTIONS, PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX } from '../runtime-entry';
 import { fillCompose, publicComposeCopy, type PublicComposeCopy } from './copy';
 import { isDraftSaved, type PublicComposeController, type PublicComposeDraft, type PublicComposeNotice, type PublicComposeState } from './public-compose-controller';
+import { PublicTopicItems, type PublicTopicItemEntry } from './PublicTopicItems';
+import { isSourceReadiness, publicSourceCopy, type PublicSourceCopy } from './source-copy';
 
 export const PUBLIC_COMPOSE_TEST_ID = 'qandeel-public-compose';
 const ROW_START = 24;
@@ -35,10 +42,14 @@ const FIELD_MIN_HEIGHT = 48;
 const TEXT_MIN_HEIGHT = 160;
 const FIELD_RADIUS = 12;
 
-interface Shared { readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly copy: PublicComposeCopy; readonly writing: 'rtl' | 'ltr' }
+interface Shared {
+  readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly copy: PublicComposeCopy; readonly writing: 'rtl' | 'ltr';
+  readonly source: PublicSourceCopy;
+}
 
-const noticeOf = (copy: PublicComposeCopy, notice: PublicComposeNotice, saved: boolean): string | null => {
+const noticeOf = (copy: PublicComposeCopy, notice: PublicComposeNotice, saved: boolean, source: PublicSourceCopy): string | null => {
   switch (notice) {
+    case 'ACKNOWLEDGED': return source.acknowledged;
     case 'STALE': return copy.stale;
     case 'LIMIT_REACHED': return copy.limitReached;
     case 'DELETION_PENDING': return copy.deletionPending;
@@ -132,6 +143,8 @@ function Editor({ draft, s, busy, confirmingDelete, controller, state }: {
         <Line text={draft.title} s={s} role="statement" color={s.palette.primary} />
         {draft.section !== null ? <Line text={s.copy.section(draft.section)} s={s} /> : null}
         <Line text={draft.text} s={s} role="body" color={s.palette.primary} />
+        <SourceBlock state={state} s={s} busy={busy} controller={controller} editable={false} />
+        <Items state={state} s={s} busy={busy} controller={controller} editable={false} />
         <Line text={s.copy.backToDraftNote} s={s} />
         <Action label={s.copy.backToDraft} onPress={controller.backToDraft} s={s} busy={busy} emphasis testID="qandeel-public-compose-back-to-draft" />
         <DeleteRow s={s} busy={busy} confirming={confirmingDelete} controller={controller} />
@@ -141,6 +154,7 @@ function Editor({ draft, s, busy, confirmingDelete, controller, state }: {
   return (
     <View testID="qandeel-public-compose-editor">
       <Line text={s.copy.privateNote} s={s} testID="qandeel-public-compose-private" />
+      <SourceBlock state={state} s={s} busy={busy} controller={controller} editable />
       <Field label={s.copy.titleLabel} hint={s.copy.titleHint} value={draft.title} onChange={controller.setTitle} max={PUBLIC_TOPIC_TITLE_MAX} multiline={false}
         s={s} busy={busy} testID="qandeel-public-compose-title" />
       <Field label={s.copy.textLabel} hint={fillCompose(s.copy.textCount, String(draft.text.length))} value={draft.text} onChange={controller.setText}
@@ -168,6 +182,50 @@ function Editor({ draft, s, busy, confirmingDelete, controller, state }: {
   );
 }
 
+/** S8A-05 CP2: the draft's material, named, and the way to remove it (the draft and its words stay). */
+function SourceBlock({ state, s, busy, controller, editable }: {
+  readonly state: PublicComposeState; readonly s: Shared; readonly busy: boolean; readonly controller: PublicComposeController; readonly editable: boolean;
+}) {
+  const held = state.source;
+  if (held === null || held.source.kind === 'NONE') return null;
+  return (
+    <View testID="qandeel-public-compose-source">
+      <Heading text={s.source.sourceHeading} s={s} />
+      <Line text={held.source.kind === 'CONVERSATION' ? s.source.sourceConversation : s.source.sourceUnderstanding} s={s} color={s.palette.primary}
+        testID={`qandeel-public-compose-source-${held.source.kind.toLowerCase()}`} />
+      {editable ? (
+        <>
+          <Line text={s.source.textOptional} s={s} />
+          <Line text={s.source.clearSourceNote} s={s} />
+          <Action label={s.source.clearSource} onPress={controller.clearSource} s={s} busy={busy} testID="qandeel-public-compose-clear-source" />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+/** S8A-05 CP2: the page of items shown, decoded for the list; emphasis only while the draft can still change. */
+function Items({ state, s, busy, controller, editable }: {
+  readonly state: PublicComposeState; readonly s: Shared; readonly busy: boolean; readonly controller: PublicComposeController; readonly editable: boolean;
+}) {
+  if (state.itemsStatus === 'UNAVAILABLE') {
+    return <Line text={s.copy.actionUnavailable} s={s} testID="qandeel-public-compose-items-unavailable" />;
+  }
+  const items = state.items;
+  if (items === null) return state.itemsStatus === 'LOADING'
+    ? <View testID="qandeel-public-compose-items-loading" accessible accessibilityState={{ busy: true }} style={{ minHeight: MIN_TARGET }} /> : null;
+  const canEmphasize = editable && state.source !== null && state.source.source.kind === 'CONVERSATION';
+  const entries: PublicTopicItemEntry[] = items.page.items.map((item) => ({
+    key: String(item.position), role: item.role, message: item.message, text: item.text, emphasized: item.emphasized, gapBefore: item.gapBefore,
+    ...(canEmphasize && items.messageStarts.has(item.position) ? { onToggleEmphasis: () => controller.toggleEmphasis(item.position) } : {}),
+  }));
+  return (
+    <PublicTopicItems entries={entries} page={items.page.page} pageCount={items.page.pageCount} onPage={controller.showItemsPage}
+      authorName={state.preview?.publisher.label ?? null}
+      palette={s.palette} language={s.language} busy={busy || state.itemsStatus === 'LOADING'} testID="qandeel-public-compose-items" inset={ROW_START} />
+  );
+}
+
 function DeleteRow({ s, busy, confirming, controller }: { readonly s: Shared; readonly busy: boolean; readonly confirming: boolean; readonly controller: PublicComposeController }) {
   if (!confirming) return <Action label={s.copy.delete} onPress={controller.askDelete} s={s} busy={busy} testID="qandeel-public-compose-delete" />;
   return (
@@ -178,9 +236,12 @@ function DeleteRow({ s, busy, confirming, controller }: { readonly s: Shared; re
   );
 }
 
-function Preview({ preview, s, busy, controller, shownAs }: {
+function Preview({ preview, s, busy, controller, shownAs, state }: {
   readonly preview: PublicTopicPreview; readonly s: Shared; readonly busy: boolean; readonly controller: PublicComposeController; readonly shownAs: string;
+  readonly state: PublicComposeState;
 }) {
+  const sourced = state.source !== null && state.source.source.kind !== 'NONE';
+  const asking = preview.readiness === 'ACKNOWLEDGEMENT_REQUIRED';
   return (
     <View testID="qandeel-public-compose-preview-screen">
       <Line text={s.copy.previewHeading} s={s} />
@@ -189,14 +250,26 @@ function Preview({ preview, s, busy, controller, shownAs }: {
         <Line text={preview.title} s={s} role="statement" color={s.palette.primary} testID="qandeel-public-compose-preview-title" />
         {preview.publisher.label !== null ? <Line text={`${shownAs}: ${preview.publisher.label}`} s={s} testID="qandeel-public-compose-preview-publisher" /> : null}
         {preview.section !== null ? <Line text={s.copy.section(preview.section)} s={s} testID="qandeel-public-compose-preview-section" /> : null}
-        <Line text={preview.text} s={s} role="body" color={s.palette.primary} testID="qandeel-public-compose-preview-text" />
+        {preview.text.length > 0 || !sourced ? <Line text={preview.text} s={s} role="body" color={s.palette.primary} testID="qandeel-public-compose-preview-text" /> : null}
+        {sourced ? <Items state={state} s={s} busy={busy} controller={controller} editable={state.draft?.state === 'EDITING'} /> : null}
       </View>
       <Heading text={s.copy.privacyHeading} s={s} />
       <Line text={s.copy.publicWarning} s={s} color={s.palette.primary} testID="qandeel-public-compose-public-warning" />
       {preview.privacyNotes.map((note) => <Line key={note} text={s.copy.note(note)} s={s} color={s.palette.primary} testID={`qandeel-public-compose-note-${note}`} />)}
-      {preview.readiness !== 'READY'
-        ? <Line text={s.copy.readiness(preview.readiness)} s={s} testID="qandeel-public-compose-not-ready" />
-        : <Action label={s.copy.prepare} onPress={controller.prepare} s={s} busy={busy} emphasis testID="qandeel-public-compose-prepare" />}
+      {/* CA-S8A05-A3 6: QANDEEL's words may describe other people — one acknowledgement, for this revision. */}
+      {asking || (sourced && state.source?.acknowledged === true) ? (
+        <View testID="qandeel-public-compose-acknowledgement">
+          <Line text={s.source.mentionWarning} s={s} color={s.palette.primary} />
+          <Line text={s.source.acknowledgement} s={s} color={s.palette.primary} testID="qandeel-public-compose-acknowledgement-text" />
+          {asking
+            ? <Action label={s.source.acknowledge} onPress={controller.acknowledge} s={s} busy={busy} emphasis testID="qandeel-public-compose-acknowledge" />
+            : <Line text={s.source.acknowledged} s={s} testID="qandeel-public-compose-acknowledged" />}
+        </View>
+      ) : null}
+      {preview.readiness === 'READY'
+        ? <Action label={s.copy.prepare} onPress={controller.prepare} s={s} busy={busy} emphasis testID="qandeel-public-compose-prepare" />
+        : asking ? null
+        : <Line text={isSourceReadiness(preview.readiness) ? s.source.readiness(preview.readiness) : s.copy.readiness(preview.readiness)} s={s} testID="qandeel-public-compose-not-ready" />}
     </View>
   );
 }
@@ -212,8 +285,8 @@ export function PublicComposeWorkspace({ controller, language, palette, bottomIn
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const copy = publicComposeCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
-  const s: Shared = { palette, language, copy, writing };
-  const said = noticeOf(copy, state.notice, isDraftSaved(state));
+  const s: Shared = { palette, language, copy, writing, source: publicSourceCopy(language) };
+  const said = noticeOf(copy, state.notice, isDraftSaved(state), s.source);
   useEffect(() => {
     if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [said]);
@@ -257,7 +330,7 @@ export function PublicComposeWorkspace({ controller, language, palette, bottomIn
         ) : state.screen === 'EDIT' && state.draft !== null ? (
           <Editor draft={state.draft} s={s} busy={state.busy} confirmingDelete={state.confirmingDelete} controller={controller} state={state} />
         ) : state.screen === 'PREVIEW' && state.preview !== null ? (
-          <Preview preview={state.preview} s={s} busy={state.busy} controller={controller} shownAs={publicAuthoringCopy(language).shownAs} />
+          <Preview preview={state.preview} s={s} busy={state.busy} controller={controller} shownAs={publicAuthoringCopy(language).shownAs} state={state} />
         ) : null}
       </ScrollView>
     </View>

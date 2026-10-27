@@ -21,6 +21,7 @@ import {
   type UnderstandingEvolutionEntry, type UnderstandingEvolutionKind, type UnderstandingItemDetail, type UnderstandingItemSummary,
   type UnderstandingDisagreementView, type UnderstandingListView, type UnderstandingResolutionView,
 } from './understanding.types';
+import { UNDERSTANDING_PUBLIC_TOPIC_OUTCOMES, type UnderstandingPublicTopicSourceView } from '../public-world/public-compose.service';
 
 /** The one owned read context both routes share. Every read uses the caller's own token under RLS. */
 interface OwnedContext {
@@ -135,6 +136,41 @@ export class UnderstandingService {
       if (answer === 'STALE') throw this.changed();
       if (answer === 'NOT_FOUND') throw new NotFoundException('Understanding item not found.');
       this.reject();
+    });
+  }
+
+  /**
+   * S8A-05 CP2 — «شارك في العالم العام» from a «فهم قنديل» card: the reader's explicit choice of ONE of their own current
+   * items, at the exact revision they see, as the material of one of their own private Public topic drafts (migration
+   * 0180). Only the item's reference is stored; the summary is read by the database while the topic is previewed and
+   * prepared, and only while it is still shown.
+   *   200  the draft's bounded outcome and revision (CREATED / SAVED, or its refusal);
+   *   409  the item changed since the reader saw it (`UNDERSTANDING_ITEM_CHANGED`): nothing was written — read again;
+   *   404  not one of the caller's current items.
+   */
+  async choosePublicTopicSource(userId: string, token: string, ref: unknown, body: unknown): Promise<UnderstandingPublicTopicSourceView> {
+    const value = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null;
+    if (value === null || Object.keys(value).length !== 3 || typeof value.draftId !== 'string' || !EVALUATION_ID.test(value.draftId.toLowerCase())
+      || typeof value.expectedRevision !== 'number' || !Number.isSafeInteger(value.expectedRevision) || value.expectedRevision < 0
+      || !isUnderstandingToken(value.revision)) {
+      throw new BadRequestException('Request must contain exactly one draftId, one expectedRevision and one revision.');
+    }
+    if (!isUnderstandingToken(ref)) throw new NotFoundException('Understanding item not found.');
+    const draftId = value.draftId.toLowerCase();
+    const expectedRevision = value.expectedRevision;
+    const revision = value.revision;
+    return this.guard(async () => {
+      const hypothesis = (await this.ownedActive(userId, token))
+        .find((item) => UNDERSTANDING_SURFACE_STATUSES.includes(item.status) && understandingItemRef(userId, item.id) === ref);
+      if (!hypothesis) throw new NotFoundException('Understanding item not found.');
+      // Only the version the reader is shown now: a topic publishes what they saw, never an older or a later summary.
+      if (understandingRevision(userId, hypothesis.id, hypothesis.version) !== revision) throw this.changed();
+      const rows = await this.repository.setPublicTopicSource(token, draftId, expectedRevision, hypothesis.id, hypothesis.version);
+      const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : this.reject();
+      if (!(UNDERSTANDING_PUBLIC_TOPIC_OUTCOMES as readonly string[]).includes(row.outcome)) this.reject();
+      const n = typeof row.draft_revision === 'string' && /^[0-9]+$/u.test(row.draft_revision) ? Number(row.draft_revision) : row.draft_revision;
+      if (n !== null && (typeof n !== 'number' || !Number.isSafeInteger(n) || n < 1)) this.reject();
+      return { outcome: row.outcome as UnderstandingPublicTopicSourceView['outcome'], draftRevision: n };
     });
   }
 

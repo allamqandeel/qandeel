@@ -249,6 +249,13 @@ export type {
 export type { PublicTopicSection } from './public-field-api';
 export { PUBLIC_TOPIC_SECTIONS, publicEntryLabel } from './public-field-api';
 export { PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX } from './public-compose-api';
+// S8A-05 CP2 — the draft's source, by reference, and its paged items.
+export type {
+  PublicTopicAcknowledgeOutcome, PublicTopicClearOutcome, PublicTopicConversationChoice, PublicTopicItem, PublicTopicItemRole, PublicTopicItemsPage,
+  PublicTopicItemsRead, PublicTopicSource, PublicTopicSourceOutcome, PublicTopicSourceRead, PublicTopicSourceRefusal, PublicTopicSourceResult,
+  PublicTopicUnderstandingOutcome,
+} from './public-compose-api';
+export type { PublicFieldContentItem, PublicFieldContentPage, PublicFieldContentRead } from './public-field-api';
 export type {
   PublicTopicDeleteOutcome, PublicTopicDiscardOutcome, PublicTopicDraft, PublicTopicDraftRead, PublicTopicDraftState, PublicTopicDraftSummary,
   PublicTopicPrepareOutcome, PublicTopicPreview, PublicTopicPreviewRead, PublicTopicPrivacyNote, PublicTopicReadiness, PublicTopicSaveOutcome,

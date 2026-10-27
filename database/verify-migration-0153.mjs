@@ -199,7 +199,16 @@ async function verifyCatalog() {
   // 0168 body byte for byte with ONE added section, `publicTopicDrafts`, before the not-yet-included list (verify-0168
   // A02 proves the same). The 0168 body keeps every claim below.
   const defined0179 = body(migrationText('0179_s8a_05_public_authored_topics_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
-  assert.equal(live, defined0179, 'the live builder is the 0179 re-statement');
+  // RE-ANCHORED by S8A-05 CP2 (migration 0180, validation only): the live builder is the 0180 re-statement, which is the
+  // 0179 body byte for byte with ONE change inside the S8A-05 section: each draft gains its `source` reference
+  // (verify-0180 S08 proves what it prints). Every claim below still holds of the live body.
+  const defined0180 = body(migrationText('0180_s8a_05_publish_from_qandeel_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
+  assert.equal(live, defined0180, 'the live builder is the 0180 re-statement');
+  const cp2 = live.indexOf('                       -- S8A-05 CP2 (0180)');
+  const cp2End = live.indexOf('                   ORDER BY d.created_at, d.id)', cp2);
+  assert.ok(cp2 > 0 && cp2End > cp2, 'the S8A-05 CP2 change is found');
+  assert.equal(live.slice(0, cp2).replace(/,\n$/u, ')\n') + live.slice(cp2End), defined0179,
+    'the live builder is the 0179 re-statement plus exactly the one CP2 source reference');
   const s8a05 = live.indexOf('        -- S8A-05 (0179)');
   assert.ok(s8a05 > 0, 'the S8A-05 section is found');
   assert.equal(live.slice(0, s8a05) + live.slice(live.indexOf("        'notYetIncluded'")), defined0168,
