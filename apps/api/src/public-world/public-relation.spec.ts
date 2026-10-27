@@ -107,7 +107,9 @@ describe('S5-03C — the panel carries explicit relations only', () => {
     publisher_display_label: 'p', published_at: '2026-10-07T10:00:00Z', discussion_post_count: 0, qandeel_response_count: 0 };
   const field = (relations: jest.Mock) => new PublicFieldService({
     field: jest.fn(async () => []), search: jest.fn(async () => []), experience: jest.fn(async () => [PANEL]),
-    content: jest.fn(async () => [{ item_ordinal: 1, item_kind: 'SOURCE_CONTENT', item_text: 'w' }]),
+    // S8A-05 CP2 (re-anchor): the panel's content is the first page of the 0180 paged read of the same items.
+    topicItems: jest.fn(async () => [{ item_count: 1, page: 1, page_count: 1, items: [{ position: 1, role: 'SOURCE_CONTENT', message: null,
+      emphasized: false, gapBefore: false, text: 'w' }] }]),
     // The nearest Experience in the same region is NOT a relation: it comes back as nearby context, never as a line.
     nearby: jest.fn(async () => [entry(5)]), relations,
     // S8A-05 CP1 (re-anchor): the panel also asks for the human titles of what it shows; none here.

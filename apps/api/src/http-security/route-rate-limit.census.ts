@@ -71,6 +71,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /understanding/items/:ref/disagreement': 'AUTHENTICATED',
   'POST /understanding/items/:ref/disagreement/resolve': 'AUTHENTICATED',
   'DELETE /understanding/items/:ref/discussion': 'AUTHENTICATED',
+  // S8A-05 CP2 — this item, at the revision seen, as a Public topic draft's source (0180): it resolves the source, as
+  // setting a conversation source does, so it takes the same strict class. No new class.
+  'POST /understanding/items/:ref/public-topic': 'SECURITY_SENSITIVE',
 
   // Activity & Notifications (A3-01). The attention read is polled while the app is in the foreground (30 s cadence).
   'GET /activity/items': 'AUTHENTICATED',
@@ -260,6 +263,16 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /public/compose/drafts/:draftId/prepare': 'SECURITY_SENSITIVE',
   'POST /public/compose/topics/:experienceId/discard': 'AUTHENTICATED',
   'POST /public/compose/topics/:experienceId/section': 'AUTHENTICATED',
+  // S8A-05 CP2 — «Publish from QANDEEL» (0180). Setting a draft's source resolves up to 10,000 whole committed units of
+  // the author's own conversation before anything is written, the heaviest work a draft command asks, so it takes the
+  // strict class; reading the source and one page of 50 items, clearing the source and the one acknowledgement are
+  // ordinary own acts the database bounds itself, and a reader's page of a served topic is an ordinary read. No new class.
+  'GET /public/compose/drafts/:draftId/source': 'AUTHENTICATED',
+  'PUT /public/compose/drafts/:draftId/source/conversation': 'SECURITY_SENSITIVE',
+  'POST /public/compose/drafts/:draftId/source/clear': 'AUTHENTICATED',
+  'POST /public/compose/drafts/:draftId/source/acknowledge': 'AUTHENTICATED',
+  'GET /public/compose/drafts/:draftId/items': 'AUTHENTICATED',
+  'GET /public/compose/topics/:experienceId/items': 'AUTHENTICATED',
   // S7-01 — the Personal Replay (0169). Preparing a preview derives and seals the canonical historical projection once
   // per selected moment, the heaviest database work a human can ask for here, so it takes the strict class; the draft,
   // its revision, finalizing (a private version, never a distribution), reopening and every read are ordinary own acts

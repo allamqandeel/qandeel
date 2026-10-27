@@ -48,7 +48,10 @@ function fieldRepository(overrides: Partial<Record<keyof PublicFieldRepository, 
     field: jest.fn(async () => [entry(2), entry(5)]),
     search: jest.fn(async () => [entry(5)]),
     experience: jest.fn(async () => [PANEL]),
-    content: jest.fn(async () => [{ item_ordinal: 1, item_kind: 'SOURCE_CONTENT', item_text: 'the public words' }]),
+    // S8A-05 CP2 (controlled re-anchor): the panel's content is the first page of the 0180 paged read, which serves the
+    // same items as the 0145 content read through the same derivation and resolver, 50 at a time.
+    topicItems: jest.fn(async () => [{ item_count: 1, page: 1, page_count: 1, items: [{ position: 1, role: 'SOURCE_CONTENT', message: null,
+      emphasized: false, gapBefore: false, text: 'the public words' }] }]),
     nearby: jest.fn(async () => [entry(5)]),
     // S5-03C (re-anchor): the panel read also asks for the Experience's explicit relations; none by default.
     relations: jest.fn(async () => []),
@@ -182,12 +185,12 @@ describe('S5-03B — the semantic field, search and panel over the same World', 
     expect(served).toEqual({ state: 'SERVED', experience: {
       id: id(2), x: '2000', y: '-2000', meaning: 'meaning 2', region: 'region.2', primaryThemes: ['fear'], secondaryThemes: [],
       publisher: { mode: 'PSEUDONYM', label: 'the publisher' }, publishedAt: '2026-10-06T10:00:00Z', discussionCount: 0, qandeelResponseCount: 0 },
-    content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }],
+    content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }], contentPages: { itemCount: 1, pageCount: 1 },
     nearby: [{ id: id(5), x: '5000', y: '-5000', meaning: 'meaning 5', region: 'region.5' }], relations: [] });
     expect(JSON.stringify(served)).not.toMatch(/view|rank|score|importance|user_id|public_identity_ref/iu);
     await expect(fieldService().experience(TOKEN, 'guess')).resolves.toEqual({ state: 'UNAVAILABLE' });
     await expect(fieldService(fieldRepository({ experience: jest.fn(async () => []) })).experience(TOKEN, id(2))).resolves.toEqual({ state: 'UNAVAILABLE' });
-    await expect(fieldService(fieldRepository({ content: jest.fn(async () => []) })).experience(TOKEN, id(2))).resolves.toEqual({ state: 'UNAVAILABLE' });
+    await expect(fieldService(fieldRepository({ topicItems: jest.fn(async () => []) })).experience(TOKEN, id(2))).resolves.toEqual({ state: 'UNAVAILABLE' });
     const crowded = fieldRepository({ nearby: jest.fn(async () => [entry(5), entry(6), entry(7), entry(8)]) });
     await expect(fieldService(crowded).experience(TOKEN, id(2))).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
@@ -223,9 +226,11 @@ describe('S5-03B — the static boundary of the API', () => {
     const viewer = [...source('public-field.repository.ts').matchAll(/this\.rpc<[A-Za-z]+>\(token, '([a-z_]+_v1)'/gu)].map((m) => m[1]).sort();
     // S8A-05 CP1 (controlled re-anchor): plus migration 0179's three viewer reads — the human title / section of served
     // Experiences, the title search and the search inside one section — on the same viewer token.
-    expect(viewer).toEqual(['read_public_section_topic_matches_v1', 'read_public_semantic_experience_content_v1', 'read_public_semantic_experience_v1', 'read_public_semantic_field_v1',
-      'read_public_semantic_nearby_v1', 'read_public_semantic_relations_v1', 'read_public_topic_headers_v1', 'read_public_topic_title_matches_v1',
-      'search_public_semantic_field_v1']);
+    // S8A-05 CP2 (controlled re-anchor): the panel's unbounded 0145 content read is replaced by the 0180 paged read of the
+    // same items (a topic from a conversation may hold 10,000), on the same viewer token.
+    expect(viewer).toEqual(['read_public_section_topic_matches_v1', 'read_public_semantic_experience_v1', 'read_public_semantic_field_v1',
+      'read_public_semantic_nearby_v1', 'read_public_semantic_relations_v1', 'read_public_topic_headers_v1', 'read_public_topic_items_v1',
+      'read_public_topic_title_matches_v1', 'search_public_semantic_field_v1']);
     expect(source('public-field.repository.ts')).not.toMatch(/server|p_viewer|p_user/u);
   });
 

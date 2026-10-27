@@ -562,12 +562,15 @@ async function verifyControlled(f, cw208) {
     await rejected(() => q(`UPDATE ${SCHEMA}.version_titles SET title = NULL, title_erased_at = now() WHERE experience_version_id = $1`, [f.t1v]), ['55000']);
     await rejected(() => q(`DELETE FROM ${SCHEMA}.experience_section_events WHERE experience_id = $1`, [f.t1]), ['55000']);
     await rejected(() => q(`DELETE FROM ${SCHEMA}.discard_commands WHERE experience_id = $1`, [f.t2]), ['55000']);
-    // F08 a topic holding a non-authored item is not discardable here (S8A-05 CP2).
+    // F08 a topic holding a non-authored item (CP1: not discardable here, left to S8A-05 CP2).
     const [{ experience_id: legacy }] = await (async () => { await as(f.mohamed); return rows('SELECT * FROM public.start_own_public_experience_draft_v1($1)', [randomUUID()]); })();
     await as(f.mohamed);
     assert.equal((await first('SELECT * FROM public.prepare_own_public_experience_package_v1($1, $2, $3::uuid[], $4::uuid[], $5::uuid[])',
       [randomUUID(), legacy, [f.userUnit], [], []])).outcome, 'PREPARED');
-    assert.equal(await discard(f.mohamed, legacy), 'NOT_DISCARDABLE', 'F08 a MY_WORLD topic is not discarded by CP1');
+    // RE-ANCHORED by S8A-05 CP2 (migration 0180, A-2(c) as narrowed by the CP2 controlled amendment): a never-published
+    // topic is discarded whatever its item classes; only a Replay artifact stays REPLAY-DIST-01's (verify-0180 F09 proves
+    // the erasure of every class).
+    assert.equal(await discard(f.mohamed, legacy), 'DISCARDED', 'F08 a MY_WORLD topic is discarded since CP2');
   } catch (error) {
     // The enclosing transaction is aborted and will be rolled back, which restores the seam; report THIS error.
     frozen.failed = true;

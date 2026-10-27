@@ -12,6 +12,7 @@ import { UnderstandingService } from './understanding.service';
  *   DELETE /understanding/items/:ref/discussion — close that discussion focus (guarded, U2)
  *   POST   /understanding/items/:ref/disagreement — explicit disagreement → Contested / Under Review (guarded, U3)
  *   POST   /understanding/items/:ref/disagreement/resolve — explicit agreement → the contest is resolved (guarded, W3-CORR-U)
+ *   POST   /understanding/items/:ref/public-topic — this item, at the revision seen, as a Public topic draft's source (S8A-05 CP2)
  *
  * Identity is the verified token only; no route takes a user id, and `:ref` is an opaque token that resolves only
  * against the caller's own items.
@@ -55,6 +56,14 @@ export class UnderstandingController {
   resolveDisagreement(@Req() request: AuthenticatedRequest, @Param('ref') ref: string, @Body() body: unknown) {
     const { userId, accessToken } = request.authenticatedUser;
     return this.understanding.resolveDisagreement(userId, accessToken, ref, body);
+  }
+
+  /** S8A-05 CP2 — «شارك في العالم العام»: this item, at the revision seen, as the source of one of the reader's topic drafts. */
+  @Post('items/:ref/public-topic')
+  @HttpCode(200)
+  choosePublicTopicSource(@Req() request: AuthenticatedRequest, @Param('ref') ref: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.understanding.choosePublicTopicSource(userId, accessToken, ref, body);
   }
 
   @Delete('items/:ref/discussion')

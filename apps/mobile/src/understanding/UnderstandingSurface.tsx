@@ -12,17 +12,22 @@
  *     out, never filled in. This is a user-facing explanation, not the model's reasoning.
  *   - "Talk to QANDEEL about this" returns the reader to their Conversation with that item as its bounded context.
  *     It is not an editor: nothing is written into the composer and nothing is sent.
+ *   - S8A-05 CP2 — «شارك في العالم العام»: the item's shown summary, at the exact revision shown, becomes the material of
+ *     a PRIVATE Public topic draft, which the composition opens in Public World. Offered only while the summary is shown
+ *     and not under review; a changed item asks the reader to open it again. Its words are the S8A-05 CP2 copy's.
  *
  * The frame is laid out logically (`direction`), so start and end are the reader's in Arabic and English alike, and
  * every colour is the canonical palette's in the reader's effective (non-Analysis) appearance.
  */
-import { useCallback, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, BackHandler, ScrollView, Text, View, findNodeHandle } from 'react-native';
 
 import { AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { UnderstandingDetailView, UnderstandingItemView } from '../runtime-entry';
+import { publicComposeCopy } from '../public-compose/copy';
+import { publicSourceCopy } from '../public-compose/source-copy';
 import { understandingCopy, type UnderstandingCopy } from './copy';
 import type { UnderstandingController } from './understanding-controller';
 
@@ -36,7 +41,15 @@ export interface UnderstandingSurfaceProps {
   readonly onBack: () => void;
   /** "Talk to QANDEEL about this" was recorded: return to the Conversation. */
   readonly onTalk: () => void;
+  /**
+   * S8A-05 CP2 — «شارك في العالم العام»: make a private Public topic draft from the item shown, at its revision. OPENED:
+   * the composition opens it; CHANGED: the item is no longer the one shown; FAILED: nothing was made. Absent: no action.
+   */
+  readonly onShare?: (ref: string, revision: string) => Promise<UnderstandingShareResult>;
 }
+
+export type UnderstandingShareResult = 'OPENED' | 'CHANGED' | 'FAILED';
+type ShareState = 'IDLE' | 'OPENING' | 'CHANGED' | 'FAILED';
 
 /** Craft values of the existing Personal page composition (Settings), not tokens. */
 const HEADER_MIN_HEIGHT = 48;
@@ -109,10 +122,11 @@ function ItemRow({ item, copy, language, palette, writing, onOpen }: {
   );
 }
 
-function Detail({ view, copy, language, palette, writing, talkState, onTalk }: {
+function Detail({ view, copy, language, palette, writing, talkState, onTalk, shareState, onShare }: {
   readonly view: UnderstandingDetailView; readonly copy: UnderstandingCopy; readonly language: ChromeLanguage;
   readonly palette: ConversationPalette; readonly writing: 'rtl' | 'ltr'; readonly talkState: 'IDLE' | 'OPENING' | 'FAILED';
   readonly onTalk: () => void;
+  readonly shareState: ShareState; readonly onShare: (() => void) | null;
 }) {
   const sections: readonly (readonly [string, readonly string[], string])[] = [
     [copy.evidence, view.evidence, 'evidence'],
@@ -171,12 +185,40 @@ function Detail({ view, copy, language, palette, writing, talkState, onTalk }: {
         >
           <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{copy.talk}</Text>
         </Control>
+        {/* S8A-05 CP2: only while the summary is shown and not under review (the server refuses either way). */}
+        {onShare !== null && !view.underReview && view.summary !== null ? (
+          <ShareAction state={shareState} onShare={onShare} language={language} palette={palette} writing={writing} />
+        ) : null}
       </View>}
     </View>
   );
 }
 
-export function UnderstandingSurface({ controller, language, insets, onBack, onTalk }: UnderstandingSurfaceProps) {
+function ShareAction({ state, onShare, language, palette, writing }: {
+  readonly state: ShareState; readonly onShare: () => void; readonly language: ChromeLanguage; readonly palette: ConversationPalette;
+  readonly writing: 'rtl' | 'ltr';
+}) {
+  const source = publicSourceCopy(language);
+  const busy = state === 'OPENING';
+  const problem = state === 'CHANGED' ? source.understandingChanged : state === 'FAILED' ? publicComposeCopy(language).actionUnavailable : null;
+  return (
+    <View testID="qandeel-understanding-share">
+      {problem === null ? null : (
+        <Text accessibilityLiveRegion="polite" testID={`qandeel-understanding-share-${state === 'CHANGED' ? 'changed' : 'failed'}`}
+          style={{ ...typeStyle('supporting'), color: palette.error, paddingStart: ROW_START, paddingEnd: ROW_END, paddingBottom: 4, writingDirection: writing }}>
+          {problem}
+        </Text>
+      )}
+      <Control palette={palette} language={language} accessibilityLabel={source.shareEntry} accessibilityState={{ busy, disabled: busy }} onPress={onShare}
+        testID="qandeel-understanding-share-entry"
+        style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, opacity: busy ? BUSY_OPACITY : 1 }}>
+        <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{source.shareEntry}</Text>
+      </Control>
+    </View>
+  );
+}
+
+export function UnderstandingSurface({ controller, language, insets, onBack, onTalk, onShare }: UnderstandingSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = understandingCopy(language);
@@ -226,6 +268,19 @@ export function UnderstandingSurface({ controller, language, insets, onBack, onT
     });
   }, [controller, onTalk]);
 
+  // S8A-05 CP2 — the share's own answer belongs to the item shown, and goes when another item (or the list) is shown.
+  const [share, setShare] = useState<{ readonly key: string; readonly state: ShareState }>({ key: titleKey, state: 'IDLE' });
+  const shareState: ShareState = share.key === titleKey ? share.state : 'IDLE';
+  const shown = detail?.status === 'READY' ? detail.view : null;
+  const shareShown = useCallback(() => {
+    if (onShare === undefined || shown === null || shareState === 'OPENING') return;
+    const key = titleKey;
+    setShare({ key, state: 'OPENING' });
+    void onShare(shown.ref, shown.revision).catch((): UnderstandingShareResult => 'FAILED').then((result) => {
+      setShare((current) => (current.key !== key ? current : { key, state: result === 'OPENED' ? 'IDLE' : result }));
+    });
+  }, [onShare, shown, shareState, titleKey]);
+
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={UNDERSTANDING_SURFACE_TEST_ID} />;
 
   const title = detail !== null && detail.view !== null ? copy.theme[detail.view.theme] : copy.name;
@@ -233,7 +288,8 @@ export function UnderstandingSurface({ controller, language, insets, onBack, onT
   let body: ReactNode = null;
   if (detail !== null) {
     if (detail.status === 'READY' && detail.view !== null) {
-      body = <Detail view={detail.view} copy={copy} language={language} palette={palette} writing={writing} talkState={state.talk} onTalk={talk} />;
+      body = <Detail view={detail.view} copy={copy} language={language} palette={palette} writing={writing} talkState={state.talk} onTalk={talk}
+        shareState={shareState} onShare={onShare === undefined ? null : shareShown} />;
     } else if (detail.status === 'UNAVAILABLE') {
       body = <Unavailable copy={copy} language={language} palette={palette} writing={writing} onRetry={() => controller.openItem(detail.ref)} />;
     }

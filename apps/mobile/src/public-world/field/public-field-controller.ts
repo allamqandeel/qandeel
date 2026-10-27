@@ -31,7 +31,8 @@
 import { envelopeCenter, projectAddress, visibleFootprint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
 import type { CanonicalWorldAddress } from '../../map/world';
 import type {
-  ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle, PublicTopicSection,
+  ForegroundSignal, PublicAuthoringAnswer, PublicFieldContentPage, PublicFieldContentRead, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel,
+  PublicFieldRectangle, PublicTopicSection,
 } from '../../runtime-entry';
 import {
   PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD, focusField, nearestTo, panField, wholeWorldCamera, zoomField, type PublicFieldCamera,
@@ -43,6 +44,8 @@ export interface PublicFieldTransport {
   /** S8A-05 CP1: with a section, inside that section only. */
   search(query: string, section?: PublicTopicSection): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>>;
   experience(experienceId: string): Promise<PublicAuthoringAnswer<PublicFieldPanel>>;
+  /** S8A-05 CP2 — one page of 50 of a served Experience's content. Absent: only the panel's first page is read. */
+  items?(experienceId: string, page: number): Promise<PublicAuthoringAnswer<PublicFieldContentRead>>;
 }
 
 export type PublicFieldPanelState =
@@ -130,6 +133,11 @@ export interface PublicFieldController {
   target(experienceId: string, view: 'PANEL' | 'DISCUSSION'): void;
   /** S5-04 — the dependent discussion of the focused Experience; null where the host provides none. */
   readonly discussion: PublicDiscussionController | null;
+  /**
+   * S8A-05 CP2 — one page of the focused Experience's content, read now (never kept). ABSENT: it is no longer served
+   * (and leaves the field); UNAVAILABLE: no definite answer.
+   */
+  contentPage(experienceId: string, page: number): Promise<PublicFieldContentPage | 'ABSENT' | 'UNAVAILABLE'>;
   /** Local Back. True when it did something inside Public World; false at the root. */
   back(): boolean;
   retire(): void;
@@ -421,6 +429,19 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
     },
     focus(experienceId) {
       focusOn(experienceId);
+    },
+    async contentPage(experienceId, page) {
+      if (!transport?.items || !live() || state.focus?.id !== experienceId) return 'UNAVAILABLE';
+      const answer = await transport.items(experienceId, page).catch(() => ({ kind: 'NO_ANSWER' as const }));
+      if (!live() || state.focus?.id !== experienceId || answer.kind !== 'ANSWER') return 'UNAVAILABLE';
+      if (answer.value.kind === 'ABSENT') {
+        // No longer served: the same answer as the panel's own read — gone at once, no reason.
+        discussion?.close();
+        forget(experienceId);
+        publish({ focus: { id: experienceId, panel: { status: 'ABSENT' } } });
+        return 'ABSENT';
+      }
+      return answer.value.page;
     },
     openSearch() {
       publish({ search: { ...state.search, open: true } });

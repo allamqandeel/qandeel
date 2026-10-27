@@ -256,14 +256,15 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
 - **S8A-04 closing change (2026-10-26):** **S8A-04 CLOSED / READY FOR PO MERGE DECISION** (2026-10-26; Draft PR #358, not merged; effective from its merge): CP3-D V2 Tier 1 ran once (round 23, USD 0.0177 at peak) and is **NOT ACCEPTED — original criteria failed** (leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150); Tier 2 is **NOT RUN — deferred by explicit Product Owner decision**; the Product Owner's D-9 decision **PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH** replaces T-D2's acceptance for this step only ([amendment §11.9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)), so the T-D2 failure alone does not block the merge or the first launch; the probabilistic disclosure and attribution errors remain (Future Improvements 012 – 016, non-blocking) and V2 gives no absolute privacy guarantee; `QAN-BL-CW-02` tombstoned and `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure) admitted (backlog: 88 items; 42 / 4 / 9 / 33); no security, privacy or deployment gate removed; `SYNTHETIC_ONLY` and `QAN-BL-AI-01` unchanged; no merge without the Product Owner's explicit order. Recorded in the [Task Contract](docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md) §6 – §8.1, amendment §11.8 – §11.10 and the backlog's "S8A-04 closing change".
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-05 — Public World: Write Your Topic (2026-10-26; current task; CP1 delivered on its Draft pull request, at the Product Owner's CP1 review; not merged)
+### S8A-05 — Public World: Write Your Topic (2026-10-26; current task; CP1 MERGED through PR #359 as `7c0356b7` (2026-10-26); CP2 delivered on its Draft pull request, at the Product Owner's CP2 review (2026-10-27); not merged)
 
 - Started 2026-10-26 on `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`
   (the merge of PR #358, 2026-10-26): **S8A-04 is merged**, so its closing change is effective. S8A-05 owns no backlog
   item at kickoff; it read (BG-05) `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01` and `QAN-BL-PROD-09`, and none moves at CP1.
 - WP0 (research), WP1 (design) and WP1-R1 (corrections) were delivered to the Product Owner outside the repository. The
   Product Owner's S8A-05 CP1 order (2026-10-26) approves WP1 with WP1-R1 as the implementation basis and orders CP1 only.
-- **CP1 — Write Your Topic:**
+- **CP1 — Write Your Topic** — **MERGED through PR #359 as `7c0356b7d632ddf0ce8d2773d09e7ad80f5fd366` (2026-10-26)**, so
+  the CP1 amendment is effective. The bullets below are as written at CP1's review:
   - governed by the candidate [S8A-05 Public Authored Topics Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_AUTHORED_TOPICS_CONTROLLED_AMENDMENT_v1.0.md):
     A-1 (Public World Product Definition addendum: direct writing, a human title, one user-chosen section that is not
     geography) and A-2 (CW2-04: the fourth source class `PUBLIC_AUTHORED`; title and section as bounded metadata outside
@@ -281,7 +282,27 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   - Copy Gate `CLOSED` — every row `APPROVED` by the Product Owner (2026-10-26; four rows in the Owner's own Arabic; the nine R2
     rows approved unchanged); R3 (CI): the topic freeze absorbs `40001` / `PT409` into `NOT_PREPARED` and is classified
     absorbed by the 0150 guard. Record: [S8A-05 implementation record](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
-- No paid API and no DeepSeek call. CP2 – CP4 have not started.
+- **CP2 — Publish from QANDEEL («انشر من قنديل»)** (2026-10-27, on `s8a/s8a-05-cp2` from `main` at `7c0356b7`, under the
+  Product Owner's S8A-05 CP2 order):
+  - governed by the candidate [S8A-05 Publish from QANDEEL Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLISH_FROM_QANDEEL_CONTROLLED_AMENDMENT_v1.0.md):
+    A-3 (CA-S8A05-A3 verbatim from WP1-R1 §6.3: personal analytical material in a Public package — the publisher's own
+    QANDEEL replies as whole messages and the shown «فهم قنديل» summary at its exact revision, the publisher the sole
+    approver, mention no veto, one acknowledgement, a closed refusal list) and the WP1-R1 §8 narrowing of A-2(c) (a
+    never-published topic is discarded whatever its item classes). It binds on the merge of the CP2 pull request;
+  - a draft's source is a reference only (session, two ends, the whole messages left out, QANDEEL replies in or out,
+    emphasized messages; or one Understanding item and revision), re-resolved by the server at preview and at freeze
+    through `resolve_personal_range_v1` (0169); one item per whole committed unit, the true order and emphasis sealed at
+    freeze; pages of 50 for the preview, the sealed topic and the reader's panel; a bounded search document (8 KB) and
+    bounded CP3 / CP4 inputs (24 KB / 6 KB) that nothing calls yet; the processing envelope 10,000 units / 8 MB refused
+    before any write; the freeze measured under 3 s at the envelope on local PostgreSQL 17; a reader never sees a
+    conversation position; migration `0180` (not hosted; the next is `0181`);
+  - mobile: «شارك في العالم العام» from the conversation (the S7-02 selection seam) and from a «فهم قنديل» detail; the
+    CP1 editor and drafts reused; the paged preview with speakers (the author's public name, «قنديل»), emphasis, gaps,
+    warnings and the one acknowledgement;
+  - **production publishing stays closed** (the freeze seam answers `NOT_EVALUATED`; CW2-08 untouched);
+  - Copy Gate `CLOSED / APPROVED` by the Product Owner on 2026-10-27 — the 37 new rows verbatim in Arabic and English (three in the Product Owner's own Arabic), 2 reused approvals. Record:
+    [S8A-05 implementation record §11](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
+- No paid API and no DeepSeek call. CP3 – CP4 have not started.
 
 ### Execution direction — 2026-10-20, after S7-05 merge (current; supersedes earlier checkpoints)
 
@@ -702,7 +723,9 @@ An entry authorizes no implementation (BG-07).
 
 ## 7. Forward roadmap
 
-> **S8A-05 CP1 (2026-10-26):** the current task, on `s8a/s8a-05-cp1` from `9459245e` (S8A-04 merged through PR #358); CP1 — Write Your Topic — delivered on its Draft pull request and at the Product Owner's CP1 review (candidate Controlled Amendment A-1 / A-2, migration 0179 not hosted, Copy Gate CLOSED (every row APPROVED by the Product Owner), production publishing closed), not merged; CP2 – CP4 not started (§0).
+> **S8A-05 CP2 (2026-10-27):** the current task, on `s8a/s8a-05-cp2` from `7c0356b7` (S8A-05 CP1 merged through PR #359); CP2 — Publish from QANDEEL — delivered on its Draft pull request and at the Product Owner's CP2 review (candidate Controlled Amendment A-3 + A-2(c) narrowing, migration 0180 not hosted, Copy Gate CLOSED / APPROVED (37 rows, 2026-10-27), production publishing closed), not merged; CP3 – CP4 not started (§0).
+>
+> *(As written at CP1's review:)* **S8A-05 CP1 (2026-10-26):** the current task, on `s8a/s8a-05-cp1` from `9459245e` (S8A-04 merged through PR #358); CP1 — Write Your Topic — delivered on its Draft pull request and at the Product Owner's CP1 review (candidate Controlled Amendment A-1 / A-2, migration 0179 not hosted, Copy Gate CLOSED (every row APPROVED by the Product Owner), production publishing closed), not merged; CP2 – CP4 not started (§0).
 >
 > *(Previous:)* **S8A-04 CP3 (2026-10-25):** the current checkpoint, on `s8a/s8a-04-cp3` from `b0839fd4`; CP2 merged through PR #357 as `b0839fd4` with the placer unbound; CP3 first completes CP2 (the placer binding, amendment §7, and the S4 deferral record, §13.10 / Future Improvement 011), then runs its WP0 (Personal Knowledge in Shared World, `SHARED-CTX-01` / `QAN-BL-CW-02`) to the Product Owner's gate; one pull request to `main` after CP3, not merged. *(Update, same day:)* the placer is bound and its integrated free proof passed (amendment §13.11); its paid confirmation passed (round 20, 34 / 34, 6 calls, USD 0.0012), so CP2 is functionally complete and the Product Owner closed its functional gate; the CP3 controlled amendment was PROPOSED (R3) at the design gate; *(Update, same day:)* the Product Owner approved R3 for implementation with two binding corrections (no AI before consent; every AI call paid by the sender of the causing message), and CP3-A (migration 0176, not hosted) and CP3-B (the authorized-disclosure lane, the judge, the reply plumbing) are implemented locally with free proofs only ([Task Contract](docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md), amendment §10); not pushed, no PR; Copy Gate 0 / 6; no paid call. *(Update, same day:)* under the Product Owner's CP3-C authorization (D-1 APPROVED WITH CONDITIONS; Copy Gate APPROVED 6 / 6), CP3-C (migration 0177, not hosted; the owner's routes; the mobile permission surfaces; the end-to-end and Activity non-disclosure proofs; the emulator check in Arabic and English) is implemented locally (amendment §10.5 – §10.6); not pushed, no PR; CP3-D not started; no paid call. *(Update, 2026-10-26:)* **S8A-04 CLOSED / READY FOR PO MERGE DECISION** (2026-10-26; Draft PR #358, not merged; effective from its merge): CP3-D V2 Tier 1 ran once (round 23, USD 0.0177 at peak) and is **NOT ACCEPTED — original criteria failed** (leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150); Tier 2 is **NOT RUN — deferred by explicit Product Owner decision**; the Product Owner's D-9 decision **PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH** replaces T-D2's acceptance for this step only ([amendment §11.9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)), so the T-D2 failure alone does not block the merge or the first launch; the probabilistic disclosure and attribution errors remain (Future Improvements 012 – 016, non-blocking) and V2 gives no absolute privacy guarantee; `QAN-BL-CW-02` tombstoned and `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure) admitted (backlog: 88 items; 42 / 4 / 9 / 33); no security, privacy or deployment gate removed; `SYNTHETIC_ONLY` and `QAN-BL-AI-01` unchanged; no merge without the Product Owner's explicit order.
 >

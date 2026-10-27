@@ -58,7 +58,7 @@ describe('UnderstandingService', () => {
       listEvidenceUpdates: jest.fn().mockResolvedValue([]), listLifecycleTransitions: jest.fn().mockResolvedValue([]),
       listContestsUnderReview: jest.fn().mockResolvedValue([]), recordDisagreement: jest.fn(),
       listContestHistory: jest.fn().mockResolvedValue([]), resolveDisagreement: jest.fn(),
-      openDiscussion: jest.fn(), closeDiscussion: jest.fn(),
+      openDiscussion: jest.fn(), closeDiscussion: jest.fn(), setPublicTopicSource: jest.fn(),
     } as unknown as jest.Mocked<UnderstandingRepository>;
     confidenceRuntime = { evaluateHypothesisVersion: jest.fn().mockResolvedValue({}), ensureHypothesisVersionEvaluation: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<ConfidenceService>;
     // PROD-OPS-01: the real telemetry service with a captured counter, so the emitted labels are the shipped ones.
@@ -644,6 +644,35 @@ describe('UnderstandingService', () => {
       await expect(service.list(USER, 'token', {})).rejects.toBeInstanceOf(ServiceUnavailableException);
       hypotheses.readEvidenceReliance.mockRejectedValueOnce(new DataApiError(500));
       await expect(service.detail(USER, 'token', understandingItemRef(USER, H1))).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+  // S8A-05 CP2 — «شارك في العالم العام» from a «فهم قنديل» card: the opaque ref resolves only here, at the revision seen.
+  describe('S8A-05 CP2 — this item as a Public topic draft’s source', () => {
+    const DRAFT = 'b2b2b2b2-0000-4000-8000-000000000001';
+    const choose = (ref: string, revision: string, extra: Record<string, unknown> = {}) =>
+      service.choosePublicTopicSource(USER, 'token', ref, { draftId: DRAFT, expectedRevision: 0, revision, ...extra });
+
+    it('sends the item and its exact current version, never its text; the draft answers its own outcome', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4 })]);
+      (repository.setPublicTopicSource as jest.Mock).mockResolvedValue([{ outcome: 'CREATED', draft_revision: 1 }]);
+      await expect(choose(understandingItemRef(USER, H1), understandingRevision(USER, H1, 4))).resolves.toEqual({ outcome: 'CREATED', draftRevision: 1 });
+      expect(repository.setPublicTopicSource).toHaveBeenCalledWith('token', DRAFT, 0, H1, 4);
+      for (const outcome of ['STALE', 'PREPARED', 'UNDERSTANDING_CHANGED', 'UNDERSTANDING_UNDER_REVIEW', 'UNDERSTANDING_WITHHELD', 'SOURCE_UNAVAILABLE']) {
+        (repository.setPublicTopicSource as jest.Mock).mockResolvedValueOnce([{ outcome, draft_revision: null }]);
+        await expect(choose(understandingItemRef(USER, H1), understandingRevision(USER, H1, 4))).resolves.toEqual({ outcome, draftRevision: null });
+      }
+      (repository.setPublicTopicSource as jest.Mock).mockResolvedValueOnce([{ outcome: 'PUBLISHED', draft_revision: null }]);
+      await expect(choose(understandingItemRef(USER, H1), understandingRevision(USER, H1, 4))).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('refuses an older revision (409, nothing written), another reader’s ref (404) and a malformed request (400)', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4 })]);
+      await expect(choose(understandingItemRef(USER, H1), understandingRevision(USER, H1, 3))).rejects.toMatchObject({ response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      await expect(choose(understandingItemRef(OTHER, H1), understandingRevision(OTHER, H1, 4))).rejects.toBeInstanceOf(NotFoundException);
+      for (const extra of [{ text: 'x' }, { hypothesisId: H1 }, { draftId: 'guess' }, { expectedRevision: -1 }]) {
+        await expect(choose(understandingItemRef(USER, H1), understandingRevision(USER, H1, 4), extra)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.setPublicTopicSource).not.toHaveBeenCalled();
     });
   });
 });

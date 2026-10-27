@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { isCanonicalCoordinateText } from './public-spatial-placer';
-import { TOPIC_SECTIONS, type TopicSection } from './public-compose.service';
-import type { PublicFieldContentRow, PublicFieldEntryRow, PublicFieldExperienceRow, PublicFieldRelationRow, PublicTopicHeaderRow } from './public-field.repository';
+import { TOPIC_SECTIONS, topicItemsOf, topicPageOf, type TopicSection } from './public-compose.service';
+import type { PublicFieldEntryRow, PublicFieldExperienceRow, PublicFieldRelationRow, PublicTopicHeaderRow, PublicTopicItemsRow } from './public-field.repository';
 import { PublicFieldRepository } from './public-field.repository';
 
 /**
@@ -24,7 +24,14 @@ export type PublicFieldExperienceView =
       readonly publisher: { readonly mode: 'PSEUDONYM' | 'REAL_NAME'; readonly label: string | null };
       readonly publishedAt: string; readonly discussionCount: number; readonly qandeelResponseCount: number;
     };
-    readonly content: ReadonlyArray<{ readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string }>;
+    /**
+     * The first page (at most 50) of the Experience's content, each item with its 0145 kind. S8A-05 CP2: an item of a
+     * topic made from a conversation or a «فهم قنديل» item also carries the role its topic sealed — the author's own
+     * message, QANDEEL's reply, QANDEEL's understanding or the author's written words — its message ordinal, its
+     * emphasis and whether a gap precedes it. The rest is read page by page (GET …/items?page=N), never all at once.
+     */
+    readonly content: ReadonlyArray<PublicFieldContentItemView>;
+    readonly contentPages: { readonly itemCount: number; readonly pageCount: number };
     readonly nearby: ReadonlyArray<PublicFieldEntryView>;
     /**
      * S5-03C: the Experience's ACTIVE explicit relations, each the OTHER endpoint's served entry and the relation's id.
@@ -32,6 +39,16 @@ export type PublicFieldExperienceView =
      */
     readonly relations: ReadonlyArray<{ readonly relationId: string; readonly other: PublicFieldEntryView }>;
   };
+
+export type PublicTopicItemRole = 'WRITTEN' | 'YOUR_MESSAGE' | 'QANDEEL_REPLY' | 'QANDEEL_UNDERSTANDING';
+export interface PublicFieldContentItemView {
+  readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string;
+  readonly role?: PublicTopicItemRole; readonly message?: number | null; readonly emphasized?: boolean; readonly gapBefore?: boolean;
+}
+/** S8A-05 CP2 — one page of a served Experience's content. */
+export type PublicTopicItemsView =
+  | { readonly state: 'UNAVAILABLE' }
+  | { readonly state: 'SERVED'; readonly itemCount: number; readonly page: number; readonly pageCount: number; readonly items: ReadonlyArray<PublicFieldContentItemView> };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 /** The database's bounds: at most 400 field entries, 20 search results, 3 nearby. */
@@ -165,7 +182,7 @@ export class PublicFieldService {
       const rows = await this.repository.experience(token, experienceId);
       if (!Array.isArray(rows) || rows.length > 1) return unavailable();
       if (rows.length === 0) return { state: 'UNAVAILABLE' as const };
-      const [content, nearby, relations] = await Promise.all([this.repository.content(token, experienceId),
+      const [content, nearby, relations] = await Promise.all([this.repository.topicItems(token, experienceId, 1),
         this.repository.nearby(token, experienceId), this.repository.relations(token, experienceId)]);
       const served = servedOf(rows[0], content, nearby, relations);
       if (served.state !== 'SERVED') return served;
@@ -174,9 +191,35 @@ export class PublicFieldService {
         relations: served.relations.map((relation) => ({ ...relation, other: titled(relation.other, headers) })) };
     });
   }
+
+  /** S8A-05 CP2 — one page of 50 of a served Experience's content, in its sealed order; nothing for anything not served. */
+  items(token: string, experienceId: string, query: unknown): Promise<PublicTopicItemsView> {
+    const page = topicPageOf(query);
+    if (!isUuid(experienceId)) return Promise.resolve({ state: 'UNAVAILABLE' });
+    return this.guard(async () => {
+      const pages = pageOf(await this.repository.topicItems(token, experienceId, page), page);
+      return pages === null ? { state: 'UNAVAILABLE' as const } : { state: 'SERVED' as const, ...pages };
+    });
+  }
 }
 
-function servedOf(row: PublicFieldExperienceRow, content: readonly PublicFieldContentRow[], nearby: readonly PublicFieldEntryRow[],
+const READER_ROLES = ['WRITTEN', 'YOUR_MESSAGE', 'QANDEEL_REPLY', 'QANDEEL_UNDERSTANDING', 'SOURCE_CONTENT', 'ANALYSIS'] as const;
+/** One page of a served Experience's content: the 0145 kind of every item, and the sealed role of a CP2 topic's. */
+function pageOf(rows: readonly PublicTopicItemsRow[], page: number): { itemCount: number; page: number; pageCount: number; items: PublicFieldContentItemView[] } | null {
+  if (!Array.isArray(rows) || rows.length > 1) return unavailable();
+  // The Experience is not served (or went dark between the reads): one neutral absence, never a partial panel.
+  if (rows.length === 0) return null;
+  const [row] = rows;
+  if (!isCount(row.item_count) || row.item_count === 0 || row.page !== page || !isCount(row.page_count) || row.page_count < 1) return unavailable();
+  const items = topicItemsOf(row.items, READER_ROLES, 'READER').map((item): PublicFieldContentItemView => {
+    if (item.role === 'SOURCE_CONTENT' || item.role === 'ANALYSIS') return { ordinal: item.position, kind: item.role, text: item.text };
+    return { ordinal: item.position, kind: item.role === 'QANDEEL_REPLY' || item.role === 'QANDEEL_UNDERSTANDING' ? 'ANALYSIS' : 'SOURCE_CONTENT',
+      text: item.text, role: item.role, message: item.message, emphasized: item.emphasized, gapBefore: item.gapBefore };
+  });
+  return { itemCount: row.item_count, page, pageCount: row.page_count, items };
+}
+
+function servedOf(row: PublicFieldExperienceRow, content: readonly PublicTopicItemsRow[], nearby: readonly PublicFieldEntryRow[],
   relations: readonly PublicFieldRelationRow[]): PublicFieldExperienceView {
   const entry = entryOf(row);
   if (!isTextList(row.primary_themes) || !isTextList(row.secondary_themes)
@@ -184,14 +227,8 @@ function servedOf(row: PublicFieldExperienceRow, content: readonly PublicFieldCo
     || (row.publisher_display_label !== null && typeof row.publisher_display_label !== 'string')
     || typeof row.published_at !== 'string' || !isCount(row.discussion_post_count) || !isCount(row.qandeel_response_count)
     || !Array.isArray(content) || !Array.isArray(relations) || relations.length > PUBLIC_RELATIONS_PER_EXPERIENCE_MAX) return unavailable();
-  // The Experience went dark between the reads: one neutral absence, never a partial panel.
-  if (content.length === 0) return { state: 'UNAVAILABLE' };
-  const items = content.map((item) => {
-    if (!Number.isInteger(item.item_ordinal) || (item.item_kind !== 'SOURCE_CONTENT' && item.item_kind !== 'ANALYSIS') || typeof item.item_text !== 'string') {
-      return unavailable();
-    }
-    return { ordinal: item.item_ordinal, kind: item.item_kind, text: item.item_text };
-  });
+  const first = pageOf(content, 1);
+  if (first === null) return { state: 'UNAVAILABLE' };
   return {
     state: 'SERVED',
     experience: {
@@ -199,7 +236,8 @@ function servedOf(row: PublicFieldExperienceRow, content: readonly PublicFieldCo
       publisher: { mode: row.publisher_label_mode, label: row.publisher_display_label }, publishedAt: row.published_at,
       discussionCount: row.discussion_post_count, qandeelResponseCount: row.qandeel_response_count,
     },
-    content: items,
+    content: first.items,
+    contentPages: { itemCount: first.itemCount, pageCount: first.pageCount },
     nearby: entriesOf(nearby, PUBLIC_NEARBY_MAX).filter((near) => near.id !== entry.id),
     relations: relations.map((relation) => (isUuid(relation?.relation_id) ? { relationId: relation.relation_id, other: entryOf(relation) } : unavailable()))
       .filter((relation) => relation.other.id !== entry.id),

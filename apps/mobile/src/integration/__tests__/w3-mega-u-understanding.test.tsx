@@ -97,7 +97,9 @@ describe('E2E-D-14 — QANDEEL Understanding, a depth of Personal QANDEEL (P4-C1
     expect(style(entry)).toMatchObject({ minWidth: 44, minHeight: 44 });
     // Read before the Settings entry, in both languages: the row is laid out from the reader's start.
     const order = within(row).getAllByRole('button').map((node) => node.props.testID);
-    expect(order).toEqual(['qandeel-understanding-entry', 'qandeel-settings-entry']);
+    // S8A-05 CP2 (controlled re-anchor): the Personal row's second slot now also holds the Share in Public World entry;
+    // the Understanding entry is still read first and Settings last.
+    expect(order).toEqual(['qandeel-understanding-entry', 'qandeel-public-share-entry', 'qandeel-settings-entry']);
     expect(style(row).flexDirection).toBe(LANGUAGE === 'ar' ? 'row-reverse' : 'row');
     // Nothing is read until the reader opens it.
     expect(understandingRequests(h)).toEqual([]);
