@@ -1,14 +1,17 @@
 # QANDEEL — S8A-05 Public World: «اكتب موضوعك» / Write Your Topic — Implementation Record v1
 
-**Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** (§1 – §10) and **CP2 — Publish
-from QANDEEL** (§11)
-**Status:** `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP2
+**Task:** S8A-05 — Public World (Stage 8A). This record covers **CP1 — Write Your Topic** (§1 – §10), **CP2 — Publish
+from QANDEEL** (§11) and **CP3 — Public Semantic Intelligence & Deterministic Spatial Placement** (§12)
+**Status:** `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 MERGED THROUGH PR #360 AS 72898797 (2026-10-27) — CP3
+DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP3 REVIEW GATE — NO NEW COPY — TIER S / TIER P RUN ONCE: NOT ACCEPTED
+— CP3 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED / CLOSED TO USERS` (§12). S8A-05 is not closed: CP4
+has not started. CP2's status as written at its review: `CP1 MERGED THROUGH PR #359 AS 7c0356b7 (2026-10-26) — CP2 DELIVERED ON ITS DRAFT PULL REQUEST — AT THE S8A-05 CP2
 REVIEW GATE — CP2 COPY GATE CLOSED / APPROVED (37 rows, Product Owner, 2026-10-27) — CP2 NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam
 NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not closed: CP3 – CP4 have not started, and BG-08 / BG-09
 are reconciled at S8A-05's last checkpoint, not here. CP1's status as written at its review: `CP1 DELIVERED — R2 REVIEW CORRECTIONS APPLIED — AT THE S8A-05 CP1 FINAL REVIEW GATE — COPY GATE CLOSED (every row
 APPROVED by the Product Owner, 2026-10-26) — NOT MERGED / NOT DEPLOYED / PRODUCTION PUBLISHING CLOSED (freeze seam NOT_EVALUATED; CW2-08 untouched) / CLOSED TO USERS`. S8A-05 is not
 closed: CP2 – CP4 have not started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
-**Date:** 2026-10-26 (CP1); 2026-10-27 (CP2, §11)  
+**Date:** 2026-10-26 (CP1); 2026-10-27 (CP2, §11; CP3, §12)  
 **Branch / base:** `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`, the merge of PR #358
 (S8A-04, merged 2026-10-26)  
 **Authority:** the Product Owner's *S8A-05 CP1 order* (2026-10-26), which approves the S8A-05 WP1 design with its WP1-R1
@@ -627,3 +630,218 @@ CP2 admits, tombstones and re-owns nothing. Read and left as they stand: `QAN-BL
 unpublishable, outside A-3), `QAN-BL-PRIV-05` (Export My Data across worlds — CP2 prints each draft's source reference
 under `publicTopicDrafts`), `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (the source columns live on `topic_drafts`, which is
 `ACCOUNT_CASCADE`). `REPLAY-DIST-01` keeps Replay artifacts.
+
+---
+
+## 12. S8A-05 CP3 — Public Semantic Intelligence & Deterministic Spatial Placement
+
+**Checkpoint:** `S8A-05 CP3 — DELIVERED ON ITS DRAFT PULL REQUEST — AT THE PRODUCT OWNER'S CP3 REVIEW — CANDIDATE CONTROLLED
+AMENDMENT A-4 — MIGRATION 0181 NOT HOSTED — NO NEW COPY — TIER S / TIER P RUN ONCE: NOT ACCEPTED (FABRICATION 3 CONFIRMED BY
+BOTH RATERS; THE DETERMINISTIC HALF MET) — PRODUCTION PUBLISHING CLOSED — NOT MERGED`. S8A-05 is not closed: CP4 has not
+started, and BG-08 / BG-09 are reconciled at S8A-05's last checkpoint, not here  
+**Date:** 2026-10-27  
+**Branch / base:** `s8a/s8a-05-cp3` from `main` at `72898797b2e9596d4c9940fefeca6c987461108b`, the merge of PR #360 (S8A-05
+CP2, merged 2026-10-27) — so the CP2 amendment (A-3 and the A-2(c) narrowing) is effective  
+**Authority:** the Product Owner's *S8A-05 CP3 order* (2026-10-27), which applies the WP1 design with its binding WP1-R1
+corrections; the candidate
+[S8A-05 Public Semantic Placement Controlled Amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-05_PUBLIC_SEMANTIC_PLACEMENT_CONTROLLED_AMENDMENT_v1.0.md)
+(A-4), which binds from this pull request's merge.
+
+Merging, deploying, opening any publication gate, opening Public discussion, starting CP4 and any further paid model call
+each need the Product Owner's explicit approval. None is done here. Every proof in §12.1 – §12.6 and §12.8 is free; the one paid
+call set is the Tier S / Tier P run the Product Owner authorized (§12.7: 100 DeepSeek Flash calls, USD 0.0346). Synthetic
+data only.
+
+**Tier S / Tier P — RUN ONCE (2026-10-27) — NOT ACCEPTED.** Run on head `4e16b455` after GitHub CI passed on it, guard
+round 25 (the Product Owner's ceiling: 100 attempts, USD 0.14): 100 attempts, every one HTTP 200, USD 0.0346 at peak. The
+deterministic half is MET; the raters' half is NOT MET on fabrication (both raters independently found additions in S48,
+S53 and S69; the criterion is 0). Nothing was re-tuned, re-run or relabelled.
+
+### 12.1 Pre-implementation impact census
+
+| Surface | Impact | Handling |
+| --- | --- | --- |
+| S5-03A (0144) interpretation contract | the placement intent becomes a closed region profile; the lens key becomes the dominant sub-region | V2 server commands beside the unchanged 0144 V1 commands; contract `PUBLIC_SEMANTIC_INTERPRETATION_V2`; a non-vocabulary lens key is never placed |
+| S5-03B (0145) placement | the production place is the database's P-dom rule, not a provider | committed through the unchanged 0145 request / commit; the `PublicSpatialPlacer` port stays unbound and refusing; an earlier 0145 place is kept |
+| Verifiers 0144 / 0145 / 0150 / 0175 / 0179 / 0180 | the new family, the new functions, the census of server commands | 0171 / 0174 / 0175 / 0176 re-anchored (each change marked RE-ANCHORED; no assertion weakened); the others pass unchanged |
+| API (`apps/api/src/public-world/`) | interpreter port V2, the DeepSeek adapter, its composition, the repository's V2 RPCs, the publisher's attribution | §12.3 |
+| Mobile / runtime-entry | none: the panel already shows the main and other themes; no region name is shown | NO NEW COPY (§12.6) |
+| SQL classification and grants | 2 new `service_role` commands; every other new function executable by no application role | verifier 0181 B01 – B07 |
+| Accounting / concurrency / retry | one family, one record per attempt; placement under the World singleton lock; a retried publication answers ALREADY_COMMITTED and never moves a place | verifier 0181 P05, K01 / K02; the AI-COST-01 contract |
+
+### 12.2 Database — migration `0181_s8a_05_public_semantic_placement_v1.sql` (not hosted; the next is `0182`)
+
+- **AI-COST-01:** the family `PUBLIC_SEMANTIC_INTERPRETATION` (the ledger CHECK now lists 14 families). The placement has
+  no family.
+- **`public_region_private`** (new private schema; `USAGE` for `service_role` only): `sub_regions` — the immutable
+  vocabulary `QANDEEL_PUBLIC_REGIONS_V1` (46 rows: key, major, ordinal, lattice centre); `region_slots` — append-only, one
+  row per assigned slot of the layout `public_region_dominant_v1`, the lattice point UNIQUE per layout (so no two places
+  are closer than 8,000).
+- **Internal derivations** (executable by no role): the profile rule and dominant sub-region, the spiral slot, the
+  title-free 24 KB package text, the slot assignment.
+- **Server channel** (`service_role`): `read_public_semantic_work_input_v2` (the same admissible work as 0144, served as one
+  bounded text) and `record_public_semantic_work_outcome_v2` (the answer with its region profile; the database derives the
+  dominant sub-region and records it as the 0144 lens key).
+- **Publication-time placement:** `public_region_private.publish_public_experience_with_placement_v1`, executable by no
+  role: under the World singleton lock it assigns the reviewed dominant sub-region's first free slot, commits it through
+  the unchanged 0145 request and commit, and calls the unchanged 0121 publication in the same transaction. Publication is
+  still closed (the CW2-08 seam answers `NOT_EVALUATED`), so production raises `55000` and the placement rolls back with it.
+- Self-assertions G1 – G6 at the end of the migration (vocabulary size, grants, the one coordinate writer, no section,
+  title, alias or popularity in any body).
+
+### 12.3 API (NestJS, `apps/api/src/public-world/`)
+
+- `public-semantic-regions.ts` — the vocabulary and centres (proved identical to the 0181 seed), the strict profile
+  decoder, the dominant rule, the spiral and lattice mirror.
+- `public-semantic-interpreter.ts` — contract V2: a `packageText` input and a region-profile placement intent, decoded
+  strictly.
+- `deepseek-public-semantic-interpreter.ts` — the DeepSeek Flash adapter: JSON Output, closed schemas (no coordinate, no
+  unknown key, sub-region keys as an enum), the instructions of amendment §9, `escapeDeepSeekData` around the package, the
+  configured timeout, `maxRetries: 0`, failures mapped to five bounded kinds; an invalid request never reaches the provider.
+- `public-semantic-interpreter-provider(.config).ts` — the one composition: the test interpreter under `NODE_ENV=test`;
+  otherwise DeepSeek Flash behind `SYNTHETIC_ONLY`, built on first use, through `accountedDeepSeekChatCompletionsClient`
+  under `PUBLIC_SEMANTIC_INTERPRETATION`; 15 s (configurable 1 – 19 s, inside the service's 20 s), 1,024 output tokens, zero
+  retries; no fallback and no synthetic answer.
+- `public-semantic.service.ts` / `.controller.ts` / `.repository.ts` — the publisher's id is the attribution of every
+  attempt (no id, no call); the repository calls the V2 commands.
+- `public-spatial-placer.ts` — unchanged behaviour; its header records that CP3 places through the database.
+
+### 12.4 Free proofs (no model)
+
+- **Verifier 0181** (`npm run verify:public-semantic-placement:integration`, real PostgreSQL 17, rolled back): boundary
+  B01 – B07; the family on the real ledger; geometry V01 – V04 (the vocabulary equals the API file; the nearest centres of
+  different majors 1,068,747 apart; the SQL spiral equals the JS ring walk for slots 0 – 5,000 and 10¹²; the profile rule);
+  the server channel I01 – I03 / R01 (V1 vs V2 text; `42501` for `authenticated`; invalid profiles `22023`; a second answer
+  STALE with the first kept; the input equals 0180's minus the title line; a long topic cut to ≤ 24,576 bytes keeping the
+  written and emphasized lines); placement P01 – P09 (a closed seam → `55000` and nothing placed; the first topic at its
+  centre; a retry ALREADY_COMMITTED with no move; the next one lattice step away; a compound at its dominant centre over
+  1 M from the other; a section that disagrees with the meaning has no effect; an older 0145 place kept with no slot; a
+  non-vocabulary lens refused; append-only and the lattice point UNIQUE); capacity 500 / 2,000 / 5,000 topics in one
+  sub-region (distinct points, contiguous slots, radius 328,028 at 5,000, spacing ≥ 8,000; 133 / 390 / 801 ms); concurrency
+  K01 / K02 (a second connection waits on the singleton lock and never duplicates a slot).
+- **Simulation** (`scripts/s8a-05/cp3/placement-sim.mjs`, results beside it; assumed interpreter errors, no model): on
+  the TEST seeds, triplets 0.951 – 0.959 with the same result in another arrival order, major purity 0.952 – 0.964,
+  sub-region purity about 0.876 (from the assumed 12 % sub-region error), every topic in its dominant sub-region, distant
+  compounds in their dominant major 0.935 – 0.959; section, popularity and retry change nothing; minimum spacing 8,000;
+  DEV and HOLDOUT2 agree.
+- **Adapter and contract tests:** `deepseek-public-semantic-interpreter.spec.ts` (10), `public-semantic.spec.ts` (18, with
+  the new rejection cases: a coordinate inside a region, an unknown or major-only key, weights that do not sum to 1, below
+  0.1 or with three decimals, duplicates, more than three regions, a string weight, a stray lens key),
+  `public-semantic-regions.spec.ts` (5), `accounted-provider-clients.spec.ts` (+1); the root contracts AI-COST-01 (the
+  adapter's frozen blob, the family, the module) and S5-03A (the V2 server commands, the composition).
+
+### 12.5 Privacy and AI-COST
+
+- The interpreter's whole input is the exact public package as one text: no title, no section, no author or alias, no
+  identifier, no Memory, no Personal or Shared knowledge, no unpublished text (amendment F-1).
+- No real person's text reaches DeepSeek: the composition refuses outside `SYNTHETIC_ONLY` (`QAN-BL-AI-01` stays open).
+- Every attempt is one `PUBLIC_SEMANTIC_INTERPRETATION` ledger record paid by the publisher who asked, with no session,
+  turn, World or Shared message; a failed attempt is still one record; there is no retry to leave unaccounted. Nothing
+  logs a package, an answer or a key.
+
+### 12.6 Copy Gate — S8A-05 CP3: `NO NEW COPY`
+
+CP3 adds no user-visible string. Evidence: no file under `apps/mobile/` changes (`git diff --stat origin/main -- apps/mobile`
+is empty); no locale file changes; the panel's existing main and other themes carry the secondary meanings; region keys and
+names are never rendered (amendment F-5). The CP1 / CP2 copy is unchanged. No row is proposed, so nothing awaits approval.
+
+### Product Owner human acceptance after the paid evaluation (2026-10-27)
+
+**Decision:** After reviewing the complete Word report of the 80 actual QANDEEL responses and 20 corrections, the Product Owner explicitly **accepts QANDEEL's answers as correct and suitable for the product** and authorizes the merge of **S8A-05 CP3 / PR #361 without a further quality gate**. **Exactly one future improvement** is admitted: the Public semantic interpreter must respect the source topic's language, especially the 0/15 English outputs that appeared in Arabic. The deferred item is tracked at [Public topic source-language improvement](../future-improvements/QANDEEL_FI_PUBLIC_SEMANTIC_TOPIC_LANGUAGE_v1.md). No other quality improvement is admitted from this round.
+
+**Methodological distinction:** The original preregistered Tier S/P run remains **NOT ACCEPTED** because the two blind raters marked fabrications, and its data, scoring, results and audit trail are unchanged. The human Product Owner's **product acceptance is an explicit override of that gate for this version**, not a claim that the original zero-fabrication criterion passed. No second paid run or prompt/test change occurred. CP4 and production publication remain outside this decision.
+
+### 12.7 Tier S / Tier P — the paid quality evaluation: `RUN ONCE — NOT ACCEPTED`
+
+Prepared in `scripts/s8a-05/cp3/`: `AUTHOR_BRIEF.md` and the independently authored `tier-s-cases.json` (80 packages, 20
+corrections, 40 triplets, 10 compounds; reviewed blind before freezing), `PREREGISTRATION.md`, `RATER_RUBRIC.md`,
+`tier-s-eval.ts`, `tier-s-score.mjs`, `tier-s-simulated.cjs`, `budget.ts` and `launch.mjs`.
+
+**Authorization.** The Product Owner's Tier S/P decision (2026-10-27): ONE run on DeepSeek Flash, synthetic data only, the
+preregistered cases and criteria, at most 100 attempts and USD 0.14, no automatic retry; the authorization committed
+(`4e16b455`, the round 25 lock lifted at exactly that ceiling) and GitHub CI green on that head before the first call.
+
+**The run** (`launch.mjs --live`, head `4e16b455`, a clean tree): 100 attempts (80 proposals, 20 assessments), every one
+HTTP 200 and `finish_reason` stop, model `deepseek-flash`, thinking disabled; 218,962 input tokens (175,616 cache hits,
+43,346 misses), 17,117 output tokens (median 202, at most 246 of 1,024); latency median 2.2 s, p90 2.5 s, at most 3.2 s;
+**USD 0.0346** at the peak rate (the whole run fell in the peak window; budget expected 0.034, ceiling 0.14). The ledger is
+sound: 100 `PUBLIC_SEMANTIC_INTERPRETATION` records, all paid by the synthetic publisher, nothing Shared.
+
+**Deterministic half — MET**
+
+| Criterion | Result | Accept |
+| --- | --- | --- |
+| Major | **78 / 80** (S30 invalid, S39) | ≥ 72 |
+| Sub-region | **76 / 78** (S30, S39) | ≥ 75 % |
+| Corrections, fair → `CONSISTENT` | **10 / 10** | ≥ 9 |
+| Corrections, unsupported → `NOT_SUPPORTED_BY_PACKAGE` | **10 / 10** | ≥ 9 |
+| Tier P similar-closer | **38 / 40** (T34, T35 — both through S39) | ≥ 34 |
+| Compounds in their dominant major | **9 / 10** (S30 invalid) | ≥ 8 |
+| Invalid | **1 / 100** (S30: an answer the strict decoder refused) | ≤ 2 |
+
+Every trap held its major (section labels 3 / 3, injected instructions 4 / 4, thin 2 / 2, near misses 4 / 4, long 3 / 3,
+QANDEEL-heavy 3 / 3). S39 (a new graduate's first weeks as a teacher) was read mainly as work pressure (0.5) with first
+steps second (0.3). A fair correction's corrected profile stayed in the case's major 9 / 10.
+
+**Raters' half — NOT MET** (two independent blind agent sessions, R1 and R2; DeepSeek never rated)
+
+| Criterion | Result | Accept |
+| --- | --- | --- |
+| Fidelity, F = YES from both | **78 / 80** (S30 no proposal; S53) | ≥ 72 |
+| Fabrication, A = YES or unresolved UNSURE from either | **8** — YES from both raters: **S48** (the meaning adds guilt the author never states), **S53** (a theme takes up QANDEEL's reading of anger that the author rejects), **S69** (a theme turns one shared laugh into daily laughter); UNSURE: S14 (a spouse's gender assumed, R1), S32 (disgust named, R1), S33 (injuries called minor, R2), S37 (deadlines "late" where the text says brought forward, both), S59 (a son where the text says a daughter, R1) | **0** |
+| Compounds keep their secondary meaning, C = YES from both | **9 / 10** (S30 no proposal) | ≥ 8 |
+
+The three both-YES additions cannot be resolved by the Product Owner's audit of the UNSURE verdicts, so the evaluation is
+**NOT ACCEPTED as run** whatever that audit decides. **Reported, not criteria:** the meaning's language matched the topic in
+29 / 35 Egyptian, 15 / 15 MSA, 14 / 15 mixed and **0 / 15 English** topics (every English topic was answered in Arabic;
+some Egyptian topics in MSA); both raters also noted gender and small factual slips that they did not count as additions
+(e.g. S06 / S11 masculine forms for a woman writing, S10, S17, S76).
+
+The results and the raters' sheets are kept locally beside the run (`.s8a-05-reports/cp3/tier-s/`, outside the
+repository), with the guard's spend state (`artifacts/evals/s8a-05-cp3/deepseek/`, ignored).
+
+### 12.8 Verification
+
+Every result below was read from its own exit code and full log, locally on Windows with Node 24 and PostgreSQL 17, on the
+final tree, one suite at a time. GitHub CI on the pull request's head is the binding run.
+
+| Gate | Result |
+| --- | --- |
+| Root contracts (`node --test tests/*.test.mjs`) | **1,639 / 1,639 pass**, exit 0 |
+| Database static contracts (`npm run test:database`) | **1,310 / 1,310 pass**, exit 0 |
+| Task-closure governance (`npm run test:task-closure-governance-contract`) | **24 / 24 pass**, exit 0 |
+| API (`npm run test:api`) | **296 suites, 7,035 pass, 1 skipped**, exit 0 |
+| API build and types | `npm run build:api` exit 0; `tsc --noEmit -p apps/api/tsconfig.json` exit 0 |
+| PG17 verifiers, each on a fresh database with every migration through 0181 | **0181, 0180, 0179, 0176, 0175, 0174, 0171, 0169, 0168, 0164, 0150, 0147, 0146, 0145, 0144, 0143 — all pass** (exit 0) |
+| Mobile | **Not run:** CP3 changes no file under `apps/mobile/`; CI runs it on the head |
+| Placement simulation | `placement-sim.mjs`, deterministic, about 3 s; results in `placement-sim-results.txt` (§12.4) |
+
+**Tier S / Tier P harness, zero cost** (every run under the network guard; nothing left the process):
+
+| Run | Result |
+| --- | --- |
+| `launch.mjs --dry` | the guard refuses the first call (`fetch:dry-run`); 0 attempts; the run is INCOMPLETE, as it must be |
+| Live lock | `QANDEEL_EVAL_ROUND=25` without dry / simulated mode: the guard throws at load, "round 25 is not authorized for a live run; nothing was sent" |
+| `--simulate`, oracle stand-in (answers the fixed labels) | 100 attempts; major 80 / 80, sub-region 78 / 78, corrections 10 / 10 + 10 / 10, similar-closer 40 / 40, compounds 10 / 10, invalid 0; ledger sound (100 records, one family, all paid by the synthetic publisher, nothing Shared) — deterministic half MET. It also shows the 40 triplets agree with the fixed labels under P-dom |
+| `--simulate`, lazy stand-in (everything `everyday.moments`, every correction CONSISTENT) | major 6 / 80, sub-region 1 / 78, unsupported corrections 0 / 10, similar-closer 16 / 40 — NOT MET, as it must be |
+| `--simulate` with faults (HTTP 500, a malformed body, a cut-off answer, an invalid answer, a hang) | each fault is exactly one attempt and one ledger record, mapped to `PROVIDER_ERROR` / `INVALID_STRUCTURED_OUTPUT` / `TIMEOUT`, counted invalid (5 / 100), never retried |
+| Rater packet and tally (rehearsal sheets) | the packet carries no label, weight or score; an unresolved `UNSURE` fabrication fails the tally; a written Product Owner overturn resolves it |
+| `budget.ts` | 100 calls, request bytes 9,020 – 11,105; expected USD 0.034, pessimistic 0.127, all-worst-case reservation 0.411; **proposed ceiling 100 attempts and USD 0.14** (PREREGISTRATION.md §5) |
+
+The case set was written by an independent agent session from `AUTHOR_BRIEF.md` alone and reviewed blind by a second
+one before it was frozen (one defect fixed: S59; PREREGISTRATION.md §2).
+
+### 12.9 Deliberately not implemented in CP3
+
+- No paid call beyond the one authorized Tier S / Tier P run; no second run, no re-tuning of the instructions, cases or criteria.
+- No production publishing, no Stage 9, no CW2-08 change, no placement before publication.
+- No edit rules for a published topic and no successor-version placement change (CP4); no Public discussion, no `@qandeel`.
+- No field camera, scale or expansion rule (`LA-SCALE-01`); no old place moved.
+- No other model and no fallback; Replay and Voice untouched.
+
+### 12.10 Backlog (BG-05 for CP3)
+
+CP3 admits, tombstones and re-owns nothing. Read and left as they stand: `QAN-BL-AI-01` (real user data to DeepSeek —
+`SYNTHETIC_ONLY` kept), `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01` / `QAN-BL-PROD-09` (the region slots are bound to a published
+Experience, and nothing can publish yet). The findings of amendment §8 are recorded there; F-2 (the camera) stays with the
+S5-03B open gaps G04 / G05.

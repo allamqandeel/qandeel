@@ -1275,6 +1275,12 @@ jobs:
       # of every class.
       - name: Verify S8A-05 Publish from QANDEEL against real PostgreSQL
         run: npm run verify:publish-from-qandeel:integration
+      # S8A-05 CP3: migration 0181 (Controlled Amendment A-4) - the Public interpretation reads one title-free bounded package
+      # and answers a closed region profile (the dominant sub-region kept as the lens key); a place is assigned only inside
+      # the publication transaction (still closed in production), at the dominant sub-region's next free lattice slot under
+      # the World lock, through the unchanged 0145 commit; similar, compound, retry, older-place, capacity and lock checks.
+      - name: Verify S8A-05 Public semantic placement against real PostgreSQL
+        run: npm run verify:public-semantic-placement:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

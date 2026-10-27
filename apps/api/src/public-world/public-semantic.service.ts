@@ -1,8 +1,9 @@
 import { BadRequestException, Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import {
-  PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, PUBLIC_SEMANTIC_INTERPRETER, SEMANTIC_MEANING_MAX, SEMANTIC_PRIMARY_THEMES,
-  SEMANTIC_SECONDARY_THEMES, areDisjointThemes, decodePublicSemanticAssessment, decodePublicSemanticProposal, isSemanticText,
-  isSemanticThemeSet, type PublicSemanticInterpreter, type PublicSemanticPackageInput, type PublicSemanticPackageItem,
+  PUBLIC_SEMANTIC_INPUT_MAX_BYTES, PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, PUBLIC_SEMANTIC_INTERPRETER, SEMANTIC_MEANING_MAX,
+  SEMANTIC_PRIMARY_THEMES, SEMANTIC_SECONDARY_THEMES, areDisjointThemes, decodePublicSemanticAssessment, decodePublicSemanticProposal,
+  isSemanticText, isSemanticThemeSet, type PublicSemanticInterpreter, type PublicSemanticPackageInput,
 } from './public-semantic-interpreter';
 import type { PublicSemanticInputRow, PublicSemanticReviewRow } from './public-semantic.repository';
 import { PublicSemanticRepository } from './public-semantic.repository';
@@ -57,6 +58,10 @@ type Interpreted = 'RECORDED' | 'INTERPRETATION_UNAVAILABLE' | 'STALE' | 'UNAVAI
  * The interpreter sees the package the database served and nothing else: this service holds no Personal, Shared,
  * memory, Human Intelligence or account context to give it, and a correction's words reach it as the database stored
  * them, not as the client sent them. Nothing here publishes; nothing here is logged.
+ *
+ * S8A-05 CP3 (A-4): the package arrives as one title-free bounded text (≤ 24 KB, migration 0181); the answer's closed
+ * region profile goes to the database, which keeps the dominant sub-region; and every interpreter attempt runs inside
+ * the AI-COST-01 attribution of the human who asked for it (the verified token's user), never the operator's.
  */
 @Injectable()
 export class PublicSemanticService {
@@ -86,7 +91,7 @@ export class PublicSemanticService {
     });
   }
 
-  proposal(token: string, experienceId: string, body: unknown): Promise<PublicSemanticProposalView> {
+  proposal(token: string, experienceId: string, body: unknown, userId?: string): Promise<PublicSemanticProposalView> {
     const { commandId } = commandOf(body, ['commandId']);
     if (!isUuid(experienceId)) return Promise.resolve({ outcome: 'UNAVAILABLE' });
     return this.guard(async () => {
@@ -100,7 +105,7 @@ export class PublicSemanticService {
       }
       if (!isUuid(begun.work_id)) return unavailable();
       if (begun.outcome === 'WORK_OPEN') {
-        const interpreted = await this.interpretProposal(begun.work_id);
+        const interpreted = await this.interpretProposal(begun.work_id, userId);
         if (interpreted !== 'RECORDED') return { outcome: interpreted };
       }
       const [committed] = await this.repository.commit(token, begun.work_id);
@@ -113,7 +118,7 @@ export class PublicSemanticService {
     });
   }
 
-  correction(token: string, experienceId: string, body: unknown): Promise<PublicSemanticCorrectionView> {
+  correction(token: string, experienceId: string, body: unknown, userId?: string): Promise<PublicSemanticCorrectionView> {
     const value = commandOf(body, ['commandId', 'interpretationId', 'meaning', 'primaryThemes', 'secondaryThemes']);
     const secondaryThemes = value.secondaryThemes ?? [];
     if (!isUuid(value.interpretationId) || !isSemanticText(value.meaning, SEMANTIC_MEANING_MAX)
@@ -132,7 +137,7 @@ export class PublicSemanticService {
       }
       if (!isUuid(begun.work_id)) return unavailable();
       if (begun.outcome === 'WORK_OPEN') {
-        const interpreted = await this.assessCorrection(begun.work_id);
+        const interpreted = await this.assessCorrection(begun.work_id, userId);
         if (interpreted !== 'RECORDED') return { outcome: interpreted };
       }
       const [committed] = await this.repository.commit(token, begun.work_id);
@@ -159,39 +164,43 @@ export class PublicSemanticService {
 
   // ------------------------------------------------------------------------------------------- the server channel
 
-  private async interpretProposal(workId: string): Promise<Interpreted> {
+  private async interpretProposal(workId: string, userId: string | undefined): Promise<Interpreted> {
     const rows = await this.repository.workInput(workId);
     const input = packageOf(rows, 'PROPOSAL');
     if (input === null) return 'STALE';
-    const proposal = decodePublicSemanticProposal(await this.call((signal) => this.interpreter.propose(input.package, signal)));
+    const proposal = decodePublicSemanticProposal(await this.call(userId, (signal) => this.interpreter.propose(input.package, signal)));
     if (!proposal) return 'INTERPRETATION_UNAVAILABLE';
     return recorded(await this.repository.recordOutcome(workId, 'PROPOSED', {
-      lensKey: proposal.placementIntent.lensKey, meaning: proposal.meaning, primaryThemes: proposal.primaryThemes,
+      regions: proposal.placementIntent, meaning: proposal.meaning, primaryThemes: proposal.primaryThemes,
       secondaryThemes: proposal.secondaryThemes, explanation: proposal.explanation,
     }).catch(() => null));
   }
 
-  private async assessCorrection(workId: string): Promise<Interpreted> {
+  private async assessCorrection(workId: string, userId: string | undefined): Promise<Interpreted> {
     const rows = await this.repository.workInput(workId);
     const input = packageOf(rows, 'CORRECTION');
     if (input === null || input.correction === null) return 'STALE';
     const correction = input.correction;
     const assessment = decodePublicSemanticAssessment(
-      await this.call((signal) => this.interpreter.assessCorrection({ ...input.package, correction }, signal)));
+      await this.call(userId, (signal) => this.interpreter.assessCorrection({ ...input.package, correction }, signal)));
     if (!assessment) return 'INTERPRETATION_UNAVAILABLE';
-    const none = { lensKey: null, meaning: null, primaryThemes: null, secondaryThemes: null, explanation: null };
+    const none = { regions: null, meaning: null, primaryThemes: null, secondaryThemes: null, explanation: null };
     return recorded(await (assessment.verdict === 'CONSISTENT'
-      ? this.repository.recordOutcome(workId, 'CONSISTENT', { ...none, lensKey: assessment.placementIntent.lensKey })
+      ? this.repository.recordOutcome(workId, 'CONSISTENT', { ...none, regions: assessment.placementIntent })
       : this.repository.recordOutcome(workId, 'NOT_SUPPORTED', none)).catch(() => null));
   }
 
-  /** One bounded interpreter attempt. Any failure — unavailable, refused, timed out — is no answer. */
-  private async call(attempt: (signal: AbortSignal) => Promise<unknown>): Promise<unknown> {
+  /**
+   * One bounded interpreter attempt, attributed to the human who asked (AI-COST-01). Without a user there is no
+   * attribution scope, and an accounted provider refuses before any request. Any failure — unavailable, refused, timed
+   * out — is no answer.
+   */
+  private async call(userId: string | undefined, attempt: (signal: AbortSignal) => Promise<unknown>): Promise<unknown> {
     const controller = new AbortController();
     let timer: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
-        attempt(controller.signal),
+        runWithAiUsageAttribution({ userId: userId ?? '' }, () => attempt(controller.signal)),
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => { controller.abort(); reject(new Error('timeout')); }, SEMANTIC_INTERPRETATION_TIMEOUT_MS);
         }),
@@ -215,14 +224,10 @@ function recorded(rows: ReadonlyArray<{ readonly outcome: string }> | null): Int
 /** The package-only input exactly as the database served it, decoded strictly; null when there is none to serve. */
 function packageOf(rows: readonly PublicSemanticInputRow[], kind: 'PROPOSAL' | 'CORRECTION'):
   { readonly package: PublicSemanticPackageInput; readonly correction: { meaning: string; primaryThemes: string[]; secondaryThemes: string[] } | null } | null {
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const items: PublicSemanticPackageItem[] = [];
-  for (const row of rows) {
-    if (row.work_kind !== kind || !Number.isInteger(row.item_ordinal) || row.item_ordinal < 1 || typeof row.item_text !== 'string'
-      || (row.item_kind !== 'SOURCE_CONTENT' && row.item_kind !== 'ANALYSIS')) return null;
-    items.push(Object.freeze({ ordinal: row.item_ordinal, kind: row.item_kind, text: row.item_text }));
-  }
+  if (!Array.isArray(rows) || rows.length !== 1) return null;
   const [head] = rows;
+  if (head.work_kind !== kind || typeof head.package_text !== 'string' || head.package_text.length === 0
+    || Buffer.byteLength(head.package_text, 'utf8') > PUBLIC_SEMANTIC_INPUT_MAX_BYTES) return null;
   const correction = kind === 'CORRECTION'
     ? (isSemanticText(head.correction_meaning, SEMANTIC_MEANING_MAX) && isSemanticThemeSet(head.correction_primary_themes, SEMANTIC_PRIMARY_THEMES)
       && isSemanticThemeSet(head.correction_secondary_themes, SEMANTIC_SECONDARY_THEMES)
@@ -230,7 +235,7 @@ function packageOf(rows: readonly PublicSemanticInputRow[], kind: 'PROPOSAL' | '
       : null)
     : null;
   if (kind === 'CORRECTION' && correction === null) return null;
-  return { package: Object.freeze({ contract: PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, items: Object.freeze(items) }), correction };
+  return { package: Object.freeze({ contract: PUBLIC_SEMANTIC_INTERPRETATION_CONTRACT, packageText: head.package_text }), correction };
 }
 
 function reviewOf(row: PublicSemanticReviewRow): PublicSemanticReviewView {

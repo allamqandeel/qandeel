@@ -19,7 +19,8 @@ import { PublicComposeController } from './public-compose.controller';
 import { PublicComposeRepository } from './public-compose.repository';
 import { PublicComposeService } from './public-compose.service';
 import { PublicSemanticController } from './public-semantic.controller';
-import { PUBLIC_SEMANTIC_INTERPRETER, createConfiguredPublicSemanticInterpreter } from './public-semantic-interpreter';
+import { PUBLIC_SEMANTIC_INTERPRETER } from './public-semantic-interpreter';
+import { createProductionPublicSemanticInterpreter } from './public-semantic-interpreter-provider';
 import { PublicSemanticRepository } from './public-semantic.repository';
 import { PublicSemanticService } from './public-semantic.service';
 import { PublicFieldController } from './public-field.controller';
@@ -52,6 +53,9 @@ import { PublicWorldService } from './public-world.service';
  * Safety Response Gate and the ONE A3-01 Activity boundary, `ActivityPublisher` (imported from `ActivityModule`, never re-provided);
  * and through migration 0179 (S8A-05 CP1: Write your topic) — eight owner commands and reads and two viewer reads (the
  * human title and section, joined into the field), all on the caller's own token, and nothing on the server channel.
+ * S8A-05 CP3 (migration 0181, Controlled Amendment A-4) binds the semantic interpreter to DeepSeek Flash behind the
+ * SYNTHETIC_ONLY gate and AI-COST-01 (`public-semantic-interpreter-provider.ts`); the spatial placer stays unbound, since
+ * the final place is computed by the database inside the publication transaction.
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],
@@ -59,7 +63,7 @@ import { PublicWorldService } from './public-world.service';
     PublicRelationController, PublicDiscussionController, PublicComposeController],
   providers: [SupabaseAuthService, SupabaseAuthGuard, SupabaseDataApiService, SupabaseServiceRoleApiService, PublicWorldRepository,
     PublicWorldService, PublicAuthoringRepository, PublicAuthoringService, PublicSemanticRepository, PublicSemanticService,
-    { provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredPublicSemanticInterpreter(process.env) },
+    { provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: () => createProductionPublicSemanticInterpreter(process.env) },
     PublicSpatialRepository, PublicSpatialService, PublicFieldRepository, PublicFieldService, PublicRelationRepository, PublicRelationService,
     { provide: PUBLIC_SPATIAL_PLACER, useFactory: () => createConfiguredPublicSpatialPlacer(process.env) },
     SafetyResponseGateService, PublicDiscussionRepository, PublicDiscussionService, PublicQandeelGenerator, PublicQandeelReplyService,

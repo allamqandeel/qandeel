@@ -38,6 +38,8 @@ export const AI_FEATURE_FAMILIES = [
   'SHARED_SPATIAL_PLACEMENT',
   // S8A-04 CP3 (migration 0176): the Shared disclosure judge, paid by the sender of the answered message.
   'SHARED_DISCLOSURE_JUDGE',
+  // S8A-05 CP3 (migration 0181): the Public semantic interpretation, paid by the publisher who asked.
+  'PUBLIC_SEMANTIC_INTERPRETATION',
 ] as const;
 export type AiFeatureFamily = typeof AI_FEATURE_FAMILIES[number];
 
