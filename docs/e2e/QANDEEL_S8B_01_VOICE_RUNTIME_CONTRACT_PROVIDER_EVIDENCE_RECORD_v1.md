@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the run awaits the Product Owner's approval of plan `3fd6a842…` (§9.15); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -1060,3 +1060,88 @@ The energy-floor reading above is not evidence that they are absent.
 - **Model training:** OFF, checked by the Product Owner.
 - **Approval record:** `asr-sm-approval.json` is `APPROVED`, with `modelTrainingOff: true`.
 - **Not approved:** no re-run, no CP3, no PR and no merge.
+
+### 9.17 Speechmatics Enhanced `ar_en` — the one approved run, a preliminary single-speaker test (2026-10-28)
+
+**The run:**
+- `s8b01-cp2-asr-sm-po-r1` at `39119a83`, plan `3fd6a842…`, EU endpoint, run once, no retry.
+- **Spend:** 20 of 20 sessions. Settled USD 0.0345, an upper bound priced on each session's wall time, of the USD 0.25 cap,
+  from the free credit. No reservation was refused or overran.
+- **Approval:** `asr-sm-approval.json` is `CONSUMED`.
+- **Outputs:** gitignored under `artifacts/evals/s8b-01/asr/s8b01-cp2-asr-sm-po-r1/`. They hold the server messages, which
+  hold the transcripts of the Product Owner's read sentences.
+- 19 sessions returned a transcript. Session 20 (overlap) closed normally but returned only empty finals.
+
+**The preregistered verdict: `NOT ACCEPTED`** (4 of 11 rules pass):
+
+| Rule | Result | |
+| --- | --- | --- |
+| every session without error | 19 / 20 with a transcript | fail |
+| Egyptian WER, speaker phone ≤ 0.25 | 0.278 | fail |
+| MSA WER ≤ 0.12 | 0.167 (2 lines) | fail |
+| noise WER ≤ 0.35 | 0.389 (2 lines) | fail |
+| English words ≥ 0.8 | 4 / 10 | fail |
+| names / key terms ≥ 0.8 | 1 / 2 | fail |
+| numbers ≥ 0.8 | 2 / 2 | pass |
+| the intended word of a self-correction ≥ 0.8 | 1 / 1 | pass |
+| first partial p50 ≤ 1000 ms | 951 ms (p95 2417) | pass |
+| end of utterance E p50 ≤ 900 ms | 1700 ms | fail |
+| final after the endpoint A p50 ≤ 300 ms | 0 ms | pass |
+
+Overall WER is 0.290 (47 errors / 162 reference words), CER 0.248.
+
+**What the errors are** (a post-hoc reading by line, not a preregistered measure; it does not change the verdict):
+- **Formatting, not comprehension, makes up 27 of the 47 word errors.** Numbers come back as digits, all of them correct:
+  78345, 3750, 1990, 15 March, the hours 3 and 4. Some words are split or joined differently: `ما نمتش` for `منمتش`,
+  `حولت لك`, `أقول لك`. Also `الأحد` for `الحد`, and `شوفوا` for `شوفه`, which sound the same.
+- **Comprehension errors are 20 of 162 words, about 12 %:**
+  - **Everyday Egyptian (01 – 05):** 3 of 42 words wrong. `بفكر` became `تفكر`, `شغلي` was lost, and `بعيد` became
+    `بعيدة`.
+  - **English inside Egyptian, the main weakness.**
+    - The words are dropped, not misheard: `meeting` and `link` (06), `deadline` and `presentation` (07, where the
+      whole first half became `It.`), `login` (08), and `meeting` again in 19.
+    - Heard: `call` (كول), `PDF` (البي دي إف), `app` (الأب) and `link` (19).
+  - **Names:** `شريف عبد الحميد` was right. `نهى` became `نوال`, although `نهى الشربيني` was in the custom dictionary.
+  - **13:** `كلّم` became `تكلم`, and the last word `الجديد` was lost.
+  - **Numbers, dates, amounts:** all right. **Self-correction (17):** the intended `خمسة` was kept. **Hesitation (16):**
+    the words were right and the filler was kept.
+  - **MSA (14, 15):** no comprehension error. The 3 errors in 14 are the year written as digits.
+- **Noise (18, 19; the Product Owner confirms the noise, §9.16):** one comprehension error more than the same sentence on
+  the speaker phone. 18 lost `امبارح`, which 02 kept. 19 lost `meeting` but kept `link`, where 06 lost both.
+- **Overlap (20, QANDEEL's voice playing; confirmed by the Product Owner):** **no words at all**. Speechmatics returned
+  only empty finals and no end of utterance. One sample cannot show why.
+
+**Speed** (the audio clock, from speech onset / end as measured by energy):
+- **First partial:** p50 951 ms after speech onset, p95 2417 ms.
+- **The last word's final:** p50 1.29 s after speech end (0.67 – 1.51 s). With `max_delay` 1.0 s, a final arrives about
+  1.0 s after the audio it covers.
+- **EndOfUtterance:** p50 1.70 s after speech end (1.03 – 1.89 s), well over the 0.9 s budget, with the 0.5 s silence
+  trigger. The sentence-ending punctuation arrives with it, so A = 0.
+- **Early endpoints:** in 2 of 19 sessions (02, 19) an EndOfUtterance also came inside the sentence, at a reading pause.
+- **What this means for QANDEEL:** in this configuration, Speechmatics' end of utterance cannot be QANDEEL's turn signal.
+  The final text of a turn arrives about 1.3 s after the user stops.
+- `max_delay` (minimum 0.7 s) and the trigger are the configuration's levers. Neither was tested.
+
+**Privacy held as planned:** real-time only, the EU endpoint, model training off (checked by the Product Owner), no batch
+job, and no retry.
+
+**Limits of this test** (§9.13, §9.14):
+- One speaker, one phone, 20 read sentences.
+- MSA, noise and overlap have 2, 2 and 1 lines, so their rates carry very wide uncertainty.
+- The audio is WhatsApp's 16 kbps SILK-wideband Opus with the phone's voice processing, not QANDEEL's own capture. The codec
+  may account for part of the lost English words and of the empty overlap session; this test cannot separate the two.
+- The run shows how Speechmatics did on this audio. It does not show how it does for other users, voices, phones or rooms.
+
+**The recommendation: `NOT READY` for production on this evidence.**
+1. English inside Egyptian, central to QANDEEL's users, lost 6 of 10 English words, and one sentence collapsed.
+2. With QANDEEL's voice playing, nothing was transcribed.
+3. The end of utterance (p50 1.7 s) and the final text (about 1.3 s after speech) are too slow to drive turn-taking in
+   this configuration.
+4. A name in the custom dictionary was misrecognized.
+
+What held: everyday Egyptian, numbers, dates and amounts, self-correction, hesitation, MSA, the first partial in under a
+second, the privacy conditions, and the cost.
+
+`NOT READY` is not a rejection of Speechmatics. A decision to approve it would need a further test on audio of QANDEEL's
+own quality, with the configuration levers above and the English terms in the custom dictionary. That would be a new plan
+and a new approval. The provider decision is the Product Owner's, and ASR remains not selected.

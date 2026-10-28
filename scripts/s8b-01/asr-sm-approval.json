@@ -1,6 +1,6 @@
 {
   "id": "s8b-01-asr-sm-approval",
-  "status": "APPROVED",
+  "status": "CONSUMED",
   "runId": "s8b01-cp2-asr-sm-po-r1",
   "approvedBy": "Product Owner",
   "approvedOn": "2026-10-28",
@@ -10,5 +10,7 @@
   "modelTrainingOff": true,
   "supersedes": "the PENDING approval record of plan version 1 (run s8b01-cp2-asr-sm-r1), never approved; it is not reused",
   "note": "APPROVED (PO FINAL APPROVAL, 2026-10-28): ONE run of s8b01-cp2-asr-sm-po-r1 on plan 3fd6a842…, Enhanced ar_en, the 20 recordings only, cap USD 0.25 from the free credit; the Product Owner checked the workspace's model-training setting OFF. No re-run without a new approval.",
-  "region": "EU1, the Product Owner's account region; the plan's pinned endpoint is the EU real-time host wss://eu.rt.speechmatics.com/v2"
+  "region": "EU1, the Product Owner's account region; the plan's pinned endpoint is the EU real-time host wss://eu.rt.speechmatics.com/v2",
+  "consumedOn": "2026-10-28",
+  "consumedBy": "run s8b01-cp2-asr-sm-po-r1 at 39119a83: 20 of 20 sessions, settled USD 0.0345 (wall-time upper bound) of the USD 0.25 cap; no retry"
 }
