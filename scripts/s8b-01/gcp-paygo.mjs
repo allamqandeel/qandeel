@@ -35,10 +35,13 @@ export function checkGcpPlan(plan) {
 /** The streamGenerateContent URL for one model. */
 export const gcpEndpoint = (plan, modelId) => plan.api.endpoint.replace('{project}', plan.project).replace('{model}', modelId);
 
-/** The documented request: the text verbatim, audio out, a prebuilt voice; nothing the 3.8 TTS models reject. */
-export function gcpRequestBody(text, voice) {
+/**
+ * The documented request: the text verbatim, audio out, a prebuilt voice; nothing the 3.8 TTS models reject. A style
+ * rides only in the part's speechMetadata, never in the spoken text.
+ */
+export function gcpRequestBody(text, voice, style = null) {
   return JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text }] }],
+    contents: [{ role: 'user', parts: [style ? { text, speechMetadata: { style } } : { text }] }],
     generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { voice } } },
   });
 }

@@ -1,0 +1,11 @@
+{
+  "id": "s8b-01-cp2-cloud-approval",
+  "status": "PENDING",
+  "runId": "s8b01-cp2-cloud-r1",
+  "approvedBy": null,
+  "approvedOn": null,
+  "scope": "ONE guarded run of the reviewed CP2 TTS set on Google Cloud (project gen-lang-client-0473671267, global, ADC): 592 streamed calls = 148 texts × gemini-3.8-flash-tts and gemini-3.8-flash-lite-tts × Achird and Sulafat. No retry; the plan's stop rules; no second run.",
+  "capUsd": 2,
+  "planSha256": null,
+  "note": "PENDING until the Product Owner approves the spend explicitly. Approval sets APPROVED, the date and the plan hash; the commit that records the run sets CONSUMED."
+}

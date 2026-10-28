@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,6 +12,9 @@ import { composeBudget, endToEndVerdict, percentile } from '../scripts/s8b-01/la
 import { GUIDANCE_ECHO_MIN_LENGTH, INTERNAL_CONTAINERS, guidanceSentences, measureStream, va2ReleasableLength } from '../scripts/s8b-01/stream-first-token.mjs';
 import { checkPlan, sha256Normalized } from '../scripts/s8b-01/bench-launch.mjs';
 import { audioParts, checkGcpPlan, gcpEndpoint, gcpRequestBody, gcpUsd, gcpWorstUsd, parseSse } from '../scripts/s8b-01/gcp-paygo.mjs';
+import { checkCloudPlan, cloudCalls, gcpStream } from '../scripts/s8b-01/cp2-cloud.mjs';
+import { buildWork, countBy, loadCorpora, reviewWork } from '../scripts/s8b-01/cp2-worklist.mjs';
+import { COMBOS, SECTIONS, grid, parseCloudSamples, styleRatios, summarizeCloud } from '../scripts/s8b-01/cp2-cloud-listen.mjs';
 import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, geminiRequestBody, geminiWorstUsd, playbackStalls, readingAnnotated, renderItem, wavFile, worstAudioSeconds }
   from '../scripts/s8b-01/cp2-providers.mjs';
 
@@ -434,4 +438,122 @@ test('gcp-paygo: the documented request, the SSE stream parser, the audio parts 
   const [flash, lite] = gcpPlan.models;
   assert.ok(Math.abs(gcpUsd(flash.listUsdPerMillion, events[1].usageMetadata) - (12 * 1 + 100 * 18) / 1e6) < 1e-15);
   assert.ok(Math.abs(gcpUsd(lite.promotionalUsdPerMillion, events[1].usageMetadata) - (12 * 0.5 + 100 * 6) / 1e6) < 1e-15);
+});
+
+// ── CP2 full Gemini TTS evaluation on Google Cloud (the Product Owner's order, 2026-10-28) ──────────────────────────────
+const cloudPlan = JSON.parse(readFileSync(join(dir, 'cp2-cloud-plan.json'), 'utf8'));
+const corpora = loadCorpora(dir);
+const cloudWork = buildWork(corpora);
+
+test('cp2-cloud review: the corrected set has no defect; 148 texts, 592 calls; every model, voice and category is covered', () => {
+  assert.deepEqual(reviewWork(cloudWork, corpora.setItems), []);
+  assert.equal(cloudWork.length, 148, 'N04 – N06 no longer rendered (157 - 3), and the duplicate no-style request of each reply dropped (- 6)');
+  const calls = cloudCalls(cloudPlan, dir);
+  assert.equal(calls.length, 592);
+  for (const n of Object.values(countBy(calls, (c) => `${c.model}|${c.voice}`))) assert.equal(n, 148);
+  assert.deepEqual(Object.keys(countBy(calls, (c) => c.category)).sort(), ['CODE_SWITCH', 'DIALECT', 'EMOTION', 'HOMOGRAPH', 'NAME', 'NUMBER', 'REPLY']);
+  for (const e of ['JOY', 'SURPRISE', 'JOKING', 'EMPATHY', 'ADVICE']) assert.equal(calls.filter((c) => c.emotion === e && c.arm === 'EMOTION').length, 8, `${e}: 2 items × 4`);
+  assert.deepEqual(checkCloudPlan(cloudPlan, dir), []);
+});
+
+test('cp2-cloud review: it refuses the r1 gloss, a Latin reading, an inline tag, a style in the text or on a plain arm, and a changed word', () => {
+  const swap = (id, arm, patch) => cloudWork.map((w) => (w.item === id && w.arm === arm ? { ...w, ...patch } : w));
+  const cases = [
+    [swap('H27', 'RENDERED', { text: 'جِدّي (جدّ = grandfather, Egyptian reading) عنده تمانين سنة وصحته كويسة.' }), /annotation mark/u],
+    [swap('N06', 'BASELINE', { text: 'تعمل نور في شركة Microsoft.' }), /Latin word not in the item's text: Microsoft/u],
+    [swap('X02', 'EMOTION', { text: 'الله! <laugh> أخيرًا خلصت المشروع؟ أنا فرحان لك جدًا.' }), /inline-tag bracket|differ in text/u],
+    [swap('X01', 'EMOTION', { style: 'سعيد' }), /short English speechMetadata style/u],
+    [swap('E01', 'BASELINE', { style: 'happy' }), /no style on this arm/u],
+    [swap('H01', 'RENDERED', { text: 'رفعوا العَلَم فوق البيت صباح اليوم.' }), /more than diacritics/u],
+    [swap('D02', 'RENDERED', { text: 'دفعت 2500 جنيه مصري.' }), /digit span/u],
+    [[...cloudWork, { ...cloudWork.find((w) => w.item === 'R01' && w.arm === 'BASELINE'), group: 'EXPRESSION', arm: 'NO_STYLE' }], /the same request as R01 BASELINE/u],
+  ];
+  for (const [work, why] of cases) assert.match(reviewWork(work, corpora.setItems).join('\n'), why);
+});
+
+test('cp2-cloud order: any prefix keeps the four model × voice combinations even and every category reached early', () => {
+  const calls = cloudCalls(cloudPlan, dir);
+  for (const k of [10, 40, 100, 148]) for (const n of Object.values(countBy(calls.slice(0, k * 4), (c) => `${c.model}|${c.voice}`))) assert.equal(n, k);
+  assert.equal(new Set(calls.slice(0, 7 * 4).map((c) => c.category)).size, 7, 'the first seven entries span the seven categories');
+  const firstEmotion = calls.findIndex((c) => c.arm === 'EMOTION');
+  assert.ok(firstEmotion < 100, 'emotions are reached in the first hundred calls (r1 never reached them)');
+});
+
+test('cp2-cloud: the request carries a style only in speechMetadata; the guard refuses the check unapproved; the launcher refuses', () => {
+  assert.deepEqual(JSON.parse(gcpRequestBody('بجد؟', 'Sulafat', 'happy')).contents[0].parts[0], { text: 'بجد؟', speechMetadata: { style: 'happy' } });
+  assert.deepEqual(JSON.parse(gcpRequestBody('بجد؟', 'Sulafat')).contents[0].parts[0], { text: 'بجد؟' });
+  const m = mkdtempSync(join(tmpdir(), 's8b01-cloud-'));
+  copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
+  copyFileSync(join(dir, 'cp2-cloud-plan.json'), join(m, 'cp2-cloud-plan.json'));
+  writeFileSync(join(m, 'cp2-cloud-approval.json'), JSON.stringify({ status: 'PENDING', runId: 'r-cloud', capUsd: 2, planSha256: null }));
+  assert.match(underGuard(m, '', { QANDEEL_S8B_CHECK: 'cp2-cloud', QANDEEL_S8B_RUN_ID: 'r-cloud' }).stderr, /no unconsumed Product Owner approval/u);
+  const approval = JSON.parse(readFileSync(join(dir, 'cp2-cloud-approval.json'), 'utf8'));
+  if (approval.status !== 'PENDING') assert.equal(approval.planSha256, sha256Normalized(join(dir, 'cp2-cloud-plan.json')), 'an approval is bound to this plan');
+  const r = spawnSync(process.execPath, [join(dir, 'cp2-cloud.mjs'), '--live'], { cwd: root, encoding: 'utf8' });
+  assert.equal(r.status, 3);
+  assert.match(r.stderr, /Nothing was sent\./u);
+  const tampered = structuredClone(cloudPlan);
+  tampered.guard.costCapUsd = 3; tampered.guard.budgetUsd.tts = 3; tampered.voices = ['Achird'];
+  const problems = checkCloudPlan(tampered, dir).join(' | ');
+  assert.match(problems, /at most the proposed USD 2/u);
+  assert.match(problems, /the voices Achird and Sulafat/u);
+  assert.match(problems, /the work list has 296 calls/u, 'one voice fewer is a different run');
+});
+
+test('cp2-cloud stream: first audio, usage, the audio bound and an HTTP error, measured against a loopback SSE server', async () => {
+  const pcm = Buffer.alloc(24000 * 2).toString('base64'); // 1 s of audio per event
+  const ev = (o) => `data: ${JSON.stringify(o)}\r\n\r\n`;
+  const audio = ev({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: pcm } }] } }] });
+  const server = createServer((req, res) => {
+    if (req.url === '/429') { res.writeHead(429, { 'content-type': 'application/json' }); res.end('{"error":{"code":429,"status":"RESOURCE_EXHAUSTED"}}'); return; }
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const n = req.url === '/long' ? 6 : 2;
+    let i = 0;
+    const tick = () => {
+      if (i < n) { res.write(audio); i += 1; setTimeout(tick, 20); return; }
+      res.end(ev({ usageMetadata: { promptTokenCount: 9, candidatesTokenCount: 50 } }));
+    };
+    tick();
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const ok = await gcpStream({ url: `${base}/ok`, body: '{}', token: 't', project: 'p', boundSeconds: 10 });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.error, null);
+    assert.equal(ok.chunks, 2);
+    assert.equal(ok.audioSeconds, 2);
+    assert.ok(ok.firstAudioMs !== null && ok.firstAudioMs <= ok.endMs);
+    assert.deepEqual(ok.usage, { promptTokenCount: 9, candidatesTokenCount: 50 });
+    const long = await gcpStream({ url: `${base}/long`, body: '{}', token: 't', project: 'p', boundSeconds: 2.5 });
+    assert.equal(long.cancelledAtBound, true, 'the stream is cancelled past its audio bound');
+    assert.equal(long.audioSeconds, 3);
+    const refused = await gcpStream({ url: `${base}/429`, body: '{}', token: 't', project: 'p', boundSeconds: 10 });
+    assert.equal(refused.status, 429);
+    assert.match(refused.error, /^HTTP 429: .*RESOURCE_EXHAUSTED/u);
+    assert.equal(refused.audioSeconds, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test('cp2-cloud listening: every listed entry is a real (item, arm) of the run; the grid, the summary and the style ratios', () => {
+  const keys = new Set(cloudWork.map((w) => `${w.item}|${w.arm}`));
+  for (const [heading, entries] of SECTIONS) for (const [item, arm] of entries) assert.ok(keys.has(`${item}|${arm}`), `${heading}: ${item} ${arm}`);
+  const listed = new Set(SECTIONS.slice(1).flatMap(([, e]) => e.map(([i, a]) => `${i}|${a}`)));
+  assert.deepEqual([...keys].filter((k) => !listed.has(k)), [], 'every text of the run appears in a section');
+  const header = 'sample,model,voice,group,category,item,arm,dialect,emotion,status,http,first_audio_ms,end_ms,audio_s,rtf,max_gap_ms,stall_ms_200,s_per_char,list_usd,promo_usd,cost_source,error';
+  const csv = [header,
+    'C0001,gemini-3.8-flash-tts,Achird,EXPRESSION,EMOTION,X01,NO_STYLE,EGYPTIAN,JOY,OK,200,600,1200,4.00,0.300,40,0,0.0800,0.001800,0.000900,usage,""',
+    'C0002,gemini-3.8-flash-tts,Achird,EXPRESSION,EMOTION,X01,EMOTION,EGYPTIAN,JOY,OK,200,700,1300,5.00,0.260,40,0,0.1000,0.002250,0.001125,usage,""',
+    'C0003,gemini-3.8-flash-lite-tts,Sulafat,EXPRESSION,EMOTION,X01,NO_STYLE,EGYPTIAN,JOY,ERROR,429,,200,0.00,,0,0,,0.000000,0.000000,usage,"HTTP 429: x, y"'].join('\n');
+  const rows = parseCloudSamples(csv);
+  assert.equal(rows[2].error, 'HTTP 429: x, y', 'a comma inside the error survives');
+  const s = summarizeCloud(rows);
+  assert.equal(s.ok, 2); assert.equal(s.http429, 1); assert.equal(s.audioSeconds, 9);
+  assert.equal(s.listUsdPerAudioMinute, Number(((0.0018 + 0.00225) / 9 * 60).toFixed(5)));
+  const g = grid(rows).get('X01|NO_STYLE');
+  assert.deepEqual(Object.keys(g.cells).sort(), ['gemini-3.8-flash-lite-tts|Sulafat', 'gemini-3.8-flash-tts|Achird']);
+  assert.deepEqual(styleRatios(rows)['gemini-3.8-flash-tts|EMOTION'], { n: 1, p50: 1.25, min: 1.25, max: 1.25 });
+  assert.equal(COMBOS.length, 4);
 });
