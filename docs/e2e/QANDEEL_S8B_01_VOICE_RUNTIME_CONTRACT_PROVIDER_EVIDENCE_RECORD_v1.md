@@ -1,9 +1,9 @@
 # QANDEEL — S8B-01 Voice Runtime Contract & Provider Evidence — Implementation Record v1
 
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B). This record covers **CP1 — the contract, the
-amendments, the benchmark harness and the locator reconciliation** (§1 – §8). CP2, the paid benchmark, and CP3, the
-selection and the closure, have not started.
-**Status:** `S8B-01 CP1 DELIVERED — AT THE PRODUCT OWNER'S CP1 REVIEW (2026-10-28) — NO PRODUCTION CODE — NO PAID CALL (USD 0.00 OF THE USD 10 CAP) — BENCHMARK LOCKED — NO PROVIDER OR VOICE SELECTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS — NOT MERGED`. S8B-01 is not closed: CP2 and CP3 have not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
+amendments, the benchmark harness and the locator reconciliation** (§1 – §8) and **CP2 — the Gemini TTS and provider
+evidence** (§9). CP3, the selection and the closure, has not started.
+**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED, PARTIAL, AT THE PRODUCT OWNER'S CP2 REVIEW (2026-10-28) — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — NO PROVIDER OR VOICE SELECTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is partial (§9.5) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
 **Date:** 2026-10-28  
 **Branch / base:** `s8b/s8b-01-voice-runtime-contract`, from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`. That is the
 merge of PR #363 (S8A-05 CP4 and S8A-05's closing change, merged 2026-10-27).  
@@ -236,3 +236,194 @@ release-readiness gate. None is claimed as tested:
 - the real microphone permission prompt;
 - on-device latency;
 - thermal and battery behaviour.
+
+## 9. CP2 — Gemini TTS & Provider Evidence (2026-10-28)
+
+**Status:** `S8B-01 CP2 DELIVERED — PARTIAL — AT THE PRODUCT OWNER'S CP2 REVIEW`. The one run is consumed: USD 0.1155 of the
+USD 10 cap was spent. No voice or model is selected. Not run: ASR, stage P, the render spike, the expression set and the
+second voice. CP2 is not claimed fully closed, and CP3 has not started.  
+**Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
+**Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
+`artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
+- `report.json`, `samples.csv` and `summary.json`;
+- `audio/S####.wav`;
+- `listening.html`: every valid sample;
+- `listening-pack.html`: a self-contained selection of 48.
+
+### 9.1 The Product Owner's CP2 decisions, and the checks before the first paid call
+
+The decisions:
+- **Models.** Evaluate `gemini-3.8-flash-tts` and `gemini-3.8-flash-lite-tts` only. The choice between them waits for
+  quality, speed and cost.
+- **Architecture unchanged.** DeepSeek Flash is the only brain; Gemini only speaks approved text. There is no Gemini Live
+  brain, and no new Orchestrator, Memory or Accounting.
+- **Retention.** Zero retention is waived for the two models only, by Controlled Amendment **VA-11**
+  ([`QANDEEL_S8B-01_CP2_GEMINI_TTS_RETENTION_EXCEPTION_CONTROLLED_AMENDMENT_v1.0.md`](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_CP2_GEMINI_TTS_RETENTION_EXCEPTION_CONTROLLED_AMENDMENT_v1.0.md)).
+  No training stays required, and no real user data is used. VA-11 does not reopen CP1.
+- **Budget.** USD 10 across every provider, which is not an approval to spend the Gemini credit in full. No automatic
+  retry.
+
+| Check before the first paid call | Result |
+| --- | --- |
+| `GEMINI_API_KEY` reachable, never printed, sent elsewhere or logged | Present at the Windows user scope. The launcher reads it into its own memory and passes it only to the guarded child process. The scrub admits only this key and `DEEPSEEK_API_KEY`. |
+| Model availability for the account | A free metadata GET on each model returned HTTP 200 for both. |
+| Google's current prices and terms, read directly | Pricing page, updated 2026-10-27, paid tier. Input: USD 0.50 per 1M text tokens, both models. Output per 1M audio tokens: USD 9 for Flash, USD 6 for Lite. Audio: 25 tokens per second. "Used to improve our products": **No**. The terms are in VA-11 §3. |
+| Request format | The Interactions API (`/v1beta/interactions`). The text is sent verbatim, a style only in `speech_metadata`, with `stream: true` and `store: false`. There is no legacy prompt preamble the model could read aloud. |
+| Guard | Live mode requires an authorized plan, an APPROVED approval bound to the plan's SHA-256, the matching run id and `--confirm`. It allows https to the two hosts only, and one request per worst-case reservation within each bucket and the cap. The spend state is persisted. |
+| Approval, cap, plan hash | `scripts/s8b-01/cp2-approval.json`: run `s8b01-cp2-r1`, USD 10, plan `2fa39d90…`. It is now **CONSUMED**, and a second `--live` is refused before anything is sent. |
+
+### 9.2 What the run reached
+
+Gemini Tier 1 limits each TTS model to **10 requests per minute and 100 requests per day**. Neither limit was in the plan.
+- The plan paced requests at 5 s, which is 12 a minute, so some requests were refused with HTTP 429. Those were not
+  charged and not retried.
+- After 100 accepted requests in the day, the refusals came three in a row, and the fail-fast rule stopped each model at
+  **112 calls**.
+
+| | Flash | Flash-Lite |
+| --- | --- | --- |
+| Calls | 112 | 112 |
+| Valid samples | 96 | 95 |
+| HTTP 429 | 12 | 12 |
+| Invalid input (§9.4) | 4 | 5 |
+| Voice reached | Achird only | Achird only |
+| Corpus reached | the pronunciation set H01 … R03 (BASELINE, and RENDERED where it differs) | the same |
+
+Not reached on either model:
+- the second voice, Sulafat;
+- the whole expression set: joy, surprise, joking, empathy and advice, under NO_STYLE / PERSONA / EMOTION. So there is no
+  evidence yet on the effect of `speech_metadata`;
+- the replies R01 – R06 (R01 – R03 were refused with HTTP 429).
+
+The 24 samples refused with HTTP 429 stay in the run directory as rows with no audio.
+
+### 9.3 Results
+
+Valid samples only, on synthetic text, measured from the developer's machine. Both columns use the Achird voice.
+
+| Measure | Flash | Flash-Lite |
+| --- | --- | --- |
+| First audio byte, p50 / p95 | 679 / 982 ms | **590 / 750 ms** |
+| Complete synthesis, p50 / p95 | 1349 / 1791 ms | **1023 / 1226 ms** |
+| Real-time factor, p50 / p95 | 0.48 / 0.65 | **0.34 / 0.48** |
+| Largest gap between chunks, p50 / p95 | 51 / 65 ms | 35 / 43 ms |
+| Samples with a playback stall (buffer 0 / 200 ms) | 2 / 0 | 0 / 0 |
+| Valid audio | 280.6 s | 290.4 s |
+| Cost per audio minute, from the reported usage | **USD 0.0136** | **USD 0.0091** |
+
+- **RENDERED against BASELINE.** Timing and cost are the same within noise, for both models.
+- **Audio length per character.** The only outlier, on both models, is D03 `15/3/1990` BASELINE. It is longer because the
+  date is read from digits. Whether it was read *correctly* is a listening question.
+- **Not scored by the harness** (`bench-plan.json` `tts.humanMetrics`): pronunciation, dialect fit, naturalness, and
+  whether words were added or dropped. Those are for the Product Owner's listening at CP3.
+
+**DeepSeek stream probe.** `deepseek-flash` with thinking off, 20 synthetic spoken prompts × 2 rounds. All 40 succeeded,
+all at the peak price, all finishing on `stop`. None was withheld, and none held text at the end.
+
+| Measure | p50 | p95 |
+| --- | --- | --- |
+| Headers | 309 ms | 369 ms |
+| T (first token) | 690 ms | 903 ms |
+| G (first VA-2-releasable chunk, after T) | 136 ms | 243 ms |
+| First releasable chunk, from the request | 826 ms | 1070 ms |
+| Stream end | 1029 ms | 1319 ms |
+| Reply length | 79 characters | 135 characters |
+
+- **By dialect.** Median time to the first releasable chunk: Egyptian 826 ms, MSA 847 ms, Gulf 901 ms, Levantine 943 ms.
+- **Cost.** USD 0.0030 for all 40.
+
+**Stage R.** The corpus-oracle rendering takes less than 0.001 ms per item. The real Speech Rendering layer is
+re-measured at S8B-04.
+
+**Planning budget.** This is not a statistical bound (§6.1 R1-2).
+
+| Partial sum T + G + R + S | p50 | p95 |
+| --- | --- | --- |
+| with Flash-Lite | 1416 ms | 1896 ms |
+| with Flash | 1505 ms | 2128 ms |
+
+The verdict stays `NOT_MEASURED`, because E, A, P and N are missing. These four stages alone already reach the 1500 ms
+p50 target.
+
+*Live-call estimate — **assumptions, not measurements**:*
+- endpointing E: 300 – 500 ms;
+- ASR final A: 100 – 300 ms;
+- stage P: 50 – 100 ms;
+- network and playout N: 100 – 200 ms.
+
+On these assumptions, the first audible audio would be about 2.0 – 2.5 s at p50 with Flash-Lite. That is above the 1.5 s
+target, so the contract §11 levers would be needed: tuning endpointing, speculative generation on a stable interim
+transcript, a shorter first chunk, and a REALTIME `max_tokens`. S8B-05 and S8B-06 measure the real figure.
+
+### 9.4 A harness defect found in the run, and its fix
+
+`renderItem` sent the corpus's expected reading verbatim. For six items that reading is a note for human raters, not
+speech text:
+- H27, H28 and H30 carry a parenthetical English gloss;
+- N04 carries an IPA form, N05 a Latin transliteration, N06 a Latin brand spelling.
+
+So the RENDERED samples of those items asked the model to speak the note:
+- 9 samples are excluded as `INVALID_INPUT`. Their USD 0.0042 stays in the spend;
+- the other 3 were refused with HTTP 429.
+
+The fix:
+- `cp2-providers.mjs`: `readingAnnotated()` detects an annotated reading. The gloss is stripped, and a reading with no
+  Arabic-script form is not rendered.
+- `cp2-analyze.mjs`: `invalidate()` marks the affected samples.
+- A new focused test fails on the old code.
+
+The fix applies to any future run. The consumed run is not repeated.
+
+### 9.5 Not run, and why
+
+| Item | Status | What is missing |
+| --- | --- | --- |
+| Expression set, the `speech_metadata` effect, voice Sulafat, R04 – R06 | **NOT RUN — QUOTA** (Tier 1: 100 requests per model per day) | A second bounded run with a new Product Owner approval. For example: the 42 expression requests × 2 voices = 84 per model, under the daily 100, paced at ≥ 6.5 s, about USD 0.10. Alternatively the Product Owner raises the tier (billing). Not started. |
+| ASSISTED arm | NOT RUN | Not justified by the BASELINE / RENDERED evidence until listening shows a residual error. |
+| ASR (stages E and A) | **NOT RUN — MISSING PREREQUISITE** | Recordings from consenting speakers, and the provider accounts. Synthetic speech is never ASR evidence, and no user voice is used. |
+| Orchestrator stage P | NOT RUN — DEFERRED WITHIN CP2 | A local PostgreSQL. S8B-05 measures it. |
+| Render spike (Replay video feasibility) | **NOT RUN — MISSING PREREQUISITE** | `ffmpeg` is not installed. Installing it needs the Product Owner's approval. |
+
+**ASR provider review.** Each provider's own pages, read 2026-10-28. Zero retention and no training stay **mandatory** for
+ASR; VA-11 does not extend to it.
+
+| Provider | Arabic / Egyptian | Retention / training | Price | Qualifies |
+| --- | --- | --- | --- | --- |
+| Azure AI Speech | `ar-EG`, real-time | Real-time audio is not stored and not used for training. | USD 1 / hour, real-time | **yes**, self-serve |
+| Speechmatics | Global Arabic pack, Egyptian included | Real-time audio is never stored; no training by default. | USD 0.80 / hour, Enhanced | **yes**, self-serve |
+| Deepgram Nova-3 | `ar-EG` | Retained and used for training **by default**, unless each request sends `mip_opt_out=true`. | USD 0.0048 / min (promotional) | only with the opt-out on every request |
+| Google Chirp 3 | `ar-EG`, in Preview | Zero retention is not stated explicitly. | — | not shown |
+| Soniox | Egyptian not documented | — | — | no |
+| OpenAI | Arabic dialects not stated | Zero retention needs sales approval. | — | no |
+| ElevenLabs | — | Zero retention is enterprise-only. | — | no |
+
+### 9.6 Spend
+
+| Bucket | Settled USD | Budget USD |
+| --- | --- | --- |
+| tts (226 reservations: 2 free preflights + 224 calls) | 0.1125 | 4.5 |
+| deepseekStream (40) | 0.0030 | 0.2 |
+| asr | 0 | 3.5 |
+| speechRenderingTools | 0 | 0.3 |
+| **Total** | **0.1155 of 10** | |
+
+- Every one of the 266 reservations was settled.
+- None was refused, none overran its worst case, and there was no retry.
+- Every Gemini cost came from the usage the API reported.
+
+### 9.7 For the Product Owner, at CP3
+
+**What the evidence shows so far.** Flash-Lite is the better candidate on every objective measure: faster first audio, a
+lower real-time factor, steadier chunking, and a third cheaper per minute. Any advantage Flash has can only be in quality.
+`listening-pack.html` and `listening.html` let the pair be compared side by side.
+
+**What the choice needs:**
+1. The Product Owner's listening: Egyptian speech, names, numbers, homographs.
+2. The expression run that r1 did not reach. It is the only evidence on emotion, on `speech_metadata` and on the second
+   voice.
+
+No voice and no model is chosen here.
+
+**Open items:**
+- The Product Owner confirms that AI Studio request logging is **off** for the `QANDEEL` project (VA-11 §3).
+- The pacing and quota of any further run.

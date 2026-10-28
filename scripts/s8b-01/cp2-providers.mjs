@@ -55,9 +55,20 @@ const plain = (w) => w.replace(/[ً-ْٰ.,!?؟،؛:]/gu, '');
  * Applies the corpus's expected reading to the target only. A homograph or name: the first occurrence of the target is
  * replaced by its selectively diacritized form. A number: the number span — with the word after it when that word's stem
  * appears in the expected reading — is replaced by the spelled reading. Anything else is unchanged.
+ *
+ * Only an Arabic-script reading is ever sent. The corpus annotates some readings for human raters with a parenthetical
+ * gloss or a Latin / IPA form ("جِدّي (جدّ = grandfather, …)", "jɑ̃ pjɛʁ (French name)"). Run s8b01-cp2-r1 sent those
+ * annotations verbatim, so its RENDERED samples of the items whose reading readingAnnotated() flags are invalid (CP2
+ * record §9.4). The gloss is now stripped, and a reading with no Arabic-script form is not rendered.
  */
+export function readingAnnotated(expected) {
+  return typeof expected === 'string' && /[()=A-Za-zɐ-ʯ]/u.test(expected);
+}
 export function renderItem(item) {
-  if (item.target && item.expected) return item.text.replace(item.target, item.expected);
+  if (item.target && item.expected) {
+    const reading = item.expected.replace(/\s*\([^)]*\)/gu, '').trim();
+    return !reading || readingAnnotated(reading) ? item.text : item.text.replace(item.target, reading);
+  }
   if (/^D\d+$/u.test(item.id) && item.expected) {
     const m = item.text.match(NUMBER_SPAN);
     if (!m) return item.text;

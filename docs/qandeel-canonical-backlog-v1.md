@@ -5452,6 +5452,19 @@ from its merge).** This is S8B-01's BG-05 kickoff record. S8A-05 is merged throu
 - **Not admitted at CP1:** the iOS properties the cloud Simulator cannot prove (D-9). They are listed in the S8B-01 record §8
   and are admitted at S8B-08, owned by the Stage 9 release-readiness gate, with their final list.
 - **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
+- **Index at S8B-01 CP1: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
+
+**S8B-01 CP2 (2026-10-28; on `s8b/s8b-01-cp2` from `main` at `de774cfd`, the merge of PR #364, S8B-01 CP1; effective from
+its merge).** Gemini TTS & provider evidence under the Product Owner's CP2 order: Controlled Amendment VA-11 and one
+consumed bounded run, USD 0.1155 of the USD 10 cap (S8B-01 record §9).
+- **`QAN-BL-VOICE-01` worked, not delivered:** owner `Stage 8B — Voice Runtime` and `DEFERRED — OWNED` unchanged. No
+  provider, model or voice is selected; CP3 selects.
+- **Carried inside Stage 8B, not admitted:** the VA-11 §4 production obligations (`store: false`, the server-only key, the
+  Voice disclosure naming Google, the re-verification of Google's terms) bind S8B-04, which implements Qandeel's voice under
+  `QAN-BL-VOICE-01`; the CP2 items NOT RUN (record §9.5: the expression set, the second voice, ASR, stage P, the render
+  spike) stay with S8B-01 for CP3. None leaves Stage 8B, so none is cross-task residue (BG-06).
+- **Read and left unchanged:** `QAN-BL-AI-01` (`SYNTHETIC_ONLY`: CP2 sent only the invented corpus).
+- **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
 - **Latest index: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
 
 ## 8. What is deliberately not in this backlog

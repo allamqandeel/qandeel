@@ -10,7 +10,7 @@ import { corpusRates, errorRates, normalizeArabic } from '../scripts/s8b-01/arab
 import { composeBudget, endToEndVerdict, percentile } from '../scripts/s8b-01/latency-model.mjs';
 import { GUIDANCE_ECHO_MIN_LENGTH, INTERNAL_CONTAINERS, guidanceSentences, measureStream, va2ReleasableLength } from '../scripts/s8b-01/stream-first-token.mjs';
 import { checkPlan, sha256Normalized } from '../scripts/s8b-01/bench-launch.mjs';
-import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, geminiRequestBody, geminiWorstUsd, playbackStalls, renderItem, wavFile, worstAudioSeconds }
+import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, geminiRequestBody, geminiWorstUsd, playbackStalls, readingAnnotated, renderItem, wavFile, worstAudioSeconds }
   from '../scripts/s8b-01/cp2-providers.mjs';
 
 // S8B-01 CP1 — the non-production voice benchmark harness (scripts/s8b-01/). This contract proves, at zero cost and with
@@ -329,6 +329,23 @@ test('CP2: the RENDERED arm changes the target only, from the corpus expected re
   assert.equal(renderItem(by.D05), 'فاضل تلات أيام على الامتحان.');
   assert.equal(renderItem(by.D07), 'المسافة ثلاثة كيلومترات ونصف.');
   assert.equal(renderItem(by.R01), by.R01.text, 'no target, no change');
+});
+
+test('CP2 run r1 defect: a rater gloss or a Latin / IPA reading is never sent as speech text', () => {
+  const set = JSON.parse(readFileSync(join(dir, 'corpus', 'tts-pronunciation-set.json'), 'utf8'));
+  const all = [...set.homographs, ...set.names, ...set.numbers, ...set.dialect_sentences, ...set.code_switch, ...set.replies];
+  const by = Object.fromEntries(all.map((i) => [i.id, i]));
+  assert.equal(renderItem(by.H27), 'جِدّي عنده تمانين سنة وصحته كويسة.', 'the gloss is stripped');
+  assert.equal(renderItem(by.H28), 'الموضوع ده جَدّ مش هزار.');
+  assert.equal(renderItem(by.N04), by.N04.text, 'an IPA reading has no Arabic-script form: not rendered');
+  assert.equal(renderItem(by.N05), by.N05.text);
+  assert.equal(renderItem(by.N06), by.N06.text, 'a Latin brand spelling is not rendered');
+  for (const i of all) {
+    const added = renderItem(i).replace(/[A-Za-z]+/gu, (w) => (i.text.includes(w) ? '' : w));
+    assert.ok(!readingAnnotated(added), `${i.id}: no annotation reaches the speech text`);
+  }
+  assert.deepEqual(all.filter((i) => i.target && readingAnnotated(i.expected)).map((i) => i.id), ['H27', 'H28', 'H30', 'N04', 'N05', 'N06'],
+    'the six items whose r1 RENDERED samples are excluded as invalid');
 });
 
 test('CP2: WAV files are valid mono 16-bit PCM, and playback stalls are counted against real time', () => {

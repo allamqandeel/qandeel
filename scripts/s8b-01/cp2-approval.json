@@ -1,6 +1,6 @@
 {
   "id": "s8b-01-cp2-approval",
-  "status": "APPROVED",
+  "status": "CONSUMED",
   "runId": "s8b01-cp2-r1",
   "approvedBy": "Product Owner",
   "approvedOn": "2026-10-28",
@@ -9,5 +9,21 @@
   "capNote": "USD 10 across every provider together; not an approval to spend the Gemini account credit in full. No automatic retry.",
   "planSha256": "2fa39d907982af7c28290e7766a43d21a6733ffd7b102042c17defb57919401b",
   "privacyException": "Zero Data Retention waived for Gemini TTS, the two models above only (Controlled Amendment VA-11); synthetic text only; store: false.",
-  "consumedNote": "Set to CONSUMED, with the run’s head and spend, by the commit that records the run; the launcher and the guard then refuse any further live run."
+  "consumedNote": "Set to CONSUMED, with the run’s head and spend, by the commit that records the run; the launcher and the guard then refuse any further live run.",
+  "consumed": {
+    "runId": "s8b01-cp2-r1",
+    "head": "1fe1eb9cb03053f63f5a425ebe0ce86ee9557f72",
+    "startedAt": "2026-10-28T06:10:07.586Z",
+    "finishedAt": "2026-10-28T06:30:11.564Z",
+    "settledUsd": 0.115475,
+    "byBucket": {
+      "tts": 0.112522,
+      "deepseekStream": 0.002953
+    },
+    "reservations": 266,
+    "refused": 0,
+    "overruns": 0,
+    "retries": 0,
+    "outcome": "Both Gemini TTS models stopped at 112 calls each on the Tier 1 quota of 100 requests per day per model (24 HTTP 429 in all, uncharged). DeepSeek 40 / 40. Record §9."
+  }
 }
