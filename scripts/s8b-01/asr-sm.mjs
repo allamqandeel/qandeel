@@ -98,11 +98,13 @@ export function sessionCeilingUsd(plan, arm, audioMs) {
 /**
  * One real-time session. The audio (plus `tailSilenceMs` of silence) is sent in `chunkMs` binary frames at real-time
  * pace; then EndOfStream. Every server message is kept with `t`, the ms since the first audio frame was sent, which is
- * the audio clock of the recording. For an arm with `forceEndOfUtteranceAfterSilenceMs` (Melia 1 has no silence
- * trigger), the client sends ForceEndOfUtterance that long after the measured speech end, as QANDEEL's own VAD would.
+ * the audio clock of the recording. `forces` ([{ atMs, timestampS }], ascending; or the single legacy `forceAtMs`) are
+ * QANDEEL's own endpoint decisions: each ForceEndOfUtterance is sent once the audio up to `atMs` has been sent, with the
+ * optional `timestamp` (s), and its send instant is kept in `forcesSent` on the same clock.
  */
-export async function smSession({ url, apiKey, pcm, rate, start, chunkMs = 20, tailSilenceMs = 2000, timeoutMs, forceAtMs = null }) {
-  const out = { events: [], error: null, closeCode: null, seqSent: 0, recognitionStartedMs: null };
+export async function smSession({ url, apiKey, pcm, rate, start, chunkMs = 20, tailSilenceMs = 2000, timeoutMs, forceAtMs = null, forces = null }) {
+  const out = { events: [], error: null, closeCode: null, seqSent: 0, recognitionStartedMs: null, forcesSent: [] };
+  const pending = forces ? [...forces] : forceAtMs === null ? [] : [{ atMs: forceAtMs }];
   const per = Math.round((rate * chunkMs) / 1000);
   const total = new Int16Array(pcm.length + Math.round((rate * tailSilenceMs) / 1000));
   total.set(pcm);
@@ -128,14 +130,18 @@ export async function smSession({ url, apiKey, pcm, rate, start, chunkMs = 20, t
       if (m.message !== 'RecognitionStarted') return;
       out.recognitionStartedMs = Math.round(performance.now() - t0);
       audio0 = performance.now();
-      let forced = forceAtMs === null;
       for (let i = 0, k = 0; i < total.length && !finished; i += per, k += 1) {
-        const wait = audio0 + k * chunkMs - performance.now();
+        // A chunk leaves when its audio is complete, as from a microphone: now() is then the audio clock (§9.19).
+        const wait = audio0 + (k + 1) * chunkMs - performance.now();
         if (wait > 0) await new Promise((r) => setTimeout(r, wait));
         const chunk = total.subarray(i, Math.min(i + per, total.length));
         ws.send(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength));
         out.seqSent += 1;
-        if (!forced && k * chunkMs >= forceAtMs) { ws.send(JSON.stringify({ message: 'ForceEndOfUtterance' })); forced = true; }
+        while (pending.length && (k + 1) * chunkMs >= pending[0].atMs) {
+          const f = pending.shift();
+          ws.send(JSON.stringify({ message: 'ForceEndOfUtterance', ...(f.timestampS !== undefined ? { timestamp: f.timestampS } : {}) }));
+          out.forcesSent.push({ atMs: f.atMs, t: now() });
+        }
       }
       if (!finished) ws.send(JSON.stringify({ message: 'EndOfStream', last_seq_no: out.seqSent }));
     };

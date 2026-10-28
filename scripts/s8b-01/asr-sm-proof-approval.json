@@ -1,0 +1,12 @@
+{
+  "id": "s8b-01-asr-sm-proof-approval",
+  "status": "PENDING",
+  "runId": "s8b01-cp2-asr-sm-proof-r1",
+  "approvedBy": null,
+  "approvedOn": null,
+  "scope": "ONE guarded run of the final ASR engineering proof: 12 sessions (6 overlap, 6 latency), Enhanced ar_en, max_delay 0.7, VAD + ForceEndOfUtterance, EU real-time endpoint, no retry.",
+  "capUsd": 0.1,
+  "planSha256": null,
+  "modelTrainingOff": null,
+  "note": "PENDING: the Product Owner approves the plan hash, the USD 0.10 cap and the run, and confirms model training is off. Until then --live is refused."
+}

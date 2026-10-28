@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed and not run (§9.18); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) is prepared and awaits approval, not run (§9.19); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -1255,3 +1255,133 @@ concurrent calls. That is a commercial setting, not a technical limit.
 **Status:**
 - ASR is not selected; the Speechmatics decision awaits the Product Owner after the proof above, if it is approved.
 - No paid call has been made since §9.17.
+
+### 9.19 The final ASR engineering proof — prepared, awaiting the Product Owner's approval (2026-10-28)
+
+**The Product Owner's order** (review of §9.18), which changes the §9.18 proposal:
+- 12 sessions, 6 overlap and 6 latency. **Sample 20 is not repeated.**
+- Speechmatics Enhanced `ar_en` only, `max_delay` 0.7, with `ForceEndOfUtterance` and a VAD.
+- The latency lines include thinking pauses and self-corrections: "لا نريد تسريع الرد على حساب قطع كلام المستخدم".
+- The accuracy and no-word-loss criteria are kept. The actual time to answer a `ForceEndOfUtterance` is measured.
+- **Synthetic mixes do not prove the phone's echo canceller.** That proof stays for the device-call phase.
+- **If the proof passes**, the recommendation is Speechmatics for production integration, with on-device barge-in proven
+  as a pre-launch condition. That is not a declaration that production testing is complete.
+- Cap USD 0.10 from the free credit. No re-run or expansion without approval.
+
+**The plan:**
+- **The files:**
+  - plan `scripts/s8b-01/asr-sm-proof-plan.json`, SHA-256
+    **`6ba458f4ced2c81f1d658367d473eeba0756b465c7786b4ce38ec8fbee158b74`**;
+  - approval `asr-sm-proof-approval.json`, `PENDING`, run id `s8b01-cp2-asr-sm-proof-r1`.
+- **The harness** (operator-only, never imported by production code):
+  - `asr-sm-proof.mjs`, with `--plan-check` and `--live --confirm <runId>`;
+  - its guarded child `asr-sm-proof-run.mjs`;
+  - the guard check `asr-sm-proof` in `spend-guard.cjs`: its own plan and approval pair, the EU real-time host only, one
+    WebSocket per reservation, every other provider key scrubbed.
+- **The arm `ENHANCED_AR_EN_FAST`:**
+  - `model enhanced`, `language ar_en`, partials on;
+  - `max_delay` 0.7 (Speechmatics' minimum), `max_delay_mode flexible` kept for numbers;
+  - `conversation_config.end_of_utterance_silence_trigger` **0**, which turns Speechmatics' own trigger off. QANDEEL's
+    endpoint is then the only one, and every EndOfUtterance answers a force;
+  - the same vocabulary as §9.17, USD 0.80 / hour.
+
+**The endpoint: two decisions kept apart**, so that a fast final never cuts the user:
+1. **FINALIZE.** A causal energy VAD runs on the audio as it is sent: 20 ms frames, threshold 300, armed after 100 ms of
+   speech. After **500 ms** of silence it sends `ForceEndOfUtterance`, with the silence start as `timestamp`. This happens
+   at a thinking pause too, and the VAD re-arms on new speech.
+2. **COMMIT.** The Conversation Orchestrator commits the turn only after a longer silence. S8B-05 sets that value by
+   controlled configuration. In this proof it is computed locally and reported, never sent.
+
+**The commit cut table** (local, all 20 recordings; a recording is "cut" when the silence ends a turn before the measured
+speech end):
+
+| Commit silence (ms) | Recordings cut |
+| --- | --- |
+| 500 | 05, 09, 17 |
+| 600 | 05, 17 |
+| 800 | none |
+| 1000 | none |
+| 1200 | none |
+
+The internal pauses behind it: 05 780 ms, 17 600 ms, 09 580 ms.
+
+**The 12 sessions:**
+- **OVERLAP, 6 sessions.** Lines 01 and 04, which §9.17 transcribed with no word error, so a change comes from the overlap
+  and not from the line. Each is mixed locally with QANDEEL's voice (`C0177.wav`, pinned by hash):
+
+  | Variant | QANDEEL's voice | Gated |
+  | --- | --- | --- |
+  | `RESIDUAL_M25` | 25 dB under the speech, for the whole line: a stand-in for the echo canceller's residual | yes |
+  | `BARGE_IN_400` | at the speech's level until 0.4 s after the user starts, then stopped: the barge-in path | yes |
+  | `FULL_0DB` | at the speech's level for the whole line: the room condition | reported only |
+
+  The endpoints are computed on the clean speech. On the phone the VAD runs after the echo canceller (§2, §4.4), so
+  QANDEEL's own voice never arms it. The mixes clip at most 3 samples.
+- **LATENCY, 6 sessions.** Lines 02, 05, 09, 11, 16 and 17, with no mix:
+  - thinking or reading pauses (05, 17, 09; 02 had a mid-sentence EndOfUtterance in §9.17);
+  - a self-correction (17) and hesitation (16);
+  - numbers spoken digit by digit (11).
+
+  The forces fall at 4720 (02); 2080 and 5520 (05); 1980 and 4280 (09); 4180 (11); 6120 (16); 2200 and 4400 (17). That is
+  three forces inside a sentence, at a pause, and every end-of-speech force 500 ms after the measured speech end.
+- **The inputs are pinned:** the recording script hash, the eight WAV hashes from `prepared.json`, and QANDEEL's file. The
+  plan check refuses any change.
+
+**Preregistered acceptance** (`plan.acceptance`; every item is reported, passed or not):
+1. Every gated session ran and returned a transcript (10).
+2. Overlap `RESIDUAL_M25` and `BARGE_IN_400`: at most 1 word error more than the same line in §9.17.
+3. Latency lines: at most 1 word error more than §9.17.
+4. Latency lines: every check that passed in §9.17 still passes (the number in 11, the intended word in 17, the English
+   word in 09).
+5. `ForceEndOfUtterance` answered, p50 ≤ 300 ms (the contract's A budget).
+6. Text ready, meaning the EndOfUtterance answering the end-of-speech force, after the speech end: p50 ≤ 900 ms (E + A).
+
+Also measured and reported, not gated: the forces inside a sentence, the last word's final, the first partial, and
+`FULL_0DB`.
+
+**Spend and stop rules:**
+- **The cost:**
+  - worst case USD 0.072, with every session at its 10 s ceiling;
+  - expected about USD 0.021;
+  - cap USD 0.10.
+- **One run, no retry.** The run stops on not-authorised (4001), quota exceeded (4005), a failed first session, three
+  consecutive failures, or a budget refusal.
+- **The launcher refuses** unless all of these hold:
+  - the approval is `APPROVED` with this plan hash;
+  - model training off is confirmed;
+  - `--confirm s8b01-cp2-asr-sm-proof-r1` is given;
+  - the run directory does not exist yet;
+  - the tracked tree is clean;
+  - the per-user key file holds a key, which is never printed.
+
+**A harness correction found by the new tests:**
+- `smSession` sent each 20 ms chunk at the start of its own interval, 20 ms before a microphone could have delivered it.
+  It now sends each chunk when its audio is complete, so the session clock is the audio clock.
+- The §9.17 timings were therefore up to 20 ms optimistic. That is negligible against the 1.7 s measured there, and they
+  are not re-stated.
+
+**What a pass would and would not mean:**
+- **A pass** supports recommending Speechmatics Enhanced `ar_en` for production integration. On-device barge-in
+  (the platform echo canceller, VAD after AEC, playout stopping) stays a **pre-launch condition**, proven on devices in
+  S8B-06 when calls are implemented.
+- **Not proven, even by a pass:**
+  - the phone's echo canceller;
+  - more than one speaker;
+  - the commit value for natural speech (S8B-05);
+  - the account tier for concurrent sessions (§9.18).
+- **A failure** is reported as it is, with no re-run or expansion without approval.
+
+**Verification (local, no network):**
+- The harness contract adds five tests, 48 of 48 passing:
+  - the plan and its refusals: the cap, a second arm, `max_delay`, Speechmatics' trigger, sample 20, the session count,
+    the deferred AEC scope, a changed recording;
+  - the causal VAD, its re-arming, and the mix level and stop;
+  - a loopback session where each force follows its audio with its timestamp, and the forced answer and text ready are
+    measured;
+  - the verdict and its failures;
+  - the guard check.
+- `--plan-check` passes.
+
+**Status:**
+- **PENDING** the Product Owner's approval of the plan hash, the USD 0.10 cap, the run id and model training off.
+- ASR is not selected. No paid call has been made since §9.17.

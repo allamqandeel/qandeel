@@ -29,13 +29,14 @@ const crypto = require('node:crypto');
 // The plan and the approval it reads. By default the S8B-01 benchmark (bench-plan.json, cp2-approval.json); a named check
 // selects its own pair beside the guard, from this fixed list only (the Product Owner's Google Cloud PayGo check,
 // 2026-10-28: gcp-paygo-plan.json, gcp-paygo-approval.json; and its full Google Cloud evaluation of the same day:
-// cp2-cloud-plan.json, cp2-cloud-approval.json; and its Speechmatics real-time ASR test: asr-sm-plan.json, asr-sm-approval.json).
-// Nothing else is selectable.
+// cp2-cloud-plan.json, cp2-cloud-approval.json; and its Speechmatics real-time ASR test: asr-sm-plan.json, asr-sm-approval.json;
+// and the final ASR engineering proof: asr-sm-proof-plan.json, asr-sm-proof-approval.json). Nothing else is selectable.
 const CHECKS = {
   '': ['bench-plan.json', 'cp2-approval.json'],
   'gcp-paygo': ['gcp-paygo-plan.json', 'gcp-paygo-approval.json'],
   'cp2-cloud': ['cp2-cloud-plan.json', 'cp2-cloud-approval.json'],
   'asr-sm': ['asr-sm-plan.json', 'asr-sm-approval.json'],
+  'asr-sm-proof': ['asr-sm-proof-plan.json', 'asr-sm-proof-approval.json'],
 };
 const CHECK = process.env.QANDEEL_S8B_CHECK ?? '';
 if (!Object.hasOwn(CHECKS, CHECK)) throw new Error('S8B_01_GUARD: unknown check; nothing was sent');

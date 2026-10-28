@@ -845,3 +845,115 @@ test('asr-sm scoring: English words in either script, numbers in digits or words
   assert.equal(summarizeAsr(rows, asrPlan).byArm.ENHANCED_AR_EN.wer, Number((20 / 200).toFixed(4)));
   assert.equal(verdict(rows.map((r) => ({ ...r, eou_ms: 1200 })), asrPlan, 'ENHANCED_AR_EN').passed, false, 'a slow endpoint fails the verdict');
 });
+
+// The Product Owner's final ASR engineering proof (2026-10-28): 12 sessions, max_delay 0.7, QANDEEL's VAD + ForceEndOfUtterance.
+const proof = await import('../scripts/s8b-01/asr-sm-proof.mjs');
+const proofPlan = JSON.parse(readFileSync(join(dir, 'asr-sm-proof-plan.json'), 'utf8'));
+
+test('asr-sm-proof plan: 12 sessions (6 overlap, 6 latency), Enhanced ar_en only, max_delay 0.7, QANDEEL\'s endpoint alone, sample 20 not repeated, USD 0.10', () => {
+  assert.deepEqual(proof.checkProofPlan(proofPlan, dir), []);
+  const approval = JSON.parse(readFileSync(join(dir, 'asr-sm-proof-approval.json'), 'utf8'));
+  assert.ok(['PENDING', 'APPROVED', 'CONSUMED'].includes(approval.status));
+  if (approval.status !== 'PENDING') assert.equal(approval.planSha256, asr.fileSha256(join(dir, 'asr-sm-proof-plan.json')));
+  const changes = [
+    [(p) => { p.guard.costCapUsd = 0.25; }, /at most USD 0\.10/u],
+    [(p) => { p.arms.push({ ...p.arms[0], id: 'X' }); }, /one arm only/u],
+    [(p) => { p.arms[0].transcriptionConfig.max_delay = 1; }, /max_delay 0\.7/u],
+    [(p) => { p.arms[0].transcriptionConfig.conversation_config.end_of_utterance_silence_trigger = 0.5; }, /own end-of-utterance trigger is off/u],
+    [(p) => { p.sets.latency.lines = [...p.sets.latency.lines.slice(1), 20]; }, /sample 20 is not repeated/u],
+    [(p) => { p.sets.latency.lines.push(3); }, /12 sessions/u],
+    [(p) => { p.scope.deviceAecProofDeferred = false; }, /device echo-canceller proof deferred/u],
+    [(p) => { p.inputs.recordings['02'] = 'x'.repeat(64); }, /recording 02 differs|every used/u],
+  ];
+  for (const [change, why] of changes) { const p = structuredClone(proofPlan); change(p); assert.match(proof.checkProofPlan(p, dir).join(' | '), why); }
+});
+
+test('asr-sm-proof VAD: causal, a pause shorter than the silence never ends the turn, it re-arms on new speech; the overlap mix sits at its level and stops', () => {
+  const rate = 16000;
+  const pcm = new Int16Array(rate * 4);
+  const tone = (a, b) => { for (let i = Math.round(a * rate); i < Math.round(b * rate); i += 1) pcm[i] = Math.round(6000 * Math.sin(i / 3)); };
+  tone(0.5, 1.5); tone(2.1, 3.0);
+  assert.deepEqual(proof.causalEndpoints(pcm, rate, { silenceMs: 500 }), [{ atMs: 2000, speechEndMs: 1500 }, { atMs: 3500, speechEndMs: 3000 }], 'a 600 ms pause finalizes, then re-arms');
+  assert.deepEqual(proof.causalEndpoints(pcm, rate, { silenceMs: 700 }), [{ atMs: 3700, speechEndMs: 3000 }], 'a 700 ms silence lets the 600 ms pause pass');
+  const late = Int16Array.from(pcm); late.fill(0, Math.round(2.1 * rate));
+  assert.deepEqual(proof.causalEndpoints(late, rate, { silenceMs: 500 }), [{ atMs: 2000, speechEndMs: 1500 }], 'a decision never reads ahead');
+  const q = new Int16Array(rate * 4); for (let i = 0; i < q.length; i += 1) q[i] = Math.round(3000 * Math.sin(i / 7));
+  const m = proof.mixOverlap(pcm, rate, q, { levelDb: -25 });
+  const added = Int16Array.from(m.pcm, (v, i) => v - pcm[i]);
+  const speechRms = Math.sqrt(pcm.slice(Math.round(0.5 * rate), Math.round(3.0 * rate)).reduce((s, v) => s + v * v, 0) / (2.5 * rate));
+  const level = 20 * Math.log10(proof.activeRms(added, rate, 1) / speechRms);
+  assert.ok(Math.abs(level - -25) < 1.5, `QANDEEL ${level.toFixed(1)} dB under the speech`);
+  const b = proof.mixOverlap(pcm, rate, q, { levelDb: 0, untilMs: 900 });
+  assert.notEqual(b.pcm[Math.round(0.85 * rate)], pcm[Math.round(0.85 * rate)]);
+  assert.equal(b.pcm[Math.round(1.2 * rate)], pcm[Math.round(1.2 * rate)], 'barge-in: QANDEEL stops');
+});
+
+test('asr-sm-proof session against a loopback server: each ForceEndOfUtterance carries its timestamp after its audio, the forced answer and text-ready are measured', async () => {
+  const forcesSeen = [];
+  let bytes = 0;
+  const server = miniWsServer((c, msg, n) => {
+    if (msg?.message === 'StartRecognition') return c.send({ message: 'RecognitionStarted', id: 't' });
+    if (n) { bytes += n; return undefined; }
+    if (msg?.message === 'ForceEndOfUtterance') {
+      forcesSeen.push({ bytes, timestamp: msg.timestamp });
+      c.send({ message: 'AddTranscript', metadata: { transcript: forcesSeen.length === 1 ? 'أنا كنت' : 'عايز أقولك', start_time: 0, end_time: 0 }, results: [] });
+      c.send({ message: 'EndOfUtterance', metadata: { start_time: 0, end_time: 0, forced: true } });
+    }
+    if (msg?.message === 'EndOfStream') { c.send({ message: 'EndOfTranscript' }); c.close(); }
+    return undefined;
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const pcm = new Int16Array(16000);
+  const forces = [{ atMs: 400, speechEndMs: 300, timestampS: 0.3 }, { atMs: 900, speechEndMs: 800, timestampS: 0.8 }];
+  const s = await asr.smSession({ url: `ws://127.0.0.1:${server.address().port}/v2`, apiKey: 'k', pcm, rate: 16000, start: asr.startRecognition(proofPlan.arms[0], 16000),
+    tailSilenceMs: 100, timeoutMs: 5000, forces });
+  server.close();
+  assert.equal(s.error, null);
+  assert.deepEqual(forcesSeen.map((f) => f.timestamp), [0.3, 0.8]);
+  assert.ok(forcesSeen[0].bytes >= 16000 * 2 * 0.4 && forcesSeen[1].bytes >= 16000 * 2 * 0.9, 'a force follows the audio it ends');
+  assert.equal(proofPlan.arms[0].transcriptionConfig.conversation_config.end_of_utterance_silence_trigger, 0);
+  const m = proof.proofMetrics(s.events, s.forcesSent, forces, { onsetMs: 100, offsetMs: 800 });
+  assert.equal(m.transcript, 'أنا كنت عايز أقولك');
+  assert.equal(m.midForces, 1, 'the first force fell at a pause inside the sentence');
+  assert.equal(m.forcedFlags, 2);
+  assert.ok(m.forceResponsesMs.every((x) => x >= 0 && x < 300), JSON.stringify(m.forceResponsesMs));
+  assert.ok(m.textReadyMs >= 100 && m.textReadyMs < 500, `text ready ${m.textReadyMs} ms after the speech end`);
+});
+
+test('asr-sm-proof verdict: accuracy held to the §9.17 line, checks kept, the forced answer and text-ready budgets; FULL_0DB reported only', () => {
+  const row = (set, n, variant, o = {}) => ({ id: `${set}_${n}`, set, n, variant, status: 'OK', word_errors: proofPlan.baseline[String(n).padStart(2, '0')].wordErrors, ref_words: 8,
+    force_response_ms: JSON.stringify([150]), text_ready_ms: 650, last_word_final_ms: 640, first_partial_ms: 500, mid_forces: 0, checks: JSON.stringify(proofPlan.baseline[String(n).padStart(2, '0')].checks), ...o });
+  const rows = [
+    ...proofPlan.sets.overlap.lines.flatMap((n) => proofPlan.sets.overlap.variants.map((v) => row('OVERLAP', n, v.id, v.id === 'FULL_0DB' ? { status: 'ERROR', word_errors: '' } : {}))),
+    ...proofPlan.sets.latency.lines.map((n) => row('LATENCY', n, 'CLEAN')),
+  ];
+  const v = proof.proofVerdict(rows, proofPlan);
+  assert.equal(v.passed, true, JSON.stringify(v.items.filter((i) => !i.passed)));
+  assert.equal(v.measured.reportedOnly.length, 2);
+  const fail = (f) => proof.proofVerdict(rows.map((r) => (f(r) ? { ...r, ...f(r) } : r)), proofPlan).passed;
+  assert.equal(fail((r) => r.variant === 'BARGE_IN_400' && r.n === 1 && { word_errors: 2 }), false, 'barge-in may add at most one wrong word');
+  assert.equal(fail((r) => r.n === 11 && { checks: JSON.stringify({ number: false }) }), false, 'a lost number fails');
+  assert.equal(fail((r) => r.set === 'LATENCY' && { force_response_ms: JSON.stringify([450]) }), false, 'a slow forced answer fails');
+  assert.equal(fail((r) => r.set === 'LATENCY' && { text_ready_ms: 1200 }), false, 'slow text-ready fails');
+  assert.equal(proof.checksHeld({ english: [true, false] }, { english: [true, false] }), true);
+  assert.equal(proof.checksHeld({ english: [true] }, { english: [false] }), false);
+});
+
+test('asr-sm-proof guard: its own plan pair, the EU host only, one session per reservation', () => {
+  const m = mkdtempSync(join(tmpdir(), 's8b01-proof-'));
+  const text = readFileSync(join(dir, 'asr-sm-proof-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
+  writeFileSync(join(m, 'asr-sm-proof-plan.json'), text);
+  copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
+  writeFileSync(join(m, 'asr-sm-proof-approval.json'), JSON.stringify({ status: 'APPROVED', runId: 'r-proof', capUsd: 0.1, planSha256: createHash('sha256').update(text).digest('hex') }));
+  const r = underGuard(m, `
+    const g = globalThis.__QANDEEL_S8B_01_GUARD__; const out = [];
+    const tryWs = (u) => { try { const w = new WebSocket(u); w.onerror = () => {}; out.push('opened'); } catch (e) { out.push(e.message.replace('S8B_01_NETWORK_FORBIDDEN:', '')); } };
+    tryWs('wss://eu.rt.speechmatics.com/v2');
+    tryWs('wss://global.rt.speechmatics.com/v2');
+    console.log(JSON.stringify({ out, check: g.check, cap: g.spend().capUsd ?? null }));
+    process.exit(0);`, { QANDEEL_S8B_CHECK: 'asr-sm-proof', QANDEEL_S8B_RUN_ID: 'r-proof', SPEECHMATICS_API_KEY: 'sm-test' });
+  assert.equal(r.status, 0, r.stderr);
+  const o = JSON.parse(r.stdout.trim());
+  assert.equal(o.check, 'asr-sm-proof');
+  assert.deepEqual(o.out, ['websocket-without-reservation:eu.rt.speechmatics.com', 'websocket:global.rt.speechmatics.com']);
+});
