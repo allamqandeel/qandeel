@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed and not run (§9.18); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -1145,3 +1145,113 @@ second, the privacy conditions, and the cost.
 `NOT READY` is not a rejection of Speechmatics. A decision to approve it would need a further test on audio of QANDEEL's
 own quality, with the configuration levers above and the English terms in the custom dictionary. That would be a new plan
 and a new approval. The provider decision is the Product Owner's, and ASR remains not selected.
+
+### 9.18 The Product Owner's review: a waiver, and an engineering review of the two open problems (2026-10-28)
+
+**The Product Owner's decision, after listening to the recordings again:**
+- **`PO ACCEPTED WITH WAIVER`** for the English words inside Egyptian and for `نهى` / `نوال`. The Product Owner judges
+  that some of those words were spoken fast and not clearly enough.
+- The understanding of everyday Egyptian is accepted provisionally.
+- **The results and the preregistered criteria of §9.17 stand unchanged:** the verdict stays `NOT ACCEPTED`, and the
+  English rate stays 4 / 10. The waiver is the Product Owner's evaluation, not a numerical pass.
+- **Two engineering problems are not waived:**
+  1. no word recognized while QANDEEL's voice played (sample 20);
+  2. the slow end-of-speech detection and final transcript.
+- The order is a bounded engineering review with no paid call, then the smallest remediation and proof plan, stopping
+  before any paid test.
+
+**Problem 1 — sample 20 (from the run's own messages and the audio, locally):**
+- **Not a session failure:**
+  - Speechmatics accepted the 3.8 s and ran at broadcast quality, the same as every other session.
+  - It sent 17 partials and 9 finals at the normal cadence, and every one was empty.
+  - The model heard no recognizable word; nothing was lost in transport.
+- **The audio is not silent or damaged** (§9.15). It carries the most continuous loud content and the highest
+  zero-crossing rate of the set (2680 Hz against 1618 – 2105 Hz), consistent with two voices overlapping, as the Product
+  Owner confirms (§9.16).
+- **QANDEEL's share cannot be measured locally.** An envelope cross-correlation with the played file (`C0177.wav`) finds
+  no distinct alignment: the best match is 0.50, against 0.45 at the top 1 % of chance alignments. The PC speaker, the
+  room, the phone's processing and the WhatsApp codec stand between the two signals.
+- **What the sample stands for:** QANDEEL's voice from an external PC speaker, for the whole sentence, into the phone's
+  microphone. The phone's echo canceller has no reference for that sound and cannot remove it. That is the "second voice in
+  the room" condition. It is not QANDEEL's own barge-in path:
+  - **The contract's path** (`voice-runtime-v1.md` §2, §4.4): QANDEEL plays from the same phone. The platform's echo
+    cancellation (Android `VOICE_COMMUNICATION` + `AcousticEchoCanceler`, iOS `voiceChat`) removes it against the
+    played reference.
+  - On-device VAD after AEC detects the user's speech, and **playout stops immediately**.
+  - The ASR then receives at most a short overlap with residual echo, followed by clean speech.
+- **What this cannot establish:**
+  - whether the zero output is Speechmatics' limit on two overlapping voices, or the phone / WhatsApp processing of
+    double-talk, or both;
+  - how Speechmatics transcribes speech after echo cancellation, with a residual echo.
+- **Classification:**
+  - "two people speaking at once in the room" may be a real limit, though one sample cannot show it;
+  - QANDEEL's own barge-in is a design matter, already in the contract. Its proof is the remaining gap.
+
+**Problem 2 — latency (from the run's own event logs):**
+
+| Moment, after the measured speech end (p50, 19 sessions) | ms |
+| --- | --- |
+| the whole eventual transcript first visible as the finals so far plus the latest partial | **433** |
+| the last word's final | 1294 |
+| EndOfUtterance | 1700 |
+
+- **The words are recognized early.** About 0.86 s of the wait is finalization, not recognition.
+- **The finalization wait has three sources:**
+  - `max_delay` 1.0 s: Speechmatics: "the delay between the end of a spoken word and the Final transcript", range
+    0.7 – 4 s;
+  - `flexible` mode, which holds a final until a number, date or amount is complete;
+  - the EndOfUtterance, which follows the final.
+- **The documented control** (Speechmatics turn-detection page):
+  - `ForceEndOfUtterance` is supported by Enhanced. The server answers it with an `AddTranscript` and then an
+    `EndOfUtterance`, both `forced: true`.
+  - Speechmatics recommends a 0.5 – 0.8 s silence trigger for voice AI, kept below `max_delay`.
+  - Partials arrive "typically in less than 500 milliseconds", and are 10 – 25 % less accurate than finals.
+- **Classification: solvable by configuration and the audio path, not a provider limit.** The contract already places
+  endpointing in QANDEEL's pipeline (§2: "streaming ASR adapter → endpointing → final transcript"; §11 lever: endpointing
+  tuning).
+- **The design that follows**, with no provider change:
+  1. QANDEEL's Voice Gateway decides the end of the user's turn from silence on the received audio (VAD, a value under
+     controlled configuration), not from Speechmatics' EndOfUtterance.
+  2. At that moment it sends `ForceEndOfUtterance`.
+  3. The forced `AddTranscript` is the committed final transcript (§4.1). The Conversation Orchestrator passes it to
+     DeepSeek (REALTIME) as today.
+  4. `max_delay` 0.7 s, `flexible` kept: the numbers were all correct, and the force releases what is held.
+     Speechmatics' own trigger stays as a backstop below `max_delay`.
+  5. Partials are not sent to DeepSeek. Speculative generation stays the contract's lever (§11), used only if the measured
+     end-to-end time misses the target.
+- **The projection, to be proven:** E ≈ the configured silence (0.5 s); A = the forced final's turnaround, unknown until
+  measured. This compares with 1.7 s today.
+- **The risk:** a 0.5 s silence can end a turn at a thinking pause. 2 of 19 sessions had a pause-length gap inside the
+  sentence (02, 19). The value is set from S8B-05 measurement. If the user goes on speaking, the existing interruption path
+  (§4.4) supersedes the reply.
+
+**One production prerequisite noticed:** each session reported `concurrent_session_usage`, "2 concurrent sessions active
+out of quota 2". The free account allows two concurrent real-time sessions, so production needs an account tier sized for
+concurrent calls. That is a commercial setting, not a technical limit.
+
+**The smallest remediation proof** (a proposal; not prepared as a plan and not run; it needs the Product Owner's approval):
+- **One guarded run**, about 13 sessions, Enhanced `ar_en` only, on the existing recordings and the existing QANDEEL file.
+  No new recording.
+- **P1, overlap, 7 sessions:**
+  - sample 20 once more, as it is, to see whether the empty result repeats;
+  - two clean lines the run already transcribed well, each mixed locally with `C0177.wav` three ways: QANDEEL about
+    25 dB below the speech for the whole line (a stand-in for the echo canceller's residual), QANDEEL at the speech's level
+    for the first 0.4 s and then stopped (the barge-in path), and QANDEEL at the speech's level throughout (the room
+    condition, reported only).
+- **P2, latency, 6 sessions:**
+  - six clean lines, two with numbers, with `max_delay` 0.7 and `ForceEndOfUtterance` sent 500 ms after the measured
+    speech end;
+  - measured: the forced final's arrival after the force; E + A; whether the forced transcript keeps the words and
+    numbers of the same line in §9.17.
+- **Preregistered acceptance:**
+  - the residual-echo and barge-in variants keep the comprehension of the clean line, at most one extra word wrong;
+  - with the force, E + A p50 ≤ 900 ms, the forced final ≤ 300 ms p50 after the force, and no word or number lost
+    against §9.17.
+- **Cost:** expected under USD 0.03; proposed cap USD 0.10.
+- **What it would still not prove:**
+  - the real device echo canceller. That is the S8B-06 real-device evidence (§13), which the contract already requires;
+  - the turn-end value for natural speech. That is S8B-05.
+
+**Status:**
+- ASR is not selected; the Speechmatics decision awaits the Product Owner after the proof above, if it is approved.
+- No paid call has been made since §9.17.

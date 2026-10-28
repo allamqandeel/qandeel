@@ -1194,7 +1194,10 @@ stay as written.
     hash `3fd6a842…`; the one approved run `s8b01-cp2-asr-sm-po-r1` (USD 0.0345, approval CONSUMED): preregistered
     verdict `NOT ACCEPTED`, recommendation `NOT READY` for production (English inside Egyptian 4 / 10, no words under
     QANDEEL's voice, end of utterance p50 1.7 s; numbers, MSA and everyday Egyptian held), a preliminary single-speaker test
-    (record §9.17); ASR not selected.
+    (record §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, results unchanged);
+    engineering review (§9.18): latency solvable by a QANDEEL-owned endpoint + `ForceEndOfUtterance` (complete text visible
+    at p50 433 ms), sample 20 not the contract's echo-cancelled barge-in path; a ~13-session proof proposed, not run; ASR
+    not selected.
   - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against
