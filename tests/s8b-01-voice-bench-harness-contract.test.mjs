@@ -132,6 +132,19 @@ test('R1-1: G is measured at the first VA-2 release, never at the first punctuat
   assert.equal(short.releasedAtEnd, true, 'a reply with no boundary is released whole at its end, after the whole-candidate checks');
 });
 
+test('R1-1: at the end of a stream, text VA-2 still holds is never counted as released', async () => {
+  const unclosed = await measureStream(timedStream(['أيوه طبعا ', '<note'], 5), performance.now());
+  assert.equal(unclosed.firstReleasableChunkMs, null, 'an unclosed < at the end releases nothing');
+  assert.equal(unclosed.releasedAtEnd, false);
+  assert.equal(unclosed.heldAtEnd, 'UNCLOSED_TAG');
+  const serverGuidance = 'تكلم بجمل قصيرة، واضحة، يمكن للمستمع أن يتابعها دون أن يرى أي نص مكتوب أمامه.';
+  const echo = await measureStream(timedStream(['تكلم بجمل', ' قصيرة'], 5), performance.now(), { serverGuidance });
+  assert.equal(echo.firstReleasableChunkMs, null, 'a text held by the GUIDANCE_ECHO holdback at the end releases nothing');
+  assert.equal(echo.releasedAtEnd, false);
+  assert.equal(echo.heldAtEnd, 'GUIDANCE_ECHO_HOLDBACK');
+  assert.equal(echo.withheldReason, null, 'held, not failed: the prefix is below the 48-character echo');
+});
+
 test('the CP1 lock refuses a live run before anything is sent, at the launcher and in the guard', () => {
   const r = launch(['--live']);
   assert.equal(r.status, 3);

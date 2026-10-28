@@ -30,6 +30,25 @@ export function guidanceSentences(serverGuidance) {
 }
 
 /**
+ * The VA-2 holdback over collapsed text: `end` is where the releasable text stops, `heldBy` names what holds the rest
+ * (an unclosed `<`, or the GUIDANCE_ECHO suffix holdback), or is null when nothing is held.
+ */
+function va2Holdback(text, sentences) {
+  let end = text.length;
+  let heldBy = null;
+  const open = text.lastIndexOf('<');
+  if (open > text.lastIndexOf('>')) { end = open; heldBy = 'UNCLOSED_TAG'; }
+  for (let k = Math.min(text.length, Math.max(0, ...sentences.map((s) => s.length))); k > 0; k -= 1) {
+    const suffix = text.slice(-k);
+    if (sentences.some((s) => s.includes(suffix))) {
+      if (text.length - k < end) { end = text.length - k; heldBy = 'GUIDANCE_ECHO_HOLDBACK'; }
+      break;
+    }
+  }
+  return { end, heldBy };
+}
+
+/**
  * VA-2 over the accumulated text of a stream that has not failed. Returns `{ withheld }` when the accumulated text fails a
  * check (the stream is cancelled and nothing more is released), otherwise `{ length }`: the releasable prefix length in
  * the collapsed text, 0 when nothing is releasable yet. A prefix is releasable only when it ends on a boundary, is at
@@ -41,13 +60,7 @@ export function va2ReleasableLength(accumulated, sentences, { minChunkChars = 12
   if (INTERNAL_CONTAINER_TAG.test(accumulated)) return { withheld: 'INTERNAL_CONTAINER' };
   const text = collapse(accumulated);
   if (sentences.some((s) => text.includes(s))) return { withheld: 'GUIDANCE_ECHO' };
-  let end = text.length;
-  const open = text.lastIndexOf('<');
-  if (open > text.lastIndexOf('>')) end = Math.min(end, open);
-  for (let k = Math.min(text.length, Math.max(0, ...sentences.map((s) => s.length))); k > 0; k -= 1) {
-    const suffix = text.slice(-k);
-    if (sentences.some((s) => s.includes(suffix))) { end = Math.min(end, text.length - k); break; }
-  }
+  const { end } = va2Holdback(text, sentences);
   for (let i = end - 1; i >= minChunkChars - 1; i -= 1) if (CHUNK_BOUNDARY.test(text[i])) return { length: i + 1 };
   return { length: 0 };
 }
@@ -57,13 +70,16 @@ export function va2ReleasableLength(accumulated, sentences, { minChunkChars = 12
  * - `firstTokenMs`: the first non-empty `delta.content`;
  * - `firstBoundaryApproxMs`: the first delta carrying a boundary after `minChunkChars` characters (diagnostic only);
  * - `firstReleasableChunkMs`: the first instant VA-2 releases a chunk; at the end of the stream, a text that never reached
- *   a releasable boundary is released whole if it passes the checks (`releasedAtEnd`); null when nothing is ever released;
+ *   a releasable boundary is released whole only if it passes the checks and nothing of it is still held (`releasedAtEnd`);
+ *   null when nothing is ever released;
+ * - `heldAtEnd`: what still held the text when the stream ended without a release (`UNCLOSED_TAG` or
+ *   `GUIDANCE_ECHO_HOLDBACK`); such a text is never counted as released;
  * - `withheldReason`: the VA-2 failure that cancelled the stream, if any (then nothing more counts as released);
  * - `usage`: the final usage object, if the stream carried one.
  */
 export async function measureStream(response, startedAt, { minChunkChars = 12, serverGuidance = '' } = {}) {
   const result = { headersMs: Math.round(performance.now() - startedAt), firstTokenMs: null, firstBoundaryApproxMs: null,
-    firstReleasableChunkMs: null, releasedAtEnd: false, withheldReason: null, endMs: null, characters: 0, events: 0,
+    firstReleasableChunkMs: null, releasedAtEnd: false, heldAtEnd: null, withheldReason: null, endMs: null, characters: 0, events: 0,
     usage: null, finishReason: null };
   const sentences = guidanceSentences(serverGuidance);
   const decoder = new TextDecoder();
@@ -97,12 +113,17 @@ export async function measureStream(response, startedAt, { minChunkChars = 12, s
     }
   }
   if (result.endMs === null) result.endMs = Math.round(performance.now() - startedAt);
-  // End of turn: the whole text passes the S8A-01 whole-candidate checks (EMPTY included) or nothing is released.
+  // End of turn: the whole text is released only if it passes the S8A-01 whole-candidate checks (EMPTY included) AND
+  // nothing of it is still held by VA-2 (an unclosed `<`, the GUIDANCE_ECHO holdback); otherwise nothing is released.
   if (result.firstReleasableChunkMs === null && result.withheldReason === null) {
     const whole = accumulated.trim();
     const check = whole ? va2ReleasableLength(whole, sentences, { minChunkChars: Infinity }) : { withheld: 'EMPTY' };
     if (check.withheld) result.withheldReason = check.withheld;
-    else { result.firstReleasableChunkMs = result.endMs; result.releasedAtEnd = true; }
+    else {
+      const { heldBy } = va2Holdback(collapse(whole), sentences);
+      if (heldBy) result.heldAtEnd = heldBy;
+      else { result.firstReleasableChunkMs = result.endMs; result.releasedAtEnd = true; }
+    }
   }
   return result;
 }

@@ -175,10 +175,10 @@ at that change.
 
 | Check | Result |
 | --- | --- |
-| `npm run test:s8b-01-voice-bench-harness-contract` (registered in `package.json` and as an API CI static-contract step, after S8A-01's) | 12 / 12 pass (8 at the first push; 4 focused R1 tests added) |
+| `npm run test:s8b-01-voice-bench-harness-contract` (registered in `package.json` and as an API CI static-contract step, after S8A-01's) | 13 / 13 pass (8 at the first push; 4 focused R1 tests, then 1 for the end-of-stream holdback) |
 | `node scripts/s8b-01/bench-launch.mjs --plan-check` / `--simulate` / `--live` | pass / report written / refused (exit 3) |
 | `npm run test:task-closure-governance-contract` | 24 / 24 pass |
-| Every root contract, `node --test tests/*.test.mjs` (Node 24, local), including the forward-safety mirror | 1653 / 1653 pass (1649 at the first push) |
+| Every root contract, `node --test tests/*.test.mjs` (Node 24, local), including the forward-safety mirror | 1654 / 1654 pass (1649 at the first push) |
 | The backlog §4 index, recounted mechanically | 89 items; 44 / 4 / 8 / 33 by status; 52 / 35 / 2 by severity — equal to §7 and to Current State §5 |
 
 Four root contracts pin the one current-task line of the Project Map:
