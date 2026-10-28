@@ -966,7 +966,7 @@ matches.
   an empty folder of its own. `release-version` reads `9.0.2`.
 - **SHA-256:** `60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba`, equal to gyan.dev's published
   `.sha256`. It was checked before extraction.
-- **Location:** extracted to `C:\Users\MG\tools\ffmpeg-9.0.2-essentials\`. It is used only through
+- **Location:** extracted to `%USERPROFILE%\tools\ffmpeg-9.0.2-essentials\`. It is used only through
   `QANDEEL_FFMPEG_DIR`, set per process. PATH and system settings are untouched.
 - **Build:** `ffmpeg version 9.0.2-essentials_build-www.gyan.dev`. It has the native Opus decoder, libopus, libx264 and AAC.
 
