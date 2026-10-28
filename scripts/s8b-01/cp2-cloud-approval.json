@@ -1,11 +1,31 @@
 {
   "id": "s8b-01-cp2-cloud-approval",
-  "status": "APPROVED",
+  "status": "CONSUMED",
   "runId": "s8b01-cp2-cloud-r1",
   "approvedBy": "Product Owner",
   "approvedOn": "2026-10-28",
   "scope": "ONE guarded run of the reviewed CP2 TTS set on Google Cloud (project gen-lang-client-0473671267, global, ADC): 592 streamed calls = 148 texts × gemini-3.8-flash-tts and gemini-3.8-flash-lite-tts × Achird and Sulafat. No retry; the plan's stop rules; no second run.",
   "capUsd": 2,
   "planSha256": "5a6ac83873c2bac99fd6bee5f590f2621ed7f4690697468025ff29f774d74e41",
-  "note": "APPROVED by the Product Owner (2026-10-28) for the plan at 7a516185 (hash verified before the run): 592 calls, USD 2 in all, at least 6.5 s between two calls to the same model, no retry, no budget increase without a new approval; a stop by Google limits or the guard is recorded as partial and never followed by another run. The commit that records the run sets CONSUMED."
+  "note": "APPROVED by the Product Owner (2026-10-28) for the plan at 7a516185 (hash verified before the run): 592 calls, USD 2 in all, at least 6.5 s between two calls to the same model, no retry, no budget increase without a new approval; a stop by Google limits or the guard is recorded as partial and never followed by another run. The commit that records the run sets CONSUMED.",
+  "consumed": {
+    "runId": "s8b01-cp2-cloud-r1",
+    "head": "2e0ac38e789d3c316525c3662a82efa3c7ec7a3a",
+    "startedAt": "2026-10-28T11:09:20.394Z",
+    "finishedAt": "2026-10-28T11:41:23.952Z",
+    "planned": 592,
+    "calls": 592,
+    "ok": 592,
+    "errors": 0,
+    "http429": 0,
+    "notReached": 0,
+    "retries": 0,
+    "reservations": 592,
+    "refused": 0,
+    "overruns": 0,
+    "settledUsdAtListPrice": 0.794962,
+    "estimatedUsdAtPromotionalPrice": 0.3975,
+    "billingCoverage": "UNVERIFIED (deferred by the Product Owner; §9.8)",
+    "record": "S8B-01 record §9.9"
+  }
 }

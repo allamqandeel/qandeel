@@ -78,6 +78,10 @@ const range = (p, a, b) => Array.from({ length: b - a + 1 }, (_, i) => `${p}${St
 export const SECTIONS = [
   ['Start here — one of each', [['X01', 'EMOTION'], ['X05', 'EMOTION'], ['X07', 'EMOTION'], ['X07', 'NO_STYLE'], ['R01', 'BASELINE'], ['R01', 'PERSONA'], ['E02', 'BASELINE'], ['C01', 'BASELINE'],
     ['H27', 'RENDERED'], ['N03', 'RENDERED'], ['N06', 'BASELINE'], ['D02', 'BASELINE'], ['D02', 'RENDERED']]],
+  // Flagged by the run's own measures (record §9.9): an audio length far from its row's other three, a date read at very
+  // different lengths, and the emotion styles that shortened or lengthened the speech the most.
+  ['Flagged by the measures — listen for a dropped word, a misread date, and whether a style registered', [['H04', 'BASELINE'], ['H04', 'RENDERED'], ['D03', 'BASELINE'], ['D03', 'RENDERED'],
+    ['X01', 'NO_STYLE'], ['X01', 'EMOTION'], ['X04', 'NO_STYLE'], ['X04', 'EMOTION'], ['X06', 'NO_STYLE'], ['X06', 'EMOTION'], ['X07', 'EMOTION']]],
   ['Emotions — each text without a style, with QANDEEL\'s persona style, and with its emotion style', range('X', 1, 10).flatMap((id) => [[id, 'NO_STYLE'], [id, 'PERSONA'], [id, 'EMOTION']])],
   ['Egyptian colloquial', [...range('E', 1, 5).map((id) => [id, 'BASELINE']), ['R01', 'BASELINE'], ['R01', 'PERSONA'], ['R02', 'BASELINE'], ['R02', 'PERSONA'],
     ['C01', 'BASELINE'], ['C02', 'BASELINE'], ...SET_ARMS(['H26', 'H27', 'H28', 'H29', 'H30']), ['N05', 'BASELINE'], ...SET_ARMS(['D02', 'D05'])]],
@@ -139,6 +143,6 @@ if (isMain) {
     byModelArm: by((r) => `${r.model}|${r.arm}`), styleLengthRatio: styleRatios(rows) };
   writeFileSync(join(runDir, 'summary.json'), JSON.stringify(summary, null, 2));
   writeFileSync(join(runDir, 'listening.html'), listeningPage(runDir, rows, texts, styles));
-  writeFileSync(join(runDir, 'listening-pack.html'), listeningPage(runDir, rows, texts, styles, { sections: SECTIONS.slice(0, 1), embed: true, title: 'S8B-01 CP2 — start here (Google Cloud)' }));
+  writeFileSync(join(runDir, 'listening-pack.html'), listeningPage(runDir, rows, texts, styles, { sections: SECTIONS.slice(0, 2), embed: true, title: 'S8B-01 CP2 — start here (Google Cloud)' }));
   console.log(JSON.stringify({ done: rows.length, planned: report.planned, stoppedRun: report.stoppedRun, models: report.models, spend: report.spend?.settledUsd }, null, 1));
 }

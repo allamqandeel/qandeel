@@ -2,8 +2,8 @@
 
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B). This record covers **CP1 — the contract, the
 amendments, the benchmark harness and the locator reconciliation** (§1 – §8) and **CP2 — the Gemini TTS and provider
-evidence** (§9). CP3, the selection and the closure, has not started.
-**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED, PARTIAL, AT THE PRODUCT OWNER'S CP2 REVIEW (2026-10-28) — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — NO PROVIDER OR VOICE SELECTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is partial (§9.5) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
+evidence** (§9), with the full TTS evaluation on Google Cloud (§9.9). CP3, the selection and the closure, has not started.
+**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED, PARTIAL, AT THE PRODUCT OWNER'S CP2 REVIEW (2026-10-28) — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — NO PROVIDER OR VOICE SELECTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is partial (§9.5) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
 **Date:** 2026-10-28  
 **Branch / base:** `s8b/s8b-01-voice-runtime-contract`, from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`. That is the
 merge of PR #363 (S8A-05 CP4 and S8A-05's closing change, merged 2026-10-27).  
@@ -240,8 +240,8 @@ release-readiness gate. None is claimed as tested:
 ## 9. CP2 — Gemini TTS & Provider Evidence (2026-10-28)
 
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — AT THE PRODUCT OWNER'S CP2 REVIEW`. The one run is consumed: USD 0.1155 of the
-USD 10 cap was spent. No voice or model is selected. Not run: ASR, stage P, the render spike, the expression set and the
-second voice. CP2 is not claimed fully closed, and CP3 has not started.  
+USD 10 cap was spent. No voice or model is selected. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
+that run's USD 2 cap (§9.9). Not run: ASR, stage P and the render spike. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -455,3 +455,101 @@ This was a separate bounded check, not a CP2 re-run. CP2's approval stays `CONSU
 | **Latency** | One cold request per model, so it is an indication only. Flash-Lite's 632 ms is near its AI Studio p50 (590 ms). Flash's 1000 ms is above its AI Studio p50 (679 ms) and near its p95 (982 ms). No route difference is established. |
 
 **Spend:** USD 0.0015 at the promotional price, and USD 0.0031 at the list price, which is what the guard settled.
+
+### 9.9 Full Gemini TTS evaluation on Google Cloud (the Product Owner's order and approval, 2026-10-28)
+
+This is the TTS part of CP2, completed through Google Cloud. It is not a new checkpoint. The CP2 run `s8b01-cp2-r1` (§9.2) and
+the PayGo check (§9.8) stay `CONSUMED`. DeepSeek streaming, the ASR research and the Replay render were not repeated, and
+neither was the billing investigation, which the Product Owner deferred.
+
+**A — the set, reviewed and corrected before any paid call (`scripts/s8b-01/cp2-worklist.mjs`):**
+- **The gloss defect (§9.4) stays fixed.** A reading that carries a gloss, an IPA, a Latin transliteration or `=` is never
+  substituted. H27, H28, H30 and N04 – N06 are sent as BASELINE only: their RENDERED arm would equal BASELINE.
+- **An automated review guards the run.** The plan check refuses to start on any defect. The review requires:
+  - every text is Arabic speech, with no annotation mark, no inline-tag bracket, and no Latin word its own item lacks;
+  - RENDERED differs from BASELINE only by diacritics on its target, which is one whole word (a one-letter proclitic is
+    allowed: «وضحى»), or a number span replaced by words;
+  - a style travels only in `speechMetadata.style`, a short English style, on PERSONA and EMOTION only;
+  - an expression item has the same text in its three variants;
+  - no duplicate (item, arm), and no two identical requests.
+- **Defects found and fixed:**
+  - two review false positives (tanween in H03 / H24; a proclitic in N03, N07, N08), fixed in the review, not in the set;
+  - one real duplication: the six replies (R01 – R06) were planned both as SET BASELINE and as expression NO_STYLE. These
+    are identical requests. The NO_STYLE copies were removed, and a reply's no-style reference is its BASELINE.
+- **The real count, not an assumed 628:** 148 texts (69 BASELINE, 43 RENDERED, 10 NO_STYLE, 16 PERSONA, 10 EMOTION) × 2
+  models × 2 voices = **592 calls**.
+
+**B — the run:**
+- **Approval:** `scripts/s8b-01/cp2-cloud-approval.json`, now `CONSUMED`. Plan `5a6ac838…`, verified at `7a516185` before the
+  run; run `s8b01-cp2-cloud-r1` at `2e0ac38e`.
+- **Route:** project `gen-lang-client-0473671267`, `global`, `streamGenerateContent`, ADC token in memory only.
+- **Models:** `gemini-3.8-flash-tts` and `gemini-3.8-flash-lite-tts`.
+- **Voices:** Achird and Sulafat.
+- **Guard:** cap USD 2; each call reserved its API ceiling (request bytes + 16,384 output tokens, at list price).
+- **Order:** categories in round robin, the two models strictly alternating, the voices balanced.
+- **Pacing:** at least 6.5 s between two calls to the same model (Product Owner).
+- **Retries:** none.
+- **Time:** 11:09:20 – 11:41:24 UTC, 32.1 minutes, against an estimate of 32.
+- **Outputs:** gitignored, under `artifacts/evals/s8b-01/cloud/s8b01-cp2-cloud-r1/`:
+  - `report.json`, `samples.csv` and `summary.json`;
+  - `audio/C####.wav`, 592 files;
+  - `listening.html`: every sample, by section;
+  - `listening-pack.html`: self-contained, the start-here and flagged sections.
+
+**Coverage: complete.** Required 592, executed 592, OK 592. There were:
+- no errors, no HTTP 429 and no stream cancelled at its bound;
+- no stop rule triggered;
+- 0 calls not reached.
+
+Per model: 120 homograph, 26 name, 32 number, 26 dialect, 8 code-switch, 24 reply and 60 emotion calls.
+
+**Results.** Synthetic text, measured from the developer's machine.
+
+| Measure | Flash | Flash-Lite |
+| --- | --- | --- |
+| First audio byte, p50 / p95 | 671 / 782 ms | **391 / 569 ms** |
+| Complete synthesis, p50 / p95 | 1434 / 2007 ms | **986 / 1415 ms** |
+| Real-time factor, p50 / p95 | 0.43 / 0.57 | **0.29 / 0.43** |
+| Largest gap between chunks, p50 / p95 | 48 / 112 ms | 39 / 80 ms |
+| Playback stalls (200 ms buffer) | 0 | 0 |
+| Audio | 1046.8 s | 1049.4 s |
+| Cost per audio minute, list price (2027) / promotional (2026) | USD 0.0273 / 0.0136 | **USD 0.0183 / 0.0091** |
+
+| Model · voice | First audio p50 / p95 | Complete p50 / p95 | Audio |
+| --- | --- | --- | --- |
+| Flash · Achird | 655 / 764 ms | 1413 / 1944 ms | 508.7 s |
+| Flash · Sulafat | 677 / 797 ms | 1475 / 2049 ms | 538.0 s |
+| Flash-Lite · Achird | 390 / 572 ms | 965 / 1302 ms | 510.8 s |
+| Flash-Lite · Sulafat | 391 / 560 ms | 987 / 1426 ms | 538.6 s |
+
+- **The voice changes neither model's speed.** Sulafat speaks about 5 % longer than Achird on both models.
+- **Style lengthens the speech, and the latency grows with it.** Complete-synthesis p50 for Flash is 1.85 s with PERSONA and
+  1.81 s with EMOTION, against 1.38 s for BASELINE. For Flash-Lite it is 1.20 s and 1.26 s, against 0.94 s.
+- **First audio does not change with style.**
+- **Style length against the same text without a style (p50):**
+  - PERSONA: Flash 1.11, Flash-Lite 1.02;
+  - EMOTION: 1.12 on both models;
+  - range 0.79 – 1.45.
+- **Against AI Studio (§9.3, Achird, the pronunciation set):** Flash-Lite's first audio p50 is 390 ms on Cloud, against
+  590 ms on AI Studio. Flash's is 655 ms, against 679 ms. One run per route and different hours, so this is an indication,
+  not a route comparison.
+
+**Flagged for listening.** The harness scores no pronunciation, dialect or naturalness. All of these are in the
+`listening.html` section "Flagged by the measures":
+- **H04 RENDERED, Flash · Achird (`C0185`):** 2.44 s, against 3.6 – 3.8 s for the other three. This could be a dropped word.
+- **D03 `15/3/1990` BASELINE:** 3.6 – 6.0 s across the four (`C0121` – `C0124`). Flash-Lite · Achird is the longest. The date
+  is read in different forms.
+- **Emotion styles that shortened the speech:** X01 JOY (0.84 on Flash · Sulafat and Flash-Lite · Achird) and X04 SURPRISE
+  (0.90 – 0.96). Did the style register?
+- **Emotion styles that lengthened it most:** X02, X06 and X07 (up to 1.45).
+- **Egyptian colloquial:** E01, N05 and C02 are the fastest speech of the run. Listen for clipped words.
+- **Persona consistency:** R01 – R06 BASELINE against PERSONA. Flash lengthens the persona by about 11 %; Flash-Lite barely
+  changes it.
+
+**Spend.** The guard settled **USD 0.7950** at the list price, of the USD 2 cap. That was 592 reservations and 592
+settlements, with no refusal, no overrun and no blocked request. At the promotional price it is about USD 0.3975, and the
+estimate was USD 0.8293 at list. CP2 in all, at list price: USD 0.1155 (AI Studio) + 0.0031 (PayGo check) + 0.7950 (this
+run) = **USD 0.9136**. Whether the USD 300 credit covers it is **UNVERIFIED** (§9.8).
+
+**Not decided here:** no model, voice or provider is selected, and no Voice Quality Router exists. The Product Owner chooses
+one voice path and one final model after listening. CP3 has not started.

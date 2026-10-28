@@ -569,6 +569,10 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
     objective measure (first audio p50 590 ms against 679; USD 0.0091 against 0.0136 per audio minute). The expression set,
     the second voice, ASR, stage P and the render spike are NOT RUN; one harness defect is fixed (§9.4);
   - no provider, model or voice selected (CP3, the Product Owner's listening).
+  - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
+    removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
+    429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against
+    0.0273 per audio minute at list price. The listening is the Product Owner's.
 - No production code, migration, provider adapter or feature gate; every voice gate closed. CP3 needs the Product Owner's
   CP2 review first.
 
