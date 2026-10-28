@@ -1,0 +1,629 @@
+{
+  "id": "s8b-01-asr-cp2-recording-script",
+  "version": 1,
+  "purpose": "The organised recording session for the S8B-01 CP2 ASR evidence (the Product Owner's order of 2026-10-28): Egyptian colloquial first, then MSA, English words inside Egyptian speech, names / numbers / dates, hesitation and self-correction, noise, and QANDEEL's own voice playing while the user speaks. It supplements asr-reading-prompts.json (hash-pinned by bench-plan.json, unchanged) and reuses its Egyptian and MSA read prompts by index. Every utterance is recorded by a consenting human speaker; synthesized speech is never scored. Names, numbers and places are invented; no user data and no real person's details.",
+  "speakers": {
+    "minimum": 2,
+    "preferred": 4,
+    "balance": "at least one female and one male voice; native Egyptian speakers; each speaker records the Egyptian part and the MSA part",
+    "ids": "anonymous codes only (S1, S2 …); no name, age or contact in any file name or metadata"
+  },
+  "format": {
+    "deliver": "any phone recording format (m4a, aac, wav); one file per line of the session sheet, named exactly as the sheet says",
+    "scored": "16 kHz mono 16-bit PCM WAV, converted locally (needs ffmpeg); the originals are kept beside them until S8B-01 closes",
+    "storage": "artifacts/evals/s8b-01/corpus/<speaker>/ (gitignored); never committed; deleted at S8B-01 closure unless the Product Owner directs otherwise, or at once if the speaker withdraws"
+  },
+  "conditions": [
+    {
+      "id": "QUIET",
+      "instruction": "غرفة هادئة، والموبايل في إيدك على مسافة طبيعية من بُقّك."
+    },
+    {
+      "id": "SPEAKER",
+      "instruction": "الموبايل على الترابيزة، على بُعد حوالي نص متر، زي المكالمة على السبيكر."
+    },
+    {
+      "id": "NOISE",
+      "instruction": "نفس وضع السبيكر، مع تلفزيون أو صوت شارع في الخلفية بمستوى عادي."
+    },
+    {
+      "id": "OVERLAP",
+      "instruction": "نفس وضع السبيكر، وجهاز تاني بيشغّل صوت قنديل (الملف المذكور) بصوت عادي وإنت بتتكلم في نفس الوقت. سجّل كلامك إنت بس."
+    }
+  ],
+  "overlapPlayback": "a QANDEEL sample in the selected voice (gemini-3.8-flash-tts, Achird) from the CP2 Cloud run, for example C0177 (R01 PERSONA); played from a second device during OVERLAP lines. It is synthesized QANDEEL speech in the background, not the scored speech.",
+  "reference": {
+    "read": "the line's reference: its text as written, with the fillers in `fillers` removed. Words the speaker actually skipped or added are corrected in the reference only by the speaker or the Product Owner after listening, never by the harness.",
+    "spontaneous": "the speaker's own verbatim transcript, in ordinary Egyptian or MSA spelling, written after recording",
+    "englishWords": "an English word scores as correct in Latin letters or in any spelling listed in `alternatives`",
+    "intent": "for a self-correction, `intent` is the value the speaker meant. ASR is scored on the verbatim words; whether the meaning is kept is reported beside it."
+  },
+  "fillers": [
+    "إممم",
+    "اممم",
+    "ممم",
+    "آآ",
+    "إيه..."
+  ],
+  "reuse": {
+    "EGYPTIAN": {
+      "file": "asr-reading-prompts.json",
+      "path": "dialects.EGYPTIAN",
+      "read": "QUIET + SPEAKER, all 15; NOISE: indices 0, 3, 6, 9, 12",
+      "spontaneous": "SPEAKER, all 6"
+    },
+    "MSA": {
+      "file": "asr-reading-prompts.json",
+      "path": "dialects.MSA",
+      "read": "QUIET + SPEAKER, all 15; NOISE: indices 0, 3, 6, 9, 12",
+      "spontaneous": "SPEAKER, indices 0, 1, 3"
+    }
+  },
+  "sets": {
+    "core": {
+      "note": "The Product Owner's Speechmatics order (2026-10-28): a representative first set of 30 lines per speaker (a man and a woman), Egyptian first; the full session is the 130 lines of all items and reuse rules. Each NOISE and OVERLAP line repeats a SPEAKER line of the same text, so the condition is compared on the same words.",
+      "lines": [
+        "EG-R01|SPEAKER",
+        "EG-R02|SPEAKER",
+        "EG-R04|SPEAKER",
+        "EG-R06|SPEAKER",
+        "EG-R09|SPEAKER",
+        "EG-R10|SPEAKER",
+        "EG-R13|SPEAKER",
+        "EG-CS-01|SPEAKER",
+        "EG-CS-02|SPEAKER",
+        "EG-CS-03|SPEAKER",
+        "EG-CS-06|SPEAKER",
+        "EG-CS-08|SPEAKER",
+        "EG-ND-01|SPEAKER",
+        "EG-ND-02|SPEAKER",
+        "EG-ND-04|SPEAKER",
+        "EG-ND-05|SPEAKER",
+        "EG-ND-06|SPEAKER",
+        "EG-DF-01|SPEAKER",
+        "EG-DF-02|SPEAKER",
+        "EG-DF-04|SPEAKER",
+        "EG-DF-06|SPEAKER",
+        "EG-R04|NOISE",
+        "EG-CS-02|NOISE",
+        "EG-ND-05|NOISE",
+        "EG-ND-02|OVERLAP",
+        "EG-DF-06|OVERLAP",
+        "EG-S01|SPEAKER",
+        "MSA-R02|SPEAKER",
+        "MSA-ND-03|SPEAKER",
+        "MSA-CS-01|SPEAKER"
+      ]
+    },
+    "po20": {
+      "note": "The Product Owner's simplification (2026-10-28): 20 recordings in all, by the Product Owner alone on their phone, files 01 … 20 in artifacts/evals/s8b-01/corpus/PO/, in the phone's own format (converted locally). A first test of one speaker: it proves nothing for every group of users. 18 and 19 repeat 02 and 06 with background noise; 20 is spoken while QANDEEL's voice plays.",
+      "speaker": "PO",
+      "folder": "artifacts/evals/s8b-01/corpus/PO",
+      "overlapPlayback": "artifacts/evals/s8b-01/cloud/s8b01-cp2-cloud-r1/audio/C0177.wav",
+      "lines": [
+        {
+          "n": "01",
+          "id": "EG-R01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "02",
+          "id": "EG-R02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "03",
+          "id": "EG-R07",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "04",
+          "id": "EG-R10",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "05",
+          "id": "EG-R12",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "06",
+          "id": "EG-CS-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "07",
+          "id": "EG-CS-02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "08",
+          "id": "EG-CS-03",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "09",
+          "id": "EG-CS-08",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "10",
+          "id": "EG-ND-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "11",
+          "id": "EG-ND-02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "12",
+          "id": "EG-ND-04",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "13",
+          "id": "EG-ND-06",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "14",
+          "id": "MSA-ND-03",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "15",
+          "id": "MSA-CS-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "16",
+          "id": "EG-DF-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "17",
+          "id": "EG-DF-02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "18",
+          "id": "EG-R02",
+          "condition": "NOISE"
+        },
+        {
+          "n": "19",
+          "id": "EG-CS-01",
+          "condition": "NOISE"
+        },
+        {
+          "n": "20",
+          "id": "EG-DF-06",
+          "condition": "OVERLAP"
+        }
+      ]
+    }
+  },
+  "items": [
+    {
+      "id": "EG-CS-01",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER",
+        "OVERLAP"
+      ],
+      "text": "بعتلك الـ meeting link على الإيميل، شوفه قبل الساعة تلاتة.",
+      "alternatives": {
+        "meeting": [
+          "ميتنج",
+          "ميتينج"
+        ],
+        "link": [
+          "لينك"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-02",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER",
+        "NOISE"
+      ],
+      "text": "الـ deadline بتاع الـ presentation اتأجل لبكرة الصبح.",
+      "alternatives": {
+        "deadline": [
+          "ديدلاين"
+        ],
+        "presentation": [
+          "بريزنتيشن",
+          "برزنتيشن"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-03",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "نزّلت الـ app الجديد بس الـ login مش راضي يشتغل.",
+      "alternatives": {
+        "app": [
+          "أب",
+          "آب",
+          "ابلكيشن"
+        ],
+        "login": [
+          "لوجين",
+          "لوج ان"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-04",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "خلّي الـ notifications مقفولة وأنا في الشغل.",
+      "alternatives": {
+        "notifications": [
+          "نوتيفيكيشنز",
+          "نوتفكيشن"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-05",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "عملت check-in في الفندق وبعدين نزلت الـ gym.",
+      "alternatives": {
+        "check-in": [
+          "تشيك ان",
+          "تشك إن"
+        ],
+        "gym": [
+          "جيم",
+          "الجيم"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-06",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER",
+        "NOISE"
+      ],
+      "text": "الـ laptop بتاعي عمل restart لوحده وأنا بشتغل.",
+      "alternatives": {
+        "laptop": [
+          "لابتوب",
+          "لاب توب"
+        ],
+        "restart": [
+          "ريستارت"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-07",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "ابعتلي voice note لما توصل البيت.",
+      "alternatives": {
+        "voice": [
+          "فويس"
+        ],
+        "note": [
+          "نوت"
+        ]
+      }
+    },
+    {
+      "id": "EG-CS-08",
+      "dialect": "EGYPTIAN",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "أنا مش فاضي، عندي call مع المدير الساعة خمسة.",
+      "alternatives": {
+        "call": [
+          "كول"
+        ]
+      }
+    },
+    {
+      "id": "EG-ND-01",
+      "dialect": "EGYPTIAN",
+      "category": "NAME_DATE",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "ميعادي مع دكتورة نهى الشربيني يوم الحد خمستاشر مارس.",
+      "keyterms": [
+        "نهى الشربيني"
+      ]
+    },
+    {
+      "id": "EG-ND-02",
+      "dialect": "EGYPTIAN",
+      "category": "NUMBER",
+      "conditions": [
+        "QUIET",
+        "SPEAKER",
+        "OVERLAP"
+      ],
+      "text": "رقم الطلب سبعة تمانية تلاتة أربعة خمسة.",
+      "digits": "78345",
+      "spoken": "سبعة تمانية تلاتة أربعة خمسة"
+    },
+    {
+      "id": "EG-ND-03",
+      "dialect": "EGYPTIAN",
+      "category": "NUMBER",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "اتولدت سنة ألفين وتلاتة في المنصورة.",
+      "digits": "2003",
+      "keyterms": [
+        "المنصورة"
+      ],
+      "spoken": "ألفين وتلاتة"
+    },
+    {
+      "id": "EG-ND-04",
+      "dialect": "EGYPTIAN",
+      "category": "NUMBER",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "حوّلتلك تلات تلاف وسبعمية وخمسين جنيه.",
+      "digits": "3750",
+      "spoken": "تلات تلاف وسبعمية وخمسين"
+    },
+    {
+      "id": "EG-ND-05",
+      "dialect": "EGYPTIAN",
+      "category": "NAME_DATE",
+      "conditions": [
+        "QUIET",
+        "SPEAKER",
+        "NOISE"
+      ],
+      "text": "القطر بيقوم الساعة سبعة وربع من محطة رمسيس.",
+      "keyterms": [
+        "رمسيس"
+      ]
+    },
+    {
+      "id": "EG-ND-06",
+      "dialect": "EGYPTIAN",
+      "category": "NAME",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "كلّم المهندس شريف عبد الحميد على رقمه الجديد.",
+      "keyterms": [
+        "شريف عبد الحميد"
+      ]
+    },
+    {
+      "id": "EG-ND-07",
+      "dialect": "EGYPTIAN",
+      "category": "NAME_DATE",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "الحفلة يوم تلاتة وعشرين ديسمبر الساعة تمانية بالليل."
+    },
+    {
+      "id": "EG-ND-08",
+      "dialect": "EGYPTIAN",
+      "category": "NAME",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "ساكن في عمارة اتنين وأربعين شارع التحرير في الدقي.",
+      "keyterms": [
+        "الدقي",
+        "شارع التحرير"
+      ]
+    },
+    {
+      "id": "EG-DF-01",
+      "dialect": "EGYPTIAN",
+      "category": "DISFLUENCY",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "أنا كنت... يعني كنت عايز أقولك إني مش هقدر آجي.",
+      "speakerNote": "اتكلم بتردد طبيعي، وكرر «كنت» زي ما مكتوب."
+    },
+    {
+      "id": "EG-DF-02",
+      "dialect": "EGYPTIAN",
+      "category": "SELF_CORRECTION",
+      "conditions": [
+        "SPEAKER",
+        "OVERLAP"
+      ],
+      "text": "الميعاد الساعة أربعة، لأ لأ قصدي خمسة.",
+      "intent": "خمسة"
+    },
+    {
+      "id": "EG-DF-03",
+      "dialect": "EGYPTIAN",
+      "category": "DISFLUENCY",
+      "conditions": [
+        "SPEAKER",
+        "NOISE"
+      ],
+      "text": "إممم... مش عارف، بس حاسس إن الموضوع ده مضايقني.",
+      "speakerNote": "ابدأ بصوت تفكير «إممم» قبل الكلام."
+    },
+    {
+      "id": "EG-DF-04",
+      "dialect": "EGYPTIAN",
+      "category": "SELF_CORRECTION",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "قابلت أحمد، قصدي محمود، في النادي امبارح.",
+      "intent": "محمود"
+    },
+    {
+      "id": "EG-DF-05",
+      "dialect": "EGYPTIAN",
+      "category": "DISFLUENCY",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "هو... هو قالي إنه هيتصل بس ما اتصلش.",
+      "speakerNote": "كرر «هو» بتردد."
+    },
+    {
+      "id": "EG-DF-06",
+      "dialect": "EGYPTIAN",
+      "category": "SELF_INTERRUPTION",
+      "conditions": [
+        "SPEAKER",
+        "OVERLAP"
+      ],
+      "text": "استنى، استنى، خليني أفكر ثانية.",
+      "speakerNote": "قولها كأنك بتقاطع قنديل."
+    },
+    {
+      "id": "MSA-ND-01",
+      "dialect": "MSA",
+      "category": "NAME_DATE",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "موعد الاجتماع يوم الأربعاء الخامس من نوفمبر في الساعة الثالثة."
+    },
+    {
+      "id": "MSA-ND-02",
+      "dialect": "MSA",
+      "category": "NUMBER",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "اسمي سلمى القاضي، ورقم الحجز أربعة ستة تسعة اثنان.",
+      "digits": "4692",
+      "keyterms": [
+        "سلمى القاضي"
+      ],
+      "spoken": "أربعة ستة تسعة اثنان"
+    },
+    {
+      "id": "MSA-ND-03",
+      "dialect": "MSA",
+      "category": "NAME_DATE",
+      "conditions": [
+        "QUIET",
+        "SPEAKER"
+      ],
+      "text": "ولدت في الخامس عشر من مارس عام ألف وتسعمئة وتسعين."
+    },
+    {
+      "id": "MSA-ND-04",
+      "dialect": "MSA",
+      "category": "NUMBER",
+      "conditions": [
+        "QUIET",
+        "SPEAKER",
+        "NOISE"
+      ],
+      "text": "حوّلت مبلغ ألف ومئتين وخمسين دولارًا إلى حساب الدكتور خالد المصري.",
+      "digits": "1250",
+      "keyterms": [
+        "خالد المصري"
+      ],
+      "spoken": "ألف ومئتين وخمسين"
+    },
+    {
+      "id": "MSA-CS-01",
+      "dialect": "MSA",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "أرسلت لك ملف الـ PDF عبر البريد الإلكتروني.",
+      "alternatives": {
+        "PDF": [
+          "بي دي إف",
+          "بي دي اف"
+        ]
+      }
+    },
+    {
+      "id": "MSA-CS-02",
+      "dialect": "MSA",
+      "category": "CODE_SWITCH",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "نستخدم برنامج Excel لمتابعة الميزانية.",
+      "alternatives": {
+        "Excel": [
+          "إكسل",
+          "اكسل"
+        ]
+      }
+    },
+    {
+      "id": "MSA-DF-01",
+      "dialect": "MSA",
+      "category": "SELF_CORRECTION",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "سأصل في الساعة السابعة، عفوًا، الثامنة مساءً.",
+      "intent": "الثامنة"
+    },
+    {
+      "id": "MSA-DF-02",
+      "dialect": "MSA",
+      "category": "DISFLUENCY",
+      "conditions": [
+        "SPEAKER"
+      ],
+      "text": "أعتقد أن... أن المشكلة في الإعدادات وليست في الجهاز.",
+      "speakerNote": "كرر «أن» بتردد طبيعي."
+    }
+  ],
+  "consent": {
+    "language": "ar",
+    "text": [
+      "أوافق على تسجيل صوتي لقراءة جمل مكتوبة والإجابة عن أسئلة عامة، لاختبار تقني لفهم الكلام في تطبيق قنديل فقط.",
+      "أفهم أن التسجيلات تُرسل إلى مزوّدَي تحويل الكلام إلى نص المذكورين في خطة الاختبار، وفق شروط لا تحتفظ بالصوت ولا تستخدمه في التدريب.",
+      "لن يُذكر اسمي في أي ملف، ولن تُنشر التسجيلات، وتُحذف عند انتهاء مرحلة الاختبار (S8B-01)، أو فورًا إذا طلبت ذلك في أي وقت.",
+      "لن أذكر في الإجابات الحرة أي معلومة شخصية حقيقية عني أو عن غيري."
+    ],
+    "record": "the speaker's code, the date and a signed or written yes, kept by the Product Owner outside the repository"
+  }
+}

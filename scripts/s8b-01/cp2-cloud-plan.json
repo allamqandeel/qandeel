@@ -1,0 +1,97 @@
+{
+  "id": "s8b-01-cp2-cloud-evaluation",
+  "version": 1,
+  "purpose": "The Product Owner's S8B-01 CP2 full Gemini TTS evaluation on Google Cloud PayGo (2026-10-28): every valid sample of the reviewed CP2 TTS set on both models and both voices, through the Agent Platform API in global with ADC. It replaces the AI Studio run r1, which a Tier 1 daily quota stopped. CP2's and the PayGo check's approvals stay CONSUMED; neither is reused.",
+  "guard": {
+    "authorized": true,
+    "costCapUsd": 2,
+    "budgetUsd": {
+      "tts": 2
+    },
+    "noAutomaticRetry": true,
+    "allowedHosts": {
+      "AGENT_PLATFORM": "aiplatform.googleapis.com"
+    },
+    "liveKeys": [
+      "GOOGLE_CLOUD_ACCESS_TOKEN"
+    ],
+    "settlement": "every call is settled at the list price (from 2027-01-01) because the 2026 promotional 'credits back' billing is unverified; the promotional figure is reported beside it",
+    "credentialNote": "An OAuth access token from Application Default Credentials, obtained by the launcher into memory only and passed to the guarded child; never printed, logged or written.",
+    "reservation": "each call reserves the most Google can bill for it (request bytes as input tokens + the model's maximum output of 16,384 audio tokens, at the list price), so the guard refuses the next call before the cap could be passed, even if a cancelled stream were billed in full"
+  },
+  "project": "gen-lang-client-0473671267",
+  "location": "global",
+  "api": {
+    "endpoint": "https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:streamGenerateContent?alt=sse",
+    "style": "contents[0].parts[0].speechMetadata.style, never inside the text",
+    "verifiedFrom": "docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-8-flash-tts, 3-8-flash-lite-tts and text-to-speech/overview (last updated 2026-10-28); proven by run s8b01-gcp-paygo-r1"
+  },
+  "models": [
+    {
+      "id": "gemini-3.8-flash-tts",
+      "promotionalUsdPerMillion": {
+        "inputText": 0.5,
+        "outputAudio": 9
+      },
+      "listUsdPerMillion": {
+        "inputText": 1,
+        "outputAudio": 18
+      },
+      "maxOutputTokens": 16384
+    },
+    {
+      "id": "gemini-3.8-flash-lite-tts",
+      "promotionalUsdPerMillion": {
+        "inputText": 0.5,
+        "outputAudio": 6
+      },
+      "listUsdPerMillion": {
+        "inputText": 1,
+        "outputAudio": 12
+      },
+      "maxOutputTokens": 16384
+    }
+  ],
+  "voices": [
+    "Achird",
+    "Sulafat"
+  ],
+  "audioTokensPerSecond": 25,
+  "corpusSha256": {
+    "corpus/tts-pronunciation-set.json": "ec40dc0bc1c56e3f4d5580db5a980253a819983caf4465accd6dd4341b037610",
+    "corpus/tts-expression-set.json": "6489cdb548bddd53d16c109f7860457ebdac5c0305c49d8433385594bf3cc695"
+  },
+  "workList": {
+    "builder": "cp2-worklist.mjs buildWork, reviewed by reviewWork (the plan check refuses while it finds a defect)",
+    "entries": 148,
+    "calls": 592,
+    "byArm": {
+      "BASELINE": 69,
+      "RENDERED": 43,
+      "NO_STYLE": 10,
+      "PERSONA": 16,
+      "EMOTION": 10
+    },
+    "order": "cp2-worklist.mjs interleave: categories in round robin; per entry the four model × voice combinations, the two models strictly alternating across the run",
+    "duplicatesRemoved": "the six replies R01 – R06 were the same request as SET BASELINE and EXPRESSION NO_STYLE; they are sent once (24 calls fewer)"
+  },
+  "pacing": {
+    "perModelStartIntervalMs": 6500,
+    "note": "Product Owner (2026-10-28): at least 6.5 s between two calls to the same model, start to start, against the unknown capacity of the Cloud route. The two models alternate, so each model's interval runs while the other is called."
+  },
+  "stopRules": {
+    "firstCallOfAModelFails": "stop that model",
+    "http400_403_404": "stop that model",
+    "http401": "stop the run (credential)",
+    "consecutive429PerModel": 3,
+    "total429PerModel": 10,
+    "consecutiveFailuresPerModel": 3,
+    "budgetRefused": "stop the run",
+    "tokenWindowMs": 3300000,
+    "tokenWindowNote": "an ADC access token lives about an hour; past 55 minutes the run stops and records what it did not reach",
+    "afterAStop": "the coverage left is recorded; no second run without a new Product Owner approval",
+    "cancelledAtBound": "stop that model (a runaway stream)"
+  },
+  "outputs": "artifacts/evals/s8b-01/cloud/<runId>/ (gitignored): report.json, samples.csv, audio/<sample>.wav, and the listening pages built after the run",
+  "notRun": "AI Studio (no second comparison run), DeepSeek streaming, ASR, the Replay render, the promotional-credit billing enquiry (deferred by the Product Owner)"
+}

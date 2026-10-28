@@ -1,0 +1,223 @@
+{
+  "id": "s8b-01-asr-sm-proof-plan",
+  "version": 1,
+  "status": "PREPARED — the Product Owner's final ASR engineering proof (2026-10-28): 12 sessions (6 overlap, 6 latency), Speechmatics Enhanced ar_en only, max_delay 0.7, QANDEEL's VAD + ForceEndOfUtterance endpoint; one bounded run after an explicit approval (asr-sm-proof-approval.json). Nothing has been sent.",
+  "scope": {
+    "preliminarySingleSpeaker": true,
+    "deviceAecProofDeferred": true,
+    "note": "The Product Owner's existing recordings only (one speaker, WhatsApp audio), no new recording, sample 20 not repeated. The overlap mixes are synthetic: they are not a proof of the phone's echo canceller, which stays a pre-launch condition proven on devices when calls are implemented. A pass recommends Speechmatics for production integration; it does not declare production testing complete."
+  },
+  "provider": "SPEECHMATICS",
+  "endpointUrl": "wss://eu.rt.speechmatics.com/v2",
+  "guard": {
+    "authorized": true,
+    "costCapUsd": 0.1,
+    "budgetUsd": {
+      "asr": 0.1
+    },
+    "allowedHosts": {
+      "speechmatics": "eu.rt.speechmatics.com"
+    },
+    "liveKeys": [
+      "SPEECHMATICS_API_KEY"
+    ],
+    "keyFile": "~/.qandeel/speechmatics-api-key.txt (per user, outside the repository; read into memory by the launcher only)",
+    "reservation": "each session reserves its timeout (the recording's audio + the tail silence + the margin) at the arm's hourly price, and settles at its measured wall time, which bounds the audio Speechmatics can bill"
+  },
+  "privacy": {
+    "realtimeOnly": true,
+    "modelTrainingMustBeOff": true,
+    "terms": [
+      {
+        "source": "https://docs.speechmatics.com/administration/security-and-compliance",
+        "holds": "real-time audio is never recorded or stored; it is processed in memory and the transcripts are returned and discarded"
+      },
+      {
+        "source": "https://www.speechmatics.com/legal/terms-of-service",
+        "holds": "clause 10.4: no use of customer data for machine learning or model training unless the workspace opts in (the portal model-training setting)"
+      },
+      {
+        "source": "https://www.speechmatics.com/pricing",
+        "holds": "the model-training opt-in (a 33 % discount) is off by default"
+      }
+    ],
+    "settings": [
+      "the workspace model-training setting stays OFF; the Product Owner confirms it in the approval (modelTrainingOff: true) before the run",
+      "real-time only: no batch job is created, so nothing is held for the batch retention of 7 days",
+      "no translation, no speaker identification, no audio events"
+    ],
+    "notes": "The Product Owner's recordings, their converted WAVs and the transcripts stay in gitignored directories and are deleted at S8B-01 closure."
+  },
+  "arms": [
+    {
+      "id": "ENHANCED_AR_EN_FAST",
+      "role": "the production candidate configuration: max_delay 0.7 (Speechmatics' minimum), flexible kept (numbers), Speechmatics' own end-of-utterance trigger off so that QANDEEL's endpoint is the only one",
+      "transcriptionConfig": {
+        "model": "enhanced",
+        "language": "ar_en",
+        "enable_partials": true,
+        "max_delay": 0.7,
+        "max_delay_mode": "flexible",
+        "conversation_config": {
+          "end_of_utterance_silence_trigger": 0
+        }
+      },
+      "additionalVocab": true,
+      "pricePerHourUsd": 0.8
+    }
+  ],
+  "endpoint": {
+    "authority": "QANDEEL_VAD_FORCE_END_OF_UTTERANCE",
+    "vad": {
+      "frameMs": 20,
+      "threshold": 300,
+      "minSpeechMs": 100
+    },
+    "finalizeSilenceMs": 500,
+    "commitSilenceCandidatesMs": [
+      500,
+      600,
+      800,
+      1000,
+      1200
+    ],
+    "note": "Two decisions, kept apart so that a fast final never cuts the user: FINALIZE — after finalizeSilenceMs of silence (also at a thinking pause) the gateway sends ForceEndOfUtterance with the silence start as timestamp, and the VAD re-arms on new speech; COMMIT — the Orchestrator commits the turn only after a longer silence (S8B-05 sets it by controlled configuration); the commit cut table is computed locally on the 20 recordings and reported, never sent."
+  },
+  "audio": {
+    "encoding": "pcm_s16le, 16 kHz mono (the prepared WAVs and their local mixes)",
+    "chunkMs": 20,
+    "pacing": "real time",
+    "tailSilenceMs": 2000,
+    "sessionTimeoutMarginMs": 15000,
+    "maxLineSeconds": 10
+  },
+  "sets": {
+    "overlap": {
+      "lines": [
+        1,
+        4
+      ],
+      "variants": [
+        {
+          "id": "RESIDUAL_M25",
+          "levelDb": -25,
+          "meaning": "QANDEEL's voice 25 dB under the speech for the whole line: a stand-in for the echo canceller's residual"
+        },
+        {
+          "id": "BARGE_IN_400",
+          "levelDb": 0,
+          "untilOnsetPlusMs": 400,
+          "meaning": "QANDEEL's voice at the speech's level until 0.4 s after the user starts, then stopped: the barge-in path"
+        },
+        {
+          "id": "FULL_0DB",
+          "levelDb": 0,
+          "meaning": "QANDEEL at the speech level for the whole line: the room condition, reported only"
+        }
+      ],
+      "why": "two lines the run transcribed with no word error (§9.17), so a change is the overlap, not the line"
+    },
+    "latency": {
+      "lines": [
+        2,
+        5,
+        9,
+        11,
+        16,
+        17
+      ],
+      "why": "thinking / reading pauses (05: 780 ms, 17: 600 ms, 09: 580 ms, 02: a mid-sentence end of utterance in §9.17), a self-correction (17), hesitation (16) and numbers spoken digit by digit (11)"
+    }
+  },
+  "sessions": 12,
+  "inputs": {
+    "scriptSha256": "ffd9eb2b03d0bc78daaecb298e4c25e73d0fb88feedaf8fe8ffeea57ce3421dc",
+    "recordings": {
+      "11": "9f9e52a042ec49f237e1c944476a2761c855cad83bd23e53a7f22b6271747cf2",
+      "16": "988250f59ef110178272d678794e77af656572a542be65f87ec27932fecb1e21",
+      "17": "dcf57fffa6c7bd52b90d98d107125bc63ac29668ccf5713fc72c5282bdebeebb",
+      "01": "569321ba8d63cbc75435ebc9c271f0ebef3867476065c481ef7254d049620850",
+      "02": "e77117301c3cfd2f9a23a0c60d13984a53ed952992100828bc46304176736335",
+      "04": "ac2902130fb74e32e834e6609a5fe4331b64f35ec3c36ef76c1e3bcab0f95f14",
+      "05": "abc9e42ee451f54f7daf50aed58845cdf515bbdb2a6882cf6ca35b52d96f81dc",
+      "09": "2a13e29d8c65c75bc155d70a4af71451db4c6d7b3401b98cbc7759af78202377"
+    },
+    "qandeelVoice": {
+      "file": "artifacts/evals/s8b-01/cloud/s8b01-cp2-cloud-r1/audio/C0177.wav",
+      "sha256": "338d3baafc148b6ad552a74dc7804919f61c28cc0f9b08c3073e95997b401a0f"
+    }
+  },
+  "baseline": {
+    "11": {
+      "wordErrors": 5,
+      "checks": {
+        "number": true
+      }
+    },
+    "16": {
+      "wordErrors": 2,
+      "checks": {}
+    },
+    "17": {
+      "wordErrors": 1,
+      "checks": {
+        "intent": true
+      }
+    },
+    "note": "The same lines in run s8b01-cp2-asr-sm-po-r1 (§9.17): raw word errors against the reference, and the checks that passed.",
+    "01": {
+      "wordErrors": 0,
+      "checks": {}
+    },
+    "04": {
+      "wordErrors": 0,
+      "checks": {}
+    },
+    "02": {
+      "wordErrors": 2,
+      "checks": {}
+    },
+    "05": {
+      "wordErrors": 2,
+      "checks": {}
+    },
+    "09": {
+      "wordErrors": 0,
+      "checks": {
+        "english": [
+          true
+        ]
+      }
+    }
+  },
+  "normalization": {
+    "diacritics": true,
+    "tatweel": true,
+    "alef": true,
+    "alefMaqsura": true,
+    "taMarbuta": true,
+    "digits": true,
+    "punctuation": true
+  },
+  "acceptance": {
+    "note": "Preregistered. The accuracy rules hold the §9.17 lines to their own results; the speed rules are the contract's E + A budget (bench-plan.json: E ≤ 900 ms, A ≤ 300 ms). FULL_0DB is reported only. The commit cut table is reported, not gated.",
+    "overlapGatedVariants": [
+      "RESIDUAL_M25",
+      "BARGE_IN_400"
+    ],
+    "reportedOnlyVariants": [
+      "FULL_0DB"
+    ],
+    "maxExtraWordErrors": 1,
+    "forceResponseP50MaxMs": 300,
+    "textReadyP50MaxMs": 900
+  },
+  "stopRules": {
+    "notAuthorised": "stop the run (HTTP 401 / close 4001)",
+    "quotaExceeded": "stop the run (close 4005)",
+    "firstSessionFails": "stop the run",
+    "consecutiveFailures": 3,
+    "budgetRefused": "stop the run",
+    "retries": "none"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "s8b-01-gcp-paygo-check",
+  "version": 1,
+  "purpose": "The Product Owner's S8B-01 CP2 Google Cloud PayGo verification (2026-10-28): a bounded check of access, billing, capacity and first-audio latency for the two Gemini TTS models through Google Cloud (Gemini Enterprise Agent Platform). It is not a CP2 re-run: CP2's approval is CONSUMED and its samples are not repeated.",
+  "guard": {
+    "authorized": true,
+    "costCapUsd": 0.25,
+    "budgetUsd": { "tts": 0.25 },
+    "noAutomaticRetry": true,
+    "allowedHosts": { "AGENT_PLATFORM": "aiplatform.googleapis.com" },
+    "liveKeys": ["GOOGLE_CLOUD_ACCESS_TOKEN"],
+    "maxCalls": 2,
+    "credentialNote": "An OAuth access token from Application Default Credentials (gcloud auth application-default print-access-token), obtained by the launcher into memory only and passed to the guarded child; never printed, logged or written. No API key, no service-account key, no new project or billing account."
+  },
+  "project": "gen-lang-client-0473671267",
+  "location": "global",
+  "api": {
+    "endpoint": "https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:streamGenerateContent?alt=sse",
+    "method": "streamGenerateContent (Server-Sent Events); responseModalities AUDIO; the text verbatim; no style; no systemInstruction, temperature, topP, topK or candidateCount",
+    "audio": "headerless 16-bit PCM, 24 kHz, mono (audio/l16), in candidates[0].content.parts[].inlineData.data",
+    "verifiedFrom": "docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-8-flash-tts and 3-8-flash-lite-tts, text-to-speech/overview (last updated 2026-10-28)"
+  },
+  "models": [
+    { "id": "gemini-3.8-flash-tts", "promotionalUsdPerMillion": { "inputText": 0.5, "outputAudio": 9 }, "listUsdPerMillion": { "inputText": 1, "outputAudio": 18 } },
+    { "id": "gemini-3.8-flash-lite-tts", "promotionalUsdPerMillion": { "inputText": 0.5, "outputAudio": 6 }, "listUsdPerMillion": { "inputText": 1, "outputAudio": 12 } }
+  ],
+  "pricingNote": "Google Cloud pricing through 2026-12-31 is promotional, 'provided through 50% credits back on net spend'; how that is billed is not verified, so every reservation and the reported upper estimate use the list price (from 2027-01-01).",
+  "audioTokensPerSecond": 25,
+  "voice": "Achird",
+  "text": "أهلًا بيك، أنا معاك. قولّي يومك كان عامل إيه؟",
+  "textNote": "Invented for this check, not a CP2 corpus item; no user data.",
+  "measures": ["HTTP status", "time to first audio byte", "time to the end of the stream", "audio seconds received", "usage tokens", "estimated cost at the promotional and the list price"],
+  "notMeasured": "Capacity: two calls prove nothing about throughput; capacity is assessed from Google's documentation or Google's confirmation, never by a load test."
+}

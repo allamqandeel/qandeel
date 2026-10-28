@@ -1,0 +1,26 @@
+{
+  "id": "s8b-01-gcp-paygo-approval",
+  "status": "CONSUMED",
+  "runId": "s8b01-gcp-paygo-r1",
+  "approvedBy": "Product Owner",
+  "approvedOn": "2026-10-28",
+  "scope": "Two streamed Gemini TTS requests through Google Cloud (project gen-lang-client-0473671267, location global): one to gemini-3.8-flash-tts and one to gemini-3.8-flash-lite-tts, the same invented Arabic sentence and the voice Achird. No retry; a failed model is not tried again.",
+  "capUsd": 0.25,
+  "planSha256": "14423873d2ed9fb236722740a425e22bf233f430682dd128234643a676329332",
+  "note": "APPROVED by the Product Owner (2026-10-28): the plan at 040d3793 after its hash is verified; one request per model; USD 0.25 in all; no retry; no widening of the check or the plan; no app code; no CP3. The commit that records the run sets CONSUMED.",
+  "consumed": {
+    "runId": "s8b01-gcp-paygo-r1",
+    "head": "2dfe875727ec9a24d0cf2ec9a226f0e54496f437",
+    "startedAt": "2026-10-28T08:00:13.290Z",
+    "finishedAt": "2026-10-28T08:00:16.584Z",
+    "calls": 2,
+    "ok": 2,
+    "retries": 0,
+    "refused": 0,
+    "overruns": 0,
+    "settledUsdAtListPrice": 0.003082,
+    "estimatedUsdAtPromotionalPrice": 0.001541,
+    "billingCoverage": "UNVERIFIED (Cloud Billing cost data not yet visible; the Cloud Billing API exposes no cost or credit)",
+    "record": "S8B-01 record §9.8"
+  }
+}
