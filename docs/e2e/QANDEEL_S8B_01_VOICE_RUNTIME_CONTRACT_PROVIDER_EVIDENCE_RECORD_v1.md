@@ -427,3 +427,31 @@ No voice and no model is chosen here.
 **Open items:**
 - The Product Owner confirms that AI Studio request logging is **off** for the `QANDEEL` project (VA-11 §3).
 - The pacing and quota of any further run.
+
+### 9.8 Google Cloud PayGo check (the Product Owner's order and approval, 2026-10-28)
+
+This was a separate bounded check, not a CP2 re-run. CP2's approval stays `CONSUMED`.
+
+**Setup:**
+- **Approval:** `scripts/s8b-01/gcp-paygo-approval.json`, now `CONSUMED`. Run `s8b01-gcp-paygo-r1` at `2dfe8757`. Plan `14423873…`, verified before the run. Cap USD 0.25.
+- **Route:** project `gen-lang-client-0473671267`, location `global`, `streamGenerateContent` on `aiplatform.googleapis.com`.
+- **Credential:** the Application Default Credentials (ADC) access token, held in memory only.
+- **Request:** one invented sentence (not a CP2 sample), voice Achird, no style. One request per model, no retry.
+- **Outputs:** gitignored, under `artifacts/evals/s8b-01/gcp-paygo/s8b01-gcp-paygo-r1/`.
+
+| | Flash | Flash-Lite |
+| --- | --- | --- |
+| Result | HTTP 200, audio received | HTTP 200, audio received |
+| First audio byte / end of stream | 1000 / 2046 ms | 632 / 1240 ms |
+| Audio / chunks / largest gap | 4.44 s / 59 / 46 ms | 3.48 s / 50 / 38 ms |
+| Usage (text in / audio out tokens), `trafficType` | 20 / 111, `ON_DEMAND` | 20 / 87, `ON_DEMAND` |
+| Cost, promotional price (2026) / list price (2027) | USD 0.00101 / 0.00202 | USD 0.00053 / 0.00106 |
+
+| Question | Finding |
+| --- | --- |
+| **Access** | **Proven.** Both models are callable from the project in `global`. |
+| **Billing** | The project is linked to the open billing account `My Billing Account`. Whether the USD 300 promotional credit covers the cost is **UNVERIFIED**. Cost data appears in Cloud Billing reports with a delay, and the Cloud Billing API exposes no cost or credit. Google states that the Free Trial credit can be applied to Gemini platform usage, and that it **cannot** pay for Gemini API usage in AI Studio. |
+| **Capacity** | **Not proven, and two calls cannot prove it.** Google publishes no numeric quota for these Preview models, and its Standard PayGo tiers "don't apply to preview models". Guaranteed higher capacity goes through Google's sales team. |
+| **Latency** | One cold request per model, so it is an indication only. Flash-Lite's 632 ms is near its AI Studio p50 (590 ms). Flash's 1000 ms is above its AI Studio p50 (679 ms) and near its p95 (982 ms). No route difference is established. |
+
+**Spend:** USD 0.0015 at the promotional price, and USD 0.0031 at the list price, which is what the guard settled.
