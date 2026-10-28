@@ -74,7 +74,7 @@
     "tailSilenceMs": 2000,
     "sessionTimeoutMarginMs": 15000,
     "maxLineSeconds": 30,
-    "format": "the phone's own format; asr-sm.mjs --prepare converts it locally to 16 kHz mono 16-bit WAV with convert-audio.ps1 (Windows Media Foundation; nothing installed, nothing sent); a streamable WAV is used as it is"
+    "format": "the phone's own format; asr-sm.mjs --prepare converts it locally to 16 kHz mono 16-bit WAV: Windows Media Foundation (convert-audio.ps1) first, then ffmpeg 9.0.2 essentials (gyan.dev, the Product Owner's approval, zip SHA-256 60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba) from QANDEEL_FFMPEG_DIR only, never PATH; nothing sent. The Product Owner's 20 recordings are WhatsApp Ogg Opus (16 kHz SILK wideband, about 16 kbps), which only ffmpeg decodes; PO/wav/prepared.json binds each source's SHA-256 to its WAV's"
   },
   "set": {
     "name": "po20",

@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus, which Windows cannot decode, and await the approval to install ffmpeg (§9.14); the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the run awaits the Product Owner's approval of plan `3fd6a842…` (§9.15); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -952,3 +952,90 @@ starts by about 0.24 s in every file.
 The plan's `audio.format` line names only the Windows converter. If ffmpeg is approved and used, that line is corrected before
 the run approval, and the new plan hash is presented with the readiness report. The expected spend on 99.7 s of audio is
 about USD 0.04. Nothing has been sent.
+
+### 9.15 ffmpeg approved and installed locally; the 20 recordings converted; the Replay render spike run (2026-10-28)
+
+**The Product Owner's approval (2026-10-28):** download and set up `ffmpeg 9.0.2` from gyan.dev, if the published SHA-256
+matches.
+- It is portable `release-essentials`, outside the repository, with no change to PATH or to system settings.
+- It is approved for converting the 20 recordings and for the local, free Replay render.
+- No request to Speechmatics is approved until the Product Owner approves the run and its cap.
+
+**The tool:**
+- **Download:** `https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.2-essentials_build.zip` (114,768,076 bytes), into
+  an empty folder of its own. `release-version` reads `9.0.2`.
+- **SHA-256:** `60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba`, equal to gyan.dev's published
+  `.sha256`. It was checked before extraction.
+- **Location:** extracted to `C:\Users\MG\tools\ffmpeg-9.0.2-essentials\`. It is used only through
+  `QANDEEL_FFMPEG_DIR`, set per process. PATH and system settings are untouched.
+- **Build:** `ffmpeg version 9.0.2-essentials_build-www.gyan.dev`. It has the native Opus decoder, libopus, libx264 and AAC.
+
+**The 20 recordings:**
+- **Conversion:** `asr-sm.mjs --prepare` gave 20 / 20 `CONVERTED` by ffmpeg, to `PO/wav/NN.wav` with `prepared.json`,
+  all PCM, mono, 16 kHz, 16-bit.
+- **Originals:** the SHA-256 of all 20 still equals their arrival value.
+- **Decoding:** `ffmpeg -v error -xerror` reports no error in any file.
+- **`--plan-check`:** 20 present, 0 missing, unprepared or invalid; durations 3.81 – 6.51 s.
+
+**Levels, from the converted WAVs** (energy measures; no one has listened to them yet):
+- **Speech:** −17 to −24.5 dBFS RMS in every file, clearly audible.
+- **Clipping:** peaks reach 0 dBFS in 04, 07, 12 and 18, with 1 – 13 samples at full scale. That is negligible.
+- **Speech start:** 0.34 – 1.42 s, so a short silence precedes speech in every file.
+
+**The three endings checked** (50 ms energy profiles):
+- **01:** speech ends at about 3.37 s, followed by 0.6 s of near-silence (−45 dB). A 50 ms low-frequency thump closes the
+  file, the record button being released, not speech.
+- **19:** speech ends at about 3.75 s. The television continues at about −40 dB until the file ends 1.1 s later.
+- **20:** speech decays to −71 dB at 3.61 s, before the file ends at 3.81 s.
+- None of the three is cut inside a word. No re-recording is requested.
+
+**What WhatsApp did, now measured:**
+- The noise floor of 12 files is digital silence (−94.7 dBFS), and of the rest −72 to −83 dBFS, except 19. That is the
+  phone's voice processing: a noise gate or suppression, applied before or by WhatsApp.
+- **18 (noise):** the television is largely removed (floor −83 dB).
+- **19 (noise):** it stays (floor −54 dB, speech to floor 35 dB).
+- **20 (overlap):** QANDEEL's playback, if it is present, lies under the speech or was suppressed (floor −72 dB).
+
+So the noise and overlap conditions are easier than the conditions they stand for, and only 19 is a real noisy line. The
+run reads them that way, as stated in §9.14.
+
+**The Speechmatics plan, final for review:**
+- `asr-sm-plan.json` version 2, hash **`3fd6a842e9dcf238270124aee9a5c2dbb96dae33db276bba54217c9562751c17`**.
+- Only its `audio.format` line changed from `5d1af7a4…`: it now names the ffmpeg route and the WhatsApp source.
+- 20 sessions; cap USD 0.25; the worst case USD 0.2089; the expected spend USD 0.0353 on the 99.7 s.
+- `asr-sm-approval.json` stays `PENDING` (run `s8b01-cp2-asr-sm-po-r1`). Nothing has been sent.
+
+**The Replay render spike** (`replay-render-spike.mjs`; synthetic, local, free; outputs gitignored under
+`artifacts/evals/s8b-01/replay-spike/`):
+- **Two harness defects, fixed:**
+  - ffmpeg 9 no longer has `-filter_complex_script`; the graph is passed with `-/filter_complex <file>`.
+  - The first render (`r1`, kept) put the end beep at 1.58 s, inside speech, while the white frame was at 30.67 s. The
+    beep detector measured energy only, so loud speech counted as a beep. It now counts a window only when the 1 kHz tone
+    carries most of its energy (Goertzel), and the contract asserts that a loud non-beep sound is never a beep.
+- **The run, `r2`: all eight checks passed.**
+
+| Check | Result |
+| --- | --- |
+| Video | H.264 Main, level 4.0, yuv420p, 720 × 1280, 30 fps |
+| Audio | AAC-LC, 48 kHz, mono |
+| Container | MP4, faststart (`moov` before `mdat`) |
+| Duration | 31.4 s; audio and video durations agree |
+| Sync, start | beep and white frame both at 500 ms (0 ms) |
+| Sync, end | beep 30,650 ms, frame 30,667 ms: −17 ms, within one frame (33 ms); the timeline held |
+| Sources | the two Opus tracks unchanged by the render (SHA-256) |
+| Processing files | deleted on completion |
+| Size | 552,369 bytes (about 141 kbps) |
+| Render | 2.9 s wall time for 31.4 s, 0.092 of real time; 14.5 s user CPU on all cores; peak memory 522 MiB |
+
+- **Phone playback is NOT VERIFIED on a device:** no Android device was connected. The profile (H.264 Main 4.0, yuv420p,
+  AAC-LC, faststart MP4) is the one phones play natively. Playback on a handset is left to the first device session.
+- **What it proves:** two mono Opus sources on one clock render to a phone-profile MP4 with sync within a frame, the sources
+  untouched and the processing files deleted, at about a tenth of real time on this PC.
+- **What it does not show:** the Replay runtime, the bound analytical projection, the Living Analysis grammar, or a server's
+  cost. The codec / container choice of `voice-runtime-v1.md` §9.2 can now cite this evidence.
+
+**Status:**
+- ASR is `READY FOR THE PRODUCT OWNER'S RUN APPROVAL`: the recordings are prepared and checked, and the plan
+  `3fd6a842…` awaits approval with model training off.
+- The render spike is `RUN — ALL CHECKS PASSED`, with device playback not verified.
+- CP3 has not started.

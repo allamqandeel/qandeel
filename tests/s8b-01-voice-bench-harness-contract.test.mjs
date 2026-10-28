@@ -648,7 +648,8 @@ test('Replay spike checks: beep and flash detection, faststart, the benchmark li
   const rate = 24000;
   const pcm = new Int16Array(rate * 3);
   for (const s of [0.5, 2.25]) for (let i = 0; i < 0.2 * rate; i += 1) pcm[Math.round(s * rate) + i] = Math.round(8000 * Math.sin((2 * Math.PI * 1000 * i) / rate));
-  assert.deepEqual(spike.findBeeps(pcm, rate).map((ms) => Math.round(ms / 10)), [50, 225]);
+  for (let i = 0; i < 0.3 * rate; i += 1) pcm[Math.round(1.6 * rate) + i] = Math.round(8000 * Math.sin((2 * Math.PI * 300 * i) / rate));
+  assert.deepEqual(spike.findBeeps(pcm, rate).map((ms) => Math.round(ms / 10)), [50, 225], 'loud audio that is not the 1 kHz beep (speech) is never a beep');
   const lumas = Buffer.alloc(90, 20);
   lumas.fill(255, 15, 21);
   lumas.fill(255, 67, 73);

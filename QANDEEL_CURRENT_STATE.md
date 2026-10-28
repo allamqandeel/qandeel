@@ -391,15 +391,14 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     voices are kept. No production code; ASR not selected.
   - **ASR and the Replay render spike (record §9.11), nothing spent:** ASR `BLOCKED — MISSING PREREQUISITES` (consenting
     recordings, the Speechmatics and Azure accounts, an independent spend plan); Speechmatics and Azure shortlisted on
-    their own privacy terms, Deepgram in reserve; the recording kit prepared. The render spike is ready and awaits the
-    approval to install ffmpeg. The Product Owner's contextual-expression and selective-vocalization requirements are
+    their own privacy terms, Deepgram in reserve; the recording kit prepared. The render spike ran locally with the approved
+    ffmpeg, all eight checks passed, phone playback not verified on a device (§9.15). The Product Owner's contextual-expression and selective-vocalization requirements are
     recorded in S8B-04 / S8B-05 scope (`docs/voice-runtime-v1.md` §5, §16), NOT IMPLEMENTED.
-  - **Speechmatics real-time ASR (record §9.12, simplified in §9.13), the Product Owner's decisions:** Speechmatics
-    Enhanced `ar_en` only, on the Product Owner's own 20 phone recordings (`sets.po20`), a preliminary single-speaker
-    test; phone formats converted locally (`convert-audio.ps1`, Windows Media Foundation); plan version 2 (`5d1af7a4…`,
-    20 sessions, USD 0.25) supersedes version 1 (`e6b233b6…`, never approved, never run); `BLOCKED — MISSING
-    PREREQUISITES`: the 20 recordings arrived as WhatsApp Ogg Opus (record §9.14), intact and not silent, but Windows
-    cannot decode them; they await the approval to install ffmpeg, then the review and the run approval; nothing sent.
+  - **Speechmatics real-time ASR (records §9.12 – §9.15), the Product Owner's decisions:** Speechmatics Enhanced `ar_en`
+    only, on the Product Owner's own 20 phone recordings (`sets.po20`), a preliminary single-speaker test; the recordings
+    arrived as WhatsApp Ogg Opus, were converted with the approved local ffmpeg 9.0.2 (gyan.dev, SHA-256 verified, outside
+    the repository, PATH untouched) and checked (no decoding error, audible, the endings not cut); plan version 2 final
+    hash `3fd6a842…` (20 sessions, USD 0.25); `READY FOR THE PRODUCT OWNER'S RUN APPROVAL`; nothing sent.
   - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against

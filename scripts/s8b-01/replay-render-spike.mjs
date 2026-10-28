@@ -140,13 +140,25 @@ export function videoFilter(timeline, captions, font) {
 }
 
 /** Onsets of the calibration beep in decoded mono PCM (10 ms windows; the first window over the threshold after silence). */
-export function findBeeps(pcm, rate, { threshold = 3000, minGapMs = 1000 } = {}) {
+export function findBeeps(pcm, rate, { threshold = 3000, minGapMs = 1000, toneShare = 0.6 } = {}) {
   const win = Math.round(rate / 100);
   const out = [];
+  // Goertzel at BEEP_HZ: a window counts only when the beep tone carries most of its energy, so loud speech is never a beep.
+  const coeff = 2 * Math.cos((2 * Math.PI * BEEP_HZ) / rate);
   for (let i = 0; i + win <= pcm.length; i += win) {
     let s = 0;
-    for (let k = 0; k < win; k += 1) s += pcm[i + k] * pcm[i + k];
+    let q1 = 0;
+    let q2 = 0;
+    for (let k = 0; k < win; k += 1) {
+      const x = pcm[i + k];
+      s += x * x;
+      const q0 = coeff * q1 - q2 + x;
+      q2 = q1;
+      q1 = q0;
+    }
     if (Math.sqrt(s / win) < threshold) continue;
+    const tone = q1 * q1 + q2 * q2 - coeff * q1 * q2;
+    if ((2 * tone) / (win * s) < toneShare) continue;
     // Refine to the first sample over half the threshold inside the window.
     let j = i;
     while (j < i + win && Math.abs(pcm[j]) < threshold / 2) j += 1;
@@ -247,7 +259,8 @@ export async function renderSpike(cloudRunDir, outDir) {
   // The render: the sources mixed on their shared clock, H.264 Main + AAC-LC in MP4, faststart.
   const mp4 = join(outDir, 'replay.mp4');
   const started = Date.now();
-  const r = run(ffmpeg.exe, ['-hide_banner', '-benchmark', '-i', sources.USER, '-i', sources.QANDEEL, '-filter_complex_script', join(work, 'graph.txt'),
+  // `-/filter_complex <file>` reads the graph from a file (ffmpeg 7+; -filter_complex_script was removed).
+  const r = run(ffmpeg.exe, ['-hide_banner', '-benchmark', '-i', sources.USER, '-i', sources.QANDEEL, '-/filter_complex', join(work, 'graph.txt'),
     '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-profile:v', 'main', '-level', '4.0', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '23',
     '-r', String(FPS), '-g', String(FPS * 2), '-c:a', 'aac', '-b:a', '96k', '-ar', '48000', '-ac', '1', '-movflags', '+faststart', '-t', sec(timeline.durationMs), mp4]);
   const renderMs = Date.now() - started;
