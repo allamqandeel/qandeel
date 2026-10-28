@@ -237,7 +237,11 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // S8A-03 RE-ANCHOR (2026-10-23): S8A-02 merged through PR #354; the current task is S8A-03, and S8A-02 stands beneath it.
     // S8A-04 RE-ANCHOR (2026-10-24): S8A-03 merged through PR #355; the current task is S8A-04, and S8A-03 stands beneath it.
     // S8A-05 RE-ANCHOR (2026-10-26): S8A-04 merged through PR #358; the current task is S8A-05, and S8A-04 stands beneath it.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-05 — Public World: Write Your Topic\*\*/mu);
+    // S8B-01 RE-ANCHOR (2026-10-28): S8A-05 merged through PR #363; Stage 8B starts and the current task is S8B-01, and
+    // S8A-05 stands beneath it.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8B-01 — Voice Runtime Contract & Provider Evidence\*\*/mu);
+    assert.match(map, /^> \*\(Previous, S8A-05, as written at its closing change; merged through PR #363:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-05 — Public World: Write Your Topic\*\*/mu);
+    assert.doesNotMatch(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-05/mu, 'the merged S8A-05 is no longer the current task');
     assert.match(map, /^> \*\(Previous, S8A-04, as written at its closing change; merged through PR #358:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-04 — Shared Social Understanding & Trusted Identity\*\*/mu);
     assert.doesNotMatch(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S8A-04/mu, 'the merged S8A-04 is no longer the current task');
     assert.match(map, /^> \*\(Previous, S8A-03, as written at its closing change; merged through PR #355:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-03 — Personal Understanding Reality\*\*/mu);

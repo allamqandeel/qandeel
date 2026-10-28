@@ -152,7 +152,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-T13-01` | Restart / Recovery / Persistence | `T-13 — Recovery / Persistence v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-NAV-01` | Cross-Session Timeline | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-NAV-02` | Analysis Replay | `S7-05 — Replay Final Integration, Device Proof & Stage Closure` | `MEDIUM` | `CLOSED — TOMBSTONE` |
-| `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `Stage 8B — Voice Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
@@ -223,6 +223,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-09` | Text Inside One Participant's Shared Message Can Pose as Another Participant Speaking | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-CI-03` | Android API 36 Emulator Boot Smoke: GitHub Runner Emulator Infrastructure (PO-WAIVED) | `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PUB-REV-01` | Published Topic Revisions and Version-Continuous Public Discussion (PRE-LAUNCH BLOCKER) | `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` | `HIGH` | `DEFERRED — OWNED` |
+| `Stage 8B — Voice Runtime` | `QAN-BL-VOICE-01` (re-owned from `UNASSIGNED` by S8B-01 CP1, 2026-10-28, under the Product Owner's S8B-00 decision D-1) |
+| `S8B-01 — Voice Runtime Contract & Provider Evidence` | none owned by its own name at kickoff (2026-10-28, from `main` at `8b476114`); it works `QAN-BL-VOICE-01` for Stage 8B; the Stage 8A items read and left as they stand; *CP1 (the S8B-01 pull request, not merged; effective from its merge):* re-owned `QAN-BL-VOICE-01` to `Stage 8B — Voice Runtime`; admitted and tombstoned nothing |
 
 ---
 
@@ -446,7 +448,7 @@ happens to reversible history — are defined here.
   realtime transport, native call lifecycle, media persistence, audio retention/deletion,
   interruption semantics, device integration or production permission/service declarations.
   Personal Replay original audio remains non-producible until a reviewed durable source exists.
-- **Owner task:** `UNASSIGNED`
+- **Owner task:** `Stage 8B — Voice Runtime` *(re-owned by S8B-01 CP1, 2026-10-28, under the Product Owner's S8B-00 decision D-1; until then `UNASSIGNED`)*
 - **Severity:** `HIGH`
 - **Reopen condition:** Architecture opens the Personal Voice / Live Call runtime implementation
   track, or a production implementation task explicitly claims realtime two-way audio, Voice Note
@@ -457,7 +459,8 @@ happens to reversible history — are defined here.
   shipped; consent/retention/deletion for any Personal original audio; and a reviewed source
   contract before audio-led Replay can claim the original call.
 - **Arabic speech-pronunciation quality (Product Owner direction, 2026-10-20; Stage 8B handoff, no implementation authorized):** the future Voice runtime must have a **context-aware Arabic pronunciation/vocalization preparation step before TTS**, capable of resolving unvowelled words whose meaning/pronunciation changes with diacritics, respecting the user dialogue, intended meaning and relevant dialect. Evaluate selective diacritization or provider-compatible phonetic hints rather than indiscriminately rewriting all displayed words. The speech-only representation must not mutate user-visible conversation text, stored original utterances, Memories or factual meaning; avoid inventing a pronunciation when context does not establish it. Test ambiguous minimal pairs in context, Egyptian and supported Arabic dialects, proper names, latency/streaming fit and the chosen TTS voice. This is within **the existing VOICE-01 item** — no second backlog item, count/state/owner change. Stage 8A may preserve necessary text/context interfaces but does not implement, claim or close this TTS requirement.
-- **Status:** `OPEN — UNASSIGNED`
+- **Current truth (S8B-01 CP1, 2026-10-28; on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114`; effective from its merge):** Stage 8B has started (the Product Owner's S8B-00 decision D-1) and owns this item. The required future properties, the Arabic speech-pronunciation handoff and the P4 residues are unchanged; S8B-01 CP1 addresses them only as a candidate contract — the [Voice Runtime contract](voice-runtime-v1.md), the [S8B-01 Voice Runtime Controlled Amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md) VA-1 … VA-10 (approved in principle, D-8) and a locked non-production benchmark harness ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md)). No runtime, provider, durable audio source or gate exists; nothing is implemented, and the item is not delivered.
+- **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
 was explicitly forbidden to invent.
@@ -4123,9 +4126,9 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 43 |
+| `DEFERRED — OWNED` | 44 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 9 |
+| `OPEN — UNASSIGNED` | 8 |
 | `CLOSED — TOMBSTONE` | 33 |
 | **Total** | **89** |
 
@@ -5432,7 +5435,24 @@ is the BG-08 reconciliation of S8A-05 (CP1 – CP4; record §13.10).
 - **Not an item:** the Tier Q evaluation. It is prepared and not run, awaiting the Product Owner's budget decision, and it
   is recorded in its preregistration and in record §13.8.
 - **Untouched:** every other item, owner, severity and status.
-- **Latest index: 89 items; 43 / 4 / 9 / 33 by status, 52 / 35 / 2 by severity.**
+- **Index at S8A-05's closing change: 89 items; 43 / 4 / 9 / 33 by status, 52 / 35 / 2 by severity.**
+
+**S8B-01 CP1 (2026-10-28; on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114`, the merge of PR #363; effective
+from its merge).** This is S8B-01's BG-05 kickoff record. S8A-05 is merged through PR #363 as
+`8b476114a0f8655bcc39c5af80ded169c691c3f8` (2026-10-27), so its closing change above is effective.
+- **Stage 8B starts** by the Product Owner's S8B-00 decision D-1 (2026-10-28).
+- **Re-owned:** `QAN-BL-VOICE-01`, from `UNASSIGNED` to `Stage 8B — Voice Runtime`; `OPEN — UNASSIGNED` → `DEFERRED — OWNED`;
+  `HIGH` unchanged. Its fields are unchanged; a current-truth note is added in §4. S8B-01 CP1 is a candidate contract and
+  a locked benchmark harness only, so the item is not delivered.
+- **Read and left unchanged:** `QAN-BL-AI-01` (`SYNTHETIC_ONLY`), `QAN-BL-AI-05`, `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-01`,
+  `QAN-BL-NOTIF-03`, `QAN-BL-NOTIF-05`, `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01`, `QAN-BL-ACCT-03`, `QAN-BL-PROD-08`,
+  `QAN-BL-PROD-09`, `QAN-BL-PROD-10`, `QAN-BL-CI-01` and `QAN-BL-CI-03`.
+- **Stage 8A is not closed or deferred by Stage 8B:** S8A-06 … S8A-08 and every item owned by `Stage 8A — QANDEEL AI Brain /
+  Production LLM Runtime` keep their owner and status.
+- **Not admitted at CP1:** the iOS properties the cloud Simulator cannot prove (D-9). They are listed in the S8B-01 record §8
+  and are admitted at S8B-08, owned by the Stage 9 release-readiness gate, with their final list.
+- **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
+- **Latest index: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
 
 ## 8. What is deliberately not in this backlog
 

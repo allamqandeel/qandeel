@@ -1,0 +1,115 @@
+{
+  "id": "s8b-01-voice-bench-plan",
+  "version": 1,
+  "status": "PREREGISTERED_CANDIDATE — S8B-01 CP1, at the Product Owner's CP1 review (2026-10-28). Every threshold below is PROPOSED until that review approves it; after approval this file is frozen by its hash in the S8B-01 record before any CP2 call.",
+  "authority": "Product Owner S8B-00 decisions D-3 (best ASR and TTS by evidence, USD 10 cap, nothing spent before CP1 approval), D-4 (specialised pronunciation tools only on measured benefit), D-6 (latency target, voices chosen by listening), D-9 (device route).",
+  "guard": {
+    "authorized": false,
+    "note": "CP1 lock. The single change that lifts it is the Product Owner's CP2 approval, recorded beside the new hash. While locked, the guard refuses every non-loopback connection and the launcher refuses --live.",
+    "costCapUsd": 10,
+    "budgetUsd": { "asr": 3.5, "tts": 4.5, "deepseekStream": 0.2, "speechRenderingTools": 0.3, "reserve": 1.5 },
+    "noAutomaticRetry": true,
+    "secondLiveRunRefused": true
+  },
+  "prerequisitesForCp2": [
+    "The Product Owner approves this plan, the corpus and the Voice Runtime Contract (CP1).",
+    "Each candidate's current Arabic support, streaming support, data-retention / no-training terms and price are re-verified from its own documentation on the day CP2 starts; a candidate that cannot attest zero retention and no training is dropped before any call (D-3).",
+    "The Product Owner creates the provider accounts and places each API key in the per-user key file (QANDEEL never creates an account or handles a key in chat).",
+    "The ASR recordings exist: consenting speakers have recorded the prompts (asr.corpus) and signed the recording consent below; no public dataset is downloaded unless the Product Owner approves its name and licence first."
+  ],
+  "asr": {
+    "candidates": [
+      { "id": "SPEECHMATICS", "modes": ["streaming", "batch"] },
+      { "id": "GOOGLE_CLOUD_STT", "modes": ["streaming", "batch"] },
+      { "id": "AZURE_AI_SPEECH", "modes": ["streaming", "batch"] },
+      { "id": "OPENAI_TRANSCRIBE", "modes": ["streaming", "batch"] },
+      { "id": "ELEVENLABS_SCRIBE", "modes": ["streaming", "batch"] },
+      { "id": "SONIOX", "modes": ["streaming", "batch"] },
+      { "id": "DEEPGRAM", "modes": ["streaming", "batch"] }
+    ],
+    "candidateNote": "A shortlist from public knowledge, not from repository research; CP2 re-verifies every entry first (prerequisitesForCp2). None is selected.",
+    "corpus": {
+      "prompts": "corpus/asr-reading-prompts.json",
+      "speakersPerDialect": 2,
+      "speakerBalance": "at least one female and one male voice per dialect where the speakers available allow it",
+      "conditions": ["QUIET", "SPEAKER", "NOISE"],
+      "recording": "each speaker reads every read prompt of their dialect once in QUIET and once in SPEAKER, and a third of them in NOISE; and answers every spontaneous prompt once in SPEAKER",
+      "format": "16 kHz mono, 16-bit PCM WAV; kept in artifacts/evals/s8b-01/corpus/ (gitignored); never committed; deleted at S8B-01 closure unless the Product Owner directs otherwise",
+      "consent": "each speaker agrees in writing that the recordings are used only for this benchmark, sent to the candidate providers under their zero-retention terms, and deleted at S8B-01 closure",
+      "synthesizedSpeechForAsr": "not scored (TTS audio biases ASR); allowed only as a wiring smoke"
+    },
+    "normalization": { "diacritics": true, "tatweel": true, "alef": true, "alefMaqsura": true, "taMarbuta": true, "digits": true, "punctuation": true },
+    "metrics": ["WER per dialect and condition (corpus-level)", "CER per dialect", "streaming: final-transcript latency after endpoint (A)", "streaming: endpointing delay after speech end (E)", "interim stability", "cost per audio minute"],
+    "proposedThresholds": {
+      "werMax": { "MSA": 0.12, "EGYPTIAN": 0.25, "GULF": 0.3, "LEVANTINE": 0.3 },
+      "streamingFinalLatencyP50Ms": 300,
+      "mandatory": ["Arabic streaming for the live call", "zero retention and no training", "a dialect-capable model or language setting for EGYPTIAN"]
+    },
+    "selectionRule": "Among candidates meeting every mandatory item and the WER ceilings: the lowest mean of (EGYPTIAN, MSA, GULF, LEVANTINE) WER in SPEAKER, EGYPTIAN and MSA weighted 2; ties within 1 percentage point go to the lower A + E p50, then to the lower cost. The live-call and Voice Note choices may differ (batch may win for notes)."
+  },
+  "tts": {
+    "candidates": [
+      { "id": "AZURE_AI_SPEECH", "pronunciationControl": ["SSML phoneme", "custom lexicon", "diacritized input"] },
+      { "id": "GOOGLE_CLOUD_TTS", "pronunciationControl": ["SSML", "diacritized input"] },
+      { "id": "ELEVENLABS", "pronunciationControl": ["pronunciation dictionary", "diacritized input"] },
+      { "id": "OPENAI_TTS", "pronunciationControl": ["diacritized input", "instructions"] }
+    ],
+    "candidateNote": "A shortlist from public knowledge; CP2 re-verifies Arabic voices per dialect, streaming, pronunciation control and terms first. None is selected.",
+    "corpus": "corpus/tts-pronunciation-set.json",
+    "arms": {
+      "BASELINE": "the text exactly as the model would release it",
+      "RENDERED": "the deterministic Speech Rendering layer: normalization, numbers, names lexicon, selective diacritics / provider markup on the targets only",
+      "ASSISTED": "RENDERED plus one specialised diacritization tool or a DeepSeek speech-hint channel, per D-4; run only for the two best TTS candidates"
+    },
+    "voicesPerCandidate": "up to two voices per supported dialect (EGYPTIAN, MSA, GULF, LEVANTINE), chosen from the provider's Arabic catalogue",
+    "raters": "the Product Owner and at least two further native raters; blind to provider and arm; each item scored once per rater",
+    "metrics": ["target-word correct reading (binary, majority of raters)", "naturalness 1-5", "dialect fit 1-5", "TTFB p50 / p95 streaming (S)", "real-time factor", "cost per 1,000 characters", "auxiliary: TTS→ASR CER on the same item"],
+    "proposedThresholds": {
+      "targetCorrectBaselineReported": true,
+      "targetCorrectRenderedMin": 0.9,
+      "naturalnessMin": 3.8,
+      "dialectFitMin": { "EGYPTIAN": 3.8, "MSA": 3.8 },
+      "ttfbP50Ms": 300,
+      "mandatory": ["streaming synthesis", "an EGYPTIAN and an MSA voice", "a pronunciation-control mechanism (markup, lexicon or honoured diacritics)", "zero retention and no training"]
+    },
+    "assistedAdoptionRule": "ASSISTED is adopted only if it raises target-correct by at least 5 points over RENDERED with no naturalness loss beyond 0.1 and no added p50 latency beyond 100 ms (D-4: measured benefit).",
+    "voiceSelection": "CP3 presents, per dialect, the top two voices by naturalness and dialect fit among candidates meeting the thresholds; the Product Owner listens to the real samples and chooses each default (D-6)."
+  },
+  "deepseekStream": {
+    "purpose": "Stage T (time to first token) and G (first releasable chunk) with stream: true, on the REALTIME spoken guidance shape, synthetic data, SYNTHETIC_ONLY, through the AI-COST-01 ledger (disposable PostgreSQL), no retry.",
+    "calls": 40,
+    "paths": ["FAST without thinking"],
+    "prompts": "20 short spoken-register exchanges written for the test (no user data), each sent twice",
+    "metrics": ["headers p50 / p95", "first token p50 / p95 (T)", "first chunk released by the VA-2 predicate p50 / p95 (G), with the REALTIME spoken guidance as the GUIDANCE_ECHO input; streams VA-2 withholds are counted and give no G", "first punctuation mark after the minimum length (diagnostic only, never G)", "end of stream", "output characters", "cost"],
+    "gNote": "The VA-2 predicate mirrors the S8A-01 guard checks (pinned by the root contract); the implemented incremental guard arrives in S8B-05, which re-measures G through it."
+  },
+  "orchestratorOverhead": {
+    "purpose": "Stage P on the real Personal turn path with the fake Model Router, local PostgreSQL, synthetic accounts; free.",
+    "runs": 60
+  },
+  "latency": {
+    "target": { "p50Ms": 1500, "p95Ms": 2500, "definition": "end of the user's speech to the first audible QANDEEL audio" },
+    "stages": [
+      { "symbol": "E", "name": "endpointing decision after silence" },
+      { "symbol": "A", "name": "ASR final after endpoint" },
+      { "symbol": "P", "name": "Orchestrator pre-generation" },
+      { "symbol": "T", "name": "DeepSeek time to first token (streamed)" },
+      { "symbol": "G", "name": "first chunk released by the VA-2 conditions after first token (never the first punctuation mark)" },
+      { "symbol": "R", "name": "Speech Rendering of the first chunk" },
+      { "symbol": "S", "name": "TTS time to first audio byte" },
+      { "symbol": "N", "name": "network, jitter buffer and device playout" }
+    ],
+    "composition": "first audio = E + A + P + T + G + R + S + N. The sums of per-stage p50s and of per-stage p95s are a planning budget only: they show where the time goes, and neither is a statistical bound on the end-to-end p50 / p95 (stage delays are not independent). The p50 / p95 target is proven only by complete end-of-speech to first-audible-audio measurements on the device: S8B-05 on synthetic audio, S8B-06 on a real Android device. N is device-only; until it is measured the planning verdict is NOT_MEASURED, with the server-side partial sum shown separately.",
+    "levers": ["endpointing tuning", "speculative generation on a stable interim transcript (cancelled if the final differs; costs more)", "a shorter first chunk", "a REALTIME max_tokens"],
+    "notALever": "spoken fillers that simulate thinking (VI-01 §14)"
+  },
+  "renderSpike": {
+    "purpose": "CW2-05 §50 codec / container and render placement for the audio-visual Replay video: server-side deterministic render of the Living Analysis projection with the original audio vs on-device render; free, local, synthetic projection data.",
+    "proposal": "Opus at the source; H.264 + AAC in MP4 for DOWNLOAD / SHARE_EXTERNALLY / the published media",
+    "criteria": ["determinism: two renders of one Replay version are semantically and temporally equivalent (CW2-05 §34)", "audio never leaves the private store except inside the produced file", "render time per minute", "no transient file outlives 1 hour or the source"]
+  },
+  "corpusSha256": {
+    "corpus/asr-reading-prompts.json": "861c140fdbef123ba98b3b33623f1242444471b59daa39875c276dd0987927a6",
+    "corpus/tts-pronunciation-set.json": "ec40dc0bc1c56e3f4d5580db5a980253a819983caf4465accd6dd4341b037610"
+  }
+}
