@@ -3,7 +3,7 @@
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B). This record covers **CP1 — the contract, the
 amendments, the benchmark harness and the locator reconciliation** (§1 – §8) and **CP2 — the Gemini TTS and provider
 evidence** (§9), with the full TTS evaluation on Google Cloud (§9.9). CP3, the closure, has not started; both selections were made by the Product Owner in CP2 (§9.10, §9.21).
-**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED — AT THE PRODUCT OWNER'S CP2 CLOSURE REVIEW — TTS SELECTION APPROVED BY THE PRODUCT OWNER (2026-10-28, §9.10) — ASR SELECTION APPROVED BY THE PRODUCT OWNER: SPEECHMATICS ENHANCED AR_EN (2026-10-28, §9.21), THE PROOF VERDICT NOT ACCEPTED (5 / 6) KEPT, ON-DEVICE BARGE-IN A BLOCKING LAUNCH CONDITION FOR CALLS — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — TTS: GOOGLE GEMINI TTS, `gemini-3.8-flash-tts`, VOICE ACHIRD, APPROVED — NO PRODUCTION CODE FOR EITHER SELECTION — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is at its closure review (§9.21) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
+**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 COMPLETE — READY FOR THE PULL REQUEST, NOT OPENED (§9.22) — TTS SELECTION APPROVED BY THE PRODUCT OWNER (2026-10-28, §9.10) — ASR SELECTION APPROVED BY THE PRODUCT OWNER: SPEECHMATICS ENHANCED AR_EN (2026-10-28, §9.21), THE PROOF VERDICT NOT ACCEPTED (5 / 6) KEPT, ON-DEVICE BARGE-IN A BLOCKING LAUNCH CONDITION FOR CALLS — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — TTS: GOOGLE GEMINI TTS, `gemini-3.8-flash-tts`, VOICE ACHIRD, APPROVED — NO PRODUCTION CODE FOR EITHER SELECTION — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is complete (§9.22) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
 **Date:** 2026-10-28  
 **Branch / base:** `s8b/s8b-01-voice-runtime-contract`, from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`. That is the
 merge of PR #363 (S8A-05 CP4 and S8A-05's closing change, merged 2026-10-27).  
@@ -239,10 +239,10 @@ release-readiness gate. None is claimed as tested:
 
 ## 9. CP2 — Gemini TTS & Provider Evidence (2026-10-28)
 
-**Status:** `S8B-01 CP2 DELIVERED — AT THE PRODUCT OWNER'S CP2 CLOSURE REVIEW — TTS SELECTION APPROVED — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21)`. The one run is consumed: USD 0.1155 of the
+**Status:** `S8B-01 CP2 COMPLETE — TTS SELECTION APPROVED — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21) — STAGE P MEASURED LOCALLY (§9.22) — READY FOR THE PULL REQUEST, NOT OPENED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR, at first `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) was approved and run once (USD 0.0201): `NOT ACCEPTED` on overlap alone, latency solved (text ready p50 680 ms, forced answer p50 164 ms, no word lost or repeated across a thinking pause), Speechmatics recommended for production integration conditionally, with on-device barge-in as a blocking pre-launch gate (§9.19, §9.20); the Product Owner then SELECTED Speechmatics Enhanced `ar_en` with seven limits, the verdict kept, barge-in on a real device a condition blocking the launch of calls (§9.21); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is not run: the contract places it in CP2 (§11, local and free), and its deferral to S8B-05 awaits the Product Owner's confirmation (§9.21). CP2 is at the Product Owner's closure review (§9.21), and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR, at first `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) was approved and run once (USD 0.0201): `NOT ACCEPTED` on overlap alone, latency solved (text ready p50 680 ms, forced answer p50 164 ms, no word lost or repeated across a thinking pause), Speechmatics recommended for production integration conditionally, with on-device barge-in as a blocking pre-launch gate (§9.19, §9.20); the Product Owner then SELECTED Speechmatics Enhanced `ar_en` with seven limits, the verdict kept, barge-in on a real device a condition blocking the launch of calls (§9.21); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P was then measured locally by the Product Owner's decision (§9.22: p50 8.4 ms, p95 17.4 ms on a local PostgreSQL; 137 / 172 ms with an assumed 20 ms per data request). CP2 is complete and ready for its pull request, not opened (§9.22), and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -1573,7 +1573,7 @@ No further Speechmatics test round is opened to select the provider.
 | Latency stages E and A | measured: text ready p50 680 ms, forced final p50 164 ms | §9.20 |
 | Latency stages T, G, R and S | measured | §9.3, §9.9 |
 | Replay render spike | done locally, 8 / 8; phone playback not verified on a device | §9.15 |
-| Stage P (Orchestrator pre-generation) | **not run**. Contract §11 places it in CP2 (local, free); it needs the Orchestrator on a local PostgreSQL. An earlier status line called it "deferred to S8B-05", but no Product Owner decision records that. **Open for the Product Owner:** confirm the deferral, or have it measured locally at no cost before closure | §9.5 |
+| Stage P (Orchestrator pre-generation) | **not run** at this review. The Product Owner then had it measured locally inside CP2 (§9.22) | §9.5, §9.22 |
 | Stage N (network, jitter, playout) | S8B-06, on the device | contract §11 |
 | ASSISTED arm | not run; not justified by the BASELINE / RENDERED evidence | §9.5 |
 
@@ -1602,3 +1602,132 @@ No further Speechmatics test round is opened to select the provider.
 - Not done here: no push, no PR, no merge, and CP3 not started.
 
 **Status: `CP2 DELIVERED — TTS AND ASR SELECTED — AT THE PRODUCT OWNER'S CP2 CLOSURE REVIEW`.**
+*(Superseded by §9.22: the closure review approved, stage P measured, CP2 complete.)*
+
+### 9.22 Stage P measured locally; CP2 complete (2026-10-28)
+
+**The Product Owner's decision** (PO DECISION — Final Measurement Before PR):
+- The closure position of §9.21 is reviewed and approved, with the Speechmatics selection and its obligations recorded for
+  the later tasks as stated there.
+- **Stage P is measured locally inside CP2 before it closes.** It belongs to the contract's original scope (§11: "CP2
+  (local, free)").
+- **The terms:**
+  1. one local, bounded measurement, with no paid API call;
+  2. the orchestrator's real path as far as possible;
+  3. the method and p50 / p95 recorded and compared with the contract's latency budget;
+  4. if missing infrastructure blocks it, no new setup or installation; report the blocker instead;
+  5. no new improvement round unless a substantive defect affects the user's experience.
+- No TTS or ASR decision and no finished test is reopened.
+
+**The infrastructure — nothing new installed or set up:**
+- The PostgreSQL 17.10 binaries already on this machine from earlier local verification (embedded-postgres, outside the
+  repository).
+- CI-01's own process-owned disposable cluster: `scripts/ci-01/local-db.mjs start` migrates a fresh `mkdtemp` cluster on
+  127.0.0.1, and `stop` removes only what it created.
+- CI-01's network guard.
+- Two temporary directory junctions to the main checkout's installed `node_modules`, the root and `apps/api`, so that the
+  worktree resolves its packages. They are removed after the run.
+
+**The method:** `scripts/s8b-01/stage-p.mjs` (the launcher), `stage-p.ts` (the driver), `stage-p-plan.json`; run
+`s8b01-cp2-stage-p-r1` at `9c1b21d1`, results under `artifacts/evals/s8b-01/stage-p/` (gitignored).
+- **What is real:** the production `ConversationOrchestratorService` and every service it calls, unmodified. That covers
+  context, Safety, Memory control, interaction preferences, the HIM lane (snapshot, reflection, cross-context, brain
+  context), Memory and Hypothesis gathering, Question selection, guidance and the budget assembly.
+  - CI-01's composition, plus `InteractionPreferencesService`, which CI-01's wiring predates.
+  - Between turns, the real post-response pipeline (publisher, then dispatcher) runs as in CI-01, so the rows it writes
+    accumulate.
+- **What is a double:**
+  - the Model Router, which stamps the instant it is asked for the reply and answers a fixed line;
+  - PostgREST, replaced by a *pooled* SQL transport: one transaction per request, with the request's role and JWT claims,
+    so the orchestrator's parallel lanes stay parallel (CI-01's single serialized client would inflate P);
+  - the background hypothesis providers;
+  - CI-01's semantic-chain fixture;
+  - Personal Understanding capture, left off, since it is an optional model call.
+- **P** = from `orchestrate()` entry to the orchestrator's Model Router reply call (`this.router.generate`). Turn admission
+  (`createTurn`) is not inside P.
+- **The inputs:**
+  - 6 synthetic accounts × 10 invented, ordinary Egyptian Personal turns = **60 turns per pass** (`bench-plan.json`
+    `orchestratorOverhead.runs`);
+  - each turn reaches the reply call: no Safety block, no Memory or preference command;
+  - one warm-up account per pass is reported, not counted.
+- **Two passes in the one run:**
+  - `LOCAL`, measured;
+  - `ASSUMED_RTT_20MS`, which adds 20 ms to each data request. That is an **assumption, not a measurement**, standing in for
+    the API → hosted PostgREST round trip.
+- **The network guard** recorded 14 blocked attempts, exactly its 14 self-test probes. No other network attempt was made.
+- Windows dev machine, Node 24.19.0.
+
+**Results** (60 turns per pass; every turn reached the reply call, all on the FAST path, no error):
+
+| Pass | P p50 | P p95 | max | data requests before the reply call |
+| --- | --- | --- | --- | --- |
+| `LOCAL` (measured) | **8.4 ms** | **17.4 ms** | 19.4 ms | 11 (max 12) |
+| `ASSUMED_RTT_20MS` (assumption) | 136.7 ms | 171.6 ms | 172.2 ms | 11 (max 12) |
+
+- **The code's own cost is small:** about 8 – 17 ms. The rest of P in production is round trips to the database.
+- With 20 ms per request, P rose by about 128 ms at p50: roughly **6 of the 11 requests lie on the sequential path**, and the
+  rest overlap. The 170 ms turns (3, 6, 9, 10) add about two more sequential requests.
+- **A cold first turn** after process start took 140 ms (warm-up, not counted). It reaches the steady 8 – 20 ms within
+  about eight turns.
+
+**Against the contract's budget** (§11; a planning budget only, never a statistical bound):
+- **The earlier live-call assumption for P was 50 – 100 ms** (§9.3).
+  - Measured locally: 8 / 17 ms, well inside it.
+  - With the assumed 20 ms round trip: 137 / 172 ms, above it. The real figure depends on the API ↔ PostgREST round
+    trip, which only the hosted path measures (S8B-05).
+- **The planning composition at p50, for the selected path:**
+
+  | Stage | p50 | Source |
+  | --- | --- | --- |
+  | E | ≈ 800 ms | the experimental commit silence; the text is ready at 680 ms, so A is hidden inside it (§9.20) |
+  | P | 8 – 137 ms | this section |
+  | T + G + R + S | 1505 ms | Flash (§9.3) |
+  | N | 100 – 200 ms | assumption |
+  | **Total** | **about 2.4 – 2.6 s** | against the 1.5 s target |
+
+- **P is about 1 – 5 % of that total.** It is not where the target is missed: T + G + R + S and E are.
+- The §11 levers (speculative generation on a stable transcript, a shorter first chunk, a REALTIME `max_tokens`, endpointing)
+  belong to S8B-05, which must meet the target end to end.
+- **No defect affecting the user's experience was found in P, so no improvement round is opened** (term 5).
+
+**What the measurement does not cover:**
+- the hosted round trips (the second pass is an assumption);
+- the DEEP path (every turn routed FAST);
+- the realtime voice turn path, which does not exist until S8B-05;
+- the work lease and session read inside `createTurn`, and authentication, which sit outside P;
+- **whether the accumulated Memory rows were served** on the later turns. The harness did not record it, and it swallowed
+  the background dispatcher's errors. The flat per-turn P suggests no large growth over ten turns, but this is not shown.
+
+S8B-05 re-measures P on the implemented realtime path against the hosted database, inside the end-to-end measurement that
+decides the target (§11).
+
+**Verification:**
+- The harness contract passes 49 of 49, including a new Stage P test: the plan's 6 × 10 = `runs`, the assumption labelled,
+  the CI-01 guard and cluster, and no production import.
+- The run itself, recorded above.
+
+**CP2 is complete:**
+
+| CP2 part | State |
+| --- | --- |
+| VA-11 | candidate amendment, written |
+| TTS evidence and selection | **APPROVED**: Gemini `gemini-3.8-flash-tts`, Achird |
+| ASR evidence and selection | **APPROVED**: Speechmatics Enhanced `ar_en`; the proof's `NOT ACCEPTED` kept; device barge-in blocks the launch of calls |
+| Latency, measured | E and A (§9.20); **P (this section)**; T, G, R and S (§9.3, §9.9) |
+| Latency, not in CP2 | N, on the device (S8B-06) |
+| Render spike | done locally |
+| ASSISTED arm | not justified |
+
+- **Every production capability stays `NOT IMPLEMENTED`:** the ASR and TTS adapters, the endpointing, barge-in, Speech
+  Rendering, the realtime path and the gates. Every voice gate is closed.
+
+**The branch, ready for a pull request:**
+- `s8b/s8b-01-cp2`, on `de774cfd`, all local, never pushed.
+- The tracked tree is clean, and its own checks pass:
+  - the harness contract, 49 of 49;
+  - the governance contract;
+  - the four root contracts.
+- No production code changed (`apps/`, `packages/` and `database/` are untouched since `de774cfd`).
+- Pushing, opening the pull request and merging each need the Product Owner's authorization. CP3 has not started.
+
+**Status: `CP2 COMPLETE — READY FOR THE PULL REQUEST, NOT OPENED (AWAITING THE PRODUCT OWNER'S AUTHORIZATION)`.**

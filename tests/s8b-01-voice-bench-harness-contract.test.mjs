@@ -957,3 +957,19 @@ test('asr-sm-proof guard: its own plan pair, the EU host only, one session per r
   assert.equal(o.check, 'asr-sm-proof');
   assert.deepEqual(o.out, ['websocket-without-reservation:eu.rt.speechmatics.com', 'websocket:global.rt.speechmatics.com']);
 });
+
+test('stage P (CP2, local, free): 6 users × 10 ordinary turns per pass, the assumed round trip labelled, the CI-01 guard and cluster, never imported by production code', () => {
+  const p = JSON.parse(readFileSync(join(dir, 'stage-p-plan.json'), 'utf8'));
+  assert.equal(p.users * p.turns.length, plan.orchestratorOverhead.runs, 'bench-plan.json runs');
+  assert.deepEqual(p.passes.map((x) => [x.id, x.perRequestDelayMs]), [['LOCAL', 0], ['ASSUMED_RTT_20MS', 20]]);
+  assert.match(p.passes[1].meaning, /ASSUMPTION, not a measurement/u);
+  const launcher = readFileSync(join(dir, 'stage-p.mjs'), 'utf8');
+  assert.match(launcher, /scripts', 'ci-01', 'network-guard\.cjs'/u);
+  assert.match(launcher, /local-db\.mjs/u);
+  assert.doesNotMatch(launcher, /dotenv|DATABASE_URL|SUPABASE_URL/u, 'the child environment is an allowlist plus the process-owned cluster');
+  const driver = readFileSync(join(dir, 'stage-p.ts'), 'utf8');
+  assert.match(driver, /__QANDEEL_CI01_NETWORK_GUARD__/u);
+  assert.match(driver, /new ConversationOrchestratorService\(/u);
+  const grep = spawnSync('git', ['grep', '-l', 's8b-01/stage-p', '--', 'apps', 'packages'], { cwd: root, encoding: 'utf8' });
+  assert.equal(grep.stdout.trim(), '', 'no production code imports the Stage P harness');
+});

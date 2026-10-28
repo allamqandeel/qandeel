@@ -1,0 +1,24 @@
+{
+  "id": "s8b-01-stage-p-plan",
+  "version": 1,
+  "status": "The Product Owner's order (2026-10-28): Stage P measured locally inside CP2, once, no paid call. Synthetic accounts and invented ordinary Personal turns only; every turn reaches the reply call (no Safety block, no Memory or preference command).",
+  "measure": "P = orchestrate() entry → the Model Router reply call, on the production orchestrator; 6 measured users × 10 turns = 60 turns per pass (bench-plan.json orchestratorOverhead.runs), after 1 warm-up user per pass (reported, not counted).",
+  "users": 6,
+  "warmupUsers": 1,
+  "turns": [
+    "أهلًا، يومي كان طويل النهارده.",
+    "أنا شغال مهندس برمجيات في شركة صغيرة.",
+    "بحب أمشي الصبح قبل الشغل.",
+    "الأسبوع ده عندي ضغط كبير في الشغل.",
+    "مش عارف أرتب وقتي بين الشغل والبيت.",
+    "أخويا الصغير بيذاكر للامتحانات.",
+    "إيه رأيك أبدأ بإيه بكرة؟",
+    "فاكر أنا قلتلك بحب أعمل إيه الصبح؟",
+    "حاسس إني محتاج أنام بدري.",
+    "شكرًا، كلامك ريحني."
+  ],
+  "passes": [
+    { "id": "LOCAL", "perRequestDelayMs": 0, "meaning": "measured: the production code on a local PostgreSQL, no network between them" },
+    { "id": "ASSUMED_RTT_20MS", "perRequestDelayMs": 20, "meaning": "an ASSUMPTION, not a measurement: 20 ms added to every data request before the reply call, standing in for the API → hosted PostgREST round trip; it shows how the requests that are sequential on the critical path add up" }
+  ]
+}
