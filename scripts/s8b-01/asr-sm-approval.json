@@ -1,13 +1,14 @@
 {
   "id": "s8b-01-asr-sm-approval",
-  "status": "PENDING",
+  "status": "APPROVED",
   "runId": "s8b01-cp2-asr-sm-po-r1",
-  "approvedBy": null,
-  "approvedOn": null,
+  "approvedBy": "Product Owner",
+  "approvedOn": "2026-10-28",
   "scope": "ONE guarded run of the Speechmatics real-time ASR plan version 2: 20 sessions = the Product Owner's 20 recordings × Enhanced ar_en, EU real-time endpoint, no retry; a preliminary single-speaker test.",
   "capUsd": 0.25,
-  "planSha256": null,
-  "modelTrainingOff": null,
+  "planSha256": "3fd6a842e9dcf238270124aee9a5c2dbb96dae33db276bba54217c9562751c17",
+  "modelTrainingOff": true,
   "supersedes": "the PENDING approval record of plan version 1 (run s8b01-cp2-asr-sm-r1), never approved; it is not reused",
-  "note": "PENDING: after the recordings are in place, prepared (--prepare) and reviewed (--plan-check), the Product Owner approves the plan hash, the USD 0.25 cap and the run, and confirms that the Speechmatics workspace model-training setting is off. Until then --live is refused."
+  "note": "APPROVED (PO FINAL APPROVAL, 2026-10-28): ONE run of s8b01-cp2-asr-sm-po-r1 on plan 3fd6a842…, Enhanced ar_en, the 20 recordings only, cap USD 0.25 from the free credit; the Product Owner checked the workspace's model-training setting OFF. No re-run without a new approval.",
+  "region": "EU1, the Product Owner's account region; the plan's pinned endpoint is the EU real-time host wss://eu.rt.speechmatics.com/v2"
 }

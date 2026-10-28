@@ -999,6 +999,9 @@ matches.
 So the noise and overlap conditions are easier than the conditions they stand for, and only 19 is a real noisy line. The
 run reads them that way, as stated in §9.14.
 
+**Withdrawn (§9.16):** the Product Owner listened to 18, 19 and 20 and confirms the noise and QANDEEL's voice in all three.
+The energy-floor reading above is not evidence that they are absent.
+
 **The Speechmatics plan, final for review:**
 - `asr-sm-plan.json` version 2, hash **`3fd6a842e9dcf238270124aee9a5c2dbb96dae33db276bba54217c9562751c17`**.
 - Only its `audio.format` line changed from `5d1af7a4…`: it now names the ffmpeg route and the WhatsApp source.
@@ -1039,3 +1042,21 @@ run reads them that way, as stated in §9.14.
   `3fd6a842…` awaits approval with model training off.
 - The render spike is `RUN — ALL CHECKS PASSED`, with device playback not verified.
 - CP3 has not started.
+
+### 9.16 The Product Owner's correction and the run approval (2026-10-28)
+
+**Correction, from the Product Owner's own listening:** the noise and QANDEEL's voice are present in 18, 19 and 20.
+- The automated background analysis of §9.15 (noise floors from energy) is **not evidence of their absence**, and its
+  inference that 18 and 20 are easier than their conditions is withdrawn.
+- 18 and 19 are scored as noise lines, and 20 as an overlap line with QANDEEL's voice playing.
+- What remains true: the audio is WhatsApp-encoded (§9.14), and the phone's voice processing may have lowered the
+  background. Its level relative to speech is not claimed from the energy floor.
+
+**PO FINAL APPROVAL — Speechmatics ASR (2026-10-28):**
+- **Run:** `s8b01-cp2-asr-sm-po-r1` on plan `3fd6a842e9dcf238270124aee9a5c2dbb96dae33db276bba54217c9562751c17`, ONE run only.
+- **Arm and recordings:** Enhanced `ar_en`, the 20 recordings only.
+- **Cap:** USD 0.25, from the free credit.
+- **Region:** EU1. This is the account's region; the plan pins the EU real-time endpoint `wss://eu.rt.speechmatics.com/v2`.
+- **Model training:** OFF, checked by the Product Owner.
+- **Approval record:** `asr-sm-approval.json` is `APPROVED`, with `modelTrainingOff: true`.
+- **Not approved:** no re-run, no CP3, no PR and no merge.
