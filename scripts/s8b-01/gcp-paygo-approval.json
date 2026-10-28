@@ -1,0 +1,11 @@
+{
+  "id": "s8b-01-gcp-paygo-approval",
+  "status": "PENDING",
+  "runId": "s8b01-gcp-paygo-r1",
+  "approvedBy": null,
+  "approvedOn": null,
+  "scope": "Two streamed Gemini TTS requests through Google Cloud (project gen-lang-client-0473671267, location global): one to gemini-3.8-flash-tts and one to gemini-3.8-flash-lite-tts, the same invented Arabic sentence and the voice Achird. No retry; a failed model is not tried again.",
+  "capUsd": 0.25,
+  "planSha256": null,
+  "note": "PENDING until the Product Owner approves the paid check explicitly. Approval sets APPROVED, the date and the plan hash; the commit that records the run sets CONSUMED."
+}

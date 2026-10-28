@@ -6,7 +6,7 @@
 // simulate / dry: loopback only. Every other socket, TLS connection, DNS lookup and fetch is refused before a byte leaves
 // the process, and every provider variable is scrubbed.
 //
-// live (CP2, the Product Owner's CP2 approval recorded in cp2-approval.json): the guard loads only when
+// live (CP2, the Product Owner's CP2 approval recorded in cp2-approval.json; or a named check, below): the guard loads only when
 //   - bench-plan.json `guard.authorized` is true,
 //   - cp2-approval.json is `APPROVED` (not `CONSUMED`), its `planSha256` equals the plan's hash, and
 //   - QANDEEL_S8B_RUN_ID equals the approval's `runId`.
@@ -26,7 +26,14 @@ const dns = require('node:dns');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-const planText = fs.readFileSync(path.join(__dirname, 'bench-plan.json'), 'utf8');
+// The plan and the approval it reads. By default the S8B-01 benchmark (bench-plan.json, cp2-approval.json); a named check
+// selects its own pair beside the guard, from this fixed list only (the Product Owner's Google Cloud PayGo check,
+// 2026-10-28: gcp-paygo-plan.json, gcp-paygo-approval.json). Nothing else is selectable.
+const CHECKS = { '': ['bench-plan.json', 'cp2-approval.json'], 'gcp-paygo': ['gcp-paygo-plan.json', 'gcp-paygo-approval.json'] };
+const CHECK = process.env.QANDEEL_S8B_CHECK ?? '';
+if (!Object.hasOwn(CHECKS, CHECK)) throw new Error('S8B_01_GUARD: unknown check; nothing was sent');
+const [PLAN_FILE, APPROVAL_FILE] = CHECKS[CHECK];
+const planText = fs.readFileSync(path.join(__dirname, PLAN_FILE), 'utf8');
 const plan = JSON.parse(planText);
 const MODE = process.env.QANDEEL_S8B_MODE ?? '';
 if (!['simulate', 'dry', 'live'].includes(MODE)) throw new Error('S8B_01_GUARD: QANDEEL_S8B_MODE must be simulate, dry or live');
@@ -37,7 +44,7 @@ if (MODE === 'live') {
   if (plan.guard.authorized !== true) {
     throw new Error('S8B_01_GUARD: the S8B-01 benchmark is not authorized for a live run (CP1 lock); nothing was sent');
   }
-  const file = path.join(__dirname, 'cp2-approval.json');
+  const file = path.join(__dirname, APPROVAL_FILE);
   approval = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
   if (!approval || approval.status !== 'APPROVED') {
     throw new Error('S8B_01_GUARD: no unconsumed Product Owner approval for a live run; nothing was sent');
@@ -161,6 +168,6 @@ globalThis.fetch = async function guardedFetch(input, init) {
 persist();
 
 globalThis.__QANDEEL_S8B_01_GUARD__ = Object.freeze({
-  mode: MODE, authorized: plan.guard.authorized, runId: approval?.runId ?? null, planSha256, scrubbed, blocked,
+  check: CHECK || null, mode: MODE, authorized: plan.guard.authorized, runId: approval?.runId ?? null, planSha256, scrubbed, blocked,
   reserve, settle, spend: () => JSON.parse(JSON.stringify(spend)),
 });

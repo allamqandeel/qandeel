@@ -10,6 +10,7 @@ import { corpusRates, errorRates, normalizeArabic } from '../scripts/s8b-01/arab
 import { composeBudget, endToEndVerdict, percentile } from '../scripts/s8b-01/latency-model.mjs';
 import { GUIDANCE_ECHO_MIN_LENGTH, INTERNAL_CONTAINERS, guidanceSentences, measureStream, va2ReleasableLength } from '../scripts/s8b-01/stream-first-token.mjs';
 import { checkPlan, sha256Normalized } from '../scripts/s8b-01/bench-launch.mjs';
+import { audioParts, checkGcpPlan, gcpEndpoint, gcpRequestBody, gcpUsd, gcpWorstUsd, parseSse } from '../scripts/s8b-01/gcp-paygo.mjs';
 import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, geminiRequestBody, geminiWorstUsd, playbackStalls, readingAnnotated, renderItem, wavFile, worstAudioSeconds }
   from '../scripts/s8b-01/cp2-providers.mjs';
 
@@ -357,4 +358,80 @@ test('CP2: WAV files are valid mono 16-bit PCM, and playback stalls are counted 
   // three 100 ms chunks arriving at 0, 100 and 350 ms: with no buffer, the third is 150 ms late.
   assert.deepEqual(playbackStalls([[0, 100], [100, 100], [350, 100]], 0), { stallMs: 150, stalls: 1 });
   assert.deepEqual(playbackStalls([[0, 100], [100, 100], [350, 100]], 200), { stallMs: 0, stalls: 0 });
+});
+
+// ── CP2 Google Cloud PayGo check (the Product Owner's order, 2026-10-28) ──────────────────────────────────────────────
+const gcpPlan = JSON.parse(readFileSync(join(dir, 'gcp-paygo-plan.json'), 'utf8'));
+
+/** A throwaway copy of the guard with a gcp-paygo plan and approval (host provider.test, so nothing is ever sent). */
+function gcpMirror(approval = 'APPROVED') {
+  const m = mkdtempSync(join(tmpdir(), 's8b01-gcp-'));
+  const text = JSON.stringify({ ...structuredClone(gcpPlan), guard: { ...structuredClone(gcpPlan.guard), allowedHosts: { TEST: 'provider.test' } } }, null, 2);
+  writeFileSync(join(m, 'gcp-paygo-plan.json'), text);
+  writeFileSync(join(m, 'bench-plan.json'), JSON.stringify(plan));
+  copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
+  writeFileSync(join(m, 'gcp-paygo-approval.json'), JSON.stringify({ status: approval, runId: 'r-gcp', capUsd: 0.25, planSha256: createHash('sha256').update(text).digest('hex') }));
+  return m;
+}
+
+test('gcp-paygo: the plan is two calls, USD 0.25, the Google Cloud host and the ADC token only; its approval is not CP2\'s', () => {
+  assert.deepEqual(checkGcpPlan(gcpPlan), []);
+  assert.equal(gcpPlan.project, 'gen-lang-client-0473671267');
+  assert.deepEqual(gcpPlan.models.map((m) => m.id), ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']);
+  const approval = JSON.parse(readFileSync(join(dir, 'gcp-paygo-approval.json'), 'utf8'));
+  assert.ok(['PENDING', 'APPROVED', 'CONSUMED'].includes(approval.status));
+  if (approval.status !== 'PENDING') assert.equal(approval.planSha256, sha256Normalized(join(dir, 'gcp-paygo-plan.json')), 'an approval is bound to this plan');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'cp2-approval.json'), 'utf8')).status, 'CONSUMED', 'the CP2 approval stays consumed');
+  const corpora = ['tts-pronunciation-set.json', 'tts-expression-set.json'].map((f) => readFileSync(join(dir, 'corpus', f), 'utf8'));
+  assert.ok(corpora.every((c) => !c.includes(gcpPlan.text)), 'an invented sentence, not a CP2 sample');
+  const total = gcpPlan.models.reduce((a, m) => a + gcpWorstUsd(m, gcpRequestBody(gcpPlan.text, gcpPlan.voice), gcpPlan.text), 0);
+  assert.ok(total < gcpPlan.guard.costCapUsd, 'both worst cases, at the list price, fit the cap');
+  const tampered = structuredClone(gcpPlan);
+  tampered.guard.costCapUsd = 1; tampered.guard.budgetUsd.tts = 1; tampered.guard.allowedHosts.X = 'generativelanguage.googleapis.com';
+  assert.equal(checkGcpPlan(tampered).length, 2);
+});
+
+test('gcp-paygo: the guard refuses an unknown check and an unapproved or consumed check, and keeps the token only when approved', () => {
+  const unknown = underGuard(gcpMirror(), '', { QANDEEL_S8B_CHECK: 'anything' });
+  assert.match(unknown.stderr, /unknown check/u);
+  for (const status of ['PENDING', 'CONSUMED']) {
+    const r = underGuard(gcpMirror(status), '', { QANDEEL_S8B_CHECK: 'gcp-paygo', QANDEEL_S8B_RUN_ID: 'r-gcp' });
+    assert.match(r.stderr, /no unconsumed Product Owner approval/u, status);
+  }
+  const ok = underGuard(gcpMirror(), `
+    const g = globalThis.__QANDEEL_S8B_01_GUARD__; const out = { check: g.check, token: Boolean(process.env.GOOGLE_CLOUD_ACCESS_TOKEN), gemini: Boolean(process.env.GEMINI_API_KEY) };
+    try { g.reserve('tts', 0.3); out.over = 'RESERVED'; } catch (e) { out.over = e.code; }
+    try { await fetch('https://generativelanguage.googleapis.com/'); out.studio = 'SENT'; } catch (e) { out.studio = e.code; }
+    console.log(JSON.stringify(out));`, { QANDEEL_S8B_CHECK: 'gcp-paygo', QANDEEL_S8B_RUN_ID: 'r-gcp', GOOGLE_CLOUD_ACCESS_TOKEN: 'x'.repeat(30), GEMINI_API_KEY: 'y'.repeat(30) });
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.deepEqual(JSON.parse(ok.stdout.trim()), { check: 'gcp-paygo', token: true, gemini: false, over: 'S8B_01_BUDGET_REFUSED', studio: 'S8B_01_NETWORK_FORBIDDEN' });
+  const simulate = underGuard(gcpMirror(), 'console.log(Boolean(process.env.GOOGLE_CLOUD_ACCESS_TOKEN));', { QANDEEL_S8B_MODE: 'simulate', GOOGLE_CLOUD_ACCESS_TOKEN: 'x'.repeat(30) });
+  assert.equal(simulate.stdout.trim(), 'false', 'outside an approved live check the token is scrubbed');
+});
+
+test('gcp-paygo: the launcher refuses --live without an approval and confirmation, before anything is sent', () => {
+  const r = spawnSync(process.execPath, [join(dir, 'gcp-paygo.mjs'), '--live'], { cwd: root, encoding: 'utf8' });
+  assert.equal(r.status, 3);
+  assert.match(r.stderr, /Nothing was sent\./u);
+});
+
+test('gcp-paygo: the documented request, the SSE stream parser, the audio parts and the cost', () => {
+  assert.equal(gcpEndpoint(gcpPlan, 'gemini-3.8-flash-tts'),
+    'https://aiplatform.googleapis.com/v1/projects/gen-lang-client-0473671267/locations/global/publishers/google/models/gemini-3.8-flash-tts:streamGenerateContent?alt=sse');
+  assert.deepEqual(JSON.parse(gcpRequestBody('أهلًا', 'Achird')), {
+    contents: [{ role: 'user', parts: [{ text: 'أهلًا' }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { voice: 'Achird' } } } });
+  const pcm = Buffer.alloc(4800).toString('base64');
+  const ev = (o) => `data: ${JSON.stringify(o)}\r\n\r\n`;
+  const stream = ev({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: pcm } }] } }] })
+    + ev({ candidates: [{ content: { parts: [] } }], usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 100 } }) + 'data: {"partial"';
+  const { events, rest } = parseSse(stream);
+  assert.equal(events.length, 2);
+  assert.equal(rest, 'data: {"partial"', 'an incomplete event waits for the next chunk');
+  const [a] = audioParts(events[0]);
+  assert.equal(a.sampleRate, 24000);
+  assert.equal(a.pcm.length, 4800, '0.1 s of 16-bit mono at 24 kHz');
+  assert.equal(audioParts(events[1]).length, 0);
+  const [flash, lite] = gcpPlan.models;
+  assert.ok(Math.abs(gcpUsd(flash.listUsdPerMillion, events[1].usageMetadata) - (12 * 1 + 100 * 18) / 1e6) < 1e-15);
+  assert.ok(Math.abs(gcpUsd(lite.promotionalUsdPerMillion, events[1].usageMetadata) - (12 * 0.5 + 100 * 6) / 1e6) < 1e-15);
 });
