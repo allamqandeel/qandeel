@@ -897,7 +897,7 @@ test('asr-sm-proof session against a loopback server: each ForceEndOfUtterance c
     if (msg?.message === 'ForceEndOfUtterance') {
       forcesSeen.push({ bytes, timestamp: msg.timestamp });
       c.send({ message: 'AddTranscript', metadata: { transcript: forcesSeen.length === 1 ? 'أنا كنت' : 'عايز أقولك', start_time: 0, end_time: 0 }, results: [] });
-      c.send({ message: 'EndOfUtterance', metadata: { start_time: 0, end_time: 0, forced: true } });
+      c.send({ message: 'EndOfUtterance', format: '2.9', metadata: { start_time: 0, end_time: 0 }, forced: true });
     }
     if (msg?.message === 'EndOfStream') { c.send({ message: 'EndOfTranscript' }); c.close(); }
     return undefined;

@@ -1,6 +1,6 @@
 {
   "id": "s8b-01-asr-sm-proof-approval",
-  "status": "APPROVED",
+  "status": "CONSUMED",
   "runId": "s8b01-cp2-asr-sm-proof-r1",
   "approvedBy": "Product Owner",
   "approvedOn": "2026-10-28",
@@ -10,5 +10,7 @@
   "modelTrainingOff": true,
   "note": "APPROVED (PO APPROVAL — Final Speechmatics Proof, 2026-10-28): ONE run of s8b01-cp2-asr-sm-proof-r1 on plan 6ba458f4…, Speechmatics Enhanced ar_en, 12 sessions, cap USD 0.10 from the free credit, EU; the Product Owner confirms model training OFF. No retry, no expansion.",
   "engineeringNote": "The Product Owner's note: ForceEndOfUtterance finalizes the text and does not by itself end the user's turn. The results must show no word lost or repeated where a thinking pause is followed by more speech, and that an early finalization is never taken as permission to send a reply to DeepSeek. The 800 ms turn-commit value is experimental only; its production setting is decided in S8B-05.",
-  "region": "EU, the plan's pinned endpoint wss://eu.rt.speechmatics.com/v2"
+  "region": "EU, the plan's pinned endpoint wss://eu.rt.speechmatics.com/v2",
+  "consumedOn": "2026-10-28",
+  "consumedBy": "run s8b01-cp2-asr-sm-proof-r1 at e80196ca: 12 of 12 sessions, settled USD 0.0201 (wall-time upper bound) of the USD 0.10 cap; no retry"
 }

@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) is prepared and awaits approval, not run (§9.19); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) was approved and run once (USD 0.0201): `NOT ACCEPTED` on overlap alone, latency solved (text ready p50 680 ms, forced answer p50 164 ms, no word lost or repeated across a thinking pause), Speechmatics recommended for production integration conditionally, with on-device barge-in as a blocking pre-launch gate (§9.19, §9.20); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -1385,3 +1385,125 @@ Also measured and reported, not gated: the forces inside a sentence, the last wo
 **Status:**
 - **PENDING** the Product Owner's approval of the plan hash, the USD 0.10 cap, the run id and model training off.
 - ASR is not selected. No paid call has been made since §9.17.
+- *(Superseded by §9.20: approved and run once.)*
+
+### 9.20 The final Speechmatics proof — the one approved run (2026-10-28)
+
+**The approval** (PO APPROVAL — Final Speechmatics Proof):
+- **Scope:** plan `6ba458f4…`, run `s8b01-cp2-asr-sm-proof-r1`, Speechmatics Enhanced `ar_en`, 12 sessions, cap USD 0.10
+  from the free credit, EU.
+- **The Product Owner confirms model training is `OFF`.**
+- One run only, with no retry and no expansion. Recorded in `asr-sm-proof-approval.json` (commit `e80196ca`), now
+  `CONSUMED`.
+- **The Product Owner's engineering note, binding on the reading of these results:**
+  - `ForceEndOfUtterance` finalizes the text; it does not by itself end the user's turn.
+  - The results must show that no word is lost or repeated where a thinking pause is followed by more speech.
+  - An early finalization is never permission to send a reply to DeepSeek.
+  - The 800 ms commit value is experimental only. Its production setting is decided in S8B-05.
+- This corrects §9.18's design step 3, which treated the forced transcript as the committed turn. The forced transcript
+  is the *finalized text*; the turn is committed only by the Orchestrator's commit silence (§9.19).
+
+**The run:**
+- 12 of 12 sessions, no error, no stop rule triggered, nothing blocked by the guard.
+- Settled USD **0.0201** (wall-time upper bound) of the USD 0.10 cap.
+- Run directory `artifacts/evals/s8b-01/asr/s8b01-cp2-asr-sm-proof-r1/` (gitignored, kept).
+
+**The preregistered verdict: `NOT ACCEPTED`. Five of six items pass; overlap fails.**
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1 | every gated session ran and returned a transcript | **passed** (10 / 10) |
+| 2 | overlap `RESIDUAL_M25` / `BARGE_IN_400`: at most +1 word error against the clean line | **failed** (line 01) |
+| 3 | latency lines: at most +1 word error against §9.17 | **passed** |
+| 4 | latency lines: every §9.17 check still passes | **passed** (the number in 11, the intended word in 17, the English word in 09) |
+| 5 | `ForceEndOfUtterance` answered, p50 ≤ 300 ms | **passed**: p50 **164 ms**, p95 216 ms (9 forces) |
+| 6 | text ready after the speech end (E + A), p50 ≤ 900 ms | **passed**: p50 **680 ms**, p95 718 ms |
+
+**Latency — solved on these recordings:**
+- Text ready after the speech end: p50 680 ms, against EndOfUtterance at 1.7 s in §9.17. The last word's final was
+  678 ms.
+- Every EndOfUtterance answered a force. Speechmatics returns `forced: true` at the top level of the message, not in
+  `metadata`; the harness's reported (not gated) count read `metadata` and showed zero. That is corrected in
+  `asr-sm-proof.mjs`, with its test, after the run.
+- Word errors on the latency lines against §9.17: 02 2 → 2; 05 2 → 1; 09 0 → 1 (the digit `5` for `خمسة`, formatting);
+  11 5 → 5 (the number check held); 16 2 → 2; 17 1 → 1 (the intended word held).
+
+**The Product Owner's checks at the thinking pauses** (lines 05, 09 and 17, one early finalization each):
+
+| Line | Silence start (ms) | Force sent (ms) | Answered (ms) | Speech resumes (ms) | Pause | Commit at 800 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| 05 | 1580 | 2080 | 2298 | 2360 | 780 ms | held open (margin **20 ms**) |
+| 09 | 1480 | 1980 | 2104 | 2060 | 580 ms | held open (margin 220 ms) |
+| 17 | 1700 | 2200 | 2366 | 2300 | 600 ms | held open (margin 200 ms) |
+
+- **No word lost or repeated at any of the three boundaries.** The text before and after each early finalization abuts
+  on the audio clock (05: 1.86 s | 1.86 s; 09 and 17: 1.78 s | 1.78 s). No word appears in both parts.
+- **Line 17's self-correction kept the intended word:** `الميعاد الساعة 4.` | `لا . لا. قصدي خمسة.`
+- **No early finalization would have committed the turn** at the experimental 800 ms: the user resumed in every case
+  before it elapsed. So nothing would have gone to DeepSeek.
+- **Line 05's margin is 20 ms.** A 780 ms reading pause shows the commit value must come from S8B-05's natural-speech
+  measurement, not from this proof.
+- At 800 ms commit, a turn's text is ready (p50 680 ms) before it is committed. The turn's E is then the commit silence
+  itself, still inside the 900 ms E + A budget on these lines.
+
+**Overlap — the failure, as measured:**
+
+| Session | Word errors (clean line: 0) | What went wrong |
+| --- | --- | --- |
+| `OVERLAP_04_RESIDUAL_M25` | 1 / 10 | `فهم.`: QANDEEL's own word, from before the user starts |
+| `OVERLAP_04_BARGE_IN_400` | 1 / 10 | `فهمك.`: the same |
+| `OVERLAP_01_RESIDUAL_M25` | **4** / 8 | `فهمك.` from QANDEEL; `احكي لك` split (2, formatting); `الشغل` heard as `الشعور` |
+| `OVERLAP_01_BARGE_IN_400` | **3** / 8 | `فهمك.` from QANDEEL; the user's first words `عايز أحكيلك` replaced by QANDEEL's `أول خط` |
+| `OVERLAP_01_FULL_0DB` (reported only) | 8 / 8 | QANDEEL's sentence transcribed instead of the user's |
+| `OVERLAP_04_FULL_0DB` (reported only) | 10 / 10 | the same |
+
+- **QANDEEL's own words are transcribed as the user's.** In every mix Speechmatics transcribed QANDEEL's voice before the
+  user started, even at −25 dB. This happened because nothing else was in the audio then.
+  - A post-hoc diagnostic, not the preregistered verdict, dropped the words that end before the user's measured onset.
+    Line 04 stays at 1 and 1. Line 01 becomes 3 (residual) and 2 (barge-in), so it still fails.
+- **At the barge-in, QANDEEL's voice won.** With QANDEEL at the user's level for the first 0.4 s, Speechmatics kept
+  QANDEEL's words and lost the user's first two words on line 01, though not on line 04.
+- **At the speech's level throughout, Speechmatics transcribes QANDEEL, not the user.** The two `FULL_0DB` sessions show
+  this; they are consistent with sample 20 in §9.17.
+- **On line 01 the end of speech was found late.** The energy VAD heard the line's tail until 4.08 s against the measured
+  3.44 s end, so the text was ready at 1.32 – 1.37 s. Line 04 was ready at 0.73 – 0.76 s. That is the stand-in VAD's
+  threshold, not Speechmatics; these sessions are not gated on time.
+
+**What this does and does not establish:**
+- **Synthetic mixes are not the phone's echo canceller** (the Product Owner's point 6). The −25 dB residual here is clean,
+  undistorted speech. The barge-in variant has no echo cancellation during its first 0.4 s.
+- **What the run shows is the requirement the device path must meet:** the ASR must not receive, or must discard,
+  QANDEEL's own voice. That means the platform echo canceller, plus discarding ASR words that end before the on-device
+  VAD's user onset while QANDEEL is playing (§4.4). Otherwise QANDEEL's words become the user's turn.
+- That design point is recorded here for S8B-05 / S8B-06 and is not implemented. Without the device proof, nothing
+  establishes that the residual after a real echo canceller is low enough.
+
+**The recommendation:**
+- **Speechmatics Enhanced `ar_en` is recommended for production integration — conditionally**, as a single-speaker
+  preliminary result. The verdict stays `NOT ACCEPTED`; this is not a numerical pass.
+- **The basis:**
+  - latency is solved by QANDEEL's own endpoint (text ready p50 680 ms; forced answer p50 164 ms);
+  - clean-speech accuracy and every §9.17 check held at `max_delay` 0.7;
+  - no word was lost or repeated across a thinking pause;
+  - the Product Owner's waiver for English and names stands (§9.18).
+- **The conditions:**
+  1. **On-device barge-in becomes a blocking pre-launch gate, not merely a condition.** It must be proven on devices in
+     S8B-06 before launch: the platform echo canceller, the on-device VAD after AEC, playout stopping, and no QANDEEL
+     word reaching the user's turn.
+  2. **The integration discards ASR words before the user's on-device VAD onset while QANDEEL plays** (a design point
+     for S8B-05).
+  3. **The commit silence is set in S8B-05** from natural speech. 800 ms is experimental, and line 05 came within 20 ms
+     of it.
+  4. **An account tier sized for concurrent sessions** (§9.18).
+- **If the Product Owner does not accept the overlap result:** a change of provider would need the same overlap test
+  first. Overlapping voices at equal level are a hard case for streaming ASR in general, and this run gives no evidence
+  that another provider does better. The overlap failure is not shown to be a Speechmatics limit; the device path is
+  where it is decided.
+
+**Verification after the run:**
+- The harness contract passes 48 of 48 with the `forced` correction.
+- No re-run, and no further paid call.
+
+**Status:**
+- ASR is **recommended conditionally**. It is not selected until the Product Owner decides.
+- No CP3, no PR, no merge.

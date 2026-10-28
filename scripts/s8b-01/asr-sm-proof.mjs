@@ -164,7 +164,7 @@ export function proofMetrics(events, forcesSent, forcesPlanned, bounds, frameMs 
     transcript: finals.map(txt).join(' ').replace(/\s+/gu, ' ').trim(),
     forceResponsesMs: responses,
     midForces: forcesPlanned.filter((f) => f.speechEndMs < bounds.offsetMs - frameMs).length,
-    forcedFlags: eous.filter((m) => m.metadata?.forced === true).length,
+    forcedFlags: eous.filter((m) => m.forced === true).length, // Speechmatics puts `forced` on the message, not in metadata (§9.20)
     textReadyMs: endAnswer ? endAnswer.t - bounds.offsetMs : null,
     lastWordFinalMs: lastWord ? lastWord.t - bounds.offsetMs : null,
     firstPartialMs: partial ? partial.t - bounds.onsetMs : null,
