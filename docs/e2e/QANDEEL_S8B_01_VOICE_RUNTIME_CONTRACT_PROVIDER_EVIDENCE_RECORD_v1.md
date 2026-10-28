@@ -3,7 +3,7 @@
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B). This record covers **CP1 — the contract, the
 amendments, the benchmark harness and the locator reconciliation** (§1 – §8) and **CP2 — the Gemini TTS and provider
 evidence** (§9), with the full TTS evaluation on Google Cloud (§9.9). CP3, the selection and the closure, has not started.
-**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED, PARTIAL, AT THE PRODUCT OWNER'S CP2 REVIEW (2026-10-28) — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — NO PROVIDER OR VOICE SELECTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is partial (§9.5) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
+**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED, PARTIAL — TTS SELECTION APPROVED BY THE PRODUCT OWNER (2026-10-28, §9.10) — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — TTS: GOOGLE GEMINI TTS, `gemini-3.8-flash-tts`, VOICE ACHIRD, APPROVED — ASR NOT SELECTED — NO PRODUCTION CODE FOR THE SELECTION — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is partial (§9.5) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
 **Date:** 2026-10-28  
 **Branch / base:** `s8b/s8b-01-voice-runtime-contract`, from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`. That is the
 merge of PR #363 (S8A-05 CP4 and S8A-05's closing change, merged 2026-10-27).  
@@ -239,8 +239,9 @@ release-readiness gate. None is claimed as tested:
 
 ## 9. CP2 — Gemini TTS & Provider Evidence (2026-10-28)
 
-**Status:** `S8B-01 CP2 DELIVERED — PARTIAL — AT THE PRODUCT OWNER'S CP2 REVIEW`. The one run is consumed: USD 0.1155 of the
-USD 10 cap was spent. No voice or model is selected. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
+**Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
+USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
+`gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
 that run's USD 2 cap (§9.9). Not run: ASR, stage P and the render spike. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
@@ -551,5 +552,67 @@ settlements, with no refusal, no overrun and no blocked request. At the promotio
 estimate was USD 0.8293 at list. CP2 in all, at list price: USD 0.1155 (AI Studio) + 0.0031 (PayGo check) + 0.7950 (this
 run) = **USD 0.9136**. Whether the USD 300 credit covers it is **UNVERIFIED** (§9.8).
 
-**Not decided here:** no model, voice or provider is selected, and no Voice Quality Router exists. The Product Owner chooses
-one voice path and one final model after listening. CP3 has not started.
+**Not decided here:** no model, voice or provider was selected by this run, and no Voice Quality Router exists. The Product
+Owner chose one voice path and one final model after listening (§9.10). CP3 has not started.
+
+### 9.10 The Product Owner's TTS selection — APPROVED (2026-10-28)
+
+The Product Owner made this selection after listening to the §9.9 samples and reviewing §9.3, §9.8 and §9.9. It is recorded
+as given.
+
+| Decision | Value |
+| --- | --- |
+| **TTS provider** | Google Gemini TTS |
+| **Model** | `gemini-3.8-flash-tts` |
+| **Voice** | Achird (male) |
+| **Path** | One TTS path only. No Voice Quality Router, no per-turn model or voice switching, no fallback model. |
+| **Status** | `APPROVED` |
+
+**Style:**
+- Qandeel's persona is friendly and natural.
+- Emotional expression is balanced and never exaggerated.
+- The Product Owner's listening notes on X05, X07, R01 and X01 / X04 are adopted. Their wording was given outside the
+  repository and is not reproduced here. The samples they refer to, on the selected model and voice, are:
+
+| Item | NO_STYLE / BASELINE | PERSONA | EMOTION |
+| --- | --- | --- | --- |
+| X01 JOY | `C0025` | `C0055` | `C0081` |
+| X04 SURPRISE | `C0255` | `C0279` | `C0303` |
+| X05 JOKING | `C0321` | `C0335` | `C0345` |
+| X07 EMPATHY | `C0383` | `C0391` | `C0399` |
+| R01 reply | `C0023` (BASELINE) | `C0177` | — |
+
+**Speech Rendering:**
+- It stays, for dates and for pronunciation: selective diacritics on homographs and names, with no gloss or reading note
+  ever spoken (§9.4).
+- The current quality of numbers is accepted.
+
+**Evidence for the selected path** (Flash · Achird, §9.9, 148 calls, all OK):
+- first audio p50 / p95: 655 / 764 ms;
+- complete synthesis p50 / p95: 1413 / 1944 ms;
+- no playback stall;
+- USD 0.0273 per audio minute at the list price (2027), and USD 0.0136 at the promotional price (2026).
+
+Flash-Lite was faster and cheaper on every objective measure (§9.9). The Product Owner chose Flash on listening.
+
+**No further paid TTS run** is needed to choose the model or the voice.
+
+**Kept, not deleted:**
+- the results of both models and both voices: §9.3, §9.8, §9.9, and the gitignored run directories, audio included;
+- the expression corpus, including its persona and emotion styles. They stay evaluation inputs; the selection does not
+  make them production copy.
+
+**What the selection does not do:**
+- **No production code.** No adapter, configuration, voice constant or feature gate. Implementing the voice belongs to
+  S8B-04 under `QAN-BL-VOICE-01`, with VA-11 §4's obligations.
+- **VA-11 is unchanged.** It still names both models. Only the selected model is on the TTS path.
+- **No gate opened.** Every voice gate stays closed, and Voice stays closed to users.
+- **ASR is not selected**, and neither are the codec, the render placement or the REALTIME budget values. CP2 / CP3 settle
+  them (§9.5, §7).
+
+**Open, for the Product Owner:**
+1. **The production route.** The evidence used two routes: AI Studio (the Gemini API key, §9.2) and Google Cloud (the
+   Agent Platform with ADC, §9.8 – §9.9). VA-11 §4's obligations (`store: false`, the server-only key, the re-verification of
+   Google's terms) are worded for the Gemini API. Which route production uses, and that route's retention terms, are for
+   S8B-04 to settle with the Product Owner. The selection does not decide it.
+2. **AI Studio request logging off** (VA-11 §3, §9.7). This still applies if the AI Studio route is used.
