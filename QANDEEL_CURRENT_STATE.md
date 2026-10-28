@@ -389,6 +389,11 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     voice Achird (male); one TTS path, no Voice Quality Router; a friendly, natural persona with balanced emotion; Speech
     Rendering kept for dates and pronunciation, the current number quality accepted. The results of both models and both
     voices are kept. No production code; ASR not selected.
+  - **ASR and the Replay render spike (record §9.11), nothing spent:** ASR `BLOCKED — MISSING PREREQUISITES` (consenting
+    recordings, the Speechmatics and Azure accounts, an independent spend plan); Speechmatics and Azure shortlisted on
+    their own privacy terms, Deepgram in reserve; the recording kit prepared. The render spike is ready and awaits the
+    approval to install ffmpeg. The Product Owner's contextual-expression and selective-vocalization requirements are
+    recorded in S8B-04 / S8B-05 scope (`docs/voice-runtime-v1.md` §5, §16), NOT IMPLEMENTED.
   - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against

@@ -599,3 +599,63 @@ test('cp2-cloud cap: each call reserves the most Google can bill for it, so the 
   assert.ok(admitted < calls.length && spend.refused === 1 && spend.overruns === 0);
   assert.ok(cloudCost(cloudPlan, calls).expectedListUsd < 2 - Math.max(...ceilings), 'the expected spend leaves the whole run admissible');
 });
+
+// CP2 completion (the Product Owner's ASR & Replay order, 2026-10-28): the ASR recording kit and the Replay render spike.
+const { loadRecordingScript, sessionLines, fileName, referenceOf } = await import('../scripts/s8b-01/asr-recording-sheet.mjs');
+const spike = await import('../scripts/s8b-01/replay-render-spike.mjs');
+
+test('ASR recording kit: Egyptian first, MSA second, every line Arabic and named, references without fillers, the pinned prompts reused unchanged', () => {
+  const data = loadRecordingScript(dir);
+  const lines = sessionLines(data);
+  assert.equal(lines.length, 130);
+  assert.equal(lines.findIndex((l) => l.dialect === 'MSA'), lines.filter((l) => l.dialect === 'EGYPTIAN').length, 'all Egyptian lines come first');
+  const names = lines.map((l) => fileName('S1', l));
+  assert.equal(new Set(names).size, names.length, 'one file per line');
+  for (const n of names) assert.match(n, /^S1_(EG|MSA)-[A-Z]+-?\d{2}_(QUIET|SPEAKER|NOISE|OVERLAP)$/u);
+  for (const item of data.script.items) {
+    assert.match(item.text, /[\u0600-\u06ff]/u);
+    for (const word of Object.keys(item.alternatives ?? {})) assert.ok(item.text.includes(word), `${item.id}: ${word}`);
+    for (const c of item.conditions) assert.ok(data.script.conditions.some((x) => x.id === c), `${item.id}: ${c}`);
+  }
+  const df = lines.find((l) => l.id === 'EG-DF-03');
+  assert.equal(referenceOf(data.script, df), 'مش عارف، بس حاسس إن الموضوع ده مضايقني.', 'the filler and the hesitation dots are not scored');
+  assert.equal(referenceOf(data.script, lines.find((l) => l.category === 'SPONTANEOUS')), null, 'a spontaneous answer is scored against the speaker\'s own transcript');
+  assert.deepEqual(checkPlan(plan), [], 'asr-reading-prompts.json is reused, not edited: the CP1 corpus hashes hold');
+  assert.match(plan.asr.cp2.status, /^NOT RUN — MISSING PREREQUISITE/u, 'no ASR run without recordings and an approved spend plan');
+});
+
+test('Replay spike timeline: one clock, a cut reply keeps only its played part, the barge-in overlaps it, a gap stays a gap', () => {
+  const durations = { C0013: 3000, C0177: 8000, C0069: 2000, C0345: 6000, C0125: 4000, C0201: 5000 };
+  const t = spike.buildTimeline(spike.SCRIPT, durations);
+  const cut = t.units.find((u) => u.interrupted);
+  assert.equal(cut.endMs - cut.startMs, 3300, '55 % of the reply was confirmed played; the remainder is never placed');
+  const barge = t.units[t.units.indexOf(cut) + 1];
+  assert.equal(barge.track, 'USER');
+  assert.equal(cut.endMs - barge.startMs, 300, 'the user started 300 ms before the playout stopped');
+  const gap = t.units.find((u) => u.kind === 'GAP');
+  assert.equal(gap.endMs - gap.startMs, 1500);
+  assert.equal(t.beeps.length, 2);
+  const audio = Object.fromEntries(Object.entries(durations).map(([k, ms]) => [k, new Int16Array((ms / 1000) * spike.RATE).fill(1000)]));
+  const q = spike.trackPcm(t, 'QANDEEL', audio);
+  const at = (ms) => q[Math.round((ms / 1000) * spike.RATE)];
+  assert.equal(at(cut.startMs + 10), 1000);
+  assert.equal(at(cut.endMs + 10), 0, 'nothing after the confirmed playout position');
+  assert.equal(at(gap.startMs + 700), 0, 'the gap is silence, not stitched');
+  assert.deepEqual(spike.findBeeps(q, spike.RATE).map(Math.round).filter((ms) => t.beeps.some((b) => Math.abs(b - ms) < 20)).length, 2);
+});
+
+test('Replay spike checks: beep and flash detection, faststart, the benchmark line, caption wrapping', () => {
+  const rate = 24000;
+  const pcm = new Int16Array(rate * 3);
+  for (const s of [0.5, 2.25]) for (let i = 0; i < 0.2 * rate; i += 1) pcm[Math.round(s * rate) + i] = Math.round(8000 * Math.sin((2 * Math.PI * 1000 * i) / rate));
+  assert.deepEqual(spike.findBeeps(pcm, rate).map((ms) => Math.round(ms / 10)), [50, 225]);
+  const lumas = Buffer.alloc(90, 20);
+  lumas.fill(255, 15, 21);
+  lumas.fill(255, 67, 73);
+  assert.deepEqual(spike.findFlashes(lumas, 30).map(Math.round), [500, 2233]);
+  const box = (type, size = 16) => { const b = Buffer.alloc(size); b.writeUInt32BE(size, 0); b.write(type, 4, 'ascii'); return b; };
+  assert.equal(spike.moovBeforeMdat(Buffer.concat([box('ftyp'), box('moov'), box('mdat')])), true);
+  assert.equal(spike.moovBeforeMdat(Buffer.concat([box('ftyp'), box('mdat'), box('moov')])), false);
+  assert.deepEqual(spike.parseBenchmark('x\nbench: utime=1.250s stime=0.100s rtime=0.900s\nbench: maxrss=123456KiB\n'), { utimeS: 1.25, stimeS: 0.1, rtimeS: 0.9, maxRssKiB: 123456 });
+  for (const line of spike.wrapCaption('فاهمك. أول خطوة ممكن تكون إنك تكلم أبوك في وقت هادي، من غير ما تحط كل حاجة مرة واحدة.').split('\n')) assert.ok(line.length <= 26);
+});

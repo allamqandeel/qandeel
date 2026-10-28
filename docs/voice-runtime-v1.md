@@ -208,6 +208,26 @@ equally barred from the visible text.
 **When the reading is ambiguous and unresolved,** the fallback is the provider's own reading of the undiacritized word.
 It is never an invented pronunciation. No universal correctness is promised.
 
+**The Product Owner's production requirements (2026-10-28, after the CP2 TTS listening; S8B-01 record §9.10).** Both are
+**required and NOT IMPLEMENTED**. A successful CP2 TTS sample is evidence that the voice can do it, not that QANDEEL does
+it. Neither is marked done before its own task proves it.
+
+1. **Contextual expression.** QANDEEL chooses how it expresses a spoken reply from the conversation's context: calm,
+   empathy, playfulness, humour, enthusiasm or seriousness.
+   - The expression is balanced, never exaggerated. The CP2 listening found X07's EMPATHY style overdone, and X05's
+     JOKING style excellent.
+   - It travels to TTS only as a speech-only style (`speechMetadata.style` for the selected Gemini TTS path). It never
+     enters the visible text, the stored unit or Memory.
+   - It is chosen inside the existing behavioral stage and spoken guidance (VA-7), not by a second persona engine or a
+     rigid tone classifier (the Product Owner's personality direction, 2026-10-20).
+   - **S8B-04** implements and proves it (the expression suite, with listening). **S8B-05** carries it on the realtime
+     path: the style is fixed per reply before its first chunk reaches TTS, within the §11 budget.
+2. **Selective contextual vocalization.** Speech Rendering (steps 2 – 4 above) vocalizes Arabic words selectively by
+   meaning and context, and improves the reading of names, dates and ambiguous words.
+   - The CP2 listening found D03's rendered date much better than its digits.
+   - The current reading of numbers is accepted as it stands.
+   - **S8B-04** implements and proves it (the pronunciation suite).
+
 ## 6. The original-audio source contract
 
 This is the reviewed source contract that G1.1 L136-138 and `QAN-BL-VOICE-01` require before audio-led Replay. It wires a
@@ -454,8 +474,8 @@ They are admitted at S8B-08 with their final list:
 | S8B-01 Contract & Evidence | — | This contract and VA-1…VA-10 approved; providers and voices chosen on measured evidence; the latency budget measured; cost per minute |
 | S8B-02 Foundation | 01 | VA-3 / VA-5 migrations; the media store; immutable `retention_expires_at` and the expiry worker (physical deletion; text kept; no extension by any action); early and account deletion; the coverage registry; export; the consent record; the ports with fakes; the gate closed; real PostgreSQL green; default-deny; no audio in logs |
 | S8B-03 Personal Voice Notes | 02 | Record, ASR, commit, reply, playback, 30-day expiry and its state, J1 / J2, VA-6 (microphone); E2E on a real Android device and in the iOS simulator |
-| S8B-04 QANDEEL's voice | 02 | Speech Rendering, VA-7, TTS, the voices and voice choice, J10, the fixed failure line; the pronunciation suite; visible text provably unchanged |
-| S8B-05 Realtime Core | 01, 02, 04 | The call authority, the gateway, streaming ASR, VA-1 / VA-2 / VA-4, barge-in, reconnection, two-track recording with playout confirmation, anchors; the §11 target on synthetic audio; no late audio; nothing stored as heard without confirmation |
+| S8B-04 QANDEEL's voice | 02 | Speech Rendering, VA-7, TTS, the voices and voice choice, J10, the fixed failure line; the pronunciation suite; visible text provably unchanged; **the Product Owner's two production requirements (§5): contextual expression (balanced, chosen in VA-7's spoken guidance, speech-only) and selective contextual vocalization of names, dates and ambiguous words, each proven by its suite and listening** |
+| S8B-05 Realtime Core | 01, 02, 04 | The call authority, the gateway, streaming ASR, VA-1 / VA-2 / VA-4, barge-in, reconnection, two-track recording with playout confirmation, anchors; the §11 target on synthetic audio; no late audio; nothing stored as heard without confirmation; **the contextual expression (§5) carried on the realtime path: one style per reply, fixed before its first chunk reaches TTS, inside the §11 budget** |
 | S8B-06 Native Call | 05 | CallKit / Core-Telecom / FGS, background, routes, interruption, the disclosure screen, `call-truth`; Android real-device matrix and latency; iOS simulator; the Stage 9 residue list |
 | S8B-07 Replay & Worlds | CP1 / CP2: 05, 06; CP3: 03 | CP1 listening (VA-10) and the audio-visual Replay (VA-8); CP2 the three destinations (VA-9), gates closed; CP3 Shared Voice Notes |
 | S8B-08 Exit & Closure | all | The device E2E, the expiry simulation, the deletion audit, zero-retention evidence, cost; BG-08 / BG-09 |

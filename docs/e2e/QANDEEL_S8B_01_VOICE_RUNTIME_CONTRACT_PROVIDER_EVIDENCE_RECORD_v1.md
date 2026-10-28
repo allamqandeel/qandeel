@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). Not run: ASR, stage P and the render spike. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`, and the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -571,8 +571,18 @@ as given.
 **Style:**
 - Qandeel's persona is friendly and natural.
 - Emotional expression is balanced and never exaggerated.
-- The Product Owner's listening notes on X05, X07, R01 and X01 / X04 are adopted. Their wording was given outside the
-  repository and is not reproduced here. The samples they refer to, on the selected model and voice, are:
+- The Product Owner's listening ratings, adopted (given with the ASR & Replay order, 2026-10-28):
+
+| Sample | Rating |
+| --- | --- |
+| X05 EMOTION | excellent |
+| X07 EMOTION | overdone and unnatural |
+| R01 PERSONA | very good |
+| X01 / X04 EMOTION | better than their no-style versions |
+| D03 RENDERED | much better than reading the date from digits |
+| Numbers in general | acceptable for now |
+
+- The samples rated, on the selected model and voice:
 
 | Item | NO_STYLE / BASELINE | PERSONA | EMOTION |
 | --- | --- | --- | --- |
@@ -602,6 +612,14 @@ Flash-Lite was faster and cheaper on every objective measure (§9.9). The Produc
 - the expression corpus, including its persona and emotion styles. They stay evaluation inputs; the selection does not
   make them production copy.
 
+**Two production requirements follow** (Product Owner, 2026-10-28). They are recorded in `docs/voice-runtime-v1.md` §5 and
+§16, in S8B-04's scope, with the contextual expression carried on S8B-05's realtime path. Both are **NOT IMPLEMENTED**.
+No TTS sample marks them done.
+1. **Contextual expression.** QANDEEL chooses its spoken expression from the conversation's context: calm, empathy,
+   playfulness, humour, enthusiasm or seriousness. It stays balanced, never exaggerated.
+2. **Selective contextual vocalization** through Speech Rendering: by meaning and context, for names, dates and ambiguous
+   words.
+
 **What the selection does not do:**
 - **No production code.** No adapter, configuration, voice constant or feature gate. Implementing the voice belongs to
   S8B-04 under `QAN-BL-VOICE-01`, with VA-11 §4's obligations.
@@ -616,3 +634,106 @@ Flash-Lite was faster and cheaper on every objective measure (§9.9). The Produc
    Google's terms) are worded for the Gemini API. Which route production uses, and that route's retention terms, are for
    S8B-04 to settle with the Product Owner. The selection does not decide it.
 2. **AI Studio request logging off** (VA-11 §3, §9.7). This still applies if the AI Studio route is used.
+
+### 9.11 ASR evidence and the Replay render spike (the Product Owner's order, 2026-10-28)
+
+These are the two remaining CP2 parts, inside CP2. Gemini TTS and the DeepSeek stream probe were not repeated, and no
+provider was called. **Nothing was spent.**
+
+**A — ASR: `BLOCKED — MISSING PREREQUISITES`.** `bench-plan.json` keeps its frozen `asr.cp2.status` (`NOT RUN — MISSING
+PREREQUISITE`): the plan is hash-bound to the consumed CP2 approval.
+
+**The candidates, from each provider's own documentation** (read 2026-10-28; the privacy clauses were re-read directly):
+
+| | Azure AI Speech | Speechmatics | Deepgram Nova-3 |
+| --- | --- | --- | --- |
+| Egyptian / MSA | `ar-EG` locale for real-time, fast and batch | one `ar` pack naming MSA, Gulf, **Egyptian** and Levantine | `ar-EG` code (monolingual) |
+| English inside Egyptian speech | weak: language ID does not switch within a sentence | **`ar_en` bilingual pack**: Arabic and English in one stream | `language=multi`; Arabic dialect coverage unstated |
+| Names, numbers, dates | phrase list (2,000; ar-EG support unverified); custom speech for ar-EG | `additional_vocab` (20,000); Arabic formatting "best-effort" | keyterms (500 tokens, extra cost); Arabic formatting unstated |
+| Hesitation | not documented | `remove_disfluencies`, Arabic included | filler words: English only |
+| Noise | no documented claim | no documented claim | marketing only |
+| Streaming partials / endpointing | interim results; segmentation silence 100 – 5000 ms | partials; `max_delay` 0.7 – 4 s; end-of-utterance trigger | interim results; endpointing; utterance end |
+| Price, streaming / batch | USD 1.00 / 0.18 per hour | USD 0.80 (Enhanced) / 0.75 per hour; Standard 0.45 | USD 0.0048 / 0.0043 per minute (promotional) |
+| Free | F0: 5 hours a month, real-time | USD 100 credit (12 months) | USD 200 credit |
+| Region | EU, **UAE North**, Qatar Central | EU, US, AU | US, EU |
+
+**Privacy — the deciding condition.** Zero retention with no training is mandatory for ASR; VA-11 is Gemini TTS only.
+
+| Provider | Verdict | What must hold on every request |
+| --- | --- | --- |
+| **Speechmatics** | **PROVEN WITH SETTINGS** | Real-time audio is never recorded or stored; it is processed in memory. Batch jobs are kept 7 days: QANDEEL deletes each job through the API at once. No training unless the workspace opts in (Terms §10.4): the "model training" setting stays off. |
+| **Azure AI Speech** | **PROVEN WITH SETTINGS, with one gap** | Real-time and fast transcription are not stored. Audio logging is off by default and must never be enabled; batch uses QANDEEL's own storage with a time-to-live, or deletion. **Gap:** the speech-to-text privacy page states no explicit "not used for training". It follows from no retention, and Microsoft's DPA must be checked before selection. |
+| **Deepgram** | **PROVEN ONLY WITH A PER-REQUEST FLAG, NOT BY DEFAULT** | By default, audio and transcripts are retained for model improvement. `mip_opt_out=true` on every request limits content to processing time; one missed flag breaks the condition. |
+
+**The two candidates to test: Speechmatics, then Azure.**
+- Speechmatics is the only one that names Egyptian, has an Arabic–English code-switching pack and handles Arabic
+  hesitation.
+- Azure has an explicit `ar-EG` locale, a UAE region and the lowest batch price. Its weakness, English words inside a
+  sentence, is exactly what the recordings measure.
+- Deepgram is kept in reserve: its privacy depends on a flag the default omits.
+- Noise robustness and real Egyptian accuracy are proven by no provider's documentation, only by the recordings.
+
+**What was prepared (free, local):**
+- `corpus/asr-cp2-recording-script.json`: the organised session. It reuses the hash-pinned Egyptian and MSA prompts
+  unchanged and adds 30 lines:
+  - English words inside Egyptian and MSA speech, each word scored in Latin or a listed Arabic spelling;
+  - names, numbers and dates, with key terms;
+  - hesitation, self-correction and self-interruption, scored verbatim with the intended value beside it;
+  - an OVERLAP condition: QANDEEL's selected voice plays from a second device while the speaker talks.
+
+  Conditions are QUIET, SPEAKER, NOISE and OVERLAP. There is an Arabic consent text, and speakers are anonymous codes.
+- `asr-recording-sheet.mjs <S1|S2…>`: the printable Arabic session sheet. 130 named files per speaker, about 11 minutes
+  of speech: Egyptian 79, MSA 51.
+
+**What the Product Owner provides:**
+1. At least 2 consenting native Egyptian speakers, one female and one male (4 preferred). Each records the 130 lines of
+   their sheet, with consent kept outside the repository. The files go to `artifacts/evals/s8b-01/corpus/<S#>/`
+   (gitignored).
+2. A Speechmatics account (self-serve, EU region, model training off) and an Azure Speech resource (UAE North or West
+   Europe, F0 or S0, audio logging untouched). The keys go in the per-user key file, never in the repository.
+3. ffmpeg (below), which converts the phone recordings to the scored 16 kHz WAV.
+4. Then an independent ASR spend plan, prepared when the recordings exist, for explicit approval. It covers the two
+   providers' streaming and batch adapters, the scoring already in the harness, and a cap. A rough size: 2 speakers ×
+   about 12 minutes × 2 providers × 2 modes ≈ USD 1.10 at list price, likely inside the free credits.
+
+   No adapter is written yet, and no ASR call is made.
+
+**B — Replay render spike: `BLOCKED — AWAITING THE PRODUCT OWNER'S APPROVAL TO INSTALL FFMPEG`.**
+
+ffmpeg / ffprobe are not installed.
+
+**The official route:** ffmpeg.org publishes source only, and its download page links the Windows builds of gyan.dev and
+BtbN. The proposal:
+- gyan.dev's `ffmpeg-release-essentials.zip`, release 9.0.2 (2026-09-19), 109 MB;
+- verified against gyan.dev's published `.sha256`;
+- extracted to a tools folder outside the repository, not added to the system PATH (`QANDEEL_FFMPEG_DIR`).
+
+The build includes libx264, libopus, libfribidi, libharfbuzz and libfreetype, and ffmpeg's native AAC encoder. Not
+installed.
+
+**The spike is ready:** `replay-render-spike.mjs <cloudRunDir> <outDir>`, local and synthetic.
+- **The call (31.4 s), on one clock (§6.1):**
+  - a USER track (synthesized Sulafat speech, a stand-in; never a human voice) and a QANDEEL track (the selected Achird);
+  - a QANDEEL reply cut at 55 % by a barge-in that starts 300 ms before the playout stops. Only the played part is on
+    the track (§4.3 – §4.4);
+  - a 1.5 s reconnection gap, left as a gap (§6.2).
+- **The source:** two mono Opus tracks (§9.2).
+- **The render:**
+  - the tracks mixed on the shared clock;
+  - a simple visual sequence from the unit anchors. This is a placeholder for the bound analytical projection, not the
+    Living Analysis grammar;
+  - derived captions (CW2-05 §40);
+  - output in H.264 Main / yuv420p + AAC-LC, in MP4 with faststart, 720 × 1280 at 30 fps.
+- **The checks:**
+  - the codec profile and faststart;
+  - audio / picture sync at the start and the end, within one frame: a calibration beep and a white frame at the same
+    instants;
+  - the timeline held;
+  - the sources unchanged by rendering (hashes): rendering touches no source, so no retention;
+  - the processing files deleted on completion (§9.1);
+  - render time, CPU time, peak memory and file size.
+- **The phone check:** playing the MP4 on an Android device or the emulator. No device was connected on 2026-10-28.
+- Retention start, the 30-day expiry, the on-demand rule and the Public World lifecycle are contract rules (§7, §9). The
+  spike neither implements them nor changes them.
+
+The focused contract covers the recording kit and the spike's pure functions without ffmpeg: `tests/s8b-01-voice-bench-harness-contract.test.mjs`, 38 / 38.
