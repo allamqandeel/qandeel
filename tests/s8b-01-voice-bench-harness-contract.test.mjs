@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import test from 'node:test';
+import test, { after } from 'node:test';
+import { createHarnessMirror, removeHarnessMirror } from './harness-temp-dir.mjs';
 import { corpusRates, errorRates, normalizeArabic } from '../scripts/s8b-01/arabic-text-metrics.mjs';
 import { composeBudget, endToEndVerdict, percentile } from '../scripts/s8b-01/latency-model.mjs';
 import { GUIDANCE_ECHO_MIN_LENGTH, INTERNAL_CONTAINERS, guidanceSentences, measureStream, va2ReleasableLength } from '../scripts/s8b-01/stream-first-token.mjs';
@@ -28,6 +28,10 @@ import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, gem
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dir = join(root, 'scripts', 's8b-01');
 const plan = JSON.parse(readFileSync(join(dir, 'bench-plan.json'), 'utf8'));
+// Every temporary folder comes from the shared harness lifecycle (QAN-INF-02) and is removed when the file ends.
+const mirrors = [];
+const harnessMirror = (name) => { const mirror = createHarnessMirror(`qandeel-s8b01-${name}-`); mirrors.push(mirror); return mirror; };
+after(() => { for (const mirror of mirrors) removeHarnessMirror(mirror); });
 const launch = (args, env = {}) => spawnSync(process.execPath, [join(dir, 'bench-launch.mjs'), ...args], { cwd: root, encoding: 'utf8', env: { ...process.env, ...env } });
 
 test('the preregistered plan is intact: corpus hashes, the USD 10 cap and its split, no retry, the D-6 target', () => {
@@ -206,7 +210,7 @@ test('the zero-cost rehearsal runs the whole scoring path against simulated prov
 
 /** A throwaway copy of the guard with its own plan and approval, so the live-mode rules are proven without a provider. */
 function guardMirror({ authorized = true, approval = 'APPROVED', planEdit = (p) => p, hosts = { TEST: 'provider.test' } } = {}) {
-  const m = mkdtempSync(join(tmpdir(), 's8b01-guard-'));
+  const m = harnessMirror('guard');
   const p = planEdit({ ...structuredClone(plan), guard: { ...structuredClone(plan.guard), authorized, allowedHosts: hosts } });
   const text = JSON.stringify(p, null, 2);
   writeFileSync(join(m, 'bench-plan.json'), text);
@@ -215,8 +219,8 @@ function guardMirror({ authorized = true, approval = 'APPROVED', planEdit = (p) 
   if (approval) writeFileSync(join(m, 'cp2-approval.json'), JSON.stringify({ status: approval, runId: 'r-test', capUsd: 10, planSha256: sha }));
   return m;
 }
-const underGuard = (m, script, env = {}) => spawnSync(process.execPath, ['--require', join(m, 'spend-guard.cjs'), '--input-type=commonjs', '-e', `(async () => { ${script} })()`],
-  { encoding: 'utf8', env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, QANDEEL_S8B_MODE: 'live', QANDEEL_S8B_RUN_ID: 'r-test', ...env } });
+const underGuard = (mirror, script, env = {}) => spawnSync(process.execPath, ['--require', join(mirror, 'spend-guard.cjs'), '--input-type=commonjs', '-e', `(async () => { ${script} })()`],
+  { cwd: mirror, encoding: 'utf8', env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, QANDEEL_S8B_MODE: 'live', QANDEEL_S8B_RUN_ID: 'r-test', ...env } });
 
 test('CP2: the recorded approval names this exact plan, the USD 10 cap and one run; the plan carries only the approved hosts and keys', () => {
   const approval = JSON.parse(readFileSync(join(dir, 'cp2-approval.json'), 'utf8'));
@@ -369,7 +373,7 @@ const gcpPlan = JSON.parse(readFileSync(join(dir, 'gcp-paygo-plan.json'), 'utf8'
 
 /** A throwaway copy of the guard with a gcp-paygo plan and approval (host provider.test, so nothing is ever sent). */
 function gcpMirror(approval = 'APPROVED') {
-  const m = mkdtempSync(join(tmpdir(), 's8b01-gcp-'));
+  const m = harnessMirror('gcp');
   const text = JSON.stringify({ ...structuredClone(gcpPlan), guard: { ...structuredClone(gcpPlan.guard), allowedHosts: { TEST: 'provider.test' } } }, null, 2);
   writeFileSync(join(m, 'gcp-paygo-plan.json'), text);
   writeFileSync(join(m, 'bench-plan.json'), JSON.stringify(plan));
@@ -482,7 +486,7 @@ test('cp2-cloud order: any prefix keeps the four model × voice combinations eve
 test('cp2-cloud: the request carries a style only in speechMetadata; the guard refuses the check unapproved; the launcher refuses', () => {
   assert.deepEqual(JSON.parse(gcpRequestBody('بجد؟', 'Sulafat', 'happy')).contents[0].parts[0], { text: 'بجد؟', speechMetadata: { style: 'happy' } });
   assert.deepEqual(JSON.parse(gcpRequestBody('بجد؟', 'Sulafat')).contents[0].parts[0], { text: 'بجد؟' });
-  const m = mkdtempSync(join(tmpdir(), 's8b01-cloud-'));
+  const m = harnessMirror('cloud');
   copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
   copyFileSync(join(dir, 'cp2-cloud-plan.json'), join(m, 'cp2-cloud-plan.json'));
   writeFileSync(join(m, 'cp2-cloud-approval.json'), JSON.stringify({ status: 'PENDING', runId: 'r-cloud', capUsd: 2, planSha256: null }));
@@ -584,7 +588,7 @@ test('cp2-cloud cap: each call reserves the most Google can bill for it, so the 
   const body = gcpRequestBody(calls[0].text, calls[0].voice, calls[0].style);
   assert.equal(callCeilingUsd(flash, body), (Buffer.byteLength(body) * 1 + 16384 * 18) / 1e6, 'request bytes + the maximum output, list price');
   const ceilings = calls.map((c) => callCeilingUsd(cloudPlan.models.find((m) => m.id === c.model), gcpRequestBody(c.text, c.voice, c.style)));
-  const m = mkdtempSync(join(tmpdir(), 's8b01-cap-'));
+  const m = harnessMirror('cap');
   const text = readFileSync(join(dir, 'cp2-cloud-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
   writeFileSync(join(m, 'cp2-cloud-plan.json'), text);
   copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
@@ -735,7 +739,7 @@ test('asr-sm po20: 20 numbered lines over the PO\'s categories; any phone format
   assert.equal(count((l) => l.condition === 'OVERLAP'), 1);
   for (const c of ['READ', 'CODE_SWITCH', 'NUMBER', 'NAME_DATE', 'SELF_CORRECTION', 'DISFLUENCY']) assert.ok(count((l) => l.category === c) >= 1, c);
   for (const l of lines) assert.match(l.text, /[؀-ۿ]/u);
-  const corpus = mkdtempSync(join(tmpdir(), 's8b01-po-'));
+  const corpus = harnessMirror('po');
   const po = join(corpus, 'PO');
   mkdirSync(po);
   const tone = (rate) => {
@@ -759,11 +763,11 @@ test('asr-sm po20: 20 numbered lines over the PO\'s categories; any phone format
   assert.deepEqual(m.unprepared, ['01', '03'], 'a changed source must be prepared again');
   assert.match(asr.convertWithFfmpeg(join(po, '03.ogg'), join(po, 'x.wav'), undefined).why, /not installed \(QANDEEL_FFMPEG_DIR\)/u, 'ffmpeg only from the approved folder, never PATH');
   assert.equal(asr.convertWithFfmpeg(join(po, '03.ogg'), join(po, 'x.wav'), corpus).ok, false);
-  rmSync(corpus, { recursive: true, force: true });
+  removeHarnessMirror(corpus);
 });
 
 test('asr-sm guard: a WebSocket reaches only the EU host, over wss, with a reservation, one session each', () => {
-  const m = mkdtempSync(join(tmpdir(), 's8b01-asr-'));
+  const m = harnessMirror('asr');
   const text = readFileSync(join(dir, 'asr-sm-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
   writeFileSync(join(m, 'asr-sm-plan.json'), text);
   copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
@@ -869,7 +873,7 @@ test('asr-sm-proof plan: 12 sessions (6 overlap, 6 latency), Enhanced ar_en only
 });
 
 test('asr-sm-proof inputs: every pinned recording and QANDEEL\'s voice file compared byte for byte; a --live launch refuses them missing or changed (synthetic fixture, no private audio)', () => {
-  const t = mkdtempSync(join(tmpdir(), 's8b01-proof-inputs-'));
+  const t = harnessMirror('proof-inputs');
   const corpus = join(t, 'corpus');
   mkdirSync(join(corpus, 'PO', 'wav'), { recursive: true });
   const tone = (k) => { const pcm = new Int16Array(1600); for (let i = 0; i < pcm.length; i += 1) pcm[i] = Math.round(3000 * Math.sin(i / (3 + k))); return wavFile(Buffer.from(pcm.buffer), 16000); };
@@ -889,7 +893,7 @@ test('asr-sm-proof inputs: every pinned recording and QANDEEL\'s voice file comp
   assert.match(check(p), /QANDEEL's voice file differs/u);
   assert.match(check(p, join(t, 'absent')), /recording 01 differs/u, '--live refuses when the private corpus is absent');
   assert.doesNotMatch(proof.checkProofPlan(p, dir, join(t, 'absent'), { repoDir: t }).join(' | '), /differs/u, '--plan-check without the corpus checks the structure only');
-  rmSync(t, { recursive: true, force: true });
+  removeHarnessMirror(t);
 });
 
 test('asr-sm-proof VAD: causal, a pause shorter than the silence never ends the turn, it re-arms on new speech; the overlap mix sits at its level and stops', () => {
@@ -941,7 +945,11 @@ test('asr-sm-proof session against a loopback server: each ForceEndOfUtterance c
   assert.equal(m.midForces, 1, 'the first force fell at a pause inside the sentence');
   assert.equal(m.forcedFlags, 2);
   assert.ok(m.forceResponsesMs.every((x) => x >= 0 && x < 300), JSON.stringify(m.forceResponsesMs));
-  assert.ok(m.textReadyMs >= 100 && m.textReadyMs < 500, `text ready ${m.textReadyMs} ms after the speech end`);
+  // Order, not timer punctuality: the bytes above prove each force left after its audio; the second left after the first,
+  // and text-ready is exactly that force's send instant past the speech end plus its answer, all on one clock.
+  assert.ok(s.forcesSent[0].t < s.forcesSent[1].t, 'the forces leave in order');
+  assert.ok(Math.abs(m.textReadyMs - ((s.forcesSent[1].t - 800) + m.forceResponsesMs[1])) < 1e-6, 'text-ready is measured from the speech end through the force that ends it');
+  assert.ok(m.textReadyMs > 0 && m.textReadyMs < 500, `text ready ${m.textReadyMs} ms after the speech end`);
 });
 
 test('asr-sm-proof verdict: accuracy held to the §9.17 line, checks kept, the forced answer and text-ready budgets; FULL_0DB reported only', () => {
@@ -964,7 +972,7 @@ test('asr-sm-proof verdict: accuracy held to the §9.17 line, checks kept, the f
 });
 
 test('asr-sm-proof guard: its own plan pair, the EU host only, one session per reservation', () => {
-  const m = mkdtempSync(join(tmpdir(), 's8b01-proof-'));
+  const m = harnessMirror('proof');
   const text = readFileSync(join(dir, 'asr-sm-proof-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
   writeFileSync(join(m, 'asr-sm-proof-plan.json'), text);
   copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));

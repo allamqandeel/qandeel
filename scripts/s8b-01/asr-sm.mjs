@@ -240,14 +240,15 @@ export function checkAsrPlan(plan, here = HERE) {
 }
 
 const nn = (n) => String(n).padStart(2, '0');
-const SKIP = new Set(['.txt', '.json', '.md', '.ini', '.db']);
+// What a phone or a recorder saves, named as audio rather than as the notes beside it.
+const AUDIO = new Set(['.wav', '.ogg', '.oga', '.opus', '.m4a', '.mp4', '.aac', '.mp3', '.flac', '.amr', '.3gp', '.webm', '.caf', '.wma']);
 
-/** The phone recording(s) for line n in the speaker folder: any extension, named 01 … 20 (or 1 … 20). */
+/** The phone recording(s) for line n in the speaker folder: any audio extension, named 01 … 20 (or 1 … 20). */
 export function sourcesOf(dir, n) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter((f) => {
     const ext = extname(f).toLowerCase();
-    return ext && !SKIP.has(ext) && statSync(join(dir, f)).isFile() && [nn(n), String(Number(n))].includes(f.slice(0, -ext.length).trim());
+    return AUDIO.has(ext) && statSync(join(dir, f)).isFile() && [nn(n), String(Number(n))].includes(f.slice(0, -ext.length).trim());
   }).map((f) => join(dir, f));
 }
 
