@@ -1,12 +1,14 @@
 {
   "id": "s8b-01-asr-sm-proof-approval",
-  "status": "PENDING",
+  "status": "APPROVED",
   "runId": "s8b01-cp2-asr-sm-proof-r1",
-  "approvedBy": null,
-  "approvedOn": null,
+  "approvedBy": "Product Owner",
+  "approvedOn": "2026-10-28",
   "scope": "ONE guarded run of the final ASR engineering proof: 12 sessions (6 overlap, 6 latency), Enhanced ar_en, max_delay 0.7, VAD + ForceEndOfUtterance, EU real-time endpoint, no retry.",
   "capUsd": 0.1,
-  "planSha256": null,
-  "modelTrainingOff": null,
-  "note": "PENDING: the Product Owner approves the plan hash, the USD 0.10 cap and the run, and confirms model training is off. Until then --live is refused."
+  "planSha256": "6ba458f4ced2c81f1d658367d473eeba0756b465c7786b4ce38ec8fbee158b74",
+  "modelTrainingOff": true,
+  "note": "APPROVED (PO APPROVAL — Final Speechmatics Proof, 2026-10-28): ONE run of s8b01-cp2-asr-sm-proof-r1 on plan 6ba458f4…, Speechmatics Enhanced ar_en, 12 sessions, cap USD 0.10 from the free credit, EU; the Product Owner confirms model training OFF. No retry, no expansion.",
+  "engineeringNote": "The Product Owner's note: ForceEndOfUtterance finalizes the text and does not by itself end the user's turn. The results must show no word lost or repeated where a thinking pause is followed by more speech, and that an early finalization is never taken as permission to send a reply to DeepSeek. The 800 ms turn-commit value is experimental only; its production setting is decided in S8B-05.",
+  "region": "EU, the plan's pinned endpoint wss://eu.rt.speechmatics.com/v2"
 }
