@@ -756,6 +756,8 @@ test('asr-sm po20: 20 numbered lines over the PO\'s categories; any phone format
   writeFileSync(join(po, '01.m4a'), 'phone audio 1, recorded again');
   m = asr.recordingManifest(asrPlan, corpus);
   assert.deepEqual(m.unprepared, ['01', '03'], 'a changed source must be prepared again');
+  assert.match(asr.convertWithFfmpeg(join(po, '03.ogg'), join(po, 'x.wav'), undefined).why, /not installed \(QANDEEL_FFMPEG_DIR\)/u, 'ffmpeg only from the approved folder, never PATH');
+  assert.equal(asr.convertWithFfmpeg(join(po, '03.ogg'), join(po, 'x.wav'), corpus).ok, false);
   rmSync(corpus, { recursive: true, force: true });
 });
 

@@ -12,7 +12,7 @@
 // per-user key file into memory and passed only to the guarded child; it is never printed, logged or written.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -259,10 +259,32 @@ export function convertWithWindows(source, target) {
 }
 
 /**
+ * The local converter for a format Windows cannot decode (WhatsApp's Ogg Opus): ffmpeg from QANDEEL_FFMPEG_DIR only, the
+ * folder the Product Owner approved; never PATH, never downloaded here. Decodes and resamples to 16 kHz mono PCM 16-bit.
+ */
+export function convertWithFfmpeg(source, target, dir = process.env.QANDEEL_FFMPEG_DIR) {
+  const exe = dir ? join(dir, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg') : null;
+  if (!exe || !existsSync(exe)) return { ok: false, why: 'ffmpeg is not installed (QANDEEL_FFMPEG_DIR)' };
+  const r = spawnSync(exe, ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', '-i', source, '-map', '0:a:0', '-map_metadata', '-1', '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', target],
+    { encoding: 'utf8', timeout: 120000 });
+  return r.status === 0 && existsSync(target) ? { ok: true, tool: 'ffmpeg' } : { ok: false, why: (r.stderr || 'conversion failed').trim().split(/\r?\n/u)[0] };
+}
+
+/** Windows Media Foundation first; ffmpeg (only when the approved QANDEEL_FFMPEG_DIR is set) for what Windows cannot read. */
+export function convertLocally(source, target) {
+  const w = convertWithWindows(source, target);
+  if (w.ok) return { ...w, tool: 'windows' };
+  const f = convertWithFfmpeg(source, target);
+  if (f.ok) return f;
+  rmSync(target, { force: true }); // the failed transcoder's empty output
+  return { ok: false, why: `${w.why}; ${f.why}` };
+}
+
+/**
  * --prepare: every phone recording to a streamable WAV in <speaker>/wav/NN.wav (a streamable WAV is used as it is), and
  * <speaker>/wav/prepared.json binding each source's SHA-256 to its WAV's, so a re-recorded file is never streamed stale.
  */
-export function prepareRecordings(plan, corpusDir, { convert = convertWithWindows } = {}) {
+export function prepareRecordings(plan, corpusDir, { convert = convertLocally } = {}) {
   const [speaker] = plan.set.speakers;
   const dir = join(corpusDir, speaker);
   const wavDir = join(dir, 'wav');
@@ -277,7 +299,7 @@ export function prepareRecordings(plan, corpusDir, { convert = convertWithWindow
     const r = asIs ? { ok: true } : convert(src[0], wav);
     if (!r.ok || !streamableWav(wav)) { report.push({ n: nn(line.n), status: 'NOT CONVERTED', why: r.why ?? 'the converted file is not a streamable WAV' }); continue; }
     prepared[nn(line.n)] = { source: src[0].slice(dir.length + 1), sourceSha256: bytesSha256(src[0]), wav: wav.slice(dir.length + 1), wavSha256: bytesSha256(wav) };
-    report.push({ n: nn(line.n), status: asIs ? 'WAV AS IS' : 'CONVERTED', source: extname(src[0]).toLowerCase() });
+    report.push({ n: nn(line.n), status: asIs ? 'WAV AS IS' : 'CONVERTED', source: extname(src[0]).toLowerCase(), tool: asIs ? null : r.tool ?? null });
   }
   writeFileSync(join(wavDir, 'prepared.json'), JSON.stringify(prepared, null, 1));
   return report;

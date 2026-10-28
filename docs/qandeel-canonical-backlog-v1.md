@@ -5463,7 +5463,7 @@ consumed bounded run, USD 0.1155 of the USD 10 cap (S8B-01 record §9).
 - **Carried inside Stage 8B, not admitted:** the VA-11 §4 production obligations (`store: false`, the server-only key, the
   Voice disclosure naming Google, the re-verification of Google's terms) bind S8B-04, which implements Qandeel's voice under
   `QAN-BL-VOICE-01`; the CP2 items NOT RUN (record §9.5: ASR, stage P, the render spike; the expression set and the second
-  voice were run in §9.9) stay with S8B-01 (§9.11 – §9.13: ASR, Speechmatics Enhanced `ar_en` only on the Product Owner's 20 recordings, `BLOCKED — MISSING PREREQUISITES`; the render spike
+  voice were run in §9.9) stay with S8B-01 (§9.11 – §9.14: ASR, Speechmatics Enhanced `ar_en` only on the Product Owner's 20 recordings, received as WhatsApp Ogg Opus and awaiting ffmpeg; the render spike
   awaiting ffmpeg); the Product Owner's two production requirements, contextual expression and selective contextual vocalization,
   bind S8B-04, and the expression carries on S8B-05's realtime path (`docs/voice-runtime-v1.md` §5, §16; NOT
   IMPLEMENTED). None leaves Stage 8B, so none is cross-task residue (BG-06).

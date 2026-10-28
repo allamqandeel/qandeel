@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus, which Windows cannot decode, and await the approval to install ffmpeg (§9.14); the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -902,3 +902,53 @@ prepare / manifest path (conversion, WAV as is, an undecodable file, a re-record
 
 Nothing has been sent. The recommendation (`APPROVE FOR PRODUCTION` or `NOT READY`, stated as preliminary and
 single-speaker) follows that one run.
+
+### 9.14 The Product Owner's 20 recordings received — WhatsApp Ogg Opus, awaiting ffmpeg (2026-10-28)
+
+The Product Owner placed `01.ogg` … `20.ogg` in `corpus/PO/`, transferred through WhatsApp. They are inspected read-only.
+Their SHA-256 values were taken on arrival and still match after every step; the originals are never modified.
+
+**What the files are** (Ogg pages parsed, nothing decoded):
+- all 20 are Ogg Opus, encoder (vendor) `WhatsApp`: mono, 16 kHz input rate, SILK wideband only (an audio band up to
+  8 kHz), about 15 – 19 kbps, 120 ms packets;
+- every page's CRC is valid, with no trailing bytes and one stream each;
+- the last page carries no end-of-stream flag, which is how WhatsApp writes its voice notes; the final granule position is
+  consistent;
+- durations 3.82 – 6.52 s, 99.7 s in all, each inside the plan's 30 s limit.
+
+**No file is silent:** without decoding, coded-speech packets (≥ 20 bytes per 20 ms) cover 25 – 50 packets per file. Speech
+starts by about 0.24 s in every file.
+- Speech reaches the last 120 ms packet in 01, 19 and 20, so a final syllable may be clipped. Only listening, or a decoded
+  waveform, can tell.
+- 19 and 20 keep large packets even between words. That is consistent with the television, or QANDEEL's voice, still being
+  present after WhatsApp's processing.
+
+**Conversion:**
+- Windows Media Foundation cannot read Ogg Opus on this machine. `convert-audio.ps1` fails with `Unknown`, and only
+  Microsoft's Web Media Extensions (Vorbis) is installed.
+- No other local decoder exists: no ffmpeg, and none in `node_modules`.
+- `asr-sm.mjs --prepare` therefore reports 20 / 20 `NOT CONVERTED`, and `--plan-check` reports 20 unprepared.
+- `--prepare` now tries ffmpeg after Windows, but only from `QANDEEL_FFMPEG_DIR`, never PATH:
+  `-map 0:a:0 -map_metadata -1 -ac 1 -ar 16000 -c:a pcm_s16le`.
+- ffmpeg is the one already proposed for the Replay spike (§9.11), so one approved install serves both. Nothing is
+  installed before the Product Owner's approval.
+
+**Reading the results, given WhatsApp:**
+- The audio the test scores is WhatsApp's 16 kbps SILK-wideband encoding, not the phone microphone's own signal. It is
+  likely a lower quality than QANDEEL's own capture.
+- If the files were recorded as WhatsApp voice notes, the phone's voice-call processing (noise suppression, gain control)
+  probably applied too. That is likely, but it cannot be confirmed from the file. It may lower the noise and overlap
+  difficulty of 18 – 20.
+- An error may come from the codec rather than Speechmatics, so the run is read as a preliminary single-speaker test on
+  WhatsApp-quality audio.
+- A good result on this audio is not weakened by the codec. A poor result does not by itself show Speechmatics is not
+  ready.
+
+**Status:** `BLOCKED — AWAITING THE PRODUCT OWNER'S APPROVAL TO INSTALL FFMPEG`. After it:
+1. `--prepare` converts the 20 files;
+2. `--plan-check` gives the readiness report on the decoded audio (durations, sample rate, speech spans);
+3. the Product Owner approves the run (plan `5d1af7a4…`, USD 0.25, model training off).
+
+The plan's `audio.format` line names only the Windows converter. If ffmpeg is approved and used, that line is corrected before
+the run approval, and the new plan hash is presented with the readiness report. The expected spend on 99.7 s of audio is
+about USD 0.04. Nothing has been sent.

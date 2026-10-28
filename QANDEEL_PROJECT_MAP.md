@@ -581,7 +581,8 @@ Closure & Implementation Direction (2026-10-21). Evidence: the [S8A-01 record](d
     Enhanced `ar_en` only, on the Product Owner's own 20 phone recordings (`sets.po20`), a preliminary single-speaker
     test; phone formats converted locally (`convert-audio.ps1`, Windows Media Foundation); plan version 2 (`5d1af7a4…`,
     20 sessions, USD 0.25) supersedes version 1 (`e6b233b6…`, never approved, never run); `BLOCKED — MISSING
-    PREREQUISITES` (the recordings, then the review and the approval with model training off); nothing sent.
+    PREREQUISITES`: the 20 recordings arrived as WhatsApp Ogg Opus (record §9.14), intact and not silent, but Windows
+    cannot decode them; they await the approval to install ffmpeg, then the review and the run approval; nothing sent.
   - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against
