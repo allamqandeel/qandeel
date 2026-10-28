@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12); the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -837,3 +837,68 @@ The focused contract covers the recording kit and the spike's pure functions wit
 **The recommendation** (`APPROVE FOR PRODUCTION` or `NOT READY`) follows that one run. None is given before it.
 
 **The Replay render spike** is unchanged (§9.11). It is ready and awaits the approval to install ffmpeg.
+
+### 9.13 ASR recording simplification — the Product Owner's 20 recordings, Enhanced `ar_en` only (2026-10-28)
+
+**The Product Owner's decision (2026-10-28)** replaces the two-speaker set of §9.12:
+- one sheet of 20 sentences across everyday Egyptian, English inside Egyptian, names and numbers, MSA, hesitation, noise and
+  interruption;
+- the Product Owner records each sentence on their own phone, one file each, named `01` … `20`, in
+  `artifacts/evals/s8b-01/corpus/PO/`;
+- the phone's natural format is accepted when it converts locally; WAV is not required;
+- Speechmatics Enhanced `ar_en` only, streamed at real-time pace over the WebSocket (Melia 1 is dropped);
+- a new plan, reservation, cap and hash for 20 recordings; the previous plan and approval record are not used;
+- **the results are a preliminary single-speaker test.** They are never reported as showing performance for all users,
+  voices, phones or rooms;
+- no call before the recordings are reviewed and the run is approved.
+
+**The 20 lines** (`asr-cp2-recording-script.json` `sets.po20`; the sheet is `asr-recording-sheet.mjs --po`, which writes
+`recording-sheet-PO-20.html`), each taken by id from the existing items or the pinned reading prompts, so no reference text is
+new:
+
+| Files | Content | Condition |
+| --- | --- | --- |
+| 01 – 05 | everyday Egyptian (reading prompts EG-R01, R02, R07, R10, R12) | speaker phone |
+| 06 – 09 | English inside Egyptian (EG-CS-01, 02, 03, 08) | speaker phone |
+| 10 – 13 | names, a date, digits, an amount (EG-ND-01, 02, 04, 06) | speaker phone |
+| 14 – 15 | MSA: a date, and an English word (MSA-ND-03, MSA-CS-01) | speaker phone |
+| 16 – 17 | hesitation, self-correction (EG-DF-01, 02) | speaker phone |
+| 18 – 19 | lines 02 and 06 again, with the television on | noise |
+| 20 | a self-interruption, with QANDEEL's voice playing from the PC (`C0177.wav` of §9.9, an existing file) | overlap |
+
+**Local conversion, nothing installed and nothing sent:** `convert-audio.ps1` converts a phone recording to 16 kHz mono
+16-bit WAV with Windows' own Media Foundation transcoder (WinRT `Windows.Media.Transcoding`, run from Windows PowerShell).
+`asr-sm.mjs --prepare` runs it for every file, uses a streamable WAV as it is, and writes `PO/wav/prepared.json`, which binds
+each source's SHA-256 to its WAV's. A file recorded again after `--prepare` is refused until it is prepared again.
+- **Proof:** a 7.88 s WAV converted to AAC m4a and back gave 16 kHz, 7.89 s, and the same measured speech bounds (220 /
+  7580 ms). The same m4a went through `prepareRecordings` with the real converter in 0.8 s.
+- A format Windows cannot decode is reported as `NOT CONVERTED` by `--prepare`. That recording is then re-saved by the
+  Product Owner as m4a or WAV; no other tool is installed.
+
+**The plan, version 2** (`asr-sm-plan.json`, hash `5d1af7a4a5ed0390fd6b20855d83876c7936fce57d066bc761a56f29b185f897`):
+- 20 sessions = 20 recordings × Enhanced `ar_en`: partials on, `max_delay` 1.0 s `flexible`, end of utterance after 0.5 s,
+  the set's names as `additional_vocab`; EU endpoint; real-time only; model training off; no retry.
+- **Cap USD 0.25.** Every session at its ceiling (30 s of audio, 2 s of tail silence and a 15 s margin, at USD 0.80 per hour)
+  totals USD 0.2089. For lines of about 5 s the expected spend is under USD 0.05, inside Speechmatics' free credit.
+- `scope.preliminarySingleSpeaker: true` is a structural rule of the plan check.
+- The preregistered thresholds of §9.12 are unchanged. With 20 lines, a group such as MSA (2 lines) or noise (2 lines) is read
+  with that caution.
+- **Plan version 1** (`e6b233b6…`, 120 sessions, USD 1) is **SUPERSEDED**: it was never approved and never run. Its
+  approval record is replaced by a new PENDING one for run `s8b01-cp2-asr-sm-po-r1`.
+
+**`--plan-check`** reports, for the Product Owner's review, each recording's source format, duration, sample rate and
+measured speech span. It prints no transcript and sends nothing.
+
+**Tests:** `tests/s8b-01-voice-bench-harness-contract.test.mjs`, 43 / 43. They cover the version 2 plan and its refusals
+(a second arm, a second speaker, another set, a cap above USD 0.25, the single-speaker rule), the 20 lines, and the
+prepare / manifest path (conversion, WAV as is, an undecodable file, a re-recorded file).
+
+**Status: `BLOCKED — MISSING PREREQUISITES`.**
+- The key file is present (checked for presence only).
+- The Product Owner records the 20 files.
+- Then `--prepare` and `--plan-check` run, and the recordings are reviewed.
+- Then the Product Owner approves the plan hash, the USD 0.25 cap and the run `s8b01-cp2-asr-sm-po-r1`, confirming that the
+  workspace's model-training setting is off.
+
+Nothing has been sent. The recommendation (`APPROVE FOR PRODUCTION` or `NOT READY`, stated as preliminary and
+single-speaker) follows that one run.

@@ -94,6 +94,114 @@
         "MSA-ND-03|SPEAKER",
         "MSA-CS-01|SPEAKER"
       ]
+    },
+    "po20": {
+      "note": "The Product Owner's simplification (2026-10-28): 20 recordings in all, by the Product Owner alone on their phone, files 01 … 20 in artifacts/evals/s8b-01/corpus/PO/, in the phone's own format (converted locally). A first test of one speaker: it proves nothing for every group of users. 18 and 19 repeat 02 and 06 with background noise; 20 is spoken while QANDEEL's voice plays.",
+      "speaker": "PO",
+      "folder": "artifacts/evals/s8b-01/corpus/PO",
+      "overlapPlayback": "artifacts/evals/s8b-01/cloud/s8b01-cp2-cloud-r1/audio/C0177.wav",
+      "lines": [
+        {
+          "n": "01",
+          "id": "EG-R01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "02",
+          "id": "EG-R02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "03",
+          "id": "EG-R07",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "04",
+          "id": "EG-R10",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "05",
+          "id": "EG-R12",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "06",
+          "id": "EG-CS-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "07",
+          "id": "EG-CS-02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "08",
+          "id": "EG-CS-03",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "09",
+          "id": "EG-CS-08",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "10",
+          "id": "EG-ND-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "11",
+          "id": "EG-ND-02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "12",
+          "id": "EG-ND-04",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "13",
+          "id": "EG-ND-06",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "14",
+          "id": "MSA-ND-03",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "15",
+          "id": "MSA-CS-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "16",
+          "id": "EG-DF-01",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "17",
+          "id": "EG-DF-02",
+          "condition": "SPEAKER"
+        },
+        {
+          "n": "18",
+          "id": "EG-R02",
+          "condition": "NOISE"
+        },
+        {
+          "n": "19",
+          "id": "EG-CS-01",
+          "condition": "NOISE"
+        },
+        {
+          "n": "20",
+          "id": "EG-DF-06",
+          "condition": "OVERLAP"
+        }
+      ]
     }
   },
   "items": [

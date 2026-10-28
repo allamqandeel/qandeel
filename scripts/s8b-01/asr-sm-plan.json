@@ -1,15 +1,20 @@
 {
   "id": "s8b-01-asr-sm-plan",
-  "version": 1,
-  "status": "PREPARED — the Product Owner's Speechmatics order (2026-10-28): Speechmatics only, real-time streaming ASR on consenting human recordings, one bounded run after an explicit approval (asr-sm-approval.json). Nothing has been sent.",
+  "version": 2,
+  "status": "PREPARED — the Product Owner's ASR recording simplification (2026-10-28): Speechmatics Enhanced ar_en only, real-time streaming over WebSocket, on the Product Owner's own 20 phone recordings; one bounded run after an explicit approval (asr-sm-approval.json). Nothing has been sent.",
+  "supersedes": "plan version 1 (sha256 e6b233b62675ca18009cc14ddef693afee1478bc14f2e92d188b8286e44379be: 120 sessions, 2 speakers, Enhanced ar_en + Melia 1, USD 1), SUPERSEDED by the Product Owner, never approved and never run; its approval record is not reused",
+  "scope": {
+    "preliminarySingleSpeaker": true,
+    "note": "One speaker (the Product Owner), 20 recordings, one phone. The results are a preliminary single-speaker test: they do not show how Speechmatics performs for other speakers, voices, phones or rooms, and they are never reported as such."
+  },
   "provider": "SPEECHMATICS",
   "endpoint": "wss://eu.rt.speechmatics.com/v2",
   "region": "EU (pinned; the global endpoint may route anywhere)",
   "guard": {
     "authorized": true,
-    "costCapUsd": 1,
+    "costCapUsd": 0.25,
     "budgetUsd": {
-      "asr": 1
+      "asr": 0.25
     },
     "allowedHosts": {
       "speechmatics": "eu.rt.speechmatics.com"
@@ -18,7 +23,7 @@
       "SPEECHMATICS_API_KEY"
     ],
     "keyFile": "~/.qandeel/speechmatics-api-key.txt (per user, outside the repository; read into memory by the launcher only)",
-    "reservation": "each session reserves its timeout (the line's audio + the tail silence + the margin) at the arm's hourly price, and settles at its measured wall time, which bounds the audio Speechmatics can bill"
+    "reservation": "each session reserves its timeout (the recording's audio + the tail silence + the margin) at the arm's hourly price, and settles at its measured wall time, which bounds the audio Speechmatics can bill"
   },
   "privacy": {
     "realtimeOnly": true,
@@ -42,12 +47,12 @@
       "real-time only: no batch job is created, so nothing is held for the batch retention of 7 days",
       "no translation, no speaker identification, no audio events"
     ],
-    "notes": "The transcripts of the consenting speakers are kept only in the gitignored run directory and deleted with the recordings at S8B-01 closure."
+    "notes": "The Product Owner's recordings, their converted WAVs and the transcripts stay in gitignored directories and are deleted at S8B-01 closure."
   },
   "arms": [
     {
       "id": "ENHANCED_AR_EN",
-      "role": "the production candidate: the only Speechmatics configuration with Arabic–English code-switching in one stream, server end-of-utterance detection, max_delay control and a custom dictionary",
+      "role": "the only arm (Product Owner): the Speechmatics configuration with Arabic–English code-switching in one stream, server end-of-utterance detection, max_delay control and a custom dictionary",
       "transcriptionConfig": {
         "model": "enhanced",
         "language": "ar_en",
@@ -60,46 +65,29 @@
       },
       "additionalVocab": true,
       "pricePerHourUsd": 0.8
-    },
-    {
-      "id": "MELIA_1",
-      "role": "the comparison the Product Owner named: automatic multilingual, cheaper, but no ar_en pack, no silence end-of-utterance (the client forces it), no max_delay and no custom dictionary",
-      "transcriptionConfig": {
-        "model": "melia-1",
-        "language": "multi",
-        "language_hints": [
-          "ar",
-          "en"
-        ],
-        "enable_partials": true
-      },
-      "additionalVocab": false,
-      "forceEndOfUtteranceAfterSilenceMs": 500,
-      "pricePerHourUsd": 0.4
     }
   ],
   "audio": {
-    "encoding": "pcm_s16le, the recording's own sample rate (mono; channels averaged)",
+    "encoding": "pcm_s16le, the WAV's own sample rate (mono; channels averaged)",
     "chunkMs": 20,
     "pacing": "real time",
     "tailSilenceMs": 2000,
     "sessionTimeoutMarginMs": 15000,
     "maxLineSeconds": 30,
-    "format": "WAV (PCM 16/24/32-bit or float 32); another format needs ffmpeg, which is not installed"
+    "format": "the phone's own format; asr-sm.mjs --prepare converts it locally to 16 kHz mono 16-bit WAV with convert-audio.ps1 (Windows Media Foundation; nothing installed, nothing sent); a streamable WAV is used as it is"
   },
   "set": {
-    "name": "core",
+    "name": "po20",
     "script": "corpus/asr-cp2-recording-script.json",
-    "scriptSha256": "0e6b40d3d664c08de6a4deba70c97fd316daf409dca61b45182f2c5bece49977",
+    "scriptSha256": "ffd9eb2b03d0bc78daaecb298e4c25e73d0fb88feedaf8fe8ffeea57ce3421dc",
     "promptsSha256": "861c140fdbef123ba98b3b33623f1242444471b59daa39875c276dd0987927a6",
-    "linesPerSpeaker": 30,
+    "linesPerSpeaker": 20,
     "speakers": [
-      "S1",
-      "S2"
+      "PO"
     ],
-    "speakerNote": "S1 and S2: one man and one woman, native Egyptian speakers, each with explicit written consent kept by the Product Owner outside the repository",
-    "sessions": 120,
-    "recordings": "artifacts/evals/s8b-01/corpus/<S#>/<S#>_<line>_<condition>.wav (gitignored); a spontaneous answer's reference is the speaker's own transcript beside it as .txt"
+    "speakerNote": "PO: the Product Owner, recording their own voice on their own phone",
+    "sessions": 20,
+    "recordings": "artifacts/evals/s8b-01/corpus/PO/NN.<phone format> (01 … 20), converted to PO/wav/NN.wav with PO/wav/prepared.json binding source and WAV hashes (gitignored)"
   },
   "normalization": {
     "diacritics": true,
@@ -111,12 +99,12 @@
     "punctuation": true
   },
   "measures": [
-    "WER / CER, corpus level, per arm × dialect, category, condition and speaker; English words scored in Latin or a listed Arabic spelling",
+    "WER / CER, corpus level, per dialect, category and condition; English words scored in Latin or a listed Arabic spelling",
     "checks: names / key terms, numbers (digits or the spoken words), the intended word of a self-correction, the English words",
     "first partial after speech onset; the last final after speech end; E = EndOfUtterance after speech end; A = the last final after EndOfUtterance; final lag after its audio"
   ],
   "acceptance": {
-    "note": "Preregistered for ENHANCED_AR_EN, the production candidate (MELIA_1 is reported against the same lines). From bench-plan.json asr.proposedThresholds (WER, A) and the plan's 0.5 s end-of-utterance trigger. The recommendation follows them; the decision is the Product Owner's. 30 lines × 2 speakers is a first representative set, not a population estimate.",
+    "note": "Preregistered for ENHANCED_AR_EN. From bench-plan.json asr.proposedThresholds (WER, A) and the plan's 0.5 s end-of-utterance trigger, unchanged from plan version 1. The recommendation follows them; the decision is the Product Owner's. 20 recordings of one speaker (18 Egyptian: 15 on the speaker phone, 2 in noise, 1 with QANDEEL's voice playing; 2 MSA) are a preliminary single-speaker test: a small group's rate is read with that caution, and nothing is claimed for all users.",
     "egyptianWerMax": 0.25,
     "msaWerMax": 0.12,
     "noiseWerMax": 0.35,
@@ -128,7 +116,7 @@
   "stopRules": {
     "notAuthorised": "stop the run (HTTP 401 / close 4001)",
     "quotaExceeded": "stop the run (close 4005)",
-    "firstSessionOfArmFails": "stop that arm",
+    "firstSessionOfArmFails": "stop the run (one arm)",
     "consecutiveFailuresPerArm": 3,
     "budgetRefused": "stop the run",
     "retries": "none"

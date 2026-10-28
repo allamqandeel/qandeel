@@ -1,12 +1,13 @@
 {
   "id": "s8b-01-asr-sm-approval",
   "status": "PENDING",
-  "runId": "s8b01-cp2-asr-sm-r1",
+  "runId": "s8b01-cp2-asr-sm-po-r1",
   "approvedBy": null,
   "approvedOn": null,
-  "scope": "ONE guarded run of the Speechmatics real-time ASR plan: 120 sessions = 30 lines × 2 consenting speakers × (Enhanced ar_en, Melia 1), EU real-time endpoint, no retry.",
-  "capUsd": 1,
+  "scope": "ONE guarded run of the Speechmatics real-time ASR plan version 2: 20 sessions = the Product Owner's 20 recordings × Enhanced ar_en, EU real-time endpoint, no retry; a preliminary single-speaker test.",
+  "capUsd": 0.25,
   "planSha256": null,
   "modelTrainingOff": null,
-  "note": "PENDING: the Product Owner approves the plan hash and the cap, and confirms that the Speechmatics workspace model-training setting is off, after the recordings and the key are in place. Until then --live is refused."
+  "supersedes": "the PENDING approval record of plan version 1 (run s8b01-cp2-asr-sm-r1), never approved; it is not reused",
+  "note": "PENDING: after the recordings are in place, prepared (--prepare) and reviewed (--plan-check), the Product Owner approves the plan hash, the USD 0.25 cap and the run, and confirms that the Speechmatics workspace model-training setting is off. Until then --live is refused."
 }

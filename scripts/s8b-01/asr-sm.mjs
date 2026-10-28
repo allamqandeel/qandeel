@@ -1,20 +1,23 @@
 // S8B-01 CP2 — the Speechmatics real-time ASR test (the Product Owner's Speechmatics order, 2026-10-28). Operator-only;
 // never imported by production code.
 //
-//   node scripts/s8b-01/asr-sm.mjs --plan-check                 the plan, the recording set and the recordings present
+//   node scripts/s8b-01/asr-sm.mjs --prepare                    local and free: each phone recording corpus/PO/NN.<any> to a
+//                                                               16 kHz mono WAV (convert-audio.ps1, Windows Media Foundation)
+//   node scripts/s8b-01/asr-sm.mjs --plan-check                 the plan, and every recording's duration and speech, for review
 //   node scripts/s8b-01/asr-sm.mjs --live --confirm <runId>     ONE approved run, under spend-guard.cjs (QANDEEL_S8B_CHECK=asr-sm)
 //
-// Consenting human recordings only (corpus/asr-cp2-recording-script.json, set `core`), streamed at real-time pace to the
-// Speechmatics real-time WebSocket in the EU region, one session per line and arm; no retry. The API key is read from the
+// The Product Owner's recording simplification (2026-10-28): the Product Owner's own 20 recordings (set `po20` of
+// corpus/asr-cp2-recording-script.json), streamed at real-time pace to the Speechmatics real-time WebSocket in the EU region,
+// Enhanced ar_en only, one session per recording; no retry. A preliminary single-speaker test, not a population estimate. The API key is read from the
 // per-user key file into memory and passed only to the guarded child; it is never printed, logged or written.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { errorRates, normalizeArabic } from './arabic-text-metrics.mjs';
-import { fileName, loadRecordingScript, referenceOf, sessionLines } from './asr-recording-sheet.mjs';
+import { loadRecordingScript, poLines, referenceOf } from './asr-recording-sheet.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
@@ -22,6 +25,7 @@ export const KEY_FILE = join(homedir(), '.qandeel', 'speechmatics-api-key.txt');
 const RATES = [8000, 16000, 22050, 24000, 32000, 44100, 48000];
 const sha256 = (text) => createHash('sha256').update(text.replace(/\r\n/gu, '\n')).digest('hex');
 export const fileSha256 = (p) => sha256(readFileSync(p, 'utf8'));
+const bytesSha256 = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 
 /** Mono PCM16 of a WAV: PCM 16 / 24 / 32-bit or IEEE float 32-bit, any channel count (averaged), WAVE_FORMAT_EXTENSIBLE too. */
 export function readAnyWav(buf) {
@@ -204,47 +208,105 @@ export function checkAsrPlan(plan, here = HERE) {
   const p = [];
   const g = plan.guard ?? {};
   if (plan.provider !== 'SPEECHMATICS') p.push('Speechmatics only (Product Owner)');
-  if (!(g.costCapUsd > 0 && g.costCapUsd <= 1)) p.push('the cap is at most USD 1');
+  if (!(g.costCapUsd > 0 && g.costCapUsd <= 0.25)) p.push('the cap is at most USD 0.25 (20 recordings)');
   if (JSON.stringify(Object.values(g.allowedHosts ?? {})) !== JSON.stringify(['eu.rt.speechmatics.com'])) p.push('the EU real-time host only');
   if (JSON.stringify(g.liveKeys) !== JSON.stringify(['SPEECHMATICS_API_KEY'])) p.push('the only credential is the Speechmatics API key');
   if (plan.endpoint !== 'wss://eu.rt.speechmatics.com/v2') p.push('the EU real-time endpoint');
   const arms = plan.arms ?? [];
-  if (arms.length !== 2 || arms[0].transcriptionConfig?.model !== 'enhanced' || arms[0].transcriptionConfig?.language !== 'ar_en') p.push('arm 1 is Enhanced ar_en, the production candidate');
-  if (arms[1]?.transcriptionConfig?.model !== 'melia-1' || arms[1]?.transcriptionConfig?.language !== 'multi') p.push('arm 2 is Melia 1 (multi), the comparison');
-  if (!arms.every((a) => a.transcriptionConfig?.enable_partials === true)) p.push('partials on every arm');
-  if (arms[1] && arms[1].transcriptionConfig.conversation_config) p.push('Melia 1 rejects end_of_utterance_silence_trigger');
-  if (!(arms[1]?.forceEndOfUtteranceAfterSilenceMs > 0)) p.push('Melia 1 needs the client-side ForceEndOfUtterance');
+  const c = arms[0]?.transcriptionConfig ?? {};
+  if (arms.length !== 1 || c.model !== 'enhanced' || c.language !== 'ar_en') p.push('one arm only: Enhanced ar_en (Product Owner)');
+  if (c.enable_partials !== true || !(c.conversation_config?.end_of_utterance_silence_trigger > 0)) p.push('partials and the server end of utterance');
   for (const a of arms) if (!(a.pricePerHourUsd > 0)) p.push(`${a.id}: a price`);
   if (plan.privacy?.modelTrainingMustBeOff !== true || plan.privacy?.realtimeOnly !== true) p.push('model training off and real-time only');
-  const { script } = loadRecordingScript(here);
+  if (plan.scope?.preliminarySingleSpeaker !== true) p.push('the results are recorded as a preliminary single-speaker test');
+  const data = loadRecordingScript(here);
   if (plan.set?.scriptSha256 !== fileSha256(join(here, 'corpus', 'asr-cp2-recording-script.json'))) p.push('the recording script hash');
   if (plan.set?.promptsSha256 !== fileSha256(join(here, 'corpus', 'asr-reading-prompts.json'))) p.push('the reused prompts hash');
-  const lines = sessionLines(loadRecordingScript(here), { set: plan.set?.name });
-  if (lines.length !== plan.set?.linesPerSpeaker) p.push('the set size');
-  if (plan.set?.speakers?.length !== 2) p.push('two speakers, a man and a woman');
-  if (plan.set?.sessions !== lines.length * plan.set.speakers.length * arms.length) p.push('sessions = lines × speakers × arms');
-  if (!script.consent?.text?.length) p.push('the consent text');
-  const worst = plan.set.speakers.length * lines.length * arms.reduce((s, a) => s + sessionCeilingUsd(plan, a, plan.audio.maxLineSeconds * 1000), 0);
+  if (plan.set?.name !== 'po20') p.push('the set is po20');
+  const lines = poLines(data);
+  if (lines.length !== 20 || lines.length !== plan.set?.linesPerSpeaker) p.push('the set size (20)');
+  if (JSON.stringify(plan.set?.speakers) !== JSON.stringify(['PO'])) p.push('one speaker, the Product Owner');
+  if (plan.set?.sessions !== lines.length * arms.length) p.push('sessions = recordings × arms');
+  if (!data.script.consent?.text?.length) p.push('the consent text');
+  const worst = lines.length * arms.reduce((s, a) => s + sessionCeilingUsd(plan, a, plan.audio.maxLineSeconds * 1000), 0);
   if (worst > g.costCapUsd) p.push(`every session at its ceiling (USD ${worst.toFixed(4)}) must fit the cap`);
   return p;
 }
 
-/** The recordings the plan needs, and what is present. */
+const nn = (n) => String(n).padStart(2, '0');
+const SKIP = new Set(['.txt', '.json', '.md', '.ini', '.db']);
+
+/** The phone recording(s) for line n in the speaker folder: any extension, named 01 … 20 (or 1 … 20). */
+export function sourcesOf(dir, n) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => {
+    const ext = extname(f).toLowerCase();
+    return ext && !SKIP.has(ext) && statSync(join(dir, f)).isFile() && [nn(n), String(Number(n))].includes(f.slice(0, -ext.length).trim());
+  }).map((f) => join(dir, f));
+}
+
+/** A WAV the harness can stream as it is: readable, at a sample rate it sends. */
+function streamableWav(file) {
+  try { const { rate } = readAnyWav(readFileSync(file)); return RATES.includes(rate); } catch { return false; }
+}
+
+/** The local converter: Windows Media Foundation through convert-audio.ps1 (nothing installed, nothing sent). */
+export function convertWithWindows(source, target) {
+  if (process.platform !== 'win32') return { ok: false, why: 'the local converter needs Windows Media Foundation' };
+  const r = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(HERE, 'convert-audio.ps1'), '-Source', source, '-Target', target],
+    { encoding: 'utf8', timeout: 120000 });
+  return r.status === 0 && existsSync(target) ? { ok: true } : { ok: false, why: (r.stderr || r.stdout || 'conversion failed').trim().split(/\r?\n/u)[0] };
+}
+
+/**
+ * --prepare: every phone recording to a streamable WAV in <speaker>/wav/NN.wav (a streamable WAV is used as it is), and
+ * <speaker>/wav/prepared.json binding each source's SHA-256 to its WAV's, so a re-recorded file is never streamed stale.
+ */
+export function prepareRecordings(plan, corpusDir, { convert = convertWithWindows } = {}) {
+  const [speaker] = plan.set.speakers;
+  const dir = join(corpusDir, speaker);
+  const wavDir = join(dir, 'wav');
+  mkdirSync(wavDir, { recursive: true });
+  const prepared = {};
+  const report = [];
+  for (const line of poLines(loadRecordingScript(HERE))) {
+    const src = sourcesOf(dir, line.n);
+    if (src.length !== 1) { report.push({ n: nn(line.n), status: src.length ? 'AMBIGUOUS' : 'MISSING' }); continue; }
+    const asIs = extname(src[0]).toLowerCase() === '.wav' && streamableWav(src[0]);
+    const wav = asIs ? src[0] : join(wavDir, `${nn(line.n)}.wav`);
+    const r = asIs ? { ok: true } : convert(src[0], wav);
+    if (!r.ok || !streamableWav(wav)) { report.push({ n: nn(line.n), status: 'NOT CONVERTED', why: r.why ?? 'the converted file is not a streamable WAV' }); continue; }
+    prepared[nn(line.n)] = { source: src[0].slice(dir.length + 1), sourceSha256: bytesSha256(src[0]), wav: wav.slice(dir.length + 1), wavSha256: bytesSha256(wav) };
+    report.push({ n: nn(line.n), status: asIs ? 'WAV AS IS' : 'CONVERTED', source: extname(src[0]).toLowerCase() });
+  }
+  writeFileSync(join(wavDir, 'prepared.json'), JSON.stringify(prepared, null, 1));
+  return report;
+}
+
+/** The recordings the plan needs, and what is present: prepared, current and valid (duration, sample rate, speech). */
 export function recordingManifest(plan, corpusDir) {
-  const data = loadRecordingScript(HERE);
-  const lines = sessionLines(data, { set: plan.set.name });
-  const out = { present: [], missing: [], invalid: [] };
-  for (const speaker of plan.set.speakers) {
-    for (const line of lines) {
-      const f = join(corpusDir, speaker, `${fileName(speaker, line)}.wav`);
-      if (!existsSync(f)) { out.missing.push(`${speaker}/${fileName(speaker, line)}.wav`); continue; }
-      try {
-        const { rate, pcm } = readAnyWav(readFileSync(f));
-        const ms = (pcm.length / rate) * 1000;
-        if (!RATES.includes(rate) || ms > plan.audio.maxLineSeconds * 1000 || !speechBounds(pcm, rate)) out.invalid.push(`${speaker}/${fileName(speaker, line)}.wav`);
-        else out.present.push({ speaker, line, file: f, ms: Math.round(ms) });
-      } catch { out.invalid.push(`${speaker}/${fileName(speaker, line)}.wav`); }
+  const [speaker] = plan.set.speakers;
+  const dir = join(corpusDir, speaker);
+  const preparedFile = join(dir, 'wav', 'prepared.json');
+  const prepared = existsSync(preparedFile) ? JSON.parse(readFileSync(preparedFile, 'utf8')) : {};
+  const out = { present: [], missing: [], unprepared: [], invalid: [] };
+  for (const line of poLines(loadRecordingScript(HERE))) {
+    const k = nn(line.n);
+    const src = sourcesOf(dir, line.n);
+    if (!src.length) { out.missing.push(k); continue; }
+    const e = prepared[k];
+    const file = e ? join(dir, e.wav) : null;
+    if (src.length !== 1 || !e || e.source !== src[0].slice(dir.length + 1) || e.sourceSha256 !== bytesSha256(src[0]) || !existsSync(file) || e.wavSha256 !== bytesSha256(file)) {
+      out.unprepared.push(k);
+      continue;
     }
+    try {
+      const { rate, pcm } = readAnyWav(readFileSync(file));
+      const ms = Math.round((pcm.length / rate) * 1000);
+      const bounds = speechBounds(pcm, rate);
+      if (!RATES.includes(rate) || ms > plan.audio.maxLineSeconds * 1000 || !bounds) out.invalid.push({ n: k, ms, rate, speech: Boolean(bounds) });
+      else out.present.push({ speaker, line, file, source: e.source, ms, rate, bounds });
+    } catch { out.invalid.push({ n: k }); }
   }
   return out;
 }
@@ -259,7 +321,7 @@ function launchLive(plan, args) {
   if ((args[0] === '--confirm' ? args[1] : null) !== approval.runId) return refuse(`the run must be confirmed explicitly with --confirm ${approval.runId}`);
   const corpus = join(REPO, 'artifacts', 'evals', 's8b-01', 'corpus');
   const manifest = recordingManifest(plan, corpus);
-  if (manifest.missing.length || manifest.invalid.length) return refuse(`recordings missing (${manifest.missing.length}) or invalid (${manifest.invalid.length})`);
+  if (manifest.missing.length || manifest.unprepared.length || manifest.invalid.length) return refuse(`recordings missing (${manifest.missing.length}), not prepared (${manifest.unprepared.length}) or invalid (${manifest.invalid.length})`);
   const runDir = join(REPO, 'artifacts', 'evals', 's8b-01', 'asr', approval.runId);
   if (existsSync(runDir)) return refuse(`${approval.runId} has already run (one run per approval)`);
   const dirty = spawnSync('git', ['status', '--porcelain', '--untracked-files=no'], { cwd: REPO, encoding: 'utf8' });
@@ -285,16 +347,26 @@ if (isMain) {
   const problems = checkAsrPlan(plan);
   if (problems.length) { console.error(`S8B-01 asr-sm plan check FAILED:\n- ${problems.join('\n- ')}`); process.exit(2); }
   const mode = process.argv[2];
+  const corpus = join(REPO, 'artifacts', 'evals', 's8b-01', 'corpus');
+  if (mode === '--prepare') {
+    console.log(JSON.stringify(prepareRecordings(plan, corpus), null, 1));
+    process.exit(0);
+  }
   if (mode === '--plan-check') {
-    const m = recordingManifest(plan, join(REPO, 'artifacts', 'evals', 's8b-01', 'corpus'));
+    // Durations and speech presence only: no transcript, nothing sent.
+    const m = recordingManifest(plan, corpus);
     const approval = JSON.parse(readFileSync(join(HERE, 'asr-sm-approval.json'), 'utf8'));
-    const worst = plan.set.speakers.length * plan.set.linesPerSpeaker * plan.arms.reduce((s, a) => s + sessionCeilingUsd(plan, a, plan.audio.maxLineSeconds * 1000), 0);
+    const worst = plan.set.linesPerSpeaker * plan.arms.reduce((s, a) => s + sessionCeilingUsd(plan, a, plan.audio.maxLineSeconds * 1000), 0);
+    const expected = m.present.reduce((s, r) => s + plan.arms.reduce((t, a) => t + ((r.ms + plan.audio.tailSilenceMs + 1000) / 3.6e6) * a.pricePerHourUsd, 0), 0);
     console.log(JSON.stringify({ check: 'passed', sessions: plan.set.sessions, arms: plan.arms.map((a) => a.id), capUsd: plan.guard.costCapUsd,
-      worstCaseUsd: Number(worst.toFixed(4)), recordings: { needed: plan.set.speakers.length * plan.set.linesPerSpeaker, present: m.present.length, missing: m.missing.length, invalid: m.invalid.length },
+      worstCaseUsd: Number(worst.toFixed(4)), expectedUsd: Number(expected.toFixed(4)),
+      recordings: { needed: plan.set.linesPerSpeaker, present: m.present.length, missing: m.missing, unprepared: m.unprepared, invalid: m.invalid },
+      review: m.present.map((r) => ({ n: nn(r.line.n), condition: r.line.condition, source: r.source, seconds: Number((r.ms / 1000).toFixed(2)), rate: r.rate,
+        speechS: [Number((r.bounds.onsetMs / 1000).toFixed(2)), Number((r.bounds.offsetMs / 1000).toFixed(2))] })),
       keyFilePresent: existsSync(KEY_FILE), planSha256: fileSha256(join(HERE, 'asr-sm-plan.json')), approval: approval.status }, null, 1));
     process.exit(0);
   }
   if (mode === '--live') process.exit(launchLive(plan, process.argv.slice(3)));
-  console.error('usage: asr-sm.mjs --plan-check | --live --confirm <runId>');
+  console.error('usage: asr-sm.mjs --prepare | --plan-check | --live --confirm <runId>');
   process.exit(64);
 }

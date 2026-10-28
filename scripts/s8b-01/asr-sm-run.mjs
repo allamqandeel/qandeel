@@ -1,8 +1,8 @@
 // S8B-01 CP2 — the Speechmatics real-time ASR run's child process (started by `asr-sm.mjs --live`, under spend-guard.cjs
-// with QANDEEL_S8B_CHECK=asr-sm, never directly). For each speaker and line, both arms in turn (Enhanced ar_en first), one
-// real-time session each, the audio streamed at real-time pace; no retry; the plan's stop rules.
-// Writes, under the run directory (gitignored): sessions/<speaker>_<line>_<arm>.json (the server messages, which hold the
-// transcripts of consenting speakers), samples.csv, summary.json and report.json. No transcript or key is printed.
+// with QANDEEL_S8B_CHECK=asr-sm, never directly). For each of the Product Owner's prepared recordings (set po20), the plan's
+// arm (Enhanced ar_en only), one real-time session each, the audio streamed at real-time pace; no retry; the plan's stop rules.
+// Writes, under the run directory (gitignored): sessions/<speaker>_<NN>_<line>_<condition>_<arm>.json (the server messages,
+// which hold the transcripts), samples.csv, summary.json and report.json. No transcript or key is printed.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,7 +29,7 @@ const save = () => {
   report.spend = guard.spend();
   report.done = rows.length;
   writeFileSync(join(runDir, 'report.json'), JSON.stringify(report, null, 2));
-  const cols = ['speaker', 'line', 'dialect', 'category', 'condition', 'arm', 'status', 'audio_ms', 'onset_ms', 'offset_ms', 'first_partial_ms', 'final_ms', 'eou_ms',
+  const cols = ['speaker', 'n', 'line', 'dialect', 'category', 'condition', 'arm', 'status', 'audio_ms', 'onset_ms', 'offset_ms', 'first_partial_ms', 'final_ms', 'eou_ms',
     'final_after_eou_ms', 'lag_ms_p50', 'partials', 'finals', 'ref_words', 'word_errors', 'ref_chars', 'char_errors', 'checks', 'quality', 'ceiling_usd', 'error'];
   writeFileSync(join(runDir, 'samples.csv'), [cols.join(','), ...rows.map((r) => cols.map((c) => JSON.stringify(r[c] ?? '')).join(','))].join('\n'));
 };
@@ -56,14 +56,14 @@ try {
       // Real-time sessions report no usage: the session is settled at its whole wall time, priced (an upper bound of the
       // audio billed); it can never pass its reservation, which is the timeout.
       guard.settle(id, (s.wallMs / 3.6e6) * arm.pricePerHourUsd);
-      const key = `${rec.speaker}_${rec.line.id}_${rec.line.condition}_${arm.id}`;
+      const key = `${rec.speaker}_${String(rec.line.n).padStart(2, '0')}_${rec.line.id}_${rec.line.condition}_${arm.id}`;
       writeFileSync(join(runDir, 'sessions', `${key}.json`), JSON.stringify({ key, bounds, wallMs: s.wallMs, recognitionStartedMs: s.recognitionStartedMs, closeCode: s.closeCode, error: s.error, events: s.events }));
       const m = sessionMetrics(s.events, bounds);
       const ok = !s.error && m.finals > 0;
       const sc = ok ? scoreLine(rec.line, items.get(rec.line.id), m.transcript, data.script, plan.normalization, own) : { scored: false };
       a.sessions += 1;
       if (ok) { a.ok += 1; a.consecutiveErrors = 0; } else { a.errors += 1; a.consecutiveErrors += 1; }
-      rows.push({ speaker: rec.speaker, line: rec.line.id, dialect: rec.line.dialect, category: rec.line.category, condition: rec.line.condition, arm: arm.id,
+      rows.push({ speaker: rec.speaker, n: rec.line.n, line: rec.line.id, dialect: rec.line.dialect, category: rec.line.category, condition: rec.line.condition, arm: arm.id,
         status: ok ? 'OK' : 'ERROR', audio_ms: rec.ms, onset_ms: bounds.onsetMs, offset_ms: bounds.offsetMs, first_partial_ms: m.firstPartialMs, final_ms: m.finalMs,
         eou_ms: m.eouMs, final_after_eou_ms: m.finalAfterEouMs, lag_ms_p50: m.lagMsP50, partials: m.partials, finals: m.finals,
         ref_words: sc.referenceWords, word_errors: sc.wordErrors, ref_chars: sc.referenceChars, char_errors: sc.charErrors, checks: sc.checks ? JSON.stringify(sc.checks) : '',
@@ -75,7 +75,7 @@ try {
       else if (a.consecutiveErrors >= plan.stopRules.consecutiveFailuresPerArm) a.stoppedBecause = `${a.consecutiveErrors} consecutive failures (last ${key})`;
       if (a.stoppedBecause) log(`${arm.id} stopped: ${a.stoppedBecause}`);
     }
-    if (rows.length % 10 === 0) { save(); log(`${rows.length} / ${plan.set.sessions} sessions, settled USD ${guard.spend().settledUsd.toFixed(4)}`); }
+    if (rows.length % 5 === 0) { save(); log(`${rows.length} / ${plan.set.sessions} sessions, settled USD ${guard.spend().settledUsd.toFixed(4)}`); }
   }
 } finally {
   report.finishedAt = new Date().toISOString();

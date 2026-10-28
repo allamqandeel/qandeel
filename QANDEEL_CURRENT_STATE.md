@@ -394,10 +394,11 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     their own privacy terms, Deepgram in reserve; the recording kit prepared. The render spike is ready and awaits the
     approval to install ffmpeg. The Product Owner's contextual-expression and selective-vocalization requirements are
     recorded in S8B-04 / S8B-05 scope (`docs/voice-runtime-v1.md` §5, §16), NOT IMPLEMENTED.
-  - **Speechmatics real-time ASR (record §9.12), the Product Owner's decision:** Speechmatics alone; Enhanced `ar_en` the
-    production candidate, Melia 1 the comparison; the 30-line set for a man and a woman, the guarded WebSocket harness and
-    the plan (`e6b233b6…`, USD 1) prepared and tested locally; `BLOCKED — MISSING PREREQUISITES` (the account with model
-    training off, the key, the recordings), approval PENDING; nothing sent.
+  - **Speechmatics real-time ASR (record §9.12, simplified in §9.13), the Product Owner's decisions:** Speechmatics
+    Enhanced `ar_en` only, on the Product Owner's own 20 phone recordings (`sets.po20`), a preliminary single-speaker
+    test; phone formats converted locally (`convert-audio.ps1`, Windows Media Foundation); plan version 2 (`5d1af7a4…`,
+    20 sessions, USD 0.25) supersedes version 1 (`e6b233b6…`, never approved, never run); `BLOCKED — MISSING
+    PREREQUISITES` (the recordings, then the review and the approval with model training off); nothing sent.
   - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against

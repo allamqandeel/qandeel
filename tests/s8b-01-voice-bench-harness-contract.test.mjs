@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -601,7 +601,7 @@ test('cp2-cloud cap: each call reserves the most Google can bill for it, so the 
 });
 
 // CP2 completion (the Product Owner's ASR & Replay order, 2026-10-28): the ASR recording kit and the Replay render spike.
-const { loadRecordingScript, sessionLines, fileName, referenceOf } = await import('../scripts/s8b-01/asr-recording-sheet.mjs');
+const { loadRecordingScript, poLines, sessionLines, fileName, referenceOf } = await import('../scripts/s8b-01/asr-recording-sheet.mjs');
 const spike = await import('../scripts/s8b-01/replay-render-spike.mjs');
 
 test('ASR recording kit: Egyptian first, MSA second, every line Arabic and named, references without fillers, the pinned prompts reused unchanged', () => {
@@ -699,24 +699,64 @@ function miniWsServer(onClient) {
   return server;
 }
 
-test('asr-sm plan: Speechmatics only, EU real-time, Enhanced ar_en then Melia 1, model training off, the 30-line set, every session at its ceiling inside USD 1', () => {
+test('asr-sm plan: Speechmatics Enhanced ar_en only, EU real-time, model training off, the Product Owner\'s 20 recordings, a preliminary single-speaker test inside USD 0.25', () => {
   assert.deepEqual(asr.checkAsrPlan(asrPlan, dir), []);
+  assert.equal(asrPlan.set.sessions, 20);
+  assert.match(asrPlan.supersedes, /e6b233b62675ca18009cc14ddef693afee1478bc14f2e92d188b8286e44379be.*never approved and never run/u);
   const approval = JSON.parse(readFileSync(join(dir, 'asr-sm-approval.json'), 'utf8'));
   assert.ok(['PENDING', 'APPROVED', 'CONSUMED'].includes(approval.status));
+  assert.equal(approval.runId, 's8b01-cp2-asr-sm-po-r1', 'a new run id: the version 1 approval record is not reused');
   if (approval.status !== 'PENDING') assert.equal(approval.planSha256, asr.fileSha256(join(dir, 'asr-sm-plan.json')));
   const changes = [
-    [(p) => { p.guard.costCapUsd = 2; }, /at most USD 1/u],
+    [(p) => { p.guard.costCapUsd = 1; }, /at most USD 0\.25/u],
     [(p) => { p.guard.allowedHosts.speechmatics = 'global.rt.speechmatics.com'; }, /EU real-time host/u],
     [(p) => { p.arms[0].transcriptionConfig.language = 'ar'; }, /Enhanced ar_en/u],
+    [(p) => { p.arms.push({ ...p.arms[0], id: 'MELIA_1' }); }, /one arm only/u],
     [(p) => { p.privacy.modelTrainingMustBeOff = false; }, /model training off/u],
-    [(p) => { p.arms[1].transcriptionConfig.conversation_config = { end_of_utterance_silence_trigger: 0.5 }; }, /Melia 1 rejects/u],
+    [(p) => { p.scope.preliminarySingleSpeaker = false; }, /preliminary single-speaker/u],
+    [(p) => { p.set.speakers = ['S1', 'S2']; }, /one speaker/u],
+    [(p) => { p.set.name = 'core'; }, /po20/u],
   ];
   for (const [change, why] of changes) { const p = structuredClone(asrPlan); change(p); assert.match(asr.checkAsrPlan(p, dir).join(' | '), why); }
   const start = asr.startRecognition(asrPlan.arms[0], 48000, ['نهى الشربيني']);
   assert.deepEqual(start.audio_format, { type: 'raw', encoding: 'pcm_s16le', sample_rate: 48000 });
   assert.deepEqual(start.transcription_config.additional_vocab, [{ content: 'نهى الشربيني' }]);
-  assert.equal(asr.startRecognition(asrPlan.arms[1], 16000, ['x']).transcription_config.additional_vocab, undefined, 'Melia 1 takes no custom dictionary');
   assert.throws(() => asr.startRecognition(asrPlan.arms[0], 11025), /sample rate/u);
+});
+
+test('asr-sm po20: 20 numbered lines over the PO\'s categories; any phone format is prepared locally, hash-bound, and a re-recorded file is never streamed stale', () => {
+  const data = loadRecordingScript(dir);
+  const lines = poLines(data);
+  assert.deepEqual(lines.map((l) => Number(l.n)), [...Array(20)].map((_, i) => i + 1));
+  const count = (f) => lines.filter(f).length;
+  assert.equal(count((l) => l.dialect === 'MSA'), 2);
+  assert.equal(count((l) => l.condition === 'NOISE'), 2);
+  assert.equal(count((l) => l.condition === 'OVERLAP'), 1);
+  for (const c of ['READ', 'CODE_SWITCH', 'NUMBER', 'NAME_DATE', 'SELF_CORRECTION', 'DISFLUENCY']) assert.ok(count((l) => l.category === c) >= 1, c);
+  for (const l of lines) assert.match(l.text, /[؀-ۿ]/u);
+  const corpus = mkdtempSync(join(tmpdir(), 's8b01-po-'));
+  const po = join(corpus, 'PO');
+  mkdirSync(po);
+  const tone = (rate) => {
+    const pcm = new Int16Array(rate * 2);
+    for (let i = rate / 2; i < rate * 1.5; i += 1) pcm[i] = Math.round(6000 * Math.sin(i / 3));
+    return wavFile(Buffer.from(pcm.buffer), rate);
+  };
+  writeFileSync(join(po, '01.m4a'), 'phone audio 1');
+  writeFileSync(join(po, '2.wav'), tone(48000));
+  writeFileSync(join(po, '03.ogg'), 'unreadable');
+  writeFileSync(join(po, 'notes.txt'), 'ignored');
+  const convert = (src, target) => (src.endsWith('.ogg') ? { ok: false, why: 'no decoder' } : (writeFileSync(target, tone(16000)), { ok: true }));
+  const rep = asr.prepareRecordings(asrPlan, corpus, { convert });
+  assert.deepEqual(rep.slice(0, 4).map((r) => r.status), ['CONVERTED', 'WAV AS IS', 'NOT CONVERTED', 'MISSING']);
+  let m = asr.recordingManifest(asrPlan, corpus);
+  assert.deepEqual(m.present.map((r) => [Number(r.line.n), r.rate, r.ms]), [[1, 16000, 2000], [2, 48000, 2000]]);
+  assert.deepEqual(m.unprepared, ['03']);
+  assert.equal(m.missing.length, 17);
+  writeFileSync(join(po, '01.m4a'), 'phone audio 1, recorded again');
+  m = asr.recordingManifest(asrPlan, corpus);
+  assert.deepEqual(m.unprepared, ['01', '03'], 'a changed source must be prepared again');
+  rmSync(corpus, { recursive: true, force: true });
 });
 
 test('asr-sm guard: a WebSocket reaches only the EU host, over wss, with a reservation, one session each', () => {
@@ -724,7 +764,7 @@ test('asr-sm guard: a WebSocket reaches only the EU host, over wss, with a reser
   const text = readFileSync(join(dir, 'asr-sm-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
   writeFileSync(join(m, 'asr-sm-plan.json'), text);
   copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
-  writeFileSync(join(m, 'asr-sm-approval.json'), JSON.stringify({ status: 'APPROVED', runId: 'r-asr', capUsd: 1, planSha256: createHash('sha256').update(text).digest('hex') }));
+  writeFileSync(join(m, 'asr-sm-approval.json'), JSON.stringify({ status: 'APPROVED', runId: 'r-asr', capUsd: 0.25, planSha256: createHash('sha256').update(text).digest('hex') }));
   const r = underGuard(m, `
     const g = globalThis.__QANDEEL_S8B_01_GUARD__; const out = [];
     const tryWs = (u) => { try { const w = new WebSocket(u); w.onerror = () => {}; out.push('opened'); } catch (e) { out.push(e.message.replace('S8B_01_NETWORK_FORBIDDEN:', '')); } };
@@ -796,9 +836,9 @@ test('asr-sm scoring: English words in either script, numbers in digits or words
   assert.deepEqual([...asr.readAnyWav(wav).pcm], [0], 'float stereo is averaged to mono PCM16');
   const row = (o) => ({ arm: 'ENHANCED_AR_EN', status: 'OK', dialect: 'EGYPTIAN', condition: 'SPEAKER', category: 'READ', speaker: 'S1', ref_words: 10, word_errors: 1, ref_chars: 40,
     char_errors: 2, first_partial_ms: 600, final_ms: 500, eou_ms: 700, final_after_eou_ms: 0, lag_ms_p50: 400, checks: '{"english":[true],"keyterms":[true],"number":true,"intent":true}', ...o });
-  const rows = [...Array(57)].map(() => row({})).concat([row({ dialect: 'MSA', word_errors: 0 }), row({ condition: 'NOISE', word_errors: 2 }), row({ dialect: 'MSA' })]);
+  const rows = [...Array(17)].map(() => row({})).concat([row({ dialect: 'MSA', word_errors: 0 }), row({ condition: 'NOISE', word_errors: 2 }), row({ dialect: 'MSA' })]);
   const v = verdict(rows, asrPlan, 'ENHANCED_AR_EN');
   assert.equal(v.passed, true, JSON.stringify(v.items.filter((i) => !i.passed)));
-  assert.equal(summarizeAsr(rows, asrPlan).byArm.ENHANCED_AR_EN.wer, Number((60 / 600).toFixed(4)));
+  assert.equal(summarizeAsr(rows, asrPlan).byArm.ENHANCED_AR_EN.wer, Number((20 / 200).toFixed(4)));
   assert.equal(verdict(rows.map((r) => ({ ...r, eou_ms: 1200 })), asrPlan, 'ENHANCED_AR_EN').passed, false, 'a slow endpoint fails the verdict');
 });

@@ -63,7 +63,52 @@ export function referenceOf(script, line) {
   return t.replace(/\.\.\./gu, ' ').replace(/\s+/gu, ' ').trim();
 }
 
+/**
+ * The Product Owner's 20 recordings (script.sets.po20): one speaker, files 01 … 20, each line taken from the script's items
+ * or the reused read prompts by id, under the condition the set names (a NOISE / OVERLAP line may repeat a SPEAKER text).
+ */
+export function poLines({ script, prompts }) {
+  const set = script.sets?.po20;
+  if (!set) throw new Error('S8B_01_ASR: no po20 set');
+  const items = new Map(script.items.map((i) => [i.id, i]));
+  return set.lines.map(({ n, id, condition }) => {
+    const read = /^(EG|MSA)-R(\d{2})$/u.exec(id);
+    const item = items.get(id);
+    if (!read && !item) throw new Error(`S8B_01_ASR: po20 line ${n} names ${id}, which the script does not have`);
+    const dialect = read ? (read[1] === 'EG' ? 'EGYPTIAN' : 'MSA') : item.dialect;
+    const text = read ? prompts.dialects[dialect].read[Number(read[2]) - 1] : item.text;
+    return { n, id, dialect, category: read ? 'READ' : item.category, condition, text, speakerNote: item?.speakerNote };
+  });
+}
+
 const esc = (s) => String(s ?? '').replace(/[&<>"]/gu, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const PO_NOTE = {
+  SPEAKER: 'الموبايل على الترابيزة قدامك على بُعد حوالي نص متر.',
+  NOISE: 'نفس الوضع، والتلفزيون شغّال في الخلفية بصوت عادي.',
+  OVERLAP: 'نفس الوضع، وشغّل صوت قنديل من الكمبيوتر (الملف المذكور تحت) واتكلم وهو شغّال.',
+};
+
+/** The Product Owner's one-page sheet: 20 numbered lines, short instructions, no file to prepare. */
+export function poSheetHtml(data) {
+  const set = data.script.sets.po20;
+  const lines = poLines(data);
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ASR recording sheet</title>
+<style>:root{--bg:#fff;--fg:#1d1b18;--mute:#6b645a;--line:#ddd6ca}@media (prefers-color-scheme:dark){:root{--bg:#171512;--fg:#eee8dd;--mute:#a59d90;--line:#3b362f}}
+body{background:var(--bg);color:var(--fg);font:17px/1.8 system-ui,sans-serif;margin:16px;max-width:760px}h1{font-size:20px}table{border-collapse:collapse;width:100%}
+td{border-bottom:1px solid var(--line);padding:6px;vertical-align:top}td.n{font:600 15px ui-monospace,monospace;width:2.5em}.m{color:var(--mute);font-size:14px}</style></head><body>
+<h1>تسجيل اختبار Speechmatics — 20 جملة</h1>
+<ul class="m">
+<li>سجّل كل جملة في ملف لوحده بتطبيق التسجيل العادي في موبايلك، وسمّيه برقمها: <span dir="ltr">01</span> … <span dir="ltr">20</span>. أي صيغة يسجّل بيها الموبايل مقبولة.</li>
+<li>اتكلم بطريقتك الطبيعية. لو غلطت في كلمة كمّل عادي؛ ما تعيدش إلا لو الجملة كلها باظت.</li>
+<li>${esc(PO_NOTE.SPEAKER)} سيب ثانية سكوت قبل وبعد كل جملة.</li>
+<li>حط الملفات كلها في: <span dir="ltr">${esc(set.folder.replace(/\//gu, '\\'))}</span></li>
+</ul>
+<table><tbody>
+${lines.map((l) => `<tr><td class="n" dir="ltr">${l.n}</td><td>${esc(l.text)}${l.condition !== 'SPEAKER' ? `<div class="m">${esc(PO_NOTE[l.condition])}${l.condition === 'OVERLAP' ? ` <span dir="ltr">${esc(set.overlapPlayback.replace(/\//gu, '\\'))}</span>` : ''}</div>` : ''}${l.speakerNote ? `<div class="m">${esc(l.speakerNote)}</div>` : ''}</td></tr>`).join('\n')}
+</tbody></table>
+</body></html>`;
+}
 
 export function sheetHtml(speaker, data, { set = null } = {}) {
   const { script } = data;
@@ -94,7 +139,15 @@ ${body}
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const speaker = process.argv[2];
-  if (!/^S\d{1,2}$/u.test(speaker ?? '')) { console.error('usage: asr-recording-sheet.mjs <S1|S2|…> [outDir]'); process.exit(64); }
+  if (speaker === '--po') {
+    const out = process.argv[3] ?? join(HERE, '..', '..', 'artifacts', 'evals', 's8b-01', 'corpus');
+    mkdirSync(out, { recursive: true });
+    const data = loadRecordingScript();
+    writeFileSync(join(out, 'recording-sheet-PO-20.html'), poSheetHtml(data));
+    console.log(poLines(data).map((l) => `${l.n} [${l.condition}] ${l.text}`).join('\n'));
+    process.exit(0);
+  }
+  if (!/^S\d{1,2}$/u.test(speaker ?? '')) { console.error('usage: asr-recording-sheet.mjs <S1|S2|…> [--set core] [outDir] | --po [outDir]'); process.exit(64); }
   const args = process.argv.slice(3);
   const set = args[0] === '--set' ? args[1] : null;
   const out = (set ? args[2] : args[0]) ?? join(HERE, '..', '..', 'artifacts', 'evals', 's8b-01', 'corpus');
