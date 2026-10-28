@@ -5459,14 +5459,14 @@ its merge).** Gemini TTS & provider evidence under the Product Owner's CP2 order
 consumed bounded run, USD 0.1155 of the USD 10 cap (S8B-01 record §9).
 - **`QAN-BL-VOICE-01` worked, not delivered:** owner `Stage 8B — Voice Runtime` and `DEFERRED — OWNED` unchanged. The
   Product Owner APPROVED the TTS selection (2026-10-28, S8B-01 record §9.10): Google Gemini TTS, `gemini-3.8-flash-tts`,
-  voice Achird, one TTS path. Implementing it stays with S8B-04 under this item; ASR is not selected.
+  voice Achird, one TTS path. Implementing it stays with S8B-04 under this item. The Product Owner APPROVED the ASR selection (2026-10-28, S8B-01 record §9.21): Speechmatics Enhanced `ar_en`, the final proof's verdict `NOT ACCEPTED` (5 / 6) kept; implementing it stays with S8B-03 / S8B-05 under this item.
 - **Carried inside Stage 8B, not admitted:** the VA-11 §4 production obligations (`store: false`, the server-only key, the
   Voice disclosure naming Google, the re-verification of Google's terms) bind S8B-04, which implements Qandeel's voice under
   `QAN-BL-VOICE-01`; the CP2 items NOT RUN (record §9.5: ASR, stage P, the render spike; the expression set and the second
-  voice were run in §9.9) stay with S8B-01 (§9.11 – §9.20: ASR, Speechmatics Enhanced `ar_en` run once on the Product Owner's 20 recordings, `NOT READY` with a PO waiver for the English / name items, the final 12-session proof run once, `NOT ACCEPTED` on overlap alone with latency solved, Speechmatics recommended conditionally (on-device barge-in a blocking pre-launch gate), ASR not selected until the PO decides; the render spike
+  voice were run in §9.9) stay with S8B-01 (§9.11 – §9.21: ASR, Speechmatics Enhanced `ar_en` run once on the Product Owner's 20 recordings, `NOT READY` with a PO waiver for the English / name items, the final 12-session proof run once, `NOT ACCEPTED` on overlap alone with latency solved, Speechmatics recommended conditionally, then selected (§9.21); the render spike
   run, phone playback not verified on a device); the Product Owner's two production requirements, contextual expression and selective contextual vocalization,
   bind S8B-04, and the expression carries on S8B-05's realtime path (`docs/voice-runtime-v1.md` §5, §16; NOT
-  IMPLEMENTED). None leaves Stage 8B, so none is cross-task residue (BG-06).
+  IMPLEMENTED); the Product Owner's ASR limits (the QANDEEL VAD + `ForceEndOfUtterance` path, finalizing apart from the turn commit and the commit silence set in S8B-05; echo cancellation, detection during playout, the immediate stop, QANDEEL's voice kept from the ASR and the user's first words kept; barge-in on a real device a condition blocking the launch of calls; concurrent-session capacity and cost) bind S8B-05, S8B-06 and S8B-08 (`docs/voice-runtime-v1.md` §4.7, §16; NOT IMPLEMENTED). None leaves Stage 8B, so none is cross-task residue (BG-06).
 - **Read and left unchanged:** `QAN-BL-AI-01` (`SYNTHETIC_ONLY`: CP2 sent only the invented corpus).
 - **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
 - **Latest index: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**

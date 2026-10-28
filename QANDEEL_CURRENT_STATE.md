@@ -353,7 +353,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
 - The only paid calls of S8A-05 are CP3's one authorized Tier S / Tier P run (100 DeepSeek Flash calls, USD 0.0346). CP4
   made none.
 
-### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28; current task; CP1 merged through PR #364; CP2 delivered, partial; TTS selection APPROVED (Gemini `gemini-3.8-flash-tts`, voice Achird); no production code; USD 0.1155 of the USD 10 cap; every voice gate closed; CP2 not merged)
+### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28; current task; CP1 merged through PR #364; CP2 delivered, at the Product Owner's CP2 closure review; TTS selection APPROVED (Gemini `gemini-3.8-flash-tts`, voice Achird); ASR selection APPROVED (Speechmatics Enhanced `ar_en`); no production code; USD 0.1155 of the USD 10 cap; every voice gate closed; CP2 not merged)
 
 - Started 2026-10-28 on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`
   (the merge of PR #363, 2026-10-27): **S8A-05 is merged**, so its closing change is effective. **Stage 8B starts** by
@@ -388,7 +388,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   - **TTS selection APPROVED by the Product Owner (2026-10-28, record §9.10):** Google Gemini TTS, `gemini-3.8-flash-tts`,
     voice Achird (male); one TTS path, no Voice Quality Router; a friendly, natural persona with balanced emotion; Speech
     Rendering kept for dates and pronunciation, the current number quality accepted. The results of both models and both
-    voices are kept. No production code; ASR not selected.
+    voices are kept. No production code; the ASR selection followed (record §9.21).
   - **ASR and the Replay render spike (record §9.11), nothing spent:** ASR `BLOCKED — MISSING PREREQUISITES` (consenting
     recordings, the Speechmatics and Azure accounts, an independent spend plan); Speechmatics and Azure shortlisted on
     their own privacy terms, Deepgram in reserve; the recording kit prepared. The render spike ran locally with the approved
@@ -406,7 +406,14 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     at p50 433 ms), sample 20 not the contract's echo-cancelled barge-in path; the Product Owner's final proof (§9.19: 12
     sessions, `max_delay` 0.7 + QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) run once
     (§9.20, USD 0.0201): `NOT ACCEPTED` on overlap alone; latency solved (text ready p50 680 ms); recommended for
-    production integration conditionally, on-device barge-in a blocking pre-launch gate; ASR not selected until the PO decides.
+    production integration conditionally, on-device barge-in a blocking pre-launch gate. **ASR selection APPROVED by the
+    Product Owner (2026-10-28, record §9.21):** Speechmatics Enhanced `ar_en`; the proof verdict `NOT ACCEPTED` (5 / 6)
+    kept; the QANDEEL VAD + `ForceEndOfUtterance` path approved, finalizing the text apart from committing the turn (no
+    early finalization sent to DeepSeek; the commit silence set in S8B-05); echo cancellation, detection during playout,
+    the immediate stop, QANDEEL's voice kept from the ASR and the user's first words kept bind S8B-05 / S8B-06
+    (`docs/voice-runtime-v1.md` §4.7); barge-in on a real device blocks the launch of calls; concurrent-session capacity and
+    cost at production setup; no production code. CP2 is at the Product Owner's closure review (stage P not run; its deferral to S8B-05 awaits the Product Owner's confirmation).
+
   - the full TTS evaluation on Google Cloud (record §9.9): the reviewed set (148 texts, the duplicated reply requests
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against
@@ -837,7 +844,7 @@ An entry authorizes no implementation (BG-07).
 
 ## 7. Forward roadmap
 
-> **S8B-01 CP2 (2026-10-28):** the current task, on `s8b/s8b-01-cp2` from `de774cfd` (S8B-01 CP1 merged through PR #364); CP2 — Gemini TTS & provider evidence: Controlled Amendment VA-11, one consumed run (USD 0.1155 of the USD 10 cap), Flash-Lite ahead on every objective measure, the expression set / second voice / ASR / stage P / render spike NOT RUN — delivered, partial; the full TTS evaluation on Google Cloud (592 / 592, USD 0.7950) run; TTS selection APPROVED by the Product Owner (Google Gemini TTS, `gemini-3.8-flash-tts`, voice Achird; one path); ASR not selected; no production code; every voice gate closed; not merged.
+> **S8B-01 CP2 (2026-10-28):** the current task, on `s8b/s8b-01-cp2` from `de774cfd` (S8B-01 CP1 merged through PR #364); CP2 — Gemini TTS & provider evidence: Controlled Amendment VA-11, one consumed run (USD 0.1155 of the USD 10 cap), Flash-Lite ahead on every objective measure, the expression set / second voice / ASR / stage P / render spike NOT RUN — delivered, partial at first; the full TTS evaluation on Google Cloud (592 / 592, USD 0.7950) run; TTS selection APPROVED by the Product Owner (Google Gemini TTS, `gemini-3.8-flash-tts`, voice Achird; one path); ASR evidence, the render spike and the final ASR proof then run (record §9.13 – §9.20); ASR selection APPROVED by the Product Owner (Speechmatics Enhanced `ar_en`, §9.21; the proof verdict `NOT ACCEPTED` kept; on-device barge-in blocks the launch of calls); CP2 at the Product Owner's closure review (stage P not run; its deferral to S8B-05 awaits the Product Owner's confirmation); no production code; every voice gate closed; not merged.
 >
 > *(Previous, merged through PR #364 as `de774cfd`:)* **S8B-01 CP1 (2026-10-28):** the current task, on `s8b/s8b-01-voice-runtime-contract` from `8b476114` (S8A-05 merged through PR #363); Stage 8B started (Product Owner D-1); CP1 — the candidate Voice Runtime contract, Controlled Amendment VA-1 … VA-10 (approved in principle), the locked non-production benchmark harness and the locator reconciliation — delivered and at the Product Owner's CP1 review; no production code, no paid call, every voice gate closed; `QAN-BL-VOICE-01` owned by Stage 8B; CP2 (paid benchmark, USD 10 cap) not started; not merged (§0). S8A-06 … S8A-08 not started, unchanged.
 >

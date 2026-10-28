@@ -1,7 +1,7 @@
 # QANDEEL — Voice Runtime Contract v1
 
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B), CP1
-**Status:** `CANDIDATE — S8B-01 CP1, AT THE PRODUCT OWNER'S CP1 REVIEW (2026-10-28) — NOT IMPLEMENTED — NO PROVIDER SELECTED — NO PAID CALL MADE — EVERY VOICE GATE CLOSED / CLOSED TO USERS`
+**Status:** `CANDIDATE — S8B-01 CP1, AT THE PRODUCT OWNER'S CP1 REVIEW (2026-10-28) — NOT IMPLEMENTED — PROVIDERS SELECTED BY THE PRODUCT OWNER AT S8B-01 CP2, NOT IMPLEMENTED (TTS: GEMINI GEMINI-3.8-FLASH-TTS, ACHIRD, record §9.10; ASR: SPEECHMATICS ENHANCED AR_EN, §4.7, record §9.21) — CP2 EVALUATION RUNS ONLY, NO PRODUCTION CALL — EVERY VOICE GATE CLOSED / CLOSED TO USERS`
 **Date:** 2026-10-28
 **Authority:** the Product Owner's S8B-00 decisions (D-1 … D-9, with the D-9 cloud-iOS amendment) and the recording /
 retention / Replay decisions, approved 2026-10-28 and recorded in the
@@ -181,6 +181,37 @@ device playout ─► playout reports ─► Recording writer: QANDEEL track (co
 - Leaving the screen while recording stops capture and keeps an unsent draft (J1).
 - «اعرض النص» shows the transcript on demand, with machine-transcription provenance and no verbatim typography (J2;
   VI-01 §14 / §18).
+
+**4.7 The selected ASR and its binding requirements** (the Product Owner's decision, 2026-10-28; S8B-01 record §9.21).
+These are **required and NOT IMPLEMENTED**. A CP2 evaluation result is evidence about the provider. It does not show that
+QANDEEL does any of this, and none of it is marked done before its own task proves it.
+- **The provider:**
+  - Speechmatics real-time, Enhanced `ar_en`, is QANDEEL's selected ASR provider. It stays behind the ASR adapter (§2).
+  - Zero retention and no training remain mandatory for ASR (VA-11 does not extend to it). The production account's terms
+    are re-verified when it is set up.
+- **The final proof's record is unchanged.** Its verdict stays `NOT ACCEPTED` (5 / 6, record §9.20). The provider was
+  selected although the synthetic overlap test failed, and that problem is a mandatory pre-launch gate.
+- **The endpoint (§2, §4.1, §11 E / A):**
+  - QANDEEL's own VAD decides when to finalize the text, and the gateway then sends `ForceEndOfUtterance`. The provider's
+    own end-of-utterance trigger is not the authority.
+  - **Finalizing the text is not ending the user's turn.** The turn is committed only after the Orchestrator's longer
+    commit silence. An early finalization at a thinking pause is never permission to send a reply to DeepSeek.
+  - Speech after an early finalization continues the same turn, with no word lost or repeated.
+  - The commit silence is measured and set in **S8B-05** by controlled configuration. The 800 ms of the CP2 proof is
+    experimental only: a 780 ms reading pause came within 20 ms of it.
+- **Barge-in and QANDEEL's own voice (§4.4).** S8B-05 builds and S8B-06 proves on a real device:
+  - echo cancellation;
+  - detecting the user's speech while QANDEEL is playing;
+  - the immediate stop of QANDEEL's audio;
+  - QANDEEL's own voice never reaching the ASR as the user's words.
+  - Discarding ASR words that end before the user's onset is not enough on its own. **The user's first words must not be
+    lost during the overlap.**
+- **Launch condition:** barge-in succeeding on a real device **blocks the launch of calls** (`PERSONAL_LIVE_CALL`, §13).
+  It is not a deferred improvement.
+- **Capacity and cost:**
+  - The production environment is prepared for concurrent real-time sessions. The evaluation account allows two.
+  - It is also prepared for the per-minute cost: every ASR call is a ledger call (§12).
+  - S8B-05 sizes the session handling, and S8B-08 reports the cost before any gate opens.
 
 ## 5. Speech Rendering (D-4)
 
@@ -475,7 +506,7 @@ They are admitted at S8B-08 with their final list:
 | S8B-02 Foundation | 01 | VA-3 / VA-5 migrations; the media store; immutable `retention_expires_at` and the expiry worker (physical deletion; text kept; no extension by any action); early and account deletion; the coverage registry; export; the consent record; the ports with fakes; the gate closed; real PostgreSQL green; default-deny; no audio in logs |
 | S8B-03 Personal Voice Notes | 02 | Record, ASR, commit, reply, playback, 30-day expiry and its state, J1 / J2, VA-6 (microphone); E2E on a real Android device and in the iOS simulator |
 | S8B-04 QANDEEL's voice | 02 | Speech Rendering, VA-7, TTS, the voices and voice choice, J10, the fixed failure line; the pronunciation suite; visible text provably unchanged; **the Product Owner's two production requirements (§5): contextual expression (balanced, chosen in VA-7's spoken guidance, speech-only) and selective contextual vocalization of names, dates and ambiguous words, each proven by its suite and listening** |
-| S8B-05 Realtime Core | 01, 02, 04 | The call authority, the gateway, streaming ASR, VA-1 / VA-2 / VA-4, barge-in, reconnection, two-track recording with playout confirmation, anchors; the §11 target on synthetic audio; no late audio; nothing stored as heard without confirmation; **the contextual expression (§5) carried on the realtime path: one style per reply, fixed before its first chunk reaches TTS, inside the §11 budget** |
-| S8B-06 Native Call | 05 | CallKit / Core-Telecom / FGS, background, routes, interruption, the disclosure screen, `call-truth`; Android real-device matrix and latency; iOS simulator; the Stage 9 residue list |
+| S8B-05 Realtime Core | 01, 02, 04 | The call authority, the gateway, streaming ASR, VA-1 / VA-2 / VA-4, barge-in, reconnection, two-track recording with playout confirmation, anchors; the §11 target on synthetic audio; no late audio; nothing stored as heard without confirmation; **the contextual expression (§5) carried on the realtime path: one style per reply, fixed before its first chunk reaches TTS, inside the §11 budget**; **the selected ASR (§4.7): QANDEEL's VAD + `ForceEndOfUtterance`, the text finalized apart from the turn commit, the commit silence measured and set, no early finalization sent to DeepSeek; barge-in with echo cancellation, QANDEEL's voice kept from the ASR and the user's first words not lost; concurrent-session handling** |
+| S8B-06 Native Call | 05 | CallKit / Core-Telecom / FGS, background, routes, interruption, the disclosure screen, `call-truth`; Android real-device matrix and latency; iOS simulator; the Stage 9 residue list; **barge-in on a real Android device (§4.7): echo cancellation, detection during playout, the immediate stop, no QANDEEL word in the user's turn, the user's first words kept, a condition that blocks the launch of calls** |
 | S8B-07 Replay & Worlds | CP1 / CP2: 05, 06; CP3: 03 | CP1 listening (VA-10) and the audio-visual Replay (VA-8); CP2 the three destinations (VA-9), gates closed; CP3 Shared Voice Notes |
-| S8B-08 Exit & Closure | all | The device E2E, the expiry simulation, the deletion audit, zero-retention evidence, cost; BG-08 / BG-09 |
+| S8B-08 Exit & Closure | all | The device E2E, the expiry simulation, the deletion audit, zero-retention evidence, cost, including the ASR per-minute cost and concurrent-session capacity (§4.7); BG-08 / BG-09 |

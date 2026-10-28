@@ -2,8 +2,8 @@
 
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B). This record covers **CP1 — the contract, the
 amendments, the benchmark harness and the locator reconciliation** (§1 – §8) and **CP2 — the Gemini TTS and provider
-evidence** (§9), with the full TTS evaluation on Google Cloud (§9.9). CP3, the selection and the closure, has not started.
-**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED, PARTIAL — TTS SELECTION APPROVED BY THE PRODUCT OWNER (2026-10-28, §9.10) — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — TTS: GOOGLE GEMINI TTS, `gemini-3.8-flash-tts`, VOICE ACHIRD, APPROVED — ASR NOT SELECTED — NO PRODUCTION CODE FOR THE SELECTION — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is partial (§9.5) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
+evidence** (§9), with the full TTS evaluation on Google Cloud (§9.9). CP3, the closure, has not started; both selections were made by the Product Owner in CP2 (§9.10, §9.21).
+**Status:** `S8B-01 CP1 MERGED (PR #364, de774cfd) — CP2 DELIVERED — AT THE PRODUCT OWNER'S CP2 CLOSURE REVIEW — TTS SELECTION APPROVED BY THE PRODUCT OWNER (2026-10-28, §9.10) — ASR SELECTION APPROVED BY THE PRODUCT OWNER: SPEECHMATICS ENHANCED AR_EN (2026-10-28, §9.21), THE PROOF VERDICT NOT ACCEPTED (5 / 6) KEPT, ON-DEVICE BARGE-IN A BLOCKING LAUNCH CONDITION FOR CALLS — NO PRODUCTION CODE — USD 0.1155 OF THE USD 10 CAP — ONE RUN, CONSUMED — FULL TTS EVALUATION ON GOOGLE CLOUD COMPLETE (592 / 592, USD 0.7950 OF ITS USD 2 CAP, CONSUMED) — TTS: GOOGLE GEMINI TTS, `gemini-3.8-flash-tts`, VOICE ACHIRD, APPROVED — NO PRODUCTION CODE FOR EITHER SELECTION — EVERY VOICE GATE CLOSED / CLOSED TO USERS`. S8B-01 is not closed: CP2 is at its closure review (§9.21) and CP3 has not started, and BG-08 / BG-09 are reconciled at S8B-01's last checkpoint, not here.  
 **Date:** 2026-10-28  
 **Branch / base:** `s8b/s8b-01-voice-runtime-contract`, from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`. That is the
 merge of PR #363 (S8A-05 CP4 and S8A-05's closing change, merged 2026-10-27).  
@@ -239,10 +239,10 @@ release-readiness gate. None is claimed as tested:
 
 ## 9. CP2 — Gemini TTS & Provider Evidence (2026-10-28)
 
-**Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
+**Status:** `S8B-01 CP2 DELIVERED — AT THE PRODUCT OWNER'S CP2 CLOSURE REVIEW — TTS SELECTION APPROVED — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21)`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) was approved and run once (USD 0.0201): `NOT ACCEPTED` on overlap alone, latency solved (text ready p50 680 ms, forced answer p50 164 ms, no word lost or repeated across a thinking pause), Speechmatics recommended for production integration conditionally, with on-device barge-in as a blocking pre-launch gate (§9.19, §9.20); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR, at first `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) was approved and run once (USD 0.0201): `NOT ACCEPTED` on overlap alone, latency solved (text ready p50 680 ms, forced answer p50 164 ms, no word lost or repeated across a thinking pause), Speechmatics recommended for production integration conditionally, with on-device barge-in as a blocking pre-launch gate (§9.19, §9.20); the Product Owner then SELECTED Speechmatics Enhanced `ar_en` with seven limits, the verdict kept, barge-in on a real device a condition blocking the launch of calls (§9.21); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P is not run: the contract places it in CP2 (§11, local and free), and its deferral to S8B-05 awaits the Product Owner's confirmation (§9.21). CP2 is at the Product Owner's closure review (§9.21), and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -1507,3 +1507,98 @@ Also measured and reported, not gated: the forces inside a sentence, the last wo
 **Status:**
 - ASR is **recommended conditionally**. It is not selected until the Product Owner decides.
 - No CP3, no PR, no merge.
+- *(Superseded by §9.21: the Product Owner selected Speechmatics.)*
+
+### 9.21 The Product Owner's ASR selection — APPROVED (2026-10-28)
+
+The Product Owner made this selection after reviewing §9.17 – §9.20 (PO DECISION — Speechmatics Selection). It is recorded
+as given.
+
+| Decision | Value |
+| --- | --- |
+| **ASR provider** | Speechmatics real-time, **Enhanced `ar_en`** |
+| **Use** | QANDEEL's selected ASR provider, carried into production integration in the Stage 8B tasks that own it |
+| **Further selection tests** | none needed; no new comparison with other providers for now |
+| **Status** | `APPROVED` |
+
+**The decision's limits** (the Product Owner's seven points):
+1. **The final proof's verdict stays `NOT ACCEPTED` (5 / 6)** (§9.20). It is neither changed nor presented as better than
+   it is. §9.17's `NOT ACCEPTED` / `NOT READY` and the §9.18 waiver also stand as recorded.
+2. **The Product Owner selects Speechmatics although the synthetic overlap test failed.** The overlap problem remains a
+   **mandatory gate before launch**.
+3. **The endpoint path is approved: QANDEEL's VAD and `ForceEndOfUtterance`.**
+   - Finalizing the text is separate from ending the user's turn.
+   - An early finalization is never permission to send a reply to DeepSeek.
+   - The production commit silence is decided in S8B-05. The 800 ms of §9.19 – §9.20 is experimental only.
+4. **S8B-05 / S8B-06 must test:**
+   - echo cancellation;
+   - detecting the user's speech while QANDEEL is playing;
+   - stopping QANDEEL's audio immediately;
+   - keeping QANDEEL's own voice from reaching the ASR.
+5. **Discarding the words before the user's onset is not enough on its own.** It must also be shown that the user's first
+   words are not lost during the overlap (§9.20 line 01: `عايز أحكيلك` lost at the 0 dB barge-in).
+6. **Barge-in succeeding on a real device is a condition that blocks the launch of calls.** It is not a deferred
+   improvement.
+7. **Production capacity and cost:** the concurrent-session capacity (the free account allows 2, §9.18) and the cost are
+   taken into account when the production environment is prepared.
+
+No further Speechmatics test round is opened to select the provider.
+
+**Where the decision binds:**
+- **The contract** records it in `docs/voice-runtime-v1.md` §4.7, with the S8B-05, S8B-06 and S8B-08 rows of §16.
+  It holds the selection, the endpoint path, the barge-in requirements, the launch condition, and capacity and cost.
+- The PO's obligations bind tasks inside Stage 8B (S8B-05, S8B-06, S8B-08) under `QAN-BL-VOICE-01`. None leaves the
+  stage, so none is cross-task residue (BG-06), and nothing is admitted to the backlog.
+  - The iOS echo-cancellation property the simulator cannot prove stays in the Stage 9 list that S8B-08 admits (§8;
+    contract §14).
+
+**What the selection does not do:**
+- **No production code.** No adapter, configuration, endpoint constant, key path or feature gate. The ASR adapter belongs to
+  S8B-03 (Voice Notes, batch) and S8B-05 (streaming), under `QAN-BL-VOICE-01`.
+- **The CP2 harness stays operator-only and non-production.** That covers `asr-sm.mjs`, `asr-sm-proof.mjs` and their runs.
+- **Every voice gate stays closed**, and Voice stays closed to users.
+- **ASR's zero retention and no training stay mandatory** (§9.5). VA-11 does not extend to ASR.
+  - The Product Owner confirmed model training `OFF` on the evaluation account (§9.16, §9.20).
+  - The production account's terms are re-verified when it is set up (D-3 / §7).
+
+**The CP2 closure position** (for the Product Owner's review):
+
+| CP2 part | State | Where |
+| --- | --- | --- |
+| VA-11, the Gemini TTS retention exception | candidate amendment, written | §9, VA-11 |
+| TTS evidence: AI Studio run, PayGo check, full Cloud evaluation | done, three runs consumed | §9.2 – §9.9 |
+| **TTS selection** | **APPROVED**: Gemini `gemini-3.8-flash-tts`, Achird, one path | §9.10 |
+| ASR evidence: the PO's 20 recordings, then the final proof | done, two runs consumed | §9.13 – §9.20 |
+| **ASR selection** | **APPROVED**: Speechmatics Enhanced `ar_en`, with the seven limits | §9.21 |
+| Latency stages E and A | measured: text ready p50 680 ms, forced final p50 164 ms | §9.20 |
+| Latency stages T, G, R and S | measured | §9.3, §9.9 |
+| Replay render spike | done locally, 8 / 8; phone playback not verified on a device | §9.15 |
+| Stage P (Orchestrator pre-generation) | **not run**. Contract §11 places it in CP2 (local, free); it needs the Orchestrator on a local PostgreSQL. An earlier status line called it "deferred to S8B-05", but no Product Owner decision records that. **Open for the Product Owner:** confirm the deferral, or have it measured locally at no cost before closure | §9.5 |
+| Stage N (network, jitter, playout) | S8B-06, on the device | contract §11 |
+| ASSISTED arm | not run; not justified by the BASELINE / RENDERED evidence | §9.5 |
+
+**The spend:**
+
+| Run | USD |
+| --- | --- |
+| AI Studio, `s8b01-cp2-r1` | 0.1155 |
+| Google Cloud: PayGo check, then `s8b01-cp2-cloud-r1` | 0.0031 + 0.7950 |
+| Speechmatics, `s8b01-cp2-asr-sm-po-r1` | 0.0345 |
+| Speechmatics, `s8b01-cp2-asr-sm-proof-r1` | 0.0201 |
+
+- Each run stayed inside its own approved cap, with no retry. The Speechmatics figures are wall-time upper bounds taken
+  from the free credit.
+
+**Still open, for CP3 (S8B-01's last checkpoint: closure only, not started):**
+- The REALTIME budget values (VA-4) and the codec and render placement (§7).
+- Cost per minute for the selected pair.
+- The final lifecycle of the contract and of VA-1 … VA-11.
+- BG-08 / BG-09.
+- The two open TTS questions (§9.10) stay with S8B-04: the production route, and AI Studio logging.
+
+**The branch:**
+- `s8b/s8b-01-cp2` is local only: 21 commits on `de774cfd`, never pushed, no pull request.
+- Merging CP2 needs a pull request, and opening one needs the Product Owner's authorization.
+- Not done here: no push, no PR, no merge, and CP3 not started.
+
+**Status: `CP2 DELIVERED — TTS AND ASR SELECTED — AT THE PRODUCT OWNER'S CP2 CLOSURE REVIEW`.**
