@@ -659,3 +659,146 @@ test('Replay spike checks: beep and flash detection, faststart, the benchmark li
   assert.deepEqual(spike.parseBenchmark('x\nbench: utime=1.250s stime=0.100s rtime=0.900s\nbench: maxrss=123456KiB\n'), { utimeS: 1.25, stimeS: 0.1, rtimeS: 0.9, maxRssKiB: 123456 });
   for (const line of spike.wrapCaption('فاهمك. أول خطوة ممكن تكون إنك تكلم أبوك في وقت هادي، من غير ما تحط كل حاجة مرة واحدة.').split('\n')) assert.ok(line.length <= 26);
 });
+
+// The Product Owner's Speechmatics order (2026-10-28): the real-time ASR harness, proven against a loopback server only.
+const asr = await import('../scripts/s8b-01/asr-sm.mjs');
+const { summarizeAsr, verdict } = await import('../scripts/s8b-01/asr-sm-summary.mjs');
+const asrPlan = JSON.parse(readFileSync(join(dir, 'asr-sm-plan.json'), 'utf8'));
+
+// A minimal RFC 6455 server (text frames out; masked text / binary frames in), so the contract needs no WebSocket package.
+function miniWsServer(onClient) {
+  const server = createServer();
+  server.on('upgrade', (req, socket) => {
+    const accept = createHash('sha1').update(`${req.headers['sec-websocket-key']}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest('base64');
+    socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
+    const send = (obj) => {
+      const p = Buffer.from(JSON.stringify(obj));
+      const h = p.length < 126 ? Buffer.from([0x81, p.length]) : Buffer.from([0x81, 126, p.length >> 8, p.length & 255]);
+      socket.write(Buffer.concat([h, p]));
+    };
+    const client = { headers: req.headers, send, close: () => { socket.write(Buffer.from([0x88, 2, 0x03, 0xe8])); socket.end(); } };
+    let buf = Buffer.alloc(0);
+    socket.on('data', (d) => {
+      buf = Buffer.concat([buf, d]);
+      for (;;) {
+        if (buf.length < 2) return;
+        const op = buf[0] & 15;
+        let len = buf[1] & 127;
+        let off = 2;
+        if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); off = 4; } else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); off = 10; }
+        if (buf.length < off + 4 + len) return;
+        const mask = buf.subarray(off, off + 4);
+        const payload = Buffer.from(buf.subarray(off + 4, off + 4 + len)).map((b, i) => b ^ mask[i % 4]);
+        buf = buf.subarray(off + 4 + len);
+        if (op === 8) { socket.end(); return; }
+        onClient(client, op === 1 ? JSON.parse(payload.toString('utf8')) : null, op === 2 ? payload.length : 0);
+      }
+    });
+    socket.on('error', () => {});
+  });
+  return server;
+}
+
+test('asr-sm plan: Speechmatics only, EU real-time, Enhanced ar_en then Melia 1, model training off, the 30-line set, every session at its ceiling inside USD 1', () => {
+  assert.deepEqual(asr.checkAsrPlan(asrPlan, dir), []);
+  const approval = JSON.parse(readFileSync(join(dir, 'asr-sm-approval.json'), 'utf8'));
+  assert.ok(['PENDING', 'APPROVED', 'CONSUMED'].includes(approval.status));
+  if (approval.status !== 'PENDING') assert.equal(approval.planSha256, asr.fileSha256(join(dir, 'asr-sm-plan.json')));
+  const changes = [
+    [(p) => { p.guard.costCapUsd = 2; }, /at most USD 1/u],
+    [(p) => { p.guard.allowedHosts.speechmatics = 'global.rt.speechmatics.com'; }, /EU real-time host/u],
+    [(p) => { p.arms[0].transcriptionConfig.language = 'ar'; }, /Enhanced ar_en/u],
+    [(p) => { p.privacy.modelTrainingMustBeOff = false; }, /model training off/u],
+    [(p) => { p.arms[1].transcriptionConfig.conversation_config = { end_of_utterance_silence_trigger: 0.5 }; }, /Melia 1 rejects/u],
+  ];
+  for (const [change, why] of changes) { const p = structuredClone(asrPlan); change(p); assert.match(asr.checkAsrPlan(p, dir).join(' | '), why); }
+  const start = asr.startRecognition(asrPlan.arms[0], 48000, ['نهى الشربيني']);
+  assert.deepEqual(start.audio_format, { type: 'raw', encoding: 'pcm_s16le', sample_rate: 48000 });
+  assert.deepEqual(start.transcription_config.additional_vocab, [{ content: 'نهى الشربيني' }]);
+  assert.equal(asr.startRecognition(asrPlan.arms[1], 16000, ['x']).transcription_config.additional_vocab, undefined, 'Melia 1 takes no custom dictionary');
+  assert.throws(() => asr.startRecognition(asrPlan.arms[0], 11025), /sample rate/u);
+});
+
+test('asr-sm guard: a WebSocket reaches only the EU host, over wss, with a reservation, one session each', () => {
+  const m = mkdtempSync(join(tmpdir(), 's8b01-asr-'));
+  const text = readFileSync(join(dir, 'asr-sm-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
+  writeFileSync(join(m, 'asr-sm-plan.json'), text);
+  copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
+  writeFileSync(join(m, 'asr-sm-approval.json'), JSON.stringify({ status: 'APPROVED', runId: 'r-asr', capUsd: 1, planSha256: createHash('sha256').update(text).digest('hex') }));
+  const r = underGuard(m, `
+    const g = globalThis.__QANDEEL_S8B_01_GUARD__; const out = [];
+    const tryWs = (u) => { try { const w = new WebSocket(u); w.onerror = () => {}; out.push('opened'); } catch (e) { out.push(e.message.replace('S8B_01_NETWORK_FORBIDDEN:', '')); } };
+    tryWs('wss://evil.example/v2');
+    tryWs('wss://eu.rt.speechmatics.com/v2');
+    g.reserve('asr', 0.01); tryWs('ws://eu.rt.speechmatics.com/v2');
+    console.log(JSON.stringify({ out, key: process.env.SPEECHMATICS_API_KEY ?? null, other: process.env.DEEPGRAM_API_KEY ?? null }));
+    process.exit(0);`, { QANDEEL_S8B_CHECK: 'asr-sm', QANDEEL_S8B_RUN_ID: 'r-asr', SPEECHMATICS_API_KEY: 'sm-test', DEEPGRAM_API_KEY: 'dg-test' });
+  assert.equal(r.status, 0, r.stderr);
+  const o = JSON.parse(r.stdout.trim());
+  assert.deepEqual(o.out, ['websocket:evil.example', 'websocket-without-reservation:eu.rt.speechmatics.com', 'websocket:ws:eu.rt.speechmatics.com']);
+  assert.equal(o.key, 'sm-test', 'the approved key survives the scrub');
+  assert.equal(o.other, null, 'every other provider key is scrubbed');
+});
+
+test('asr-sm session against a loopback server: the key in the handshake header, real-time pacing, partials, finals, EndOfUtterance, the measures', async () => {
+  let auth = null;
+  let bytes = 0;
+  const server = miniWsServer((c, msg, n) => {
+    auth = c.headers.authorization;
+    if (msg?.message === 'StartRecognition') return c.send({ message: 'RecognitionStarted', id: 't' });
+    if (n) {
+      bytes += n;
+      if (bytes === 16000 * 2 * 0.2) c.send({ message: 'AddPartialTranscript', metadata: { transcript: 'بعتلك', start_time: 0.1, end_time: 0.2 } });
+      return undefined;
+    }
+    if (msg?.message === 'EndOfStream') {
+      c.send({ message: 'AddTranscript', metadata: { transcript: 'بعتلك الميتنج لينك', start_time: 0.1, end_time: 0.6 }, results: [] });
+      c.send({ message: 'EndOfUtterance', metadata: {} });
+      c.send({ message: 'EndOfTranscript' });
+      c.close();
+    }
+    return undefined;
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const pcm = new Int16Array(16000 * 0.6);
+  for (let i = 1600; i < 9600; i += 1) pcm[i] = Math.round(6000 * Math.sin(i / 3));
+  const bounds = asr.speechBounds(pcm, 16000);
+  assert.deepEqual([bounds.onsetMs, bounds.offsetMs], [100, 600]);
+  const s = await asr.smSession({ url: `ws://127.0.0.1:${server.address().port}/v2`, apiKey: 'k-test', pcm, rate: 16000,
+    start: asr.startRecognition(asrPlan.arms[0], 16000), tailSilenceMs: 200, timeoutMs: 5000 });
+  server.close();
+  assert.equal(s.error, null);
+  assert.equal(auth, 'Bearer k-test');
+  assert.equal(s.seqSent, 40, '0.8 s in 20 ms frames');
+  assert.ok(s.wallMs >= 750, `streamed at real-time pace (${s.wallMs} ms)`);
+  const m = asr.sessionMetrics(s.events, bounds);
+  assert.equal(m.transcript, 'بعتلك الميتنج لينك');
+  assert.equal(m.partials, 1);
+  assert.ok(m.firstPartialMs >= 50 && m.firstPartialMs < 400, `first partial ${m.firstPartialMs} ms after onset`);
+  assert.ok(m.eouMs >= 0 && m.finalAfterEouMs === 0);
+});
+
+test('asr-sm scoring: English words in either script, numbers in digits or words, the intended word, corpus-level WER and the preregistered verdict', () => {
+  const data = loadRecordingScript(dir);
+  const items = new Map(data.script.items.map((i) => [i.id, i]));
+  const line = (id, condition = 'SPEAKER') => sessionLines(data).find((l) => l.id === id && l.condition === condition);
+  const cs = asr.scoreLine(line('EG-CS-01'), items.get('EG-CS-01'), 'بعتلك الـ ميتنج لينك على الإيميل، شوفه قبل الساعة تلاتة', data.script, asrPlan.normalization);
+  assert.equal(cs.wordErrors, 0, 'ميتنج / لينك count as meeting / link');
+  assert.deepEqual(cs.checks.english, [true, true]);
+  const nd = asr.scoreLine(line('EG-ND-02'), items.get('EG-ND-02'), 'رقم الطلب 78345', data.script, asrPlan.normalization);
+  assert.equal(nd.checks.number, true, 'the digits count as the number');
+  const df = asr.scoreLine(line('EG-DF-02'), items.get('EG-DF-02'), 'الميعاد الساعة أربعة لا لا قصدي خمسة', data.script, asrPlan.normalization);
+  assert.equal(df.checks.intent, true);
+  assert.equal(asr.scoreLine(line('EG-S01'), null, 'أي كلام', data.script, asrPlan.normalization).scored, false, 'a spontaneous answer needs its own transcript');
+  const wav = Buffer.alloc(44 + 8);
+  wav.write('RIFF', 0); wav.writeUInt32LE(44, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(3, 20); wav.writeUInt16LE(2, 22);
+  wav.writeUInt32LE(48000, 24); wav.writeUInt16LE(32, 34); wav.write('data', 36); wav.writeUInt32LE(8, 40); wav.writeFloatLE(0.5, 44); wav.writeFloatLE(-0.5, 48);
+  assert.deepEqual([...asr.readAnyWav(wav).pcm], [0], 'float stereo is averaged to mono PCM16');
+  const row = (o) => ({ arm: 'ENHANCED_AR_EN', status: 'OK', dialect: 'EGYPTIAN', condition: 'SPEAKER', category: 'READ', speaker: 'S1', ref_words: 10, word_errors: 1, ref_chars: 40,
+    char_errors: 2, first_partial_ms: 600, final_ms: 500, eou_ms: 700, final_after_eou_ms: 0, lag_ms_p50: 400, checks: '{"english":[true],"keyterms":[true],"number":true,"intent":true}', ...o });
+  const rows = [...Array(57)].map(() => row({})).concat([row({ dialect: 'MSA', word_errors: 0 }), row({ condition: 'NOISE', word_errors: 2 }), row({ dialect: 'MSA' })]);
+  const v = verdict(rows, asrPlan, 'ENHANCED_AR_EN');
+  assert.equal(v.passed, true, JSON.stringify(v.items.filter((i) => !i.passed)));
+  assert.equal(summarizeAsr(rows, asrPlan).byArm.ENHANCED_AR_EN.wer, Number((60 / 600).toFixed(4)));
+  assert.equal(verdict(rows.map((r) => ({ ...r, eou_ms: 1200 })), asrPlan, 'ENHANCED_AR_EN').passed, false, 'a slow endpoint fails the verdict');
+});

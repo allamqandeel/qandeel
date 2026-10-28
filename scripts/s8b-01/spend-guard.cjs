@@ -29,11 +29,13 @@ const crypto = require('node:crypto');
 // The plan and the approval it reads. By default the S8B-01 benchmark (bench-plan.json, cp2-approval.json); a named check
 // selects its own pair beside the guard, from this fixed list only (the Product Owner's Google Cloud PayGo check,
 // 2026-10-28: gcp-paygo-plan.json, gcp-paygo-approval.json; and its full Google Cloud evaluation of the same day:
-// cp2-cloud-plan.json, cp2-cloud-approval.json). Nothing else is selectable.
+// cp2-cloud-plan.json, cp2-cloud-approval.json; and its Speechmatics real-time ASR test: asr-sm-plan.json, asr-sm-approval.json).
+// Nothing else is selectable.
 const CHECKS = {
   '': ['bench-plan.json', 'cp2-approval.json'],
   'gcp-paygo': ['gcp-paygo-plan.json', 'gcp-paygo-approval.json'],
   'cp2-cloud': ['cp2-cloud-plan.json', 'cp2-cloud-approval.json'],
+  'asr-sm': ['asr-sm-plan.json', 'asr-sm-approval.json'],
 };
 const CHECK = process.env.QANDEEL_S8B_CHECK ?? '';
 if (!Object.hasOwn(CHECKS, CHECK)) throw new Error('S8B_01_GUARD: unknown check; nothing was sent');
@@ -78,9 +80,10 @@ function hostOf(args) {
   if (typeof a === 'string' && !/^\d+$/u.test(a)) return `pipe:${a}`;
   return typeof args[1] === 'string' ? args[1] : 'localhost';
 }
-// A socket to a provider host opens only inside a fetch the guard admitted (undici connects within it).
+// A socket to a provider host opens only inside a fetch or a WebSocket session the guard admitted (undici connects within it).
 let fetchInFlight = 0;
-const allowedSocket = (host) => LOOPBACK.has(host) || (PROVIDER_HOSTS.has(host) && fetchInFlight > 0);
+let socketsOpen = 0;
+const allowedSocket = (host) => LOOPBACK.has(host) || (PROVIDER_HOSTS.has(host) && (fetchInFlight > 0 || socketsOpen > 0));
 
 const originalConnect = net.Socket.prototype.connect;
 net.Socket.prototype.connect = function guardedConnect(...args) {
@@ -170,6 +173,31 @@ globalThis.fetch = async function guardedFetch(input, init) {
     fetchInFlight -= 1;
   }
 };
+// A WebSocket session (Speechmatics real-time) is admitted like a fetch: an allowed host, wss only, and one session per
+// reservation; its sockets stay allowed until the session closes.
+const OriginalWebSocket = globalThis.WebSocket;
+if (OriginalWebSocket) {
+  globalThis.WebSocket = class GuardedWebSocket extends OriginalWebSocket {
+    constructor(input, init) {
+      const url = new URL(String(input));
+      const provider = !LOOPBACK.has(url.hostname);
+      if (provider) {
+        if (!PROVIDER_HOSTS.has(url.hostname)) forbid(`websocket:${url.hostname}`);
+        if (url.protocol !== 'wss:') forbid(`websocket:${url.protocol}${url.hostname}`);
+        if (pending === null) forbid(`websocket-without-reservation:${url.hostname}`);
+        pending = null;
+        socketsOpen += 1;
+      }
+      super(input, init);
+      if (provider) {
+        let ended = false;
+        const end = () => { if (!ended) { ended = true; socketsOpen -= 1; } };
+        this.addEventListener('close', end);
+        this.addEventListener('error', end);
+      }
+    }
+  };
+}
 persist();
 
 globalThis.__QANDEEL_S8B_01_GUARD__ = Object.freeze({

@@ -242,7 +242,7 @@ release-readiness gate. None is claimed as tested:
 **Status:** `S8B-01 CP2 DELIVERED — PARTIAL — TTS SELECTION APPROVED`. The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
-that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`, and the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
+that run's USD 2 cap (§9.9). ASR is `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12); the render spike awaits the approval to install ffmpeg (§9.11); stage P is deferred to S8B-05. CP2 is not claimed fully closed, and CP3 has not started.  
 **Branch / base:** `s8b/s8b-01-cp2`, from `main` at `de774cfd` (the merge of PR #364, S8B-01 CP1).  
 **Run:** `s8b01-cp2-r1`, at `1fe1eb9c`, 2026-10-28 06:10 – 06:30 UTC. Its outputs are local and gitignored, under
 `artifacts/evals/s8b-01/live/s8b01-cp2-r1/`:
@@ -737,3 +737,103 @@ installed.
   spike neither implements them nor changes them.
 
 The focused contract covers the recording kit and the spike's pure functions without ffmpeg: `tests/s8b-01-voice-bench-harness-contract.test.mjs`, 38 / 38.
+
+### 9.12 Speechmatics real-time ASR — prepared, awaiting the Product Owner's prerequisites (2026-10-28)
+
+**The Product Owner's decision (2026-10-28):**
+- Speechmatics alone is tested, with the aim of approving it for production if it proves its quality, its speed and the
+  privacy conditions. A satisfactory result goes to production without reopening the provider comparison.
+- Google, Azure and Deepgram are not tested now, and Gemini TTS is not re-tested.
+- The test is real-time streaming ASR, not only file transcription.
+- It starts with a representative human set of about 25 – 30 lines per speaker, a man and a woman, each with explicit
+  consent, instead of the 130 lines of §9.11.
+
+**The model and configuration, from Speechmatics' own documentation** (read 2026-10-28):
+
+| | Enhanced `ar_en` | Melia 1 |
+| --- | --- | --- |
+| Language | the Arabic–English bilingual pack: "Arabic and English in the same media file or stream"; Arabic covers MSA and the Gulf, Egypt and the Levant | `language: multi` with `language_hints: ["ar", "en"]`; no `ar_en` pack |
+| End of utterance | `conversation_config.end_of_utterance_silence_trigger` (0 – 2 s) | **not supported**: the client sends `ForceEndOfUtterance` |
+| Latency control | `max_delay` 0.7 – 4 s, `max_delay_mode` | **not supported** |
+| Custom dictionary | `additional_vocab` (up to 20,000) | **not supported** |
+| Partials | yes | yes |
+| Real-time price | USD 0.80 per hour | USD 0.40 per hour |
+
+- **Test configuration, the production candidate:** Enhanced `ar_en` with:
+  - partials on;
+  - `max_delay` 1.0 s, `flexible`;
+  - end of utterance after 0.5 s of silence;
+  - the set's names as `additional_vocab`.
+
+  It is the only configuration that has code-switching in one stream, server-side end-of-speech detection and a custom
+  dictionary together.
+- **The comparison the Product Owner named:** Melia 1, with `ForceEndOfUtterance` sent 500 ms after the measured speech
+  end, which stands in for QANDEEL's own VAD.
+- **Endpoint:** `wss://eu.rt.speechmatics.com/v2` (EU, pinned).
+- **Audio:** raw `pcm_s16le` at the recording's own rate, in 20 ms frames, streamed at real-time pace.
+
+**Privacy, from Speechmatics' own pages** (read directly, 2026-10-28):
+- **Real-time:** audio is "never recorded or stored"; it is processed in memory, and the transcripts are returned and
+  discarded (Security and compliance).
+- **Training:** Terms of Service §10.4. No use of customer data for machine learning or model training unless the
+  workspace opts in through its model-training setting. The pricing page states that the opt-in (a 33 % discount) is off by
+  default.
+- **The run therefore requires:**
+  - the model-training setting **off**, confirmed by the Product Owner in the approval (`modelTrainingOff: true`; the
+    launcher refuses without it);
+  - real-time only. No batch job is ever created, so nothing waits out the batch retention of 7 days;
+  - the EU endpoint;
+  - no translation, speaker identification or audio events.
+
+**What is prepared (free, local, nothing sent):**
+- **The 30-line set** (`asr-cp2-recording-script.json` `sets.core`; sheets `asr-recording-sheet.mjs <S#> --set core`):
+  - 22 Egyptian lines on the speaker phone: everyday speech, English words, names / numbers / dates, hesitation,
+    self-correction and self-interruption;
+  - 3 noise lines and 2 lines with QANDEEL's voice playing (barge-in). Each repeats a speaker-phone line, so the condition
+    is compared on the same words;
+  - 1 spontaneous answer, scored against the speaker's own transcript;
+  - 3 MSA lines;
+  - recordings in WAV, at any common rate. Another format needs ffmpeg, which is not installed.
+- **The harness** (`asr-sm.mjs`, `asr-sm-run.mjs`, `asr-sm-summary.mjs`):
+  - one real-time session per line and arm, the key in the handshake header, no retry;
+  - the measures: WER / CER, the checks (names, numbers in digits or words, the intended word of a self-correction,
+    English words in either script), first partial, last final, E (end of utterance after speech end), A (final after the
+    end of utterance), and the final's lag;
+  - the preregistered acceptance, for the Enhanced `ar_en` arm:
+
+| Measure | Threshold |
+| --- | --- |
+| Egyptian WER | ≤ 0.25 |
+| MSA WER | ≤ 0.12 |
+| WER in noise | ≤ 0.35 |
+| Each check | ≥ 80 % |
+| First partial p50 | ≤ 1000 ms |
+| E p50 | ≤ 900 ms |
+| A p50 | ≤ 300 ms |
+| Session errors | none |
+
+- **The guard:** `spend-guard.cjs` now admits a WebSocket exactly like a fetch: an allowed host, `wss` only, and one
+  session per reservation. Every other provider key is scrubbed.
+- **The plan:** `asr-sm-plan.json`, hash `e6b233b62675ca18009cc14ddef693afee1478bc14f2e92d188b8286e44379be`:
+  - 120 sessions = 30 lines × 2 speakers × 2 arms;
+  - cap USD 1; every session at its ceiling totals USD 0.94;
+  - expected about USD 0.15 and about 15 minutes, inside Speechmatics' free credit.
+- **The approval:** `asr-sm-approval.json` is `PENDING`, so `--live` is refused.
+- **Tests:** `tests/s8b-01-voice-bench-harness-contract.test.mjs`, 42 / 42, covering:
+  - the plan and its refusals;
+  - the guard's WebSocket rules;
+  - a session against a loopback server (the header, the pacing, partials, finals, end of utterance);
+  - the scoring and the verdict.
+
+**Status: `BLOCKED — MISSING PREREQUISITES`.** The Product Owner provides:
+1. A Speechmatics account (self-serve, free credit, no card) with the workspace **model-training setting off**.
+2. An API key, saved by the Product Owner in `~/.qandeel/speechmatics-api-key.txt` and never pasted into a conversation
+   or the repository.
+3. The two consenting speakers' 30 recordings each, from `recording-sheet-S1-core.html` / `-S2-core.html`, in
+   `artifacts/evals/s8b-01/corpus/S1/` and `/S2/`. The spontaneous answer's own transcript goes beside it as a `.txt`.
+4. Then `asr-sm.mjs --plan-check` verifies the 60 files, and the Product Owner approves the plan hash, the USD 1 cap and
+   the run `s8b01-cp2-asr-sm-r1`, confirming model training off.
+
+**The recommendation** (`APPROVE FOR PRODUCTION` or `NOT READY`) follows that one run. None is given before it.
+
+**The Replay render spike** is unchanged (§9.11). It is ready and awaits the approval to install ffmpeg.

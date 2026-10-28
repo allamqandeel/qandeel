@@ -1,0 +1,136 @@
+{
+  "id": "s8b-01-asr-sm-plan",
+  "version": 1,
+  "status": "PREPARED — the Product Owner's Speechmatics order (2026-10-28): Speechmatics only, real-time streaming ASR on consenting human recordings, one bounded run after an explicit approval (asr-sm-approval.json). Nothing has been sent.",
+  "provider": "SPEECHMATICS",
+  "endpoint": "wss://eu.rt.speechmatics.com/v2",
+  "region": "EU (pinned; the global endpoint may route anywhere)",
+  "guard": {
+    "authorized": true,
+    "costCapUsd": 1,
+    "budgetUsd": {
+      "asr": 1
+    },
+    "allowedHosts": {
+      "speechmatics": "eu.rt.speechmatics.com"
+    },
+    "liveKeys": [
+      "SPEECHMATICS_API_KEY"
+    ],
+    "keyFile": "~/.qandeel/speechmatics-api-key.txt (per user, outside the repository; read into memory by the launcher only)",
+    "reservation": "each session reserves its timeout (the line's audio + the tail silence + the margin) at the arm's hourly price, and settles at its measured wall time, which bounds the audio Speechmatics can bill"
+  },
+  "privacy": {
+    "realtimeOnly": true,
+    "modelTrainingMustBeOff": true,
+    "terms": [
+      {
+        "source": "https://docs.speechmatics.com/administration/security-and-compliance",
+        "holds": "real-time audio is never recorded or stored; it is processed in memory and the transcripts are returned and discarded"
+      },
+      {
+        "source": "https://www.speechmatics.com/legal/terms-of-service",
+        "holds": "clause 10.4: no use of customer data for machine learning or model training unless the workspace opts in (the portal model-training setting)"
+      },
+      {
+        "source": "https://www.speechmatics.com/pricing",
+        "holds": "the model-training opt-in (a 33 % discount) is off by default"
+      }
+    ],
+    "settings": [
+      "the workspace model-training setting stays OFF; the Product Owner confirms it in the approval (modelTrainingOff: true) before the run",
+      "real-time only: no batch job is created, so nothing is held for the batch retention of 7 days",
+      "no translation, no speaker identification, no audio events"
+    ],
+    "notes": "The transcripts of the consenting speakers are kept only in the gitignored run directory and deleted with the recordings at S8B-01 closure."
+  },
+  "arms": [
+    {
+      "id": "ENHANCED_AR_EN",
+      "role": "the production candidate: the only Speechmatics configuration with Arabic–English code-switching in one stream, server end-of-utterance detection, max_delay control and a custom dictionary",
+      "transcriptionConfig": {
+        "model": "enhanced",
+        "language": "ar_en",
+        "enable_partials": true,
+        "max_delay": 1,
+        "max_delay_mode": "flexible",
+        "conversation_config": {
+          "end_of_utterance_silence_trigger": 0.5
+        }
+      },
+      "additionalVocab": true,
+      "pricePerHourUsd": 0.8
+    },
+    {
+      "id": "MELIA_1",
+      "role": "the comparison the Product Owner named: automatic multilingual, cheaper, but no ar_en pack, no silence end-of-utterance (the client forces it), no max_delay and no custom dictionary",
+      "transcriptionConfig": {
+        "model": "melia-1",
+        "language": "multi",
+        "language_hints": [
+          "ar",
+          "en"
+        ],
+        "enable_partials": true
+      },
+      "additionalVocab": false,
+      "forceEndOfUtteranceAfterSilenceMs": 500,
+      "pricePerHourUsd": 0.4
+    }
+  ],
+  "audio": {
+    "encoding": "pcm_s16le, the recording's own sample rate (mono; channels averaged)",
+    "chunkMs": 20,
+    "pacing": "real time",
+    "tailSilenceMs": 2000,
+    "sessionTimeoutMarginMs": 15000,
+    "maxLineSeconds": 30,
+    "format": "WAV (PCM 16/24/32-bit or float 32); another format needs ffmpeg, which is not installed"
+  },
+  "set": {
+    "name": "core",
+    "script": "corpus/asr-cp2-recording-script.json",
+    "scriptSha256": "0e6b40d3d664c08de6a4deba70c97fd316daf409dca61b45182f2c5bece49977",
+    "promptsSha256": "861c140fdbef123ba98b3b33623f1242444471b59daa39875c276dd0987927a6",
+    "linesPerSpeaker": 30,
+    "speakers": [
+      "S1",
+      "S2"
+    ],
+    "speakerNote": "S1 and S2: one man and one woman, native Egyptian speakers, each with explicit written consent kept by the Product Owner outside the repository",
+    "sessions": 120,
+    "recordings": "artifacts/evals/s8b-01/corpus/<S#>/<S#>_<line>_<condition>.wav (gitignored); a spontaneous answer's reference is the speaker's own transcript beside it as .txt"
+  },
+  "normalization": {
+    "diacritics": true,
+    "tatweel": true,
+    "alef": true,
+    "alefMaqsura": true,
+    "taMarbuta": true,
+    "digits": true,
+    "punctuation": true
+  },
+  "measures": [
+    "WER / CER, corpus level, per arm × dialect, category, condition and speaker; English words scored in Latin or a listed Arabic spelling",
+    "checks: names / key terms, numbers (digits or the spoken words), the intended word of a self-correction, the English words",
+    "first partial after speech onset; the last final after speech end; E = EndOfUtterance after speech end; A = the last final after EndOfUtterance; final lag after its audio"
+  ],
+  "acceptance": {
+    "note": "Preregistered for ENHANCED_AR_EN, the production candidate (MELIA_1 is reported against the same lines). From bench-plan.json asr.proposedThresholds (WER, A) and the plan's 0.5 s end-of-utterance trigger. The recommendation follows them; the decision is the Product Owner's. 30 lines × 2 speakers is a first representative set, not a population estimate.",
+    "egyptianWerMax": 0.25,
+    "msaWerMax": 0.12,
+    "noiseWerMax": 0.35,
+    "checksMin": 0.8,
+    "firstPartialP50MaxMs": 1000,
+    "eouP50MaxMs": 900,
+    "finalAfterEouP50MaxMs": 300
+  },
+  "stopRules": {
+    "notAuthorised": "stop the run (HTTP 401 / close 4001)",
+    "quotaExceeded": "stop the run (close 4005)",
+    "firstSessionOfArmFails": "stop that arm",
+    "consecutiveFailuresPerArm": 3,
+    "budgetRefused": "stop the run",
+    "retries": "none"
+  }
+}
