@@ -1597,7 +1597,7 @@ No further Speechmatics test round is opened to select the provider.
 - The two open TTS questions (§9.10) stay with S8B-04: the production route, and AI Studio logging.
 
 **The branch:**
-- `s8b/s8b-01-cp2` is local only: 21 commits on `de774cfd`, never pushed, no pull request.
+- `s8b/s8b-01-cp2` is local only: every CP2 commit on `de774cfd`, ending at this change, never pushed, with no pull request.
 - Merging CP2 needs a pull request, and opening one needs the Product Owner's authorization.
 - Not done here: no push, no PR, no merge, and CP3 not started.
 
