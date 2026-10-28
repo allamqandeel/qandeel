@@ -5,8 +5,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { playbackStalls, wavFile, worstAudioSeconds } from './cp2-providers.mjs';
-import { cloudCalls, gcpStream } from './cp2-cloud.mjs';
-import { gcpEndpoint, gcpRequestBody, gcpUsd, gcpWorstUsd } from './gcp-paygo.mjs';
+import { callCeilingUsd, cloudCalls, gcpStream } from './cp2-cloud.mjs';
+import { gcpEndpoint, gcpRequestBody, gcpUsd } from './gcp-paygo.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const guard = globalThis.__QANDEEL_S8B_01_GUARD__;
@@ -34,6 +34,7 @@ const save = () => {
     r.listUsd.toFixed(6), r.promoUsd.toFixed(6), r.costSource, JSON.stringify(r.error ?? '')].join(','))].join('\n'));
 };
 
+const lastStart = {};
 const consecutive = Object.fromEntries(plan.models.map((m) => [m.id, { fail: 0, r429: 0 }]));
 try {
   for (let i = 0; i < calls.length; i += 1) {
@@ -46,12 +47,17 @@ try {
     const body = gcpRequestBody(c.text, c.voice, c.style);
     let id;
     try {
-      id = guard.reserve('tts', gcpWorstUsd(model, body, c.text, plan.audioTokensPerSecond));
+      // The reservation is the most Google can bill for this request (its maximum output), so the cap holds even for a
+      // stream cancelled at its bound: the guard refuses any call that could pass the cap.
+      id = guard.reserve('tts', callCeilingUsd(model, body));
     } catch (e) {
       if (e.code === 'S8B_01_BUDGET_REFUSED') { report.stoppedRun = 'budget refused by the guard'; break; }
       throw e;
     }
-    const started = Date.now();
+    // Pacing: at least perModelStartIntervalMs between two calls to the same model, start to start.
+    const due = (lastStart[c.model] ?? -Infinity) + plan.pacing.perModelStartIntervalMs - Date.now();
+    if (due > 0) await sleep(due);
+    lastStart[c.model] = Date.now();
     const r = await gcpStream({ url: gcpEndpoint(plan, c.model), body, token, project: plan.project, boundSeconds: worstAudioSeconds(c.text) });
     const usage = r.usage ?? { promptTokenCount: 0, candidatesTokenCount: Math.ceil(r.audioSeconds * plan.audioTokensPerSecond) };
     const listUsd = gcpUsd(model.listUsdPerMillion, usage);
@@ -75,11 +81,10 @@ try {
     else if ([400, 403, 404].includes(r.status)) m.stoppedBecause = `HTTP ${r.status} on ${sample}: ${r.error}`;
     else if (k.r429 >= rules.consecutive429PerModel) m.stoppedBecause = `${k.r429} consecutive HTTP 429 (last on ${sample})`;
     else if (m.http429 >= rules.total429PerModel) m.stoppedBecause = `${m.http429} HTTP 429 in all (last on ${sample})`;
+    else if (r.cancelledAtBound) m.stoppedBecause = `a runaway stream cancelled at its audio bound on ${sample}`;
     else if (k.fail >= rules.consecutiveFailuresPerModel) m.stoppedBecause = `${k.fail} consecutive failures (last on ${sample}: ${r.error})`;
     if (m.stoppedBecause) log(`${c.model} stopped: ${m.stoppedBecause}`);
     if (rows.length % 40 === 0) { save(); log(`${rows.length} / ${calls.length} calls, settled (list) USD ${guard.spend().settledUsd.toFixed(4)}`); }
-    const wait = plan.pacingMs - (Date.now() - started);
-    if (wait > 0) await sleep(wait);
   }
 } finally {
   report.finishedAt = new Date().toISOString();

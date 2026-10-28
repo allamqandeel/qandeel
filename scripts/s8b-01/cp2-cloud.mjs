@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { sha256Normalized } from './bench-launch.mjs';
 import { worstAudioSeconds } from './cp2-providers.mjs';
 import { buildWork, countBy, interleave, loadCorpora, reviewWork } from './cp2-worklist.mjs';
-import { audioParts, gcpRequestBody, gcpWorstUsd, parseSse } from './gcp-paygo.mjs';
+import { audioParts, gcpRequestBody, parseSse } from './gcp-paygo.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..');
@@ -28,6 +28,30 @@ export function cloudCalls(plan, here = HERE) {
   const defects = reviewWork(work, corpora.setItems);
   if (defects.length) throw new Error(`S8B_01_CLOUD: the work list has defects:\n- ${defects.join('\n- ')}`);
   return interleave(work, plan.models.map((m) => m.id), plan.voices);
+}
+
+/**
+ * The most Google can bill for one request, at the list price: every request byte as an input token, and the model's
+ * documented maximum output (16,384 tokens) as audio. Reserving it makes the cap a hard bound.
+ */
+export function callCeilingUsd(model, body) {
+  return (Buffer.byteLength(body) * model.listUsdPerMillion.inputText + model.maxOutputTokens * model.listUsdPerMillion.outputAudio) / 1e6;
+}
+
+/**
+ * The run's duration, simulated on its order: a call starts when the previous call has ended and at least
+ * perModelStartIntervalMs after its model's previous start; a call lasts its model's CP2 r1 median end time
+ * (Flash 1.35 s, Flash-Lite 1.02 s) unless given.
+ */
+export function estimateDurationMs(calls, plan, genMs = { 'gemini-3.8-flash-tts': 1350, 'gemini-3.8-flash-lite-tts': 1020 }) {
+  let t = 0;
+  const last = {};
+  for (const c of calls) {
+    const start = Math.max(t, (last[c.model] ?? -Infinity) + plan.pacing.perModelStartIntervalMs);
+    last[c.model] = start;
+    t = start + genMs[c.model];
+  }
+  return t;
 }
 
 /** Every structural rule of the plan; returns the violations (empty = valid). */
@@ -42,11 +66,14 @@ export function checkCloudPlan(plan, here = HERE) {
   if (JSON.stringify(plan.models.map((m) => m.id)) !== JSON.stringify(['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'])) problems.push('the two Product Owner models only');
   if (JSON.stringify(plan.voices) !== JSON.stringify(['Achird', 'Sulafat'])) problems.push('the voices Achird and Sulafat');
   if (plan.location !== 'global') problems.push('the 3.8 TTS models are served in global only');
+  if (!(plan.pacing?.perModelStartIntervalMs >= 6500)) problems.push('at least 6.5 s between two calls to the same model (Product Owner)');
+  if (!plan.models.every((m) => m.maxOutputTokens === 16384)) problems.push('each model carries its documented maximum output (16,384 tokens)');
   for (const [file, expected] of Object.entries(plan.corpusSha256)) if (sha256Normalized(join(here, file)) !== expected) problems.push(`corpus hash mismatch: ${file}`);
   try {
     const calls = cloudCalls(plan, here);
     if (calls.length !== plan.workList.calls || calls.length / 4 !== plan.workList.entries) problems.push(`the work list has ${calls.length} calls, the plan says ${plan.workList.calls}`);
     const arms = countBy(calls.filter((c) => c.model === plan.models[0].id && c.voice === plan.voices[0]), (c) => c.arm);
+    if (estimateDurationMs(calls, plan) > plan.stopRules.tokenWindowMs * 0.8) problems.push('the paced run would not fit 80 % of the token window');
     const sorted = (o) => JSON.stringify(Object.entries(o).sort());
     if (sorted(arms) !== sorted(plan.workList.byArm)) problems.push(`the arms differ from the plan: ${JSON.stringify(arms)}`);
   } catch (e) {
@@ -56,15 +83,15 @@ export function checkCloudPlan(plan, here = HERE) {
 }
 
 /**
- * The cost of the run. Worst case: each call at its own bound (the stream is cancelled there), at the list price — the
- * sum the guard could ever admit before the cap stops it. Expected: the CP2 r1 audio rate (0.103 audio seconds per
- * character, both models' median) at 25 tokens / s, and about half a token per input character.
+ * The cost of the run. Expected: the CP2 r1 audio rate (0.103 audio seconds per character, both models' median) at
+ * 25 tokens / s, and about half a token per input character. The hard bound is the cap itself: each call reserves its
+ * ceiling (callCeilingUsd), so the guard refuses any call once the settled spend plus that ceiling would pass the cap.
  */
 export function cloudCost(plan, calls) {
-  const out = { worstListUsd: 0, expectedListUsd: 0, expectedPromotionalUsd: 0 };
+  const out = { expectedListUsd: 0, expectedPromotionalUsd: 0, maxCallCeilingUsd: 0 };
   for (const c of calls) {
     const model = plan.models.find((m) => m.id === c.model);
-    out.worstListUsd += gcpWorstUsd(model, gcpRequestBody(c.text, c.voice, c.style), c.text, plan.audioTokensPerSecond);
+    out.maxCallCeilingUsd = Math.max(out.maxCallCeilingUsd, callCeilingUsd(model, gcpRequestBody(c.text, c.voice, c.style)));
     const audio = [...c.text].length * 0.103 * plan.audioTokensPerSecond;
     const input = ([...c.text].length + (c.style?.length ?? 0)) * 0.5;
     out.expectedListUsd += (input * model.listUsdPerMillion.inputText + audio * model.listUsdPerMillion.outputAudio) / 1e6;
@@ -163,6 +190,8 @@ if (isMain) {
     const approval = JSON.parse(readFileSync(join(HERE, 'cp2-cloud-approval.json'), 'utf8'));
     console.log(JSON.stringify({ check: 'passed', defects: 0, calls: calls.length, byModelVoice: countBy(calls, (c) => `${c.model}|${c.voice}`),
       byCategory: countBy(calls, (c) => c.category), cost: cloudCost(plan, calls), capUsd: plan.guard.costCapUsd,
+      noCallAdmittedOnceSettledAboveUsd: Number((plan.guard.costCapUsd - cloudCost(plan, calls).maxCallCeilingUsd).toFixed(4)),
+      estimatedDurationMin: Number((estimateDurationMs(calls, plan) / 60000).toFixed(1)),
       maxBoundSeconds: Math.max(...calls.map((c) => worstAudioSeconds(c.text))), planSha256: sha256Normalized(join(HERE, 'cp2-cloud-plan.json')),
       approval: approval.status }, null, 1));
     process.exit(0);

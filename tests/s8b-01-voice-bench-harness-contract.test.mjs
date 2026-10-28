@@ -12,7 +12,7 @@ import { composeBudget, endToEndVerdict, percentile } from '../scripts/s8b-01/la
 import { GUIDANCE_ECHO_MIN_LENGTH, INTERNAL_CONTAINERS, guidanceSentences, measureStream, va2ReleasableLength } from '../scripts/s8b-01/stream-first-token.mjs';
 import { checkPlan, sha256Normalized } from '../scripts/s8b-01/bench-launch.mjs';
 import { audioParts, checkGcpPlan, gcpEndpoint, gcpRequestBody, gcpUsd, gcpWorstUsd, parseSse } from '../scripts/s8b-01/gcp-paygo.mjs';
-import { checkCloudPlan, cloudCalls, gcpStream } from '../scripts/s8b-01/cp2-cloud.mjs';
+import { callCeilingUsd, checkCloudPlan, cloudCalls, cloudCost, estimateDurationMs, gcpStream } from '../scripts/s8b-01/cp2-cloud.mjs';
 import { buildWork, countBy, loadCorpora, reviewWork } from '../scripts/s8b-01/cp2-worklist.mjs';
 import { COMBOS, SECTIONS, grid, parseCloudSamples, styleRatios, summarizeCloud } from '../scripts/s8b-01/cp2-cloud-listen.mjs';
 import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, geminiRequestBody, geminiWorstUsd, playbackStalls, readingAnnotated, renderItem, wavFile, worstAudioSeconds }
@@ -497,7 +497,7 @@ test('cp2-cloud: the request carries a style only in speechMetadata; the guard r
   const problems = checkCloudPlan(tampered, dir).join(' | ');
   assert.match(problems, /at most the proposed USD 2/u);
   assert.match(problems, /the voices Achird and Sulafat/u);
-  assert.match(problems, /the work list has 296 calls/u, 'one voice fewer is a different run');
+  assert.match(problems, /exactly two models and two voices/u, 'one voice fewer is a different run');
 });
 
 test('cp2-cloud stream: first audio, usage, the audio bound and an HTTP error, measured against a loopback SSE server', async () => {
@@ -556,4 +556,46 @@ test('cp2-cloud listening: every listed entry is a real (item, arm) of the run; 
   assert.deepEqual(Object.keys(g.cells).sort(), ['gemini-3.8-flash-lite-tts|Sulafat', 'gemini-3.8-flash-tts|Achird']);
   assert.deepEqual(styleRatios(rows)['gemini-3.8-flash-tts|EMOTION'], { n: 1, p50: 1.25, min: 1.25, max: 1.25 });
   assert.equal(COMBOS.length, 4);
+});
+
+test('cp2-cloud pacing (Product Owner): ≥ 6.5 s between two calls to the same model, the models alternating, the run inside the token window', () => {
+  const calls = cloudCalls(cloudPlan, dir);
+  assert.equal(cloudPlan.pacing.perModelStartIntervalMs, 6500);
+  for (let i = 1; i < calls.length; i += 1) assert.notEqual(calls[i].model, calls[i - 1].model, `calls ${i - 1} and ${i} are the same model`);
+  // The simulated schedule never starts a model sooner than 6.5 s after its previous start, even with instant calls.
+  const starts = {};
+  let t = 0;
+  for (const c of calls) {
+    const s = Math.max(t, (starts[c.model]?.at(-1) ?? -Infinity) + 6500);
+    (starts[c.model] ??= []).push(s);
+    t = s;
+  }
+  for (const xs of Object.values(starts)) for (let i = 1; i < xs.length; i += 1) assert.ok(xs[i] - xs[i - 1] >= 6500);
+  const ms = estimateDurationMs(calls, cloudPlan);
+  assert.ok(ms > 30 * 60000 && ms < 0.8 * cloudPlan.stopRules.tokenWindowMs, `${(ms / 60000).toFixed(1)} min`);
+  const faster = structuredClone(cloudPlan);
+  faster.pacing.perModelStartIntervalMs = 5000;
+  assert.match(checkCloudPlan(faster, dir).join(' | '), /at least 6\.5 s/u);
+});
+
+test('cp2-cloud cap: each call reserves the most Google can bill for it, so the guard stops before USD 2 even if every call were billed in full', () => {
+  const calls = cloudCalls(cloudPlan, dir);
+  const flash = cloudPlan.models[0];
+  const body = gcpRequestBody(calls[0].text, calls[0].voice, calls[0].style);
+  assert.equal(callCeilingUsd(flash, body), (Buffer.byteLength(body) * 1 + 16384 * 18) / 1e6, 'request bytes + the maximum output, list price');
+  const ceilings = calls.map((c) => callCeilingUsd(cloudPlan.models.find((m) => m.id === c.model), gcpRequestBody(c.text, c.voice, c.style)));
+  const m = mkdtempSync(join(tmpdir(), 's8b01-cap-'));
+  const text = readFileSync(join(dir, 'cp2-cloud-plan.json'), 'utf8').replace(/\r\n/gu, '\n');
+  writeFileSync(join(m, 'cp2-cloud-plan.json'), text);
+  copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
+  writeFileSync(join(m, 'cp2-cloud-approval.json'), JSON.stringify({ status: 'APPROVED', runId: 'r-cap', capUsd: 2, planSha256: createHash('sha256').update(text).digest('hex') }));
+  const r = underGuard(m, `
+    const g = globalThis.__QANDEEL_S8B_01_GUARD__; const ceilings = ${JSON.stringify(ceilings)}; let admitted = 0;
+    for (const c of ceilings) { try { const id = g.reserve('tts', c); g.settle(id, c); admitted += 1; } catch (e) { if (e.code !== 'S8B_01_BUDGET_REFUSED') throw e; break; } }
+    console.log(JSON.stringify({ admitted, spend: g.spend() }));`, { QANDEEL_S8B_CHECK: 'cp2-cloud', QANDEEL_S8B_RUN_ID: 'r-cap' });
+  assert.equal(r.status, 0, r.stderr);
+  const { admitted, spend } = JSON.parse(r.stdout.trim());
+  assert.ok(spend.settledUsd <= 2, `every call billed at its ceiling stops at USD ${spend.settledUsd}`);
+  assert.ok(admitted < calls.length && spend.refused === 1 && spend.overruns === 0);
+  assert.ok(cloudCost(cloudPlan, calls).expectedListUsd < 2 - Math.max(...ceilings), 'the expected spend leaves the whole run admissible');
 });

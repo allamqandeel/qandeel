@@ -108,16 +108,22 @@ export function reviewWork(work, setItems) {
 /**
  * The run order. Each (item, arm) becomes one call per model and voice. Calls are interleaved so that a stop at any point
  * leaves a balanced partial coverage: categories in round robin (homographs, names, numbers, dialects, code switch,
- * replies, emotions …), and for each entry the four model × voice combinations next to each other, the combination order
- * rotating from one entry to the next.
+ * replies, emotions …), and for each entry the four model × voice combinations next to each other. The two models
+ * strictly alternate across the whole run (m0, m1, m0, m1 …), so each model's own pacing interval runs while the other
+ * model is called; the voice of each model's first call alternates from one entry to the next.
  */
 export function interleave(work, models, voices) {
   const queues = new Map();
   for (const w of work) (queues.get(w.category) ?? queues.set(w.category, []).get(w.category)).push(w);
   const ordered = [];
   for (let i = 0; ordered.length < work.length; i += 1) for (const q of queues.values()) if (q[i]) ordered.push(q[i]);
-  const combos = models.flatMap((m) => voices.map((v) => ({ model: m, voice: v })));
-  return ordered.flatMap((w, i) => combos.map((_, k) => ({ ...w, ...combos[(i + k) % combos.length] })));
+  if (models.length !== 2 || voices.length !== 2) throw new Error('S8B_01_CLOUD: the alternating order needs exactly two models and two voices');
+  const [m0, m1] = models;
+  const [v0, v1] = voices;
+  return ordered.flatMap((w, i) => {
+    const [a, b] = i % 2 === 0 ? [v0, v1] : [v1, v0];
+    return [[m0, a], [m1, b], [m0, b], [m1, a]].map(([model, voice]) => ({ ...w, model, voice }));
+  });
 }
 
 /** Counts by a key, for the plan check and the report. */

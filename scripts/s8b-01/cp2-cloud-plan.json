@@ -16,7 +16,8 @@
       "GOOGLE_CLOUD_ACCESS_TOKEN"
     ],
     "settlement": "every call is settled at the list price (from 2027-01-01) because the 2026 promotional 'credits back' billing is unverified; the promotional figure is reported beside it",
-    "credentialNote": "An OAuth access token from Application Default Credentials, obtained by the launcher into memory only and passed to the guarded child; never printed, logged or written."
+    "credentialNote": "An OAuth access token from Application Default Credentials, obtained by the launcher into memory only and passed to the guarded child; never printed, logged or written.",
+    "reservation": "each call reserves the most Google can bill for it (request bytes as input tokens + the model's maximum output of 16,384 audio tokens, at the list price), so the guard refuses the next call before the cap could be passed, even if a cancelled stream were billed in full"
   },
   "project": "gen-lang-client-0473671267",
   "location": "global",
@@ -35,7 +36,8 @@
       "listUsdPerMillion": {
         "inputText": 1,
         "outputAudio": 18
-      }
+      },
+      "maxOutputTokens": 16384
     },
     {
       "id": "gemini-3.8-flash-lite-tts",
@@ -46,7 +48,8 @@
       "listUsdPerMillion": {
         "inputText": 1,
         "outputAudio": 12
-      }
+      },
+      "maxOutputTokens": 16384
     }
   ],
   "voices": [
@@ -69,10 +72,13 @@
       "PERSONA": 16,
       "EMOTION": 10
     },
-    "order": "cp2-worklist.mjs interleave: categories in round robin, the four model × voice combinations of an entry next to each other, rotating",
+    "order": "cp2-worklist.mjs interleave: categories in round robin; per entry the four model × voice combinations, the two models strictly alternating across the run",
     "duplicatesRemoved": "the six replies R01 – R06 were the same request as SET BASELINE and EXPRESSION NO_STYLE; they are sent once (24 calls fewer)"
   },
-  "pacingMs": 1500,
+  "pacing": {
+    "perModelStartIntervalMs": 6500,
+    "note": "Product Owner (2026-10-28): at least 6.5 s between two calls to the same model, start to start, against the unknown capacity of the Cloud route. The two models alternate, so each model's interval runs while the other is called."
+  },
   "stopRules": {
     "firstCallOfAModelFails": "stop that model",
     "http400_403_404": "stop that model",
@@ -83,7 +89,8 @@
     "budgetRefused": "stop the run",
     "tokenWindowMs": 3300000,
     "tokenWindowNote": "an ADC access token lives about an hour; past 55 minutes the run stops and records what it did not reach",
-    "afterAStop": "the coverage left is recorded; no second run without a new Product Owner approval"
+    "afterAStop": "the coverage left is recorded; no second run without a new Product Owner approval",
+    "cancelledAtBound": "stop that model (a runaway stream)"
   },
   "outputs": "artifacts/evals/s8b-01/cloud/<runId>/ (gitignored): report.json, samples.csv, audio/<sample>.wav, and the listening pages built after the run",
   "notRun": "AI Studio (no second comparison run), DeepSeek streaming, ASR, the Replay render, the promotional-credit billing enquiry (deferred by the Product Owner)"
