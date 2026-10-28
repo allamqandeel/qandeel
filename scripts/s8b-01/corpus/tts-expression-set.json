@@ -1,0 +1,20 @@
+{
+  "id": "s8b-01-tts-expression-set",
+  "version": 1,
+  "purpose": "The S8B-01 CP2 expression set, added by the Product Owner's CP2 order (2026-10-28): QANDEEL's natural, friendly delivery in the user's dialect, and emotional expression (joy, surprise, joking, empathy, advice). Each item is synthesized in three variants: NO_STYLE (the text alone), PERSONA (one constant short QANDEEL style) and EMOTION (the item's own short style). The style travels only in the speech_metadata annotation, never inside the spoken text. Invented content; no user data.",
+  "persona_style": "warm, friendly and natural, like a close friend talking casually; relaxed pace",
+  "items": [
+    { "id": "X01", "emotion": "JOY", "dialect": "EGYPTIAN", "text": "بجد؟ ده خبر حلو أوي! مبروك يا صاحبي، تستاهل كل خير.", "style": "genuinely happy and excited for a friend" },
+    { "id": "X02", "emotion": "JOY", "dialect": "EGYPTIAN", "text": "الله! أخيرًا خلصت المشروع؟ أنا فرحان لك جدًا.", "style": "joyful, warm, a little laugh in the voice" },
+    { "id": "X03", "emotion": "SURPRISE", "dialect": "EGYPTIAN", "text": "إيه ده؟ إنت سافرت إسكندرية امبارح ومقلتليش؟", "style": "pleasantly surprised, playful" },
+    { "id": "X04", "emotion": "SURPRISE", "dialect": "EGYPTIAN", "text": "معقول! ده إنت بتعرف تطبخ كمان؟", "style": "amazed, light and friendly" },
+    { "id": "X05", "emotion": "JOKING", "dialect": "EGYPTIAN", "text": "يعني إنت صاحي من الساعة خمسة الصبح عشان تلعب ماتش؟ ده إنت بطل والله.", "style": "teasing gently, joking, smiling" },
+    { "id": "X06", "emotion": "JOKING", "dialect": "EGYPTIAN", "text": "خلاص، القهوة التالتة النهارده رسمي بقت فرد من العيلة.", "style": "dry humor, amused" },
+    { "id": "X07", "emotion": "EMPATHY", "dialect": "EGYPTIAN", "text": "حاسس بيك، الأيام دي تقيلة عليك. خد وقتك، أنا موجود.", "style": "soft, caring and calm, slower pace" },
+    { "id": "X08", "emotion": "EMPATHY", "dialect": "EGYPTIAN", "text": "طبيعي تكون زعلان بعد اللي حصل. مش لازم تبقى كويس دلوقتي.", "style": "gentle and reassuring" },
+    { "id": "X09", "emotion": "ADVICE", "dialect": "EGYPTIAN", "text": "لو أنا مكانك، هبدأ بأسهل حاجة النهارده، والباقي نرتبه بكرة سوا.", "style": "calm, clear and supportive, not preachy" },
+    { "id": "X10", "emotion": "ADVICE", "dialect": "EGYPTIAN", "text": "جرّب تنام بدري الأسبوع ده، وشوف هتفرق معاك ولا لأ.", "style": "friendly practical suggestion, light" }
+  ],
+  "also_from_tts_set": ["R01", "R02", "R03", "R04", "R05", "R06"],
+  "also_note": "The six QANDEEL-style replies of tts-pronunciation-set.json run in the same three variants; their EMOTION style is the PERSONA style, since they carry no single emotion."
+}

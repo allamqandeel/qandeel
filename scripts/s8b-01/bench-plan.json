@@ -1,15 +1,29 @@
 {
   "id": "s8b-01-voice-bench-plan",
-  "version": 1,
-  "status": "PREREGISTERED_CANDIDATE — S8B-01 CP1, at the Product Owner's CP1 review (2026-10-28). Every threshold below is PROPOSED until that review approves it; after approval this file is frozen by its hash in the S8B-01 record before any CP2 call.",
+  "version": 2,
+  "status": "CP2 — the Product Owner's CP2 order (2026-10-28, after PR #364 merged CP1): one bounded live run, recorded in cp2-approval.json with this file's hash. Version 1 (CP1) was the preregistered candidate; version 2 adds only the CP2 decisions below (the selected Gemini TTS models, the expression set, the DeepSeek prompts, the allowed hosts and keys, the NOT RUN parts). The CP1 thresholds and rules are unchanged.",
   "authority": "Product Owner S8B-00 decisions D-3 (best ASR and TTS by evidence, USD 10 cap, nothing spent before CP1 approval), D-4 (specialised pronunciation tools only on measured benefit), D-6 (latency target, voices chosen by listening), D-9 (device route).",
   "guard": {
-    "authorized": false,
-    "note": "CP1 lock. The single change that lifts it is the Product Owner's CP2 approval, recorded beside the new hash. While locked, the guard refuses every non-loopback connection and the launcher refuses --live.",
+    "authorized": true,
+    "note": "CP2: lifted by the Product Owner's CP2 order for ONE run, recorded in cp2-approval.json (status APPROVED → CONSUMED after the run). The guard admits only the allowed hosts, one request per reservation, within each bucket and the USD 10 cap across every provider together. No automatic retry.",
     "costCapUsd": 10,
-    "budgetUsd": { "asr": 3.5, "tts": 4.5, "deepseekStream": 0.2, "speechRenderingTools": 0.3, "reserve": 1.5 },
+    "budgetUsd": {
+      "asr": 3.5,
+      "tts": 4.5,
+      "deepseekStream": 0.2,
+      "speechRenderingTools": 0.3,
+      "reserve": 1.5
+    },
     "noAutomaticRetry": true,
-    "secondLiveRunRefused": true
+    "secondLiveRunRefused": true,
+    "allowedHosts": {
+      "GEMINI_TTS": "generativelanguage.googleapis.com",
+      "DEEPSEEK": "api.deepseek.com"
+    },
+    "liveKeys": [
+      "GEMINI_API_KEY",
+      "DEEPSEEK_API_KEY"
+    ]
   },
   "prerequisitesForCp2": [
     "The Product Owner approves this plan, the corpus and the Voice Runtime Contract (CP1).",
@@ -19,40 +33,144 @@
   ],
   "asr": {
     "candidates": [
-      { "id": "SPEECHMATICS", "modes": ["streaming", "batch"] },
-      { "id": "GOOGLE_CLOUD_STT", "modes": ["streaming", "batch"] },
-      { "id": "AZURE_AI_SPEECH", "modes": ["streaming", "batch"] },
-      { "id": "OPENAI_TRANSCRIBE", "modes": ["streaming", "batch"] },
-      { "id": "ELEVENLABS_SCRIBE", "modes": ["streaming", "batch"] },
-      { "id": "SONIOX", "modes": ["streaming", "batch"] },
-      { "id": "DEEPGRAM", "modes": ["streaming", "batch"] }
+      {
+        "id": "SPEECHMATICS",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      },
+      {
+        "id": "GOOGLE_CLOUD_STT",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      },
+      {
+        "id": "AZURE_AI_SPEECH",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      },
+      {
+        "id": "OPENAI_TRANSCRIBE",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      },
+      {
+        "id": "ELEVENLABS_SCRIBE",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      },
+      {
+        "id": "SONIOX",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      },
+      {
+        "id": "DEEPGRAM",
+        "modes": [
+          "streaming",
+          "batch"
+        ]
+      }
     ],
     "candidateNote": "A shortlist from public knowledge, not from repository research; CP2 re-verifies every entry first (prerequisitesForCp2). None is selected.",
     "corpus": {
       "prompts": "corpus/asr-reading-prompts.json",
       "speakersPerDialect": 2,
       "speakerBalance": "at least one female and one male voice per dialect where the speakers available allow it",
-      "conditions": ["QUIET", "SPEAKER", "NOISE"],
+      "conditions": [
+        "QUIET",
+        "SPEAKER",
+        "NOISE"
+      ],
       "recording": "each speaker reads every read prompt of their dialect once in QUIET and once in SPEAKER, and a third of them in NOISE; and answers every spontaneous prompt once in SPEAKER",
       "format": "16 kHz mono, 16-bit PCM WAV; kept in artifacts/evals/s8b-01/corpus/ (gitignored); never committed; deleted at S8B-01 closure unless the Product Owner directs otherwise",
       "consent": "each speaker agrees in writing that the recordings are used only for this benchmark, sent to the candidate providers under their zero-retention terms, and deleted at S8B-01 closure",
       "synthesizedSpeechForAsr": "not scored (TTS audio biases ASR); allowed only as a wiring smoke"
     },
-    "normalization": { "diacritics": true, "tatweel": true, "alef": true, "alefMaqsura": true, "taMarbuta": true, "digits": true, "punctuation": true },
-    "metrics": ["WER per dialect and condition (corpus-level)", "CER per dialect", "streaming: final-transcript latency after endpoint (A)", "streaming: endpointing delay after speech end (E)", "interim stability", "cost per audio minute"],
-    "proposedThresholds": {
-      "werMax": { "MSA": 0.12, "EGYPTIAN": 0.25, "GULF": 0.3, "LEVANTINE": 0.3 },
-      "streamingFinalLatencyP50Ms": 300,
-      "mandatory": ["Arabic streaming for the live call", "zero retention and no training", "a dialect-capable model or language setting for EGYPTIAN"]
+    "normalization": {
+      "diacritics": true,
+      "tatweel": true,
+      "alef": true,
+      "alefMaqsura": true,
+      "taMarbuta": true,
+      "digits": true,
+      "punctuation": true
     },
-    "selectionRule": "Among candidates meeting every mandatory item and the WER ceilings: the lowest mean of (EGYPTIAN, MSA, GULF, LEVANTINE) WER in SPEAKER, EGYPTIAN and MSA weighted 2; ties within 1 percentage point go to the lower A + E p50, then to the lower cost. The live-call and Voice Note choices may differ (batch may win for notes)."
+    "metrics": [
+      "WER per dialect and condition (corpus-level)",
+      "CER per dialect",
+      "streaming: final-transcript latency after endpoint (A)",
+      "streaming: endpointing delay after speech end (E)",
+      "interim stability",
+      "cost per audio minute"
+    ],
+    "proposedThresholds": {
+      "werMax": {
+        "MSA": 0.12,
+        "EGYPTIAN": 0.25,
+        "GULF": 0.3,
+        "LEVANTINE": 0.3
+      },
+      "streamingFinalLatencyP50Ms": 300,
+      "mandatory": [
+        "Arabic streaming for the live call",
+        "zero retention and no training",
+        "a dialect-capable model or language setting for EGYPTIAN"
+      ]
+    },
+    "selectionRule": "Among candidates meeting every mandatory item and the WER ceilings: the lowest mean of (EGYPTIAN, MSA, GULF, LEVANTINE) WER in SPEAKER, EGYPTIAN and MSA weighted 2; ties within 1 percentage point go to the lower A + E p50, then to the lower cost. The live-call and Voice Note choices may differ (batch may win for notes).",
+    "cp2": {
+      "status": "NOT RUN — MISSING PREREQUISITE",
+      "missing": [
+        "no consenting speaker recordings of the ASR prompts",
+        "no ASR provider account or key",
+        "each candidate's terms are reviewed (CP2 record); the zero-retention requirement for ASR is unchanged (the Gemini exception does not extend to ASR)"
+      ],
+      "note": "Synthesized speech is not ASR evidence (asr.corpus.synthesizedSpeechForAsr); none is scored."
+    }
   },
   "tts": {
     "candidates": [
-      { "id": "AZURE_AI_SPEECH", "pronunciationControl": ["SSML phoneme", "custom lexicon", "diacritized input"] },
-      { "id": "GOOGLE_CLOUD_TTS", "pronunciationControl": ["SSML", "diacritized input"] },
-      { "id": "ELEVENLABS", "pronunciationControl": ["pronunciation dictionary", "diacritized input"] },
-      { "id": "OPENAI_TTS", "pronunciationControl": ["diacritized input", "instructions"] }
+      {
+        "id": "AZURE_AI_SPEECH",
+        "pronunciationControl": [
+          "SSML phoneme",
+          "custom lexicon",
+          "diacritized input"
+        ]
+      },
+      {
+        "id": "GOOGLE_CLOUD_TTS",
+        "pronunciationControl": [
+          "SSML",
+          "diacritized input"
+        ]
+      },
+      {
+        "id": "ELEVENLABS",
+        "pronunciationControl": [
+          "pronunciation dictionary",
+          "diacritized input"
+        ]
+      },
+      {
+        "id": "OPENAI_TTS",
+        "pronunciationControl": [
+          "diacritized input",
+          "instructions"
+        ]
+      }
     ],
     "candidateNote": "A shortlist from public knowledge; CP2 re-verifies Arabic voices per dialect, streaming, pronunciation control and terms first. None is selected.",
     "corpus": "corpus/tts-pronunciation-set.json",
@@ -63,53 +181,204 @@
     },
     "voicesPerCandidate": "up to two voices per supported dialect (EGYPTIAN, MSA, GULF, LEVANTINE), chosen from the provider's Arabic catalogue",
     "raters": "the Product Owner and at least two further native raters; blind to provider and arm; each item scored once per rater",
-    "metrics": ["target-word correct reading (binary, majority of raters)", "naturalness 1-5", "dialect fit 1-5", "TTFB p50 / p95 streaming (S)", "real-time factor", "cost per 1,000 characters", "auxiliary: TTS→ASR CER on the same item"],
+    "metrics": [
+      "target-word correct reading (binary, majority of raters)",
+      "naturalness 1-5",
+      "dialect fit 1-5",
+      "TTFB p50 / p95 streaming (S)",
+      "real-time factor",
+      "cost per 1,000 characters",
+      "auxiliary: TTS→ASR CER on the same item"
+    ],
     "proposedThresholds": {
       "targetCorrectBaselineReported": true,
       "targetCorrectRenderedMin": 0.9,
       "naturalnessMin": 3.8,
-      "dialectFitMin": { "EGYPTIAN": 3.8, "MSA": 3.8 },
+      "dialectFitMin": {
+        "EGYPTIAN": 3.8,
+        "MSA": 3.8
+      },
       "ttfbP50Ms": 300,
-      "mandatory": ["streaming synthesis", "an EGYPTIAN and an MSA voice", "a pronunciation-control mechanism (markup, lexicon or honoured diacritics)", "zero retention and no training"]
+      "mandatory": [
+        "streaming synthesis",
+        "an EGYPTIAN and an MSA voice",
+        "a pronunciation-control mechanism (markup, lexicon or honoured diacritics)",
+        "zero retention and no training"
+      ]
     },
     "assistedAdoptionRule": "ASSISTED is adopted only if it raises target-correct by at least 5 points over RENDERED with no naturalness loss beyond 0.1 and no added p50 latency beyond 100 ms (D-4: measured benefit).",
-    "voiceSelection": "CP3 presents, per dialect, the top two voices by naturalness and dialect fit among candidates meeting the thresholds; the Product Owner listens to the real samples and chooses each default (D-6)."
+    "voiceSelection": "CP3 presents, per dialect, the top two voices by naturalness and dialect fit among candidates meeting the thresholds; the Product Owner listens to the real samples and chooses each default (D-6).",
+    "cp2": {
+      "decision": "Product Owner, 2026-10-28: the two Gemini 3.8 TTS models are the ones evaluated in CP2; the choice between them is not made before quality, speed and cost are measured. The other TTS candidates are not run by that decision. Zero data retention is waived for these two models only (Controlled Amendment VA-11).",
+      "api": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "stream": true,
+        "store": false,
+        "responseFormat": {
+          "type": "audio"
+        },
+        "audio": "audio/l16, 24 kHz, mono, 16-bit (the documented streaming default)",
+        "style": "speech_metadata annotation on the text part only; the text field is the verbatim transcript"
+      },
+      "models": [
+        {
+          "id": "gemini-3.8-flash-tts",
+          "inputUsdPerMillionTextTokens": 0.5,
+          "outputUsdPerMillionAudioTokens": 9
+        },
+        {
+          "id": "gemini-3.8-flash-lite-tts",
+          "inputUsdPerMillionTextTokens": 0.5,
+          "outputUsdPerMillionAudioTokens": 6
+        }
+      ],
+      "priceSource": "https://ai.google.dev/gemini-api/docs/pricing (last updated 2026-10-27 UTC): paid tier, through 2026-12-31; 25 audio tokens per second",
+      "audioTokensPerSecond": 25,
+      "voices": [
+        "Achird",
+        "Sulafat"
+      ],
+      "voiceNote": "Two prebuilt voices, the same on both models so they compare: Google describes Achird as 'Friendly' and Sulafat as 'Warm'. The Product Owner chooses after listening (D-6); nothing is selected here.",
+      "arms": {
+        "BASELINE": "the item text as written, no annotation",
+        "RENDERED": "the item text with the corpus's expected reading applied to the target only (homographs and names: the selectively diacritized target; numbers: the spelled reading of the number span), no annotation; run only where it differs from BASELINE",
+        "ASSISTED": "NOT RUN: no specialised diacritization tool is approved, and no RENDERED rating exists yet to justify it (assistedAdoptionRule)"
+      },
+      "expressionSet": {
+        "corpus": "corpus/tts-expression-set.json",
+        "variants": [
+          "NO_STYLE",
+          "PERSONA",
+          "EMOTION"
+        ],
+        "note": "the effect of speech_metadata on delivery; the six replies run NO_STYLE and PERSONA only"
+      },
+      "worstCasePerCall": "input: every UTF-8 byte of the request priced as a text token; output: (characters / 4 + 10) seconds of audio at 25 tokens per second; the stream is cancelled when its audio reaches that bound",
+      "pacingMs": 5000,
+      "objectiveMetrics": [
+        "time to first audio byte (streamed) p50 / p95",
+        "real-time factor",
+        "playback stalls with a 0 ms and a 200 ms jitter buffer",
+        "audio seconds per character (outliers flag a skipped, repeated or read-aloud span)",
+        "cost per call and per audio minute from the reported usage",
+        "errors and cancellations"
+      ],
+      "humanMetrics": "target-correct reading, naturalness and dialect fit are human ratings (tts.raters), collected in CP3 from the saved samples; no automatic score stands in for them"
+    }
   },
   "deepseekStream": {
     "purpose": "Stage T (time to first token) and G (first releasable chunk) with stream: true, on the REALTIME spoken guidance shape, synthetic data, SYNTHETIC_ONLY, through the AI-COST-01 ledger (disposable PostgreSQL), no retry.",
     "calls": 40,
-    "paths": ["FAST without thinking"],
+    "paths": [
+      "FAST without thinking"
+    ],
     "prompts": "20 short spoken-register exchanges written for the test (no user data), each sent twice",
-    "metrics": ["headers p50 / p95", "first token p50 / p95 (T)", "first chunk released by the VA-2 predicate p50 / p95 (G), with the REALTIME spoken guidance as the GUIDANCE_ECHO input; streams VA-2 withholds are counted and give no G", "first punctuation mark after the minimum length (diagnostic only, never G)", "end of stream", "output characters", "cost"],
-    "gNote": "The VA-2 predicate mirrors the S8A-01 guard checks (pinned by the root contract); the implemented incremental guard arrives in S8B-05, which re-measures G through it."
+    "metrics": [
+      "headers p50 / p95",
+      "first token p50 / p95 (T)",
+      "first chunk released by the VA-2 predicate p50 / p95 (G), with the REALTIME spoken guidance as the GUIDANCE_ECHO input; streams VA-2 withholds are counted and give no G",
+      "first punctuation mark after the minimum length (diagnostic only, never G)",
+      "end of stream",
+      "output characters",
+      "cost"
+    ],
+    "gNote": "The VA-2 predicate mirrors the S8A-01 guard checks (pinned by the root contract); the implemented incremental guard arrives in S8B-05, which re-measures G through it.",
+    "cp2": {
+      "endpoint": "https://api.deepseek.com/chat/completions",
+      "model": "deepseek-flash",
+      "thinking": "disabled",
+      "maxTokens": 160,
+      "prompts": "corpus/deepseek-spoken-prompts.json",
+      "usdPerMillion": {
+        "peak": {
+          "cacheHit": 0.006,
+          "cacheMiss": 0.3,
+          "output": 1.2
+        },
+        "offPeakIsHalf": true,
+        "peakUtc": "Mon-Fri 01:00-04:00 and 06:00-10:00"
+      },
+      "priceSource": "https://api-docs.deepseek.com/quick_start/pricing (read 2026-10-28)",
+      "worstCasePerCall": "every request byte as a cache-miss token plus max_tokens as output, at the peak rate",
+      "ledgerNote": "The production streaming path (VA-1) does not exist until S8B-05, so these calls are accounted by the guard's spend ledger, not through the AI-COST-01 ledger."
+    }
   },
   "orchestratorOverhead": {
     "purpose": "Stage P on the real Personal turn path with the fake Model Router, local PostgreSQL, synthetic accounts; free.",
-    "runs": 60
+    "runs": 60,
+    "cp2": {
+      "status": "NOT RUN — DEFERRED WITHIN CP2",
+      "reason": "it needs the Personal turn path on a local PostgreSQL harness; free, independent of every paid part, and not built in this run"
+    }
   },
   "latency": {
-    "target": { "p50Ms": 1500, "p95Ms": 2500, "definition": "end of the user's speech to the first audible QANDEEL audio" },
+    "target": {
+      "p50Ms": 1500,
+      "p95Ms": 2500,
+      "definition": "end of the user's speech to the first audible QANDEEL audio"
+    },
     "stages": [
-      { "symbol": "E", "name": "endpointing decision after silence" },
-      { "symbol": "A", "name": "ASR final after endpoint" },
-      { "symbol": "P", "name": "Orchestrator pre-generation" },
-      { "symbol": "T", "name": "DeepSeek time to first token (streamed)" },
-      { "symbol": "G", "name": "first chunk released by the VA-2 conditions after first token (never the first punctuation mark)" },
-      { "symbol": "R", "name": "Speech Rendering of the first chunk" },
-      { "symbol": "S", "name": "TTS time to first audio byte" },
-      { "symbol": "N", "name": "network, jitter buffer and device playout" }
+      {
+        "symbol": "E",
+        "name": "endpointing decision after silence"
+      },
+      {
+        "symbol": "A",
+        "name": "ASR final after endpoint"
+      },
+      {
+        "symbol": "P",
+        "name": "Orchestrator pre-generation"
+      },
+      {
+        "symbol": "T",
+        "name": "DeepSeek time to first token (streamed)"
+      },
+      {
+        "symbol": "G",
+        "name": "first chunk released by the VA-2 conditions after first token (never the first punctuation mark)"
+      },
+      {
+        "symbol": "R",
+        "name": "Speech Rendering of the first chunk"
+      },
+      {
+        "symbol": "S",
+        "name": "TTS time to first audio byte"
+      },
+      {
+        "symbol": "N",
+        "name": "network, jitter buffer and device playout"
+      }
     ],
     "composition": "first audio = E + A + P + T + G + R + S + N. The sums of per-stage p50s and of per-stage p95s are a planning budget only: they show where the time goes, and neither is a statistical bound on the end-to-end p50 / p95 (stage delays are not independent). The p50 / p95 target is proven only by complete end-of-speech to first-audible-audio measurements on the device: S8B-05 on synthetic audio, S8B-06 on a real Android device. N is device-only; until it is measured the planning verdict is NOT_MEASURED, with the server-side partial sum shown separately.",
-    "levers": ["endpointing tuning", "speculative generation on a stable interim transcript (cancelled if the final differs; costs more)", "a shorter first chunk", "a REALTIME max_tokens"],
-    "notALever": "spoken fillers that simulate thinking (VI-01 §14)"
+    "levers": [
+      "endpointing tuning",
+      "speculative generation on a stable interim transcript (cancelled if the final differs; costs more)",
+      "a shorter first chunk",
+      "a REALTIME max_tokens"
+    ],
+    "notALever": "spoken fillers that simulate thinking (VI-01 §14)",
+    "cp2Note": "CP2 measures T, G (DeepSeek) and S (Gemini) on the provider side and R locally; E and A (ASR) and P (Orchestrator) are not run, and N is device-only, so the planning budget stays NOT_MEASURED and any live-call estimate that fills them is labelled an assumption."
   },
   "renderSpike": {
     "purpose": "CW2-05 §50 codec / container and render placement for the audio-visual Replay video: server-side deterministic render of the Living Analysis projection with the original audio vs on-device render; free, local, synthetic projection data.",
     "proposal": "Opus at the source; H.264 + AAC in MP4 for DOWNLOAD / SHARE_EXTERNALLY / the published media",
-    "criteria": ["determinism: two renders of one Replay version are semantically and temporally equivalent (CW2-05 §34)", "audio never leaves the private store except inside the produced file", "render time per minute", "no transient file outlives 1 hour or the source"]
+    "criteria": [
+      "determinism: two renders of one Replay version are semantically and temporally equivalent (CW2-05 §34)",
+      "audio never leaves the private store except inside the produced file",
+      "render time per minute",
+      "no transient file outlives 1 hour or the source"
+    ],
+    "cp2": {
+      "status": "NOT RUN — MISSING PREREQUISITE",
+      "reason": "no H.264 / AAC encoder (ffmpeg) is installed on the operator machine; installing one is a download that needs the Product Owner's approval"
+    }
   },
   "corpusSha256": {
     "corpus/asr-reading-prompts.json": "861c140fdbef123ba98b3b33623f1242444471b59daa39875c276dd0987927a6",
-    "corpus/tts-pronunciation-set.json": "ec40dc0bc1c56e3f4d5580db5a980253a819983caf4465accd6dd4341b037610"
+    "corpus/tts-pronunciation-set.json": "ec40dc0bc1c56e3f4d5580db5a980253a819983caf4465accd6dd4341b037610",
+    "corpus/tts-expression-set.json": "6489cdb548bddd53d16c109f7860457ebdac5c0305c49d8433385594bf3cc695",
+    "corpus/deepseek-spoken-prompts.json": "505c56029a301fd51ef21a6aa7b7d2ff81c06dbb23392d00ec015e152ed267cc"
   }
 }

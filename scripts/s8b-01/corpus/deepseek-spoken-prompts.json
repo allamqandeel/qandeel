@@ -1,0 +1,28 @@
+{
+  "id": "s8b-01-deepseek-spoken-prompts",
+  "version": 1,
+  "purpose": "The S8B-01 CP2 DeepSeek stream probe (bench-plan.json deepseekStream): 20 short spoken-register user turns written for the test, each sent twice (40 calls), with one synthetic spoken guidance. Stages T (first token) and G (first chunk the VA-2 conditions release, the guidance being the GUIDANCE_ECHO input). Invented content; no user data. The guidance is a test stand-in, not QANDEEL's production guidance (VA-7 is implemented in S8B-05).",
+  "guidance": "You are speaking aloud in a live voice call with a friend. Reply in the user's own dialect, in one to three short spoken sentences that sound natural when heard.\nNever use lists, markdown, links, emojis or symbols, because everything you write will be spoken by a voice.\nBe warm and friendly, ask at most one short question, and never lecture or give long explanations.",
+  "prompts": [
+    { "id": "P01", "dialect": "EGYPTIAN", "text": "النهارده كان يوم طويل أوي في الشغل." },
+    { "id": "P02", "dialect": "EGYPTIAN", "text": "أخيرًا خلصت الامتحانات!" },
+    { "id": "P03", "dialect": "EGYPTIAN", "text": "مش عارف أنام بقالي يومين." },
+    { "id": "P04", "dialect": "EGYPTIAN", "text": "تفتكر أكلم صاحبي الأول ولا أستنى هو يكلمني؟" },
+    { "id": "P05", "dialect": "EGYPTIAN", "text": "عملت أكلة جديدة النهارده وطلعت حلوة." },
+    { "id": "P06", "dialect": "EGYPTIAN", "text": "أنا متوتر من المقابلة بتاعة بكرة." },
+    { "id": "P07", "dialect": "EGYPTIAN", "text": "أختي جابت بيبي امبارح!" },
+    { "id": "P08", "dialect": "EGYPTIAN", "text": "حاسس إني بضيع وقت كتير على الموبايل." },
+    { "id": "P09", "dialect": "EGYPTIAN", "text": "ممكن نتكلم شوية؟ زهقان." },
+    { "id": "P10", "dialect": "EGYPTIAN", "text": "اتخانقت مع أبويا الصبح." },
+    { "id": "P11", "dialect": "EGYPTIAN", "text": "عايز أبدأ أجري الصبح بس مش عارف أبدأ إزاي." },
+    { "id": "P12", "dialect": "EGYPTIAN", "text": "النهارده عيد ميلادي." },
+    { "id": "P13", "dialect": "MSA", "text": "أشعر بالإرهاق هذا الأسبوع." },
+    { "id": "P14", "dialect": "MSA", "text": "حصلت على ترقية في العمل اليوم." },
+    { "id": "P15", "dialect": "MSA", "text": "لا أعرف إن كان علي تغيير تخصصي." },
+    { "id": "P16", "dialect": "MSA", "text": "ما رأيك في أن أبدأ بتعلم لغة جديدة؟" },
+    { "id": "P17", "dialect": "GULF", "text": "والله تعبان اليوم وما سويت شي." },
+    { "id": "P18", "dialect": "GULF", "text": "أبي أسافر بس محتار وين أروح." },
+    { "id": "P19", "dialect": "LEVANTINE", "text": "اليوم كان كتير حلو، طلعنا عالبحر." },
+    { "id": "P20", "dialect": "LEVANTINE", "text": "حاسس حالي ضايع شوي هالفترة." }
+  ]
+}

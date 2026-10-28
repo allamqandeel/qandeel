@@ -1,17 +1,24 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { corpusRates, errorRates, normalizeArabic } from '../scripts/s8b-01/arabic-text-metrics.mjs';
 import { composeBudget, endToEndVerdict, percentile } from '../scripts/s8b-01/latency-model.mjs';
 import { GUIDANCE_ECHO_MIN_LENGTH, INTERNAL_CONTAINERS, guidanceSentences, measureStream, va2ReleasableLength } from '../scripts/s8b-01/stream-first-token.mjs';
-import { checkPlan } from '../scripts/s8b-01/bench-launch.mjs';
+import { checkPlan, sha256Normalized } from '../scripts/s8b-01/bench-launch.mjs';
+import { deepseekActualUsd, deepseekPeak, deepseekWorstUsd, geminiActualUsd, geminiRequestBody, geminiWorstUsd, playbackStalls, renderItem, wavFile, worstAudioSeconds }
+  from '../scripts/s8b-01/cp2-providers.mjs';
 
 // S8B-01 CP1 — the non-production voice benchmark harness (scripts/s8b-01/). This contract proves, at zero cost and with
 // nothing sent off the machine, that the preregistered plan is intact, that the scoring is the preregistered one, that the
 // CP1 lock refuses every live run, and that the whole path runs end to end against simulated providers.
+// CP2 (the Product Owner's CP2 order, 2026-10-28) lifts the lock for ONE recorded run only; the contract proves, still with
+// nothing sent, the guard's live rules (the approval bound to the plan hash, allowed hosts, one request per reservation,
+// bucket budgets and the cap), the cost formulas, the RENDERED arm, the request shape and the WAV / stall helpers.
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dir = join(root, 'scripts', 's8b-01');
@@ -21,7 +28,8 @@ const launch = (args, env = {}) => spawnSync(process.execPath, [join(dir, 'bench
 test('the preregistered plan is intact: corpus hashes, the USD 10 cap and its split, no retry, the D-6 target', () => {
   assert.deepEqual(checkPlan(plan), []);
   assert.equal(plan.guard.costCapUsd, 10);
-  assert.equal(plan.guard.authorized, false, 'CP1 keeps the benchmark locked');
+  // CP2: the lock is lifted by the Product Owner's CP2 order for the ONE run recorded in cp2-approval.json (proven below).
+  assert.equal(plan.guard.authorized, true, 'CP2 lifts the CP1 lock for one approved run');
 });
 
 test('a changed corpus or a widened cap fails the plan check', () => {
@@ -145,13 +153,13 @@ test('R1-1: at the end of a stream, text VA-2 still holds is never counted as re
   assert.equal(echo.withheldReason, null, 'held, not failed: the prefix is below the 48-character echo');
 });
 
-test('the CP1 lock refuses a live run before anything is sent, at the launcher and in the guard', () => {
-  const r = launch(['--live']);
-  assert.equal(r.status, 3);
-  assert.match(r.stderr, /not authorized \(CP1 lock\)\. Nothing was sent\./u);
-  const guarded = spawnSync(process.execPath, ['--require', join(dir, 'spend-guard.cjs'), '-e', ''], { encoding: 'utf8', env: { ...process.env, QANDEEL_S8B_MODE: 'live' } });
+test('the CP1 lock still refuses a live run before anything is sent, in the guard (a locked plan copy)', () => {
+  // CP2 lifted the lock on the real plan; the lock itself is proven on a copy whose plan keeps it (guardMirror, below).
+  const guarded = underGuard(guardMirror({ authorized: false }), '');
   assert.notEqual(guarded.status, 0);
   assert.match(guarded.stderr, /not authorized for a live run \(CP1 lock\); nothing was sent/u);
+  const unapproved = spawnSync(process.execPath, ['--require', join(dir, 'spend-guard.cjs'), '-e', ''], { encoding: 'utf8', env: { ...process.env, QANDEEL_S8B_MODE: 'live', QANDEEL_S8B_RUN_ID: 'not-the-run' } });
+  assert.notEqual(unapproved.status, 0, 'the real guard refuses any run that is not the approved one');
 });
 
 test('under the guard, every non-loopback destination is refused', () => {
@@ -187,4 +195,149 @@ test('the zero-cost rehearsal runs the whole scoring path against simulated prov
   assert.equal(report.budget.kind, 'PLANNING_BUDGET');
   assert.equal(report.budget.verdict, 'NOT_MEASURED', 'the device stage N is never simulated into a pass');
   assert.equal(report.endToEnd.verdict, 'NOT_MEASURED', 'p50 / p95 are proven on the device only');
+});
+
+// ── CP2 (the Product Owner's CP2 order, 2026-10-28) ───────────────────────────────────────────────────────────────────
+
+/** A throwaway copy of the guard with its own plan and approval, so the live-mode rules are proven without a provider. */
+function guardMirror({ authorized = true, approval = 'APPROVED', planEdit = (p) => p, hosts = { TEST: 'provider.test' } } = {}) {
+  const m = mkdtempSync(join(tmpdir(), 's8b01-guard-'));
+  const p = planEdit({ ...structuredClone(plan), guard: { ...structuredClone(plan.guard), authorized, allowedHosts: hosts } });
+  const text = JSON.stringify(p, null, 2);
+  writeFileSync(join(m, 'bench-plan.json'), text);
+  copyFileSync(join(dir, 'spend-guard.cjs'), join(m, 'spend-guard.cjs'));
+  const sha = createHash('sha256').update(text).digest('hex');
+  if (approval) writeFileSync(join(m, 'cp2-approval.json'), JSON.stringify({ status: approval, runId: 'r-test', capUsd: 10, planSha256: sha }));
+  return m;
+}
+const underGuard = (m, script, env = {}) => spawnSync(process.execPath, ['--require', join(m, 'spend-guard.cjs'), '--input-type=commonjs', '-e', `(async () => { ${script} })()`],
+  { encoding: 'utf8', env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, QANDEEL_S8B_MODE: 'live', QANDEEL_S8B_RUN_ID: 'r-test', ...env } });
+
+test('CP2: the recorded approval names this exact plan, the USD 10 cap and one run; the plan carries only the approved hosts and keys', () => {
+  const approval = JSON.parse(readFileSync(join(dir, 'cp2-approval.json'), 'utf8'));
+  assert.equal(approval.planSha256, sha256Normalized(join(dir, 'bench-plan.json')), 'the approval is bound to this plan');
+  assert.equal(approval.capUsd, 10);
+  assert.ok(['APPROVED', 'CONSUMED'].includes(approval.status));
+  assert.deepEqual(Object.values(plan.guard.allowedHosts).sort(), ['api.deepseek.com', 'generativelanguage.googleapis.com']);
+  assert.deepEqual(plan.guard.liveKeys.sort(), ['DEEPSEEK_API_KEY', 'GEMINI_API_KEY']);
+  assert.deepEqual(plan.tts.cp2.models.map((m) => m.id), ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']);
+  assert.equal(plan.tts.cp2.api.store, false, 'stateless interactions: nothing stored for later retrieval');
+  assert.match(plan.asr.cp2.status, /^NOT RUN — MISSING PREREQUISITE/u, 'ASR is not run, and synthesized speech is never its evidence');
+});
+
+test('CP2: the guard refuses a live run whose plan is locked, unapproved, consumed, changed, or not the approved run', () => {
+  for (const [m, env, why] of [
+    [guardMirror({ authorized: false }), {}, /CP1 lock/u],
+    [guardMirror({ approval: null }), {}, /no unconsumed Product Owner approval/u],
+    [guardMirror({ approval: 'CONSUMED' }), {}, /no unconsumed Product Owner approval/u],
+    [guardMirror(), { QANDEEL_S8B_RUN_ID: 'another-run' }, /not the approved run/u],
+  ]) {
+    const r = underGuard(m, '', env);
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, why);
+  }
+  const changed = guardMirror();
+  writeFileSync(join(changed, 'bench-plan.json'), readFileSync(join(changed, 'bench-plan.json'), 'utf8').replace('"costCapUsd": 10', '"costCapUsd": 9'));
+  assert.match(underGuard(changed, '').stderr, /differs from the approved plan hash/u);
+});
+
+test('CP2: live mode admits only an allowed host, only over https, only with a reservation, one request per reservation', () => {
+  const r = underGuard(guardMirror(), `
+    const g = globalThis.__QANDEEL_S8B_01_GUARD__; const out = [];
+    const tryFetch = async (u) => { try { await fetch(u); return 'SENT'; } catch (e) { return e.code ?? e.cause?.code ?? e.message; } };
+    out.push(await tryFetch('https://example.com/'));
+    out.push(await tryFetch('https://provider.test/x'));
+    g.reserve('tts', 0.01);
+    out.push(await tryFetch('http://provider.test/x'));
+    out.push(await tryFetch('https://provider.test/x'));
+    out.push(await tryFetch('https://provider.test/x'));
+    console.log(JSON.stringify(out));`);
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout.trim());
+  assert.equal(out[0], 'S8B_01_NETWORK_FORBIDDEN', 'a host outside the plan');
+  assert.equal(out[1], 'S8B_01_NETWORK_FORBIDDEN', 'an allowed host without a reservation');
+  assert.equal(out[2], 'S8B_01_NETWORK_FORBIDDEN', 'plain http');
+  assert.notEqual(out[3], 'S8B_01_NETWORK_FORBIDDEN', 'admitted (the reserved .test host never resolves, so nothing is sent anywhere)');
+  assert.equal(out[4], 'S8B_01_NETWORK_FORBIDDEN', 'the reservation admitted one request: no retry without a new one');
+});
+
+test('CP2: a reservation that would pass a bucket budget or the cap is refused, and the spend state is written', () => {
+  const m = guardMirror();
+  const state = join(m, 'spend-state.json');
+  const r = underGuard(m, `
+    const g = globalThis.__QANDEEL_S8B_01_GUARD__; const out = [];
+    const id = g.reserve('tts', 4.0); g.settle(id, 4.0);
+    try { g.reserve('tts', 0.6); out.push('RESERVED'); } catch (e) { out.push(e.code); }
+    const id2 = g.reserve('tts', 0.4); const o = g.settle(id2, 0.45); out.push(o.overrun);
+    try { g.reserve('nope', 0); } catch (e) { out.push(e.message); }
+    console.log(JSON.stringify({ out, spend: g.spend() }));`, { QANDEEL_S8B_STATE_FILE: state });
+  assert.equal(r.status, 0, r.stderr);
+  const { out, spend } = JSON.parse(r.stdout.trim());
+  assert.equal(out[0], 'S8B_01_BUDGET_REFUSED', 'tts budget is USD 4.5');
+  assert.equal(out[1], true, 'a measured cost above its worst case is charged in full and flagged');
+  assert.match(out[2], /unknown bucket/u);
+  assert.ok(Math.abs(spend.settledUsd - 4.45) < 1e-9);
+  assert.equal(JSON.parse(readFileSync(state, 'utf8')).settledUsd, spend.settledUsd);
+});
+
+test('CP2: the launcher refuses --live without the explicit run confirmation, before anything is sent', () => {
+  const r = launch(['--live']);
+  assert.equal(r.status, 3);
+  assert.match(r.stderr, /Nothing was sent\./u);
+});
+
+test('CP2: Gemini and DeepSeek costs: worst cases bound the call, usage settles it, off-peak DeepSeek is half', () => {
+  const flash = plan.tts.cp2.models[0];
+  const lite = plan.tts.cp2.models[1];
+  const body = geminiRequestBody(flash.id, 'Achird', 'تمام، فاهمك.', null);
+  assert.ok(geminiWorstUsd(flash, body, 'تمام، فاهمك.') > geminiWorstUsd(lite, body, 'تمام، فاهمك.'));
+  assert.equal(worstAudioSeconds('1234'), 11);
+  const fromUsage = geminiActualUsd(flash, { total_input_tokens: 20, total_output_tokens: 250 }, 10, 300);
+  assert.equal(fromUsage.source, 'usage');
+  assert.ok(Math.abs(fromUsage.usd - (20 * 0.5 + 250 * 9) / 1e6) < 1e-15);
+  const fromAudio = geminiActualUsd(lite, null, 10, 300);
+  assert.equal(fromAudio.source, 'audio-duration');
+  assert.ok(Math.abs(fromAudio.usd - (300 * 0.5 + 250 * 6) / 1e6) < 1e-15, '10 s of audio = 250 tokens; every request byte as a token');
+  const peak = plan.deepseekStream.cp2.usdPerMillion.peak;
+  const usage = { prompt_cache_hit_tokens: 100, prompt_cache_miss_tokens: 200, completion_tokens: 50 };
+  assert.ok(Math.abs(deepseekActualUsd(peak, usage, true) - 2 * deepseekActualUsd(peak, usage, false)) < 1e-15);
+  assert.equal(deepseekPeak(new Date('2026-10-28T07:00:00Z')), true, 'Wednesday 07:00 UTC');
+  assert.equal(deepseekPeak(new Date('2026-10-28T05:00:00Z')), false);
+  assert.equal(deepseekPeak(new Date('2026-10-31T07:00:00Z')), false, 'Saturday');
+  assert.ok(deepseekWorstUsd(peak, '{}', 160) >= (160 * peak.output) / 1e6);
+});
+
+test('CP2: the Gemini request carries the text verbatim, a style only in speech_metadata, stream on and store off', () => {
+  const b = JSON.parse(geminiRequestBody('gemini-3.8-flash-tts', 'Sulafat', 'بجد؟ ده خبر حلو!', 'happy'));
+  assert.equal(b.input[0].type, 'user_input');
+  assert.deepEqual(b.input[0].content[0], { type: 'text', text: 'بجد؟ ده خبر حلو!', annotations: [{ type: 'speech_metadata', style: 'happy' }] });
+  assert.deepEqual(b.generation_config, { speech_config: [{ voice: 'Sulafat' }] });
+  assert.equal(b.stream, true);
+  assert.equal(b.store, false);
+  assert.equal(JSON.parse(geminiRequestBody('m', 'v', 'x', null)).input[0].content[0].annotations, undefined, 'no style, no annotation');
+});
+
+test('CP2: the RENDERED arm changes the target only, from the corpus expected reading', () => {
+  const set = JSON.parse(readFileSync(join(dir, 'corpus', 'tts-pronunciation-set.json'), 'utf8'));
+  const by = Object.fromEntries([...set.homographs, ...set.names, ...set.numbers, ...set.replies].map((i) => [i.id, i]));
+  assert.equal(renderItem(by.H01), 'رفعوا العَلَم فوق المدرسة صباح اليوم.');
+  assert.equal(renderItem(by.N01), 'اتصلت بك هَدِير مساء أمس.');
+  assert.equal(renderItem(by.D01), 'الموعد في الساعة السابعة والنصف مساءً.');
+  assert.equal(renderItem(by.D02), 'دفعت ألفين وخمسمية جنيه.');
+  assert.equal(renderItem(by.D03), 'ولد في الخامس عشر من مارس عام ألف وتسعمئة وتسعين.');
+  assert.equal(renderItem(by.D04), 'ارتفع السعر بنسبة خمسة وعشرين في المئة.');
+  assert.equal(renderItem(by.D05), 'فاضل تلات أيام على الامتحان.');
+  assert.equal(renderItem(by.D07), 'المسافة ثلاثة كيلومترات ونصف.');
+  assert.equal(renderItem(by.R01), by.R01.text, 'no target, no change');
+});
+
+test('CP2: WAV files are valid mono 16-bit PCM, and playback stalls are counted against real time', () => {
+  const w = wavFile(Buffer.alloc(48000), 24000);
+  assert.equal(w.toString('ascii', 0, 4), 'RIFF');
+  assert.equal(w.readUInt32LE(24), 24000);
+  assert.equal(w.readUInt16LE(34), 16);
+  assert.equal(w.readUInt32LE(40), 48000);
+  // three 100 ms chunks arriving at 0, 100 and 350 ms: with no buffer, the third is 150 ms late.
+  assert.deepEqual(playbackStalls([[0, 100], [100, 100], [350, 100]], 0), { stallMs: 150, stalls: 1 });
+  assert.deepEqual(playbackStalls([[0, 100], [100, 100], [350, 100]], 200), { stallMs: 0, stalls: 0 });
 });
