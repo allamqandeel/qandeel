@@ -212,8 +212,11 @@ export function proofVerdict(rows, plan) {
   };
 }
 
-/** Every structural rule of the plan (empty = valid). */
-export function checkProofPlan(plan, here = HERE, corpusDir = join(REPO, 'artifacts', 'evals', 's8b-01', 'corpus')) {
+/**
+ * Every structural rule of the plan (empty = valid). The pinned recordings and QANDEEL's voice file are compared byte for
+ * byte wherever the private corpus is present; with `requireInputs` (every --live launch) their absence is a refusal too.
+ */
+export function checkProofPlan(plan, here = HERE, corpusDir = join(REPO, 'artifacts', 'evals', 's8b-01', 'corpus'), { requireInputs = false, repoDir = REPO } = {}) {
   const p = [];
   const g = plan.guard ?? {};
   if (plan.provider !== 'SPEECHMATICS') p.push('Speechmatics only');
@@ -234,12 +237,12 @@ export function checkProofPlan(plan, here = HERE, corpusDir = join(REPO, 'artifa
   if (sets.overlap?.lines?.includes(20) || sets.latency?.lines?.includes(20)) p.push('sample 20 is not repeated (Product Owner)');
   if (plan.sessions !== 12) p.push('sessions = 12');
   if (plan.inputs?.scriptSha256 !== fileSha256(join(here, 'corpus', 'asr-cp2-recording-script.json'))) p.push('the recording script hash');
-  if (existsSync(join(corpusDir, 'PO', 'wav'))) {
+  if (requireInputs || existsSync(join(corpusDir, 'PO', 'wav'))) {
     for (const [k, h] of Object.entries(plan.inputs?.recordings ?? {})) {
       const f = join(corpusDir, 'PO', 'wav', `${k}.wav`);
       if (!existsSync(f) || bytesSha256(f) !== h) p.push(`recording ${k} differs from the pinned WAV`);
     }
-    const q = join(REPO, plan.inputs?.qandeelVoice?.file ?? '');
+    const q = join(repoDir, plan.inputs?.qandeelVoice?.file ?? '');
     if (!existsSync(q) || bytesSha256(q) !== plan.inputs.qandeelVoice.sha256) p.push("QANDEEL's voice file differs from the pinned one");
   }
   const used = [...(sets.overlap?.lines ?? []), ...(sets.latency?.lines ?? [])].map(nn);
@@ -279,9 +282,9 @@ function launchLive(plan, args) {
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const plan = JSON.parse(readFileSync(PLAN_FILE, 'utf8'));
-  const problems = checkProofPlan(plan);
-  if (problems.length) { console.error(`S8B-01 asr-sm-proof plan check FAILED:\n- ${problems.join('\n- ')}`); process.exit(2); }
   const mode = process.argv[2];
+  const problems = checkProofPlan(plan, HERE, undefined, { requireInputs: mode === '--live' });
+  if (problems.length) { console.error(`S8B-01 asr-sm-proof plan check FAILED:\n- ${problems.join('\n- ')}`); process.exit(2); }
   if (mode === '--plan-check') {
     const corpus = join(REPO, 'artifacts', 'evals', 's8b-01', 'corpus');
     const sessions = proofSessions(plan, corpus);

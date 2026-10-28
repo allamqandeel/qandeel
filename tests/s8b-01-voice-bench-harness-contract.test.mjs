@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { corpusRates, errorRates, normalizeArabic } from '../scripts/s8b-01/arabic-text-metrics.mjs';
@@ -863,9 +863,33 @@ test('asr-sm-proof plan: 12 sessions (6 overlap, 6 latency), Enhanced ar_en only
     [(p) => { p.sets.latency.lines = [...p.sets.latency.lines.slice(1), 20]; }, /sample 20 is not repeated/u],
     [(p) => { p.sets.latency.lines.push(3); }, /12 sessions/u],
     [(p) => { p.scope.deviceAecProofDeferred = false; }, /device echo-canceller proof deferred/u],
-    [(p) => { p.inputs.recordings['02'] = 'x'.repeat(64); }, /recording 02 differs|every used/u],
+    [(p) => { delete p.inputs.recordings['02']; }, /every used recording is pinned/u],
   ];
   for (const [change, why] of changes) { const p = structuredClone(proofPlan); change(p); assert.match(proof.checkProofPlan(p, dir).join(' | '), why); }
+});
+
+test('asr-sm-proof inputs: every pinned recording and QANDEEL\'s voice file compared byte for byte; a --live launch refuses them missing or changed (synthetic fixture, no private audio)', () => {
+  const t = mkdtempSync(join(tmpdir(), 's8b01-proof-inputs-'));
+  const corpus = join(t, 'corpus');
+  mkdirSync(join(corpus, 'PO', 'wav'), { recursive: true });
+  const tone = (k) => { const pcm = new Int16Array(1600); for (let i = 0; i < pcm.length; i += 1) pcm[i] = Math.round(3000 * Math.sin(i / (3 + k))); return wavFile(Buffer.from(pcm.buffer), 16000); };
+  const p = structuredClone(proofPlan);
+  for (const [i, k] of Object.keys(p.inputs.recordings).entries()) { writeFileSync(join(corpus, 'PO', 'wav', `${k}.wav`), tone(i)); p.inputs.recordings[k] = createHash('sha256').update(readFileSync(join(corpus, 'PO', 'wav', `${k}.wav`))).digest('hex'); }
+  mkdirSync(dirname(join(t, p.inputs.qandeelVoice.file)), { recursive: true });
+  writeFileSync(join(t, p.inputs.qandeelVoice.file), tone(99));
+  p.inputs.qandeelVoice.sha256 = createHash('sha256').update(readFileSync(join(t, p.inputs.qandeelVoice.file))).digest('hex');
+  const check = (plan, c = corpus) => proof.checkProofPlan(plan, dir, c, { requireInputs: true, repoDir: t }).join(' | ');
+  assert.equal(check(p), '', 'the fixture matches its pins');
+  assert.match(check({ ...p, inputs: { ...p.inputs, recordings: { ...p.inputs.recordings, '02': 'x'.repeat(64) } } }), /recording 02 differs/u);
+  writeFileSync(join(corpus, 'PO', 'wav', '05.wav'), tone(50));
+  assert.match(check(p), /recording 05 differs/u, 'a re-recorded file is refused');
+  rmSync(join(corpus, 'PO', 'wav', '05.wav'));
+  assert.match(check(p), /recording 05 differs/u, 'a missing file is refused');
+  writeFileSync(join(t, p.inputs.qandeelVoice.file), tone(98));
+  assert.match(check(p), /QANDEEL's voice file differs/u);
+  assert.match(check(p, join(t, 'absent')), /recording 01 differs/u, '--live refuses when the private corpus is absent');
+  assert.doesNotMatch(proof.checkProofPlan(p, dir, join(t, 'absent'), { repoDir: t }).join(' | '), /differs/u, '--plan-check without the corpus checks the structure only');
+  rmSync(t, { recursive: true, force: true });
 });
 
 test('asr-sm-proof VAD: causal, a pause shorter than the silence never ends the turn, it re-arms on new speech; the overlap mix sits at its level and stops', () => {
