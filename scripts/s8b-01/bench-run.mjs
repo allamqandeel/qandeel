@@ -2,7 +2,7 @@
 //
 // CP1 ships it with its SIMULATED providers only (simulated-providers.mjs): deterministic stand-ins that exercise the
 // whole scoring path — ASR WER / CER per dialect, TTS arm bookkeeping, the DeepSeek-shaped SSE stream measured by the
-// real measureStream(), and the latency budget composition — at zero cost, sending nothing off the machine. CP2 adds the
+// real measureStream(), and the latency planning-budget composition — at zero cost, sending nothing off the machine. CP2 adds the
 // approved provider adapters behind the same three functions (transcribe, synthesize, streamCompletion) and changes
 // nothing else. The report holds counts, rates and instants only: no audio, no transcript text.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -65,7 +65,7 @@ try {
   for (let i = 0; i < plan.deepseekStream.calls; i += 1) {
     const startedAt = performance.now();
     const response = await providers.streamCompletion(i);
-    stream.push(await measureStream(response, startedAt));
+    stream.push(await measureStream(response, startedAt, { serverGuidance: providers.serverGuidance }));
   }
 
   const stageSamples = {
@@ -73,18 +73,25 @@ try {
     A: Object.values(asr).flatMap((d) => Object.values(d).map((r) => r.finalLatencyP50Ms)),
     P: stream.map(() => providers.simulatedStage('P')),
     T: stream.map((s) => s.firstTokenMs),
-    G: stream.map((s) => s.firstChunkMs - s.firstTokenMs),
+    // G is the first chunk VA-2 releases, never the first punctuation mark (R1-1); a withheld stream has no G.
+    G: stream.filter((s) => s.firstReleasableChunkMs !== null).map((s) => s.firstReleasableChunkMs - s.firstTokenMs),
     R: stream.map(() => providers.simulatedStage('R')),
     S: Object.values(tts).map((a) => a.RENDERED.ttfbP50Ms),
-    // N is device-measured (S8B-06): deliberately absent here, so the full verdict stays NOT_MEASURED.
+    // N is device-measured (S8B-06): deliberately absent here, so the planning verdict stays NOT_MEASURED.
   };
   const budget = composeBudget(stageSamples, plan);
 
   const report = {
     kind: 'S8B-01 benchmark report', mode: guard.mode, simulated: true, paidCalls: 0, networkBlocked: guard.blocked.length,
     asr, tts,
-    deepseekStream: { calls: stream.length, firstTokenP50Ms: percentile(stream.map((s) => s.firstTokenMs), 50), firstChunkP50Ms: percentile(stream.map((s) => s.firstChunkMs), 50) },
+    deepseekStream: { calls: stream.length, firstTokenP50Ms: percentile(stream.map((s) => s.firstTokenMs), 50),
+      firstReleasableChunkP50Ms: percentile(stream.filter((s) => s.firstReleasableChunkMs !== null).map((s) => s.firstReleasableChunkMs), 50),
+      firstBoundaryApproxP50Ms: percentile(stream.filter((s) => s.firstBoundaryApproxMs !== null).map((s) => s.firstBoundaryApproxMs), 50),
+      firstBoundaryApproxIsDiagnosticOnly: true, withheld: stream.filter((s) => s.withheldReason !== null).length,
+      releasedAtEnd: stream.filter((s) => s.releasedAtEnd).length },
     budget,
+    // The planning budget proves nothing about p50 / p95 (R1-2): only end-to-end samples on the device do (S8B-05 / S8B-06).
+    endToEnd: { verdict: 'NOT_MEASURED', reason: 'end-of-speech to first-audible-audio is measured on the device only' },
   };
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify(report, null, 2));

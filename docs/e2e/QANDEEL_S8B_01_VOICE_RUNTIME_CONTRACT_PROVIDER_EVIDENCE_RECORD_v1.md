@@ -126,8 +126,8 @@ grammar and adds no token, colour, glyph or Surface role.
 | `corpus/asr-reading-prompts.json` | Fifteen read and six spontaneous prompts each for MSA, Egyptian, Gulf and Levantine; three recording conditions. Invented content, no user data. |
 | `corpus/tts-pronunciation-set.json` | 69 items:<ul><li>30 homographs in context, with the expected reading, including the Egyptian جِدّ / جَدّ reversal against MSA</li><li>8 names</li><li>8 number, date and time forms</li><li>13 dialect sentences</li><li>4 code-switch sentences</li><li>6 QANDEEL-style replies</li></ul> |
 | `arabic-text-metrics.mjs` | The preregistered scoring normalization (diacritics, tatweel, alef, alef maqsura, ta marbuta, digits, punctuation) and corpus-level WER / CER. It is used for scoring only, never for user-visible text. |
-| `latency-model.mjs` | E + A + P + T + G + R + S + N.<ul><li>A stage that was not measured is `MISSING`, and the verdict is `NOT_MEASURED`, never a pass.</li><li>The measured stages are also summed and shown on their own.</li></ul> |
-| `stream-first-token.mjs` | Measures time to first token and the first releasable chunk over a Chat Completions SSE stream. It keeps no text. |
+| `latency-model.mjs` | E + A + P + T + G + R + S + N.<ul><li>The per-stage sums are a **planning budget only** (`WITHIN_PLANNING_BUDGET` / `OVER_PLANNING_BUDGET`), never a bound on the end-to-end p50 / p95 (R1-2).</li><li>The target is decided only by `endToEndVerdict` over complete on-device measurements.</li><li>A stage that was not measured is `MISSING`, and the verdict is `NOT_MEASURED`, never a pass.</li><li>The measured stages are also summed and shown on their own.</li></ul> |
+| `stream-first-token.mjs` | Measures time to first token, and G at the first chunk that the VA-2 conditions release, over a Chat Completions SSE stream (R1-1).<ul><li>The conditions are a boundary, `UNREADABLE`, `INTERNAL_CONTAINER`, an unclosed `<` and the `GUIDANCE_ECHO` suffix holdback, mirroring the S8A-01 guard. The root contract pins the mirror.</li><li>The first punctuation mark is kept apart, as a diagnostic only.</li><li>A stream that VA-2 withholds gives no G.</li><li>It keeps no text.</li></ul> |
 | `spend-guard.cjs` | A preload on the S8A-02 guard's pattern.<ul><li>In live mode it refuses to load while locked.</li><li>Otherwise only loopback is allowed: every other socket, TLS connection, DNS lookup and `fetch` is refused before any byte leaves.</li><li>Provider variables are scrubbed by name.</li></ul> |
 | `bench-launch.mjs`, `bench-run.mjs`, `simulated-providers.mjs` | `--plan-check`, `--simulate` and `--live`.<ul><li>The rehearsal runs the whole scoring path against deterministic simulated providers and a local SSE stream.</li><li>Its report holds rates and instants only.</li><li>`--live` is refused.</li></ul> |
 
@@ -137,7 +137,7 @@ grammar and adds no token, colour, glyph or Surface role.
   - 7 ASR candidates × 4 dialects scored;
   - 4 TTS candidates × 2 arms × 69 items;
   - 40 simulated streams measured by the real measurer;
-  - budget `NOT_MEASURED`, because N is device-only;
+  - planning budget `NOT_MEASURED`, because N is device-only; end-to-end `NOT_MEASURED` (device only);
   - 0 network refusals needed, and 0 paid calls.
 - `--live` was refused with exit 3: "Nothing was sent."
 - **The simulated numbers are synthetic by construction and are not provider evidence.**
@@ -175,10 +175,10 @@ at that change.
 
 | Check | Result |
 | --- | --- |
-| `npm run test:s8b-01-voice-bench-harness-contract` (registered in `package.json` and as an API CI static-contract step, after S8A-01's) | 8 / 8 pass |
+| `npm run test:s8b-01-voice-bench-harness-contract` (registered in `package.json` and as an API CI static-contract step, after S8A-01's) | 12 / 12 pass (8 at the first push; 4 focused R1 tests added) |
 | `node scripts/s8b-01/bench-launch.mjs --plan-check` / `--simulate` / `--live` | pass / report written / refused (exit 3) |
 | `npm run test:task-closure-governance-contract` | 24 / 24 pass |
-| Every root contract, `node --test tests/*.test.mjs` (Node 24, local), including the forward-safety mirror | 1649 / 1649 pass |
+| Every root contract, `node --test tests/*.test.mjs` (Node 24, local), including the forward-safety mirror | 1653 / 1653 pass (1649 at the first push) |
 | The backlog §4 index, recounted mechanically | 89 items; 44 / 4 / 8 / 33 by status; 52 / 35 / 2 by severity — equal to §7 and to Current State §5 |
 
 Four root contracts pin the one current-task line of the Project Map:
@@ -189,6 +189,17 @@ Four root contracts pin the one current-task line of the Project Map:
 
 They are re-anchored, validation only, as each earlier task did: S8B-01 is current, and S8A-05 stands beneath it as merged
 through PR #363. No other assertion was changed.
+
+## 6.1 CP1 review corrections R1 (2026-10-28)
+
+The Product Owner's independent review of PR #364 accepted the scope and the contracts and asked for three bounded
+corrections. No product decision and no frozen contract changes.
+
+| # | Correction | Where | Focused proof |
+| --- | --- | --- | --- |
+| R1-1 | The first punctuation mark is no longer stage G. G is the first chunk the VA-2 conditions release, measured with a predicate that mirrors the S8A-01 guard. The approximate boundary is a diagnostic only, and a withheld stream gives no G. S8B-05 re-measures G through the implemented guard. | `stream-first-token.mjs`, `bench-run.mjs`, `bench-plan.json` (`deepseekStream`, stage G), contract §11 | the mirror pinned against `model-output-release-guard.ts`; a boundary inside an unclosed `<`, a guidance-echo prefix and an internal container are not releasable; a timed stream releases after its first mark; a withheld stream reports no G |
+| R1-2 | The per-stage p50 / p95 sums are a planning budget, not a statistical bound. p50 / p95 are decided only by complete end-to-end measurements on the device. | `latency-model.mjs`, `bench-plan.json` (`latency.composition`), contract §11 | a counterexample where the sum of stage p95s (0) is below the end-to-end p95 (100); the planning verdict never claims the target; `endToEndVerdict` decides on device samples |
+| R1-3 | Interruption mid-chunk: a cut chunk's text is never committed as spoken, and no word-level alignment is claimed. The played audio up to the confirmed playout position is kept and is the Replay reference. The anchor ends at the cut. | contract §4.3, §6.1, §6.3 | contract text (S8B-05 implements it) |
 
 ## 7. What CP2 needs, and what is not decided here
 

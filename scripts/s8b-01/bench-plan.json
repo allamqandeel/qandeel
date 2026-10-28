@@ -80,7 +80,8 @@
     "calls": 40,
     "paths": ["FAST without thinking"],
     "prompts": "20 short spoken-register exchanges written for the test (no user data), each sent twice",
-    "metrics": ["headers p50 / p95", "first token p50 / p95 (T)", "first releasable chunk p50 / p95 (G)", "end of stream", "output characters", "cost"]
+    "metrics": ["headers p50 / p95", "first token p50 / p95 (T)", "first chunk released by the VA-2 predicate p50 / p95 (G), with the REALTIME spoken guidance as the GUIDANCE_ECHO input; streams VA-2 withholds are counted and give no G", "first punctuation mark after the minimum length (diagnostic only, never G)", "end of stream", "output characters", "cost"],
+    "gNote": "The VA-2 predicate mirrors the S8A-01 guard checks (pinned by the root contract); the implemented incremental guard arrives in S8B-05, which re-measures G through it."
   },
   "orchestratorOverhead": {
     "purpose": "Stage P on the real Personal turn path with the fake Model Router, local PostgreSQL, synthetic accounts; free.",
@@ -93,12 +94,12 @@
       { "symbol": "A", "name": "ASR final after endpoint" },
       { "symbol": "P", "name": "Orchestrator pre-generation" },
       { "symbol": "T", "name": "DeepSeek time to first token (streamed)" },
-      { "symbol": "G", "name": "first releasable chunk after first token" },
+      { "symbol": "G", "name": "first chunk released by the VA-2 conditions after first token (never the first punctuation mark)" },
       { "symbol": "R", "name": "Speech Rendering of the first chunk" },
       { "symbol": "S", "name": "TTS time to first audio byte" },
       { "symbol": "N", "name": "network, jitter buffer and device playout" }
     ],
-    "composition": "first audio = E + A + P + T + G + R + S + N. The p95 bound sums per-stage p95s (conservative). N is measured on a real Android device in S8B-06; until then CP3 reports N as MISSING and the verdict as NOT_MEASURED for the full sum, with the server-side partial sum shown separately.",
+    "composition": "first audio = E + A + P + T + G + R + S + N. The sums of per-stage p50s and of per-stage p95s are a planning budget only: they show where the time goes, and neither is a statistical bound on the end-to-end p50 / p95 (stage delays are not independent). The p50 / p95 target is proven only by complete end-of-speech to first-audible-audio measurements on the device: S8B-05 on synthetic audio, S8B-06 on a real Android device. N is device-only; until it is measured the planning verdict is NOT_MEASURED, with the server-side partial sum shown separately.",
     "levers": ["endpointing tuning", "speculative generation on a stable interim transcript (cancelled if the final differs; costs more)", "a shorter first chunk", "a REALTIME max_tokens"],
     "notALever": "spoken fillers that simulate thinking (VI-01 §14)"
   },

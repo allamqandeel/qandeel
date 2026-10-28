@@ -148,6 +148,16 @@ device playout ─► playout reports ─► Recording writer: QANDEEL track (co
 - Each released chunk passes Speech Rendering (§5) and then TTS.
 - The committed QANDEEL unit is the released text **truncated to the last chunk whose audio was confirmed played**,
   marked `INTERRUPTED` when cut. What is stored is what was said.
+- **A chunk cut mid-playout** (CP1 review R1-3):
+  - Its text is **not** committed as spoken. The committed unit keeps only the chunks whose audio was confirmed played
+    to their end.
+  - Nothing infers which words of a cut chunk were heard: not from the playout position, the elapsed time or the
+    character count. Stage 8B claims no word-level alignment of the synthesized audio. Committing part of a chunk's text
+    as spoken would need a word-level playout proof and a controlled change.
+  - The audio that was actually played, up to the device-confirmed playout position, stays in the `QANDEEL` track
+    (§6.1). It is the Replay reference for that moment, not the text.
+  - A cut before the first chunk finished playing commits no QANDEEL text. The `INTERRUPTED` unit then carries no
+    spoken text, and its audio range is the only record of what was heard.
 
 **4.4 Interruption (barge-in, J5).**
 - Detection uses on-device VAD after AEC, with a minimum speech duration. The value is measured in S8B-05 and set by
@@ -211,6 +221,9 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
   synchronized by construction.
 - "Heard" is defined operationally as *played out by the device's audio output, confirmed by the client's playout
   report*. A downlink range without confirmation is never stored or presented as heard.
+- **An interruption mid-chunk** (R1-3): the `QANDEEL` range ends at the device-confirmed playout position, and the
+  partial audio up to that point is kept as played. The unplayed remainder is never stored. That played audio, not the
+  committed text, is what Replay presents for that moment (§4.3, §9).
 
 **6.2 Gaps.**
 - A reconnection gap or a muted span is recorded as what it was: an explicit gap marker, or real silence while muted.
@@ -218,6 +231,9 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
 
 **6.3 Anchors.**
 - Every committed spoken unit carries `[start_ms, end_ms)` on the call clock, plus its commit instant.
+- For an `INTERRUPTED` QANDEEL unit, `end_ms` is the confirmed playout position of the cut. The anchor therefore covers
+  the played audio, including the cut chunk's played part, while the unit's text covers only the fully played chunks
+  (§4.3). A transcript derived from that audio stays `DERIVED_TRANSCRIPT` (CW2-05 §40) and is never shown as verbatim.
 - These are the CW2-05 §11 stable source anchors for audio.
 - The analytical projection at represented time *t* is the one that was live at *t*, because units commit during the
   call and I-06B projects them with the no-hindsight rule (§8–§9).
@@ -343,6 +359,12 @@ The stage budget is preregistered in `scripts/s8b-01/bench-plan.json`:
 | Network, jitter buffer and device playout | N | S8B-06 (device) |
 
 - First audio = E + A + P + T + G + R + S + N.
+- **The per-stage sums are a planning budget only** (CP1 review R1-2). They show where the time goes. Neither the sum of
+  stage p50s nor the sum of stage p95s is a statistical bound on the end-to-end p50 / p95, because stage delays are not
+  independent. The target is proven only by complete end-of-speech → first-audible-audio measurements on the device.
+- **G is the first chunk the VA-2 conditions release** (R1-1), never the first punctuation mark. A stream that VA-2
+  withholds gives no G and is counted. CP2 measures G with a predicate that mirrors the S8A-01 guard; S8B-05 re-measures
+  it through the implemented guard.
 - If CP2 shows the sum cannot meet the target, the levers are measured and offered, never applied silently:
   - endpointing tuning;
   - speculative generation on a stable interim transcript, cancelled if the final differs, which costs more;
@@ -353,7 +375,7 @@ The stage budget is preregistered in `scripts/s8b-01/bench-plan.json`:
 - Acceptance:
   - S8B-05 must meet the target on synthetic audio;
   - S8B-06 measures it on a real Android device;
-  - S8B-08 reports p50 / p95 per stage.
+  - S8B-08 reports p50 / p95 per stage, as the planning breakdown, beside the end-to-end p50 / p95 that decides.
 
 ## 12. Accounting (VA-5)
 

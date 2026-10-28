@@ -43,7 +43,14 @@ export async function createSimulatedProviders() {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
 
+  // A synthetic server guidance, shaped like the S8A-01 guard's input (prose sentences plus a data container), so the VA-2
+  // GUIDANCE_ECHO holdback is exercised. CP2 measures with the REALTIME spoken guidance the Orchestrator composes.
+  const serverGuidance = 'Reply in short spoken sentences that the listener can follow without seeing any text at all.\n'
+    + 'Never read lists, markdown, links or symbols aloud; say what matters in plain natural speech.\n'
+    + '<user_memory_context>synthetic data that a reply may say back</user_memory_context>';
+
   return {
+    serverGuidance,
     async transcribe(provider, dialect, reference) {
       const h = hash(`${provider}|${dialect}|${reference}`);
       return { text: simulatedTranscript(provider, reference), finalLatencyMs: 120 + (h % 200) };
