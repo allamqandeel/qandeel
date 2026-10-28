@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-27, CP4):** S8A-05 — Public World: Write Your Topic; S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27): CP3 MERGED through PR #361 as `4ff74a80`; CP4 (Public Discussion Threads & the @qandeel Context) delivered on its Draft pull request, not merged (Controlled Amendment A-5; migration 0182 not hosted; CP4 Product Copy Gate CLOSED / APPROVED, 2 rows; Tier Q prepared, NOT RUN — no budget approval; production publishing closed); editing a published topic deferred to `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`, owner `PUB-REV-01`, before Stage 9 opens production publishing), NOT implemented. Sequencing recorded by the Product Owner's CP4 decision: `PUB-REV-01` (published topic revisions and version-continuous discussion) is a `PRE-LAUNCH BLOCKER` that must be done and tested before Stage 9 opens production publishing; it is not started and needs its own Task Contract. Stage 8B and Stage 9 are not started.
+> **CURRENT TASK (2026-10-28, CP1):** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B, started by the Product Owner's S8B-00 decision D-1); S8A-05 merged through PR #363 as `8b476114` (2026-10-27); CP1 — the candidate Voice Runtime contract, Controlled Amendment VA-1 … VA-10 (approved in principle), the locked non-production benchmark harness and the locator reconciliation — delivered and at the Product Owner's CP1 review; no production code, no paid call (USD 10 cap, nothing spent), every voice gate closed; `QAN-BL-VOICE-01` owned by Stage 8B; CP2 not started; not merged (the S8B-01 note at the end). S8A-06 … S8A-08 have not started; their state is unchanged.
+>
+> *(Previous:)* **CURRENT TASK (2026-10-27, CP4):** S8A-05 — Public World: Write Your Topic; S8A-05 CLOSED / READY FOR PO MERGE DECISION (2026-10-27): CP3 MERGED through PR #361 as `4ff74a80`; CP4 (Public Discussion Threads & the @qandeel Context) delivered on its Draft pull request, not merged (Controlled Amendment A-5; migration 0182 not hosted; CP4 Product Copy Gate CLOSED / APPROVED, 2 rows; Tier Q prepared, NOT RUN — no budget approval; production publishing closed); editing a published topic deferred to `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`, owner `PUB-REV-01`, before Stage 9 opens production publishing), NOT implemented. Sequencing recorded by the Product Owner's CP4 decision: `PUB-REV-01` (published topic revisions and version-continuous discussion) is a `PRE-LAUNCH BLOCKER` that must be done and tested before Stage 9 opens production publishing; it is not started and needs its own Task Contract. Stage 8B and Stage 9 are not started.
 >
 > *(As written at CP3's review:)* **CURRENT TASK (2026-10-27, CP3):** S8A-05 — Public World: Write Your Topic; CP1 merged through PR #359 as `7c0356b7` (2026-10-26) and CP2 through PR #360 as `72898797` (2026-10-27); CP3 — Public Semantic Intelligence & Deterministic Spatial Placement — delivered on its Draft pull request and at the Product Owner's CP3 review (candidate Controlled Amendment A-4; migration 0181 not hosted; NO NEW COPY; production publishing closed until Stage 9; the Tier S / Tier P quality evaluation run once and NOT ACCEPTED on fabrication, the deterministic half met), not merged; CP4 not started; one pull request per checkpoint, none merged without the Product Owner's approval.
 >
@@ -1045,8 +1047,9 @@ stay as written.
 - **S8A-04 closing change (2026-10-26):** **S8A-04 CLOSED / READY FOR PO MERGE DECISION** (2026-10-26; Draft PR #358, not merged; effective from its merge): CP3-D V2 Tier 1 ran once (round 23, USD 0.0177 at peak) and is **NOT ACCEPTED — original criteria failed** (leaks 36 / 90, false blocks 7 / 60, invalid 1 / 150); Tier 2 is **NOT RUN — deferred by explicit Product Owner decision**; the Product Owner's D-9 decision **PO-ACCEPTED-KNOWN-RISK — DEFERRED UNTIL AFTER FIRST LAUNCH** replaces T-D2's acceptance for this step only ([amendment §11.9](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8A-04_CP3_PERSONAL_KNOWLEDGE_IN_SHARED_WORLD_CONTROLLED_AMENDMENT_v1.0.md)), so the T-D2 failure alone does not block the merge or the first launch; the probabilistic disclosure and attribution errors remain (Future Improvements 012 – 016, non-blocking) and V2 gives no absolute privacy guarantee; `QAN-BL-CW-02` tombstoned and `QAN-BL-CI-03` (PO-WAIVED Android emulator infrastructure) admitted (backlog: 88 items; 42 / 4 / 9 / 33); no security, privacy or deployment gate removed; `SYNTHETIC_ONLY` and `QAN-BL-AI-01` unchanged; no merge without the Product Owner's explicit order. Recorded in the [Task Contract](docs/e2e/QANDEEL_S8A_04_CP3_IMPLEMENTATION_TASK_CONTRACT_v1.md) §6 – §8.1, amendment §11.8 – §11.10 and the backlog's "S8A-04 closing change".
 - `SYNTHETIC_ONLY` is kept. No real user's data reaches DeepSeek (`QAN-BL-AI-01` stays open).
 
-### S8A-05 — Public World: Write Your Topic (2026-10-26 … 2026-10-27; current task; CP1 MERGED through PR #359 as `7c0356b7`; CP2 MERGED through PR #360 as `72898797`; CP3 MERGED through PR #361 as `4ff74a80`; CP4 delivered on its Draft pull request; **S8A-05 CLOSED / READY FOR PO MERGE DECISION** (2026-10-27); editing a published topic deferred to `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`), NOT implemented; not merged)
+### S8A-05 — Public World: Write Your Topic (2026-10-26 … 2026-10-27; MERGED through PR #363, 2026-10-27)
 
+- **`CLOSED / MERGED` through PR #363 as `8b476114a0f8655bcc39c5af80ded169c691c3f8` (2026-10-27); NOT DEPLOYED / CLOSED TO USERS.** Reconciled by S8B-01 CP1 (2026-10-28). The heading and bullets below are as written at its closing change: *(2026-10-26 … 2026-10-27; current task; CP1 MERGED through PR #359 as `7c0356b7`; CP2 MERGED through PR #360 as `72898797`; CP3 MERGED through PR #361 as `4ff74a80`; CP4 delivered on its Draft pull request; **S8A-05 CLOSED / READY FOR PO MERGE DECISION** (2026-10-27); editing a published topic deferred to `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`), NOT implemented; not merged)*
 - Started 2026-10-26 on `s8a/s8a-05-cp1` from `main` at `9459245e10bb763eaa0fc20bdfeb1acd27c90bc8`
   (the merge of PR #358, 2026-10-26): **S8A-04 is merged**, so its closing change is effective. S8A-05 owns no backlog
   item at kickoff; it read (BG-05) `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01` and `QAN-BL-PROD-09`, and none moves at CP1.
@@ -1140,3 +1143,29 @@ stay as written.
     [S8A-05 implementation record §13](docs/e2e/QANDEEL_S8A_05_PUBLIC_WORLD_WRITE_YOUR_TOPIC_IMPLEMENTATION_RECORD_v1.md).
 - The only paid calls of S8A-05 are CP3's one authorized Tier S / Tier P run (100 DeepSeek Flash calls, USD 0.0346). CP4
   made none.
+
+### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28; current task; CP1 delivered and at the Product Owner's CP1 review; no production code; no paid call; every voice gate closed; not merged)
+
+- Started 2026-10-28 on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`
+  (the merge of PR #363, 2026-10-27): **S8A-05 is merged**, so its closing change is effective. **Stage 8B starts** by
+  the Product Owner's S8B-00 decision D-1 (2026-10-28); the remaining Stage 8A work (S8A-06 … S8A-08 and its backlog
+  items) keeps its owner and state, neither closed nor deferred by Stage 8B.
+- The S8B-00 foundation review, its recording / Replay correction and its final version were delivered to the Product
+  Owner outside the repository. The Product Owner's decisions D-1 … D-9 (D-9 amended: the cloud iOS Simulator plus a
+  real Android device; a physical iPhone is not a Stage 8B closure condition) and recording decisions 1 – 12 (D-5a
+  cancelled) are recorded in the [S8B-01 record](docs/e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §1.
+- **CP1 (2026-10-28), at the Product Owner's review:**
+  - the candidate [Voice Runtime contract](docs/voice-runtime-v1.md): a streaming cascade around the existing
+    Orchestrator, DeepSeek Flash the only brain; call authority; the spoken turn; Speech Rendering; the two-track original
+    audio source on one clock; the immutable 30-day retention; listening; the private Replay and the three destinations;
+    disclosure; latency; accounting; gates; devices;
+  - the candidate [S8B-01 Voice Runtime Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md)
+    VA-1 … VA-10, approved in principle (D-8), each binding only from the task that implements it; the frozen texts are
+    not edited;
+  - the non-production benchmark harness (`scripts/s8b-01/`): the preregistered plan (USD 10 cap, locked), two corpora,
+    scoring, the latency model, the guard and a zero-cost simulated rehearsal; root contract
+    `tests/s8b-01-voice-bench-harness-contract.test.mjs`;
+  - `QAN-BL-VOICE-01` re-owned to `Stage 8B — Voice Runtime` (`DEFERRED — OWNED`); the register holds 89 items:
+    44 / 4 / 8 / 33 by status.
+- No production code, migration, provider adapter, provider call or paid run; no provider or voice selected; every voice
+  gate closed. CP2 (the paid benchmark) needs the Product Owner's approval of CP1 first.
