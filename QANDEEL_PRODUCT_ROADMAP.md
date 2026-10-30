@@ -7,7 +7,7 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-30, S8B-02 CP1):** S8B-02 — Voice Foundation; S8B-01 merged through PR #366 as `c65b878c` (2026-10-30); CP1 — the database and governance foundation (migrations `0183` / `0184`, not hosted; the Product Owner's D-1 … D-8, PRIV-W and P-1) delivered locally on `s8b/s8b-02-cp1`; not pushed; no pull request; every voice gate closed; CP2 not authorized; S8B-02 not complete ([record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md)). S8A-06 … S8A-08 unchanged.
+> **CURRENT TASK (2026-10-30, S8B-02 CP1):** S8B-02 — Voice Foundation; S8B-01 merged through PR #366 as `c65b878c` (2026-10-30); CP1 — the database and governance foundation (migrations `0183` / `0184`, not hosted; the Product Owner's D-1 … D-8, PRIV-W and P-1) on `s8b/s8b-02-cp1`, Draft PR #367, with the Product Owner's R1 corrections (record §10); not merged; every voice gate closed; CP2 not authorized; S8B-02 not complete ([record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md)). S8A-06 … S8A-08 unchanged.
 >
 > *(As written at S8B-01 CP3; merged through PR #366:)* **CURRENT TASK (2026-10-30, CP3):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP2 merged through PR #365 as `47121434` (2026-10-28); CP3, S8B-01's closing change (record §10): the VA-4 starting values, the cost model, the formats and the server-side render placement, the lifecycle of VA-1 … VA-11, BG-08 / BG-09; **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION**, the Product Owner's CP3 decisions D-A1 … D-F1 made (2026-10-30, record §10.9), none implemented; call retention `started_at` + 30 days (D-D2); launch now, scale when needed (D-F1); no paid call; no production code; every voice gate closed; not merged. Next, after the decisions and the merge and on a new authorization: S8B-02 Foundation. S8A-06 … S8A-08 unchanged.
 >
@@ -1240,7 +1240,7 @@ stay as written.
 - No production code, migration, provider adapter or feature gate; every voice gate closed. S8B-02 needs the merge of
   this change and a new authorization.
 
-### S8B-02 — Voice Foundation (2026-10-30 …; current task; CP1 delivered locally on `s8b/s8b-02-cp1`, not pushed, no pull request; S8B-02 not complete; every voice gate closed)
+### S8B-02 — Voice Foundation (2026-10-30 …; current task; CP1 on Draft PR #367 with the Product Owner's R1 corrections; not merged; S8B-02 not complete; every voice gate closed)
 
 - Started 2026-10-30 on `s8b/s8b-02-cp1` from `main` at `c65b878c50ffc519c838b86c08b53298f8a88ff7` (the merge of PR #366, 2026-10-30):
   **S8B-01 is merged**, so its closing change is effective. The Product Owner approved the WP0 decisions D-1 … D-8 with
@@ -1250,7 +1250,14 @@ stay as written.
 - **BG-05 at kickoff** (record §2): no item is owned by "S8B-02". `QAN-BL-VOICE-01` is worked, not delivered, and stays
   `DEFERRED — OWNED` by Stage 8B. Every other open item was read and left with its owner. CP1 admits and tombstones
   nothing.
-- **CP1 — the database and governance foundation** (record §3 – §6). Delivered locally; not pushed; not merged.
+- **CP1 — the database and governance foundation** (record §3 – §6). On `s8b/s8b-02-cp1`, Draft PR #367; not merged.
+  **R1 (2026-10-30, the Product Owner's review, record §10):**
+  - a withdrawal also refuses a replayed unfinished begin or add, while completed operations replay safely;
+  - no segment, store or gap at or after the expiry, and the sweep seals, expires and queues a call recording still
+    `RECORDING`;
+  - P-1 is controlled configuration;
+  - the gap that `MACHINE_ASR` Memory never reaches Fresh Evidence is owned by S8B-03 and must be decided before any
+    voice gate opens (a dated note on `QAN-BL-VOICE-01`).
   - **Migration `0183`:**
     - the turn's voice source (VA-3, with the turn-level anchor of D-3);
     - the Memory and Public World readers (D-7);

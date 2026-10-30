@@ -360,7 +360,7 @@ async function verifyCatalogue(report) {
     const text = migration('0183');
     const acl = text.indexOf('  FOREACH fn IN ARRAY ARRAY[');
     const declared = [...text.slice(acl, text.indexOf('] LOOP', acl)).matchAll(/'([a-z_]+\.[a-z_0-9]+\([^']*\))'/gu)].map((m) => m[1]);
-    assert.equal(declared.length, 40, 'S0b the ACL block names the forty 0183 functions');
+    assert.equal(declared.length, 41, 'S0b the ACL block names the forty-one 0183 functions');
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,
           p.proconfig AS config, pg_get_userbyid(p.proowner) AS owner,
           EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0) AS to_public
@@ -726,6 +726,44 @@ async function verifyBehaviour(report) {
       assert.equal(await deleteRecording(A, opened.recording_id), 'ALREADY_GONE', 'A6 terminal is final');
     });
 
+    await report.isolated('A6r retention while RECORDING: no add, store or gap at or after the expiry; the sweep seals RECOVERY, expires and queues', async () => {
+      const A = await human();
+      const session = await newSession(A);
+      await installConsent('VERIFY_0183_A6R');
+      assert.equal(await grant(A, 'VERIFY_0183_A6R'), 'GRANTED');
+      await setVoiceGate('PERSONAL_LIVE_CALL');
+      // A call opened 30 days minus 2 seconds ago whose writer never seals it.
+      const opened = await openCall(A, session, { ago: '30 days -2 seconds', lease: 120 });
+      assert.equal(opened.outcome, 'OPENED');
+      const pending = await addSegment(A, opened.recording_id, 'USER', 0, 0, 1000, 1000, 120);
+      assert.equal(pending.outcome, 'ADDED');
+      const stored = await addSegment(A, opened.recording_id, 'QANDEEL', 0, 0, 800, 1000, 120);
+      assert.equal(stored.outcome, 'ADDED');
+      assert.equal(await storeSegment(A, opened.recording_id, 'QANDEEL', 0), 'STORED');
+      const before = await recordingRow(opened.recording_id);
+      await q('SELECT pg_sleep(2.5)');
+      assert.equal((await recordingRow(opened.recording_id)).recording_state, 'RECORDING', 'A6r the writer still holds it open');
+      assert.deepEqual([outcomeOf(await addSegment(A, opened.recording_id, 'QANDEEL', 1, 800, 1600, 1000, 120))], ['EXPIRED'], 'A6r no add at or after the expiry');
+      assert.equal(await storeSegment(A, opened.recording_id, 'USER', 0), 'EXPIRED', 'A6r no store at or after the expiry');
+      assert.equal(await recordGap(A, opened.recording_id, 'USER', 1000, 1500), 'EXPIRED', 'A6r no gap at or after the expiry');
+      assert.deepEqual(await readObjects(A, opened.recording_id), [], 'A6r nothing is readable at or after the expiry');
+      const [swept] = await server('SELECT * FROM public.server_sweep_voice_recordings_v1(200)');
+      assert.ok(swept.expired >= 1, 'A6r the sweep closes it');
+      const after = await recordingRow(opened.recording_id);
+      assert.deepEqual([after.recording_state, after.sealed_by, after.terminal, after.retention_expires_at, after.started_at],
+        ['EXPIRED', 'RECOVERY', true, before.retention_expires_at, before.started_at], 'A6r sealed RECOVERY then EXPIRED, the expiry and started_at unchanged');
+      const objects = await rows('SELECT track, segment_index, object_state FROM voice_private.recording_objects WHERE recording_id = $1 ORDER BY 1, 2', [opened.recording_id]);
+      assert.deepEqual(objects.map((o) => [o.track, o.segment_index, o.object_state]),
+        [['QANDEEL', 0, 'STORED'], ['USER', 0, 'DISCARDED']], 'A6r the pending segment is discarded, nothing pending is presented as stored');
+      const gaps = await rows(`SELECT track, clock_start_ms::int AS s, clock_end_ms::int AS e, gap_kind FROM voice_private.recording_gaps
+          WHERE recording_id = $1 ORDER BY 1, 2`, [opened.recording_id]);
+      assert.deepEqual(gaps.map((g) => [g.track, g.s, g.e, g.gap_kind]), [['USER', 0, 1000, 'WRITER_LOSS']], 'A6r the lost range is an explicit gap');
+      assert.deepEqual(await queued([pending.storage_key, stored.storage_key]), [pending.storage_key, stored.storage_key].sort(),
+        'A6r every key, pending and stored, is queued in the same transaction');
+      assert.equal(await seal(A, opened.recording_id), 'UNAVAILABLE', 'A6r a late writer seal changes nothing: terminal is final');
+      assert.equal(await deleteRecording(A, opened.recording_id), 'ALREADY_GONE', 'A6r and the owner finds it gone');
+    });
+
     await report.isolated('A7 segments: order, continuity, gaps, store-after-add, and RECOVERY sealing with WRITER_LOSS', async () => {
       const A = await human();
       const session = await newSession(A);
@@ -791,12 +829,17 @@ async function verifyBehaviour(report) {
       const [{ n: active }] = await rows('SELECT count(*)::int AS n FROM voice_private.recording_consents WHERE user_id = $1 AND revoked_at IS NULL', [A]);
       assert.equal(active, 1, 'A8 the current grant closed the earlier one');
       // Recordings in flight, then the withdrawal.
-      const begun = await begin(A, session);
+      const beginCommand = randomUUID();
+      const begun = await begin(A, session, 2048, beginCommand);
       assert.equal(begun.outcome, 'BEGUN');
+      const doneNote = await begin(A, session);
+      assert.equal((await accept(A, doneNote.recording_id)).outcome, 'ACCEPTED');
       const kept = await storedNote(A, session);
       const { recording_id: call } = await openCall(A, session);
       const segment = await addSegment(A, call, 'USER', 0, 0, 1000);
       assert.equal(segment.outcome, 'ADDED');
+      assert.equal(outcomeOf(await addSegment(A, call, 'QANDEEL', 0, 0, 800)), 'ADDED');
+      assert.equal(await storeSegment(A, call, 'QANDEEL', 0, 1000), 'STORED');
       const keptBefore = await recordingRow(kept.id);
       const revokeCommand = randomUUID();
       assert.equal(await revoke(A, revokeCommand), 'WITHDRAWN');
@@ -808,6 +851,14 @@ async function verifyBehaviour(report) {
       assert.equal(outcomeOf(await openCall(A, session)), 'CONSENT_REQUIRED', 'A8 withdrawn: open');
       assert.equal(outcomeOf(await addSegment(A, call, 'USER', 1, 1000, 2000)), 'CONSENT_REQUIRED', 'A8 withdrawn: add');
       assert.equal(await storeSegment(A, call, 'USER', 0), 'CONSENT_REQUIRED', 'A8 withdrawn: store');
+      // PRIV-W idempotency: replaying the SAME unfinished request is refused too, and its key is never handed back.
+      const replayedBegin = await begin(A, session, 2048, beginCommand);
+      assert.deepEqual([replayedBegin.outcome, replayedBegin.storage_key], ['CONSENT_REQUIRED', null], 'A8 withdrawn: a replayed begin of an unfinished note');
+      const replayedAdd = await addSegment(A, call, 'USER', 0, 0, 1000);
+      assert.deepEqual([replayedAdd.outcome, replayedAdd.storage_key], ['CONSENT_REQUIRED', null], 'A8 withdrawn: a replayed add of the same segment index');
+      // A completed operation stays safely retryable after a withdrawal: it answers its result and records nothing new.
+      assert.equal((await accept(A, doneNote.recording_id)).outcome, 'ACCEPTED', 'A8 withdrawn: an accepted note replays ACCEPTED');
+      assert.equal(await storeSegment(A, call, 'QANDEEL', 0, 1000), 'STORED', 'A8 withdrawn: a stored segment replays STORED');
       assert.equal(await seal(A, call), 'SEALED', 'A8 a seal records nothing new and still works');
       assert.deepEqual(await recordingRow(kept.id), keptBefore, 'A8 a withdrawal deletes and changes nothing');
       assert.equal((await readObjects(A, kept.id)).length, 1, 'A8 the owner still reads it');

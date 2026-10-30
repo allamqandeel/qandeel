@@ -2,7 +2,7 @@
 
 **Task:** S8B-02 — Voice Foundation (Stage 8B). This record covers **CP1 — the database and governance foundation**
 (§1 – §9). CP2 — the secure media lifecycle and S8B-02's closing change — is not started.
-**Status:** `S8B-02 CP1 DELIVERED LOCALLY ON s8b/s8b-02-cp1 (2026-10-30) — NOT PUSHED, NO PULL REQUEST, NOT MERGED — S8B-02 NOT COMPLETE (CP2 NOT STARTED, NOT AUTHORIZED) — MIGRATIONS 0183 / 0184 NOT HOSTED — EVERY VOICE GATE CLOSED`
+**Status:** `S8B-02 CP1 DELIVERED ON s8b/s8b-02-cp1, PUSHED, DRAFT PR #367 (2026-10-30) — R1: THE PRODUCT OWNER'S REVIEW CORRECTIONS APPLIED ON THE SAME BRANCH (2026-10-30; §10) — NOT MERGED — S8B-02 NOT COMPLETE (CP2 NOT STARTED, NOT AUTHORIZED) — MIGRATIONS 0183 / 0184 NOT HOSTED — EVERY VOICE GATE CLOSED`
 **Date:** 2026-10-30
 **Branch / base:** `s8b/s8b-02-cp1`, from `main` at `c65b878c50ffc519c838b86c08b53298f8a88ff7`, the merge of PR #366
 (S8B-01 CP3, S8B-01's closing change, merged 2026-10-30).
@@ -51,9 +51,10 @@ any hosted resource each need the Product Owner's explicit approval. None of the
 - These are **controlled configuration values, not accuracy claims.**
 - `MACHINE_ASR` stays the Memory's source. There is no automatic 0.98 / 0.95 for a voice turn.
 - The text Memory path and every correction mechanism are unchanged.
-- Where they live: `MACHINE_ASR_MEMORY_CONFIDENCE` in `apps/api/src/memory/memory-write-evaluator.service.ts`, one frozen
-  object. Changing them is a reviewed one-line change (§7, deviation 11). The database refuses any `MACHINE_ASR`
-  confidence of 0.95 or more.
+- Where they live (as corrected by R1, §10.3): `MACHINE_ASR_MEMORY_CONFIDENCE_HIGH` / `_MEDIUM` in the API's environment,
+  tuned without a code change. The approved values are the defaults (`MACHINE_ASR_MEMORY_CONFIDENCE_DEFAULTS` in
+  `apps/api/src/memory/memory-write-evaluator.service.ts`). Each must be above 0 and below 0.95, and MEDIUM never above
+  HIGH; any other value stops the API from starting. The database refuses any `MACHINE_ASR` confidence of 0.95 or more.
 
 ---
 
@@ -144,11 +145,14 @@ No API endpoint, worker, store adapter, provider adapter, mobile code or user-vi
   enforced. Gaps are `RECONNECTION`, `MUTED` or `WRITER_LOSS`. Recovery seals with `RECOVERY`, discards pending segments
   as `WRITER_LOSS` gaps, and leaves the expiry byte-equal. No loss bound is claimed (D-5).
 - A read is refused from the expiry instant with no worker; the sweep marks `EXPIRED` and queues the keys.
+- *(R1, §10.2.)* No segment, store or gap is admitted at or after the expiry. A call recording still `RECORDING` at its
+  expiry is sealed `RECOVERY` by the sweep, then expired, with every key queued; the call itself stays S8B-05's.
 
 **Consent with withdrawal (A8, PRIV-W).** Versioned consent texts (none installed: every act is refused until S8B-03
 installs a Copy-Gated version); grant, withdraw and state definers; the five recording acts refused without a current
 grant; seal, read and owner deletion never consult consent. Two-connection races prove the ordering of a withdrawal
-against a begin / open (A8r).
+against a begin / open (A8r). *(R1, §10.1.)* A replayed begin or add of an unfinished request is refused after a
+withdrawal and never hands its key back; a completed accept or store still replays its result.
 
 **The capability gate (A9).** `PERSONAL_VOICE_NOTE`, `PERSONAL_LIVE_CALL`, `SHARED_VOICE_NOTE`,
 `REPLAY_AUDIO_DISTRIBUTION`, all seeded `DISABLED` / `UNSATISFIED` with an append-only event history. Begin and open
@@ -230,7 +234,7 @@ Run on the final tree, on a database freshly migrated from the clean 0182 databa
 
 | Check | Result |
 |---|---|
-| `verify-migration-0183` | **19 / 19 PASS** |
+| `verify-migration-0183` | **19 / 19 PASS** (20 / 20 after R1, §10.5) |
 | `verify-migration-0184` | **PASS** |
 | Every `npm run verify:*` step of `api-ci.yml` (the full sweep) | **176 PASS, 11 FAIL.** Ten fail identically on the clean 0182 database in this environment (175 PASS, 10 FAIL there) and are not caused by S8B-02; the eleventh was S8B-02's and is fixed: <ul><li>the HBS / HGS / HRS report-window and HIM bridge verifiers (7): the server-authoritative report-time clock;</li><li>`supabase-default-privilege-drift`: `psql` is not installed;</li><li>`runtime-event-publisher-startup-recovery`: the Redis publisher;</li><li>`personal-privacy-export-account-deletion` (0130): the PostgreSQL clock runs about 3 ms ahead of Node, so the 7-day grace computes as 7.00000003 days against `<= 7`;</li><li>`him-measurement-preflight` (S8B-02): its `test:database` step flagged the finding below. Fixed; each of its steps then passed when rerun (`him-structured-measurement-preflight` 6 / 6, `test:database`, both `tsc`, `build:api`; its jest run is the row below).</li></ul> |
 | `test:database` (the verifier hazard scanner and its fixtures) | **1310 / 1310 PASS**, after one fix: the scanner's H2 rule flagged the `rejected()` wrapper in `verify-migration-0183`. That wrapper calls the savepoint-holding shared helper and only re-throws, so it was written as a re-throw without `try` / `catch` |
@@ -275,7 +279,8 @@ Run on the final tree, on a database freshly migrated from the clean 0182 databa
    only `USER_STATED` / `USER_CONFIRMED`, so such a Memory is never fresh Evidence and the effect completes
    `NO_FRESH_EVIDENCE` (otherwise the association step would refuse it and the execution would quarantine). **A risk for
    the Product Owner:** spoken facts can be remembered and recalled, but never support a hypothesis or matching until a
-   later decision admits `MACHINE_ASR` there.
+   later decision admits `MACHINE_ASR` there. **Owner (R1, §10.4): S8B-03, before any voice gate opens**, recorded as a
+   dated note on `QAN-BL-VOICE-01`.
 7. **The database enforces the P-1 ceiling:** a `MACHINE_ASR` confidence of 0.95 or more is refused.
 8. **Explicit Memory commands stay `USER_STATED`.** «افتكر …» spoken in a call is the foreground command path, which D-7
    does not change.
@@ -284,9 +289,8 @@ Run on the final tree, on a database freshly migrated from the clean 0182 databa
    key can exist in CP1 (no consent text, gates closed). CP2 extends the store and the worker (contract §3.10).
 10. **Begin v1 still admits the route-neutral `GEMINI_SPEECH_GENERATION`.** Its settlement is partition-guarded: settle v1
     cannot write a text kind on it (A12).
-11. **P-1 is a frozen code constant, not an environment variable.** The contract's recommendation said "adjustable
-    without code"; the values are one reviewed line instead, which keeps them out of runtime configuration. If the
-    Product Owner wants an environment override, it is a small follow-up within the same bound.
+11. ~~**P-1 is a frozen code constant, not an environment variable.**~~ **Withdrawn by R1 (§10.3):** P-1 is now
+    controlled configuration, tuned without a code change, as approved.
 12. **`deleted_reason = 'ACCOUNT_ERASURE'` is in the vocabulary but unused:** account erasure removes the rows rather than
     marking them.
 13. **Two NULL-unsafe CHECKs were found by the verifier and fixed before commit** (a call recording without an expiry;
@@ -297,8 +301,9 @@ Run on the final tree, on a database freshly migrated from the clean 0182 databa
 
 ## 8. Risks and decisions for the Product Owner
 
-- **Deviation 6** (`MACHINE_ASR` is not Evidence) is the one behavioural choice a later task may revisit.
-- **P-1** values are starting values; they can be tuned only by a reviewed change, and only below 0.95.
+- **Deviation 6** (`MACHINE_ASR` is not Evidence) is an open gap. It is owned by S8B-03 and must be decided before any
+  voice gate opens (§10.4).
+- **P-1** values are starting values. They are tuned through configuration, and only above 0 and below 0.95 (§10.3).
 - **CP2 dependencies:** the object store and its worker for voice keys (deviation 9), B5, the hosted-proof note on
   `QAN-BL-PROD-08` (D-8), and the closing BG-08 / BG-09.
 - **No new backlog item.** Every gap found has a named owner: CP2 for the store and worker, S8B-03 for the consent text
@@ -316,3 +321,95 @@ Run on the final tree, on a database freshly migrated from the clean 0182 databa
 - **Contract:** dated S8B-02 notes in `docs/voice-runtime-v1.md` §6.2, §6.3, §7, §10 and §12.
 - **Not done here:** BG-08 and BG-09 are S8B-02's closing change (CP2). This record keeps its CP1 banner; S8B-02 is not
   declared complete. No `**Phase:**` banner and no `### I-0N closure record` heading are written.
+
+## 10. R1 — the Product Owner's review of PR #367 (2026-10-30)
+
+The Product Owner reviewed PR #367 against the approved contract. The implementation was accepted, with three bounded
+corrections and one record required before merge. R1 applies them on `s8b/s8b-02-cp1` and updates the Draft PR. It makes
+no other change: 0184, the text path, Replay and the gates are untouched.
+
+### 10.1 PRIV-W and idempotency
+
+- **Finding.** `server_begin_voice_note_upload_v1` and `server_add_call_segment_v1` answered a replayed request from its
+  earlier row before re-reading consent. After a withdrawal, a replay could hand back the key of an unfinished upload.
+- **Correction (0183).**
+  - A replayed begin of a note still `PENDING_UPLOAD` answers `CONSENT_REQUIRED` and returns no key.
+  - The add re-reads consent before its idempotent replay, so the same segment index is refused too.
+  - The accept and the store already re-read consent before acting on a pending object.
+  - A **completed** operation stays safely retryable: an accepted note replays `ACCEPTED`, a stored segment replays
+    `STORED`, and nothing new is recorded.
+- **Proof (verify-0183 A8).**
+  - After a withdrawal, a replayed begin answers `CONSENT_REQUIRED` with no key, and so does a replayed add of the same
+    index.
+  - An accepted note and a stored segment still replay their results.
+  - Against the CP1 migration, A8 fails on exactly this assertion.
+
+### 10.2 Retention while a call recording is `RECORDING`
+
+- **Finding.**
+  - The segment writers did not check `retention_expires_at`.
+  - The sweep covered `STORED` and `PENDING_UPLOAD` only, so a recording whose writer never sealed it stayed
+    `RECORDING` past its expiry.
+- **Correction (0183).**
+  - `voice_private.recording_expired_v1` (no role may execute it).
+  - Add, store and gap answer `EXPIRED` at or after the expiry.
+  - The sweep now also takes a `RECORDING` recording at or past its expiry. It seals it `RECOVERY` through the existing
+    seal: pending segments become `WRITER_LOSS` gaps, and their keys are queued after their upload window. It then marks
+    it `EXPIRED` and queues every stored key, in one transaction.
+  - The expiry and `started_at` are unchanged.
+  - **Only the recording is closed.** The call, its end and its end reason stay S8B-05's, and no call authority is added
+    or changed.
+- **Proof (verify-0183 A6r).**
+  - In a call opened 30 days minus 2 seconds ago and never sealed, add, store and gap answer `EXPIRED` after the instant,
+    and nothing is readable.
+  - The sweep leaves the recording `EXPIRED`, sealed `RECOVERY`, with its expiry and `started_at` byte-equal.
+  - The pending segment is `DISCARDED` with a `WRITER_LOSS` gap, and both keys are queued.
+  - A late writer seal answers `UNAVAILABLE`, and the owner finds the recording `ALREADY_GONE`.
+  - Against the CP1 migration, A6r fails at the first add.
+
+### 10.3 P-1 as controlled configuration
+
+- **Finding.** The values were a code constant, while the approved decision asks for controlled configuration that can be
+  tuned without a code change (deviation 11).
+- **Correction (API).**
+  - `loadMachineAsrMemoryConfidence` reads `MACHINE_ASR_MEMORY_CONFIDENCE_HIGH` / `_MEDIUM` once, when the background
+    enrichment service is built.
+  - Unset or blank keeps the approved defaults, 0.90 / 0.75.
+  - Each value must be a number above 0 and below 0.95, and MEDIUM must not exceed HIGH. Any other value stops the API
+    from starting, so a misconfiguration never writes.
+  - `.env.example` names both with their defaults. The database ceiling (< 0.95) is unchanged.
+- **Proof (`s8b-02-voice-memory-capture.spec.ts`):**
+  - the defaults;
+  - a tuned pair;
+  - every unsafe value refused, for both variables;
+  - MEDIUM above HIGH refused;
+  - the background capture writing the configured value, read once;
+  - an unsafe value refusing to build the service.
+
+### 10.4 `MACHINE_ASR` Memory and Fresh Evidence — a recorded gap with an owner
+
+- **The gap.** A `MACHINE_ASR` Memory is written and recalled, but it **never reaches Fresh Evidence**:
+  - every Evidence, truth-maintenance and matching reader admits only `USER_STATED` / `USER_CONFIRMED`;
+  - the background effect therefore completes `NO_FRESH_EVIDENCE` (deviation 6).
+- **Consequence.** A fact the user only ever said aloud does not support a hypothesis, Personal Understanding evidence or
+  matching.
+- **Owner: S8B-03** (Personal Voice Note), the first task that produces `MACHINE_ASR` turns.
+  - The gap must be decided **before any voice gate opens**: either a reviewed controlled change that admits
+    `MACHINE_ASR` to Evidence on stated terms, or the Product Owner's explicit acceptance of the limitation.
+  - It is recorded as a dated note on `QAN-BL-VOICE-01` (owned by Stage 8B), so it does not live only in this record.
+  - No backlog item is admitted, because the item already has its owner.
+- **Not done in CP1.** CP1 does not redesign the Evidence system.
+
+### 10.5 Verification (targeted, as the Product Owner asked)
+
+| Check | Result |
+|---|---|
+| `verify-migration-0183` on a freshly migrated database (0182 → 0183 → 0184) | **20 / 20 PASS**, run twice. New: A6r. Extended: A8. |
+| The same verifier against the CP1 migration | A6r and A8 **FAIL** on the defects, as expected (S0b fails on the new helper) |
+| `test:database` (verifier hazard scanner) | 1310 / 1310 PASS |
+| `test:s8b-02-voice-foundation-contract` (ACL count 41, P-1 configuration pins) | 7 / 7 PASS |
+| `test:s4-01-shared-world-reachability-contract` (reads `.env.example`) | 7 / 7 PASS |
+| API jest: `background-intelligence`, `memory`, the memory-control route | 20 suites, 624 PASS |
+| API `tsc` (both configurations) | clean |
+
+No full local sweep was rerun, as the Product Owner asked. GitHub CI on the R1 head is authoritative.

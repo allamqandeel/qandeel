@@ -21,9 +21,38 @@ export const MEMORY_IMPORTANCE: Readonly<Record<Exclude<MemoryType, 'DERIVED_INS
  * S8B-02 P-1 (Product Owner, 2026-10-30): the confidence a background Memory captured from a MACHINE_ASR transcript is
  * recorded with, per ASR confidence band. These are controlled configuration values, NOT accuracy claims. A LOW band
  * writes no Memory. For a voice turn they replace the typed-text 0.98 / 0.95, which the database refuses there (0183).
+ * The approved starting values are the defaults; MACHINE_ASR_MEMORY_CONFIDENCE_HIGH / _MEDIUM tune them without a code
+ * change, inside the safe bounds below.
  */
-export const MACHINE_ASR_MEMORY_CONFIDENCE = Object.freeze({ HIGH: 0.90, MEDIUM: 0.75 } as const);
+export const MACHINE_ASR_MEMORY_CONFIDENCE_DEFAULTS = Object.freeze({ HIGH: 0.90, MEDIUM: 0.75 } as const);
+/** Exclusive ceiling: a machine transcript never reaches the typed 0.95 (the database refuses it as well, 0183). */
+export const MACHINE_ASR_MEMORY_CONFIDENCE_CEILING = 0.95;
 export type AsrConfidenceBand = 'HIGH' | 'MEDIUM' | 'LOW';
+export interface MachineAsrMemoryConfidence { readonly HIGH: number; readonly MEDIUM: number }
+
+/**
+ * S8B-02 P-1: the configured confidences, read once. Each is a number above 0 and below the ceiling, MEDIUM never above
+ * HIGH; unset or blank keeps the approved default. Anything else refuses to start: a misconfiguration never writes.
+ */
+export function loadMachineAsrMemoryConfidence(environment: NodeJS.ProcessEnv = process.env): MachineAsrMemoryConfidence {
+  const high = machineAsrConfidenceSetting(environment.MACHINE_ASR_MEMORY_CONFIDENCE_HIGH,
+    MACHINE_ASR_MEMORY_CONFIDENCE_DEFAULTS.HIGH, 'MACHINE_ASR_MEMORY_CONFIDENCE_HIGH');
+  const medium = machineAsrConfidenceSetting(environment.MACHINE_ASR_MEMORY_CONFIDENCE_MEDIUM,
+    MACHINE_ASR_MEMORY_CONFIDENCE_DEFAULTS.MEDIUM, 'MACHINE_ASR_MEMORY_CONFIDENCE_MEDIUM');
+  if (medium > high) {
+    throw new Error('MACHINE_ASR_MEMORY_CONFIDENCE_MEDIUM must not exceed MACHINE_ASR_MEMORY_CONFIDENCE_HIGH.');
+  }
+  return Object.freeze({ HIGH: high, MEDIUM: medium });
+}
+
+function machineAsrConfidenceSetting(value: string | undefined, fallback: number, name: string): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed >= MACHINE_ASR_MEMORY_CONFIDENCE_CEILING) {
+    throw new Error(`${name} must be greater than 0 and below ${MACHINE_ASR_MEMORY_CONFIDENCE_CEILING}.`);
+  }
+  return parsed;
+}
 
 /**
  * S8B-02 CP1 (D-7): the background candidate of a voice turn. The typed grammar has already decided WHAT would be kept;
@@ -32,9 +61,10 @@ export type AsrConfidenceBand = 'HIGH' | 'MEDIUM' | 'LOW';
 export function machineAsrMemoryCandidate(
   candidate: CreateMemoryInput,
   band: AsrConfidenceBand,
+  confidence: MachineAsrMemoryConfidence = MACHINE_ASR_MEMORY_CONFIDENCE_DEFAULTS,
 ): { decision: 'SKIP'; reason: 'LOW_CONFIDENCE_MACHINE_ASR' } | { decision: 'WRITE'; candidate: CreateMemoryInput } {
   if (band !== 'HIGH' && band !== 'MEDIUM') return { decision: 'SKIP', reason: 'LOW_CONFIDENCE_MACHINE_ASR' };
-  return { decision: 'WRITE', candidate: { ...candidate, source: 'MACHINE_ASR', confidence: MACHINE_ASR_MEMORY_CONFIDENCE[band] } };
+  return { decision: 'WRITE', candidate: { ...candidate, source: 'MACHINE_ASR', confidence: confidence[band] } };
 }
 
 export type MemoryWriteSkipReason =

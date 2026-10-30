@@ -339,7 +339,9 @@ truthful end reason, and its expiry does not move. No migration before S8B-02.)*
 *(S8B-02 CP1, 2026-10-30, the Product Owner's D-6; binds from S8B-02's merge.)* A Voice Note's "commit instant" is its
 `accepted_at`, the instant the server accepts the stored note: `retention_expires_at = accepted_at + 30 days`, written
 once, together with `accepted_at`, from `NULL`. A call recording's expiry is written at creation from `started_at`. Both
-are refused every later change by every role ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §4.1).
+are refused every later change by every role. Nothing is recorded at or after the expiry, and a call recording
+still being written at its expiry is sealed and expired by the retention sweep; the call itself stays S8B-05's (R1,
+[S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §4.1).
 
 - **Nothing extends retention.** `retention_expires_at` is written once and is never updated, by a trigger that refuses
   every update. That holds for listening, creating a Replay, editing it, previewing it and distributing it.
@@ -431,7 +433,8 @@ authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
    withdraw recording consent at any time. Afterwards no begin, accept, open, segment add or segment store is admitted.
    Sealing an open call recording still succeeds. Existing recordings keep their expiry and stay deletable, and
    withdrawal is never a deletion reason. The consent catalogue is empty until S8B-03 installs a Copy-Gated version, so
-   every recording act is refused until then. Withdrawal racing an upload or a segment store is proven in S8B-02 CP2
+   every recording act is refused until then. A replayed begin or segment add that is still unfinished is refused too
+   and never hands its key back; a completed acceptance or store still replays its result (R1). Withdrawal racing an upload or a segment store is proven in S8B-02 CP2
    (B5). Export lists retained recordings as metadata, with no key. The per-file voice export is CP2 (B9), and the
    mobile saver is S8B-03.
 

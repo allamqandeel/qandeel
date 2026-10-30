@@ -2330,6 +2330,14 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
                WHERE g.recording_id = p_recording_id AND g.track = p_track), 0));
 $$;
 
+-- Whether a recording's expiry instant has passed (D-6). A call recording carries its expiry from the open; a note's
+-- is NULL until acceptance, so a note being uploaded is never "expired" here (its upload window governs it).
+CREATE FUNCTION voice_private.recording_expired_v1(p_recording_id uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT coalesce((SELECT clock_timestamp() >= r.retention_expires_at FROM voice_private.recordings r
+                    WHERE r.id = p_recording_id), false);
+$$;
+
 -- Seal a call recording: its pending segments are discarded and their ranges become WRITER_LOSS gaps (nothing pending
 -- is presented as stored). The expiry is unchanged.
 CREATE FUNCTION voice_private.seal_call_recording_v1(p_recording_id uuid, p_sealed_by text) RETURNS void
@@ -2368,6 +2376,11 @@ BEGIN
   SELECT * INTO v_existing FROM voice_private.recordings r WHERE r.begin_command_id = p_command_id;
   IF FOUND THEN
     IF v_existing.user_id = p_user_id AND v_existing.session_id = p_session_id AND v_existing.recording_state = 'PENDING_UPLOAD'
+       AND clock_timestamp() < v_existing.upload_deadline
+       AND voice_private.consent_state_v1(p_user_id) <> 'GRANTED_CURRENT' THEN
+      -- PRIV-W: a withdrawal stops an unfinished upload, a replayed begin included; the key is not handed back.
+      RETURN QUERY SELECT 'CONSENT_REQUIRED'::text, NULL::uuid, NULL::text, NULL::timestamptz;
+    ELSIF v_existing.user_id = p_user_id AND v_existing.session_id = p_session_id AND v_existing.recording_state = 'PENDING_UPLOAD'
        AND clock_timestamp() < v_existing.upload_deadline THEN
       RETURN QUERY SELECT 'BEGUN'::text, v_existing.id, o.storage_key, v_existing.upload_deadline
         FROM voice_private.recording_objects o WHERE o.recording_id = v_existing.id;
@@ -2518,6 +2531,17 @@ BEGIN
     RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::text, NULL::timestamptz;
     RETURN;
   END IF;
+  -- D-6: nothing is recorded at or after the recording's expiry; the sweep closes it (server_sweep_voice_recordings_v1).
+  IF voice_private.recording_expired_v1(p_recording_id) THEN
+    RETURN QUERY SELECT 'EXPIRED'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  -- PRIV-W: consent is re-read BEFORE the idempotent replay, so a withdrawal stops an unfinished segment even when the
+  -- same index is asked for again; the key is not handed back.
+  IF voice_private.consent_state_v1(p_user_id) <> 'GRANTED_CURRENT' THEN
+    RETURN QUERY SELECT 'CONSENT_REQUIRED'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
   SELECT * INTO v_existing FROM voice_private.recording_objects o
    WHERE o.recording_id = p_recording_id AND o.track = p_track AND o.segment_index = p_segment_index;
   IF FOUND THEN
@@ -2527,10 +2551,6 @@ BEGIN
     ELSE
       RETURN QUERY SELECT 'OUT_OF_ORDER'::text, NULL::text, NULL::timestamptz;
     END IF;
-    RETURN;
-  END IF;
-  IF voice_private.consent_state_v1(p_user_id) <> 'GRANTED_CURRENT' THEN
-    RETURN QUERY SELECT 'CONSENT_REQUIRED'::text, NULL::text, NULL::timestamptz;
     RETURN;
   END IF;
   SELECT coalesce(max(o.segment_index), -1) + 1 INTO v_next FROM voice_private.recording_objects o
@@ -2586,6 +2606,10 @@ BEGIN
     RETURN QUERY SELECT 'STORED'::text;
     RETURN;
   END IF;
+  IF voice_private.recording_expired_v1(p_recording_id) THEN
+    RETURN QUERY SELECT 'EXPIRED'::text;
+    RETURN;
+  END IF;
   IF v_object.object_state <> 'PENDING_UPLOAD' OR clock_timestamp() >= v_object.upload_deadline THEN
     RETURN QUERY SELECT 'UNAVAILABLE'::text;
     RETURN;
@@ -2618,6 +2642,10 @@ BEGIN
    WHERE r.id = p_recording_id AND r.user_id = p_user_id AND r.recording_state = 'RECORDING' FOR UPDATE;
   IF NOT FOUND THEN
     RETURN QUERY SELECT 'UNAVAILABLE'::text;
+    RETURN;
+  END IF;
+  IF voice_private.recording_expired_v1(p_recording_id) THEN
+    RETURN QUERY SELECT 'EXPIRED'::text;
     RETURN;
   END IF;
   IF EXISTS (SELECT 1 FROM voice_private.recording_gaps g
@@ -2690,7 +2718,10 @@ BEGIN
 END$$;
 
 -- The retention sweep: a stored recording at or past its expiry becomes EXPIRED, and a note whose upload window closed
--- is DISCARDED; each with its keys queued, in one transaction. Reads already stopped at the instant (§3.4).
+-- is DISCARDED; each with its keys queued, in one transaction. Reads already stopped at the instant (§3.4). A call
+-- recording still RECORDING at its expiry (its writer never sealed it) is sealed RECOVERY first - pending segments become
+-- WRITER_LOSS gaps with their keys queued - and is then expired like any other. Only the recording is closed: the call
+-- itself, its end and its end reason stay S8B-05's.
 CREATE FUNCTION public.server_sweep_voice_recordings_v1(p_limit integer)
 RETURNS TABLE (expired integer, discarded integer)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
@@ -2704,14 +2735,17 @@ BEGIN
   END IF;
   FOR v_row IN
     SELECT r.id, r.recording_state FROM voice_private.recordings r
-     WHERE (r.recording_state = 'STORED' AND r.retention_expires_at <= clock_timestamp())
+     WHERE (r.recording_state IN ('STORED', 'RECORDING') AND r.retention_expires_at <= clock_timestamp())
         OR (r.recording_state = 'PENDING_UPLOAD' AND r.upload_deadline <= clock_timestamp())
      ORDER BY r.id
      LIMIT p_limit
      FOR UPDATE SKIP LOCKED
   LOOP
+    IF v_row.recording_state = 'RECORDING' THEN
+      PERFORM voice_private.seal_call_recording_v1(v_row.id, 'RECOVERY');
+    END IF;
     PERFORM voice_private.queue_recording_keys_v1(v_row.id);
-    IF v_row.recording_state = 'STORED' THEN
+    IF v_row.recording_state IN ('STORED', 'RECORDING') THEN
       UPDATE voice_private.recordings r SET recording_state = 'EXPIRED', terminal_at = clock_timestamp()
        WHERE r.id = v_row.id;
       v_expired := v_expired + 1;
@@ -3128,6 +3162,7 @@ BEGIN
     'voice_private.install_consent_text_v1(text,text,text)',
     'voice_private.queue_recording_keys_v1(uuid)',
     'voice_private.track_clock_end_v1(uuid,text)',
+    'voice_private.recording_expired_v1(uuid)',
     'voice_private.seal_call_recording_v1(uuid,text)',
     'voice_private.recording_readable_v1(uuid,uuid)',
     'public.guard_conversation_unit_voice_source_v1()',

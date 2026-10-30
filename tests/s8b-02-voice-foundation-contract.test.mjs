@@ -71,7 +71,7 @@ test('least privilege: only the server_* commands are opened, to service_role al
   const block = /FOREACH fn IN ARRAY ARRAY\[([\s\S]*?)\] LOOP/u.exec(v0183);
   assert.ok(block, 'the 0183 ACL block');
   const functions = [...block[1].matchAll(/'([^']+)'/gu)].map((m) => m[1]);
-  assert.equal(functions.length, 40, 'the 0183 ACL block names every function it creates');
+  assert.equal(functions.length, 41, 'the 0183 ACL block names every function it creates');
   assert.equal(new Set(functions).size, functions.length);
   const created = [...sqlOnly(v0183).matchAll(/CREATE FUNCTION ((?:public|voice_private|account_erasure_private)\.[a-z0-9_]+)\(/gu)].map((m) => m[1]);
   for (const name of created) assert.ok(functions.some((fn) => fn.startsWith(`${name}(`)), `${name} is in the ACL block`);
@@ -116,7 +116,12 @@ test('0184: the TypeScript mirrors equal the CHECKs, the text registries keep th
 
 test('P-1: the Product Owner\'s band values, below the typed-text confidence the database refuses on a voice turn', () => {
   const evaluator = read('apps/api/src/memory/memory-write-evaluator.service.ts');
-  assert.match(evaluator, /export const MACHINE_ASR_MEMORY_CONFIDENCE = Object\.freeze\(\{ HIGH: 0\.90, MEDIUM: 0\.75 \} as const\);/u);
+  assert.match(evaluator, /export const MACHINE_ASR_MEMORY_CONFIDENCE_DEFAULTS = Object\.freeze\(\{ HIGH: 0\.90, MEDIUM: 0\.75 \} as const\);/u);
+  assert.match(evaluator, /export const MACHINE_ASR_MEMORY_CONFIDENCE_CEILING = 0\.95;/u);
+  assert.match(evaluator, /environment\.MACHINE_ASR_MEMORY_CONFIDENCE_HIGH/u, 'P-1 is tuned without a code change');
+  assert.match(evaluator, /environment\.MACHINE_ASR_MEMORY_CONFIDENCE_MEDIUM/u);
+  assert.match(read('.env.example'), /^MACHINE_ASR_MEMORY_CONFIDENCE_HIGH=0\.90$/mu);
+  assert.match(read('.env.example'), /^MACHINE_ASR_MEMORY_CONFIDENCE_MEDIUM=0\.75$/mu);
   assert.match(evaluator, /confidence: rememberRequested \? 0\.98 : 0\.95,/u, 'the typed-text values are unchanged');
   assert.match(evaluator, /if \(band !== 'HIGH' && band !== 'MEDIUM'\) return \{ decision: 'SKIP', reason: 'LOW_CONFIDENCE_MACHINE_ASR' \};/u);
   const writer = SUBSTITUTIONS.find((s) => s.key === 'background-memory-writer');

@@ -247,7 +247,8 @@ An implementing task may tighten a text here. It may not widen one without a new
 
 This section records the text the Product Owner approved for S8B-02 (WP0 approval and CP1 authorization, 2026-10-30;
 [S8B-02 record](../../../e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §1). It binds from S8B-02's
-merge, as §2 lists. Until then nothing here is in force. CP1 is delivered locally and is not merged.
+merge, as §2 lists. Until then nothing here is in force. CP1 is on Draft PR #367, with the Product Owner's R1
+corrections (record §10), and is not merged.
 
 - **Citations re-quoted on `main` at `c65b878c`.** Each narrowed text still stands there:
   - `0064_committed_conversational_unit_substrate_v1.sql:147` (`CHECK (source_modality = 'TEXT')`);
