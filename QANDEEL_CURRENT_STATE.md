@@ -1,5 +1,8 @@
 # QANDEEL — Current State
 
+> **POST-MERGE RECONCILIATION — 2026-10-31 (supersedes the pre-merge CP2 status snapshots below; status only, no new task authority):** **S8B-02 Voice Foundation is CLOSED / MERGED** through [PR #368](https://github.com/allamqandeel/qandeel/pull/368) at `004f97270357a5efac3d21b9742c639ab8ede04a` (2026-10-31 Egypt local time). CP1 was merged through PR #367 at `f0d8ed1a`. API CI and Mobile CI passed on CP2 head `b5c23ccf`, including the live PostgREST / rclone `prove-0185` gate; rclone is **not** hosted-production proof. Migrations `0183` / `0184` / `0185` are **not hosted**. All four voice launch gates remain `DISABLED`; there is no user-ready voice, no provider adapter, no client voice surface and no paid production run. `QAN-BL-VOICE-01` stays worked but not delivered, the backlog stays at 89 items. **NEXT (not started or authorized): S8B-03**; then S8B-04 … S8B-08. S8A-06 … S8A-08 and Stage 9 remain unstarted. The earlier CP2 text is retained as its pre-merge historical snapshot.
+
+
 **Status:** `CURRENT-STATE LOCATOR / REPOSITORY TRUTH SNAPSHOT — CREATES NO NEW PRODUCT AUTHORITY`
 
 Read this first in every new session. It says where the project stands and where the authority for each
