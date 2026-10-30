@@ -95,12 +95,25 @@ export class S3PrivateAudioObjectStore implements PrivateAudioObjectStore {
     if (!Number.isSafeInteger(byteSize) || byteSize <= 0 || byteSize > VOICE_OBJECT_MAX_BYTES) throw new VoiceByteCountError();
     const { client, bucket } = this.s3();
     const counted = exactLength(byteSize);
-    // A source failure (the client went away) fails the counted stream, and with it the PUT; never a partial object.
-    body.once('error', (error) => counted.destroy(error));
-    signal.addEventListener('abort', () => counted.destroy(new Error('voice upload aborted')), { once: true });
-    await client.send(new PutObjectCommand({
-      Bucket: bucket, Key: key, Body: body.pipe(counted), ContentType: contentType, ContentLength: byteSize,
-    }), { abortSignal: signal });
+    // Aborting a streamed PUT destroys this Transform with an error. Node must have an error listener on that stream:
+    // the SDK's abortSignal does not handle its 'error' event. Race the stream failure against the SDK request so an
+    // interrupted upload rejects normally (and the caller can discard it), instead of crashing the API process.
+    const streamFailure = new Promise<never>((_resolve, reject) => counted.once('error', reject));
+    const onSourceError = (error: Error) => counted.destroy(error);
+    const onAbort = () => counted.destroy(new Error('voice upload aborted'));
+    body.once('error', onSourceError);
+    signal.addEventListener('abort', onAbort, { once: true });
+    try {
+      await Promise.race([
+        client.send(new PutObjectCommand({
+          Bucket: bucket, Key: key, Body: body.pipe(counted), ContentType: contentType, ContentLength: byteSize,
+        }), { abortSignal: signal }),
+        streamFailure,
+      ]);
+    } finally {
+      body.removeListener('error', onSourceError);
+      signal.removeEventListener('abort', onAbort);
+    }
   }
 
   async getRange(key: string, range: VoiceByteRange | null, signal: AbortSignal): Promise<Readable | null> {
