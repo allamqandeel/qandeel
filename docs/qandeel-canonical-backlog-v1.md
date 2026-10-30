@@ -224,7 +224,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CI-03` | Android API 36 Emulator Boot Smoke: GitHub Runner Emulator Infrastructure (PO-WAIVED) | `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PUB-REV-01` | Published Topic Revisions and Version-Continuous Public Discussion (PRE-LAUNCH BLOCKER) | `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` | `HIGH` | `DEFERRED — OWNED` |
 | `Stage 8B — Voice Runtime` | `QAN-BL-VOICE-01` (re-owned from `UNASSIGNED` by S8B-01 CP1, 2026-10-28, under the Product Owner's S8B-00 decision D-1) |
-| `S8B-01 — Voice Runtime Contract & Provider Evidence` | none owned by its own name at kickoff (2026-10-28, from `main` at `8b476114`); it works `QAN-BL-VOICE-01` for Stage 8B; the Stage 8A items read and left as they stand; *CP1 (the S8B-01 pull request, not merged; effective from its merge):* re-owned `QAN-BL-VOICE-01` to `Stage 8B — Voice Runtime`; admitted and tombstoned nothing |
+| `S8B-01 — Voice Runtime Contract & Provider Evidence` | none owned by its own name at kickoff (2026-10-28, from `main` at `8b476114`); it works `QAN-BL-VOICE-01` for Stage 8B; the Stage 8A items read and left as they stand; *CP1 (merged through PR #364 as `de774cfd`):* re-owned `QAN-BL-VOICE-01` to `Stage 8B — Voice Runtime`; admitted and tombstoned nothing; *CP2 (merged through PR #365 as `47121434`):* admitted and tombstoned nothing; *CP3, the closing change (2026-10-30, from `main` at `47121434`; effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B; admitted and tombstoned nothing |
 
 ---
 
@@ -460,6 +460,7 @@ happens to reversible history — are defined here.
   contract before audio-led Replay can claim the original call.
 - **Arabic speech-pronunciation quality (Product Owner direction, 2026-10-20; Stage 8B handoff, no implementation authorized):** the future Voice runtime must have a **context-aware Arabic pronunciation/vocalization preparation step before TTS**, capable of resolving unvowelled words whose meaning/pronunciation changes with diacritics, respecting the user dialogue, intended meaning and relevant dialect. Evaluate selective diacritization or provider-compatible phonetic hints rather than indiscriminately rewriting all displayed words. The speech-only representation must not mutate user-visible conversation text, stored original utterances, Memories or factual meaning; avoid inventing a pronunciation when context does not establish it. Test ambiguous minimal pairs in context, Egyptian and supported Arabic dialects, proper names, latency/streaming fit and the chosen TTS voice. This is within **the existing VOICE-01 item** — no second backlog item, count/state/owner change. Stage 8A may preserve necessary text/context interfaces but does not implement, claim or close this TTS requirement.
 - **Current truth (S8B-01 CP1, 2026-10-28; on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114`; effective from its merge):** Stage 8B has started (the Product Owner's S8B-00 decision D-1) and owns this item. The required future properties, the Arabic speech-pronunciation handoff and the P4 residues are unchanged; S8B-01 CP1 addresses them only as a candidate contract — the [Voice Runtime contract](voice-runtime-v1.md), the [S8B-01 Voice Runtime Controlled Amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md) VA-1 … VA-10 (approved in principle, D-8) and a locked non-production benchmark harness ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md)). No runtime, provider, durable audio source or gate exists; nothing is implemented, and the item is not delivered.
+- **Current truth (S8B-01 CP2 and CP3, 2026-10-28 … 2026-10-30; CP2 merged through PR #365 as `47121434`; CP3 on `s8b/s8b-01-cp3`, effective from its merge):** the Product Owner selected the providers at CP2: Google Gemini TTS `gemini-3.8-flash-tts`, voice Achird, one path ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §9.10), and Speechmatics Enhanced `ar_en`, the proof verdict `NOT ACCEPTED` (5 / 6) kept, barge-in on a real Android device a condition blocking the launch of calls (§9.21). CP3, S8B-01's closing change (record §10), records the VA-4 starting values, the cost model, the formats and the render placement, and the Product Owner's decisions on them (D-A1 … D-F1, 2026-10-30, record §10.9; call retention `started_at` + 30 days; Voice Notes in AAC-LC / M4A; launch now, scale when needed, with no Enterprise launch condition), none implemented, and records the lifecycle of VA-1 … VA-11: none in force for production, every one `NOT IMPLEMENTED`. The implementing obligations stay inside Stage 8B under this item, each with its task: S8B-02 (foundation, store, expiry), S8B-03 (Voice Notes), S8B-04 (Speech Rendering, contextual expression, selective vocalization, VA-11 §4), S8B-05 (conversation speed and interruption), S8B-06 (AEC and barge-in on a real Android device), S8B-07 (Replay and its distribution), S8B-08 (cost, privacy and launch evidence). No runtime, adapter, durable audio source or gate exists; the item is not delivered.
 - **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
@@ -5470,6 +5471,43 @@ consumed bounded run, USD 0.1155 of the USD 10 cap (S8B-01 record §9).
 - **Read and left unchanged:** `QAN-BL-AI-01` (`SYNTHETIC_ONLY`: CP2 sent only the invented corpus).
 - **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
 - **Latest index: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
+
+**S8B-01 CP3 — the closing change (2026-10-30; on `s8b/s8b-01-cp3` from `main` at `47121434`, the merge of PR #365,
+S8B-01 CP2; effective from its merge).** The Product Owner's CP3 order: the final decisions, the budget and the closure, in
+documentation only and with no paid call (S8B-01 record §10), and the Product Owner's *Final Closure Authorization* with the
+decisions D-A1 … D-F1 (2026-10-30, record §10.9). S8B-01 CP2 is merged through PR #365 as `47121434`, so its paragraph
+above is effective.
+- **BG-08 — `QAN-BL-VOICE-01` reconciled:** worked by S8B-01 and not delivered. Owner `Stage 8B — Voice Runtime`, `HIGH` and
+  `DEFERRED — OWNED` are unchanged; a current-truth note is added in §4. It is not closed, because no runtime, adapter,
+  durable audio source or gate exists.
+- **Carried inside Stage 8B, not admitted** (record §10.5; contract §16): S8B-02 (VA-3 schema, VA-5 with the billing truths of
+  record §10.2, VA-8 R-1, the store and its integration respecting `HOSTED-DEPLOY-01` (D-E1), the immutable expiry
+  `started_at` + 30 days written once and never extended, and the recovery path (D-D2)); S8B-03 (Voice Notes, VA-6, the Voice
+  Note format, AAC-LC / M4A, D-C2); S8B-04 (Speech Rendering, VA-7, contextual expression and selective contextual vocalization, VA-11 §4, the
+  production TTS route); S8B-05 (VA-1, VA-2, VA-4 with the CP3 starting values approved as starting values (D-A1), conversation speed against
+  the §11 target, interruption, the commit silence and barge-in; concurrent-session capacity from the provider's real limit and a safe
+  refusal when full, D-F1); S8B-06 (AEC and barge-in on a real Android device, a
+  condition blocking the launch of calls; N); S8B-07 (VA-8 R-2 / R-4 / R-6 with the CP3 codec approved (D-C1), VA-9, VA-10,
+  the bounded server render worker); S8B-08 (cost, privacy and launch evidence; the capacity and cost evidence before operational scaling, D-F1; its two planned admissions, the Stage 9 iOS list
+  and real-user enablement, unchanged). None leaves Stage 8B, so none is cross-task residue (BG-06).
+- **Not admitted at CP3:** the hosted voice media store and render worker (contract §1: `HOSTED-DEPLOY-01`). By the Product
+  Owner's D-E1 (record §10.9), setting up and integrating the store is S8B-02's, respecting `HOSTED-DEPLOY-01`. The decision
+  creates no backlog item, no duplicate of one and no launch condition. S8B-02 admits an item only for residue that no
+  existing item covers, at its own closure (BG-06).
+- **The Product Owner's CP3 decisions** (2026-10-30, record §10.9), recorded as given, none implemented: D-A1 (the VA-4
+  starting values), D-A2 (the §11 target kept), D-B1 (the cost model as a planning estimate), D-C1 (the codec and the
+  bounded server-side render), D-C2 (Voice Notes in AAC-LC / M4A), D-D1 (one voice, Achird), D-D2 (call retention
+  `started_at` + 30 days, written once, never extended), D-E1 (above) and D-F1 (launch now, scale when needed: no
+  Enterprise or minimum-user launch condition). None admits, re-owns or tombstones an item.
+- **Read and left unchanged:** `QAN-BL-AI-01` (`SYNTHETIC_ONLY`), `QAN-BL-AI-03` (DeepSeek's time-of-day price, relevant
+  to the cost model), `QAN-BL-AI-05`, `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03`, `QAN-BL-NOTIF-05`,
+  `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01`, `QAN-BL-ACCT-03`, `QAN-BL-PROD-08`, `QAN-BL-PROD-09`, `QAN-BL-PROD-10`,
+  `QAN-BL-CI-01`, `QAN-BL-CI-02` (the forward-safety mirror's intermittent Expo leg, seen again locally at CP3; record
+  §10.8) and `QAN-BL-CI-03`. Stage 8A's items keep their owner and status (D-1).
+- **BG-09:** the S8B-01 record, the Voice Runtime contract, VA-1 … VA-10 and VA-11 carry their final lifecycle state in this
+  change, and so do the three locators.
+- **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
+- **Index at S8B-01's closing change: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
