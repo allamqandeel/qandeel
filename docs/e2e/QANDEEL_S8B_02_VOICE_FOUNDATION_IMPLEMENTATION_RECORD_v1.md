@@ -1,8 +1,9 @@
 # QANDEEL — S8B-02 Voice Foundation — Implementation Record v1
 
 **Task:** S8B-02 — Voice Foundation (Stage 8B). This record covers **CP1 — the database and governance foundation**
-(§1 – §9). CP2 — the secure media lifecycle and S8B-02's closing change — is not started.
-**Status:** `S8B-02 CP1 DELIVERED ON s8b/s8b-02-cp1, PUSHED, DRAFT PR #367 (2026-10-30) — R1: THE PRODUCT OWNER'S REVIEW CORRECTIONS APPLIED ON THE SAME BRANCH (2026-10-30; §10) — NOT MERGED — S8B-02 NOT COMPLETE (CP2 NOT STARTED, NOT AUTHORIZED) — MIGRATIONS 0183 / 0184 NOT HOSTED — EVERY VOICE GATE CLOSED`
+(§1 – §10) and **CP2 — the secure media lifecycle, S8B-02's closing change** (§11).
+**Status:** `S8B-02 CLOSING CHANGE (CP2) DELIVERED AS A LOCAL COMMIT ON s8b/s8b-02-cp2 (2026-10-30; §11) — NOT PUSHED, NO PULL REQUEST — CP1 MERGED THROUGH PR #367 AS f0d8ed1a (2026-10-30) — ENGINEERING CLOSURE PENDING THE LIVE PostgREST / rclone PROOF (prove-0185) IN CI AND THE PRODUCT OWNER'S MERGE DECISION — S8B-02 NOT DECLARED COMPLETE, NOT MERGED — NOT USER-READY (VOICE FOR USERS NEEDS S8B-03 … S8B-08) — MIGRATIONS 0183 / 0184 / 0185 NOT HOSTED — EVERY VOICE GATE CLOSED`
+*(As written at CP1 R1:)* `S8B-02 CP1 DELIVERED ON s8b/s8b-02-cp1, PUSHED, DRAFT PR #367 (2026-10-30) — R1: THE PRODUCT OWNER'S REVIEW CORRECTIONS APPLIED ON THE SAME BRANCH (2026-10-30; §10) — NOT MERGED — S8B-02 NOT COMPLETE (CP2 NOT STARTED, NOT AUTHORIZED) — MIGRATIONS 0183 / 0184 NOT HOSTED — EVERY VOICE GATE CLOSED`
 **Date:** 2026-10-30
 **Branch / base:** `s8b/s8b-02-cp1`, from `main` at `c65b878c50ffc519c838b86c08b53298f8a88ff7`, the merge of PR #366
 (S8B-01 CP3, S8B-01's closing change, merged 2026-10-30).
@@ -413,3 +414,255 @@ no other change: 0184, the text path, Replay and the gates are untouched.
 | API `tsc` (both configurations) | clean |
 
 No full local sweep was rerun, as the Product Owner asked. GitHub CI on the R1 head is authoritative.
+
+---
+
+## 11. CP2 — the secure media lifecycle, S8B-02's closing change (2026-10-30)
+
+### 11.1 Authority and scope
+
+- **Order:** the Product Owner's *S8B-02 CP2 execution order* (2026-10-30): CP2 is S8B-02's second and last checkpoint, under
+  the S8B-02 Implementation Task Contract v1.0 FINAL and its acceptance rows B1 – B14, keeping D-1 … D-8, PRIV-W, P-1 and
+  the R1 corrections. WP0 and CP1 are not reopened.
+- **Base:** `main` at `f0d8ed1a88a5f3747e32bc476a4d898c6e4a3046`, the merge of PR #367 (S8B-02 CP1 with R1; API CI and
+  Mobile CI green). Branch `s8b/s8b-02-cp2`. 0183 and 0184 are byte-identical.
+- **Allowed and done:** the branch, the code, one forward-only migration (§11.2), local and integration tests, these
+  documents, a local commit.
+- **Not done (each needs the Product Owner's further approval):** push, pull request, merge, S8B-03, opening any voice
+  gate, any paid call, any hosted resource, any real user data.
+- **Not built in CP2, as ordered:**
+  - production ASR or TTS, or any provider call;
+  - the mobile recorder and the mobile saver of exported voice files (S8B-03);
+  - the Live Call gateway and its segment writer (S8B-05);
+  - VAD, AEC and barge-in (S8B-05 / S8B-06);
+  - Replay rendering and distribution (S8B-07);
+  - Shared Voice Notes;
+  - Price Cards or Credits;
+  - any Memory or Evidence redesign. The `MACHINE_ASR` → Fresh Evidence gap stays with S8B-03 (§10.4).
+
+### 11.2 Why migration 0185 exists
+
+The integration proved two database gaps in 0183. Each is closed forward-only in
+`database/migrations/0185_s8b_02_voice_media_lifecycle_v1.sql`.
+
+1. **Export needs an enumerator.** No 0183 definer lists an owner's readable recordings: the export package builder
+   names no recording or object, by design. Without one, the voice manifest of Export My Data (§3.11, B9) cannot be
+   built.
+   - **Added:** `public.server_list_voice_recordings_v1(uuid)`. It returns the owner's readable recordings (through
+     0183's `recording_readable_v1`) and their `STORED` objects, each with a stable export file name. It returns **no
+     storage key**: the per-file route re-reads the key through 0183's read definer, which re-checks ownership and
+     readability at that instant.
+2. **Late writes were invisible to reconciliation.** 0183's voice listing reconciliation skipped every key that still had
+   an object row. Voice object rows outlive their recording's `EXPIRED` / `DELETED` / `DISCARDED` state, because they are
+   its history. So an object written late under such a key could never be found (B5).
+   - **Forward-replaced:** `public.server_enqueue_unknown_voice_media_v1(text[])`. It now queues a listed key unless that
+     key belongs to a live object (not `DISCARDED`) of a live recording (not `EXPIRED`, `DELETED` or `DISCARDED`). A live
+     key is never touched.
+
+**What 0185 does not contain:**
+
+- no relation, column, CHECK, trigger, state, gate or consent text;
+- no `voice_private` function, so verify-0183's census is unchanged;
+- nothing that names the account erasure coordinator.
+
+Both definers are granted to `service_role` alone. Deploy guard G1 refuses unless all four voice scopes are
+`DISABLED` / `UNSATISFIED`; G2 refuses any client-role execute.
+
+**Defect found by its own verifier before commit:** a NULL `CASE` concatenation made every export file name NULL. It is
+fixed with `ELSE ''`, and verify-0185 L1 proves the names.
+
+### 11.3 What CP2 delivers
+
+| Kind | Files |
+|---|---|
+| Migration | `0185_s8b_02_voice_media_lifecycle_v1.sql` (§11.2) |
+| A — store | `apps/api/src/voice-media/private-audio-object.store.ts` — `PrivateAudioObjectStore` (`putStream`, `getRange`, `exists`, `remove`, `listOlderThan`), the S3 adapter and the ONE in-memory fake. It reuses the S6-06 bucket, configuration and SDK through `mediaStoreConfigFrom` / `mediaStoreClient` (exported from `introduction-media.store.ts`, behaviour unchanged). No new dependency, no second store. |
+| B — API | `voice-media.service.ts`, `voice-media.controller.ts`, `voice-media.repository.ts`, `voice-media.module.ts` |
+| C — retention | `voice-retention.worker.ts` (the 0183 sweep), `voice-recording-recovery.worker.ts` (the 0183 stale-writer recovery) |
+| D — erasure | `introduction-media-erasure.worker.ts`, generalized: routes a key by prefix to its store, adds the voice listing reconciliation |
+| E — account deletion | no new code. The 0164 / 0183 authority already queues every voice key to the shared queue and `media_pending`; D makes the worker erase them. |
+| F — export | `privacy-data.service.ts` / `privacy-data.controller.ts`: `voiceManifest` beside `photoManifest`; `GET /account/privacy/export/download/bundle/voice/:fileName` |
+| G — ports | `apps/api/src/voice/speech-recognition.adapter.ts`, `speech-synthesis.adapter.ts`; deterministic fakes in `apps/api/src/voice/testing/` |
+| Composition | `IntroductionsDisclosureModule` imports and re-exports `VoiceMediaModule`, so `AccountModule`'s import list is unchanged |
+| Telemetry | `VOICE_MEDIA` (upload / read / delete / export_file), `VOICE_RETENTION` (sweep / recover), `INTRODUCTION_MEDIA_ERASURE` `voice_reconcile`: content-free classes only |
+| Rate census | the four voice routes and the voice export file route are classified |
+| Tests | `voice-media.spec.ts` (30); `database/verify-migration-0185.mjs` (C0, L1, R1); `database/prove-0185-voice-media-lifecycle-postgrest.mjs` (V01 – V14) |
+| CI | `verify:voice-media-lifecycle:integration` after the 0184 verifier; `prove:voice-media-lifecycle:postgrest` in the PostgREST + rclone loop after `prove-0168` |
+| Re-anchored | `tests/s8b-02-voice-foundation-contract.test.mjs` (0185 is next; the CP2 boundary and privacy rules replace the CP1 "no adapter" rule); `tests/w3-mega-s-personal-controls-settings-contract.test.mjs` (the voice export route); `privacy-data.spec.ts`, `privacy-export-bundle.spec.ts`, `observability.spec.ts`; `prove-0168` X07 (the null `voiceManifest`) |
+
+Routes. All are behind the verified token and answer `Cache-Control: no-store, private`. None takes a user id or a
+storage key.
+
+| Route | Behaviour |
+|---|---|
+| `POST /voice/notes/:sessionId/:commandId` | the raw `audio/mp4` body, streamed |
+| `GET /voice/recordings/:recordingId` | the readable objects |
+| `GET /voice/recordings/:recordingId/objects/:track/:segmentIndex` | 200, or 206 for a Range; 416 out of range |
+| `DELETE /voice/recordings/:recordingId` | `DELETED`, or `ALREADY_GONE` on a repeat |
+| `GET /account/privacy/export/download/bundle/voice/:fileName` | one listed export file, streamed |
+
+### 11.4 The design as built
+
+- **Streaming (A, B10).**
+  - The upload is one S3 PUT. Its body is the request stream piped through an exact-length counter; the length is the
+    one the database recorded at begin.
+  - A read is the store's own body stream, piped to the response with a 30 s idle watchdog.
+  - Every store call takes an AbortSignal: a client disconnect, the upload deadline and a 15 s budget to begin answering
+    a read.
+  - Nothing buffers a whole recording.
+- **Note upload order (B).**
+  1. Shape checks run before any database call.
+  2. **begin:** the gate and consent are checked in the database.
+  3. **PUT.**
+  4. **accept:** consent is re-read.
+  - Whatever stops the upload after begin discards the note at once:
+    - a failed or aborted PUT;
+    - an accept refusal, such as a PRIV-W withdrawal.
+  - A discarded note is never `STORED`. Its key waits out the upload deadline in the shared queue.
+  - An accept that gets no answer is neither discarded nor claimed: the sweep settles it.
+- **Gates (B12).** Only creation consults a gate or consent. Read, delete and export never do.
+- **Reads.**
+  - Every read re-checks ownership and readability in the database.
+  - A not-readable recording answers 404 without touching the store. That covers another human's, expired, deleted and
+    erasure-due recordings.
+  - A live key with no object is 503, an integrity failure, never an empty answer.
+- **Retention (C, B8).**
+  - The clock is 0183's: `retention_expires_at`, written once. Reads stop at the instant, inside the database, with no
+    worker.
+  - The retention worker runs 0183's sweep. It expires `STORED` recordings, discards unfinished notes, and seals
+    `RECOVERY` then expires a call still `RECORDING` past its expiry.
+  - The recovery worker seals a call whose writer lease lapsed.
+  - No API code computes or extends an expiry.
+- **Erasure (D).**
+  - There is one worker and one queue, using DELETE, then HEAD 404, then Confirm, with the 0162 lease and backoff.
+  - A voice key goes to the audio store and a photo key to the photo store.
+  - Without an audio store, a voice key is deferred, never confirmed.
+  - The listing reconciliation now covers `voice-note/` and `voice-call/` as well as `intro-media/`, and 0185 decides
+    what is no longer live.
+  - A pending key waits until its upload deadline plus 60 s (0183), so an upload still in flight is never erased from
+    under itself, and a late write is found by the listing.
+- **Account erasure (E).**
+  - 0164 / 0183 queue every key the account's recordings ever named, history included, and track them in
+    `media_pending`.
+  - `media_erased_at` is set by the 0164 trigger only when the last key leaves the queue, for photos and voice alike.
+- **Export (F).**
+  - The voice manifest, format `qandeel.personal-data-export.voice.v1`, lists each file with:
+    - its name, type, kind, track and index;
+    - its instants, its size and its clock;
+    - `originalAudio: true`.
+  - It carries no key, no recording id and no bytes.
+  - The per-file route re-resolves the name against the owner's readable recordings at download. An expired, deleted or
+    erased recording, or another reader's file, answers 404 `NO_LONGER_AVAILABLE`.
+  - The bundle requires a `READY` export, as for photos. A lost voice object does not block the bundle: its file
+    answers 503 on download. This differs from `QAN-BL-PROD-10`, which is about photos and is unchanged.
+- **Ports (G).**
+  - `SpeechRecognitionAdapter` (batch and streaming) and `SpeechSynthesisAdapter` (chunked).
+  - Their usage is in the VA-5 ledger's own units and sources:
+    - Speechmatics: `audioInputMs`, `PROVIDER_REPORTED` / `GATEWAY_MEASURED` (D-2);
+    - Gemini: `inputTokens` + `audioOutputTokens` (D-1);
+    - a crashed session is `ABSENT`, never zero.
+  - The fakes are deterministic and composed by no module. The ports carry no network code and read no credential
+    (static contract).
+
+### 11.5 Acceptance — B1 … B14
+
+| Row | What proves it | State |
+|---|---|---|
+| **B1** Voice Note lifecycle | prove-0185 V02 – V04, V08 (consent → upload → store → read → expiry at the instant → physical deletion); `voice-media.spec` upload / read | proven locally at unit, contract and DB level; **live leg written, runs in CI** |
+| **B2** Live Call recording | prove-0185 V09:<br>• USER / QANDEEL segments;<br>• `OUT_OF_ORDER` and `DISCONTINUOUS` refused;<br>• a `RECONNECTION` gap;<br>• the owner's deletion erases every segment.<br>verify-0183 A6 / A6r / A7 (the database authority) | DB proven locally; **live leg runs in CI** |
+| **B3** Early deletion | prove-0185 V07: refused at once, erased (DELETE, HEAD 404, the data directory), `ALREADY_GONE` on repeat; spec | **live leg runs in CI** |
+| **B4** Account erasure | prove-0185 V12 (a real photo and voice through the one queue; `media_erased_at` only after the last key); verify-0183 A11; verify-0164 E01 / E09 re-run on the 0185 database | DB proven locally; **live leg runs in CI** |
+| **B5** Races, PRIV-W | prove-0185 V10:<br>• a withdrawal during an upload discards the note; the landed object waits out its deadline, then is erased;<br>• a withdrawal between a segment's PUT and its store refuses the store;<br>• a late PUT under a terminal key and an orphan are reconciled;<br>• live keys are never queued.<br>verify-0183 A8r (the two-connection ordering); verify-0185 R1 | DB proven locally; **live leg runs in CI** |
+| **B6** Crash and recovery | V06 (a client disconnect discards, leaving no object or partial file); V09 (a writer lost → recovery seal); V12 (a crashed worker's leases lapse, then a fresh worker finishes); spec | **live leg runs in CI** |
+| **B7** Storage failures | V07b (live PUT / GET / DELETE / HEAD failures: 503, nothing partial, never a false confirmation, the retry erases); V12 (a voice store outage during account erasure); spec (`failing` put / get / remove / exists / list) | unit proven locally; **live leg runs in CI** |
+| **B8** Retention never extended | V04 (reads), V09 (reconnection and recovery), V08 (the instant); verify-0183 A6 / A6r (the Replay capture and the sweep leave the expiry byte-equal) | DB proven locally; **live leg runs in CI** |
+| **B9** Export | V11 (the manifest beside an unchanged photo manifest; every file byte for byte; another reader and a deleted recording `NO_LONGER_AVAILABLE`); verify-0185 L1; spec | DB proven locally; **live leg runs in CI** |
+| **B10** Privacy and streaming memory | static contract (no logger, console, Sentry, presign or ACL in the media code; no base64); telemetry allowlist (`observability.spec`); V03 / V11 (no key in any answer); V05 (an error carries only its outcome); V06 (the streaming witness, §11.7) | contract and unit proven locally; **memory witness runs in CI** |
+| **B11** HTTP isolation | V05 (another human 404, nothing read from storage for them; no token 401 on every voice route); V13 (no client role reaches a voice definer on the wire) | **live leg runs in CI** |
+| **B12** Gates | 0185 deploy guard G1; verify-0185 C0; V01 / V14; every scope `DISABLED` / `UNSATISFIED` | **proven locally** |
+| **B13** Honest evidence | every rclone result is labelled a CI stand-in; the hosted proof is `QAN-BL-PROD-08`'s (§11.9) | **met** |
+| **B14** Closure | §11.9 and the backlog's closing paragraph (BG-08, BG-09) | **met in this change** |
+
+### 11.6 Verification (local, 2026-10-30)
+
+All runs used the loopback PostgreSQL 17 on port 55433 and never the hosted database. The 0185 database is a fresh clone
+of a database migrated to 0184, with 0185 applied.
+
+| Check | Result |
+|---|---|
+| verify-migration-0185 (C0 catalogue and gates, L1 export listing, R1 reconciliation) | **PASS** |
+| verify-migration-0183 / 0184 / 0164 / 0162 / 0168 / 0169 on the 0185 database | **PASS** (each) |
+| `test:database` (verifier hazard scanner) | **1310 / 1310 PASS** |
+| root contracts (`node --test tests/*.test.mjs`) | see §11.10 (final run) |
+| `test:s8b-02-voice-foundation-contract` | **9 / 9 PASS** |
+| S6-06 and the other pinned contracts (s6-02, s6-05, s6-06, s6-07 ×2, s7-01, acct-del-01, w3-mega-s) | **PASS** |
+| forward-safety mirror contract | **35 / 35 PASS** |
+| API jest, full | **300 suites; 7095 PASS, 1 skipped**. The "worker failed to exit" warning is not from the voice, account or disclosure suites: `--detectOpenHandles` on them finds none. |
+| API `tsc` | clean |
+| DI composition (`AccountModule` booted with no environment) | `PrivacyDataService` holds the one `VoiceMediaService`; the erasure worker holds the audio store and the voice repository |
+| `prove-0185` (PostgREST + rclone) | **NOT RUN LOCALLY** (§11.7). Syntax-checked; wired into CI. |
+
+**No regression in photo erasure or export:**
+
+- verify-0162, verify-0164 and verify-0168 pass on the 0185 database.
+- The photo store and worker behaviour are unchanged: the worker only adds a prefix route and a second reconciliation.
+- The photo manifest, photo files and text package are byte-unchanged in shape; `voiceManifest` is additive.
+- `prove-0162` and `prove-0168` are unchanged, apart from X07's re-anchored null shape, and run beside `prove-0185` in CI.
+
+### 11.7 Proofs not complete, and why
+
+- **`prove-0185` has not run.** This machine has no PostgREST, no `rclone` and no Docker. Downloading the pinned
+  binaries needs the Product Owner's approval; pushing for CI is not authorized. The proof is written, syntax-checked
+  and wired into api-ci's PostgREST + rclone loop.
+  - **Until it passes in CI, B1 – B9 and B11 are proven at the database, contract and unit level only**, and the
+    PostgREST / rclone results the order asks for do not exist yet.
+  - **This is the condition for engineering closure.**
+- **The streaming-memory proof** is the V06 witness: while the client pauses with 8 of 24 MiB sent, the storage server
+  already holds at least 4 MiB of the object. The API process's RSS is logged as information only: a heap figure in one
+  process is not a stable proof.
+- **Timeouts** are proven by unit only: the 15 s read-open budget, the 30 s idle watchdog and the upload deadline.
+- **Hosted Supabase Storage** is not proven and must not be inferred from rclone (B13; §11.9, `QAN-BL-PROD-08`).
+
+### 11.8 Deviations, declared
+
+1. **No `voice.module.ts`.** The ports have no production provider in CP2, so a module would compose nothing. S8B-03 /
+   S8B-04 / S8B-05 bind them.
+2. **`VoiceMediaModule` is composed through `IntroductionsDisclosureModule`,** which imports it for the shared erasure
+   worker and re-exports it. `AccountModule`'s import list, pinned by six contracts, is unchanged. One instance of each
+   provider exists; the DI composition check proves it.
+3. **`writeCallSegment` has no route.** It is S8B-05's writer entry point and is proven live by `prove-0185` V09 / V10.
+4. **The export voice file route answers through `@Res`.** It sets `no-store, private` before anything is sent, instead
+   of the `@Header(...NO_STORE)` decorator of the JSON routes. The pinned count of seven decorated routes is unchanged.
+5. **Account erasure tracks every key a recording ever named** (0183 `erase_voice_v1`), including keys already erased.
+   Each is confirmed again by DELETE then HEAD 404. This is harmless, and it is what keeps a late write from escaping
+   the erasure.
+
+### 11.9 Governance — BG-08 / BG-09 (S8B-02's closing change)
+
+- **BG-08:**
+  - `QAN-BL-VOICE-01` is **worked and not delivered**. It stays `DEFERRED — OWNED` by Stage 8B, `HIGH`, with a dated
+    current-truth note: done in S8B-02, and what remains with S8B-03 … S8B-08.
+  - `QAN-BL-PROD-08` receives the dated note D-8 asked for: the hosted proof also covers `voice-note/` and `voice-call/`,
+    Range, the object-size limit, DELETE / HEAD and listing.
+  - Nothing is admitted or tombstoned. Every residue has an owner:
+    - the hosted store: `HOSTED-DEPLOY-01` (`PROD-08`);
+    - the recorder, the voice file saver, the consent text and `MACHINE_ASR` → Evidence: S8B-03;
+    - the call gateway and writer: S8B-05;
+    - Replay audio: S8B-07;
+    - provider reconciliation and launch evidence: S8B-08.
+  - The index is unchanged: **89 items; 44 / 4 / 8 / 33; 52 / 35 / 2**.
+- **BG-09:** this record's banner carries S8B-02's state at its closing change. The three locators, the backlog's §7
+  closing paragraph and its §9 row are updated in this same change. No separate documentation step follows.
+- **Engineering completion is not user readiness.** S8B-02 gives Stage 8B a secure, closed-by-default media lifecycle.
+  A user can record, hear or export nothing until:
+  - S8B-03 (the recorder, the consent text, the saver, `MACHINE_ASR` → Evidence);
+  - S8B-04 / S8B-05 / S8B-06 (rendering, the call, barge-in);
+  - S8B-07 (Replay audio);
+  - S8B-08 (cost, privacy and launch evidence);
+  - the hosted store (`QAN-BL-PROD-08`);
+  - and the gates opened by their own launch decisions.
+
+### 11.10 Final local state
+
+See the closing commit on `s8b/s8b-02-cp2`. The root-contract run after these documents is recorded in the Product
+Owner's CP2 report.

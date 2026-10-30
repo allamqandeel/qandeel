@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-30, S8B-02 CP1):** S8B-02 — Voice Foundation; S8B-01 merged through PR #366 as `c65b878c` (2026-10-30); CP1 — the database and governance foundation (migrations `0183` / `0184`, not hosted; the Product Owner's D-1 … D-8, PRIV-W and P-1) on `s8b/s8b-02-cp1`, Draft PR #367, with the Product Owner's R1 corrections (record §10); not merged; every voice gate closed; CP2 not authorized; S8B-02 not complete ([record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md)). S8A-06 … S8A-08 unchanged.
+> **CURRENT TASK (2026-10-30, S8B-02 CP2):** S8B-02 — Voice Foundation. CP1 is merged through PR #367 as `f0d8ed1a`. CP2, S8B-02's closing change ([S8B-02 record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §11), is a local commit on `s8b/s8b-02-cp2`, not pushed. It adds the secure media lifecycle: migration `0185` (not hosted); the private audio store; the owner's voice routes; retention and recovery; the one shared erasure worker; account erasure; the voice export; the ASR / TTS ports with fakes only. BG-08 / BG-09 are done. `prove-0185` (PostgREST + rclone) runs in CI and has not run locally. Every voice gate is closed. S8B-02 is not declared complete, and is not user-ready: voice for users needs S8B-03 … S8B-08, the hosted store and each gate's launch decision. Next, on new authorizations: push and a Draft PR, CI, the Product Owner's merge decision, then S8B-03. S8A-06 … S8A-08 unchanged.
+>
+> *(As written at S8B-02 CP1; merged through PR #367:)* **CURRENT TASK (2026-10-30, S8B-02 CP1):** S8B-02 — Voice Foundation; S8B-01 merged through PR #366 as `c65b878c` (2026-10-30); CP1 — the database and governance foundation (migrations `0183` / `0184`, not hosted; the Product Owner's D-1 … D-8, PRIV-W and P-1) on `s8b/s8b-02-cp1`, Draft PR #367, with the Product Owner's R1 corrections (record §10); not merged; every voice gate closed; CP2 not authorized; S8B-02 not complete ([record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md)). S8A-06 … S8A-08 unchanged.
 >
 > *(As written at S8B-01 CP3; merged through PR #366:)* **CURRENT TASK (2026-10-30, CP3):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP2 merged through PR #365 as `47121434` (2026-10-28); CP3, S8B-01's closing change (record §10): the VA-4 starting values, the cost model, the formats and the server-side render placement, the lifecycle of VA-1 … VA-11, BG-08 / BG-09; **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION**, the Product Owner's CP3 decisions D-A1 … D-F1 made (2026-10-30, record §10.9), none implemented; call retention `started_at` + 30 days (D-D2); launch now, scale when needed (D-F1); no paid call; no production code; every voice gate closed; not merged. Next, after the decisions and the merge and on a new authorization: S8B-02 Foundation. S8A-06 … S8A-08 unchanged.
 >
@@ -1240,7 +1242,7 @@ stay as written.
 - No production code, migration, provider adapter or feature gate; every voice gate closed. S8B-02 needs the merge of
   this change and a new authorization.
 
-### S8B-02 — Voice Foundation (2026-10-30 …; current task; CP1 on Draft PR #367 with the Product Owner's R1 corrections; not merged; S8B-02 not complete; every voice gate closed)
+### S8B-02 — Voice Foundation (2026-10-30 …; current task; CP1 merged through PR #367 as `f0d8ed1a`; CP2, the closing change, a local commit on `s8b/s8b-02-cp2`, not pushed; S8B-02 not declared complete; not user-ready; every voice gate closed)
 
 - Started 2026-10-30 on `s8b/s8b-02-cp1` from `main` at `c65b878c50ffc519c838b86c08b53298f8a88ff7` (the merge of PR #366, 2026-10-30):
   **S8B-01 is merged**, so its closing change is effective. The Product Owner approved the WP0 decisions D-1 … D-8 with
@@ -1250,7 +1252,7 @@ stay as written.
 - **BG-05 at kickoff** (record §2): no item is owned by "S8B-02". `QAN-BL-VOICE-01` is worked, not delivered, and stays
   `DEFERRED — OWNED` by Stage 8B. Every other open item was read and left with its owner. CP1 admits and tombstones
   nothing.
-- **CP1 — the database and governance foundation** (record §3 – §6). On `s8b/s8b-02-cp1`, Draft PR #367; not merged.
+- **CP1 — the database and governance foundation** (record §3 – §6). On `s8b/s8b-02-cp1`; **merged through PR #367 as `f0d8ed1a88a5f3747e32bc476a4d898c6e4a3046` (2026-10-30; API CI and Mobile CI green)**.
   **R1 (2026-10-30, the Product Owner's review, record §10):**
   - a withdrawal also refuses a replayed unfinished begin or add, while completed operations replay safely;
   - no segment, store or gap at or after the expiry, and the sweep seals, expires and queues a call recording still
@@ -1274,7 +1276,30 @@ stay as written.
   - Not hosted; the next migration is `0185`.
   - The text path and the text Replay are proven unchanged (A1, A5, A12).
   - The amendment text S8B-02 binds is [amendment §4](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md); it binds from S8B-02's merge.
-- No API endpoint, worker, store, provider adapter, mobile code or user-visible string. Every voice gate is closed, and
+- *(CP1)* No API endpoint, worker, store, provider adapter, mobile code or user-visible string. Every voice gate is closed, and
   no consent text is installed.
-- **CP2 (the secure media lifecycle, B1 – B10, PRIV-W B5) and S8B-02's closing change are not started and not
-  authorized.**
+- **CP2 — the secure media lifecycle, S8B-02's closing change** (record §11; the Product Owner's CP2 order, 2026-10-30). A
+  local commit on `s8b/s8b-02-cp2` from `f0d8ed1a`; not pushed; no pull request.
+  - **Migration `0185`** (not hosted):
+    - the owner's readable recordings listed for the export, with no key;
+    - the voice reconciliation now finds a late write under a terminal key.
+  - **The private audio store:** `voice-note/` `audio/mp4` and `voice-call/` `audio/ogg`, streamed both ways, in the
+    S6-06 bucket. No presign, no ACL, no new dependency.
+  - **The owner's voice routes:** note upload, Range reads, early deletion. Each is `no-store, private` and re-checks the
+    owner on every request.
+  - **The retention and recovery workers** (0183's clock, never extended).
+  - **The ONE erasure worker** for photo and voice keys, with the voice listing reconciliation.
+  - **Account erasure** of voice through the shared queue.
+  - **The voice export manifest** beside the photo manifest, with a per-file route.
+  - **The ASR / TTS ports** with deterministic fakes only.
+  - **Verified locally on PostgreSQL 17:**
+    - verify-0185, and verify-0183 / 0184 / 0164 / 0162 / 0168 / 0169 on the 0185 database;
+    - API jest 300 suites;
+    - the database hazard scanner;
+    - the root contracts.
+  - **The live PostgREST / rclone proof `prove-0185` is wired into CI and has not run locally:** no PostgREST or rclone is
+    installed here. S8B-02 is not declared complete before it passes and the Product Owner approves the merge.
+  - BG-08: `QAN-BL-VOICE-01` is worked and not delivered (a current-truth note). `QAN-BL-PROD-08` gets the dated
+    hosted-storage note (D-8). Nothing is admitted or tombstoned; 89 items.
+  - **Engineering completion is not user readiness.** Voice for users needs S8B-03 … S8B-08, the hosted store and each
+    gate's own launch decision.

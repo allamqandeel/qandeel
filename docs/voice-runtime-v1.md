@@ -437,6 +437,14 @@ authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
    and never hands its key back; a completed acceptance or store still replays its result (R1). Withdrawal racing an upload or a segment store is proven in S8B-02 CP2
    (B5). Export lists retained recordings as metadata, with no key. The per-file voice export is CP2 (B9), and the
    mobile saver is S8B-03.
+8. *(S8B-02 CP2, 2026-10-30, S8B-02's closing change; a local commit, effective from its merge; S8B-02 record §11.)*
+   The server side of items 3, 4 and 7 is implemented, closed by default:
+   - the owner's early deletion through the one shared erasure worker;
+   - retention at the instant, never extended by any read;
+   - the voice export manifest and its per-file route;
+   - PRIV-W's withdrawal races (B5), as live PostgREST / rclone scenarios in `prove-0185`.
+
+   Items 1, 2 and 6 (every user-visible string) and the mobile saver remain S8B-03's. Every voice gate stays `DISABLED`.
 
 ## 11. Speed and latency (D-6)
 

@@ -79,6 +79,10 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * S7-01 composes the owner's Personal Replay boundary (ReplayModule, migration 0169) here for the same reason: it is the
  * owner's own account-scoped Replay of their own conversations. It shares nothing with these providers, holds no
  * service_role path and imports no AI runtime, mobile or graphics code.
+ *
+ * S8B-02 (CP2): the owner's voice media (the private audio store, its routes, the retention and recovery workers) arrives
+ * through IntroductionsDisclosureModule, which re-exports VoiceMediaModule beside the shared erasure worker; Export My
+ * Data reads the owner's voice manifest and files through it. The import list above is unchanged.
  */
 @Module({
   imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,

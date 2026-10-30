@@ -47,6 +47,8 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // never refused for its number (the right to export is not bounded by a request count, Q7'').
   'GET /account/privacy/export/download/bundle': 'SECURITY_SENSITIVE',
   'GET /account/privacy/export/download/bundle/files/:fileName': 'AUTHENTICATED',
+  // S8B-02 (CP2): one listed voice file of the reader's own, streamed - classed as the photo file route, for the same reason.
+  'GET /account/privacy/export/download/bundle/voice/:fileName': 'AUTHENTICATED',
   'POST /account/privacy/deletion': 'SECURITY_SENSITIVE', // password proof
   'POST /account/privacy/deletion/cancel': 'SECURITY_SENSITIVE',
 
@@ -277,6 +279,13 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // per selected moment, the heaviest database work a human can ask for here, so it takes the strict class; the draft,
   // its revision, finalizing (a private version, never a distribution), reopening and every read are ordinary own acts
   // the database bounds itself (one range of whole messages, 100 Replays per conversation). No new class.
+  // S8B-02 (CP2): the owner's voice media. The upload streams up to 25 MiB (classed as the photo upload); reads are Range
+  // requests a player repeats, and the owner's deletion is always available.
+  'POST /voice/notes/:sessionId/:commandId': 'SECURITY_SENSITIVE',
+  'GET /voice/recordings/:recordingId': 'AUTHENTICATED',
+  'GET /voice/recordings/:recordingId/objects/:track/:segmentIndex': 'AUTHENTICATED',
+  'DELETE /voice/recordings/:recordingId': 'AUTHENTICATED',
+
   'GET /replay/capability': 'AUTHENTICATED',
   'GET /replay/conversations/:sessionId': 'AUTHENTICATED',
   'POST /replay/drafts': 'AUTHENTICATED',

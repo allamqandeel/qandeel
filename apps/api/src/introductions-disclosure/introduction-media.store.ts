@@ -26,7 +26,8 @@ export interface IntroductionMediaObjectStore {
 export const INTRODUCTION_MEDIA_PREFIX = 'intro-media/';
 const KEY = /^intro-media\/[0-9a-f-]{36}$/u;
 
-interface StoreConfig {
+/** S8B-02 (CP2): the one bucket configuration, shared with the private audio store (one bucket, one SDK, no new dependency). */
+export interface MediaStoreConfig {
   readonly endpoint: string;
   readonly region: string;
   readonly bucket: string;
@@ -34,7 +35,7 @@ interface StoreConfig {
   readonly secretAccessKey: string;
 }
 
-function configFrom(env: NodeJS.ProcessEnv): StoreConfig | null {
+export function mediaStoreConfigFrom(env: NodeJS.ProcessEnv): MediaStoreConfig | null {
   const endpoint = env.QANDEEL_MEDIA_S3_ENDPOINT;
   const region = env.QANDEEL_MEDIA_S3_REGION;
   const bucket = env.QANDEEL_MEDIA_S3_BUCKET;
@@ -49,10 +50,24 @@ function configFrom(env: NodeJS.ProcessEnv): StoreConfig | null {
   return { endpoint, region, bucket, accessKeyId, secretAccessKey };
 }
 
-const isMissing = (error: unknown): boolean => {
+export const isMissingMediaObject = (error: unknown): boolean => {
   const e = error as { name?: string; $metadata?: { httpStatusCode?: number } } | null;
   return e?.name === 'NoSuchKey' || e?.name === 'NotFound' || e?.$metadata?.httpStatusCode === 404;
 };
+
+/** The one S3 client shape for the private bucket. */
+export function mediaStoreClient(config: MediaStoreConfig): S3Client {
+  return new S3Client({
+    endpoint: config.endpoint,
+    region: config.region,
+    forcePathStyle: true,
+    credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+    // Only the checksums the protocol requires: S3-compatible servers differ on the optional ones.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+    maxAttempts: 1,
+  });
+}
 
 const assertKey = (key: string): void => {
   if (!KEY.test(key)) throw new Error('introduction media key out of shape');
@@ -60,21 +75,12 @@ const assertKey = (key: string): void => {
 
 @Injectable()
 export class S3IntroductionMediaStore implements IntroductionMediaObjectStore {
-  private readonly config: StoreConfig | null;
+  private readonly config: MediaStoreConfig | null;
   private readonly client: S3Client | null;
 
   constructor() {
-    this.config = configFrom(process.env);
-    this.client = this.config === null ? null : new S3Client({
-      endpoint: this.config.endpoint,
-      region: this.config.region,
-      forcePathStyle: true,
-      credentials: { accessKeyId: this.config.accessKeyId, secretAccessKey: this.config.secretAccessKey },
-      // Only the checksums the protocol requires: S3-compatible servers differ on the optional ones.
-      requestChecksumCalculation: 'WHEN_REQUIRED',
-      responseChecksumValidation: 'WHEN_REQUIRED',
-      maxAttempts: 1,
-    });
+    this.config = mediaStoreConfigFrom(process.env);
+    this.client = this.config === null ? null : mediaStoreClient(this.config);
   }
 
   isConfigured(): boolean {
@@ -102,7 +108,7 @@ export class S3IntroductionMediaStore implements IntroductionMediaObjectStore {
       if (!answer.Body) return null;
       return Buffer.from(await answer.Body.transformToByteArray());
     } catch (error) {
-      if (isMissing(error)) return null;
+      if (isMissingMediaObject(error)) return null;
       throw error;
     }
   }
@@ -114,7 +120,7 @@ export class S3IntroductionMediaStore implements IntroductionMediaObjectStore {
       await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: signal });
       return true;
     } catch (error) {
-      if (isMissing(error)) return false;
+      if (isMissingMediaObject(error)) return false;
       throw error;
     }
   }
@@ -126,7 +132,7 @@ export class S3IntroductionMediaStore implements IntroductionMediaObjectStore {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: signal });
     } catch (error) {
       // Deleting what is already gone is success: the erasure is proven by the HEAD that follows, never by this answer.
-      if (!isMissing(error)) throw error;
+      if (!isMissingMediaObject(error)) throw error;
     }
   }
 

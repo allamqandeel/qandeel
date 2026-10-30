@@ -143,8 +143,12 @@ test('the owner routes are guarded, account-free and silent; only the provider-r
   assert.match(controller, /@Controller\('account\/privacy'\)\n@UseGuards\(SupabaseAuthGuard\)\nexport class PrivacyDataController/u);
   assert.deepEqual([...code(controller).matchAll(/@(Get|Post)\(([^)]*)\)/gu)].map((m) => `${m[1]} ${m[2]}`), ["Get ", "Post 'export'", "Get 'export/download'",
     // RE-ANCHORED by S6-07 (CP4, QAN-BL-PRIV-04): the export bundle and its per-photo file route, owner-only and additive.
-    "Get 'export/download/bundle'", "Get 'export/download/bundle/files/:fileName'", "Post 'deletion'", "Post 'deletion/cancel'"]);
+    "Get 'export/download/bundle'", "Get 'export/download/bundle/files/:fileName'",
+    // RE-ANCHORED by S8B-02 (CP2, §3.11): the per-file voice export route, owner-only, streamed and additive.
+    "Get 'export/download/bundle/voice/:fileName'", "Post 'deletion'", "Post 'deletion/cancel'"]);
   assert.equal((code(controller).match(/@Header\(\.\.\.NO_STORE\)/gu) ?? []).length, 7, 'no answer — above all the package and its photos — is kept by a cache (S6-07 CP4: five routes became seven)');
+  // S8B-02 (CP2): the streamed voice route sets its own `no-store, private` before a byte is sent (it answers through @Res).
+  assert.match(code(controller), /downloadExportVoice\([^)]*\)[^{]*\{\n\s*response\.setHeader\('Cache-Control', 'no-store, private'\);/u);
   assert.match(controller, /const NO_STORE = \['Cache-Control', 'no-store'\] as const;/u);
   const files = readdirSync(new URL(`${API}/`, root)).filter((name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'));
   const adminReachers = files.filter((name) => /\/auth\/v1\/admin\//u.test(code(read(`${API}/${name}`))));

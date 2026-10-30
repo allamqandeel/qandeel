@@ -181,8 +181,13 @@ const OPERATIONAL_LEGAL:ReadonlyArray<readonly [string,string,string]>=Object.fr
  // RE-ANCHORED by S6-07 (CP4): the export bundle and its per-photo file route (deliberate widening).
  ...['success','not_ready','transport_failure','integrity_failure'].map(o=>['PRIVACY_EXPORT','bundle',o] as const),
  ...['success','superseded_expected','transport_failure','integrity_failure'].map(o=>['PRIVACY_EXPORT','bundle_file',o] as const),
+ // RE-ANCHORED by S8B-02 (CP2): the voice media routes, the voice retention and recovery workers, and the voice listing
+ // reconciliation of the one media erasure worker (deliberate widening; refused_expected is the database's own refusal).
+ ...['success','transport_failure','integrity_failure'].map(o=>['INTRODUCTION_MEDIA_ERASURE','voice_reconcile',o] as const),
+ ...['success','refused_expected','transport_failure','integrity_failure'].flatMap(o=>[['VOICE_MEDIA','upload',o],['VOICE_MEDIA','read',o],['VOICE_MEDIA','delete',o],['VOICE_MEDIA','export_file',o]] as const),
+ ...['success','transport_failure','integrity_failure'].flatMap(o=>[['VOICE_RETENTION','sweep',o],['VOICE_RETENTION','recover',o]] as const),
 ] as const);
-const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE','AI_USAGE_ACCOUNTING','INTRODUCTION_MEDIA_ERASURE','ACCOUNT_ERASURE','INTRODUCTIONS_FORWARD'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan','operations_scan','sweep','reconcile','rearm','dispatch','bundle','bundle_file'],OUTCOMES=['success','not_ready','retry_pending','terminal_failure','blocked_expected','superseded_expected','retry_expected','provider_unavailable','transport_failure','integrity_failure','deferred'];
+const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE','AI_USAGE_ACCOUNTING','INTRODUCTION_MEDIA_ERASURE','ACCOUNT_ERASURE','INTRODUCTIONS_FORWARD','VOICE_MEDIA','VOICE_RETENTION'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan','operations_scan','sweep','reconcile','rearm','dispatch','bundle','bundle_file','voice_reconcile','upload','read','delete','export_file','recover'],OUTCOMES=['success','not_ready','retry_pending','terminal_failure','blocked_expected','superseded_expected','retry_expected','provider_unavailable','transport_failure','integrity_failure','deferred','refused_expected'];
 describe('PROD-OPS-01 operational telemetry',()=>{
  const harness=()=>{const t=new TelemetryService(new CorrelationService()),add=jest.fn(),state=jest.fn(),age=jest.fn(),failures=jest.fn();Object.assign(t as any,{operationalOutcomes:{add},privacyOperationStateCounts:{record:state},privacyOperationOldestAges:{record:age},privacyExportRecentFailures:{record:failures}});return{t,add,state,age,failures};};
  it('emits exactly the legal domain/operation/outcome relation and drops every other combination',()=>{const{t,add}=harness();

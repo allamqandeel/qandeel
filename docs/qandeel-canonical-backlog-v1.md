@@ -460,6 +460,26 @@ happens to reversible history — are defined here.
 - **Current truth (S8B-01 CP1, 2026-10-28; on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114`; effective from its merge):** Stage 8B has started (the Product Owner's S8B-00 decision D-1) and owns this item. The required future properties, the Arabic speech-pronunciation handoff and the P4 residues are unchanged; S8B-01 CP1 addresses them only as a candidate contract — the [Voice Runtime contract](voice-runtime-v1.md), the [S8B-01 Voice Runtime Controlled Amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md) VA-1 … VA-10 (approved in principle, D-8) and a locked non-production benchmark harness ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md)). No runtime, provider, durable audio source or gate exists; nothing is implemented, and the item is not delivered.
 - **Current truth (S8B-01 CP2 and CP3, 2026-10-28 … 2026-10-30; CP2 merged through PR #365 as `47121434`; CP3 on `s8b/s8b-01-cp3`, effective from its merge):** the Product Owner selected the providers at CP2: Google Gemini TTS `gemini-3.8-flash-tts`, voice Achird, one path ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §9.10), and Speechmatics Enhanced `ar_en`, the proof verdict `NOT ACCEPTED` (5 / 6) kept, barge-in on a real Android device a condition blocking the launch of calls (§9.21). CP3, S8B-01's closing change (record §10), records the VA-4 starting values, the cost model, the formats and the render placement, and the Product Owner's decisions on them (D-A1 … D-F1, 2026-10-30, record §10.9; call retention `started_at` + 30 days; Voice Notes in AAC-LC / M4A; launch now, scale when needed, with no Enterprise launch condition), none implemented, and records the lifecycle of VA-1 … VA-11: none in force for production, every one `NOT IMPLEMENTED`. The implementing obligations stay inside Stage 8B under this item, each with its task: S8B-02 (foundation, store, expiry), S8B-03 (Voice Notes), S8B-04 (Speech Rendering, contextual expression, selective vocalization, VA-11 §4), S8B-05 (conversation speed and interruption), S8B-06 (AEC and barge-in on a real Android device), S8B-07 (Replay and its distribution), S8B-08 (cost, privacy and launch evidence). No runtime, adapter, durable audio source or gate exists; the item is not delivered.
 - **Current truth (S8B-02 CP1 R1, 2026-10-30; Draft PR #367, effective from its merge):** S8B-02 CP1 builds the voice database foundation (migrations `0183` / `0184`, not hosted; every voice gate closed) and works this item without delivering it. **Recorded gap, owned by S8B-03, to be decided before any voice gate opens:** a Memory captured from a `MACHINE_ASR` transcript is written and recalled but never reaches Fresh Evidence, because every Evidence, truth-maintenance and matching reader admits only `USER_STATED` / `USER_CONFIRMED`. Until a reviewed controlled change admits it on stated terms, or the Product Owner explicitly accepts the limitation, a fact said only aloud supports no hypothesis, understanding evidence or matching ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §10.4). No item is admitted.
+- **Current truth (S8B-02 CP2, S8B-02's closing change, 2026-10-30; a local commit on `s8b/s8b-02-cp2` from `main` at `f0d8ed1a`, the merge of PR #367 (CP1); effective from its merge):** worked and **not delivered**. S8B-02 now provides, closed by default and with every voice gate `DISABLED`:
+  - the private audio object store (`voice-note/` `audio/mp4`, `voice-call/` `audio/ogg`, streamed, in the S6-06 bucket);
+  - the owner's Voice Note upload, Range reads and early deletion;
+  - the 0183 retention sweep and the stale-writer recovery as workers;
+  - the ONE shared erasure worker for photo and voice keys, with the voice listing reconciliation;
+  - account erasure of voice through the shared queue;
+  - the voice export manifest and its per-file route;
+  - the ASR / TTS ports with deterministic fakes only.
+
+  Migration `0185` adds the export listing and fixes the reconciliation of late writes ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §11.2); `0183` / `0184` / `0185` are not hosted.
+  **Remaining, each with its Stage 8B owner:**
+  - S8B-03: the Voice Note recorder, the consent text, the phone's saver for exported voice files, and the `MACHINE_ASR` → Fresh Evidence decision before any voice gate opens;
+  - S8B-04: Speech Rendering and the production TTS route;
+  - S8B-05: the Live Call gateway, its segment writer (the `writeCallSegment` entry point exists, with no route), VAD and interruption;
+  - S8B-06: AEC and barge-in on a real Android device;
+  - S8B-07: Replay audio and its distribution;
+  - S8B-08: cost, privacy and launch evidence, and provider reconciliation;
+  - `HOSTED-DEPLOY-01`: the hosted store (`QAN-BL-PROD-08`).
+
+  **Engineering completion of S8B-02 is not user readiness:** no user can record, hear or export voice until those tasks and the gates' own launch decisions. No item is admitted or tombstoned.
 - **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
@@ -1558,6 +1578,15 @@ nothing here authorizes implementation, an upgrade or a migration (BG-07).
   deleted the last of them (DELETE, then HEAD 404). On a hosted API that second level depends on this item's object store:
   until it closes, the queue holds and `media_erased_at` stays empty, and the `ACCOUNT_ERASURE` telemetry reports it.
   `prove-0162` against the hosted endpoint covers the erasure's keys as well; nothing else is added to this item.
+- **Dated note (S8B-02 CP2, S8B-02's closing change, 2026-10-30; a local commit on `s8b/s8b-02-cp2`, not merged; effective from its merge; the Product Owner's S8B-02 decision D-8):** voice media uses the SAME private bucket, configuration and adapter family. When this item's hosted proof runs, it must also cover, on the hosted S3 endpoint:
+  - the `voice-note/` (`audio/mp4`) and `voice-call/` (`audio/ogg`) keys;
+  - a streamed PUT of an exact length;
+  - Range reads (206);
+  - the bucket's object-size limit against the 25 MiB voice ceiling (0183);
+  - DELETE then HEAD 404, and the provider's own listing for both prefixes;
+  - refusal of unsigned requests.
+
+  `prove-0185`'s storage scenarios are run against the hosted endpoint, with the evidence read on the hosted project. CI proves all of this against `rclone serve s3` only, which is never claimed as hosted behaviour ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §11.7 / §11.9). Until this item closes, the voice routes answer `UNAVAILABLE` on a hosted API and voice keys wait in the queue. Owner, severity, status and the other fields are unchanged; no item is admitted.
 - **Status:** `DEFERRED — OWNED`
 
 ---
@@ -5508,6 +5537,37 @@ above is effective.
 - **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
 - **Index at S8B-01's closing change: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
 
+**S8B-02 CP1 (2026-10-30; merged through PR #367 as `f0d8ed1a`, recorded by CP2).** CP1 admitted and tombstoned nothing.
+Its rows are in §9 and its current-truth note is in `QAN-BL-VOICE-01`.
+
+**S8B-02 CP2 — the closing change (2026-10-30; a local commit on `s8b/s8b-02-cp2` from `main` at `f0d8ed1a`, the merge of
+PR #367; not pushed; effective from its merge).** The Product Owner's CP2 execution order: the secure media lifecycle and
+S8B-02's closure ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §11).
+
+- **BG-08 — `QAN-BL-VOICE-01` reconciled:** worked by S8B-02 and **not delivered**. Owner `Stage 8B — Voice Runtime`,
+  `HIGH` and `DEFERRED — OWNED` are unchanged. A current-truth note is added in §5 with what is done and what remains,
+  each remaining part with its Stage 8B owner.
+- **`QAN-BL-PROD-08`:** the dated hosted-storage note of D-8 is added in §5. Its fields are unchanged.
+- **Not admitted, every residue owned:**
+  - the hosted voice store: `HOSTED-DEPLOY-01`, `PROD-08`;
+  - the recorder, the consent text, the voice file saver and `MACHINE_ASR` → Fresh Evidence: S8B-03;
+  - Speech Rendering: S8B-04;
+  - the call gateway and segment writer: S8B-05;
+  - AEC and barge-in: S8B-06;
+  - Replay audio: S8B-07;
+  - cost, privacy and launch evidence: S8B-08.
+
+  None leaves Stage 8B or its named owner, so none is cross-task residue (BG-06). The live PostgREST / rclone proof
+  (`prove-0185`) runs in CI and is a verification condition of this change, not a backlog item.
+- **Read and left unchanged:** `QAN-BL-PROD-06`, `QAN-BL-PROD-09`, `QAN-BL-PROD-10` (photos; a lost voice object does not
+  block the export bundle, record §11.4), `QAN-BL-ACCT-01`, `QAN-BL-ACCT-03`, `QAN-BL-PRIV-05`, `QAN-BL-LAUNCH-06` (the
+  photo folder save; the voice file saver is S8B-03's), `QAN-BL-AI-01`, `QAN-BL-AI-03`, `QAN-BL-AI-05`,
+  `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03`, `QAN-BL-NOTIF-05` and `QAN-BL-CI-01` / `02` / `03`.
+- **BG-09:** the S8B-02 record carries S8B-02's state at its closing change, and so do the three locators. S8B-02 is
+  **not** declared complete or merged before `prove-0185` passes in CI and the Product Owner approves the merge.
+- **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
+- **Index at S8B-02's closing change: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5618,7 +5678,7 @@ Inherited after T-12 closure reconciliation:
 | `LANG-01 — Arabic Language Authority & Fixed Copy Correction` | none — no item names it (kickoff, 2026-10-13; the LANG workstream of the Stage 6 WP0 final decision addendum, D6); `QAN-BL-VOICE-01` receives V-01 … V-03 as approved editorial references with its fields unchanged; `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-ACE-02`, `QAN-BL-MATCH-01`, `QAN-BL-MATCH-02` and `QAN-BL-PRIV-04` observed and left unchanged; none admitted at kickoff; the SW-07 `fill()` defect is tracked by the [LANG-01 record](e2e/QANDEEL_LANG_01_ARABIC_LANGUAGE_AUTHORITY_FIXED_COPY_CORRECTION_RECORD_v1.md) §9 and reconciled at its closure |
 | `Stage 8B — Voice Runtime` | `QAN-BL-VOICE-01` (re-owned from `UNASSIGNED` by S8B-01 CP1, 2026-10-28, under the Product Owner's S8B-00 decision D-1) |
 | `S8B-01 — Voice Runtime Contract & Provider Evidence` | none owned by its own name at kickoff (2026-10-28, from `main` at `8b476114`); it works `QAN-BL-VOICE-01` for Stage 8B; the Stage 8A items read and left as they stand; *CP1 (merged through PR #364 as `de774cfd`):* re-owned `QAN-BL-VOICE-01` to `Stage 8B — Voice Runtime`; admitted and tombstoned nothing; *CP2 (merged through PR #365 as `47121434`):* admitted and tombstoned nothing; *CP3, the closing change (2026-10-30, from `main` at `47121434`; effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B; admitted and tombstoned nothing; *merged through PR #366 as `c65b878c` (2026-10-30; recorded by S8B-02 CP1)* |
-| `S8B-02 — Voice Foundation` | none owned by its own name at kickoff (BG-05, 2026-10-30, from `main` at `c65b878c`, S8B-01 merged through PR #366); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` / `09` / `10` (`HOSTED-DEPLOY-01`), `QAN-BL-ACCT-01` (`ACCT-DEL-02`), `QAN-BL-ACCT-03` (Stage 9), `QAN-BL-PRIV-05` (`PRIV-EXPORT-01`), `QAN-BL-AI-01` / `AI-05` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02` (Stage 8A, `VALIDATION — OPEN`), `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03` / `05`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-30, on `s8b/s8b-02-cp1`; not merged):* admitted and tombstoned nothing; these two Stage 8B rows moved here from §4, where they had been written into the index by mistake (contract I-10) |
+| `S8B-02 — Voice Foundation` | none owned by its own name at kickoff (BG-05, 2026-10-30, from `main` at `c65b878c`, S8B-01 merged through PR #366); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` / `09` / `10` (`HOSTED-DEPLOY-01`), `QAN-BL-ACCT-01` (`ACCT-DEL-02`), `QAN-BL-ACCT-03` (Stage 9), `QAN-BL-PRIV-05` (`PRIV-EXPORT-01`), `QAN-BL-AI-01` / `AI-05` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02` (Stage 8A, `VALIDATION — OPEN`), `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03` / `05`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-30, on `s8b/s8b-02-cp1`; merged through PR #367 as `f0d8ed1a`, recorded by CP2):* admitted and tombstoned nothing; these two Stage 8B rows moved here from §4, where they had been written into the index by mistake (contract I-10); *CP2, the closing change (2026-10-30, from `main` at `f0d8ed1a`; a local commit, effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B (current-truth note); a dated note on `QAN-BL-PROD-08` (D-8); admitted and tombstoned nothing |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

@@ -166,7 +166,9 @@ describe('PrivacyDataService — cancellation', () => {
 describe('PrivacyDataController — the route surface', () => {
   // RE-ANCHORED by S6-07 (CP4, addendum §10.4 and Q7″): five routes became seven - the export bundle and its per-photo file
   // route, both owner-only, additive; every existing route, path and header is unchanged.
-  it('is guarded as a whole, under /account/privacy, with exactly seven routes and no account in any path', () => {
+  // RE-ANCHORED by S8B-02 (CP2, B9): seven routes became eight - the per-file voice download beside the per-file photo
+  // route, owner-only and additive; every existing route, path and header is unchanged.
+  it('is guarded as a whole, under /account/privacy, with exactly eight routes and no account in any path', () => {
     expect(Reflect.getMetadata(PATH_METADATA, PrivacyDataController)).toBe('account/privacy');
     expect(Reflect.getMetadata(GUARDS_METADATA, PrivacyDataController)).toEqual([SupabaseAuthGuard]);
     const routes = Object.getOwnPropertyNames(PrivacyDataController.prototype)
@@ -176,7 +178,7 @@ describe('PrivacyDataController — the route surface', () => {
         return [RequestMethod[Reflect.getMetadata(METHOD_METADATA, handler)], Reflect.getMetadata(PATH_METADATA, handler)];
       });
     expect(routes).toEqual([['GET', '/'], ['POST', 'export'], ['GET', 'export/download'], ['GET', 'export/download/bundle'],
-      ['GET', 'export/download/bundle/files/:fileName'], ['POST', 'deletion'], ['POST', 'deletion/cancel']]);
+      ['GET', 'export/download/bundle/files/:fileName'], ['GET', 'export/download/bundle/voice/:fileName'], ['POST', 'deletion'], ['POST', 'deletion/cancel']]);
   });
 
   it('no answer is kept by any cache on the way — above all the package', () => {
