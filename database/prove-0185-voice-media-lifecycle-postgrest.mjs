@@ -840,6 +840,18 @@ async function main() {
       await rows('ROLLBACK').catch(() => undefined);
       throw error;
     }
+    // V12's account erasure released the counterpart's matching anchor (0164). Both release tables reference the
+    // participation events that cleanupIntroductionRace removes, and both are immutable. So the fixture's own rows go
+    // first, under replica mode: the reactivation commands, then the releases.
+    // The FK (anchor_event_id, participant_user_id) ties every release to its own participant's event, so the scope is
+    // exactly the fixture humans. No other user's row is touched, and the count below witnesses it.
+    const releasesOfOthers = async () => (await rows(`SELECT
+        (SELECT count(*) FROM public.matching_counterpart_erasure_releases WHERE participant_user_id <> ALL($1::uuid[]))
+      + (SELECT count(*) FROM public.matching_counterpart_erasure_reactivation_commands WHERE participant_user_id <> ALL($1::uuid[])) AS n`, [humans]))[0].n;
+    const othersBefore = await releasesOfOthers();
+    await surgery('DELETE FROM public.matching_counterpart_erasure_reactivation_commands WHERE participant_user_id = ANY($1::uuid[])', [humans]);
+    await surgery('DELETE FROM public.matching_counterpart_erasure_releases WHERE participant_user_id = ANY($1::uuid[])', [humans]);
+    assert.equal(await releasesOfOthers(), othersBefore, 'the release cleanup touched no row outside the fixture');
     await rt.cleanupIntroductionRace(humans);
     const deletions = '(SELECT id FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[]))';
     await rows(`DELETE FROM account_erasure_private.media_pending WHERE deletion_id IN ${deletions}`, [humans]);
@@ -848,8 +860,13 @@ async function main() {
     await rt.removeFixtureHumans(humans);
     const [{ residue }] = await rows(`SELECT (SELECT count(*) FROM voice_private.consent_texts WHERE version = $2)
         + (SELECT count(*) FROM voice_private.recordings WHERE user_id = ANY($1::uuid[]))
-        + (SELECT count(*) FROM voice_private.voice_launch_capability_states WHERE feature_flag_state <> 'DISABLED') AS residue`, [humans, consentVersion]);
-    assert.equal(Number(residue), 0, 'the run leaves no voice row, no consent text and no open gate behind');
+        + (SELECT count(*) FROM voice_private.voice_launch_capability_states WHERE feature_flag_state <> 'DISABLED')
+        + (SELECT count(*) FROM public.matching_counterpart_erasure_releases WHERE participant_user_id = ANY($1::uuid[]))
+        + (SELECT count(*) FROM public.matching_counterpart_erasure_reactivation_commands WHERE participant_user_id = ANY($1::uuid[]))
+        + (SELECT count(*) FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[]))
+        + (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[])) AS residue`, [humans, consentVersion]);
+    assert.equal(Number(residue), 0, 'the run leaves no voice row, consent text, open gate, release, deletion or fixture human behind');
+    assert.equal(Number(othersBefore), Number(await releasesOfOthers()), 'and every other user\'s release rows are as they were');
   })().then(() => null, (error) => error ?? new Error('fixture removal failed')).finally(() => rt.client.end());
   if (failure && removal) {
     stage = failure.stage;
