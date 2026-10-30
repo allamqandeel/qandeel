@@ -15,9 +15,10 @@
 //   V06  B10 B6   a 24 MiB note flows to the store while the client is still sending (never held whole); a client that
 //                 disconnects mid-upload leaves no object and a DISCARDED note; TOO_LARGE / UNSUPPORTED store nothing
 //   V06m B10      bounded memory, the acceptance bound: 50 MiB of synthetic notes (24 + 24 + 2 MiB, each under the 25 MiB
-//                 ceiling) streamed up and read back whole; the API process's RSS never grows by more than
-//                 STREAM_RSS_BOUND (16 MiB, less than one note); a deliberately held 24 MiB note exceeds the bound (the
-//                 instrument can fail); the notes are then deleted and erased
+//                 ceiling) streamed up and read back whole; the payload bytes the process still holds (live ArrayBuffer
+//                 memory after a collection, sampled throughout) never exceed STREAM_MEMORY_BOUND (16 MiB, less than one
+//                 note); a deliberately held 24 MiB note exceeds the bound (the instrument can fail); RSS is reported;
+//                 the notes are then deleted and erased
 //   V07  B3       owner deletion: refused at once while the object still exists; the shared worker erases it (DELETE, HEAD
 //                 404, the data directory); a second deletion is ALREADY_GONE
 //   V07b B7       storage failures on the live path: a failing PUT discards the note (503, nothing readable); a failing GET
@@ -97,8 +98,14 @@ const { SupabaseDataApiService } = require('../apps/api/dist/conversation/supaba
 const { SupabaseServiceRoleApiService } = require('../apps/api/dist/conversation/supabase-service-role-api.service.js');
 
 const MiB = 1024 * 1024;
-/** B10's acceptance bound: the API process's RSS may not grow by more than this while 50 MiB of voice is streamed. */
-const STREAM_RSS_BOUND = 16 * MiB;
+/**
+ * B10's acceptance bound: the payload bytes the process may still hold at any instant while 50 MiB of voice is streamed.
+ *
+ * It is measured as live ArrayBuffer memory, not as RSS. RSS growth counts allocator churn from bytes already released.
+ * At loopback speed this was measured at 8 - 22 MiB with a server that only discards the body (no SDK) and RSS back to
+ * ~0 after a collection. So it cannot tell a held note from bytes passing through (record §11.7).
+ */
+const STREAM_MEMORY_BOUND = 16 * MiB;
 const VOICE_KEY = /^voice-(note|call)\/[0-9a-f-]{36}$/u;
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 const base64url = (value) => Buffer.from(value).toString('base64url');
@@ -436,20 +443,28 @@ async function main() {
     assert.deepEqual((await upload(tokens.a, sessionA, synth(2048, 6), 'audio/wav')).json, { outcome: 'UNSUPPORTED' }, 'V06 UNSUPPORTED');
     assert.equal(Number((await rows("SELECT count(*) n FROM voice_private.recordings WHERE user_id = $1 AND recording_state = 'PENDING_UPLOAD'", [a]))[0].n), 0, 'V06 no refused upload left a pending note');
 
-    stage = 'V06m B10 bounded memory: 50 MiB streamed, RSS growth under the bound';
-    // The collector, without a command-line flag: it runs on a fixed cadence during the measurement, so what is measured is
-    // memory the process RETAINS, not garbage waiting for a collection. A note held whole is retained and still exceeds it.
+    stage = 'V06m B10 bounded memory: 50 MiB streamed, the payload held never over the bound';
+    // The collector, without a command-line flag. A held note is reachable and is counted. Garbage awaiting a collection
+    // is not counted.
     setFlagsFromString('--expose-gc');
     const gc = runInNewContext('gc');
     const settle = async () => { for (let i = 0; i < 3; i += 1) { gc(); await sleep(50); } return process.memoryUsage().rss; };
+    // Live payload memory: two synchronous collections and the reading in ONE tick, so nothing is allocated between them
+    // and the second completes the first's ArrayBuffer sweep.
+    const liveBuffers = () => { gc(); gc(); return process.memoryUsage().arrayBuffers; };
     const measure = async (run) => {
-      const base = await settle();
-      let peak = base;
-      const sampler = setInterval(() => { peak = Math.max(peak, process.memoryUsage().rss); }, 10);
-      const collector = setInterval(() => gc(), 250);
-      try { await run(); } finally { clearInterval(sampler); clearInterval(collector); }
-      peak = Math.max(peak, process.memoryUsage().rss);
-      return { base, peak, growth: peak - base, after: (await settle()) - base };
+      const rssBase = await settle();
+      const base = liveBuffers();
+      let peak = 0;
+      let samples = 0;
+      let rssPeak = rssBase;
+      let running = true;
+      const rssSampler = setInterval(() => { rssPeak = Math.max(rssPeak, process.memoryUsage().rss); }, 10);
+      const sampler = (async () => {
+        while (running) { peak = Math.max(peak, liveBuffers() - base); samples += 1; await sleep(20); }
+      })();
+      try { await run(); } finally { running = false; clearInterval(rssSampler); await sampler; }
+      return { growth: peak, samples, after: liveBuffers() - base, rssBase, rssGrowth: rssPeak - rssBase };
     };
     // The harness allocates nothing per chunk: sixteen fixed, never-mutated 64 KiB patterns, varied by position.
     const patterns = Array.from({ length: 16 }, (_, i) => Buffer.alloc(64 * 1024, (i * 37 + 11) % 251));
@@ -486,13 +501,15 @@ async function main() {
         streamedNotes.push(answer.json.recordingId);
       }
     });
-    console.log(`V06m memory: 50 MiB up and 50 MiB down; API process RSS ${(transfer.base / MiB).toFixed(1)} MiB before, peak growth ${(transfer.growth / MiB).toFixed(1)} MiB, ${(transfer.after / MiB).toFixed(1)} MiB retained after; bound ${STREAM_RSS_BOUND / MiB} MiB`);
-    assert.ok(transfer.growth <= STREAM_RSS_BOUND, `V06m B10 RSS grew ${(transfer.growth / MiB).toFixed(1)} MiB while 50 MiB was streamed: over the ${STREAM_RSS_BOUND / MiB} MiB bound`);
-    assert.ok(transfer.after <= STREAM_RSS_BOUND, 'V06m and nothing of the payload is retained afterwards');
+    const mib = (n) => (n / MiB).toFixed(1);
+    console.log(`V06m memory: 50 MiB up and 50 MiB down; payload held at most ${mib(transfer.growth)} MiB over ${transfer.samples} samples, ${mib(transfer.after)} MiB after; bound ${STREAM_MEMORY_BOUND / MiB} MiB (RSS ${mib(transfer.rssBase)} MiB before, peak growth ${mib(transfer.rssGrowth)} MiB, reported only)`);
+    assert.ok(transfer.samples >= 10, `V06m the instrument sampled throughout the transfer (${transfer.samples} samples)`);
+    assert.ok(transfer.growth <= STREAM_MEMORY_BOUND, `V06m B10 the process held ${mib(transfer.growth)} MiB of payload while 50 MiB was streamed: over the ${STREAM_MEMORY_BOUND / MiB} MiB bound`);
+    assert.ok(transfer.after <= STREAM_MEMORY_BOUND, 'V06m and nothing of the payload is held afterwards');
     // The control: the same instrument sees a note held whole.
     let held = null;
     const control = await measure(async () => { held = Buffer.alloc(24 * MiB, 9); await sleep(300); });
-    assert.ok(control.growth > STREAM_RSS_BOUND, `V06m the control: a 24 MiB note held whole grows RSS by ${(control.growth / MiB).toFixed(1)} MiB, over the bound`);
+    assert.ok(control.growth > STREAM_MEMORY_BOUND, `V06m the control: a 24 MiB note held whole is seen as ${mib(control.growth)} MiB held, over the bound`);
     held = null;
     const streamedKeys = [];
     for (const id of streamedNotes) {

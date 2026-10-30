@@ -621,14 +621,29 @@ of a database migrated to 0184, with 0185 applied.
   figure logged for information is not acceptance).
   - **What runs:** 50 MiB of synthetic notes (24 + 24 + 2 MiB, each under the 25 MiB object ceiling). Each is streamed up
     through the API to the store, then read back whole through the API. Every byte is checked by SHA-256.
-  - **The bound:** the API process's RSS, sampled every 10 ms, may not grow by more than `STREAM_RSS_BOUND` = **16 MiB**
-    over its settled baseline. That is under one third of the payload and under any one note. Nothing of the payload may
-    remain afterwards.
-  - **How it is kept repeatable:**
-    - the collector runs on a fixed 250 ms cadence (exposed at run time, with no new command-line flag), so that retained
-      memory is measured, not garbage awaiting a collection;
-    - the harness allocates nothing per chunk.
+  - **The bound:** at no sample may the process hold more than `STREAM_MEMORY_BOUND` = **16 MiB** of payload. That is under
+    one third of the payload and under any one note, and nothing may remain afterwards.
+    - "Held" means live ArrayBuffer memory (`process.memoryUsage().arrayBuffers`) over its baseline.
+    - It is read after two synchronous collections in the same tick, so nothing is allocated in between, and the second
+      collection completes the first one's ArrayBuffer sweep.
+    - Samples run throughout the transfer, at least 10 of them.
+    - The collector is exposed at run time, with no new command-line flag. The harness allocates nothing per chunk.
   - **The control:** the same instrument must see a deliberately held 24 MiB note exceed the bound, so it can fail.
+  - **Why it is not RSS: the first CI run of V06m (`4e4c4cac`).**
+    - That run measured RSS: baseline 175.6 MiB, peak growth 24.0 MiB and 24.0 MiB after a collection, against the
+      original 16 MiB RSS bound.
+    - The diagnosis (2026-10-30) ran on this machine against a fake S3 in its own process, with the same 24 + 24 + 2 MiB.
+      It found no whole-file buffering anywhere in the production path:
+      - the upload through `S3PrivateAudioObjectStore` and the SDK held at most 1.9 MiB live;
+      - on the read path, the S3 body, the response's write queue and the S3 socket each held at most 0.1 MiB;
+      - with the corrected instrument, the full API path (store and SDK) held 0.2 – 0.3 MiB, while a server that
+        buffers a whole note held 48.0 MiB.
+    - RSS grew 8 – 22 MiB even in a server that only discards the body, with no SDK. It grew 48.7 MiB when the harness
+      alone streamed to the fake S3, with no API at all. In every case RSS was back to ~0 after a collection on this
+      machine.
+    - So RSS growth in this shared process measures churn from released bytes, not bytes held. Linux's allocator keeps
+      the pages it has released, which is why CI showed the same 24.0 MiB after collection.
+    - RSS is therefore reported, not asserted. The bound's VALUE is unchanged at 16 MiB.
   - The measured notes are then deleted and erased, so the later scenarios see the store unchanged.
   - V06's witness stays: while the client pauses with 8 of 24 MiB sent, the store already holds at least 4 MiB.
 - **Timeouts** are proven by unit only: the 15 s read-open budget, the 30 s idle watchdog and the upload deadline.
