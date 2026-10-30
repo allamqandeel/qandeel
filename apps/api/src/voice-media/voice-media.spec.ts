@@ -1,13 +1,13 @@
 import { HttpException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Readable } from 'node:stream';
+import { PassThrough, Readable } from 'node:stream';
 import {
   AI_GATEWAY_MEASURABLE_OPERATIONS, AI_LEDGER_USAGE_KINDS, AI_USAGE_SOURCES, AI_VOICE_COMPLETE_USAGE_KINDS,
 } from '../ai-usage/ai-usage.types';
 import { IntroductionMediaErasureWorker } from '../introductions-disclosure/introduction-media-erasure.worker';
 import { FakeSpeechRecognitionAdapter } from '../voice/testing/fake-speech-recognition.adapter';
 import { FakeSpeechSynthesisAdapter } from '../voice/testing/fake-speech-synthesis.adapter';
-import { InMemoryPrivateAudioObjectStore, VOICE_OBJECT_MAX_BYTES, exactLength } from './private-audio-object.store';
+import { InMemoryPrivateAudioObjectStore, S3PrivateAudioObjectStore, VOICE_OBJECT_MAX_BYTES, exactLength } from './private-audio-object.store';
 import { VoiceMediaRepository } from './voice-media.repository';
 import { VOICE_EXPORT_FILE_NAME, VoiceMediaService, parseByteRange } from './voice-media.service';
 import { VoiceRecordingRecoveryWorker } from './voice-recording-recovery.worker';
@@ -75,6 +75,32 @@ describe('S8B-02 CP2 — the private audio store contract (the shared fake)', ()
     counted.on('data', (c: Buffer) => seen.push(c.length));
     await new Promise((resolve, reject) => Readable.from([Buffer.alloc(3), Buffer.alloc(4)]).pipe(counted).on('end', resolve).on('error', reject));
     expect(seen).toEqual([3, 4]);
+  });
+
+  it('an aborted S3 PUT or failed upload source rejects without an unhandled stream error', async () => {
+    // The first live PostgREST/rclone proof exposed a crash when abort destroyed the counted Transform with an
+    // unhandled error event. Fake only the S3 transport; exercise the production S3 adapter and its stream wiring.
+    const store = new S3PrivateAudioObjectStore();
+    const transport = store as unknown as { config: { bucket: string }; client: { send: jest.Mock } };
+    transport.config = { bucket: 'synthetic' };
+    transport.client = {
+      send: jest.fn((_command: unknown, options: { abortSignal: AbortSignal }) =>
+        new Promise<void>((_resolve, reject) => {
+          options.abortSignal.addEventListener('abort', () => reject(new Error('SDK_ABORTED')), { once: true });
+        })),
+    };
+
+    const body = new PassThrough();
+    const abort = new AbortController();
+    const uploading = store.putStream(NOTE_KEY, 'audio/mp4', body, 1024, abort.signal);
+    abort.abort();
+    await expect(uploading).rejects.toThrow(/voice upload aborted|SDK_ABORTED/u);
+    body.destroy();
+
+    const failedBody = new PassThrough();
+    const uploadingFailedBody = store.putStream(NOTE_KEY, 'audio/mp4', failedBody, 1024, new AbortController().signal);
+    failedBody.destroy(new Error('upload source disconnected'));
+    await expect(uploadingFailedBody).rejects.toThrow(/upload source disconnected/u);
   });
 });
 
