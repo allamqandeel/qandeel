@@ -3,7 +3,7 @@
 **Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B). This record covers **CP1 — the contract, the
 amendments, the benchmark harness and the locator reconciliation** (§1 – §8) and **CP2 — the Gemini TTS and provider
 evidence** (§9), with the full TTS evaluation on Google Cloud (§9.9), and **CP3 — the final decisions, the budget and the closure** (§10), S8B-01's closing change. Both selections were made by the Product Owner in CP2 (§9.10, §9.21).
-**Status:** `S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S CP3 DECISIONS AND MERGE DECISION (2026-10-30, the CP3 closing change, §10) — CP1 MERGED (PR #364, de774cfd) — CP2 MERGED (PR #365, 47121434) — TTS SELECTION APPROVED (GEMINI-3.8-FLASH-TTS, ACHIRD, §9.10) — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21), THE PROOF VERDICT NOT ACCEPTED (5 / 6) KEPT, BARGE-IN ON A REAL ANDROID DEVICE A CONDITION BLOCKING THE LAUNCH OF CALLS — CP3 PROPOSALS (VA-4 STARTING VALUES, CODEC, RENDER PLACEMENT, VOICE NOTE FORMAT) PROPOSED, NOT APPROVED (§10.7) — COST MODEL REPORTED (§10.2) — NO PRODUCTION CODE — EVERY PRODUCTION VOICE CAPABILITY NOT IMPLEMENTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`.  
+**Status:** `S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION (2026-10-30, the CP3 closing change, §10; NOT MERGED) — CP1 MERGED (PR #364, de774cfd) — CP2 MERGED (PR #365, 47121434) — TTS SELECTION APPROVED (GEMINI-3.8-FLASH-TTS, ACHIRD, §9.10) — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21), THE PROOF VERDICT NOT ACCEPTED (5 / 6) KEPT, BARGE-IN ON A REAL ANDROID DEVICE A CONDITION BLOCKING THE LAUNCH OF CALLS — THE PRODUCT OWNER'S CP3 DECISIONS D-A1 … D-F1 MADE (2026-10-30, §10.9): THE VA-4 VALUES APPROVED AS STARTING VALUES, THE §11 TARGET KEPT, THE COST MODEL APPROVED AS AN ESTIMATE, THE CODEC AND THE SERVER-SIDE RENDER APPROVED, VOICE NOTES IN AAC-LC / M4A, ACHIRD THE ONE VOICE, CALL RETENTION STARTED_AT + 30 DAYS, THE HOSTED STORE OWNED BY S8B-02, LAUNCH NOW / SCALE WHEN NEEDED — EACH NOT IMPLEMENTED — NO PRODUCTION CODE — EVERY PRODUCTION VOICE CAPABILITY NOT IMPLEMENTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`.  
 **Date:** 2026-10-28 (CP1, CP2); 2026-10-30 (CP3)  
 **Branch / base:** `s8b/s8b-01-voice-runtime-contract`, from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`. That is the
 merge of PR #363 (S8A-05 CP4 and S8A-05's closing change, merged 2026-10-27).  
@@ -67,7 +67,7 @@ The Product Owner's clarified decisions 1 – 12:
 | # | Decision |
 |---|---|
 | 1 | The Personal Live Call is recorded with its original audio: the user's voice and QANDEEL's voice as actually heard, with its timing and its correct live analysis. |
-| 2 | A call recording is kept 30 days from the end of the call. A Voice Note is kept 30 days from its commit. |
+| 2 | A call recording is kept 30 days from the start of the call (`started_at` + 30 days). A Voice Note is kept 30 days from its commit. *(Corrected by the Product Owner at CP3, D-D2, §10.9. As given at S8B-00, the call clause read "from the end of the call"; that reading is superseded.)* |
 | 3 | Within retention, the user can return to the call at any time, listen to it and create a Replay of any allowed part. This is not limited to the moment the call ends. |
 | 4 | Listening, or creating, editing, previewing or distributing a Replay, never extends the source's retention. |
 | 5 | The private Replay is a draft / preview with technical version data under CW2-05. It is not a permanent private video library. |
@@ -239,7 +239,7 @@ release-readiness gate. None is claimed as tested:
 
 ## 9. CP2 — Gemini TTS & Provider Evidence (2026-10-28)
 
-**Status:** `S8B-01 CP2 COMPLETE — TTS SELECTION APPROVED — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21) — STAGE P MEASURED LOCALLY (§9.22) — READY FOR THE PULL REQUEST, NOT OPENED`. The one run is consumed: USD 0.1155 of the
+**Status:** `S8B-01 CP2 COMPLETE — TTS SELECTION APPROVED — ASR SELECTION APPROVED (SPEECHMATICS ENHANCED AR_EN, §9.21) — STAGE P MEASURED LOCALLY (§9.22) — READY FOR THE PULL REQUEST, NOT OPENED`. *(Merged through PR #365 as `47121434`, 2026-10-28.)* The one run is consumed: USD 0.1155 of the
 USD 10 cap was spent. The Product Owner selected the TTS path after listening (§9.10): Google Gemini TTS,
 `gemini-3.8-flash-tts`, voice Achird. The expression set and the second voice were then run on Google Cloud: 592 of 592 calls, USD 0.7950 of
 that run's USD 2 cap (§9.9). ASR, at first `BLOCKED — MISSING PREREQUISITES`: Speechmatics only, by the Product Owner's decision, prepared and awaiting the account, the key and the recordings (§9.12), then simplified by the Product Owner to their own 20 recordings, Enhanced `ar_en` only, a preliminary single-speaker test (§9.13); the 20 recordings arrived as WhatsApp Ogg Opus (§9.14), were converted with the approved ffmpeg and checked, and the one approved run (plan `3fd6a842…`, USD 0.0345) gave the preregistered verdict `NOT ACCEPTED` and the recommendation `NOT READY` for production, a preliminary single-speaker test (§9.16, §9.17); the Product Owner waived the English and name items (`PO ACCEPTED WITH WAIVER`, the results unchanged), and the engineering review found the latency solvable by a QANDEEL-owned endpoint with `ForceEndOfUtterance` and sample 20 unrepresentative of the contract's echo-cancelled barge-in path, with a small proof proposed (§9.18); the Product Owner's final engineering proof (12 sessions, `max_delay` 0.7 with QANDEEL's VAD and `ForceEndOfUtterance`, plan `6ba458f4…`, cap USD 0.10) was approved and run once (USD 0.0201): `NOT ACCEPTED` on overlap alone, latency solved (text ready p50 680 ms, forced answer p50 164 ms, no word lost or repeated across a thinking pause), Speechmatics recommended for production integration conditionally, with on-device barge-in as a blocking pre-launch gate (§9.19, §9.20); the Product Owner then SELECTED Speechmatics Enhanced `ar_en` with seven limits, the verdict kept, barge-in on a real device a condition blocking the launch of calls (§9.21); the render spike ran locally, all eight checks passed, phone playback not verified on a device (§9.15); stage P was then measured locally by the Product Owner's decision (§9.22: p50 8.4 ms, p95 17.4 ms on a local PostgreSQL; 137 / 172 ms with an assumed 20 ms per data request). CP2 is complete and ready for its pull request, not opened (§9.22), and CP3 has not started.  
@@ -1731,13 +1731,15 @@ decides the target (§11).
 - Pushing, opening the pull request and merging each need the Product Owner's authorization. CP3 has not started.
 
 **Status: `CP2 COMPLETE — READY FOR THE PULL REQUEST, NOT OPENED (AWAITING THE PRODUCT OWNER'S AUTHORIZATION)`.**
+*(Superseded: merged through PR #365 as `47121434`, 2026-10-28.)*
 
 ## 10. CP3 — Final Decisions, Budget & Closure (2026-10-30)
 
-**Status:** `S8B-01 CP3 — THE CLOSING CHANGE — CLOSED / READY FOR THE PRODUCT OWNER'S CP3 DECISIONS AND MERGE DECISION — EVERY NUMBER AND CHOICE BELOW IS PROPOSED, NOT APPROVED (§10.7) — NO PRODUCTION CODE — NO PAID CALL — EVERY VOICE GATE CLOSED / CLOSED TO USERS`.  
+**Status:** `S8B-01 CP3 — THE CLOSING CHANGE — CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION — THE PRODUCT OWNER'S DECISIONS D-A1 … D-F1 MADE (2026-10-30, §10.9); §10.1 – §10.7 KEPT AS PROPOSED AND READ WITH §10.9 — EVERY DECISION NOT IMPLEMENTED — NO PRODUCTION CODE — NO PAID CALL — EVERY VOICE GATE CLOSED / CLOSED TO USERS`.  
 **Branch / base:** `s8b/s8b-01-cp3`, from `main` at `47121434` (the merge of PR #365, S8B-01 CP2, 2026-10-28). CP2 is merged,
 so its record (§9) and VA-11 are on `main`.  
-**Authority:** the Product Owner's *S8B-01 CP3 — Final Decisions & Engineering Closure* order (2026-10-30).
+**Authority:** the Product Owner's *S8B-01 CP3 — Final Decisions & Engineering Closure* order (2026-10-30), and the Product
+Owner's *Final Closure Authorization* with the decisions D-A1 … D-F1 (2026-10-30, §10.9).
 
 **The order's boundaries, as given:**
 - The approved state is not reopened: DeepSeek Flash is the brain; Speechmatics Enhanced `ar_en` is the ASR; Gemini
@@ -1747,7 +1749,7 @@ so its record (§9) and VA-11 are on `main`.
 - Documentation and engineering only: no production code, migration or dependency; no paid call; no TTS or ASR test; no
   new recording. CP2's evidence is the only measurement used. Official price pages were read for the cost model.
 - The new numbers (VA-4), the codec and the render placement are **recommendations until the Product Owner approves
-  them**. Nothing here attributes their approval to the Product Owner.
+  them**. Nothing here attributes their approval to the Product Owner. *(Decided afterwards by the Product Owner: §10.9.)*
 - No push, no pull request, no merge, and S8B-02 is not started without a new authorization.
 
 **How every number below is labelled:**
@@ -1755,7 +1757,7 @@ so its record (§9) and VA-11 are on `main`.
 - **A (assumption):** a stated input that no CP2 run measured.
 - **E (estimate):** computed from M and A.
 
-### 10.1 A — the REALTIME budget (VA-4), proposed starting values
+### 10.1 A — the REALTIME budget (VA-4), proposed starting values (approved as starting values, D-A1, §10.9)
 
 **The measured inputs (CP2, p50 / p95):**
 
@@ -1827,10 +1829,11 @@ change each one by controlled configuration):
   Owner's decision, and this record does not reopen it.
 - **Decision for the Product Owner (§10.7, D-A2):** keep the target as S8B-05's acceptance criterion, with S8B-05 bringing
   the measured end-to-end result back if it misses, or re-baseline it now. The recommendation is to keep it: re-baselining on
-  planning sums would decide on the kind of evidence that §6.1 R1-2 says cannot decide.
+  planning sums would decide on the kind of evidence that §6.1 R1-2 says cannot decide. *Decided (D-A2, §10.9): the target
+  is kept; S8B-05 and S8B-06 optimise and measure.*
 
 
-### 10.2 B — the cost model (selected providers only: Speechmatics + DeepSeek Flash + Gemini Flash TTS)
+### 10.2 B — the cost model (selected providers only: Speechmatics + DeepSeek Flash + Gemini Flash TTS; approved as a planning estimate, D-B1, §10.9)
 
 **The billing truths, read on each provider's own pages (2026-10-30):**
 
@@ -1914,7 +1917,8 @@ uncached, 0.03 / GB cached):
 | Replay file, per minute | about 1.1 MB (about 141 kbps) | delivery about USD 0.0001; transient storage negligible |
 | Published media, per minute published | about 1.1 MB, durable | about USD 0.00002 a month; serving USD 0.00003 – 0.0001 per minute viewed |
 
-- Storage and Replay together are **under 3 %** of a call minute's provider cost. Nothing here is billed (contract §12:
+- Storage and Replay together are **under 3 %** of a call minute's provider cost, on these assumptions. That is an
+  estimate, not a guaranteed ceiling (D-B1, §10.9). Nothing here is billed (contract §12:
   storage and render are reported at S8B-08).
 - **The spike's picture is a placeholder** and ran on a desktop PC. The Living Analysis frames are heavier to draw. S8B-07
   re-measures the render on the server.
@@ -1922,7 +1926,8 @@ uncached, 0.03 / GB cached):
 **What S8B-08 must measure, before any gate opens** (S8B-08's existing scope, contract §12 and §16; nothing new):
 1. Natural calls: exchanges per minute and QANDEEL's speaking share.
 2. The spoken path's real input tokens, cache hits and auxiliary calls per turn.
-3. What Speechmatics bills for a real call, including reconnections; the Pro tier's 50 concurrent sessions against the
+3. What Speechmatics bills for a real call, including reconnections; the Pro tier's 50 concurrent sessions (not a launch
+   condition, D-F1, §10.9) against the
    expected peak (§4.7); its volume discount.
 4. The TTS route and its price after 2026-12-31 (AI Studio, or Cloud with credits back), with VA-11 §4.
 5. The cost of cancelled speculative work, if S8B-05 adopts lever 1 (§10.1).
@@ -1932,7 +1937,7 @@ uncached, 0.03 / GB cached):
 **Not a production price.** The CP2 runs' spend (§9.6, §9.9, §9.21) was used only for the TTS USD per audio minute, which
 comes from the API's own usage at the published price.
 
-### 10.3 C — codec and Replay render placement (proposed)
+### 10.3 C — codec and Replay render placement (proposed; approved, D-C1 and D-C2, §10.9)
 
 **Starting point:** the render spike (§9.15, 8 / 8 checks, phone playback not verified on a device); CW2-05 §30, §34, §39 –
 §40 and §50; `docs/replay-runtime-v1.md` §25 and §45; contract §6 – §9; VA-8 R-5 and VA-9. No Replay engine is created: the
@@ -1949,7 +1954,7 @@ proposal wires an encoder behind the existing render contract and distribution p
 | **Call recording, `USER` track** | the uplink Opus packets exactly as received, in an Ogg Opus file | "As received" (§6.1), with no re-encoding. |
 | **Call recording, `QANDEEL` track** | the downlink Opus packets of the confirmed-played ranges only, in an Ogg Opus file | The bytes that were actually sent (§6.1). A cut keeps whole 20 ms packets up to, and never past, the confirmed playout position. |
 | **Gaps, mute, playout ranges** | rows on the call record, on the client clock (contract §6.2 – §6.3); no sidecar file | They are already the anchors' data. |
-| **Voice Note** | **AAC-LC, mono, in M4A** (about 32 kbps), stored exactly as recorded and sent | iOS and Android both record and play it natively, so a Shared Voice Note plays across platforms without a server copy. Speechmatics batch accepts it. Ogg Opus, which contract §6.4 names, is not relied on for iOS playback. **This changes contract §6.4's word "Opus"**, so it is a decision for the Product Owner (D-C2), and S8B-03 verifies it on both platforms. |
+| **Voice Note** | **AAC-LC, mono, in M4A** (about 32 kbps), stored exactly as recorded and sent | iOS and Android both record and play it natively, so a Shared Voice Note plays across platforms without a server copy. Speechmatics batch accepts it. Ogg Opus, which contract §6.4 names, is not relied on for iOS playback. **This changes contract §6.4's word "Opus"**, so it is a decision for the Product Owner (D-C2), and S8B-03 verifies it on both platforms. *(Approved, D-C2, §10.9; contract §6.4 updated.)* |
 | **Listening to a retained call** (§8) | a transient, server-mixed AAC-LC M4A of both tracks on the shared clock, delivered by a short-lived authorized read; deleted when the listening session ends and in any case within 1 hour | The device plays one file. Both tracks never leave the store as separate files. It is a processing file under §9.1's rule, never a permanent copy. |
 | **Replay output** (`DOWNLOAD`, `SHARE_EXTERNALLY`, the published media) | MP4 with faststart, H.264 Main (level 4.0), yuv420p, 720 × 1280 at 30 fps; AAC-LC 48 kHz mono; derived captions drawn in the picture as `DERIVED_CAPTION` | The spike's profile: it passed every check, and phones and share targets play it natively. About 141 kbps, about 1.1 MB per minute (§9.15). The captions' look is S8B-07 CP1's visual gate. |
 
@@ -1968,6 +1973,8 @@ proposal wires an encoder behind the existing render contract and distribution p
   - **Battery and heat:** the device does none of it.
 - **Placement in the architecture:** a job in the existing modular monolith. A PostgreSQL job row (no new queue service), a
   worker process running the pinned ffmpeg build, scratch files in a per-job directory. No microservice (AGENTS §4).
+- **Bounded, never in a live call's way** (D-C1, §10.9): the worker's concurrency and CPU are bounded and it runs apart
+  from the Voice Gateway's process, so a render waits rather than slowing a live call. S8B-07 proves it.
 - **Temporary files** (contract §9.1, VA-9):
   - The per-job directory is deleted when the job ends, whatever the outcome.
   - The delivery file for `DOWNLOAD` / `SHARE_EXTERNALLY` lives in the media domain. It is deleted on confirmed delivery, and
@@ -1994,11 +2001,11 @@ implementing task re-quotes it.
 | VA-1 Streaming Model Router with cancellation | in principle (D-8); text reviewed in S8B-05 | S8B-05 | `NOT IMPLEMENTED`: `generate()` only (`:106`); the DeepSeek client sends `stream: false` | `stream()` with `delta` / `end` events; abort stops the request and suppresses every later event; usage from the final chunk settled through AI-COST-01; a provider without streaming refuses; text callers unchanged |
 | VA-2 Incremental release guard | in principle; S8B-05 | S8B-05 | `NOT IMPLEMENTED`: the whole-candidate guard only | sentence-chunk release; the `<` and `GUIDANCE_ECHO` holdbacks; `WITHHELD_TAIL`; G re-measured through the real guard; the text path byte-identical |
 | VA-3 Voice modality and provenance | in principle; S8B-02 (schema), S8B-03 / S8B-05 (writers) | S8B-02, S8B-03, S8B-05 | `NOT IMPLEMENTED`: `0064` `CHECK (source_modality = 'TEXT')` | the migration on real PostgreSQL; `MACHINE_ASR`, the confidence band and the anchor required; `LOW` suppresses durable Memory writes; `channel = 'VOICE'` still refused |
-| VA-4 REALTIME budgets | in principle; **starting values PROPOSED here (§10.1), the Product Owner's decision pending (D-A1)** | S8B-05 | `NOT IMPLEMENTED`: no REALTIME path exists | the values as controlled configuration; the abort rates reported; the §11 target measured end to end on synthetic audio (S8B-05) and on a real Android device (S8B-06) |
+| VA-4 REALTIME budgets | in principle; **starting values proposed here (§10.1), approved as starting values (D-A1, §10.9)** | S8B-05 | `NOT IMPLEMENTED`: no REALTIME path exists | the values as controlled configuration; the abort rates reported; the §11 target measured end to end on synthetic audio (S8B-05) and on a real Android device (S8B-06) |
 | VA-5 AI-COST-01 audio units | in principle; S8B-02 | S8B-02 | `NOT IMPLEMENTED`: `ai-usage.types.ts:57` | the three usage kinds and four families; the billing truths cited in §10.2; unknown prices `UNPRICED`; Credits inactive |
 | VA-6 The microphone in the native guard | in principle; S8B-03 / S8B-06 | S8B-03 (microphone), S8B-06 (background) | `NOT IMPLEMENTED`: the photo guard still asserts `RECORD_AUDIO` removed and `NSMicrophoneUsageDescription` absent | the voice guard; the Copy-Gated purpose string; the microphone requested at intent only |
 | VA-7 Spoken behavioural guidance | in principle; S8B-04, with a Copy Gate on its exact text | S8B-04 | `NOT IMPLEMENTED` | the spoken variant; the Copy Gate; the expression and pronunciation suites with listening (contract §5) |
-| VA-8 The original-audio source in Replay | in principle; **R-5 (codec / container) PROPOSED here (§10.3), the Product Owner's decision pending (D-C1)** | S8B-02 (R-1), S8B-05 (R-3 / R-7), S8B-07 CP1 (R-2 / R-4 / R-6) | `NOT IMPLEMENTED`: `ORIGINAL_TEXT_ONLY` (`0102`) | a new `RENDER_CONTRACT_VERSION`; anchors on one clock; expiry as an I-06D fact; playback on a real Android device and in the iOS Simulator |
+| VA-8 The original-audio source in Replay | in principle; **R-5 (codec / container) proposed here (§10.3), approved (D-C1, §10.9)** | S8B-02 (R-1), S8B-05 (R-3 / R-7), S8B-07 CP1 (R-2 / R-4 / R-6) | `NOT IMPLEMENTED`: `ORIGINAL_TEXT_ONLY` (`0102`) | a new `RENDER_CONTRACT_VERSION`; anchors on one clock; expiry as an I-06D fact; playback on a real Android device and in the iOS Simulator |
 | VA-9 The three destinations' media | in principle; S8B-07 CP2 | S8B-07 CP2 | `NOT IMPLEMENTED`: the I-06C deploy guard stands | the three destinations end to end in a disposable environment, gates closed; deletion within 1 hour proven; the published media outliving the source |
 | VA-10 Listening to a retained call | in principle; **a visual proof board approved by the Product Owner before implementation** | S8B-07 CP1 | `NOT IMPLEMENTED`: P4-C3 §2 stands | the board; the record returning exactly to P4-C3 §2 after expiry |
 | VA-11 Gemini TTS retention exception | the Product Owner's CP2 decision | the CP2 evaluation (done; its runs consumed); production from the merge of S8B-04 | **in force for the CP2 evaluation only, which is complete; for production `NOT IMPLEMENTED`** | VA-11 §4: `store: false`, the server-only key, the disclosure naming Google (an S8B-04 Copy Gate row), Google's terms re-verified when S8B-04 starts; the production route and AI Studio logging settled with the Product Owner (§9.10). **Recommended:** S8B-04 narrows VA-11 to the selected `gemini-3.8-flash-tts` when it binds (an implementing task may tighten a text, §2). |
@@ -2011,11 +2018,11 @@ to the Product Owner):
 
 | # | Where | What | Resolution |
 | --- | --- | --- | --- |
-| 1 | VA-4 ("set by the Product Owner at CP3") against §9.21 ("the production commit silence is decided in S8B-05") | The later, explicit decision is the Product Owner's §9.21 one, and VA-4 is not in force. | CP3 proposes **starting values** only; the commit silence and the barge-in threshold are set in S8B-05 by controlled configuration (§10.1). The same holds for contract §4.4. |
-| 2 | Contract §15 ("CP3 presents a shortlist per supported dialect … the user's voice choice is built if two or more voices are approved") and §16's S8B-04 row ("the voices and voice choice") against §9.10 (one voice, Achird, one path, no per-turn switching) | The Product Owner chose one voice at CP2, so §15's CP3 shortlist step has nothing left to choose. §9.10 does not name the dialects. | **To confirm (D-D1):** Achird is the voice for every supported dialect; no per-dialect shortlist; §15's own condition for a voice choice (two or more voices) is not met, so S8B-04 builds no voice choice. Until it is confirmed, the contract records the conflict and changes nothing. |
-| 3 | Retention start (contract §7; PO decision 2) | No conflict. The call starts at `ended_at`, the note at its commit instant, in every text (§1.3, contract §7, VA-11 §2 condition 3). | **A precision for S8B-02, not a change:** a call's expiry exists only at `ENDED`. So the expiry is written once, at the `ENDED` transition, as exactly `ended_at` + 30 days (UTC, an interval of 30 days), and the trigger refuses every later change. A call that never reaches `ENDED` (a server failure) is ended by a recovery job with `PEER_LOST_AFTER_GRACE`, so no recording exists without an expiry. For `PEER_LOST_AFTER_GRACE`, `ended_at` is the end of the grace window, up to 30 s after the last audio, as the contract defines the end. |
+| 1 | VA-4 ("set by the Product Owner at CP3") against §9.21 ("the production commit silence is decided in S8B-05") | The later, explicit decision is the Product Owner's §9.21 one, and VA-4 is not in force. | CP3 proposes **starting values** only, approved as such (D-A1, §10.9); the commit silence and the barge-in threshold are set in S8B-05 by controlled configuration (§10.1). The same holds for contract §4.4. |
+| 2 | Contract §15 ("CP3 presents a shortlist per supported dialect … the user's voice choice is built if two or more voices are approved") and §16's S8B-04 row ("the voices and voice choice") against §9.10 (one voice, Achird, one path, no per-turn switching) | The Product Owner chose one voice at CP2, so §15's CP3 shortlist step has nothing left to choose. §9.10 does not name the dialects. | **Confirmed (D-D1, §10.9):** one voice, Achird on Gemini Flash TTS; no per-dialect shortlist; §15's own condition for a voice choice (two or more voices) is not met, so S8B-04 builds no voice choice. Dialect support stays S8B-04's, with no claim that every dialect is production-qualified. Contract §15 and §16 updated. |
+| 3 | Retention start (contract §7; PO decision 2) | As proposed at CP3: S8B-00 decision 2 said "from the end of the call", and contract §7 wrote `ended_at` + 30 days; CP3 proposed writing the expiry once at `ENDED`. | **Corrected by the Product Owner (D-D2, §10.9):** `retention_expires_at = started_at + 30 days` (UTC, an interval of 30 days), `started_at` being the instant the call first becomes `ACTIVE`. It is written once, with `started_at`, and the trigger refuses every later change, so no recording exists without an expiry. Ending the call, a reconnection, or creating or sharing a Replay never restarts the count. A call that never reaches `ENDED` normally (a server failure) is ended by a recovery path with a truthful end reason, and its expiry does not move. A Voice Note stays at its commit instant + 30 days. |
 | 4 | Contract §9.2 and VA-8 R-5 ("decided by the CP2 render spike") | The spike gives evidence; the choice is CP3's proposal. | §10.3; contract §9.2 now points to it. |
-| 5 | Contract §6.4 ("one mono Opus track") against the Voice Note proposal | It applies only if the Product Owner approves AAC-LC / M4A (D-C2). | Until then §6.4 stands. |
+| 5 | Contract §6.4 ("one mono Opus track") against the Voice Note proposal | The Product Owner approved AAC-LC / M4A (D-C2, §10.9). | Contract §6.4 updated. |
 | 6 | VA-5 ("the providers selected at S8B-01 CP3") | The providers were selected at CP2 (§9.10, §9.21). | Wording only: CP3 supplies the billing truths (§10.2). |
 | 7 | The contract, VA-1 … VA-10 and VA-11 banners | They still read "at the CP1 review" / "CP2". | Updated (BG-09, §10.5). |
 
@@ -2030,7 +2037,8 @@ to the Product Owner):
 - **Read and left unchanged:** `QAN-BL-AI-01` (`SYNTHETIC_ONLY`: no real user data was ever sent), `QAN-BL-AI-03` (the
   DeepSeek time-of-day price, relevant to §10.2), `QAN-BL-AI-05`, `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03`,
   `QAN-BL-NOTIF-05`, `QAN-BL-PRIV-05`, `QAN-BL-ACCT-01`, `QAN-BL-ACCT-03`, `QAN-BL-PROD-08`, `QAN-BL-PROD-09`,
-  `QAN-BL-PROD-10`, `QAN-BL-CI-01` and `QAN-BL-CI-03`.
+  `QAN-BL-PROD-10`, `QAN-BL-CI-01`, `QAN-BL-CI-02` (the forward-safety mirror's intermittent Expo leg, §10.8) and
+  `QAN-BL-CI-03`.
 - **Stage 8A is untouched (D-1):** S8A-06 … S8A-08 and every Stage 8A item keep their owner and status.
 
 **The Stage 8B obligations stay with their owners** (contract §16, under `QAN-BL-VOICE-01`). None leaves Stage 8B, so none
@@ -2038,20 +2046,21 @@ is cross-task residue (BG-06) and none goes to the backlog:
 
 | Owner | Obligations carried (each `NOT IMPLEMENTED`) |
 | --- | --- |
-| S8B-02 Foundation | VA-3 schema, VA-5 (the billing truths of §10.2), VA-8 R-1; the media store; the immutable expiry, written once at `ENDED` (§10.4 #3); the expiry worker; deletion; export; the consent record; the ports with fakes; the gate closed |
-| S8B-03 Personal Voice Notes | the Voice Note writer and batch ASR; VA-6 microphone; the Voice Note format on both platforms (D-C2) |
+| S8B-02 Foundation | VA-3 schema, VA-5 (the billing truths of §10.2), VA-8 R-1; the media store and its integration, respecting `HOSTED-DEPLOY-01` (D-E1); the immutable expiry `started_at` + 30 days, written once, never extended, with the recovery path for a call that never ends normally (§10.4 #3, D-D2); the expiry worker; deletion; export; the consent record; the ports with fakes; the gate closed |
+| S8B-03 Personal Voice Notes | the Voice Note writer and batch ASR; VA-6 microphone; the Voice Note format, AAC-LC / M4A, proven on Android and iOS (D-C2) |
 | S8B-04 QANDEEL's voice | Speech Rendering; VA-7; TTS on `gemini-3.8-flash-tts` · Achird; **contextual expression** and **selective contextual vocalization** (contract §5), each with its suite and listening; the fixed failure line; VA-11 §4; the production route and AI Studio logging (§9.10) |
-| S8B-05 Realtime Core | VA-1, VA-2, VA-4 (the values of §10.1 once approved), the call writer, VA-8 R-3 / R-7; **conversation speed** (the §11 target and its levers) and **interruption**: QANDEEL's VAD + `ForceEndOfUtterance`, the commit silence set from natural speech, barge-in with echo cancellation, the user's first words kept; the expression carried on the realtime path; concurrent sessions |
+| S8B-05 Realtime Core | VA-1, VA-2, VA-4 (the values of §10.1, approved as starting values, D-A1), the call writer, VA-8 R-3 / R-7; **conversation speed** (the §11 target and its levers) and **interruption**: QANDEEL's VAD + `ForceEndOfUtterance`, the commit silence set from natural speech, barge-in with echo cancellation, the user's first words kept; the expression carried on the realtime path; concurrent sessions: capacity set from the provider's real limit and a safe, understandable refusal when it is full (D-F1) |
 | S8B-06 Native Call | **AEC and barge-in proven on a real Android device**, a condition that blocks the launch of calls; N measured; the call lifecycle, routes and background; the iOS Simulator |
-| S8B-07 Replay & Worlds | **the Replay and its distribution**: VA-10 (proof board first), VA-8 R-2 / R-4 / R-6 with the codec of §10.3 once approved, VA-9, the server render worker, the device playback proof; Shared Voice Notes |
-| S8B-08 Exit & Closure | **cost, privacy and launch evidence**: the measurements of §10.2, zero-retention evidence, the deletion audit, the expiry simulation; it admits the Stage 9 iOS list (§8) and the real-user enablement item (contract §1) |
+| S8B-07 Replay & Worlds | **the Replay and its distribution**: VA-10 (proof board first), VA-8 R-2 / R-4 / R-6 with the codec of §10.3 (approved, D-C1), VA-9, the server render worker, bounded so that it never competes with live calls (D-C1), the device playback proof; Shared Voice Notes |
+| S8B-08 Exit & Closure | **cost, privacy and launch evidence**: the measurements of §10.2, zero-retention evidence, the deletion audit, the expiry simulation; the capacity and cost evidence before operational scaling (D-F1); it admits the Stage 9 iOS list (§8) and the real-user enablement item (contract §1) |
 
 **BG-06 — new residue checked:**
 - **Nothing is admitted and nothing is tombstoned at CP3.**
 - **The hosted voice media store and render worker** (contract §1: "Hosted object-store lifecycle → `HOSTED-DEPLOY-01`").
   Nothing hosted exists to describe yet. The item is admitted by S8B-02, with the store it provisions. That is the photo
   store's precedent: S6-06 CP1 admitted `QAN-BL-PROD-08` with its store. The Product Owner may instead have it admitted now
-  (D-E1).
+  (D-E1). *Decided (D-E1, §10.9): setting up and integrating the store is S8B-02's, respecting `HOSTED-DEPLOY-01`; no
+  duplicate item and no new launch condition is created by the decision.*
 - The Stage 9 items the contract names (Credits and per-minute pricing, store declarations, the legal policy, opening the
   gates) are anti-scope boundaries, not S8B-01 obligations. The two S8B-08 admissions above are unchanged.
 
@@ -2076,9 +2085,9 @@ need no re-anchoring.
   public price and limit pages.
 - The focused checks the changed files touch: §10.8.
 
-### 10.7 The decisions the Product Owner makes before the final closure
+### 10.7 The decisions put to the Product Owner (as asked; decided in §10.9)
 
-Nothing below is approved. After the Product Owner decides, one documentation change records each answer as given.
+As asked in the CP3 report, and kept as asked. The Product Owner's answers are recorded in §10.9.
 
 | # | Decision | Recommendation |
 | --- | --- | --- |
@@ -2100,11 +2109,62 @@ Nothing below is approved. After the Product Owner decides, one documentation ch
   `s5-02` 8, `s5-03a` 10, `s5-03b` 13, `s5-03c` 8, `s5-04` 9, `s7-02` 19, `s7-03` 31, `s7-04` 58, `s7-05` 23, `s8a-01` 5,
   `sec-match-00` 10, `shared-vis-01` 8, `t11` 27, `t12` 32, `t12p` 23, `t14` 17, `val-01` 24, `vport-02` 9, `w2-02` 19,
   `w3-mega-s` 11.
-- `forward-safety-contract`: 34 / 35 in a standalone run. The one failure is the nested replay of
-  `qan-inf-03-deterministic-expo-dependency-validation-contract` (`expo install --check` and `expo-doctor`) inside a
-  later-task scenario. Run on its own on this change, that contract passes 6 / 6. An earlier batch run of
-  forward-safety failed a different count (32 / 35), so the result varies between runs. This is read as environmental:
-  a local worktree whose `node_modules` is a junction to the main checkout, and a scenario that runs for about 320 s.
-  This change touches no test, no package manifest and nothing under `apps/`. The pull request's CI is the
-  authoritative run.
+- `forward-safety-contract`: two earlier local runs on this change failed the nested replay of
+  `qan-inf-03-deterministic-expo-dependency-validation-contract` (`expo install --check` and `expo-doctor`): 32 / 35 in
+  a batch run, then 34 / 35 standalone (1,307 s). Run on its own, that contract passed 6 / 6. **The one comparison the
+  Product Owner ordered** (2026-10-30), on the same host under the same conditions (a worktree with `node_modules` as a
+  junction to the main checkout, the gate run standalone with nothing else running):
+  - `main` at `47121434`, a clean detached worktree: **35 / 35** (556 s);
+  - this change, immediately after: **35 / 35** (554 s).
+
+  The failure is therefore environmental, not caused by this change. It is the known `QAN-BL-CI-02`
+  (`VALIDATION — OPEN`, owner `QAN-INF-06`): the mirror's `QAN-INF-03` leg fails intermittently on some local hosts.
+  The two failing runs were the slow ones, under load. None of its reopen conditions is met: no hosted CI run failed, and
+  no merge decision rests on a local result. The guard is not disabled and nothing is changed for it. The pull request's
+  GitHub CI is the authoritative run.
 - `apps/`, `packages/` and `database/` are unchanged since `47121434`. No dependency or migration is added.
+
+### 10.9 The Product Owner's CP3 decisions (2026-10-30), as given
+
+**Authority:** the Product Owner's *PO FINAL DECISIONS — S8B-01 CP3, Final Closure Authorization* (2026-10-30), after
+reviewing the CP3 report, on `s8b/s8b-01-cp3` from `47121434`. Each decision is recorded as given. None is implemented:
+each is implemented and proven in the task named. §10.1 – §10.7 keep their text as proposed and are read with this section.
+
+| # | Decision, as given | What it binds | Implemented and proven in |
+| --- | --- | --- | --- |
+| D-A1 | **APPROVED AS STARTING VALUES:** the whole §10.1 table, including the generation and token bounds, the endpointing, barge-in and reconnection. | Starting values, adjustable by controlled configuration and measured in S8B-05. They are not production performance results and do not prove the speed target. | S8B-05; S8B-06 on the device |
+| D-A2 | **APPROVED:** the target is kept, p50 ≤ 1.5 s and p95 ≤ 2.5 s. | It is not changed because the current estimates are above it. Optimisation and real measurement belong to S8B-05 and S8B-06, not to CP3. | S8B-05, S8B-06 |
+| D-B1 | **APPROVED AS AN ESTIMATE.** | A planning estimate, not a final price or a guaranteed bound. The 2026 and 2027 prices, their sources and their effective dates are kept apart (§10.2). Storage and Replay under 3 % is not a guaranteed ceiling. The final production measurements are S8B-08's. No new accounting system is created. | S8B-08 |
+| D-C1 | **APPROVED:** the §10.3 formats, and the Replay rendered on the server on demand by a resource-bounded background worker inside the existing architecture, with no second Replay engine and no new microservice. | Video rendering must never compete with the latency of live calls. The audio recording keeps the original truth. No private Replay video is stored durably. Temporary files are deleted as the contract says. The copy published in the Public World is independent of the recording's expiry and is governed by publishing and privacy rules. | S8B-02 (the store), S8B-05 (the tracks), S8B-07 (the render and the destinations) |
+| D-C2 | **APPROVED:** Voice Notes in AAC-LC / M4A instead of Opus. | Contract §6.4 is updated to match. | S8B-03 proves it on Android and iOS |
+| D-D1 | **CONFIRMED:** one voice for now, Achird; one provider, Gemini Flash TTS; no new voice list; no separate fast path and quality path; no provider or voice re-test in CP3. | Dialect support, selective vocalization and contextual expression stay S8B-04's, with no claim that every dialect is production-qualified. Contract §15 and §16's S8B-04 row are updated: no voice choice is built. | S8B-04 |
+| D-D2 | **APPROVED WITH A MANDATORY CORRECTION:** a live-call recording's retention starts at the start of the call, not at its end: `retention_expires_at = started_at + 30 days`. | Written once and never extended. Ending the call, a reconnection, or creating or sharing a Replay never restarts the count. A call that does not reach a normal end has a correct recovery and termination path, and retention is not extended by it. A Voice Note stays 30 days from the note's commit, as its contract says. Every text that tied the 30 days to `ended_at` is corrected (below). No migration now. | S8B-02 |
+| D-E1 | **APPROVED:** setting up and integrating the hosted media store is S8B-02's, respecting `HOSTED-DEPLOY-01`. | This decision creates no duplicate backlog item and no new launch condition. | S8B-02 |
+| D-F1 | **LAUNCH NOW, SCALE WHEN NEEDED** (binding; below). | No Enterprise launch condition; capacity managed against the provider's real limits. | S8B-05 (design), S8B-08 (evidence) |
+
+**D-F1, as given.** QANDEEL launches on the approved path: Speechmatics Enhanced `ar_en`, DeepSeek Flash, Gemini Flash
+TTS / Achird. The Speechmatics Pro limit of 50 concurrent sessions is not a limit of 50 registered users. It is not, in
+itself, a reason to delay QANDEEL's launch or to require Enterprise before the real need.
+1. No new launch condition requires Enterprise or an arbitrary minimum number of users.
+2. S8B-05's design manages concurrent sessions and sets capacity from the provider's actual limits. It never assumes the
+   capacity is unlimited.
+3. When capacity is full, starting a new session is refused safely and understandably. No pretend call is opened, and no
+   call is left to fail silently. The visible text goes through the implementing task's Copy Gate.
+4. Raising the concurrency limit or upgrading the provider plan stays possible when needed, without rebuilding QANDEEL's
+   brain or changing the voice providers.
+5. Session occupancy, the peak, the refusals for capacity and the session cost are monitored. The scaling thresholds are
+   set from real usage.
+6. S8B-08 reviews the capacity and cost evidence before operational scaling, and the launch conditions already approved
+   stay.
+
+D-F1 removes none of the safety and privacy conditions, nor the proof of AEC and barge-in on a real Android device, and
+it opens no production gate before its stage. No scaling system is built in CP3: the contract (§4.7) and the owners
+record it.
+
+**Corrected for D-D2:** this record's §1.3 decision 2, §10.4 #3 and §10.5; contract §7 and §16 (S8B-02); the backlog's
+S8B-01 CP3 record. `started_at` is the instant the call first becomes `ACTIVE`, when its recording can begin. A call that
+never becomes `ACTIVE` has no recording.
+
+**The state after these decisions:** every VA amendment keeps its implementing task (§10.4). None is in force for
+production, every production voice capability is `NOT IMPLEMENTED`, and every voice gate is closed. S8B-01 is closed and
+ready for the merge decision. It is not merged, and it is not complete on `main` until this change merges.

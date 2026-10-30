@@ -1,7 +1,7 @@
 # QANDEEL — Stage 8B
 ## S8B-01 — Voice Runtime Controlled Amendment VA-1 … VA-10 v1.0
 
-**Status:** `MERGED WITH S8B-01 CP1 (PR #364, de774cfd) — APPROVED IN PRINCIPLE (S8B-00 D-8); EACH TEXT REVIEWED AND BOUND IN ITS IMPLEMENTING TASK — NONE IN FORCE — EVERY AMENDMENT NOT IMPLEMENTED (S8B-01 CP3 CLOSE, 2026-10-30; record §10.4) — VA-4'S STARTING VALUES AND VA-8 R-5'S CODEC PROPOSED AT CP3, NOT APPROVED`. Each amendment binds only from the merge of the Stage 8B task that implements it, as listed in §2, after the Product Owner has approved its text in that task. Nothing below is in force today.  
+**Status:** `MERGED WITH S8B-01 CP1 (PR #364, de774cfd) — APPROVED IN PRINCIPLE (S8B-00 D-8); EACH TEXT REVIEWED AND BOUND IN ITS IMPLEMENTING TASK — NONE IN FORCE — EVERY AMENDMENT NOT IMPLEMENTED (S8B-01 CP3 CLOSE, 2026-10-30; record §10.4) — VA-4'S STARTING VALUES APPROVED AS STARTING VALUES AND VA-8 R-5'S CODEC APPROVED BY THE PRODUCT OWNER AT CP3 (D-A1, D-C1, 2026-10-30), NOT IMPLEMENTED`. Each amendment binds only from the merge of the Stage 8B task that implements it, as listed in §2, after the Product Owner has approved its text in that task. Nothing below is in force today.  
 **Scope:** the controlled changes the [Voice Runtime Contract v1](../../../voice-runtime-v1.md) needs.
 - VA-1 … VA-7 touch the Foundation turn path, the Model Router contract and the release guard, the Conversation Unit
   modality, the AI-COST-01 units and a mobile CI guard.
@@ -234,9 +234,11 @@ An implementing task may tighten a text here. It may not widen one without a new
   citation moved: `ModelRouter.generate` is now `model-router.types.ts:106`. The implementing task re-quotes it.
 - The approval, the implementing task, the state and the future proof gate of each amendment, VA-11 included: the
   [S8B-01 record](../../../e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §10.4.
-- **VA-4.** CP3 proposes the starting values (record §10.1, D-A1). The commit silence and the barge-in threshold are set in
+- **VA-4.** CP3 proposed the starting values (record §10.1), approved as starting values (D-A1, record §10.9). The commit silence and the barge-in threshold are set in
   S8B-05, by the Product Owner's later decision (record §9.21), which prevails over VA-4's "set at CP3".
 - **VA-5.** The providers were selected at CP2, not CP3. Their billing truths are cited in record §10.2.
-- **VA-8 R-5.** The spike gave the evidence (record §9.15); the codec and container are a CP3 proposal (record §10.3,
-  D-C1).
-- Nothing here is approved by the Product Owner beyond D-8's approval in principle.
+- **VA-8 R-5.** The spike gave the evidence (record §9.15); the codec and container were proposed at CP3 (record §10.3)
+  and approved (D-C1, record §10.9), with the render worker bounded so that it never competes with live calls.
+- Beyond D-8's approval in principle, the Product Owner's CP3 decisions (record §10.9) approve VA-4's starting values
+  and VA-8 R-5's codec only. Every amendment keeps its implementing task, none is in force, and each text is still bound
+  in that task.
