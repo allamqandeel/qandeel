@@ -192,6 +192,9 @@ async function main() {
   const seams = [];
   const strayKeys = [];
   let gates = null;
+  // The fixture's Introduction World, kept from the start. V12's account erasure of A deletes the Introduction record
+  // the cleanup would otherwise find it by, and keeps the World for B (0164).
+  let fixtureWorlds = [];
   let app = null;
   let gateway = null;
   let failure = null;
@@ -308,6 +311,7 @@ async function main() {
     await rt.recordFacts(a, { sex: 'FEMALE', firstName: 'Mona' });
     await rt.recordFacts(b, { sex: 'MALE', firstName: 'Omar' });
     const f = await rt.bringToIntroduction(a, b);
+    fixtureWorlds = [f.world];
     await owner();
     const sessionA = await newSession(a);
     const sessionB = await newSession(b);
@@ -825,13 +829,13 @@ async function main() {
           [s.capability_scope, s.feature_flag_state, s.launch_requirements_state, s.restriction_version, s.decided_by, s.policy_basis, s.decided_at]);
         }
       }
-      const worlds = '(SELECT r.world_id FROM public.introduction_records r WHERE r.lower_user_id = ANY($1::uuid[]) OR r.higher_user_id = ANY($1::uuid[]))';
+      const worlds = '(SELECT r.world_id FROM public.introduction_records r WHERE r.lower_user_id = ANY($1::uuid[]) OR r.higher_user_id = ANY($1::uuid[]) UNION SELECT unnest($2::uuid[]))';
       const seriesOf = `(SELECT s.id FROM introduction_sharing_private.image_series s WHERE s.world_id IN ${worlds})`;
-      await rows(`DELETE FROM introduction_sharing_private.name_display_state WHERE world_id IN ${worlds}`, [humans]);
-      await rows(`DELETE FROM introduction_sharing_private.name_display_events WHERE world_id IN ${worlds}`, [humans]);
-      await rows(`DELETE FROM introduction_sharing_private.image_stage_disclosures WHERE series_id IN ${seriesOf}`, [humans]);
-      await rows(`DELETE FROM introduction_sharing_private.image_renditions WHERE series_id IN ${seriesOf}`, [humans]);
-      await rows(`DELETE FROM introduction_sharing_private.image_series WHERE world_id IN ${worlds}`, [humans]);
+      await rows(`DELETE FROM introduction_sharing_private.name_display_state WHERE world_id IN ${worlds}`, [humans, fixtureWorlds]);
+      await rows(`DELETE FROM introduction_sharing_private.name_display_events WHERE world_id IN ${worlds}`, [humans, fixtureWorlds]);
+      await rows(`DELETE FROM introduction_sharing_private.image_stage_disclosures WHERE series_id IN ${seriesOf}`, [humans, fixtureWorlds]);
+      await rows(`DELETE FROM introduction_sharing_private.image_renditions WHERE series_id IN ${seriesOf}`, [humans, fixtureWorlds]);
+      await rows(`DELETE FROM introduction_sharing_private.image_series WHERE world_id IN ${worlds}`, [humans, fixtureWorlds]);
       await rows('DELETE FROM personal_data_private.data_exports WHERE user_id = ANY($1::uuid[])', [humans]);
       await rows('DELETE FROM public.conversation_sessions WHERE user_id = ANY($1::uuid[])', [humans]);
       await rows("SET LOCAL session_replication_role = 'origin'");
@@ -853,10 +857,48 @@ async function main() {
     await surgery('DELETE FROM public.matching_counterpart_erasure_releases WHERE participant_user_id = ANY($1::uuid[])', [humans]);
     assert.equal(await releasesOfOthers(), othersBefore, 'the release cleanup touched no row outside the fixture');
     await rt.cleanupIntroductionRace(humans);
+    // What V12 leaves of the fixture World for B: B's retained view, the World's remaining history, B's ended episode,
+    // and the World itself (0164 keeps it while a member remains). It goes under replica mode, scoped to the World this
+    // run created.
+    await owner();
+    await rows('BEGIN');
+    try {
+      await rows("SET LOCAL session_replication_role = 'replica'");
+      const items = '(SELECT i.id FROM public.shared_world_history_items i WHERE i.world_id = ANY($1::uuid[]))';
+      await rows('DELETE FROM public.introduction_retained_view_items WHERE world_id = ANY($1::uuid[])', [fixtureWorlds]);
+      await rows('DELETE FROM public.introduction_retained_views WHERE world_id = ANY($1::uuid[])', [fixtureWorlds]);
+      await rows(`DELETE FROM public.shared_world_history_item_baseline_viewers WHERE history_item_id IN ${items}`, [fixtureWorlds]);
+      await rows(`DELETE FROM public.shared_world_history_item_required_approvers WHERE history_item_id IN ${items}`, [fixtureWorlds]);
+      await rows('DELETE FROM public.shared_world_history_items WHERE world_id = ANY($1::uuid[])', [fixtureWorlds]);
+      await rows('DELETE FROM public.shared_world_membership_episodes WHERE world_id = ANY($1::uuid[])', [fixtureWorlds]);
+      await rows('DELETE FROM public.shared_worlds WHERE id = ANY($1::uuid[])', [fixtureWorlds]);
+      await rows("SET LOCAL session_replication_role = 'origin'");
+      await rows('COMMIT');
+    } catch (error) {
+      await rows('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
     const deletions = '(SELECT id FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[]))';
     await rows(`DELETE FROM account_erasure_private.media_pending WHERE deletion_id IN ${deletions}`, [humans]);
     await rows(`DELETE FROM account_erasure_private.deletion_progress WHERE deletion_id IN ${deletions}`, [humans]);
     await rows('DELETE FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[])', [humans]);
+    // Before the humans go: every row that a non-cascading foreign key still ties to a fixture human or the fixture
+    // World, found through the catalogue, so that anything left is named exactly.
+    const blocking = async (target, ids) => {
+      const found = [];
+      const fks = await rows(`SELECT c.conrelid::regclass::text AS tbl, a.attname AS col
+          FROM pg_constraint c
+          JOIN pg_attribute k ON k.attrelid = c.confrelid AND k.attname = 'id'
+          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[array_position(c.confkey, k.attnum)]
+         WHERE c.contype = 'f' AND c.confrelid = $1::regclass AND c.confdeltype NOT IN ('c', 'n', 'd') AND k.attnum = ANY (c.confkey)`, [target]);
+      for (const { tbl, col } of fks) {
+        const [{ n }] = await rows(`SELECT count(*)::int AS n FROM ${tbl} WHERE ${col} = ANY($1::uuid[])`, [ids]);
+        if (n > 0) found.push(`${tbl}.${col}=${n}`);
+      }
+      return found;
+    };
+    assert.deepEqual([...await blocking('public.users', humans), ...await blocking('public.shared_worlds', fixtureWorlds)], [],
+      'no row outside the fixture removal still references a fixture human or the fixture World');
     await rt.removeFixtureHumans(humans);
     const [{ residue }] = await rows(`SELECT (SELECT count(*) FROM voice_private.consent_texts WHERE version = $2)
         + (SELECT count(*) FROM voice_private.recordings WHERE user_id = ANY($1::uuid[]))
@@ -864,7 +906,8 @@ async function main() {
         + (SELECT count(*) FROM public.matching_counterpart_erasure_releases WHERE participant_user_id = ANY($1::uuid[]))
         + (SELECT count(*) FROM public.matching_counterpart_erasure_reactivation_commands WHERE participant_user_id = ANY($1::uuid[]))
         + (SELECT count(*) FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[]))
-        + (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[])) AS residue`, [humans, consentVersion]);
+        + (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))
+        + (SELECT count(*) FROM public.shared_worlds WHERE id = ANY($3::uuid[])) AS residue`, [humans, consentVersion, fixtureWorlds]);
     assert.equal(Number(residue), 0, 'the run leaves no voice row, consent text, open gate, release, deletion or fixture human behind');
     assert.equal(Number(othersBefore), Number(await releasesOfOthers()), 'and every other user\'s release rows are as they were');
   })().then(() => null, (error) => error ?? new Error('fixture removal failed')).finally(() => rt.client.end());
