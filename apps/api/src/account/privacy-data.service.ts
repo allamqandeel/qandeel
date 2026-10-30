@@ -4,6 +4,7 @@ import {
   ExportMediaIntegrityError, IntroductionDisclosureService, type OwnExportRendition,
 } from '../introductions-disclosure/introduction-disclosure.service';
 import { TelemetryService } from '../observability/telemetry.service';
+import { VoiceMediaService, type OpenedAudio, type VoiceExportManifest } from '../voice-media/voice-media.service';
 import { PrivacyDataRepository, type DeletionActRow, type ExportRequestRow } from './privacy-data.repository';
 import { SupabasePasswordGrantService } from './supabase-password-grant.service';
 
@@ -48,6 +49,18 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * identities. A store with no object for a live key, or any transport failure, is 503: never a partial bundle sold as
  * complete. A photo the reader may no longer download is listed in `notIncluded` (NO_LONGER_AVAILABLE), never silently
  * missing.
+ *
+ * ## S8B-02 (CP2) — the reader's own voice recordings (contract §3.11, B9)
+ *
+ *   GET …/export/download/bundle          also answers `voiceManifest` (`qandeel.personal-data-export.voice.v1`) BESIDE
+ *                                         the photo manifest: every voice object the owner may read now, by file name.
+ *                                         Nothing inline, never base64; no key, recording id or URL. The photo manifest,
+ *                                         its files and its token are unchanged.
+ *   GET …/export/download/bundle/voice/:fileName   one listed voice file, STREAMED, while the export is READY; the name
+ *                                         is resolved again and the object re-read through the database's read definer at
+ *                                         that instant, so an expired, deleted or erased recording answers
+ *                                         NO_LONGER_AVAILABLE. Today's mobile client ignores the voice manifest; S8B-03
+ *                                         saves the files on the device.
  */
 export const EXPORT_BUNDLE_INLINE_MAX_BYTES = 32 * 1024 * 1024;
 export const EXPORT_BUNDLE_ASSEMBLY_MS = 20_000;
@@ -138,6 +151,7 @@ export class PrivacyDataService {
     private readonly provider: SupabasePasswordGrantService,
     @Optional() private readonly photos?: IntroductionDisclosureService,
     @Optional() private readonly telemetry?: TelemetryService,
+    @Optional() private readonly voice?: VoiceMediaService,
   ) {}
 
   async readState(accessToken: string): Promise<PrivacyStateView> {
@@ -195,11 +209,11 @@ export class PrivacyDataService {
    * S6-07 (CP4): the bundle - exactly the package `downloadExport` answers, the photo manifest beside it, the leading
    * photo files inline while they fit EXPORT_BUNDLE_INLINE_MAX_BYTES, and the manifest token for the rest.
    */
-  async downloadExportBundle(accessToken: string, clientIp: string | undefined) {
+  async downloadExportBundle(accessToken: string, clientIp: string | undefined, userId?: string) {
     const base = await this.downloadExport(accessToken, clientIp);
     if (base.status !== 'READY') {
       this.signal('bundle', 'not_ready');
-      return { ...base, photoManifest: null, photoFiles: null, photoManifestToken: null };
+      return { ...base, photoManifest: null, photoFiles: null, photoManifestToken: null, voiceManifest: null };
     }
     const signal = AbortSignal.timeout(EXPORT_BUNDLE_ASSEMBLY_MS);
     try {
@@ -233,8 +247,10 @@ export class PrivacyDataService {
           introductionStartedAt: f.introductionStartedAt, derivedRendition: true })),
         notIncluded,
       };
+      // S8B-02 (CP2): the voice manifest, beside the photo manifest; a voice listing failure fails the bundle (never partial).
+      const voiceManifest: VoiceExportManifest | null = userId !== undefined && this.voice !== undefined ? await this.voice.exportManifest(userId) : null;
       this.signal('bundle', 'success');
-      return { ...base, photoManifest, photoFiles: inline, photoManifestToken: manifestToken(base.availableUntil, entries) };
+      return { ...base, photoManifest, photoFiles: inline, photoManifestToken: manifestToken(base.availableUntil, entries), voiceManifest };
     } catch (error) {
       this.signal('bundle', error instanceof ExportMediaIntegrityError ? 'integrity_failure' : 'transport_failure');
       throw unavailable();
@@ -277,6 +293,20 @@ export class PrivacyDataService {
     }
     this.signal('bundle_file', 'success');
     return answer;
+  }
+
+  /**
+   * S8B-02 (CP2): one listed voice file, streamed by the caller, while the export is READY (otherwise CHANGED, as a photo
+   * file). Ownership, readability and the name are decided again by the voice service at this instant.
+   */
+  async openExportVoiceFile(accessToken: string, userId: string, fileName: string, signal: AbortSignal): Promise<OpenedAudio> {
+    if (this.voice === undefined) throw unavailable();
+    const row = await this.repository.readExport(accessToken).catch(() => {
+      throw unavailable();
+    });
+    if (row === undefined) throw unavailable();
+    if (exportStatus(row.export_status) !== 'READY') throw changed();
+    return this.voice.openExportFile(userId, fileName, signal);
   }
 
   private ownPhotos(): IntroductionDisclosureService {

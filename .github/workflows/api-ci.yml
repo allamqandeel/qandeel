@@ -1301,6 +1301,11 @@ jobs:
       # recording, every existing partition and v1 function unchanged, UNPRICED without a card, Credits untouched.
       - name: Verify S8B-02 voice AI cost units against real PostgreSQL
         run: npm run verify:voice-ai-cost:integration
+      # S8B-02 CP2: migration 0185 (Secure Media Lifecycle) - the owner's readable recordings listed for the export with a
+      # stable file name and no key, and the voice listing reconciliation that queues a key under a terminal recording while
+      # never touching a live one; every gate still DISABLED.
+      - name: Verify S8B-02 voice media lifecycle (0185) against real PostgreSQL
+        run: npm run verify:voice-media-lifecycle:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1421,6 +1426,11 @@ jobs:
             # the package unchanged on both routes, the reader's own photos byte for byte (never the other human's, by the
             # storage log), every photo beyond the 32 MiB guard by the file route, 503 on a missing object, CHANGED after a removal.
             POSTGREST_VERSION="$version" npm run --silent prove:export-bundle:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
+            # S8B-02 (CP2): the voice media lifecycle with the compiled API, the S3 audio adapter against rclone (a CI stand-in,
+            # never a hosted proof) and the shared erasure worker - gates and consent, streamed upload and Range reads, isolation,
+            # owner deletion, expiry at the instant, RECORDING recovery, PRIV-W races, late writes and orphans reconciled, the
+            # voice export manifest and files, and account erasure of photos and voice through the one queue.
+            POSTGREST_VERSION="$version" npm run --silent prove:voice-media-lifecycle:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

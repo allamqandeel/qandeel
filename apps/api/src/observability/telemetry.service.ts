@@ -85,7 +85,14 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  // sentence or provider body. Accepted is the provider's acceptance, never delivery (I-08N-01 D41, D56).
  // S6-06 (CP2): the Introduction photo erasure worker (migration 0162) - sweep, erase (DELETE proven by HEAD, or deferred
  // and never dropped) and the listing reconciliation. Outcome classes only - never a key, handle, World, person or byte count.
- ['INTRODUCTION_MEDIA_ERASURE',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','deferred',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])]])],
+ // S8B-02 (CP2): the same worker also erases voice keys from the one queue (0183) and lists each voice prefix
+ // (voice_reconcile). The photo operations and outcomes are unchanged.
+ ['INTRODUCTION_MEDIA_ERASURE',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','deferred',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])],['voice_reconcile',new Set(['success',...OPERATION_FAILURES])]])],
+ // S8B-02 (CP2): the owner's voice media routes (upload, read, delete, export_file) - a refusal the database decided
+ // (gate, consent, not readable, not theirs, a range out of bounds) is refused_expected - and the retention and recovery
+ // workers. Never a person, recording, key, file name, size, transcript or byte.
+ ['VOICE_MEDIA',new Map(['upload','read','delete','export_file'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','refused_expected',...OPERATION_FAILURES])]))],
+ ['VOICE_RETENTION',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['recover',new Set(['success',...OPERATION_FAILURES])]])],
  // S6-07 (CP2): the forward dispatcher (migration 0166). A forward is success; a proposal another act moved first is
  // superseded_expected; one the core or its seam did not clear, or with no single conclusion, is blocked_expected; a held
  // pair is retry_expected; a held integrity refusal is integrity_failure. Never a person, proposal, view or count.

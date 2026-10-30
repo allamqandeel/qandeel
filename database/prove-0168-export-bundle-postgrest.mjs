@@ -258,7 +258,8 @@ async function main() {
 
     stage = 'X07 not ready, and no token';
     const none = await call(tokens.outsider, 'GET', '/account/privacy/export/download/bundle');
-    assert.deepEqual(none.json, { status: 'NONE', availableUntil: null, package: null, photoManifest: null, photoFiles: null, photoManifestToken: null });
+    // RE-ANCHORED by S8B-02 (CP2, B9): the voice manifest beside the photo manifest is null with it while nothing is READY.
+    assert.deepEqual(none.json, { status: 'NONE', availableUntil: null, package: null, photoManifest: null, photoFiles: null, photoManifestToken: null, voiceManifest: null });
     assert.equal((await call(null, 'GET', '/account/privacy/export/download/bundle')).status, 401, 'X07 a request without a token is refused');
     console.log(`prove-0168 (${version}): X01-X07 passed`);
   } catch (error) {

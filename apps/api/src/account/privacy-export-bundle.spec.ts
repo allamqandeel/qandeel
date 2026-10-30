@@ -61,7 +61,10 @@ describe('S6-07 PrivacyDataService — the export bundle', () => {
     expect(old).not.toHaveProperty('photoFiles');
     expect(bundle.package).toEqual(old.package);
     expect(bundle.package).not.toHaveProperty('photoManifest');
-    expect(Object.keys(bundle).sort()).toEqual(['availableUntil', 'package', 'photoFiles', 'photoManifest', 'photoManifestToken', 'status']);
+    // RE-ANCHORED by S8B-02 (CP2, B9): one more key BESIDE the photo manifest, `voiceManifest` (null here: no voice source is
+    // composed in this harness); the package and every photo key are unchanged.
+    expect(Object.keys(bundle).sort()).toEqual(['availableUntil', 'package', 'photoFiles', 'photoManifest', 'photoManifestToken', 'status', 'voiceManifest']);
+    expect(bundle.voiceManifest).toBeNull();
   });
 
   it('names each own rendition by its Introduction and stage, joined to the package by the start instant, all files inline', async () => {
@@ -178,7 +181,8 @@ describe('S6-07 PrivacyDataService — the export bundle', () => {
       const h = harness([rendition(W1, STARTED1, 1, H(1))]);
       h.repository.readExport.mockResolvedValue({ export_status: status, available_until: null, content: null });
       await expect(h.service.downloadExportBundle(TOKEN, IP)).resolves.toEqual({
-        status, availableUntil: null, package: null, photoManifest: null, photoFiles: null, photoManifestToken: null,
+        // RE-ANCHORED by S8B-02 (CP2): the voice manifest is null with the photo manifest while the export is not READY.
+        status, availableUntil: null, package: null, photoManifest: null, photoFiles: null, photoManifestToken: null, voiceManifest: null,
       });
       expect(h.photos.ownRenditionsForExport).not.toHaveBeenCalled();
       expect(h.signals()).toEqual(['PRIVACY_EXPORT:bundle:not_ready']);

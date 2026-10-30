@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Header, Headers, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Headers, HttpCode, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { ServerResponse } from 'node:http';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { sendAudio } from '../voice-media/voice-media.controller';
 import { EXPORT_MANIFEST_HEADER, PrivacyDataService } from './privacy-data.service';
 
 type OwnerRequest = AuthenticatedRequest & { readonly ip?: string };
@@ -16,6 +18,8 @@ type OwnerRequest = AuthenticatedRequest & { readonly ip?: string };
  *                                            leading photo files and the manifest token (QAN-BL-PRIV-04)
  *   GET  /account/privacy/export/download/bundle/files/:fileName   one listed photo file, under the manifest token
  *                                            (header x-qandeel-export-manifest); 409 CHANGED when the photos moved
+ *   GET  /account/privacy/export/download/bundle/voice/:fileName   S8B-02 (CP2): one listed voice file, streamed
+ *                                            (`no-store, private`); 404 NO_LONGER_AVAILABLE once expired, deleted or erased
  *   POST /account/privacy/deletion           { commandId, password } → ACCEPTED | CANCELLED | PASSWORD_REJECTED
  *   POST /account/privacy/deletion/cancel    {}                      → CANCELLED | NONE | NOT_CANCELLABLE
  *
@@ -51,13 +55,20 @@ export class PrivacyDataController {
   @Get('export/download/bundle')
   @Header(...NO_STORE)
   downloadExportBundle(@Req() request: OwnerRequest) {
-    return this.privacy.downloadExportBundle(request.authenticatedUser.accessToken, request.ip);
+    return this.privacy.downloadExportBundle(request.authenticatedUser.accessToken, request.ip, request.authenticatedUser.userId);
   }
 
   @Get('export/download/bundle/files/:fileName')
   @Header(...NO_STORE)
   downloadExportPhoto(@Req() request: OwnerRequest, @Param('fileName') fileName: string, @Headers(EXPORT_MANIFEST_HEADER) token: string | undefined) {
     return this.privacy.downloadExportPhoto(request.authenticatedUser.accessToken, fileName, token);
+  }
+
+  @Get('export/download/bundle/voice/:fileName')
+  async downloadExportVoice(@Req() request: OwnerRequest, @Res() response: ServerResponse, @Param('fileName') fileName: string): Promise<void> {
+    response.setHeader('Cache-Control', 'no-store, private');
+    await sendAudio(response, (signal) => this.privacy.openExportVoiceFile(request.authenticatedUser.accessToken,
+      request.authenticatedUser.userId, fileName, signal), fileName);
   }
 
   @Post('deletion')

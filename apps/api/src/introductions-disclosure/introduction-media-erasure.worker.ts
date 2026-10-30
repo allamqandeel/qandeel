@@ -3,6 +3,10 @@ import { TelemetryService } from '../observability/telemetry.service';
 import { IntroductionDisclosureRepository } from './introduction-disclosure.repository';
 import { INTRODUCTION_MEDIA_STORE } from './introduction-disclosure.service';
 import type { IntroductionMediaObjectStore } from './introduction-media.store';
+import {
+  PRIVATE_AUDIO_OBJECT_STORE, VOICE_KEY_PREFIXES, isVoiceKey, type PrivateAudioObjectStore,
+} from '../voice-media/private-audio-object.store';
+import { VoiceMediaRepository } from '../voice-media/voice-media.repository';
 
 const DEFAULT_POLL_MS = 30_000;
 const SWEEP_LIMIT = 50;
@@ -29,6 +33,13 @@ const RECONCILE_GRACE_MS = 10 * 60_000;
  * One cycle at a time, a timer that never keeps the process alive, off under tests and whenever the object store or
  * the server authority is not configured. It reads nothing but keys, and logs and reports nothing of content.
  *
+ * S8B-02 (CP2, contract §3.10 / §3.11) — GENERALIZED, not duplicated: the one queue also holds `voice-note/` and
+ * `voice-call/` keys (0183), so this one worker erases them with the same lease, back-off, DELETE then HEAD 404 and
+ * confirmation, through the private audio store; the account erasure's `media_erased_at` follows from the same confirm
+ * (0164's trigger), for photo and voice keys alike. A voice key while the audio store is not composed is deferred, never
+ * dropped. The reconciliation also lists each voice prefix and queues what the database no longer holds as live (0185).
+ * The photo behaviour is unchanged: the same sweep, the same intro-media listing, the same outcomes.
+ *
  * S6-06 (CP2) — every step's outcome is VISIBLE as content-free telemetry (`INTRODUCTION_MEDIA_ERASURE` / sweep, erase,
  * reconcile; finite outcome classes only — never a key, handle, World, person or count as a label), so an erasure the
  * worker defers and retries is never silent. Telemetry is fail-soft: it can never fail or delay an erasure.
@@ -43,6 +54,8 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
     private readonly repository: IntroductionDisclosureRepository,
     @Inject(INTRODUCTION_MEDIA_STORE) private readonly store: IntroductionMediaObjectStore,
     @Optional() private readonly telemetry?: TelemetryService,
+    @Optional() @Inject(PRIVATE_AUDIO_OBJECT_STORE) private readonly audioStore?: PrivateAudioObjectStore,
+    @Optional() private readonly voiceRepository?: VoiceMediaRepository,
   ) {}
 
   get enabled(): boolean {
@@ -104,18 +117,20 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
           this.signal('erase', 'deferred');
         }
       }
-      if (this.cycle % RECONCILE_EVERY === 1) result.enqueued = await this.reconcile();
+      if (this.cycle % RECONCILE_EVERY === 1) result.enqueued = (await this.reconcile()) + (await this.reconcileVoice());
       return result;
     } finally {
       this.running = false;
     }
   }
 
-  /** DELETE, then HEAD: only an absence proven after the delete counts as erased. */
+  /** DELETE, then HEAD, in the store that holds the key's prefix: only an absence proven after the delete counts as erased. */
   async erase(key: string): Promise<boolean> {
+    const store = isVoiceKey(key) ? this.audioStore : this.store;
+    if (store === undefined) return false;
     try {
-      await this.store.remove(key, AbortSignal.timeout(STORE_BUDGET_MS));
-      return !(await this.store.exists(key, AbortSignal.timeout(STORE_BUDGET_MS)));
+      await store.remove(key, AbortSignal.timeout(STORE_BUDGET_MS));
+      return !(await store.exists(key, AbortSignal.timeout(STORE_BUDGET_MS)));
     } catch {
       return false;
     }
@@ -142,8 +157,30 @@ export class IntroductionMediaErasureWorker implements OnModuleInit, OnModuleDes
     return enqueued;
   }
 
+  /** S8B-02 (CP2): the listing reconciliation of each voice prefix (0185 decides what is no longer live). */
+  async reconcileVoice(now: Date = new Date()): Promise<number> {
+    if (this.audioStore === undefined || this.voiceRepository === undefined || !this.audioStore.isConfigured()) return 0;
+    let enqueued = 0;
+    const olderThan = new Date(now.getTime() - RECONCILE_GRACE_MS);
+    try {
+      for (const prefix of VOICE_KEY_PREFIXES) {
+        let continuation: string | null = null;
+        do {
+          const page = await this.audioStore.listOlderThan(prefix, olderThan, continuation, AbortSignal.timeout(STORE_BUDGET_MS));
+          if (page.keys.length > 0) enqueued += Number((await this.voiceRepository.enqueueUnknown(page.keys))?.enqueued ?? 0);
+          continuation = page.next;
+        } while (continuation !== null);
+      }
+      this.signal('voice_reconcile', 'success');
+    } catch {
+      // Retried on the next reconciliation; the queue already holds every key the database released.
+      this.signal('voice_reconcile', 'transport_failure');
+    }
+    return enqueued;
+  }
+
   /** One content-free outcome; a telemetry failure never reaches the erasure. */
-  private signal(operation: 'sweep' | 'erase' | 'reconcile', outcome: 'success' | 'deferred' | 'transport_failure'): void {
+  private signal(operation: 'sweep' | 'erase' | 'reconcile' | 'voice_reconcile', outcome: 'success' | 'deferred' | 'transport_failure'): void {
     try {
       this.telemetry?.recordOperationalOutcome('INTRODUCTION_MEDIA_ERASURE', operation, outcome);
     } catch {
