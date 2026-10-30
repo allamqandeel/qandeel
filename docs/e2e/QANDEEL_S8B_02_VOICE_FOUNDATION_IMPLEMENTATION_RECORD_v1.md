@@ -577,7 +577,7 @@ storage key.
 | **B7** Storage failures | V07b (live PUT / GET / DELETE / HEAD failures: 503, nothing partial, never a false confirmation, the retry erases); V12 (a voice store outage during account erasure); spec (`failing` put / get / remove / exists / list) | unit proven locally; **live leg runs in CI** |
 | **B8** Retention never extended | V04 (reads), V09 (reconnection and recovery), V08 (the instant); verify-0183 A6 / A6r (the Replay capture and the sweep leave the expiry byte-equal) | DB proven locally; **live leg runs in CI** |
 | **B9** Export | V11 (the manifest beside an unchanged photo manifest; every file byte for byte; another reader and a deleted recording `NO_LONGER_AVAILABLE`); verify-0185 L1; spec | DB proven locally; **live leg runs in CI** |
-| **B10** Privacy and streaming memory | static contract (no logger, console, Sentry, presign or ACL in the media code; no base64); telemetry allowlist (`observability.spec`); V03 / V11 (no key in any answer); V05 (an error carries only its outcome); V06 (the streaming witness, §11.7) | contract and unit proven locally; **memory witness runs in CI** |
+| **B10** Privacy and streaming memory | static contract (no logger, console, Sentry, presign or ACL in the media code; no base64); telemetry allowlist (`observability.spec`); V03 / V11 (no key in any answer); V05 (an error carries only its outcome); V06 (the streaming witness); **V06m (the bounded-memory acceptance test, §11.7)** | contract and unit proven locally; **V06m runs in CI** |
 | **B11** HTTP isolation | V05 (another human 404, nothing read from storage for them; no token 401 on every voice route); V13 (no client role reaches a voice definer on the wire) | **live leg runs in CI** |
 | **B12** Gates | 0185 deploy guard G1; verify-0185 C0; V01 / V14; every scope `DISABLED` / `UNSATISFIED` | **proven locally** |
 | **B13** Honest evidence | every rclone result is labelled a CI stand-in; the hosted proof is `QAN-BL-PROD-08`'s (§11.9) | **met** |
@@ -611,15 +611,26 @@ of a database migrated to 0184, with 0185 applied.
 
 ### 11.7 Proofs not complete, and why
 
-- **`prove-0185` has not run.** This machine has no PostgREST, no `rclone` and no Docker. Downloading the pinned
-  binaries needs the Product Owner's approval; pushing for CI is not authorized. The proof is written, syntax-checked
+- **`prove-0185` has not run.** This machine has no PostgREST, no `rclone` and no Docker. The Product Owner's CP2
+  review (2026-10-30) authorized a push and a Draft PR so that CI runs it; nothing is downloaded locally. The proof is written, syntax-checked
   and wired into api-ci's PostgREST + rclone loop.
   - **Until it passes in CI, B1 – B9 and B11 are proven at the database, contract and unit level only**, and the
     PostgREST / rclone results the order asks for do not exist yet.
   - **This is the condition for engineering closure.**
-- **The streaming-memory proof** is the V06 witness: while the client pauses with 8 of 24 MiB sent, the storage server
-  already holds at least 4 MiB of the object. The API process's RSS is logged as information only: a heap figure in one
-  process is not a stable proof.
+- **Streaming memory (B10) — the acceptance test V06m** (added after the Product Owner's CP2 review, 2026-10-30; an RSS
+  figure logged for information is not acceptance).
+  - **What runs:** 50 MiB of synthetic notes (24 + 24 + 2 MiB, each under the 25 MiB object ceiling). Each is streamed up
+    through the API to the store, then read back whole through the API. Every byte is checked by SHA-256.
+  - **The bound:** the API process's RSS, sampled every 10 ms, may not grow by more than `STREAM_RSS_BOUND` = **16 MiB**
+    over its settled baseline. That is under one third of the payload and under any one note. Nothing of the payload may
+    remain afterwards.
+  - **How it is kept repeatable:**
+    - the collector runs on a fixed 250 ms cadence (exposed at run time, with no new command-line flag), so that retained
+      memory is measured, not garbage awaiting a collection;
+    - the harness allocates nothing per chunk.
+  - **The control:** the same instrument must see a deliberately held 24 MiB note exceed the bound, so it can fail.
+  - The measured notes are then deleted and erased, so the later scenarios see the store unchanged.
+  - V06's witness stays: while the client pauses with 8 of 24 MiB sent, the store already holds at least 4 MiB.
 - **Timeouts** are proven by unit only: the 15 s read-open budget, the 30 s idle watchdog and the upload deadline.
 - **Hosted Supabase Storage** is not proven and must not be inferred from rclone (B13; §11.9, `QAN-BL-PROD-08`).
 

@@ -14,6 +14,10 @@
 //                 key is never an identifier; an error answer carries only its outcome; without a token: 401
 //   V06  B10 B6   a 24 MiB note flows to the store while the client is still sending (never held whole); a client that
 //                 disconnects mid-upload leaves no object and a DISCARDED note; TOO_LARGE / UNSUPPORTED store nothing
+//   V06m B10      bounded memory, the acceptance bound: 50 MiB of synthetic notes (24 + 24 + 2 MiB, each under the 25 MiB
+//                 ceiling) streamed up and read back whole; the API process's RSS never grows by more than
+//                 STREAM_RSS_BOUND (16 MiB, less than one note); a deliberately held 24 MiB note exceeds the bound (the
+//                 instrument can fail); the notes are then deleted and erased
 //   V07  B3       owner deletion: refused at once while the object still exists; the shared worker erases it (DELETE, HEAD
 //                 404, the data directory); a second deletion is ALREADY_GONE
 //   V07b B7       storage failures on the live path: a failing PUT discards the note (503, nothing readable); a failing GET
@@ -49,6 +53,8 @@ import http from 'node:http';
 import { join } from 'node:path';
 import process from 'node:process';
 import { PassThrough, Readable } from 'node:stream';
+import { setFlagsFromString } from 'node:v8';
+import { runInNewContext } from 'node:vm';
 import { I07D_SEAMS, PFN, createIntroductionRuntime } from './introduction-lifecycle-verifier-support.mjs';
 
 const require = createRequire(import.meta.url);
@@ -91,6 +97,8 @@ const { SupabaseDataApiService } = require('../apps/api/dist/conversation/supaba
 const { SupabaseServiceRoleApiService } = require('../apps/api/dist/conversation/supabase-service-role-api.service.js');
 
 const MiB = 1024 * 1024;
+/** B10's acceptance bound: the API process's RSS may not grow by more than this while 50 MiB of voice is streamed. */
+const STREAM_RSS_BOUND = 16 * MiB;
 const VOICE_KEY = /^voice-(note|call)\/[0-9a-f-]{36}$/u;
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 const base64url = (value) => Buffer.from(value).toString('base64url');
@@ -427,6 +435,73 @@ async function main() {
     if (!tooLarge.error) assert.deepEqual(tooLarge.json, { outcome: 'TOO_LARGE' }, 'V06 TOO_LARGE before any database act');
     assert.deepEqual((await upload(tokens.a, sessionA, synth(2048, 6), 'audio/wav')).json, { outcome: 'UNSUPPORTED' }, 'V06 UNSUPPORTED');
     assert.equal(Number((await rows("SELECT count(*) n FROM voice_private.recordings WHERE user_id = $1 AND recording_state = 'PENDING_UPLOAD'", [a]))[0].n), 0, 'V06 no refused upload left a pending note');
+
+    stage = 'V06m B10 bounded memory: 50 MiB streamed, RSS growth under the bound';
+    // The collector, without a command-line flag: it runs on a fixed cadence during the measurement, so what is measured is
+    // memory the process RETAINS, not garbage waiting for a collection. A note held whole is retained and still exceeds it.
+    setFlagsFromString('--expose-gc');
+    const gc = runInNewContext('gc');
+    const settle = async () => { for (let i = 0; i < 3; i += 1) { gc(); await sleep(50); } return process.memoryUsage().rss; };
+    const measure = async (run) => {
+      const base = await settle();
+      let peak = base;
+      const sampler = setInterval(() => { peak = Math.max(peak, process.memoryUsage().rss); }, 10);
+      const collector = setInterval(() => gc(), 250);
+      try { await run(); } finally { clearInterval(sampler); clearInterval(collector); }
+      peak = Math.max(peak, process.memoryUsage().rss);
+      return { base, peak, growth: peak - base, after: (await settle()) - base };
+    };
+    // The harness allocates nothing per chunk: sixteen fixed, never-mutated 64 KiB patterns, varied by position.
+    const patterns = Array.from({ length: 16 }, (_, i) => Buffer.alloc(64 * 1024, (i * 37 + 11) % 251));
+    function* noteBody(length, digest) {
+      for (let at = 0; at < length; at += 64 * 1024) {
+        const chunk = patterns[(at / 65536) % 16].subarray(0, Math.min(64 * 1024, length - at));
+        digest.update(chunk);
+        yield chunk;
+      }
+    }
+    /** A whole-object read consumed as it arrives: hashed and counted, never collected. */
+    const drain = (path) => new Promise((resolve, reject) => {
+      http.get(`${api}${path}`, { headers: { Authorization: `Bearer ${tokens.a}` } }, (response) => {
+        const digest = createHash('sha256');
+        let length = 0;
+        response.on('data', (chunk) => { digest.update(chunk); length += chunk.length; });
+        response.on('error', reject);
+        response.on('end', () => resolve({ status: response.statusCode, length, sha: digest.digest('hex') }));
+      }).on('error', reject);
+    });
+    const sizes = [24 * MiB, 24 * MiB, 2 * MiB];
+    assert.equal(sizes.reduce((sum, n) => sum + n, 0), 50 * MiB, 'V06m 50 MiB of synthetic voice in all');
+    assert.ok(sizes.every((n) => n <= 26_214_400), 'V06m every note under the 25 MiB object ceiling');
+    const streamedNotes = [];
+    const transfer = await measure(async () => {
+      for (const size of sizes) {
+        const digest = createHash('sha256');
+        const answer = await send(tokens.a, 'POST', `/voice/notes/${sessionA}/${randomUUID()}`, {
+          headers: { 'Content-Type': 'audio/mp4', 'Content-Length': String(size) }, body: Readable.from(noteBody(size, digest)) });
+        assert.equal(answer.json?.outcome, 'ACCEPTED', `V06m a ${size / MiB} MiB note is ACCEPTED (${JSON.stringify(answer.json)})`);
+        const sha = digest.digest('hex');
+        const back = await drain(`/voice/recordings/${answer.json.recordingId}/objects/NOTE/0`);
+        assert.deepEqual([back.status, back.length, back.sha], [200, size, sha], `V06m the ${size / MiB} MiB note reads back whole, byte for byte`);
+        streamedNotes.push(answer.json.recordingId);
+      }
+    });
+    console.log(`V06m memory: 50 MiB up and 50 MiB down; API process RSS ${(transfer.base / MiB).toFixed(1)} MiB before, peak growth ${(transfer.growth / MiB).toFixed(1)} MiB, ${(transfer.after / MiB).toFixed(1)} MiB retained after; bound ${STREAM_RSS_BOUND / MiB} MiB`);
+    assert.ok(transfer.growth <= STREAM_RSS_BOUND, `V06m B10 RSS grew ${(transfer.growth / MiB).toFixed(1)} MiB while 50 MiB was streamed: over the ${STREAM_RSS_BOUND / MiB} MiB bound`);
+    assert.ok(transfer.after <= STREAM_RSS_BOUND, 'V06m and nothing of the payload is retained afterwards');
+    // The control: the same instrument sees a note held whole.
+    let held = null;
+    const control = await measure(async () => { held = Buffer.alloc(24 * MiB, 9); await sleep(300); });
+    assert.ok(control.growth > STREAM_RSS_BOUND, `V06m the control: a 24 MiB note held whole grows RSS by ${(control.growth / MiB).toFixed(1)} MiB, over the bound`);
+    held = null;
+    const streamedKeys = [];
+    for (const id of streamedNotes) {
+      streamedKeys.push(...(await keysOf(id)).map((k) => k.storage_key));
+      assert.deepEqual((await send(tokens.a, 'DELETE', `/voice/recordings/${id}`)).json, { outcome: 'DELETED' }, 'V06m the measured notes are deleted');
+    }
+    await dueNow(streamedKeys);
+    await eraser.runOnce();
+    assert.deepEqual([streamedKeys.some(onDisk), (await queuedOf(streamedKeys)).length], [false, 0], 'V06m and erased');
 
     stage = 'V07 B3 owner deletion: refused at once, erased by the shared worker';
     const second = await upload(tokens.a, sessionA, synth(64 * 1024, 7));
