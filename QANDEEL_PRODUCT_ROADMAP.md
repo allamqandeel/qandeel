@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-28, CP2):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP1 merged through PR #364 as `de774cfd` (2026-10-28); CP2 — Gemini TTS & provider evidence (VA-11; one consumed run, USD 0.1155 of the USD 10 cap; partial: the expression set, the second voice, ASR, stage P and the render spike NOT RUN) — delivered; the expression set and the second voice then run on Google Cloud (592 / 592, USD 0.7950); TTS selection APPROVED by the Product Owner (Google Gemini TTS, `gemini-3.8-flash-tts`, voice Achird; one path); ASR evidence, the render spike and the final ASR proof then run; ASR selection APPROVED by the Product Owner (Speechmatics Enhanced `ar_en`; the proof verdict `NOT ACCEPTED` kept; on-device barge-in blocks the launch of calls); stage P measured locally (p50 8.4 ms, p95 17.4 ms; record §9.22); CP2 complete, its pull request not opened; no production code; every voice gate closed; CP2 not merged. S8A-06 … S8A-08 unchanged.
+> **CURRENT TASK (2026-10-30, CP3):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP2 merged through PR #365 as `47121434` (2026-10-28); CP3, S8B-01's closing change (record §10): the VA-4 starting values, the cost model, the formats and the server-side render placement, the lifecycle of VA-1 … VA-11, BG-08 / BG-09; **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S CP3 DECISIONS AND MERGE DECISION**, every proposal not approved; no paid call; no production code; every voice gate closed; not merged. Next, after the decisions and the merge and on a new authorization: S8B-02 Foundation. S8A-06 … S8A-08 unchanged.
+>
+> *(As written at CP2:)* **CURRENT TASK (2026-10-28, CP2):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP1 merged through PR #364 as `de774cfd` (2026-10-28); CP2 — Gemini TTS & provider evidence (VA-11; one consumed run, USD 0.1155 of the USD 10 cap; partial: the expression set, the second voice, ASR, stage P and the render spike NOT RUN) — delivered; the expression set and the second voice then run on Google Cloud (592 / 592, USD 0.7950); TTS selection APPROVED by the Product Owner (Google Gemini TTS, `gemini-3.8-flash-tts`, voice Achird; one path); ASR evidence, the render spike and the final ASR proof then run; ASR selection APPROVED by the Product Owner (Speechmatics Enhanced `ar_en`; the proof verdict `NOT ACCEPTED` kept; on-device barge-in blocks the launch of calls); stage P measured locally (p50 8.4 ms, p95 17.4 ms; record §9.22); CP2 complete, its pull request not opened; no production code; every voice gate closed; CP2 not merged. S8A-06 … S8A-08 unchanged.
 >
 > *(As written at CP1:)* **CURRENT TASK (2026-10-28, CP1):** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B, started by the Product Owner's S8B-00 decision D-1); S8A-05 merged through PR #363 as `8b476114` (2026-10-27); CP1 — the candidate Voice Runtime contract, Controlled Amendment VA-1 … VA-10 (approved in principle), the locked non-production benchmark harness and the locator reconciliation — delivered and at the Product Owner's CP1 review; no production code, no paid call (USD 10 cap, nothing spent), every voice gate closed; `QAN-BL-VOICE-01` owned by Stage 8B; CP2 not started; not merged (the S8B-01 note at the end). S8A-06 … S8A-08 have not started; their state is unchanged.
 >
@@ -1146,7 +1148,7 @@ stay as written.
 - The only paid calls of S8A-05 are CP3's one authorized Tier S / Tier P run (100 DeepSeek Flash calls, USD 0.0346). CP4
   made none.
 
-### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28; current task; CP1 merged through PR #364; CP2 complete, its pull request not opened; TTS selection APPROVED (Gemini `gemini-3.8-flash-tts`, voice Achird); ASR selection APPROVED (Speechmatics Enhanced `ar_en`); no production code; USD 0.1155 of the USD 10 cap; every voice gate closed; CP2 not merged)
+### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28 … 2026-10-30; current task; CP1 merged through PR #364; CP2 merged through PR #365 as `47121434`; TTS selection APPROVED (Gemini `gemini-3.8-flash-tts`, voice Achird); ASR selection APPROVED (Speechmatics Enhanced `ar_en`); CP3 the closing change: **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S CP3 DECISIONS AND MERGE DECISION**, its proposals not approved; no production code; every voice gate closed; CP3 not merged)
 
 - Started 2026-10-28 on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`
   (the merge of PR #363, 2026-10-27): **S8A-05 is merged**, so its closing change is effective. **Stage 8B starts** by
@@ -1169,7 +1171,7 @@ stay as written.
     `tests/s8b-01-voice-bench-harness-contract.test.mjs`;
   - `QAN-BL-VOICE-01` re-owned to `Stage 8B — Voice Runtime` (`DEFERRED — OWNED`); the register holds 89 items:
     44 / 4 / 8 / 33 by status.
-- **CP2 (2026-10-28), on `s8b/s8b-01-cp2` from `main` at `de774cfd`, delivered and at the Product Owner's CP2 review:**
+- **CP2 (2026-10-28), merged through PR #365 as `47121434` (2026-10-28), after two API CI corrections; as written at its review, on `s8b/s8b-01-cp2` from `main` at `de774cfd`:**
   Gemini TTS & provider evidence under the Product Owner's CP2 order ([record](docs/e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §9):
   - the candidate [Controlled Amendment VA-11](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_CP2_GEMINI_TTS_RETENTION_EXCEPTION_CONTROLLED_AMENDMENT_v1.0.md):
     zero retention waived for `gemini-3.8-flash-tts` and `gemini-3.8-flash-lite-tts` only; no training still required;
@@ -1211,5 +1213,19 @@ stay as written.
     removed) × both models × Achird and Sulafat, ONE approved run (`s8b01-cp2-cloud-r1`, now CONSUMED): 592 of 592 OK, no
     429, USD 0.7950 of its USD 2 cap at list price. Flash-Lite first audio p50 391 ms against 671; USD 0.0183 against
     0.0273 per audio minute at list price. The listening is the Product Owner's.
-- No production code, migration, provider adapter or feature gate; every voice gate closed. CP3 needs the Product Owner's
-  CP2 review first.
+- **CP3 (2026-10-30), on `s8b/s8b-01-cp3` from `main` at `47121434`, S8B-01's closing change** (the Product Owner's CP3
+  order; [record](docs/e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §10). Documentation only;
+  no paid call; every value below is **PROPOSED, NOT APPROVED** (record §10.7):
+  - the VA-4 starting values for S8B-05 (record §10.1): first-token abort 2,000 ms, total 5,000 ms, `max_tokens` 160,
+    finalize 500 ms, commit 800 ms as S8B-05's starting value only, barge-in 200 ms with a stop ≤ 50 ms, reconnection 30 s;
+    the planning sums reach about 2.4 – 2.6 s at p50, above the 1.5 s target, which stays S8B-05's to prove end to end;
+  - the cost model (record §10.2), from the providers' own price pages: about USD 0.026 – 0.029 per call minute at 2027
+    prices (USD 0.020 – 0.022 at 2026 prices), ASR and TTS 90 – 97 % of it; storage and Replay under 3 %;
+  - the formats and the render placement (record §10.3): Opus transport and call tracks, an H.264 / AAC MP4 Replay rendered
+    on the server on demand, no private video; a Voice Note in AAC-LC / M4A proposed;
+  - the lifecycle of the contract and of VA-1 … VA-11 (record §10.4): approved in principle or for CP2 only, none in force
+    for production, every one `NOT IMPLEMENTED`;
+  - BG-08 / BG-09 (record §10.5): `QAN-BL-VOICE-01` stays `DEFERRED — OWNED` by Stage 8B, not delivered; every
+    obligation stays with its Stage 8B owner (S8B-02 … S8B-08); nothing admitted or tombstoned; 89 items unchanged.
+- No production code, migration, provider adapter or feature gate; every voice gate closed. S8B-02 needs the Product
+  Owner's CP3 decisions, the merge and a new authorization.

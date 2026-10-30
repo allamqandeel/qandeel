@@ -1,15 +1,16 @@
 # QANDEEL — Voice Runtime Contract v1
 
-**Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B), CP1
-**Status:** `CANDIDATE — S8B-01 CP1, AT THE PRODUCT OWNER'S CP1 REVIEW (2026-10-28) — NOT IMPLEMENTED — PROVIDERS SELECTED BY THE PRODUCT OWNER AT S8B-01 CP2, NOT IMPLEMENTED (TTS: GEMINI GEMINI-3.8-FLASH-TTS, ACHIRD, record §9.10; ASR: SPEECHMATICS ENHANCED AR_EN, §4.7, record §9.21) — CP2 EVALUATION RUNS ONLY, NO PRODUCTION CALL — EVERY VOICE GATE CLOSED / CLOSED TO USERS`
-**Date:** 2026-10-28
+**Task:** S8B-01 — Voice Runtime Contract & Provider Evidence (Stage 8B): CP1 (this contract), CP2 (the provider evidence), CP3 (the closing change)
+**Status:** `STAGE 8B VOICE RUNTIME CONTRACT — MERGED WITH S8B-01 CP1 (PR #364, de774cfd) — PROVIDERS SELECTED BY THE PRODUCT OWNER AT S8B-01 CP2, MERGED (PR #365, 47121434): TTS GEMINI-3.8-FLASH-TTS, VOICE ACHIRD (record §9.10); ASR SPEECHMATICS ENHANCED AR_EN (§4.7, record §9.21) — S8B-01 CLOSED AT CP3 (record §10): THE VA-4 STARTING VALUES, THE CODEC AND THE RENDER PLACEMENT PROPOSED, NOT APPROVED — EVERY CAPABILITY IN THIS CONTRACT NOT IMPLEMENTED — EVERY VOICE GATE CLOSED / CLOSED TO USERS`
+**Date:** 2026-10-28 (CP1); closed at S8B-01 CP3, 2026-10-30
 **Authority:** the Product Owner's S8B-00 decisions (D-1 … D-9, with the D-9 cloud-iOS amendment) and the recording /
 retention / Replay decisions, approved 2026-10-28 and recorded in the
 [S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §1. The controlled changes this
 contract needs are drafted, one by one, in the candidate
 [S8B-01 Voice Runtime Controlled Amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md)
-(VA-1 … VA-10). This document binds nothing until the Product Owner approves CP1. Each amendment binds only when the
-Stage 8B task that implements it merges.
+(VA-1 … VA-10), with VA-11 added at CP2. CP1 was merged through PR #364. Each amendment binds only when the Stage 8B task
+that implements it merges, and none is in force for production today; their lifecycle at S8B-01's close is in the record
+§10.4.
 
 This contract defines Stage 8B's runtime. It **consumes** frozen authority and edits none of it:
 
@@ -291,7 +292,8 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
 - Analysis computed after the call stays at its own, later time.
 
 **6.4 Voice Note.**
-- One mono Opus track, the recording as sent, with its commit instant.
+- One mono Opus track, the recording as sent, with its commit instant. *(CP3 proposes AAC-LC in M4A instead, for native
+  recording and playback on both platforms; **not approved**, record §10.3, D-C2. Until it is decided, this line stands.)*
 - QANDEEL's reply to a note is text. A Replay of a note exchange is `MIXED` (CW2-05 §41).
 
 **6.5 Storage.**
@@ -306,6 +308,9 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
 |---|---|---|
 | Live Call recording | the call's `ended_at` + 30 days | yes |
 | Voice Note (Personal and Shared) | its commit instant + 30 days | yes |
+
+*(Precision proposed at CP3, record §10.4 #3, D-D2: a call's expiry exists only at `ENDED`, so it is written once at that
+transition, as exactly 30 days after `ended_at`; a recovery job ends a call that never ended. No start instant changes.)*
 
 - **Nothing extends retention.** `retention_expires_at` is written once and is never updated, by a trigger that refuses
   every update. That holds for listening, creating a Replay, editing it, previewing it and distributing it.
@@ -354,8 +359,9 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
 - Captions are `DERIVED_CAPTION` (§40).
 - The video's picture is the bound `ANALYTICAL_PROJECTION_VERSION`, drawn in the Living Analysis grammar (§36). It is not
   a new analysis.
-- The codec / container (CW2-05 §50 leaves it open) is decided by the S8B-01 CP2 render spike. The proposal is H.264 +
-  AAC in MP4 for destinations, with Opus at the source.
+- The codec / container (CW2-05 §50 leaves it open). The S8B-01 CP2 render spike gave the evidence (record §9.15). CP3
+  proposes the formats and a server-side, on-demand render (record §10.3): Opus at the source, H.264 + AAC in MP4 for the
+  destinations, no private video. **PROPOSED, not approved** (record §10.7, D-C1).
 
 **9.3 The three destinations** (PO decision 6). They are independent and use I-06C's existing destination actions,
 authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
@@ -422,7 +428,10 @@ The stage budget is preregistered in `scripts/s8b-01/bench-plan.json`:
   - a shorter first chunk;
   - a REALTIME `max_tokens` cap.
 - Spoken fillers that simulate thinking are **not** a lever (VI-01 §14).
-- The REALTIME budgets (time to first token, total) are set from CP2 evidence by controlled configuration (VA-4).
+- The REALTIME budgets (time to first token, total) are set from CP2 evidence by controlled configuration (VA-4). CP3
+  proposes their starting values (record §10.1), **not approved** (D-A1). The commit silence and the barge-in threshold are
+  set in S8B-05 (§4.4, §4.7). The planning sums with those values reach about 2.4 – 2.6 s at p50, above the target; the
+  target stands and S8B-05 decides it end to end (D-A2).
 - Acceptance:
   - S8B-05 must meet the target on synthetic audio;
   - S8B-06 measures it on a real Android device;
@@ -492,7 +501,10 @@ They are admitted at S8B-08 with their final list:
 
 - The reconnection window is 30 s.
 - The latency target is §11.
-- **Voices:**
+- **Voices** *(the Product Owner chose one voice at CP2, Achird on `gemini-3.8-flash-tts`, one path, no per-turn switching
+  (record §9.10). The shortlist below therefore has nothing left to choose at CP3. Whether Achird serves every supported
+  dialect, so that S8B-04 builds no voice choice, is put to the Product Owner (record §10.4 #2, D-D1); nothing below is
+  changed until then)*:
   - CP3 presents a shortlist per supported dialect from real samples;
   - the Product Owner chooses each default after listening;
   - if the Product Owner approves two or more voices for a dialect, the user's voice choice (P1 L271) is built in
@@ -502,7 +514,7 @@ They are admitted at S8B-08 with their final list:
 
 | Task | Depends on | Core acceptance |
 |---|---|---|
-| S8B-01 Contract & Evidence | — | This contract and VA-1…VA-10 approved; providers and voices chosen on measured evidence; the latency budget measured; cost per minute |
+| S8B-01 Contract & Evidence | — | This contract and VA-1…VA-10 approved; providers and voices chosen on measured evidence; the latency budget measured; cost per minute. *Closed at CP3 (record §10): the contract merged (CP1); providers and the voice chosen (CP2); every stage but N measured; cost per minute estimated (§10.2); the CP3 proposals pending (§10.7)* |
 | S8B-02 Foundation | 01 | VA-3 / VA-5 migrations; the media store; immutable `retention_expires_at` and the expiry worker (physical deletion; text kept; no extension by any action); early and account deletion; the coverage registry; export; the consent record; the ports with fakes; the gate closed; real PostgreSQL green; default-deny; no audio in logs |
 | S8B-03 Personal Voice Notes | 02 | Record, ASR, commit, reply, playback, 30-day expiry and its state, J1 / J2, VA-6 (microphone); E2E on a real Android device and in the iOS simulator |
 | S8B-04 QANDEEL's voice | 02 | Speech Rendering, VA-7, TTS, the voices and voice choice, J10, the fixed failure line; the pronunciation suite; visible text provably unchanged; **the Product Owner's two production requirements (§5): contextual expression (balanced, chosen in VA-7's spoken guidance, speech-only) and selective contextual vocalization of names, dates and ambiguous words, each proven by its suite and listening** |

@@ -1,7 +1,7 @@
 # QANDEEL — Stage 8B
 ## S8B-01 CP2 — Gemini TTS Provider-Retention Exception — Controlled Amendment VA-11 v1.0
 
-**Status:** `CANDIDATE — S8B-01 CP2 (2026-10-28) — RECORDS THE PRODUCT OWNER'S CP2 DECISION — IN FORCE FOR THE CP2 EVALUATION ON SYNTHETIC TEXT; FOR PRODUCTION ONLY FROM THE MERGE OF S8B-04 (QANDEEL'S VOICE)`.  
+**Status:** `MERGED WITH S8B-01 CP2 (PR #365, 47121434) — RECORDS THE PRODUCT OWNER'S CP2 DECISION — THE CP2 EVALUATION ON SYNTHETIC TEXT COMPLETE, ITS RUNS CONSUMED — FOR PRODUCTION ONLY FROM THE MERGE OF S8B-04 (QANDEEL'S VOICE), NOT IMPLEMENTED (S8B-01 CP3 CLOSE, 2026-10-30; record §10.4)`. Only `gemini-3.8-flash-tts` was selected (record §9.10); S8B-04 may narrow this exception to it when it binds (Controlled Amendment VA-1 … VA-10 §2: a task may tighten a text).  
 **Authority:** the Product Owner's S8B-01 CP2 order (2026-10-28), §1 "Product Owner decision — binding". It was given
 after PR #364 merged S8B-01 CP1 (`de774cfd`).  
 **Task:** `S8B-01` — CP2. It is not a Connected Worlds phase.
