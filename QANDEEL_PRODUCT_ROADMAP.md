@@ -7,7 +7,9 @@ reconciliation. It does not itself open an implementation task, define runtime s
 contract, or turn a backlog entry into executable work.
 Every concrete work item still requires its own scoped Task Contract before execution.
 ---
-> **CURRENT TASK (2026-10-30, CP3):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP2 merged through PR #365 as `47121434` (2026-10-28); CP3, S8B-01's closing change (record §10): the VA-4 starting values, the cost model, the formats and the server-side render placement, the lifecycle of VA-1 … VA-11, BG-08 / BG-09; **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION**, the Product Owner's CP3 decisions D-A1 … D-F1 made (2026-10-30, record §10.9), none implemented; call retention `started_at` + 30 days (D-D2); launch now, scale when needed (D-F1); no paid call; no production code; every voice gate closed; not merged. Next, after the decisions and the merge and on a new authorization: S8B-02 Foundation. S8A-06 … S8A-08 unchanged.
+> **CURRENT TASK (2026-10-30, S8B-02 CP1):** S8B-02 — Voice Foundation; S8B-01 merged through PR #366 as `c65b878c` (2026-10-30); CP1 — the database and governance foundation (migrations `0183` / `0184`, not hosted; the Product Owner's D-1 … D-8, PRIV-W and P-1) delivered locally on `s8b/s8b-02-cp1`; not pushed; no pull request; every voice gate closed; CP2 not authorized; S8B-02 not complete ([record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md)). S8A-06 … S8A-08 unchanged.
+>
+> *(As written at S8B-01 CP3; merged through PR #366:)* **CURRENT TASK (2026-10-30, CP3):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP2 merged through PR #365 as `47121434` (2026-10-28); CP3, S8B-01's closing change (record §10): the VA-4 starting values, the cost model, the formats and the server-side render placement, the lifecycle of VA-1 … VA-11, BG-08 / BG-09; **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION**, the Product Owner's CP3 decisions D-A1 … D-F1 made (2026-10-30, record §10.9), none implemented; call retention `started_at` + 30 days (D-D2); launch now, scale when needed (D-F1); no paid call; no production code; every voice gate closed; not merged. Next, after the decisions and the merge and on a new authorization: S8B-02 Foundation. S8A-06 … S8A-08 unchanged.
 >
 > *(As written at CP2:)* **CURRENT TASK (2026-10-28, CP2):** S8B-01 — Voice Runtime Contract & Provider Evidence; CP1 merged through PR #364 as `de774cfd` (2026-10-28); CP2 — Gemini TTS & provider evidence (VA-11; one consumed run, USD 0.1155 of the USD 10 cap; partial: the expression set, the second voice, ASR, stage P and the render spike NOT RUN) — delivered; the expression set and the second voice then run on Google Cloud (592 / 592, USD 0.7950); TTS selection APPROVED by the Product Owner (Google Gemini TTS, `gemini-3.8-flash-tts`, voice Achird; one path); ASR evidence, the render spike and the final ASR proof then run; ASR selection APPROVED by the Product Owner (Speechmatics Enhanced `ar_en`; the proof verdict `NOT ACCEPTED` kept; on-device barge-in blocks the launch of calls); stage P measured locally (p50 8.4 ms, p95 17.4 ms; record §9.22); CP2 complete, its pull request not opened; no production code; every voice gate closed; CP2 not merged. S8A-06 … S8A-08 unchanged.
 >
@@ -1148,8 +1150,9 @@ stay as written.
 - The only paid calls of S8A-05 are CP3's one authorized Tier S / Tier P run (100 DeepSeek Flash calls, USD 0.0346). CP4
   made none.
 
-### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28 … 2026-10-30; current task; CP1 merged through PR #364; CP2 merged through PR #365 as `47121434`; TTS selection APPROVED (Gemini `gemini-3.8-flash-tts`, voice Achird); ASR selection APPROVED (Speechmatics Enhanced `ar_en`); CP3 the closing change: **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION**, the Product Owner's CP3 decisions D-A1 … D-F1 made (2026-10-30); no production code; every voice gate closed; CP3 not merged)
+### S8B-01 — Voice Runtime Contract & Provider Evidence (2026-10-28 … 2026-10-30; MERGED through PR #366, 2026-10-30)
 
+- **`CLOSED / MERGED` through PR #366 as `c65b878c50ffc519c838b86c08b53298f8a88ff7` (2026-10-30); NOT DEPLOYED / CLOSED TO USERS.** Reconciled by S8B-02 CP1 (2026-10-30). The heading and bullets below are as written at its closing change: *(2026-10-28 … 2026-10-30; current task; CP1 merged through PR #364; CP2 merged through PR #365 as `47121434`; TTS selection APPROVED (Gemini `gemini-3.8-flash-tts`, voice Achird); ASR selection APPROVED (Speechmatics Enhanced `ar_en`); CP3 the closing change: **S8B-01 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION**, the Product Owner's CP3 decisions D-A1 … D-F1 made (2026-10-30); no production code; every voice gate closed; CP3 not merged)*
 - Started 2026-10-28 on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114a0f8655bcc39c5af80ded169c691c3f8`
   (the merge of PR #363, 2026-10-27): **S8A-05 is merged**, so its closing change is effective. **Stage 8B starts** by
   the Product Owner's S8B-00 decision D-1 (2026-10-28); the remaining Stage 8A work (S8A-06 … S8A-08 and its backlog
@@ -1236,3 +1239,35 @@ stay as written.
     obligation stays with its Stage 8B owner (S8B-02 … S8B-08); nothing admitted or tombstoned; 89 items unchanged.
 - No production code, migration, provider adapter or feature gate; every voice gate closed. S8B-02 needs the merge of
   this change and a new authorization.
+
+### S8B-02 — Voice Foundation (2026-10-30 …; current task; CP1 delivered locally on `s8b/s8b-02-cp1`, not pushed, no pull request; S8B-02 not complete; every voice gate closed)
+
+- Started 2026-10-30 on `s8b/s8b-02-cp1` from `main` at `c65b878c50ffc519c838b86c08b53298f8a88ff7` (the merge of PR #366, 2026-10-30):
+  **S8B-01 is merged**, so its closing change is effective. The Product Owner approved the WP0 decisions D-1 … D-8 with
+  corrections, added PRIV-W (consent withdrawal), approved P-1 (`MACHINE_ASR` Memory confidence: `HIGH` 0.90, `MEDIUM`
+  0.75, `LOW` SKIP, controlled values and not accuracy claims) and authorized CP1 only (2026-10-30). The decisions are in
+  the [S8B-02 record](docs/e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §1.
+- **BG-05 at kickoff** (record §2): no item is owned by "S8B-02". `QAN-BL-VOICE-01` is worked, not delivered, and stays
+  `DEFERRED — OWNED` by Stage 8B. Every other open item was read and left with its owner. CP1 admits and tombstones
+  nothing.
+- **CP1 — the database and governance foundation** (record §3 – §6). Delivered locally; not pushed; not merged.
+  - **Migration `0183`:**
+    - the turn's voice source (VA-3, with the turn-level anchor of D-3);
+    - the Memory and Public World readers (D-7);
+    - the Replay medium (VA-8 R-1; the Replay of calls is not cancelled and stays S8B-07's);
+    - the recording authority with segments and gaps (D-4 / D-5), with retention from `started_at` / `accepted_at`
+      plus 30 days (D-6);
+    - consent with withdrawal (PRIV-W);
+    - the four voice gates, seeded `DISABLED`;
+    - erasure inside the shared account-erasure path.
+  - **Migration `0184`:**
+    - Speechmatics, `AUDIO_INPUT_MS`, and Gemini speech in `INPUT_TOKEN` + `AUDIO_OUTPUT_TOKEN` (D-1);
+    - `usage_source`, `PROVIDER_REPORTED` / `GATEWAY_MEASURED` (D-2);
+    - no Price Card, no Credit change, no DeepSeek or text change.
+  - Not hosted; the next migration is `0185`.
+  - The text path and the text Replay are proven unchanged (A1, A5, A12).
+  - The amendment text S8B-02 binds is [amendment §4](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md); it binds from S8B-02's merge.
+- No API endpoint, worker, store, provider adapter, mobile code or user-visible string. Every voice gate is closed, and
+  no consent text is installed.
+- **CP2 (the secure media lifecycle, B1 – B10, PRIV-W B5) and S8B-02's closing change are not started and not
+  authorized.**

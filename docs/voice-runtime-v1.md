@@ -291,9 +291,17 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
 **6.2 Gaps.**
 - A reconnection gap or a muted span is recorded as what it was: an explicit gap marker, or real silence while muted.
 - Nothing is stitched to look continuous (CW2-05 §17 timing integrity).
+- *(S8B-02 CP1, 2026-10-30, the Product Owner's D-4 / D-5; binds from S8B-02's merge.)* Gaps are recording data, held
+  by the recording authority (`voice_private.recording_gaps`), as `RECONNECTION`, `MUTED` or `WRITER_LOSS`. Segments are
+  ordered by index on a continuous clock unless a gap explains the discontinuity. A writer that stops is recovered by
+  sealing, and its pending segments become `WRITER_LOSS` gaps. Order, gaps and interruption are proven; **no loss bound
+  is claimed** (D-5). [S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §4.1.
 
 **6.3 Anchors.**
 - Every committed spoken unit carries `[start_ms, end_ms)` on the call clock, plus its commit instant.
+- *(S8B-02 CP1, 2026-10-30, the Product Owner's D-3; binds from S8B-02's merge.)* The anchor is **turn-level**: it is
+  written once on the turn's voice source, before the turn has units, and every unit of the turn inherits it
+  (VA-3 tightened, amendment §4).
 - For an `INTERRUPTED` QANDEEL unit, `end_ms` is the confirmed playout position of the cut. The anchor therefore covers
   the played audio, including the cut chunk's played part, while the unit's text covers only the fully played chunks
   (§4.3). A transcript derived from that audio stays `DERIVED_TRANSCRIPT` (CW2-05 §40) and is never shown as verbatim.
@@ -327,6 +335,11 @@ real `ORIGINAL_AUDIO` source into CW2-05 / I-06A … D. It does not redesign the
 recording can begin. The expiry is written once, with `started_at`. Ending the call, a reconnection, or creating or
 sharing a Replay never restarts the count. A call that never reaches `ENDED` normally is ended by a recovery path with a
 truthful end reason, and its expiry does not move. No migration before S8B-02.)*
+
+*(S8B-02 CP1, 2026-10-30, the Product Owner's D-6; binds from S8B-02's merge.)* A Voice Note's "commit instant" is its
+`accepted_at`, the instant the server accepts the stored note: `retention_expires_at = accepted_at + 30 days`, written
+once, together with `accepted_at`, from `NULL`. A call recording's expiry is written at creation from `started_at`. Both
+are refused every later change by every role ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §4.1).
 
 - **Nothing extends retention.** `retention_expires_at` is written once and is never updated, by a trigger that refuses
   every update. That holds for listening, creating a Replay, editing it, previewing it and distributing it.
@@ -414,6 +427,13 @@ authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
 5. **No human review** of any private voice content (CW2-08A).
 6. Every string goes through a Product Copy Gate in neutral MSA (decision of 2026-10-13). The published legal policy is
    Stage 9.
+7. *(S8B-02 CP1, 2026-10-30, the Product Owner's PRIV-W; binds from S8B-02's merge.)* **Withdrawal.** A user may
+   withdraw recording consent at any time. Afterwards no begin, accept, open, segment add or segment store is admitted.
+   Sealing an open call recording still succeeds. Existing recordings keep their expiry and stay deletable, and
+   withdrawal is never a deletion reason. The consent catalogue is empty until S8B-03 installs a Copy-Gated version, so
+   every recording act is refused until then. Withdrawal racing an upload or a segment store is proven in S8B-02 CP2
+   (B5). Export lists retained recordings as metadata, with no key. The per-file voice export is CP2 (B9), and the
+   mobile saver is S8B-03.
 
 ## 11. Speed and latency (D-6)
 
@@ -460,6 +480,12 @@ The stage budget is preregistered in `scripts/s8b-01/bench-plan.json`:
 
 - Every ASR and TTS call, and any paid Speech Rendering tool, is a ledger call in AI-COST-01. This extends the ledger; no
   second ledger is created.
+- *(S8B-02 CP1, 2026-10-30, the Product Owner's D-1 / D-2; binds from S8B-02's merge; amendment §4.)* The kinds are
+  `AUDIO_INPUT_MS` (Speechmatics) and `AUDIO_OUTPUT_TOKEN` with `INPUT_TOKEN` (Gemini speech, which is billed in
+  tokens). `AUDIO_OUTPUT_MS` and `SYNTHESIS_CHARACTERS` below are superseded and are not added. Every settled call
+  carries its usage source, `PROVIDER_REPORTED` or `GATEWAY_MEASURED`. `GATEWAY_MEASURED` applies to Speechmatics only,
+  is never presented as provider-confirmed usage, and stays a separate dimension in every reader, aggregate and
+  telemetry label. No Price Card is registered in S8B-02, so every voice call settles `UNPRICED`.
 - **New usage kinds:** `AUDIO_INPUT_MS`, `AUDIO_OUTPUT_MS` and `SYNTHESIS_CHARACTERS`.
 - **New feature families:** `VOICE_NOTE_TRANSCRIPTION`, `LIVE_CALL_TRANSCRIPTION`, `SPEECH_SYNTHESIS` and
   `SPEECH_RENDERING`.

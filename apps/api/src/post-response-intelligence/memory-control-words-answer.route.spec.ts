@@ -224,6 +224,8 @@ class CanonicalStore {
       reevaluateWithdrawnHypothesisEvidence: async () => 0,
       listActiveHypotheses: async () => [],
       readHypothesisEvidenceReliance: async () => [],
+      // S8B-02 CP1: every turn here is typed; a typed turn has no voice source.
+      readTurnVoiceProvenance: async () => undefined,
       listActiveMemories: async (c: BackgroundIntelligenceExecutionContext, limit: number) => this.memories
         .filter((m) => m.user_id === c.userId && m.status === 'ACTIVE').sort((l, r) => r.updated_at.localeCompare(l.updated_at)).slice(0, limit)
         .map((m) => ({ ...m, subject: this.subjectOf(m.id) })),

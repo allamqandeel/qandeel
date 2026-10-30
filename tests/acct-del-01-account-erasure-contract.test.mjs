@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
+import { SUBSTITUTIONS, substitutedStatement } from '../database/voice-foundation-0183-substitutions.mjs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
 const M0164 = 'database/migrations/0164_account_deletion_matching_introductions_v1.sql';
@@ -84,9 +85,18 @@ function ownershipViolations(w) {
   // coordinator, account_erasure_private.erase_account_v1, ever opens qandeel.account_erasure or writes the authorization;
   // 0164 defines it and 0169 alone forward-replaces it, and every other mention is a guard READING the setting.
   const COORDINATOR = /CREATE (?:OR REPLACE )?FUNCTION account_erasure_private\.erase_account_v1\(p_deletion_id uuid\)[\s\S]*?\nEND\$\$;/u;
+  // S8B-02 CP1 RE-ANCHOR (2026-10-30): 0183 forward-replaces the coordinator once more (to erase the voice module) as its
+  // declared substitution `account-erasure` - the 0169 statement plus exact, tagged edits, proven byte-for-byte by
+  // verify-migration-0183 (S0d). The rule is unchanged: one coordinator, and every replacement of it is named here.
+  const OWNERS = ['0164_account_deletion_matching_introductions_v1.sql', '0169_replay_personal_secure_integration_erasure_v1.sql', '0183_s8b_02_voice_foundation_v1.sql'];
   const definers = w.migrations.filter(([, t]) => COORDINATOR.test(t)).map(([f]) => f);
-  if (JSON.stringify(definers) !== JSON.stringify(['0164_account_deletion_matching_introductions_v1.sql', '0169_replay_personal_secure_integration_erasure_v1.sql'])) {
-    out.push(`the coordinator is defined by 0164 and forward-replaced by 0169 alone (got ${definers})`);
+  if (JSON.stringify(definers) !== JSON.stringify(OWNERS)) {
+    out.push(`the coordinator is defined by 0164 and forward-replaced by 0169 and 0183 alone (got ${definers})`);
+  }
+  const voice = w.migrations.find(([f]) => f === OWNERS[2]);
+  const erasure = SUBSTITUTIONS.find((substitution) => substitution.key === 'account-erasure');
+  if (voice && (!erasure || !voice[1].includes(substitutedStatement(erasure)) || !COORDINATOR.test(substitutedStatement(erasure)))) {
+    out.push('0183 replaces the coordinator with something other than its declared substitution');
   }
   for (const [f, t] of w.migrations) {
     const outside = t.replace(new RegExp(COORDINATOR.source, 'gu'), '');
@@ -94,8 +104,8 @@ function ownershipViolations(w) {
     if (/INSERT INTO account_erasure_private\.erasure_authorizations \(/u.test(outside)) out.push(`${f} writes the account erasure authorization outside the coordinator`);
   }
   const owners = w.migrations.filter(([, t]) => /qandeel\.account_erasure/u.test(t)).map(([f]) => f);
-  if (JSON.stringify(owners) !== JSON.stringify(['0164_account_deletion_matching_introductions_v1.sql', '0169_replay_personal_secure_integration_erasure_v1.sql'])) {
-    out.push(`only 0164 and 0169 name qandeel.account_erasure (got ${owners})`);
+  if (JSON.stringify(owners) !== JSON.stringify(OWNERS)) {
+    out.push(`only 0164, 0169 and 0183 name qandeel.account_erasure (got ${owners})`);
   }
   return out;
 }

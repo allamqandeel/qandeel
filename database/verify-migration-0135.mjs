@@ -172,12 +172,19 @@ async function verifyCatalog() {
   // RE-ANCHORED by S8A-04 CP2 (2026-10-25, amendment §5): migration 0175 adds begin_ai_provider_call_v2 (the Shared
   // correlation), executable by service_role alone; once it exists it is the one addition, and nothing else may be.
   const beginV2 = (await rows("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid,uuid,uuid,uuid,text,text,text,text,text)') IS NOT NULL AS present"))[0].present;
+  // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): the voice begin, the voice-aware settle and the two
+  // operator reads that report the usage source are four more, all service_role.
+  const voice = (await rows("SELECT to_regprocedure('public.begin_ai_provider_call_v3(uuid,uuid,uuid,uuid,text,text,text,text,text)') IS NOT NULL AS present"))[0].present;
   assert.deepEqual(reachable.map((r) => `${r.role}:${r.fn}`).sort(),
     ['service_role:public.begin_ai_provider_call_v1(uuid,uuid,uuid,uuid,text,text,text,text,text)', ...(beginV2 ? ['service_role:public.begin_ai_provider_call_v2(uuid,uuid,uuid,uuid,text,text,text,text,text)'] : []),
       'service_role:public.server_read_ai_cost_aggregates_v1(timestamp with time zone,timestamp with time zone)',
       'service_role:public.server_read_ai_credit_policy_state_v1()', 'service_role:public.server_read_ai_usage_operations_summary_v1()',
-      'service_role:public.settle_ai_provider_call_v1(uuid,uuid,text,text,jsonb)'],
-    'exactly five accounting functions (six once 0175 adds the Shared begin) are executable by an application role, all by service_role');
+      'service_role:public.settle_ai_provider_call_v1(uuid,uuid,text,text,jsonb)',
+      ...(voice ? ['service_role:public.begin_ai_provider_call_v3(uuid,uuid,uuid,uuid,text,text,text,text,text)',
+        'service_role:public.server_read_ai_cost_aggregates_v2(timestamp with time zone,timestamp with time zone)',
+        'service_role:public.server_read_ai_usage_operations_summary_v2(integer)',
+        'service_role:public.settle_ai_provider_call_v2(uuid,uuid,text,text,jsonb,text)'] : [])].sort(),
+    'exactly five accounting functions (six once 0175 adds the Shared begin, ten once 0184 adds the voice four) are executable by an application role, all by service_role');
 
   stage = 'catalog: nothing seeded - no price, no Credit policy, no balance';
   for (const table of ['ai_price_cards', 'ai_credit_policies', 'ai_credit_ratings']) assert.equal(await count(`SELECT count(*) AS n FROM public.${table}`), 0, `${table} is empty after migration`);

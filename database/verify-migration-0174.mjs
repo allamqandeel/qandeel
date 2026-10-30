@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
+import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -52,7 +53,9 @@ async function verify() {
   // detected by its branch-scoped context read (0182's own verifier pins the full list).
   const { publicReply } = await one("SELECT to_regprocedure('public.read_public_qandeel_context_v2(uuid, uuid)') IS NOT NULL AS \"publicReply\"");
   const expected = [...FAMILIES, ...(later ? ['SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT'] : []), ...(judged ? ['SHARED_DISCLOSURE_JUDGE'] : []),
-    ...(publicReading ? ['PUBLIC_SEMANTIC_INTERPRETATION'] : []), ...(publicReply ? ['PUBLIC_QANDEEL_REPLY'] : [])];
+    ...(publicReading ? ['PUBLIC_SEMANTIC_INTERPRETATION'] : []), ...(publicReply ? ['PUBLIC_QANDEEL_REPLY'] : []),
+    // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list); nothing else in this list changes.
+    ...((await one(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : [])];
   assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((match) => match[1]).sort(), [...expected].sort());
 
   await q('BEGIN');

@@ -167,7 +167,10 @@ const ABSORBED = [
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1',
   // RE-ANCHORED by S8A-04 CP2 (migration 0175, 2026-10-24): the Shared begin raises the same 0135 ledger conflict, PT409.
-  'public.begin_ai_provider_call_v2'];
+  'public.begin_ai_provider_call_v2',
+  // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): the voice begin and the voice-aware settle raise the same
+  // 0135 ledger conflicts, PT409.
+  'public.begin_ai_provider_call_v3', 'public.settle_ai_provider_call_v2'];
 
 // ------------------------------------------------------------------ session helpers
 /** A Data-API-shaped session inside the caller's transaction: the role PostgREST switches to, with its claims. */

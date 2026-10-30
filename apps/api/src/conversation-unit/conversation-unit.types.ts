@@ -49,6 +49,10 @@ export interface CommitConversationUnitsRequest extends CommitBatchProvenance {
   readonly units: readonly ProposedCommitUnit[];
 }
 
+/** The closed modality vocabulary of migration 0183 `conversation_units_source_modality_check`. */
+export const CONVERSATION_UNIT_SOURCE_MODALITIES = ['TEXT', 'VOICE_NOTE', 'LIVE_CALL_SPEECH'] as const;
+export type ConversationUnitSourceModality = typeof CONVERSATION_UNIT_SOURCE_MODALITIES[number];
+
 /**
  * A durable committed CU row, exactly as the database stores it.
  *
@@ -64,7 +68,12 @@ export interface CommittedConversationUnit {
   readonly commit_batch_id: string;
   readonly source_role: 'USER' | 'ASSISTANT';
   readonly speaker_state: 'RESOLVED' | 'UNRESOLVED';
-  readonly source_modality: 'TEXT';
+  /**
+   * S8B-02 CP1 (migration 0183, VA-3): derived by the database from the turn's voice source - TEXT for a turn without
+   * one. A voice unit's committed_text is the turn's MACHINE_ASR transcript (user) or the delivered reply (assistant);
+   * the commitment gate itself stays channel-based.
+   */
+  readonly source_modality: ConversationUnitSourceModality;
   readonly ordinal_within_turn: number;
   readonly source_span_start: number;
   readonly source_span_end: number;

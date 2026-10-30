@@ -17,6 +17,26 @@ export const MEMORY_IMPORTANCE: Readonly<Record<Exclude<MemoryType, 'DERIVED_INS
   TEMPORARY_STATE: 0.50,
 };
 
+/**
+ * S8B-02 P-1 (Product Owner, 2026-10-30): the confidence a background Memory captured from a MACHINE_ASR transcript is
+ * recorded with, per ASR confidence band. These are controlled configuration values, NOT accuracy claims. A LOW band
+ * writes no Memory. For a voice turn they replace the typed-text 0.98 / 0.95, which the database refuses there (0183).
+ */
+export const MACHINE_ASR_MEMORY_CONFIDENCE = Object.freeze({ HIGH: 0.90, MEDIUM: 0.75 } as const);
+export type AsrConfidenceBand = 'HIGH' | 'MEDIUM' | 'LOW';
+
+/**
+ * S8B-02 CP1 (D-7): the background candidate of a voice turn. The typed grammar has already decided WHAT would be kept;
+ * this decides only whether a machine transcript may keep it, and at which configured confidence.
+ */
+export function machineAsrMemoryCandidate(
+  candidate: CreateMemoryInput,
+  band: AsrConfidenceBand,
+): { decision: 'SKIP'; reason: 'LOW_CONFIDENCE_MACHINE_ASR' } | { decision: 'WRITE'; candidate: CreateMemoryInput } {
+  if (band !== 'HIGH' && band !== 'MEDIUM') return { decision: 'SKIP', reason: 'LOW_CONFIDENCE_MACHINE_ASR' };
+  return { decision: 'WRITE', candidate: { ...candidate, source: 'MACHINE_ASR', confidence: MACHINE_ASR_MEMORY_CONFIDENCE[band] } };
+}
+
 export type MemoryWriteSkipReason =
   | 'NO_SUPPORTED_EXPLICIT_PATTERN'
   | 'SENSITIVE_DATA'

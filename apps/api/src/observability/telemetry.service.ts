@@ -3,7 +3,7 @@ import { metrics,SpanStatusCode,trace,type Attributes,type Span,type Tracer } fr
 import { CorrelationService } from './correlation.service';
 import{RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE,RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE,RUNTIME_ROUTING_POLICY_VERSION,isLegalCurrentRoutePair,isRuntimeRoutingPath,type RuntimeRoutingDecision}from'../intelligence-runtime/fast-deep-routing-contract';
 import{POST_RESPONSE_PROVIDER_BUDGET_DECISION_KEYS,POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION,POST_RESPONSE_PROVIDER_EFFECT_KEYS}from'../post-response-intelligence/post-response-provider-budget';
-import{AI_FEATURE_FAMILIES,AI_PROVIDERS,AI_USAGE_KINDS,type NormalizedAiUsage}from'../ai-usage/ai-usage.types';
+import{AI_FEATURE_FAMILIES,AI_GATEWAY_MEASURABLE_OPERATIONS,AI_PROVIDERS,AI_USAGE_KINDS,AI_USAGE_SOURCES,AI_VOICE_COMPLETE_USAGE_KINDS,AI_VOICE_FEATURE_FAMILIES,AI_VOICE_PROVIDER_OPERATIONS,type NormalizedAiUsage,type NormalizedAiVoiceUsage}from'../ai-usage/ai-usage.types';
 
 type Usage={inputTokens:number;outputTokens:number};
 type Instrument={add?:(value:number,attributes?:Attributes)=>void;record?:(value:number,attributes?:Attributes)=>void};
@@ -124,6 +124,12 @@ const AI_USAGE_ACCOUNTING_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new M
 // The aggregate accounting state from migration 0135's service-role summary: state -> whether an oldest age exists.
 const AI_USAGE_OPERATION_STATES:ReadonlyMap<string,boolean>=new Map([['pending',false],['stale_pending',true],['settled_24h',false],['failed_24h',false],['cancelled_24h',false],['usage_unknown_24h',false],['rated_24h',false],['unpriced_24h',false]]);
 const AI_USAGE_POLICY_VERSION='1';
+// S8B-02 CP1 (D-2): the voice registries. A voice settlement always carries its usage source, so a GATEWAY_MEASURED
+// quantity is never merged into, or presented as, a provider-reported one.
+const AI_VOICE_OPERATIONS:ReadonlyMap<string,ReadonlySet<string>>=new Map(Object.entries(AI_VOICE_PROVIDER_OPERATIONS).map(([provider,operations])=>[provider,new Set<string>(operations)]));
+const AI_VOICE_FAMILY_LABELS:ReadonlySet<string>=new Set(AI_VOICE_FEATURE_FAMILIES);
+const AI_USAGE_SOURCE_LABELS:ReadonlySet<string>=new Set(AI_USAGE_SOURCES);
+const AI_GATEWAY_MEASURABLE:ReadonlySet<string>=new Set(AI_GATEWAY_MEASURABLE_OPERATIONS);
 
 @Injectable()
 export class TelemetryService{
@@ -141,6 +147,7 @@ export class TelemetryService{
  private readonly aiUsageAccounting:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.accounting'),{});
  private readonly aiUsageProviderCalls:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.provider_calls'),{});
  private readonly aiUsageTokens:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.tokens',{unit:'{token}'}),{});
+ private readonly aiUsageAudioInput:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.audio_input',{unit:'ms'}),{});
  private readonly aiUsageOperationStateCounts:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.ai_usage.operations.state_count'),{});
  private readonly aiUsageOperationOldestAges:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.ai_usage.operations.oldest_age',{unit:'s'}),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
@@ -280,6 +287,23 @@ export class TelemetryService{
   for(const[kind,quantity]of Object.entries(usage.quantities)){
    if(!AI_USAGE_KIND_LABELS.has(kind)||!Number.isSafeInteger(quantity)||(quantity as number)<0)continue;
    this.aiUsageTokens.add?.(quantity as number,{provider,feature_family:featureFamily,usage_kind:kind,policy_version:AI_USAGE_POLICY_VERSION});
+  }
+ });}
+ // S8B-02 CP1 (D-2) one settled VOICE provider attempt: the same call count with the usage source as its own label, the
+ // token kinds on the token counter and AUDIO_INPUT_MS on its own millisecond counter, each labelled by source. Only a
+ // kind of the operation's own partition is emitted, GATEWAY_MEASURED only for a Speechmatics operation; anything else is
+ // DROPPED. The text method above is unchanged and never carries a voice family. Fail-soft.
+ recordAiVoiceProviderCallSettlement(provider:string,operation:string,featureFamily:string,outcome:string,usageSource:string,usage:NormalizedAiVoiceUsage):void{this.safeVoid(()=>{
+  if(!AI_VOICE_OPERATIONS.get(provider)?.has(operation)||!AI_VOICE_FAMILY_LABELS.has(featureFamily)||!AI_USAGE_OUTCOMES.has(outcome))return;
+  if(!AI_USAGE_SOURCE_LABELS.has(usageSource)||(usageSource==='GATEWAY_MEASURED'&&!AI_GATEWAY_MEASURABLE.has(operation)))return;
+  if(usage?.completeness!=='COMPLETE'&&usage?.completeness!=='INCOMPLETE'&&usage?.completeness!=='ABSENT')return;
+  this.aiUsageProviderCalls.add?.(1,{provider,feature_family:featureFamily,outcome,usage_completeness:usage.completeness,usage_source:usageSource,policy_version:AI_USAGE_POLICY_VERSION});
+  if(usage.completeness==='ABSENT')return;
+  const partition:readonly string[]=AI_VOICE_COMPLETE_USAGE_KINDS[operation as keyof typeof AI_VOICE_COMPLETE_USAGE_KINDS];
+  for(const[kind,quantity]of Object.entries(usage.quantities)){
+   if(!partition.includes(kind)||!Number.isSafeInteger(quantity)||(quantity as number)<0)continue;
+   const labels={provider,feature_family:featureFamily,usage_kind:kind,usage_source:usageSource,policy_version:AI_USAGE_POLICY_VERSION};
+   if(kind==='AUDIO_INPUT_MS')this.aiUsageAudioInput.add?.(quantity as number,labels);else this.aiUsageTokens.add?.(quantity as number,labels);
   }
  });}
  // AI-COST-01 aggregate accounting state (migration 0135 summary): the count, and for stale_pending the oldest age in

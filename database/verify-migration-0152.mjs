@@ -55,6 +55,7 @@ import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -353,7 +354,11 @@ async function verifyCatalog() {
     ['public.background_record_memory_v1', Object.keys(NEW_FUNCTIONS).find((s) => s.includes('background_record'))],
   ]) {
     const replace = name.includes('standing') || name.includes('change_core');
-    assert.equal(await liveBody(signature), bodyOf(text0152, name, { replace }), `${name} is exactly the 0152 body`);
+    // RE-ANCHORED by S8B-02 CP1 (migration 0183, 2026-10-30): once 0183 is applied the background writer is its 0183
+    // body, which is this body with exactly the declared D-7 / P-1 edits (voice-foundation-0183-substitutions.mjs).
+    const expected = name === 'public.background_record_memory_v1' && await voiceFoundationApplied(rows)
+      ? normalizeBody(substitutedBody('background-memory-writer')) : bodyOf(text0152, name, { replace });
+    assert.equal(await liveBody(signature), expected, `${name} is exactly the 0152 body (or its declared 0183 successor)`);
   }
   for (const [name, signature] of [
     ['public.reevaluate_withdrawn_hypothesis_evidence_core_v1', 'public.reevaluate_withdrawn_hypothesis_evidence_core_v1(uuid,integer)'],

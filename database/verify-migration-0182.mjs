@@ -20,6 +20,7 @@
 //      unpublished words; nothing without the live lease or once the Experience leaves the Public World; the unchanged
 //      0147 completion accepts what it consumed.
 import assert from 'node:assert/strict';
+import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import { APP_ROLES, SEAM, T, createRuntime, runVerifier } from './public-runtime-verifier-support.mjs';
@@ -252,7 +253,9 @@ async function verifyBoundary() {
   // B06 AI-COST-01.
   const [{ def }] = await rows(`SELECT pg_get_constraintdef(c.oid) def FROM pg_constraint c
     WHERE c.conrelid = 'public.ai_provider_calls'::regclass AND c.conname = 'ai_provider_calls_feature_family_check'`);
-  assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort(), [...FAMILIES].sort(), 'B06 the family list');
+  assert.deepEqual([...def.matchAll(/'([A-Z_]+)'::text/gu)].map((m) => m[1]).sort(), [...FAMILIES,
+    // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list); nothing else in this list changes.
+    ...((await first(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : [])].sort(), 'B06 the family list');
   // B07 launch closure and the frozen publication core.
   assert.ok((await rt.functionPosture(SEAM)).prosrc.includes('NOT_EVALUATED'), 'B07 the CW2-08 publication seam answers NOT_EVALUATED');
   const entitlement = (await rt.functionPosture(ENTITLEMENT)).prosrc;

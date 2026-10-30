@@ -254,6 +254,7 @@ jobs:
       - {name: "Verify S7-05 Replay final integration static contract (a Reading's scope verified against its one canonical form and sent as its class alone, anything else refused whole and never repaired, no Session id in either captured wire, the decoder taking the class alone, no consumer reading a scope, 0169 and the frozen historical wire unchanged, the 27 English rows approved, the record and locators in place)", run: npm run test:s7-05-replay-final-integration-contract}
       - {name: "Verify S8A-01 DeepSeek production integration static contract (no reasoning trace read, no end-user identifier, the fixed DeepSeek endpoint, accounted only, synthetic qualification only, the output release guard, 0170 the three registries only)", run: npm run test:s8a-01-deepseek-production-integration-contract}
       - {name: "Verify S8B-01 voice benchmark harness static contract (the preregistered plan and corpus hashes intact, the USD 10 cap and its split, the preregistered Arabic scoring, an unmeasured stage never a pass, the CP1 lock refusing every live run, loopback only under the guard, the zero-cost simulated rehearsal with no paid call)", run: npm run test:s8b-01-voice-bench-harness-contract}
+      - {name: "Verify S8B-02 Voice Foundation static contract (0183 / 0184 forward-only and wired, every voice gate seeded DISABLED with a setter no role holds, the server surface service_role's alone, the 0184 CHECKs mirrored in TypeScript with the text registries unchanged, the P-1 band values, 0104 and I-06C untouched, no provider adapter or client surface)", run: npm run test:s8b-02-voice-foundation-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1288,6 +1289,18 @@ jobs:
       # attached to their posts and the topic as one bounded text, public-visible truth only; PUBLIC_QANDEEL_REPLY admitted.
       - name: Verify S8A-05 Public discussion threads and @qandeel context against real PostgreSQL
         run: npm run verify:public-discussion-threads:integration
+      # S8B-02 CP1: migration 0183 (Voice Foundation) - the voice source of a turn (VA-3) beside the unchanged text paths
+      # (a golden text fingerprint recorded on 0182), the closed voice channel, MACHINE_ASR Memory bands (P-1: HIGH 0.90,
+      # MEDIUM 0.75, LOW skipped) and the Public exclusion, the Replay ORIGINAL_AUDIO medium, the recording authority with
+      # its segments, gaps and 30-day retention, consent with withdrawal (PRIV-W, two-connection races), the four voice
+      # gates DISABLED, isolation and account erasure.
+      - name: Verify S8B-02 Voice Foundation against real PostgreSQL
+        run: npm run verify:voice-foundation:integration
+      # S8B-02 CP1: migration 0184 (AI-COST-01 / VA-5 as amended) - Speechmatics AUDIO_INPUT_MS settled GATEWAY_MEASURED and
+      # reported apart (D-2), Gemini speech INPUT_TOKEN + AUDIO_OUTPUT_TOKEN (D-1), the voice begin bound to the payer's own
+      # recording, every existing partition and v1 function unchanged, UNPRICED without a card, Credits untouched.
+      - name: Verify S8B-02 voice AI cost units against real PostgreSQL
+        run: npm run verify:voice-ai-cost:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

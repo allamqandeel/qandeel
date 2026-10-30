@@ -24,6 +24,7 @@
 //      called under every member's token, and a seeded place's bare meaning (a unique marker) never appears outside its
 //      composed frame.
 import assert from 'node:assert/strict';
+import { VOICE_COST_PROBE, VOICE_FAMILIES } from './voice-cost-families-0184.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
@@ -618,7 +619,9 @@ async function verifyLedger(h, w, p, iso) {
   assert.deepEqual(families, ['CONVERSATION_REPLY', 'CU_SEGMENTATION', 'FOCUS_RESOLUTION', 'THREAD_FORMATION', 'THREAD_CONTINUITY',
     'HYPOTHESIS_INTENT_EXTRACTION', 'HYPOTHESIS_EVIDENCE_ASSOCIATION', 'HYPOTHESIS_CANDIDATE_GENERATION', 'PERSONAL_UNDERSTANDING_CAPTURE',
     'SHARED_SEMANTIC_READING', 'SHARED_KNOWLEDGE_RECALL', 'SHARED_SPATIAL_PLACEMENT', 'SHARED_DISCLOSURE_JUDGE',
-    'PUBLIC_SEMANTIC_INTERPRETATION', 'PUBLIC_QANDEEL_REPLY'].sort());
+    'PUBLIC_SEMANTIC_INTERPRETATION', 'PUBLIC_QANDEEL_REPLY',
+    // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): 0184 adds exactly the four voice families (0184's own verifier pins the full list); nothing else in this list changes.
+    ...((await first(VOICE_COST_PROBE)).voice ? VOICE_FAMILIES : [])].sort());
   const begin = async (call, user, world, material, family, path = null) => {
     await actAs('service_role');
     const row = await first(BEGIN_V2, [call, user, world, material, 'DEEPSEEK', 'deepseek-flash', 'DEEPSEEK_CHAT_COMPLETIONS_CREATE', family, path]);

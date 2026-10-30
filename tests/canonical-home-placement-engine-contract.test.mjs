@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SUBSTITUTIONS, substitutedStatement } from '../database/voice-foundation-0183-substitutions.mjs';
 
 const root = new URL('../', import.meta.url);
 const rootPath = fileURLToPath(root);
@@ -117,6 +118,18 @@ const slice = (text, from, to) => {
   assert.ok(start >= 0 && end > start, `slice ${from} .. ${to} exists`);
   return text.slice(start, end);
 };
+
+// S8B-02 RE-ANCHOR (2026-10-30): migration 0183 re-creates ten earlier statements - its declared substitutions, each its
+// origin plus exact edits, proven byte-for-byte by verify-migration-0183 (S0d) - and some of those already touch the
+// frozen Thread / Home substrate. Outside those re-creations it must carry none, exactly as 0150 is read below.
+const VOICE_MIGRATION = '0183_s8b_02_voice_foundation_v1.sql';
+function withoutVoiceRecreations(text) {
+  return SUBSTITUTIONS.reduce((rest, substitution) => {
+    const statement = substitutedStatement(substitution);
+    assert.ok(rest.includes(statement), `${VOICE_MIGRATION} carries its declared re-creation ${substitution.key}`);
+    return rest.replace(statement, '');
+  }, text.replace(/\r\n/gu, '\n'));
+}
 
 test('the T-03B2b1 directory exists exactly, nested under T-03B2a, pure and framework-agnostic; T-03B2a is byte-identical', () => {
   assert.equal(existsSync(new URL(`${HOME_DIR}/`, root)), true);
@@ -366,7 +379,8 @@ test('no database, Supabase, Nest, runtime, mobile, provider or B1 / B2a import;
       );
       continue;
     }
-    assert.doesNotMatch(read(file), /home-placement|placeCanonicalHome|OSDAP|HomePlacementRequest/u, `${file} does not reach the engine`);
+    const text = file === `database/migrations/${VOICE_MIGRATION}` ? withoutVoiceRecreations(read(file)) : read(file);
+    assert.doesNotMatch(text, /home-placement|placeCanonicalHome|OSDAP|HomePlacementRequest/u, `${file} does not reach the engine`);
   }
   for (const file of B2B2_DATABASE_FILES) {
     assert.ok(read(file).includes('QANDEEL_OSDAP_V1'), `${file} carries the frozen scheme id`);
@@ -468,7 +482,8 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
     .replaceAll('get_conversation_thread_identity_dossier_page_v1', '').replaceAll('STALE_THREAD_IDENTITY_CONTEXT', ''), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu,
     `outside its two verbatim re-creations ${RETRY_MIGRATION} carries no Home substrate`);
   for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION)) {
-    assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
+    const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`)) : read(`database/migrations/${name}`);
+    assert.doesNotMatch(text, /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
   assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => SUBSTRATE_VERIFIER_NAME.test(name)), [],
     'no Home / placement verifier is named after the engine');

@@ -38,10 +38,16 @@ export interface BackgroundMemoryCreateInput {
   readonly status: MemoryStatus;
   readonly expiresAt?: string;
 }
-/** MEM-AR-01C: what background_record_memory_v1 committed for one capture. */
+/** MEM-AR-01C: what background_record_memory_v1 committed for one capture. S8B-02 (0183): LOW_CONFIDENCE_MACHINE_ASR. */
 export type BackgroundMemoryRecordResult =
   | { readonly outcome: 'CREATED' | 'ALREADY_RECORDED'; readonly memoryId: string }
-  | { readonly outcome: 'SKIPPED_COMMAND_TURN' | 'EQUIVALENT_EXISTS' | 'SUPERSEDED_BY_LATER_COMMAND' };
+  | { readonly outcome: 'SKIPPED_COMMAND_TURN' | 'EQUIVALENT_EXISTS' | 'SUPERSEDED_BY_LATER_COMMAND' | 'LOW_CONFIDENCE_MACHINE_ASR' };
+/** S8B-02 CP1 (migration 0183, VA-3): the voice provenance of a USER source turn. A typed turn has none. */
+export interface BackgroundTurnVoiceProvenance {
+  readonly sourceModality: 'VOICE_NOTE' | 'LIVE_CALL_SPEECH';
+  readonly transcriptOrigin: 'MACHINE_ASR';
+  readonly asrConfidenceBand: 'HIGH' | 'MEDIUM' | 'LOW';
+}
 export interface BackgroundHypothesisCreateInput { readonly id:string; readonly statement:string; readonly type:HypothesisType; readonly domain:HypothesisDomain; readonly scope:string; readonly assumptions:readonly string[]; readonly disconfirmingConditions:readonly string[]; }
 
 @Injectable()
@@ -93,7 +99,8 @@ export class BackgroundIntelligenceDataApiService {
       }
       return { outcome, memoryId: row.memory_id };
     }
-    if ((outcome === 'SKIPPED_COMMAND_TURN' || outcome === 'EQUIVALENT_EXISTS' || outcome === 'SUPERSEDED_BY_LATER_COMMAND') && row?.memory_id === null) {
+    if ((outcome === 'SKIPPED_COMMAND_TURN' || outcome === 'EQUIVALENT_EXISTS' || outcome === 'SUPERSEDED_BY_LATER_COMMAND'
+      || outcome === 'LOW_CONFIDENCE_MACHINE_ASR') && row?.memory_id === null) {
       return { outcome };
     }
     throw new Error('BACKGROUND_MEMORY_RECORD_INTEGRITY');
@@ -103,6 +110,17 @@ export class BackgroundIntelligenceDataApiService {
     this.assertExecutionContext(context);
     const query=new URLSearchParams({select:SOURCE_TURN_FIELDS,id:`eq.${context.sourceTurnId}`,session_id:`eq.${context.sessionId}`,user_id:`eq.${context.userId}`,role:'eq.USER',status:'eq.COMPLETED',limit:'1'});
     return (await this.request<BackgroundCanonicalSourceTurn[]>(`conversation_turns?${query}`))[0];
+  }
+
+  // S8B-02 CP1 (migration 0183, D-7): the source turn's voice provenance, through the server-channel read. Content-free:
+  // the modality, the transcript origin and the band only. A typed turn answers no row (undefined).
+  async readTurnVoiceProvenance(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundTurnVoiceProvenance | undefined> {
+    this.assertExecutionContext(context);
+    const rows = await this.request<unknown>('rpc/server_read_turn_voice_provenance_v1', {
+      method: 'POST',
+      body: JSON.stringify({ p_user_id: context.userId, p_turn_id: context.sourceTurnId }),
+    });
+    return turnVoiceProvenance(rows, 'BACKGROUND_TURN_VOICE_PROVENANCE_INTEGRITY');
   }
 
   // S8A-03 CP2 (migration 0171): the bounded backfill read. The source turn names the RUNNING execution, and the
@@ -285,4 +303,16 @@ export class BackgroundIntelligenceDataApiService {
   private assertExecutionContext(context: BackgroundIntelligenceExecutionContext): void {
     if (!isBackgroundIntelligenceExecutionContext(context)) throw new Error('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');
   }
+}
+
+/** S8B-02 CP1: one USER turn has at most one voice source, and it is a MACHINE_ASR transcript with a band. */
+export function turnVoiceProvenance(rows: unknown, integrityError: string): BackgroundTurnVoiceProvenance | undefined {
+  if (!Array.isArray(rows) || rows.length > 1) throw new Error(integrityError);
+  if (rows.length === 0) return undefined;
+  const row = rows[0] as { source_modality?: unknown; transcript_origin?: unknown; asr_confidence_band?: unknown } | null;
+  if ((row?.source_modality !== 'VOICE_NOTE' && row?.source_modality !== 'LIVE_CALL_SPEECH') || row.transcript_origin !== 'MACHINE_ASR'
+    || (row.asr_confidence_band !== 'HIGH' && row.asr_confidence_band !== 'MEDIUM' && row.asr_confidence_band !== 'LOW')) {
+    throw new Error(integrityError);
+  }
+  return { sourceModality: row.source_modality, transcriptOrigin: 'MACHINE_ASR', asrConfidenceBand: row.asr_confidence_band };
 }

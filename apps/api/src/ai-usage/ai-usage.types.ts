@@ -2,7 +2,8 @@
 //
 // Each registry here equals, exactly, the CHECK constraint of migration 0135 that stores it, as widened by 0170 (S8A-01:
 // DEEPSEEK). A new provider, a new feature family or a new billable kind is a reviewed change in BOTH places, never an
-// implicit widening.
+// implicit widening. S8B-02 (0184) adds the voice vocabulary in its own section at the end; the `AI_LEDGER_*` unions there
+// equal the widened CHECKs, while the text registries below keep exactly the text path's values.
 //
 // Nothing in this file is a price, a Credit value or a provider choice.
 
@@ -54,7 +55,7 @@ export type AiProcessingPath = 'FAST' | 'DEEP';
  *   CACHE_READ_INPUT_TOKEN   input served from the provider's prompt cache;
  *   CACHE_WRITE_INPUT_TOKEN  input written to the provider's prompt cache;
  *   OUTPUT_TOKEN             all billed output, reasoning / thinking included.
- * Audio or other units are NOT here: they need a reviewed extension backed by a provider's billing truth.
+ * These are the text path's kinds. The audio kinds are the reviewed S8B-02 extension (`AI_VOICE_USAGE_KINDS`, below).
  */
 export const AI_USAGE_KINDS = ['INPUT_TOKEN', 'OUTPUT_TOKEN', 'CACHE_READ_INPUT_TOKEN', 'CACHE_WRITE_INPUT_TOKEN'] as const;
 export type AiUsageKind = typeof AI_USAGE_KINDS[number];
@@ -107,3 +108,74 @@ export interface AiProviderCallDescriptor {
 
 /** The model identity rule shared with every provider configuration and with migration 0135. */
 export const AI_MODEL_IDENTITY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// S8B-02 CP1 (migration 0184; Product Owner decisions D-1 and D-2, 2026-10-30): the VOICE ledger vocabulary.
+//
+// It is kept beside, never inside, the text registries above: the text path's providers, single operation, families,
+// kinds and telemetry are unchanged, so no text caller can name a voice operation and no text label set changes. The
+// ledger CHECKs hold the union (`AI_LEDGER_*`). Nothing here calls a provider: CP1 records the vocabulary only.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** The voice operations, per provider. Gemini speech is route-neutral (its route is S8B-04's). */
+export const AI_VOICE_PROVIDER_OPERATIONS = {
+  SPEECHMATICS: ['SPEECHMATICS_REALTIME_TRANSCRIPTION', 'SPEECHMATICS_BATCH_TRANSCRIPTION'],
+  GEMINI: ['GEMINI_SPEECH_GENERATION'],
+} as const;
+export type AiVoiceProvider = keyof typeof AI_VOICE_PROVIDER_OPERATIONS;
+export type AiVoiceOperation = typeof AI_VOICE_PROVIDER_OPERATIONS[AiVoiceProvider][number];
+
+/** Every operation each provider may name in the ledger (migration 0184 `ai_provider_operation_is_known_v1`). */
+export const AI_LEDGER_PROVIDER_OPERATIONS: Readonly<Record<AiProvider | AiVoiceProvider, readonly string[]>> = {
+  OPENAI: [AI_PROVIDER_OPERATION.OPENAI],
+  ANTHROPIC: [AI_PROVIDER_OPERATION.ANTHROPIC],
+  GEMINI: [AI_PROVIDER_OPERATION.GEMINI, ...AI_VOICE_PROVIDER_OPERATIONS.GEMINI],
+  DEEPSEEK: [AI_PROVIDER_OPERATION.DEEPSEEK],
+  SPEECHMATICS: AI_VOICE_PROVIDER_OPERATIONS.SPEECHMATICS,
+};
+
+/** The voice capabilities that spend a call. */
+export const AI_VOICE_FEATURE_FAMILIES = [
+  'VOICE_NOTE_TRANSCRIPTION',
+  'LIVE_CALL_TRANSCRIPTION',
+  'SPEECH_SYNTHESIS',
+  'SPEECH_RENDERING',
+] as const;
+export type AiVoiceFeatureFamily = typeof AI_VOICE_FEATURE_FAMILIES[number];
+
+/** Exactly migration 0184's `ai_provider_calls_feature_family_check`. */
+export const AI_LEDGER_FEATURE_FAMILIES = [...AI_FEATURE_FAMILIES, ...AI_VOICE_FEATURE_FAMILIES] as const;
+
+/**
+ * The voice billable kinds:
+ *   AUDIO_INPUT_MS       transcribed input audio, in milliseconds (Speechmatics);
+ *   AUDIO_OUTPUT_TOKEN   generated audio, in the provider's audio tokens (Gemini speech; D-1: speech is billed in tokens).
+ * A Gemini speech call's text input is the existing INPUT_TOKEN.
+ */
+export const AI_VOICE_USAGE_KINDS = ['AUDIO_INPUT_MS', 'AUDIO_OUTPUT_TOKEN'] as const;
+export type AiVoiceUsageKind = typeof AI_VOICE_USAGE_KINDS[number];
+
+/** Exactly migration 0184's usage and component kind CHECKs. */
+export const AI_LEDGER_USAGE_KINDS = [...AI_USAGE_KINDS, ...AI_VOICE_USAGE_KINDS] as const;
+export type AiLedgerUsageKind = typeof AI_LEDGER_USAGE_KINDS[number];
+
+/** The kinds a COMPLETE usage of each voice operation carries (migration 0184 `ai_complete_usage_kinds_v2`). */
+export const AI_VOICE_COMPLETE_USAGE_KINDS: Readonly<Record<AiVoiceOperation, readonly AiLedgerUsageKind[]>> = {
+  SPEECHMATICS_REALTIME_TRANSCRIPTION: ['AUDIO_INPUT_MS'],
+  SPEECHMATICS_BATCH_TRANSCRIPTION: ['AUDIO_INPUT_MS'],
+  GEMINI_SPEECH_GENERATION: ['AUDIO_OUTPUT_TOKEN', 'INPUT_TOKEN'],
+};
+
+/**
+ * D-2: where a settled quantity came from. GATEWAY_MEASURED is what QANDEEL's gateway measured of the audio it streamed;
+ * it is never evidence that the provider billed the same quantity, is never presented as provider usage, and is
+ * admitted only for the two Speechmatics operations. Every reader keeps the two apart.
+ */
+export const AI_USAGE_SOURCES = ['PROVIDER_REPORTED', 'GATEWAY_MEASURED'] as const;
+export type AiUsageSource = typeof AI_USAGE_SOURCES[number];
+export const AI_GATEWAY_MEASURABLE_OPERATIONS: readonly AiVoiceOperation[] = AI_VOICE_PROVIDER_OPERATIONS.SPEECHMATICS;
+
+/** What a voice usage reported, normalized as the text usage is: never padded with a zero. */
+export type NormalizedAiVoiceUsage =
+  | { readonly completeness: 'COMPLETE' | 'INCOMPLETE'; readonly quantities: Readonly<Partial<Record<AiLedgerUsageKind, number>>> }
+  | { readonly completeness: 'ABSENT' };

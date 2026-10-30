@@ -33,6 +33,7 @@ import process from 'node:process';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import { CLEAN, createMatchRuntime, P, PFN, MATCH, runVerifier } from './matching-match-verifier-support.mjs';
 import { coordinatorWithS701Edits } from './replay-personal-verifier-support.mjs';
+import { substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
 
 const rt = createMatchRuntime(process.env.DATABASE_URL);
 const { q, rows, count, asRole, actAs, rejected } = rt;
@@ -206,8 +207,11 @@ async function verifyPosture(report) {
     // coordinator must equal the pre-0166 body plus EXACTLY those edits (the one shared definition 0169 A07 also uses);
     // where it is not, the pre-0166 body itself. Every other body stays byte-exact, and every EXECUTE posture is unchanged.
     const [{ s701 }] = await rows(`SELECT to_regprocedure('account_erasure_private.erase_personal_replays_v1(uuid,uuid)') IS NOT NULL AS s701`);
+    // RE-ANCHORED by S8B-02 CP1 (migration 0183, 2026-10-30): where 0183 is applied the coordinator is the 0169 body plus
+    // exactly the declared voice edits (voice-foundation-0183-substitutions.mjs; verify-0169 A07 proves the chain).
+    const voice = await voiceFoundationApplied(rows);
     const expected = (schema, name) => (s701 && schema === 'account_erasure_private' && name === 'erase_account_v1'
-      ? coordinatorWithS701Edits(priorBody(schema, name)) : priorBody(schema, name));
+      ? (voice ? substitutedBody('account-erasure') : coordinatorWithS701Edits(priorBody(schema, name))) : priorBody(schema, name));
     // [schema, name, signature, the application roles that execute it] - the S6-04 decisions are authenticated-only.
     for (const [schema, name, signature, executors] of [
       ['public', 'forward_matching_proposal_to_second_core_v1', PFN.FORWARD, []],

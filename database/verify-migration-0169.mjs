@@ -28,6 +28,7 @@ import {
   CONTRACT_POLICY, P, PERSONAL_REPLAY_DISCLOSURE_BAN, W, coordinatorWithS701Edits, createPersonalReplayRuntime, runVerifier,
 } from './replay-personal-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
+import { extractStatement, substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole, rejected } = rt;
@@ -243,7 +244,17 @@ async function verifyPosture(report) {
       return m0164.slice(start, m0164.indexOf(open[1], start));
     };
     const coordinator = coordinatorWithS701Edits(body('CREATE FUNCTION account_erasure_private.erase_account_v1(p_deletion_id uuid)'));
-    assert.equal(await live('account_erasure_private.erase_account_v1(uuid)'), coordinator, 'A07 the coordinator is 0164 plus E1-E3');
+    // RE-ANCHORED by S8B-02 CP1 (migration 0183, 2026-10-30): 0183 forward-replaces the coordinator from its 0169 statement
+    // with exactly the declared voice edits (the recordings lock, the voice module and its residue check). Where 0183 is
+    // applied, the 0169 statement is still 0164 plus E1-E3 and the live coordinator is that statement plus the voice edits.
+    if (await voiceFoundationApplied(rows)) {
+      assert.equal(extractStatement(migration('0169'), 'FUNCTION account_erasure_private.erase_account_v1(').body, coordinator,
+        'A07 the 0169 coordinator is 0164 plus E1-E3');
+      assert.equal(await live('account_erasure_private.erase_account_v1(uuid)'), substitutedBody('account-erasure'),
+        'A07 the coordinator is the 0169 body plus exactly the S8B-02 voice edits');
+    } else {
+      assert.equal(await live('account_erasure_private.erase_account_v1(uuid)'), coordinator, 'A07 the coordinator is 0164 plus E1-E3');
+    }
 
     const out = `'${OUTSIDE}'::text`;
     let census = body('CREATE FUNCTION account_erasure_private.residue_classes_v1(p_user uuid, p_worlds uuid[])');

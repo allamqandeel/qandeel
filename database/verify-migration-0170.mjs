@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
+import { VOICE_COST_PROBE } from './voice-cost-families-0184.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -85,7 +86,14 @@ async function verify() {
     'service_role:public.server_read_ai_credit_policy_state_v1()',
     'service_role:public.server_read_ai_usage_operations_summary_v1()',
     'service_role:public.settle_ai_provider_call_v1(uuid,uuid,text,text,jsonb)',
-  ], 'the executable surface is still exactly the five service-role functions (six once 0175 adds the Shared begin)');
+    // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): the voice begin, the voice-aware settle and the two
+    // operator reads that report the usage source, all service_role alone (0184's own verifier pins them).
+    ...((await q(VOICE_COST_PROBE)).rows[0].voice ? [
+      'service_role:public.begin_ai_provider_call_v3(uuid,uuid,uuid,uuid,text,text,text,text,text)',
+      'service_role:public.server_read_ai_cost_aggregates_v2(timestamp with time zone,timestamp with time zone)',
+      'service_role:public.server_read_ai_usage_operations_summary_v2(integer)',
+      'service_role:public.settle_ai_provider_call_v2(uuid,uuid,text,text,jsonb,text)'] : []),
+  ].sort(), 'the executable surface is still exactly the five service-role functions (six once 0175 adds the Shared begin, ten once 0184 adds the voice four)');
 
   stage = 'registries: DEEPSEEK admitted with its own operation and partition; every 0135 provider unchanged';
   const known = async (provider, operation) => (await one('SELECT public.ai_provider_operation_is_known_v1($1, $2) AS ok', [provider, operation])).ok;
