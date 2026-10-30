@@ -13,7 +13,7 @@ import type { DurableHimBrainContextResult } from '../post-response-intelligence
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationContext } from '../hypothesis/him-hypothesis-generation-context';
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
-import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, screenMemoryCapture } from '../memory/memory-write-evaluator.service';
+import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, loadMachineAsrMemoryConfidence, machineAsrMemoryCandidate, screenMemoryCapture } from '../memory/memory-write-evaluator.service';
 import type { MemoryRecord, MemoryType, MemoryWriteResult } from '../memory/memory.types';
 import { interpretMemoryControl } from '../memory/memory-control.interpreter';
 import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
@@ -38,6 +38,8 @@ import { type BackgroundCanonicalSourceTurn, type BackgroundIntelligenceDataApiS
 @Injectable()
 export class BackgroundIntelligenceEnrichmentService {
  constructor(@Inject(BACKGROUND_INTELLIGENCE_DATA_API)private readonly data:BackgroundIntelligenceDataApiService,private readonly evaluator:MemoryWriteEvaluatorService,private readonly classifier:HypothesisGenerationTriggerClassificationService,private readonly himReasoning:HimReasoningConsumptionService){}
+ // S8B-02 P-1: the MACHINE_ASR band confidences, read once from controlled configuration; an invalid value refuses to start.
+ private readonly machineAsrConfidence=loadMachineAsrMemoryConfidence();
 
  // HIM Runtime Consumption v1: the ONE high-level background HIM boundary. It
  // reads canonical CONVERSATION_SESSION source rows through the narrow
@@ -120,11 +122,17 @@ export class BackgroundIntelligenceEnrichmentService {
   // IP-IMP-01 (WP2): a durable interaction-preference command is the foreground's too; it writes only the canonical
   // record (0153), never a Memory. The same deterministic grammar decides it here.
   if(interpretInteractionPreferenceCommand(currentUserContent))return{decision:'SKIP',reason:'INTERACTION_PREFERENCE_COMMAND'};
-  const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);const screen=screenMemoryCapture(decision.candidate,active);if(screen)return{decision:'SKIP',reason:screen,type:decision.candidate.type};
+  // S8B-02 CP1 (D-7 / P-1): a voice turn is a machine transcript. A LOW band keeps nothing; HIGH / MEDIUM keep the same
+  // candidate as MACHINE_ASR at the band's configured confidence. A typed turn has no voice source and is unchanged.
+  const voice=await this.data.readTurnVoiceProvenance(context);const asr=voice?machineAsrMemoryCandidate(decision.candidate,voice.asrConfidenceBand,this.machineAsrConfidence):undefined;if(asr?.decision==='SKIP')return asr;const candidate=asr?asr.candidate:decision.candidate;
+  const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);const screen=screenMemoryCapture(candidate,active);if(screen)return{decision:'SKIP',reason:screen,type:candidate.type};
   // MEM-AR-01C: the database decides the write under the owner's lock. Only a Memory this execution recorded is fresh
   // Evidence (CREATED, or ALREADY_RECORDED on a replay); every other answer completes the effect with no Evidence.
-  const recorded=await this.data.recordMemory(context,{id:randomUUID(),...decision.candidate,status:decision.candidate.status??'ACTIVE'});
-  if(recorded.outcome!=='CREATED'&&recorded.outcome!=='ALREADY_RECORDED')return{decision:'SKIP',reason:recorded.outcome,type:decision.candidate.type};
+  const recorded=await this.data.recordMemory(context,{id:randomUUID(),...candidate,status:candidate.status??'ACTIVE'});
+  if(recorded.outcome!=='CREATED'&&recorded.outcome!=='ALREADY_RECORDED')return{decision:'SKIP',reason:recorded.outcome,type:candidate.type};
+  // S8B-02 CP1: a MACHINE_ASR Memory is kept but is never fresh Evidence (Evidence reads typed sources only), so the effect
+  // completes NO_FRESH_EVIDENCE and no association is prepared from it.
+  if(candidate.source==='MACHINE_ASR')return{decision:'SKIP',reason:'MACHINE_ASR_RECORDED_NOT_EVIDENCE',type:candidate.type};
   return{decision:'WRITE',type:decision.candidate.type,memoryId:recorded.memoryId,evidenceId:`memory:${recorded.memoryId}`};
  }
 

@@ -242,3 +242,42 @@ An implementing task may tighten a text here. It may not widen one without a new
 - Beyond D-8's approval in principle, the Product Owner's CP3 decisions (record §10.9) approve VA-4's starting values
   and VA-8 R-5's codec only. Every amendment keeps its implementing task, none is in force, and each text is still bound
   in that task.
+
+## 4. S8B-02 CP1 — the text S8B-02 binds (2026-10-30)
+
+This section records the text the Product Owner approved for S8B-02 (WP0 approval and CP1 authorization, 2026-10-30;
+[S8B-02 record](../../../e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §1). It binds from S8B-02's
+merge, as §2 lists. Until then nothing here is in force. CP1 is on Draft PR #367, with the Product Owner's R1
+corrections (record §10), and is not merged.
+
+- **Citations re-quoted on `main` at `c65b878c`.** Each narrowed text still stands there:
+  - `0064_committed_conversational_unit_substrate_v1.sql:147` (`CHECK (source_modality = 'TEXT')`);
+  - `conversation-unit-commitment.service.ts:82` (`UNSUPPORTED_SOURCE_MODALITY`);
+  - `0102:572` (`ORIGINAL_TEXT_ONLY`);
+  - `ai-usage.types.ts:57` ("Audio or other units are NOT here …").
+  - **One citation moved:** the `0100` Personal pin to `ORIGINAL_TEXT` is the shape CHECK at `0100:395`, not `:358`.
+- **VA-3, tightened by D-3.**
+  - The audio anchor is turn-level. It lives on the turn's voice source and is inherited by every unit of that turn.
+  - It is the recording identity plus `[start_ms, end_ms)` on its clock, never a key or URL.
+  - The modality and provenance are written once, before the turn has units. A unit's modality must equal its turn's.
+  - `LOW` suppresses durable Memory writes. `HIGH` / `MEDIUM` write `source = 'MACHINE_ASR'` at the Product Owner's P-1
+    values (0.90 / 0.75), never the typed 0.98 / 0.95. Explicit Memory commands are unchanged.
+  - The commitment gate at `:82` is unchanged, because the API commits no voice turn until S8B-03.
+- **VA-5, amended by D-1 / D-2.**
+  - **Usage kinds:** `AUDIO_INPUT_MS` (Speechmatics) and `AUDIO_OUTPUT_TOKEN` with `INPUT_TOKEN` (Gemini speech).
+    `AUDIO_OUTPUT_MS` and `SYNTHESIS_CHARACTERS` are not added: Gemini speech is billed in tokens (D-1).
+  - **Usage source:** every settled call carries `PROVIDER_REPORTED` or `GATEWAY_MEASURED`. `GATEWAY_MEASURED` is admitted
+    for the Speechmatics operations only. It is never presented as provider-confirmed usage, and every reader, aggregate
+    and telemetry label keeps the two apart (D-2).
+  - **Providers and operations:** `SPEECHMATICS` (realtime, batch) and the route-neutral `GEMINI_SPEECH_GENERATION`.
+  - No Price Card and no Credit change: an unknown price settles `UNPRICED`. Every text pair keeps exactly its partition.
+- **VA-8 R-1.**
+  - A Personal manifest item takes its unit's medium: `ORIGINAL_AUDIO` for a voice unit.
+  - Moments return no transcript for a non-text item. A sub-range of an audio item is refused.
+  - `0102:572` stays as written. An audio-bearing Replay is not rendered, previewed or distributed until R-2 (S8B-07).
+    This is a wait, not a cancellation (D-7).
+- **Not changed by S8B-02:**
+  - the `0001` session channel (`VOICE` stays refused);
+  - the text paths;
+  - `0104` and the I-06C distribution;
+  - every other amendment.

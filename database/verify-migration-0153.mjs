@@ -30,6 +30,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { cleanupVerifierUsers } from './verifier-fixture-cleanup.mjs';
+import { substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -190,7 +191,15 @@ async function verifyCatalog() {
   };
   const defined0130 = body(migrationText('0130_personal_privacy_export_account_deletion_v1.sql'), 'CREATE FUNCTION personal_data_private.build_personal_export_v1(');
   const defined0153 = body(migrationText('0153_interaction_preferences_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(');
-  const live = (await one("SELECT prosrc FROM pg_proc WHERE oid = 'personal_data_private.build_personal_export_v1(uuid)'::regprocedure")).prosrc.replace(/\r\n/gu, '\n');
+  const liveBuilder = (await one("SELECT prosrc FROM pg_proc WHERE oid = 'personal_data_private.build_personal_export_v1(uuid)'::regprocedure")).prosrc.replace(/\r\n/gu, '\n');
+  // RE-ANCHORED by S8B-02 CP1 (migration 0183, 2026-10-30): once 0183 is applied the live builder is its 0183 body, the
+  // 0180 body with exactly the two declared D-7 edits (voice-foundation-0183-substitutions.mjs). Every claim below is
+  // then made of the 0180 body that body is derived from.
+  const voice = await voiceFoundationApplied(async (sql) => [await one(sql)]);
+  if (voice) assert.equal(liveBuilder, substitutedBody('personal-export'), 'the live builder is the 0183 re-statement');
+  const live = voice
+    ? body(migrationText('0180_s8a_05_publish_from_qandeel_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(')
+    : liveBuilder;
   // RE-ANCHORED by S6-07 CP4 (migration 0168, CA-EXP): the live builder is the 0168 re-statement, which is this 0153 body
   // byte for byte up to its one added section, with `introductions` gone from the not-yet-included list (verify-0168 A02
   // proves the same slice against the live body).

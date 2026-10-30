@@ -15,6 +15,9 @@ export const MEMORY_SOURCES = [
   'SYSTEM_DERIVED',
   'IMPORTED',
   'ADMIN_CONTROLLED',
+  // S8B-02 CP1 (migration 0183, D-7): a background Memory captured from a voice turn's machine transcript. The database
+  // decides it from the turn, never from the caller; it is below the typed-text confidence and is not Evidence.
+  'MACHINE_ASR',
 ] as const;
 
 export const MEMORY_STATUSES = [

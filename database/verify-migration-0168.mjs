@@ -36,6 +36,7 @@ import process from 'node:process';
 import { DFN, PFN, createIntroductionRuntime, runVerifier } from './introduction-lifecycle-verifier-support.mjs';
 import { CLEAN } from './matching-match-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
+import { substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
 
 const rt = createIntroductionRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole, rejected } = rt;
@@ -208,7 +209,13 @@ async function verifyPosture(report) {
     const marker = 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(';
     const defined0153 = body(migrationText('0153_interaction_preferences_v1.sql'), marker);
     const defined0168 = body(M0168, marker);
-    const live = (await rows('SELECT prosrc FROM pg_proc WHERE oid = $1::regprocedure', [BUILDER]))[0].prosrc.replace(/\r\n/gu, '\n');
+    const liveBuilder = (await rows('SELECT prosrc FROM pg_proc WHERE oid = $1::regprocedure', [BUILDER]))[0].prosrc.replace(/\r\n/gu, '\n');
+    // RE-ANCHORED by S8B-02 CP1 (migration 0183, 2026-10-30): once 0183 is applied the live builder is its 0183 body, the
+    // 0180 body with exactly the two declared D-7 edits (voice-foundation-0183-substitutions.mjs); every claim below is
+    // then made of the 0180 body it is derived from.
+    const voice = await voiceFoundationApplied(rows);
+    if (voice) assert.equal(liveBuilder, substitutedBody('personal-export'), 'A02 the live builder is the 0183 body');
+    const live = voice ? body(migrationText('0180_s8a_05_publish_from_qandeel_v1.sql'), marker) : liveBuilder;
     // RE-ANCHORED by S8A-05 CP1 (validation only): migration 0179 re-states this body with ONE added section,
     // `publicTopicDrafts`, immediately before the not-yet-included list. The live builder is the 0168 body with exactly
     // that section removed - every 0168 line, byte for byte - and the 0179 body is the live one.

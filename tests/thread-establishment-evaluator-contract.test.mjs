@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SUBSTITUTIONS, substitutedStatement } from '../database/voice-foundation-0183-substitutions.mjs';
 
 const root = new URL('../', import.meta.url);
 const rootPath = fileURLToPath(root);
@@ -84,6 +85,18 @@ function vocabulary(name) {
   const match = types.match(new RegExp(`export const ${name} = Object\\.freeze\\(\\[([\\s\\S]*?)\\] as const\\);`, 'u'));
   assert.ok(match, `${name} is a frozen as-const vocabulary`);
   return [...match[1].matchAll(/'([A-Z0-9_-]+)'/gu)].map((m) => m[1]);
+}
+
+// S8B-02 RE-ANCHOR (2026-10-30): migration 0183 re-creates ten earlier statements - its declared substitutions, each its
+// origin plus exact edits, proven byte-for-byte by verify-migration-0183 (S0d) - and some of those already touch the
+// frozen Thread / Home substrate. Outside those re-creations it must carry none, exactly as 0150 is read below.
+const VOICE_MIGRATION = '0183_s8b_02_voice_foundation_v1.sql';
+function withoutVoiceRecreations(text) {
+  return SUBSTITUTIONS.reduce((rest, substitution) => {
+    const statement = substitutedStatement(substitution);
+    assert.ok(rest.includes(statement), `${VOICE_MIGRATION} carries its declared re-creation ${substitution.key}`);
+    return rest.replace(statement, '');
+  }, text.replace(/\r\n/gu, '\n'));
 }
 
 test('the T-03B2a directory exists, exactly, separate from T-03B1, and is framework-agnostic', () => {
@@ -313,6 +326,9 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     // TE-01 provenance exactly as the 0072 verifier does (to build a real history for the 0169 reads), and never imports
     // this evaluator.
     'database/replay-composite-proof-world.mjs',
+    // S8B-02 RE-ANCHOR (2026-10-30): the Voice Foundation verifier commits a voice turn through the FINAL 0071 coordinator
+    // with the frozen TE-01 provenance exactly as the 0072 verifier does, and never imports this evaluator.
+    'database/verify-migration-0183.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -320,7 +336,8 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
         `${file} re-proves the frozen gates in SQL and never imports the evaluator`);
       continue;
     }
-    assert.doesNotMatch(read(file), /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT/u, `${file} does not reach the evaluator`);
+    const text = file === `database/migrations/${VOICE_MIGRATION}` ? withoutVoiceRecreations(read(file)) : read(file);
+    assert.doesNotMatch(text, /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT/u, `${file} does not reach the evaluator`);
   }
 });
 
@@ -384,7 +401,8 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
     .replaceAll('get_conversation_thread_identity_dossier_page_v1', '').replaceAll('STALE_THREAD_IDENTITY_CONTEXT', ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
     `outside its two verbatim re-creations ${RETRY_MIGRATION} carries no Thread / Home substrate`);
   for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION)) {
-    assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
+    const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`)) : read(`database/migrations/${name}`);
+    assert.doesNotMatch(text, /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));
   // The evaluator slice still owns no verifier step: the only Thread verifiers

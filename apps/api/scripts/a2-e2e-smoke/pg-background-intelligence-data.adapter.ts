@@ -24,7 +24,9 @@ import type {
   BackgroundHypothesisCreateInput,
   BackgroundMemoryCreateInput,
   BackgroundMemoryRecordResult,
+  BackgroundTurnVoiceProvenance,
 } from '../../src/background-intelligence/background-intelligence-data-api.service';
+import { turnVoiceProvenance } from '../../src/background-intelligence/background-intelligence-data-api.service';
 import type { ConfidenceEvaluationRecord } from '../../src/hypothesis/confidence.types';
 import type { HimSnapshotSourceRow } from '../../src/human-model/him-intelligence-snapshot.types';
 import type { HimBrainContextSourceRow } from '../../src/human-model/him-brain-context.types';
@@ -94,8 +96,20 @@ export class PgBackgroundIntelligenceDataApiAdapter {
     );
     const [row] = rows;
     if (row?.outcome === 'CREATED' || row?.outcome === 'ALREADY_RECORDED') return { outcome: row.outcome, memoryId: row.memory_id as string };
-    if (row?.outcome === 'SKIPPED_COMMAND_TURN' || row?.outcome === 'EQUIVALENT_EXISTS' || row?.outcome === 'SUPERSEDED_BY_LATER_COMMAND') return { outcome: row.outcome };
+    if ((row?.outcome === 'SKIPPED_COMMAND_TURN' || row?.outcome === 'EQUIVALENT_EXISTS' || row?.outcome === 'SUPERSEDED_BY_LATER_COMMAND'
+      || row?.outcome === 'LOW_CONFIDENCE_MACHINE_ASR') && row.memory_id === null) return { outcome: row.outcome };
     throw new Error('A2_SMOKE_BACKGROUND_MEMORY_RECORD_INTEGRITY');
+  }
+
+  // S8B-02 CP1 (migration 0183): the same server-channel provenance read production issues, with the same validation.
+  async readTurnVoiceProvenance(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundTurnVoiceProvenance | undefined> {
+    this.assertExecutionContext(context);
+    const rows = await this.db.asRole<Record<string, unknown>>(
+      'service_role',
+      'SELECT * FROM public.server_read_turn_voice_provenance_v1($1, $2)',
+      [context.userId, context.sourceTurnId],
+    );
+    return turnVoiceProvenance(rows, 'A2_SMOKE_TURN_VOICE_PROVENANCE_INTEGRITY');
   }
 
   async readCanonicalSourceTurn(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundCanonicalSourceTurn | undefined> {
