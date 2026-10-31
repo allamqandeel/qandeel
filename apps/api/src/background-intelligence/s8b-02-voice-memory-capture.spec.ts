@@ -113,11 +113,13 @@ describe('S8B-02 CP1: the background capture of a voice turn', () => {
     expect(data.recordMemory).not.toHaveBeenCalled();
   });
 
-  it.each([['HIGH', 0.90], ['MEDIUM', 0.75]] as const)('%s writes MACHINE_ASR at %s and is never fresh Evidence', async (band, confidence) => {
+  // RE-ANCHORED by S8B-03 (CP1, E4): the S8B-02 skip line is removed - a HIGH / MEDIUM MACHINE_ASR Memory is fresh Evidence
+  // (0186 E1 / E2) and proceeds to association, like a typed one.
+  it.each([['HIGH', 0.90], ['MEDIUM', 0.75]] as const)('%s writes MACHINE_ASR at %s and it is fresh Evidence (S8B-03 E4)', async (band, confidence) => {
     const context = await authorize();
     const { data, service } = enrichment(voice(band));
     await expect(service.evaluateAndWriteMemory(context, FACT))
-      .resolves.toEqual({ decision: 'SKIP', reason: 'MACHINE_ASR_RECORDED_NOT_EVIDENCE', type: 'PERSONAL_FACT' });
+      .resolves.toEqual({ decision: 'WRITE', type: 'PERSONAL_FACT', memoryId: expect.any(String), evidenceId: expect.stringMatching(/^memory:/u) });
     expect(data.recordMemory).toHaveBeenCalledWith(context, expect.objectContaining({ source: 'MACHINE_ASR', confidence, content: 'أنا ساكنة في مدينة نصر.' }));
   });
 

@@ -130,7 +130,8 @@ describe('PostResponseIntelligenceRepository.completeUnderstandingCapture', () =
     await expect(new PostResponseIntelligenceRepository().completeUnderstandingCapture(executionId, command)).resolves.toBe('COMPLETED');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://database.example.test/rest/v1/rpc/complete_post_response_personal_capture_v3');
+    // RE-ANCHORED by S8B-03 (CP1, E6): the v4 command (v3 is its wrapper), with the typed confirmations (none here).
+    expect(url).toBe('https://database.example.test/rest/v1/rpc/complete_post_response_personal_capture_v4');
     expect(JSON.parse(init.body)).toEqual({
       p_execution_id: executionId, p_memory_ids: ['a1', 'a2'], p_types: ['PERSONAL_FACT', 'PERSONAL_FACT'],
       p_contents: ['أنا ساكن في المعادي.', 'سلمى بقت مدرسة إنجليزي.'], p_importances: [0.65, 0.65], p_expires_at: [null, null],
@@ -139,7 +140,7 @@ describe('PostResponseIntelligenceRepository.completeUnderstandingCapture', () =
       p_index_slots: [null], p_index_temporals: ['CURRENT'], p_term_memory_ids: ['a1', 'a1', 'a2', 'b2', 'g7'], p_terms: ['ساكن', 'معاد', 'مدرس', 'شغل', 'ليلى'],
       p_reaffirmed_memory_ids: ['c3'], p_ended_memory_ids: ['d4'], p_forget_memory_ids: ['e5'],
       p_correct_memory_ids: ['f6'], p_correct_new_ids: ['g7'], p_correct_types: ['PERSONAL_FACT'], p_correct_contents: ['ليلى عندها 8 سنين.'],
-      p_correct_importances: [0.65], p_correct_slots: [null], p_correct_temporals: ['CURRENT'],
+      p_correct_importances: [0.65], p_correct_slots: [null], p_correct_temporals: ['CURRENT'], p_confirmed_memory_ids: [],
     });
     // No identity the database derives itself, no address form (not adopted), and the content-free audit never leaves the API.
     expect(JSON.parse(init.body)).not.toHaveProperty('p_user_id');

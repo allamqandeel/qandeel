@@ -1,5 +1,7 @@
 # QANDEEL — Current State
 
+> **S8B-03 CP1 — 2026-10-31 (current task; status only, no new task authority):** **S8B-03 — Personal Voice Notes, CP1 Server & Intelligence**, from `main` at `a3b04d7a` (the merge of PR #369), under the Product Owner's CP1 authorization (2026-10-31), which approved the WP0 contract v1.2 in full (D1 … D5, OD-1 … OD-10, E1 … E13, migration `0186`, A1 … A27 + A6b) and the **19 Copy Gate rows C-01 … C-12, C-54 … C-57 and M-01 … M-03 verbatim** (Arabic and English; the other 41 stay `PROPOSED` until before CP2). CP1 is delivered on `s8b/s8b-03-cp1` as a **Draft pull request, not merged** ([S8B-03 record](docs/e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md)): the Voice Note transcription lifecycle, the batch port and the Speechmatics adapter (loopback fakes only), the M4A duration proof, the §8.1 API and the voice turn through the unchanged Orchestrator, and the governed `MACHINE_ASR` → Fresh Evidence brain amendment E1 … E13 ([controlled amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-03_MACHINE_ASR_FRESH_EVIDENCE_CONTROLLED_AMENDMENT_v1.0.md)). Migration `0186` is **not hosted**; all four voice gates stay `DISABLED`; no paid provider call, no real recording or user data. `PC-S1 … PC-S7` and `PC-D` remain open gate conditions, not proofs. **CP2 (mobile, `expo-audio`, device proof) is not started and not authorized; S8B-03 is not closed;** `QAN-BL-VOICE-01` stays worked, not delivered.
+
 > **POST-MERGE RECONCILIATION — 2026-10-31 (supersedes the pre-merge CP2 status snapshots below; status only, no new task authority):** **S8B-02 Voice Foundation is CLOSED / MERGED** through [PR #368](https://github.com/allamqandeel/qandeel/pull/368) at `004f97270357a5efac3d21b9742c639ab8ede04a` (2026-10-31 Egypt local time). CP1 was merged through PR #367 at `f0d8ed1a`. API CI and Mobile CI passed on CP2 head `b5c23ccf`, including the live PostgREST / rclone `prove-0185` gate; rclone is **not** hosted-production proof. Migrations `0183` / `0184` / `0185` are **not hosted**. All four voice launch gates remain `DISABLED`; there is no user-ready voice, no provider adapter, no client voice surface and no paid production run. `QAN-BL-VOICE-01` stays worked but not delivered, the backlog stays at 89 items. **NEXT (not started or authorized): S8B-03**; then S8B-04 … S8B-08. S8A-06 … S8A-08 and Stage 9 remain unstarted. The earlier CP2 text is retained as its pre-merge historical snapshot.
 
 
@@ -445,6 +447,23 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
     obligation stays with its Stage 8B owner (S8B-02 … S8B-08); nothing admitted or tombstoned; 89 items unchanged.
 - No production code, migration, provider adapter or feature gate; every voice gate closed. S8B-02 needs the merge of
   this change and a new authorization.
+
+### S8B-03 — Personal Voice Notes (2026-10-31 …; current task; CP1 on a Draft pull request from `s8b/s8b-03-cp1`, not merged; CP2 not started; S8B-03 not closed; every voice gate closed)
+
+- **Authority:** the Product Owner's S8B-03 CP1 authorization (2026-10-31), approving the WP0 contract v1.2 in full; the
+  [S8B-03 record](docs/e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) holds the decisions, the approved texts and the proof map, and the
+  [MACHINE_ASR Fresh Evidence Controlled Amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-03_MACHINE_ASR_FRESH_EVIDENCE_CONTROLLED_AMENDMENT_v1.0.md) the brain change (binds from CP1's merge).
+- **Copy Gate:** 19 rows **APPROVED verbatim** (C-01 … C-11 the consent `VOICE_RECORDING_V1`, C-12 the microphone text,
+  C-54 … C-57 the spoken Memory command replies, M-01 … M-03 the model texts); 41 rows `PROPOSED` until before CP2.
+- **Implemented in CP1 (closed by default):** migration `0186` (not hosted); the transcription lifecycle and attempt
+  policy; the batch port, the Speechmatics adapter in `apps/api/src/voice/speechmatics/` and the worker (loopback fakes
+  only); the M4A duration proof; the eight `/voice` routes and the voice turn through the unchanged Orchestrator;
+  E1 … E13; consent grant / withdrawal / read and their races.
+- **Proven:** verify-0186 twice (28 / 28), the re-pinned verifiers, the API jest suite, the root contracts; `prove-0186`
+  (A19 / A24 live) runs in GitHub CI only.
+- **Not done:** CP2 (mobile, `expo-audio`, device proof, the 41 rows, S8B-03's closing change); any gate opening;
+  `PC-S1 … PC-S7` / `PC-D` (open gate conditions); hosting `0186`; any paid call. `QAN-BL-VOICE-01` stays worked,
+  not delivered.
 
 ### S8B-02 — Voice Foundation (2026-10-30 …; current task; CP1 merged through PR #367 as `f0d8ed1a`; CP2, the closing change, a local commit on `s8b/s8b-02-cp2`, not pushed; S8B-02 not declared complete; not user-ready; every voice gate closed)
 

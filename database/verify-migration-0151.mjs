@@ -34,6 +34,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
+import { substitutedBody, voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -244,7 +245,10 @@ async function verifyCatalog() {
   // MEM-AR-01C (migration 0152) re-anchor: L2 is no longer 0028's byte for byte. CC-M1 (a Product Owner Controlled Change)
   // adds ONE Step-B line - the SELF attribution - and verify-migration-0152 proves that is the only difference. 0151 itself
   // still changes nothing in L2: the live body is exactly the 0152 body.
-  assert.equal(projectionLive, bodyOf(migrationText('0152_memory_subject_identity_atomicity_v1.sql'), 'CREATE OR REPLACE FUNCTION public.canonical_eligible_memory_ids_v1('), 'the canonical Evidence projection (L2) is 0152\'s (CC-M1)');
+  // S8B-03 (migration 0186) re-anchor: E1 widens Step A's source list with 'MACHINE_ASR' (one line, declared in
+  // database/voice-notes-0186-substitutions.mjs and proven by verify-migration-0186); once 0186 is applied L2 is that body.
+  assert.equal(projectionLive, await voiceNotesApplied(rows) ? substitutedBody('evidence-eligibility')
+    : bodyOf(migrationText('0152_memory_subject_identity_atomicity_v1.sql'), 'CREATE OR REPLACE FUNCTION public.canonical_eligible_memory_ids_v1('), 'the canonical Evidence projection (L2) is 0152\'s (CC-M1), or 0186\'s (E1)');
   assert.doesNotMatch(m0151.replace(/--[^\n]*/gu, ''), /ERRCODE\s*=\s*'(?:40001|40P01|PT409)'/u, 'no retryable or PROD-RETRY-01-tracked SQLSTATE is raised');
   assert.doesNotMatch(m0151.replace(/--[^\n]*/gu, ''), /'(?:REJECTED|RETIRED)'/u, 'no lifecycle status is ever written');
 }

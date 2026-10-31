@@ -1037,4 +1037,9 @@ describe('PostResponseIntelligenceDispatcherService',()=>{
    s.ledger.acquire.mockResolvedValueOnce({id:id.execution,event_id:id.event,user_id:id.user,session_id:id.session,source_turn_id:id.turn,event_version:'2.0',processing_path:'FAST',safety_disposition:safety,state:'RUNNING',attempt_count:1} as never);
    await s.service.dispatch(JSON.stringify(event('2.0',safety)));expect(step).not.toHaveBeenCalled();});
  });
+
+ // S8B-03 (CP1, E7 / A10): a LOW voice turn never feeds the Intent or Hypothesis generation; HIGH / MEDIUM and typed turns
+ // continue exactly as before.
+ it('S8B-03 E7: an eligible LOW voice turn is terminally NOT_ELIGIBLE before any Intent provider work',async()=>{const s=setup();s.enrichment.evaluateGenerationEligibility.mockResolvedValue(eligible() as never);(s.enrichment as unknown as Record<string,jest.Mock>).readTurnVoiceProvenance=jest.fn().mockResolvedValue({asrConfidenceBand:'LOW'});await s.service.dispatch(JSON.stringify(event()));expect(s.ledger.finish).toHaveBeenCalledWith(id.execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');expect(s.ledger.claim).not.toHaveBeenCalledWith(id.execution,'INTENT_PROVIDER');expect(s.extraction.extract).not.toHaveBeenCalled();});
+ it.each(['HIGH','MEDIUM'])('S8B-03 E7: an eligible %s voice turn continues to the Intent',async band=>{const s=setup();s.enrichment.evaluateGenerationEligibility.mockResolvedValue(eligible() as never);(s.enrichment as unknown as Record<string,jest.Mock>).readTurnVoiceProvenance=jest.fn().mockResolvedValue({asrConfidenceBand:band});await s.service.dispatch(JSON.stringify(event())).catch(()=>undefined);expect(s.ledger.claim).toHaveBeenCalledWith(id.execution,'INTENT_PROVIDER');});
 });

@@ -22,7 +22,9 @@ export type MemoryControlRequestedOutcome =
   | 'CORRECTED' | 'ALREADY_CORRECT'
   | 'FORGOTTEN' | 'DISABLED'
   | 'TARGET_NOT_FOUND' | 'TARGET_NOT_SPECIFIED'
-  | 'CLARIFICATION_REQUIRED' | 'CLARIFICATION_DECLINED';
+  | 'CLARIFICATION_REQUIRED' | 'CLARIFICATION_DECLINED'
+  // S8B-03 (0186, E8): a spoken command the voice message did not carry clearly enough - nothing changes (C-54).
+  | 'NOT_HEARD_CLEARLY';
 
 /**
  * Outcomes the database DECIDES under its locks and never takes from the caller: `TARGET_CHANGED` (0128), and
@@ -38,7 +40,24 @@ export const MEMORY_CONTROL_OUTCOMES: ReadonlySet<MemoryControlOutcome> = new Se
   'ALREADY_CORRECT', 'FORGOTTEN', 'DISABLED', 'TARGET_NOT_FOUND', 'TARGET_NOT_SPECIFIED', 'CLARIFICATION_REQUIRED',
   'CLARIFICATION_DECLINED', 'TARGET_CHANGED',
   'SUBJECT_CLARIFICATION_REQUIRED', 'RECONFIRMED', 'CORRECTED_TO_EXISTING',
+  'NOT_HEARD_CLEARLY',
 ]);
+
+/** S8B-03 (E8): the ASR confidence band of a voice turn (migration 0183 / 0186). */
+export type MemoryCommandVoiceBand = 'HIGH' | 'MEDIUM' | 'LOW';
+
+/**
+ * S8B-03 (E8): the voice source of a Memory command, read from the database (`server_read_memory_command_voice_v1`):
+ * the band of the turn being answered and of the turn whose words are kept (the turn that asked the pending question, or
+ * the turn itself). `null` is a typed turn. finalize v2 re-reads both under its locks and refuses anything else.
+ */
+export interface MemoryCommandVoiceSource {
+  turnBand: MemoryCommandVoiceBand | null;
+  originBand: MemoryCommandVoiceBand | null;
+}
+
+/** Reads the voice source of this turn; `answersCommandId` names the question it answers, if any. */
+export type MemoryCommandVoiceReader = (answersCommandId: string | undefined) => Promise<MemoryCommandVoiceSource>;
 
 /** A clarification offers at most this many options (database: `cardinality(candidate_memory_ids) <= 3`). */
 export const MAX_CLARIFICATION_OPTIONS = 3;

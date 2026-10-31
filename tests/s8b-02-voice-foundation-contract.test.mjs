@@ -47,8 +47,10 @@ function walk(dir) {
 test('the three migrations are the next ones, forward-only, each one transaction, and every verifier runs in CI', () => {
   const names = readdirSync(join(root, MIGRATIONS)).filter((name) => /^\d{4}_/u.test(name)).sort();
   // RE-ANCHORED by S8B-02 CP2: 0185 follows 0184.
-  assert.deepEqual(names.slice(-3), ['0183_s8b_02_voice_foundation_v1.sql', '0184_s8b_02_ai_cost_voice_units_v1.sql',
-    '0185_s8b_02_voice_media_lifecycle_v1.sql']);
+  // RE-ANCHORED by S8B-03 CP1 (2026-10-31): the three stay consecutive; 0186 (S8B-03 Personal Voice Notes) follows them.
+  const at = names.indexOf('0183_s8b_02_voice_foundation_v1.sql');
+  assert.deepEqual(names.slice(at, at + 4), ['0183_s8b_02_voice_foundation_v1.sql', '0184_s8b_02_ai_cost_voice_units_v1.sql',
+    '0185_s8b_02_voice_media_lifecycle_v1.sql', '0186_s8b_03_personal_voice_notes_v1.sql']);
   for (const text of [v0183, v0184, v0185]) {
     const body = sqlOnly(text).trim();
     assert.match(body, /^BEGIN;/u);
@@ -160,8 +162,10 @@ test('P-1: the Product Owner\'s band values, below the typed-text confidence the
   assert.match(body, /v_source := 'MACHINE_ASR';/u);
   const enrichment = read('apps/api/src/background-intelligence/background-intelligence-enrichment.service.ts');
   assert.match(enrichment, /const voice=await this\.data\.readTurnVoiceProvenance\(context\);/u);
-  assert.match(enrichment, /if\(candidate\.source==='MACHINE_ASR'\)return\{decision:'SKIP',reason:'MACHINE_ASR_RECORDED_NOT_EVIDENCE',type:candidate\.type\};/u,
-    'a MACHINE_ASR Memory is never fresh Evidence');
+  // RE-ANCHORED by S8B-03 CP1 (2026-10-31, the Product Owner's D1, E4): a HIGH / MEDIUM MACHINE_ASR Memory IS Fresh
+  // Evidence now, so the SKIP line is removed; 0186 E13 makes the writer require the band's exact constant instead of
+  // `< 0.95` (proven by verify-migration-0186 V-CS and tests/s8b-03-personal-voice-notes-contract.test.mjs).
+  assert.doesNotMatch(enrichment, /MACHINE_ASR_RECORDED_NOT_EVIDENCE/u, 'E4: the SKIP line that kept voice out of Evidence is gone');
 });
 
 // RE-ANCHORED by S8B-02 CP2: CP1 had no adapter and no audio path. CP2 adds exactly the media lifecycle (voice-media/) and
@@ -178,11 +182,23 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
         `${path} calls no voice recording command (the media lifecycle alone does)`);
     }
   }
-  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/'))) {
+  // RE-ANCHORED by S8B-03 CP1 (2026-10-31, contract §5.8): the ONE network path is the Speechmatics batch adapter in
+  // voice/speechmatics/ (fetch, hand-streamed multipart, no SDK; its config reads the environment). Nothing outside that
+  // folder imports it but voice.module.ts, and the worker reads a note's audio through VoiceMediaService alone.
+  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/') && !p.startsWith('apps/api/src/voice/speechmatics/'))) {
     assert.doesNotMatch(read(path), /\bfetch\(|from 'node:https?'|require\('https?'\)|WebSocket|from 'ws'|axios|process\.env|@speechmatics|@google\//u, `${path} carries no network code and reads no credential`);
   }
+  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/speechmatics/'))) {
+    assert.doesNotMatch(read(path), /WebSocket|from 'ws'|axios|@speechmatics|@google\//u, `${path} uses no provider SDK and no socket`);
+  }
+  for (const path of files.filter((p) => !p.startsWith('apps/api/src/voice/speechmatics/') && p !== 'apps/api/src/voice/voice.module.ts')) {
+    assert.doesNotMatch(read(path), /from '[^']*\/speechmatics\//u, `${path} does not import the Speechmatics adapter`);
+  }
+  const worker = codeOnly(read('apps/api/src/voice/voice-note-transcription.worker.ts'));
+  assert.doesNotMatch(worker, /PrivateAudioObjectStore|PRIVATE_AUDIO_OBJECT_STORE|S3Client/u, 'the worker never reads the private store directly');
+  assert.match(worker, /VoiceMediaService/u, 'a note\'s audio comes through VoiceMediaService');
   for (const path of files.filter((p) => !p.endsWith('.spec.ts') && !p.startsWith('apps/api/src/voice/testing/'))) {
-    assert.doesNotMatch(read(path), /Fake(?:SpeechRecognition|SpeechSynthesis)Adapter/u, `${path} composes no fake`);
+    assert.doesNotMatch(read(path), /Fake(?:SpeechRecognition|SpeechSynthesis)Adapter|FakeBatchTranscriptionJobs/u, `${path} composes no fake`);
   }
   assert.doesNotMatch(read('apps/api/package.json'), /speechmatics|@google\/genai/iu, 'no provider SDK dependency');
   for (const path of walk(join(root, 'apps/mobile/src')).map((p) => relative(root, p).replaceAll('\\', '/'))) {

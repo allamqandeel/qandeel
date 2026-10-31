@@ -93,6 +93,8 @@ export interface MemoryRecord {
    * so it is never personal Evidence.
    */
   subject?: MemorySubject | null;
+  /** S8B-03 (E5 / E9, migration 0186): a MACHINE_ASR Memory the user later confirmed in typed text. Absent otherwise. */
+  confirmed_by_typing?: boolean;
 }
 
 export interface CreateMemoryInput {

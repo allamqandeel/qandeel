@@ -191,6 +191,8 @@ export function selectMemories(
       (options.historical?.has(memory.id) === true || isHistoricalKnowledge({ ended: false, temporal: null, content: memory.content }));
     return {
       type: memory.type, content: memory.content, source: memory.source, about: aboutOf(memory),
+      // S8B-03 (E5): a MACHINE_ASR item says whether the user later confirmed it in typed text.
+      ...(memory.source === 'MACHINE_ASR' ? { confirmedByTyping: memory.confirmed_by_typing === true } : {}),
       ...(member.unsettled ? { standing: 'UNSETTLED' as const } : historical ? { standing: 'HISTORICAL' as const } : {}),
       ...(options.tier !== undefined ? { tier: options.tier } : {}),
     };

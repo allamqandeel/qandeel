@@ -255,6 +255,7 @@ jobs:
       - {name: "Verify S8A-01 DeepSeek production integration static contract (no reasoning trace read, no end-user identifier, the fixed DeepSeek endpoint, accounted only, synthetic qualification only, the output release guard, 0170 the three registries only)", run: npm run test:s8a-01-deepseek-production-integration-contract}
       - {name: "Verify S8B-01 voice benchmark harness static contract (the preregistered plan and corpus hashes intact, the USD 10 cap and its split, the preregistered Arabic scoring, an unmeasured stage never a pass, the CP1 lock refusing every live run, loopback only under the guard, the zero-cost simulated rehearsal with no paid call)", run: npm run test:s8b-01-voice-bench-harness-contract}
       - {name: "Verify S8B-02 Voice Foundation static contract (0183 / 0184 forward-only and wired, every voice gate seeded DISABLED with a setter no role holds, the server surface service_role's alone, the 0184 CHECKs mirrored in TypeScript with the text registries unchanged, the P-1 band values, 0104 and I-06C untouched, no provider adapter or client surface)", run: npm run test:s8b-02-voice-foundation-contract}
+      - {name: "Verify S8B-03 Personal Voice Notes static contract (the 19 Copy Gate rows APPROVED verbatim in the record, the code and the 0186 consent text under its guarded digests, every voice gate still DISABLED, 0186 wired with its verifier and live proof, the Speechmatics key server-only, no logging, no mobile surface before CP2)", run: npm run test:s8b-03-personal-voice-notes-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1306,6 +1307,11 @@ jobs:
       # never touching a live one; every gate still DISABLED.
       - name: Verify S8B-02 voice media lifecycle (0185) against real PostgreSQL
         run: npm run verify:voice-media-lifecycle:integration
+      # S8B-03 CP1: migration 0186 (Personal Voice Notes) - the transcription lifecycle and its attempt policy, the one atomic
+      # voice turn, MACHINE_ASR Evidence and capture by band, spoken Memory commands, the typed confirmation, consent races and
+      # erasure; every gate still DISABLED and the approved consent text installed verbatim.
+      - name: Verify S8B-03 Personal Voice Notes (0186) against real PostgreSQL
+        run: npm run verify:personal-voice-notes:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1431,6 +1437,10 @@ jobs:
             # owner deletion, expiry at the instant, RECORDING recovery, PRIV-W races, late writes and orphans reconciled, the
             # voice export manifest and files, and account erasure of photos and voice through the one queue.
             POSTGREST_VERSION="$version" npm run --silent prove:voice-media-lifecycle:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
+            # S8B-03 (CP1): voice note transcription with the compiled API, worker and batch adapter against a LOOPBACK fake of the
+            # batch API (no provider, no key, no paid call) and rclone - wire refusals, a 24 MiB note streamed within 16 MiB of
+            # held payload (A19), and consent withdrawn while a job runs (A24).
+            POSTGREST_VERSION="$version" npm run --silent prove:personal-voice-notes:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

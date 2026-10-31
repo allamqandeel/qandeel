@@ -72,6 +72,7 @@ export class HypothesisEvidenceAssociationAuthorityService {
       freshEvidence: {
         evidenceId: freshEvidence.evidenceId, evidenceKind: freshEvidence.evidenceKind,
         statement: freshEvidence.statement, source: freshEvidence.source,
+        ...(freshEvidence.source === 'MACHINE_ASR' ? { confirmedByTyping: freshEvidence.confirmedByTyping === true } : {}),
       },
       candidateHypotheses: candidates,
       maxAssociationCount: MAX_FRESH_EVIDENCE_ASSOCIATIONS,

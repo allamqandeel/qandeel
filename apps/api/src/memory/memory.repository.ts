@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from './memory-data-api.service';
-import { MEMORY_SUBJECT_EMBED, withMemorySubject } from './memory-subject';
+import { MEMORY_SUBJECT_EMBED, MEMORY_TYPED_CONFIRMATION_EMBED, withMemorySubject } from './memory-subject';
 import type { MemoryRecord } from './memory.types';
 
-const MEMORY_FIELDS = `id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id,${MEMORY_SUBJECT_EMBED}`;
+const MEMORY_FIELDS = `id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id,${MEMORY_SUBJECT_EMBED},${MEMORY_TYPED_CONFIRMATION_EMBED}`;
 
 // Owner-scoped reads only, on the authenticated path. MEM-AR-01C (migration 0152): this repository writes nothing. The
 // only authorities that can change a Memory are the conversational command (server_finalize_memory_control_turn_v2,

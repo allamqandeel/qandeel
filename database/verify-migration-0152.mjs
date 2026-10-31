@@ -56,6 +56,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
+import { substitutedBody as notesBody, voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -320,14 +321,24 @@ async function verifyCatalog() {
   // forget / correct of the owner's earlier ACTIVE Memories - service_role only, under the same lock and the same
   // command-turn / later-command / equivalence rules. The 0171 and 0172 commands are unchanged and keep their grants;
   // the runtime calls only v3.
+  // S8B-03 re-anchor (migration 0186): 0186 adds complete_post_response_personal_capture_v4, Open Understanding with the
+  // voice rules (E3 / E4 / E5 / E9) - service_role only, under the same lock and rules; v3 now delegates to it with no
+  // typed confirmations, so the runtime's one capture path is v4.
+  const notesApplied = await voiceNotesApplied(rows);
   assert.deepEqual([...executable].sort(), ['personal_data_private.erase_personal_account_v1', 'public.background_record_memory_v1',
     'public.complete_post_response_personal_capture_v1', 'public.complete_post_response_personal_capture_v2',
-    'public.complete_post_response_personal_capture_v3',
+    'public.complete_post_response_personal_capture_v3', ...(notesApplied ? ['public.complete_post_response_personal_capture_v4'] : []),
     'public.server_erase_personal_account_v1', 'public.server_finalize_memory_control_turn_v2'],
-  'the writable set is exactly {v2, background_record_memory_v1, the 0171, 0172 and 0173 capture commands, governed erasure}');
+  'the writable set is exactly {v2, background_record_memory_v1, the 0171, 0172, 0173 (and 0186) capture commands, governed erasure}');
 
   stage = 'W-1 catalog: CC-M1 is the 0028 L2 body plus exactly one marked line';
-  const l2Live = await liveBody('public.canonical_eligible_memory_ids_v1(uuid,timestamp with time zone)');
+  // S8B-03 re-anchor (migration 0186): E1 widens Step A with 'MACHINE_ASR'. Once 0186 is applied the live body is the
+  // declared 0186 statement, and CC-M1 is checked on the 0152 statement it was derived from.
+  const l2Current = await liveBody('public.canonical_eligible_memory_ids_v1(uuid,timestamp with time zone)');
+  const l2Live = await voiceNotesApplied(rows)
+    ? (assert.equal(l2Current, normalizeBody(notesBody('evidence-eligibility')), 'L2 is the declared 0186 body (E1)'),
+      bodyOf(migrationText(MIGRATION), 'public.canonical_eligible_memory_ids_v1', { replace: true }))
+    : l2Current;
   const l2Defined = bodyOf(migrationText('0028_canonical_evidence_eligibility_v1.sql'), 'public.canonical_eligible_memory_ids_v1');
   const marked = l2Live.split('\n').filter((line) => line.includes('-- MEM-AR-01C CC-M1 (0152)'));
   assert.equal(marked.length, 1, 'exactly one marked line');
@@ -356,9 +367,15 @@ async function verifyCatalog() {
     const replace = name.includes('standing') || name.includes('change_core');
     // RE-ANCHORED by S8B-02 CP1 (migration 0183, 2026-10-30): once 0183 is applied the background writer is its 0183
     // body, which is this body with exactly the declared D-7 / P-1 edits (voice-foundation-0183-substitutions.mjs).
-    const expected = name === 'public.background_record_memory_v1' && await voiceFoundationApplied(rows)
-      ? normalizeBody(substitutedBody('background-memory-writer')) : bodyOf(text0152, name, { replace });
-    assert.equal(await liveBody(signature), expected, `${name} is exactly the 0152 body (or its declared 0183 successor)`);
+    // S8B-03 re-anchor (migration 0186): L1 standing (E2), the Memory-control finalize (E8 / E9 / E13) and the writer
+    // (E13) are their declared 0186 bodies once 0186 is applied (voice-notes-0186-substitutions.mjs).
+    const notesKey = { 'public.personal_evidence_standing_v1': 'evidence-standing',
+      'public.server_finalize_memory_control_turn_v2': 'memory-control-finalize',
+      'public.background_record_memory_v1': 'background-memory-writer' }[name];
+    const expected = notesKey && await voiceNotesApplied(rows) ? normalizeBody(notesBody(notesKey))
+      : name === 'public.background_record_memory_v1' && await voiceFoundationApplied(rows)
+        ? normalizeBody(substitutedBody('background-memory-writer')) : bodyOf(text0152, name, { replace });
+    assert.equal(await liveBody(signature), expected, `${name} is exactly the 0152 body (or its declared 0183 / 0186 successor)`);
   }
   for (const [name, signature] of [
     ['public.reevaluate_withdrawn_hypothesis_evidence_core_v1', 'public.reevaluate_withdrawn_hypothesis_evidence_core_v1(uuid,integer)'],

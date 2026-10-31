@@ -17,6 +17,7 @@ import process from 'node:process';
 import { createPersonalReplayRuntime } from './replay-personal-verifier-support.mjs';
 import { runVerifier } from './public-runtime-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
+import { voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -112,7 +113,10 @@ async function verifyCatalogue(report) {
     const cols = (await rows(`SELECT unnest(p.proargnames) AS n FROM pg_proc p WHERE p.oid = $1::regprocedure`, [LIST])).map((r) => r.n);
     assert.equal(cols.some((c) => /key|url/u.test(c)), false, 'C0 the listing returns no key or URL column');
     const [{ n }] = await rows("SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace s ON s.oid = p.pronamespace WHERE s.nspname = 'voice_private'");
-    assert.equal(n, 20, 'C0 voice_private still holds exactly the twenty 0183 functions');
+    // S8B-03 re-anchor (migration 0186): 0186 adds eight voice_private internals (the transcription policy, guards and
+    // settlement), each named by its own ACL block and proven by verify-migration-0186; 0185 itself still adds none.
+    const expected = await voiceNotesApplied(rows) ? 28 : 20;
+    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186 ones): ${expected}`);
     const [{ closed }] = await rows(`SELECT count(*)::int closed FROM voice_private.voice_launch_capability_states
                                       WHERE feature_flag_state = 'DISABLED' AND launch_requirements_state = 'UNSATISFIED'`);
     assert.equal(closed, 4, 'C0 all four voice scopes are DISABLED');

@@ -194,9 +194,12 @@ async function verifyEffectiveAcls() {
     `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname='public' AND p.prokind='f'
         AND pg_get_functiondef(p.oid) ~ 'public\\.memories'
-        AND pg_get_functiondef(p.oid) ~ 'source IN \\(''USER_STATED'',''USER_CONFIRMED''\\)'
+        AND pg_get_functiondef(p.oid) ~ 'source IN \\(''USER_STATED'',''USER_CONFIRMED''(,''MACHINE_ASR'')?\\)'
       ORDER BY p.proname`,
   )).map((row) => row.proname);
+  // S8B-03 (migration 0186) re-anchor: E1 / E2 widen this same predicate with the machine transcript of the user's own
+  // voice ('MACHINE_ASR'), in the primitive and in L1 standing alike. The widened form is still the one predicate, so the
+  // search matches both spellings and the set it admits is unchanged.
   // INTEL-TM-01 (migration 0151) re-anchor, the QAN-AUD-03 objection its record pre-empts: L1 Memory standing
   // (personal_evidence_standing_v1) states the same row facts as steps A + B, without the window and without
   // deduplication, and it is NOT Evidence - it only ever WITHHOLDS reliance on a Hypothesis. It is admitted here by

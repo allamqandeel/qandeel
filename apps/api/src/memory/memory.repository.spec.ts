@@ -40,9 +40,22 @@ describe('MemoryRepository', () => {
       { id: 'e', memory_subject_attributions: { subject: 'self' } },
     ]);
     const rows = await repository.listActiveForUser('token-a', 'user-a', 32);
-    expect(new URL(`https://local/${dataApi.request.mock.calls[0][1]}`).searchParams.get('select')).toMatch(/,memory_subject_attributions\(subject\)$/u);
+    // RE-ANCHORED by S8B-03 (CP1, E5): the typed confirmations are embedded after the attribution.
+    expect(new URL(`https://local/${dataApi.request.mock.calls[0][1]}`).searchParams.get('select')).toMatch(/,memory_subject_attributions\(subject\),memory_typed_confirmations\(memory_id\)$/u);
     expect(rows.map(({ id, subject }) => [id, subject])).toEqual([['a', 'SELF'], ['b', 'OTHER'], ['c', null], ['d', null], ['e', null]]);
     expect(rows.every((row) => !('memory_subject_attributions' in row))).toBe(true);
+  });
+
+  it('S8B-03 (E5): only a MACHINE_ASR Memory reports a typed confirmation; a typed Memory is read exactly as before', async () => {
+    dataApi.request.mockResolvedValue([
+      { id: 'a', source: 'MACHINE_ASR', memory_subject_attributions: null, memory_typed_confirmations: [{ memory_id: 'a' }] },
+      { id: 'b', source: 'MACHINE_ASR', memory_subject_attributions: null, memory_typed_confirmations: [] },
+      { id: 'c', source: 'USER_STATED', memory_subject_attributions: null, memory_typed_confirmations: [] },
+    ]);
+    const rows = await repository.listActiveForUser('token-a', 'user-a', 32);
+    expect(rows.map((row) => row.confirmed_by_typing)).toEqual([true, false, undefined]);
+    expect(rows.every((row) => !('memory_typed_confirmations' in row))).toBe(true);
+    expect('confirmed_by_typing' in rows[2]).toBe(false);
   });
 
   it('MEM-AR-01C: retains no Memory write at all - no server command, no authenticated mutation, no generic update', () => {

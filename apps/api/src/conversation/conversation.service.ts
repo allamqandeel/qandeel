@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
 import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
 import type {
@@ -15,6 +15,7 @@ import { ConversationOrchestratorService } from './conversation-orchestrator.ser
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
+import { VoiceNotesRepository } from '../voice-media/voice-notes.repository';
 
 // T-03A2 / T-03D: turn handling is TWO distinct technical phases.
 //
@@ -60,7 +61,7 @@ function isTurnAdmissionLimited(error: unknown): boolean {
 
 @Injectable()
 export class ConversationService {
-  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService,private readonly semantic: ConversationSemanticEstablishmentService, private readonly turnWork: ConversationTurnWorkRepository) {}
+  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService,private readonly semantic: ConversationSemanticEstablishmentService, private readonly turnWork: ConversationTurnWorkRepository, @Optional() private readonly voiceNotes?: VoiceNotesRepository) {}
 
   // userId stays in the signature for the authenticated controller contract,
   // but it is never serialized as mutation authority: the database derives the
@@ -94,6 +95,25 @@ export class ConversationService {
     // authenticated reader; the session and user turn come from the canonical correlation bound below.
     return runWithAiUsageAttribution({ userId }, () =>
       runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), () => this.admitAndRunTurn(userId, accessToken, sessionId, input)));
+  }
+
+  /**
+   * S8B-03 (CP1, §4.4) — run ONE user turn the database already committed (a Voice Note's, from
+   * `server_commit_voice_note_turn_v1`) through the same path as a typed turn: one foreground work scope, the
+   * owner's attribution, the UNCHANGED Orchestrator and the semantic establishment. Nothing is admitted here; a
+   * replay of a committed turn returns its stored reply. Ownership is the caller token's (row-level security).
+   */
+  async runCommittedTurn(userId: string, accessToken: string, sessionId: string, turnId: string): Promise<OrchestratedTurnResult> {
+    const gate: ForegroundTurnWorkGate = {
+      begin: (workSessionId, userTurnId) => this.turnWork.begin(workSessionId, userId, userTurnId),
+      end: (userTurnId, leaseId) => this.turnWork.end(userId, userTurnId, leaseId),
+    };
+    return runWithAiUsageAttribution({ userId }, () => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {
+      const turn = await this.repository.findTurn(accessToken, sessionId, userId, turnId);
+      if (!turn || turn.role !== 'USER') throw new NotFoundException('Conversation turn was not found.');
+      this.correlation.bindCanonical(turn.session_id, turn.id);
+      return this.establishSemanticChain(userId, await this.orchestrator.orchestrate(accessToken, userId, turn));
+    }));
   }
 
   private async admitAndRunTurn(userId: string, accessToken: string, sessionId: string, input: { content: string; idempotencyKey?: string }): Promise<OrchestratedTurnResult> {
@@ -182,10 +202,20 @@ export class ConversationService {
       accessToken, sessionId, userId, users.map((turn) => turn.id),
     );
     const replyBySource = new Map(assistants.map((turn) => [turn.source_turn_id, turn]));
+    // S8B-03: which of these turns came from a Voice Note, and whether its recording can still be played (no key, no band).
+    const voiceRows = this.voiceNotes && users.length > 0 ? await this.voiceNotes.sessionVoiceTurns(userId, sessionId, users.map((turn) => turn.id)) : [];
+    const voiceByTurn = new Map(voiceRows.map((row) => [row.turn_id, row]));
     const exchanges = users.map((userTurn): ConversationHistoryExchange => {
       const reply = replyBySource.get(userTurn.id);
+      const voice = voiceByTurn.get(userTurn.id);
       return {
         userTurn: { id: userTurn.id, content: userTurn.content, idempotencyKey: userTurn.idempotency_key, createdAt: userTurn.created_at },
+        ...(voice ? { voiceNote: {
+          recordingId: voice.recording_id,
+          available: voice.available === true,
+          availableUntil: voice.available_until === null ? null : new Date(voice.available_until).toISOString(),
+          durationMs: voice.duration_ms === null ? null : Number(voice.duration_ms),
+        } } : {}),
         // A reply exists only as a COMPLETED assistant turn, and FAILED is the committed turn's own
         // terminal state. Anything else is still outstanding — never reported as failed or answered.
         replyState: reply ? 'COMPLETED' : userTurn.status === 'FAILED' ? 'FAILED' : 'PENDING',

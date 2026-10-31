@@ -1,6 +1,7 @@
 // S8A-03 (D1): hypothesis intent extraction on DeepSeek Flash. DeepSeek JSON Output carries the schema in the system
 // instruction; `parseOutput` is the enforcement (exactly three keys, an allowed domain, only supplied Evidence IDs,
 // no duplicate), as it always also was. The request validation, the instructions and the provider data are unchanged.
+import { MACHINE_ASR_SOURCE_GUIDANCE } from '../memory/machine-asr-model-copy';
 import { EVIDENCE_KINDS } from '../memory/evidence.types';
 import { HYPOTHESIS_DOMAINS, MAX_STATEMENT_LENGTH } from './hypothesis.types';
 import { HYPOTHESIS_TRIGGER_REASONS, MAX_HYPOTHESIS_TRIGGER_INPUT_CHARS } from './hypothesis-generation-trigger-classification.types';
@@ -42,7 +43,8 @@ export class DeepSeekHypothesisIntentExtractionProvider implements HypothesisInt
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
       const response = await this.client.chat.completions.create(deepSeekJsonRequest({
-        instructions: INSTRUCTIONS,
+        // S8B-03 (E5, M-01): only when a MACHINE_ASR item is supplied.
+        instructions: request.eligibleEvidence.some((item) => item.source === 'MACHINE_ASR') ? `${INSTRUCTIONS} ${MACHINE_ASR_SOURCE_GUIDANCE}` : INSTRUCTIONS,
         schema: extractionSchema(request),
         data: `<intent_extraction_data>${escapeDeepSeekData(providerData(request))}</intent_extraction_data>`,
         maxTokens: this.config.maxOutputTokens,

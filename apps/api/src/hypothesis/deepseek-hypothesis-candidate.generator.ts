@@ -2,6 +2,7 @@
 // proposal array travels as `{ "candidates": [...] }`; the schema is in the system instruction, and `parseResponse` /
 // `validProposal` are the enforcement (exact keys, supplied domain, scope, Evidence IDs and grounding handles only), as
 // they always also were. The request validation and the provider data are unchanged.
+import { MACHINE_ASR_SOURCE_GUIDANCE } from '../memory/machine-asr-model-copy';
 import { EVIDENCE_KINDS } from '../memory/evidence.types';
 import {
   HYPOTHESIS_DOMAINS, HYPOTHESIS_TYPES, MAX_ACTIVE_HYPOTHESES, MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS,
@@ -87,7 +88,9 @@ const SUBJECT_GROUNDING_INSTRUCTIONS = [
 ].join(' ');
 
 function instructionsFor(request: HypothesisGenerationRequest): string {
-  return subjectGroundingHandles(request).length > 0 ? `${INSTRUCTIONS} ${SUBJECT_GROUNDING_INSTRUCTIONS}` : INSTRUCTIONS;
+  const base = subjectGroundingHandles(request).length > 0 ? `${INSTRUCTIONS} ${SUBJECT_GROUNDING_INSTRUCTIONS}` : INSTRUCTIONS;
+  // S8B-03 (E5, M-01): only when a MACHINE_ASR item is supplied.
+  return request.eligibleEvidence.some((item) => item.source === 'MACHINE_ASR') ? `${base} ${MACHINE_ASR_SOURCE_GUIDANCE}` : base;
 }
 
 function providerData(request: HypothesisGenerationRequest) {
@@ -108,8 +111,9 @@ function providerData(request: HypothesisGenerationRequest) {
           ({ metricKey, knowledgeState, ordinalCategory })),
       },
     } : {}),
-    eligibleEvidence: request.eligibleEvidence.map(({ evidenceId, evidenceKind, statement }) =>
-      ({ evidenceId, evidenceKind, statement })),
+    // S8B-03 (E5): a MACHINE_ASR item carries its source and typed confirmation; a typed item is re-picked exactly as before.
+    eligibleEvidence: request.eligibleEvidence.map(({ evidenceId, evidenceKind, statement, source, confirmedByTyping }) =>
+      ({ evidenceId, evidenceKind, statement, ...(source === 'MACHINE_ASR' ? { source, confirmedByTyping: confirmedByTyping === true } : {}) })),
     // T-03C R2: the server-built subject-grounding universe crosses as opaque
     // handles plus committed wording and Session Positions only - re-picked
     // here so no focus, Thread or Session identity can ever leak through a

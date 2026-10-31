@@ -197,11 +197,12 @@ test('turn handling is two distinct technical phases', () => {
   // temporal-only service is retired with no fallback.)
   assert.match(conversationService, /private readonly semantic: ConversationSemanticEstablishmentService/u);
   assert.match(conversationService, /return this\.establishSemanticChain\(userId, await this\.orchestrator\.orchestrate\(/u);
-  assert.equal((stripComments(conversationService).match(/this\.establishSemanticChain\(/gu) ?? []).length, 3,
-    'every orchestrated path - new turn, idempotency replay and the unique-violation replay - re-enters establishment');
+  // RE-PINNED by S8B-03 CP1 (2026-10-31): 3 → 4; the fourth path is runCommittedTurn, a Voice Note's one committed turn.
+  assert.equal((stripComments(conversationService).match(/this\.establishSemanticChain\(/gu) ?? []).length, 4,
+    'every orchestrated path - new turn, idempotency replay, the unique-violation replay and the committed voice turn - re-enters establishment');
   assert.doesNotMatch(stripComments(conversationService), /ConversationTemporalEstablishmentService|establishTemporal\(/u, 'no temporal-only fallback path exists');
-  assert.equal((stripComments(conversationService).match(/this\.orchestrator\.orchestrate\(/gu) ?? []).length, 3,
-    'and every one of those three paths goes through the generation phase exactly once');
+  assert.equal((stripComments(conversationService).match(/this\.orchestrator\.orchestrate\(/gu) ?? []).length, 4,
+    'and every one of those four paths goes through the generation phase exactly once');
   // Phase 1 is untouched and remains the ONLY owner of generation failure.
   const orchestratorCode = stripComments(orchestrator);
   assert.match(orchestratorCode, /await this\.repository\.failTurn\(/u);

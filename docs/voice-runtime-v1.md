@@ -140,6 +140,12 @@ device playout ─► playout reports ─► Recording writer: QANDEEL track (co
 - A low-confidence band suppresses durable Memory writes from that unit. The turn itself still proceeds.
 - The user can correct through the existing Memory correction commands.
 - No new Memory runtime is created.
+- *(S8B-03 CP1, 2026-10-31, the Product Owner's D1 and E1 … E13; binds from S8B-03 CP1's merge; [S8B-03 MACHINE_ASR Fresh Evidence Controlled Amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-03_MACHINE_ASR_FRESH_EVIDENCE_CONTROLLED_AMENDMENT_v1.0.md).)*
+  **`MACHINE_ASR` is Fresh Evidence by band.** HIGH and MEDIUM write Memory and Evidence with source `MACHINE_ASR` at the
+  band's constant confidence (0.90 / 0.75), read inside the database; LOW leaves no durable trace and feeds no hypothesis or
+  intent. It is never treated or quoted as typed text and never promoted to `USER_CONFIRMED` / `USER_STATED`; an explicit
+  typed confirmation is recorded beside it, without rewriting its source. Spoken FORGET / DISABLE always ask first, and a
+  LOW spoken command changes nothing (C-54). This replaces S8B-02's Deviations 6 and 8.
 
 **4.3 QANDEEL's reply.**
 - The Orchestrator runs the existing pipeline. The behavioral stage selects the **spoken guidance** (VA-7): shorter,
@@ -182,6 +188,12 @@ device playout ─► playout reports ─► Recording writer: QANDEEL track (co
 - Leaving the screen while recording stops capture and keeps an unsent draft (J1).
 - «اعرض النص» shows the transcript on demand, with machine-transcription provenance and no verbatim typography (J2;
   VI-01 §14 / §18).
+- *(S8B-03 CP1, 2026-10-31; binds from its merge; [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md).)* **The server side is implemented, closed by default:**
+  a durable transcription state (attempts bounded 3 automatic / 5 total, a crash-safe `OUTCOME_UNKNOWN`, no blind
+  resubmission); a local M4A duration proof before any submission (10-minute limit); the batch port and its Speechmatics
+  adapter behind `voice/speechmatics/` (proven only against a loopback fake); no note is `READY` before the first
+  outcome of the provider job's deletion is recorded; one atomic voice turn through the unchanged Orchestrator. The recorder, the draft (J1), the bubble and
+  «اعرض النص» are CP2's, not started. `PERSONAL_VOICE_NOTE` stays `DISABLED`.
 
 **4.7 The selected ASR and its binding requirements** (the Product Owner's decision, 2026-10-28; S8B-01 record §9.21).
 These are **required and NOT IMPLEMENTED**. A CP2 evaluation result is evidence about the provider. It does not show that
@@ -445,6 +457,11 @@ authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
    - PRIV-W's withdrawal races (B5), as live PostgREST / rclone scenarios in `prove-0185`.
 
    Items 1, 2 and 6 (every user-visible string) and the mobile saver remain S8B-03's. Every voice gate stays `DISABLED`.
+9. *(S8B-03 CP1, 2026-10-31; binds from its merge; [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §2.)* **The consent text `VOICE_RECORDING_V1`** (C-01 …
+   C-11) and the microphone text (C-12) are **APPROVED verbatim** by the Product Owner, with QANDEEL's spoken Memory
+   command replies C-54 … C-57 and the model texts M-01 … M-03. `0186` installs C-01 … C-11; consent grant, withdrawal
+   and reading are served. The version is scoped to voice messages only; a new version adds calls, QANDEEL's voice and
+   the provider names at S8B-04 (VA-11, OD-9). C-12 is used by CP2. The other 41 rows stay `PROPOSED` until before CP2.
 
 ## 11. Speed and latency (D-6)
 
@@ -505,6 +522,11 @@ The stage budget is preregistered in `scripts/s8b-01/bench-plan.json`:
 - Credits stay inactive (Stage 9).
 - Storage and render cost per call minute are reported at S8B-08, not billed.
 - The Model Router's DeepSeek stream is accounted from the stream's final usage chunk, on the existing operation.
+- *(S8B-03 CP1, 2026-10-31; binds from its merge.)* Every Voice Note batch attempt is one ledger call
+  (`SPEECHMATICS_BATCH_TRANSCRIPTION`, `VOICE_NOTE_TRANSCRIPTION`, `AUDIO_INPUT_MS`), begun with `SUBMITTING` before any
+  byte is sent and bound to the recording; unknown outcomes are counted. It settles `PROVIDER_REPORTED` when the provider
+  reports the duration, otherwise `GATEWAY_MEASURED` from the local proof, or `ABSENT`; still `UNPRICED`. No paid call was
+  made in S8B-03 CP1.
 
 ## 13. Gates
 

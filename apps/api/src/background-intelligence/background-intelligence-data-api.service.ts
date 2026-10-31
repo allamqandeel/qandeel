@@ -3,8 +3,8 @@ import type { SessionStatus, TurnStatus } from '../conversation/conversation.typ
 import type { HimSnapshotSourceRow } from '../human-model/him-intelligence-snapshot.types';
 import type { HimBrainContextSourceRow } from '../human-model/him-brain-context.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
-import { MEMORY_SUBJECT_EMBED, withMemorySubject } from '../memory/memory-subject';
-import { MEMORY_TYPES } from '../memory/memory.types';
+import { MEMORY_SUBJECT_EMBED, MEMORY_TYPED_CONFIRMATION_EMBED, withMemorySubject } from '../memory/memory-subject';
+import { MEMORY_TYPES, MEMORY_SOURCES } from '../memory/memory.types';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
@@ -18,7 +18,7 @@ import { type BackgroundIntelligenceExecutionContext, isBackgroundIntelligenceEx
 const SESSION_FIELDS = 'id,status,channel';
 const TURN_FIELDS = 'id,session_id,role,status,source_turn_id';
 const SOURCE_TURN_FIELDS = `${TURN_FIELDS},content,processing_path,routing_reason`;
-const MEMORY_FIELDS = `id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id,${MEMORY_SUBJECT_EMBED}`;
+const MEMORY_FIELDS = `id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id,${MEMORY_SUBJECT_EMBED},${MEMORY_TYPED_CONFIRMATION_EMBED}`;
 const HYPOTHESIS_FIELDS = 'id,user_id,statement,type,domain,scope,origin,status,version,supporting_evidence_ids,contradicting_evidence_ids,competing_hypothesis_ids,assumptions,disconfirming_conditions,created_at,updated_at';
 // The canonical UUID shape, used only to fail closed on a malformed execution
 // identity before it can reach the service-role transport.
@@ -160,10 +160,12 @@ export class BackgroundIntelligenceDataApiService {
 
   // S8A-03 Open Understanding (0173): the owner's live Memories the capture may ground people on, restate, end, forget or
   // correct - at most forty, SELF and OTHER, with person labels. The source turn names the RUNNING execution.
+  // S8B-03 (0186, E5): v2 adds each item's source and whether a MACHINE_ASR item was later confirmed in typed text.
   async listKnownMemories(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<Array<{ memoryId: string; type: MemoryType; content: string;
-    subject: 'SELF' | 'OTHER' | 'UNATTRIBUTED'; personName: string | null; personRelation: string | null; temporal: string | null; ended: boolean; terms: string[] }>> {
+    subject: 'SELF' | 'OTHER' | 'UNATTRIBUTED'; personName: string | null; personRelation: string | null; temporal: string | null; ended: boolean; terms: string[];
+    source: MemorySource; confirmedByTyping: boolean }>> {
     this.assertExecutionContext(context);
-    const rows = await this.request<Array<Record<string, unknown>>>('rpc/background_known_memories_v1', {
+    const rows = await this.request<Array<Record<string, unknown>>>('rpc/background_known_memories_v2', {
       method: 'POST', body: JSON.stringify({ p_source_turn_id: context.sourceTurnId, p_limit: limit }),
     });
     if (!Array.isArray(rows) || rows.length > limit) throw new Error('BACKGROUND_UNDERSTANDING_KNOWN_INTEGRITY');
@@ -173,11 +175,13 @@ export class BackgroundIntelligenceDataApiService {
           !(MEMORY_TYPES as readonly string[]).includes(row.type) || typeof row.content !== 'string' ||
           !(row.subject === 'SELF' || row.subject === 'OTHER' || row.subject === 'UNATTRIBUTED') || !nullableText(row.person_name) ||
           !nullableText(row.person_relation) || !nullableText(row.temporal) || typeof row.ended !== 'boolean' ||
-          !Array.isArray(row.terms) || !row.terms.every((term) => typeof term === 'string')) {
+          !Array.isArray(row.terms) || !row.terms.every((term) => typeof term === 'string') ||
+          typeof row.source !== 'string' || !(MEMORY_SOURCES as readonly string[]).includes(row.source) || typeof row.confirmed_by_typing !== 'boolean') {
         throw new Error('BACKGROUND_UNDERSTANDING_KNOWN_INTEGRITY');
       }
       return { memoryId: row.memory_id, type: row.type as MemoryType, content: row.content, subject: row.subject, personName: row.person_name,
-        personRelation: row.person_relation, temporal: row.temporal, ended: row.ended, terms: row.terms as string[] };
+        personRelation: row.person_relation, temporal: row.temporal, ended: row.ended, terms: row.terms as string[],
+        source: row.source as MemorySource, confirmedByTyping: row.confirmed_by_typing };
     });
   }
 

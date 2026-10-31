@@ -1,3 +1,5 @@
+import { VoiceModule } from '../voice/voice.module';
+import { VOICE_NOTE_TURN_RUNNER, type VoiceNoteTurnRunner } from '../voice-media/voice-note-turn.port';
 import { Module } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
@@ -75,8 +77,10 @@ export const FOCUS_RESOLUTION_BINDING_FACTORY = Symbol('FOCUS_RESOLUTION_BINDING
 export const THREAD_ESTABLISHMENT_BINDING_FACTORY = Symbol('THREAD_ESTABLISHMENT_BINDING_FACTORY');
 export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDING_FACTORY');
 
+// S8B-03 (CP1): VoiceModule (the transcription worker and its port binding) is composed here because a committed Voice
+// Note's turn runs through ConversationService (VOICE_NOTE_TURN_RUNNER); its routes and repository arrive re-exported.
 @Module({
-  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule, InteractionPreferencesModule],
+  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule, InteractionPreferencesModule, VoiceModule],
   // QHIA-011A: the explicit session context activation entry is its own
   // authenticated controller. It is a separate product command surface, never
   // part of create-turn input and never reached from a normal turn.
@@ -170,6 +174,14 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
       ],
     },
     ConversationService,
+    // S8B-03: the one runner of a committed Voice Note turn - the same Orchestrator path as a typed turn.
+    {
+      provide: VOICE_NOTE_TURN_RUNNER,
+      useFactory: (conversations: ConversationService): VoiceNoteTurnRunner => ({
+        run: (userId, accessToken, sessionId, turnId) => conversations.runCommittedTurn(userId, accessToken, sessionId, turnId),
+      }),
+      inject: [ConversationService],
+    },
     // QHIA-011A: the narrow facade over the EXISTING QHIA-006 relevance
     // authority. HimModule already provides and exports
     // HimSessionContextBindingService and its one repository, so no second

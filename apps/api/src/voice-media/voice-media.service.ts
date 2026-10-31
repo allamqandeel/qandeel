@@ -115,6 +115,7 @@ export class VoiceMediaService {
     });
     if (begun === undefined) throw this.failed('upload', unavailable());
     if (begun.outcome === 'NOT_AVAILABLE_NOW' || begun.outcome === 'CONSENT_REQUIRED' || begun.outcome === 'TOO_LARGE') return this.refused(begun.outcome);
+    if (begun.outcome === 'ALREADY_ACCEPTED' && begun.recording_id) return this.replayAcceptedNote(userId, begun.recording_id, byteSize, body);
     if (begun.outcome !== 'BEGUN' || !begun.recording_id || !begun.storage_key) {
       this.signal('upload', 'refused_expected');
       throw notFound();
@@ -143,6 +144,69 @@ export class VoiceMediaService {
     }
     this.signal('upload', 'success');
     return { outcome: 'ACCEPTED', recordingId, acceptedAt: instant(accepted.accepted_at), availableUntil: instant(accepted.retention_expires_at) };
+  }
+
+  /**
+   * S8B-03 (§5.2, BLOCKER-1) — the same command replayed after its note was accepted (the answer was lost): the body is
+   * drained without storing it (no PUT), and accept v1's read-only STORED branch, scoped to the owner, returns the stored
+   * acceptance - the very values the first answer carried. A delete or expiry racing between the two calls answers 404,
+   * and nothing is ever discarded: the recording is not this request's.
+   */
+  private async replayAcceptedNote(userId: string, recordingId: string, byteSize: number, body: Readable): Promise<NoteUploadAnswer> {
+    await drain(body, byteSize);
+    const accepted = await this.repository.acceptNote(userId, recordingId, byteSize).catch(() => undefined);
+    if (accepted === undefined) throw this.failed('upload', unavailable());
+    const availableUntil = instant(accepted.retention_expires_at);
+    if (accepted.outcome !== 'ACCEPTED' || availableUntil === null || Date.parse(availableUntil) <= Date.now()) {
+      this.signal('upload', 'refused_expected');
+      throw notFound();
+    }
+    this.signal('upload', 'success');
+    return { outcome: 'ACCEPTED', recordingId, acceptedAt: instant(accepted.accepted_at), availableUntil };
+  }
+
+  /**
+   * S8B-03 (§4.10.3) — the transcription worker's ONLY way to a note's audio: the note's object re-read through the read
+   * definer for its owner at this instant (never a key the worker holds), as an async stream of exactly its bytes. Not
+   * readable now (deleted, expired, erased): null.
+   */
+  async openNoteForTranscription(userId: string, recordingId: string, signal: AbortSignal): Promise<{ readonly byteSize: number; readonly audio: AsyncIterable<Buffer> } | null> {
+    const note = await this.noteObject(userId, recordingId);
+    if (note === null) return null;
+    const body = await this.store.getRange(note.storage_key, null, signal);
+    if (body === null) throw this.failed('read', unavailable(), 'integrity_failure');
+    return { byteSize: Number(note.byte_size), audio: body as AsyncIterable<Buffer> };
+  }
+
+  /** S8B-03 (§4.6.2) — one bounded Range read of a readable note, for the duration proof. Not readable now: null. */
+  async readNoteRange(userId: string, recordingId: string, offset: number, length: number, signal: AbortSignal): Promise<Buffer | null> {
+    const note = await this.noteObject(userId, recordingId);
+    if (note === null) return null;
+    const size = Number(note.byte_size);
+    if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 || length <= 0 || offset >= size) return Buffer.alloc(0);
+    const body = await this.store.getRange(note.storage_key, { start: offset, end: Math.min(size, offset + length) - 1 }, signal);
+    if (body === null) throw this.failed('read', unavailable(), 'integrity_failure');
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of body as AsyncIterable<Buffer>) {
+      total += chunk.length;
+      if (total > length) {
+        body.destroy();
+        throw this.failed('read', unavailable(), 'integrity_failure');
+      }
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks, total);
+  }
+
+  private async noteObject(userId: string, recordingId: string): Promise<RecordingObjectRow | null> {
+    if (!UUID.test(recordingId)) return null;
+    if (!this.store.isConfigured()) throw this.failed('read', unavailable());
+    const rows = await this.repository.readObjects(userId, recordingId).catch(() => {
+      throw this.failed('read', unavailable());
+    });
+    const notes = (Array.isArray(rows) ? rows : []).filter((o) => o.track === 'NOTE');
+    return notes.length === 1 ? notes[0] : null;
   }
 
   /** The objects of one readable recording, in track and segment order - no key. Not readable now: 404. */
@@ -311,3 +375,16 @@ export class VoiceMediaService {
 }
 
 type VoiceMediaOperation = 'upload' | 'read' | 'delete' | 'export_file';
+
+/** Reads a request body to its end without keeping it, bounded by its declared length (§5.2: no second upload). */
+async function drain(body: Readable, byteSize: number): Promise<void> {
+  let seen = 0;
+  try {
+    for await (const chunk of body as AsyncIterable<Buffer>) {
+      seen += chunk.length;
+      if (seen > byteSize) break;
+    }
+  } catch {
+    // A client that goes away mid-drain changes nothing: the note is already accepted.
+  }
+}

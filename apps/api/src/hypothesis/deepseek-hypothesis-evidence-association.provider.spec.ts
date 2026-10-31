@@ -1,3 +1,4 @@
+import { MACHINE_ASR_SOURCE_GUIDANCE } from '../memory/machine-asr-model-copy';
 import { DeepSeekHypothesisEvidenceAssociationProvider } from './deepseek-hypothesis-evidence-association.provider';
 import type { HypothesisEvidenceAssociationDeepSeekConfig } from './hypothesis-evidence-association-provider.config';
 import { HypothesisEvidenceAssociationProviderError } from './hypothesis-evidence-association-provider.types';
@@ -90,5 +91,19 @@ describe('DeepSeekHypothesisEvidenceAssociationProvider', () => {
     }));
     await expect(new DeepSeekHypothesisEvidenceAssociationProvider({ ...config, timeoutMs: 10 }, clientOf(hanging)).propose(snapshot())).rejects.toEqual(new HypothesisEvidenceAssociationProviderError('TIMEOUT'));
     expect(hanging).toHaveBeenCalledTimes(1);
+  });
+
+  // S8B-03 (CP1, E5 / A15).
+  it('S8B-03 A15: a MACHINE_ASR fresh item carries its confirmation and M-01; a typed one is unchanged', async () => {
+    const typedCreate = jest.fn().mockResolvedValue(completion(null));
+    await new DeepSeekHypothesisEvidenceAssociationProvider(config, clientOf(typedCreate)).propose(snapshot()).catch(() => undefined);
+    expect(typedCreate.mock.calls[0][0].messages[0].content).not.toContain(MACHINE_ASR_SOURCE_GUIDANCE);
+    const voiceCreate = jest.fn().mockResolvedValue(completion(null));
+    const voiced = snapshot();
+    const fresh = { ...voiced.freshEvidence, source: 'MACHINE_ASR' as const, confirmedByTyping: false };
+    await new DeepSeekHypothesisEvidenceAssociationProvider(config, clientOf(voiceCreate)).propose({ ...voiced, freshEvidence: fresh }).catch(() => undefined);
+    const [system, user] = voiceCreate.mock.calls[0][0].messages;
+    expect(system.content).toContain(MACHINE_ASR_SOURCE_GUIDANCE);
+    expect(user.content).toContain('MACHINE_ASR');
   });
 });

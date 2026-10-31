@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import type { CreateMemoryInput, MemoryRecord, MemorySubject, MemoryType } from './memory.types';
 import { MemoryControlRepository } from './memory-control.repository';
-import { MEMORY_IMPORTANCE, MemoryWriteEvaluatorService, memoryDuplicateKeys, normalizeMemoryContent } from './memory-write-evaluator.service';
+import {
+  MEMORY_IMPORTANCE, MemoryWriteEvaluatorService, loadMachineAsrMemoryConfidence, memoryDuplicateKeys, normalizeMemoryContent,
+  type MachineAsrMemoryConfidence,
+} from './memory-write-evaluator.service';
 import {
   interpretMemoryControl, interpretNaturalReversal, memoryControlLanguage, readClarificationAnswer, readSubjectAnswer,
   screenMemorySubject, type ClarificationAnswer, type MemoryControlIntent, type MemorySubjectScreen, type SubjectAnswer,
@@ -10,10 +13,11 @@ import {
 import { distinctiveWords, resolveMemoryTarget, resolveReversalTarget, type MemoryTargetResolution } from './memory-control.resolution';
 import {
   alreadyCorrectReply, alreadyRememberedReply, clarificationReply, correctedReply, disabledReply, forgottenReply,
-  inspectReply, plainReply, rememberedReply, subjectQuestionReply, type MemoryControlLanguage,
+  inspectReply, notHeardClearlyReply, plainReply, rememberedReply, subjectQuestionReply, voiceCorrectionQuestion, voiceDisableQuestion,
+  voiceForgetQuestion, type MemoryControlLanguage,
 } from './memory-control.copy';
 import type {
-  MemoryControlKind, MemoryControlPlan, NaturalReversal, PendingCorrectionSubjectClarification, PendingMemoryClarification,
+  MemoryCommandVoiceReader, MemoryCommandVoiceSource, MemoryControlKind, MemoryControlPlan, NaturalReversal, PendingCorrectionSubjectClarification, PendingMemoryClarification,
   PendingSubjectClarification,
 } from './memory-control.types';
 
@@ -30,7 +34,15 @@ export interface MemoryControlTurn {
   content: string;
   /** The immediately preceding user words of this Session from the canonical context, when there are any. */
   previousUserContent?: string;
+  /**
+   * S8B-03 (E8): reads the voice source of this turn. Called only once a Memory command or answer has been planned, so an
+   * ordinary turn reads nothing; absent, every turn is typed exactly as before.
+   */
+  readVoiceSource?: MemoryCommandVoiceReader;
 }
+
+/** S8B-03 (E8): the remembered words a planned command names, kept beside the plan for the spoken confirmations. */
+const NAMED_WORDS = new WeakMap<MemoryControlPlan, { target: string; replacement?: string }>();
 
 /**
  * W3-MEGA-M (E2E-D-13) — the ONE Memory-control boundary of a Conversation turn.
@@ -50,7 +62,52 @@ export class MemoryControlService {
     private readonly evaluator: MemoryWriteEvaluatorService,
   ) {}
 
+  /** S8B-03 (E13): the P-1 band confidences, read once; the startup check proves they equal the database constants. */
+  private readonly machineAsrConfidence: MachineAsrMemoryConfidence = loadMachineAsrMemoryConfidence();
+
   async plan(turn: MemoryControlTurn, now = new Date()): Promise<MemoryControlPlan | null> {
+    const planned = await this.planTyped(turn, now);
+    if (!planned || !turn.readVoiceSource) return planned;
+    const source = await turn.readVoiceSource(planned.answersCommandId);
+    return this.voiced(planned, source, memoryControlLanguage(turn.content, turn.previousUserContent));
+  }
+
+  /**
+   * S8B-03 (CP1, E8, §4.9.4): a spoken command is executed by its band, and the database (finalize v2) enforces the same
+   * rules. A typed turn is unchanged, except that a typed answer to a question a voice message asked keeps the words of
+   * that message, so the Memory it writes is MACHINE_ASR at that message's band score.
+   *   - LOW: nothing changes (NOT_HEARD_CLEARLY, C-54); an inspection still answers.
+   *   - An answer to a question counts only from a typed or HIGH turn; MEDIUM / LOW change nothing (C-54).
+   *   - A spoken FORGET / DISABLE is never executed in the turn that says it: it asks the one-option confirmation
+   *     (C-55 / C-56), which only the next typed or HIGH turn can confirm.
+   *   - A spoken correction asking a one-option confirmation shows the old and the new words (C-57).
+   *   - REMEMBERED / CORRECTED are written at the band's exact score.
+   */
+  private voiced(plan: MemoryControlPlan, source: MemoryCommandVoiceSource, language: MemoryControlLanguage): MemoryControlPlan {
+    const words = NAMED_WORDS.get(plan);
+    const scored = (band: MemoryCommandVoiceSource['originBand']): MemoryControlPlan => (plan.newMemory && (band === 'HIGH' || band === 'MEDIUM')
+      ? { ...plan, newMemory: { ...plan.newMemory, confidence: this.machineAsrConfidence[band] } }
+      : plan);
+    if (source.turnBand === null) return scored(source.originBand);
+    if (plan.kind === 'INSPECT') return plan;
+    if (source.turnBand === 'LOW' || (plan.answersCommandId !== undefined && source.turnBand !== 'HIGH')) {
+      return { kind: plan.kind, outcome: 'NOT_HEARD_CLEARLY', candidateMemoryIds: [], reply: notHeardClearlyReply(language) };
+    }
+    if ((plan.outcome === 'FORGOTTEN' || plan.outcome === 'DISABLED') && plan.answersCommandId === undefined && plan.targetMemoryId && words) {
+      return {
+        kind: plan.kind, outcome: 'CLARIFICATION_REQUIRED', candidateMemoryIds: [plan.targetMemoryId],
+        reply: plan.kind === 'FORGET' ? voiceForgetQuestion(language, words.target) : voiceDisableQuestion(language, words.target),
+      };
+    }
+    if (plan.outcome === 'CLARIFICATION_REQUIRED' && plan.candidateMemoryIds.length === 1 && words) {
+      if (plan.kind === 'FORGET') return { ...plan, reply: voiceForgetQuestion(language, words.target) };
+      if (plan.kind === 'DISABLE') return { ...plan, reply: voiceDisableQuestion(language, words.target) };
+      if (plan.kind === 'CORRECT' && words.replacement !== undefined) return { ...plan, reply: voiceCorrectionQuestion(language, words.target, words.replacement) };
+    }
+    return scored(source.originBand);
+  }
+
+  private async planTyped(turn: MemoryControlTurn, now: Date): Promise<MemoryControlPlan | null> {
     // MEM-AR-01B: an explicit request first; otherwise a natural reversal («مبقتش …», «بطلت …», «بقيت …»), which is a
     // command only when it names the one remembered fact it reverses.
     const intent = interpretMemoryControl(turn.content) ?? interpretNaturalReversal(turn.content);
@@ -142,7 +199,7 @@ export class MemoryControlService {
           if (replacement.decision === 'SKIP' && replacement.reason === 'SENSITIVE_DATA') {
             return { kind: 'CORRECT', outcome: 'DECLINED_SENSITIVE', candidateMemoryIds: [], reply: plainReply(language, 'DECLINED_SENSITIVE') };
           }
-          return clarification('CORRECT', language, resolution.options);
+          return clarification('CORRECT', language, resolution.options, false, intent.replacement);
         }
         // Nothing remembered says the old value any more. QANDEEL says it already has the new one only when a Memory holds
         // it about the same person the words are about - established, never inferred: someone else's fact, or one whose
@@ -215,7 +272,7 @@ export class MemoryControlService {
     if (replacement.decision === 'SKIP' && replacement.reason === 'SENSITIVE_DATA') {
       return { kind: 'CORRECT', outcome: 'DECLINED_SENSITIVE', candidateMemoryIds: [], reply: plainReply(language, 'DECLINED_SENSITIVE') };
     }
-    return clarification('CORRECT', language, resolution.options);
+    return clarification('CORRECT', language, resolution.options, false, intent.replacement);
   }
 
   /**
@@ -419,16 +476,20 @@ function fallbackType(type: MemoryType): Exclude<MemoryType, 'DERIVED_INSIGHT'> 
 
 function clarification(
   kind: Exclude<MemoryControlKind, 'INSPECT' | 'REMEMBER'>, language: MemoryControlLanguage,
-  options: ReadonlyArray<MemoryRecord>, oneAtATime = false,
+  options: ReadonlyArray<MemoryRecord>, oneAtATime = false, replacement?: string,
 ): MemoryControlPlan {
-  return {
+  const plan: MemoryControlPlan = {
     kind, outcome: 'CLARIFICATION_REQUIRED', candidateMemoryIds: options.map(({ id }) => id),
     reply: clarificationReply(language, options.map(({ content }) => content), oneAtATime, options.map(({ subject }) => subject)),
   };
+  if (options.length === 1) NAMED_WORDS.set(plan, { target: options[0].content, ...(replacement !== undefined ? { replacement } : {}) });
+  return plan;
 }
 
 function lifecycleChange(kind: 'FORGET' | 'DISABLE', language: MemoryControlLanguage, target: MemoryRecord): MemoryControlPlan {
-  return kind === 'FORGET'
+  const plan: MemoryControlPlan = kind === 'FORGET'
     ? { kind, outcome: 'FORGOTTEN', targetMemoryId: target.id, candidateMemoryIds: [], reply: forgottenReply(language, target.content), replyIfChanged: plainReply(language, 'TARGET_CHANGED') }
     : { kind, outcome: 'DISABLED', targetMemoryId: target.id, candidateMemoryIds: [], reply: disabledReply(language, target.content), replyIfChanged: plainReply(language, 'TARGET_CHANGED') };
+  NAMED_WORDS.set(plan, { target: target.content });
+  return plan;
 }

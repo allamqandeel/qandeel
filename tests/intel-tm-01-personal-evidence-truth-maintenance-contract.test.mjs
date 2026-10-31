@@ -26,6 +26,7 @@ const readIfPresent = (path) => (existsSync(join(root, path)) ? read(path) : nul
 const MIGRATIONS = 'database/migrations';
 const M0151 = '0151_personal_evidence_truth_maintenance_v1.sql';
 const M0152 = '0152_memory_subject_identity_atomicity_v1.sql';
+const M0186 = '0186_s8b_03_personal_voice_notes_v1.sql';
 const RECORD = 'docs/e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md';
 const MARK = ' -- INTEL-TM-01 (0151)';
 const AR = Object.freeze({
@@ -58,7 +59,10 @@ const shipped = Object.freeze({
   // MEM-AR-01C (K-2): 0152 is the one later migration admitted to redefine the L1 / L3 predicates (CC-M2', CC-M3');
   // it is held to exactly that below, and every other migration still may not reference them.
   m0152: read(`${MIGRATIONS}/${M0152}`),
-  otherMigrationTexts: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql') && name !== M0151 && name !== M0152).map((name) => read(`${MIGRATIONS}/${name}`)).join('\n'),
+  // S8B-03 CP1 (2026-10-31, E2): 0186 is admitted to re-create L1 (`personal_evidence_standing_v1`) once, for MACHINE_ASR
+  // Evidence, and nothing else of L1 / L3; it is held to exactly that below.
+  m0186: read(`${MIGRATIONS}/${M0186}`),
+  otherMigrationTexts: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql') && name !== M0151 && name !== M0152 && name !== M0186).map((name) => read(`${MIGRATIONS}/${name}`)).join('\n'),
   api: apiSources(),
   mobileApi: read('apps/mobile/src/runtime-entry/understanding-api.ts'),
   mobileCopy: read('apps/mobile/src/understanding/copy.ts'),
@@ -102,6 +106,12 @@ function migrationViolations(world) {
   if (!standing || !core) out.push('0152 does not redefine both L1 and L3 as its Controlled Changes');
   if (/personal_evidence_standing_v1|hypothesis_evidence_change_core_v1/u.test(m0152.replace(standing, '').replace(core, ''))) out.push('0152 references the L1 / L3 predicates outside its two Controlled Changes');
   if (/\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.(?:reevaluate_withdrawn_hypothesis_evidence_core_v1|guard_hypothesis_evidence_link_removal_v1|guard_formal_question_binding_reliance_v1|select_formal_question_opportunity_v1)\b/u.test(m0152)) out.push('0152 redefines the housekeeping, the link guard, the bind guard or the selector');
+  // S8B-03 CP1 (E2): in 0186 L1 appears only inside its own one CREATE OR REPLACE body; L3 is not referenced at all.
+  const m0186 = code(world.m0186);
+  const l1Start = m0186.indexOf('CREATE OR REPLACE FUNCTION public.personal_evidence_standing_v1(');
+  const l1 = l1Start < 0 ? '' : m0186.slice(l1Start, m0186.indexOf('$$;', l1Start) + 3);
+  if (!l1) out.push('0186 does not re-create L1 as its E2');
+  if (/personal_evidence_standing_v1|hypothesis_evidence_change_core_v1/u.test(m0186.replace(l1, ''))) out.push('0186 references the L1 / L3 predicates outside its one E2 body');
   return out;
 }
 

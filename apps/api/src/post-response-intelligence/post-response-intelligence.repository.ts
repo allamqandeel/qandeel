@@ -44,7 +44,8 @@ export class PostResponseIntelligenceRepository{
  /** S8A-03 CP2 (migration 0171; v2 since S8A-03 Living Personal Memory, migration 0172; v3 since Open Understanding, migration 0173, CP2 amendment §10): the ONE atomic UNDERSTANDING_CAPTURE_PROVIDER command. Every verified Memory with its subject, profile, terms and - for someone else's fact - its person label, every backfill index row, every verified restatement / ending of an existing SELF or OTHER Memory, every verified forget and correction of an owned Memory, and the typed completion commit together or not at all; the database derives the owner, the Session and the source turn from the execution. COMPLETED means this call wrote the typed result; NO_OP means no RUNNING execution held the effect CLAIMED, so nothing was written. Anything else is a transport failure. */
  async completeUnderstandingCapture(id:string,command:PersonalUnderstandingCaptureCommandV3):Promise<'COMPLETED'|'NO_OP'>{
   const terms=[...command.items,...command.index,...command.corrections].flatMap(entry=>entry.terms.map(term=>({memoryId:entry.memoryId,term})));
-  const value=await this.request<unknown>('rpc/complete_post_response_personal_capture_v3',{method:'POST',body:JSON.stringify({p_execution_id:id,
+  // S8B-03 (0186, E6): v4 - the database reads the turn's voice source and decides source, score and the allowed operations.
+  const value=await this.request<unknown>('rpc/complete_post_response_personal_capture_v4',{method:'POST',body:JSON.stringify({p_execution_id:id,
    p_memory_ids:command.items.map(item=>item.memoryId),p_types:command.items.map(item=>item.type),p_contents:command.items.map(item=>item.content),
    p_importances:command.items.map(item=>item.importance),p_expires_at:command.items.map(item=>item.expiresAt),p_slots:command.items.map(item=>item.slot),
    p_temporals:command.items.map(item=>item.temporal),p_subjects:command.items.map(item=>item.subject),
@@ -55,7 +56,7 @@ export class PostResponseIntelligenceRepository{
    p_correct_memory_ids:command.corrections.map(c=>c.targetMemoryId),p_correct_new_ids:command.corrections.map(c=>c.memoryId),
    p_correct_types:command.corrections.map(c=>c.type),p_correct_contents:command.corrections.map(c=>c.content),
    p_correct_importances:command.corrections.map(c=>c.importance),p_correct_slots:command.corrections.map(c=>c.slot),
-   p_correct_temporals:command.corrections.map(c=>c.temporal)})});
+   p_correct_temporals:command.corrections.map(c=>c.temporal),p_confirmed_memory_ids:command.confirmed??[]})});
   if(value==='COMPLETED'||value==='NO_OP')return value;throw new Error('POST_RESPONSE_DATABASE_UNAVAILABLE');}
  async finish(id:string,state:'COMPLETED'|'SKIPPED'|'QUARANTINED'|'FAILED',outcome:string,stage:string):Promise<boolean>{return this.booleanRpc('finish_post_response_intelligence_execution_v1',{p_execution_id:id,p_state:state,p_outcome_code:outcome,p_stage:stage});}
  private async booleanRpc(name:string,body:Record<string,unknown>):Promise<boolean>{const value=await this.request<boolean>(`rpc/${name}`,{method:'POST',body:JSON.stringify(body)});return value===true;}

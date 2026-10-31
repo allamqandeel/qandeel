@@ -2,6 +2,7 @@
 // association array travels as `{ "associations": [...] }`; the schema (with the supplied hypothesis IDs as its enum) is in
 // the system instruction, and `parseResponse` / `validProposal` are the enforcement (exact keys, supplied IDs only, each
 // once, at most four), as they always also were. The snapshot validation and the instructions are unchanged.
+import { MACHINE_ASR_SOURCE_GUIDANCE } from '../memory/machine-asr-model-copy';
 import { EVIDENCE_KINDS } from '../memory/evidence.types';
 import { HYPOTHESIS_DOMAINS, HYPOTHESIS_TYPES, MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS, MAX_SCOPE_LENGTH, MAX_STATEMENT_LENGTH, MAX_STRUCTURED_TEXT_LENGTH } from './hypothesis.types';
 import { MAX_ASSOCIATION_HYPOTHESIS_CANDIDATES, MAX_ASSOCIATION_HYPOTHESIS_STRING_CHARACTERS, MAX_FRESH_EVIDENCE_ASSOCIATIONS, type HypothesisEvidenceAssociationProposal, type HypothesisEvidenceAssociationSnapshot } from './hypothesis-evidence-association.types';
@@ -20,7 +21,7 @@ export class DeepSeekHypothesisEvidenceAssociationProvider implements Hypothesis
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
       const response = await this.client.chat.completions.create(deepSeekJsonRequest({
-        instructions: INSTRUCTIONS,
+        instructions: snapshot.freshEvidence.source === 'MACHINE_ASR' ? `${INSTRUCTIONS} ${MACHINE_ASR_SOURCE_GUIDANCE}` : INSTRUCTIONS,
         schema: associationSchema(snapshot),
         data: `<association_data>${escapeDeepSeekData({ freshEvidence: snapshot.freshEvidence, candidateHypotheses: snapshot.candidateHypotheses, maxAssociationCount: snapshot.maxAssociationCount, schemaVersion: HYPOTHESIS_EVIDENCE_ASSOCIATION_PROVIDER_SCHEMA_VERSION })}</association_data>`,
         maxTokens: this.config.maxOutputTokens,
@@ -45,7 +46,7 @@ function parseResponse(value: unknown, snapshot: HypothesisEvidenceAssociationSn
 }
 function validProposal(value: unknown, ids: ReadonlySet<string>): value is HypothesisEvidenceAssociationProposal { if (!value || typeof value !== 'object' || Array.isArray(value)) return false; const item = value as Record<string, unknown>; return Object.keys(item).length === 2 && typeof item.hypothesisId === 'string' && ids.has(item.hypothesisId) && (item.evidenceRole === 'SUPPORTING' || item.evidenceRole === 'CONTRADICTING'); }
 function validSnapshot(value: HypothesisEvidenceAssociationSnapshot): boolean { if (!value || value.contractVersion !== HYPOTHESIS_EVIDENCE_ASSOCIATION_CONTRACT_VERSION || value.maxAssociationCount !== MAX_FRESH_EVIDENCE_ASSOCIATIONS || !validEvidence(value.freshEvidence) || !Array.isArray(value.candidateHypotheses) || value.candidateHypotheses.length === 0 || value.candidateHypotheses.length > MAX_ASSOCIATION_HYPOTHESIS_CANDIDATES) return false; const ids = value.candidateHypotheses.map((candidate) => candidate.hypothesisId); return new Set(ids).size === ids.length && value.candidateHypotheses.every(validCandidate) && value.candidateHypotheses.reduce((total, candidate) => total + candidate.statement.length + candidate.scope.length + candidate.assumptions.reduce((sum, item) => sum + item.length, 0) + candidate.disconfirmingConditions.reduce((sum, item) => sum + item.length, 0), 0) <= MAX_ASSOCIATION_HYPOTHESIS_STRING_CHARACTERS; }
-function validEvidence(value: HypothesisEvidenceAssociationSnapshot['freshEvidence']): boolean { return !!value && /^memory:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu.test(value.evidenceId) && EVIDENCE_KINDS.includes(value.evidenceKind) && validText(value.statement, MAX_STATEMENT_LENGTH) && (value.source === 'USER_STATED' || value.source === 'USER_CONFIRMED'); }
+function validEvidence(value: HypothesisEvidenceAssociationSnapshot['freshEvidence']): boolean { return !!value && /^memory:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu.test(value.evidenceId) && EVIDENCE_KINDS.includes(value.evidenceKind) && validText(value.statement, MAX_STATEMENT_LENGTH) && (value.source === 'USER_STATED' || value.source === 'USER_CONFIRMED' || value.source === 'MACHINE_ASR'); }
 function validCandidate(value: HypothesisEvidenceAssociationSnapshot['candidateHypotheses'][number]): boolean { return !!value && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/iu.test(value.hypothesisId) && Number.isSafeInteger(value.hypothesisVersion) && value.hypothesisVersion > 0 && validText(value.statement, MAX_STATEMENT_LENGTH) && HYPOTHESIS_TYPES.includes(value.type) && HYPOTHESIS_DOMAINS.includes(value.domain) && validText(value.scope, MAX_SCOPE_LENGTH) && validTextList(value.assumptions, MAX_ASSUMPTIONS) && validTextList(value.disconfirmingConditions, MAX_DISCONFIRMING_CONDITIONS) && typeof value.alreadySupporting === 'boolean' && typeof value.alreadyContradicting === 'boolean'; }
 function validText(value: unknown, max: number): boolean { return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max; }
 function validTextList(value: unknown, max: number): boolean { return Array.isArray(value) && value.length <= max && new Set(value).size === value.length && value.every((item) => validText(item, MAX_STRUCTURED_TEXT_LENGTH)); }

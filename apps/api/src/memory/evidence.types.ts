@@ -18,7 +18,10 @@ export interface EvidenceItem {
   evidenceKind: EvidenceKind;
   memoryType: Exclude<MemoryType, 'DERIVED_INSIGHT'>;
   statement: string;
-  source: Extract<MemorySource, 'USER_STATED' | 'USER_CONFIRMED'>;
+  /** S8B-03 (E3): MACHINE_ASR is evidence too (0186 E1), and its source travels with it to every model boundary (E5). */
+  source: Extract<MemorySource, 'USER_STATED' | 'USER_CONFIRMED' | 'MACHINE_ASR'>;
+  /** S8B-03 (E5): present on a MACHINE_ASR item only - whether the user later confirmed it in typed text. */
+  confirmedByTyping?: boolean;
   /** Memory extraction confidence; it is not truth probability. */
   confidence: number;
   /** Memory utility metadata; it is not evidential strength. */

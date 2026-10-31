@@ -1,5 +1,6 @@
+import { VoiceNotesRepository } from '../voice-media/voice-notes.repository';
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Inject, Injectable, ServiceUnavailableException, Optional } from '@nestjs/common';
 import { MODEL_ROUTER, type ModelRouter, type ProcessingPath } from '../model-router/model-router.types';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn, OrchestratedTurnResult } from './conversation.types';
@@ -105,6 +106,8 @@ export class ConversationOrchestratorService {
     private readonly telemetry:TelemetryService,
     private readonly memoryControl: MemoryControlService,
     private readonly interactionPreferences: InteractionPreferencesService,
+    // S8B-03 (CP1, E8): the voice source of a Memory command; absent (tests, no voice module), every turn is typed.
+    @Optional() private readonly voiceNotes?: VoiceNotesRepository,
   ) {}
 
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
@@ -204,12 +207,15 @@ export class ConversationOrchestratorService {
         const memoryControl = await this.engine('memory_control',selection.path,()=>this.memoryControl.plan({
           accessToken, userId, sessionId: userTurn.session_id, sourceTurnId: userTurn.id, content: userTurn.content,
           ...(previousUserContent !== undefined ? { previousUserContent } : {}),
+          // S8B-03 (E8): read only once a Memory command is planned; the database re-checks the band under its locks.
+          ...(this.voiceNotes ? { readVoiceSource: (answersCommandId: string | undefined) => this.voiceNotes!.memoryCommandVoice(userId, userTurn.session_id, userTurn.id, answersCommandId) } : {}),
         }));
         if (memoryControl) {
           const finalized = await this.repository.finalizeMemoryControlTurn({
             sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), plan: memoryControl,
           });
           if (!finalized) return this.currentResult(accessToken, userId, claimed);
+          if (memoryControl.outcome === 'NOT_HEARD_CLEARLY') this.telemetry.recordOperationalOutcome('VOICE_MEMORY_COMMAND_NOT_HEARD', 'memory_command', 'not_heard');
           this.telemetry.recordTurnOutcome('completed',selection.path);
           return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
         }

@@ -12,6 +12,8 @@ export interface FreshEvidenceAssociationItem {
   evidenceKind: EvidenceItem['evidenceKind'];
   statement: string;
   source: EvidenceItem['source'];
+  /** S8B-03 (E5): present on a MACHINE_ASR item only. */
+  confirmedByTyping?: boolean;
 }
 
 export interface HypothesisEvidenceAssociationCandidate {

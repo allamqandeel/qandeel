@@ -46,7 +46,8 @@ export interface PersonalKnowledgePicture {
   readonly historical: ReadonlySet<string>;
 }
 
-const STATED_SOURCES = new Set(['USER_STATED', 'USER_CONFIRMED']);
+// S8B-03 (E10): the personal knowledge picture includes what the user said by voice, with its source.
+const STATED_SOURCES = new Set(['USER_STATED', 'USER_CONFIRMED', 'MACHINE_ASR']);
 
 /** Whether a Memory is history, not the present: ended by the user, PAST in its index, or said in the past tense. */
 export function isHistoricalKnowledge(row: Pick<PersonalKnowledgeSource, 'ended' | 'temporal' | 'content'>): boolean {
