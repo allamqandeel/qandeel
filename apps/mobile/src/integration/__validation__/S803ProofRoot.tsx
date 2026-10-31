@@ -64,7 +64,26 @@ export function S803ProofRoot() {
   useEffect(() => {
     const foreground = createAppStateForegroundSignal();
     const recorder = createExpoVoiceRecorderPort();
-    const made = createVoiceNoteCapture({ owner: OWNER_A, sessionId: SESSION, recorder, store, foreground, newId: uuid, screen: createCaptureScreenHold() });
+    // The capture's awaited platform calls, traced by name and outcome word only (never a path): a capture that stays
+    // at STARTING shows which call never returned (iOS run 41229713390: STARTING for 90 s, no later state).
+    const traced = <T,>(name: string, call: () => Promise<T>, word: (value: T) => string) => async (): Promise<T> => {
+      say(`PORT ${name}…`);
+      try {
+        const value = await call();
+        say(`PORT ${name} ${word(value)}`);
+        return value;
+      } catch (error) {
+        say(`PORT ${name} threw`);
+        throw error;
+      }
+    };
+    const port = {
+      ...recorder,
+      permission: traced('permission', recorder.permission, (value) => value),
+      requestPermission: traced('requestPermission', recorder.requestPermission, (value) => value),
+      prepare: traced('prepare', recorder.prepare, () => 'ok'),
+    };
+    const made = createVoiceNoteCapture({ owner: OWNER_A, sessionId: SESSION, recorder: port, store, foreground, newId: uuid, screen: createCaptureScreenHold() });
     capture.current = made;
     // Each capture that really began recording gets the next number, so a step can prove a NEW capture (`RECORDING #2`)
     // instead of matching a line an earlier capture left on screen. The draft's first 8 characters tie its RECORDING,

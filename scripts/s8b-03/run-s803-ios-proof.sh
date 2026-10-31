@@ -64,7 +64,7 @@ xcrun simctl install "$UDID" "$APP" || fail "install"
   echo "simulator: $UDID / $(xcrun simctl list devices | grep "$UDID" | head -n 1 | sed 's/^ *//')"
   echo "app: $APP"
 } | tee -a "$SUMMARY"
-echo "MAESTRO_DRIVER_STARTUP_TIMEOUT=${MAESTRO_DRIVER_STARTUP_TIMEOUT:-unset (Maestro's default)}" | tee -a "$SUMMARY"
+echo "MAESTRO_DRIVER_STARTUP_TIMEOUT=${MAESTRO_DRIVER_STARTUP_TIMEOUT:-unset, the Maestro default}" | tee -a "$SUMMARY"
 DRIVER_START="$(date +%s)"
 if ! $BOUND --seconds 300 --label driver-readiness --out "$OUT" --quiet -- maestro --device "$UDID" hierarchy --compact; then
   note "driver-readiness: no answer after $(( $(date +%s) - DRIVER_START )) s"
