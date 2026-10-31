@@ -223,6 +223,10 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AI-09` | Text Inside One Participant's Shared Message Can Pose as Another Participant Speaking | `S8A-02 — QANDEEL Conversational Personality & DeepSeek Real-Model Quality` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-CI-03` | Android API 36 Emulator Boot Smoke: GitHub Runner Emulator Infrastructure (PO-WAIVED) | `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PUB-REV-01` | Published Topic Revisions and Version-Continuous Public Discussion (PRE-LAUNCH BLOCKER) | `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-VOICE-02` | Personal Voice Note Gate-Opening Conditions: the Open External Proof Conditions PC-S1 … PC-S7 and PC-D | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-VOICE-03` | A Real Android Recording Refused by the Voice Note Duration Proof (First AAC Frame of 1792 Ticks) | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-VOICE-04` | Personal Voice Note Physical-Device Proof List (Call, Headset, TalkBack / VoiceOver, Sign-out Cycle, Backup Run, C-53, iOS Device) | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-MOB-01` | Local `expo-sqlite` Stores Fail After BACK and a Relaunch in the Same Process (`NullPointerException`) | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -481,6 +485,7 @@ happens to reversible history — are defined here.
 
   **Engineering completion of S8B-02 is not user readiness:** no user can record, hear or export voice until those tasks and the gates' own launch decisions. No item is admitted or tombstoned.
 - **Current truth (S8B-03 CP1, 2026-10-31; a Draft pull request from `s8b/s8b-03-cp1`, from `main` at `a3b04d7a`; effective from its merge):** worked and **not delivered**. S8B-03 CP1 delivers the Voice Note server side and the governed `MACHINE_ASR` → Fresh Evidence decision S8B-02 left to it ([S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md); [controlled amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-03_MACHINE_ASR_FRESH_EVIDENCE_CONTROLLED_AMENDMENT_v1.0.md)): migration `0186` (not hosted), the transcription lifecycle, the batch port and the Speechmatics adapter (proven against loopback fakes only), the duration proof, the voice turn through the unchanged Orchestrator, and the consent text `VOICE_RECORDING_V1` approved verbatim. S8B-02's §11.8 / §11.9 obligations on S8B-03 are met on the server: `voice.module` and the consent text; the recorder and the voice file saver remain CP2's. Every voice gate stays `DISABLED`; `PC-S1 … PC-S7` / `PC-D` remain gate conditions. No item is admitted or tombstoned.
+- **Current truth (S8B-03 CP2, S8B-03's closing change, 2026-10-31; a Draft pull request from `s8b/s8b-03-cp2`, from `main` at `e68ca146` (CP1 merged through PR #370); effective from its merge):** worked and **not delivered**. S8B-03 now provides the Personal Voice Note end to end, closed by its gate: the recorder (`expo-audio`, AAC-LC mono 16 kHz 32 kbps, foreground only), the private local draft with its narrow backup exclusion, upload / processing / commit / recovery, the slab with the Timeline-language player, consent before the first note, Settings and the voice file saver, the native Voice Note gate in Mobile CI, and the device proof on the Product Owner's Android phone and the iOS Simulator ([S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §9 … §14). All 60 Copy Gate rows are approved. **Admitted at this closure:** `QAN-BL-VOICE-02` (the external proof conditions), `QAN-BL-VOICE-03` (the duration proof refuses Android's software-encoder first frame), `QAN-BL-VOICE-04` (the physical-device list), `QAN-BL-MOB-01` (`expo-sqlite` after BACK). **Remaining under this item:** S8B-04 Speech Rendering; S8B-05 the Live Call gateway; S8B-06 AEC and barge-in; S8B-07 Replay audio; S8B-08 cost, privacy and launch evidence with `VOICE-02` … `04`; `HOSTED-DEPLOY-01` the hosted store and `0186`. Every voice gate stays `DISABLED`; no user can record a Voice Note until those and the gate's launch decision.
 - **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
@@ -3417,6 +3422,95 @@ part of S8A-04's scope, and nothing here authorizes implementation (BG-07).
 Admitted by `S8A-05` at its closing change (CP4) under BG-08 / BG-06, as the Product Owner directed on 2026-10-27.
 Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-VOICE-02` — Personal Voice Note Gate-Opening Conditions: the Open External Proof Conditions PC-S1 … PC-S7 and PC-D
+
+- **Title / Finding:** S8B-03's Voice Note is engineered and proven against fakes; the provider-side facts it relies on
+  are not proven, because each needs a paid live run (OD-10) or the production account. They are conditions on opening
+  `PERSONAL_VOICE_NOTE`, not proofs:
+  - PC-S1 / S1b — Speechmatics' real job deletion (200 / 404 / 410 / 423) and its verification;
+  - PC-S2 — `tracking.reference` survives and the job list is complete;
+  - PC-S3 — `ar_en` with `enhanced` is accepted in Batch;
+  - PC-S4 — the provider's job duration against the locally proven duration, on real files;
+  - PC-S5 — per-word confidence exists and its scale (without it every band is LOW);
+  - PC-S6 — the Batch EU endpoint;
+  - PC-S7 — no training and the retention terms on the production account;
+  - PC-D — DeepSeek's behaviour on M-02 / M-03 (recorded, not a gate condition by itself).
+- **Source:** contract v1.2 §8.4; [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §7 and §13.
+- **Why deferred:** each needs a separately authorized paid run or the production account; the Product Owner authorized
+  neither (OD-10 not run). Until each is closed the safe behaviour of record §7 holds and the gate stays `DISABLED`.
+- **Owner task:** `S8B-08 — Voice Cost, Privacy & Launch Evidence` (the gate-opening evidence of Stage 8B).
+- **Severity:** `HIGH` — the gate must not open without them.
+- **Reopen condition:** before `PERSONAL_VOICE_NOTE` (or `SHARED_VOICE_NOTE`) opens, or when an OD-10 run is authorized.
+- **Required future properties:** each condition proven on the production account or a live run, its evidence recorded,
+  and the safe behaviour kept for any condition not proven (PC-S2's conservative path may stay for good).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06. Nothing here authorizes implementation
+(BG-07).
+
+### `QAN-BL-VOICE-03` — A Real Android Recording Refused by the Voice Note Duration Proof (First AAC Frame of 1792 Ticks)
+
+- **Title / Finding:** Android's software AAC path (MPEG4Writer; seen on the API 36 emulator through S8B-03's shipped
+  capture) writes the first sample of a Voice Note as **1792** ticks and every later one as 1024. Contract v1.2 §4.6.2
+  step 4 accepts 1024 only, except the last entry, so the CP1 prover refuses the file `AUDIO_CONTAINER_INCONSISTENT`:
+  the note fails for good with C-29 and is never transcribed. The Product Owner's HONOR phone wrote 1024 throughout and
+  every file was `PROVEN`, so the loss is device-dependent and its spread is unknown.
+- **Source:** [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §11 (B5) and §12; `apps/api/src/voice/m4a/m4a-device-fixtures.spec.ts` with the
+  three emulator files in `apps/api/fixtures/voice-m4a/` (silence), which pins the current verdict.
+- **Why deferred:** the rule is the approved contract's (BLOCKER-3), not an implementation choice; widening it is a
+  Product / contract decision that S8B-03 may not take, and no user can record while the gate is closed.
+- **Owner task:** `S8B-08 — Voice Cost, Privacy & Launch Evidence`, through a controlled amendment of contract §4.6.2 decided by the Product Owner.
+- **Severity:** `HIGH` — on affected devices every Voice Note would be lost to C-29.
+- **Reopen condition:** before `PERSONAL_VOICE_NOTE` opens; earlier on the Product Owner's order or a device report.
+- **Required future properties:** a decided rule for an encoder's first frame (for example a first delta within
+  `[1024, 1024 + frameSamples]`, the duration still counted from the sample table, consistency with `mdhd` / `tkhd` /
+  `mvhd` kept); the fixtures' expected verdict flipped by that amendment and no other prover rule weakened; a census of
+  devices or encoders in the release-readiness proof.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06. Nothing here authorizes implementation
+(BG-07).
+
+### `QAN-BL-VOICE-04` — Personal Voice Note Physical-Device Proof List (Call, Headset, TalkBack / VoiceOver, Sign-out Cycle, Backup Run, C-53, iOS Device)
+
+- **Title / Finding:** what S8B-03's device proof could not prove (contract §8.3 limits): an incoming call and a headset
+  unplug during a recording on a device (jest proves the interruption and route-change paths); TalkBack and VoiceOver
+  (no system accessibility setting was changed on the Product Owner's phone); a real sign-out / sign-in cycle and an
+  on-device backup / device-transfer run (the store isolation and the shipped backup rules are proven); C-53
+  (`FAILED_REMAINS`) on a device (jest only); on iOS, a real microphone and prompt, sound quality and container
+  integrity after a force-quit (the simulator records silence).
+- **Source:** [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §11; contract v1.2 §8.3 («تُسجَّل في قائمة Stage 9 التي يقبلها S8B-08»).
+- **Why deferred:** each needs hardware, a system setting or a device state outside S8B-03's authorized proof.
+- **Owner task:** `S8B-08 — Voice Cost, Privacy & Launch Evidence`, which accepts the Stage 9 physical-device list.
+- **Severity:** `HIGH` — release-readiness evidence for a user-facing capture surface.
+- **Reopen condition:** before `PERSONAL_VOICE_NOTE` opens, or when a physical-device validation pass is scheduled.
+- **Required future properties:** each item proven on a physical Android and iOS device with recorded evidence, or
+  accepted as a stated limit by the Product Owner.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06. Nothing here authorizes implementation
+(BG-07).
+
+### `QAN-BL-MOB-01` — Local `expo-sqlite` Stores Fail After BACK and a Relaunch in the Same Process (`NullPointerException`)
+
+- **Title / Finding:** on the Product Owner's Android phone, after BACK finished the activity and the app was reopened in
+  the same process, a `SQLiteStorage` opened earlier rejected (`NativeDatabase.prepareAsync` / `execAsync` →
+  `NullPointerException`). The Voice Note capture then failed at `store.begin` silently: no draft, no message (writing
+  stayed available). A force-stop and relaunch cleared it. The same open-once pattern serves other local stores
+  (appearance, the push device store, auth, recovery); it was not reproduced there.
+- **Source:** [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §12 (seen once during the CP2 device proof, 2026-10-31).
+- **Why deferred:** pre-existing and app-wide in pattern, not a Voice Note rule; its fix (reopening a handle the native
+  side has released, or holding stores per activity) touches every local store and needs its own proof.
+- **Owner task:** `Stage 9 — Economy + Launch Closure (release-readiness gate)`.
+- **Severity:** `HIGH` — a silent loss of a local write.
+- **Reopen condition:** before any release build, or earlier on a reproduction in another store.
+- **Required future properties:** every `expo-sqlite` store survives BACK + relaunch in one process (proven on a device),
+  a failed local write is never silent, and no store loses data.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06. Nothing here authorizes implementation
+(BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4156,15 +4250,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 44 |
+| `DEFERRED — OWNED` | 48 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 8 |
 | `CLOSED — TOMBSTONE` | 33 |
-| **Total** | **89** |
+| **Total** | **93** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 52 |
+| `HIGH` | 56 |
 | `MEDIUM` | 35 |
 | `LOW` | 2 |
 
@@ -5580,6 +5674,21 @@ merge).** CP1 is not S8B-03's closing change, so BG-08 is not run here. It admit
   `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06` and `QAN-BL-CI-01` / `02` / `03`.
 - **Index unchanged: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
 
+**S8B-03 CP2 — the closing change (2026-10-31; a Draft pull request from `s8b/s8b-03-cp2`, from `main` at `e68ca146`,
+the merge of PR #370; effective from its merge).** BG-08 is run here ([S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §13).
+
+- **BG-08 — `QAN-BL-VOICE-01` reconciled:** worked by S8B-03 and **not delivered**; owner, severity and status unchanged;
+  a current-truth note is added in §5.
+- **Admitted (BG-06), each with the complete schema in §5:** `QAN-BL-VOICE-02` (PC-S1 … PC-S7, PC-D), `QAN-BL-VOICE-03`
+  (the duration proof and Android's 1792-tick first frame), `QAN-BL-VOICE-04` (the physical-device list), all three
+  owned by S8B-08; `QAN-BL-MOB-01` (`expo-sqlite` after BACK), owned by Stage 9's release-readiness gate. The contract's
+  closure clause (§8.2) requires the unclosed PC-S conditions to be admitted as gate-opening conditions with a named owner.
+- **Read and left unchanged:** `QAN-BL-PROD-06` / `08` (`0186` not hosted), `QAN-BL-AI-01`, `QAN-BL-AI-03`,
+  `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06`, `QAN-BL-PRIV-05`, `QAN-BL-SEC-01` (the app-wide `allowBackup`, untouched) and
+  `QAN-BL-CI-01` / `02` / `03`.
+- **BG-09:** the S8B-03 record carries S8B-03's closing state; so do the three locators.
+- **Index at S8B-03's closing change: 93 items; 48 / 4 / 8 / 33 by status, 56 / 35 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5686,12 +5795,13 @@ Inherited after T-12 closure reconciliation:
 | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` — authorized by the Product Owner (2026-10-12; D-1 … D-4, Copy Gate 6 / 6); delivered for both Worlds under the ACE-SP-01 controlled amendment and tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-ACE-02`'s validation set extended (D-4; owner and status unchanged); admitted `QAN-BL-GOV-01`; `QAN-BL-CW-02`, `QAN-BL-IP-01` and `QAN-BL-MATCH-01` reconciled with owners unchanged |
 | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `QAN-BL-GOV-01` (admitted by ACE-SP-01; owner name APPROVED by the Product Owner, 2026-10-12 — *as first written: "owner name proposed for the Product Owner's confirmation"*) — delivered; tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-CW-03` tombstoned retroactively for SHARED-VIS-01; Issue #322 not admitted (a Product Owner decision); none admitted |
 | `Stage 6 — Matching & Introductions Kickoff (WP0)` | none — no item names it; research and planning only, no implementation; `QAN-BL-MATCH-01` left with `S6-01`, unchanged (S6-01 not resumed); `QAN-BL-ACCT-01` and `QAN-BL-PROD-06` observed, reopen conditions not fired; admitted `QAN-BL-LAUNCH-04` (Issue #322) at the Product Owner's explicit approval; inherited and adjacent items mapped to the proposed Stage 6 tasks for Product Owner review only ([WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §8); proposed admissions found by WP0 (record §8.5: the Introduction-phase account-Name leak; the Stage 8A Matching conclusion producer, AI-COST family and eval suite; conditional others) await the Product Owner's GATE-03 decision — none admitted. *Product Owner Tier 0 decision (2026-10-13), same PR:* GATE-01 … GATE-03 approved; admitted `QAN-BL-MATCH-02` (owner `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary`) and `QAN-BL-MATCH-03` (owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`); the conditional findings not admitted; `QAN-BL-MATCH-01` unchanged. *Product Owner final approval package (2026-10-13), same PR:* every remaining gate decided as approved Product intent, direction or initial policy proposal, none authorizing implementation; the seven-task Stage 6 map approved as planning direction; admitted `QAN-BL-PRIV-04` (owner `S6-07 — Activity, Direct Entry and Final Integration`, WP0's assignment awaiting the Product Owner's confirmation) at GATE-19; no Task Contract written. *Product Owner final decision addendum (2026-10-13), same PR:* `QAN-BL-PRIV-04`'s owner and `HIGH` confirmed (D2); admitted `QAN-BL-PRIV-05` (owner `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts`, D5); `QAN-BL-ACCT-01` unchanged, with a dated D3 note (`ACCT-DEL-01` provisional, not yet admitted); GATE-16 resolved (D1; CA-09 identified, not implemented); the default language of generated conversation (D4) and the LANG / S6 workstreams (D6) recorded; no Task Contract written |
-| `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `QAN-BL-LAUNCH-04` (admitted by the Stage 6 WP0 at the Product Owner's approval, 2026-10-13; an earlier explicit validation owner may take it when a physical Android device is available, recorded as a re-owning); `QAN-BL-LAUNCH-05` (admitted by S6-06's closing change; listed here by S6-07); `QAN-BL-LAUNCH-06` (admitted by S6-07's closing change, 2026-10-18: the export folder save on iOS, physical Android devices and read-only places); `QAN-BL-AI-03` (admitted by S8A-01 at CP2; listed here by its closing change) |
+| `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `QAN-BL-LAUNCH-04` (admitted by the Stage 6 WP0 at the Product Owner's approval, 2026-10-13; an earlier explicit validation owner may take it when a physical Android device is available, recorded as a re-owning); `QAN-BL-LAUNCH-05` (admitted by S6-06's closing change; listed here by S6-07); `QAN-BL-LAUNCH-06` (admitted by S6-07's closing change, 2026-10-18: the export folder save on iOS, physical Android devices and read-only places); `QAN-BL-AI-03` (admitted by S8A-01 at CP2; listed here by its closing change); `QAN-BL-MOB-01` (admitted by S8B-03's closing change, 2026-10-31) |
 | `LANG-01 — Arabic Language Authority & Fixed Copy Correction` | none — no item names it (kickoff, 2026-10-13; the LANG workstream of the Stage 6 WP0 final decision addendum, D6); `QAN-BL-VOICE-01` receives V-01 … V-03 as approved editorial references with its fields unchanged; `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-ACE-02`, `QAN-BL-MATCH-01`, `QAN-BL-MATCH-02` and `QAN-BL-PRIV-04` observed and left unchanged; none admitted at kickoff; the SW-07 `fill()` defect is tracked by the [LANG-01 record](e2e/QANDEEL_LANG_01_ARABIC_LANGUAGE_AUTHORITY_FIXED_COPY_CORRECTION_RECORD_v1.md) §9 and reconciled at its closure |
 | `Stage 8B — Voice Runtime` | `QAN-BL-VOICE-01` (re-owned from `UNASSIGNED` by S8B-01 CP1, 2026-10-28, under the Product Owner's S8B-00 decision D-1) |
 | `S8B-01 — Voice Runtime Contract & Provider Evidence` | none owned by its own name at kickoff (2026-10-28, from `main` at `8b476114`); it works `QAN-BL-VOICE-01` for Stage 8B; the Stage 8A items read and left as they stand; *CP1 (merged through PR #364 as `de774cfd`):* re-owned `QAN-BL-VOICE-01` to `Stage 8B — Voice Runtime`; admitted and tombstoned nothing; *CP2 (merged through PR #365 as `47121434`):* admitted and tombstoned nothing; *CP3, the closing change (2026-10-30, from `main` at `47121434`; effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B; admitted and tombstoned nothing; *merged through PR #366 as `c65b878c` (2026-10-30; recorded by S8B-02 CP1)* |
 | `S8B-02 — Voice Foundation` | none owned by its own name at kickoff (BG-05, 2026-10-30, from `main` at `c65b878c`, S8B-01 merged through PR #366); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` / `09` / `10` (`HOSTED-DEPLOY-01`), `QAN-BL-ACCT-01` (`ACCT-DEL-02`), `QAN-BL-ACCT-03` (Stage 9), `QAN-BL-PRIV-05` (`PRIV-EXPORT-01`), `QAN-BL-AI-01` / `AI-05` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02` (Stage 8A, `VALIDATION — OPEN`), `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03` / `05`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-30, on `s8b/s8b-02-cp1`; merged through PR #367 as `f0d8ed1a`, recorded by CP2):* admitted and tombstoned nothing; these two Stage 8B rows moved here from §4, where they had been written into the index by mistake (contract I-10); *CP2, the closing change (2026-10-30, from `main` at `f0d8ed1a`; a local commit, effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B (current-truth note); a dated note on `QAN-BL-PROD-08` (D-8); admitted and tombstoned nothing |
-| `S8B-03 — Personal Voice Notes` | none owned by its own name at kickoff (BG-05, 2026-10-31, from `main` at `a3b04d7a`, S8B-02 merged through PR #368); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` (`HOSTED-DEPLOY-01`), `QAN-BL-AI-01` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-31, a Draft pull request from `s8b/s8b-03-cp1`; effective from its merge):* admitted and tombstoned nothing; a current-truth note on `QAN-BL-VOICE-01`; S8B-03 not closed |
+| `S8B-03 — Personal Voice Notes` | none owned by its own name at kickoff (BG-05, 2026-10-31, from `main` at `a3b04d7a`, S8B-02 merged through PR #368); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` (`HOSTED-DEPLOY-01`), `QAN-BL-AI-01` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-31, a Draft pull request from `s8b/s8b-03-cp1`; effective from its merge):* admitted and tombstoned nothing; a current-truth note on `QAN-BL-VOICE-01`; S8B-03 not closed; *CP2, the closing change (2026-10-31, a Draft pull request from `s8b/s8b-03-cp2` from `main` at `e68ca146`; effective from its merge):* `QAN-BL-VOICE-01` reconciled (worked, not delivered; a current-truth note); admitted `QAN-BL-VOICE-02` / `03` / `04` (S8B-08) and `QAN-BL-MOB-01` (Stage 9); tombstoned nothing; S8B-03 CLOSED, not merged |
+| `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `QAN-BL-VOICE-02`, `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (admitted by S8B-03's closing change, 2026-10-31) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

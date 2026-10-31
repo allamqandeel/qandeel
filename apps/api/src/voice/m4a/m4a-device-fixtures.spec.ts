@@ -17,10 +17,11 @@ import { proveM4aAudioDuration } from './m4a-audio-duration';
  * Android's software AAC path (MPEG4Writer) gives the FIRST sample the encoder's start offset: stts = [1 × 1792] then
  * n × 1024. Contract v1.2 §4.6.2 step 4 requires every delta but the last to be 1024, so the CP1 prover refuses these
  * files AUDIO_CONTAINER_INCONSISTENT — a true device recording that the approved rule does not accept. That is the open
- * residue QAN-BL-VOICE-02 (S8B-03 record §12): this spec pins the current truth; the controlled amendment that decides
+ * residue QAN-BL-VOICE-03 (S8B-03 record §12): this spec pins the current truth; the controlled amendment that decides
  * it flips the verdict expected here. The Product Owner's phone (HONOR) wrote 1024 throughout and its files were PROVEN.
  */
-const FIXTURES = join(__dirname, '__fixtures__');
+// Binary fixtures live outside src/: every file under apps/api/src is TypeScript source (the HIM authority scan).
+const FIXTURES = join(__dirname, '../../../fixtures/voice-m4a');
 const DEVICE_FILES = [
   { file: 'android-emulator-silence-2416ms.m4a', sha256: 'a25f043be07f0d7a8d4c982325c41c66de40446bc23aa609b37f820f6c6c223d', ms: 2416, frames: 37 },
   { file: 'android-emulator-silence-4720ms.m4a', sha256: 'ed35e50d81668fe339ca109d088710bf217c1daac6aa863c2c200f3457944fe8', ms: 4720, frames: 73 },
@@ -94,7 +95,7 @@ describe('S8B-03 device-recorded M4A fixtures (B5)', () => {
     expect(bitsPerSecond).toBeLessThan(36_000);
   });
 
-  it.each(DEVICE_FILES)('$file: the CP1 prover refuses it under contract §4.6.2 step 4 (QAN-BL-VOICE-02, open)', async ({ file }) => {
+  it.each(DEVICE_FILES)('$file: the CP1 prover refuses it under contract §4.6.2 step 4 (QAN-BL-VOICE-03, open)', async ({ file }) => {
     const bytes = readFileSync(join(FIXTURES, file));
     const proof = await proveM4aAudioDuration(async (offset, length) => bytes.subarray(offset, offset + length), bytes.length);
     expect(proof).toEqual({ kind: 'REJECTED', rejection: 'AUDIO_CONTAINER_INCONSISTENT' });

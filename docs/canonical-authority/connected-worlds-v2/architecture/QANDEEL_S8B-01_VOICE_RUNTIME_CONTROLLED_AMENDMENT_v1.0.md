@@ -281,3 +281,32 @@ corrections (record §10), and is not merged.
   - the text paths;
   - `0104` and the I-06C distribution;
   - every other amendment.
+
+## 5. S8B-03 — the text S8B-03 binds (2026-10-31)
+
+This section records the text the Product Owner approved for S8B-03 (contract v1.2 FINAL with OD-1 … OD-10, CP1 and CP2
+authorizations, 2026-10-31; [S8B-03 record](../../../e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md)
+§1 and §9). It binds from S8B-03's merge, as §2 lists. CP1 merged through PR #370 as `e68ca146`; CP2 is on a Draft pull
+request and is not merged, so until that merge nothing here is in force.
+
+- **VA-3 (Voice Note writer).**
+  - The writer is `public.server_commit_voice_note_turn_v1(p_user_id uuid, p_recording_id uuid)` in
+    `0186_s8b_03_personal_voice_notes_v1.sql`. It creates the user turn and its voice source in ONE transaction, under
+    the same admission bound as a typed turn.
+  - It writes `VOICE_NOTE` with `MACHINE_ASR` provenance, the band, and the turn-level anchor that §4 fixed: the recording
+    identity plus `[start_ms, end_ms)` on its clock, never a key or URL.
+  - The commitment gate at `conversation-unit-commitment.service.ts:82` (`UNSUPPORTED_SOURCE_MODALITY`) still refuses
+    every non-text modality on the generic path. Only this definer commits a voice turn.
+  - The call writer stays with S8B-05.
+- **VA-6 (microphone).**
+  - The guard is `apps/mobile/scripts/verify-voice-note-native.mjs`, run in mobile CI after the native prebuild.
+  - Android requests `RECORD_AUDIO` (never `tools:node="remove"`) and no `FOREGROUND_SERVICE*` permission.
+  - iOS carries C-12 as `NSMicrophoneUsageDescription` in both locales, and no `UIBackgroundModes` exists.
+  - OD-7's narrow reading: the image picker's `microphonePermission` carries C-12 only so that one sentence describes the
+    microphone. The picker selects images, never opens the camera and never captures sound.
+  - The background half of VA-6 stays with S8B-06.
+- **Not changed by S8B-03:**
+  - the four voice gates, which stay `DISABLED`;
+  - the `0001` session channel;
+  - the Replay and distribution paths;
+  - every other amendment.
