@@ -6,7 +6,8 @@
  * round caps and joins, on P2's 24-unit grid scaled to the render size. No generic icon replaces
  * any of it, and `react-native-svg` is not used (P2 §14; W1A-01 authorization §5.3).
  *
- * Direction is by MEANING: Send, the depth glyph and the media glyphs (Replay, play, pause) never mirror; the back chevron
+ * Direction is by MEANING: Send, the depth glyph, the media glyphs (Replay, play, pause), the microphone and close never
+ * mirror; the back chevron
  * points back in the reading direction it is shown in. A glyph is always decorative — the control that holds it
  * carries the accessible name.
  */
@@ -64,6 +65,21 @@ export function Glyph({ name, color, direction }: GlyphProps) {
           {/* S7-04: a glyph's solid rounded bars (the media transport's pause), P2's own rectangles. */}
           {('rects' in glyph ? glyph.rects : []).map((rect) => (
             <RoundedRect key={`${rect.x},${rect.y}`} x={rect.x} y={rect.y} width={rect.width} height={rect.height} r={rect.r} color={color} />
+          ))}
+          {/* S8B-03: a glyph's stroked rounded shape (the microphone's capsule), P2's own rectangle at its optical stroke. */}
+          {('strokeRects' in glyph ? glyph.strokeRects : []).map((rect) => (
+            <RoundedRect
+              key={`s${rect.x},${rect.y}`}
+              x={rect.x}
+              y={rect.y}
+              width={rect.width}
+              height={rect.height}
+              r={rect.r}
+              style="stroke"
+              strokeWidth={rect.strokeWidth}
+              strokeJoin="round"
+              color={color}
+            />
           ))}
         </Group>
       </Canvas>

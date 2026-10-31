@@ -159,6 +159,7 @@ import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator }
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
 import { createProjectionCoordinator, type ProjectionCoordinator } from '../projection/projection-coordinator';
+import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, type VoiceNoteDevice, type VoiceNoteSession } from '../../voice-note';
 
 /**
  * The three frozen promoted-act authorities, as ONE value.
@@ -289,6 +290,12 @@ export interface IntegrationSessionRuntime {
    * generation: retired with it, so no version, moment, timer or command of one account or Session reaches the next.
    */
   readonly replayPlayer: ReplayPlayerController;
+  /**
+   * S8B-03: Voice Notes in THIS Session's conversation — the capture, the drafts and notes in flight, playback and the
+   * consent — on the Voice Note transport bound to this identity. Retired with the generation: a capture stops and is
+   * kept as the account's draft, polling and playback stop. The drafts themselves stay the account's, on this device.
+   */
+  readonly voiceNotes: VoiceNoteSession;
   /** S6-07: the governed enrollment and the reader's three consents (0165), retired with the generation. */
   readonly introductionEnrollment: EnrollmentController;
   /**
@@ -411,6 +418,8 @@ export interface IntegrationRuntimeOptions extends MobileRuntimeEntryOptions {
   readonly pushDeviceStore?: PushDeviceStore;
   /** S4-04 — where QANDEEL links arrive from. Production: React Native `Linking`; tests and proofs: their own. */
   readonly sharedLinks?: SharedLinkSource;
+  /** S8B-03 — the device's Voice Note parts. Production: the drafts store, `expo-audio` and the screen hold; tests: their own. */
+  readonly voiceNoteDevice?: VoiceNoteDevice;
 }
 
 export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}): IntegrationRuntimeResult {
@@ -432,6 +441,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   // A3-02 — the device's notification system, app-level: a tap that launched the app arrives before any identity is
   // restored, so it is held here and executed only through the reader's own Activity `open` (D38).
   const pushPlatform: PushPlatformPort = options.pushPlatform ?? createExpoPushPlatformPort();
+  // S8B-03 — the device's Voice Note parts, once: the drafts are the account's on this device, across generations.
+  const voiceNoteDevice: VoiceNoteDevice = options.voiceNoteDevice ?? createDeviceVoiceNotes();
   const pushDeviceStore: PushDeviceStore = options.pushDeviceStore ?? createPushDeviceStore();
   const notificationEntries = createNotificationEntryInbox();
   const unsubscribePush: (() => void)[] = [
@@ -478,6 +489,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     if (session === null) return;
     session.recovery.writer.retire();
     session.replayPlayer.retire();
+    session.voiceNotes.retire();
     session.replayEntry.retire();
     session.publicShare?.retire();
     session.conversation.retire();
@@ -616,6 +628,11 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent,
         create: (choice) => built.publicWorld.compose?.createFromSource(choice) ?? Promise.resolve({ kind: 'FAILED' }),
       }) : null,
+      // S8B-03: Voice Notes of THIS conversation; a committed note joins it through the conversation's own merge.
+      voiceNotes: createVoiceNoteSessionRuntime({
+        owner: bundle.userId, sessionId: bundle.sessionId, transport: entry.voiceNotesFor(bundle), device: voiceNoteDevice,
+        foreground: entry.foreground, isCurrent, conversation,
+      }),
       // S7-04: the Replay player, on the same identity's transports; it never touches the conversation.
       replayPlayer: createReplayPlayerController({
         sessionId: bundle.sessionId, reads: entry.replayFor(bundle), commands: entry.replayLifecycleFor(bundle), history: entry.replayHistoryFor(bundle), isCurrent,

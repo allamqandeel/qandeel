@@ -74,6 +74,7 @@ export type {
 export { ConversationSessionApiClient } from './conversation/conversation-session-api';
 export type {
   ConversationExchangeView,
+  ConversationVoiceNoteView,
   ConversationHistoryOutcome,
   ConversationHistoryPageView,
   ConversationReplyState,
@@ -108,6 +109,7 @@ export type {
   ExportPhotoFile,
   ExportPhotoOutcome,
   ExportPhotoSet,
+  ExportVoiceSet,
   PrivacyDeletionStatus,
   PrivacyExportStatus,
   PrivacyRequestOutcome,

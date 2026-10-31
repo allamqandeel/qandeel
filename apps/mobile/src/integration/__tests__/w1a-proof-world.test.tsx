@@ -17,6 +17,7 @@ import { createW1AProofWorld } from '../__validation__/w1a-proof-world';
 import { settle } from '../__fixtures__/integration';
 import { resize } from '../../responsive/__fixtures__/composition';
 import type { ChromeLanguage } from '../../orientation-chrome';
+import { createInertVoiceNoteDevice } from '../../voice-note';
 
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 412, height: 915 }, insets: { top: 24, left: 0, right: 0, bottom: 24 } };
 
@@ -30,6 +31,8 @@ async function step(view: RenderResult, testID: string): Promise<void> {
 it.each(['en', 'ar'] as const)('%s: the proof world walks through every captured state on the production surface', async (language: ChromeLanguage) => {
   const world = createW1AProofWorld(language, { firstSendMs: 0, retryMs: 0 });
   const built = createIntegrationRuntime({
+    // S8B-03: an in-memory Voice Note device: no microphone, no player, no SQLite.
+    voiceNoteDevice: createInertVoiceNoteDevice(),
     config: world.config,
     authPort: world.auth,
     httpFetch: world.fetch,

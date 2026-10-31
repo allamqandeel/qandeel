@@ -109,6 +109,23 @@ describe('W1A-01 — GET /conversation/sessions/:sessionId/turns', () => {
     }
   });
 
+  it('S8B-03: carries the Voice Note mark of a turn (no key, no band), and refuses a malformed one', async () => {
+    const view = exchange('fixture: spoken');
+    const mark = { recordingId: 'e0000000-0000-4000-8000-000000000005', available: true, availableUntil: '2026-11-30T10:00:00.000Z', durationMs: 4200 };
+    const body = historyBody([view]) as { exchanges: Record<string, unknown>[] };
+    body.exchanges[0].voiceNote = mark;
+    const { http, api } = client();
+    http.on('/turns', () => ({ status: 200, body }));
+    await expect(api.readHistory(SESSION_A)).resolves.toEqual({ kind: 'PAGE', page: { exchanges: [{ ...view, voiceNote: mark }], hasOlder: false } });
+    for (const bad of [{ ...mark, available: 'yes' }, { ...mark, recordingId: '' }, { ...mark, durationMs: -1 }, { ...mark, availableUntil: 7 }, 'mark']) {
+      const malformed = historyBody([view]) as { exchanges: Record<string, unknown>[] };
+      malformed.exchanges[0].voiceNote = bad;
+      const other = client();
+      other.http.on('/turns', () => ({ status: 200, body: malformed }));
+      await expect(other.api.readHistory(SESSION_A)).resolves.toEqual({ kind: 'UNAVAILABLE', reason: 'MALFORMED_RESPONSE' });
+    }
+  });
+
   it('reports an unavailable history by kind, never as an empty conversation', async () => {
     const { http, api } = client();
     http.on('/turns', () => ({ status: 404, body: {} }));

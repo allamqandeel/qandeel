@@ -28,7 +28,7 @@ import { HistoricalProjectionApiClient } from '../projection';
 import { TemporalApiClient } from '../temporal';
 import { createAuthSessionStorage, type AuthSessionStorage } from './auth/auth-session-storage';
 import { createMobileAuthAuthority, type MobileAuthAuthority } from './auth/mobile-auth-authority';
-import { createAuthorizedFetch, NO_CAPTURED_CREDENTIAL } from './auth/request-credential';
+import { createAuthorizationHeader, createAuthorizedFetch, NO_CAPTURED_CREDENTIAL } from './auth/request-credential';
 import { createSupabaseAuthPort, type SupabaseAuthPort } from './auth/supabase-auth-port';
 import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstrap';
 import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
@@ -51,6 +51,7 @@ import { IntroductionContinuationApiClient } from './introduction-continuation-a
 import { PushApiClient } from './push-api';
 import { SharedWorldApiClient } from './shared-world-api';
 import { PublicWorldApiClient } from './public-world-api';
+import { VoiceNoteApiClient, type VoiceNoteFetch } from '../voice-note/voice-note-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -189,6 +190,11 @@ export interface MobileRuntimeEntry {
   introductionSharingFor(bundle: CanonicalRuntimeBundle): IntroductionSharingApiClient;
   /** S6-06 — SUCCESS and resuming Introductions, on the same AC-01 seam bound to the bundle's own auth generation. */
   introductionContinuationFor(bundle: CanonicalRuntimeBundle): IntroductionContinuationApiClient;
+  /**
+   * S8B-03 — the Voice Note client for a bundle this coordinator produced, on the same AC-01 seam bound to the bundle's own
+   * auth generation, and the bearer header the media player is handed for the note's bytes (null for another identity).
+   */
+  voiceNotesFor(bundle: CanonicalRuntimeBundle): { readonly api: VoiceNoteApiClient; readonly authorization: () => Record<string, string> | null };
   /**
    * A3-02 — the device-registration client for a bundle this coordinator produced, on the same AC-01 seam bound to the
    * bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -401,6 +407,13 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
       // The same seam: it only sets the bearer and passes the request and the platform's response through untouched, so
       // a photo's raw bytes go out, and a rendition's come back, exactly as the platform fetch carries them.
       return new IntroductionSharingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) as unknown as IntroductionSharingFetch });
+    },
+    voiceNotesFor(bundle) {
+      // The same seam as the photos: it only sets the bearer and passes a note's raw bytes through untouched.
+      return {
+        api: new VoiceNoteApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) as unknown as VoiceNoteFetch }),
+        authorization: createAuthorizationHeader({ credential, authGeneration: bundle.authGeneration }),
+      };
     },
     introductionContinuationFor(bundle) {
       return new IntroductionContinuationApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

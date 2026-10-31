@@ -48,10 +48,23 @@ export interface ConversationReplyView {
  */
 export type ConversationReplyState = 'COMPLETED' | 'FAILED' | 'PENDING';
 
+/**
+ * S8B-03: the turn came from the reader's own Voice Note. Never a storage key, a transcript band or a confidence; only
+ * whether its recording can still be played, until when, and how long it is.
+ */
+export interface ConversationVoiceNoteView {
+  readonly recordingId: string;
+  readonly available: boolean;
+  readonly availableUntil: string | null;
+  readonly durationMs: number | null;
+}
+
 export interface ConversationExchangeView {
   readonly userTurn: ConversationUserTurnView;
   readonly replyState: ConversationReplyState;
   readonly reply: ConversationReplyView | null;
+  /** S8B-03: present only for a turn that came from a Voice Note. */
+  readonly voiceNote?: ConversationVoiceNoteView;
 }
 
 export interface ConversationHistoryPageView {
@@ -143,6 +156,15 @@ export function decodeSubmitResponse(body: unknown): Decoded<ConversationExchang
   return { ok: true, value: { userTurn: user.value, replyState, reply } };
 }
 
+function decodeVoiceNote(value: unknown): Decoded<ConversationVoiceNoteView> {
+  if (!isRecord(value) || !isText(value.recordingId) || typeof value.available !== 'boolean') return { ok: false };
+  const until = value.availableUntil;
+  const duration = value.durationMs;
+  if (until !== null && !isText(until)) return { ok: false };
+  if (duration !== null && !(typeof duration === 'number' && Number.isFinite(duration) && duration >= 0)) return { ok: false };
+  return { ok: true, value: { recordingId: value.recordingId, available: value.available, availableUntil: until, durationMs: duration } };
+}
+
 /** The read route's body: `{ exchanges: [{ userTurn, replyState, assistantTurn }], hasOlder }`. */
 export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistoryPageView> {
   if (!isRecord(body) || !Array.isArray(body.exchanges) || typeof body.hasOlder !== 'boolean') return { ok: false };
@@ -161,6 +183,12 @@ export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistor
     }
     // A reply and its state are one fact: COMPLETED carries exactly one reply, nothing else carries any.
     if ((state === 'COMPLETED') !== (reply !== null)) return { ok: false };
+    if (entry.voiceNote !== undefined) {
+      const voiceNote = decodeVoiceNote(entry.voiceNote);
+      if (!voiceNote.ok) return { ok: false };
+      exchanges.push({ userTurn: user.value, replyState: state, reply, voiceNote: voiceNote.value });
+      continue;
+    }
     exchanges.push({ userTurn: user.value, replyState: state, reply });
   }
   return { ok: true, value: { exchanges, hasOlder: body.hasOlder } };

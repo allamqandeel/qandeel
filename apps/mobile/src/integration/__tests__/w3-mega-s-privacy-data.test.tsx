@@ -18,12 +18,22 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
 import { settingsCopy } from '../../settings';
 import { notificationsCopy } from '../../activity';
-import { Directory } from 'expo-file-system';
+import { Directory, File } from 'expo-file-system';
+import { voiceNoteText } from '../../voice-note';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 
-jest.mock('expo-file-system', () => ({ ...jest.requireActual<object>('expo-file-system'), Directory: { pickDirectoryAsync: jest.fn() } }));
+// S8B-03 (CP2, B9): the voice files are streamed by expo-file-system's File.downloadFileAsync into the cache; stood in here
+// by a download the test answers, and a cache file that is only ever deleted.
+jest.mock('expo-file-system', () => {
+  class StoodInFile {
+    static downloadFileAsync = jest.fn();
+    get exists() { return false; }
+    delete() {}
+  }
+  return { ...jest.requireActual<object>('expo-file-system'), Directory: { pickDirectoryAsync: jest.fn() }, File: StoodInFile, Paths: { cache: 'cache' } };
+});
 
 /** The place the reader picks, on a stood-in disk: what was written where, in which order, and what was removed. */
 function pickedPlace() {
@@ -37,14 +47,16 @@ function pickedPlace() {
       if (files.has(full)) throw new Error('exists');
       files.set(full, Buffer.alloc(0));
       return {
-        write: (content: string, options?: { encoding?: string }) => {
-          files.set(full, Buffer.from(content, options?.encoding === 'base64' ? 'base64' : 'utf8'));
+        write: (content: string | Uint8Array, options?: { encoding?: string }) => {
+          files.set(full, typeof content === 'string' ? Buffer.from(content, options?.encoding === 'base64' ? 'base64' : 'utf8') : Buffer.from(content));
           order.push(full);
         },
+        bytesSync: () => new Uint8Array(files.get(full) ?? Buffer.alloc(0)),
         get exists() { return files.has(full); },
         get size() { return files.get(full)?.length ?? 0; },
       };
     },
+    get exists() { return !deleted.includes(path); },
     delete: () => {
       deleted.push(path);
       for (const key of [...files.keys()]) if (key.startsWith(`${path}/`)) files.delete(key);
@@ -76,6 +88,10 @@ function server(h: IntegrationHarness) {
     photos: [] as { fileName: string; bytes: Buffer }[],
     inline: 0,
     moved: false,
+    // S8B-03 (CP2): the reader's own voice recordings the bundle lists (S8B-02's voice manifest), and those since gone.
+    voices: [] as { fileName: string; bytes: Buffer }[],
+    voiceManifest: undefined as unknown,
+    goneVoices: [] as string[],
   };
   const body = (request: { readonly body?: string | null }) => JSON.parse(request.body ?? '{}') as Record<string, string>;
   const view = () => ({ export: { ...state.export }, deletion: { ...state.deletion } });
@@ -96,7 +112,9 @@ function server(h: IntegrationHarness) {
         files: state.photos.map((f, i) => ({ fileName: f.fileName, mimeType: 'image/jpeg', stage: i + 1, shared: i === 0,
           introductionStartedAt: '2026-10-10T08:00:00.123456+00:00', derivedRendition: true })) },
       photoFiles: state.photos.slice(0, state.inline).map((f) => ({ fileName: f.fileName, bytes: f.bytes.length, bytesBase64: f.bytes.toString('base64') })),
-      photoManifestToken: TOKEN } }
+      photoManifestToken: TOKEN,
+      ...(state.voiceManifest !== undefined ? { voiceManifest: state.voiceManifest }
+        : state.voices.length > 0 ? { voiceManifest: { format: 'qandeel.personal-data-export.voice.v1', files: state.voices.map((v) => ({ fileName: v.fileName, bytes: v.bytes.length })) } } : {}) } }
     : { status: 200, body: { status: state.export.status, availableUntil: null, package: null, photoManifest: null, photoFiles: null, photoManifestToken: null } }));
   h.http.on('/account/privacy/export/download/bundle/files/', (request) => {
     const name = request.url.slice(request.url.lastIndexOf('/') + 1);
@@ -116,14 +134,26 @@ function server(h: IntegrationHarness) {
     state.deletion = { status: 'NONE', finalAt: null };
     return { status: 200, body: { outcome: had ? 'CANCELLED' : 'NONE', deletion: { ...state.deletion } } };
   });
+  // The voice file route: streamed with the bearer in a header; a recording since gone answers 404 NO_LONGER_AVAILABLE.
+  (File as unknown as { downloadFileAsync: jest.Mock }).downloadFileAsync.mockImplementation(async (url: string, _to: unknown, options: { headers?: Record<string, string> }) => {
+    voiceRequests.push({ url, headers: { ...options.headers } });
+    const name = url.slice(url.lastIndexOf('/') + 1);
+    const file = state.voices.find((v) => v.fileName === name);
+    if (file === undefined || state.goneVoices.includes(name) || options.headers?.Authorization !== 'Bearer token-a') {
+      throw new Error('UnableToDownload: response has status: 404');
+    }
+    return { bytesSync: () => new Uint8Array(file.bytes) };
+  });
   return state;
 }
+const voiceRequests: { url: string; headers: Record<string, string> }[] = [];
 
 /** Every runtime a test built, disposed when it ends: an undisposed one keeps its Settings read retries armed after the run. */
 const built: IntegrationHarness[] = [];
 
 afterEach(() => {
   for (const h of built.splice(0)) h.dispose();
+  voiceRequests.splice(0);
 });
 
 async function world() {
@@ -218,6 +248,67 @@ describe('W3-MEGA-S — Privacy & Data, end to end', () => {
     expect(again.files.size).toBe(0);
     expect(again.deleted).toEqual([folder]);
     expect(within(view.getByTestId('qandeel-export-download-notice')).getByText(COPY.privacy.exportSaveFailed)).toBeTruthy();
+  });
+
+  it('S8B-03 (B9): after the package, the reader saves their own voice recordings (C-49) - byte for byte, the manifest last; a gone one is said (C-52)', async () => {
+    const { view, state } = await world();
+    state.export = { status: 'READY', availableUntil: UNTIL };
+    const A = 'qandeel-voice-note-20261031T100000000000Z.m4a';
+    const B = 'qandeel-voice-note-20261031T101500000000Z.m4a';
+    state.voices = [A, B].map((fileName, i) => ({ fileName, bytes: Buffer.from(Array.from({ length: 300 + i }, (_, k) => (k * 7 + i) % 256)) }));
+    await press(view, 'qandeel-settings-entry');
+    expect(view.queryByTestId('qandeel-export-voices')).toBeNull();
+    const place = pickedPlace();
+    await press(view, 'qandeel-export-download');
+    const day = new Date().toISOString().slice(0, 10);
+    // The package first, exactly as before: the voice files are never part of it, and only offered once it is saved.
+    expect([...place.files.keys()]).toEqual([`picked/qandeel-data-${day}.json`]);
+    expect(voiceRequests).toEqual([]);
+    expect(within(view.getByTestId('qandeel-export-voices')).getByText(voiceNoteText('C-49', LANGUAGE))).toBeTruthy();
+
+    await press(view, 'qandeel-export-voices');
+    const folder = `picked/qandeel-voice-${day}`;
+    expect(place.order.slice(1)).toEqual([`${folder}/${A}`, `${folder}/${B}`, `${folder}/qandeel-voice-${day}.json`]);
+    for (const v of state.voices) expect(place.files.get(`${folder}/${v.fileName}`)?.equals(v.bytes)).toBe(true);
+    expect(JSON.parse(place.files.get(`${folder}/qandeel-voice-${day}.json`)?.toString() ?? '')).toEqual({
+      format: 'qandeel.personal-data-export.voice.v1', files: [{ fileName: A, bytes: 300 }, { fileName: B, bytes: 301 }],
+    });
+    expect(voiceRequests.map((r) => r.url.slice(r.url.indexOf('/account/')))).toEqual([A, B].map((n) => `/account/privacy/export/download/bundle/voice/${n}`));
+    for (const r of voiceRequests) {
+      expect(r.headers).toEqual({ Authorization: 'Bearer token-a' });
+      expect(r.url).not.toMatch(/token|bearer|alice/iu);
+    }
+    expect(within(view.getByTestId('qandeel-export-voices-notice')).getByText(voiceNoteText('C-50', LANGUAGE))).toBeTruthy();
+
+    // Again, with one recording gone since the manifest: the rest and the manifest are kept, and it is said (C-52).
+    state.goneVoices = [B];
+    const again = pickedPlace();
+    await press(view, 'qandeel-export-download');
+    await press(view, 'qandeel-export-voices');
+    const voiceFolder = [...again.files.keys()].filter((k) => k.includes('/qandeel-voice-'));
+    expect(voiceFolder).toEqual([`${folder}/${A}`, `${folder}/qandeel-voice-${day}.json`]);
+    expect(within(view.getByTestId('qandeel-export-voices-notice')).getByText(voiceNoteText('C-52', LANGUAGE))).toBeTruthy();
+  });
+
+  it('S8B-03 (B9): a voice manifest this client cannot trust withholds only the voice files - the package is still saved, C-49 is not offered', async () => {
+    const { view, state } = await world();
+    state.export = { status: 'READY', availableUntil: UNTIL };
+    for (const manifest of [
+      { format: 'qandeel.personal-data-export.voice.v2', files: [{ fileName: 'qandeel-voice-note-20261031T100000000000Z.m4a', bytes: 3 }] },
+      { format: 'qandeel.personal-data-export.voice.v1', files: [{ fileName: '../escape.m4a', bytes: 3 }] },
+      { format: 'qandeel.personal-data-export.voice.v1', files: [{ fileName: 'qandeel-voice-note-20261031T100000000000Z.m4a', bytes: 0 }] },
+      { format: 'qandeel.personal-data-export.voice.v1', files: [] },
+    ]) {
+      state.voiceManifest = manifest;
+      await press(view, 'qandeel-settings-entry');
+      const place = pickedPlace();
+      await press(view, 'qandeel-export-download');
+      expect([...place.files.keys()]).toEqual([`picked/qandeel-data-${new Date().toISOString().slice(0, 10)}.json`]);
+      expect(within(view.getByTestId('qandeel-export-download-notice')).getByText(COPY.privacy.exportSaved)).toBeTruthy();
+      expect(view.queryByTestId('qandeel-export-voices')).toBeNull();
+      await press(view, 'qandeel-settings-back');
+    }
+    expect(voiceRequests).toEqual([]);
   });
 
   it('deletes (Personal world): the password, then the date it becomes final; Cancel keeps the account', async () => {

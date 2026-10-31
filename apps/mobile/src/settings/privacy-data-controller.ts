@@ -21,6 +21,7 @@
 import type {
   DeletionCancelOutcome, ExportBundleOutcome, ExportPhotoFile, ExportPhotoOutcome, ExportPhotoSet, PrivacyRequestOutcome, PrivacyStateOutcome,
   PrivacyStateView,
+  ExportVoiceSet,
 } from '../runtime-entry';
 import { mintPublicIdCommandId } from './public-id-controller';
 
@@ -54,7 +55,8 @@ export interface ExportPhotosToSave {
   fetch(fileName: string): Promise<ExportPhotoFile | null>;
 }
 export type ExportDownloadResult =
-  | { readonly kind: 'READY'; readonly document: Record<string, unknown>; readonly photos: ExportPhotosToSave | null }
+  /** S8B-03: `voices` — the reader's own voice recordings the package lists, saved by the reader's separate C-49 act. */
+  | { readonly kind: 'READY'; readonly document: Record<string, unknown>; readonly photos: ExportPhotosToSave | null; readonly voices: ExportVoiceSet | null }
   | { readonly kind: 'NOT_READY' }
   | { readonly kind: 'RETRY' };
 
@@ -255,7 +257,7 @@ export function createPrivacyDataController({
         const outcome = await bounded(EXPORT_DOWNLOAD_TIMEOUT_MS, (signal) => transport.downloadDataExportBundle(signal))
           .catch((): ExportBundleOutcome => ({ kind: 'NETWORK' }));
         if (!live()) return { kind: 'RETRY' };
-        if (outcome.kind === 'READY') return { kind: 'READY', document: outcome.document, photos: outcome.photos === null ? null : toSave(outcome.photos) };
+        if (outcome.kind === 'READY') return { kind: 'READY', document: outcome.document, photos: outcome.photos === null ? null : toSave(outcome.photos), voices: outcome.voices };
         await reread(true);
         return outcome.kind === 'NOT_READY' ? { kind: 'NOT_READY' } : { kind: 'RETRY' };
       });
