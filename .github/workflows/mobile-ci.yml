@@ -174,9 +174,13 @@ jobs:
       # W2-02: the GENERATED Android + iOS projects carry the I-08B2.5 icon bytes unchanged and the World-only
       # launch, with a planted defect proved caught for every check family. Linux generates both platforms.
       - {name: Native launch identity gate (W2-02), run: npm run prebuild:launch-identity:mobile}
-      # S6-06: the GENERATED projects request no camera, microphone, storage or media permission for the Introduction
-      # photo (the system pickers need none), and iOS keeps its own approved Photos purpose string (PD-83) in both languages.
+      # S6-06: the GENERATED projects request no camera, storage or media permission for the Introduction photo (the
+      # system pickers need none), and iOS keeps its own approved Photos purpose string (PD-83) in both languages. The
+      # microphone is S8B-03's now, proven by the next gate.
       - {name: Native Introduction photo permission gate (S6-06), run: npm run prebuild:introduction-photo:mobile}
+      # S8B-03 (contract §5.6, VA-6): RECORD_AUDIO and the approved C-12 purpose; no background mode, foreground service
+      # or voip; expo-audio with both background switches off; drafts excluded from backup; the picker never captures sound.
+      - {name: Native Voice Note microphone gate (S8B-03), run: npm run prebuild:voice-note:mobile}
 
   # -------------------------------------------------------------------------------------------------
   # Android — BUILD PRODUCER, then VALIDATION CONSUMER

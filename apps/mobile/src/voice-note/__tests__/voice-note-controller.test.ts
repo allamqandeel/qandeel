@@ -6,8 +6,7 @@
  *   UNAVAILABLE → the command id is rotated; a restart restores drafts and pending notes WITHOUT uploading;
  *   a failed transcription → Try again → READY → one turn; consent withdrawn → held, the recording kept.
  */
-import type { ConversationExchangeView } from '../../runtime-entry/conversation/conversation-turn-api';
-import { createManualForegroundSignal } from '../../runtime-entry';
+import { createManualForegroundSignal, type ConversationExchangeView } from '../../runtime-entry';
 import type { VoiceNoteApiClient, VoiceNoteServerStatus, VoiceNoteUploadResult } from '../voice-note-api';
 import { createVoiceNotesController, VOICE_NOTE_POLL_DELAYS_MS, VOICE_NOTE_UPLOAD_TIMEOUT_MS } from '../voice-note-controller';
 import { createEphemeralVoiceDraftKeyValue, createVoiceDraftStore, type VoiceDraftFiles, type VoiceDraftRecord } from '../voice-draft-store';

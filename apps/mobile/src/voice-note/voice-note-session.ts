@@ -9,8 +9,7 @@
  *     OS permission at the moment of intent, then the capture. Nothing is sent before the reader's Send.
  *   - Leaving the screen stops a capture and keeps it as a draft (C-17); retire does the same and stops everything.
  */
-import type { ConversationExchangeView } from '../runtime-entry/conversation/conversation-turn-api';
-import type { ForegroundSignal } from '../runtime-entry/lifecycle/foreground-signal';
+import type { ConversationExchangeView, ForegroundSignal } from '../runtime-entry';
 import type { VoiceConsentState, VoiceNoteApiClient, VoiceConsentRowView } from './voice-note-api';
 import { VOICE_CONSENT_COPY_ROWS, VOICE_CONSENT_VERSION } from './voice-note-copy';
 import type { VoiceNoteCapture } from './voice-note-capture';

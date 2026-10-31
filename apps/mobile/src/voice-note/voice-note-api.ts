@@ -17,8 +17,7 @@
  * The one ambiguity it refuses to hide: an upload with no readable answer MAY have been stored. That is UNKNOWN, never
  * "not sent"; the caller retries it with the SAME command id, which the server resolves to the same recording.
  */
-import { EXPORT_VOICE_FILE_NAME } from '../runtime-entry/account/account-api';
-import { decodeSubmitResponse, type ConversationExchangeView } from '../runtime-entry/conversation/conversation-turn-api';
+import { decodeSubmitResponse, EXPORT_VOICE_FILE_NAME, type ConversationExchangeView } from '../runtime-entry';
 import { VOICE_CONSENT_VERSION } from './voice-note-copy';
 import { VOICE_NOTE_CONTENT_TYPE } from './voice-note-limits';
 

@@ -12,6 +12,7 @@ import {
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
   type AudioRecorder,
+  type NativeAudioModule,
   type PermissionResponse,
   type RecordingStatus,
 } from 'expo-audio';
@@ -21,6 +22,9 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { excludeFromBackup, folderOf } from './backup-exclusion';
 import { platformRecordingOptions, VOICE_NOTE_RECORDING_OPTIONS } from './recording-options';
 import type { MicrophonePermission, VoiceRecorderPort } from './voice-note-capture';
+
+/** expo-audio's native module, typed: its recorder class is a native member the import linter cannot see. */
+const nativeAudio: NativeAudioModule = AudioModule;
 
 function permissionOf(response: PermissionResponse): MicrophonePermission {
   if (response.granted) return 'GRANTED';
@@ -46,7 +50,7 @@ export function createExpoVoiceRecorderPort(): VoiceRecorderPort & { release(): 
       subscription?.remove();
       recorder?.release();
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false, interruptionMode: 'doNotMix' });
-      const next = new AudioModule.AudioRecorder(platformRecordingOptions());
+      const next = new nativeAudio.AudioRecorder(platformRecordingOptions());
       recorder = next;
       subscription = next.addListener('recordingStatusUpdate', (status: RecordingStatus) => {
         if (status.isFinished && status.hasError) for (const listener of Array.from(endedListeners)) listener();

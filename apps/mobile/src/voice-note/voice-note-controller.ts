@@ -14,8 +14,7 @@
  * Restoring (a restart, a return to the conversation) re-reads local state and `GET /voice/notes/pending`; it never
  * uploads anything. Polling pauses while the app is not in front of the reader. Nothing is logged.
  */
-import type { ConversationExchangeView } from '../runtime-entry/conversation/conversation-turn-api';
-import type { ForegroundSignal } from '../runtime-entry/lifecycle/foreground-signal';
+import type { ConversationExchangeView, ForegroundSignal } from '../runtime-entry';
 import type { VoiceNoteApiClient, VoiceNoteServerStatus, VoiceNoteStatusView } from './voice-note-api';
 import { VOICE_NOTE_MAX_BYTES } from './voice-note-limits';
 import type { VoiceDraftFiles, VoiceDraftRecord, VoiceDraftStore } from './voice-draft-store';

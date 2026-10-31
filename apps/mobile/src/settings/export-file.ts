@@ -161,8 +161,8 @@ export async function saveExportVoices(
   device: VoiceExportDevice = createVoiceExportDevice(),
   now: Date = new Date(),
 ): Promise<VoiceExportSaveResult> {
-  const folder = await device.pickFolder((copy) => exportVoiceFolderName(now, copy)).catch(() => null);
-  if (folder === null) return 'CANCELLED';
+  const target = await device.pickFolder((copy) => exportVoiceFolderName(now, copy)).catch(() => null);
+  if (target === null) return 'CANCELLED';
   let gone = 0;
   try {
     for (const { fileName, bytes } of voices.files) {
@@ -176,21 +176,21 @@ export async function saveExportVoices(
       }
       if (body.length !== bytes) throw new Error('file length differs from its listing');
       const digest = sha256Hex(body);
-      const written = folder.write(fileName, fileName.endsWith('.ogg') ? 'audio/ogg' : 'audio/mp4', body);
+      const written = target.write(fileName, fileName.endsWith('.ogg') ? 'audio/ogg' : 'audio/mp4', body);
       if (written.length !== bytes || sha256Hex(written) !== digest || !sameBytes(written, body)) throw new Error('file not written whole');
     }
     if (gone === voices.files.length) throw new Error('nothing to save');
-    folder.writeText(exportVoiceManifestName(now), JSON.stringify(voices.manifest, null, 2));
+    target.writeText(exportVoiceManifestName(now), JSON.stringify(voices.manifest, null, 2));
     return gone > 0 ? 'SOME_UNAVAILABLE' : 'SAVED';
   } catch {
     try {
-      folder.delete();
+      target.delete();
     } catch {
       // checked below
     }
     let remains = true;
     try {
-      remains = folder.exists();
+      remains = target.exists();
     } catch {
       remains = true;
     }
@@ -198,7 +198,7 @@ export async function saveExportVoices(
   }
 }
 
-/** The platform's half: the system folder picker (SAF on Android) and a streamed download into the app's cache. */
+/** The platform's half: the system target picker (SAF on Android) and a streamed download into the app's cache. */
 export function createVoiceExportDevice(): VoiceExportDevice {
   return {
     async pickFolder(name) {

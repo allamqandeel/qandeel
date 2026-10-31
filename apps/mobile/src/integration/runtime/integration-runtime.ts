@@ -488,8 +488,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
-    session.replayPlayer.retire();
     session.voiceNotes.retire();
+    session.replayPlayer.retire();
     session.replayEntry.retire();
     session.publicShare?.retire();
     session.conversation.retire();

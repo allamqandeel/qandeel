@@ -315,8 +315,14 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
   // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
   // S6-06 RE-ANCHOR (D-03, WP0 correction 4): Expo's first-party expo-image-picker, last, with the camera and the microphone
   // OFF and the app's own approved Photos purpose string (PD-83); typed mods only, no dangerous mod, no generated project.
+  // S8B-03 RE-ANCHOR (contract §5.6 / §5.7.1, OD-6 / OD-7): before the picker, the Voice Note backup plugin (a typed
+  // manifest mod only; its two rule files ship in the local module's Android res/, no dangerous mod) and Expo's
+  // first-party expo-audio with background recording and playback OFF and the approved C-12; the picker carries C-12
+  // instead of `false`, which would strip the microphone from the whole app.
   assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
-    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: false }]]);
+    './plugins/with-qandeel-voice-backup',
+    ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
+    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]]);
   // Exactly two dangerous mods: one Android install, one iOS install. Everything else is a typed mod.
   const dangerousCount = (text) => (code(text).match(/withDangerousMod\(config,/gu) ?? []).length;
   assert.equal(dangerousCount(pluginText), 2);
@@ -329,8 +335,12 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
   // A3-02 RE-ANCHOR: one more plugin, `with-qandeel-push.js` — TYPED manifest mods only (the notification small icon
   // REFERENCES this plugin's installed monochrome drawable; it copies, derives or deletes nothing). It is not a second
   // Level-4 step: the dangerous-mod scan below and the level-4 exception set still name this plugin alone.
-  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH, 'apps/mobile/plugins/with-qandeel-push.js']);
+  // S8B-03 RE-ANCHOR (OD-6): one more plugin, `with-qandeel-voice-backup.js` — ONE typed manifest mod pointing
+  // <application> at the two backup rule files the local module ships in its Android res/. It writes, copies or deletes
+  // nothing, so it is not a Level-4 step either.
+  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH, 'apps/mobile/plugins/with-qandeel-push.js', 'apps/mobile/plugins/with-qandeel-voice-backup.js']);
   assert.doesNotMatch(read('apps/mobile/plugins/with-qandeel-push.js'), /withDangerousMod|writeFileSync|copyFileSync|unlinkSync|rmSync/u);
+  assert.doesNotMatch(read('apps/mobile/plugins/with-qandeel-voice-backup.js'), /withDangerousMod|writeFileSync|copyFileSync|unlinkSync|rmSync/u);
   assert.match(read('tests/mobile-foundation-toolchain-contract.test.mjs'), /const level4Exceptions = new Set\(\['apps\/mobile\/plugins\/with-qandeel-launch-identity\.js'\]\);/u);
   const readme = read('apps/mobile/README.md');
   assert.match(readme, /\*\*W2-02 Level-4 exception — APPROVED \(bounded\)\.\*\*/u, 'the approved, bounded exception is recorded in the CNG policy');

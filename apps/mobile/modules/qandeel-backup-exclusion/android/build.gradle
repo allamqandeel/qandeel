@@ -1,0 +1,17 @@
+// S8B-03 (CP2, OD-6) — the Android half of the local module: no code, only the two backup rule resources in
+// src/main/res/xml, which Android merges into the app. plugins/with-qandeel-voice-backup.js points <application> at them.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.qandeel'
+version = '1.0.0'
+
+android {
+  namespace "com.qandeel.backupexclusion"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}

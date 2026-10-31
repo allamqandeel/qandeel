@@ -14,7 +14,7 @@
  * The player sits behind `VoiceNotePlayerPort`, so every rule is tested without a device; production binds it to
  * `expo-audio` (voice-note-player-port.ts). No URL, header or position is logged.
  */
-import type { ForegroundSignal } from '../runtime-entry/lifecycle/foreground-signal';
+import type { ForegroundSignal } from '../runtime-entry';
 
 export interface VoiceNotePlayerStatus {
   readonly loaded: boolean;

@@ -4,7 +4,7 @@
 //
 //   - Android: RECORD_AUDIO is requested (never `tools:node="remove"`); no FOREGROUND_SERVICE* permission and no
 //     foreground service exist; the unsent drafts are excluded from Auto Backup and from cloud backup / device transfer
-//     (OD-6: both rule files, wired on <application>).
+//     (OD-6: both rule files, shipped in the local module's Android res/ and wired on <application>).
 //   - iOS: NSMicrophoneUsageDescription is the approved C-12 — English in Info.plist, Arabic and English in
 //     InfoPlist.strings; no UIBackgroundModes (so no `audio` and no `voip`) exists.
 //   - The config: expo-audio with background recording AND background playback switched off (its plugin defaults
@@ -28,6 +28,9 @@ const read = (file) => readFileSync(file, 'utf8');
 const RECORD_AUDIO = 'android.permission.RECORD_AUDIO';
 const BACKUP_EXCLUDED = ['qandeel-voice-drafts/', 'Audio/', 'SQLite/qandeel-voice-drafts.db'];
 const PICKER_SOURCE = 'src/introductions/photo-source.ts';
+/** The local module that ships the two backup rule resources (Android merges a library's res/ into the app). */
+const BACKUP_MODULE = 'modules/qandeel-backup-exclusion';
+const backupRules = (resource) => join(projectDir, BACKUP_MODULE, 'android/src/main/res/xml', `${resource}.xml`);
 
 /** The approved C-12 row, read from the copy module the app shows (one source for the app and the native build). */
 export function microphonePurpose() {
@@ -91,7 +94,7 @@ export function checkAndroid(androidRoot) {
   const application = /<application\b[^>]*>/u.exec(manifest)?.[0] ?? '';
   for (const [attribute, resource] of [['android:fullBackupContent', 'qandeel_backup_rules'], ['android:dataExtractionRules', 'qandeel_data_extraction_rules']]) {
     if (!application.includes(`${attribute}="@xml/${resource}"`)) failures.push(`android: <application> does not carry ${attribute}="@xml/${resource}"`);
-    const rules = join(androidRoot, 'app/src/main/res/xml', `${resource}.xml`);
+    const rules = backupRules(resource);
     const text = existsSync(rules) ? read(rules) : '';
     for (const path of BACKUP_EXCLUDED) {
       const sections = resource === 'qandeel_backup_rules' ? 1 : 2;
@@ -99,6 +102,11 @@ export function checkAndroid(androidRoot) {
       if (found !== sections) failures.push(`android: ${resource}.xml does not exclude ${path}`);
     }
     if (/<include\b/u.test(text)) failures.push(`android: ${resource}.xml narrows backup to an include list`);
+  }
+  // The rules reach the app only while the module is linked on Android (a library with no code of its own).
+  const moduleConfig = JSON.parse(read(join(projectDir, BACKUP_MODULE, 'expo-module.config.json')));
+  if (!moduleConfig.platforms?.includes('android') || !existsSync(join(projectDir, BACKUP_MODULE, 'android/build.gradle'))) {
+    failures.push('android: the backup rules module is not linked on Android');
   }
   return failures;
 }
@@ -151,8 +159,10 @@ function runPlantedDefects(androidRoot, iosRoot, purpose) {
       mutate: (text) => text.replace('<application', '<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>\n  <application') },
     { id: 'android-backup-unwired', file: manifest, check: () => checkAndroid(androidRoot),
       mutate: (text) => text.replace(' android:dataExtractionRules="@xml/qandeel_data_extraction_rules"', '') },
-    { id: 'android-backup-rule-dropped', file: join(androidRoot, 'app/src/main/res/xml/qandeel_backup_rules.xml'), check: () => checkAndroid(androidRoot),
+    { id: 'android-backup-rule-dropped', file: backupRules('qandeel_backup_rules'), check: () => checkAndroid(androidRoot),
       mutate: (text) => text.replace('<exclude domain="file" path="Audio/" />', '') },
+    { id: 'android-backup-module-unlinked', file: join(projectDir, BACKUP_MODULE, 'expo-module.config.json'), check: () => checkAndroid(androidRoot),
+      mutate: (text) => text.replace('"platforms": ["apple", "android"]', '"platforms": ["apple"]') },
     ...(iosRoot === null ? [] : [
       { id: 'ios-purpose-changed', file: join(iosRoot, 'QANDEEL/Info.plist'), check: () => checkIos(iosRoot, purpose),
         mutate: (text) => text.replace(/(<key>NSMicrophoneUsageDescription<\/key>\s*<string>)[^<]*/u, '$1Allow $(PRODUCT_NAME) to access your microphone') },

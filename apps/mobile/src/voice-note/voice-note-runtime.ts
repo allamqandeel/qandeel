@@ -5,8 +5,7 @@
  * The drafts belong to the ACCOUNT on this device, not to the generation: they survive a sign-out and are shown again
  * only to the same account (decision D3, OD-6). The recorder and the player are the platform's, created per use.
  */
-import type { ConversationExchangeView } from '../runtime-entry/conversation/conversation-turn-api';
-import type { ForegroundSignal } from '../runtime-entry/lifecycle/foreground-signal';
+import type { ConversationExchangeView, ForegroundSignal } from '../runtime-entry';
 import {
   createDeviceVoiceDraftFiles,
   createEphemeralVoiceDraftKeyValue,

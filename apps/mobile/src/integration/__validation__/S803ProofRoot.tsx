@@ -16,8 +16,6 @@
  *   qandeel://s803-proof/upload      the newest SAVED draft → the fake server, which runs the CP1 duration prover on it
  *   qandeel://s803-proof/play        the uploaded note, streamed with an Authorization header (and Range)
  *   qandeel://s803-proof/pause
- *   qandeel://s803-proof/export      the uploaded note → a folder the reader picks, verified by size and SHA-256
- *   qandeel://s803-proof/export-expired   a file the server no longer has (C-52)
  *   qandeel://s803-proof/export-voices       the PRODUCTION saver (C-49): the newest note under its S8B-02 name → SAVED
  *   qandeel://s803-proof/export-voices-gone  …plus one listed file the server answers 404 → SOME_UNAVAILABLE (C-52)
  *   qandeel://s803-proof/discard    the newest draft of owner A is discarded
@@ -28,11 +26,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
-import { Directory, File, Paths } from 'expo-file-system';
 
 import { createAppStateForegroundSignal } from '../../runtime-entry';
 import { saveExportVoices } from '../../settings/export-file';
-import { sha256Hex } from '../../voice-note/sha256';
 import { S803UiProof } from './S803UiProof';
 import { VoiceNoteApiClient, type VoiceNoteFetch } from '../../voice-note/voice-note-api';
 import { createVoiceNoteCapture, type VoiceNoteCapture } from '../../voice-note/voice-note-capture';
@@ -165,32 +161,6 @@ export function S803ProofRoot() {
           { url: (fileName) => api.exportVoiceUrl(fileName), authorization: () => ({ Authorization: TOKEN }) },
         );
         say(`VOICES ${result} files=${manifest.files.length}`);
-        return;
-      }
-      if (command === 'export' || command === 'export-expired') {
-        const name = command === 'export' ? `${uploaded.current ?? 'none'}.m4a` : 'expired-0000.m4a';
-        let picked: Directory;
-        try {
-          picked = await Directory.pickDirectoryAsync();
-        } catch {
-          return say('EXPORT cancelled');
-        }
-        const temp = new File(Paths.cache, `s803-export-${uuid()}.m4a`);
-        try {
-          await File.downloadFileAsync(`${BASE}/account/privacy/export/download/bundle/voice/${name}`, temp, { headers: { Authorization: TOKEN }, idempotent: true });
-          const bytes = temp.bytesSync();
-          const digest = sha256Hex(bytes);
-          const folder = picked.createDirectory(`qandeel-s803-${Date.now()}`);
-          const target = folder.createFile(name, 'audio/mp4');
-          target.write(bytes);
-          const back = sha256Hex(target.bytesSync());
-          say(`EXPORT size=${target.size}/${bytes.length} sha=${digest === back ? 'MATCH' : 'DIFFER'} ${digest.slice(0, 12)}`);
-        } catch (error) {
-          say(`EXPORT failed ${(error as Error)?.name ?? 'error'}`);
-        } finally {
-          if (temp.exists) temp.delete();
-          say(`EXPORT temp-left=${temp.exists}`);
-        }
         return;
       }
       say(`unknown ${command}`);

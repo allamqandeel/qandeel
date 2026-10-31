@@ -44,12 +44,16 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // (PUBLIC_TOPIC_SECTIONS, PUBLIC_TOPIC_TEXT_MAX, PUBLIC_TOPIC_TITLE_MAX; server keys and limits, not reader-facing copy)
   // and publicEntryLabel, the one rule that names a Public topic by its human title, else its meaning, so the map, search,
   // panel and relations surfaces never each carry a copy of it.
+  // S8B-03 CP2 added exactly two, deliberately, so the Voice Note client reaches this layer through the barrel only (T-12P):
+  // decodeSubmitResponse, the one decoder of a committed turn's answer (a voice turn commits into the same exchange), and
+  // EXPORT_VOICE_FILE_NAME, S8B-02's pattern of a voice export file's name (a RegExp, not reader-facing copy).
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
     'CONVERSATION_HISTORY_PAGE_LIMIT',
     'ConversationSessionApiClient',
     'ConversationTurnApiClient',
+    'EXPORT_VOICE_FILE_NAME',
     'FOREGROUND_CATCH_UP_INTERVAL_MS',
     'INTRODUCTION_HOMETOWN_MAX_LENGTH',
     'INTRODUCTION_IMAGE_MAX_BYTES',
@@ -87,6 +91,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'createManualForegroundSignal',
     'createMobileAuthAuthority',
     'createMobileRuntimeEntry',
+    'decodeSubmitResponse',
     'describeConfigFailure',
     'isEmailIdentifier',
     'publicEntryLabel',

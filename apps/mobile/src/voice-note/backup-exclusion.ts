@@ -1,7 +1,8 @@
 /**
  * S8B-03 (CP2, OD-6, contract §8.2 / B4) — the narrow backup exclusion of the Voice Note drafts.
  *
- *   Android: the app's backup rules (plugins/with-qandeel-voice-backup.js) exclude the drafts folder, the recorder's
+ *   Android: the app's backup rules (shipped by modules/qandeel-backup-exclusion, wired by
+ *            plugins/with-qandeel-voice-backup.js) exclude the drafts folder, the recorder's
  *            in-progress folder and the drafts database from cloud backup and device transfer. Nothing to do at runtime.
  *   iOS:     the local module `QandeelBackupExclusion` sets NSURLIsExcludedFromBackupKey on the same items and reads it
  *            back. A folder's flag covers what is inside it.

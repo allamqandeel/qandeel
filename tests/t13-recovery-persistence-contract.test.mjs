@@ -132,8 +132,16 @@ test('§2 — Product recovery and auth persistence are two stores, two files, a
   // the permission education, in its OWN database file (`qandeel-push.db`). It holds no auth material, no push token
   // and no Product recovery truth; any fifth is still refused.
   const PUSH_STORAGE = 'apps/mobile/src/push/device-store.ts';
+  // S8B-03 RE-ANCHOR (contract §8.2, D3): S8B-03 added the fifth deliberately — the metadata of the reader's UNSENT Voice
+  // Note drafts, per account, in its OWN database file (`qandeel-voice-drafts.db`, excluded from backup). It holds no auth
+  // material, no transcript and no Product recovery truth, and a draft is deleted once the server accepts it; any sixth is
+  // still refused.
+  const VOICE_DRAFT_STORAGE = 'apps/mobile/src/voice-note/voice-draft-store.ts';
   const storageUsers = mobileProduction.filter((file) => /expo-sqlite|SQLiteStorage/u.test(stripComments(read(file))));
-  assert.deepEqual(storageUsers, [`${INTEGRATION_DIR}`.replace(INTEGRATION_DIR, RECOVERY_STORAGE), AUTH_STORAGE, APPEARANCE_STORAGE, PUSH_STORAGE].sort(), 'exactly the four storage modules');
+  assert.deepEqual(storageUsers, [`${INTEGRATION_DIR}`.replace(INTEGRATION_DIR, RECOVERY_STORAGE), AUTH_STORAGE, APPEARANCE_STORAGE, PUSH_STORAGE, VOICE_DRAFT_STORAGE].sort(), 'exactly the five storage modules');
+  const voiceDraftStorage = stripComments(read(VOICE_DRAFT_STORAGE));
+  assert.doesNotMatch(voiceDraftStorage, /accessToken|refresh_token|supabase|Bearer|Authorization|transcript|viewpoint|checkpoint/iu, 'the Voice Note draft store holds draft metadata only');
+  assert.match(voiceDraftStorage, /VOICE_DRAFTS_DATABASE_NAME = 'qandeel-voice-drafts\.db'/u, 'in its own database file');
   const pushStorage = stripComments(read(PUSH_STORAGE));
   assert.doesNotMatch(pushStorage, /accessToken|refresh_token|supabase|sessionId|viewpoint|checkpoint|pushToken|deviceToken/iu, 'the push device store holds an installation id and one decision only');
   assert.match(pushStorage, /PUSH_DATABASE_NAME = 'qandeel-push\.db'/u, 'in its own database file');

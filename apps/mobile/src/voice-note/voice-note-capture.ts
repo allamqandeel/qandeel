@@ -10,7 +10,7 @@
  * The recorder sits behind `VoiceRecorderPort` so every rule above is tested without a device; production binds it to
  * `expo-audio` (voice-note-recorder-port.ts). No audio, transcript or path is logged.
  */
-import type { ForegroundSignal } from '../runtime-entry/lifecycle/foreground-signal';
+import type { ForegroundSignal } from '../runtime-entry';
 import { VOICE_NOTE_MAX_DURATION_MS } from './voice-note-limits';
 import type { VoiceDraftRecord, VoiceDraftStop, VoiceDraftStore } from './voice-draft-store';
 

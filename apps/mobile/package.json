@@ -15,7 +15,8 @@
     "prebuild:ios": "expo prebuild --platform ios --no-install",
     "prebuild:verify": "node scripts/verify-prebuild-idempotency.mjs",
     "prebuild:verify-launch-identity": "node scripts/verify-launch-identity-native.mjs",
-    "prebuild:verify-introduction-photo": "node scripts/verify-introduction-photo-native.mjs"
+    "prebuild:verify-introduction-photo": "node scripts/verify-introduction-photo-native.mjs",
+    "prebuild:verify-voice-note": "node scripts/verify-voice-note-native.mjs"
   },
   "dependencies": {
     "@shopify/react-native-skia": "2.6.2",

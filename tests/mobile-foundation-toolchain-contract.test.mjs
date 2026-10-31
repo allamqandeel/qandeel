@@ -47,6 +47,11 @@ const expectedDependencies = {
   expo: '~57.0.21',
   // S4-01: the Shared ID's Copy (P1 §5.1; W3-PDG-01 §4 "copyable") — Expo SDK 57's first-party clipboard module at its
   // bundled version (`expo/bundledNativeModules.json`). It writes one string the reader asked to copy; it reads nothing.
+  // S8B-03 (contract §8.2, approved by the Product Owner 2026-10-31): Expo SDK 57's first-party audio module at its bundled
+  // version (`expo/bundledNativeModules.json`) — the Voice Note recorder (AAC-LC, mono, 32 kbps, 16 kHz) and the player
+  // that streams a recording with the Authorization header. Background recording and playback are OFF in its plugin; the
+  // S8B-03 native Voice Note gate proves the generated projects.
+  'expo-audio': '~57.0.4',
   'expo-clipboard': '~57.0.1',
   'expo-constants': '~57.0.17',
   'expo-dev-client': '~57.0.18',
@@ -66,6 +71,9 @@ const expectedDependencies = {
   // or storage permission — the S6-06 native photo-permission gate proves the generated projects).
   'expo-image': '~57.0.4',
   'expo-image-picker': '~57.0.16',
+  // S8B-03 (the Product Owner's device-proof decision, 2026-10-31: keep the screen on while recording): Expo SDK 57's
+  // first-party module at its bundled version; one tag, held only while a Voice Note is being recorded. No permission.
+  'expo-keep-awake': '~57.0.1',
   'expo-linking': '~57.0.9',
   // A3-02: native Push, OS notification permission, channels and taps — Expo SDK 57's first-party module at its bundled
   // version (A3-02 record §5). It talks to APNs / FCM natively; Expo's push relay is never used.
@@ -176,8 +184,14 @@ test('app config carries provisional technical identifiers only and no architect
   // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
   // S6-06 RE-ANCHOR (D-03, WP0 correction 4): Expo's first-party expo-image-picker plugin, last, with the camera and the
   // microphone OFF and the app's own approved Photos purpose string (PD-83); typed mods only, no dangerous mod.
+  // S8B-03 RE-ANCHOR (contract §5.6 / §5.7.1, OD-6 / OD-7): before the picker, the Voice Note backup plugin (a typed
+  // manifest mod only; its two rule files ship in the local module's Android res/, no dangerous mod) and Expo's
+  // first-party expo-audio with background recording and playback OFF and the approved C-12; the picker carries C-12
+  // instead of `false`, which would strip the microphone from the whole app.
   assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
-    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: false }]]);
+    './plugins/with-qandeel-voice-backup',
+    ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
+    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]]);
   assert.equal('newArchEnabled' in expo, false, 'New Architecture is structural on this SDK line; no toggle may be reintroduced');
   assert.equal('extra' in expo, false);
   assert.match(bootSmoke, /^appId: com\.qandeel\.mobile$/mu);

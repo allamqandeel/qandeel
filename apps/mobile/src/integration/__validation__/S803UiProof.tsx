@@ -8,14 +8,14 @@
  * voice API (Fake Speechmatics, faults by toggle file) through `adb reverse`. Its own owner and Session, so no draft of
  * the capability proof is ever shown here.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ConversationSurface, createConversationController } from '../../conversation';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { ConversationTurnApiClient, createAppStateForegroundSignal } from '../../runtime-entry';
-import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, useVoiceNoteSurface, VoiceNoteApiClient, VoiceNoteSettingsSection, type VoiceNoteDevice } from '../../voice-note';
+import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, useVoiceNoteSurface, VoiceNoteApiClient, VoiceNoteSettingsSection } from '../../voice-note';
 import type { VoiceNoteFetch } from '../../voice-note/voice-note-api';
 
 const BASE = 'http://127.0.0.1:8803';
@@ -27,23 +27,6 @@ const INSETS = { top: 36, right: 0, bottom: 24, left: 0 };
 const authorized = (input: string, init?: Record<string, unknown>) =>
   fetch(input, { ...init, headers: { ...(init?.headers as Record<string, string> | undefined), Authorization: TOKEN } } as RequestInit);
 
-/** Proof diagnostics only: which port call failed, by error name and a short message — never audio, a path or an id. */
-function traced(device: VoiceNoteDevice): VoiceNoteDevice {
-  const said = (where: string) => (cause: unknown) => {
-    const error = cause as { name?: string; message?: string } | null;
-    console.log(`S803UI ${where} failed ${error?.name ?? 'error'} ${String(error?.message ?? '').replace(/\/[^\s]*/gu, '<path>').slice(0, 120)}`);
-    throw cause;
-  };
-  return {
-    ...device,
-    recorder: () => {
-      const port = device.recorder();
-      return { ...port, prepare: () => port.prepare().catch(said('recorder.prepare')) };
-    },
-    store: { ...device.store, begin: (owner, record) => device.store.begin(owner, record).catch(said('store.begin')) },
-  };
-}
-
 function build() {
   const foreground = createAppStateForegroundSignal();
   const turns = new ConversationTurnApiClient({ baseUrl: BASE, fetch: authorized as never });
@@ -53,21 +36,19 @@ function build() {
     owner: OWNER_UI,
     sessionId: SESSION_UI,
     transport: { api, authorization: () => ({ Authorization: TOKEN }) },
-    device: traced(createDeviceVoiceNotes()),
+    device: createDeviceVoiceNotes(),
     foreground,
     isCurrent: () => true,
     conversation,
   });
-  session.capture.subscribe(() => console.log(`S803UI capture ${session.capture.getState().kind}`));
   return { conversation, session };
 }
 
 export function S803UiProof({ language, settings, onClose }: { readonly language: ChromeLanguage; readonly settings: boolean; readonly onClose: () => void }) {
-  const built = useMemo(build, []);
-  const [inFront, setInFront] = useState(true);
+  const built = useMemo(() => build(), []);
   useEffect(() => () => built.session.retire(), [built]);
-  useEffect(() => setInFront(!settings), [settings]);
-  const slots = useVoiceNoteSurface(built.session, language, inFront);
+  // The Conversation is in front unless the Settings section is shown.
+  const slots = useVoiceNoteSurface(built.session, language, !settings);
   return (
     // As ProductRoot does: the voice message's line takes its touches through the gesture handler.
     <GestureHandlerRootView style={{ flex: 1 }} testID="s803-ui">
