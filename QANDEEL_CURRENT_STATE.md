@@ -459,7 +459,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
   policy; the batch port, the Speechmatics adapter in `apps/api/src/voice/speechmatics/` and the worker (loopback fakes
   only); the M4A duration proof; the eight `/voice` routes and the voice turn through the unchanged Orchestrator;
   E1 … E13; consent grant / withdrawal / read and their races.
-- **Proven:** verify-0186 twice (28 / 28), the re-pinned verifiers, the API jest suite, the root contracts; `prove-0186`
+- **Proven:** verify-0186 twice (29 / 29 after the PR #370 review's ledger recovery V-L2), the re-pinned verifiers, the API jest suite, the root contracts; `prove-0186`
   (A19 / A24 live) runs in GitHub CI only.
 - **Not done:** CP2 (mobile, `expo-audio`, device proof, the 41 rows, S8B-03's closing change); any gate opening;
   `PC-S1 … PC-S7` / `PC-D` (open gate conditions); hosting `0186`; any paid call. `QAN-BL-VOICE-01` stays worked,

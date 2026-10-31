@@ -64,6 +64,7 @@ const DEFINERS = [
   'public.server_record_voice_note_transcription_failure_v1(uuid,text,uuid,text)',
   'public.server_hold_voice_note_for_consent_v1(uuid)',
   'public.server_list_voice_note_deletions_due_v1(integer)',
+  'public.server_list_voice_note_unsettled_attempts_v1(integer,integer)',
   'public.server_retry_voice_note_transcription_v1(uuid,uuid)',
   'public.server_read_voice_note_status_v1(uuid,uuid)',
   'public.server_list_session_pending_voice_notes_v1(uuid,uuid)',
@@ -185,6 +186,7 @@ const recordFailure = (recording, attempt, failure, worker = W) =>
   one('SELECT * FROM public.server_record_voice_note_transcription_failure_v1($1, $2, $3, $4)', [recording, worker, attempt, failure]);
 const hold = (recording) => one('SELECT * FROM public.server_hold_voice_note_for_consent_v1($1)', [recording]);
 const deletionsDue = (limit = 100) => server('SELECT * FROM public.server_list_voice_note_deletions_due_v1($1)', [limit]);
+const unsettled = (grace = 120, limit = 100) => server('SELECT * FROM public.server_list_voice_note_unsettled_attempts_v1($1, $2)', [grace, limit]);
 const retry = async (user, recording) => (await one('SELECT * FROM public.server_retry_voice_note_transcription_v1($1, $2)', [user, recording])).outcome;
 const status = (user, recording) => one('SELECT * FROM public.server_read_voice_note_status_v1($1, $2)', [user, recording]);
 const commit = (user, recording) => one('SELECT * FROM public.server_commit_voice_note_turn_v1($1, $2)', [user, recording]);
@@ -681,6 +683,50 @@ async function verifyBehaviour(report) {
       const [settled] = await server("SELECT * FROM public.settle_ai_provider_call_v2($1, $2, 'SUCCEEDED', 'COMPLETE', '{\"AUDIO_INPUT_MS\": 4100}'::jsonb, 'PROVIDER_REPORTED')", [note.attempt, user]);
       assert.deepEqual([settled.settle_outcome, settled.call_state], ['SETTLED', 'SUCCEEDED_USAGE_REPORTED'], 'V-L1 settled');
       await rejected(() => server("SELECT * FROM public.settle_ai_provider_call_v2($1, $2, 'FAILED', 'ABSENT', '{}'::jsonb, 'GATEWAY_MEASURED')", [randomUUID(), user]), ['22023']);
+    });
+
+    await report.isolated('V-L2 a ledger row the worker left PENDING: listed from durable facts only after the grace, settled once, then gone', async () => {
+      const { user, session } = await ready();
+      const listed = async (attempt) => (await unsettled()).find((r) => r.attempt_id === attempt);
+      const age = async (attempt) => {
+        await owner();
+        await q("UPDATE voice_private.note_transcription_attempts SET settled_at = clock_timestamp() - interval '10 minutes' WHERE attempt_id = $1", [attempt]);
+      };
+      // A SUCCEEDED attempt whose settlement never landed: invisible inside the grace, then listed with its proven duration.
+      const note = await readyNote(user, session, { ms: 4300 });
+      assert.equal(await listed(note.attempt), undefined, 'V-L2 not listed inside the grace');
+      await age(note.attempt);
+      const row = await listed(note.attempt);
+      assert.deepEqual(row && [row.user_id, row.attempt_state, row.failure_class, Number(row.duration_ms)], [user, 'SUCCEEDED', null, 4300],
+        'V-L2 the terminal state, failure class and locally proven duration - nothing else');
+      assert.deepEqual(Object.keys(row).sort(), ['attempt_id', 'attempt_state', 'duration_ms', 'failure_class', 'user_id'], 'V-L2 no job id, text or band');
+      // A FAILED attempt is listed with its class; a SUBMITTED one (not terminal) never is.
+      const failing = await storedNote(user, session);
+      assert.ok(await claimNote(failing.id));
+      const f = randomUUID();
+      assert.equal((await beginSubmission(failing.id, f)).outcome, 'SUBMITTING');
+      await recordFailure(failing.id, f, 'PROVIDER_UNAVAILABLE');
+      await age(f);
+      assert.deepEqual([(await listed(f))?.attempt_state, (await listed(f))?.failure_class], ['FAILED', 'PROVIDER_UNAVAILABLE'], 'V-L2 FAILED listed');
+      const open = await storedNote(user, session);
+      const s1 = await submitted(open.id);
+      assert.equal(await listed(s1), undefined, 'V-L2 a SUBMITTED attempt is not terminal');
+      // Bounded and ordered; the bounds are refused outside them.
+      assert.ok((await unsettled(120, 1)).length <= 1, 'V-L2 bounded by p_limit');
+      for (const [grace, limit] of [[59, 10], [86401, 10], [120, 0], [120, 101], [null, 10], [120, null]]) {
+        await rejected(() => unsettled(grace, limit), ['22023']);
+      }
+      // Settled from those facts (GATEWAY_MEASURED: the provider's own duration is not durable) - then gone; a replay is idempotent.
+      const settle = (attempt, outcome, completeness, usage, source) =>
+        one('SELECT * FROM public.settle_ai_provider_call_v2($1, $2, $3, $4, $5::jsonb, $6)', [attempt, user, outcome, completeness, usage, source]);
+      const s = await settle(note.attempt, 'SUCCEEDED', 'COMPLETE', '{"AUDIO_INPUT_MS": 4300}', 'GATEWAY_MEASURED');
+      assert.deepEqual([s.settle_outcome, s.call_state], ['SETTLED', 'SUCCEEDED_USAGE_REPORTED'], 'V-L2 settled');
+      assert.equal(await listed(note.attempt), undefined, 'V-L2 a settled row is no longer listed');
+      assert.equal((await settle(note.attempt, 'SUCCEEDED', 'COMPLETE', '{"AUDIO_INPUT_MS": 4300}', 'GATEWAY_MEASURED')).settle_outcome, 'ALREADY_SETTLED', 'V-L2 idempotent');
+      await rejected(() => settle(note.attempt, 'SUCCEEDED', 'COMPLETE', '{"AUDIO_INPUT_MS": 9999}', 'GATEWAY_MEASURED'), ['PT409']);
+      // A failure keeps its usage unknown (ABSENT, unpriced), never invented.
+      assert.equal((await settle(f, 'FAILED', 'ABSENT', '{}', 'PROVIDER_REPORTED')).call_state, 'FAILED_USAGE_UNKNOWN', 'V-L2 FAILED stays usage-unknown');
+      assert.equal(await listed(f), undefined);
     });
 
     await report.isolated('V-D1..D4 deletion: REQUESTED scheduled, retried on LOCKED / TRANSIENT, ABSENT final, UNCONFIRMED on day seven', async () => {

@@ -77,6 +77,14 @@ export interface VoiceConsentTextRow {
 export type CommitVoiceTurnOutcome = 'COMMITTED' | 'ALREADY_COMMITTED' | 'UNAVAILABLE' | 'SESSION_NOT_ACTIVE' | 'NOT_READY'
   | 'NOT_AVAILABLE_NOW' | 'CONSENT_REQUIRED' | 'COMMAND_CONFLICT' | 'ADMISSION_LIMITED';
 export interface CommitVoiceTurnRow { readonly outcome: CommitVoiceTurnOutcome; readonly turn_id: string | null; readonly session_id: string | null }
+/** A terminal attempt whose ledger row is still PENDING after the grace: durable facts only (no job id, text or band). */
+export interface UnsettledAttemptRow {
+  readonly attempt_id: string;
+  readonly user_id: string;
+  readonly attempt_state: 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+  readonly failure_class: string | null;
+  readonly duration_ms: number | string | null;
+}
 export type LedgerSettlement =
   | { readonly outcome: 'SUCCEEDED'; readonly audioInputMs: number; readonly source: 'PROVIDER_REPORTED' | 'GATEWAY_MEASURED' }
   | { readonly outcome: 'FAILED' | 'CANCELLED_BEFORE_PROVIDER' };
@@ -138,6 +146,11 @@ export class VoiceNotesRepository {
 
   deletionsDue(limit: number) {
     return this.all<DeletionDueRow>('server_list_voice_note_deletions_due_v1', { p_limit: limit });
+  }
+
+  /** The attempts whose own settlement did not land (record §5 decision 5): read-only, bounded by `limit`. */
+  unsettledAttempts(graceSeconds: number, limit: number) {
+    return this.all<UnsettledAttemptRow>('server_list_voice_note_unsettled_attempts_v1', { p_grace_seconds: graceSeconds, p_limit: limit });
   }
 
   /** The ledger row of one attempt (its id is the call id), settled once; a replay with the same facts is ALREADY_SETTLED. */

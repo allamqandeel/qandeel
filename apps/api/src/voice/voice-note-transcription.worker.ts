@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { TelemetryService } from '../observability/telemetry.service';
 import { VoiceMediaService } from '../voice-media/voice-media.service';
-import { type ClaimedNoteRow, type LedgerSettlement, type ProviderDeletionReport, VoiceNotesRepository } from '../voice-media/voice-notes.repository';
+import {
+  type ClaimedNoteRow,
+  type LedgerSettlement,
+  type ProviderDeletionReport,
+  type UnsettledAttemptRow,
+  VoiceNotesRepository,
+} from '../voice-media/voice-notes.repository';
 import { classifyVoiceNote, DEFAULT_ASR_BAND_THRESHOLDS, type AsrBandThresholds } from './asr-confidence/asr-confidence';
 import {
   BATCH_TRANSCRIPTION_JOBS,
@@ -56,6 +62,8 @@ export const VOICE_WORKER_LIMITS = Object.freeze({
   pollTotalMs: 15 * 60_000,
   unknownQuarantineMs: 30 * 60_000,
   deletionsPerSweep: 20,
+  settlementGraceSeconds: 15 * 60,
+  settlementsPerSweep: 20,
 });
 
 const FAILURE_CLASS: Record<BatchFailure, string> = {
@@ -131,9 +139,9 @@ export class VoiceNoteTranscriptionWorker implements OnModuleInit, OnModuleDestr
     this.shutdown.abort();
   }
 
-  /** One cycle: claim up to `concurrency` notes and work them, then sweep the deletions due. Never throws. */
-  async runOnce(): Promise<{ claimed: number; deletions: number }> {
-    const result = { claimed: 0, deletions: 0 };
+  /** One cycle: claim up to `concurrency` notes and work them, then sweep the deletions due and the unsettled ledger rows. Never throws. */
+  async runOnce(): Promise<{ claimed: number; deletions: number; settlements: number }> {
+    const result = { claimed: 0, deletions: 0, settlements: 0 };
     if (this.running || this.jobs === null) return result;
     this.running = true;
     try {
@@ -147,6 +155,7 @@ export class VoiceNoteTranscriptionWorker implements OnModuleInit, OnModuleDestr
       result.claimed = rows.length;
       await Promise.all(rows.map((row) => this.work(row)));
       result.deletions = await this.sweepDeletions();
+      result.settlements = await this.recoverSettlements();
     } finally {
       this.running = false;
     }
@@ -436,10 +445,49 @@ export class VoiceNoteTranscriptionWorker implements OnModuleInit, OnModuleDestr
     try {
       await this.notes.settleAttempt(attemptId, userId, settlement);
     } catch {
-      // The ledger row stays PENDING and is visible in the stale-pending summary (a declared residual); the note's own
-      // state is already durable, so nothing is retried here.
+      // The ledger row stays PENDING; the note's own state is already durable. recoverSettlements() settles it later.
       this.signal('ledger', 'transport_failure');
     }
+  }
+
+  /**
+   * The ledger rows whose settlement did not land (record §5 decision 5): a terminal attempt still PENDING after the grace
+   * is settled from durable facts only - the provider is never asked again. A transcript the provider returned (SUCCEEDED,
+   * or TRANSCRIPT_TOO_LONG) is the duration proven locally before submission, GATEWAY_MEASURED (the provider's own duration
+   * is not durable); every other end keeps its usage ABSENT (unpriced). settle_ai_provider_call_v2 makes a replay
+   * ALREADY_SETTLED; a racing different settlement that landed first stands. Bounded per cycle; never throws.
+   */
+  async recoverSettlements(): Promise<number> {
+    if (this.jobs === null) return 0;
+    let rows: UnsettledAttemptRow[];
+    try {
+      rows = await this.notes.unsettledAttempts(VOICE_WORKER_LIMITS.settlementGraceSeconds, VOICE_WORKER_LIMITS.settlementsPerSweep);
+    } catch {
+      this.signal('ledger', 'transport_failure');
+      return 0;
+    }
+    let settled = 0;
+    for (const row of rows.slice(0, VOICE_WORKER_LIMITS.settlementsPerSweep)) {
+      const transcribed = row.attempt_state === 'SUCCEEDED' || (row.attempt_state === 'FAILED' && row.failure_class === 'TRANSCRIPT_TOO_LONG');
+      const durationMs = Number(row.duration_ms);
+      if (transcribed && !(Number.isSafeInteger(durationMs) && durationMs > 0)) {
+        // The measured duration is written before any submission; without it nothing is invented and the row stays PENDING.
+        this.signal('ledger', 'integrity_failure');
+        continue;
+      }
+      const settlement: LedgerSettlement = transcribed
+        ? { outcome: 'SUCCEEDED', audioInputMs: durationMs, source: 'GATEWAY_MEASURED' }
+        : { outcome: 'FAILED' };
+      try {
+        await this.notes.settleAttempt(row.attempt_id, row.user_id, settlement);
+        settled += 1;
+        this.signal('ledger', 'success');
+      } catch {
+        // Unreachable, or a racing settlement landed first (PT409): either way the row is listed again only while PENDING.
+        this.signal('ledger', 'transport_failure');
+      }
+    }
+    return settled;
   }
 
   private async release(row: ClaimedNoteRow): Promise<void> {

@@ -105,6 +105,15 @@ const MEMORY_SUBJECT_EMBED = 'memory_subject_attributions(subject)';
 const MEMORY_SUBJECT_EMBED_SQL =
   "(SELECT json_build_object('subject', attribution.subject) FROM public.memory_subject_attributions attribution"
   + ' WHERE attribution.memory_id = memories.id AND attribution.user_id = memories.user_id) AS memory_subject_attributions';
+// S8B-03 CP1 (migration 0186): MemoryRepository's reads add the ONE further embed, pinned here the same way and accepted
+// only directly after the subject embed, on `memories`, as the last item. It is answered as PostgREST answers the
+// one-to-many relationship memory_typed_confirmations.(memory_id, user_id) -> memories.(id, user_id): an array of
+// `{ memory_id }`, empty when the Memory has no typed confirmation, read under the caller's role and the table's own RLS.
+const MEMORY_TYPED_CONFIRMATION_EMBED = 'memory_typed_confirmations(memory_id)';
+const MEMORY_TYPED_CONFIRMATION_EMBED_SQL =
+  "COALESCE((SELECT json_agg(json_build_object('memory_id', confirmation.memory_id) ORDER BY confirmation.source_turn_id)"
+  + ' FROM public.memory_typed_confirmations confirmation'
+  + " WHERE confirmation.memory_id = memories.id AND confirmation.user_id = memories.user_id), '[]'::json) AS memory_typed_confirmations";
 
 /**
  * Smoke-only record of every request shape this substitute refused. A refusal inside an optional or fail-closed
@@ -232,11 +241,14 @@ export function translateTableRead(table: string, queryString: string): Translat
 
   for (const [key, value] of params.entries()) {
     if (key === 'select') {
-      const embedded = table === MEMORY_SUBJECT_EMBED_TABLE && value.endsWith(`,${MEMORY_SUBJECT_EMBED}`);
-      const plain = embedded ? value.slice(0, -(MEMORY_SUBJECT_EMBED.length + 1)) : value;
+      const withConfirmations = `,${MEMORY_SUBJECT_EMBED},${MEMORY_TYPED_CONFIRMATION_EMBED}`;
+      const confirmed = table === MEMORY_SUBJECT_EMBED_TABLE && value.endsWith(withConfirmations);
+      const embedded = confirmed || (table === MEMORY_SUBJECT_EMBED_TABLE && value.endsWith(`,${MEMORY_SUBJECT_EMBED}`));
+      const plain = confirmed ? value.slice(0, -withConfirmations.length) : embedded ? value.slice(0, -(MEMORY_SUBJECT_EMBED.length + 1)) : value;
       if (!SELECT_LIST.test(plain)) unsupported('select');
       columns = plain.split(',').map((column) => identifier(column)).join(', ');
       if (embedded) columns = `${columns}, ${MEMORY_SUBJECT_EMBED_SQL}`;
+      if (confirmed) columns = `${columns}, ${MEMORY_TYPED_CONFIRMATION_EMBED_SQL}`;
     } else if (key === 'order') {
       orderBy = ` ORDER BY ${value
         .split(',')

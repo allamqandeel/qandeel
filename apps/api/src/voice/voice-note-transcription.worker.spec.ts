@@ -41,6 +41,9 @@ class Model {
   failureClass: string | null = null;
   readonly attempts: Attempt[] = [];
   readonly ledger: { attemptId: string; settlement: LedgerSettlement }[] = [];
+  readonly unsettledReads: [number, number][] = [];
+  /** When an attempt was first seen terminal: the model's stand-in for settled_at, which the grace counts from. */
+  readonly terminalSince = new Map<string, number>();
   readonly events: string[] = [];
   private readonly crashes = new Map<string, 'before' | 'after'>();
 
@@ -181,6 +184,16 @@ class Model {
       .filter((a) => a.jobId !== null && ['PENDING', 'REQUESTED', 'RETRYING'].includes(a.deletion) && ['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(a.state)
         && (a.nextDeletionAt ?? 0) <= this.now && (a.firstDeletionAt !== null || this.lease === null || this.lease.expires <= this.now))
       .map((a) => { a.nextDeletionAt = this.now + 120_000; return { attempt_id: a.id, provider_job_id: a.jobId!, provider_deletion_state: a.deletion, deletion_attempts: 0 }; })),
+    // A terminal attempt with no ledger settlement, once the grace has passed (V-L2 proves the definer on PostgreSQL).
+    unsettledAttempts: async (grace: number, limit: number) => this.hook('unsettledAttempts', () => {
+      this.unsettledReads.push([grace, limit]);
+      const terminal = this.attempts.filter((a) => ['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(a.state));
+      for (const a of terminal) if (!this.terminalSince.has(a.id)) this.terminalSince.set(a.id, this.now);
+      return terminal
+        .filter((a) => this.now - this.terminalSince.get(a.id)! >= grace * 1000 && !this.ledger.some((l) => l.attemptId === a.id))
+        .slice(0, limit)
+        .map((a) => ({ attempt_id: a.id, user_id: USER, attempt_state: a.state, failure_class: a.failureClass, duration_ms: this.durationMs === null ? null : String(this.durationMs) }));
+    }),
     settleAttempt: async (attemptId: string, _user: string, settlement: LedgerSettlement) => this.hook('settleAttempt', () => {
       this.ledger.push({ attemptId, settlement });
       return { settle_outcome: 'SETTLED', call_state: settlement.outcome };
@@ -464,7 +477,66 @@ describe('the worker is off unless configured', () => {
     const off = new VoiceNoteTranscriptionWorker(model.repository as unknown as VoiceNotesRepository, media as unknown as VoiceMediaService,
       { enabled: true, concurrency: 2, thresholds: DEFAULT_ASR_BAND_THRESHOLDS }, null, undefined, clock);
     expect(off.enabled).toBe(false);
-    expect(await off.runOnce()).toEqual({ claimed: 0, deletions: 0 });
+    expect(await off.runOnce()).toEqual({ claimed: 0, deletions: 0, settlements: 0 });
+    expect(await off.recoverSettlements()).toBe(0);
     expect(model.events).toHaveLength(0);
+  });
+});
+
+describe('the ledger row a lost settlement left PENDING (record §5 decision 5)', () => {
+  const terminal = (id: string, state: string, failureClass: string | null = null) => {
+    model.attempts.push({ id, state, jobId: null, unknownSince: null, submittedAt: null, deletion: 'NOT_APPLICABLE', firstDeletionAt: null, nextDeletionAt: null, failureClass });
+    model.terminalSince.set(id, model.now - VOICE_WORKER_LIMITS.settlementGraceSeconds * 1000);
+  };
+
+  it('is settled once from durable facts by a later cycle: no provider call, no second row', async () => {
+    jobs.providerDurationMs = 4100;
+    model.crash('settleAttempt');
+    const w = worker();
+    expect(await w.runOnce()).toMatchObject({ claimed: 1, settlements: 0 });
+    expect(model.state).toBe('READY');
+    expect(model.ledger).toEqual([]);
+    // Inside the grace the worker's own settlement may still be landing: nothing is touched.
+    expect(await w.runOnce()).toMatchObject({ claimed: 0, settlements: 0 });
+    model.now += VOICE_WORKER_LIMITS.settlementGraceSeconds * 1000;
+    const calls = { ...jobs.calls };
+    expect(await w.recoverSettlements()).toBe(1);
+    // The provider's own duration is not durable: the duration proven locally before submission, labelled so.
+    expect(model.ledger).toEqual([{ attemptId: model.attempts[0].id, settlement: { outcome: 'SUCCEEDED', audioInputMs: 4000, source: 'GATEWAY_MEASURED' } }]);
+    expect(jobs.calls).toEqual(calls);
+    expect(await w.recoverSettlements()).toBe(0);
+    expect(model.ledger).toHaveLength(1);
+    expect(model.unsettledReads.every(([grace, limit]) => grace === VOICE_WORKER_LIMITS.settlementGraceSeconds && limit === VOICE_WORKER_LIMITS.settlementsPerSweep)).toBe(true);
+  });
+
+  it('a returned transcript is the measured duration; every other end keeps its usage unknown (FAILED, ABSENT)', async () => {
+    model.durationMs = 4000;
+    terminal('a-ok', 'SUCCEEDED');
+    terminal('a-long', 'FAILED', 'TRANSCRIPT_TOO_LONG');
+    terminal('a-timeout', 'FAILED', 'PROVIDER_TIMEOUT');
+    terminal('a-unknown', 'FAILED', 'UNCERTAIN_SUBMISSION');
+    terminal('a-cancel', 'CANCELLED');
+    terminal('a-open', 'SUBMITTED');
+    expect(await worker().recoverSettlements()).toBe(5);
+    const measured = { outcome: 'SUCCEEDED', audioInputMs: 4000, source: 'GATEWAY_MEASURED' };
+    expect(Object.fromEntries(model.ledger.map((l) => [l.attemptId, l.settlement]))).toEqual({
+      'a-ok': measured, 'a-long': measured, 'a-timeout': { outcome: 'FAILED' }, 'a-unknown': { outcome: 'FAILED' }, 'a-cancel': { outcome: 'FAILED' },
+    });
+    expect(jobs.calls).toEqual({ submit: 0, status: 0, fetchResult: 0, remove: 0, findByReference: 0 });
+  });
+
+  it('without a proven duration a transcript is not invented (the row stays PENDING); bounded per cycle; never throws', async () => {
+    terminal('a-ok', 'SUCCEEDED');
+    terminal('a-failed', 'FAILED', 'PROVIDER_TIMEOUT');
+    expect(await worker().recoverSettlements()).toBe(1);
+    expect(model.ledger).toEqual([{ attemptId: 'a-failed', settlement: { outcome: 'FAILED' } }]);
+    model = new Model();
+    model.durationMs = 4000;
+    for (let i = 0; i < VOICE_WORKER_LIMITS.settlementsPerSweep + 5; i += 1) terminal(`a-${i}`, 'FAILED', 'PROVIDER_TIMEOUT');
+    expect(await worker().recoverSettlements()).toBe(VOICE_WORKER_LIMITS.settlementsPerSweep);
+    model.crash('settleAttempt');
+    expect(await worker().recoverSettlements()).toBe(4);
+    model.crash('unsettledAttempts');
+    expect(await worker().recoverSettlements()).toBe(0);
   });
 });

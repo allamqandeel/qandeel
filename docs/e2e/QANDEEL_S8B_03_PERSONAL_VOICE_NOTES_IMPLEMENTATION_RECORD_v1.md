@@ -121,8 +121,8 @@ byte-identical to before (A21).
 
 | Area | Where |
 |---|---|
-| **A — Migration `0186`** | `database/migrations/0186_s8b_03_personal_voice_notes_v1.sql` (forward-only, one transaction) with its substitution module `database/voice-notes-0186-substitutions.mjs` (0183 pattern: every re-created body = its original + declared edits; any undeclared difference fails). The transcription state and attempt tables (RLS, no policy, no grant, erasure census); the 13 transcription definers (`service_role` only); the replayed-begin fix (`ALREADY_ACCEPTED`, BLOCKER-1); the atomic `server_commit_voice_note_turn_v1`; E1 / E2 / E6 / E8 / E9 / E11 / E13; `memory_typed_confirmations`; `voice_private.machine_asr_memory_confidence_v1`; `server_read_memory_command_voice_v1`; the consent text installed verbatim (§2.1); deploy guards: all four gates `DISABLED`, no client role executes a new definer, the `voice_private` function census. |
-| **B — Batch port, adapter, worker** | `apps/api/src/voice/batch-transcription-jobs.port.ts` (`BATCH_TRANSCRIPTION_JOBS`); `apps/api/src/voice/speechmatics/speechmatics-batch-jobs.adapter.ts` + `speechmatics-batch.config.ts` (`fetch`, hand-streamed multipart, configurable EU endpoint, `tracking.reference`, json-v2, deletion without `force`, the per-instance rate limit, content-free error classes, `NOT_SENT` distinct from `UNKNOWN`); `apps/api/src/voice/testing/fake-batch-transcription-jobs.ts` (tests only, wired in no module); `apps/api/src/voice/voice-note-transcription.worker.ts` with the deletion sweep; `apps/api/src/voice/voice.module.ts`. `SpeechRecognitionAdapter` is unchanged and has no production binding. |
+| **A — Migration `0186`** | `database/migrations/0186_s8b_03_personal_voice_notes_v1.sql` (forward-only, one transaction) with its substitution module `database/voice-notes-0186-substitutions.mjs` (0183 pattern: every re-created body = its original + declared edits; any undeclared difference fails). The transcription state and attempt tables (RLS, no policy, no grant, erasure census); the 13 transcription definers (`service_role` only), plus the read-only `server_list_voice_note_unsettled_attempts_v1` added by the PR #370 review (decision 5); the replayed-begin fix (`ALREADY_ACCEPTED`, BLOCKER-1); the atomic `server_commit_voice_note_turn_v1`; E1 / E2 / E6 / E8 / E9 / E11 / E13; `memory_typed_confirmations`; `voice_private.machine_asr_memory_confidence_v1`; `server_read_memory_command_voice_v1`; the consent text installed verbatim (§2.1); deploy guards: all four gates `DISABLED`, no client role executes a new definer, the `voice_private` function census. |
+| **B — Batch port, adapter, worker** | `apps/api/src/voice/batch-transcription-jobs.port.ts` (`BATCH_TRANSCRIPTION_JOBS`); `apps/api/src/voice/speechmatics/speechmatics-batch-jobs.adapter.ts` + `speechmatics-batch.config.ts` (`fetch`, hand-streamed multipart, configurable EU endpoint, `tracking.reference`, json-v2, deletion without `force`, the per-instance rate limit, content-free error classes, `NOT_SENT` distinct from `UNKNOWN`); `apps/api/src/voice/testing/fake-batch-transcription-jobs.ts` (tests only, wired in no module); `apps/api/src/voice/voice-note-transcription.worker.ts` with the deletion sweep and the ledger recovery sweep (decision 5); `apps/api/src/voice/voice.module.ts`. `SpeechRecognitionAdapter` is unchanged and has no production binding. |
 | **C — M4A duration prover** | `apps/api/src/voice/m4a/m4a-audio-duration.ts` (`proveM4aAudioDuration`, §4.6.2) through `VoiceMediaService.readNoteRange`; `apps/api/src/voice/testing/m4a-fixture.writer.ts` for synthetic fixtures. A refused note is final, uncounted, and never submitted. |
 | **D — API and the voice turn** | `apps/api/src/voice-media/voice-notes.controller.ts` / `.service.ts` / `.repository.ts`: `GET /voice/consent`, `POST /voice/consent/grant`, `POST /voice/consent/withdraw`, `GET /voice/capability`, `GET /voice/notes/pending`, `GET /voice/notes/:recordingId/status`, `POST /voice/notes/:recordingId/transcription/retry`, `POST /voice/notes/:recordingId/turn`; the optional `voiceNote` field in conversation history (no key, no band). The committed turn runs through `ConversationService.runCommittedTurn` → the **unchanged** Orchestrator (`voice-note-turn.port.ts`). Each route is classified in the rate-limit census. |
 | **E — The governed brain (E1 … E13)** | E1 / E2 / E6 / E8 / E9 / E11 / E13 in `0186`; E3 (`evidence.types.ts`, `evidence.service.ts`, the association provider); E4 (the enrichment SKIP line removed); E5 (source and `confirmedByTyping` at the six model boundaries, M-01 / M-02 / M-03, `ModelRouterMemoryContext`); E6 TS (`personal-understanding-capture.service.ts`, the post-response repository); E7 (a LOW turn feeds no hypothesis and no intent); E8 TS (`memory-control.service.ts` / `.copy.ts` / `.types.ts`, `NOT_HEARD_CLEARLY`); E9 TS (the typed confirmation); E10 (`personal-knowledge.projection.ts`); E12 (LOW runs Open Understanding in backfill only); E13 (`apps/api/src/voice/asr-confidence/machine-asr-confidence.startup-check.ts`). |
@@ -134,7 +134,7 @@ byte-identical to before (A21).
 
 ## 4. Acceptance criteria A1 … A27 + A6b — how each is proven (all free)
 
-`verify-migration-0186.mjs` ran **twice on one database, 28 / 28 sections passing both times** (local PostgreSQL 17,
+`verify-migration-0186.mjs` ran **twice on one database, 29 / 29 sections passing both times** (28 at the first delivery; V-L2 added by the PR #370 review) (local PostgreSQL 17,
 `0001 … 0186`). The jest specs named below pass. `prove-0186` runs in GitHub CI only (PostgREST + rclone + a loopback fake of
 the batch API); GitHub CI is the authority for it.
 
@@ -149,7 +149,7 @@ the batch API); GitHub CI is the authority for it.
 | A6b | Adapter classification, `Retry-After`, rate limit, streamed multipart, `findByReference` `UNSUPPORTED`, no content logged | `speechmatics-batch-jobs.adapter.spec` against a loopback HTTP server |
 | A7 | 3 automatic / 5 total; duration proof accept / refuse matrix with `submit` = 0 | `m4a-audio-duration.spec` (fixtures from `m4a-fixture.writer.ts`, counted bytes and reads) + worker spec + verify-0186 V-T5 / T6 |
 | A8 | External uncertainty: `UNKNOWN` → `OUTCOME_UNKNOWN`, quarantine, adoption, abort after the first byte | worker spec + adapter spec + verify-0186 V-T3 |
-| A9 | Ledger: one v3 row per attempt; settlement source; `UNPRICED` | worker spec + verify-0186 V-L1 |
+| A9 | Ledger: one v3 row per attempt; settlement source; `UNPRICED` | worker spec (incl. the recovery sweep) + verify-0186 V-L1 / V-L2 |
 | A10 | By band: HIGH / MEDIUM write `MACHINE_ASR` at 0.90 / 0.75; LOW writes nothing | verify-0186 V-E1 … E6 + the dispatcher, association and capture specs |
 | A11 | Truth Maintenance after voice evidence | verify-0186 V-TM1 … TM5 |
 | A12 | No automatic promotion | verify-0186 V-P1 … P4 |
@@ -193,8 +193,18 @@ consent text and digests; the gates; the CI wiring; the key server-only; no logg
    `service_role` definer; the startup check compares it with P-1 and **runs only when the worker is enabled**.
 3. **Adapter classification** follows A6b exactly; a timeout after the first body byte is `UNKNOWN`, never `NOT_SENT`.
 4. **Attempt limits live only in the database policy** (3 automatic, 5 total); the worker never counts.
-5. **The ledger is settled right after the database outcome, before the provider deletion.** Residual: a crash between the
-   two leaves the call `PENDING` until the existing ledger sweep.
+5. **The ledger is settled right after the database outcome, before the provider deletion; a settlement that did not land
+   is recovered from durable facts** (PR #370 review, 2026-10-31). A failed or crashed `settle` no longer leaves the call
+   `PENDING` for good: each worker cycle reads, through the read-only `service_role` definer
+   `server_list_voice_note_unsettled_attempts_v1` (bounded: grace 60 s … 1 day, at most 100 rows; the worker uses 15 minutes
+   and 20), the terminal attempts whose call is still `PENDING`, and settles each through the same
+   `settle_ai_provider_call_v2`. Only durable facts are used and **the provider is never asked again**: a transcript the
+   provider returned (`SUCCEEDED`, or `FAILED` with `TRANSCRIPT_TOO_LONG`) settles `SUCCEEDED` with the duration proven
+   locally before submission, labelled `GATEWAY_MEASURED` (D-2) — the provider's own duration is not durable, so a
+   recovered row is never `PROVIDER_REPORTED`; every other end settles `FAILED` with usage `ABSENT` (`FAILED_USAGE_UNKNOWN`,
+   unpriced). A transcript without a proven duration is not invented: the row stays `PENDING` (integrity signal). The
+   ledger's own digest makes a replay `ALREADY_SETTLED`; a different settlement that landed first stands (`PT409`), so
+   nothing is counted twice. No new cost table, state or rating rule. Proven by verify-0186 V-L2 and the worker spec.
 6. **E11 retry:** when the database refuses a person label (an uncertain word, or a non-HIGH band), the capture is retried
    once **without the items about other people** (`withoutOtherPeople`); each dropped item is counted as
    `VOICE_CAPTURE_OPERATION_WITHHELD`.
@@ -204,19 +214,36 @@ consent text and digests; the gates; the CI wiring; the key server-only; no logg
 9. **The history `voiceNote` read is not fail-soft:** a failed read fails the history request, never omits the field.
 10. **The memory-command voice read** (`server_read_memory_command_voice_v1`): one extra read **only** when a Memory command
     is planned on a turn; ordinary turns read nothing. A failed read fails the turn closed.
-11. **C-57 is wired but unreachable** by the current grammar: a CORRECT clarification always has two or more options, so the
-    single-option voice correction question is not produced today (§6).
+11. **C-57 is wired but unreachable** (re-verified for the PR #370 review, 2026-10-31). The approved E8 table (§4.9.4)
+    gives a spoken CORRECT no confirmation of its own: a single clear target is `CORRECTED` at the band's score, an
+    ambiguous one asks *the existing clarification*. `memory-control.service.ts` builds a CORRECT clarification only
+    from `AMBIGUOUS` (two or three options; `PARTIAL` is ordinary talk for a correction), so the one-option question
+    with the old and the new words is never asked. The one place a CORRECT clarification can carry one option — asking
+    again after an out-of-range answer when the other options were removed meanwhile — repeats the existing question
+    without the new words, as the table says. No scenario the contract requires is missing, so no question was
+    invented; C-57 stays pinned and tested at the copy level (§6).
 12. **C-12 is pinned in documents only** in CP1 (§2.2).
 13. **A5 by composition:** see §4.
 
 ---
+
+### 5.1 PR #370 review fixes (2026-10-31)
+
+- **API CI, `test:full-intelligence-e2e-smoke-adapters`:** the smoke harness's foreground SQL translator refused the read
+  `MemoryRepository` makes since E9 (the subject embed followed by `memory_typed_confirmations(memory_id)`). It now accepts
+  that one further embed, pinned exactly, only directly after the subject embed, on `memories`, as the last item, and
+  translates it to a correlated array (`[]` without a row) under the caller's RLS. Columns, order and every other refusal
+  are unchanged; no production code changed. Its test proves the shape and the isolation on real PostgreSQL.
+- **Ledger recovery:** decision 5. **C-57:** decision 11 (truth recorded, no code change).
 
 ## 6. Residual limits (CP1)
 
 - **prove-0186** (A19, A24 live, wire refusals) runs only in GitHub CI; it is not runnable on the local harness.
 - **A5** is proven by composition (real-PostgreSQL unit + Orchestrator spec), not one end-to-end real-PostgreSQL spec.
 - **C-57** is unreachable by the current grammar (decision 11); it stays pinned and tested at the copy level.
-- **Ledger `PENDING` window** between settlement and a crash (decision 5).
+- **Ledger `PENDING` window:** a call whose settlement did not land stays `PENDING` for the grace (15 minutes) and until a
+  worker cycle runs; it is then settled from durable facts (decision 5). Only while every worker is off does it stay
+  `PENDING` (visible in the stale-pending summary).
 - **No live provider behaviour is proven.** Every adapter proof is a loopback fake; every DeepSeek proof is a recorded
   payload, not a model answer.
 - **Not user-ready:** no client surface, no recorder, no `expo-audio`, no device proof (all CP2), and every gate is closed.

@@ -257,6 +257,7 @@ async function main() {
         ['server_commit_voice_note_turn_v1', { p_user_id: a, p_recording_id: randomUUID() }],
         ['server_read_memory_command_voice_v1', { p_user_id: a, p_session_id: sessionA, p_turn_id: randomUUID(), p_command_id: null }],
         ['server_read_machine_asr_memory_confidence_v1', {}],
+        ['server_list_voice_note_unsettled_attempts_v1', { p_grace_seconds: 900, p_limit: 1 }],
       ]) {
         const status = await wire(token, name, body);
         assert.ok([401, 403, 404].includes(status), `P01 ${label} is refused ${name} (${status})`);

@@ -828,6 +828,31 @@ BEGIN
   RETURN QUERY SELECT 'HELD'::text, v_state;
 END$$;
 
+-- The ledger rows a worker left PENDING (record §5 decision 5, PR #370 review): an attempt the database settled at least
+-- p_grace_seconds ago whose AI-COST call is still PENDING, because the worker's own settlement did not land. Only durable
+-- facts come back - the terminal state, the failure class and the duration proven locally before submission - so the
+-- worker settles from them and never asks the provider again. settle_ai_provider_call_v2 makes it idempotent: a call
+-- already settled the same way answers ALREADY_SETTLED; a racing different settlement is a conflict the worker ignores.
+-- Read-only and bounded; nothing here writes.
+CREATE FUNCTION public.server_list_voice_note_unsettled_attempts_v1(p_grace_seconds integer, p_limit integer)
+RETURNS TABLE (attempt_id uuid, user_id uuid, attempt_state text, failure_class text, duration_ms bigint)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF p_grace_seconds IS NULL OR p_grace_seconds NOT BETWEEN 60 AND 86400 OR p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100 THEN
+    RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+  RETURN QUERY
+    SELECT a.attempt_id, a.user_id, a.attempt_state, a.failure_class, n.duration_ms
+      FROM voice_private.note_transcription_attempts a
+      JOIN voice_private.note_transcriptions n ON n.recording_id = a.recording_id
+      JOIN public.ai_provider_calls c ON c.id = a.attempt_id AND c.user_id = a.user_id
+     WHERE a.attempt_state IN ('SUCCEEDED', 'FAILED', 'CANCELLED') AND a.settled_at IS NOT NULL
+       AND a.settled_at <= now() - make_interval(secs => p_grace_seconds)
+       AND c.call_state = 'PENDING'
+     ORDER BY a.settled_at, a.attempt_id
+     LIMIT p_limit;
+END$$;
+
 -- The deletions due (§4.8 step 4): every known job of a settled attempt whose deletion is not final, once its time has
 -- come - but a first deletion of a note a live worker holds is that worker's. Each row handed out is deferred two minutes
 -- so two sweepers do not repeat it (a repeated delete is harmless). Seven days after its creation, an unconfirmed deletion
@@ -2298,6 +2323,7 @@ BEGIN
     'public.server_record_voice_note_transcription_failure_v1(uuid,text,uuid,text)',
     'public.server_hold_voice_note_for_consent_v1(uuid)',
     'public.server_list_voice_note_deletions_due_v1(integer)',
+    'public.server_list_voice_note_unsettled_attempts_v1(integer,integer)',
     'public.server_retry_voice_note_transcription_v1(uuid,uuid)',
     'public.server_read_voice_note_status_v1(uuid,uuid)',
     'public.server_list_session_pending_voice_notes_v1(uuid,uuid)',
