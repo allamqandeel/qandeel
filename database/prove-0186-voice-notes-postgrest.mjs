@@ -269,7 +269,10 @@ async function main() {
     assert.deepEqual([await grant(a), await grant(b)], ['GRANTED', 'GRANTED']);
     const size = 24 * MiB;
     const large = await uploadNote(tokens.a, sessionA, size);
-    assert.equal((await noteOf(large))?.state, 'PENDING', 'P02 an accepted note waits for transcription');
+    // An accepted recording has no transcription row until the worker claims it; the owner status RPC derives PROCESSING.
+    const accepted = await send(tokens.a, 'GET', `/voice/notes/${large}/status`);
+    assert.equal(accepted.status, 200, 'P02 the owner can read an accepted note before transcription');
+    assert.equal(accepted.json?.status, 'PROCESSING', 'P02 an accepted note waits for transcription');
     setFlagsFromString('--expose-gc');
     const gc = runInNewContext('gc');
     const liveBuffers = () => { gc(); gc(); return process.memoryUsage().arrayBuffers; };
