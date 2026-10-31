@@ -156,8 +156,8 @@ function filesUnder(root) {
 const voiceFiles = () => filesUnder(join(dataDir, bucket)).filter((f) => f.startsWith('voice-'));
 
 /** A valid synthetic M4A of exactly `size` bytes: about ten minutes of zero frames, padded by a top-level `free` box. */
-function noteOptions(size) {
-  const base = { durationMs: 590_000, frameBytes: 512 };
+function noteOptions(size, durationMs) {
+  const base = { durationMs, frameBytes: 512 };
   const plain = m4aFixtureParts(base).byteSize;
   const freeBytes = size - plain - 8;
   assert.ok(freeBytes > 0, 'the note is larger than its frames');
@@ -232,9 +232,9 @@ async function main() {
       else if (Buffer.isBuffer(body)) request.end(body);
       else body.pipe(request);
     });
-    const uploadNote = async (token, session, size) => {
+    const uploadNote = async (token, session, size, durationMs) => {
       const answer = await send(token, 'POST', `/voice/notes/${session}/${randomUUID()}`, {
-        headers: { 'Content-Type': 'audio/mp4', 'Content-Length': String(size) }, body: Readable.from(streamM4aFixture(noteOptions(size))) });
+        headers: { 'Content-Type': 'audio/mp4', 'Content-Length': String(size) }, body: Readable.from(streamM4aFixture(noteOptions(size, durationMs))) });
       assert.equal(answer.json?.outcome, 'ACCEPTED', `the note is accepted (${JSON.stringify(answer.json)})`);
       return answer.json.recordingId;
     };
@@ -268,7 +268,7 @@ async function main() {
     await setGate('PERSONAL_VOICE_NOTE', 'ENABLED', 'WAIVED_BY_AUTHORIZED_GOVERNANCE');
     assert.deepEqual([await grant(a), await grant(b)], ['GRANTED', 'GRANTED']);
     const size = 24 * MiB;
-    const large = await uploadNote(tokens.a, sessionA, size);
+    const large = await uploadNote(tokens.a, sessionA, size, 590_000);
     // An accepted recording has no transcription row until the worker claims it; the owner status RPC derives PROCESSING.
     const accepted = await send(tokens.a, 'GET', `/voice/notes/${large}/status`);
     assert.equal(accepted.status, 200, 'P02 the owner can read an accepted note before transcription');
@@ -306,7 +306,7 @@ async function main() {
     assert.equal((await send(tokens.b, 'GET', `/voice/notes/${large}/status`)).status, 404, 'P02 another human: 404');
 
     stage = 'P03 A24 consent withdrawn while a job runs: held, no text kept, the job deleted';
-    const small = await uploadNote(tokens.b, sessionB, 256 * 1024);
+    const small = await uploadNote(tokens.b, sessionB, 256 * 1024, 4_000);
     fake.state.plan = 'running';
     const deletesBefore = fake.state.deletes.length;
     const run = worker.runOnce();
