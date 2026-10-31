@@ -64,8 +64,16 @@ xcrun simctl install "$UDID" "$APP" || fail "install"
   echo "simulator: $UDID / $(xcrun simctl list devices | grep "$UDID" | head -n 1 | sed 's/^ *//')"
   echo "app: $APP"
 } | tee -a "$SUMMARY"
-$BOUND --seconds 300 --label driver-readiness --out "$OUT" --quiet -- maestro --device "$UDID" hierarchy --compact \
-  || fail "INFRASTRUCTURE — the Maestro XCTest driver did not answer; no Product step was run"
+echo "MAESTRO_DRIVER_STARTUP_TIMEOUT=${MAESTRO_DRIVER_STARTUP_TIMEOUT:-unset (Maestro's default)}" | tee -a "$SUMMARY"
+DRIVER_START="$(date +%s)"
+if ! $BOUND --seconds 300 --label driver-readiness --out "$OUT" --quiet -- maestro --device "$UDID" hierarchy --compact; then
+  note "driver-readiness: no answer after $(( $(date +%s) - DRIVER_START )) s"
+  # Read-only evidence (S6-01 CI-R2): the runner launches, the ports listening, maestro.log and the XCTest runner's own
+  # output. It changes no state and decides nothing; the run stays red.
+  bash "$REPO/scripts/validation/ios-driver-diagnostics.sh" "$UDID" > "$OUT/driver-diagnostics.txt" 2>&1 || true
+  fail "INFRASTRUCTURE — the Maestro XCTest driver did not answer; no Product step was run"
+fi
+note "driver-readiness: answered after $(( $(date +%s) - DRIVER_START )) s"
 
 # B2 — permission at the moment of intent, refused.
 flow s803-ios-permission.yaml permission || fail "B2: the iOS alert with C-12, or the refusal"

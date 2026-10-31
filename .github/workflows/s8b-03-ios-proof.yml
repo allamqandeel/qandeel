@@ -104,6 +104,11 @@ jobs:
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Prove the Voice Note capability on the iOS simulator
         timeout-minutes: 45
+        env:
+          # Run 41236881549: `IOSDriverTimeoutException: iOS driver not ready in time` about 149 s into the readiness
+          # probe, before any Product step. cli-2.10.0 reads this variable (its own message names it; Mobile CI sets it).
+          # Each flow stays inside its 300 s outer bound and the step inside its 45 minutes.
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: 240000
         run: bash scripts/s8b-03/run-s803-ios-proof.sh "$IOS_APP_PATH" "$RUNNER_TEMP/s8b-03-ios" "$IOS_SIM_UDID"
       - name: Summarize
         if: always()
