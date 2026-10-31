@@ -1,5 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { createServer as createNetServer, type AddressInfo } from 'node:net';
+import { setFlagsFromString } from 'node:v8';
+import { runInNewContext } from 'node:vm';
 import type { ProviderJobId } from '../batch-transcription-jobs.port';
 import { loadSpeechmaticsBatchConfig } from './speechmatics-batch.config';
 import { parseJsonV2, retryAfterMs, SpeechmaticsBatchJobsAdapter } from './speechmatics-batch-jobs.adapter';
@@ -9,6 +11,8 @@ import { parseJsonV2, retryAfterMs, SpeechmaticsBatchJobsAdapter } from './speec
  * machine and no key is real.
  */
 type Handler = (request: IncomingMessage, body: Buffer, response: ServerResponse) => void | Promise<void>;
+/** node's own https module object (not an interop copy), so a spy sees the adapter's call. */
+const httpsModule = jest.requireActual<typeof import('node:https')>('node:https');
 
 describe('SpeechmaticsBatchJobsAdapter (loopback)', () => {
   let server: Server;
@@ -121,25 +125,101 @@ describe('SpeechmaticsBatchJobsAdapter (loopback)', () => {
     expect(outcome).toEqual({ kind: 'UNKNOWN' });
   });
 
-  it('streams: a 24 MiB note crosses the adapter under backpressure, never more than 16 MiB ahead of the wire', async () => {
+  it('a note longer than declared: not one byte beyond the declared size is written, and the outcome is UNKNOWN', async () => {
+    handler = reply(201, { id: 'job-1' });
+    received = 0;
+    const outcome = await adapter().submit({ audio: audio(20_000, 4_000), byteSize: 12_000, contentType: 'audio/mp4', language: 'ar_en', reference: '3f1c7a2e-0000-4000-8000-000000000004', signal: AbortSignal.timeout(5000) });
+    expect(outcome).toEqual({ kind: 'UNKNOWN' });
+    expect(received).toBeLessThan(12_000 + 1024); // the multipart head is under 1 KiB
+    expect(seen).toHaveLength(0); // the request never completed
+  });
+
+  /**
+   * A19 regression (PR #370): the bytes the adapter has ALREADY SENT must not stay reachable until the request ends. Each
+   * chunk is a fresh buffer, as a store stream yields them, and the live ArrayBuffer memory (after a collection) is
+   * sampled throughout the send. `fetch` passed the old "ahead of the wire" check (0.6 MiB) while holding ~23 MiB; the
+   * held control proves the instrument sees a note kept whole.
+   */
+  it('streams: a 24 MiB note of fresh chunks is neither read ahead of the wire nor held once sent (A19, 16 MiB)', async () => {
     handler = reply(201, { id: 'job-big' });
     countOnly = true;
-    const chunk = Buffer.alloc(64 * 1024, 7);
-    const total = 24 * 1024 * 1024;
-    let yielded = 0;
-    let ahead = 0;
-    async function* note() {
-      for (; yielded < total; yielded += chunk.length) {
-        ahead = Math.max(ahead, yielded - received);
-        yield chunk;
+    setFlagsFromString('--expose-gc');
+    const gc = runInNewContext('gc') as () => void;
+    const live = () => { gc(); gc(); return process.memoryUsage().arrayBuffers; };
+    const MiB = 1024 * 1024;
+    const total = 24 * MiB;
+    const chunk = 64 * 1024;
+    const send = async (keep: Buffer[] | null) => {
+      const base = live();
+      let peak = 0;
+      let ahead = 0;
+      async function* note() {
+        for (let yielded = 0; yielded < total; yielded += chunk) {
+          ahead = Math.max(ahead, yielded - received);
+          if (yielded % (2 * MiB) === 0) peak = Math.max(peak, live() - base);
+          const bytes = Buffer.alloc(chunk, 7);
+          keep?.push(bytes);
+          yield bytes;
+        }
+        peak = Math.max(peak, live() - base);
       }
-    }
-    const outcome = await adapter().submit({ audio: note(), byteSize: total, contentType: 'audio/mp4', language: 'ar_en', reference: '3f1c7a2e-0000-4000-8000-000000000003', signal: AbortSignal.timeout(30_000) });
-    expect(outcome).toEqual({ kind: 'CREATED', jobId: 'job-big' });
+      const outcome = await adapter().submit({ audio: note(), byteSize: total, contentType: 'audio/mp4', language: 'ar_en', reference: '3f1c7a2e-0000-4000-8000-000000000003', signal: AbortSignal.timeout(30_000) });
+      return { outcome, peak, ahead };
+    };
+    const streamed = await send(null);
+    expect(streamed.outcome).toEqual({ kind: 'CREATED', jobId: 'job-big' });
     expect(seen[0].bytes).toBeGreaterThan(total);
-    // What the adapter has read from the note but the provider has not yet received: the bytes it can be holding.
-    expect(ahead).toBeLessThan(16 * 1024 * 1024);
+    expect(streamed.ahead).toBeLessThan(16 * MiB);
+    expect(streamed.peak).toBeLessThan(16 * MiB);
+    const held: Buffer[] = [];
+    const control = await send(held);
+    expect(control.outcome).toEqual({ kind: 'CREATED', jobId: 'job-big' });
+    expect(control.peak).toBeGreaterThan(16 * MiB);
+    held.length = 0;
   }, 60_000);
+
+  it('an answer before the whole body (413 at once) decides; the rest of the note is never read', async () => {
+    const early = createServer((_request, response) => {
+      response.writeHead(413, { 'content-type': 'application/json' }).end('{}');
+    });
+    await new Promise<void>((resolve) => early.listen(0, '127.0.0.1', resolve));
+    try {
+      const config = loadSpeechmaticsBatchConfig({ SPEECHMATICS_API_KEY: 'k', SPEECHMATICS_BATCH_BASE_URL: `http://127.0.0.1:${(early.address() as AddressInfo).port}` });
+      const total = 24 * 1024 * 1024;
+      let yielded = 0;
+      async function* note() { for (; yielded < total; yielded += 64 * 1024) yield Buffer.alloc(64 * 1024, 7); }
+      const outcome = await new SpeechmaticsBatchJobsAdapter({ ...config, apiKey: 'k' }).submit({ audio: note(), byteSize: total, contentType: 'audio/mp4', language: 'ar_en', reference: '3f1c7a2e-0000-4000-8000-000000000005', signal: AbortSignal.timeout(10_000) });
+      expect(outcome).toEqual({ kind: 'REJECTED', failure: 'TOO_LARGE' });
+      expect(yielded).toBeLessThan(total);
+    } finally {
+      early.closeAllConnections();
+      await new Promise<void>((resolve) => early.close(() => resolve()));
+    }
+  }, 30_000);
+
+  it('https: node verifies the certificate by default, and nothing (not the key) is written before TLS is up → NOT_SENT', async () => {
+    // A plain TCP listener where TLS is expected: the handshake fails, so the request never starts.
+    const clear: Buffer[] = [];
+    const plain = createNetServer((socket) => {
+      socket.on('data', (bytes: Buffer) => { clear.push(bytes); socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'); });
+      socket.on('error', () => undefined);
+    });
+    await new Promise<void>((resolve) => plain.listen(0, '127.0.0.1', resolve));
+    const spy = jest.spyOn(httpsModule, 'request');
+    try {
+      const port = (plain.address() as AddressInfo).port;
+      expect(await submit(adapter({ SPEECHMATICS_BATCH_BASE_URL: `https://127.0.0.1:${port}` }))).toEqual({ kind: 'NOT_SENT', failure: 'NETWORK' });
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [url, options] = spy.mock.calls[0] as unknown as [URL, Record<string, unknown>];
+      expect(String(url)).toBe(`https://127.0.0.1:${port}/v2/jobs/`);
+      for (const relaxed of ['rejectUnauthorized', 'ca', 'agent', 'checkServerIdentity', 'insecureHTTPParser']) expect(options).not.toHaveProperty(relaxed);
+      const wire = Buffer.concat(clear).toString('latin1');
+      expect(wire).not.toMatch(/test-only-key|authorization|POST|multipart/iu);
+    } finally {
+      spy.mockRestore();
+      await new Promise<void>((resolve) => plain.close(() => resolve()));
+    }
+  });
 
   it('the local create limit holds back the third submission inside one second', async () => {
     handler = reply(201, { id: 'job-r' });

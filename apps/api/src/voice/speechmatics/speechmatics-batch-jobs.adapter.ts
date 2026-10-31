@@ -1,3 +1,6 @@
+import * as nodeHttp from 'node:http';
+import * as nodeHttps from 'node:https';
+import type { Socket } from 'node:net';
 import type {
   BatchFailure,
   BatchSubmitRequest,
@@ -17,10 +20,13 @@ import type { SpeechmaticsBatchConfig } from './speechmatics-batch.config';
  * authentication, the streamed multipart upload, json-v2 parsing, response classification and the per-instance rate
  * limit. It keeps no durable state and records nothing: the worker records every outcome through the 0186 definers.
  *
- *   - no SDK: `fetch` with a hand-built multipart body streamed from the note (never buffered whole);
- *   - `submit` is never retried here. NOT_SENT only when it failed before the body was first pulled (DNS, connection,
- *     the local rate limit, a decisive 429 / 503); after that, any timeout, drop or abort without a decisive answer is
- *     UNKNOWN, never "not created";
+ *   - no SDK. The upload is ONE `node:http(s)` POST of a hand-built multipart body streamed from the note under the
+ *     socket's backpressure (PR #370, A19): `fetch` kept every chunk it had already sent reachable until the request
+ *     ended - a whole note held - so it serves the small reads only. TLS and its certificate check are node's defaults,
+ *     never relaxed;
+ *   - `submit` is never retried here. NOT_SENT only when it failed before the connection (and TLS) was up - nothing is
+ *     written before then - or on the local rate limit or a decisive 429 / 503; after that, any timeout, drop or abort
+ *     without a decisive answer is UNKNOWN, never "not created";
  *   - `status` / `fetchResult` / `remove` / `findByReference` retry once on a network error only;
  *   - DELETE never carries `force`: a running job answers LOCKED and is deleted once it is terminal;
  *   - `findByReference` is UNSUPPORTED unless reconciliation by reference is enabled (PC-S2);
@@ -95,6 +101,73 @@ function neverConnected(error: unknown): boolean {
 const transientOf = (status: number): BatchFailure => (status === 429 ? 'RATE_LIMITED' : 'UNAVAILABLE');
 const isTimeout = (error: unknown) => error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
 
+/**
+ * One streamed POST: nothing is written before the connection (and, for https, the TLS handshake) is up; each write
+ * waits for the socket to drain before the next chunk is read, so the bytes in flight stay bounded and a chunk is no
+ * longer referenced once it is written; and the first answer stops the writing (the provider stopped reading).
+ */
+class StreamedPost {
+  answer: nodeHttp.IncomingMessage | null = null;
+  wasConnected = false;
+  readonly response: Promise<nodeHttp.IncomingMessage>;
+  private readonly ready: Promise<void>;
+
+  constructor(private readonly request: nodeHttp.ClientRequest, secure: boolean) {
+    request.on('error', () => undefined); // every failure is read through the promises below, never thrown unhandled
+    this.response = new Promise((resolve, reject) => {
+      request.once('response', (response: nodeHttp.IncomingMessage) => { this.answer = response; resolve(response); });
+      request.once('error', reject);
+      request.once('close', () => reject(new Error('REQUEST_CLOSED')));
+    });
+    this.response.catch(() => undefined);
+    this.ready = new Promise((resolve, reject) => {
+      const up = () => { this.wasConnected = true; resolve(); };
+      request.once('socket', (socket: Socket) => {
+        // A pooled socket is already connected (and its TLS session established); a new one is not, yet.
+        if (!socket.connecting) up();
+        else socket.once(secure ? 'secureConnect' : 'connect', up);
+      });
+      request.once('error', reject);
+      request.once('close', () => reject(new Error('REQUEST_CLOSED')));
+    });
+    this.ready.catch(() => undefined);
+  }
+
+  connected(): Promise<void> {
+    return this.ready;
+  }
+
+  write(chunk: Buffer): Promise<void> {
+    return this.flushed(this.request.write(chunk));
+  }
+
+  /** The last bytes; a failure from here on surfaces through `response`. */
+  end(chunk: Buffer): void {
+    if (this.request.destroyed) throw new Error('REQUEST_CLOSED');
+    this.request.end(chunk);
+  }
+
+  destroy(): void {
+    this.request.destroy();
+  }
+
+  /** Resolves once the socket can take more (or the provider answered); rejects when the request failed or closed. */
+  private flushed(accepted: boolean): Promise<void> {
+    const request = this.request;
+    if (request.destroyed) return Promise.reject(new Error('REQUEST_CLOSED'));
+    if (accepted || this.answer !== null) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const done = () => { off(); resolve(); };
+      const fail = (error?: Error) => { off(); reject(error ?? new Error('REQUEST_CLOSED')); };
+      const closed = () => fail();
+      const off = () => {
+        request.off('drain', done).off('response', done).off('error', fail).off('close', closed);
+      };
+      request.once('drain', done).once('response', done).once('error', fail).once('close', closed);
+    });
+  }
+}
+
 export class SpeechmaticsBatchJobsAdapter implements BatchTranscriptionJobs {
   readonly provider = 'SPEECHMATICS' as const;
   private readonly limiter: RateLimiter;
@@ -128,54 +201,63 @@ export class SpeechmaticsBatchJobsAdapter implements BatchTranscriptionJobs {
       'utf8',
     );
     const tail = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8');
-    let pulled = false;
-    let streamed = 0;
+    const url = new URL(this.url('/v2/jobs/'));
     const iterator = request.audio[Symbol.asyncIterator]();
-    let stage: 'head' | 'audio' | 'done' = 'head';
-    const body = new ReadableStream<Uint8Array>({
-      async pull(controller) {
-        pulled = true;
-        if (stage === 'head') { stage = 'audio'; controller.enqueue(head); return; }
-        if (stage === 'audio') {
-          const next = await iterator.next();
-          if (!next.done) { streamed += next.value.length; controller.enqueue(next.value); return; }
-          // The declared size is exact; a short or long note is never sent as if it were whole.
-          if (streamed !== request.byteSize) { controller.error(new Error('NOTE_SIZE_MISMATCH')); return; }
-          stage = 'done';
-          controller.enqueue(tail);
-          return;
-        }
-        controller.close();
-      },
-      async cancel() { await iterator.return?.(); },
-    }, { highWaterMark: 0 });
-    let response: Response;
+    // node's https verifies the provider's certificate and host name by default: no agent, CA or check is passed here.
+    const post = new StreamedPost((url.protocol === 'https:' ? nodeHttps : nodeHttp).request(url, {
+      method: 'POST',
+      headers: this.headers({
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+        'content-length': String(head.length + request.byteSize + tail.length),
+      }),
+      signal: request.signal,
+    }), url.protocol === 'https:');
+    let response: nodeHttp.IncomingMessage;
+    let whole = false;
     try {
-      response = await this.http(this.url('/v2/jobs/'), {
-        method: 'POST',
-        headers: this.headers({
-          'content-type': `multipart/form-data; boundary=${boundary}`,
-          'content-length': String(head.length + request.byteSize + tail.length),
-        }),
-        body,
-        signal: request.signal,
-        duplex: 'half',
-      } as RequestInit & { duplex: 'half' });
+      await post.connected();
+      await post.write(head);
+      let streamed = 0;
+      while (post.answer === null) {
+        const next = await iterator.next();
+        if (next.done) {
+          // The declared size is exact; a short note is never sent as if it were whole.
+          if (streamed !== request.byteSize) throw new Error('NOTE_SIZE_MISMATCH');
+          post.end(tail);
+          whole = true;
+          break;
+        }
+        streamed += next.value.length;
+        // Nor a long one: not one byte beyond the declared size is written.
+        if (streamed > request.byteSize) throw new Error('NOTE_SIZE_MISMATCH');
+        await post.write(next.value);
+      }
+      response = await post.response;
     } catch (error) {
-      await iterator.return?.().catch(() => undefined);
-      // The request is written only after the connection (and TLS) is established, so a failure to establish it proves
-      // that no byte reached the provider, even if the client already pulled the body. Anything else after a pull may
-      // have reached it.
-      return !pulled || neverConnected(error) ? { kind: 'NOT_SENT', failure: 'NETWORK' } : { kind: 'UNKNOWN' };
+      if (post.answer === null) {
+        post.destroy();
+        await iterator.return?.().catch(() => undefined);
+        // Nothing is written before the connection (and TLS) is up, so a failure before then proves that no byte reached
+        // the provider. Anything after may have reached it.
+        return !post.wasConnected || neverConnected(error) ? { kind: 'NOT_SENT', failure: 'NETWORK' } : { kind: 'UNKNOWN' };
+      }
+      response = post.answer; // the provider answered, then stopped reading the body: its answer decides
     }
-    const status = response.status;
+    if (!whole) {
+      // An early answer: the rest of the note is never sent, and the half-written request is closed.
+      await iterator.return?.().catch(() => undefined);
+    }
+    const status = response.statusCode ?? 0;
     if (status === 201 || status === 200) {
-      const id = await readJson(response).then((json) => (json && isJobId(json.id) ? json.id : null)).catch(() => null);
+      const id = await readNodeJson(response).then((json) => (json && isJobId(json.id) ? json.id : null)).catch(() => null);
+      if (!whole) post.destroy();
       return id ? { kind: 'CREATED', jobId: id as ProviderJobId } : { kind: 'UNKNOWN' };
     }
-    await discard(response);
+    response.on('error', () => undefined).resume();
+    if (!whole) post.destroy();
     if (status === 429 || status === 503) {
-      const after = retryAfterMs(response.headers.get('retry-after'));
+      const header = response.headers['retry-after'];
+      const after = retryAfterMs(typeof header === 'string' ? header : null);
       if (after !== undefined) this.limiter.pause('create', after);
       return { kind: 'NOT_SENT', failure: status === 429 ? 'RATE_LIMITED' : 'UNAVAILABLE', ...(after !== undefined ? { retryAfterMs: after } : {}) };
     }
@@ -302,6 +384,21 @@ async function readJson(response: Response): Promise<any> {
       throw new Error('RESPONSE_TOO_LARGE');
     }
     chunks.push(value);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+/** The same bound for the upload's answer, read from node's response stream. */
+async function readNodeJson(response: nodeHttp.IncomingMessage): Promise<any> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of response as AsyncIterable<Buffer>) {
+    total += chunk.length;
+    if (total > MAX_RESULT_BYTES) {
+      response.destroy();
+      throw new Error('RESPONSE_TOO_LARGE');
+    }
+    chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
