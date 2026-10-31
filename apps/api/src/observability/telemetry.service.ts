@@ -93,6 +93,14 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  // workers. Never a person, recording, key, file name, size, transcript or byte.
  ['VOICE_MEDIA',new Map(['upload','read','delete','export_file'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','refused_expected',...OPERATION_FAILURES])]))],
  ['VOICE_RETENTION',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['recover',new Set(['success',...OPERATION_FAILURES])]])],
+ // S8B-03 (CP1): the Voice Note transcription worker (0186) - claim, one attempt, the provider deletion and its sweeper,
+ // and the ledger settle. A refusal the database decided (gate, consent, a duration it cannot prove, a cancelled note) is
+ // refused_expected; a transient provider answer the database will retry is retry_expected; a deferred store read is
+ // deferred. The two brain classes count a capture operation withheld from a voice turn (E6) and a spoken Memory command
+ // not heard clearly enough to act on (E8). Never a person, recording, job, key, transcript, word or band.
+ ['VOICE_TRANSCRIPTION',new Map(['claim','attempt','provider_delete','sweep','ledger'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','refused_expected','retry_expected','deferred',...OPERATION_FAILURES])]))],
+ ['VOICE_CAPTURE_OPERATION_WITHHELD',new Map([['capture',new Set(['withheld'])]])],
+ ['VOICE_MEMORY_COMMAND_NOT_HEARD',new Map([['memory_command',new Set(['not_heard'])]])],
  // S6-07 (CP2): the forward dispatcher (migration 0166). A forward is success; a proposal another act moved first is
  // superseded_expected; one the core or its seam did not clear, or with no single conclusion, is blocked_expected; a held
  // pair is retry_expected; a held integrity refusal is integrity_failure. Never a person, proposal, view or count.

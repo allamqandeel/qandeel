@@ -480,6 +480,7 @@ happens to reversible history — are defined here.
   - `HOSTED-DEPLOY-01`: the hosted store (`QAN-BL-PROD-08`).
 
   **Engineering completion of S8B-02 is not user readiness:** no user can record, hear or export voice until those tasks and the gates' own launch decisions. No item is admitted or tombstoned.
+- **Current truth (S8B-03 CP1, 2026-10-31; a Draft pull request from `s8b/s8b-03-cp1`, from `main` at `a3b04d7a`; effective from its merge):** worked and **not delivered**. S8B-03 CP1 delivers the Voice Note server side and the governed `MACHINE_ASR` → Fresh Evidence decision S8B-02 left to it ([S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md); [controlled amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-03_MACHINE_ASR_FRESH_EVIDENCE_CONTROLLED_AMENDMENT_v1.0.md)): migration `0186` (not hosted), the transcription lifecycle, the batch port and the Speechmatics adapter (proven against loopback fakes only), the duration proof, the voice turn through the unchanged Orchestrator, and the consent text `VOICE_RECORDING_V1` approved verbatim. S8B-02's §11.8 / §11.9 obligations on S8B-03 are met on the server: `voice.module` and the consent text; the recorder and the voice file saver remain CP2's. Every voice gate stays `DISABLED`; `PC-S1 … PC-S7` / `PC-D` remain gate conditions. No item is admitted or tombstoned.
 - **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
@@ -5568,6 +5569,17 @@ S8B-02's closure ([S8B-02 record](e2e/QANDEEL_S8B_02_VOICE_FOUNDATION_IMPLEMENTA
 - **Untouched:** every other item, owner, severity and status. Nothing is admitted or tombstoned.
 - **Index at S8B-02's closing change: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
 
+**S8B-03 CP1 (2026-10-31; a Draft pull request from `s8b/s8b-03-cp1`, from `main` at `a3b04d7a`; effective from its
+merge).** CP1 is not S8B-03's closing change, so BG-08 is not run here. It admits and tombstones nothing.
+
+- **`QAN-BL-VOICE-01`:** worked, not delivered; a current-truth note is added in §5. Owner, severity and status unchanged.
+- **Carried inside S8B-03 / Stage 8B, not admitted:** CP2 (the recorder, `expo-audio`, the voice file saver, the 41
+  `PROPOSED` rows, the device proof); `PC-S1 … PC-S7` (gate-opening conditions, S8B-08); `PC-D` (DeepSeek quality on
+  M-02 / M-03, recorded). None leaves Stage 8B, so none is cross-task residue (BG-06).
+- **Read and left unchanged:** `QAN-BL-PROD-08` (`0186` is not hosted), `QAN-BL-PROD-06`, `QAN-BL-AI-01`, `QAN-BL-AI-03`,
+  `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06` and `QAN-BL-CI-01` / `02` / `03`.
+- **Index unchanged: 89 items; 44 / 4 / 8 / 33 by status, 52 / 35 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5679,6 +5691,7 @@ Inherited after T-12 closure reconciliation:
 | `Stage 8B — Voice Runtime` | `QAN-BL-VOICE-01` (re-owned from `UNASSIGNED` by S8B-01 CP1, 2026-10-28, under the Product Owner's S8B-00 decision D-1) |
 | `S8B-01 — Voice Runtime Contract & Provider Evidence` | none owned by its own name at kickoff (2026-10-28, from `main` at `8b476114`); it works `QAN-BL-VOICE-01` for Stage 8B; the Stage 8A items read and left as they stand; *CP1 (merged through PR #364 as `de774cfd`):* re-owned `QAN-BL-VOICE-01` to `Stage 8B — Voice Runtime`; admitted and tombstoned nothing; *CP2 (merged through PR #365 as `47121434`):* admitted and tombstoned nothing; *CP3, the closing change (2026-10-30, from `main` at `47121434`; effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B; admitted and tombstoned nothing; *merged through PR #366 as `c65b878c` (2026-10-30; recorded by S8B-02 CP1)* |
 | `S8B-02 — Voice Foundation` | none owned by its own name at kickoff (BG-05, 2026-10-30, from `main` at `c65b878c`, S8B-01 merged through PR #366); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` / `09` / `10` (`HOSTED-DEPLOY-01`), `QAN-BL-ACCT-01` (`ACCT-DEL-02`), `QAN-BL-ACCT-03` (Stage 9), `QAN-BL-PRIV-05` (`PRIV-EXPORT-01`), `QAN-BL-AI-01` / `AI-05` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02` (Stage 8A, `VALIDATION — OPEN`), `QAN-BL-LAUNCH-01`, `QAN-BL-NOTIF-03` / `05`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-30, on `s8b/s8b-02-cp1`; merged through PR #367 as `f0d8ed1a`, recorded by CP2):* admitted and tombstoned nothing; these two Stage 8B rows moved here from §4, where they had been written into the index by mistake (contract I-10); *CP2, the closing change (2026-10-30, from `main` at `f0d8ed1a`; a local commit, effective from its merge):* BG-08 reconciled, `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B (current-truth note); a dated note on `QAN-BL-PROD-08` (D-8); admitted and tombstoned nothing |
+| `S8B-03 — Personal Voice Notes` | none owned by its own name at kickoff (BG-05, 2026-10-31, from `main` at `a3b04d7a`, S8B-02 merged through PR #368); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` (`HOSTED-DEPLOY-01`), `QAN-BL-AI-01` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-31, a Draft pull request from `s8b/s8b-03-cp1`; effective from its merge):* admitted and tombstoned nothing; a current-truth note on `QAN-BL-VOICE-01`; S8B-03 not closed |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

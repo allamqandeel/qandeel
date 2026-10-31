@@ -10,7 +10,10 @@ import type { MemoryRecord, MemorySubject } from './memory.types';
 
 export const MEMORY_SUBJECT_EMBED = 'memory_subject_attributions(subject)';
 
-type EmbeddedRow = Omit<MemoryRecord, 'subject'> & { memory_subject_attributions?: unknown; subject?: unknown };
+/** S8B-03 (E5, migration 0186): the typed confirmations of a Memory, embedded through their foreign key; any row means confirmed. */
+export const MEMORY_TYPED_CONFIRMATION_EMBED = 'memory_typed_confirmations(memory_id)';
+
+type EmbeddedRow = Omit<MemoryRecord, 'subject'> & { memory_subject_attributions?: unknown; subject?: unknown; memory_typed_confirmations?: unknown };
 
 export function readMemorySubject(embedded: unknown): MemorySubject | null {
   const row = Array.isArray(embedded) ? (embedded.length === 1 ? embedded[0] : undefined) : embedded;
@@ -24,7 +27,11 @@ export function readMemorySubject(embedded: unknown): MemorySubject | null {
  * in-process double that already speaks `MemoryRecord`) keeps the subject it states, read the same strict way.
  */
 export function withMemorySubject(row: EmbeddedRow): MemoryRecord {
-  const { memory_subject_attributions: embedded, subject: stated, ...memory } = row;
+  const { memory_subject_attributions: embedded, subject: stated, memory_typed_confirmations: confirmations, ...memory } = row;
   const subject = 'memory_subject_attributions' in row ? readMemorySubject(embedded) : readMemorySubject({ subject: stated });
+  // S8B-03: only a MACHINE_ASR Memory reports a typed confirmation; a typed one is read exactly as before.
+  if ('memory_typed_confirmations' in row && memory.source === 'MACHINE_ASR') {
+    return { ...memory, subject, confirmed_by_typing: Array.isArray(confirmations) ? confirmations.length > 0 : confirmations !== null && confirmations !== undefined };
+  }
   return { ...memory, subject };
 }

@@ -1,3 +1,4 @@
+import { MACHINE_ASR_SOURCE_GUIDANCE } from '../memory/machine-asr-model-copy';
 import type { EvidenceItem } from '../memory/evidence.types';
 import type { HypothesisCandidateProposal, HypothesisGenerationRequest } from './hypothesis-generation.types';
 import {
@@ -255,5 +256,22 @@ describe('DeepSeekHypothesisCandidateGenerator', () => {
       .rejects.toEqual(new HypothesisCandidateGeneratorError('PROVIDER_ERROR'));
     expect(network).toHaveBeenCalledTimes(1);
     expect(generic).toHaveBeenCalledTimes(1);
+  });
+
+  // S8B-03 (CP1, E5 / A15): a MACHINE_ASR item carries its source and typed confirmation, and M-01 joins the instructions;
+  // a request without one is byte for byte the request before S8B-03.
+  it('S8B-03 A15: MACHINE_ASR evidence carries its source and M-01; typed evidence is unchanged', async () => {
+    const typedCreate = jest.fn().mockResolvedValue(completion(null));
+    await new DeepSeekHypothesisCandidateGenerator(config, clientOf(typedCreate)).generate(request).catch(() => undefined);
+    const typedBody = JSON.stringify(typedCreate.mock.calls[0][0]);
+    expect(typedBody).not.toContain('MACHINE_ASR');
+    expect(typedBody).not.toContain('confirmedByTyping');
+    const voiceCreate = jest.fn().mockResolvedValue(completion(null));
+    const voiced = { ...request, eligibleEvidence: [{ ...evidence, source: 'MACHINE_ASR' as const, confirmedByTyping: true }] };
+    await new DeepSeekHypothesisCandidateGenerator(config, clientOf(voiceCreate)).generate(voiced).catch(() => undefined);
+    const [system, user] = voiceCreate.mock.calls[0][0].messages;
+    expect(system.content).toContain(MACHINE_ASR_SOURCE_GUIDANCE);
+    expect(user.content).toContain('"source":"MACHINE_ASR"');
+    expect(user.content).toContain('"confirmedByTyping":true');
   });
 });

@@ -130,9 +130,8 @@ export class BackgroundIntelligenceEnrichmentService {
   // Evidence (CREATED, or ALREADY_RECORDED on a replay); every other answer completes the effect with no Evidence.
   const recorded=await this.data.recordMemory(context,{id:randomUUID(),...candidate,status:candidate.status??'ACTIVE'});
   if(recorded.outcome!=='CREATED'&&recorded.outcome!=='ALREADY_RECORDED')return{decision:'SKIP',reason:recorded.outcome,type:candidate.type};
-  // S8B-02 CP1: a MACHINE_ASR Memory is kept but is never fresh Evidence (Evidence reads typed sources only), so the effect
-  // completes NO_FRESH_EVIDENCE and no association is prepared from it.
-  if(candidate.source==='MACHINE_ASR')return{decision:'SKIP',reason:'MACHINE_ASR_RECORDED_NOT_EVIDENCE',type:candidate.type};
+  // S8B-03 (E4): a MACHINE_ASR Memory (HIGH / MEDIUM only; a LOW band writes none) is fresh Evidence like a typed one
+  // (0186 E1 / E2), so it proceeds to association. The S8B-02 skip line is removed.
   return{decision:'WRITE',type:decision.candidate.type,memoryId:recorded.memoryId,evidenceId:`memory:${recorded.memoryId}`};
  }
 
@@ -143,6 +142,8 @@ export class BackgroundIntelligenceEnrichmentService {
  /** S8A-03 Living Personal Memory (0172): the owner's current-state Memories a capture may find restated or ended. */
  async listCurrentStateMemories(context:BackgroundIntelligenceExecutionContext,limit:number):Promise<Array<{memoryId:string;type:MemoryType;content:string;terms:string[]}>>{this.assert(context);return this.data.listCurrentStateMemories(context,limit);}
  async listKnownMemories(context:BackgroundIntelligenceExecutionContext,limit:number){this.assert(context);return this.data.listKnownMemories(context,limit);}
+ // S8B-03 (E6 / E7 / E12): the source turn's voice band (content-free), for Open Understanding and generation eligibility.
+ async readTurnVoiceProvenance(context:BackgroundIntelligenceExecutionContext){this.assert(context);return this.data.readTurnVoiceProvenance(context);}
  async listRecentTurns(context:BackgroundIntelligenceExecutionContext,limit:number){this.assert(context);return this.data.listRecentTurns(context,limit);}
  async listCaptureScreenMemories(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<MemoryRecord[]>{this.assert(context);return this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT,now);}
 

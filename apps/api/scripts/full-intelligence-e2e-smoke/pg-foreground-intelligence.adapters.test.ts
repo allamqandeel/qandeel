@@ -24,6 +24,11 @@ const PLAIN_COLUMNS =
 const EMBED_SQL =
   "(SELECT json_build_object('subject', attribution.subject) FROM public.memory_subject_attributions attribution"
   + ' WHERE attribution.memory_id = memories.id AND attribution.user_id = memories.user_id) AS memory_subject_attributions';
+// S8B-03 CP1 (0186): MemoryRepository's reads also embed the typed confirmations (one-to-many: an array, empty without a row).
+const CONFIRMATION_SQL =
+  "COALESCE((SELECT json_agg(json_build_object('memory_id', confirmation.memory_id) ORDER BY confirmation.source_turn_id)"
+  + ' FROM public.memory_typed_confirmations confirmation'
+  + " WHERE confirmation.memory_id = memories.id AND confirmation.user_id = memories.user_id), '[]'::json) AS memory_typed_confirmations";
 
 /** The exact `table?query` paths the production repositories send. */
 async function productionPaths(): Promise<string[]> {
@@ -55,11 +60,11 @@ function refusal(table: string, select: string): string {
 test('every production Memory read is translated with the pinned subject embed and its own filters, order and limit', async () => {
   const [find, active, controllable, owned] = (await productionPaths()).map(translate);
   assert.deepEqual(find, {
-    text: `SELECT ${PLAIN_COLUMNS}, ${EMBED_SQL} FROM public.memories WHERE id = $1 AND user_id = $2 LIMIT 1`,
+    text: `SELECT ${PLAIN_COLUMNS}, ${EMBED_SQL}, ${CONFIRMATION_SQL} FROM public.memories WHERE id = $1 AND user_id = $2 LIMIT 1`,
     values: [MEMORY, OWNER],
   });
   assert.deepEqual(active, {
-    text: `SELECT ${PLAIN_COLUMNS}, ${EMBED_SQL} FROM public.memories WHERE user_id = $1 AND status = $2`
+    text: `SELECT ${PLAIN_COLUMNS}, ${EMBED_SQL}, ${CONFIRMATION_SQL} FROM public.memories WHERE user_id = $1 AND status = $2`
       + ' AND (expires_at IS NULL OR expires_at > $3) ORDER BY updated_at DESC, id DESC LIMIT 16',
     values: [OWNER, 'ACTIVE', '2026-10-11T00:00:00.000Z'],
   });
@@ -87,6 +92,7 @@ test('every other select shape still fails closed', () => {
   // The pinned embed on any table other than memories.
   assert.match(refusal('hypotheses', 'id,memory_subject_attributions(subject)'), refused);
   assert.match(refusal('conversation_turns', 'id,memory_subject_attributions(subject)'), refused);
+  assert.match(refusal('hypotheses', 'id,memory_subject_attributions(subject),memory_typed_confirmations(memory_id)'), refused);
   // Unknown relationships, other or extra embedded columns, wildcards, nesting, hints, aliases and spreads.
   for (const select of [
     'id,hypotheses(statement)',
@@ -107,6 +113,15 @@ test('every other select shape still fails closed', () => {
     'id,MEMORY_SUBJECT_ATTRIBUTIONS(subject)',
     '*',
     'id,content::text',
+    // S8B-03: the confirmation embed only directly after the subject embed, exactly as pinned, and only once.
+    'id,memory_typed_confirmations(memory_id)',
+    'id,memory_typed_confirmations(memory_id),memory_subject_attributions(subject)',
+    'id,memory_subject_attributions(subject),memory_typed_confirmations(*)',
+    'id,memory_subject_attributions(subject),memory_typed_confirmations(memory_id,basis)',
+    'id,memory_subject_attributions(subject),memory_typed_confirmations!inner(memory_id)',
+    'id,memory_subject_attributions(subject),memory_typed_confirmations(memory_id),memory_typed_confirmations(memory_id)',
+    'id,memory_subject_attributions(subject),memory_typed_confirmations(memory_id),content',
+    'memory_subject_attributions(subject),memory_typed_confirmations(memory_id)',
   ]) {
     assert.match(refusal('memories', select), refused, select);
   }
@@ -173,6 +188,58 @@ test('against real PostgreSQL: the subject comes from the attribution, under the
     await db.setAuthenticatedClaims(stranger);
     assert.deepEqual(await (api as unknown as PgAuthenticatedDataApiAdapter).request('token', unfiltered),
       [{ id: strangers, memory_subject_attributions: { subject: 'SELF' } }]);
+  } finally {
+    await db.rollback();
+    await db.close();
+  }
+});
+
+test('against real PostgreSQL (S8B-03, 0186): the typed confirmations are an array under the caller\'s RLS, read by production', {
+  skip: process.env.DATABASE_URL ? false : 'DATABASE_URL is not set (runs in the API CI database leg)',
+}, async () => {
+  const db = new SmokeDbSession(process.env.DATABASE_URL as string);
+  await db.open();
+  try {
+    const owner = randomUUID();
+    const stranger = randomUUID();
+    for (const id of [owner, stranger]) await db.observer('INSERT INTO auth.users (id) VALUES ($1)', [id]);
+    const row = `INSERT INTO public.memories (id, user_id, scope, type, content, source, confidence, importance, status)
+                 VALUES ($1, $2, 'USER', 'PERSONAL_FACT', $3, $4, $5, 0.5, 'ACTIVE')`;
+    const confirm = `INSERT INTO public.memory_typed_confirmations (memory_id, user_id, source_turn_id, basis, command_id)
+                     VALUES ($1, $2, $3, 'EXPLICIT_MEMORY_COMMAND', $4)`;
+    const twice = randomUUID();
+    const never = randomUUID();
+    const typed = randomUUID();
+    const strangers = randomUUID();
+    await db.observer(row, [twice, owner, 'بحب القهوة', 'MACHINE_ASR', 0.9]);
+    await db.observer(row, [never, owner, 'بحب الشاي', 'MACHINE_ASR', 0.75]);
+    await db.observer(row, [typed, owner, 'بحب الكتب', 'USER_STATED', 0.95]);
+    await db.observer(row, [strangers, stranger, 'بحب القهوة', 'MACHINE_ASR', 0.9]);
+    const turns = [randomUUID(), randomUUID()].sort();
+    for (const turn of turns) await db.observer(confirm, [twice, owner, turn, randomUUID()]);
+    await db.observer(confirm, [strangers, stranger, randomUUID(), randomUUID()]);
+
+    await db.setAuthenticatedClaims(owner);
+    const api = new PgAuthenticatedDataApiAdapter(db) as unknown as MemoryDataApiService;
+    const memory = new MemoryRepository(api);
+    // Production's own parse: a MACHINE_ASR Memory reports whether it was confirmed; a typed one carries no such field.
+    const listed = Object.fromEntries((await memory.listActiveForUser('token', owner, 16)).map((m) => [m.id, m.confirmed_by_typing]));
+    assert.deepEqual(listed, { [twice]: true, [never]: false, [typed]: undefined });
+    assert.equal((await memory.find('token', owner, twice))?.confirmed_by_typing, true);
+    assert.equal(await memory.find('token', owner, strangers), undefined);
+
+    // Shaped as PostgREST answers this one-to-many relationship: one element per row, in a stable order; [] without one.
+    const select = 'id,memory_subject_attributions(subject),memory_typed_confirmations(memory_id)';
+    const read = (query: Record<string, string>) => (api as unknown as PgAuthenticatedDataApiAdapter)
+      .request<Array<{ id: string; memory_typed_confirmations: unknown }>>('token', `memories?${new URLSearchParams({ select, ...query })}`);
+    assert.deepEqual(
+      Object.fromEntries((await read({ user_id: `eq.${owner}` })).map(({ id, memory_typed_confirmations }) => [id, memory_typed_confirmations])),
+      { [twice]: [{ memory_id: twice }, { memory_id: twice }], [never]: [], [typed]: [] });
+    // RLS, not the query's filter: unfiltered, each caller sees only its own Memories and its own confirmations.
+    assert.deepEqual((await read({})).map(({ id }) => id).sort(), [twice, never, typed].sort());
+    await db.setAuthenticatedClaims(stranger);
+    assert.deepEqual((await read({})).map(({ id, memory_typed_confirmations }) => [id, memory_typed_confirmations]),
+      [[strangers, [{ memory_id: strangers }]]]);
   } finally {
     await db.rollback();
     await db.close();

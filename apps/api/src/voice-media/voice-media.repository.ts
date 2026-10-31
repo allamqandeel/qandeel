@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 
-export interface BeginNoteRow { readonly outcome: string; readonly recording_id: string | null; readonly storage_key: string | null; readonly upload_deadline: string | null }
+/**
+ * Every outcome of begin v1. S8B-03 (0186, §5.2): ALREADY_ACCEPTED names the owner's accepted note again for the same
+ * command, session and size, with no key and no deadline (nothing is uploaded).
+ */
+export type BeginNoteOutcome = 'BEGUN' | 'ALREADY_ACCEPTED' | 'NOT_AVAILABLE_NOW' | 'CONSENT_REQUIRED' | 'TOO_LARGE' | 'UNAVAILABLE' | 'COMMAND_CONFLICT';
+export interface BeginNoteRow { readonly outcome: BeginNoteOutcome; readonly recording_id: string | null; readonly storage_key: string | null; readonly upload_deadline: string | null }
 export interface AcceptNoteRow { readonly outcome: string; readonly accepted_at: string | null; readonly retention_expires_at: string | null }
 export interface AddSegmentRow { readonly outcome: string; readonly storage_key: string | null; readonly upload_deadline: string | null }
 export interface OutcomeRow { readonly outcome: string }

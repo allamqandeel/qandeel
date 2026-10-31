@@ -39,6 +39,10 @@ import process from 'node:process';
 import { createPersonalReplayRuntime, runVerifier } from './replay-personal-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import { SUBSTITUTIONS, extractStatement, substitutedStatement } from './voice-foundation-0183-substitutions.mjs';
+import { SUBSTITUTIONS as NOTE_SUBSTITUTIONS, substitutedBody as notesBody, voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
+
+// S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
+const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole, actAs } = rt;
@@ -361,6 +365,15 @@ async function verifyCatalogue(report) {
     const acl = text.indexOf('  FOREACH fn IN ARRAY ARRAY[');
     const declared = [...text.slice(acl, text.indexOf('] LOOP', acl)).matchAll(/'([a-z_]+\.[a-z_0-9]+\([^']*\))'/gu)].map((m) => m[1]);
     assert.equal(declared.length, 41, 'S0b the ACL block names the forty-one 0183 functions');
+    // S8B-03 re-anchor (migration 0186): once 0186 is applied voice_private also holds the eight internals 0186's own ACL
+    // block names (no role executes them; verify-migration-0186 proves their shape). They are held to the same rules here.
+    if (await voiceNotesApplied(rows)) {
+      const text0186 = migration('0186');
+      const acl0186 = text0186.indexOf('  FOREACH fn IN ARRAY ARRAY[');
+      const internals = [...text0186.slice(acl0186, text0186.indexOf('] LOOP', acl0186)).matchAll(/'(voice_private\.[a-z_0-9]+\([^']*\))'/gu)].map((m) => m[1]);
+      assert.equal(internals.length, 8, 'S0b 0186 names eight voice_private internals');
+      declared.push(...internals);
+    }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,
           p.proconfig AS config, pg_get_userbyid(p.proowner) AS owner,
           EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0) AS to_public
@@ -390,7 +403,14 @@ async function verifyCatalogue(report) {
     assert.equal(events, 4, 'S0c one seed event per scope');
     const [{ texts, grants }] = await rows(`SELECT (SELECT count(*)::int FROM voice_private.consent_texts) AS texts,
         (SELECT count(*)::int FROM voice_private.recording_consents) AS grants`);
-    assert.deepEqual([texts, grants], [0, 0], 'S0c no consent text is installed, no grant exists');
+    // S8B-03 re-anchor (migration 0186): 0186 installs the Product Owner-approved text (C-01 ... C-11) as the one current
+    // version; its deploy guard G2 and verify-migration-0186 pin its digests. No grant exists either way.
+    const notesApplied = await voiceNotesApplied(rows);
+    assert.deepEqual([texts, grants], [notesApplied ? 1 : 0, 0], 'S0c no consent text is installed (or only the approved 0186 text), no grant exists');
+    if (notesApplied) {
+      const [{ current }] = await rows("SELECT count(*)::int AS current FROM voice_private.consent_texts WHERE version = $1 AND is_current", [NOTES_CONSENT_VERSION]);
+      assert.equal(current, 1, 'S0c the approved 0186 text is current');
+    }
   });
 
   await report.section('S0d every forward-replaced function is its origin statement plus exactly the declared edits, in 0183 and live', async () => {
@@ -404,7 +424,11 @@ async function verifyCatalogue(report) {
       const name = /FUNCTION ([a-z_]+\.[a-z_0-9]+)\(/u.exec(substitution.header)[1];
       const live = await rows(`SELECT p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE n.nspname || '.' || p.proname = $1`, [name]);
-      assert.ok(live.some((r) => r.prosrc === written.body), `S0d ${substitution.key}: the live body is the 0183 body`);
+      // S8B-03 re-anchor (migration 0186): a function 0186 forward-replaces from this 0183 statement is live as its declared
+      // 0186 body (voice-notes-0186-substitutions.mjs, whose origin is this statement; verify-migration-0186 proves the chain).
+      const successor = NOTE_SUBSTITUTIONS.find((n) => n.header === substitution.header && n.origin.startsWith('0183') && !n.target);
+      const liveBody = successor && await voiceNotesApplied(rows) ? notesBody(successor.key) : written.body;
+      assert.ok(live.some((r) => r.prosrc === liveBody), `S0d ${substitution.key}: the live body is the 0183 body (or its declared 0186 successor)`);
     }
     // The 0150 coordinator is not re-created: the producer it calls carries VA-3.
     assert.doesNotMatch(text, /FUNCTION public\.commit_finalized_exchange_with_full_semantic_chain_v1\(/u, 'S0d the coordinator is untouched');
@@ -812,6 +836,14 @@ async function verifyBehaviour(report) {
       const session = await newSession(A);
       await setVoiceGate('PERSONAL_VOICE_NOTE');
       await setVoiceGate('PERSONAL_LIVE_CALL');
+      // S8B-03 re-anchor (migration 0186): 0186 installs the approved text, so the empty catalogue is recreated inside this
+      // rolled-back scenario (the text guard admits no delete; replica mode is set back at once).
+      if (await voiceNotesApplied(rows)) {
+        await owner();
+        await q("SET LOCAL session_replication_role = 'replica'");
+        await q('DELETE FROM voice_private.consent_texts WHERE version = $1', [NOTES_CONSENT_VERSION]);
+        await q("SET LOCAL session_replication_role = 'origin'");
+      }
       assert.deepEqual(await consentState(A), { consent_state: 'NOT_GRANTED', consent_version: null });
       assert.equal(await grant(A, 'ANY_VERSION'), 'VERSION_NOT_CURRENT', 'A8 an empty catalogue grants nothing');
       assert.equal(outcomeOf(await begin(A, session)), 'CONSENT_REQUIRED', 'A8 no grant: begin');
@@ -1088,6 +1120,10 @@ async function removeConsentRaceFixtures(humans, versions) {
     await q('DELETE FROM voice_private.recordings WHERE user_id = ANY($1::uuid[])', [humans]);
     await q('DELETE FROM voice_private.recording_consents WHERE user_id = ANY($1::uuid[])', [humans]);
     await q('DELETE FROM voice_private.consent_texts WHERE version = ANY($1::text[])', [versions]);
+    // S8B-03 re-anchor (migration 0186): installing the race version retired the approved 0186 text; with the race version
+    // gone it is the current text again, exactly as 0186 left it.
+    await q(`UPDATE voice_private.consent_texts SET is_current = true WHERE version = $1 AND NOT EXISTS
+               (SELECT 1 FROM voice_private.consent_texts t WHERE t.purpose = 'VOICE_RECORDING' AND t.is_current)`, [NOTES_CONSENT_VERSION]);
     await q("SET LOCAL session_replication_role = 'origin'");
     await q('COMMIT');
   } catch (error) {
@@ -1137,9 +1173,9 @@ if (GOLDEN_MODE) {
     report.print();
     report.assertAllPassed();
     const [{ residue }] = await rows(`SELECT (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))
-        + (SELECT count(*) FROM voice_private.consent_texts) + (SELECT count(*) FROM voice_private.recording_consents)
+        + (SELECT count(*) FROM voice_private.consent_texts WHERE NOT (version = $2 AND is_current)) + (SELECT count(*) FROM voice_private.recording_consents)
         + (SELECT count(*) FROM voice_private.recordings)
-        + (SELECT count(*) FROM voice_private.voice_launch_capability_states WHERE feature_flag_state <> 'DISABLED') AS residue`, [humans]);
+        + (SELECT count(*) FROM voice_private.voice_launch_capability_states WHERE feature_flag_state <> 'DISABLED') AS residue`, [humans, NOTES_CONSENT_VERSION]);
     assert.equal(Number(residue), 0, 'the run leaves nothing behind');
   }, () => rt.client.end().catch(() => undefined));
 }

@@ -365,7 +365,10 @@ test('R2: the production A-1 path is the canonical subject-grounding authority e
   assert.match(generator, /items: \{ type: 'string', enum: \[\.\.\.handles\] \}/u, 'the provider schema enumerates exactly the issued handles');
   // RE-ANCHORED by S8A-03 (D1): the DeepSeek generator selects the instructions per request; a request without a
   // universe still carries the base instructions alone, with no grounding sentence.
-  assert.match(generator, /return subjectGroundingHandles\(request\)\.length > 0 \? `\$\{INSTRUCTIONS\} \$\{SUBJECT_GROUNDING_INSTRUCTIONS\}` : INSTRUCTIONS;/u, 'a request without a universe carries the base instructions alone');
+  // RE-ANCHORED by S8B-03 CP1 (2026-10-31, E5): the same selection is named `base`; the approved M-01 line is appended only
+  // when a MACHINE_ASR Evidence item is present, so a request with no voice source still carries exactly the base.
+  assert.match(generator, /const base = subjectGroundingHandles\(request\)\.length > 0 \? `\$\{INSTRUCTIONS\} \$\{SUBJECT_GROUNDING_INSTRUCTIONS\}` : INSTRUCTIONS;/u, 'a request without a universe carries the base instructions alone');
+  assert.match(generator, /return request\.eligibleEvidence\.some\(\(item\) => item\.source === 'MACHINE_ASR'\) \? `\$\{base\} \$\{MACHINE_ASR_SOURCE_GUIDANCE\}` : base;/u, 'only a voice source adds M-01');
   // The wire and both decoders carry the grounding as a closed shape; the T-02 kernel (blob-pinned above) has no key for it.
   assert.match(runtimeIndex, /^\s*DisclosedSubjectGrounding,$/mu);
   assert.match(stripComments(runtimeHistorical), /export interface DisclosedSubjectGrounding \{\s*readonly emergingFocusId: string;\s*readonly groundedAtSp: number;\s*\}/u);

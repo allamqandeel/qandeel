@@ -70,6 +70,8 @@ export interface ConversationHistoryExchange {
   };
   replyState: ConversationReplyState;
   assistantTurn: { id: string; content: string; createdAt: string } | null;
+  /** S8B-03: present only for a turn that came from a Voice Note; never a storage key or a confidence band. */
+  voiceNote?: { recordingId: string; available: boolean; availableUntil: string | null; durationMs: number | null };
 }
 
 export interface ConversationHistoryPage {

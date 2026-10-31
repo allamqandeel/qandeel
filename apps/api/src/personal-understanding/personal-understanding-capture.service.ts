@@ -11,7 +11,14 @@
 // It never writes: the dispatcher hands the verified command to the ONE atomic database command. Since Open Understanding
 // (Product Owner decision 2026-10-24, CP2 amendment §10) that is capture schema v3 and migration 0173: DeepSeek reads the
 // meaning; `personal-understanding-semantic.verifier.ts` proves grounding, ownership and structure.
-import { Inject, Injectable } from '@nestjs/common';
+//
+// S8B-03 (CP1, E6 / E9 / E12, §4.9.3): a Voice Note turn is understood too. The database (capture v4) reads the turn's
+// voice source and decides the source, the score and the operations; this service only keeps the command inside what
+// v4 allows, so a voice turn never asks for what the database would refuse. LOW: backfill only - the unreliable text is
+// never sent. MEDIUM: facts about the user and restatements only. HIGH: everything but a forget. A typed confirmation
+// (M-03) comes only from a typed message, and only for an earlier MACHINE_ASR item.
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { TelemetryService } from '../observability/telemetry.service';
 import type { BackgroundIntelligenceExecutionContext } from '../background-intelligence/background-intelligence-authority.service';
 import { BackgroundIntelligenceEnrichmentService } from '../background-intelligence/background-intelligence-enrichment.service';
 import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
@@ -53,6 +60,8 @@ export interface PersonalUnderstandingCapturePlan {
    */
   readonly known: ReadonlyArray<UnderstandingKnownItem>;
   readonly recentTurns: ReadonlyArray<UnderstandingRecentTurn>;
+  /** S8B-03: the source turn's voice band; null for a typed turn. A LOW plan carries no message (backfill only). */
+  readonly voiceBand?: 'HIGH' | 'MEDIUM' | 'LOW' | null;
 }
 
 /**
@@ -95,10 +104,13 @@ export class PersonalUnderstandingCaptureService {
   constructor(
     private readonly data: BackgroundIntelligenceEnrichmentService,
     @Inject(PERSONAL_UNDERSTANDING_CAPTURE_PROVIDER) private readonly provider: PersonalUnderstandingCaptureProviderV3,
+    @Optional() private readonly telemetry?: TelemetryService,
   ) {}
 
   async prepare(context: BackgroundIntelligenceExecutionContext, currentUserContent: string, now = new Date()): Promise<PersonalUnderstandingCapturePlan | undefined> {
-    const message = capturableMessage(currentUserContent);
+    // S8B-03 (E12): a LOW voice turn calls the provider in the existing backfill mode only - its text is never sent.
+    const voiceBand = (await this.data.readTurnVoiceProvenance?.(context))?.asrConfidenceBand ?? null;
+    const message = voiceBand === 'LOW' ? null : capturableMessage(currentUserContent);
     const unindexed = await this.data.listUnindexedMemories(context, MAX_UNDERSTANDING_BACKFILL);
     const sendable = (memory: { readonly content: string }) =>
       memory.content.trim().length > 0 && [...memory.content].length <= MAX_UNDERSTANDING_MEMORY_CHARS && !containsObviousSecret(memory.content);
@@ -108,7 +120,7 @@ export class PersonalUnderstandingCaptureService {
       return containsObviousSecret(memory.content) ? { ...own, terms: [] } : own;
     });
     if (message === null && backlog.length === 0 && settle.length === 0) return undefined;
-    if (message === null) return { message, backlog, settle, current: [], known: [], recentTurns: [] };
+    if (message === null) return { message, backlog, settle, current: [], known: [], recentTurns: [], ...(voiceBand ? { voiceBand } : {}) };
     const current = await this.data.listCaptureScreenMemories(context, now);
     const known = (await this.data.listKnownMemories(context, MAX_UNDERSTANDING_KNOWN_ITEMS))
       .filter(sendable).slice(0, MAX_UNDERSTANDING_KNOWN_ITEMS).map((memory, index) => ({ handle: `k${index + 1}`, ...memory }));
@@ -117,7 +129,7 @@ export class PersonalUnderstandingCaptureService {
       .filter((turn) => !containsObviousSecret(turn.content))
       .map((turn) => ({ role: turn.role === 'USER' ? 'USER' as const : 'QANDEEL' as const,
         content: [...turn.content].slice(0, MAX_UNDERSTANDING_RECENT_TURN_CHARS).join('') }));
-    return { message, backlog, settle, current, known, recentTurns };
+    return { message, backlog, settle, current, known, recentTurns, ...(voiceBand ? { voiceBand } : {}) };
   }
 
   async propose(plan: PersonalUnderstandingCapturePlan, now = new Date()): Promise<PersonalUnderstandingCaptureCommandV3> {
@@ -133,7 +145,8 @@ export class PersonalUnderstandingCaptureService {
         recentTurns: plan.message === null ? [] : [...plan.recentTurns],
         memories: plan.backlog.map((memory) => ({ handle: memory.handle, type: memory.type, content: memory.content })),
         known: plan.message === null ? [] : plan.known.map((item) => ({ handle: item.handle, type: item.type, content: item.content,
-          about: knownAbout(item), temporal: item.temporal, ended: item.ended })),
+          about: knownAbout(item), temporal: item.temporal, ended: item.ended, source: item.source, confirmedByTyping: item.confirmedByTyping })),
+        ...(plan.message !== null && (plan.voiceBand === 'HIGH' || plan.voiceBand === 'MEDIUM') ? { voiceBand: plan.voiceBand } : {}),
       });
     } catch {
       return empty([...plan.settle], [{ part: 'fact', index: -1, verdict: 'PROVIDER_FAILED' }]);
@@ -141,7 +154,61 @@ export class PersonalUnderstandingCaptureService {
     const index = [...verifyMemoryProposals(output.memories, plan.backlog), ...plan.settle];
     if (plan.message === null) return empty(index);
     const result = verifySemanticCapture(output, { message: plan.message, recentTurns: plan.recentTurns, known: plan.known, current: plan.current, now });
-    return { items: result.items, index, reaffirmed: result.reaffirmed, ended: result.ended, forget: result.forget,
-      corrections: result.corrections, audit: result.audit };
+    const verified: PersonalUnderstandingCaptureCommandV3 = { items: result.items, index, reaffirmed: result.reaffirmed, ended: result.ended, forget: result.forget,
+      corrections: result.corrections, audit: result.audit, confirmed: plan.voiceBand ? [] : confirmedKnownIds(output.confirmedKnown, plan.known, result) };
+    return this.withinVoiceBand(verified, plan.voiceBand ?? null);
   }
+
+  /**
+   * S8B-03 (§4.9.3): what capture v4 allows for this turn's band, and nothing more. A withheld operation is counted (one
+   * content-free class), never logged. A typed turn passes unchanged.
+   */
+  withinVoiceBand(command: PersonalUnderstandingCaptureCommandV3, band: 'HIGH' | 'MEDIUM' | 'LOW' | null): PersonalUnderstandingCaptureCommandV3 {
+    if (band === null) return command;
+    const keep = band === 'LOW'
+      ? { items: [], reaffirmed: [], ended: [], corrections: [] }
+      : band === 'MEDIUM'
+        ? { items: command.items.filter((item) => item.subject !== 'OTHER'), reaffirmed: command.reaffirmed, ended: [], corrections: [] }
+        : { items: command.items, reaffirmed: command.reaffirmed, ended: command.ended, corrections: command.corrections };
+    const withheld = (command.items.length - keep.items.length) + (command.reaffirmed.length - keep.reaffirmed.length)
+      + (command.ended.length - keep.ended.length) + (command.corrections.length - keep.corrections.length) + command.forget.length
+      + (command.confirmed?.length ?? 0);
+    for (let i = 0; i < withheld; i += 1) this.withheld();
+    const kept = new Set([...keep.items, ...keep.corrections].map((entry) => entry.memoryId));
+    return { ...command, ...keep, forget: [], confirmed: [], index: command.index.filter((entry) => !isNewEntry(command, entry.memoryId) || kept.has(entry.memoryId)) };
+  }
+
+  /** S8B-03 (E11): the same command without facts about someone else - when the database refused a person label. */
+  withoutOtherPeople(command: PersonalUnderstandingCaptureCommandV3): PersonalUnderstandingCaptureCommandV3 {
+    const items = command.items.filter((item) => item.subject !== 'OTHER');
+    for (let i = 0; i < command.items.length - items.length; i += 1) this.withheld();
+    const kept = new Set([...items, ...command.corrections].map((entry) => entry.memoryId));
+    return { ...command, items, index: command.index.filter((entry) => !isNewEntry(command, entry.memoryId) || kept.has(entry.memoryId)) };
+  }
+
+  private withheld(): void {
+    try {
+      this.telemetry?.recordOperationalOutcome('VOICE_CAPTURE_OPERATION_WITHHELD', 'capture', 'withheld');
+    } catch {
+      // Observability is best-effort.
+    }
+  }
+}
+
+/** Whether an index entry belongs to a NEW Memory of this command (an item or a correction), not to a backfilled one. */
+function isNewEntry(command: PersonalUnderstandingCaptureCommandV3, memoryId: string): boolean {
+  return command.items.some((item) => item.memoryId === memoryId) || command.corrections.some((entry) => entry.memoryId === memoryId);
+}
+
+/**
+ * S8B-03 (E9, M-03): the known items a typed message explicitly confirmed - only earlier MACHINE_ASR items, never one this
+ * command also ends, forgets or corrects, at most three. The database re-checks every condition (0186 v4).
+ */
+function confirmedKnownIds(handles: readonly string[] | undefined, known: ReadonlyArray<UnderstandingKnownItem>,
+  result: { readonly ended: readonly string[]; readonly forget: readonly string[]; readonly corrections: ReadonlyArray<{ readonly targetMemoryId: string }> }): string[] {
+  const touched = new Set([...result.ended, ...result.forget, ...result.corrections.map((c) => c.targetMemoryId)]);
+  const ids = (handles ?? []).map((handle) => known.find((item) => item.handle === handle))
+    .filter((item): item is UnderstandingKnownItem => item !== undefined && item.source === 'MACHINE_ASR' && !touched.has(item.memoryId))
+    .map((item) => item.memoryId);
+  return [...new Set(ids)].slice(0, 3);
 }

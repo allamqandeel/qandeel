@@ -267,8 +267,10 @@ test('THE CUTOVER: ONLY the FINAL chain is wired, the temporary T-03A2-only writ
   // ConversationService: every orchestrated path re-enters the FINAL chain; nothing temporal-only remains.
   assert.match(conversationService, /private readonly semantic: ConversationSemanticEstablishmentService/u);
   assert.match(conversationService, /return this\.establishSemanticChain\(userId, await this\.orchestrator\.orchestrate\(/u);
-  assert.equal((stripComments(conversationService).match(/this\.establishSemanticChain\(/gu) ?? []).length, 3);
-  assert.equal((stripComments(conversationService).match(/this\.orchestrator\.orchestrate\(/gu) ?? []).length, 3);
+  // RE-PINNED by S8B-03 CP1 (2026-10-31): 3 → 4. runCommittedTurn (a Voice Note's one committed user turn) is the fourth
+  // orchestrated path, and it re-enters the same FINAL chain; there is still no temporal-only path and no fallback.
+  assert.equal((stripComments(conversationService).match(/this\.establishSemanticChain\(/gu) ?? []).length, 4);
+  assert.equal((stripComments(conversationService).match(/this\.orchestrator\.orchestrate\(/gu) ?? []).length, 4);
   assert.doesNotMatch(stripComments(conversationService), /ConversationTemporalEstablishmentService|establishTemporal|ConversationFocusEstablishmentService|ConversationThreadEstablishmentService|ConversationThreadLifecycleEstablishmentService|ConversationUnitRepository|catch \(\w+\) \{[^}]*temporal/u,
     'no temporal-only, B1-only, B1+B2-only or B3-only path and no fallback catch');
   // ConversationModule: the FINAL service, its service-role repository and the four lazy binding FACTORIES, nothing superseded.

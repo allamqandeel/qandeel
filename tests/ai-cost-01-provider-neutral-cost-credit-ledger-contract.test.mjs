@@ -143,16 +143,21 @@ const CENSUS = [
   { transport: 'apps/api/src/conversational-focus/deepseek-focus-resolution.provider.ts', family: 'FOCUS_RESOLUTION', frozen: '22cd4f2ed3871156e07fd715ebe208ccbb61a021' },
   { transport: 'apps/api/src/thread-establishment/deepseek-thread-establishment.provider.ts', family: 'THREAD_FORMATION', frozen: 'e34c43cbfa8b583d14daeb66255b733f49bcdc85' },
   { transport: 'apps/api/src/thread-lifecycle/deepseek-thread-continuity.provider.ts', family: 'THREAD_CONTINUITY', frozen: '94e0005eea59fd2233ec5bab927bc4f9fcd22b2a' },
-  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-intent-extraction.provider.ts', family: 'HYPOTHESIS_INTENT_EXTRACTION', frozen: 'eed991a4a3b2642fef982d5d7c3595e5789296c1' },
-  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts', family: 'HYPOTHESIS_EVIDENCE_ASSOCIATION', frozen: '00216737d23ebd67f7fb43f7b7359062886923d7' },
-  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts', family: 'HYPOTHESIS_CANDIDATE_GENERATION', frozen: 'efc828ad938e1765b5bf2deb7f0e32c4c423a011' },
+  // S8B-03 CP1 (2026-10-31, Controlled Amendment E5, PO-approved contract v1.2): the three hypothesis adapters re-pinned for
+  // the MACHINE_ASR source and confirmedByTyping on the outgoing items and the approved M-01 text, appended only when a voice
+  // source is present (a typed request's bytes are unchanged). Same call, same family, same accounting and SYNTHETIC_ONLY gate.
+  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-intent-extraction.provider.ts', family: 'HYPOTHESIS_INTENT_EXTRACTION', frozen: '0006109ef702c735a5a7bed6eaa4e8d9faa8fbf7' },
+  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-evidence-association.provider.ts', family: 'HYPOTHESIS_EVIDENCE_ASSOCIATION', frozen: '873aac8f8964e1fd02c0464d0fafbaf890bceaa3' },
+  { transport: 'apps/api/src/hypothesis/deepseek-hypothesis-candidate.generator.ts', family: 'HYPOTHESIS_CANDIDATE_GENERATION', frozen: 'd177099176181343155fd936daa0ff5ec3253011' },
   // S8A-03 CP2 (2026-10-23): the background Personal Understanding capture, the QIR-005 v2 fourth provider effect.
   // S8A-03 Living Personal Memory (2026-10-23): re-pinned for the schema-v2 capture (current items, family statements,
   // restatements and endings; amendment §9.5.1). Same call, same family, same accounting and SYNTHETIC_ONLY gate.
   // S8A-03 Open Understanding (2026-10-24, Product Owner decision; amendment §10): re-pinned for the schema-v3 capture
   // (what QANDEEL already knows, the recent turns, person labels, forget / correct; no address form). Same call, same
   // family, same accounting and SYNTHETIC_ONLY gate.
-  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: 'dd4babad6b6a27ce44b7e6354cbcc0f25d6c23a1' },
+  // S8B-03 CP1 (2026-10-31, E5 / E6): re-pinned for the approved M-02 (a voice message, by band) and M-03 (a typed message)
+  // texts and the source on the known items; same call, family, accounting and gate.
+  { transport: 'apps/api/src/personal-understanding/deepseek-personal-understanding-capture.provider.ts', family: 'PERSONAL_UNDERSTANDING_CAPTURE', frozen: '93d2c3f5f3a87fcf71e8f8be47bcc4a93cc1a2e0' },
   // S8A-04 CP1 (2026-10-24, Product Owner D3 / D4): the Shared semantic reading under its own family (migration 0174), through
   // the same shared client, JSON Output envelope, accounting boundary and SYNTHETIC_ONLY gate. Re-pinned 2026-10-24 for the
   // one §5.2 sentence the Product Owner approved at the CP1 Copy Gate (amendment §9.1); nothing else in the file changed.
@@ -494,7 +499,9 @@ function simulatorViolations(world) {
 
 function attributionViolations(world) {
   const out = [];
-  if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) =>\s*runForegroundTurnWork\(/u.test(ts(world.conversationService))) out.push('the foreground request does not attribute its provider calls to the authenticated reader');
+  if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) =>\s*runForegroundTurnWork\(gate, foregroundTurnWorkDeadlineMs\(\), \(\) => this\.admitAndRunTurn\(/u.test(ts(world.conversationService))) out.push('the foreground request does not attribute its provider calls to the authenticated reader');
+  // S8B-03 CP1: the committed Voice Note turn is charged to its owner the same way, in its own scope.
+  if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) => runForegroundTurnWork\(gate, foregroundTurnWorkDeadlineMs\(\), async \(\) => \{\s*const turn = await this\.repository\.findTurn\(/u.test(ts(world.conversationService))) out.push('the committed voice-note turn does not attribute its provider calls to its owner');
   if (!/withPostResponseAiUsageAttribution\(entry\.envelope, \(\) => this\.dispatcher\.dispatch\(entry\.envelope\)\)/u.test(ts(world.consumer))) out.push('post-response provider calls are not attributed');
   // S8A-04 CP1: the Shared semantic reading is charged to the sender the 0089 resolver names as the author of its message.
   // S8A-04 CP2 (0175): with the World and the causing message, for the reading and the placement alike.
@@ -708,6 +715,7 @@ const PLANTED = [
   ['ops: the operations signal is not fail-soft', 'operationsScanViolations', () => plant('worker', 'this.quietly(() => this.telemetry.recordOperationalOutcome(', '(() => this.telemetry.recordOperationalOutcome(')],
   ['ops: the registry drops the operations scan', 'operationsScanViolations', () => plant('telemetry', " ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],\n", '')],
   ['attribution: the foreground request is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () =>\n      runForegroundTurnWork(', 'return (() =>\n      runForegroundTurnWork(')],
+  ['attribution: the committed voice-note turn is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {', 'return (() => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {')],
 ];
 
 for (const [name, detector, world] of PLANTED) {

@@ -117,6 +117,8 @@ export class PostResponseIntelligenceDispatcherService{
    if(gapSync==='QUARANTINED')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','INFORMATION_GAP_SYNC');
   }
   const assessment=await this.enrichment.evaluateGenerationEligibility(context,turn.content,'ALLOW');if(!('triggerClassification'in assessment))return this.terminal(execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
+  // S8B-03 (E7): a LOW voice turn never feeds Hypothesis generation or the Intent - its text is not reliable enough.
+  if((await this.enrichment.readTurnVoiceProvenance?.(context))?.asrConfidenceBand==='LOW')return this.terminal(execution,'SKIPPED','NOT_ELIGIBLE','ELIGIBILITY');
   // A durably COMPLETED INTENT_PROVIDER carries its own post-authority result, so a redelivery recovers the exact authorized intent instead of losing it with the process and false-skipping. A fresh run persists the typed result atomically with completion before consuming it.
   const persistedIntent=effects.find(effect=>effect.effect_key==='INTENT_PROVIDER'&&effect.state==='COMPLETED');let intent:AuthorizedHypothesisGenerationIntent;
   if(persistedIntent){const recovered=recoverDurableIntentProviderResult(persistedIntent,execution);if(recovered.status==='INDETERMINATE')return this.terminal(execution,'QUARANTINED','INDETERMINATE_EFFECT','INTENT_RECOVERY');budget.recover('INTENT_PROVIDER');if(recovered.status==='NOT_AUTHORIZED')return this.terminal(execution,'SKIPPED','INTENT_NOT_AUTHORIZED','INTENT');intent=recovered.intent;}
@@ -346,7 +348,9 @@ export class PostResponseIntelligenceDispatcherService{
   if(!plan)return'DONE';
   if(budget.authorize('UNDERSTANDING_CAPTURE_PROVIDER')==='EXHAUSTED')return'PROVIDER_BUDGET_EXHAUSTED';
   if(!await this.ledger.claim(execution.id,'UNDERSTANDING_CAPTURE_PROVIDER'))return'LOST';budget.spend('UNDERSTANDING_CAPTURE_PROVIDER');
-  try{const command=await this.understanding.propose(plan);if(await this.ledger.completeUnderstandingCapture(execution.id,command)!=='COMPLETED')return'LOST';}catch{return'QUARANTINED';}
+  // S8B-03 (E11): capture v4 refuses a person label of a HIGH voice turn that holds a word heard below T_HIGH (words this
+  // server never sees); the same command is then completed once more without facts about someone else.
+  try{const command=await this.understanding.propose(plan);let answer:'COMPLETED'|'NO_OP';try{answer=await this.ledger.completeUnderstandingCapture(execution.id,command);}catch(error){if(plan.voiceBand!=='HIGH'||!command.items.some(item=>item.subject==='OTHER'))throw error;answer=await this.ledger.completeUnderstandingCapture(execution.id,this.understanding.withoutOtherPeople(command));}if(answer!=='COMPLETED')return'LOST';}catch{return'QUARANTINED';}
   completed.add('UNDERSTANDING_CAPTURE_PROVIDER');return'DONE';}
  private providerBudgetExhausted(execution:IntelligenceExecution):Promise<true>{
   return this.terminal(execution,'QUARANTINED',POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_OUTCOME,POST_RESPONSE_PROVIDER_BUDGET_EXHAUSTED_STAGE);}

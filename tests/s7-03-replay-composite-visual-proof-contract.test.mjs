@@ -269,7 +269,9 @@ const DETECTORS = {
     // S8B-01 RE-ANCHOR (2026-10-28): S8A-05 merged through PR #363; Stage 8B starts and the current task is S8B-01, and
     // S8A-05 stands beneath it.
     // S8B-02 RE-ANCHOR (2026-10-30): S8B-01 merged through PR #366; the current task is S8B-02, and S8B-01 stands beneath it.
-    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8B-02 — Voice Foundation\*\*/mu.test(w.map)) out.push('the Project Map names S8B-02 as current');
+    // S8B-03 RE-ANCHOR (2026-10-31): S8B-02 merged through PR #368; the current task is S8B-03, and S8B-02 stands beneath it.
+    if (w.map !== null && !/^> \*\*CURRENT IMPLEMENTATION TASK: S8B-03 — Personal Voice Notes\*\*/mu.test(w.map)) out.push('the Project Map names S8B-03 as current');
+    if (w.map !== null && !/^> \*\(Previous, S8B-02, as written at its closing change; merged through PR #368:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8B-02 — Voice Foundation\*\*/mu.test(w.map)) out.push('the Project Map keeps S8B-02 beneath S8B-03');
     if (w.map !== null && !/^> \*\(Previous, S8B-01, as written at its closing change; merged through PR #366:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8B-01 — Voice Runtime Contract & Provider Evidence\*\*/mu.test(w.map)) out.push('the Project Map keeps S8B-01 beneath S8B-02');
     if (w.map !== null && /^> \*\*CURRENT IMPLEMENTATION TASK: S8B-01/mu.test(w.map)) out.push('the merged S8B-01 is no longer the current task');
     if (w.map !== null && !/^> \*\(Previous, S8A-05, as written at its closing change; merged through PR #363:\)\* \*\*CURRENT IMPLEMENTATION TASK: S8A-05 — Public World: Write Your Topic\*\*/mu.test(w.map)) out.push('the Project Map keeps S8A-05 beneath S8B-01');

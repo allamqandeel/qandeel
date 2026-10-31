@@ -198,6 +198,9 @@ export interface UnderstandingKnownItem {
   readonly personName: string | null;
   readonly personRelation: string | null;
   readonly temporal: string | null;
+  /** S8B-03 (E5): where the Memory came from, and whether a MACHINE_ASR item was later confirmed in typed text. */
+  readonly source?: string;
+  readonly confirmedByTyping?: boolean;
   readonly ended: boolean;
   readonly terms: readonly string[];
 }
@@ -213,7 +216,9 @@ export interface PersonalUnderstandingCaptureRequestV3 {
   readonly recentTurns: readonly UnderstandingRecentTurn[];
   readonly memories: ReadonlyArray<{ readonly handle: string; readonly type: MemoryType; readonly content: string }>;
   readonly known: ReadonlyArray<{ readonly handle: string; readonly type: MemoryType; readonly content: string; readonly about: string;
-    readonly temporal: string | null; readonly ended: boolean }>;
+    readonly temporal: string | null; readonly ended: boolean; readonly source?: string; readonly confirmedByTyping?: boolean }>;
+  /** S8B-03 (E6, M-02): a qualifying Voice Note's band; absent for a typed message (M-03) and for a backfill-only call. */
+  readonly voiceBand?: 'HIGH' | 'MEDIUM';
 }
 
 export interface PersonalUnderstandingCaptureOutputV3 {
@@ -221,6 +226,8 @@ export interface PersonalUnderstandingCaptureOutputV3 {
   readonly memories: readonly UnderstandingMemoryProposal[];
   readonly context: readonly UnderstandingContextProposalV3[];
   readonly commands: readonly UnderstandingCommandProposal[];
+  /** S8B-03 (E9, M-03): known handles a typed message explicitly confirms; absent or empty otherwise. */
+  readonly confirmedKnown?: readonly string[];
 }
 
 export interface PersonalUnderstandingCaptureProviderV3 {
@@ -253,6 +260,8 @@ export interface PersonalUnderstandingCaptureCommandV3 extends PersonalUnderstan
   readonly items: readonly VerifiedUnderstandingItemV3[];
   readonly forget: readonly string[];
   readonly corrections: readonly VerifiedUnderstandingCorrection[];
+  /** S8B-03 (E9): earlier MACHINE_ASR Memories this typed message explicitly confirmed (at most three). */
+  readonly confirmed?: readonly string[];
   /** Content-free verdict per proposal, for counters and tests only: never written, never logged. */
   readonly audit: ReadonlyArray<{ readonly part: 'fact' | 'context' | 'command'; readonly index: number; readonly verdict: string }>;
 }

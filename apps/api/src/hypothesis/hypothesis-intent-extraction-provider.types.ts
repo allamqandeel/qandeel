@@ -16,6 +16,9 @@ export interface HypothesisIntentExtractionProviderRequest {
     evidenceId: string;
     evidenceKind: EvidenceKind;
     statement: string;
+    /** S8B-03 (E5): present on a MACHINE_ASR item only, with its typed confirmation. */
+    source?: 'MACHINE_ASR';
+    confirmedByTyping?: boolean;
   }>;
   maxSelectedEvidence: number;
   schemaVersion: typeof HYPOTHESIS_INTENT_EXTRACTION_SCHEMA_VERSION;

@@ -1,3 +1,4 @@
+import { MACHINE_ASR_SOURCE_GUIDANCE } from '../memory/machine-asr-model-copy';
 import { HYPOTHESIS_DOMAINS } from './hypothesis.types';
 import { MAX_INTENT_EVIDENCE_IDS } from './hypothesis-generation-intent-authority.types';
 import type { HypothesisIntentExtractionDeepSeekConfig } from './hypothesis-intent-extraction-provider.config';
@@ -157,5 +158,19 @@ describe('DeepSeekHypothesisIntentExtractionProvider', () => {
     expect(client.maxRetries).toBe(0);
     expect(client.baseURL).toBe(DEEPSEEK_API_BASE_URL);
     expect(JSON.stringify(request())).not.toContain(config.apiKey);
+  });
+
+  // S8B-03 (CP1, E5 / A15).
+  it('S8B-03 A15: MACHINE_ASR evidence carries its source and M-01; typed evidence is unchanged', async () => {
+    const typedCreate = jest.fn().mockResolvedValue(stop(null));
+    await new DeepSeekHypothesisIntentExtractionProvider(config, clientOf(typedCreate)).extract(request()).catch(() => undefined);
+    const typedBody = JSON.stringify(typedCreate.mock.calls[0][0]);
+    expect(typedBody).not.toContain('MACHINE_ASR');
+    const voiceCreate = jest.fn().mockResolvedValue(stop(null));
+    const voiced = request({ eligibleEvidence: [{ evidenceId, evidenceKind: 'USER_STATED_FACT', statement: 'I pull away in close relationships.', source: 'MACHINE_ASR', confirmedByTyping: true }] });
+    await new DeepSeekHypothesisIntentExtractionProvider(config, clientOf(voiceCreate)).extract(voiced).catch(() => undefined);
+    const [system, user] = voiceCreate.mock.calls[0][0].messages;
+    expect(system.content).toContain(MACHINE_ASR_SOURCE_GUIDANCE);
+    expect(user.content).toContain('MACHINE_ASR');
   });
 });

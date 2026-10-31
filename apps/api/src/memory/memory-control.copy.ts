@@ -166,6 +166,39 @@ export function plainReply(
   }
 }
 
+// S8B-03 (CP1, E8) — PRODUCT OWNER APPROVED COPY (Copy Gate C-54 ... C-57, 2026-10-31). Exact bytes; «…» / “…” is the
+// quoted remembered words, exactly as every other line here quotes them. Pinned by the S8B-03 static contract.
+const VOICE_LINES = {
+  notHeardClearly: {
+    ar: 'لم تكن الرسالة الصوتية واضحة بما يكفي لتنفيذ هذا الطلب، لذلك لم أغيّر شيئًا. يمكن كتابة الطلب أو تسجيله من جديد.',
+    en: "The voice message wasn't clear enough to act on this request, so I haven't changed anything. The request can be typed or recorded again.",
+  },
+} satisfies Record<string, Line>;
+
+/** C-54: a spoken command not heard clearly enough; nothing changed. */
+export function notHeardClearlyReply(language: MemoryControlLanguage): string {
+  return VOICE_LINES.notHeardClearly[language];
+}
+
+/** C-55: the confirmation a spoken FORGET always asks first. */
+export function voiceForgetQuestion(language: MemoryControlLanguage, content: string): string {
+  return language === 'ar' ? `هل المقصود نسيان ${quoteMemory(language, content)}؟` : `Should I forget ${quoteMemory(language, content)}?`;
+}
+
+/** C-56: the confirmation a spoken DISABLE always asks first. */
+export function voiceDisableQuestion(language: MemoryControlLanguage, content: string): string {
+  return language === 'ar'
+    ? `هل المقصود التوقف عن الاعتماد على ${quoteMemory(language, content)}؟`
+    : `Should I stop relying on ${quoteMemory(language, content)}?`;
+}
+
+/** C-57: a spoken correction that asks for confirmation shows the old and the new words together. */
+export function voiceCorrectionQuestion(language: MemoryControlLanguage, previous: string, current: string): string {
+  return language === 'ar'
+    ? `هل المقصود تصحيح ${quoteMemory(language, previous)} إلى ${quoteMemory(language, current)}؟`
+    : `Should I change ${quoteMemory(language, previous)} to ${quoteMemory(language, current)}?`;
+}
+
 /** MEM-AR-01C: the one question asked when a remember request does not say whom it is about. */
 export function subjectQuestionReply(language: MemoryControlLanguage): string {
   return LINES.subjectQuestion[language];

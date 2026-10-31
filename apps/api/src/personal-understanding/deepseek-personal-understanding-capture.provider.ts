@@ -15,6 +15,7 @@ import {
   isDeepSeekUnavailable,
   type DeepSeekJsonClient,
 } from '../model-router/providers/deepseek/deepseek-client';
+import { MACHINE_ASR_SOURCE_GUIDANCE, TYPED_CONFIRMATION_GUIDANCE, voiceMessageGuidance } from '../memory/machine-asr-model-copy';
 import type { PersonalUnderstandingCaptureDeepSeekConfig } from './personal-understanding-capture-provider.config';
 import {
   MAX_UNDERSTANDING_BACKFILL,
@@ -73,10 +74,38 @@ export const PERSONAL_UNDERSTANDING_CAPTURE_INSTRUCTIONS = [
   'Do not provide rationale, confidence or extra fields. Never invent a fact, a name or a detail.',
 ].join(' ');
 
+/** The most typed confirmations one message may name (0186 v4 refuses more). */
+export const MAX_UNDERSTANDING_CONFIRMED_KNOWN = 3;
+
+/**
+ * S8B-03 (CP1, E5 / E6 / E9): the instructions of one request - the unchanged S8A-03 text, then M-01 when a known item is
+ * MACHINE_ASR (its source travels with it), M-02 for a qualifying voice message, or M-03 for a typed message whose known
+ * items include a MACHINE_ASR one (the only case `confirmedKnown` exists). A request with no voice anywhere is byte for
+ * byte the S8A-03 request.
+ */
+export function captureInstructions(request: PersonalUnderstandingCaptureRequestV3): string {
+  const lines = [PERSONAL_UNDERSTANDING_CAPTURE_INSTRUCTIONS];
+  if (hasMachineAsrKnown(request)) lines.push(MACHINE_ASR_SOURCE_GUIDANCE);
+  if (request.currentUserText !== null && request.voiceBand) lines.push(voiceMessageGuidance(request.voiceBand));
+  if (confirmsKnown(request)) lines.push(TYPED_CONFIRMATION_GUIDANCE);
+  return lines.join(' ');
+}
+
+function hasMachineAsrKnown(request: PersonalUnderstandingCaptureRequestV3): boolean {
+  return request.known.some((item) => item.source === 'MACHINE_ASR');
+}
+
+/** A typed message with a MACHINE_ASR known item: the only request whose answer may confirm a known item (M-03). */
+function confirmsKnown(request: PersonalUnderstandingCaptureRequestV3): boolean {
+  return request.currentUserText !== null && !request.voiceBand && hasMachineAsrKnown(request);
+}
+
 function providerData(request: PersonalUnderstandingCaptureRequestV3): object {
   return {
     currentUserText: request.currentUserText,
-    known: request.known.map((item) => ({ handle: item.handle, type: item.type, about: item.about, temporal: item.temporal, ended: item.ended, content: item.content })),
+    // S8B-03 (E5): a MACHINE_ASR known item carries its source and its typed confirmation to the model.
+    known: request.known.map((item) => ({ handle: item.handle, type: item.type, about: item.about, temporal: item.temporal, ended: item.ended, content: item.content,
+      ...(item.source === 'MACHINE_ASR' ? { source: 'MACHINE_ASR', confirmedByTyping: item.confirmedByTyping === true } : {}) })),
     memories: request.memories.map((memory) => ({ handle: memory.handle, type: memory.type, content: memory.content })),
     recentTurns: request.recentTurns.map((turn) => ({ role: turn.role, content: turn.content })),
     schemaVersion: request.schemaVersion,
@@ -111,9 +140,11 @@ function captureSchema(request: PersonalUnderstandingCaptureRequestV3): object {
   const hasText = request.currentUserText !== null;
   const knownHandles = request.known.map((item) => item.handle);
   const span = { type: 'string', minLength: 1, maxLength: MAX_UNDERSTANDING_SPAN_CHARS };
+  const confirm = confirmsKnown(request);
   return {
-    type: 'object', additionalProperties: false, required: ['commands', 'context', 'facts', 'memories'],
+    type: 'object', additionalProperties: false, required: confirm ? ['commands', 'confirmedKnown', 'context', 'facts', 'memories'] : ['commands', 'context', 'facts', 'memories'],
     properties: {
+      ...(confirm ? { confirmedKnown: { type: 'array', maxItems: MAX_UNDERSTANDING_CONFIRMED_KNOWN, items: { type: 'string', enum: knownHandles } } } : {}),
       facts: { type: 'array', maxItems: hasText ? MAX_UNDERSTANDING_FACT_PROPOSALS_V3 : 0, items: factSchema() },
       context: { type: 'array', maxItems: hasText ? request.known.length : 0, items: { type: 'object', additionalProperties: false, required: [...CONTEXT_KEYS],
         properties: { handle: { type: 'string', enum: knownHandles }, status: { type: 'string', enum: [...UNDERSTANDING_CONTEXT_STATUSES_V3] }, span } } },
@@ -135,7 +166,8 @@ function validRequest(request: PersonalUnderstandingCaptureRequestV3): boolean {
   if (request.currentUserText === null && request.memories.length === 0) return false;
   if (!Array.isArray(request.known) || request.known.length > MAX_UNDERSTANDING_KNOWN_ITEMS) return false;
   if (!Array.isArray(request.recentTurns) || request.recentTurns.length > MAX_UNDERSTANDING_RECENT_TURNS) return false;
-  if (request.currentUserText === null && (request.known.length > 0 || request.recentTurns.length > 0)) return false;
+  if (request.currentUserText === null && (request.known.length > 0 || request.recentTurns.length > 0 || request.voiceBand !== undefined)) return false;
+  if (request.voiceBand !== undefined && request.voiceBand !== 'HIGH' && request.voiceBand !== 'MEDIUM') return false;
   const handles = new Set<string>();
   for (const memory of request.memories) {
     if (!memory || !MEMORY_HANDLE.test(memory.handle) || handles.has(memory.handle) || typeof memory.content !== 'string' ||
@@ -163,7 +195,13 @@ function parseOutput(content: string | undefined, request: PersonalUnderstanding
   try { value = JSON.parse(content); } catch { throw new PersonalUnderstandingCaptureProviderError('INVALID_STRUCTURED_OUTPUT'); }
   const hasText = request.currentUserText !== null;
   const fact = (f: unknown) => exactKeys(f, FACT_KEYS);
-  if (!exactKeys(value, ['commands', 'context', 'facts', 'memories']) || !Array.isArray(value.facts) || !Array.isArray(value.memories) ||
+  // S8B-03 (E9): `confirmedKnown` exists only for a typed message with known items, and is at most three known handles.
+  const confirmed = confirmsKnown(request) && typeof value === 'object' && value !== null && 'confirmedKnown' in value;
+  if (confirmed && (!Array.isArray((value as { confirmedKnown: unknown }).confirmedKnown) || (value as { confirmedKnown: unknown[] }).confirmedKnown.length > MAX_UNDERSTANDING_CONFIRMED_KNOWN ||
+      !(value as { confirmedKnown: unknown[] }).confirmedKnown.every((handle) => typeof handle === 'string' && KNOWN_HANDLE.test(handle)))) {
+    throw new PersonalUnderstandingCaptureProviderError('INVALID_STRUCTURED_OUTPUT');
+  }
+  if (!exactKeys(value, confirmed ? ['commands', 'confirmedKnown', 'context', 'facts', 'memories'] : ['commands', 'context', 'facts', 'memories']) || !Array.isArray(value.facts) || !Array.isArray(value.memories) ||
       !Array.isArray(value.context) || !Array.isArray(value.commands) ||
       value.facts.length > (hasText ? MAX_UNDERSTANDING_FACT_PROPOSALS_V3 : 0) || value.memories.length > request.memories.length ||
       value.context.length > (hasText ? request.known.length : 0) ||
@@ -190,7 +228,7 @@ export class DeepSeekPersonalUnderstandingCaptureProvider implements PersonalUnd
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
       const response = await this.client.chat.completions.create(deepSeekJsonRequest({
-        instructions: PERSONAL_UNDERSTANDING_CAPTURE_INSTRUCTIONS,
+        instructions: captureInstructions(request),
         schema: captureSchema(request),
         data: `<personal_understanding_data>${escapeDeepSeekData(providerData(request))}</personal_understanding_data>`,
         maxTokens: this.config.maxOutputTokens,

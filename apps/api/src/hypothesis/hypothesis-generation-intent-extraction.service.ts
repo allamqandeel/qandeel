@@ -78,7 +78,9 @@ export class HypothesisGenerationIntentExtractionService {
         .join('');
       if (statement.length === 0) return [];
       totalCharacters += [...statement].length;
-      return [{ evidenceId: item.evidenceId, evidenceKind: item.evidenceKind, statement }];
+      // S8B-03 (E5): a MACHINE_ASR item keeps its source and typed confirmation; a typed item is projected exactly as before.
+      return [{ evidenceId: item.evidenceId, evidenceKind: item.evidenceKind, statement,
+        ...(item.source === 'MACHINE_ASR' ? { source: 'MACHINE_ASR' as const, confirmedByTyping: item.confirmedByTyping === true } : {}) }];
     });
   }
 }

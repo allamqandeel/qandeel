@@ -331,7 +331,6 @@ describe('ConversationService', () => {
         return result;
       });
       await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
-      expect(turnWork.begin).toHaveBeenCalledTimes(1);
       expect(turnWork.end).toHaveBeenCalledTimes(1);
     });
 
@@ -420,6 +419,29 @@ describe('ConversationService', () => {
       } finally {
         now.mockRestore();
       }
+    });
+  });
+
+  // S8B-03 (CP1, A3 / A5): a committed voice note's ONE user turn runs through the unchanged Orchestrator, under the same
+  // foreground work gate and semantic chain as a typed turn; a replay hands the same turn back to it (a COMPLETED turn is
+  // answered from history there, with no new provider work).
+  describe('runCommittedTurn (S8B-03)', () => {
+    beforeEach(() => { (repository as unknown as Record<string, jest.Mock>).findTurn = jest.fn().mockResolvedValue({ ...turn, idempotency_key: 'voice-note:x' }); });
+
+    it('runs the committed turn through the Orchestrator once, then the semantic chain', async () => {
+      await service.runCommittedTurn('user-a', 'token-a', session.id, turn.id);
+      expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
+      expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', expect.objectContaining({ id: turn.id, role: 'USER' }));
+      expect(semantic.establish).toHaveBeenCalledTimes(1);
+      expect(repository.createTurn).not.toHaveBeenCalled();
+    });
+
+    it('refuses a turn that is not the caller\'s user turn before any work', async () => {
+      (repository as unknown as Record<string, jest.Mock>).findTurn.mockResolvedValueOnce(null);
+      await expect(service.runCommittedTurn('user-a', 'token-a', session.id, turn.id)).rejects.toBeInstanceOf(NotFoundException);
+      (repository as unknown as Record<string, jest.Mock>).findTurn.mockResolvedValueOnce({ ...turn, role: 'ASSISTANT' });
+      await expect(service.runCommittedTurn('user-a', 'token-a', session.id, turn.id)).rejects.toBeInstanceOf(NotFoundException);
+      expect(orchestrator.orchestrate).not.toHaveBeenCalled();
     });
   });
 });

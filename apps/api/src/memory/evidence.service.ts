@@ -59,7 +59,8 @@ export function projectEligibleEvidence(
       evidenceKind: EVIDENCE_KIND_BY_MEMORY_TYPE[memory.type as Exclude<MemoryType, 'DERIVED_INSIGHT'>],
       memoryType: memory.type as Exclude<MemoryType, 'DERIVED_INSIGHT'>,
       statement: memory.content,
-      source: memory.source as 'USER_STATED' | 'USER_CONFIRMED',
+      source: memory.source as 'USER_STATED' | 'USER_CONFIRMED' | 'MACHINE_ASR',
+      ...(memory.source === 'MACHINE_ASR' ? { confirmedByTyping: memory.confirmed_by_typing === true } : {}),
       confidence: memory.confidence,
       importance: memory.importance,
       observedAt: memory.created_at,
@@ -74,7 +75,8 @@ export function projectEligibleEvidence(
 function isEligible(userId: string, memory: MemoryRecord, now: Date): boolean {
   return memory.user_id === userId &&
     memory.status === 'ACTIVE' &&
-    (memory.source === 'USER_STATED' || memory.source === 'USER_CONFIRMED') &&
+    // S8B-03 (E3): the mirror of the 0186 Step B gate - a machine transcript of the user's own voice is evidence too.
+    (memory.source === 'USER_STATED' || memory.source === 'USER_CONFIRMED' || memory.source === 'MACHINE_ASR') &&
     memory.type !== 'DERIVED_INSIGHT' &&
     memory.subject === 'SELF' &&
     (memory.expires_at === null || new Date(memory.expires_at).getTime() > now.getTime());

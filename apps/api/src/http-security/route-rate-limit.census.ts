@@ -285,6 +285,18 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /voice/recordings/:recordingId': 'AUTHENTICATED',
   'GET /voice/recordings/:recordingId/objects/:track/:segmentIndex': 'AUTHENTICATED',
   'DELETE /voice/recordings/:recordingId': 'AUTHENTICATED',
+  // S8B-03 (CP1): the voice consent and the Voice Note routes (0186). Granting consent is classed like the S6-07 consent
+  // act; reading it and withdrawing it are ordinary own acts (a withdrawal is never throttled like a credential act). A
+  // note's turn is a Conversation turn and takes the turn's class; a retry and the status reads are ordinary own acts the
+  // database bounds itself (attempt limits, one note).
+  'GET /voice/consent': 'AUTHENTICATED',
+  'POST /voice/consent/grant': 'SECURITY_SENSITIVE',
+  'POST /voice/consent/withdraw': 'AUTHENTICATED',
+  'GET /voice/capability': 'AUTHENTICATED',
+  'GET /voice/notes/pending': 'AUTHENTICATED',
+  'GET /voice/notes/:recordingId/status': 'AUTHENTICATED',
+  'POST /voice/notes/:recordingId/transcription/retry': 'AUTHENTICATED',
+  'POST /voice/notes/:recordingId/turn': 'CONVERSATION',
 
   'GET /replay/capability': 'AUTHENTICATED',
   'GET /replay/conversations/:sessionId': 'AUTHENTICATED',

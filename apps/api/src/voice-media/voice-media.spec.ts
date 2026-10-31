@@ -167,8 +167,69 @@ describe('S8B-02 CP2 — the Voice Note upload', () => {
   });
 });
 
+describe('S8B-03 CP1 — a replayed upload of an accepted note (§5.2, A1)', () => {
+  const replayed = () => jest.fn().mockResolvedValue({ outcome: 'ALREADY_ACCEPTED', recording_id: RECORDING, storage_key: null, upload_deadline: null });
+
+  it('ALREADY_ACCEPTED: the body is drained, no PUT, no discard, one accept, and the answer equals the first one', async () => {
+    const first = await upload(harness().service);
+    const h = harness({ beginNote: replayed() });
+    const putStream = jest.spyOn(h.store, 'putStream');
+    const body = audio(2048);
+    const answer = await h.service.uploadNote(USER, SESSION, randomUUID(), 'audio/mp4', '2048', body, new AbortController().signal);
+    expect(answer).toEqual(first);
+    expect(putStream).not.toHaveBeenCalled();
+    expect(h.repository.deleteRecording).not.toHaveBeenCalled();
+    expect(h.repository.acceptNote).toHaveBeenCalledTimes(1);
+    expect(h.repository.acceptNote).toHaveBeenCalledWith(USER, RECORDING, 2048);
+    expect(h.store.objects.size).toBe(0);
+    expect(body.readableEnded).toBe(true);
+    expect(JSON.stringify(answer)).not.toMatch(/voice-note|voice-call/u);
+  });
+
+  it('a delete or expiry racing between begin and accept answers 404 and discards nothing', async () => {
+    for (const accepted of [
+      { outcome: 'UNAVAILABLE', accepted_at: null, retention_expires_at: null },
+      { outcome: 'ACCEPTED', accepted_at: '2026-09-01T10:00:00Z', retention_expires_at: '2026-10-01T10:00:00Z' },
+    ]) {
+      const h = harness({ beginNote: replayed(), acceptNote: jest.fn().mockResolvedValue(accepted) });
+      const putStream = jest.spyOn(h.store, 'putStream');
+      expect(await statusOf(upload(h.service))).toBe(404);
+      expect(putStream).not.toHaveBeenCalled();
+      expect(h.repository.deleteRecording).not.toHaveBeenCalled();
+    }
+  });
+
+  it('another human, another session or another size is COMMAND_CONFLICT → 404, before any byte is stored', async () => {
+    const h = harness({ beginNote: jest.fn().mockResolvedValue({ outcome: 'COMMAND_CONFLICT', recording_id: null, storage_key: null, upload_deadline: null }) });
+    expect(await statusOf(upload(h.service))).toBe(404);
+    expect(h.repository.acceptNote).not.toHaveBeenCalled();
+    expect(h.repository.deleteRecording).not.toHaveBeenCalled();
+    expect(h.store.objects.size).toBe(0);
+  });
+});
+
+describe('S8B-03 CP1 — the transcription worker\'s reads of a note go through the service', () => {
+  const noteRow = { track: 'NOTE', segment_index: 0, storage_key: NOTE_KEY, content_type: 'audio/mp4', byte_size: 10, clock_start_ms: null, clock_end_ms: null };
+
+  it('a readable note streams exactly its bytes, and one bounded range; an unreadable one is null with no store read', async () => {
+    const h = harness({ readObjects: jest.fn().mockResolvedValue([noteRow]) });
+    await h.store.putStream(NOTE_KEY, 'audio/mp4', Readable.from([Buffer.from('0123456789')]), 10, new AbortController().signal);
+    const opened = await h.service.openNoteForTranscription(USER, RECORDING, new AbortController().signal);
+    const chunks: Buffer[] = [];
+    for await (const chunk of opened!.audio) chunks.push(chunk);
+    expect([opened!.byteSize, Buffer.concat(chunks).toString()]).toEqual([10, '0123456789']);
+    expect((await h.service.readNoteRange(USER, RECORDING, 2, 4, new AbortController().signal))!.toString()).toBe('2345');
+    expect((await h.service.readNoteRange(USER, RECORDING, 8, 16, new AbortController().signal))!.toString()).toBe('89');
+    const gone = harness();
+    const getRange = jest.spyOn(gone.store, 'getRange');
+    expect(await gone.service.openNoteForTranscription(USER, RECORDING, new AbortController().signal)).toBeNull();
+    expect(await gone.service.readNoteRange(USER, RECORDING, 0, 16, new AbortController().signal)).toBeNull();
+    expect(getRange).not.toHaveBeenCalled();
+  });
+});
+
 describe('S8B-02 CP2 — reads, deletion and export', () => {
-  const object = { track: 'NOTE', segment_index: 0, storage_key: NOTE_KEY, content_type: 'audio/mp4', byte_size: '10', clock_start_ms: null, clock_end_ms: null };
+  const object ={ track: 'NOTE', segment_index: 0, storage_key: NOTE_KEY, content_type: 'audio/mp4', byte_size: '10', clock_start_ms: null, clock_end_ms: null };
 
   it('a recording that is not readable now (another human\'s, expired, deleted) is 404, with no store read', async () => {
     const h = harness();
