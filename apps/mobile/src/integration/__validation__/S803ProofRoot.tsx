@@ -193,7 +193,8 @@ export function S803ProofRoot() {
     return (
       <View style={styles.root}>
         <StatusBar style="auto" />
-        <S803UiProof key={ui.language} language={ui.language} settings={ui.settings} onClose={() => setUi(null)} />
+        <S803UiProof key={ui.language} language={ui.language} settings={ui.settings} onClose={() => setUi(null)}
+          onLeave={() => setUi((previous) => (previous === null ? previous : { ...previous, settings: true }))} />
       </View>
     );
   }

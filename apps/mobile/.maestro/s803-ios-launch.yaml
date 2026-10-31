@@ -1,0 +1,14 @@
+# S8B-03 CP2 — iOS Simulator: (re)launch the proof root with the microphone ALLOWED (granted by `simctl privacy` before;
+# stated again here so Maestro's launch keeps it), without clearing its data. VALIDATION ONLY. Input: PREFIX, SHOT.
+appId: com.qandeel.mobile
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+    permissions:
+      microphone: allow
+- extendedWaitUntil:
+    visible:
+      text: ".*S8B-03 proof ready.*"
+    timeout: 180000
+- takeScreenshot: ${PREFIX}-${SHOT}

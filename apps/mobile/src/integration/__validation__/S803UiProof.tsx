@@ -44,7 +44,13 @@ function build() {
   return { conversation, session };
 }
 
-export function S803UiProof({ language, settings, onClose }: { readonly language: ChromeLanguage; readonly settings: boolean; readonly onClose: () => void }) {
+export function S803UiProof({ language, settings, onClose, onLeave }: {
+  readonly language: ChromeLanguage;
+  readonly settings: boolean;
+  readonly onClose: () => void;
+  /** The in-app way out of the Conversation (its analysis entry, as Depth is in the product): no Android lifecycle. */
+  readonly onLeave: () => void;
+}) {
   const built = useMemo(() => build(), []);
   useEffect(() => () => built.session.retire(), [built]);
   // The Conversation is in front unless the Settings section is shown.
@@ -57,9 +63,9 @@ export function S803UiProof({ language, settings, onClose }: { readonly language
           <VoiceNoteSettingsSection session={built.session} language={language} />
         </View>
       ) : (
-        <ConversationSurface controller={built.conversation} language={language} insets={INSETS} onOpenAnalysis={() => undefined} {...slots} />
+        <ConversationSurface controller={built.conversation} language={language} insets={INSETS} onOpenAnalysis={onLeave} {...slots} />
       )}
-      <Pressable accessibilityRole="button" accessibilityLabel="close proof" onPress={onClose} testID="s803-ui-close" style={{ position: 'absolute', top: 4, left: 4, padding: 4 }}>
+      <Pressable accessibilityRole="button" accessibilityLabel="close proof" onPress={onClose} testID="s803-ui-close" style={{ position: 'absolute', top: INSETS.top + 4, left: 4, padding: 12 }}>
         <Text style={{ fontSize: 10, color: '#888' }}>×</Text>
       </Pressable>
     </GestureHandlerRootView>

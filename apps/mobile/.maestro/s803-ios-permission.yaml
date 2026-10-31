@@ -1,0 +1,33 @@
+# S8B-03 CP2 — iOS Simulator: the microphone permission at the moment of intent, refused (B2). VALIDATION ONLY.
+# Nothing asks at launch; the first «record» hands over to iOS's own alert, which carries C-12 (NSMicrophoneUsageDescription,
+# English: the simulator's language); «Don't Allow» leaves the capture PERMISSION_DENIED and nothing is recorded.
+# Driven by scripts/s8b-03/run-s803-ios-proof.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+# Maestro grants every permission at launch by default; this leg needs the REAL never-asked state.
+- launchApp:
+    permissions:
+      microphone: unset
+- extendedWaitUntil:
+    visible:
+      text: ".*S8B-03 proof ready.*"
+    timeout: 180000
+- assertNotVisible:
+    text: ".*Would Like to Access the Microphone.*"
+- takeScreenshot: ${PREFIX}-01-nothing-asked-at-launch
+- openLink: "qandeel://s803-proof/record"
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: ".*It isn.t used to play recordings.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-the-real-ios-alert-with-c12
+- tapOn:
+    text: "Don.t Allow"
+- extendedWaitUntil:
+    visible:
+      text: ".*capture PERMISSION_DENIED.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-03-refused-nothing-recorded
