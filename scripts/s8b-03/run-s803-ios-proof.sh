@@ -75,25 +75,54 @@ note "PASS B2 — nothing asked at launch; iOS's own alert carried C-12; Don't A
 xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || fail "simctl privacy grant microphone"
 flow s803-ios-launch.yaml launch-granted -e SHOT=04-granted || fail "relaunch with the microphone granted"
 
+# Every expectation below names a line only THIS step can produce: the proof root numbers each capture that really began
+# recording (`RECORDING #n`), says when its recorder clock advanced (`LIVE #n`), tags the app's lifecycle with the capture
+# it happened during (`APPSTATE #n`), and ties the stopped draft to the capture that began it (`same=true`). A line an
+# earlier step left on screen never satisfies a later one.
+uploads() { grep -c '"kind":"upload"' "$OUT/server/server.log"; }
+# The one draft file of owner A in the simulator's container: present, and an AAC-LC, mono, 16 kHz M4A with a duration.
+draft_m4a() {
+  local data dir files info
+  data="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)" || fail "$1: the app's data container"
+  dir="$data/Documents/qandeel-voice-drafts/$OWNER_A"
+  files="$(ls "$dir"/*.m4a 2>/dev/null | wc -l | tr -d ' ')"
+  [ "$files" = "1" ] || fail "$1: expected exactly one kept draft file, found $files"
+  info="$(node "$REPO/scripts/s8b-03/m4a-info.cjs" "$dir"/*.m4a)" || fail "$1: the kept draft is not a readable M4A"
+  echo "$1 kept draft $info" | tee -a "$SUMMARY"
+  node -e '
+    const o = JSON.parse(process.argv[1]);
+    const ok = o.codec === "mp4a" && o.audioObjectType === 2 && o.channels === 1 && o.sampleRate === 16000 && o.mdhd > 0
+      && Array.isArray(o.top) && o.top.indexOf("moov") >= 0 && o.top.indexOf("mdat") >= 0;
+    process.exit(ok ? 0 : 1);' "$info" || fail "$1: the kept draft is not a complete AAC-LC / mono / 16 kHz M4A"
+}
+
 # B5 / B6 — record, stop, upload, play.
-tap s803-record ".*S8B-03 proof ready.*" a || fail "record"
-sleep 4
-tap s803-stop ".*STOPPED by=USER bytes=[1-9][0-9]* ms=[1-9][0-9]* check=COMPLETE.*" a || fail "B5: stop → a complete SAVED draft"
-step list ".*LIST A drafts=1 \\[SAVED:[1-9][0-9]*\\].*B drafts=0.*" || fail "B4: owner A's one draft; owner B sees none"
+tap s803-record ".*RECORDING #1 draft=[0-9a-f]{8}.*" a || fail "record: capture #1 did not begin"
+flow s803-ios-expect.yaml live-a -e SHOT=05a-live -e EXPECT=".*LIVE #1 ms=[1-9][0-9]*.*" || fail "B5: capture #1's recorder clock did not advance"
+tap s803-stop ".*STOPPED #1 draft=[0-9a-f]{8} same=true by=USER left=none bytes=[1-9][0-9]* ms=[1-9][0-9]* check=COMPLETE.*" a \
+  || fail "B5: stop → a complete SAVED draft of capture #1"
+step list ".*LIST A drafts=1 \\[SAVED:USER:[1-9][0-9]*\\].*B drafts=0.*" || fail "B4: owner A's one draft; owner B sees none"
 step upload ".*UPLOAD ACCEPTED bytes=[1-9][0-9]* draftLeft=false.*" || fail "B6: upload ACCEPTED and the draft removed"
 step play ".*PLAY loaded=true.*" || fail "B6: streamed playback with the bearer"
 step pause ".*PAUSE at=.*" || fail "pause"
 note "PASS B5/B6 — recorded, stopped into a complete draft, uploaded (ACCEPTED, draft removed), played from the server"
 
-# B3 — the background stops the capture and keeps the draft.
-tap s803-record ".*PAUSE at=.*" b || fail "record (background leg)"
-sleep 3
+# B3 — a NEW capture (#2) is recording; the background stops it and keeps its draft; nothing is sent.
+UPLOADS_B3="$(uploads)"
+tap s803-record ".*RECORDING #2 draft=[0-9a-f]{8}.*" b || fail "B3: capture #2 did not begin (no earlier line is accepted)"
+flow s803-ios-expect.yaml live-b -e SHOT=05b-live -e EXPECT=".*LIVE #2 ms=[1-9][0-9]*.*" || fail "B3: capture #2's recorder clock did not advance"
 xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null || fail "send the app to the background"
 sleep 4
 xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null || fail "bring the app back"
-flow s803-ios-expect.yaml background -e SHOT=05-left-screen -e EXPECT=".*STOPPED by=LEFT_SCREEN bytes=[1-9][0-9]* ms=[1-9][0-9]* check=COMPLETE.*" \
-  || fail "B3: the background did not stop the capture into a kept draft"
-note "PASS B3 — the background stopped the capture; the draft is kept (LEFT_SCREEN)"
+flow s803-ios-expect.yaml background-signal -e SHOT=05c-appstate -e EXPECT=".*APPSTATE #2 background.*" \
+  || fail "B3: React Native never reported the background during capture #2"
+flow s803-ios-expect.yaml background -e SHOT=05-left-screen \
+  -e EXPECT=".*STOPPED #2 draft=[0-9a-f]{8} same=true by=LEFT_SCREEN left=(inactive|background) bytes=[1-9][0-9]* ms=[1-9][0-9]* check=COMPLETE.*" \
+  || fail "B3: the background did not stop capture #2 into its own kept draft"
+step list ".*LIST A drafts=1 \\[SAVED:LEFT_SCREEN:[1-9][0-9]*\\].*B drafts=0.*" || fail "B3: capture #2's draft is not the one SAVED draft"
+draft_m4a "B3"
+[ "$(uploads)" = "$UPLOADS_B3" ] || fail "B3: something was uploaded by the background or the return"
+note "PASS B3 — capture #2 recorded (its clock advanced), the background (AppState) stopped it LEFT_SCREEN, its draft is kept as a complete M4A, zero uploads"
 
 # B4 — iOS's backup flag on the drafts folder and database, read on the host.
 DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)" || fail "the app's data container"

@@ -23,7 +23,7 @@
  * Every result is printed on screen (testID `s803-log`) as one short line; no audio, path or token is logged anywhere.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 
@@ -66,13 +66,40 @@ export function S803ProofRoot() {
     const recorder = createExpoVoiceRecorderPort();
     const made = createVoiceNoteCapture({ owner: OWNER_A, sessionId: SESSION, recorder, store, foreground, newId: uuid, screen: createCaptureScreenHold() });
     capture.current = made;
+    // Each capture that really began recording gets the next number, so a step can prove a NEW capture (`RECORDING #2`)
+    // instead of matching a line an earlier capture left on screen. The draft's first 8 characters tie its RECORDING,
+    // LIVE and STOPPED lines together; `same=` says the stopped draft is the one this capture began.
+    let captures = 0;
+    let began: string | null = null;
+    let live = false;
+    let left: string | null = null;
     const unsubscribe = made.subscribe(() => {
       const state = made.getState();
-      if (state.kind === 'RECORDING') return;
+      if (state.kind === 'RECORDING') {
+        if (state.draftId !== began) {
+          captures += 1;
+          began = state.draftId;
+          live = false;
+          left = null;
+          say(`RECORDING #${captures} draft=${state.draftId.slice(0, 8)}`);
+        } else if (!live && state.elapsedMs >= 1000) {
+          // The recorder's own clock advanced: the capture is really running, not only started.
+          live = true;
+          say(`LIVE #${captures} ms=${state.elapsedMs}`);
+        }
+        return;
+      }
       if (state.kind === 'STOPPED') {
         const d = state.draft;
-        say(`STOPPED by=${d.stoppedBy} bytes=${d.bytes} ms=${d.durationMs} check=${files.check(OWNER_A, d.draftId)}`);
+        say(`STOPPED #${captures} draft=${d.draftId.slice(0, 8)} same=${d.draftId === began} by=${d.stoppedBy} left=${left ?? 'none'} bytes=${d.bytes} ms=${d.durationMs} check=${files.check(OWNER_A, d.draftId)}`);
       } else say(`capture ${state.kind}`);
+    });
+    // The app's lifecycle as the capture sees it — the SAME foreground signal the capture subscribes to (no second
+    // platform listener) — with React Native's own word for the state, tagged with the capture it happened during.
+    const unsubscribeLifecycle = foreground.subscribe((next) => {
+      const status = AppState.currentState;
+      if (next !== 'ACTIVE' && made.getState().kind === 'RECORDING' && left === null) left = status;
+      say(`APPSTATE #${captures} ${status}`);
     });
 
     async function run(command: string): Promise<void> {
@@ -100,7 +127,7 @@ export function S803ProofRoot() {
       if (command === 'list') {
         const a = await store.list(OWNER_A);
         const b = await store.list(OWNER_B);
-        say(`LIST A drafts=${a.drafts.length} [${a.drafts.map((d) => `${d.state}:${d.bytes}`).join(',')}] accepted=${a.accepted.length}; B drafts=${b.drafts.length}`);
+        say(`LIST A drafts=${a.drafts.length} [${a.drafts.map((d) => `${d.state}:${d.stoppedBy}:${d.bytes}`).join(',')}] accepted=${a.accepted.length}; B drafts=${b.drafts.length}`);
         return;
       }
       if (command === 'recover') {
@@ -183,6 +210,7 @@ export function S803ProofRoot() {
     return () => {
       subscription.remove();
       unsubscribe();
+      unsubscribeLifecycle();
       made.retire();
       recorder.release();
       player.current?.release();
@@ -207,7 +235,17 @@ export function S803ProofRoot() {
             onPress={() => {
               const made = capture.current;
               if (made === null) return;
-              void (name === 'record' ? made.start() : name === 'stop' ? made.stop() : made.cancel());
+              if (name === 'record') {
+                // A tap that does not begin a capture says why, once — what the capture was in and what React Native
+                // reported for the app — so a refused start is never mistaken for one that ran. It retries nothing.
+                const before = made.getState().kind;
+                void made.start().then(() => {
+                  const after = made.getState().kind;
+                  if (after !== 'RECORDING') say(`START ended state=${after} from=${before} app=${AppState.currentState}`);
+                });
+                return;
+              }
+              void (name === 'stop' ? made.stop() : made.cancel());
             }}>
             <Text style={styles.label}>{name.toUpperCase()}</Text>
           </Pressable>
