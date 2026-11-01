@@ -53,9 +53,13 @@ const store = createVoiceDraftStore(createVoiceDraftKeyValue(), createDeviceVoic
 const files = createDeviceVoiceDraftFiles();
 const api = new VoiceNoteApiClient({ baseUrl: BASE, fetch: authorized });
 
+/** The proof's commands as buttons (testID `s803-cmd-<name>`), the same `run` a link reaches. */
+const COMMANDS = ['list', 'upload', 'play', 'pause', 'recover', 'export-voices', 'ui-ar', 'ui-en'] as const;
+
 export function S803ProofRoot() {
   const [lines, setLines] = useState<string[]>(['S8B-03 proof ready']);
   const capture = useRef<VoiceNoteCapture | null>(null);
+  const command = useRef<((name: string) => void) | null>(null);
   const player = useRef<AudioPlayer | null>(null);
   const uploaded = useRef<string | null>(null);
   const say = (line: string) => setLines((previous) => [...previous.slice(-30), line]);
@@ -226,7 +230,14 @@ export function S803ProofRoot() {
     };
     void Linking.getInitialURL().then(handle);
     const subscription = Linking.addEventListener('url', (event) => handle(event.url));
+    // The same commands as on-screen buttons — a reader's tap inside the app. The iOS proof drives every step through
+    // them: iOS run 41243248744 showed a link confirmed with «Open» that iOS never delivered to the app (no open-URL
+    // action reached it), so a link proves nothing about a command having run. Links stay for the Android adb harness.
+    command.current = (name) => {
+      void run(name).catch((error) => say(`ERROR ${(error as Error)?.message ?? 'unknown'}`));
+    };
     return () => {
+      command.current = null;
       subscription.remove();
       unsubscribe();
       unsubscribeLifecycle();
@@ -270,6 +281,14 @@ export function S803ProofRoot() {
           </Pressable>
         ))}
       </View>
+      <View style={styles.commands}>
+        {COMMANDS.map((name) => (
+          <Pressable key={name} testID={`s803-cmd-${name}`} accessibilityRole="button" style={styles.command}
+            onPress={() => command.current?.(name)}>
+            <Text style={styles.commandLabel}>{name}</Text>
+          </Pressable>
+        ))}
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text testID="s803-log" style={styles.log}>{lines.join('\n')}</Text>
       </ScrollView>
@@ -283,5 +302,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 48 },
   button: { minWidth: 96, minHeight: 56, alignItems: 'center', justifyContent: 'center', backgroundColor: '#dddddd', borderRadius: 8 },
   label: { fontSize: 16, color: '#111111' },
+  commands: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, paddingTop: 8, paddingHorizontal: 8 },
+  command: { minWidth: 72, minHeight: 44, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eeeeee', borderRadius: 6 },
+  commandLabel: { fontSize: 13, color: '#111111' },
   log: { fontSize: 13, color: '#111111' },
 });

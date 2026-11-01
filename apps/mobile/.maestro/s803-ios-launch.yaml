@@ -11,4 +11,7 @@ appId: com.qandeel.mobile
     visible:
       text: ".*S8B-03 proof ready.*"
     timeout: 180000
+# A NEW process: not one result line of the last one is on screen.
+- assertNotVisible:
+    text: ".*(capture |PORT |RECORDING #|STOPPED #|START ended|LIST |UPLOAD |PLAY |PAUSE |RECOVER |VOICES ).*"
 - takeScreenshot: ${PREFIX}-${SHOT}

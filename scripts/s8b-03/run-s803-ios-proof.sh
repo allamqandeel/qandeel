@@ -44,10 +44,39 @@ flow() {
   $BOUND --seconds 300 --label "flow-$label" --out "$OUT" -- maestro --device "$UDID" test --debug-output "$OUT/debug-$label" \
     --test-output-dir "$OUT/shots" -e PREFIX=s803 "$@" "$FLOWS/$file"
 }
-step() { flow s803-ios-step.yaml "$1" -e CMD="$1" -e EXPECT="$2"; }
-# Recording is started and stopped by the proof root's own buttons (a reader's tap): a link opened from outside can make
-# iOS mark the app inactive for a moment, which (rightly) stops a capture as LEFT_SCREEN.
+# Every step is a reader's tap on the proof root's own buttons — never a link. iOS run 41243248744 confirmed a link with
+# «Open» that iOS never delivered to the app (no open-URL action reached it), so a link proves nothing about a command
+# having run; a link also marks the app inactive for a moment, which (rightly) stops a capture as LEFT_SCREEN.
+# Each command step is numbered, so a repeated command (list, upload) keeps its own debug output and screenshot.
+STEP=0
+cmd() { STEP=$((STEP + 1)); flow s803-ios-cmd.yaml "cmd-$STEP-$1" -e CMD="$1" -e EXPECT="$2" -e SHOT="cmd-$STEP-$1"; }
 tap() { flow s803-ios-tap.yaml "$1-$3" -e ID="$1" -e EXPECT="$2"; }
+# The production surface: open it (its root s803-ui appears) and close it (the proof root's s803-record is back).
+surface() {
+  flow s803-ios-tap-id.yaml "ui-$1" -e ID="s803-cmd-ui-$1" -e WAIT_ID=s803-ui -e SHOT="07-ui-$1" || fail "the $2 surface did not open"
+  flow s803-ios-tap-id.yaml "ui-$1-close" -e ID=s803-ui-close -e WAIT_ID=s803-record -e SHOT="07-ui-$1-closed" || fail "the $2 surface did not close"
+}
+uploads() { grep -c '"kind":"upload"' "$OUT/server/server.log"; }
+data_dir() { xcrun simctl get_app_container "$UDID" "$BUNDLE" data; }
+drafts_of_a() { ls "$1/Documents/qandeel-voice-drafts/$OWNER_A/"*.m4a 2>/dev/null | wc -l | tr -d ' '; }
+# An AAC-LC, mono, 16 kHz M4A with a duration and both moov and mdat: <label> <file>.
+m4a_ok() {
+  local info
+  info="$(node "$REPO/scripts/s8b-03/m4a-info.cjs" "$2")" || fail "$1: $(basename "$2") is not a readable M4A"
+  echo "$1 $(basename "$2") $info" | tee -a "$SUMMARY"
+  node -e '
+    const o = JSON.parse(process.argv[1]);
+    const ok = o.codec === "mp4a" && o.audioObjectType === 2 && o.channels === 1 && o.sampleRate === 16000 && o.mdhd > 0
+      && Array.isArray(o.top) && o.top.indexOf("moov") >= 0 && o.top.indexOf("mdat") >= 0;
+    process.exit(ok ? 0 : 1);' "$info" || fail "$1: $(basename "$2") is not a complete AAC-LC / mono / 16 kHz M4A"
+}
+# The one draft file of owner A in the simulator's container: present, and a complete M4A.
+draft_m4a() {
+  local data
+  data="$(data_dir)" || fail "$1: the app's data container"
+  [ "$(drafts_of_a "$data")" = "1" ] || fail "$1: expected exactly one kept draft file, found $(drafts_of_a "$data")"
+  m4a_ok "$1 kept draft" "$(ls "$data/Documents/qandeel-voice-drafts/$OWNER_A/"*.m4a)"
+}
 
 # The fake voice server (CP1's prover and consent text from the built API).
 S803_OUT="$OUT/server" S803_LABEL=ios node "$REPO/scripts/s8b-03/fake-voice-server.cjs" > "$OUT/server/server.log" 2>&1 &
@@ -75,9 +104,12 @@ if ! $BOUND --seconds 300 --label driver-readiness --out "$OUT" --quiet -- maest
 fi
 note "driver-readiness: answered after $(( $(date +%s) - DRIVER_START )) s"
 
-# B2 — permission at the moment of intent, refused.
-flow s803-ios-permission.yaml permission || fail "B2: the iOS alert with C-12, or the refusal"
-note "PASS B2 — nothing asked at launch; iOS's own alert carried C-12; Don't Allow → PERMISSION_DENIED"
+# B2 — permission at the moment of intent, refused: the RECORD tap reached the production capture (its permission read
+# and request are traced), iOS's alert carried C-12, «Don't Allow» ended it PERMISSION_DENIED, and nothing was recorded.
+flow s803-ios-permission.yaml permission || fail "B2: the RECORD tap, iOS's alert with C-12, or the refusal"
+[ "$(drafts_of_a "$(data_dir)")" = "0" ] || fail "B2: a draft file exists after the refusal"
+[ "$(uploads)" = "0" ] || fail "B2: something was uploaded"
+note "PASS B2 — nothing asked at launch; the RECORD tap asked iOS, whose alert carried C-12; Don't Allow → PERMISSION_DENIED; no draft, no upload"
 
 # Granted (simctl privacy, as a reader's Settings would), then relaunched without clearing the app's data.
 xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || fail "simctl privacy grant microphone"
@@ -86,33 +118,17 @@ flow s803-ios-launch.yaml launch-granted -e SHOT=04-granted || fail "relaunch wi
 # Every expectation below names a line only THIS step can produce: the proof root numbers each capture that really began
 # recording (`RECORDING #n`), says when its recorder clock advanced (`LIVE #n`), tags the app's lifecycle with the capture
 # it happened during (`APPSTATE #n`), and ties the stopped draft to the capture that began it (`same=true`). A line an
-# earlier step left on screen never satisfies a later one.
-uploads() { grep -c '"kind":"upload"' "$OUT/server/server.log"; }
-# The one draft file of owner A in the simulator's container: present, and an AAC-LC, mono, 16 kHz M4A with a duration.
-draft_m4a() {
-  local data dir files info
-  data="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)" || fail "$1: the app's data container"
-  dir="$data/Documents/qandeel-voice-drafts/$OWNER_A"
-  files="$(ls "$dir"/*.m4a 2>/dev/null | wc -l | tr -d ' ')"
-  [ "$files" = "1" ] || fail "$1: expected exactly one kept draft file, found $files"
-  info="$(node "$REPO/scripts/s8b-03/m4a-info.cjs" "$dir"/*.m4a)" || fail "$1: the kept draft is not a readable M4A"
-  echo "$1 kept draft $info" | tee -a "$SUMMARY"
-  node -e '
-    const o = JSON.parse(process.argv[1]);
-    const ok = o.codec === "mp4a" && o.audioObjectType === 2 && o.channels === 1 && o.sampleRate === 16000 && o.mdhd > 0
-      && Array.isArray(o.top) && o.top.indexOf("moov") >= 0 && o.top.indexOf("mdat") >= 0;
-    process.exit(ok ? 0 : 1);' "$info" || fail "$1: the kept draft is not a complete AAC-LC / mono / 16 kHz M4A"
-}
+# earlier step left on screen never satisfies a later one, and each launch proves a new process (s803-ios-launch.yaml).
 
 # B5 / B6 — record, stop, upload, play.
 tap s803-record ".*RECORDING #1 draft=[0-9a-f]{8}.*" a || fail "record: capture #1 did not begin"
 flow s803-ios-expect.yaml live-a -e SHOT=05a-live -e EXPECT=".*LIVE #1 ms=[1-9][0-9]*.*" || fail "B5: capture #1's recorder clock did not advance"
 tap s803-stop ".*STOPPED #1 draft=[0-9a-f]{8} same=true by=USER left=none bytes=[1-9][0-9]* ms=[1-9][0-9]* check=COMPLETE.*" a \
   || fail "B5: stop → a complete SAVED draft of capture #1"
-step list ".*LIST A drafts=1 \\[SAVED:USER:[1-9][0-9]*\\].*B drafts=0.*" || fail "B4: owner A's one draft; owner B sees none"
-step upload ".*UPLOAD ACCEPTED bytes=[1-9][0-9]* draftLeft=false.*" || fail "B6: upload ACCEPTED and the draft removed"
-step play ".*PLAY loaded=true.*" || fail "B6: streamed playback with the bearer"
-step pause ".*PAUSE at=.*" || fail "pause"
+cmd list ".*LIST A drafts=1 \\[SAVED:USER:[1-9][0-9]*\\].*B drafts=0.*" || fail "B4: owner A's one draft; owner B sees none"
+cmd upload ".*UPLOAD ACCEPTED bytes=[1-9][0-9]* draftLeft=false.*" || fail "B6: upload ACCEPTED and the draft removed"
+cmd play ".*PLAY loaded=true.*" || fail "B6: streamed playback with the bearer"
+cmd pause ".*PAUSE at=.*" || fail "pause"
 note "PASS B5/B6 — recorded, stopped into a complete draft, uploaded (ACCEPTED, draft removed), played from the server"
 
 # B3 — a NEW capture (#2) is recording; the background stops it and keeps its draft; nothing is sent.
@@ -127,13 +143,13 @@ flow s803-ios-expect.yaml background-signal -e SHOT=05c-appstate -e EXPECT=".*AP
 flow s803-ios-expect.yaml background -e SHOT=05-left-screen \
   -e EXPECT=".*STOPPED #2 draft=[0-9a-f]{8} same=true by=LEFT_SCREEN left=(inactive|background) bytes=[1-9][0-9]* ms=[1-9][0-9]* check=COMPLETE.*" \
   || fail "B3: the background did not stop capture #2 into its own kept draft"
-step list ".*LIST A drafts=1 \\[SAVED:LEFT_SCREEN:[1-9][0-9]*\\].*B drafts=0.*" || fail "B3: capture #2's draft is not the one SAVED draft"
+cmd list ".*LIST A drafts=1 \\[SAVED:LEFT_SCREEN:[1-9][0-9]*\\].*B drafts=0.*" || fail "B3: capture #2's draft is not the one SAVED draft"
 draft_m4a "B3"
 [ "$(uploads)" = "$UPLOADS_B3" ] || fail "B3: something was uploaded by the background or the return"
 note "PASS B3 — capture #2 recorded (its clock advanced), the background (AppState) stopped it LEFT_SCREEN, its draft is kept as a complete M4A, zero uploads"
 
 # B4 — iOS's backup flag on the drafts folder and database, read on the host.
-DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)" || fail "the app's data container"
+DATA="$(data_dir)" || fail "the app's data container"
 FLAG="com.apple.metadata:com_apple_backup_excludeItem"
 for item in "Documents/qandeel-voice-drafts" "Documents/SQLite/qandeel-voice-drafts.db"; do
   [ -e "$DATA/$item" ] || fail "B4: $item does not exist"
@@ -143,29 +159,37 @@ ls "$DATA/Documents/qandeel-voice-drafts/$OWNER_A/" > "$OUT/drafts-of-owner-a.tx
 note "PASS B4 — the drafts folder and the drafts database carry iOS's excluded-from-backup flag"
 
 # B4 — relaunch: the draft is recovered and nothing is sent.
-UPLOADS_BEFORE="$(grep -c '"kind":"upload"' "$OUT/server/server.log")"
+UPLOADS_BEFORE="$(uploads)"
 flow s803-ios-launch.yaml relaunch -e SHOT=06-relaunched || fail "relaunch"
-step recover ".*RECOVER unrecoverable=0 drafts=1 \\[SAVED:LEFT_SCREEN:[1-9][0-9]*\\].*" || fail "B4: the draft recovered after relaunch"
+cmd recover ".*RECOVER unrecoverable=0 drafts=1 \\[SAVED:LEFT_SCREEN:[1-9][0-9]*\\].*" || fail "B4: the draft recovered after relaunch"
 sleep 3
-[ "$(grep -c '"kind":"upload"' "$OUT/server/server.log")" = "$UPLOADS_BEFORE" ] || fail "B4: something was uploaded on recovery"
+[ "$(uploads)" = "$UPLOADS_BEFORE" ] || fail "B4: something was uploaded on recovery"
 note "PASS B4 — relaunched: the draft recovered, zero uploads"
-step upload ".*UPLOAD ACCEPTED bytes=[1-9][0-9]* draftLeft=false.*" || fail "upload of the recovered draft"
+cmd upload ".*UPLOAD ACCEPTED bytes=[1-9][0-9]* draftLeft=false.*" || fail "upload of the recovered draft"
 
-# The production surface, Arabic and English (screenshots).
-step ui-ar ".*" || fail "the Arabic surface"
-step ui-close ".*S8B-03 proof ready.*" || fail "close"
-step ui-en ".*" || fail "the English surface"
-step ui-close ".*S8B-03 proof ready.*" || fail "close"
+# The production surface, Arabic and English (screenshots): each opens (its root appears) and closes (the log is back).
+surface ar Arabic
+surface en English
 
-# The uploaded files: container facts and the CP1 prover's verdict, from the server's own log.
-for f in "$OUT"/server/ios-*.m4a; do
-  [ -e "$f" ] || fail "B5: no uploaded file"
-  echo "$(basename "$f") $(node "$REPO/scripts/s8b-03/m4a-info.cjs" "$f")" | tee -a "$SUMMARY"
-done
-grep '"kind":"upload"' "$OUT/server/server.log" | node -e '
-  let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
-    for (const line of s.trim().split("\n")) { const o = JSON.parse(line); console.log(`upload ${o.file} bytes=${o.bytes} auth=${o.auth} prover=${JSON.stringify(o.proof)}`); }
-  });' | tee -a "$SUMMARY"
+# The uploaded files — B5's and the recovered one, two in all, each authorized: their container facts read on the host and
+# the CP1 duration prover's verdict from the fake server's own log, both required.
+[ "$(uploads)" = "2" ] || fail "B5: expected two uploads (the recorded and the recovered draft), found $(uploads)"
+[ "$(ls "$OUT"/server/ios-*.m4a 2>/dev/null | wc -l | tr -d ' ')" = "2" ] || fail "B5: expected two uploaded files on the fake server"
+for f in "$OUT"/server/ios-*.m4a; do m4a_ok "B5 uploaded" "$f"; done
+grep '"kind":"upload"' "$OUT/server/server.log" > "$OUT/uploads.jsonl"
+node -e '
+  let ok = true;
+  for (const line of require("fs").readFileSync(process.argv[1], "utf8").trim().split("\n")) {
+    const o = JSON.parse(line);
+    const p = o.proof || {};
+    console.log(`upload ${o.file} bytes=${o.bytes} auth=${o.auth} prover=${JSON.stringify(p)}`);
+    if (!(o.auth === true && p.kind === "PROVEN" && p.durationMs > 0 && p.sampleRate === 16000 && p.frames > 0)) ok = false;
+  }
+  process.exit(ok ? 0 : 1);' "$OUT/uploads.jsonl" > "$OUT/uploads-verdict.txt"
+VERDICT=$?
+tee -a "$SUMMARY" < "$OUT/uploads-verdict.txt"
+[ "$VERDICT" = "0" ] || fail "B5: an upload was not authorized, or the CP1 prover did not return PROVEN at 16 kHz"
+note "PASS B5 — both uploaded files are complete AAC-LC / mono / 16 kHz M4A, and the CP1 prover returned PROVEN for each"
 grep '"kind":"play"' "$OUT/server/server.log" | head -n 3 | tee -a "$SUMMARY"
 grep -q '"kind":"play","auth":true' "$OUT/server/server.log" || fail "B6: playback reached the server without the bearer"
 

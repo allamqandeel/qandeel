@@ -1,0 +1,12 @@
+# S8B-03 CP2 — iOS Simulator: tap one element (ID) and wait for an element that exists only after the tap took effect
+# (WAIT_ID): the production surface opening (s803-ui) or closing back to the proof root (s803-record). VALIDATION ONLY.
+# Input: PREFIX, ID, WAIT_ID, SHOT.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: ${ID}
+- extendedWaitUntil:
+    visible:
+      id: ${WAIT_ID}
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-${SHOT}

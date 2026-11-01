@@ -1,11 +1,10 @@
 # S8B-03 CP2 — iOS Simulator: the production voice saver (Settings C-49) into a folder chosen in iOS's own document picker
 # (On My iPhone), then its outcome word on screen. VALIDATION ONLY; its result is recorded, not required. Input: PREFIX.
+# Started by the proof root's own export button (a reader's tap), never a link.
 appId: com.qandeel.mobile
 ---
-- openLink: "qandeel://s803-proof/export-voices"
 - tapOn:
-    text: "Open"
-    optional: true
+    id: s803-cmd-export-voices
 - extendedWaitUntil:
     visible:
       text: "On My iPhone"
