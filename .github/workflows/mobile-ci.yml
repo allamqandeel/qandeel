@@ -494,6 +494,10 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_7
+          # S8B-04 CP1 CI R2 (run 41324976926): with the action's default 2 cores the guest load reached 42.20 three minutes
+          # after boot and System UI stopped responding; the emulator itself warns it "will run more smoothly with 4 CPU
+          # cores", and this public-repository runner has 4 vCPUs.
+          cores: 4
           # The size the emulator really uses (it raises anything smaller to 6 GiB; see the disk check above). The action
           # appends it after avdmanager's own value, and the emulator reads the last one.
           disk-size: ${{ env.AVD_DATA_PARTITION_MIB }}M
@@ -506,9 +510,13 @@ jobs:
           # Each line runs alone under `sh -c`, and the action kills the emulator as soon as one fails. A failed probe or
           # smoke therefore prints its read-only evidence (Maestro's log, the device and the app state) first, then
           # stays failed: QAN-BL-CI-03's `launchApp clearState` failure left no evidence on every earlier occurrence.
+          # S8B-04 CP1 CI R2: before the smoke, System UI must be up, stable and free of ANR (one clean emulator recovery
+          # on a proven hang; a second hang fails as ENVIRONMENT and the smoke does not run). The smoke itself is
+          # unchanged and runs once.
           script: |
             adb install -r "$APK"
             node scripts/validation/bounded-run.mjs --seconds 240 --label android-driver-readiness --quiet -- maestro hierarchy --compact || { status=$?; timeout 120 bash scripts/validation/android-smoke-diagnostics.sh; exit $status; }
+            timeout 900 bash scripts/validation/android-system-ui-ready.sh || { status=$?; timeout 120 bash scripts/validation/android-smoke-diagnostics.sh; exit $status; }
             node scripts/validation/bounded-run.mjs --seconds 300 --label android-boot-smoke -- maestro test apps/mobile/.maestro/boot-smoke.yaml || { status=$?; timeout 120 bash scripts/validation/android-smoke-diagnostics.sh; exit $status; }
 
   # -------------------------------------------------------------------------------------------------

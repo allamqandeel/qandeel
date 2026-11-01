@@ -300,3 +300,33 @@ The CI result on this record's own head is reported on the Draft pull request an
   cause is **not proven** from that run. **Change:** `scripts/validation/android-smoke-diagnostics.sh` (read-only,
   failure path only) now prints the window's UI hierarchy (element attributes only) and one bounded base64 screenshot.
   The assertion and its timeout are unchanged. The result on the R1 head decides the next step.
+
+### 10.2 CI repair R2 (2026-11-01; head `53fe8124` → R2)
+
+- **On `53fe8124`: API CI green.** Mobile CI run `41324976926`, job `124909137558`: the boot smoke failed again, and
+  the R1 diagnostics showed the screen — Android's **"System UI isn't responding"** dialog (`android:id/alertTitle`,
+  `aerr_close` "Close app", `aerr_wait` "Wait") over the app, which was installed, alive and resumed, with no app crash.
+  Guest load average **42.20 / 20.76 / 8.08** at 3 minutes' uptime on **2 emulated cores** (the action's default); the
+  emulator logged "AVD 'test' will run more smoothly with 4 CPU cores (currently using 2)"; the runner (public
+  repository, `ubuntu-24.04`) has 4 vCPUs. **Proven cause: the emulator's System UI hung under post-boot CPU starvation —
+  an environment failure, not a Product UI result.** The single 72 KB base64 screenshot line also cut the step's log.
+- **Change (CI / environment only; no Product, voice or test-assertion change):**
+  - `mobile-ci.yml`: the emulator runs with `cores: 4`.
+  - `scripts/validation/android-system-ui-ready.sh`, run after the driver probe and before the smoke: every 5 s it reads
+    System UI's pid, an ANR dialog, an `am_anr` for System UI and the load; it settles on three samples in a row with
+    the same System UI pid, no ANR and load ≤ 2 per core (bound 300 s; a load that does not settle is printed and the
+    smoke decides). A **proven hang** (ANR dialog, `am_anr` for System UI, or System UI absent) gets **one** clean
+    recovery (an emulator reboot and the same boot wait); a second proven hang fails the step as `ENVIRONMENT` (exit 3)
+    and the smoke does not run. It never dismisses a dialog, never touches the app and never retries the smoke
+    (QAN-INF-04 forbids an automatic retry).
+  - `android-smoke-diagnostics.sh`: the guest's loadavg, memory, busiest processes and `am_anr` / `am_crash` events; the
+    screenshot in 76-character lines, bounded at 256 KiB.
+  - `boot-smoke.yaml` (`assertVisible: QANDEEL`) and its timeout are unchanged; the native build fingerprint is unchanged
+    (`9f72473c…`), so CI reuses the APK already built.
+- **Focused local proof** (the APK CI built for this PR, sha256 `ae40a942…` as its manifest states; a fresh API 36
+  `google_apis` x86_64 `pixel_7` AVD with 4 cores, CI's emulator options; then deleted): after install and the driver probe
+  the guest load was 31.47 and fell to ≤ 8 in 147 s (`am_anr` for GMS and `com.google.android.as` during the first boot's
+  storm, none for System UI); the gate settled and the unchanged smoke passed. A System UI ANR provoked on that emulator
+  (`kill -STOP` on System UI, then input: `am_anr … com.android.systemui … Input dispatching timed out`) was detected, the
+  emulator rebooted once, the gate settled at load 6.93, and the smoke passed. A stubbed second hang exits 3 with the
+  `ENVIRONMENT` message.
