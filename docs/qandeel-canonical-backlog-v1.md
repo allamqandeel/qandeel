@@ -3379,8 +3379,17 @@ authorizes implementation (BG-07).
     size really used (6144 MiB); the runner's unused .NET, Haskell, Swift, CodeQL, PowerShell and Boost are removed
     first; the action's own SDK packages are installed before a decisive disk check that needs 7373 + 2048 MiB and fails
     in seconds; the final AVD config is printed before launch.
-  - **Disposition:** decided on the GitHub run of that change, recorded in this item (tombstone if the smoke passes for
-    this reason); until then the status below stands.
+  - **The disk part is fixed (GitHub, Mobile CI run `41276622163` on `7e8e060e`):** 22 309 MiB free at the AVD after the
+    cleanup and the packages, the emulator created its 6144 MiB partition and booted (77 s), and the APK installed.
+  - **What still fails is the older intermittent of this same job:** Maestro stops at `Launch app "com.qandeel.mobile"
+    with clear state...` with no assertion, crash or message — seen on `main` before (A3-02 record: runs `37216917512`,
+    `37188980195`, `37228370161`; W3-MEGA-S record §17, where an unchanged re-run passed). Its cause was never seen: the
+    action kills the emulator when its script fails and the consumer publishes nothing (QAN-INF-04). The smoke and the
+    driver probe now print read-only evidence on failure, before the emulator dies
+    (`scripts/validation/android-smoke-diagnostics.sh`: Maestro's log, adb and boot state, whether the app is installed,
+    launchable and running, the crash buffer and the system's process records), with the original exit status kept.
+  - **Disposition:** decided on the GitHub evidence: tombstone if the smoke passes and its cause is shown or the
+    evidence rules out this job's configuration; until then the status below stands.
 - **Why deferred:** runner, emulator image and disk provisioning are infrastructure outside S8A-04's product scope, the
   same shape as `QAN-BL-CI-01` (iOS, S4-01). No product contract is left violated (BG-01).
 - **Owner task:** `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` (identifier the Product Owner's; the

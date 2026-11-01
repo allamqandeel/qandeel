@@ -516,8 +516,11 @@ PROVEN on the simulator).
 - **API CI — PASSED** on `29794fca`.
 - **Mobile CI** run `41272148542` on `29794fca`: both Release builds, the contracts and the iOS boot smoke passed; the
   **Android API 36 emulator boot smoke failed** before the emulator started (runner disk, `QAN-BL-CI-03`, §13) and
-  `Validation evidence (VAL-01)` with it. The bounded Mobile CI change that follows is verified only by its own GitHub
-  run; nothing here claims that result.
+  `Validation evidence (VAL-01)` with it.
+- **Mobile CI** run `41276622163` on `7e8e060e` (the disk change): the disk is fixed — 22 309 MiB free, the emulator
+  booted and the APK installed — and the smoke then failed at `Launch app … with clear state` with no message, the
+  pre-existing intermittent of `QAN-BL-CI-03` (§13). The next change prints that failure's evidence; nothing here claims
+  its result.
 
 **The state left:**
 

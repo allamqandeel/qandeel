@@ -503,10 +503,13 @@ jobs:
             df -h "$ANDROID_AVD_HOME"
           disable-animations: true
           emulator-boot-timeout: 900
+          # Each line runs alone under `sh -c`, and the action kills the emulator as soon as one fails. A failed probe or
+          # smoke therefore prints its read-only evidence (Maestro's log, the device and the app state) first, then
+          # stays failed: QAN-BL-CI-03's `launchApp clearState` failure left no evidence on every earlier occurrence.
           script: |
             adb install -r "$APK"
-            node scripts/validation/bounded-run.mjs --seconds 240 --label android-driver-readiness --quiet -- maestro hierarchy --compact
-            node scripts/validation/bounded-run.mjs --seconds 300 --label android-boot-smoke -- maestro test apps/mobile/.maestro/boot-smoke.yaml
+            node scripts/validation/bounded-run.mjs --seconds 240 --label android-driver-readiness --quiet -- maestro hierarchy --compact || { status=$?; timeout 120 bash scripts/validation/android-smoke-diagnostics.sh; exit $status; }
+            node scripts/validation/bounded-run.mjs --seconds 300 --label android-boot-smoke -- maestro test apps/mobile/.maestro/boot-smoke.yaml || { status=$?; timeout 120 bash scripts/validation/android-smoke-diagnostics.sh; exit $status; }
 
   # -------------------------------------------------------------------------------------------------
   # iOS — BUILD PRODUCER, then VALIDATION CONSUMER
