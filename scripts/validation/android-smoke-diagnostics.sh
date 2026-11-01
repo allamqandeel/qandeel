@@ -48,6 +48,33 @@ for dir in $(ls -td "$HOME"/.maestro/tests/*/ 2>/dev/null | head -n 2); do
   echo '::endgroup::'
 done
 
+# S8B-04 CP1 CI repair (2026-11-01, run 41320539649): an assertion failed with the app alive and resumed and no crash,
+# and the screen itself was never seen (the consumer may not publish an artifact, QAN-INF-04). The screen is printed
+# here, read-only: the window's UI hierarchy (element attributes only) and one screenshot as bounded base64 (decode it
+# with `base64 -d`). The boot smoke's build is unconfigured, with no account, so the screen carries no user data.
+echo '::group::screen — UI hierarchy (uiautomator, element attributes only)'
+if dev shell uiautomator dump /sdcard/qandeel-smoke-ui.xml >/dev/null; then
+  dev exec-out cat /sdcard/qandeel-smoke-ui.xml | tr '>' '\n' | grep -o '<node .*' \
+    | sed -E 's/.*(text="[^"]*").*(resource-id="[^"]*").*(class="[^"]*").*(package="[^"]*").*(content-desc="[^"]*").*(bounds="[^"]*").*/\1 \2 \3 \4 \5 \6/' \
+    | head -n 150
+  dev shell rm -f /sdcard/qandeel-smoke-ui.xml
+else
+  echo 'uiautomator dump failed'
+fi
+echo '::endgroup::'
+
+echo '::group::screen — screenshot (PNG, base64; printed only when 1 MiB or smaller)'
+SHOT="${RUNNER_TEMP:-/tmp}/qandeel-smoke-screen.png"
+if timeout 20 adb exec-out screencap -p > "$SHOT" 2>/dev/null && [ -s "$SHOT" ]; then
+  size=$(wc -c < "$SHOT")
+  echo "bytes=$size sha256=$(sha256sum "$SHOT" | cut -d' ' -f1)"
+  if [ "$size" -le 1048576 ]; then echo '----- BEGIN QANDEEL SMOKE SCREEN -----'; base64 -w 0 "$SHOT"; echo; echo '----- END QANDEEL SMOKE SCREEN -----'; fi
+  rm -f "$SHOT"
+else
+  echo 'screencap failed'
+fi
+echo '::endgroup::'
+
 echo '::group::disk'
 df -h / 2>&1
 dev shell df -h /data

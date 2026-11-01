@@ -349,7 +349,15 @@ async function verifyBehaviour(report) {
       assert.equal((await admit(user, randomUUID(), 0)).outcome, 'NOT_FOUND');
       assert.equal((await admit(await human(), listen, 0)).outcome, 'NOT_FOUND', 'V-A another user');
       await complete(user, call);
-      await rejected(() => admit(user, listen, 2, call), ['PT409']);
+      // V-A identity: a provider call id already in the ledger is the one AI-usage identity conflict (PT409 with the exact
+      // reason; the one 0187 site verify-migration-0150's PT409 census admits). It writes no cost row and admits nothing.
+      const ledger = async () => (await rows('SELECT (SELECT count(*) FROM public.ai_provider_calls) + (SELECT count(*) FROM public.ai_provider_call_usage) AS n'))[0].n;
+      const ledgerBefore = await ledger();
+      const pending = await segment(user, listen, 2);
+      await rejected(() => admit(user, listen, 2, call), ['PT409'], /^AI_PROVIDER_CALL_IDENTITY_CONFLICT$/u);
+      assert.equal(await ledger(), ledgerBefore, 'V-A the identity conflict writes no cost row');
+      assert.deepEqual(await segment(user, listen, 2), pending, 'V-A the identity conflict admits nothing');
+      assert.equal(pending.state, 'PENDING');
       await setVoiceGate('DISABLED', 'UNSATISFIED');
       assert.equal((await admit(user, listen, 2)).outcome, 'NOT_AVAILABLE_NOW', 'V-A the gate is re-read');
       await setVoiceGate();

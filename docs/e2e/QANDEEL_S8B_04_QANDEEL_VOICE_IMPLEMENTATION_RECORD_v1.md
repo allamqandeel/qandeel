@@ -282,3 +282,21 @@ run it. After it is applied, V-2 is read again (free) and recorded.
 ## 10. GitHub CI on the Draft pull request
 
 The CI result on this record's own head is reported on the Draft pull request and in the report to the Product Owner; this record does not claim it. Merge only on «ادمج».
+
+### 10.1 CI repair R1 (2026-11-01, the Product Owner's focused repair order; head `acaa671f` → R1)
+
+- **API CI run `41320539778` — `verify-migration-0150` `PT409_CENSUS` failed. Proven cause:** `0187`'s
+  `public.server_admit_reply_speech_synthesis_v1` raises the 0135 AI-usage identity conflict (`AI_PROVIDER_CALL_IDENTITY_CONFLICT`,
+  PT409) on a provider call id already in the ledger, a raiser the census did not list. **Change:** the census admits
+  exactly that one function with exactly that message when `0187` is applied (absent before it); the 23 stale-state sites
+  stay exactly 23; any other new PT409 raiser still fails. Migration `0150` is unchanged. `verify-migration-0187` V-A now
+  asserts the exact reason, that the conflict writes no `ai_provider_calls` / `ai_provider_call_usage` row, and that the
+  segment stays PENDING. **Local, real PostgreSQL 17:** `verify-migration-0150` 28 / 28 on a database at `0187` and on one at
+  `0186`; `verify-migration-0187` 13 / 13.
+- **Mobile CI run `41320539649` — Android boot smoke `Assert that "QANDEEL" is visible` failed** (APK built and installed,
+  emulator booted, the app process alive and `MainActivity` resumed, no crash; load average 42.8 three minutes after
+  boot). This change touches no mobile code; its lockfile change only adds API-side packages (no existing version
+  changed). **The screen itself was never recorded** (the consumer job may not publish an artifact, QAN-INF-04), so the
+  cause is **not proven** from that run. **Change:** `scripts/validation/android-smoke-diagnostics.sh` (read-only,
+  failure path only) now prints the window's UI hierarchy (element attributes only) and one bounded base64 screenshot.
+  The assertion and its timeout are unchanged. The result on the R1 head decides the next step.

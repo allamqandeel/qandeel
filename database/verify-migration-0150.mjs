@@ -171,6 +171,12 @@ const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provi
   // RE-ANCHORED by S8B-02 CP1 (migration 0184, 2026-10-30): the voice begin and the voice-aware settle raise the same
   // 0135 ledger conflicts, PT409.
   'public.begin_ai_provider_call_v3', 'public.settle_ai_provider_call_v2'];
+/**
+ * RE-ANCHORED by S8B-04 CP1 (migration 0187, 2026-11-01): a Listen segment's one paid admission refuses a provider call
+ * id already in the ledger with the same 0135 AI-usage identity conflict - ONE site, that exact message, nothing else.
+ * It is not a stale-state site (the 23 stay 23); verify-migration-0187 V-A proves it writes no cost row.
+ */
+const VOICE_PT409 = { name: 'public.server_admit_reply_speech_synthesis_v1', message: 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' };
 
 // ------------------------------------------------------------------ session helpers
 /** A Data-API-shaped session inside the caller's transaction: the role PostgREST switches to, with its claims. */
@@ -265,9 +271,13 @@ async function verifyCatalog(report) {
     const raisers = [...new Set(raiseCensus(analysis).filter((r) => r.code === 'PT409').map((r) => r.signature.slice(0, r.signature.indexOf('('))))].sort();
     const [{ shared }] = await rows("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid, uuid, uuid, uuid, text, text, text, text, text)') IS NOT NULL AS shared");
     const prior = PRIOR_PT409.filter((name) => shared || name !== 'public.begin_ai_provider_call_v2');
-    const expected = [...prior, ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
+    const [{ voice }] = await rows("SELECT to_regclass('voice_private.reply_speech_segments') IS NOT NULL AS voice");
+    const expected = [...prior, ...(voice ? [VOICE_PT409.name] : []), ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
     assert.deepEqual(raisers, expected);
-    assert.equal(raiseCensus(analysis).filter((r) => r.code === 'PT409' && !PRIOR_PT409.some((p) => r.signature.startsWith(`${p}(`))).length, 23, '23 stale-state sites');
+    const voiceSites = raiseCensus(analysis).filter((r) => r.code === 'PT409' && r.signature.startsWith(`${VOICE_PT409.name}(`));
+    assert.deepEqual(voiceSites.map((r) => r.message), voice ? [VOICE_PT409.message] : [], '0187: exactly one identity-conflict site');
+    const ledgerOrVoice = [...PRIOR_PT409, VOICE_PT409.name];
+    assert.equal(raiseCensus(analysis).filter((r) => r.code === 'PT409' && !ledgerOrVoice.some((p) => r.signature.startsWith(`${p}(`))).length, 23, '23 stale-state sites');
   });
 }
 const executes = async (role, name) => (await rows(`SELECT bool_or(has_function_privilege($1, p.oid, 'EXECUTE')) AS x
