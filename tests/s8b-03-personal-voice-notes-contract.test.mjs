@@ -78,7 +78,10 @@ test('the record carries all 60 APPROVED rows, none PROPOSED, and states S8B-03\
 test('C-01 … C-11: the consent text in code equals the record, and 0186 installs exactly it under the guarded digests', () => {
   const rows = approvedRows();
   const code = read('apps/api/src/voice-media/voice-consent-text.ts');
-  assert.match(code, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V1';/u);
+  // RE-ANCHORED by S8B-04 CP1 (2026-11-01, migration 0187): VOICE_RECORDING_V1 (C-01 … C-11) is HISTORY, kept unchanged
+  // under its own constant; the current version is VOICE_RECORDING_V2 (K-01 … K-15), pinned by the S8B-04 contract test.
+  assert.match(code, /export const VOICE_CONSENT_V1_VERSION = 'VOICE_RECORDING_V1';/u);
+  assert.match(code, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V2';/u);
   const unescape = (s) => s.replace(/\\'/gu, "'");
   const inCode = [...code.matchAll(/id: '(C-\d{2})',\s*ar: '((?:[^'\\]|\\')*)',\s*en: '((?:[^'\\]|\\')*)'/gu)]
     .map((m) => ({ id: m[1], ar: unescape(m[2]), en: unescape(m[3]) }));

@@ -206,3 +206,25 @@ export class BehavioralResponsePolicyService implements BehavioralResponsePolicy
     return interaction?.safetyGuided ? `${guidance}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;
   }
 }
+
+// S8B-04 (CP1, contract v1.2 §7.1 / §11.4; VA-7 "with its exact text") — the model-facing voice texts, Copy Gate rows TM-01,
+// TM-02 and TM-03 APPROVED by the Product Owner for CP1 (2026-11-01), verbatim. They are appended to a VOICE_NOTE turn's
+// guidance only; every other turn's guidance is exactly what buildTextGuidance returns (§7.3). TM-03 is appended only when
+// the hint policy is not OFF (CP1: OFF until P-1). TM-02 is the spoken-call version S8B-05 consumes; nothing calls it in
+// S8B-04.
+export const VOICE_DELIVERY_LINE_GUIDANCE_TM_01 = 'Begin your answer with one line exactly in the form [[speech:STYLE]], where STYLE is one of CALM, JOY, PLAYFUL, SURPRISE, EMPATHY or SERIOUS: the delivery that best fits how this reply would sound if spoken aloud. Prefer CALM unless the moment clearly calls for another. Never mention or explain this line. Then write your reply as usual.';
+export const VOICE_PRONUNCIATION_HINT_GUIDANCE_TM_03 = 'Right after any sentence of your reply that contains a word you intend in its less common reading, one a reader would likely misread without vowel marks in a way that changes the meaning, add a marker in the form [[say:WORD]], writing that word exactly as it appears in the sentence with only the diacritics needed for the intended reading. Do not mark a word used in its usual reading. Mark at most two words in a sentence, separated by |. Mark a word only when you are certain of its intended reading; if you are not certain, mark nothing. Never mark the name of a person or a place. Never mention or explain these markers.';
+export const VOICE_SPOKEN_REPLY_GUIDANCE_TM_02 = 'This reply will be spoken aloud. Keep it short and easy to follow by ear: plain sentences, with no lists, headings, markdown, links or symbols. Say numbers, dates and times the way they are spoken. End at a natural point; the user may interrupt at any time.';
+
+/** A VOICE_NOTE turn's guidance: the turn's own text guidance, then TM-01, then TM-03 when the hint channel is on. */
+export function withVoiceNoteChannel(textGuidance: string, options: { readonly hints: boolean }): string {
+  const voice = options.hints
+    ? `${VOICE_DELIVERY_LINE_GUIDANCE_TM_01}\n\n${VOICE_PRONUNCIATION_HINT_GUIDANCE_TM_03}`
+    : VOICE_DELIVERY_LINE_GUIDANCE_TM_01;
+  return `${textGuidance}\n\n${voice}`;
+}
+
+/** VA-7 (S8B-05 consumes it; not wired in S8B-04): a spoken call reply's guidance, the text guidance then TM-02. */
+export function withSpokenCallReply(textGuidance: string): string {
+  return `${textGuidance}\n\n${VOICE_SPOKEN_REPLY_GUIDANCE_TM_02}`;
+}

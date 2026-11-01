@@ -101,6 +101,13 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  ['VOICE_TRANSCRIPTION',new Map(['claim','attempt','provider_delete','sweep','ledger'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','refused_expected','retry_expected','deferred',...OPERATION_FAILURES])]))],
  ['VOICE_CAPTURE_OPERATION_WITHHELD',new Map([['capture',new Set(['withheld'])]])],
  ['VOICE_MEMORY_COMMAND_NOT_HEARD',new Map([['memory_command',new Set(['not_heard'])]])],
+ // S8B-04 (CP1): a voice-note reply's speech channel - separated (a reply whose markers could not be separated with
+ // certainty is malformed and fails its turn; an opener past the parser is leak) and recorded (best effort) - and Listen:
+ // the four owner commands and the sweeper. A refusal the database decided (gate, consent, not theirs, not a voice-note
+ // reply, a second listen) is refused_expected; a full queue or an open breaker is overloaded; a repeat answered from
+ // the store is replayed. Never a person, turn, listen, segment, word, hint, expression or byte.
+ ['VOICE_REPLY_CHANNEL',new Map([['separate',new Set(['success','malformed','leak'])],['record',new Set(['success',...OPERATION_FAILURES])]])],
+ ['VOICE_LISTEN',new Map([...['start','synthesis','audio','cancel'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','replayed','in_progress','refused_expected','overloaded','provider_failure',...OPERATION_FAILURES])]),['sweep',new Set(['success',...OPERATION_FAILURES])]])],
  // S6-07 (CP2): the forward dispatcher (migration 0166). A forward is success; a proposal another act moved first is
  // superseded_expected; one the core or its seam did not clear, or with no single conclusion, is blocked_expected; a held
  // pair is retry_expected; a held integrity refusal is integrity_failure. Never a person, proposal, view or count.

@@ -16,7 +16,7 @@
 //
 // It needs DATABASE_URL, POSTGREST_URL, POSTGREST_JWT_SECRET, the CI-only QANDEEL_MEDIA_S3_* values, RCLONE_DATA_DIR and a
 // built API. Every fixture is removed afterwards; the gates are restored exactly. The approved consent text
-// (VOICE_RECORDING_V1, installed by 0186) is used as it is and never changed.
+// (VOICE_RECORDING_V1, installed by 0186; VOICE_RECORDING_V2 once 0187 is applied) is used as it is and never changed.
 import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, statSync } from 'node:fs';
@@ -184,7 +184,9 @@ async function main() {
     await owner();
     await rows(`SELECT * FROM voice_private.set_voice_launch_capability_v1($1, $2, $3, 'prove-0186', 'live CP1 proof')`, [scope, flag, requirements]);
   };
-  const grant = async (user) => (await svc('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), 'VOICE_RECORDING_V1']))[0].outcome;
+  // S8B-04 re-anchor (migration 0187): the fixture grants whichever approved version is current (V2 once 0187 is applied).
+  const [{ consent_version: currentConsentVersion }] = await svc('SELECT consent_version FROM public.server_read_voice_consent_text_v1()');
+  const grant = async (user) => (await svc('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), currentConsentVersion]))[0].outcome;
   const revoke = async (user) => (await svc('SELECT * FROM public.server_revoke_voice_recording_consent_v1($1, $2)', [user, randomUUID()]))[0].outcome;
   const noteOf = async (id) => (await rows(`SELECT state, failure_class, transcript_text IS NOT NULL AS has_text, asr_confidence_band
       FROM voice_private.note_transcriptions WHERE recording_id = $1`, [id]))[0];

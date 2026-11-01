@@ -1,0 +1,9 @@
+{
+  "line": "F-01",
+  "purpose": "S8B-04 the fixed spoken failure line, consumed by calls in S8B-05; chosen by listening; never synthesized at run time",
+  "state": "NOT_INSTALLED",
+  "files": {
+    "ar": null,
+    "en": null
+  }
+}

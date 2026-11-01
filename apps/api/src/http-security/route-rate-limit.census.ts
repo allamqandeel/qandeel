@@ -297,6 +297,14 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /voice/notes/:recordingId/status': 'AUTHENTICATED',
   'POST /voice/notes/:recordingId/transcription/retry': 'AUTHENTICATED',
   'POST /voice/notes/:recordingId/turn': 'CONVERSATION',
+  // S8B-04 (CP1): «استمع» on a voice-note reply (0187). Opening a listen, reading a stored segment and discarding are
+  // ordinary own acts. The one paid command (a segment's synthesis) takes the Conversation class: one reply is up to 16
+  // segments, and the database itself admits each segment ONCE and bounds a human's concurrent synthesis, so the
+  // throttler is not what limits cost. The GET reads the 15-minute store only.
+  'POST /voice/replies/:turnId/listen': 'AUTHENTICATED',
+  'POST /voice/replies/:turnId/listen/:listenId/segments/:index/synthesis': 'CONVERSATION',
+  'GET /voice/replies/:turnId/listen/:listenId/segments/:index/audio': 'AUTHENTICATED',
+  'DELETE /voice/replies/:turnId/listen/:listenId': 'AUTHENTICATED',
 
   'GET /replay/capability': 'AUTHENTICATED',
   'GET /replay/conversations/:sessionId': 'AUTHENTICATED',

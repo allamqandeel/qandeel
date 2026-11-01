@@ -34,6 +34,9 @@ import { createPersonalReplayRuntime, runVerifier } from './replay-personal-veri
 import { createScenarioReport } from './verifier-scenarios.mjs';
 import { extractStatement } from './voice-foundation-0183-substitutions.mjs';
 import { MIGRATION_0186, SUBSTITUTIONS, substitutedStatement, writtenHeader } from './voice-notes-0186-substitutions.mjs';
+import {
+  qandeelVoiceApplied, VOICE_CONSENT_V1, VOICE_CONSENT_V2, VOICE_CONSENT_V2_AR_SHA256, VOICE_CONSENT_V2_EN_SHA256,
+} from './qandeel-voice-0187-anchor.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -151,7 +154,9 @@ async function setVoiceGate(flag = 'ENABLED', requirements = 'SATISFIED') {
   await rows(`SELECT * FROM voice_private.set_voice_launch_capability_v1('PERSONAL_VOICE_NOTE', $1, $2, 'verify-0186', 'real-PostgreSQL proof')`,
     [flag, requirements]);
 }
-const grant = async (user) => (await one('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), 'VOICE_RECORDING_V1'])).outcome;
+// S8B-04 re-anchor (migration 0187): a fixture grants the current version (VOICE_RECORDING_V2 once 0187 is applied).
+let currentConsentVersion = VOICE_CONSENT_V1;
+const grant = async (user) => (await one('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), currentConsentVersion])).outcome;
 const revoke = async (user) => (await one('SELECT * FROM public.server_revoke_voice_recording_consent_v1($1, $2)', [user, randomUUID()])).outcome;
 /** A human with a session, the gate open and consent current (inside the rolled-back transaction). */
 async function ready() {
@@ -371,8 +376,10 @@ async function verifyCatalogue(report) {
       for (const role of ['anon', 'authenticated', 'service_role']) assert.equal(await rt.canExecute(role, sig), false, `C0b ${role} must not execute ${sig}`);
     }
     // voice_private: the twenty 0183 functions and the eight 0186 ones, nothing else.
+    // S8B-04 re-anchor (migration 0187): plus 0187's six internals (verify-migration-0187 proves their shape).
     const [{ n }] = await rows("SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace s ON s.oid = p.pronamespace WHERE s.nspname = 'voice_private'");
-    assert.equal(n, 28, 'C0b voice_private holds exactly 20 + 8 functions');
+    const voiceApplied = await qandeelVoiceApplied(rows);
+    assert.equal(n, voiceApplied ? 34 : 28, voiceApplied ? 'C0b voice_private holds exactly 20 + 8 + 6 functions' : 'C0b voice_private holds exactly 20 + 8 functions');
     // v4 has no score parameter: the score is the band's constant.
     const [{ args }] = await rows('SELECT pg_get_function_arguments($1::regprocedure) AS args', [V4]);
     assert.doesNotMatch(args, /confidence/u, 'C0b v4 takes no confidence');
@@ -390,15 +397,22 @@ async function verifyCatalogue(report) {
   await report.section('C0d the four scopes DISABLED; exactly the approved consent text (C-01 ... C-11) installed and current', async () => {
     const scopes = await rows(`SELECT capability_scope, feature_flag_state, launch_requirements_state FROM voice_private.voice_launch_capability_states ORDER BY 1`);
     assert.deepEqual(scopes, SCOPES.map((s) => ({ capability_scope: s, feature_flag_state: 'DISABLED', launch_requirements_state: 'UNSATISFIED' })));
-    const texts = await rows('SELECT purpose, version, is_current, text_ar, text_en, text_ar_sha256, text_en_sha256 FROM voice_private.consent_texts');
-    assert.equal(texts.length, 1, 'C0d one consent text');
+    // S8B-04 re-anchor (migration 0187): 0187 installs VOICE_RECORDING_V2 (K-01 ... K-15) as current; this text stays,
+    // word for word, as history. verify-migration-0187 and 0187's guard G2 pin V2's digests.
+    const voiceApplied = await qandeelVoiceApplied(rows);
+    const texts = await rows('SELECT purpose, version, is_current, text_ar, text_en, text_ar_sha256, text_en_sha256 FROM voice_private.consent_texts ORDER BY version');
+    assert.equal(texts.length, voiceApplied ? 2 : 1, voiceApplied ? 'C0d two consent texts (V1 history, V2 current)' : 'C0d one consent text');
     const [t] = texts;
-    assert.deepEqual([t.purpose, t.version, t.is_current], ['VOICE_RECORDING', 'VOICE_RECORDING_V1', true]);
+    assert.deepEqual([t.purpose, t.version, t.is_current], ['VOICE_RECORDING', VOICE_CONSENT_V1, !voiceApplied]);
+    if (voiceApplied) {
+      assert.deepEqual([texts[1].version, texts[1].is_current, texts[1].text_ar_sha256, texts[1].text_en_sha256],
+        [VOICE_CONSENT_V2, true, VOICE_CONSENT_V2_AR_SHA256, VOICE_CONSENT_V2_EN_SHA256], 'C0d V2 is the current approved text');
+    }
     assert.deepEqual([t.text_ar_sha256, t.text_en_sha256], [CONSENT_AR_SHA256, CONSENT_EN_SHA256], 'C0d the approved digests');
     assert.deepEqual([sha256(t.text_ar), sha256(t.text_en)], [CONSENT_AR_SHA256, CONSENT_EN_SHA256], 'C0d the stored words are the approved words');
     assert.deepEqual([t.text_ar.split('\n').length, t.text_en.split('\n').length], [11, 11], 'C0d eleven rows, one per line');
     const [read] = await server('SELECT * FROM public.server_read_voice_consent_text_v1()');
-    assert.deepEqual([read.consent_version, read.text_ar_sha256], ['VOICE_RECORDING_V1', CONSENT_AR_SHA256], 'C0d the read returns it');
+    assert.deepEqual([read.consent_version, read.text_ar_sha256], voiceApplied ? [VOICE_CONSENT_V2, VOICE_CONSENT_V2_AR_SHA256] : [VOICE_CONSENT_V1, CONSENT_AR_SHA256], 'C0d the read returns the current text');
     const [constants] = await server('SELECT * FROM public.server_read_machine_asr_memory_confidence_v1()');
     assert.deepEqual([constants.high, constants.medium], [0.9, 0.75], 'C0d E13 the startup read returns the P-1 constants');
   });
@@ -1215,6 +1229,7 @@ runVerifier('0186', async (setStage) => {
   await q("SET lock_timeout = '10s'");
   await q("SET statement_timeout = '120s'");
   const report = createScenarioReport('0186', { query: q, restore: () => owner() });
+  if (await qandeelVoiceApplied(rows)) currentConsentVersion = VOICE_CONSENT_V2;
   const humans = [randomUUID()];
   setStage('catalogue');
   await verifyCatalogue(report);

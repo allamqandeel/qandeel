@@ -1,4 +1,10 @@
 import { VoiceNotesRepository } from '../voice-media/voice-notes.repository';
+import { ReplySpeechRepository } from '../voice-media/reply-speech.repository';
+import {
+  assertNoSpeechMarkup, SPEECH_HINT_POLICY, SpeechMarkupLeakError, stripSpeechMarkup, toStoredHints, validateSpeechHints,
+  type SpeechExpression, type StoredSpeechHint,
+} from '../speech-rendering';
+import { withVoiceNoteChannel } from './behavioral-response-policy.service';
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, ServiceUnavailableException, Optional } from '@nestjs/common';
 import { MODEL_ROUTER, type ModelRouter, type ProcessingPath } from '../model-router/model-router.types';
@@ -81,6 +87,25 @@ class HimSnapshotForegroundWaitBudgetExceededError extends Error {
   constructor() { super('HIM_SNAPSHOT_FOREGROUND_WAIT_BUDGET_EXCEEDED'); }
 }
 
+/** S8B-04 (CP1): how the turn reached QANDEEL. Only the Voice Note runner passes VOICE_NOTE; absent means typed. */
+export interface OrchestrateOptions {
+  readonly modality?: 'VOICE_NOTE';
+}
+
+interface VoiceReplyChannel {
+  readonly text: string;
+  readonly expression: SpeechExpression;
+  readonly hints: readonly StoredSpeechHint[];
+}
+
+/** A voice-note reply whose speech markers could not be separated with certainty (S8B-04 CP1, item C3). No text. */
+export class SpeechMarkupMalformedError extends Error {
+  constructor() {
+    super('SPEECH_MARKUP_MALFORMED');
+    this.name = 'SpeechMarkupMalformedError';
+  }
+}
+
 @Injectable()
 export class ConversationOrchestratorService {
   constructor(
@@ -108,9 +133,11 @@ export class ConversationOrchestratorService {
     private readonly interactionPreferences: InteractionPreferencesService,
     // S8B-03 (CP1, E8): the voice source of a Memory command; absent (tests, no voice module), every turn is typed.
     @Optional() private readonly voiceNotes?: VoiceNotesRepository,
+    // S8B-04 (CP1): where a voice-note reply's speech channel (expression + validated hints) is kept; absent, nothing is kept.
+    @Optional() private readonly replySpeech?: ReplySpeechRepository,
   ) {}
 
-  async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
+  async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn, options: OrchestrateOptions = {}): Promise<OrchestratedTurnResult> {
     if (userTurn.status === 'COMPLETED') {
       return this.currentResult(accessToken, userId, userTurn);
     }
@@ -505,9 +532,13 @@ export class ConversationOrchestratorService {
       // Mandatory Core, the ONE composeServerGuidance). All DEFAULT leaves the guidance exactly the Personal Text v2
       // (ACE-01: frozen Text v1 + the approved personality core).
       const interactionPreferences = await interactionPreferencesPromise;
-      const behavioralGuidance = this.behavioralPolicy.buildTextGuidance({
+      const textGuidance = this.behavioralPolicy.buildTextGuidance({
         preferences: interactionPreferences.preferences, safetyGuided: safety.disposition === 'GUIDED',
       });
+      // S8B-04 (CP1, §7.1 / §7.3): a VOICE_NOTE turn's guidance is its own text guidance plus TM-01 (and TM-03 only when
+      // the hint channel is on; CP1: OFF). Every other turn's guidance is exactly the text guidance, byte for byte.
+      const voiceNote = options.modality === 'VOICE_NOTE';
+      const behavioralGuidance = voiceNote ? withVoiceNoteChannel(textGuidance, { hints: SPEECH_HINT_POLICY !== 'OFF' }) : textGuidance;
       // ACE-01 (WP2): the request locale from deterministic facts only - an explicit language request in this message,
       // else the durable reply-language preference, else a conservative script indication, else `und`. Pure CPU work;
       // it names a language, never a dialect or a tone, and no provider renders it.
@@ -586,9 +617,14 @@ export class ConversationOrchestratorService {
       // new outcome is introduced and the existing telemetry contract keeps its
       // exact name and dimensions.
       if (assembled.request.hypothesisContext !== undefined) this.telemetry.recordHypothesisContext('consumed', selection.path, assembled.request.hypothesisContext.contractVersion, assembled.request.hypothesisContext.candidateHypothesisCount, assembled.request.hypothesisContext.includedHypothesisCount);
+      // S8B-04 (CP1, item C): a VOICE_NOTE reply's speech channel is separated here, and ONLY here; a typed turn's output
+      // never passes through the parser and is stored exactly as generated. A reply whose markers cannot be separated
+      // with certainty throws into the existing failure path below (the turn fails, nothing is stored or shown, no extra
+      // model call, no substitute wording).
+      const voiceReply = voiceNote ? this.separateVoiceNoteChannel(candidate.content, safety.disposition === 'GUIDED') : null;
       const finalized = await this.repository.finalizeTurn({
         sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
-        assistantTurnId: randomUUID(), content: candidate.content, safetyDisposition: safety.disposition,
+        assistantTurnId: randomUUID(), content: voiceReply ? voiceReply.text : candidate.content, safetyDisposition: safety.disposition,
         // QIR-006: the reservation is BOUND when and only when the sanitized
         // QuestionContext actually survived final provider-request assembly -
         // authorized by the FINAL NORMALIZED REQUEST the provider received,
@@ -600,6 +636,7 @@ export class ConversationOrchestratorService {
           ? { questionBindingId: questionForeground.bindingId } : {}),
       });
       if (!finalized) return this.currentResult(accessToken, userId, claimed);
+      if (voiceReply) await this.recordVoiceReplyChannel(userId, finalized.assistantTurn.id, voiceReply);
       this.telemetry.recordTurnOutcome('completed',selection.path);
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
@@ -608,6 +645,45 @@ export class ConversationOrchestratorService {
       throw new ServiceUnavailableException('Conversation generation failed.');
     }};
     if(!this.correlation.current())return execute();this.correlation.bindCanonical(claimed.session_id,claimed.id);return this.correlation.withOrchestration(execute);
+  }
+
+  /**
+   * S8B-04 (CP1, item C / §7.4): the visible reply and its speech channel. Throws (into the turn's failure path) when the
+   * markers cannot be separated with certainty, when nothing visible is left, or when the tripwire finds an opener the
+   * parser left (a parser defect). Counted by class only; never the text, a word or a hint.
+   */
+  private separateVoiceNoteChannel(raw: string, safetyGuided: boolean): VoiceReplyChannel {
+    const parsed = stripSpeechMarkup(raw, { safetyGuided });
+    const visible = parsed.kind === 'OK' ? parsed.text.trim() : '';
+    if (parsed.kind !== 'OK' || visible === '') {
+      this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'separate', 'malformed');
+      throw new SpeechMarkupMalformedError();
+    }
+    try {
+      assertNoSpeechMarkup(visible);
+    } catch (error) {
+      if (error instanceof SpeechMarkupLeakError) this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'separate', 'leak');
+      throw error;
+    }
+    const lead = parsed.text.length - parsed.text.trimStart().length;
+    const candidates = parsed.hints.map((h) => ({ word: h.word, at: Math.max(0, h.at - lead) }));
+    const hints = validateSpeechHints(visible, candidates, SPEECH_HINT_POLICY === 'OFF' ? 'OFF' : 'B_ALL').hints;
+    this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'separate', 'success');
+    return { text: visible, expression: parsed.expression, hints: toStoredHints(hints) };
+  }
+
+  /**
+   * S8B-04 (CP1, §7.1): keeps the reply's expression and validated hints for Listen, after the reply is committed. Best
+   * effort: the reply is already the user's, so a failure here never fails the turn; Listen then speaks it CALM, unhinted.
+   */
+  private async recordVoiceReplyChannel(userId: string, assistantTurnId: string, reply: VoiceReplyChannel): Promise<void> {
+    if (!this.replySpeech) return;
+    try {
+      await this.replySpeech.recordChannel(userId, assistantTurnId, reply.expression, reply.hints);
+      this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'record', 'success');
+    } catch {
+      this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'record', 'transport_failure');
+    }
   }
 
   private engine<T>(name:string,path:ProcessingPath|undefined,work:()=>Promise<T>|T):Promise<T>{return this.correlation.current()?this.telemetry.withEngine(name,path,work):Promise.resolve().then(work);}
