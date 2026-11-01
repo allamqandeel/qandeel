@@ -112,7 +112,8 @@ export class ConversationService {
       const turn = await this.repository.findTurn(accessToken, sessionId, userId, turnId);
       if (!turn || turn.role !== 'USER') throw new NotFoundException('Conversation turn was not found.');
       this.correlation.bindCanonical(turn.session_id, turn.id);
-      return this.establishSemanticChain(userId, await this.orchestrator.orchestrate(accessToken, userId, turn));
+      // S8B-04 (CP1): this runner is the Voice Note's only path, so its reply carries the speech channel (TM-01).
+      return this.establishSemanticChain(userId, await this.orchestrator.orchestrate(accessToken, userId, turn, { modality: 'VOICE_NOTE' }));
     }));
   }
 

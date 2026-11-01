@@ -823,7 +823,9 @@ async function main() {
       await rows('DELETE FROM voice_private.consent_texts WHERE version = $1', [consentVersion]);
       // S8B-03 re-anchor (migration 0186): installing the proof version retired the approved 0186 text (VOICE_RECORDING_V1);
       // with the proof version gone it is the current text again, exactly as 0186 left it. Before 0186 nothing matches.
-      await rows(`UPDATE voice_private.consent_texts SET is_current = true WHERE version = 'VOICE_RECORDING_V1' AND NOT EXISTS
+      // S8B-04 re-anchor (migration 0187): once 0187 is applied the text restored is VOICE_RECORDING_V2 (V1 stays history).
+      await rows(`UPDATE voice_private.consent_texts SET is_current = true WHERE version = (SELECT max(version) FROM voice_private.consent_texts
+                    WHERE version IN ('VOICE_RECORDING_V1', 'VOICE_RECORDING_V2')) AND NOT EXISTS
                     (SELECT 1 FROM voice_private.consent_texts t WHERE t.purpose = 'VOICE_RECORDING' AND t.is_current)`);
       if (gates) {
         await rows('DELETE FROM voice_private.voice_launch_capability_events WHERE id > $1', [gates.lastEvent]);

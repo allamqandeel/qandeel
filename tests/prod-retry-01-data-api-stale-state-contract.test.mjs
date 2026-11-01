@@ -110,8 +110,11 @@ test('40P01 is never converted, and PT409 is raised only by the eleven and the t
   // S8B-02 CP1 RE-ANCHOR (2026-10-30): 0184's begin_ai_provider_call_v3 (the voice begin) carries the same one identity
   // conflict, and its settle_ai_provider_call_v2 the one 0135 settlement conflict, and no other PT409.
   const m0184 = '0184_s8b_02_ai_cost_voice_units_v1.sql';
-  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175, m0184]);
-  for (const name of [m0170, m0175]) {
+  // S8B-04 CP1 RE-ANCHOR (2026-11-01): 0187's server_admit_reply_speech_synthesis_v1 (a Listen segment's one paid
+  // admission) refuses a reused provider call id with the same one AI-usage identity conflict, and no other PT409.
+  const m0187 = '0187_s8b_04_qandeel_voice_v1.sql';
+  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175, m0184, m0187]);
+  for (const name of [m0170, m0175, m0187]) {
     const pt409 = read(`${MIGRATIONS}/${name}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu);
     assert.deepEqual(pt409, ["RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"], name);
   }

@@ -431,7 +431,9 @@ describe('ConversationService', () => {
     it('runs the committed turn through the Orchestrator once, then the semantic chain', async () => {
       await service.runCommittedTurn('user-a', 'token-a', session.id, turn.id);
       expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
-      expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', expect.objectContaining({ id: turn.id, role: 'USER' }));
+      // S8B-04 (CP1): the Voice Note runner names its modality, so the reply carries the speech channel (TM-01); every typed
+      // path above calls with three arguments only.
+      expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', expect.objectContaining({ id: turn.id, role: 'USER' }), { modality: 'VOICE_NOTE' });
       expect(semantic.establish).toHaveBeenCalledTimes(1);
       expect(repository.createTurn).not.toHaveBeenCalled();
     });

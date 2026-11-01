@@ -5,7 +5,7 @@ import { HttpException } from '@nestjs/common';
 import type { ModuleRef } from '@nestjs/core';
 import { VoiceNotesService } from './voice-notes.service';
 import type { VoiceNotesRepository } from './voice-notes.repository';
-import { consentText, VOICE_CONSENT_ROWS } from './voice-consent-text';
+import { consentText, VOICE_CONSENT_ROWS, VOICE_CONSENT_V1_ROWS, VOICE_CONSENT_V1_VERSION } from './voice-consent-text';
 import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 
 const USER = 'aaaaaaaa-0000-4000-8000-000000000001';
@@ -16,7 +16,7 @@ const COMMAND = 'dddddddd-0000-4000-8000-000000000001';
 
 function setup(overrides: Partial<Record<keyof VoiceNotesRepository, jest.Mock>> = {}, rpc = jest.fn()) {
   const notes = {
-    consentText: jest.fn().mockResolvedValue({ consent_version: 'VOICE_RECORDING_V1', text_ar: consentText('ar'), text_en: consentText('en') }),
+    consentText: jest.fn().mockResolvedValue({ consent_version: 'VOICE_RECORDING_V2', text_ar: consentText('ar'), text_en: consentText('en') }),
     commitTurn: jest.fn(), status: jest.fn(), retry: jest.fn(), pending: jest.fn(), capability: jest.fn(),
     ...overrides,
   } as unknown as jest.Mocked<VoiceNotesRepository>;
@@ -32,13 +32,22 @@ describe('VoiceNotesService (S8B-03 CP1)', () => {
   it('serves the approved consent rows when the installed text is exactly the approved one', async () => {
     const { service } = setup({}, jest.fn().mockResolvedValue([{ consent_state: 'NONE', consent_version: null }]));
     await expect(service.consent(USER)).resolves.toEqual({
-      consentVersion: 'VOICE_RECORDING_V1', consentState: 'NONE', grantedVersion: null,
+      consentVersion: 'VOICE_RECORDING_V2', consentState: 'NONE', grantedVersion: null,
       rows: VOICE_CONSENT_ROWS.map(({ id, ar, en }) => ({ id, ar, en })),
     });
   });
 
+  // S8B-04 (CP1, migration 0187): the current version is VOICE_RECORDING_V2 (K-01 … K-15); V1 is history. A database
+  // still answering V1 as current is a version the API does not serve.
+  it('serves no consent text (503) when the installed current version is not V2, even V1 word for word', async () => {
+    const v1Text = { consent_version: VOICE_CONSENT_V1_VERSION, text_ar: VOICE_CONSENT_V1_ROWS.map((r) => r.ar).join('\n'), text_en: VOICE_CONSENT_V1_ROWS.map((r) => r.en).join('\n') };
+    const { service } = setup({ consentText: jest.fn().mockResolvedValue(v1Text) }, jest.fn().mockResolvedValue([{ consent_state: 'NONE', consent_version: null }]));
+    await expect(statusOf(service.consent(USER))).resolves.toBe(503);
+    expect(VOICE_CONSENT_ROWS.map((r) => r.id)).toEqual(Array.from({ length: 15 }, (_, i) => `K-${String(i + 1).padStart(2, '0')}`));
+  });
+
   it('serves no consent text at all (503) when the installed text drifted', async () => {
-    const drifted = jest.fn().mockResolvedValue({ consent_version: 'VOICE_RECORDING_V1', text_ar: `${consentText('ar')} `, text_en: consentText('en') });
+    const drifted = jest.fn().mockResolvedValue({ consent_version: 'VOICE_RECORDING_V2', text_ar: `${consentText('ar')} `, text_en: consentText('en') });
     const { service } = setup({ consentText: drifted }, jest.fn().mockResolvedValue([{ consent_state: 'NONE', consent_version: null }]));
     await expect(statusOf(service.consent(USER))).resolves.toBe(503);
   });
@@ -46,10 +55,10 @@ describe('VoiceNotesService (S8B-03 CP1)', () => {
   it('grant and withdraw pass the verified human and the command only', async () => {
     const rpc = jest.fn().mockResolvedValueOnce([{ outcome: 'GRANTED' }]).mockResolvedValueOnce([{ outcome: 'WITHDRAWN' }]);
     const { service } = setup({}, rpc);
-    await expect(service.grant(USER, { commandId: COMMAND, version: 'VOICE_RECORDING_V1' })).resolves.toEqual({ outcome: 'GRANTED' });
+    await expect(service.grant(USER, { commandId: COMMAND, version: 'VOICE_RECORDING_V2' })).resolves.toEqual({ outcome: 'GRANTED' });
     await expect(service.withdraw(USER, { commandId: COMMAND })).resolves.toEqual({ outcome: 'WITHDRAWN' });
     expect(rpc.mock.calls).toEqual([
-      ['server_grant_voice_recording_consent_v1', { p_user_id: USER, p_command_id: COMMAND, p_consent_version: 'VOICE_RECORDING_V1' }],
+      ['server_grant_voice_recording_consent_v1', { p_user_id: USER, p_command_id: COMMAND, p_consent_version: 'VOICE_RECORDING_V2' }],
       ['server_revoke_voice_recording_consent_v1', { p_user_id: USER, p_command_id: COMMAND }],
     ]);
   });

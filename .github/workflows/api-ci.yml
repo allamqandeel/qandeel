@@ -256,6 +256,7 @@ jobs:
       - {name: "Verify S8B-01 voice benchmark harness static contract (the preregistered plan and corpus hashes intact, the USD 10 cap and its split, the preregistered Arabic scoring, an unmeasured stage never a pass, the CP1 lock refusing every live run, loopback only under the guard, the zero-cost simulated rehearsal with no paid call)", run: npm run test:s8b-01-voice-bench-harness-contract}
       - {name: "Verify S8B-02 Voice Foundation static contract (0183 / 0184 forward-only and wired, every voice gate seeded DISABLED with a setter no role holds, the server surface service_role's alone, the 0184 CHECKs mirrored in TypeScript with the text registries unchanged, the P-1 band values, 0104 and I-06C untouched, no provider adapter or client surface)", run: npm run test:s8b-02-voice-foundation-contract}
       - {name: "Verify S8B-03 Personal Voice Notes static contract (the 19 Copy Gate rows APPROVED verbatim in the record, the code and the 0186 consent text under its guarded digests, every voice gate still DISABLED, 0186 wired with its verifier and live proof, the Speechmatics key server-only, no logging, no mobile surface before CP2)", run: npm run test:s8b-03-personal-voice-notes-contract}
+      - {name: "Verify S8B-04 QANDEEL's Voice static contract (the 25 CP1 Copy Gate rows APPROVED verbatim in the record and the code, the 0187 consent text VOICE_RECORDING_V2 under its guarded digests, no voice gate opened, the one Google Cloud ADC route with a closed body and no key, the Listen GET never paying, TM-01 on Voice Notes only, TM-02 unwired, the lexicon disabled, no logging, no mobile Listen surface)", run: npm run test:s8b-04-qandeel-voice-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1312,6 +1313,16 @@ jobs:
       # erasure; every gate still DISABLED and the approved consent text installed verbatim.
       - name: Verify S8B-03 Personal Voice Notes (0186) against real PostgreSQL
         run: npm run verify:personal-voice-notes:integration
+      # S8B-04 CP1: migration 0187 (QANDEEL's Voice) - a voice-note reply's speech channel, the 15-minute Listen store, one
+      # paid admission per segment with its ledger row in the same transaction, crash settlement, TTL, erasure and
+      # VOICE_RECORDING_V2 current with V1 kept as history; every gate still DISABLED.
+      - name: Verify S8B-04 QANDEEL's Voice (0187) against real PostgreSQL
+        run: npm run verify:qandeel-voice:integration
+      # S8B-04 CP1 (contract §8.4): Listen end to end with the compiled service, repository, sweeper and Vertex adapter against
+      # a LOOPBACK fake of streamGenerateContent that counts every request - one paid call per segment, retries, crashes,
+      # TTL, DELETE, refusals, the request allowlist. No credential, no paid call. Repeated over the wire in the PostgREST loop.
+      - name: Prove S8B-04 Listen against real PostgreSQL and a fake Vertex server (free)
+        run: npm run prove:qandeel-voice-listen:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1441,6 +1452,9 @@ jobs:
             # batch API (no provider, no key, no paid call) and rclone - wire refusals, a 24 MiB note streamed within 16 MiB of
             # held payload (A19), and consent withdrawn while a job runs (A24).
             POSTGREST_VERSION="$version" npm run --silent prove:personal-voice-notes:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
+            # S8B-04 (CP1): Listen over the wire - the same free proof with every repository call through this PostgREST line
+            # (bytea, jsonb and timestamps as PostgREST encodes them) and the loopback fake Vertex server.
+            POSTGREST_VERSION="$version" npm run --silent prove:qandeel-voice-listen:integration || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

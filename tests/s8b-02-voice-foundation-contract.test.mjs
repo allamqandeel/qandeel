@@ -173,7 +173,9 @@ test('P-1: the Product Owner\'s band values, below the typed-text confidence the
 // recording command, the ports carry no network code, and nothing composes a fake.
 test('CP2 boundary: the recording commands live in the media lifecycle alone, the ports reach no network, no client surface', () => {
   const files = walk(join(root, 'apps/api/src')).map((p) => relative(root, p).replaceAll('\\', '/'));
-  const allowed = new Set(['apps/api/src/ai-usage/ai-usage.types.ts', 'apps/api/src/observability/telemetry.service.ts']);
+  // RE-ANCHORED by S8B-04 CP1 (2026-11-01): the CURRENT consent text VOICE_RECORDING_V2 names Speechmatics in its K-07,
+  // APPROVED verbatim by the Product Owner (it is the user-facing disclosure, not a provider call).
+  const allowed = new Set(['apps/api/src/ai-usage/ai-usage.types.ts', 'apps/api/src/observability/telemetry.service.ts', 'apps/api/src/voice-media/voice-consent-text.ts']);
   for (const path of files) {
     if (allowed.has(path) || path.endsWith('.spec.ts') || path.startsWith('apps/api/src/voice/')) continue;
     assert.doesNotMatch(read(path), /speechmatics|GEMINI_SPEECH_GENERATION/iu, `${path} names no voice provider`);
@@ -185,8 +187,23 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
   // RE-ANCHORED by S8B-03 CP1 (2026-10-31, contract §5.8): the ONE network path is the Speechmatics batch adapter in
   // voice/speechmatics/ (fetch, hand-streamed multipart, no SDK; its config reads the environment). Nothing outside that
   // folder imports it but voice.module.ts, and the worker reads a note's audio through VoiceMediaService alone.
-  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/') && !p.startsWith('apps/api/src/voice/speechmatics/'))) {
-    assert.doesNotMatch(read(path), /\bfetch\(|from 'node:https?'|require\('https?'\)|WebSocket|from 'ws'|axios|process\.env|@speechmatics|@google\//u, `${path} carries no network code and reads no credential`);
+  // RE-ANCHORED by S8B-04 CP1 (2026-11-01, contract v1.2 §9 / D): the SECOND network path is the Google Cloud TTS adapter
+  // in voice/vertex-speech/ (fetch to aiplatform.googleapis.com, ADC through google-auth-library alone, no Gemini SDK; its
+  // config reads the environment). Its fake Vertex server (testing/) is the one test-only node:http listener. Nothing
+  // outside that folder imports it but voice.module.ts.
+  const VERTEX_DIR = 'apps/api/src/voice/vertex-speech/';
+  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/') && !p.startsWith('apps/api/src/voice/speechmatics/') && !p.startsWith(VERTEX_DIR))) {
+    assert.doesNotMatch(read(path), /\bfetch\(|from 'node:https?'|require\('https?'\)|WebSocket|from 'ws'|axios|process\.env|@speechmatics|@google\/|google-auth-library/u, `${path} carries no network code and reads no credential`);
+  }
+  for (const path of files.filter((p) => p.startsWith(VERTEX_DIR) && !p.endsWith('.spec.ts'))) {
+    const text = read(path);
+    assert.doesNotMatch(text, /WebSocket|from 'ws'|axios|@google\/|@google-cloud\/|generativelanguage|require\('https?'\)/u, `${path} uses no Gemini SDK, no socket, no AI Studio`);
+    if (path !== `${VERTEX_DIR}vertex-speech.auth.ts`) assert.doesNotMatch(text, /google-auth-library/u, `${path}: ADC lives in vertex-speech.auth.ts alone`);
+    if (!path.startsWith(`${VERTEX_DIR}testing/`)) assert.doesNotMatch(text, /from 'node:https?'/u, `${path}: the adapter speaks through fetch alone`);
+    if (path !== `${VERTEX_DIR}vertex-speech.config.ts`) assert.doesNotMatch(text, /process\.env/u, `${path}: only the config reads the environment`);
+  }
+  for (const path of files.filter((p) => !p.startsWith(VERTEX_DIR) && p !== 'apps/api/src/voice/voice.module.ts')) {
+    assert.doesNotMatch(read(path), /from '[^']*\/vertex-speech\//u, `${path} does not import the Vertex speech adapter`);
   }
   for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/speechmatics/'))) {
     assert.doesNotMatch(read(path), /WebSocket|from 'ws'|axios|@speechmatics|@google\//u, `${path} uses no provider SDK and no socket`);
@@ -197,10 +214,11 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
   const worker = codeOnly(read('apps/api/src/voice/voice-note-transcription.worker.ts'));
   assert.doesNotMatch(worker, /PrivateAudioObjectStore|PRIVATE_AUDIO_OBJECT_STORE|S3Client/u, 'the worker never reads the private store directly');
   assert.match(worker, /VoiceMediaService/u, 'a note\'s audio comes through VoiceMediaService');
-  for (const path of files.filter((p) => !p.endsWith('.spec.ts') && !p.startsWith('apps/api/src/voice/testing/'))) {
-    assert.doesNotMatch(read(path), /Fake(?:SpeechRecognition|SpeechSynthesis)Adapter|FakeBatchTranscriptionJobs/u, `${path} composes no fake`);
+  for (const path of files.filter((p) => !p.endsWith('.spec.ts') && !p.startsWith('apps/api/src/voice/testing/') && !p.startsWith(`${VERTEX_DIR}testing/`))) {
+    assert.doesNotMatch(read(path), /Fake(?:SpeechRecognition|SpeechSynthesis)Adapter|FakeBatchTranscriptionJobs|FakeVertexSpeechServer/u, `${path} composes no fake`);
   }
-  assert.doesNotMatch(read('apps/api/package.json'), /speechmatics|@google\/genai/iu, 'no provider SDK dependency');
+  assert.doesNotMatch(read('apps/api/package.json'), /speechmatics|@google\/genai|@google-cloud\//iu, 'no provider SDK dependency');
+  assert.match(read('apps/api/package.json'), /"google-auth-library": "11\.3\.1"/u, 'S8B-04: ADC through google-auth-library, pinned exactly');
   // S8B-03 RE-ANCHOR (contract §5.7.4): the recorder and the saver now exist, and the allowed surface is a FOLDER — the
   // Voice Note client `apps/mobile/src/voice-note/` alone names a voice route. Elsewhere only a test may name one, in an
   // expectation of what that client calls; no other production module reaches a voice surface.
@@ -216,7 +234,11 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
 
 test('CP2 media privacy: nothing logged, nothing presigned or public, every voice answer no-store, private', () => {
   const media = walk(join(root, 'apps/api/src/voice-media')).map((p) => relative(root, p).replaceAll('\\', '/')).filter((p) => !p.endsWith('.spec.ts'));
-  for (const path of [...media, 'apps/api/src/voice/speech-recognition.adapter.ts', 'apps/api/src/voice/speech-synthesis.adapter.ts']) {
+  // S8B-04 CP1: QANDEEL's voice (the Vertex adapter, the admission guard, Listen, the failure line) logs nothing either.
+  const qandeelVoice = walk(join(root, 'apps/api/src/voice')).map((p) => relative(root, p).replaceAll('\\', '/'))
+    .filter((p) => !p.endsWith('.spec.ts') && /\/voice\/(?:vertex-speech|listen|failure-line)\/|speech-admission\.guard\.ts$/u.test(p));
+  assert.ok(qandeelVoice.length >= 8, 'the S8B-04 voice files are walked');
+  for (const path of [...media, ...qandeelVoice, 'apps/api/src/voice/speech-recognition.adapter.ts', 'apps/api/src/voice/speech-synthesis.adapter.ts']) {
     const text = codeOnly(read(path));
     assert.doesNotMatch(text, /\bLogger\b|console\.|captureException|Sentry/u, `${path} logs nothing`);
     assert.doesNotMatch(text, /getSignedUrl|presign|s3-request-presigner|\bACL\b|public-read/u, `${path} presigns nothing and sets no ACL`);
