@@ -138,6 +138,26 @@ export interface ConversationSurfaceProps {
   readonly overlay?: ReactElement | null;
   /** S7-02: the selection mode, while it is on. */
   readonly selection?: ConversationSelection | null;
+  /**
+   * S8B-03 (G1.2 §E): what the composition hands the composer's END edge while there are no words to send — another
+   * way to begin a turn. Presentation only; this layer writes none of its words and holds none of its state.
+   */
+  readonly composerEnd?: ReactElement | null;
+  /**
+   * S8B-03: while the composition holds the field for something of its own, it draws that in the composer's place, on
+   * the same FIELD ground. The words typed so far stay in the controller, untouched.
+   */
+  readonly composerOverride?: ReactElement | null;
+  /**
+   * S8B-03: what the composition shows after the last committed exchange (turns of its own not yet committed).
+   * Presentation only; it is never a turn and never changes the history.
+   */
+  readonly threadTail?: ReactElement | null;
+  /**
+   * S8B-03 (P4-C3): the composition may draw the body of a committed utterance itself — for an exchange it recognizes —
+   * inside the same slab, on the same edge. It answers null for every other exchange, whose words are drawn here.
+   */
+  readonly utteranceBody?: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
@@ -273,13 +293,14 @@ function Selectable({ id, label, gap, selection, palette, language, children }: 
   );
 }
 
-function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection }: {
+function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody }: {
   readonly exchange: ConversationExchangeView;
   readonly copy: ConversationCopy;
   readonly palette: ConversationPalette;
   readonly language: ChromeLanguage;
   readonly contentWidth: number;
   readonly selection: ConversationSelection | null;
+  readonly utteranceBody: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
 }) {
   const mine = readerSide(language);
   const theirs = oppositeSide(mine);
@@ -287,9 +308,17 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   if (selection !== null) {
     return <SelectingExchangeRow exchange={exchange} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={selection} />;
   }
+  // A body the composition draws carries its own controls and draws its own UTTERANCE slab (the Voice Note's slab has
+  // P4-C3 §1's own width and insets), so the place it sits in is then neither one assistive element nor a surface.
+  const body = utteranceBody === null ? null : utteranceBody(exchange);
   return (
     <View>
       {/* UTTERANCE — the reader's committed words, on the reader's own edge. */}
+      {body !== null ? (
+        <View testID={`qandeel-utterance-${exchange.userTurn.id}`} style={{ alignSelf: alignSelfFor(mine), marginTop: 28 }}>
+          {body}
+        </View>
+      ) : (
       <View
         testID={`qandeel-utterance-${exchange.userTurn.id}`}
         accessible
@@ -309,6 +338,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
       >
         <Paragraphs text={exchange.userTurn.content} fallback={fallback} palette={palette} role="body" />
       </View>
+      )}
 
       {exchange.reply !== null ? (
         // QANDEEL — open on the World, from the opposite edge. No surface of its own.
@@ -393,6 +423,10 @@ export function ConversationSurface({
   chromeEnd = null,
   overlay = null,
   selection = null,
+  composerEnd = null,
+  composerOverride = null,
+  threadTail = null,
+  utteranceBody = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -405,6 +439,8 @@ export function ConversationSurface({
   const endSide = theirs; // the end edge of the reader's line is the edge opposite their start
   const fallback = readerDirection(language);
   const contentWidth = Math.max(0, width - insets.left - insets.right - THREAD_GUTTER * 2);
+  // The rows re-render when the mode or the handed body changes; both are held by reference.
+  const rowInputs = useMemo(() => ({ selection, utteranceBody }), [selection, utteranceBody]);
 
   useEffect(() => {
     controller.ensureHistory();
@@ -448,23 +484,48 @@ export function ConversationSurface({
   const list = useRef<FlatList<ConversationExchangeView>>(null);
   const nearNewest = useRef(true);
   const positioned = useRef(false);
+  // S8B-03 (CP2, device finding): a follow this surface started stays a follow until it reaches the newest turn, so a
+  // thread end that grows again mid-animation is followed too; only the reader's own drag hands the position back.
+  const following = useRef(false);
+  // S8B-03 (CP2, device finding): a scroll to an end the native list cannot hold yet (it still has the previous height)
+  // is clamped short, so a follow is applied again over the next two frames — unless the reader drags in between.
+  const follow = useRef(0);
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-      nearNewest.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) < FOLLOW_THRESHOLD;
+      const near = contentSize.height - (contentOffset.y + layoutMeasurement.height) < FOLLOW_THRESHOLD;
+      if (near) following.current = false;
+      nearNewest.current = near || following.current;
       if (contentOffset.y < OLDER_THRESHOLD) controller.loadOlder();
     },
     [controller],
   );
+  const onScrollBeginDrag = useCallback(() => {
+    following.current = false;
+    follow.current += 1;
+  }, []);
   const onContentSizeChange = useCallback(() => {
+    const toEnd = (animated: boolean) => {
+      const mine = (follow.current += 1);
+      list.current?.scrollToEnd({ animated });
+      const again = (frames: number) => requestAnimationFrame(() => {
+        if (follow.current !== mine) return;
+        list.current?.scrollToEnd({ animated });
+        if (frames > 1) again(frames - 1);
+      });
+      again(2);
+    };
     if (!positioned.current) {
       if (state.history !== 'LOADING') {
         positioned.current = true;
-        list.current?.scrollToEnd({ animated: false });
+        toEnd(false);
       }
       return;
     }
-    if (nearNewest.current) list.current?.scrollToEnd({ animated: !reduceMotion });
+    if (nearNewest.current) {
+      following.current = true;
+      toEnd(!reduceMotion);
+    }
   }, [reduceMotion, state.history]);
 
   // ------------------------------------------------------------------------- depth control
@@ -493,10 +554,18 @@ export function ConversationSurface({
   const canSend = !locked && state.draft.trim().length > 0;
   const composerDirection = state.draft.length === 0 ? fallback : directedParagraphs(state.draft, fallback)[0].direction;
 
-  const footer =
+  const awaiting =
     submission !== null && submission.phase === 'AWAITING' ? (
       <StatusLine text={copy.waitingForReply} tone="waiting" side={theirs} palette={palette} language={language} testID="qandeel-conversation-awaiting" />
     ) : null;
+  // The handed tail follows the committed thread and is hidden while a selection mode is on.
+  const footer =
+    threadTail === null || selection !== null ? awaiting : (
+      <View>
+        {awaiting}
+        <View testID="qandeel-conversation-tail">{threadTail}</View>
+      </View>
+    );
 
   const historyFailure =
     state.history === 'UNAVAILABLE' ? (
@@ -634,14 +703,15 @@ export function ConversationSurface({
         testID="qandeel-conversation-thread"
         data={state.exchanges}
         keyExtractor={(exchange) => exchange.userTurn.id}
-        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={selection} />}
-        extraData={selection}
+        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} />}
+        extraData={rowInputs}
         ListHeaderComponent={state.exchanges.length > 0 ? historyFailure : null}
         // An empty list is either a history that could not be read, or — once READ — a genuinely empty
         // Conversation, which is where the W1B-01 opening belongs.
         ListEmptyComponent={state.history === 'READY' ? (opening ?? null) : historyFailure}
         ListFooterComponent={footer}
         onScroll={onScroll}
+        onScrollBeginDrag={onScrollBeginDrag}
         scrollEventThrottle={64}
         onContentSizeChange={onContentSizeChange}
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
@@ -706,7 +776,14 @@ export function ConversationSurface({
       ) : null}
 
       {/* FIELD — the composer. One lower line; Send at the END edge, present only with words to send. */}
-      {selection !== null ? null : (
+      {selection !== null ? null : composerOverride !== null ? (
+        <View
+          testID="qandeel-conversation-composer-override"
+          style={{ backgroundColor: palette.field, paddingTop: 10, paddingBottom: insets.bottom + 10, paddingLeft: insets.left + 14, paddingRight: insets.right + 14 }}
+        >
+          {composerOverride}
+        </View>
+      ) : (
       <View
         testID="qandeel-conversation-composer"
         style={{
@@ -752,6 +829,8 @@ export function ConversationSurface({
           <Control palette={palette} language={language} accessibilityLabel={copy.sendName} onPress={controller.send} testID="qandeel-conversation-send" style={{ width: MIN_TARGET, alignItems: 'center' }}>
             <Glyph name="send" color={palette.primary} direction={fallback} />
           </Control>
+        ) : !locked && composerEnd !== null ? (
+          <View testID="qandeel-conversation-composer-end">{composerEnd}</View>
         ) : null}
       </View>
       )}

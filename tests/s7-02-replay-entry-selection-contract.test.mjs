@@ -124,7 +124,9 @@ const DETECTORS = {
       if (!surface.includes(seam)) out.push(`the surface offers the seam: ${seam}`);
     }
     // While a selection mode is on, the composer is not drawn, and its words are never written by the mode.
-    if (!/\{selection !== null \? null : \(\n\s*<View\n\s*testID="qandeel-conversation-composer"/u.test(surface)) out.push('the selection bar stands where the composer is');
+    // S8B-03 RE-ANCHOR: the composer's place may also hold the composition's own line (a Voice Note being recorded), but the
+    // selection is decided FIRST — while a selection mode is on, neither the composer nor that line is drawn.
+    if (!/\{selection !== null \? null : (?:composerOverride !== null \? \(\n\s*<View\n\s*testID="qandeel-conversation-composer-override"[\s\S]*?\) : )?\(\n\s*<View\n\s*testID="qandeel-conversation-composer"\n/u.test(surface)) out.push('the selection bar stands where the composer is');
     if (/selection[^\n]*setDraft|setDraft[^\n]*selection/u.test(surface)) out.push('the selection never writes the composer');
     return out;
   },

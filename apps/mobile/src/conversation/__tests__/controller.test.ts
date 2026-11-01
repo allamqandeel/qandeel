@@ -471,6 +471,23 @@ describe('W1A-01 — a committed turn restored as PENDING (e.g. after a crash)',
   });
 });
 
+describe('S8B-03 — an exchange committed elsewhere joins the conversation through the same merge', () => {
+  it('adopt merges one exchange of THIS Session only; a later answer without the origin mark keeps the held mark', async () => {
+    const r = rig();
+    await loaded(r, []);
+    const spoken = { ...exchange('fixture: spoken', { replyState: 'PENDING' }), voiceNote: { recordingId: 'e0000000-0000-4000-8000-000000000005', available: true, availableUntil: null, durationMs: 4200 } };
+    r.controller.adopt(spoken, 'another-session');
+    expect(r.controller.getState().exchanges).toEqual([]);
+    r.controller.adopt(spoken, SESSION);
+    expect(r.controller.getState().exchanges).toEqual([spoken]);
+    // The re-check of a PENDING turn answers a typed turn's shape; the turn is the same and stays marked.
+    const { voiceNote: _mark, ...answered } = { ...spoken, replyState: 'COMPLETED' as const, reply: { id: 'reply-1', content: 'fixture: reply', createdAt: spoken.userTurn.createdAt } };
+    r.controller.adopt(answered, SESSION);
+    expect(r.controller.getState().exchanges).toEqual([{ ...answered, voiceNote: spoken.voiceNote }]);
+    expect(r.catchUps.count).toBe(1);
+  });
+});
+
 describe('W1A-01 — one runtime generation', () => {
   it('after retirement nothing is applied, nothing is issued, and no catch-up is requested', async () => {
     const r = rig();

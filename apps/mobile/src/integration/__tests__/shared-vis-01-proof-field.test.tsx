@@ -24,6 +24,7 @@ import { createIntegrationRuntime, type IntegrationRuntime, type IntegrationSess
 import { createS401ProofWorld, type S401ProofWorld } from '../__validation__/s401-proof-world';
 import { SHARED_VIS_WORLD_A, SHARED_VIS_WORLD_B, pick } from '../__validation__/shared-vis-proof-field';
 import { settle } from '../__fixtures__/integration';
+import { createInertVoiceNoteDevice } from '../../voice-note';
 
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -43,6 +44,8 @@ afterEach(async () => {
 
 async function proofApp(world: S401ProofWorld): Promise<{ view: RenderResult; app: IntegrationSessionRuntime }> {
   const built = createIntegrationRuntime({
+    // S8B-03: an in-memory Voice Note device: no microphone, no player, no SQLite.
+    voiceNoteDevice: createInertVoiceNoteDevice(),
     config: world.config, authPort: world.auth, httpFetch: world.fetch, foreground: createManualForegroundSignal('INACTIVE'),
     recoveryStorage: createEphemeralProductRecoveryStorage(), appearanceStore: createEphemeralAppearancePreferenceStore(),
     nativeAppearance: { apply: () => undefined }, pushPlatform: createInertPushPlatformPort(), pushDeviceStore: createEphemeralPushDeviceStore({ declined: true }),

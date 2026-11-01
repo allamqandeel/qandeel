@@ -28,6 +28,7 @@ import {
   createIntroductionWorldsController, createIntroductionsController, createParticipationController, fillSharing, introductionSharingCopy,
   introductionWorldCopy, myPhotoOf, type PhotoChoice, type PhotoSource,
 } from '..';
+import { voiceNoteText } from '../../voice-note/voice-note-copy';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual<object>('react-native/Libraries/ReactNative/RendererProxy'),
@@ -184,10 +185,13 @@ describe('S6-06 — the approved copy', () => {
     }
     expect(INTRODUCTION_SHARING_COPY_GATE.status).toMatch(/CLOSED — 74 rows APPROVED/u);
     const picker = APP.expo.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker') as [string, Record<string, unknown>];
-    expect(picker[1]).toEqual({ photosPermission: INTRODUCTION_SHARING_COPY_ROWS.photosPurpose.en, cameraPermission: false, microphonePermission: false });
+    // S8B-03 RE-ANCHOR (2026-10-31, contract v1.2 §5.6 / §5.7 item 2, OD-7). The picker's camera stays refused and its
+    // media stays images-only; its microphone purpose is now the ONE approved C-12 string instead of `false`, because
+    // Voice Notes declare the microphone and the plugin writes one purpose for the app. The picker never captures sound.
+    expect(picker[1]).toEqual({ photosPermission: INTRODUCTION_SHARING_COPY_ROWS.photosPurpose.en, cameraPermission: false, microphonePermission: voiceNoteText('C-12', 'en') });
     for (const lang of ['ar', 'en'] as const) {
       const locale = JSON.parse(readFileSync(join(__dirname, `../../../locales/${lang}.json`), 'utf8'));
-      expect(locale).toEqual({ ios: { NSPhotoLibraryUsageDescription: INTRODUCTION_SHARING_COPY_ROWS.photosPurpose[lang] } });
+      expect(locale).toEqual({ ios: { NSPhotoLibraryUsageDescription: INTRODUCTION_SHARING_COPY_ROWS.photosPurpose[lang], NSMicrophoneUsageDescription: voiceNoteText('C-12', lang) } });
     }
     expect(APP.expo.android.blockedPermissions).toEqual(['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE']);
   });

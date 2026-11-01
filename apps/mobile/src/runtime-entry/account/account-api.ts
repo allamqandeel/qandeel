@@ -156,8 +156,17 @@ export interface ExportPhotoSet {
   readonly inline: readonly ExportPhotoFile[];
   readonly token: string;
 }
+/**
+ * S8B-03 (CP2, B9) — the reader's own voice recordings beside the package (S8B-02 `qandeel.personal-data-export.voice.v1`):
+ * the server's manifest, saved verbatim, and each listed file's name and length. Never inline, never a key or a URL; each
+ * file is fetched by name, streamed, while the export is READY.
+ */
+export interface ExportVoiceSet {
+  readonly manifest: Record<string, unknown>;
+  readonly files: readonly { readonly fileName: string; readonly bytes: number }[];
+}
 export type ExportBundleOutcome =
-  | { readonly kind: 'READY'; readonly availableUntil: string | null; readonly document: Record<string, unknown>; readonly photos: ExportPhotoSet | null }
+  | { readonly kind: 'READY'; readonly availableUntil: string | null; readonly document: Record<string, unknown>; readonly photos: ExportPhotoSet | null; readonly voices: ExportVoiceSet | null }
   | { readonly kind: 'NOT_READY'; readonly status: PrivacyExportStatus }
   | { readonly kind: 'FAILED' }
   | { readonly kind: 'NETWORK' };
@@ -173,6 +182,24 @@ const PHOTO_MANIFEST_FORMAT = 'qandeel.personal-data-export.photos.v1';
 const PHOTO_FILE_NAME = /^qandeel-photo-\d{2,4}-stage-[123]\.jpg$/u;
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 const MANIFEST_TOKEN = /^[0-9a-f]{64}$/u;
+/** S8B-02's own voice file names (VOICE_EXPORT_FILE_NAME): a Voice Note's M4A, or one track of a call. */
+export const EXPORT_VOICE_FILE_NAME = /^qandeel-voice-(?:note-\d{8}T\d{12}Z(?:-\d+)?\.m4a|call-\d{8}T\d{12}Z(?:-\d+)?-(?:user|qandeel)-\d{6,}\.ogg)$/u;
+const EXPORT_VOICE_FORMAT = 'qandeel.personal-data-export.voice.v1';
+
+/** The voice manifest, or 'NONE' when there is none (or it lists nothing), or null when it is not one this client can trust. */
+function decodeVoiceSet(manifest: unknown): ExportVoiceSet | 'NONE' | null {
+  if (manifest === null || manifest === undefined) return 'NONE';
+  if (!isRecord(manifest) || manifest.format !== EXPORT_VOICE_FORMAT || !Array.isArray(manifest.files)) return null;
+  const files: { fileName: string; bytes: number }[] = [];
+  const seen = new Set<string>();
+  for (const entry of manifest.files) {
+    if (!isRecord(entry) || typeof entry.fileName !== 'string' || !EXPORT_VOICE_FILE_NAME.test(entry.fileName) || seen.has(entry.fileName)) return null;
+    if (typeof entry.bytes !== 'number' || !Number.isInteger(entry.bytes) || entry.bytes <= 0) return null;
+    seen.add(entry.fileName);
+    files.push({ fileName: entry.fileName, bytes: entry.bytes });
+  }
+  return files.length === 0 ? 'NONE' : { manifest, files };
+}
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every((key) => key in value);
 /** The decoded length a base64 text stands for, or -1 when it is not base64. */
@@ -452,14 +479,16 @@ export class AccountApiClient {
   async downloadDataExportBundle(signal?: AbortSignal): Promise<ExportBundleOutcome> {
     const answer = await this.exchange('GET', '/account/privacy/export/download/bundle', undefined, { signal });
     if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
-    const { status, availableUntil, package: document, photoManifest, photoFiles, photoManifestToken } = answer.body;
+    const { status, availableUntil, package: document, photoManifest, photoFiles, photoManifestToken, voiceManifest } = answer.body;
     if (typeof status !== 'string' || !EXPORT_STATUSES.includes(status)) return { kind: 'FAILED' };
     if (status !== 'READY') return { kind: 'NOT_READY', status: status as PrivacyExportStatus };
     const until = instantOrNull(availableUntil);
     if (!isRecord(document) || until === undefined) return { kind: 'FAILED' };
     const photos = decodePhotoSet(photoManifest, photoFiles, photoManifestToken);
     if (photos === null) return { kind: 'FAILED' };
-    return { kind: 'READY', availableUntil: until, document, photos: photos === 'NONE' ? null : photos };
+    // S8B-03: the voice manifest is decoded on its own; an untrustworthy one withholds only the voice files, never the package.
+    const voices = decodeVoiceSet(voiceManifest);
+    return { kind: 'READY', availableUntil: until, document, photos: photos === 'NONE' ? null : photos, voices: voices === null || voices === 'NONE' ? null : voices };
   }
 
   /** S6-07 (CP4) — one listed photo file the bundle did not carry, under the manifest token. */

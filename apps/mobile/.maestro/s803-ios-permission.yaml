@@ -1,0 +1,46 @@
+# S8B-03 CP2 — iOS Simulator: the microphone permission at the moment of intent, refused (B2). VALIDATION ONLY.
+# Nothing asks at launch. The reader's tap on the proof root's own RECORD button (no link: iOS run 41243248744 confirmed a
+# link with «Open» that never reached the app) runs the production capture, whose permission check and request are traced
+# on screen (`PORT …`). iOS's own alert carries C-12 (NSMicrophoneUsageDescription, English: the simulator's language);
+# «Don't Allow» ends the capture PERMISSION_DENIED with nothing prepared and nothing recorded.
+# Driven by scripts/s8b-03/run-s803-ios-proof.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+# Maestro grants every permission at launch by default; this leg needs the REAL never-asked state.
+- launchApp:
+    permissions:
+      microphone: unset
+- extendedWaitUntil:
+    visible:
+      text: ".*S8B-03 proof ready.*"
+    timeout: 180000
+- assertNotVisible:
+    text: ".*Would Like to Access the Microphone.*"
+# A new process: no capture began and nothing was asked.
+- assertNotVisible:
+    text: ".*(capture |PORT |RECORDING #|START ended).*"
+- takeScreenshot: ${PREFIX}-01-nothing-asked-at-launch
+- tapOn:
+    id: s803-record
+- extendedWaitUntil:
+    visible:
+      text: ".*It isn.t used to play recordings.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-the-real-ios-alert-with-c12
+- tapOn:
+    text: "Don.t Allow"
+# The tap reached the production capture: it read the permission (never asked), asked iOS, and ended PERMISSION_DENIED.
+- extendedWaitUntil:
+    visible:
+      text: ".*START ended state=PERMISSION_DENIED from=IDLE app=[a-z]+.*"
+    timeout: 30000
+- assertVisible:
+    text: ".*PORT permission UNDETERMINED.*"
+- assertVisible:
+    text: ".*PORT requestPermission (DENIED|UNDETERMINED).*"
+- assertVisible:
+    text: ".*capture PERMISSION_DENIED.*"
+# Nothing was prepared or recorded.
+- assertNotVisible:
+    text: ".*(PORT prepare|RECORDING #).*"
+- takeScreenshot: ${PREFIX}-03-refused-nothing-recorded

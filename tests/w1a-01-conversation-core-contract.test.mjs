@@ -296,8 +296,12 @@ test('§7 — no Voice, Replay, Activity, Settings, Understanding, Global Shell,
   const glyphs = generated.slice(generated.indexOf('"glyphs"'), generated.indexOf('"type"'));
   // The three W1A glyphs, plus W3-01's P2 `settings` utility glyph for the S-B entry, plus S7-02's P2 `replay` media glyph,
   // plus S7-04's Replay transport: P2's `play` / `pause` media marks.
-  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay', 'play', 'pause'],
-    'only the W1A glyphs, W3-01’s settings glyph, S7-02’s replay glyph and S7-04’s transport are ported');
+  // S8B-03 RE-ANCHOR (contract §5.7.3): P2's `mic` (the geometry of the Call Rail port's P2_CALL_GLYPHS.mic, at 24 px and at
+  // 20 px with P2's stroke for that size) and P2's utility `close`, drawn by the Voice Note slots. This layer still holds no
+  // Voice code: the keys are neutral drawing names, the scan above still refuses `voice` and `microphone` here, and the
+  // Voice Note logic lives in apps/mobile/src/voice-note/, handed to the surface through neutral slots.
+  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay', 'play', 'pause', 'mic', 'micRecording', 'close'],
+    'only the W1A glyphs, W3-01’s settings glyph, S7-02’s replay glyph, S7-04’s transport and S8B-03’s mic and close are ported');
 });
 
 // ---------------------------------------------------------------------------------------------

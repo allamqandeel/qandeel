@@ -201,9 +201,16 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
     assert.doesNotMatch(read(path), /Fake(?:SpeechRecognition|SpeechSynthesis)Adapter|FakeBatchTranscriptionJobs/u, `${path} composes no fake`);
   }
   assert.doesNotMatch(read('apps/api/package.json'), /speechmatics|@google\/genai/iu, 'no provider SDK dependency');
+  // S8B-03 RE-ANCHOR (contract §5.7.4): the recorder and the saver now exist, and the allowed surface is a FOLDER — the
+  // Voice Note client `apps/mobile/src/voice-note/` alone names a voice route. Elsewhere only a test may name one, in an
+  // expectation of what that client calls; no other production module reaches a voice surface.
+  const VOICE_NOTE_DIR = 'apps/mobile/src/voice-note/';
+  const VOICE_SURFACE = /voice_private|server_[a-z_]*voice|turn_voice_source|\/voice\/notes|bundle\/voice/u;
   for (const path of walk(join(root, 'apps/mobile/src')).map((p) => relative(root, p).replaceAll('\\', '/'))) {
-    assert.doesNotMatch(read(path), /voice_private|server_[a-z_]*voice|turn_voice_source|\/voice\/notes|bundle\/voice/u, `${path} reaches no voice surface (the recorder and saver are S8B-03's)`);
+    if (path.startsWith(VOICE_NOTE_DIR) || /\/__tests__\//u.test(path)) continue;
+    assert.doesNotMatch(read(path), VOICE_SURFACE, `${path} reaches no voice surface (only apps/mobile/src/voice-note/ does)`);
   }
+  assert.match(read(`${VOICE_NOTE_DIR}voice-note-api.ts`), /\/voice\/notes/u, 'the Voice Note client is the one that names the routes');
   assert.match(read('apps/api/src/conversation-unit/conversation-unit-commitment.service.ts'), /throw new CommitmentRejectedError\('UNSUPPORTED_SOURCE_MODALITY'\);/u);
 });
 

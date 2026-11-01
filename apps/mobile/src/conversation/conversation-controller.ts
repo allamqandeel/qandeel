@@ -103,6 +103,13 @@ export interface ConversationController {
   send(): void;
   /** Re-issue the unconfirmed submission, same words and same key. Refused in any other phase. */
   retrySubmission(): void;
+  /**
+   * S8B-03 (CP2) — an exchange of THIS Session the server committed through another of its routes, answered whole: it
+   * is merged exactly like any server report (the newer report of the same turn wins), a PENDING reply is re-checked by
+   * the same-key path above, and a completed reply asks the Analysis owners to catch up. It never sends anything, and
+   * an exchange of another Session is ignored.
+   */
+  adopt(exchange: ConversationExchangeView, sessionOfExchange: string): void;
   /** Retire with the runtime generation. Every later outcome is dropped. */
   retire(): void;
 }
@@ -165,7 +172,9 @@ const compareExchanges = (a: ConversationExchangeView, b: ConversationExchangeVi
 function mergeExchanges(held: readonly ConversationExchangeView[], incoming: readonly ConversationExchangeView[]): ConversationExchangeView[] {
   const byId = new Map<string, ConversationExchangeView>();
   for (const exchange of held) byId.set(exchange.userTurn.id, exchange);
-  for (const exchange of incoming) byId.set(exchange.userTurn.id, exchange);
+  // S8B-03: a submission's answer carries less than a history read (never a turn's origin mark), so what is already
+  // held for a turn is kept underneath what arrives.
+  for (const exchange of incoming) byId.set(exchange.userTurn.id, { ...byId.get(exchange.userTurn.id), ...exchange });
   return [...byId.values()].sort(compareExchanges);
 }
 
@@ -398,6 +407,11 @@ export function createConversationController(options: ConversationControllerOpti
       if (!live() || state.submission === null || state.submission.phase !== 'UNCONFIRMED') return;
       const { content, key } = state.submission;
       issue(content, key);
+    },
+    adopt(exchange, sessionOfExchange) {
+      if (!live() || sessionOfExchange !== sessionId) return;
+      update({ exchanges: mergeExchanges(state.exchanges, [exchange]) });
+      if (exchange.replyState === 'COMPLETED') onReplyCommitted();
     },
     retire() {
       if (retired) return;

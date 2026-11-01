@@ -1142,8 +1142,14 @@ test('no generated native project or dangerous mod entered the tree', async () =
   // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
   // S6-06 RE-ANCHOR (D-03, WP0 correction 4): Expo's first-party expo-image-picker, last, with the camera and the microphone
   // OFF and the app's own approved Photos purpose string (PD-83); typed mods only, no dangerous mod, no generated project.
+  // S8B-03 RE-ANCHOR (contract §5.6 / §5.7.1, OD-6 / OD-7): before the picker, the Voice Note backup plugin (a typed
+  // manifest mod only; its two rule files ship in the local module's Android res/, no dangerous mod) and Expo's
+  // first-party expo-audio with background recording and playback OFF and the approved C-12; the picker carries C-12
+  // instead of `false`, which would strip the microphone from the whole app.
   assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
-    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: false }]]);
+    './plugins/with-qandeel-voice-backup',
+    ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
+    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]]);
   assert.equal(existsSync(new URL('apps/mobile/ios', root)), false);
   assert.equal(existsSync(new URL('apps/mobile/android', root)), false);
 });

@@ -1,0 +1,124 @@
+name: S8B-03 iOS Simulator proof — Personal Voice Notes
+# S8B-03 CP2 (contract v1.2 §8.2 B2 – B6, B9; D5) — the Voice Note native capability on the iOS Simulator. VALIDATION ONLY.
+#
+# The binary's ROOT COMPONENT is the S8B-03 proof root (one recorded change of the mobile manifest's `main`, made by
+# select-s803-proof-entry.mjs in this ephemeral checkout only); the voice-note modules it drives are the shipped ones.
+# It talks to the fake voice server (scripts/s8b-03/fake-voice-server.cjs) on 127.0.0.1:8803, with the CP1 duration
+# prover and consent text from the built API. The proof build's Info.plist allows local networking (that loopback
+# server only); the Product build is never changed.
+#
+# A GitHub macOS runner has no microphone (contract §8.3): what the simulator records is silence. NOT proven here: sound
+# quality, the real microphone path, the real-device prompt, a call, a headset — the Android device proof and the
+# record's limits carry those. No credential exists in this workflow: no provider key, no API origin, nothing paid.
+#
+# Every screenshot, the fake server's content-free log, the uploaded silence files and their container facts are
+# uploaded, pass or fail. A red run stays red: nothing here retries.
+#
+# Scoped to the S8B-03 CP2 branch and manual dispatch: it proves those heads and is inert everywhere else.
+on:
+  push:
+    branches: ['s8b/s8b-03-cp2']
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/api/src/voice/**'
+      - 'apps/api/src/voice-media/**'
+      - 'scripts/s8b-03/**'
+      - 'package-lock.json'
+      - '.github/workflows/s8b-03-ios-proof.yml'
+  workflow_dispatch:
+concurrency:
+  group: s8b-03-ios-proof-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+jobs:
+  proof-ios:
+    name: S8B-03 proof — iOS 26.5 simulator
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Build the API (the fake server uses CP1's duration prover and consent text)
+        run: npm run build:api
+      - name: Select the S8B-03 proof entry (validation build only; recorded)
+        run: S803_DEVICE_PROOF=1 node apps/mobile/scripts/select-s803-proof-entry.mjs --apply
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Read the generated Info.plist (C-12, no background mode), then allow the loopback fake server (proof build only)
+        run: |
+          plist="$(ls apps/mobile/ios/*/Info.plist | grep -v Pods | head -n 1)"
+          echo "plist=$plist"
+          /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$plist" | tee "$RUNNER_TEMP/c12.txt"
+          grep -qx "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." "$RUNNER_TEMP/c12.txt"
+          if /usr/libexec/PlistBuddy -c 'Print :UIBackgroundModes' "$plist" >/dev/null 2>&1; then echo 'UIBackgroundModes must not exist'; exit 1; fi
+          /usr/libexec/PlistBuddy -c 'Add :NSAppTransportSecurity dict' "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Delete :NSAppTransportSecurity:NSAllowsLocalNetworking' "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true' "$plist"
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the proof Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          echo "workspace=$workspace scheme=$scheme"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_APP_PATH=$app" >> "$GITHUB_ENV"
+      - name: Boot the authorized simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then echo "STOP: ${IOS_SIMULATOR_NAME} / ${IOS_SIMULATOR_RUNTIME_SUFFIX} is not on this image"; xcrun simctl list devices available; exit 1; fi
+          xcrun simctl boot "$udid" || true
+          xcrun simctl bootstatus "$udid" -b
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Prove the Voice Note capability on the iOS simulator
+        timeout-minutes: 45
+        env:
+          # Run 41236881549: `IOSDriverTimeoutException: iOS driver not ready in time` about 149 s into the readiness
+          # probe, before any Product step. cli-2.10.0 reads this variable (its own message names it; Mobile CI sets it).
+          # Each flow stays inside its 300 s outer bound and the step inside its 45 minutes.
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: 240000
+        run: bash scripts/s8b-03/run-s803-ios-proof.sh "$IOS_APP_PATH" "$RUNNER_TEMP/s8b-03-ios" "$IOS_SIM_UDID"
+      - name: Summarize
+        if: always()
+        run: |
+          { echo '### S8B-03 iOS Simulator proof'; echo '```'; cat "$RUNNER_TEMP/s8b-03-ios/summary.txt" 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8b-03-ios-proof-${{ github.sha }}
+          path: ${{ runner.temp }}/s8b-03-ios
+          if-no-files-found: warn
+          include-hidden-files: true

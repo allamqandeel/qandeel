@@ -282,6 +282,59 @@ export const CANONICAL_VISUAL = {
           "r": 1.4
         }
       ]
+    },
+    "mic": {
+      "size": 24,
+      "mirrorsInRtl": false,
+      "strokes": [
+        {
+          "d": "M5.6 11.2a6.4 6.4 0 0 0 12.8 0M12 17.6v3",
+          "strokeWidth": 1.6
+        }
+      ],
+      "dots": [],
+      "strokeRects": [
+        {
+          "x": 9,
+          "y": 3,
+          "width": 6,
+          "height": 11.2,
+          "r": 3,
+          "strokeWidth": 1.6
+        }
+      ]
+    },
+    "micRecording": {
+      "size": 20,
+      "mirrorsInRtl": false,
+      "strokes": [
+        {
+          "d": "M5.6 11.2a6.4 6.4 0 0 0 12.8 0M12 17.6v3",
+          "strokeWidth": 1.75
+        }
+      ],
+      "dots": [],
+      "strokeRects": [
+        {
+          "x": 9,
+          "y": 3,
+          "width": 6,
+          "height": 11.2,
+          "r": 3,
+          "strokeWidth": 1.75
+        }
+      ]
+    },
+    "close": {
+      "size": 24,
+      "mirrorsInRtl": false,
+      "strokes": [
+        {
+          "d": "M18 6L6.00081 17.9992M17.9992 18L6 6.00085",
+          "strokeWidth": 1.6
+        }
+      ],
+      "dots": []
     }
   },
   "type": {

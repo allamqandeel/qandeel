@@ -55,7 +55,7 @@
  * The frame is laid out logically (`direction`), so the start and end edges are the reader's in Arabic and
  * English alike. Every colour is the canonical palette's, in the reader's effective appearance.
  */
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, BackHandler, ScrollView, Text, View, findNodeHandle } from 'react-native';
 
 import { APPEARANCE_PREFERENCES, AppearanceStatusBar, useAppearance, useAppearanceChoice, type AppearancePreference } from '../appearance';
@@ -64,7 +64,9 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import { ActionRow, EmailChange, IdentityRow, LoginIdChange, NameChange, PasswordChange } from './AccountSecuritySection';
 import type { AccountIdentityController, AccountIdentityState } from './account-identity-controller';
 import { settingsCopy } from './copy';
-import { saveExportBundle } from './export-file';
+import { saveExportBundle, type VoiceExportSaveResult } from './export-file';
+import { voiceNoteText } from '../voice-note/voice-note-copy';
+import type { ExportVoiceSet } from '../runtime-entry';
 import { openLanguageSettings } from './language-settings';
 import type { PrivacyDataController, PrivacyDataState } from './privacy-data-controller';
 import { NotificationsSettings } from './NotificationsSection';
@@ -121,6 +123,13 @@ export interface SettingsSurfaceProps {
   readonly interactionPreferences?: InteractionPreferencesController;
   /** A3-01: open directly on Notifications & Activity (from Activity, or a Direct Entry); Back from it is then Back. */
   readonly initialPage?: 'NOTIFICATIONS';
+  /** S8B-03 — «الرسائل الصوتية» (C-44 … C-48), drawn after Privacy & Data. Presentation only. */
+  readonly voiceSection?: ReactNode;
+  /**
+   * S8B-03 — saving the reader's own voice recordings that a downloaded package lists (C-49 … C-53). Without it, a
+   * package's voice files are not offered here.
+   */
+  readonly saveExportVoices?: (voices: ExportVoiceSet) => Promise<VoiceExportSaveResult>;
 }
 
 /** The change shown in place of the groups, if any. */
@@ -230,7 +239,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, introductionShares, sharedAlerts, introductionAlerts, notifications, push, interactionPreferences, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, introductionShares, sharedAlerts, introductionAlerts, notifications, push, interactionPreferences, initialPage, voiceSection = null, saveExportVoices }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -350,6 +359,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
   const [deletionNotice, setDeletionNotice] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // S8B-03: the voice files of the package just saved, offered by their own act (C-49); its result beneath it.
+  const [voicesToSave, setVoicesToSave] = useState<ExportVoiceSet | null>(null);
+  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
+  const [savingVoices, setSavingVoices] = useState(false);
   const privacyActRef = useRef(false);
   const say = useCallback((setNotice: (said: string | null) => void, said: string | null) => {
     setNotice(said);
@@ -365,13 +378,28 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     if (result?.kind === 'READY') {
       const saved = await saveExportBundle(result.document, result.photos);
       said = saved === 'SAVED' ? copy.privacy.exportSaved : saved === 'FAILED' ? copy.privacy.exportSaveFailed : null;
+      // S8B-03: once the package is saved, the reader's own voice recordings it lists are offered (C-49).
+      setVoiceNotice(null);
+      setVoicesToSave(saved === 'SAVED' && saveExportVoices !== undefined ? result.voices : null);
     } else if (result?.kind === 'RETRY') {
       said = copy.privacy.network;
     }
     privacyActRef.current = false;
     setDownloading(false);
     say(setExportNotice, said);
-  }, [copy, privacy, say]);
+  }, [copy, privacy, say, saveExportVoices]);
+  const saveVoices = useCallback(async () => {
+    if (voicesToSave === null || saveExportVoices === undefined || privacyActRef.current) return;
+    privacyActRef.current = true;
+    setSavingVoices(true);
+    setVoiceNotice(null);
+    const result = await saveExportVoices(voicesToSave);
+    privacyActRef.current = false;
+    setSavingVoices(false);
+    if (result === 'SAVED' || result === 'SOME_UNAVAILABLE') setVoicesToSave(null);
+    const line = result === 'SAVED' ? 'C-50' : result === 'SOME_UNAVAILABLE' ? 'C-52' : result === 'FAILED_REMOVED' ? 'C-51' : result === 'FAILED_REMAINS' ? 'C-53' : null;
+    say(setVoiceNotice, line === null ? null : voiceNoteText(line, language));
+  }, [voicesToSave, saveExportVoices, say, language]);
   const cancelDeletion = useCallback(async () => {
     if (privacy === undefined || privacyActRef.current) return;
     privacyActRef.current = true;
@@ -619,6 +647,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                   onCancelDeletion={() => void cancelDeletion()}
                   rowRef={rowRef}
                 />
+                {voicesToSave !== null || voiceNotice !== null ? (
+                  <ActionRow label={voiceNoteText('C-49', language)} notice={voiceNotice} busy={savingVoices} language={language} palette={palette}
+                    onPress={() => void saveVoices()} testID="qandeel-export-voices" />
+                ) : null}
                 {formerShared !== undefined ? (
                   <FormerSharedMaterialRow language={language} palette={palette} onOpen={() => openChange('FORMER_SHARED')} rowRef={rowRef('FORMER_SHARED')} />
                 ) : null}
@@ -627,6 +659,8 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                 ) : null}
               </View>
             ) : null}
+
+            {voiceSection}
 
             <View testID="qandeel-settings-group-support">
               <GroupHeading text={copy.supportGroup} language={language} palette={palette} testID="qandeel-settings-group-support-name" />

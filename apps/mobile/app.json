@@ -35,12 +35,21 @@
           "mode": "production"
         }
       ],
+      "./plugins/with-qandeel-voice-backup",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
       [
         "expo-image-picker",
         {
           "photosPermission": "QANDEEL uses only the photo you choose, to share it in your introduction.",
           "cameraPermission": false,
-          "microphonePermission": false
+          "microphonePermission": "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings."
         }
       ]
     ],

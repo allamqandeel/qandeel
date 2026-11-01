@@ -240,3 +240,22 @@ jest.mock('expo-image-picker', () => ({
   getPendingResultAsync: jest.fn(async () => null),
   UIImagePickerPreferredAssetRepresentationMode: { Automatic: 'automatic', Compatible: 'compatible', Current: 'current' },
 }));
+
+// S8B-03 — `expo-audio` extends its native classes at IMPORT time, so without the native module its entry point cannot
+// even load in Jest. Its pure enums (the recording constants) are the real ones; every native entry is an inert
+// stand-in. Nothing here records, plays or asks for a permission: the Voice Note rules are proven against their ports
+// (voice-note-capture / voice-note-playback), and the platform behaviour on real devices (contract §8.2 B1–B9).
+jest.mock('expo-audio', () => {
+  const constants = jest.requireActual('expo-audio/build/RecordingConstants');
+  const denied = { granted: false, canAskAgain: true, status: 'undetermined', expires: 'never' };
+  return {
+    ...constants,
+    AudioModule: { AudioRecorder: class AudioRecorder {} },
+    createAudioPlayer: jest.fn(() => {
+      throw new Error('no audio player in Jest');
+    }),
+    setAudioModeAsync: jest.fn(async () => undefined),
+    getRecordingPermissionsAsync: jest.fn(async () => denied),
+    requestRecordingPermissionsAsync: jest.fn(async () => denied),
+  };
+});

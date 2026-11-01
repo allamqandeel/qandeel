@@ -103,16 +103,26 @@ test('5 — the native build: no camera, microphone, storage or media permission
   const picker = app.plugins.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker');
   const copy = read(`${INTRO}/introduction-sharing-copy.ts`);
   const purpose = /photosPurpose: \{ id: 'PD-83', ar: ("[^"]*"), en: ("[^"]*") \}/u.exec(copy);
-  assert.deepEqual(picker[1], { photosPermission: JSON.parse(purpose[2]), cameraPermission: false, microphonePermission: false });
+  // S8B-03 RE-ANCHOR (contract §5.6 / §5.7.2, OD-7): the app now records Voice Notes, so the picker carries the approved
+  // C-12 instead of `false` (which would strip the microphone app-wide). The camera stays OFF, and the picker still never
+  // captures sound: the S8B-03 native Voice Note gate proves its one call asks for images only and launches no camera.
+  const c12 = /id: 'C-12',\s*ar: '(?:[^'\\]|\\.)*',\s*en: '((?:[^'\\]|\\.)*)'/u.exec(read('apps/mobile/src/voice-note/voice-note-copy.ts'));
+  assert.deepEqual(picker[1], { photosPermission: JSON.parse(purpose[2]), cameraPermission: false, microphonePermission: c12[1].replace(/\\(.)/gu, '$1') });
   assert.deepEqual(app.android.blockedPermissions, ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE']);
   assert.deepEqual(app.locales, { ar: './locales/ar.json', en: './locales/en.json' });
   assert.equal(JSON.parse(read('apps/mobile/locales/ar.json')).ios.NSPhotoLibraryUsageDescription, JSON.parse(purpose[1]));
   assert.equal(JSON.parse(read('apps/mobile/locales/en.json')).ios.NSPhotoLibraryUsageDescription, JSON.parse(purpose[2]));
   const gate = read('apps/mobile/scripts/verify-introduction-photo-native.mjs');
-  for (const name of ['CAMERA', 'RECORD_AUDIO', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'READ_MEDIA_IMAGES', 'NSCameraUsageDescription', 'NSMicrophoneUsageDescription']) {
+  for (const name of ['CAMERA', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'READ_MEDIA_IMAGES', 'NSCameraUsageDescription']) {
     assert.ok(gate.includes(name), `the native gate checks ${name}`);
   }
   assert.match(read('.github/workflows/mobile-ci.yml'), /run: npm run prebuild:introduction-photo:mobile\}/u, 'Mobile CI runs the native gate');
+  // S8B-03 RE-ANCHOR: the photo gate lost ONLY its microphone rule; the microphone is the Voice Note gate's, in Mobile CI.
+  const voiceGate = read('apps/mobile/scripts/verify-voice-note-native.mjs');
+  for (const name of ['RECORD_AUDIO', 'NSMicrophoneUsageDescription', 'UIBackgroundModes', 'FOREGROUND_SERVICE', 'launchCameraAsync']) {
+    assert.ok(voiceGate.includes(name), `the Voice Note native gate checks ${name}`);
+  }
+  assert.match(read('.github/workflows/mobile-ci.yml'), /run: npm run prebuild:voice-note:mobile\}/u, 'Mobile CI runs the Voice Note native gate');
 });
 
 test('6 — V-1 kept: one sharing action beside END in the live World; SUCCESS only with a real transition; no colour literal', () => {

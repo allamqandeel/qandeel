@@ -1,0 +1,12 @@
+# S8B-03 CP2 — iOS Simulator: tap one of the proof root's own buttons (ID: s803-record / s803-stop) — a reader's tap, so the
+# app never leaves the active state the way a link opened from outside can — then wait for its result line (EXPECT, a
+# regular expression over the s803-log text). VALIDATION ONLY. Input: PREFIX, ID, EXPECT.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: ${ID}
+- extendedWaitUntil:
+    visible:
+      text: ${EXPECT}
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-${ID}

@@ -12,6 +12,7 @@
  * it; the lifecycle rules that need it awake say so explicitly.
  */
 
+import { createInertVoiceNoteDevice } from '../../voice-note';
 import {
   TEST_CONFIG,
   authPortDouble,
@@ -127,6 +128,8 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
     pushPlatform: options.pushPlatform ?? createInertPushPlatformPort(),
     pushDeviceStore: options.pushDeviceStore ?? createEphemeralPushDeviceStore(),
     sharedLinks: options.sharedLinks ?? NO_SHARED_LINKS,
+    // S8B-03: an in-memory Voice Note device: no microphone, no player, no SQLite.
+    voiceNoteDevice: createInertVoiceNoteDevice(),
   });
   if (!built.ok) throw new Error(`the harness could not build a runtime: ${built.phase.detail}`);
   const runtime = built.runtime;

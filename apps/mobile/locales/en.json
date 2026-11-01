@@ -1,5 +1,6 @@
 {
   "ios": {
-    "NSPhotoLibraryUsageDescription": "QANDEEL uses only the photo you choose, to share it in your introduction."
+    "NSPhotoLibraryUsageDescription": "QANDEEL uses only the photo you choose, to share it in your introduction.",
+    "NSMicrophoneUsageDescription": "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings."
   }
 }

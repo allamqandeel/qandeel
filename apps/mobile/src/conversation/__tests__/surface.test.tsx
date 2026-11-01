@@ -3,7 +3,7 @@
  * direction, accessible names, the approved send / waiting / failure states, and nothing invented.
  */
 import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
-import { AccessibilityInfo, StyleSheet } from 'react-native';
+import { AccessibilityInfo, FlatList, StyleSheet } from 'react-native';
 
 import { ConversationSurface, conversationCopy, createConversationController, type ConversationController } from '..';
 import type { ChromeLanguage } from '../../orientation-chrome';
@@ -343,6 +343,110 @@ describe('W1A-01 — nothing but the approved words and the one depth control', 
       const s = style(view.getByTestId(id));
       expect(s.minWidth as number).toBeGreaterThanOrEqual(44);
       expect(s.minHeight as number).toBeGreaterThanOrEqual(44);
+    }
+  });
+});
+
+describe('S8B-03 — the neutral slots: the surface draws what it is handed, and none of its words', () => {
+  async function slotted(props: Partial<Parameters<typeof ConversationSurface>[0]>, history = [exchange('fixture: words', { reply: 'fixture: reply' })]) {
+    const transport = scriptedTransport();
+    const controller = createConversationController({
+      sessionId: SESSION, transport, isCurrent: () => true, onReplyCommitted: () => undefined,
+      newSubmissionKey: () => 'key-1', setTimer: () => null, clearTimer: () => undefined,
+    });
+    const view = await render(<ConversationSurface controller={controller} language="en" insets={INSETS} onOpenAnalysis={() => undefined} {...props} />);
+    await act(async () => {
+      transport.answerRead(page(history));
+      await flush();
+    });
+    return { view, controller };
+  }
+
+  it('composerEnd stands at the END edge only while there are no words to send', async () => {
+    const { view } = await slotted({ composerEnd: <></> });
+    expect(view.getByTestId('qandeel-conversation-composer-end')).toBeTruthy();
+    await type(view, 'fixture: words');
+    expect(view.queryByTestId('qandeel-conversation-composer-end')).toBeNull();
+    expect(view.getByTestId('qandeel-conversation-send')).toBeTruthy();
+  });
+
+  it('composerOverride takes the composer’s place on the same FIELD ground; the typed words stay in the controller', async () => {
+    const { view, controller } = await slotted({});
+    await type(view, 'fixture: kept');
+    await act(async () => {
+      await view.rerender(<ConversationSurface controller={controller} language="en" insets={INSETS} onOpenAnalysis={() => undefined} composerOverride={<></>} />);
+    });
+    expect(view.queryByTestId('qandeel-conversation-composer')).toBeNull();
+    expect(style(view.getByTestId('qandeel-conversation-composer-override')).backgroundColor).toBe(PALETTE.field);
+    expect(controller.getState().draft).toBe('fixture: kept');
+  });
+
+  it('threadTail follows the committed thread; utteranceBody draws its own slab, on the reader’s edge, for the exchanges it recognizes', async () => {
+    const spoken = exchange('fixture: spoken words', { reply: 'fixture: answer' });
+    const plain = exchange('fixture: typed words', { reply: 'fixture: answer two' });
+    const { view } = await slotted({
+      threadTail: <></>,
+      utteranceBody: (e) => (e.userTurn.id === spoken.userTurn.id ? <></> : null),
+    }, [spoken, plain]);
+    expect(view.getByTestId('qandeel-conversation-tail')).toBeTruthy();
+    const drawn = view.getByTestId(`qandeel-utterance-${spoken.userTurn.id}`);
+    expect(drawn.props.accessible).not.toBe(true);
+    expect(drawn.props.accessibilityLabel).toBeUndefined();
+    // The place it sits in is not a surface: the body draws the slab (P4-C3 §1 has its own width and insets).
+    expect(style(drawn).backgroundColor).toBeUndefined();
+    expect(texts(view.toJSON())).not.toContain('fixture: spoken words');
+    // An exchange the composition does not recognize is drawn here exactly as before.
+    expect(view.getByTestId(`qandeel-utterance-${plain.userTurn.id}`).props.accessibilityLabel).toBe(conversationCopy('en').userTurnName('fixture: typed words'));
+  });
+
+  it('device finding: a follow to the newest survives the thread end growing again mid-animation; the reader’s own drag ends it', async () => {
+    const toEnd = jest.spyOn(FlatList.prototype, 'scrollToEnd').mockImplementation(() => undefined);
+    const frames: FrameRequestCallback[] = [];
+    const raf = jest.spyOn(global, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    const nextFrame = () => act(async () => {
+      for (const callback of frames.splice(0)) callback(0);
+    });
+    try {
+      const { view } = await slotted({ threadTail: <></> });
+      const list = view.getByTestId('qandeel-conversation-thread');
+      const scrolled = (y: number, content: number) => act(async () => {
+        list.props.onScroll({ nativeEvent: { contentOffset: { x: 0, y }, contentSize: { width: 390, height: content }, layoutMeasurement: { width: 390, height: 600 } } });
+      });
+      const grown = () => act(async () => {
+        list.props.onContentSizeChange(390, 2000);
+      });
+      await grown(); // positioned at the newest once the history is read
+      await nextFrame();
+      await nextFrame();
+      expect(toEnd).toHaveBeenCalledTimes(3); // and placed again while the native list may still clamp it
+      await scrolled(1400, 2000); // the reader is at the newest
+      toEnd.mockClear();
+      await grown(); // the end grows: followed
+      expect(toEnd).toHaveBeenCalledTimes(1);
+      // A scroll the native list clamped short (it still had the previous height) is applied again over two frames.
+      await nextFrame();
+      await nextFrame();
+      await nextFrame();
+      expect(toEnd).toHaveBeenCalledTimes(3);
+      toEnd.mockClear();
+      await scrolled(1100, 2300); // mid-animation, still far from the new end
+      await grown(); // it grows again before the animation lands: still followed
+      expect(toEnd).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        list.props.onScrollBeginDrag();
+      });
+      await nextFrame(); // the reader's drag cancels what was still to be applied
+      expect(toEnd).toHaveBeenCalledTimes(1);
+      await scrolled(400, 2300); // the reader drags up to read older turns
+      await grown();
+      await nextFrame();
+      expect(toEnd).toHaveBeenCalledTimes(1); // never pulled away from what they are reading
+    } finally {
+      toEnd.mockRestore();
+      raf.mockRestore();
     }
   });
 });

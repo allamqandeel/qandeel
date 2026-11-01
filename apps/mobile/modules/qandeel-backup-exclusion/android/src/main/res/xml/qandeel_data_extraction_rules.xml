@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- S8B-03 (OD-6): unsent Voice Note drafts stay on this device. Shipped by modules/qandeel-backup-exclusion; wired by plugins/with-qandeel-voice-backup.js. -->
+<data-extraction-rules>
+  <cloud-backup>
+    <exclude domain="file" path="qandeel-voice-drafts/" />
+    <exclude domain="file" path="Audio/" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db-wal" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db-shm" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db-journal" />
+  </cloud-backup>
+  <device-transfer>
+    <exclude domain="file" path="qandeel-voice-drafts/" />
+    <exclude domain="file" path="Audio/" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db-wal" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db-shm" />
+    <exclude domain="file" path="SQLite/qandeel-voice-drafts.db-journal" />
+  </device-transfer>
+</data-extraction-rules>

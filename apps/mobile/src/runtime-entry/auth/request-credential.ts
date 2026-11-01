@@ -127,3 +127,16 @@ export function createAuthorizedFetch({ credential, authGeneration, fetch }: Aut
     });
   };
 }
+
+/**
+ * S8B-03 — the bearer for a request a native consumer issues itself (the media player reading a Voice Note with Range):
+ * the same rule as {@link createAuthorizedFetch}, decided at the moment it is asked, and refused (null) for no identity or
+ * another identity's generation. It is handed straight to that consumer as a header — never put in a URL, never logged.
+ */
+export function createAuthorizationHeader({ credential, authGeneration }: Omit<AuthorizedFetchOptions, 'fetch'>): () => Record<string, string> | null {
+  return () => {
+    const current = credential();
+    if (current === null || current.authGeneration !== authGeneration) return null;
+    return { Authorization: `Bearer ${current.accessToken}` };
+  };
+}

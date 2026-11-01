@@ -1,0 +1,9 @@
+# S8B-03 CP2 — iOS Simulator: wait for one result line of the proof root already on screen (EXPECT, a regular expression)
+# without sending anything — e.g. after the app came back from the background. VALIDATION ONLY. Input: PREFIX, SHOT, EXPECT.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      text: ${EXPECT}
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-${SHOT}

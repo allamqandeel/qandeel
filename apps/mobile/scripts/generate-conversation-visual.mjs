@@ -149,11 +149,14 @@ function primitives(markup) {
   // S7-04: a solid rounded rectangle (the media transport's pause bars), taken as P2 drew it.
   const rects = [...markup.matchAll(/<rect x="([0-9.]+)" y="([0-9.]+)" width="([0-9.]+)" height="([0-9.]+)" rx="([0-9.]+)" fill="currentColor"\/>/gu)]
     .map((m) => ({ x: Number(m[1]), y: Number(m[2]), width: Number(m[3]), height: Number(m[4]), r: Number(m[5]) }));
+  // S8B-03: a stroked rounded rectangle (the microphone's capsule), taken as P2 drew it, at its own optical stroke.
+  const strokeRects = [...markup.matchAll(/<rect x="([0-9.]+)" y="([0-9.]+)" width="([0-9.]+)" height="([0-9.]+)" rx="([0-9.]+)" fill="none" stroke="currentColor" stroke-width="([0-9.]+)"/gu)]
+    .map((m) => ({ x: Number(m[1]), y: Number(m[2]), width: Number(m[3]), height: Number(m[4]), r: Number(m[5]), strokeWidth: Number(m[6]) }));
   // Every drawn element is taken, and nothing is dropped: a shape the parser does not know is a refusal, not a gap.
   const drawn = (markup.match(/<(path|circle|rect)\b/gu) ?? []).length;
-  if (drawn !== strokes.length + dots.length + fills.length + rects.length) throw new Error(`glyph markup carries a shape that is not taken: ${markup}`);
+  if (drawn !== strokes.length + dots.length + fills.length + rects.length + strokeRects.length) throw new Error(`glyph markup carries a shape that is not taken: ${markup}`);
   if (strokes.length === 0 && fills.length === 0 && rects.length === 0) throw new Error(`nothing drawn in glyph markup: ${markup}`);
-  return { strokes, dots, ...(fills.length === 0 ? {} : { fills }), ...(rects.length === 0 ? {} : { rects }) };
+  return { strokes, dots, ...(fills.length === 0 ? {} : { fills }), ...(rects.length === 0 ? {} : { rects }), ...(strokeRects.length === 0 ? {} : { strokeRects }) };
 }
 
 const open = NUANCES.open;
@@ -190,6 +193,22 @@ glyphs.play = { size: 20, mirrorsInRtl: false, ...primitives(SIG.play(open, 20))
 glyphs.pause = { size: 20, mirrorsInRtl: false, ...primitives(SIG.pause(open, 20)) };
 if (glyphs.play.fills?.length !== 1 || glyphs.play.strokes.length !== 0) throw new Error('P2 play is no longer one solid mark');
 if (glyphs.pause.rects?.length !== 2 || glyphs.pause.strokes.length !== 0) throw new Error('P2 pause is no longer two solid bars');
+// S8B-03 — the Voice Note, at P2's frozen render sizes (P2 closure §3, §4, §8; P2-A inventory §2 and geometry spec):
+// P2's own `mic` at the Conversation line's 24 px (record entry) and at 20 px, the size P4-C3 §3 sets beside the capture
+// word, each at P2's optical stroke for its size; and the curated Hugeicons Free `close` (cancel), re-weighted to the P2
+// optical stroke for 24 px. The voice message's play / pause are P2's media transport above, at its frozen 20 px. Send
+// is `send` above. None of them is directional. The microphone is the geometry the Call Rail port draws
+// (`P2_CALL_GLYPHS.mic`, VPORT-02); a test holds the two equal.
+glyphs.mic = { size: 24, mirrorsInRtl: false, ...primitives(SIG.mic(open, 24)) };
+glyphs.micRecording = { size: 20, mirrorsInRtl: false, ...primitives(SIG.mic(open, 20)) };
+for (const [name, size] of [['mic', 24], ['micRecording', 20]]) {
+  const g = glyphs[name];
+  if (g.strokeRects?.length !== 1 || g.strokes.length !== 1 || [...g.strokes, ...g.strokeRects].some((s) => s.strokeWidth !== strokeFor(size))) {
+    throw new Error(`P2 mic is no longer one capsule and one cradle at the optical stroke for ${size} px`);
+  }
+}
+glyphs.close = { size: 24, mirrorsInRtl: false, ...primitives(utilInner('close', { size: 24 }).inner) };
+if (glyphs.close.strokes.length !== 1 || glyphs.close.strokes[0].strokeWidth !== strokeFor(24)) throw new Error('P2 close is not one stroke at the optical stroke for 24 px');
 
 
 // ------------------------------------------------------------------------------------------ type

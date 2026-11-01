@@ -74,6 +74,7 @@ export type {
 export { ConversationSessionApiClient } from './conversation/conversation-session-api';
 export type {
   ConversationExchangeView,
+  ConversationVoiceNoteView,
   ConversationHistoryOutcome,
   ConversationHistoryPageView,
   ConversationReplyState,
@@ -84,7 +85,7 @@ export type {
   ConversationUnknownReason,
   ConversationUserTurnView,
 } from './conversation/conversation-turn-api';
-export { CONVERSATION_HISTORY_PAGE_LIMIT, ConversationTurnApiClient } from './conversation/conversation-turn-api';
+export { CONVERSATION_HISTORY_PAGE_LIMIT, ConversationTurnApiClient, decodeSubmitResponse } from './conversation/conversation-turn-api';
 export type {
   AccountApiConfig,
   AccountFirstUseOutcome,
@@ -108,13 +109,14 @@ export type {
   ExportPhotoFile,
   ExportPhotoOutcome,
   ExportPhotoSet,
+  ExportVoiceSet,
   PrivacyDeletionStatus,
   PrivacyExportStatus,
   PrivacyRequestOutcome,
   PrivacyStateOutcome,
   PrivacyStateView,
 } from './account/account-api';
-export { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
+export { AccountApiClient, EXPORT_VOICE_FILE_NAME, LoginIdAvailabilityClient } from './account/account-api';
 export type {
   UnderstandingApiConfig,
   UnderstandingConfidence,

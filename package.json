@@ -217,6 +217,7 @@
     "prebuild:mobile": "npm run prebuild:verify --workspace @qandeel/mobile",
     "prebuild:launch-identity:mobile": "npm run prebuild:verify-launch-identity --workspace @qandeel/mobile",
     "prebuild:introduction-photo:mobile": "npm run prebuild:verify-introduction-photo --workspace @qandeel/mobile",
+    "prebuild:voice-note:mobile": "npm run prebuild:verify-voice-note --workspace @qandeel/mobile",
     "test:mobile-foundation-contract": "node --test tests/mobile-foundation-toolchain-contract.test.mjs",
     "test:mobile-canonical-state-contract": "node --test tests/mobile-canonical-state-contract.test.mjs",
     "test:living-analysis-map-runtime-contract": "node --test tests/living-analysis-map-runtime-contract.test.mjs",

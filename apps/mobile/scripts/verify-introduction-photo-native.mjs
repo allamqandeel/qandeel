@@ -1,12 +1,16 @@
 // S6-06 native photo-permission gate (WP0 correction 4). It proves, on the REAL generated projects, what the app config
 // declares for choosing an Introduction photo, and nothing more:
 //
-//   - Android: the system Photo Picker needs no permission. CAMERA and RECORD_AUDIO (expo-image-picker's `false`
-//     options) and READ / WRITE_EXTERNAL_STORAGE (`android.blockedPermissions`) are declared `tools:node="remove"`, so no
+//   - Android: the system Photo Picker needs no permission. CAMERA (expo-image-picker's `false` option) and
+//     READ / WRITE_EXTERNAL_STORAGE (`android.blockedPermissions`) are declared `tools:node="remove"`, so no
 //     library can bring them back at manifest merge; no READ_MEDIA_* permission is requested at all.
 //   - iOS: PHPicker needs no library access either, but the app keeps its OWN Photos purpose string (PD-83, approved in
 //     both languages) so the build stays valid (ITMS-90683): English in Info.plist, Arabic and English in InfoPlist.strings.
-//     No camera, microphone or add-to-library purpose string exists.
+//     No camera or add-to-library purpose string exists.
+//
+// RE-ANCHORED by S8B-03 (CP2, contract §5.6, OD-7, 2026-10-31): this gate loses ONLY its microphone rule. The app now
+// records Voice Notes, so RECORD_AUDIO and NSMicrophoneUsageDescription (the approved C-12, in both languages) exist and
+// are proven by scripts/verify-voice-note-native.mjs; the picker still never captures sound (its source guard is there).
 //
 // It then PLANTS a defect for every check family and requires each one to be caught, discards the generated `android/`
 // and `ios/` output, and requires the repository state to be unchanged — the W2-02 gate's discipline.
@@ -21,9 +25,9 @@ const projectDir = fileURLToPath(new URL('../', import.meta.url)).replace(/[\\/]
 const require = createRequire(import.meta.url);
 const read = (file) => readFileSync(file, 'utf8');
 
-const REMOVED = ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE'];
+const REMOVED = ['android.permission.CAMERA', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE'];
 const NEVER = ['android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.READ_MEDIA_VISUAL_USER_SELECTED'];
-const IOS_ABSENT = ['NSCameraUsageDescription', 'NSMicrophoneUsageDescription', 'NSPhotoLibraryAddUsageDescription'];
+const IOS_ABSENT = ['NSCameraUsageDescription', 'NSPhotoLibraryAddUsageDescription'];
 
 /** The approved PD-83 row, read from the generated copy module (one source for the app and the native build). */
 export function purposeStrings() {
@@ -134,7 +138,7 @@ function main() {
     if (failures.length > 0) {
       failed = true;
     } else {
-      console.log(`PASS: the generated ${platforms.join(' + ')} projects request no camera, microphone, storage or media permission${iosRoot === null ? '' : ' and carry PD-83 in Arabic and English'}.`);
+      console.log(`PASS: the generated ${platforms.join(' + ')} projects request no camera, storage or media permission${iosRoot === null ? '' : ' and carry PD-83 in Arabic and English'}.`);
       const missed = runPlantedDefects(androidRoot, iosRoot, purpose);
       if (missed > 0) {
         console.error(`FAIL: ${missed} planted defect(s) were not caught`);

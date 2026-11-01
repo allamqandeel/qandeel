@@ -1,0 +1,13 @@
+# S8B-03 CP2 — iOS Simulator: ONE command of the Voice Note native-capability proof, run by the proof root's own button
+# (testID s803-cmd-<CMD>) — a reader's tap inside the app, never a link — then its one-line result on screen (EXPECT, a
+# regular expression over the s803-log text, naming a line only this command can produce). VALIDATION ONLY.
+# Driven by scripts/s8b-03/run-s803-ios-proof.sh, which passes PREFIX, CMD, EXPECT and SHOT.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: s803-cmd-${CMD}
+- extendedWaitUntil:
+    visible:
+      text: ${EXPECT}
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-${SHOT}

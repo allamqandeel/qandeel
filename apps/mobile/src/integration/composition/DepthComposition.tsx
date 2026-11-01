@@ -87,6 +87,8 @@ import {
   DEPTH_CROSSFADE_REDUCED_MOTION_MS,
   useReduceMotion,
 } from '../../conversation';
+import { useVoiceNoteSurface, VoiceNoteSettingsSection } from '../../voice-note';
+import { saveExportVoices } from '../../settings/export-file';
 import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
@@ -99,7 +101,7 @@ import { PublicWorldArea } from '../../public-world';
 import { PublicShareEntry, usePublicShareSelection } from '../../public-share';
 import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, useReplaySelection } from '../../replay-entry';
 import { ReplayAnalysisEntry, ReplayPlayer, ReplayPreviewAction } from '../../replay-player';
-import type { DirectEntryDestination } from '../../runtime-entry';
+import type { DirectEntryDestination, ExportVoiceSet } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
@@ -572,6 +574,13 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const shareSelection = usePublicShareSelection(publicShare, runtime.conversation, locale.language, conversationInsets);
   const sharing = shareSelection !== null;
   const replaying = replaySelection !== null;
+  // S8B-03 — Voice Notes, in the Personal world's conversation only. Leaving the conversation screen in any way (the
+  // depth, a destination, another world, a selection mode) stops a capture and keeps it as a draft (C-17).
+  const voiceSlots = useVoiceNoteSurface(onSignOut === undefined ? null : runtime.voiceNotes, locale.language,
+    surface === 'CONVERSATION' && !replaying && !sharing);
+  // S8B-03 — Settings: the Voice Notes section (C-44 … C-48) and the separate voice export act (C-49 … C-53).
+  const voiceSettings = <VoiceNoteSettingsSection session={runtime.voiceNotes} language={locale.language} />;
+  const saveVoices = useCallback((voices: ExportVoiceSet) => saveExportVoices(voices, runtime.voiceNotes.exportAccess), [runtime.voiceNotes]);
   useEffect(() => {
     if (sharing) runtime.replayEntry.cancel();
   }, [sharing, runtime.replayEntry]);
@@ -612,6 +621,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         chromeStart={onSignOut === undefined ? null : (
           <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
         )}
+        composerEnd={voiceSlots.composerEnd}
+        composerOverride={voiceSlots.composerOverride}
+        threadTail={voiceSlots.threadTail}
+        utteranceBody={voiceSlots.utteranceBody}
       />
     ) : (
       <AnalysisAppearanceScope>
@@ -746,7 +759,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} introductionAlerts={runtime.introductionAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} introductionShares={runtime.introductionShares} interactionPreferences={runtime.interactionPreferences} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} introductionAlerts={runtime.introductionAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} introductionShares={runtime.introductionShares} interactionPreferences={runtime.interactionPreferences} voiceSection={voiceSettings} saveExportVoices={saveVoices} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
