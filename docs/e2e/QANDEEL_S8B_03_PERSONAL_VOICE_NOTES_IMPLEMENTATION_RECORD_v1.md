@@ -399,15 +399,15 @@ iOS 26.5 simulator in CI (`s8b-03-ios-proof.yml`). No paid call; every gate `DIS
 
 | ID | Criterion | Proof | Result |
 |---|---|---|---|
-| B1 | The G1.2 §E states with the approved texts; no lone long press; RTL / LTR | jest (`voice-note-surface`, the views and session suites); Android captures of idle, recording, sending, converting, committed, playing, paused, details, text, cancel, withdraw and consent in Arabic, and idle / recording / playing / the Timeline line in English; iOS screenshots of both languages (CI) | **Proven.** No view registers a long press (jest); the long-press absence was not exercised separately on the phone. |
-| B2 | Permission at the moment of intent; refusal → writing + «فتح الإعدادات»; never asked at playback | Android: `RECORD_AUDIO` not granted at launch, nothing asked; the first record after consent raised Android's own dialog; «Don't allow» → **C-21 + C-22** with the composer still there; C-22 opened the proof app's own App info, Back returned. No dialog at any playback. iOS (CI): nothing asked at launch; iOS's alert carries C-12; «Don't Allow» → `PERMISSION_DENIED`. | **Proven** on Android; iOS per §14. |
-| B3 | Leaving the screen, the background, a call and a headset stop and keep; no background recording | Android: **in-app leave** (the analysis entry, no Android lifecycle) → a 0:03 draft with **C-17**, stopped at the in-app tap and not at a later link; Home → `LEFT_SCREEN`, `dumpsys audio` shows the recorder stopped; force-quit mid-recording → the recorder file adopted on relaunch (`PROVEN`); no `FOREGROUND_SERVICE`, both background options off (native gate). iOS (CI): the background → `LEFT_SCREEN`, draft kept. | **Proven** for leaving, background and force-quit. **A call and a headset unplug were not exercised on a device** (the interruption and route-change paths are proven by jest only) → `QAN-BL-VOICE-04`. |
-| B4 | The draft survives relaunch; no network before send; no send on recovery; isolation; deleted after `ACCEPTED`; backup exclusion | Android: relaunch and `recover` kept every draft with **zero uploads**; owner B never saw owner A's drafts in the same store; `draftLeft=false` after each `ACCEPTED`; the **shipped APK** (`aapt2`) carries `fullBackupContent` / `dataExtractionRules` and both merged rule files excluding `qandeel-voice-drafts/`, `Audio/` and the drafts database with `-wal` / `-shm` / `-journal`. iOS (CI): the drafts folder and database carry iOS's excluded-from-backup flag; relaunch recovers with zero uploads. | **Proven** at the store and package level. A real sign-out / sign-in cycle on the device and an on-device backup / transfer run were not done → `QAN-BL-VOICE-04`. |
-| B5 | AAC-LC (`mp4a.40.2`), mono, ~32 kbps M4A; plays on both; device files pass the prover within 0.1 s; silence fixtures in the repository | Phone files (12, quiet room, deleted after proof): `ftyp, moov, free, mdat`, AAC-LC, 1 channel, 16 kHz, 32.6 kbps on the 10-minute file; **every one `PROVEN`** and equal to the container's own `mdhd` / `mvhd` to the millisecond; the 10-minute `LIMIT` stop at 600 384 ms (bound 601 000). Played on the phone. **Fixtures:** `apps/api/fixtures/voice-m4a/android-emulator-silence-{2416,4720,11760}ms.m4a` (the shipped capture on the emulator, zeroed input) + `m4a-device-fixtures.spec.ts`. | **Proven for the phone.** The emulator's software AAC path writes the first frame as 1792 ticks, which §4.6.2 step 4 refuses: the fixtures are pinned as **REJECTED** (`AUDIO_CONTAINER_INCONSISTENT`) → `QAN-BL-VOICE-03`. The recorder's own wall clock leads the file by about 120 – 135 ms on short notes (shown only while sending; the server's proven duration replaces it). iOS's silence file and its verdict: §14. |
-| B6 | The full path with a fake transcription server | Android, production surface: consent → record → send → `ACCEPTED` (`PROVEN`) → C-27 → `READY` → one `COMMITTED` turn → the reply; playback with the bearer (`200`, and `206` for seek and the 10-minute file); after restart the slab is drawn again. iOS (CI): record → upload `ACCEPTED` → playback with the bearer. | **Proven** on Android; iOS per §14. |
+| B1 | The G1.2 §E states with the approved texts; no lone long press; RTL / LTR | jest (`voice-note-surface`, the views and session suites); Android captures of idle, recording, sending, converting, committed, playing, paused, details, text, cancel, withdraw and consent in Arabic, and idle / recording / playing / the Timeline line in English; iOS (CI, run `41272144181`): the production surface opened and closed in Arabic and in English (screenshots) | **Proven.** No view registers a long press (jest); the long-press absence was not exercised separately on the phone. |
+| B2 | Permission at the moment of intent; refusal → writing + «فتح الإعدادات»; never asked at playback | Android: `RECORD_AUDIO` not granted at launch, nothing asked; the first record after consent raised Android's own dialog; «Don't allow» → **C-21 + C-22** with the composer still there; C-22 opened the proof app's own App info, Back returned. No dialog at any playback. iOS (CI, run `41272144181`): nothing asked at launch; the in-app RECORD tap reached the shipped capture (its permission read `UNDETERMINED` and its request traced), iOS's own alert carried C-12 word for word; «Don't Allow» → `PERMISSION_DENIED`, no `prepare`, no recording, no draft file, zero uploads. | **Proven** on Android and on the iOS Simulator. |
+| B3 | Leaving the screen, the background, a call and a headset stop and keep; no background recording | Android: **in-app leave** (the analysis entry, no Android lifecycle) → a 0:03 draft with **C-17**, stopped at the in-app tap and not at a later link; Home → `LEFT_SCREEN`, `dumpsys audio` shows the recorder stopped; force-quit mid-recording → the recorder file adopted on relaunch (`PROVEN`); no `FOREGROUND_SERVICE`, both background options off (native gate). iOS (CI, run `41272144181`): a NEW capture (#2) recording with its clock advancing; the app sent to the background → React Native reported `background`, the capture stopped `LEFT_SCREEN` into its own kept draft (a complete AAC-LC / mono / 16 kHz M4A, 12 800 ms), zero uploads. | **Proven** for leaving, background and force-quit. **A call and a headset unplug were not exercised on a device** (the interruption and route-change paths are proven by jest only) → `QAN-BL-VOICE-04`. |
+| B4 | The draft survives relaunch; no network before send; no send on recovery; isolation; deleted after `ACCEPTED`; backup exclusion | Android: relaunch and `recover` kept every draft with **zero uploads**; owner B never saw owner A's drafts in the same store; `draftLeft=false` after each `ACCEPTED`; the **shipped APK** (`aapt2`) carries `fullBackupContent` / `dataExtractionRules` and both merged rule files excluding `qandeel-voice-drafts/`, `Audio/` and the drafts database with `-wal` / `-shm` / `-journal`. iOS (CI, run `41272144181`): the drafts folder and database carry iOS's excluded-from-backup flag (read on the host); a relaunch (a new process) recovered the `LEFT_SCREEN` draft with zero uploads; owner B saw none of owner A's drafts. | **Proven** at the store and package level. A real sign-out / sign-in cycle on the device and an on-device backup / transfer run were not done → `QAN-BL-VOICE-04`. |
+| B5 | AAC-LC (`mp4a.40.2`), mono, ~32 kbps M4A; plays on both; device files pass the prover within 0.1 s; silence fixtures in the repository | Phone files (12, quiet room, deleted after proof): `ftyp, moov, free, mdat`, AAC-LC, 1 channel, 16 kHz, 32.6 kbps on the 10-minute file; **every one `PROVEN`** and equal to the container's own `mdhd` / `mvhd` to the millisecond; the 10-minute `LIMIT` stop at 600 384 ms (bound 601 000). Played on the phone. **Fixtures:** `apps/api/fixtures/voice-m4a/android-emulator-silence-{2416,4720,11760}ms.m4a` (the shipped capture on the emulator, zeroed input) + `m4a-device-fixtures.spec.ts`. | **Proven for the phone.** The emulator's software AAC path writes the first frame as 1792 ticks, which §4.6.2 step 4 refuses: the fixtures are pinned as **REJECTED** (`AUDIO_CONTAINER_INCONSISTENT`) → `QAN-BL-VOICE-03`. The recorder's own wall clock leads the file by about 120 – 135 ms on short notes (shown only while sending; the server's proven duration replaces it). **iOS (CI, run `41272144181`):** both uploaded silence files `ftyp, moov, free, mdat`, AAC-LC, mono, 16 kHz, **`PROVEN`** (23 680 ms / 370 frames and 12 800 ms / 200 frames, equal to `mdhd`). iOS's writer puts `channelcount=2` in the sample entry of this mono stream (the AudioSpecificConfig says 1 channel); the prover reads the stream, so the verdict is unaffected — recorded as an observation (§12). |
+| B6 | The full path with a fake transcription server | Android, production surface: consent → record → send → `ACCEPTED` (`PROVEN`) → C-27 → `READY` → one `COMMITTED` turn → the reply; playback with the bearer (`200`, and `206` for seek and the 10-minute file); after restart the slab is drawn again. iOS (CI, run `41272144181`): record → stop → upload `ACCEPTED` (`draftLeft=false`) → playback streamed with the bearer (`206`). | **Proven** on Android and on the iOS Simulator (the fake server; no transcription on iOS). |
 | B7 | A network cut during the upload and after acceptance; a transcription failure with retry; no duplicate | Android with injected faults: a failure → C-26 + Try again → one commit; the reply lost after `ACCEPTED` → the re-send is the same note (`replay`), no second note; a cut before anything stored → the draft kept with Try again; status reads cut → C-27 kept, then one commit. | **Proven.** |
 | B8 | Expired and deleted: a non-interactive slab with the text kept; C-42 before delete | Android: delete → C-42 with Cancel / Delete (C-43) → C-38, the text kept, still C-38 after restart; **expired → C-37, no play, and C-35 opens the text with C-36**. | **Proven.** |
-| B9 | Export byte for byte; cleanup → C-51; unconfirmed cleanup → C-53; a file gone → C-52 | Android, the production saver: `SAVED` with the on-device SHA-256 equal to the uploaded file; `SOME_UNAVAILABLE` (C-52); a short file → `FAILED_REMOVED` (C-51) with no folder left. C-53 (`FAILED_REMAINS`) by jest (`export-voice-file`, a device that cannot delete). iOS: attempted in CI through iOS's own picker (§14). | **Proven** except C-53 on a device → `QAN-BL-VOICE-04`. |
+| B9 | Export byte for byte; cleanup → C-51; unconfirmed cleanup → C-53; a file gone → C-52 | Android, the production saver: `SAVED` with the on-device SHA-256 equal to the uploaded file; `SOME_UNAVAILABLE` (C-52); a short file → `FAILED_REMOVED` (C-51) with no folder left. C-53 (`FAILED_REMAINS`) by jest (`export-voice-file`, a device that cannot delete). iOS (CI, run `41272144181`): the production saver opened iOS's own document picker, which opened on «Recents»; the flow's «On My iPhone» choice was not reached, so nothing was saved. | **Proven on Android** except C-53 on a device → `QAN-BL-VOICE-04`. **NOT PROVEN on the iOS Simulator** — recorded, not required (contract §8.2 / §8.3). |
 | B10 | Guards pass; planted defects rejected; the photo guard without regression | `verify-voice-note-native.mjs`: PASS, 11 planted defects caught, repository unchanged; the photo gate and its re-pinned contract pass; both run in Mobile CI. | **Proven** (CI result §14). |
 | B11 | Names and roles; TalkBack; VoiceOver structure; Reduced Motion | Accessible names from the approved rows (C-13, C-16, C-34 + duration, C-35, C-41 …) and 44 dp targets read from the phone's accessibility tree; the line an adjustable element with value «m:ss / m:ss» and the CP2-6 step (jest). Reduced Motion: the Voice Note views run no animation (no `Animated`, no timing or spring, no layout animation); the preview opening follows the finger 1:1, and the time and the position change in steps. | **Names, roles and targets proven; nothing for Reduced Motion to remove.** TalkBack and VoiceOver were **not run** (no system accessibility setting was changed on the Product Owner's phone) → `QAN-BL-VOICE-04`. |
 | B12 | No key, URL or text in the logs; no `expo-secure-store` or `AsyncStorage` | The proof app's whole logcat over the proofs (138 lines): no bearer, token, server address, route, transcript, reply, recording id, drafts path or file name — the only "token" lines are Android's own activity records; the fake server logs kinds, sizes and verdicts only; the storage ban by the T-13 / S8B-02 contracts and this contract test. | **Proven.** |
@@ -417,7 +417,8 @@ iOS 26.5 simulator in CI (`s8b-03-ios-proof.yml`). No paid call; every gate `DIS
 **Not proven, recorded as limits (contract §8.3) and admitted as `QAN-BL-VOICE-04` for S8B-08's Stage 9 list:** an
 incoming call and a headset unplug during a recording on a device; TalkBack and VoiceOver on devices; a
 real sign-out / sign-in cycle and an on-device backup / transfer run; C-53 on a device; on iOS, a real microphone, the
-real-device prompt, sound quality and container integrity after a force-quit.
+real-device prompt, sound quality and container integrity after a force-quit, and the export into a folder (B9: NOT
+PROVEN on the simulator).
 
 ---
 
@@ -433,28 +434,36 @@ real-device prompt, sound quality and container integrity after a force-quit.
 3. **The thread did not follow the newest note:** it follows when near the newest and re-applies over two frames; a drag
    cancels it (jest, and 3 / 3 on the phone).
 4. **The accessible value rounded while the text floored:** both use whole seconds (jest).
+5. **The iOS proof harness (validation only, no production change):** iOS run `41243248744` showed SpringBoard's «Open
+   in QANDEEL?» confirmed for a proof link that iOS never delivered to the app (no open-URL action reached it), so a link
+   proves nothing about a command having run. The iOS proof now drives every step through the proof root's own buttons,
+   checks that the RECORD tap reached the shipped capture, and requires each uploaded file's container and `PROVEN`
+   verdict; the script was run locally end to end against stubbed `maestro` / `xcrun` / `xattr` and the real fake voice
+   server (16 injected faults and two stale expectations caught) before run `41272144181` passed.
 
 **Residues admitted (§13):**
 
-5. **`QAN-BL-VOICE-03` — a real Android recording refused by the duration proof.** Android's software AAC path
+6. **`QAN-BL-VOICE-03` — a real Android recording refused by the duration proof.** Android's software AAC path
    (MPEG4Writer, seen on the API 36 emulator) writes the first sample as 1792 ticks, then 1024 per frame. Contract v1.2
    §4.6.2 step 4 allows 1024 only, except the last entry, so the CP1 prover refuses such a file
    `AUDIO_CONTAINER_INCONSISTENT` and the note fails with C-29. The Product Owner's phone wrote 1024 throughout (every file
    `PROVEN`), so this is device-dependent. The approved rule is not changed by CP2: it needs a Product Owner decision and
    a controlled amendment of §4.6.2 before `PERSONAL_VOICE_NOTE` opens. Pinned by `m4a-device-fixtures.spec.ts`.
-6. **`QAN-BL-MOB-01` — `expo-sqlite` handles fail after BACK and a relaunch in the same process.** After the activity is
+7. **`QAN-BL-MOB-01` — `expo-sqlite` handles fail after BACK and a relaunch in the same process.** After the activity is
    finished by BACK and the app reopened in the same process, a `SQLiteStorage` opened earlier rejects
    (`NativeDatabase.prepareAsync` / `execAsync` → `NullPointerException`), so a capture fails at `store.begin`
    silently: no draft and no message; the reader can still write. Seen once on the phone; force-stop and relaunch clears it. The same lazy
    open-once pattern serves other app stores (appearance, push device store, auth, recovery) — not reproduced there.
-7. **`QAN-BL-VOICE-02` — the open external proof conditions** PC-S1 … PC-S7 and PC-D (§7), as gate-opening conditions.
-8. **`QAN-BL-VOICE-04` — the physical-device proof list** of §11.
+8. **`QAN-BL-VOICE-02` — the open external proof conditions** PC-S1 … PC-S7 and PC-D (§7), as gate-opening conditions.
+9. **`QAN-BL-VOICE-04` — the physical-device proof list** of §11.
 
 **Observations, not defects:**
 
 - Once, about 6.5 s of playback was heard without a play act (an audio-focus pair in `dumpsys audio`); not reproduced in
   five attempts, and no tap on the details starts playback.
 - The length reads 0:29 while sending and 0:28 after the commit: the recorder's wall clock against the proven duration.
+- iOS's recorder writes `channelcount=2` in the M4A sample entry of the mono AAC stream (the AudioSpecificConfig says
+  one channel, AOT 2, 16 kHz); every stts delta is 1024 and the prover returns `PROVEN`.
 - Android's folder picker names a second export folder of the same day `… (1)`; the saver's own name is kept otherwise.
 - The first launch link after a cold start on the emulator was not executed by the proof root (a harness timing): its
   draft stayed `RECORDING` until `recover` adopted it as `SAVED` with nothing sent — the product's recovery path.
@@ -472,7 +481,10 @@ real-device prompt, sound quality and container integrity after a force-quit.
   owner Stage 9's release-readiness gate). **Index: 93 items; 48 / 4 / 8 / 33 by status; 56 / 35 / 2 by severity.**
 - **Read and left unchanged:** `QAN-BL-PROD-06` / `08` (`0186` not hosted), `QAN-BL-AI-01`, `QAN-BL-AI-03`,
   `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06` (the photo folder save; the voice saver is proven here), `QAN-BL-PRIV-05`,
-  `QAN-BL-SEC-01` (the app-wide `allowBackup`, untouched), `QAN-BL-CI-01` / `02` / `03`.
+  `QAN-BL-SEC-01` (the app-wide `allowBackup`, untouched), `QAN-BL-CI-01` / `02`.
+- **Reopened after the closing change:** `QAN-BL-CI-03` (Mobile CI's Android emulator disk), its reopen condition met on
+  head `29794fca`; diagnosed and given a bounded Mobile CI change at the Product Owner's direction (2026-11-01). Its
+  disposition follows the GitHub run of that change; the index counts are unchanged.
 - **BG-09:** this record's banner states S8B-03's closing state; the three locators (`QANDEEL_CURRENT_STATE.md`,
   `QANDEEL_PROJECT_MAP.md`, `QANDEEL_PRODUCT_ROADMAP.md`) carry it.
 - **The controlled amendment:** the S8B-01 Voice Runtime Controlled Amendment gains **§5 "S8B-03 — the text S8B-03
@@ -496,7 +508,16 @@ real-device prompt, sound quality and container integrity after a force-quit.
   guard unchanged);
 - `npm run test:task-closure-governance-contract`: 24 / 24.
 
-**GitHub CI on the Draft pull request:** the checks on the closing head, as the pull request shows them; the iOS Simulator proof (B2 … B9 on iOS) is the `s8b-03-ios-proof` run on that head and its uploaded evidence. Nothing here claims a CI result before that run has finished.
+**GitHub CI on the Draft pull request:**
+
+- **iOS Simulator proof — PASSED:** `s8b-03-ios-proof` run `41272144181` on `29794fca` (iPhone 17 / iOS 26.5, Xcode 26.6,
+  Maestro 2.10.0; the driver answered after 41 s): B2, B3, B4, B5 and B6 pass with the evidence in §11 and the run's
+  artifact; **B9 NOT PROVEN** on the simulator (iOS's picker opened on «Recents»), recorded, not required.
+- **API CI — PASSED** on `29794fca`.
+- **Mobile CI** run `41272148542` on `29794fca`: both Release builds, the contracts and the iOS boot smoke passed; the
+  **Android API 36 emulator boot smoke failed** before the emulator started (runner disk, `QAN-BL-CI-03`, §13) and
+  `Validation evidence (VAL-01)` with it. The bounded Mobile CI change that follows is verified only by its own GitHub
+  run; nothing here claims that result.
 
 **The state left:**
 

@@ -3368,6 +3368,19 @@ authorizes implementation (BG-07).
   - The waiver is not merge approval. The merge still needs the Product Owner's explicit order, which must name the
     waiver against `AGENTS.md` §8 ("Do not merge a failing CI change") when that job is red on the head.
   - The Android Release APK build producer did not fail in any of these four runs.
+- **Reopened (2026-11-01, S8B-03 CP2, Draft PR #371):** the reopen condition was met on head `29794fca` (Mobile CI run
+  `41272148542`: «Not enough space to create userdata partition. Available: 6407.40 MB …, need 7372.80 MB»; 11 647 MiB
+  free at the old check, before the SDK and system image landed). The Product Owner directed a bounded fix in PR #371.
+  - **Diagnosed cause (measured locally on the same system image, emulator 37.2):** the emulator raises any data
+    partition below 6 GiB to 6 GiB. A lone `disk.dataPartition.size=3072M` ran as `6g` and `8G` as `8g`; with two keys
+    the last one is read. So `disk-size: 3072M` never took effect, and the true need is 6144 × 1.2 = 7372.8 MiB free
+    where the AVD lives, after about 5 GiB of SDK packages have landed on the same disk.
+  - **The change (Mobile CI `verify-android`, nothing in the smoke weakened):** the configured partition states the
+    size really used (6144 MiB); the runner's unused .NET, Haskell, Swift, CodeQL, PowerShell and Boost are removed
+    first; the action's own SDK packages are installed before a decisive disk check that needs 7373 + 2048 MiB and fails
+    in seconds; the final AVD config is printed before launch.
+  - **Disposition:** decided on the GitHub run of that change, recorded in this item (tombstone if the smoke passes for
+    this reason); until then the status below stands.
 - **Why deferred:** runner, emulator image and disk provisioning are infrastructure outside S8A-04's product scope, the
   same shape as `QAN-BL-CI-01` (iOS, S4-01). No product contract is left violated (BG-01).
 - **Owner task:** `CI-ANDROID-01 — Android Emulator CI Infrastructure Reliability` (identifier the Product Owner's; the
@@ -3478,7 +3491,8 @@ Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06
   (no system accessibility setting was changed on the Product Owner's phone); a real sign-out / sign-in cycle and an
   on-device backup / device-transfer run (the store isolation and the shipped backup rules are proven); C-53
   (`FAILED_REMAINS`) on a device (jest only); on iOS, a real microphone and prompt, sound quality and container
-  integrity after a force-quit (the simulator records silence).
+  integrity after a force-quit (the simulator records silence), and the export into a folder chosen in iOS's picker
+  (B9 NOT PROVEN on the simulator in run `41272144181`: the picker opened on «Recents»; Android proves B9).
 - **Source:** [S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §11; contract v1.2 §8.3 («تُسجَّل في قائمة Stage 9 التي يقبلها S8B-08»).
 - **Why deferred:** each needs hardware, a system setting or a device state outside S8B-03's authorized proof.
 - **Owner task:** `S8B-08 — Voice Cost, Privacy & Launch Evidence`, which accepts the Stage 9 physical-device list.

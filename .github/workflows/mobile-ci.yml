@@ -357,6 +357,9 @@ jobs:
     if: ${{ !cancelled() && needs.build-android.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # The emulator's data partition, in MiB: the disk check and the emulator action read the same value.
+      AVD_DATA_PARTITION_MIB: 6144
     permissions:
       contents: read
       actions: read
@@ -421,17 +424,57 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      # The emulator refuses to create its data partition with less than 1.2 x its size free where the AVD lives, but
-      # the action below would still wait out the whole 900 s boot allowance. This says so in seconds instead:
-      # the 3072M data partition set below needs 3072 x 1.2 = 3687 MiB free under $HOME.
-      - name: Check the disk the emulator's data partition needs (3072M)
+      # QAN-BL-CI-03 (run 41272148542: «Not enough space to create userdata partition. Available: 6407.40 MB …, need
+      # 7372.80 MB»). The emulator raises any data partition below 6 GiB to 6 GiB — measured on the same system image
+      # with emulator 37.2: a lone `disk.dataPartition.size=3072M` ran as 6g, `8G` as 8g — so the 3072M this job used
+      # to set never took effect, and the real need is 6144 x 1.2 = 7372.8 MiB free where the AVD lives, AFTER the SDK
+      # and the system image (about 5 GiB on run 41272148542) have landed on the same disk.
+      #
+      # Free first what this job never runs. It runs Node (/opt/hostedtoolcache/node), Temurin 17
+      # (/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk), the Android SDK ($ANDROID_HOME) and Maestro (~/.maestro), and
+      # nothing else: no .NET, Haskell, Swift, CodeQL, PowerShell or Boost. The APK is in $RUNNER_TEMP and stays.
+      - name: Free runner disk this job never uses (.NET, Haskell, Swift, CodeQL, PowerShell, Boost)
         run: |
-          df -h "$HOME" "$RUNNER_TEMP"
-          avail=$(df --output=avail -m "$HOME" | tail -1 | tr -d ' ')
-          need=3687
-          echo "Available under $HOME: ${avail} MiB; the 3072M data partition needs ${need} MiB."
+          df -m /
+          for dir in /usr/share/dotnet /usr/local/.ghcup /opt/ghc /usr/share/swift /opt/hostedtoolcache/CodeQL /usr/local/share/powershell /usr/local/share/boost; do
+            if [ -e "$dir" ]; then
+              sudo rm -rf "$dir"
+              echo "removed $dir — $(df --output=avail -m / | tail -1 | tr -d ' ') MiB free"
+            fi
+          done
+          # What this job does use is still there.
+          node --version
+          java -version
+          maestro --version
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -s "$RUNNER_TEMP/native-build/app-release.apk"
+      # The SAME packages the emulator action installs (v2.38.0: build-tools 37.0.0, platform-tools, the API 36
+      # platform, the stable emulator and the system image, channel 0), installed here so the disk check below sees
+      # them; the action's own install then finds them present.
+      - name: Install the emulator's SDK packages before the disk check
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses > /dev/null
+          "$sdkmanager" --install 'build-tools;37.0.0' platform-tools 'platforms;android-36' > /dev/null
+          "$sdkmanager" --install emulator --channel=0 > /dev/null
+          "$sdkmanager" --install 'system-images;android-36;google_apis;x86_64' --channel=0 > /dev/null
+          "$ANDROID_HOME/emulator/emulator" -version | head -n 1
+      # The decisive check, after every package and before the emulator: the emulator's own need (1.2 x the data
+      # partition it will really use) plus 2048 MiB for the partition's growth during install and smoke. A shortfall
+      # fails here in seconds, with the numbers, instead of after the action's 900 s boot allowance.
+      - name: Check the disk the emulator's data partition needs
+        run: |
+          avd_home="$HOME/.android/avd"
+          mkdir -p "$avd_home"
+          floor=6144
+          size=$(( AVD_DATA_PARTITION_MIB > floor ? AVD_DATA_PARTITION_MIB : floor ))
+          emulator_need=$(( (size * 12 + 9) / 10 ))
+          need=$(( emulator_need + 2048 ))
+          avail=$(df --output=avail -m "$avd_home" | tail -1 | tr -d ' ')
+          df -h "$avd_home"
+          echo "Data partition ${size} MiB; the emulator needs ${emulator_need} MiB free, this check ${need} MiB; ${avail} MiB free at ${avd_home}."
           if [ "$avail" -lt "$need" ]; then
-            echo "::error::Not enough disk for the emulator's data partition: ${avail} MiB free, ${need} MiB needed."
+            echo "::error::Not enough disk for the emulator's ${size} MiB data partition: ${avail} MiB free at ${avd_home}, ${need} MiB needed (${emulator_need} for the emulator + 2048 margin)."
             exit 1
           fi
       # Bounded at the STEP, not only by the job's hour: a hung Maestro launch must fail fast instead of
@@ -451,9 +494,13 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_7
-          # pixel_7's default 6144M data partition needs 7373 MiB free, more than the runner now has. 3072M holds the
-          # ~63 MB Release APK and its compiled code, the Maestro driver and the first boot's own data with room to spare.
-          disk-size: 3072M
+          # The size the emulator really uses (it raises anything smaller to 6 GiB; see the disk check above). The action
+          # appends it after avdmanager's own value, and the emulator reads the last one.
+          disk-size: ${{ env.AVD_DATA_PARTITION_MIB }}M
+          # The AVD as the emulator will read it, printed for the evidence (the action does not stop on this script).
+          pre-emulator-launch-script: |
+            grep -n '^disk\.dataPartition\.size\|^hw\.device\.name' "$ANDROID_AVD_HOME/test.avd/config.ini"
+            df -h "$ANDROID_AVD_HOME"
           disable-animations: true
           emulator-boot-timeout: 900
           script: |
