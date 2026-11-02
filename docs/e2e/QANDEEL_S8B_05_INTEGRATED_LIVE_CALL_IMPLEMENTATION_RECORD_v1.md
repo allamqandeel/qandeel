@@ -661,4 +661,6 @@ This broke S3 (contract Part A) and the guarantee that committed speech is not l
     - turn 2 is committed with both utterances, as one turn, and played COMPLETE; one provider request.
   - A repeated recovery through the same command returns SAME. A different value is refused with
     `CALL_TURN_SAFETY_CONFLICT`, and the stored value is unchanged.
-- **Unchanged:** verify-0190 (18 / 18) and every other proof above; no migration changed.
+- **Unchanged:** verify-0190 (18 / 18) and every other proof above; no migration changed. The R1 runs (full and single-call,
+  10 / 10 each) are kept as `CP2_R1_SYNTHETIC_PROOF_local_pg17*.txt`. The full run shared the machine with a Jest run, so
+  its latency (P50 2 469 ms) is not the reference; §10.3 keeps the quiet run (P50 2 336 ms).
