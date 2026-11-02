@@ -537,7 +537,7 @@ async function verifyBehaviour(report) {
   }
 }
 
-// ------------------------------------------------------------------ races (committed fixtures in the THROWAWAY clone)
+// ------------------------------------------------------------------ races (committed fixtures, removed afterwards)
 async function verifyRaces(report) {
   const { q2, close } = await rt.openSecondary();
   const sr = async (client, sql, values) => {
@@ -545,8 +545,10 @@ async function verifyRaces(report) {
     await client('SET LOCAL ROLE service_role');
     return client(sql, values);
   };
+  const P = randomUUID();
+  await owner();
+  const [gate] = await rows("SELECT * FROM voice_private.voice_launch_capability_states WHERE capability_scope = 'PERSONAL_VOICE_NOTE'");
   try {
-    const P = randomUUID();
     await rt.provisionHumans([P]);
     await owner();
     await setVoiceGate();
@@ -603,8 +605,43 @@ async function verifyRaces(report) {
     await q('ROLLBACK').catch(() => undefined);
     await q2('ROLLBACK').catch(() => undefined);
     await close();
-    await owner();
+    await removeRaceFixtures([P], gate);
   }
+}
+
+// The PRC fixtures are committed, and in CI the next steps (prove-0185 first) share this database: the gate goes back to
+// the state it had and every row of the fixture human goes, so the run leaves nothing behind.
+async function removeRaceFixtures(humans, gate) {
+  await owner();
+  await q('BEGIN');
+  try {
+    await q("SET LOCAL session_replication_role = 'replica'");
+    await q('DELETE FROM voice_private.live_reply_segments WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM voice_private.live_reply_streams WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM voice_private.note_live_transcriptions WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM voice_private.live_voice_notes WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM voice_private.note_transcriptions WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM public.ai_provider_call_usage WHERE provider_call_id IN (SELECT id FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[]))', [humans]);
+    await q('DELETE FROM public.ai_cost_ratings WHERE provider_call_id IN (SELECT id FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[]))', [humans]);
+    await q('DELETE FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM public.conversation_turn_voice_sources WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM voice_private.recording_objects WHERE recording_id IN (SELECT id FROM voice_private.recordings WHERE user_id = ANY($1::uuid[]))', [humans]);
+    await q('DELETE FROM voice_private.recordings WHERE user_id = ANY($1::uuid[])', [humans]);
+    await q('DELETE FROM voice_private.recording_consents WHERE user_id = ANY($1::uuid[])', [humans]);
+    if (gate) {
+      await q(`UPDATE voice_private.voice_launch_capability_states SET feature_flag_state = $2, launch_requirements_state = $3,
+                 restriction_version = $4, decided_by = $5, policy_basis = $6, decided_at = $7 WHERE capability_scope = $1`,
+      [gate.capability_scope, gate.feature_flag_state, gate.launch_requirements_state, gate.restriction_version, gate.decided_by, gate.policy_basis, gate.decided_at]);
+      await q('DELETE FROM voice_private.voice_launch_capability_events WHERE capability_scope = $1 AND restriction_version > $2', [gate.capability_scope, gate.restriction_version]);
+    }
+    await q("SET LOCAL session_replication_role = 'origin'");
+    await q('COMMIT');
+  } catch (error) {
+    await q('ROLLBACK');
+    throw error;
+  }
+  await rt.removeHistoricalFixture(humans);
+  await rt.removeFixtureHumans(humans);
 }
 
 runVerifier('0188', async (setStage) => {
