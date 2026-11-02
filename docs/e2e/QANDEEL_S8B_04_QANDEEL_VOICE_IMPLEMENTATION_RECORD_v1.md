@@ -1,16 +1,18 @@
 # QANDEEL — S8B-04 QANDEEL's Voice — Implementation Record v1
 
-**Task:** S8B-04 — QANDEEL's Voice (Stage 8B). This record covers **CP1 — Server & Intelligence**.
-**Status:** `S8B-04 CP1 UNDER REVIEW (2026-11-01) — ON s8b/s8b-04-cp1 AS A DRAFT PULL REQUEST, NOT MERGED (MERGE ONLY ON THE PRODUCT OWNER'S EXPLICIT «ادمج») — CP2 NOT STARTED, NOT AUTHORIZED — P-1 NOT RUN, NOT AUTHORIZED — MIGRATION 0187 NOT HOSTED — ALL FOUR VOICE GATES DISABLED — NO PAID PROVIDER CALL, NO PRODUCTION RESOURCE — NOT USER-READY`
-**Date:** 2026-11-01
-**Branch / base:** `s8b/s8b-04-cp1`, from `main` at `71b1088be761c7aaa558a264fa34b796558085e9`.
+**Task:** S8B-04 — QANDEEL's Voice (Stage 8B). This record covers **CP1 — Server & Intelligence** (§1 … §10, merged) and
+**CP2 — the automatic voice reply and the Fast Voice Path, S8B-04's closing change** (§11).
+**Status:** `S8B-04 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION (2026-11-02, the CP2 closing change; §11) — CP1 MERGED THROUGH PR #372 AS 54b5333e — CP2 ON s8b/s8b-04-cp2 AS A DRAFT PULL REQUEST, NOT MERGED (MERGE ONLY ON THE PRODUCT OWNER'S EXPLICIT «ادمج») — THE PAID RUNS (D-S5, SPEECHMATICS REALTIME QUALITY, P-1) NOT RUN, NOT AUTHORIZED — MIGRATIONS 0187 AND 0188 NOT HOSTED — ALL FOUR VOICE GATES DISABLED — NO PAID PROVIDER CALL, NO PRODUCTION RESOURCE — NOT USER-READY`
+**Date:** 2026-11-01 (CP1); 2026-11-02 (CP2)
+**Branch / base:** CP1 `s8b/s8b-04-cp1`, from `main` at `71b1088be761c7aaa558a264fa34b796558085e9`, merged through PR #372 as
+`54b5333e`; CP2 `s8b/s8b-04-cp2`, from `main` at `54b5333e`.
 **Authority:** the Product Owner's *QANDEEL — S8B-04 CP1 — Server & Intelligence — QANDEEL's Voice* authorization
 (2026-11-01), which approved the WP0 Research & Execution Contract v1.2 (consolidated) and the L-0 results report, and
 authorized **CP1 only** (§1). The contract and the L-0 report are the Product Owner's local review files
 (`E:\QANDEEL_REPORTS\S8B-04\`); this record carries what binds from them. The provider decision is narrowed by the
 [VA-11R controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_VA-11R_TTS_ABUSE_MONITORING_CONTROLLED_AMENDMENT_v1.0.md).
-**Not a phase:** S8B-04 is a Stage 8B task, not a Connected Worlds phase. CP1 does not close it (BG-09 applies at its
-closing change, after CP2).
+**Not a phase:** S8B-04 is a Stage 8B task, not a Connected Worlds phase. CP1 did not close it; CP2 is its closing change
+(BG-08 / BG-09, §11.11).
 
 ---
 
@@ -61,7 +63,8 @@ TM-02 is the spoken-call text S8B-05 consumes and is wired nowhere in S8B-04.
 
 ### 2.3 Consent, version `VOICE_RECORDING_V2` — `apps/api/src/voice-media/voice-consent-text.ts`; installed by `0187`
 
-The one current version from `0187` on. `VOICE_RECORDING_V1` (C-01 … C-11) stays installed, unchanged, as history; a
+The one current version from `0187` until `0188` (CP2), which installs `VOICE_RECORDING_V3` (§11.3) and keeps V2, unchanged,
+as history. `VOICE_RECORDING_V1` (C-01 … C-11) stays installed, unchanged, as history; a
 grant of V1 is no longer current consent. Digests (UTF-8, rows joined by `\n`): Arabic
 `84b546b49ed718f683bc38388c9191310da125b853a6d6d0e2a97466d3141740`, English
 `c3297ff4142651fb7b175060172c92769570ca636ec3f0572d15bb479dc5ccce`, required by `0187`'s deploy guard.
@@ -238,7 +241,7 @@ The access token was read into memory through ADC and never printed or stored. N
 
 ## 7. Residual limits and gaps
 
-- **Mobile consent is V1 and now fails closed.** `apps/mobile/src/voice-note/voice-note-copy.ts` pins
+- **Mobile consent is V1 and now fails closed** (resolved by CP2: the phone carries V3, §11.5 B, §11.6 item 4). `apps/mobile/src/voice-note/voice-note-copy.ts` pins
   `VOICE_RECORDING_V1`; with `0187` applied the API serves V2 only, so the mobile consent step refuses. No user is affected
   (every gate DISABLED, `0187` not hosted). CP2 must ship K-01 … K-15 on mobile before any gate opens.
 - **No live Google call** was made: the adapter's wire behaviour is proven against the fake server only; the real
@@ -259,6 +262,9 @@ The access token was read into memory through ADC and never printed or stored. N
 | `QAN-BL-VOICE-02` | UNCHANGED | V-1 / V-2 for the production project are added inside PC-S7, not as a new item. |
 
 ## Approvals needed before CP2
+
+*(Settled by the Product Owner at the CP2 gate, 2026-11-02, §11.1: 1 and 2 by D1 / D2 / D3 — the automatic reply replaced
+the Listen UI; 3 stays unauthorized (D9, §11.9); 4 is the Product Owner's to perform (D8); 5 is carried by `QAN-BL-VOICE-05`.)*
 
 1. **The Listen UI visual design** (the button, its states, playback, the 15-minute expiry, failure) and the Listen Copy
    Gate rows (contract §11.2), still `PROPOSED`.
@@ -330,3 +336,192 @@ The CI result on this record's own head is reported on the Draft pull request an
   (`kill -STOP` on System UI, then input: `am_anr … com.android.systemui … Input dispatching timed out`) was detected, the
   emulator rebooted once, the gate settled at load 6.93, and the smoke passed. A stubbed second hang exits 3 with the
   `ENVIRONMENT` message.
+
+---
+
+## 11. CP2 — the automatic voice reply and the Fast Voice Path (S8B-04's closing change)
+
+**Date:** 2026-11-02. **Branch / base:** `s8b/s8b-04-cp2`, from `main` at `54b5333e`, the merge of PR #372 (CP1).
+**Authority:** the Product Owner's *S8B-04 CP2* brief and Fast Voice Path decision (2026-11-01: D-S1 … D-S5, the speed
+target «لا أريد مطاردة رقم 3 ثوانٍ على حساب الجودة»), the gate review (2026-11-02) and the *Product Owner Final Approval
+Gate — APPROVED* (2026-11-02, D1 … D9). The gate package, the 20 design captures, the device report and the paid plans
+are the Product Owner's local review files (`E:\QANDEEL_REPORTS\S8B-04\CP2\`); this record carries what binds from them.
+The [Fast Voice Path controlled amendment FVP v1.0](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_FAST_VOICE_PATH_CONTROLLED_AMENDMENT_v1.0.md)
+binds the path (Personal Voice Notes only).
+
+### 11.1 The Product Owner's decisions (2026-11-02), recorded as binding
+
+| # | Decision |
+|---|---|
+| D1 | APPROVED: the 20 design captures — the design, the control's place, the Timeline and P2 icons, the states, RTL / LTR. Changed only to fix a proven defect. |
+| D2 | APPROVED: T2-01 … T2-07 verbatim (§11.2). |
+| D3 | APPROVED: `VOICE_RECORDING_V3` with K-07 v1.1 verbatim, K-08 and K-13 (§11.3), and R-01. Keep V1 and V2 and every historical consent unchanged, with no automatic upgrade. Verify that the Speechmatics training opt-out is in place and that the text promises nothing beyond the provider's terms (§11.4). |
+| D4 | APPROVED: one consent vocabulary across the layers (`GRANTED_CURRENT` / `VERSION_NOT_CURRENT` / `NOT_GRANTED` / `WITHDRAWN`); an earlier consent opens nothing on the new path; V3 needs a new explicit consent before any audio is sent during recording. |
+| D5 | APPROVED: FVP-1 … FVP-10, Personal Voice Notes only; the record, Current State, Project Map and backlog updated; CP1's state corrected after PR #372. No S8B-05, no live call. |
+| D6 | APPROVED, final: accept-first. No speculative generation; kept as a future improvement, not open work. |
+| D7 | APPROVED: the speed is measured L2 (on the phone) with L3 calibration; real apart from simulated, the player's start apart from the first audible sound. |
+| D8 | APPROVED in principle: `disableCache: true`, performed by the Product Owner, never by QANDEEL's engineering. Gemini 3.8 Flash TTS does not support context caching; disabling the cache does not cancel any other retention. |
+| D9 | NOT AUTHORIZED: the paid runs. Their plans and caps stand: D-S5 latency USD 1.50, Speechmatics Realtime quality USD 1.00, P-1 USD 2.00. |
+
+### 11.2 Product Copy Gate — the spoken reply (APPROVED verbatim, 2026-11-02) — `apps/mobile/src/voice-note/voice-note-copy.ts`
+
+These rows replace the contract's T-01 … T-05 (the manual «استمع» of CP1, which no screen shows).
+
+| ID | State | Arabic | English |
+|---|---|---|---|
+| T2-01 | APPROVED | إيقاف مؤقت | Pause |
+| T2-02 | APPROVED | متابعة | Resume |
+| T2-03 | APPROVED | إعادة الاستماع | Play again |
+| T2-04 | APPROVED | رد قنديل الصوتي | Qandeel's spoken reply |
+| T2-05 | APPROVED | جارٍ تجهيز الصوت | Preparing audio |
+| T2-06 | APPROVED | تعذّر تشغيل الصوت الآن. الرد مكتوب أعلاه. | Audio couldn't play right now. The reply is written above. |
+| T2-07 | APPROVED | لم يعد صوت هذا الرد متاحًا. الرد مكتوب أعلاه. | This reply's audio is no longer available. The reply is written above. |
+| R-01 | APPROVED | تغيّرت شروط التسجيل الصوتي. راجعها ووافق عليها لمتابعة الرسائل الصوتية. | The voice recording terms have changed. Review and agree to them to keep using voice messages. |
+
+R-01 is shown above the consent text only to a reader who agreed to an earlier version; it is in no version's text or
+digest.
+
+### 11.3 Consent, version `VOICE_RECORDING_V3` — `apps/api/src/voice-media/voice-consent-text.ts`; installed by `0188`
+
+The one current version from `0188` on: V2 (§2.3) with exactly K-07, K-08 and K-13 replaced; K-01 … K-06, K-09 … K-12,
+K-14 and K-15 are V2's, unchanged. `VOICE_RECORDING_V2` and `VOICE_RECORDING_V1` stay installed, unchanged, as history;
+a grant of either is `VERSION_NOT_CURRENT` and opens nothing. Digests (UTF-8, K-01 … K-15 joined by `\n`): Arabic
+`2550241d69c0cf2fc510c3b09e9fa857012ad4fe0360e3febb2b0d7452e0226b`, English
+`b593945f15f8e0858e35befeef191d89273ab3149cdee28cd5fbcda3e080bec9`, required by `0188`'s deploy guard together with V2's and
+V1's unchanged digests.
+
+| ID | State | Arabic | English |
+|---|---|---|---|
+| V3 K-07 | APPROVED | تحوّل خدمة Speechmatics الكلام إلى نص. أثناء تسجيل رسالة صوتية يُرسل صوتك إليها مباشرةً لتحويله لحظيًا، قبل الضغط على «إرسال»، ليصل الرد أسرع؛ ووفق شروطها تعالج هذا الصوت اللحظي في الذاكرة دون حفظه. وبعد الإرسال قد يُرسل إليها التسجيل المحفوظ أيضًا لتحويله، ويطلب قنديل منها حذفه بعد التحويل مباشرة. ولم يأذن لها قنديل باستخدام صوتك في تدريب نماذجها. وإذا ألغيت الرسالة قبل إرسالها، لا يُنشئ قنديل منها رسالة ولا يتذكر منها شيئًا، أما ما وصل إلى الخدمة قبل الإلغاء فيكون قد عولج بالفعل. | Speechmatics converts speech to text. While you record a voice message, your voice is streamed to it for live conversion, before you press Send, so the reply comes faster; under its terms, it processes this live audio in memory without storing it. After you send, the saved recording may also be sent to it for conversion, and Qandeel asks it to delete that recording right after conversion. Qandeel hasn't allowed it to use your audio to train its models. If you cancel a message before sending it, Qandeel creates no message and remembers nothing from it, but whatever already reached the service before you cancelled has already been processed. |
+| V3 K-08 | APPROVED | عندما ترسل رسالة صوتية، يرد قنديل بصوته تلقائيًا: يُرسل نص الرد إلى Google لتحويله إلى صوت أثناء كتابته. ويحدث ذلك أيضًا عند الضغط على «استمع»، وفي المكالمات عند توفرها. ولا تُرسل تسجيلاتك إلى Google. وقد يتضمن نص الرد شيئًا مما قلته. ويُحفظ صوت الرد التلقائي 15 دقيقة لإعادة الاستماع، ثم يُحذف. | When you send a voice message, Qandeel replies in its voice automatically: the text of its reply is sent to Google to turn it into speech as it's written. This also happens when you press Listen, and in calls once they're available. Your recordings aren't sent to Google. The reply text may include something you said. The audio of an automatic reply is kept for 15 minutes so you can play it again, then deleted. |
+| V3 K-13 | APPROVED | يمكن سحب الموافقة في أي وقت من الإعدادات. سحبها يوقف الرسائل الصوتية الجديدة والردود الصوتية والمكالمات و«استمع»، ولا يحذف التسجيلات الحالية. | Consent can be withdrawn at any time in Settings. Withdrawing it stops new voice messages, spoken replies, calls and Listen, and doesn't delete existing recordings. |
+
+### 11.4 The Speechmatics training opt-out (D3)
+
+- **In the code:** no request QANDEEL sends to Speechmatics carries any training or data-use field. The realtime
+  `StartRecognition` (`speechmatics-realtime.adapter.ts`) sends the audio format and the transcription settings only; the
+  batch job (`speechmatics-batch-jobs.adapter.ts`) sends the language and the operating point only. Model training is a
+  workspace setting at Speechmatics (Terms of Service §10.4: no use of customer data for training unless the workspace
+  opts in; the opt-in is off by default), not a request field.
+- **On record:** the [S8B-01 provider evidence record](QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md)
+  (§9.11 ff.) — the setting **off**, confirmed by the Product Owner for the S8B-01 run (`modelTrainingOff: true`, the
+  launcher refused without it); Realtime audio "never recorded or stored", processed in memory; batch jobs kept 7 days and
+  deleted by QANDEEL at once.
+- **Not readable from here:** the account's current setting is visible only in the Speechmatics portal. Before any paid
+  or production Speechmatics run, the Product Owner confirms it there (a condition of the paid plans, §11.9).
+- **The text:** K-07 says only what the terms and the setting give — Realtime "in memory without storing it" "under its
+  terms"; the saved recording "asks it to delete"; "hasn't allowed it" to train; a cancel does not undo what the service
+  already processed. It promises no zero retention beyond the provider's own terms.
+
+### 11.5 What CP2 implements
+
+**A. The server (accept-first, FVP-4):**
+- *The live note (D-S1, FVP-1 … FVP-3)* — `apps/api/src/voice/live-note/` and the Speechmatics Realtime adapter
+  (`voice/speechmatics/speechmatics-realtime.adapter.ts`, `ar_en` Enhanced, the S8B-01 configuration). Admitted only with a
+  consent to V3, the gate, an active session and one live note per person, its ledger row begun in the same definer call.
+  Interim words are never kept; final words live only in the process until Send. The recognizer is bound only when the
+  server key is set **and** `VOICE_NOTE_LIVE_TRANSCRIPT=ADOPT`; otherwise no audio is ever streamed and the note is
+  transcribed by Batch exactly as before. Adoption: every chunk in order, the live note finalized, its heard length within
+  ±1200 ms of the recording's proven length, and the batch path's own classification giving HIGH or MEDIUM.
+- *Accept + the live transcript in one transaction* — the upload `?liveId=&liveChunks=` calls
+  `server_accept_live_voice_note_v1` (accept v1 unchanged inside it, and the transcription row READY), so the batch claim
+  never races it; the unchanged commit `?auto=1` creates the turn and answers `REPLYING {turnId, replyId}`.
+- *The reply (VA-1 / VA-2 on this path, FVP-5)* — the Conversation Orchestrator streams DeepSeek through the Model Router
+  (`deepseek-model-router.ts`, accounted stream) and releases it through the incremental release guard
+  (`model-router/incremental-release-guard.ts`). COMPLETE stores exactly the text the non-streamed path would store;
+  WITHHELD_TAIL stores the released prefix through `server_finalize_voice_note_withheld_tail_v1` with **no completed
+  event**, so no Memory or post-response intelligence reads an incomplete reply. A Safety BLOCK and a Memory or
+  preference command finalize their own reply and are spoken whole (`speakWhole`, FVP-6). The typed path is unchanged.
+- *The automatic voice (D-S3, FVP-7 / FVP-8)* — `apps/api/src/voice/live-reply/`: one live reply per voice-note turn; one
+  ledger row per synthesis attempt, written before the call; no repeat after `USAGE_UNKNOWN`; PCM kept 15 minutes, then
+  deleted; `GET /voice/live-replies/:id?wait=&have=&final=&done=` (status long-poll with the released text),
+  `GET …/audio` (ONE continuous WAV stream per reply, the bearer in a header, its length announced once complete) and
+  `DELETE` (stops new synthesis). Replay reads the store and never pays.
+- *Migration `0188_s8b_04_fast_voice_path_v1.sql`* — forward-only, one transaction: the live note, accept-live, the live
+  reply store and its segments, the delivery record of the withheld tail, the sweep, `ACCOUNT_CASCADE` for the five new
+  relations, every new definer `service_role` only, and `VOICE_RECORDING_V3` installed as the one current version **in the
+  same transaction** (D4). Its deploy guard requires every voice gate `DISABLED`, the erasure census clean, no client
+  access, and exactly the three approved texts (V3 current; V2 and V1 historical, their digests unchanged).
+
+**B. The phone:**
+- `voice-live-note.ts` + `voice-pcm-stream-port.ts` — the live note during recording (16 kHz PCM chunks beside the
+  S8B-03 M4A recorder); cancel and leaving discard it.
+- `voice-reply.ts` — the automatic player: it starts by itself on a voice note sent here, long-polls the text, plays the
+  one stream, stops itself at the announced length (−60 ms), pause / resume / play again; `quiet()` pauses and stops new
+  synthesis when the conversation is left, the app leaves the foreground or a new recording starts (FVP-9). Nothing old
+  plays when a conversation is reopened; a typed message stays text only.
+- The reply companion slot (`ConversationSurface` `replyCompanion`, `VoiceNoteViews` control) with T2-01 … T2-07;
+  `accessibilityState.busy` only while PREPARING.
+- The consent: `VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V3'` and K-01 … K-15 as the client's guard copy (the title the
+  first row, agree and decline the last two); R-01 for an `OUTDATED` consent; Settings offers the withdrawal (C-46) for a
+  current or `OUTDATED` consent.
+
+### 11.6 Defects found and fixed in CP2
+
+1. **The native player kept playing after release (S8B-03 inheritance, found on the phone).** In `expo-audio` 57.0.5 on
+   Android, `remove()` only forgets the player in the module; ExoPlayer keeps playing. `voice-note-player-port.ts` now
+   pauses, removes **and** releases (`player.release()`). Device: 0 playing media sessions after the reply ended and after
+   leaving the conversation. Pinned by the S8B-04 contract test against the module's own source.
+2. **Play again after the store's 15 minutes showed T2-06.** The player cannot see the 404; on a failure the phone now
+   reads the reply's status once, and `NOT_FOUND` shows T2-07 (verified on the phone, Arabic).
+3. **A stale screen-reader busy state** after PREPARING: `busy` is now an explicit boolean.
+4. **The consent vocabulary (S8B-03 `faff8e70`, in `main`).** The API passes the database's words through
+   (`GRANTED_CURRENT`, `VERSION_NOT_CURRENT`, `NOT_GRANTED`, `WITHDRAWN`), but the phone read only `NONE` / `GRANTED` /
+   `WITHDRAWN` — words no real server sends — so Voice Notes were never offered against a real server; and the phone
+   still pinned V1 while `0187` had made V2 current. The phone now maps exactly the four database words
+   (`SERVER_VOICE_CONSENT_STATES`) and carries V3; one contract test reads the four words from `0183`, the API's
+   pass-through, the phone's map and the fakes. No user was affected (every gate `DISABLED`, nothing hosted).
+
+### 11.7 Verification (free; no provider called)
+
+| Check | Result |
+|---|---|
+| `verify-migration-0188` (real PostgreSQL 17, local) | 17 / 17 — catalogue; V3 current, the file text the installed text, V1 / V2 unchanged; the live note refused on a V1 or V2 consent; accept-first; one reply per turn; one ledger row per attempt; UNKNOWN final; finish; the withheld tail with no outbox event; the sweep; erasure; three races on two connections |
+| Re-anchored predecessors on a database **with** `0188` | `verify-migration-0183` 20 / 20 · `0185` 3 / 3 · `0186` 29 / 29 · `0187` 13 / 13 (a V2 grant refused under V3) |
+| The same on a database at `0187` (without `0188`) | `verify-migration-0186` and `0187` pass unchanged |
+| `0188` applied on top of `0187` | the deploy guard passes; V1 / V2 / V3 digests as §2.3 / §11.3 |
+| API jest (full) · mobile voice-note jest | 322 suites, 7,580 passed, 1 skipped · 13 suites, 150 / 150 |
+| Root contracts | S8B-02 / S8B-03 / S8B-04 voice contracts, AI-COST-01, S8A-01, W3-MEGA-M, the task-closure governance contract |
+| The Android phone (Huawei ALI-NX1, Android 15; a side-by-side proof app, the owner's own app untouched) | T10 auto reply and replay with no new synthesis · T11 pause / resume / `quiet()` with exactly one DELETE · T7 a 3 s data gap · T12 the live note beside the M4A with real speech (20 / 20 chunks in order) · T9 neither microphone capture silences the other · the 20 design captures · fixes 1 – 3 above. Provider timings there are **simulated**; the phone's part is real |
+
+The GitHub CI result on the Draft pull request is reported there and to the Product Owner, not claimed here.
+
+### 11.8 Not proven by CP2
+
+- **Real speed** with the real providers (D-S5), **live-transcript quality** (Speechmatics Realtime: negation, names,
+  numbers, Egyptian Arabic; the earlier WER 0.29 to be reviewed; the recorder-first order lowers the stream 6 – 10 dB on
+  the phone) and **Qandeel's voice quality** (P-1: naturalness, pronunciation, tone, the four lexicon candidates, H26).
+  `VOICE_NOTE_LIVE_TRANSCRIPT` stays `OFF` and the lexicon stays disabled until those plans pass.
+- **V-2 on the development project** (the cache) until the Product Owner applies `disableCache: true` (D8) and a free
+  re-read records it; **the Speechmatics training setting** until the Product Owner confirms it in the portal.
+- **iOS on a device**, TalkBack / VoiceOver on the reply control, a headset and a call during playback
+  (`QAN-BL-VOICE-04`'s list).
+
+### 11.9 The paid plans (D9 — NOT AUTHORIZED; each needs its own approval)
+
+| Plan | Cap | Before it runs |
+|---|---|---|
+| D-S5 — real latency, L2 on the phone with L3 calibration (first audible ≤ 3 s p50, p95 ≤ 5 s, ≥ 10 s a failure) | USD 1.50 | V-1 / V-2 verified (VA-11R §2 item 6); the training setting confirmed |
+| Speechmatics Realtime quality (live-transcript adoption) | USD 1.00 | the training setting confirmed in the portal |
+| P-1 — Gemini voice: pronunciation A/B, hints, tone, the lexicon, H26 | USD 2.00 | V-1 / V-2 verified |
+
+They are owned by `QAN-BL-VOICE-05` (§11.11).
+
+### 11.10 GitHub CI and the local runs
+
+The CI result on this record's own head is reported on the Draft pull request and in the report to the Product Owner;
+this record does not claim it. Merge only on «ادمج».
+
+### 11.11 S8B-04's closure (BG-08 / BG-09)
+
+- **`QAN-BL-VOICE-01` — worked by S8B-04 and not delivered:** Speech Rendering, the production TTS route, Listen's server,
+  the automatic spoken reply of Personal Voice Notes and the live note are built; calls, barge-in and realtime
+  conversation stay with S8B-05, and every gate stays `DISABLED`. Owner, severity and status unchanged.
+- **Admitted (BG-06):** `QAN-BL-VOICE-05` — S8B-04's unrun paid evidence and the conditions before it (§11.9, H26, the
+  lexicon, `VOICE_NOTE_LIVE_TRANSCRIPT`, V-2 and the training setting), owned by `S8B-08 — Voice Cost, Privacy & Launch
+  Evidence`. No item survives only in this record.
+- **Read and left unchanged:** `QAN-BL-VOICE-02` (PC-S1 … PC-S7, PC-D: V-1 / V-2 for the production project stay in
+  PC-S7), `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (the reply control joins its list as a screen-reader item), `QAN-BL-PROD-06`
+  / `08` (`0187` / `0188` not hosted), `QAN-BL-AI-01`, `QAN-BL-ACE-02`.
+- **Speculative generation** (D6) is a future improvement, not open work and not a backlog item.
+- **BG-09:** this record's banner states S8B-04's closing state; so do the three locators and the FVP amendment.

@@ -69,6 +69,13 @@ describe.each<ChromeLanguage>(['ar', 'en'])('Voice messages in Settings (%s)', (
     expect(view.queryByTestId('qandeel-voice-consent-withdrawn')).toBeNull();
   });
 
+  it('S8B-04 D4: a consent to an earlier version is still held: C-46 withdraws it like a current one', async () => {
+    const { session } = stubSession(true, 'OUTDATED');
+    const view = await render(<VoiceNoteSettingsSection session={session} language={language} />);
+    expect(view.getByTestId('qandeel-voice-withdraw')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-voice-consent-withdrawn')).toBeNull();
+  });
+
   it('OD-4: C-46 opens its consequence (C-47); Cancel keeps the consent; the second C-46 withdraws, then C-48 says so', async () => {
     // Drawn even once Voice Notes are no longer offered: a withdrawal is always reachable after a consent.
     const t = stubSession(false, 'GRANTED');

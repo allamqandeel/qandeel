@@ -156,6 +156,19 @@ describe('voice note session', () => {
     expect(t.session.capture.getState().kind).toBe('RECORDING');
   });
 
+  it('S8B-04 D4: a consent to an earlier version is asked for again, with R-01 above the text; a first consent without it', async () => {
+    const rows = VOICE_CONSENT_COPY_ROWS.map((r) => ({ ...r }));
+    const outdated = setup({ consent: false, rows: { kind: 'CONSENT', version: VOICE_CONSENT_VERSION, state: 'OUTDATED', rows } });
+    await outdated.session.begin();
+    expect(outdated.session.getState().sheet).toMatchObject({ phase: 'READY', renewal: true });
+    expect(outdated.rec.calls).toEqual([]);
+    await outdated.session.agree();
+    expect(outdated.api.calls).toEqual(['capability', 'consent', `grant:${VOICE_CONSENT_VERSION}`]);
+    const first = setup({ consent: false });
+    await first.session.begin();
+    expect(first.session.getState().sheet).toMatchObject({ phase: 'READY', renewal: false });
+  });
+
   it('B13: rows that are not the approved ones (or another version) are never shown and no consent is asked', async () => {
     const tampered = VOICE_CONSENT_COPY_ROWS.map((r) => ({ ...r }));
     tampered[3] = { ...tampered[3], en: `${tampered[3].en} ` };

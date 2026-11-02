@@ -219,4 +219,75 @@ describe('S8B-04 — the voice-note speech channel in the orchestrator', () => {
       expect(VOICE_SPOKEN_REPLY_GUIDANCE_TM_02).toMatch(/^This reply will be spoken aloud\./u);
     });
   });
+
+  // S8B-04 (CP2, Fast Voice Path, D-S2): the same turn, streamed into the automatic voice reply.
+  describe('a VOICE_NOTE turn with an automatic voice reply (CP2, D-S2)', () => {
+    type Released = { piece: string; expression: string };
+    const liveSink = () => {
+      const released: Released[] = [];
+      const ends: unknown[] = [];
+      return {
+        released, ends,
+        sink: { replyId: 'reply-1', signal: new AbortController().signal, release: (piece: string, speech: { expression: string }) => released.push({ piece, expression: speech.expression }), end: (e: unknown) => ends.push(e) },
+      };
+    };
+    const streamWith = (pieces: string[], result: Record<string, unknown>) => {
+      (router as unknown as { stream: jest.Mock }).stream = jest.fn().mockImplementation(async (_req: unknown, options: { onRelease: (p: string, s: unknown) => void }) => {
+        for (const piece of pieces) options.onRelease(piece, { expression: 'JOY', hints: [] });
+        return { routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 }, ...result };
+      });
+    };
+
+    it('streams: released pieces are spoken while generating, the tail after; the stored reply is the complete text; the end is COMPLETE', async () => {
+      const live = liveSink();
+      streamWith(['أهلًا بك!'], { kind: 'COMPLETE', text: 'أهلًا بك! كيف حالك؟', tail: ' كيف حالك؟', expression: 'JOY', hints: [] });
+      await orchestrator.orchestrate('token', 'user', turnOf('hello'), { ...voice, liveReply: live.sink as never });
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(live.released.map((r) => r.piece)).toEqual(['أهلًا بك!', ' كيف حالك؟']);
+      expect(storedContent()).toBe('أهلًا بك! كيف حالك؟');
+      expect(replySpeech.recordChannel).toHaveBeenCalledWith('user', ASSISTANT, 'JOY', []);
+      expect(live.ends).toEqual([{ kind: 'COMPLETE', assistantTurnId: ASSISTANT }]);
+    });
+
+    it('a whole that fails after a release keeps what was released (it may have been heard), stores it as WITHHELD_TAIL, never as a complete reply', async () => {
+      const live = liveSink();
+      repository.finalizeVoiceNoteWithheldTail = jest.fn().mockResolvedValue({ userTurn: turnOf('x'), assistantTurn: turnOf('أفهمك تمامًا.', ASSISTANT) });
+      streamWith(['أفهمك تمامًا.'], { kind: 'WITHHELD_TAIL', released: 'أفهمك تمامًا.', reason: 'GUIDANCE_ECHO' });
+      await orchestrator.orchestrate('token', 'user', turnOf('hello'), { ...voice, liveReply: live.sink as never });
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(repository.finalizeVoiceNoteWithheldTail).toHaveBeenCalledWith(expect.objectContaining({ content: 'أفهمك تمامًا.', reason: 'GUIDANCE_ECHO', safetyDisposition: 'ALLOW' }));
+      expect(replySpeech.recordChannel).not.toHaveBeenCalled();
+      expect(live.ends).toEqual([{ kind: 'WITHHELD_TAIL', assistantTurnId: ASSISTANT }]);
+    });
+
+    it('nothing released and no complete reply: the turn fails exactly as today and the voice reply ends FAILED', async () => {
+      const live = liveSink();
+      (router as unknown as { stream: jest.Mock }).stream = jest.fn().mockRejectedValue(new Error('provider'));
+      await expect(orchestrator.orchestrate('token', 'user', turnOf('hello'), { ...voice, liveReply: live.sink as never })).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(repository.failTurn).toHaveBeenCalled();
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(live.released).toEqual([]);
+      expect(live.ends).toEqual([{ kind: 'FAILED' }]);
+    });
+
+    it('a typed turn never streams, even if a voice reply were passed: the text path is unchanged', async () => {
+      const live = liveSink();
+      streamWith(['x.'], { kind: 'COMPLETE', text: 'x.', tail: '', expression: 'CALM', hints: [] });
+      await orchestrator.orchestrate('token', 'user', turnOf('hello'), { liveReply: live.sink as never });
+      expect(router.generate).toHaveBeenCalled();
+      expect((router as unknown as { stream: jest.Mock }).stream).not.toHaveBeenCalled();
+      expect(live.released).toEqual([]);
+    });
+
+    it('a Safety BLOCK reply (no provider) is spoken whole, CALM, then the end is COMPLETE', async () => {
+      const live = liveSink();
+      decide({ disposition: 'BLOCK', deterministicResponse: 'لا أستطيع المساعدة في هذا.' } as never);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: turnOf('x'), assistantTurn: turnOf('لا أستطيع المساعدة في هذا.', ASSISTANT) } as never);
+      streamWith([], { kind: 'COMPLETE', text: '', tail: '', expression: 'CALM', hints: [] });
+      await orchestrator.orchestrate('token', 'user', turnOf('hello'), { ...voice, liveReply: live.sink as never });
+      expect((router as unknown as { stream: jest.Mock }).stream).not.toHaveBeenCalled();
+      expect(live.released).toEqual([{ piece: 'لا أستطيع المساعدة في هذا.', expression: 'CALM' }]);
+      expect(live.ends).toEqual([{ kind: 'COMPLETE', assistantTurnId: ASSISTANT }]);
+    });
+  });
 });

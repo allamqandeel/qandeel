@@ -305,6 +305,17 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /voice/replies/:turnId/listen/:listenId/segments/:index/synthesis': 'CONVERSATION',
   'GET /voice/replies/:turnId/listen/:listenId/segments/:index/audio': 'AUTHENTICATED',
   'DELETE /voice/replies/:turnId/listen/:listenId': 'AUTHENTICATED',
+  // S8B-04 (CP2, Fast Voice Path, 0188): opening a live voice note begins paid realtime transcription, so it takes the
+  // Conversation class (the database admits one open live note per human, after current consent and within the work
+  // budget). Its audio chunks (one per ~500 ms while recording, at most 64 KiB) and the cancel are ordinary own acts the
+  // database and the service bound themselves. The automatic voice reply's routes start no paid work (synthesis is
+  // server-started by the turn): its status long-poll, its one audio stream and its stop are ordinary own acts.
+  'POST /voice/live-notes': 'CONVERSATION',
+  'POST /voice/live-notes/:liveId/audio': 'AUTHENTICATED',
+  'DELETE /voice/live-notes/:liveId': 'AUTHENTICATED',
+  'GET /voice/live-replies/:replyId': 'AUTHENTICATED',
+  'GET /voice/live-replies/:replyId/audio': 'AUTHENTICATED',
+  'DELETE /voice/live-replies/:replyId': 'AUTHENTICATED',
 
   'GET /replay/capability': 'AUTHENTICATED',
   'GET /replay/conversations/:sessionId': 'AUTHENTICATED',

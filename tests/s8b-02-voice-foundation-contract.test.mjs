@@ -205,8 +205,13 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
   for (const path of files.filter((p) => !p.startsWith(VERTEX_DIR) && p !== 'apps/api/src/voice/voice.module.ts')) {
     assert.doesNotMatch(read(path), /from '[^']*\/vertex-speech\//u, `${path} does not import the Vertex speech adapter`);
   }
+  // RE-ANCHORED by S8B-04 CP2 (2026-11-01, the Product Owner's D-S1 decision: realtime transcription during recording):
+  // the realtime adapter speaks to Speechmatics over Node's own global WebSocket - no `ws` package, no SDK - and it is
+  // the ONE file (with its spec) that may name a socket. Every other file in the folder still names none.
+  const REALTIME = new Set(['apps/api/src/voice/speechmatics/speechmatics-realtime.adapter.ts', 'apps/api/src/voice/speechmatics/speechmatics-realtime.adapter.spec.ts']);
   for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/speechmatics/'))) {
-    assert.doesNotMatch(read(path), /WebSocket|from 'ws'|axios|@speechmatics|@google\//u, `${path} uses no provider SDK and no socket`);
+    assert.doesNotMatch(read(path), /from 'ws'|require\('ws'\)|axios|@speechmatics|@google\//u, `${path} uses no provider SDK and no socket package`);
+    if (!REALTIME.has(path)) assert.doesNotMatch(read(path), /WebSocket/u, `${path} names no socket (the realtime adapter alone does)`);
   }
   for (const path of files.filter((p) => !p.startsWith('apps/api/src/voice/speechmatics/') && p !== 'apps/api/src/voice/voice.module.ts')) {
     assert.doesNotMatch(read(path), /from '[^']*\/speechmatics\//u, `${path} does not import the Speechmatics adapter`);

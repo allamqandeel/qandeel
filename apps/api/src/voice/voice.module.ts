@@ -1,8 +1,21 @@
 import { Module } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
+import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import { ObservabilityModule } from '../observability/observability.module';
+import { FAST_VOICE_PATH, type FastVoicePath } from '../voice-media/fast-voice-path.port';
 import { VoiceMediaModule } from '../voice-media/voice-media.module';
+import { LiveVoiceNoteController } from './live-note/live-voice-note.controller';
+import { LiveVoiceNoteRepository } from './live-note/live-voice-note.repository';
+import {
+  LIVE_VOICE_NOTE_SETTINGS, LIVE_VOICE_NOTE_STORE, LiveVoiceNoteService, REALTIME_RECOGNITION, type LiveVoiceNoteSettings, type RealtimeRecognition,
+} from './live-note/live-voice-note.service';
+import { LiveReplyController } from './live-reply/live-reply.controller';
+import { LiveReplyRepository } from './live-reply/live-reply.repository';
+import { LiveReplyService } from './live-reply/live-reply.service';
+import { LIVE_REPLY_STORE } from './live-reply/live-reply.store';
+import { loadSpeechmaticsRealtimeConfig } from './speechmatics/speechmatics-realtime.config';
+import { SpeechmaticsRealtimeAdapter } from './speechmatics/speechmatics-realtime.adapter';
 import { MachineAsrConfidenceStartupCheck } from './asr-confidence/machine-asr-confidence.startup-check';
 import { BATCH_TRANSCRIPTION_JOBS } from './batch-transcription-jobs.port';
 import { SpeechmaticsBatchJobsAdapter } from './speechmatics/speechmatics-batch-jobs.adapter';
@@ -29,13 +42,19 @@ import {
  * S8B-04 (CP1): it also binds the ONE speech synthesis route - Google Cloud TTS (`vertex-speech/`, ADC only) - and only
  * when a project is configured (otherwise null: Listen refuses before anything is written or sent). No fake is bound and
  * no fallback exists. «استمع» (ReplyListenController / ReplyListenService) lives here, beside the route it pays for.
+ *
+ * S8B-04 (CP2, Fast Voice Path): the automatic voice reply (LiveReplyService, the same synthesis route, server-started)
+ * and the live voice note (LiveVoiceNoteService). The realtime recognizer is bound ONLY when the server key is set AND
+ * VOICE_NOTE_LIVE_TRANSCRIPT=ADOPT (realtime quality accepted first); otherwise null and no audio is ever streamed. The
+ * voice media module reaches both through FAST_VOICE_PATH, resolved at call time (it still imports no provider).
  */
 @Module({
   imports: [ObservabilityModule, VoiceMediaModule],
-  controllers: [ReplyListenController],
+  controllers: [ReplyListenController, LiveReplyController, LiveVoiceNoteController],
   providers: [
     SupabaseAuthService,
     SupabaseAuthGuard,
+    SupabaseServiceRoleApiService,
     {
       provide: LISTEN_SYNTHESIS_ROUTE,
       useFactory: (): ListenSynthesisRoute | null => {
@@ -53,6 +72,35 @@ import {
       },
     },
     ReplyListenService,
+    { provide: LIVE_REPLY_STORE, useClass: LiveReplyRepository },
+    LiveReplyService,
+    { provide: LIVE_VOICE_NOTE_STORE, useClass: LiveVoiceNoteRepository },
+    {
+      provide: LIVE_VOICE_NOTE_SETTINGS,
+      useFactory: (): LiveVoiceNoteSettings => {
+        const config = loadSpeechmaticsRealtimeConfig();
+        return { mode: config.liveTranscript, thresholds: config.thresholds };
+      },
+    },
+    {
+      provide: REALTIME_RECOGNITION,
+      useFactory: (): RealtimeRecognition | null => {
+        const config = loadSpeechmaticsRealtimeConfig();
+        if (config.liveTranscript !== 'ADOPT' || !config.apiKey) return null;
+        return new SpeechmaticsRealtimeAdapter({ ...config, apiKey: config.apiKey });
+      },
+    },
+    LiveVoiceNoteService,
+    {
+      provide: FAST_VOICE_PATH,
+      useFactory: (notes: LiveVoiceNoteService, replies: LiveReplyService): FastVoicePath => ({
+        finishLiveNote: (userId, liveId, sentChunks, provenDurationMs) => notes.finish(userId, liveId, sentChunks, provenDurationMs),
+        discardLiveNote: (userId, liveId) => notes.cancel(userId, liveId).catch(() => undefined),
+        openReply: (userId, sessionId, sourceTurnId) => replies.open(userId, sessionId, sourceTurnId),
+        attachExchange: (userId, replyId, exchange) => replies.attachExchange(userId, replyId, exchange),
+      }),
+      inject: [LiveVoiceNoteService, LiveReplyService],
+    },
     { provide: VOICE_NOTE_TRANSCRIPTION_WORKER_SETTINGS, useFactory: () => loadVoiceTranscriptionWorkerConfig() },
     {
       provide: BATCH_TRANSCRIPTION_JOBS,

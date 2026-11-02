@@ -158,6 +158,19 @@ export interface ConversationSurfaceProps {
    * inside the same slab, on the same edge. It answers null for every other exchange, whose words are drawn here.
    */
   readonly utteranceBody?: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
+  /**
+   * S8B-04 (CP2): a companion of the reply, for an exchange the composition recognizes: the text released so far of a
+   * reply still being produced (drawn here, exactly as a reply's words) and a control the composition draws beneath the
+   * reply. It answers null for every other exchange; the words stay this layer's, the companion's logic stays outside it.
+   */
+  readonly replyCompanion?: ((exchange: ConversationExchangeView) => ConversationReplyCompanion | null) | null;
+}
+
+/** S8B-04 (CP2): what the composition hands as one reply's companion. */
+export interface ConversationReplyCompanion {
+  /** The released text of a reply not yet committed (null or empty: nothing released yet). */
+  readonly text: string | null;
+  readonly control: ReactElement | null;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
@@ -293,7 +306,7 @@ function Selectable({ id, label, gap, selection, palette, language, children }: 
   );
 }
 
-function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody }: {
+function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody, replyCompanion }: {
   readonly exchange: ConversationExchangeView;
   readonly copy: ConversationCopy;
   readonly palette: ConversationPalette;
@@ -301,6 +314,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   readonly contentWidth: number;
   readonly selection: ConversationSelection | null;
   readonly utteranceBody: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
+  readonly replyCompanion: ((exchange: ConversationExchangeView) => ConversationReplyCompanion | null) | null;
 }) {
   const mine = readerSide(language);
   const theirs = oppositeSide(mine);
@@ -311,6 +325,12 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   // A body the composition draws carries its own controls and draws its own UTTERANCE slab (the Voice Note's slab has
   // P4-C3 §1's own width and insets), so the place it sits in is then neither one assistive element nor a surface.
   const body = utteranceBody === null ? null : utteranceBody(exchange);
+  const companion = replyCompanion === null ? null : replyCompanion(exchange);
+  // A reply still produced shows the words released so far, as a reply's words; the committed reply replaces them.
+  const releasedText = exchange.reply === null && exchange.replyState === 'PENDING' && companion?.text ? companion.text : null;
+  const companionControl = companion?.control ? (
+    <View testID={`qandeel-reply-companion-${exchange.userTurn.id}`} style={{ alignSelf: alignSelfFor(theirs), marginTop: 4 }}>{companion.control}</View>
+  ) : null;
   return (
     <View>
       {/* UTTERANCE — the reader's committed words, on the reader's own edge. */}
@@ -350,11 +370,21 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
         >
           <Paragraphs text={exchange.reply.content} fallback={fallback} palette={palette} role="body" />
         </View>
+      ) : releasedText !== null ? (
+        <View
+          testID={`qandeel-reply-released-${exchange.userTurn.id}`}
+          accessible
+          accessibilityLabel={copy.replyTurnName(releasedText)}
+          style={{ alignSelf: alignSelfFor(theirs), marginTop: 16, maxWidth: Math.max(0, contentWidth - REPLY_END_INSET) }}
+        >
+          <Paragraphs text={releasedText} fallback={fallback} palette={palette} role="body" />
+        </View>
       ) : exchange.replyState === 'FAILED' ? (
         <StatusLine text={copy.replyFailed} tone="failure" side={theirs} palette={palette} language={language} testID={`qandeel-reply-failed-${exchange.userTurn.id}`} />
       ) : (
         <StatusLine text={copy.waitingForReply} tone="waiting" side={theirs} palette={palette} language={language} testID={`qandeel-reply-pending-${exchange.userTurn.id}`} />
       )}
+      {companionControl}
     </View>
   );
 }
@@ -427,6 +457,7 @@ export function ConversationSurface({
   composerOverride = null,
   threadTail = null,
   utteranceBody = null,
+  replyCompanion = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -440,7 +471,7 @@ export function ConversationSurface({
   const fallback = readerDirection(language);
   const contentWidth = Math.max(0, width - insets.left - insets.right - THREAD_GUTTER * 2);
   // The rows re-render when the mode or the handed body changes; both are held by reference.
-  const rowInputs = useMemo(() => ({ selection, utteranceBody }), [selection, utteranceBody]);
+  const rowInputs = useMemo(() => ({ selection, utteranceBody, replyCompanion }), [selection, utteranceBody, replyCompanion]);
 
   useEffect(() => {
     controller.ensureHistory();
@@ -703,7 +734,7 @@ export function ConversationSurface({
         testID="qandeel-conversation-thread"
         data={state.exchanges}
         keyExtractor={(exchange) => exchange.userTurn.id}
-        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} />}
+        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} replyCompanion={rowInputs.replyCompanion} />}
         extraData={rowInputs}
         ListHeaderComponent={state.exchanges.length > 0 ? historyFailure : null}
         // An empty list is either a history that could not be read, or — once READ — a genuinely empty

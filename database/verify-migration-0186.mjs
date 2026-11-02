@@ -37,6 +37,7 @@ import { MIGRATION_0186, SUBSTITUTIONS, substitutedStatement, writtenHeader } fr
 import {
   qandeelVoiceApplied, VOICE_CONSENT_V1, VOICE_CONSENT_V2, VOICE_CONSENT_V2_AR_SHA256, VOICE_CONSENT_V2_EN_SHA256,
 } from './qandeel-voice-0187-anchor.mjs';
+import { fastVoiceApplied, VOICE_CONSENT_V3, VOICE_CONSENT_V3_AR_SHA256, VOICE_CONSENT_V3_EN_SHA256 } from './qandeel-voice-0188-anchor.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -378,8 +379,10 @@ async function verifyCatalogue(report) {
     // voice_private: the twenty 0183 functions and the eight 0186 ones, nothing else.
     // S8B-04 re-anchor (migration 0187): plus 0187's six internals (verify-migration-0187 proves their shape).
     const [{ n }] = await rows("SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace s ON s.oid = p.pronamespace WHERE s.nspname = 'voice_private'");
+    // S8B-04 CP2 re-anchor (migration 0188): plus 0188's four internals (verify-migration-0188 proves their shape).
     const voiceApplied = await qandeelVoiceApplied(rows);
-    assert.equal(n, voiceApplied ? 34 : 28, voiceApplied ? 'C0b voice_private holds exactly 20 + 8 + 6 functions' : 'C0b voice_private holds exactly 20 + 8 functions');
+    const expected = 28 + (voiceApplied ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0);
+    assert.equal(n, expected, `C0b voice_private holds exactly 20 + 8 (+ 6 from 0187, + 4 from 0188) functions: ${expected}`);
     // v4 has no score parameter: the score is the band's constant.
     const [{ args }] = await rows('SELECT pg_get_function_arguments($1::regprocedure) AS args', [V4]);
     assert.doesNotMatch(args, /confidence/u, 'C0b v4 takes no confidence');
@@ -400,25 +403,35 @@ async function verifyCatalogue(report) {
     // S8B-04 re-anchor (migration 0187): 0187 installs VOICE_RECORDING_V2 (K-01 ... K-15) as current; this text stays,
     // word for word, as history. verify-migration-0187 and 0187's guard G2 pin V2's digests.
     const voiceApplied = await qandeelVoiceApplied(rows);
+    // S8B-04 CP2 re-anchor (migration 0188): 0188 installs VOICE_RECORDING_V3 as current; V1 and V2 stay, word for word,
+    // as history. verify-migration-0188 and 0188's deploy guard pin all three digests.
+    const fastApplied = await fastVoiceApplied(rows);
     const texts = await rows('SELECT purpose, version, is_current, text_ar, text_en, text_ar_sha256, text_en_sha256 FROM voice_private.consent_texts ORDER BY version');
-    assert.equal(texts.length, voiceApplied ? 2 : 1, voiceApplied ? 'C0d two consent texts (V1 history, V2 current)' : 'C0d one consent text');
+    assert.equal(texts.length, fastApplied ? 3 : voiceApplied ? 2 : 1, fastApplied ? 'C0d three consent texts (V1 and V2 history, V3 current)' : voiceApplied ? 'C0d two consent texts (V1 history, V2 current)' : 'C0d one consent text');
     const [t] = texts;
     assert.deepEqual([t.purpose, t.version, t.is_current], ['VOICE_RECORDING', VOICE_CONSENT_V1, !voiceApplied]);
     if (voiceApplied) {
       assert.deepEqual([texts[1].version, texts[1].is_current, texts[1].text_ar_sha256, texts[1].text_en_sha256],
-        [VOICE_CONSENT_V2, true, VOICE_CONSENT_V2_AR_SHA256, VOICE_CONSENT_V2_EN_SHA256], 'C0d V2 is the current approved text');
+        [VOICE_CONSENT_V2, !fastApplied, VOICE_CONSENT_V2_AR_SHA256, VOICE_CONSENT_V2_EN_SHA256], fastApplied ? 'C0d V2 is history, unchanged' : 'C0d V2 is the current approved text');
+    }
+    if (fastApplied) {
+      assert.deepEqual([texts[2].version, texts[2].is_current, texts[2].text_ar_sha256, texts[2].text_en_sha256],
+        [VOICE_CONSENT_V3, true, VOICE_CONSENT_V3_AR_SHA256, VOICE_CONSENT_V3_EN_SHA256], 'C0d V3 is the current approved text');
     }
     assert.deepEqual([t.text_ar_sha256, t.text_en_sha256], [CONSENT_AR_SHA256, CONSENT_EN_SHA256], 'C0d the approved digests');
     assert.deepEqual([sha256(t.text_ar), sha256(t.text_en)], [CONSENT_AR_SHA256, CONSENT_EN_SHA256], 'C0d the stored words are the approved words');
     assert.deepEqual([t.text_ar.split('\n').length, t.text_en.split('\n').length], [11, 11], 'C0d eleven rows, one per line');
     const [read] = await server('SELECT * FROM public.server_read_voice_consent_text_v1()');
-    assert.deepEqual([read.consent_version, read.text_ar_sha256], voiceApplied ? [VOICE_CONSENT_V2, VOICE_CONSENT_V2_AR_SHA256] : [VOICE_CONSENT_V1, CONSENT_AR_SHA256], 'C0d the read returns the current text');
+    assert.deepEqual([read.consent_version, read.text_ar_sha256], fastApplied ? [VOICE_CONSENT_V3, VOICE_CONSENT_V3_AR_SHA256] : voiceApplied ? [VOICE_CONSENT_V2, VOICE_CONSENT_V2_AR_SHA256] : [VOICE_CONSENT_V1, CONSENT_AR_SHA256], 'C0d the read returns the current text');
     const [constants] = await server('SELECT * FROM public.server_read_machine_asr_memory_confidence_v1()');
     assert.deepEqual([constants.high, constants.medium], [0.9, 0.75], 'C0d E13 the startup read returns the P-1 constants');
   });
 
   await report.section('C0e erasure coverage: both relations VOICE; the census is clean; the confidence constants are IMMUTABLE', async () => {
-    const registry = await rows("SELECT relation, coverage FROM account_erasure_private.coverage_registry WHERE relation LIKE 'voice_private.note_%' ORDER BY 1");
+    // S8B-04 CP2 re-anchor (migration 0188): 0188's voice_private.note_live_transcriptions is not a 0186 relation; it is
+    // ACCOUNT_CASCADE, proven by verify-migration-0188.
+    const registry = await rows(`SELECT relation, coverage FROM account_erasure_private.coverage_registry
+        WHERE relation LIKE 'voice_private.note_%' AND relation <> 'voice_private.note_live_transcriptions' ORDER BY 1`);
     assert.deepEqual(registry, RELATIONS.map((relation) => ({ relation, coverage: 'VOICE' })).sort((a, b) => a.relation.localeCompare(b.relation)));
     assert.deepEqual(await rows(CENSUS), [], 'C0e no unregistered relation references the account or a voice relation');
     const [f] = await rows("SELECT provolatile AS v FROM pg_proc WHERE oid = 'voice_private.machine_asr_memory_confidence_v1(text)'::regprocedure");
@@ -1230,6 +1243,7 @@ runVerifier('0186', async (setStage) => {
   await q("SET statement_timeout = '120s'");
   const report = createScenarioReport('0186', { query: q, restore: () => owner() });
   if (await qandeelVoiceApplied(rows)) currentConsentVersion = VOICE_CONSENT_V2;
+  if (await fastVoiceApplied(rows)) currentConsentVersion = VOICE_CONSENT_V3;
   const humans = [randomUUID()];
   setStage('catalogue');
   await verifyCatalogue(report);

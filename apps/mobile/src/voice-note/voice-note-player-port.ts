@@ -30,9 +30,13 @@ export function createExpoVoiceNotePlayerPort(): VoiceNotePlayerPort {
         play: () => player.play(),
         pause: () => player.pause(),
         seekTo: (positionMs) => player.seekTo(positionMs / 1000),
+        // `remove()` only forgets the player in the module; the native player keeps playing until it is released
+        // (S8B-04 CP2 device finding), so it is stopped and released here, not left to garbage collection.
         release: () => {
           subscription.remove();
+          player.pause();
           player.remove();
+          player.release();
         },
       };
     },

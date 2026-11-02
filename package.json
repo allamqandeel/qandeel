@@ -301,6 +301,7 @@
     "verify:voice-media-lifecycle:integration": "node --env-file-if-exists=.env database/verify-migration-0185.mjs",
     "verify:personal-voice-notes:integration": "node --env-file-if-exists=.env database/verify-migration-0186.mjs",
     "verify:qandeel-voice:integration": "node --env-file-if-exists=.env database/verify-migration-0187.mjs",
+    "verify:fast-voice-path:integration": "node --env-file-if-exists=.env database/verify-migration-0188.mjs",
     "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",
     "test:a3-02-native-push-platform-delivery-contract": "node --test tests/a3-02-native-push-platform-delivery-contract.test.mjs",
     "test:s4-01-shared-world-reachability-contract": "node --test tests/s4-01-shared-world-reachability-contract.test.mjs",

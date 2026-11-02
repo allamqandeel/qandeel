@@ -178,7 +178,7 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     {
       provide: VOICE_NOTE_TURN_RUNNER,
       useFactory: (conversations: ConversationService): VoiceNoteTurnRunner => ({
-        run: (userId, accessToken, sessionId, turnId) => conversations.runCommittedTurn(userId, accessToken, sessionId, turnId),
+        run: (userId, accessToken, sessionId, turnId, options) => conversations.runCommittedTurn(userId, accessToken, sessionId, turnId, options),
       }),
       inject: [ConversationService],
     },

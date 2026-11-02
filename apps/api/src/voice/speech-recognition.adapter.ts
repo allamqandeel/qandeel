@@ -59,6 +59,16 @@ export interface StreamingRecognitionSession {
   abort(): void;
 }
 
+/**
+ * S8B-04 (CP2, D-S1) — a realtime session the caller can finalize at once (Send): everything heard so far is finalized as
+ * fast as the provider can. Resolves ANSWERED once the provider answered, or TIMED_OUT after the governed timeout (the
+ * finals received so far stand, and a caller that may only use a complete transcript treats it as unusable). Rejects
+ * when the session has failed, ended or been aborted.
+ */
+export interface FinalizableRecognitionSession extends StreamingRecognitionSession {
+  finalize(): Promise<'ANSWERED' | 'TIMED_OUT'>;
+}
+
 export interface SpeechRecognitionAdapter {
   readonly provider: 'SPEECHMATICS';
   transcribe(request: BatchRecognitionRequest): Promise<BatchRecognitionResult>;

@@ -2,6 +2,7 @@ import {
   BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, ServiceUnavailableException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
+import { FAST_VOICE_PATH, type FastVoicePath } from './fast-voice-path.port';
 import { VOICE_NOTE_TURN_RUNNER, type VoiceNoteTurnRunner } from './voice-note-turn.port';
 import { consentText, VOICE_CONSENT_ROWS, VOICE_CONSENT_VERSION } from './voice-consent-text';
 import { VoiceNotesRepository } from './voice-notes.repository';
@@ -43,15 +44,22 @@ export class VoiceNotesService {
    * admission bounds, one turn + its voice source in one transaction), then run that turn through the unchanged
    * Orchestrator. The commit never calls the transcription provider (A6). A replay answers the same turn and reply.
    */
-  async commitTurn(userId: string, accessToken: string, recordingId: string) {
+  async commitTurn(userId: string, accessToken: string, recordingId: string, automaticVoiceReply = false) {
     if (!UUID.test(recordingId)) throw notFound();
     const row = await this.notes.commitTurn(userId, recordingId);
     switch (row?.outcome) {
       case 'COMMITTED':
-      case 'ALREADY_COMMITTED':
+      case 'ALREADY_COMMITTED': {
         if (!row.turn_id || !row.session_id) throw unavailable();
-        return this.moduleRef.get<VoiceNoteTurnRunner>(VOICE_NOTE_TURN_RUNNER, { strict: false })
-          .run(userId, accessToken, row.session_id, row.turn_id);
+        const runner = this.moduleRef.get<VoiceNoteTurnRunner>(VOICE_NOTE_TURN_RUNNER, { strict: false });
+        // S8B-04 (CP2, the automatic voice reply): only the request that committed the turn opens its reply; a replay of
+        // the same note (ALREADY_COMMITTED) answers the turn exactly as before and never opens a second reply or paid work.
+        if (automaticVoiceReply && row.outcome === 'COMMITTED') {
+          const replying = await this.replyAutomatically(runner, userId, accessToken, row.session_id, row.turn_id);
+          if (replying) return replying;
+        }
+        return runner.run(userId, accessToken, row.session_id, row.turn_id);
+      }
       case 'ADMISSION_LIMITED':
         // The same machine-readable refusal as a typed turn (PROD-SEC-02): nothing was committed.
         throw new HttpException({ code: 'TURN_ADMISSION_LIMITED' }, HttpStatus.TOO_MANY_REQUESTS);
@@ -66,6 +74,33 @@ export class VoiceNotesService {
       default:
         throw notFound();
     }
+  }
+
+  /**
+   * The turn runs in the background with its reply released into the automatic voice reply while it is generated; the
+   * answer names the reply at once, and the phone reads the text, the voice and finally the turn's answer from it. Nothing
+   * here changes the turn: the same runner, the same Orchestrator path, the same stored reply. No reply could be opened
+   * (no synthesis route, the database refused it): null, and the turn is answered exactly as before, text only.
+   */
+  private async replyAutomatically(runner: VoiceNoteTurnRunner, userId: string, accessToken: string, sessionId: string, turnId: string) {
+    let path: FastVoicePath | undefined;
+    try {
+      path = this.moduleRef.get<FastVoicePath>(FAST_VOICE_PATH, { strict: false }) ?? undefined;
+    } catch {
+      path = undefined;
+    }
+    const sink = path ? await path.openReply(userId, sessionId, turnId).catch(() => undefined) : undefined;
+    if (!path || !sink) return null;
+    const fast = path;
+    void runner.run(userId, accessToken, sessionId, turnId, { liveReply: sink }).then(
+      (exchange) => fast.attachExchange(userId, sink.replyId, exchange),
+      () => {
+        // The orchestrator already ended the reply on its own failures; this covers a failure before it started.
+        sink.end({ kind: 'FAILED' });
+        fast.attachExchange(userId, sink.replyId, null);
+      },
+    );
+    return { outcome: 'REPLYING' as const, turnId, replyId: sink.replyId };
   }
 
   /** GET /voice/consent — the approved text of the current version, and this person's consent state. */

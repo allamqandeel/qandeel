@@ -8,13 +8,31 @@
  *   - Consent comes first (C-01 … C-11, read from the server and shown only when they are the approved rows), then the
  *     OS permission at the moment of intent, then the capture. Nothing is sent before the reader's Send.
  *   - Leaving the screen stops a capture and keeps it as a draft (C-17); retire does the same and stops everything.
+ *   - S8B-04 (CP2): a capture begun after consent opens its live note beside it (D-S1); Send names it with the upload,
+ *     anything else discards it. QANDEEL's spoken reply to a note sent here plays by itself (`replies`); a new recording,
+ *     leaving the screen or the app leaving the foreground quiets it, and nothing new is synthesized for it then.
  */
 import type { ConversationExchangeView, ForegroundSignal } from '../runtime-entry';
-import type { VoiceConsentState, VoiceNoteApiClient, VoiceConsentRowView } from './voice-note-api';
+import type { VoiceConsentState, VoiceLiveNoteRef, VoiceNoteApiClient, VoiceConsentRowView } from './voice-note-api';
 import { VOICE_CONSENT_COPY_ROWS, VOICE_CONSENT_VERSION } from './voice-note-copy';
 import type { VoiceNoteCapture } from './voice-note-capture';
 import type { VoiceNotesController } from './voice-note-controller';
 import type { VoiceNotePlayback } from './voice-note-playback';
+import type { VoiceReplies } from './voice-reply';
+
+/** S8B-04 (CP2, D-S1): this Session's live note, beside its capture. */
+export interface VoiceSessionLiveNote {
+  begin(): Promise<void>;
+  finish(): Promise<VoiceLiveNoteRef | undefined>;
+  cancel(): void;
+}
+const NO_LIVE_NOTE: VoiceSessionLiveNote = { begin: async () => undefined, finish: async () => undefined, cancel: () => undefined };
+/** A store snapshot must be the same object while nothing changes. */
+const NO_REPLY_STATE = Object.freeze({ replies: Object.freeze({}) });
+const NO_REPLIES: VoiceReplies = {
+  getState: () => NO_REPLY_STATE, subscribe: () => () => undefined, start: () => undefined, toggle: async () => undefined,
+  quiet: () => undefined, retire: () => undefined,
+};
 
 export type VoiceNoteSessionNotice =
   | 'PERMISSION_DENIED' // C-21 + C-22
@@ -22,7 +40,8 @@ export type VoiceNoteSessionNotice =
 
 export type VoiceConsentSheet =
   | { readonly phase: 'LOADING' }
-  | { readonly phase: 'READY'; readonly rows: readonly VoiceConsentRowView[]; readonly granting: boolean }
+  /** `renewal`: the reader agreed to an earlier version; R-01 says the terms changed, above the current text. */
+  | { readonly phase: 'READY'; readonly rows: readonly VoiceConsentRowView[]; readonly granting: boolean; readonly renewal: boolean }
   /** The rows could not be read, or are not the approved ones: no consent is asked on words we cannot vouch for. */
   | { readonly phase: 'UNAVAILABLE' };
 
@@ -30,7 +49,7 @@ export interface VoiceNoteSessionState {
   /** Whether the microphone is offered (the server's capability for this reader). */
   readonly offered: boolean;
   readonly consentCurrent: boolean;
-  /** The reader's consent as the server holds it (null until read): Settings offers C-46 only while GRANTED (OD-4). */
+  /** The reader's consent as the server holds it (null until read): Settings offers C-46 while a consent is held, current or OUTDATED (OD-4). */
   readonly consentState: VoiceConsentState | null;
   /** Settings' withdrawal in flight, and its last failure (said with the approved line only — none exists, so nothing). */
   readonly withdrawing: boolean;
@@ -43,6 +62,10 @@ export interface VoiceNoteSessionOptions {
   readonly capture: VoiceNoteCapture;
   readonly notes: VoiceNotesController;
   readonly playback: VoiceNotePlayback;
+  /** S8B-04 (CP2): QANDEEL's spoken replies to notes sent here (absent: text only, as before). */
+  readonly replies?: VoiceReplies;
+  /** S8B-04 (CP2, D-S1): the live note beside each capture (absent: none). */
+  readonly liveNote?: VoiceSessionLiveNote;
   readonly foreground: ForegroundSignal;
   readonly newId: () => string;
   readonly isCurrent: () => boolean;
@@ -57,6 +80,7 @@ export interface VoiceNoteSession {
   readonly capture: VoiceNoteCapture;
   readonly notes: VoiceNotesController;
   readonly playback: VoiceNotePlayback;
+  readonly replies: VoiceReplies;
   getState(): VoiceNoteSessionState;
   subscribe(listener: () => void): () => void;
   /** The capability read and the drafts / notes of this Session. Sends nothing. */
@@ -97,6 +121,8 @@ export function consentRowsAreApproved(version: string, rows: readonly VoiceCons
 
 export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceNoteSession {
   const { api, capture, notes, playback, newId, isCurrent } = options;
+  const replies = options.replies ?? NO_REPLIES;
+  const liveNote = options.liveNote ?? NO_LIVE_NOTE;
   let state: VoiceNoteSessionState = { offered: false, consentCurrent: false, consentState: null, withdrawing: false, sheet: null, notice: null };
   const listeners = new Set<() => void>();
   let retired = false;
@@ -117,6 +143,8 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
     if (current.kind === 'FAILED') capture.reset();
     // A capture that stopped on its own (left, interrupted, the limit) becomes a draft row with its own line.
     if (current.kind === 'STOPPED' && current.draft.stoppedBy !== 'USER') {
+      // Not the reader's Send: the live note is discarded; the draft is transcribed after it is sent.
+      liveNote.cancel();
       notes.addDraft(current.draft);
       capture.reset();
     }
@@ -139,7 +167,15 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
       return;
     }
     consentVersion = read.version;
-    set({ sheet: { phase: 'READY', rows: read.rows, granting: false } });
+    set({ sheet: { phase: 'READY', rows: read.rows, granting: false, renewal: read.state === 'OUTDATED' } });
+  }
+
+  /** A capture, with its live note once it records (and a spoken reply quieted first: the reader is speaking now). */
+  async function startCapture(): Promise<void> {
+    replies.quiet();
+    playback.pause();
+    await capture.start();
+    if (live() && capture.getState().kind === 'RECORDING') await liveNote.begin();
   }
 
   return {
@@ -147,6 +183,7 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
     capture,
     notes,
     playback,
+    replies,
     getState: () => state,
     subscribe(listener) {
       listeners.add(listener);
@@ -168,7 +205,7 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
         await openSheet();
         return;
       }
-      await capture.start();
+      await startCapture();
     },
     async sendDraft(draftId) {
       if (!live()) return;
@@ -198,7 +235,7 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
       }
       set({ sheet: null, consentCurrent: true, consentState: 'GRANTED' });
       if (afterConsent.kind === 'SEND') await notes.send(afterConsent.draftId);
-      else await capture.start();
+      else await startCapture();
     },
     decline() {
       set({ sheet: null });
@@ -208,11 +245,17 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
       if (draft === null || !live()) return;
       notes.addDraft(draft);
       capture.reset();
-      await notes.send(draft.draftId);
+      const reference = await liveNote.finish();
+      await notes.send(draft.draftId, reference);
     },
-    cancel: () => capture.cancel(),
+    async cancel() {
+      liveNote.cancel();
+      await capture.cancel();
+    },
     async leave() {
       playback.pause();
+      replies.quiet();
+      liveNote.cancel();
       await capture.leave();
     },
     async withdrawConsent() {
@@ -222,6 +265,8 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
       if (!live()) return 'FAILED';
       set({ withdrawing: false });
       if (outcome !== 'DONE') return 'FAILED';
+      // A withdrawal stops spoken replies too (the server refuses their audio from now on).
+      replies.quiet();
       set({ consentCurrent: false, consentState: 'WITHDRAWN' });
       await readCapability();
       return 'DONE';
@@ -241,9 +286,11 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
     retire() {
       retired = true;
       unsubscribeCapture();
+      liveNote.cancel();
       capture.retire();
       notes.retire();
       playback.retire();
+      replies.retire();
       listeners.clear();
     },
   };

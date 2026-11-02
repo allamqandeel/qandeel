@@ -46,7 +46,7 @@ function server() {
         s.uploads.push({ commandId, bytes: bytes.length });
         if (!s.recordings.has(commandId)) s.recordings.set(commandId, REC);
         // LOST: the server stored it, but the answer never arrived.
-        return next === 'LOST' ? { kind: 'UNKNOWN' } : { kind: 'ACCEPTED', recordingId: s.recordings.get(commandId)!, acceptedAt: null, availableUntil: '2026-11-30T10:00:00.000Z' };
+        return next === 'LOST' ? { kind: 'UNKNOWN' } : { kind: 'ACCEPTED', recordingId: s.recordings.get(commandId)!, acceptedAt: null, availableUntil: '2026-11-30T10:00:00.000Z', transcriptReady: false };
       }
       return { kind: next } as VoiceNoteUploadResult;
     },

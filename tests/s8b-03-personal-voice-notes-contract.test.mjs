@@ -80,8 +80,9 @@ test('C-01 … C-11: the consent text in code equals the record, and 0186 instal
   const code = read('apps/api/src/voice-media/voice-consent-text.ts');
   // RE-ANCHORED by S8B-04 CP1 (2026-11-01, migration 0187): VOICE_RECORDING_V1 (C-01 … C-11) is HISTORY, kept unchanged
   // under its own constant; the current version is VOICE_RECORDING_V2 (K-01 … K-15), pinned by the S8B-04 contract test.
+  // RE-ANCHORED by S8B-04 CP2 (2026-11-02, migration 0188): the current version is VOICE_RECORDING_V3; V2 is history too.
   assert.match(code, /export const VOICE_CONSENT_V1_VERSION = 'VOICE_RECORDING_V1';/u);
-  assert.match(code, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V2';/u);
+  assert.match(code, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V3';/u);
   const unescape = (s) => s.replace(/\\'/gu, "'");
   const inCode = [...code.matchAll(/id: '(C-\d{2})',\s*ar: '((?:[^'\\]|\\')*)',\s*en: '((?:[^'\\]|\\')*)'/gu)]
     .map((m) => ({ id: m[1], ar: unescape(m[2]), en: unescape(m[3]) }));
@@ -143,9 +144,10 @@ test('C-12 … C-53: the app shows exactly the approved rows; C-12 is the microp
     assert.ok(mobile.has(id), `${id} is in voice-note-copy.ts`);
     assert.deepEqual([mobile.get(id).ar, mobile.get(id).en], [rows.get(id).a, rows.get(id).b], `${id} is verbatim`);
   }
-  for (const id of EXPECTED_IDS.slice(0, 11)) {
-    assert.deepEqual([mobile.get(id).ar, mobile.get(id).en], [rows.get(id).a, rows.get(id).b], `${id}: the client's guard copy is the consent text`);
-  }
+  // RE-ANCHORED by S8B-04 CP2 (2026-11-02, migration 0188): the client's guard copy is the CURRENT consent text,
+  // VOICE_RECORDING_V3 (K-01 … K-15), pinned row for row to the server's by the S8B-04 contract test. V1's C-01 … C-11
+  // are history on the server only; the phone no longer carries them.
+  for (const id of EXPECTED_IDS.slice(0, 11)) assert.equal(mobile.has(id), false, `${id} is not the phone's consent copy any more`);
   const c12 = rows.get('C-12');
   const plugins = JSON.parse(read('apps/mobile/app.json')).expo.plugins;
   const option = (name) => plugins.find((p) => Array.isArray(p) && p[0] === name)?.[1];

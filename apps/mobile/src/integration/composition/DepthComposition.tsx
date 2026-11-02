@@ -625,6 +625,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         composerOverride={voiceSlots.composerOverride}
         threadTail={voiceSlots.threadTail}
         utteranceBody={voiceSlots.utteranceBody}
+        replyCompanion={voiceSlots.replyCompanion}
       />
     ) : (
       <AnalysisAppearanceScope>

@@ -13,6 +13,10 @@
  *                         44 pt target), the line in the Temporal Spine's language (heard part, the Parting at the
  *                         position, seek by tap, drag or the accessible adjust), and the time — nothing else.
  *
+ *   VoiceReplyControl     S8B-04 (CP2): QANDEEL's spoken reply to a note sent here, beneath the reply's words, on QANDEEL's
+ *                         edge: P2 `pause` while it speaks, `play` while paused, `replay` after the end (44 pt), and only
+ *                         the line its state needs (T2-06 the voice could not play, T2-07 it is no longer available).
+ *
  * What is not always true is not always shown: the availability date, the text and deleting the recording are behind the
  * slab itself (a tap, named and with its expanded state), and a state's approved line appears only while that state
  * holds. There is no level meter, no waveform, no pulse and no recording dot. Times are tabular Western digits, an LTR
@@ -22,7 +26,9 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type R
 import { Linking, ScrollView, Text, View, useWindowDimensions, type AccessibilityActionEvent, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { Control, Glyph, MIN_TARGET, readerDirection, readerSide, typeStyle, usePalette, type ConversationPalette } from '../conversation';
+import {
+  Control, Glyph, MIN_TARGET, oppositeSide, readerDirection, readerSide, typeStyle, usePalette, type ConversationPalette, type ConversationReplyCompanion,
+} from '../conversation';
 import { Aperture, P2_SPINE } from '../iconography';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { ConversationExchangeView, ConversationVoiceNoteView } from '../runtime-entry';
@@ -32,6 +38,7 @@ import { availableUntilText, voiceNotePair, voiceNoteText } from './voice-note-c
 import type { VoiceDraftRecord } from './voice-draft-store';
 import type { VoiceNoteItem } from './voice-note-controller';
 import type { VoiceNoteSession } from './voice-note-session';
+import type { VoiceReplyState } from './voice-reply';
 
 /** P4-C3 §1: a fixed calm width; length is never encoded as width. */
 export const VOICE_NOTE_SLAB_WIDTH = 292;
@@ -205,12 +212,19 @@ export function VoiceConsentPanel({ session, language, maxHeight }: { readonly s
       </View>
     );
   }
-  const [title, ...body] = sheet.rows.slice(0, 9);
-  const agree = sheet.rows[9];
-  const decline = sheet.rows[10];
+  // The title first, the two decisions last, every row between them a body row (eleven rows in V1, fifteen in V2 / V3).
+  const title = sheet.rows[0];
+  const body = sheet.rows.slice(1, -2);
+  const agree = sheet.rows[sheet.rows.length - 2];
+  const decline = sheet.rows[sheet.rows.length - 1];
   return (
     <View testID="qandeel-voice-consent" style={{ paddingHorizontal: 6 }}>
       <ScrollView style={{ maxHeight }} contentContainerStyle={{ paddingTop: 6, paddingBottom: 12 }}>
+        {sheet.renewal ? (
+          <Text testID="qandeel-voice-consent-renewal" accessibilityLanguage={language} style={{ ...typeStyle('supporting'), color: palette.secondary, textAlign: side, writingDirection: writing, marginBottom: 10 }}>
+            {voiceNoteText('R-01', language)}
+          </Text>
+        ) : null}
         <Text accessibilityRole="header" accessibilityLanguage={language} style={{ ...typeStyle('statement'), color: palette.primary, textAlign: side, writingDirection: writing, marginBottom: 14 }}>
           {title[language]}
         </Text>
@@ -749,11 +763,62 @@ export function VoiceNoteTail({ session, language, contentWidth }: { readonly se
 
 // ------------------------------------------------------------------------------------------------ the composition seam
 
+// ------------------------------------------------------------------------------------------------ the spoken reply
+
+const NO_REPLIES_STATE: VoiceReplyState = { replies: {} };
+
+/**
+ * S8B-04 (CP2): the control of QANDEEL's spoken reply to one note sent here. It never says who makes the voice, how long
+ * it is kept, or anything technical; a failure keeps the written reply and offers the voice again.
+ */
+export function VoiceReplyControl({ session, turnId, language }: {
+  readonly session: VoiceNoteSession;
+  readonly turnId: string;
+  readonly language: ChromeLanguage;
+}) {
+  const palette = usePalette();
+  const replies = useSyncExternalStore(session.replies.subscribe, session.replies.getState);
+  const item = replies.replies[turnId];
+  if (item === undefined) return null;
+  const testID = `qandeel-voice-reply-${turnId}`;
+  const theirs = oppositeSide(readerSide(language));
+  const writing = readerDirection(language);
+  const lineStyle = { ...typeStyle('supporting'), color: palette.secondary, textAlign: theirs, writingDirection: writing } as const;
+  if (item.phase === 'GONE') {
+    return <Text testID={`${testID}-gone`} accessibilityLanguage={language} style={lineStyle}>{voiceNoteText('T2-07', language)}</Text>;
+  }
+  const glyph = item.phase === 'PLAYING' || item.phase === 'PREPARING' ? 'pause' : item.phase === 'PAUSED' ? 'play' : 'replay';
+  const action = item.phase === 'PREPARING' ? 'T2-05' : item.phase === 'PLAYING' ? 'T2-01' : item.phase === 'PAUSED' ? 'T2-02' : 'T2-03';
+  const separator = language === 'ar' ? '، ' : ', ';
+  return (
+    <View style={{ alignItems: theirs === 'right' ? 'flex-end' : 'flex-start' }}>
+      <Control
+        palette={palette}
+        language={language}
+        accessibilityLabel={`${voiceNoteText('T2-04', language)}${separator}${voiceNoteText(action, language)}`}
+        accessibilityState={{ busy: item.phase === 'PREPARING' }}
+        onPress={() => void session.replies.toggle(turnId)}
+        testID={`${testID}-control`}
+        style={{ width: MIN_TARGET, alignItems: 'center' }}
+      >
+        <Glyph name={glyph} color={palette.primary} direction={writing} />
+      </Control>
+      {item.phase === 'FAILED' ? (
+        <Text testID={`${testID}-failed`} accessibilityLiveRegion="polite" accessibilityLanguage={language} style={{ ...lineStyle, color: palette.error }}>
+          {voiceNoteText('T2-06', language)}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 export interface VoiceNoteSurfaceSlots {
   readonly composerEnd: ReactElement | null;
   readonly composerOverride: ReactElement | null;
   readonly threadTail: ReactElement | null;
   readonly utteranceBody: (exchange: ConversationExchangeView) => ReactElement | null;
+  /** S8B-04 (CP2): QANDEEL's spoken reply to a note sent here (its released words and its control); null otherwise. */
+  readonly replyCompanion: (exchange: ConversationExchangeView) => ConversationReplyCompanion | null;
 }
 
 /**
@@ -774,6 +839,8 @@ export function useVoiceNoteSurface(session: VoiceNoteSession | null, language: 
     };
   }, [session]);
   const key = useSyncExternalStore(subscribe, () => (session === null ? 'NONE' : `${voiceNoteOffered(session)}:${voiceNoteHoldsField(session)}:${session.getState().sheet !== null}`));
+  const subscribeReplies = useCallback((listener: () => void) => (session === null ? () => undefined : session.replies.subscribe(listener)), [session]);
+  const replyState = useSyncExternalStore(subscribeReplies, () => (session === null ? NO_REPLIES_STATE : session.replies.getState()));
   useEffect(() => {
     if (session !== null) void session.restore();
   }, [session]);
@@ -787,7 +854,16 @@ export function useVoiceNoteSurface(session: VoiceNoteSession | null, language: 
       ),
     [session, language, contentWidth],
   );
-  if (session === null) return { composerEnd: null, composerOverride: null, threadTail: null, utteranceBody };
+  // A new reply object only when the replies change, so the thread re-draws the rows that show them.
+  const replyCompanion = useCallback(
+    (exchange: ConversationExchangeView): ConversationReplyCompanion | null => {
+      const item = replyState.replies[exchange.userTurn.id];
+      if (session === null || item === undefined) return null;
+      return { text: item.text, control: <VoiceReplyControl session={session} turnId={exchange.userTurn.id} language={language} /> };
+    },
+    [session, replyState, language],
+  );
+  if (session === null) return { composerEnd: null, composerOverride: null, threadTail: null, utteranceBody, replyCompanion };
   const [offered, holds, sheet] = key.split(':').map((part) => part === 'true');
   return {
     composerEnd: offered ? <VoiceNoteMicEntry session={session} language={language} /> : null,
@@ -796,5 +872,6 @@ export function useVoiceNoteSurface(session: VoiceNoteSession | null, language: 
       : <VoiceNoteCaptureLine session={session} language={language} />,
     threadTail: <VoiceNoteTail session={session} language={language} contentWidth={contentWidth} />,
     utteranceBody,
+    replyCompanion,
   };
 }

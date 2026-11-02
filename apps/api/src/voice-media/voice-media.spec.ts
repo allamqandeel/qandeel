@@ -7,6 +7,7 @@ import {
 import { IntroductionMediaErasureWorker } from '../introductions-disclosure/introduction-media-erasure.worker';
 import { FakeSpeechRecognitionAdapter } from '../voice/testing/fake-speech-recognition.adapter';
 import { FakeSpeechSynthesisAdapter } from '../voice/testing/fake-speech-synthesis.adapter';
+import { buildM4aFixture } from '../voice/testing/m4a-fixture.writer';
 import { InMemoryPrivateAudioObjectStore, S3PrivateAudioObjectStore, VOICE_OBJECT_MAX_BYTES, exactLength } from './private-audio-object.store';
 import { VoiceMediaRepository } from './voice-media.repository';
 import { VOICE_EXPORT_FILE_NAME, VoiceMediaService, parseByteRange } from './voice-media.service';
@@ -371,5 +372,87 @@ describe('S8B-02 CP2 — the ASR / TTS ports: deterministic fakes in the ledger\
     const stopped = adapter.synthesize({ text: 'واحد. اثنان.', voiceId: 'Achird', hint: null, signal: controller.signal });
     for await (const _chunk of stopped.chunks) controller.abort();
     expect((await stopped.result).usage).toEqual({ completeness: 'ABSENT' });
+  });
+});
+
+// S8B-04 (CP2, Fast Voice Path, accept-first): the transcript heard DURING the recording is adopted only inside the
+// acceptance's own transaction (accept-live), with the recording's duration proven from the very bytes stored, and only
+// when the live service answers TRANSCRIBED. Anything else accepts exactly as before (the batch path transcribes it), and
+// a live note the upload does not hand over is discarded at once.
+describe('S8B-04 CP2 — a Voice Note upload with a live transcript', () => {
+  const LIVE = randomUUID();
+  const transcribed = { kind: 'TRANSCRIBED' as const, text: 'أنا بخير', band: 'HIGH' as const, uncertainTokens: [], audioMs: 1000, transcriptSha256: 'a'.repeat(64) };
+  function live(answer: unknown = transcribed) {
+    const path = {
+      finishLiveNote: jest.fn().mockImplementation(async (_u: string, _l: string, _n: number, proven: Promise<number | null>) => {
+        await proven;
+        return answer;
+      }),
+      discardLiveNote: jest.fn().mockResolvedValue(undefined),
+      openReply: jest.fn(), attachExchange: jest.fn(),
+    };
+    const h = harness({
+      acceptLiveNote: jest.fn().mockResolvedValue({ outcome: 'ACCEPTED', accepted_at: '2026-11-01T10:00:00+00:00', retention_expires_at: '2026-12-01T10:00:00+00:00', transcript_state: 'READY' }),
+    } as never);
+    const moduleRef = { get: jest.fn().mockReturnValue(path) };
+    const service = new VoiceMediaService(h.repository, h.store, h.telemetry as never, moduleRef as never);
+    return { ...h, path, service };
+  }
+  const m4a = buildM4aFixture();
+  const send = (service: VoiceMediaService, liveId: string = LIVE, chunks = 4) =>
+    service.uploadNote(USER, SESSION, randomUUID(), 'audio/mp4', String(m4a.length), Readable.from([m4a]), new AbortController().signal, { liveId, sentChunks: chunks });
+
+  it('adopts a qualifying live transcript with the acceptance, the duration proven from the stored bytes', async () => {
+    const { repository, store, path, service } = live();
+    await expect(send(service)).resolves.toMatchObject({ outcome: 'ACCEPTED', recordingId: RECORDING, transcriptReady: true });
+    expect(store.objects.get(NOTE_KEY)?.bytes.equals(m4a)).toBe(true);
+    expect(path.finishLiveNote).toHaveBeenCalledWith(USER, LIVE, 4, expect.any(Promise));
+    expect(await path.finishLiveNote.mock.calls[0]![3]).toBe(1000);
+    expect(repository.acceptLiveNote).toHaveBeenCalledWith(USER, RECORDING, m4a.length, expect.objectContaining({ liveId: LIVE, durationMs: 1000, transcript: 'أنا بخير', band: 'HIGH' }));
+    expect(repository.acceptNote).not.toHaveBeenCalled();
+    expect(path.discardLiveNote).not.toHaveBeenCalled();
+  });
+
+  it('an unusable live transcript accepts exactly as before: the batch path transcribes the recording', async () => {
+    const { repository, service } = live({ kind: 'UNUSABLE', reason: 'LOW_BAND' });
+    await expect(send(service)).resolves.toMatchObject({ outcome: 'ACCEPTED', transcriptReady: false });
+    expect(repository.acceptNote).toHaveBeenCalledTimes(1);
+    expect(repository.acceptLiveNote).not.toHaveBeenCalled();
+  });
+
+  it('a body that is not a provable recording never adopts anything', async () => {
+    const { repository, path, service } = live();
+    path.finishLiveNote.mockImplementation(async (_u: string, _l: string, _n: number, proven: Promise<number | null>) => ((await proven) === null ? { kind: 'UNUSABLE', reason: 'DURATION_MISMATCH' } : transcribed));
+    const junk = Buffer.alloc(900, 3);
+    await service.uploadNote(USER, SESSION, randomUUID(), 'audio/mp4', String(junk.length), Readable.from([junk]), new AbortController().signal, { liveId: LIVE, sentChunks: 1 });
+    expect(repository.acceptLiveNote).not.toHaveBeenCalled();
+    expect(repository.acceptNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('a refused upload or a replay discards the live note at once (its ledger row settled), and stores nothing', async () => {
+    const refused = live();
+    refused.repository.beginNote.mockResolvedValue({ outcome: 'CONSENT_REQUIRED', recording_id: null, storage_key: null, upload_deadline: null });
+    await expect(send(refused.service)).resolves.toEqual({ outcome: 'CONSENT_REQUIRED' });
+    expect(refused.path.discardLiveNote).toHaveBeenCalledWith(USER, LIVE);
+    expect(refused.path.finishLiveNote).not.toHaveBeenCalled();
+    const replay = live();
+    replay.repository.beginNote.mockResolvedValue({ outcome: 'ALREADY_ACCEPTED', recording_id: RECORDING, storage_key: null, upload_deadline: null });
+    await send(replay.service);
+    expect(replay.path.discardLiveNote).toHaveBeenCalledWith(USER, LIVE);
+    expect(replay.repository.acceptLiveNote).not.toHaveBeenCalled();
+  });
+
+  it('a malformed live reference is refused before anything moves', async () => {
+    const { repository, service } = live();
+    await expect(statusOf(send(service, 'not-a-uuid'))).resolves.toBe(400);
+    await expect(statusOf(send(service, LIVE, -1))).resolves.toBe(400);
+    expect(repository.beginNote).not.toHaveBeenCalled();
+  });
+
+  it('without the fast path (no Voice module) the upload is exactly S8B-03\'s', async () => {
+    const { repository, service } = harness();
+    await expect(service.uploadNote(USER, SESSION, randomUUID(), 'audio/mp4', String(m4a.length), Readable.from([m4a]), new AbortController().signal, { liveId: LIVE, sentChunks: 2 }))
+      .resolves.toEqual(expect.not.objectContaining({ transcriptReady: expect.anything() }));
+    expect(repository.acceptNote).toHaveBeenCalledTimes(1);
   });
 });

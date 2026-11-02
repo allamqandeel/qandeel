@@ -7,7 +7,13 @@ import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-
  */
 export type BeginNoteOutcome = 'BEGUN' | 'ALREADY_ACCEPTED' | 'NOT_AVAILABLE_NOW' | 'CONSENT_REQUIRED' | 'TOO_LARGE' | 'UNAVAILABLE' | 'COMMAND_CONFLICT';
 export interface BeginNoteRow { readonly outcome: BeginNoteOutcome; readonly recording_id: string | null; readonly storage_key: string | null; readonly upload_deadline: string | null }
-export interface AcceptNoteRow { readonly outcome: string; readonly accepted_at: string | null; readonly retention_expires_at: string | null }
+export interface AcceptNoteRow {
+  readonly outcome: string;
+  readonly accepted_at: string | null;
+  readonly retention_expires_at: string | null;
+  /** S8B-04 (CP2, accept-live only): READY when the live transcript was adopted with the acceptance. */
+  readonly transcript_state?: string | null;
+}
 export interface AddSegmentRow { readonly outcome: string; readonly storage_key: string | null; readonly upload_deadline: string | null }
 export interface OutcomeRow { readonly outcome: string }
 export interface RecordingObjectRow {
@@ -53,6 +59,21 @@ export class VoiceMediaRepository {
 
   acceptNote(userId: string, recordingId: string, byteSize: number) {
     return this.first<AcceptNoteRow>('server_accept_voice_note_v1', { p_user_id: userId, p_recording_id: recordingId, p_byte_size: byteSize });
+  }
+
+  /**
+   * S8B-04 (CP2, Fast Voice Path) — accept the note AND record its live transcript READY in one transaction (0188): the
+   * same acceptance as accept v1, then the transcription row exactly as the batch path would have left it, so no batch
+   * job is ever created for it. Consent, the gate and the recording are re-read inside; a refusal adopts nothing.
+   */
+  acceptLiveNote(userId: string, recordingId: string, byteSize: number, live: {
+    liveId: string;
+    durationMs: number; transcript: string; band: 'HIGH' | 'MEDIUM'; uncertainTokens: readonly string[]; transcriptSha256: string;
+  }) {
+    return this.first<AcceptNoteRow>('server_accept_live_voice_note_v1', {
+      p_user_id: userId, p_recording_id: recordingId, p_byte_size: byteSize, p_live_id: live.liveId, p_duration_ms: live.durationMs,
+      p_transcript: live.transcript, p_band: live.band, p_uncertain_tokens: [...live.uncertainTokens], p_transcript_sha256: live.transcriptSha256,
+    });
   }
 
   addSegment(userId: string, recordingId: string, track: string, segmentIndex: number, clockStartMs: number, clockEndMs: number, byteSize: number, leaseSeconds: number) {

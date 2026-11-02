@@ -13,9 +13,14 @@
  *
  * Restoring (a restart, a return to the conversation) re-reads local state and `GET /voice/notes/pending`; it never
  * uploads anything. Polling pauses while the app is not in front of the reader. Nothing is logged.
+ *
+ * S8B-04 (CP2, the automatic voice reply): a note the reader SENT in this runtime is committed with `?auto=1`, so its
+ * reply is spoken by itself (`onReplying`); a note found again by restoring is committed as before, text only, so nothing
+ * old speaks on its own. The upload may name the recording's live note; when its transcript stood (`transcriptReady`)
+ * the note is committed at once, with no status reads.
  */
 import type { ConversationExchangeView, ForegroundSignal } from '../runtime-entry';
-import type { VoiceNoteApiClient, VoiceNoteServerStatus, VoiceNoteStatusView } from './voice-note-api';
+import type { VoiceLiveNoteRef, VoiceNoteApiClient, VoiceNoteServerStatus, VoiceNoteStatusView } from './voice-note-api';
 import { VOICE_NOTE_MAX_BYTES } from './voice-note-limits';
 import type { VoiceDraftFiles, VoiceDraftRecord, VoiceDraftStore } from './voice-draft-store';
 
@@ -64,6 +69,11 @@ export interface VoiceNotesControllerOptions {
   readonly foreground: ForegroundSignal;
   /** The committed exchange, for the conversation of `sessionId` to merge. */
   readonly onCommitted: (exchange: ConversationExchangeView, sessionId: string) => void;
+  /**
+   * S8B-04 (CP2): a note sent in this runtime was committed and its reply is being produced and spoken under `replyId`.
+   * Absent: notes are committed text only, as before.
+   */
+  readonly onReplying?: (reply: { readonly recordingId: string; readonly turnId: string; readonly replyId: string; readonly durationMs: number | null; readonly availableUntil: string | null }) => void;
   readonly isCurrent: () => boolean;
   readonly newId: () => string;
   readonly setTimer?: (callback: () => void, ms: number) => unknown;
@@ -77,8 +87,8 @@ export interface VoiceNotesController {
   restore(): Promise<void>;
   /** A capture became a draft of this Session. */
   addDraft(draft: VoiceDraftRecord): void;
-  /** The reader's Send (or Try again) of one draft. */
-  send(draftId: string): Promise<void>;
+  /** The reader's Send (or Try again) of one draft; `live` names the recording's live note (S8B-04 CP2). */
+  send(draftId: string, live?: VoiceLiveNoteRef): Promise<void>;
   deleteDraft(draftId: string): Promise<void>;
   /** The reader's Try again of a note whose transcription failed. */
   retryNote(recordingId: string): Promise<void>;
@@ -111,6 +121,8 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
   let retired = false;
   /** One poll per note: its attempt count, its timer, and whether a read or commit is in flight. */
   const polls = new Map<string, { attempt: number; timer: unknown; busy: boolean }>();
+  /** S8B-04 (CP2): the notes the reader sent in THIS runtime; only they are answered by voice. */
+  const sentHere = new Set<string>();
   const live = () => !retired && isCurrent();
 
   const set = (next: Partial<VoiceNotesState>) => {
@@ -170,9 +182,19 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
   }
 
   async function commit(recordingId: string): Promise<'DONE' | 'AGAIN' | 'STOP'> {
-    const result = await api.commitTurn(recordingId);
+    const automatic = options.onReplying !== undefined && sentHere.has(recordingId);
+    const result = await api.commitTurn(recordingId, automatic);
     if (!live()) return 'STOP';
     switch (result.kind) {
+      case 'REPLYING': {
+        const held = noteOf(recordingId);
+        options.onReplying?.({
+          recordingId, turnId: result.turnId, replyId: result.replyId, durationMs: held?.durationMs ?? null, availableUntil: held?.availableUntil ?? null,
+        });
+        sentHere.delete(recordingId);
+        await forget(recordingId);
+        return 'DONE';
+      }
       case 'COMMITTED': {
         // The turn's answer is a typed turn's shape; it joins the conversation marked as this note's, still playable.
         const held = noteOf(recordingId);
@@ -180,6 +202,7 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
           ...result.exchange,
           voiceNote: { recordingId, available: true, availableUntil: held?.availableUntil ?? null, durationMs: held?.durationMs ?? null },
         }, sessionId);
+        sentHere.delete(recordingId);
         await forget(recordingId);
         return 'DONE';
       }
@@ -234,6 +257,22 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
     else schedule(recordingId);
   }
 
+  /** S8B-04 (CP2): the live transcript stood: the note is committed now, and read again later only if that did not take. */
+  async function commitNow(recordingId: string): Promise<void> {
+    const poll = polls.get(recordingId) ?? { attempt: 0, timer: null, busy: false };
+    polls.set(recordingId, poll);
+    if (poll.busy || !live()) return;
+    poll.busy = true;
+    let done: 'DONE' | 'AGAIN' | 'STOP';
+    try {
+      done = await commit(recordingId);
+    } finally {
+      poll.busy = false;
+    }
+    if (done === 'AGAIN') schedule(recordingId);
+    else stopPoll(recordingId);
+  }
+
   /** An accepted note shown as processing until its first status read says otherwise. */
   function track(recordingId: string, durationMs: number | null, availableUntil: string | null): void {
     if (noteOf(recordingId) === undefined) {
@@ -277,7 +316,7 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
       if (!live() || draft.sessionId !== sessionId || draft.state !== 'SAVED') return;
       replace(isDraft(draft.draftId), { kind: 'DRAFT', draft, phase: 'READY_TO_SEND' });
     },
-    async send(draftId) {
+    async send(draftId, liveNote) {
       const held = draftOf(draftId);
       if (!live() || held === undefined || held.phase === 'SENDING' || held.phase === 'REFUSED') return;
       // The command id is the one kept with the draft NOW (a rotation may have happened since it was shown).
@@ -296,7 +335,7 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
       }
       const abort = new AbortController();
       const timer = setTimer(() => abort.abort(), VOICE_NOTE_UPLOAD_TIMEOUT_MS);
-      const result = await api.upload(sessionId, current.commandId, bytes, abort.signal);
+      const result = await api.upload(sessionId, current.commandId, bytes, abort.signal, liveNote);
       clearTimer(timer);
       if (!live()) return;
       switch (result.kind) {
@@ -304,7 +343,13 @@ export function createVoiceNotesController(options: VoiceNotesControllerOptions)
           await store.accept(owner, draftId, { recordingId: result.recordingId, sessionId, durationMs: current.durationMs, availableUntil: result.availableUntil });
           if (!live()) return;
           replace(isDraft(draftId), null);
-          track(result.recordingId, current.durationMs, result.availableUntil);
+          sentHere.add(result.recordingId);
+          if (result.transcriptReady) {
+            replace(isNote(result.recordingId), {
+              kind: 'NOTE', recordingId: result.recordingId, durationMs: current.durationMs, availableUntil: result.availableUntil, phase: 'PROCESSING', canRetry: false,
+            });
+            await commitNow(result.recordingId);
+          } else track(result.recordingId, current.durationMs, result.availableUntil);
           return;
         case 'UNAVAILABLE': {
           // Nothing is known to be stored: the next Send is a NEW upload.

@@ -2,12 +2,13 @@ import { VoiceNotesRepository } from '../voice-media/voice-notes.repository';
 import { ReplySpeechRepository } from '../voice-media/reply-speech.repository';
 import {
   assertNoSpeechMarkup, SPEECH_HINT_POLICY, SpeechMarkupLeakError, stripSpeechMarkup, toStoredHints, validateSpeechHints,
-  type SpeechExpression, type StoredSpeechHint,
+  type SpeechExpression, type SpeechHintCandidate, type StoredSpeechHint,
 } from '../speech-rendering';
 import { withVoiceNoteChannel } from './behavioral-response-policy.service';
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, ServiceUnavailableException, Optional } from '@nestjs/common';
-import { MODEL_ROUTER, type ModelRouter, type ProcessingPath } from '../model-router/model-router.types';
+import { MODEL_ROUTER, type ModelRouter, type ModelRouterRequest, type ProcessingPath } from '../model-router/model-router.types';
+import type { LiveReplySink } from '../voice/live-reply/live-reply.service';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn, OrchestratedTurnResult } from './conversation.types';
 import { enterForegroundTurnWork } from './foreground-turn-work';
@@ -90,6 +91,13 @@ class HimSnapshotForegroundWaitBudgetExceededError extends Error {
 /** S8B-04 (CP1): how the turn reached QANDEEL. Only the Voice Note runner passes VOICE_NOTE; absent means typed. */
 export interface OrchestrateOptions {
   readonly modality?: 'VOICE_NOTE';
+  /**
+   * S8B-04 (CP2, Fast Voice Path, D-S2/D-S3): the automatic voice reply of a VOICE_NOTE turn. When present (and the
+   * router streams), the reply is generated through the incremental release guard and every released piece is handed
+   * to it to be spoken while the rest is still generated; its end is told on every outcome. Absent, the turn runs exactly
+   * as before. Never passed for a typed turn.
+   */
+  readonly liveReply?: LiveReplySink;
 }
 
 interface VoiceReplyChannel {
@@ -200,8 +208,9 @@ export class ConversationOrchestratorService {
           sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id,
           assistantTurnId: randomUUID(), content: safety.deterministicResponse!, safetyDisposition: safety.disposition,
         });
-        if (!finalized) return this.currentResult(accessToken, userId, claimed);
+        if (!finalized) { options.liveReply?.end({ kind: 'FAILED' }); return this.currentResult(accessToken, userId, claimed); }
         this.telemetry.recordTurnOutcome('blocked',selection.path);
+        this.speakWhole(options.liveReply, finalized.assistantTurn);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
       // W3-MEGA-M (E2E-D-13): an explicit conversational Memory request (P1 §9) - what QANDEEL remembers, remember,
@@ -225,8 +234,9 @@ export class ConversationOrchestratorService {
         const finalized = await this.repository.finalizeInteractionPreferenceTurn({
           sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), plan,
         });
-        if (!finalized) return this.currentResult(accessToken, userId, claimed);
+        if (!finalized) { options.liveReply?.end({ kind: 'FAILED' }); return this.currentResult(accessToken, userId, claimed); }
         this.telemetry.recordTurnOutcome('completed',selection.path);
+        this.speakWhole(options.liveReply, finalized.assistantTurn);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
       }
       if (safety.disposition === 'ALLOW') {
@@ -241,9 +251,10 @@ export class ConversationOrchestratorService {
           const finalized = await this.repository.finalizeMemoryControlTurn({
             sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), plan: memoryControl,
           });
-          if (!finalized) return this.currentResult(accessToken, userId, claimed);
+          if (!finalized) { options.liveReply?.end({ kind: 'FAILED' }); return this.currentResult(accessToken, userId, claimed); }
           if (memoryControl.outcome === 'NOT_HEARD_CLEARLY') this.telemetry.recordOperationalOutcome('VOICE_MEMORY_COMMAND_NOT_HEARD', 'memory_command', 'not_heard');
           this.telemetry.recordTurnOutcome('completed',selection.path);
+          this.speakWhole(options.liveReply, finalized.assistantTurn);
           return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
         }
       }
@@ -599,6 +610,9 @@ export class ConversationOrchestratorService {
         latencyBudgetMs: selection.path === 'DEEP' ? 25000 : 10000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });
+      const live = voiceNote && options.liveReply && this.router.stream ? options.liveReply : undefined;
+      if (live) return await this.streamVoiceNoteReply(live, assembled.request, safety.disposition, selection.path, accessToken, userId, userTurn, claimed,
+        assembled.request.questionContext !== undefined && questionForeground?.state === 'SELECTED' ? questionForeground.bindingId : undefined);
       const candidate = await this.engine('model_router',selection.path,()=>this.router.generate(assembled.request));
       // QIR-004 Fix 01: `consumed` is authorized by the FINAL NORMALIZED
       // REQUEST the provider actually received - never by the pre-budget
@@ -635,11 +649,12 @@ export class ConversationOrchestratorService {
         ...(assembled.request.questionContext !== undefined && questionForeground?.state === 'SELECTED'
           ? { questionBindingId: questionForeground.bindingId } : {}),
       });
-      if (!finalized) return this.currentResult(accessToken, userId, claimed);
+      if (!finalized) { options.liveReply?.end({ kind: 'FAILED' }); return this.currentResult(accessToken, userId, claimed); }
       if (voiceReply) await this.recordVoiceReplyChannel(userId, finalized.assistantTurn.id, voiceReply);
       this.telemetry.recordTurnOutcome('completed',selection.path);
       return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
     } catch {
+      options.liveReply?.end({ kind: 'FAILED' });
       this.telemetry.recordTurnOutcome('failed',selection.path);
       await this.repository.failTurn(userTurn.session_id, userId, userTurn.id);
       throw new ServiceUnavailableException('Conversation generation failed.');
@@ -654,8 +669,18 @@ export class ConversationOrchestratorService {
    */
   private separateVoiceNoteChannel(raw: string, safetyGuided: boolean): VoiceReplyChannel {
     const parsed = stripSpeechMarkup(raw, { safetyGuided });
-    const visible = parsed.kind === 'OK' ? parsed.text.trim() : '';
-    if (parsed.kind !== 'OK' || visible === '') {
+    if (parsed.kind !== 'OK') {
+      this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'separate', 'malformed');
+      throw new SpeechMarkupMalformedError();
+    }
+    return this.voiceNoteChannel(parsed.text, parsed.expression, parsed.hints);
+  }
+
+  /** The visible reply and its validated hints from the one parser's reading (whole or streamed). Same checks, same throws. */
+  private voiceNoteChannel(text: string, expression: SpeechExpression, parsedHints: readonly SpeechHintCandidate[]): VoiceReplyChannel {
+    const parsed = { text, expression, hints: parsedHints };
+    const visible = parsed.text.trim();
+    if (visible === '') {
       this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'separate', 'malformed');
       throw new SpeechMarkupMalformedError();
     }
@@ -670,6 +695,82 @@ export class ConversationOrchestratorService {
     const hints = validateSpeechHints(visible, candidates, SPEECH_HINT_POLICY === 'OFF' ? 'OFF' : 'B_ALL').hints;
     this.telemetry.recordOperationalOutcome('VOICE_REPLY_CHANNEL', 'separate', 'success');
     return { text: visible, expression: parsed.expression, hints: toStoredHints(hints) };
+  }
+
+  /**
+   * S8B-04 (CP2, Fast Voice Path, D-S2 as the Product Owner approved it on 2026-11-01) — a VOICE_NOTE reply generated
+   * through the incremental release guard. Everything before this step (claim, context, Safety, Memory and preference
+   * commands, guidance, budget) ran exactly as for any turn; only the provider call streams.
+   *
+   *   - Each released piece goes to the automatic voice reply while the rest is still generated. Nothing that is not
+   *     released (a held sentence, a marker, an unfinished part) ever reaches it.
+   *   - COMPLETE: the stored reply is exactly what the non-streaming path stores (the guard's contract); the unreleased
+   *     tail is spoken after it; finalize, speech channel and the completed event are the ordinary ones.
+   *   - The whole failed AFTER something was released (or the visible reply cannot be separated after a release): what
+   *     was released may already have been heard, so it is never erased or treated as unspoken. It is stored as the
+   *     reply, marked WITHHELD_TAIL, and no completed event is emitted, so no Memory or later intelligence ever treats
+   *     an incomplete reply as complete. Nothing released and no complete reply: the turn fails exactly as today.
+   */
+  private async streamVoiceNoteReply(live: LiveReplySink, request: ModelRouterRequest, disposition: 'ALLOW' | 'GUIDED', path: ProcessingPath,
+    accessToken: string, userId: string, userTurn: ConversationTurn, claimed: ConversationTurn, questionBindingId: string | undefined): Promise<OrchestratedTurnResult> {
+    let releasedText = '';
+    const streamed = await this.engine('model_router', path, () => this.router.stream!(request, {
+      safetyGuided: disposition === 'GUIDED',
+      onRelease: (piece, speech) => {
+        releasedText += piece;
+        live.release(piece, speech);
+      },
+    }));
+    if (request.hypothesisContext !== undefined) this.telemetry.recordHypothesisContext('consumed', path, request.hypothesisContext.contractVersion, request.hypothesisContext.candidateHypothesisCount, request.hypothesisContext.includedHypothesisCount);
+    let channel: VoiceReplyChannel | null = null;
+    if (streamed.kind === 'COMPLETE') {
+      try {
+        channel = this.voiceNoteChannel(streamed.text, streamed.expression, streamed.hints);
+      } catch (error) {
+        if (releasedText === '') throw error;
+      }
+    }
+    if (streamed.kind === 'COMPLETE' && channel) {
+      const tailStart = streamed.text.length - streamed.tail.length;
+      if (streamed.tail.trim() !== '') {
+        live.release(streamed.tail, {
+          expression: streamed.expression,
+          hints: streamed.hints.filter((hint) => hint.at > tailStart).map((hint) => ({ word: hint.word, at: hint.at - tailStart })),
+        });
+      }
+      const finalized = await this.repository.finalizeTurn({
+        sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), content: channel.text, safetyDisposition: disposition,
+        ...(questionBindingId !== undefined ? { questionBindingId } : {}),
+      });
+      if (!finalized) {
+        live.end({ kind: 'FAILED' });
+        return this.currentResult(accessToken, userId, claimed);
+      }
+      await this.recordVoiceReplyChannel(userId, finalized.assistantTurn.id, channel);
+      live.end({ kind: 'COMPLETE', assistantTurnId: finalized.assistantTurn.id });
+      this.telemetry.recordTurnOutcome('completed', path);
+      return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
+    }
+    const kept = releasedText.trim();
+    const reason = streamed.kind === 'WITHHELD_TAIL' ? streamed.reason : 'MARKUP_MALFORMED';
+    const finalized = await this.repository.finalizeVoiceNoteWithheldTail({
+      sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), content: kept, safetyDisposition: disposition, reason,
+    });
+    if (!finalized) {
+      live.end({ kind: 'FAILED' });
+      return this.currentResult(accessToken, userId, claimed);
+    }
+    live.end({ kind: 'WITHHELD_TAIL', assistantTurnId: finalized.assistantTurn.id });
+    this.telemetry.recordOperationalOutcome('VOICE_REPLY_STREAM', 'withheld_tail', reason === 'PROVIDER_FAILED' || reason === 'TRUNCATED' ? 'provider' : 'guard');
+    this.telemetry.recordTurnOutcome('completed', path);
+    return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
+  }
+
+  /** A reply QANDEEL wrote without the provider (Safety BLOCK, a Memory or preference command): spoken whole, CALM. */
+  private speakWhole(live: LiveReplySink | undefined, assistantTurn: ConversationTurn): void {
+    if (!live) return;
+    live.release(assistantTurn.content, { expression: 'CALM', hints: [] });
+    live.end({ kind: 'COMPLETE', assistantTurnId: assistantTurn.id });
   }
 
   /**

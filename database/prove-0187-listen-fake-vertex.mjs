@@ -140,7 +140,9 @@ async function exchange(user, sessionId, voice = true) {
 }
 async function grantCurrent(user) {
   await asRole('service_role');
-  const [{ outcome }] = await rows('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), 'VOICE_RECORDING_V2']);
+  // S8B-04 CP2 re-anchor (migration 0188): the current approved version (VOICE_RECORDING_V3 once 0188 is applied).
+  const [{ consent_version: current }] = await rows('SELECT consent_version FROM public.server_read_voice_consent_text_v1()');
+  const [{ outcome }] = await rows('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), current]);
   await owner();
   assert.equal(outcome, 'GRANTED');
 }

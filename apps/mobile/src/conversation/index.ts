@@ -32,7 +32,7 @@ export { conversationCopy } from './copy';
 export type { DirectedParagraph, ParagraphDirection, PhysicalSide } from './bidi';
 export { directedParagraphs, oppositeSide, paragraphDirection, readerDirection, readerSide, withDirectionMark } from './bidi';
 
-export type { ConversationSelection, ConversationSelectionMark, ConversationSurfaceProps, SurfaceInsets } from './ConversationSurface';
+export type { ConversationReplyCompanion, ConversationSelection, ConversationSelectionMark, ConversationSurfaceProps, SurfaceInsets } from './ConversationSurface';
 export { CONVERSATION_HEADER_MIN_HEIGHT, CONVERSATION_SURFACE_TEST_ID, ConversationSurface } from './ConversationSurface';
 export type { AnalysisReturnBarProps } from './AnalysisReturnBar';
 export { ANALYSIS_RETURN_BAR_MIN_HEIGHT, AnalysisReturnBar } from './AnalysisReturnBar';

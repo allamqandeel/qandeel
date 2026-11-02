@@ -41,6 +41,7 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import { SUBSTITUTIONS, extractStatement, substitutedStatement } from './voice-foundation-0183-substitutions.mjs';
 import { SUBSTITUTIONS as NOTE_SUBSTITUTIONS, substitutedBody as notesBody, voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
 import { qandeelVoiceApplied, VOICE_CONSENT_V2, voiceInternals0187 } from './qandeel-voice-0187-anchor.mjs';
+import { fastVoiceApplied, historicalVoiceConsentVersions, VOICE_CONSENT_V3, voiceInternals0188 } from './qandeel-voice-0188-anchor.mjs';
 
 // S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
 const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
@@ -384,6 +385,13 @@ async function verifyCatalogue(report) {
       assert.equal(internals.length, 6, 'S0b 0187 names six voice_private internals');
       declared.push(...internals);
     }
+    // S8B-04 CP2 re-anchor (migration 0188): 0188 adds four voice_private internals of its own, held to the same rules
+    // (verify-migration-0188 proves their shape).
+    if (await fastVoiceApplied(rows)) {
+      const internals = voiceInternals0188();
+      assert.equal(internals.length, 4, 'S0b 0188 names four voice_private internals');
+      declared.push(...internals);
+    }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,
           p.proconfig AS config, pg_get_userbyid(p.proowner) AS owner,
           EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0) AS to_public
@@ -419,10 +427,13 @@ async function verifyCatalogue(report) {
     // S8B-04 re-anchor (migration 0187): 0187 installs VOICE_RECORDING_V2 (K-01 ... K-15) as the one current version and
     // keeps the 0186 text as history; its guard G2 and verify-migration-0187 pin both texts' digests.
     const voiceApplied = await qandeelVoiceApplied(rows);
-    assert.deepEqual([texts, grants], [voiceApplied ? 2 : notesApplied ? 1 : 0, 0], 'S0c no consent text is installed (or only the approved 0186 / 0187 texts), no grant exists');
+    // S8B-04 CP2 re-anchor (migration 0188): 0188 installs VOICE_RECORDING_V3 as current and keeps V1 and V2 as history;
+    // its deploy guard and verify-migration-0188 pin all three texts' digests.
+    const fastApplied = await fastVoiceApplied(rows);
+    assert.deepEqual([texts, grants], [fastApplied ? 3 : voiceApplied ? 2 : notesApplied ? 1 : 0, 0], 'S0c no consent text is installed (or only the approved 0186 / 0187 / 0188 texts), no grant exists');
     if (notesApplied) {
-      const [{ current }] = await rows("SELECT count(*)::int AS current FROM voice_private.consent_texts WHERE version = $1 AND is_current", [voiceApplied ? VOICE_CONSENT_V2 : NOTES_CONSENT_VERSION]);
-      assert.equal(current, 1, voiceApplied ? 'S0c the approved 0187 text is current' : 'S0c the approved 0186 text is current');
+      const [{ current }] = await rows("SELECT count(*)::int AS current FROM voice_private.consent_texts WHERE version = $1 AND is_current", [fastApplied ? VOICE_CONSENT_V3 : voiceApplied ? VOICE_CONSENT_V2 : NOTES_CONSENT_VERSION]);
+      assert.equal(current, 1, fastApplied ? 'S0c the approved 0188 text is current' : voiceApplied ? 'S0c the approved 0187 text is current' : 'S0c the approved 0186 text is current');
     }
   });
 
@@ -855,7 +866,8 @@ async function verifyBehaviour(report) {
         await owner();
         await q("SET LOCAL session_replication_role = 'replica'");
         // S8B-04 re-anchor (migration 0187): 0187's VOICE_RECORDING_V2 goes the same way, so the catalogue is empty.
-        await q('DELETE FROM voice_private.consent_texts WHERE version = ANY($1::text[])', [[NOTES_CONSENT_VERSION, VOICE_CONSENT_V2]]);
+        // S8B-04 CP2 re-anchor (migration 0188): and 0188's VOICE_RECORDING_V3.
+        await q('DELETE FROM voice_private.consent_texts WHERE version = ANY($1::text[])', [[NOTES_CONSENT_VERSION, VOICE_CONSENT_V2, VOICE_CONSENT_V3]]);
         await q("SET LOCAL session_replication_role = 'origin'");
       }
       assert.deepEqual(await consentState(A), { consent_state: 'NOT_GRANTED', consent_version: null });
@@ -1172,6 +1184,7 @@ if (GOLDEN_MODE) {
     await q("SET statement_timeout = '120s'");
     const report = createScenarioReport('0183', { query: q, restore: () => owner() });
     if (await qandeelVoiceApplied(rows)) currentConsentVersion = VOICE_CONSENT_V2;
+    if (await fastVoiceApplied(rows)) currentConsentVersion = VOICE_CONSENT_V3;
     const humans = [randomUUID()];
     const versions = [`VERIFY_0183_RACE_${randomUUID().replace(/-/gu, '').slice(0, 12).toUpperCase()}`];
     setStage('catalogue');
@@ -1190,7 +1203,7 @@ if (GOLDEN_MODE) {
     const [{ residue }] = await rows(`SELECT (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))
         + (SELECT count(*) FROM voice_private.consent_texts WHERE NOT ((version = $2 AND is_current) OR (version = ANY($3::text[]) AND NOT is_current))) + (SELECT count(*) FROM voice_private.recording_consents)
         + (SELECT count(*) FROM voice_private.recordings)
-        + (SELECT count(*) FROM voice_private.voice_launch_capability_states WHERE feature_flag_state <> 'DISABLED') AS residue`, [humans, currentConsentVersion, currentConsentVersion === VOICE_CONSENT_V2 ? [NOTES_CONSENT_VERSION] : []]);
+        + (SELECT count(*) FROM voice_private.voice_launch_capability_states WHERE feature_flag_state <> 'DISABLED') AS residue`, [humans, currentConsentVersion, historicalVoiceConsentVersions(currentConsentVersion)]);
     assert.equal(Number(residue), 0, 'the run leaves nothing behind');
   }, () => rt.client.end().catch(() => undefined));
 }
