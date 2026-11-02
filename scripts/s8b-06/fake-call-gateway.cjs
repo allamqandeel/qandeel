@@ -890,6 +890,14 @@ function createGateway(options = {}) {
     return json(404, { error: 'NOT_FOUND' });
   });
   server.on('upgrade', onUpgrade);
+  // `server.close()` waits for every socket it accepted. A refused upgrade (`socket.end` only) or a Wire closed with an
+  // unref'd destroy timer can stay half-open; on Node 22 (CI) close() then never settles and the test runner's event loop
+  // drains under it. close() therefore destroys whatever is still open.
+  const sockets = new Set();
+  server.on('connection', (socket) => {
+    sockets.add(socket);
+    socket.on('close', () => sockets.delete(socket));
+  });
 
   return {
     server,
@@ -901,6 +909,7 @@ function createGateway(options = {}) {
         if (c.conn && !c.conn.closed) c.conn.wire.destroy();
       }
       server.close(() => resolve());
+      for (const socket of sockets) socket.destroy();
     }),
     summary: () => summarize(newest()),
     startReply: (opts) => startReply(newest(), { ms: 2000, late: 0, repeat: 0, reorder: 0, jitter: 0, wrongEpoch: 0, lead: 5, ...opts }),

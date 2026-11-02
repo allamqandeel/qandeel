@@ -1,8 +1,14 @@
 # QANDEEL S8B-06 — Native Call Audio Engine & Real Android AEC Proof: Implementation Record v1
 
-**Checkpoint:** S8B-06 CP1 — UNDER REVIEW (2026-11-02). CP1 (Native Audio Engine & Real Android AEC Proof) is on
-`s8b/s8b-06-cp1` as a **Draft pull request, not merged; merge only on the Product Owner's explicit «ادمج»**. S8B-06 is
-**not closed**. S8B-06 CP2 / CP3 are **not started and not authorized**.
+**Checkpoint:** S8B-06 CP1 — CLOSED / READY FOR PO MERGE DECISION (2026-11-02). CP1 (Native Audio Engine & Real
+Android AEC Proof) is on `s8b/s8b-06-cp1` as Draft PR #376, **not merged; merge only on the Product Owner's explicit
+«ادمج»**.
+
+- **Proven on a real phone:** AEC; B1 / B2, 20 / 20; the user's first words kept.
+- **Stop latency:** the measured 69–77 ms is accepted by the Product Owner for the first release as an approved
+  exception (§9). Stop ≤ 50 ms is still recorded as not met, and the goal moves to Future Improvement 018.
+
+S8B-06 is **not closed**. S8B-06 CP2 / CP3 are **not started and not authorized**.
 
 ## 0. Authority, base, precedence
 
@@ -73,6 +79,18 @@ Speechmatics), F-01, S8B-08 paid tests. Nothing in `runtime-entry/` or `integrat
 | Mobile Jest `src/voice-call` (protocol, client 13, session 7) | **28 / 28 pass** |
 | Native JUnit `:qandeel-voice-call:testDebugUnitTest` (detector 8, ledger 6, Opus 4: mono 20 ms TOC with FEC read from the LBRR flag and decodable, no DTX on silence, 24 kHz decode, and **64 real libopus downlink packets — hybrid and SILK — each decoded to libopus's own level ± 3 dB**, fixture `src/test/resources/s806-libopus-downlink-hybrid.txt`) | **18 / 18 pass**, 0 failures (local Gradle 9.3.1, §4) |
 | `tsc --noEmit`, ESLint (`src/voice-call`, the selector) | clean |
+
+**CI fix (on `df9d2ccb`).** API CI and Mobile CI run Node 22, and there the contract's gateway tests (5–14) were
+cancelled with "Promise resolution is still pending but the event loop has already resolved". Locally they pass on
+Node 24.
+
+- **Reproduction.** The failure was reproduced locally on Node 22.
+- **Cause.** `server.close()` waits for every socket the fake gateway accepted. A refused upgrade (`socket.end` only),
+  or a wire closed with an unref'd destroy timer, can stay half-open. On Node 22 `close()` then never settled, so the
+  test's `withGateway` hung on it while nothing else kept the event loop alive.
+- **Fix.** The narrowest one, in the fake gateway only: it tracks its sockets and destroys those still open when it
+  closes. No assertion and no protocol rule changed.
+- **Result.** 14 / 14 on Node 22 and on Node 24.
 
 ## 4. Native build
 
@@ -201,6 +219,13 @@ Pooled with `echo-pool.cjs <dir> --lag 20 --from 41`; the result is kept as `ech
   40 s of the room alone. This is the detector's false-trigger rate from external noise, as tuned: an onset run of
   200 ms above floor + 10 dB. It is a VAD robustness figure, not an echo figure. It is reported, not accepted or
   rejected, since the contract sets no number for it.
+- **Quality note Q-01: external noise, kept apart from AEC** (Product Owner, 2026-11-02). The false cuts and
+  report-only candidates caused by street and room noise are kept as a separate VAD quality observation, classified for
+  later evaluation and improvement.
+  - They are **not** evidence that AEC failed: they fell while the reply was silent or absent.
+  - The current results do **not** prove that the detector tells human speech apart from every possible noise. The
+    onset rule is level and duration, not a speech classifier.
+  - Q-01 is not an acceptance criterion and blocks nothing.
 
 ### 5.5 True barge-in with the user's voice: `ce7fb149…`, reports 079 (B1, speaker) and 080 (B2, earpiece)
 
@@ -246,8 +271,8 @@ buffer). It produced reports 064–078.
 - It was rejected. The source was returned to `ce7fb149…` byte for byte, and that APK was reinstalled for B1 / B2.
 
 The remaining route that might shorten the output path is AAudio MMAP through the NDK; the phone's policy reports MMAP
-support (policy 2). That would be a native C++ audio path, outside CP1. It is not attempted here; it is listed for the
-Product Owner in §9.
+support (policy 2). That would be a native C++ audio path, outside CP1. It is not attempted here. The Product Owner
+decided not to open it now (§9); it is recorded in Future Improvement 018.
 
 ### 5.7 Late / reordered / wrong-epoch packets (L1, report 060)
 
@@ -304,31 +329,47 @@ The gateway sent one turn as 183 packets (164 distinct):
 |---|---|---|---|
 | 1 | Capture and playback together with AEC active; clear sound from the main speaker | **MET** | D0 / B1 `describe`: AEC attached and enabled (Qualcomm Fluence); replies heard on speaker and earpiece; positive control §5.3–5.4 |
 | 2 | Echo-only: no false barge-in from the phone's own speaker; processed vs unprocessed measured; false-trigger rate | **MET on this phone** | §5.4: echo not detected with the canceller (E1 / E2 / E5, ≥ 26 pooled pairs each); detected at −61.6 dBFS without it (E3); 0 echo-caused cuts; room-only false-trigger rate reported (3 candidates / 40 s). No AEC number invented |
-| 3 | True barge-in: detection after ≥ 200 ms of real speech; **local stop ≤ 50 ms** from detection; P50 / P95 / Max with timestamp origin | Detection **MET** (10 + 10 of 10, 0 before the cue). **Stop ≤ 50 ms: NOT MET.** B1 P50 76.18 / P95 76.67 / Max 76.67 ms; B2 P50 69.77 / P95 72.43 / Max 72.43 ms | §5.5, source `TIMESTAMP` on every sample; A1 cross-check §5.5; one rejected attempt §5.6 |
+| 3 | True barge-in: detection after ≥ 200 ms of real speech; **local stop ≤ 50 ms** from detection; P50 / P95 / Max with timestamp origin | Detection **MET** (10 + 10 of 10, 0 before the cue). **Stop ≤ 50 ms: NOT MET** (measured): B1 P50 76.18 / P95 76.67 / Max 76.67 ms; B2 P50 69.77 / P95 72.43 / Max 72.43 ms. **Accepted for the first release as a PO-APPROVED EXCEPTION** (2026-11-02, below) | §5.5, source `TIMESTAMP` on every sample; A1 cross-check §5.5; one rejected attempt §5.6 |
 | 4 | First words kept on the uplink during the cut | **MET** | §5.5: 35 / 35 packets, 0 holes, × 20 runs; speech level against the pre-onset level |
 | 5 | No packet of a cut reply or old epoch played; PLAYOUT only from heard positions | **MET** | §5.7 (15 / 15 wrong epoch, late after cut refused, `playoutAboveSent` 0); B1 / B2 / E series `aheadOfAdmitted` 0 with `TIMESTAMP` |
 | 6 | Capture clock not reset on resume; protocol-exact resend; no invented speech in the gap | **MET** | §5.8 |
 | 7 | Mute / unmute, end, permission refused, audio resources released, audio mode restored, no microphone left held | **MET** | §5.8 (mute), §5.9 (P0; H1 platform log) |
 | — | Repetitions documented; device conditions shown | **MET** | §5.1; ≥ 2–3 runs per echo condition, 10 per scenario |
 
-**Open item (Product Owner).** The ≤ 50 ms stop criterion is not met on this phone. Every sample is 69–77 ms, and
-almost all of it is the platform's output queue (§5.5).
+**What was measured (as reported to the Product Owner).** The ≤ 50 ms stop criterion is not met on this phone. Every
+sample is 69–77 ms, and almost all of it is the platform's output queue (§5.5).
 
-This is **not** a failure of platform AEC, which §5.4 shows working. The WebRTC condition of execution task §7
-(*AEC fails, or echo causes false barge-in*) is therefore **not triggered**, and WebRTC is not proposed. It would also
-not remove the output queue, which a WebRTC audio device plays through as well.
+- This is **not** a failure of platform AEC, which §5.4 shows working.
+- The WebRTC condition of execution task §7 (*AEC fails, or echo causes false barge-in*) is therefore **not
+  triggered**, and WebRTC was not proposed. It would also not remove the output queue, which a WebRTC audio device
+  plays through as well.
+- The 48 kHz `VOIP_RX` track was tried and rejected (§5.6).
 
-The options, for the Product Owner to choose from (none is taken by CP1):
+The Product Owner was offered three options:
 
-1. **Accept** a device-measured stop latency on this class of phone. The criterion stays in the contract and is
-   recorded as not met here.
-2. **Authorize a low-latency output path:** AAudio MMAP through the NDK (Oboe or direct). The phone reports MMAP
-   support. This is a native C++ path, so a change of CP1 scope.
-3. **Measure on other phones** in CP3's device list before deciding.
+1. accept the measured latency;
+2. a low-latency AAudio MMAP path through the NDK;
+3. measuring on other phones first.
 
-The 48 kHz `VOIP_RX` track was tried and rejected (§5.6).
+**Product Owner decision (2026-11-02, «S8B-06 CP1 — PO Decision & CI Fix»): PO-APPROVED EXCEPTION.**
 
-**Not claimed:** CP1 is not complete while item 3 is open. Nothing here is PASS without its device report.
+- The engine's current performance is accepted for the first release, with the stop latency measured at 69–77 ms
+  instead of the original ≤ 50 ms.
+- The decision is an **approved exception to the original performance condition**: contract v1.0 D-A1 (detection
+  after 200 ms, local stop ≤ 50 ms, the uplink never stopped), carried by execution task §6 item 3. Only the ≤ 50 ms
+  figure is excepted. The 200 ms onset, the uplink rule and every other frozen condition stand unchanged, and the
+  contract text is not rewritten.
+- Not meeting ≤ 50 ms does not block closing S8B-06 CP1 or the first release.
+- ≤ 50 ms stays a future goal, not an acceptance condition for the first release. It is recorded as **Future
+  Improvement 018**, «S8B-06 — Reduce Android Voice Barge-in Stop Latency to ≤50ms», in the local log
+  `docs/future-improvements/QANDEEL_FUTURE_IMPROVEMENTS.docx`, as *Future Improvement — Non-Launch-Blocking — PO
+  Approved*. Its constraint: no cost to AEC, PLAYOUT truth or the user's first words, and re-evaluation on more than
+  one phone model.
+- No NDK / AAudio / WebRTC work is opened to shorten it now, and the engine is unchanged.
+- The measurements above are **not altered**, and nothing here records the 50 ms criterion as met.
+
+**Not claimed:** nothing here is PASS without its device report. Item 3's stop figure is an accepted exception, not a
+pass.
 
 ## 10. Backlog (BG-05 at kickoff; CP1 is not the closing change)
 
