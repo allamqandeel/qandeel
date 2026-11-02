@@ -27,6 +27,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import pg from 'pg';
+import { endFixtureCall, fixtureCall } from './live-call-0189-anchor.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -163,12 +164,17 @@ async function verifyBehaviour() {
       [session, user, secondSession, otherSession, other]);
     const recording = randomUUID();
     const otherRecording = randomUUID();
+    // S8B-05 re-anchor (migration 0189): each recording's call row is written first and marked ENDED without the authority's
+    // seal (live-call-0189-anchor.mjs); the recording itself is as 0183 writes it.
+    const rowsOf = async (text, values = []) => (await q(text, values)).rows;
     for (const [id, owner, ownerSession] of [[recording, user, session], [otherRecording, other, otherSession]]) {
-      await q(`WITH n AS (SELECT clock_timestamp() AS t)
-               INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at,
+      const { t } = await one('SELECT clock_timestamp()::text AS t');
+      const call = await fixtureCall(q, rowsOf, { id: randomUUID(), user: owner, session: ownerSession, startedAt: t });
+      await endFixtureCall(q, rowsOf, call);
+      await q(`INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at,
                                                      retention_expires_at, recording_state, writer_lease_until)
-               SELECT $1, $2, $3, 'LIVE_CALL', gen_random_uuid(), n.t, n.t + interval '30 days', 'RECORDING', n.t + interval '60 seconds' FROM n`,
-        [id, owner, ownerSession]);
+               VALUES ($1, $2, $3, 'LIVE_CALL', $4, $5::timestamptz, $5::timestamptz + interval '30 days', 'RECORDING', $5::timestamptz + interval '60 seconds')`,
+        [id, owner, ownerSession, call, t]);
     }
 
     stage = 'begin v3: only the voice operations and families, only the payer\'s own recording in its session';

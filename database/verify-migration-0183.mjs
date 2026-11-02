@@ -42,6 +42,7 @@ import { SUBSTITUTIONS, extractStatement, substitutedStatement } from './voice-f
 import { SUBSTITUTIONS as NOTE_SUBSTITUTIONS, substitutedBody as notesBody, voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
 import { qandeelVoiceApplied, VOICE_CONSENT_V2, voiceInternals0187 } from './qandeel-voice-0187-anchor.mjs';
 import { fastVoiceApplied, historicalVoiceConsentVersions, VOICE_CONSENT_V3, voiceInternals0188 } from './qandeel-voice-0188-anchor.mjs';
+import { endFixtureCall, fixtureCall, liveCallApplied, voiceInternals0189 } from './live-call-0189-anchor.mjs';
 
 // S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
 const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
@@ -137,15 +138,20 @@ async function storedNote(user, session) {
            VALUES ($1, 'NOTE', 0, $2, 'STORED', 'audio/mp4', 2048, clock_timestamp(), clock_timestamp())`, [id, key]);
   return { id, key };
 }
-/** A call recording in RECORDING, written directly. */
+/**
+ * A call recording in RECORDING, written directly. S8B-05 re-anchor (migration 0189): its call row is written first and
+ * marked ENDED without the authority's seal, so 0183's recording rules govern it unchanged (live-call-0189-anchor.mjs).
+ */
 async function recordingCall(user, session) {
   const id = randomUUID();
   await owner();
-  await q(`WITH n AS (SELECT clock_timestamp() AS t)
-           INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at,
+  const [{ t }] = await rows('SELECT clock_timestamp()::text AS t');
+  const call = await fixtureCall(q, rows, { id: randomUUID(), user, session, startedAt: t });
+  await q(`INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at,
                                                  retention_expires_at, recording_state, writer_lease_until)
-           SELECT $1, $2, $3, 'LIVE_CALL', gen_random_uuid(), n.t, n.t + interval '30 days', 'RECORDING', n.t + interval '60 seconds'
-             FROM n`, [id, user, session]);
+           VALUES ($1, $2, $3, 'LIVE_CALL', $4, $5::timestamptz, $5::timestamptz + interval '30 days', 'RECORDING',
+                   $5::timestamptz + interval '60 seconds')`, [id, user, session, call, t]);
+  await endFixtureCall(q, rows, call);
   return { id };
 }
 /** A voice source written directly (the attach definer is proven in A3). */
@@ -176,8 +182,18 @@ const begin = (user, session, bytes = 2048, command = randomUUID()) =>
   one('SELECT * FROM public.server_begin_voice_note_upload_v1($1, $2, $3, $4)', [user, session, command, bytes]);
 const accept = (user, recording, bytes = 2048) =>
   one('SELECT * FROM public.server_accept_voice_note_v1($1, $2, $3)', [user, recording, bytes]);
-const openCall = (user, session, { call = randomUUID(), ago = '0 seconds', lease = 30 } = {}) =>
-  one('SELECT * FROM public.server_open_call_recording_v1($1, $2, $3, clock_timestamp() - $4::interval, $5)', [user, session, call, ago, lease]);
+// S8B-05 re-anchor (migration 0189): the open answers only for the call authority's ACTIVE call with its started_at, so the
+// fixture call is written first; after the open (whatever it answered) the call is marked ENDED without a seal, and 0183's
+// recording rules (the writer's seal, the stale-writer recovery) govern the recording unchanged.
+async function openCall(user, session, { call = randomUUID(), ago = '0 seconds', lease = 30 } = {}) {
+  await owner();
+  const [{ t }] = await rows('SELECT (clock_timestamp() - $1::interval)::text AS t', [ago]);
+  await fixtureCall(q, rows, { id: call, user, session, startedAt: t });
+  const opened = await one('SELECT * FROM public.server_open_call_recording_v1($1, $2, $3, $4::timestamptz, $5)', [user, session, call, t, lease]);
+  await owner();
+  await endFixtureCall(q, rows, call);
+  return opened;
+}
 const addSegment = (user, recording, track, index, start, end, bytes = 1000, lease = 30) =>
   one('SELECT * FROM public.server_add_call_segment_v1($1, $2, $3, $4, $5, $6, $7, $8)', [user, recording, track, index, start, end, bytes, lease]);
 const storeSegment = (user, recording, track, index, bytes = 1000) =>
@@ -390,6 +406,13 @@ async function verifyCatalogue(report) {
     if (await fastVoiceApplied(rows)) {
       const internals = voiceInternals0188();
       assert.equal(internals.length, 4, 'S0b 0188 names four voice_private internals');
+      declared.push(...internals);
+    }
+    // S8B-05 CP1 re-anchor (migration 0189): 0189 adds seven voice_private internals of its own, held to the same rules
+    // (verify-migration-0189 proves their shape).
+    if (await liveCallApplied(rows)) {
+      const internals = voiceInternals0189();
+      assert.equal(internals.length, 7, 'S0b 0189 names seven voice_private internals');
       declared.push(...internals);
     }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,
@@ -1144,6 +1167,8 @@ async function removeConsentRaceFixtures(humans, versions) {
     await q(`DELETE FROM voice_private.recording_gaps WHERE recording_id IN (${recordings})`, [humans]);
     await q(`DELETE FROM voice_private.recording_objects WHERE recording_id IN (${recordings})`, [humans]);
     await q('DELETE FROM voice_private.recordings WHERE user_id = ANY($1::uuid[])', [humans]);
+    // S8B-05 re-anchor (migration 0189): the fixture calls go with their recordings (no cascade runs in replica mode).
+    if (await liveCallApplied(rows)) await q('DELETE FROM voice_private.calls WHERE user_id = ANY($1::uuid[])', [humans]);
     await q('DELETE FROM voice_private.recording_consents WHERE user_id = ANY($1::uuid[])', [humans]);
     await q('DELETE FROM voice_private.consent_texts WHERE version = ANY($1::text[])', [versions]);
     // S8B-03 re-anchor (migration 0186): installing the race version retired the approved 0186 text; with the race version

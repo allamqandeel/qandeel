@@ -20,6 +20,7 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import { voiceNotesApplied } from './voice-notes-0186-substitutions.mjs';
 import { qandeelVoiceApplied } from './qandeel-voice-0187-anchor.mjs';
 import { fastVoiceApplied } from './qandeel-voice-0188-anchor.mjs';
+import { endFixtureCall, fixtureCall, liveCallApplied } from './live-call-0189-anchor.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -75,11 +76,15 @@ async function note(user, sess, { state = 'STORED', acceptedAgo = '1 hour', obje
 async function sealedCall(user, sess, startedAgo = '1 hour') {
   const id = randomUUID();
   await owner();
-  await q(`WITH n AS (SELECT clock_timestamp() - $4::interval AS t)
-           INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at, retention_expires_at,
+  // S8B-05 re-anchor (migration 0189): the recording's call row is written first and marked ENDED without the authority's
+  // seal (live-call-0189-anchor.mjs); the seal below is 0183's.
+  const [{ t }] = await rows('SELECT (clock_timestamp() - $1::interval)::text AS t', [startedAgo]);
+  const call = await fixtureCall(q, rows, { id: randomUUID(), user, session: sess, startedAt: t });
+  await endFixtureCall(q, rows, call);
+  await q(`INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at, retention_expires_at,
                                                  recording_state, writer_lease_until)
-           SELECT $1, $2, $3, 'LIVE_CALL', gen_random_uuid(), n.t, n.t + interval '30 days', 'RECORDING', clock_timestamp() + interval '60 seconds'
-             FROM n`, [id, user, sess, startedAgo]);
+           VALUES ($1, $2, $3, 'LIVE_CALL', $4, $5::timestamptz, $5::timestamptz + interval '30 days', 'RECORDING', clock_timestamp() + interval '60 seconds')`,
+  [id, user, sess, call, t]);
   const keys = {};
   for (const [track, index, start, end, state] of [['USER', 0, 0, 1000, 'STORED'], ['USER', 1, 1000, 2000, 'STORED'], ['QANDEEL', 0, 0, 800, 'STORED'],
     ['USER', 2, 2000, 3000, 'PENDING_UPLOAD']]) {
@@ -119,8 +124,10 @@ async function verifyCatalogue(report) {
     // settlement), each named by its own ACL block and proven by verify-migration-0186; 0185 itself still adds none.
     // S8B-04 re-anchor (migration 0187): 0187 adds six voice_private internals of its own (verify-migration-0187).
     // S8B-04 CP2 re-anchor (migration 0188): and four 0188 internals (verify-migration-0188).
-    const expected = (await voiceNotesApplied(rows) ? 28 : 20) + (await qandeelVoiceApplied(rows) ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0);
-    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186, six 0187 and four 0188 ones): ${expected}`);
+    // S8B-05 CP1 re-anchor (migration 0189): and seven 0189 internals (verify-migration-0189).
+    const expected = (await voiceNotesApplied(rows) ? 28 : 20) + (await qandeelVoiceApplied(rows) ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0)
+      + (await liveCallApplied(rows) ? 7 : 0);
+    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186, six 0187, four 0188 and seven 0189 ones): ${expected}`);
     const [{ closed }] = await rows(`SELECT count(*)::int closed FROM voice_private.voice_launch_capability_states
                                       WHERE feature_flag_state = 'DISABLED' AND launch_requirements_state = 'UNSATISFIED'`);
     assert.equal(closed, 4, 'C0 all four voice scopes are DISABLED');

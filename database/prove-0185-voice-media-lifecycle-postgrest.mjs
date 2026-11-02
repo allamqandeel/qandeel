@@ -57,6 +57,7 @@ import { PassThrough, Readable } from 'node:stream';
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
 import { I07D_SEAMS, PFN, createIntroductionRuntime } from './introduction-lifecycle-verifier-support.mjs';
+import { endFixtureCall, fixtureCall, liveCallApplied } from './live-call-0189-anchor.mjs';
 
 const require = createRequire(import.meta.url);
 const databaseUrl = process.env.DATABASE_URL;
@@ -587,7 +588,17 @@ async function main() {
 
     stage = 'V09 B2 B6 B8 a call: order, gaps, deletion; a RECORDING past its expiry; a silent writer';
     const segment = (seed) => synth(8000, seed);
-    const openCall = async (startedSql, lease = 30) => (await svc(`SELECT * FROM public.server_open_call_recording_v1($1, $2, $3, ${startedSql}, $4)`, [a, sessionA, randomUUID(), lease]))[0];
+    // S8B-05 re-anchor (migration 0189): the open answers only for the call authority's ACTIVE call with its started_at, so
+    // the fixture call is written first and, once the recording is open, marked ENDED without a seal: 0183's recording rules
+    // (the writer's seal, the stale-writer recovery) govern the recording unchanged (live-call-0189-anchor.mjs).
+    const openCall = async (startedSql, lease = 30) => {
+      const call = randomUUID();
+      const [{ t }] = await rows(`SELECT (${startedSql})::text AS t`);
+      await fixtureCall(rows, rows, { id: call, user: a, session: sessionA, startedAt: t });
+      const [opened] = await svc('SELECT * FROM public.server_open_call_recording_v1($1, $2, $3, $4::timestamptz, $5)', [a, sessionA, call, t, lease]);
+      await endFixtureCall(rows, rows, call);
+      return opened;
+    };
     const call0 = await openCall('clock_timestamp()');
     assert.equal(call0.outcome, 'OPENED');
     const write = (rec, track, index, start, end, bytes) => voice.writeCallSegment(a, rec, track, index, start, end, Readable.from([bytes]), bytes.length, AbortSignal.timeout(30_000));
@@ -819,6 +830,8 @@ async function main() {
       await rows(`DELETE FROM voice_private.recording_gaps WHERE recording_id IN (${recordings})`, [humans]);
       await rows(`DELETE FROM voice_private.recording_objects WHERE recording_id IN (${recordings})`, [humans]);
       await rows('DELETE FROM voice_private.recordings WHERE user_id = ANY($1::uuid[])', [humans]);
+      // S8B-05 re-anchor (migration 0189): the fixture calls go with their recordings (no cascade runs in replica mode).
+      if (await liveCallApplied(rows)) await rows('DELETE FROM voice_private.calls WHERE user_id = ANY($1::uuid[])', [humans]);
       await rows('DELETE FROM voice_private.recording_consents WHERE user_id = ANY($1::uuid[])', [humans]);
       await rows('DELETE FROM voice_private.consent_texts WHERE version = $1', [consentVersion]);
       // S8B-03 re-anchor (migration 0186): installing the proof version retired the approved 0186 text (VOICE_RECORDING_V1);
