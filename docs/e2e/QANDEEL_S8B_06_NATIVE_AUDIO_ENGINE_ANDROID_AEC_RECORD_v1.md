@@ -28,8 +28,9 @@ S8B-06 is **not closed**. S8B-06 CP2 / CP3 are **not started and not authorized*
 **Constraints kept:**
 
 - `apps/api/`, `database/`, the frozen protocol (`docs/voice/QANDEEL_LIVE_CALL_PROTOCOL_v1.md`,
-  `apps/api/src/voice/call/live-call.protocol.ts`) and migration `0189` are **unchanged** (`git diff main -- apps/api
-  database docs/voice` is empty);
+  `apps/api/src/voice/call/live-call.protocol.ts`) and migration `0189` are **unchanged** (`git diff 50938001 --
+  database docs/voice` is empty). The one exception under `apps/api/` is the CI fix R2 (§3), made on the Product
+  Owner's instruction: test-only, in S8B-04's `live-reply.service.spec.ts`; no production code changed;
 - no voice gate opened, no production identity changed, no hosted deploy, no paid call, no provider called
   (DeepSeek / Gemini / Speechmatics untouched);
 - no raw audio stored or logged; the evidence holds numbers, and the only audio files are the gateway's synthetic reply
@@ -91,6 +92,24 @@ Node 24.
 - **Fix.** The narrowest one, in the fake gateway only: it tracks its sockets and destroys those still open when it
   closes. No assertion and no protocol rule changed.
 - **Result.** 14 / 14 on Node 22 and on Node 24.
+
+**CI fix R2 (on `7b4c8d49`).** API CI failed one test, in both of its Jest runs (7636 passed, 1 skipped):
+S8B-04's `live-reply.service.spec.ts` "nothing paid starts when no phone connected within the grace…", which expected
+0 synthesis calls and received 1. The test predates S8B-06 and S8B-06 does not touch its subject.
+
+- **Cause (a race in the test, proven).** The test read `Date.now()` before `await openReply(service)`, then froze the
+  clock at that reading + 6000 + 1 ms. The reply's grace starts at its own `openedAt`, taken when it is constructed after
+  the asynchronous open. When the open takes ≥ 2 ms, the frozen clock is still inside the grace, so the synthesis
+  rightly starts. A 3 ms delay injected into the fake store's open reproduces the CI failure exactly (0 expected,
+  1 received).
+- **Fix (test only).** The fake clock is installed before the open, so the grace starts exactly at the test's `opened`
+  instant, and the clock then moves to `opened` + 6000 + 1 ms. The assertions are unchanged: no synthesis call, no
+  admitted segment, and the text side ends COMPLETE with 0 segments. A companion test sets the clock to `opened` + 6000
+  ms (the grace's last millisecond) and expects the synthesis to start. This shows that the clock, not a vacuous
+  setup, is what stops it. Both tests pass with a 3 ms or 50 ms delay injected into the open.
+  `LiveReplyService`, `LIVE_REPLY_FIRST_CONNECT_GRACE_MS` (6000 ms) and every other assertion are unchanged.
+- **Result (local, Node 22 as in CI).** The spec passed 12 / 12 on 8 runs. The full API Jest run passed 328 / 328
+  suites: 7638 passed, 1 skipped.
 
 ## 4. Native build
 
