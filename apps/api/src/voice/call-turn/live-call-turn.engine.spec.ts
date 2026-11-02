@@ -214,4 +214,53 @@ describe('S8B-05 CP2 the call turn engine (§3 – §8): voice in, a committed t
     expect(requests.map((r) => r.callTurnIndex)).toEqual([1, 2]);
     h.stream.close();
   });
+
+  // S3 race (PR #375 review, head 7d585767): the context read comes back while the person is speaking again, before the
+  // commit silence. The held turn must not be committed early, and QANDEEL must not start replying over the person: the
+  // held words and the new ones are ONE turn, committed after the speech ends, by the usual commit rules.
+  it('S3 race: a held turn is not committed while the person is speaking; it joins the new words after the commit silence', async () => {
+    let readable = false;
+    const requests: LiveCallReplyRequest[] = [];
+    const h = harness(['احكيلي حاجة', 'أنا هنا', 'ولسه بكمل كلامي'], {
+      conversation: {
+        reply: async (request): Promise<LiveCallReplyOutcome> => {
+          requests.push(request);
+          if (request.callTurnIndex === 1) return { kind: 'FAILED', stages: {} };
+          await request.storeSafety('ALLOW');
+          return { kind: 'FAILED', stages: {} };
+        },
+        settleSafety: async (request) => {
+          if (!readable) throw new Error('CALL_CONTEXT_UNAVAILABLE');
+          await request.storeSafety('ALLOW');
+        },
+      },
+    });
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.channel.of('TURN_COMMITTED').length === 1);
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.observed.some((o) => o.kind === 'COMMIT_HELD' && o.finals === 1));
+
+    // The person speaks again; the read comes back mid-speech. Five real seconds of speech outlast any retry delay (≤ 4 s).
+    await h.speak('loud', 200);
+    readable = true;
+    for (let wall = Date.now(); Date.now() - wall < 5_000;) {
+      await h.speak('loud', 100);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(h.channel.of('TURN_COMMITTED')).toHaveLength(1);
+    expect(h.store.commits).toHaveLength(1);
+    expect(requests.map((r) => r.callTurnIndex)).toEqual([1]);
+
+    // The speech ends: after the usual silence, ONE turn with every word; only then is it answered.
+    await h.speak('quiet', 1_000);
+    await until(() => h.channel.of('TURN_COMMITTED').length === 2, 8_000);
+    expect(h.store.commits).toHaveLength(2);
+    expect(h.store.commits[1]!.content).toBe('أنا هنا ولسه بكمل كلامي');
+    expect(h.store.exchanges[0]!.closed).toMatchObject({ deliveryState: 'FAILED', reason: 'NEXT_TURN' });
+    await until(() => requests.length === 2);
+    expect(requests[1]).toMatchObject({ callTurnIndex: 2, content: 'أنا هنا ولسه بكمل كلامي' });
+    h.stream.close();
+  }, 30_000);
 });

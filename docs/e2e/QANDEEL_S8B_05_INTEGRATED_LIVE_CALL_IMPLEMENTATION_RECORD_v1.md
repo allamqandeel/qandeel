@@ -489,7 +489,7 @@ The re-anchored verifiers 0150, 0153, 0168, 0183, 0185 and 0186 pass locally on 
 |---|---|---|
 | `voice/call-turn/call-endpointer.spec.ts` | 4 | the five moments, resumed speech as the same turn, the thresholds |
 | `voice/call-turn/call-reply.spec.ts` | 9 | the five cases, P1, one close, the retry, the terms |
-| `voice/call-turn/live-call-turn.engine.spec.ts` | 6 | voice to a heard reply, finals only, N1 with its stored Safety, the recognizer settled by the gateway bytes, unbound; **R1: the S3 regression (§10.9)** |
+| `voice/call-turn/live-call-turn.engine.spec.ts` | 7 | voice to a heard reply, finals only, N1 with its stored Safety, the recognizer settled by the gateway bytes, unbound; **R1: the S3 regression and the R1b race regression (§10.9)** |
 | `conversation/live-call-reply.service.spec.ts` | 20 | the window, the fold, retrieval, S1 / S2, BLOCK, GUIDED, a Safety not stored, the 80 ms skip, a provider failure; **#37 (b): six history-dependent cases from the gate's own spec give the call history the same verdict as the text history**; R1: the S3 recovery gives the reply's own verdict, and an unreadable context stores nothing |
 | `model-router/providers/deepseek/deepseek-live-call.spec.ts` | 4 | REALTIME (160, no thinking, 5 000 / 2 000 ms), the first-token abort settled once, the call's keep-alive fetch |
 | `http-transport/live-call-keep-alive-fetch.spec.ts` | 3 | HTTPS only, the body kinds, no redirect, abort |
@@ -631,7 +631,12 @@ This broke S3 (contract Part A) and the guarantee that committed speech is not l
   - retried after 250 ms, doubling to 4 s;
   - any words said meanwhile join it as ONE turn, in order, the way speech that resumes before a commit does;
   - once the read is back, S3 stores the Safety, N1 closes the previous exchange, and the held turn commits with every
-    word.
+    word;
+  - **R1b (the Product Owner's review at `7d585767`):** a retry never commits the held turn while the person is speaking.
+    If the endpointer is not IDLE (speech, or a commit silence still pending), the retry leaves the turn held. The turn
+    then joins the new words at that speech's commit, by the usual D-A1 rules, and only then is QANDEEL's reply started.
+    If that speech gives no words, the held turn is committed on its own. At `7d585767` a retry could commit it mid-speech;
+    the regression below failed there (two `TURN_COMMITTED` during speech) and passes now. No frozen value changed.
 - **Not covered here:** a turn held when the connection closes is not committed and was never announced; it goes with
   the connection. The call's END and a crash, with S3 in the sweep, are CP3 (§10.6).
 
@@ -645,6 +650,10 @@ This broke S3 (contract Part A) and the guarantee that committed speech is not l
   4. The read comes back: the gate's own verdict (GUIDED, not a default ALLOW) is stored once; N1 closes turn 1 FAILED
      with one REPLY_END; turn 2 commits with all its words.
   5. A repeat is SAME, and a different value is a conflict.
+- **`live-call-turn.engine.spec.ts`, the R1b race regression (deterministic):** turn 1 fails before its Safety, and turn 2
+  is held. The person speaks again, and the read comes back mid-speech. For five real seconds of speech (longer than any
+  retry delay) nothing is committed, announced or answered. After the commit silence there is ONE turn 2 with every word;
+  N1 closes turn 1 FAILED, and the reply starts only then.
 - **`live-call-reply.service.spec.ts`:**
   - The recovery gives exactly the reply's gate input and verdict, with the real gate on a history-dependent case.
   - An unreadable context stores nothing and is retried.

@@ -239,8 +239,9 @@ class CallTurnSession implements LiveCallSpeechStream {
     this.endpointer.reset();
     const content = words.map((w) => w.text.trim()).filter((t) => t !== '').join(' ');
     if (content === '' || turnStart === null) {
-      // Noise, or nothing recognized: no turn.
+      // Noise, or nothing recognized: no turn. A held turn that waited for this speech goes on alone.
       this.deps.signal('commit', 'no_speech');
+      await this.retryHeld();
       return;
     }
     // A held turn and the words said since are ONE turn, in order (as speech resumed before a commit is).
@@ -274,6 +275,9 @@ class CallTurnSession implements LiveCallSpeechStream {
 
   private async retryHeld(): Promise<void> {
     if (this.closed) return;
+    // The person is speaking again (or this speech's commit silence is pending): the held turn is not committed over
+    // them. It stays held, without a timer, and joins the new words at this speech's commit (D-A1, one turn).
+    if (this.endpointer.state !== 'IDLE') return;
     const held = this.takeHeld();
     if (held) await this.commitSpoken(held);
   }
