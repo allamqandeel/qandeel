@@ -113,7 +113,9 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   assert.match(code, /INSERT INTO account_erasure_private\.coverage_registry/u, 'the calls relation is in the erasure coverage');
   const migrations = readdirSync(join(root, 'database/migrations')).filter((f) => f.endsWith('.sql')).sort();
   // RE-ANCHORED by S8B-05 CP2 (was: 0189 is the last migration): CP2 adds exactly 0190 after it.
-  assert.deepEqual(migrations.slice(-2), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql'], 'CP2 adds exactly 0190 after 0189');
+  // RE-ANCHORED by S8B-05 CP3 (was: 0190 is the last migration): CP3 adds exactly 0191 after 0190.
+  assert.deepEqual(migrations.slice(-3), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
+    '0191_s8b_05_live_call_ordered_halves_v1.sql'], 'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
   assert.equal(scripts['prove:live-call-synthetic:integration'],
@@ -198,7 +200,8 @@ test('call-truth is a classified, guarded, private route; the upgrade is the gat
 test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no call text reaches the phone in CP1', () => {
   const record = read(RECORD);
   // RE-ANCHORED by S8B-05 CP2 (was: CP1 under review): CP1 merged (PR #374); the record states CP2 under review, not closed.
-  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP2 — UNDER REVIEW/mu, 'the record states CP2 under review, not closed');
+  // RE-ANCHORED by S8B-05 CP3 (was: CP2 under review): CP2 merged (PR #375); the record states CP3 under review, not closed.
+  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP3 — UNDER REVIEW/mu, 'the record states CP3 under review, not closed');
   const rows = record.split('\n').filter((line) => /^\| (?:LC|LCE)-\d{2} \|/u.test(line));
   assert.ok(rows.length >= 30, 'the unified gate lists the existing and the new call rows');
   for (const row of rows) assert.match(row, /^\| (?:LC|LCE)-\d{2} \| PROPOSED \|/u, `${row.slice(0, 12)} is PROPOSED`);
@@ -236,4 +239,55 @@ test('no post-response consumer reads the source exchange\'s reply content witho
   assert.match(m0190, /CREATE FUNCTION public\.server_read_call_reply_delivery_v1\(/u);
   const history = codeOnly(read('apps/api/src/conversation/conversation.service.ts'));
   assert.match(history, /\.\.\.\(reply && deliveryByReply\.has\(reply\.id\) \? \{ deliveryState: deliveryByReply\.get\(reply\.id\)! \} : \{\}\)/u, 'the history carries it, additively');
+});
+
+// S8B-05 CP3 (migration 0191; contract v1.2 Part A A3.3, A1 §1 - §3, L2 - L5): the ordered half establishment, the
+// durable ordered analysis worker, the shared background permits and S3 after the END. Statically: 0191 is forward-only,
+// opens no gate and grants no client role; L2 (M1) is the default and M1′ only when set exactly; the voice path makes no
+// database call for the analysis (an in-memory kick, never awaited) and no reply path asks a background permit; the worker
+// logs nothing; the verifier and the synthetic proof run in CI and the proof reaches no provider. The behaviour itself is
+// proven by verify-migration-0191, the CP3 synthetic proof and the live-analysis / establishment specs.
+const M0191 = 'database/migrations/0191_s8b_05_live_call_ordered_halves_v1.sql';
+const ANALYSIS_DIR = 'apps/api/src/live-analysis/';
+
+test('0191 is forward-only, one transaction, opens no voice gate, grants no client role, and its proofs run in CI', () => {
+  const migration = read(M0191);
+  assert.equal((migration.match(/^BEGIN;$/gmu) ?? []).length, 1);
+  assert.equal((migration.match(/^COMMIT;$/gmu) ?? []).length, 1);
+  const code = codeOnly(migration);
+  assert.doesNotMatch(code, /set_voice_launch_capability_v1\(|(?:INSERT INTO|UPDATE)\s+voice_private\.voice_launch_capability_(?:states|events)/u, 'no gate is set');
+  assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|authenticated|PUBLIC)\b/u, 'nothing is granted to a client role');
+  assert.match(code, /CREATE FUNCTION public\.server_acquire_background_permit_v1\(/u);
+  assert.match(code, /'contract v1\.2 A1 §3 \(B_total 16, B_min 2, k 2, two permits per person, a 120 s lease; calibrated in S8B-08\)'/u,
+    'the shipped permit policy is the contract\'s, calibrated later, not by CP3');
+  const scripts = JSON.parse(read('package.json')).scripts;
+  assert.equal(scripts['verify:live-call-ordered-halves:integration'], 'node --env-file-if-exists=.env database/verify-migration-0191.mjs');
+  assert.equal(scripts['prove:live-analysis-synthetic:integration'],
+    'node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts');
+  const ci = read('.github/workflows/api-ci.yml');
+  const at = (needle) => { const i = ci.indexOf(needle); assert.ok(i >= 0, `CI runs ${needle}`); return i; };
+  assert.ok(at('run: npm run verify:live-call-spoken-turn:integration') < at('run: npm run verify:live-call-ordered-halves:integration'), '0191 is verified after 0190');
+  assert.ok(at('run: npm run prove:live-call-spoken-turn-synthetic:integration') < at('run: npm run prove:live-analysis-synthetic:integration'), 'CP3 proof after the CP2 proof');
+  const proof = read('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts');
+  assert.match(proof, /S8B05_CP3_PROOF_REFUSED: DATABASE_URL must name a loopback throwaway database/u);
+  assert.doesNotMatch(codeOnly(proof), /api\.deepseek\.com|speechmatics\.com|googleapis\.com|aiplatform|openai\.com/u, 'the proof reaches no provider');
+});
+
+test('L2 is the default (M1) and M1′ only when set exactly; the voice path kicks in memory and no reply path asks a permit', () => {
+  const worker = codeOnly(read(`${ANALYSIS_DIR}call-analysis.worker.ts`));
+  assert.match(worker, /return environment\[CALL_ANALYSIS_START_ENV\] === 'AT_COMMIT' \? 'AT_COMMIT' : 'AFTER_FIRST_AUDIO';/u, 'the default is L2\'s yield');
+  assert.match(worker, /respectCriticalWindow: this\.deps\.start === 'AFTER_FIRST_AUDIO',/u);
+  const signal = codeOnly(read(`${CALL_TURN_DIR}live-call-analysis.signal.ts`));
+  assert.doesNotMatch(signal, /import [^;]*(?:supabase|service-role|data-api|repository)/iu, 'the signal reaches no database');
+  assert.match(signal, /try \{[\s\S]*?\} catch/u, 'a kick never throws into the voice path');
+  const engine = codeOnly(read(`${CALL_TURN_DIR}live-call-turn.engine.ts`));
+  assert.doesNotMatch(engine, /await [^;\n]*analysis/u, 'the engine never awaits the analysis');
+  // The live call reply, the typed reply and the voice-note reply never ask a background permit.
+  for (const path of ['apps/api/src/conversation/live-call-reply.service.ts', 'apps/api/src/conversation/conversation.service.ts',
+    ...files('apps/api/src/voice').filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts'))]) {
+    assert.doesNotMatch(codeOnly(read(path)), /BackgroundPermitGate|BACKGROUND_PERMIT_GATE|acquire_background_permit/u, `${path} asks no background permit`);
+  }
+  for (const path of files(ANALYSIS_DIR).filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts'))) {
+    assert.doesNotMatch(codeOnly(read(path)), /\bLogger\b|console\.|process\.stdout/u, `${path} logs nothing`);
+  }
 });

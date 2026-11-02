@@ -46,6 +46,12 @@ export interface CommitmentEvaluationOptions {
    * identity for equivalent segmentation output; the default stays random.
    */
   readonly newUnitId?: (unit: { readonly index: number; readonly spanStart: number; readonly spanEnd: number }) => string;
+  /**
+   * S8B-05 CP3, CA-05-01 INPUT-01 (contract v1.1 §1.5): a live call's numbered USER turn is final-content at its commit and
+   * can only ever become COMPLETED (0190's guard, R2′), so its half is committable while the turn is still GENERATING.
+   * Only the call half coordinator passes it; migration 0191's writer re-checks the same rule under the turn lock.
+   */
+  readonly liveCallUserTurn?: boolean;
 }
 
 export class ConversationUnitCommitmentService {
@@ -75,7 +81,8 @@ export class ConversationUnitCommitmentService {
     // Condition 2 (boundary stability): a turn has no continuation mechanism, so
     // a terminal COMPLETED turn is the whole contribution; provisional,
     // cancelled, failed and superseded source is never committable.
-    if (source.status !== 'COMPLETED') {
+    const liveCallUser = options.liveCallUserTurn === true && source.role === 'USER' && source.status === 'GENERATING';
+    if (source.status !== 'COMPLETED' && !liveCallUser) {
       throw new CommitmentRejectedError('SOURCE_TURN_NOT_COMMITTABLE');
     }
     if (source.channel !== 'TEXT') {
@@ -130,6 +137,30 @@ export class ConversationUnitCommitmentService {
       sourceTurnId: source.turnId,
       batchId: options.batchId ?? randomUUID(),
       units,
+      evaluatorVersion: CU_BOUNDARY_EVALUATOR_VERSION,
+      policyVersion: CU_COMMITMENT_POLICY_VERSION,
+      segmentationProvider: this.providerName,
+      segmentationModel: this.providerModel,
+      segmentationPromptVersion: CU_SEGMENTATION_PROMPT_VERSION,
+    };
+  }
+
+  /**
+   * S8B-05 CP3, CA-05-01 R6: a call reply of which nothing was heard is a COMPLETED ASSISTANT turn with empty content. Its
+   * half is the zero-unit batch the frozen grammar allows (`1 turn = 0..N committed CUs`), built WITHOUT a segmentation
+   * call: there is no source to segment. Anything else is not this case.
+   */
+  emptyReplyBatch(source: CommitmentSource, options: CommitmentEvaluationOptions = {}): CommitConversationUnitsRequest {
+    if (source.role !== 'ASSISTANT' || source.status !== 'COMPLETED' || source.channel !== 'TEXT'
+      || codePointLength(source.content) !== 0 || source.sourceFrontier !== 0) {
+      throw new CommitmentRejectedError('SOURCE_TURN_NOT_COMMITTABLE');
+    }
+    return {
+      sessionId: source.sessionId,
+      userId: source.userId,
+      sourceTurnId: source.turnId,
+      batchId: options.batchId ?? randomUUID(),
+      units: [],
       evaluatorVersion: CU_BOUNDARY_EVALUATOR_VERSION,
       policyVersion: CU_COMMITMENT_POLICY_VERSION,
       segmentationProvider: this.providerName,

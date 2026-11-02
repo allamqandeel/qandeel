@@ -25,6 +25,7 @@ import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
+import { liveCallHalvesApplied } from './live-call-0191-substitutions.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -481,15 +482,21 @@ async function verifyStaticAuthority() {
   // owned `public.commit_*` authority (S5-03B's Public spatial placement, proven
   // by verify-migration-0145) is outside T-03D's ownership and outside this census.
   const COMMIT_FAMILY = "n.nspname='public' AND (p.proname LIKE 'commit\\_conversation\\_units%' OR p.proname LIKE 'commit\\_finalized\\_exchange%')";
+  const halves = await liveCallHalvesApplied(rows);
   const family = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE ${COMMIT_FAMILY} ORDER BY p.proname`);
   eq(family.map((r) => r.proname), [
     'commit_conversation_units_v1', 'commit_conversation_units_with_focus_thread_lifecycle_v1', 'commit_conversation_units_with_focus_and_thread_v1',
     'commit_conversation_units_with_focus_v1', 'commit_conversation_units_with_full_semantic_chain_v1',
     'commit_finalized_exchange_conversation_units_v1', 'commit_finalized_exchange_with_focus_and_thread_v1', 'commit_finalized_exchange_with_focus_thread_lifecycle_v1',
     'commit_finalized_exchange_with_focus_v1', 'commit_finalized_exchange_with_full_semantic_chain_v1',
+    // RE-ANCHORED by S8B-05 CP3 (migration 0191): the half coordinator of a numbered call turn joins the family (CA-05-01
+    // R3, the D-05 amendment of contract v1.1 §1.5); verify-migration-0191 proves it.
+    ...(halves ? ['commit_conversation_units_call_half_v1'] : []),
   ].sort(), 'the T-03D conversation commit family is exactly the legacy, focus, Thread, lifecycle and FINAL committers');
   const committing = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE ${COMMIT_FAMILY} AND has_function_privilege('service_role', p.oid, 'EXECUTE') ORDER BY p.proname`);
-  eq(committing.map((r) => r.proname), ['commit_finalized_exchange_with_full_semantic_chain_v1'], 'exactly ONE committing function is executable by service_role after T-03D');
+  // After 0191 (D-05 as amended): the FINAL coordinator and the half coordinator, the writer still for no role.
+  eq(committing.map((r) => r.proname), [...(halves ? ['commit_conversation_units_call_half_v1'] : []), 'commit_finalized_exchange_with_full_semantic_chain_v1'],
+    'exactly ONE committing function is executable by service_role after T-03D (and the 0191 half coordinator)');
   // The LF domain and nothing beside it.
   const columns = async (table) => (await rows("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position", [table])).map((c) => c.column_name);
   eq(await columns('conversation_live_focus_transitions'), ['event_id', 'user_id', 'session_id', 'cu_id', 'commit_batch_id', 'session_position', 'same_sp_event_sequence', 'from_kind', 'from_ref', 'to_kind', 'to_ref', 'reason_code', 'created_at'],

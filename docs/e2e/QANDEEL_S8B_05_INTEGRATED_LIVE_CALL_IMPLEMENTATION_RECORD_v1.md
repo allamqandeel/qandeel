@@ -1,11 +1,17 @@
 # QANDEEL S8B-05 — Integrated Live Call: Implementation Record v1
 
-**Checkpoint:** S8B-05 CP2 — UNDER REVIEW (2026-11-02). CP1 (Call Authority, Gateway, Admission & User Track) is
-**merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`. CP2 (Realtime Spoken Turn,
-QANDEEL Reply & Playout Truth, §10) is on `s8b/s8b-05-cp2` as a **Draft pull request, not merged; merge only on the
-Product Owner's explicit «ادمج»**. S8B-05 is **not closed**. CP3, CP4 and S8B-06 are **not started and not authorized**.
+**Checkpoint:** S8B-05 CP3 — UNDER REVIEW (2026-11-02). CP1 (Call Authority, Gateway, Admission & User Track) is
+**merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`; CP2 (Realtime Spoken Turn,
+QANDEEL Reply & Playout Truth, §10) is **merged** through [PR #375](https://github.com/allamqandeel/qandeel/pull/375) as
+`f5de4c27`. CP3 (Ordered Half-Exchange Establishment & Fast Live Analysis, §11) is on `s8b/s8b-05-cp3` as a **Draft pull
+request, not merged; merge only on the Product Owner's explicit «ادمج»**. S8B-05 is **not closed**. CP4 is **not started
+and not authorized**; S8B-06 CP1 is its own pull request (#376), on which CP3 does not depend.
 
-*(§0 – §9 are CP1's record as written; where CP2 changed a CP1 statement, §10 says so.)*
+*(§0 – §9 are CP1's record as written, §10 CP2's; where a later checkpoint changed an earlier statement, its own section
+says so.)*
+
+*(CP2's banner as written, before its merge: "S8B-05 CP2 — UNDER REVIEW (2026-11-02) … CP3, CP4 and S8B-06 are not started
+and not authorized.")*
 
 ## 0. Authority, base, precedence
 
@@ -673,3 +679,215 @@ This broke S3 (contract Part A) and the guarantee that committed speech is not l
 - **Unchanged:** verify-0190 (18 / 18) and every other proof above; no migration changed. The R1 runs (full and single-call,
   10 / 10 each) are kept as `CP2_R1_SYNTHETIC_PROOF_local_pg17*.txt`. The full run shared the machine with a Jest run, so
   its latency (P50 2 469 ms) is not the reference; §10.3 keeps the quiet run (P50 2 336 ms).
+
+## 11. CP3 — Ordered Half-Exchange Establishment & Fast Live Analysis (2026-11-02; UNDER REVIEW)
+
+**Authority:** the Product Owner's S8B-05 CP3 execution authorization (2026-11-02): the full 05-CP3 scope of contract
+v1.2 (CA-05-01; L2 – L5; A1 §1 – §3; R5′ / S3 at the END), with Fast Live Analysis as a stated priority. **Base:** `main`
+at `f5de4c27`, the merge of PR #375 (CP2). **Branch:** `s8b/s8b-05-cp3`. **Migration:** `0191` (forward-only, **not
+hosted**). **The next migration is `0192`.** PR #376 (S8B-06 CP1) is separate: CP3 neither touches it nor depends on it.
+
+**Constraints kept:** no voice gate opened; no migration on a hosted database; no paid API, no F-01 or warning audio; no
+real person or voice (random UUIDs, fixed synthetic Arabic sentences, no audio at all in the CP3 proof); nothing merged.
+
+### 11.1 What CP3 delivers, against the authorized items
+
+| Item | Where | How |
+|---|---|---|
+| Durable ASSISTANT half queued at the close | 0191 (close core, origin 0190) | Every close (`PLAYED_OUT`, `INTERRUPTED`, `GENERATION_FAILED`, `NEXT_TURN`, `CALL_ENDING`) queues the reply's half in the same transaction as the close and the completion event. |
+| Queue states | 0191 | `PENDING → CLAIMED` (a lease) `→ COMPLETE`; `RETRY_WAIT` (a provider failure, 2 s then 4 s); `PARKED` (attempts or the daily budget exhausted, never dropped); `ABANDONED_INTEGRITY` (a permanent integrity failure confirmed once, declared with its reply, counted). |
+| O1, O2 | 0191 half coordinator | A half commits only when every earlier item of the session's order is terminal: the reply's half never before its USER half (O1); the next USER half never before the whole previous exchange (O2). Ordering is by `call_turn_index`, never by a timestamp. A refusal is retryable and writes nothing. |
+| O3a | 0191 (full coordinator, origin 0150) | The text path's full coordinator refuses every numbered call turn; a text exchange is unchanged. |
+| O3b / B1 | 0191 (commit turn, origin 0190) | A call's first commit adopts the session's unestablished pre-call exchanges as `EXCHANGE` items numbered `1 − n … 0`, at the head of the order. |
+| The Half-Exchange Semantic Coordinator | `commit_conversation_units_call_half_v1` + `ConversationSemanticEstablishmentService.establishCallHalf` | The existing engines are reused unchanged: segmentation → B1 focus → the Thread layer → LF, canonicalized; one half per batch with deterministic batch ids; D-07 (one stale re-evaluation); the USER half is analyzable while its turn is `GENERATING` (the writer, origin 0183, admits a GENERATING USER call turn and nothing else); an empty reply is a zero-unit batch with no segmentation call. It is a separate coordinator, not the full one with the COMPLETED check removed. No hindsight: a half sees only its own CUs and the committed past. |
+| The Durable Ordered Analysis Worker | `apps/api/src/live-analysis/` | One active worker per session across instances (0191's claim takes the session's semantic lease, an analysis lock separate from 0131's, and the head item's lease); FIFO; pre-call first; a crashed claim lapses and is re-claimed; a half committed before a crash is REPLAYED from storage with zero provider calls; B1 – B4, L5; a 429, an outage or the budget is a retry or PARKED, never a skip. |
+| Shared background permits (L2 – L5) | 0191 + `background-permits.ts` | PostgreSQL-shared permits across instances, `max(B_min, B_total − k × live generations)`, two per person, a 120 s lease renewed every 30 s. Covered: call analysis, the text exchange's semantic establishment after its reply, post-response intelligence / memory. Excluded: the live call reply, the typed reply, the voice-note reply (statically pinned). No database call on the voice path (an in-memory kick, never awaited); started calls are never cancelled; waits are bounded and measured. |
+| L2 as configuration | `LIVE_CALL_ANALYSIS_START` | `AFTER_FIRST_AUDIO` (M1) is the default; `AT_COMMIT` (M1′) only when set exactly. **The default is unchanged**; §11.3 gives the numbers. A first-audio kick wakes a permit wait in the window at once instead of after its backoff step. |
+| The call's end, every path, and S3 | 0191 (`end_call_v1`, origin 0189) + the worker's sweep + `LiveCallReplyService.settleEndedCallSafety` | §11.4. |
+
+### 11.2 Proofs (all free, all local or in CI; nothing paid, nothing hosted)
+
+- **`verify-migration-0191` — 26 / 26 on local PG17** (base: every migration through 0191): T0a – T0f (catalogue, ACL,
+  forward replacements identical to their origin plus the declared edits, D-05 as amended, every end path, the gates and
+  the census), T1 – T13 (the USER half while GENERATING; O1; O2; the empty reply; stale tokens; O3a; O3b; claims and
+  crash recovery; L5 / B3 / the budget; the shared session lock; the permits and L2; the END, S3 and the sweep; erasure).
+- **The CP3 synthetic proof (`apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts`) — 51 / 51 checks on local PG17.**
+  The real worker (two instances, sticky kicks, both scanning), the real half establishment, the real permits and the
+  real queue over a real PostgreSQL with 0191, driven by synthetic live calls through 0189 / 0190's own commands. Stand-ins:
+  the PostgREST hop (a service_role pg shim with PostgREST's error identity) and the providers (fakes with seeded
+  latencies; the live reply's first token and every analysis call share ONE fake provider capacity of 8 slots).
+- **API specs:** the worker (10), the permits and the post-response gate (9), the half establishment and the text permit
+  (8). Every existing suite is unchanged. The full Jest run gave 7 713 passed and 1 skipped. Its one failure was an S8B-04
+  spec CP3 does not touch (`voice/live-reply`, a fixed 10 ms tick), while the static suite ran alongside; it passes 11 / 11
+  on its own.
+- **Static contracts:** `tests/s8b-05-live-call-contract.test.mjs` adds the CP3 pins (§11.6); the re-anchors are listed
+  in §11.7.
+
+### 11.3 Fast Live Analysis — **Synthetic estimate**
+
+**Setup (local PG17, loopback; Synthetic estimate, not a final performance result).**
+
+- 7 concurrent calls per mode: 6 calls of 8 turns and 1 long call of 20 turns. Each session first has one pre-call text
+  exchange (O3b): 68 exchanges per mode.
+- One fake provider capacity of 8 slots, shared by the live reply's first token and every analysis call.
+  - Reply first token 380 ± 160 ms, then +120 ms to first audio, tail 450 ms.
+  - Segmentation 200 ± 80, focus 240 ± 90, thread 220 ± 80 ms.
+  - The reply's latencies are drawn from the same seed in every mode.
+- Two instances of the worker, with sticky kicks and both scanning.
+- Each analysis mode runs under the permit policy 0191 ships (B_total 16, k 2, B_min 2, two per person) and under a
+  policy calibrated to the fake capacity (B_total 8).
+- Two paces:
+  - **stress**: the person's turn is 900 ms, an unrealistically fast exchange;
+  - **conversational**: 3 s.
+- Reports: `CP3_SYNTHETIC_PROOF_local_pg17_{stress,conversational}.{txt,json}`, kept outside the repository with the
+  contract. Both runs: 51 / 51 checks.
+- After a final refactor (the worker's integrity classification moved behind the live-focus service; no behaviour
+  changed), CI's profile was rerun on its own: the calibrated policy at the stress pace, 31 / 31 checks, M1 +20 / +54 ms,
+  M1′ +36 / +50 ms (`CP3_SYNTHETIC_PROOF_local_pg17_ci_profile.*`).
+
+**First Audio (commit → first audio) against M0 (analysis off).** The contract limit is +50 ms P50 / +100 ms P95.
+
+| Pace | M0 P50 / P95 | M1 shipped | M1′ shipped | M1 calibrated | M1′ calibrated |
+|---|---|---|---|---|---|
+| stress | 533 / 657 | +33 / **+104** ✗ | **+58** / **+109** ✗ | +21 / +70 ✓ | +32 / +53 ✓ |
+| conversational | 523 / 658 | +13 / +1 ✓ | +45 / +30 ✓ | +0 / +17 ✓ | +10 / +18 ✓ |
+
+An earlier stress run gave M1 shipped +48 / +133 and M1 calibrated +35 / +67. Under contention the P95 moves by tens of
+milliseconds from run to run. The numbers are reported as measured; nothing is claimed as "no impact" (§4.3).
+
+**Live Analysis (P50 / P95, ms).**
+
+| Pace / mode | commit → first analysis work (USER half) | commit → USER half committed (= LF update) | close → reply half committed | first stable LF per call | queue depth | backlog age |
+|---|---|---|---|---|---|---|
+| conversational, M1 shipped | 676 / 2 177 | **1 659 / 3 138** | 1 315 / 2 765 | 3 138 / 3 330 | 1 / 14 | 271 / 1 656 |
+| conversational, M1′ shipped | 3 / 2 105 | **1 242 / 3 088** | 934 / 2 726 | 3 088 / 3 236 | 1 / 11 | 77 / 1 354 |
+| conversational, M1 calibrated | 791 / 2 392 | **1 785 / 3 148** | 1 336 / 2 776 | 3 148 / 3 730 | 1 / 13 | 575 / 2 368 |
+| conversational, M1′ calibrated | 838 / 2 074 | **1 773 / 3 059** | 1 316 / 2 639 | 3 059 / 4 046 | 1 / 13 | 192 / 2 632 |
+| stress, M1 shipped | 3 029 / 4 615 | 4 186 / 5 844 | 3 950 / 5 415 | 3 668 / 3 987 | 5 / 35 | 3 614 / 5 550 |
+| stress, M1′ shipped | 2 767 / 3 801 | 3 922 / 5 012 | 3 676 / 4 711 | 3 633 / 3 922 | 3 / 31 | 1 760 / 4 776 |
+| stress, M1 calibrated | 6 380 / 10 407 | **7 364 / 11 463** | 7 542 / 11 176 | 3 858 / 4 362 | 13 / 52 | 9 700 / 11 190 |
+| stress, M1′ calibrated | 3 159 / 10 280 | 4 248 / 11 153 | 4 077 / 10 913 | 3 919 / 10 901 | 16 / 51 | 3 660 / 11 074 |
+
+Notes on the table:
+
+- The first stable LF includes the session's pre-call exchange, which is established first.
+- The LF update equals the USER half's commit here, because every USER half in the workload moves the Live Focus.
+
+**The long call (20 turns): commit → USER half committed, per turn.**
+
+- conversational: M1 shipped settles at about 1.4 – 1.7 s from turn 2; M1′ shipped at about 1.0 – 1.1 s.
+- stress:
+  - M1 shipped stays at about 3.3 – 4.7 s;
+  - M1′ shipped converges from 3.3 s to about 1.0 s;
+  - M1 calibrated jumps to about 11 s at turn 3 and recovers only slowly (9.1 s at turn 20);
+  - M1′ calibrated converges to about 1.0 s.
+
+**Provider calls:**
+
+- 6.62 analysis calls per exchange in every mode, the same count in every mode: no call is skipped or reduced
+  (segmentation 150, focus 225, thread 75, continuity 0 per mode).
+- Per minute: about 340 at the conversational pace and 600 – 710 at the stress pace, across 7 concurrent calls.
+- The reply: one call per exchange.
+
+**What it shows.**
+
+1. **Analysis is live.** At a conversational pace the USER half is committed, and the Live Focus updated, about 1.2 – 1.8 s
+   after the commit at P50 (≈ 3.1 s at P95). That is while QANDEEL is still answering or just after. The queue stays at a
+   depth of 1 at P50, and every mode drains within 1.5 s of the last call.
+2. **The voice is protected by the permit cap, not by L2 alone.** L2 protects only the same person's reply. On a shared
+   provider, other people's analysis competes for the same capacity. With the shipped `B_total 16` on an 8-slot provider,
+   the stress pace breaks the P95 limit in both modes. With `B_total` calibrated to the capacity, both modes keep it. The
+   values are the contract's and S8B-08 calibrates them against the real provider. CP3 does not change them.
+3. **M1 against M1′.**
+   - At a conversational pace: M1′ gives the USER half about 0.4 s sooner under the shipped policy (1.24 s against 1.66 s
+     P50), at +45 ms P50 First Audio against +13 ms. Under the calibrated policy the two are equal (1.77 s against 1.79 s).
+   - At the stress pace with the calibrated policy: L2 and the tight cap together starve M1 (USER half 7.4 s / 11.5 s),
+     while M1′ keeps 4.2 s P50 and converges in the long call.
+
+**Recommendation (for the Product Owner's decision; nothing changed).**
+
+- **Keep L2 (M1) as the default for now.** It has the smallest First Audio impact at a conversational pace (≤ +13 ms
+  P50) and delivers the USER half within about 1.7 s.
+- **Calibrate `B_total` against the real provider in S8B-08 before launch.** That cap, not L2, is what keeps the voice
+  inside +100 ms P95 under shared load.
+- **Revisit M1′ with S8B-08's numbers** if the real capacity is tight. Under a tight cap, M1′ keeps the analysis live where
+  M1 falls behind, and stays within the voice limit (+32 / +53 ms here).
+
+**Synthetic limits.**
+
+- The fake capacity is a FIFO of 8 slots, not DeepSeek's real concurrency or rate limits, and its latencies are assumed.
+- The database is loopback (no network hop, PostgREST replaced by a pg shim).
+- One machine runs the calls, the workers and PostgreSQL.
+- The workload is a fixed script, with no barge-in and no audio.
+- M2 (five concurrent calls plus active post-response work) and the full E2E closure are CP4's.
+
+### 11.4 The call's end and S3 (R5′)
+
+- **Every end path** (explicit end, a failed connection, the server, the grace lapse, a new call's recovery, the sweep)
+  goes through `end_call_v1`, which closes the open exchange **in the same transaction** when its Safety is stored:
+  `CALL_ENDING`, the reply's half queued, exactly one `ConversationTurnCompleted` (T0e, T12a, T12c).
+- **An exchange whose Safety was never stored stays `OPEN` after the END** and cannot be closed (T12b). This is the case
+  where atomic closure and Safety recovery after a process crash genuinely conflict: the gate is TypeScript
+  (`SafetyResponseGateService`), so no database transaction can run it, and a second Safety copy in the database is
+  forbidden. The resolution is the contract's R5′ (A4 lists v1.1 R5's "same transaction" as superseded):
+  1. the END closes atomically everything whose Safety is stored;
+  2. the worker's sweep lists the ended calls' open exchanges, recomputes Safety with **the same gate over the same
+     reader** (`server_read_call_context_v1`, a definer wrapper of `call_context_exchanges_v1`), stores it once through
+     the 0190 command (STORED, or SAME), then closes it once (`CALL_ENDING`);
+  3. a context that cannot be read leaves it OPEN for the next scan: never a default ALLOW / BLOCK, never a close
+     without Safety.
+  The user's turn is never lost: it is committed and kept; only its close waits for its Safety. Proven by T12b and the
+  proof's R3.
+- **Memory and Safety:** existing policies are preserved. `ConversationTurnCompleted` v2 is written from stored facts;
+  a LOW ASR band gives no memory; an interrupted reply is not complete; no memory fact comes from untrusted speech.
+
+### 11.5 Acceptance items reviewed (contract §11 as amended): CP3 against CP4
+
+| # | Item | CP3 proof | Status |
+|---|---|---|---|
+| 13 | Live Analysis during the call | the proof's M1 / M1′ (the USER half committed while the call goes on; §11.3) | **Met (SYN) for CP3**; the full M0 / M1 / M1′ / M2 E2E closure is CP4 |
+| 15 | Ordered analysis, no skip, no duplicate | verify T2, T3, T7 – T9; the proof's order, duplicate, crash and outage checks | **Met** |
+| 26 | Background work never delays the voice | the proof's First Audio impact (§11.3); the static pins (no permit on a reply path, no database call on the voice path) | **Met under a calibrated permit policy; exceeded under the shipped policy on an 8-slot fake provider (reported, §11.3)**; real provider contention is S8B-08 |
+| 29 | A call turn ends only COMPLETED / the last exchange closed | verify T12a – T12c; the proof's R3 | **Met** |
+| 30 | No lost event for the user's words | verify T12a – T12c (one event per close, CALL_ENDING included) | **Met** |
+| 32 | Recovery after a crash | verify T8; the proof's R1 (REPLAYED, zero provider calls) | **Met** |
+| 33 | Cost bounded | L5 (three attempts, PARKED, the daily budget; verify T9); provider calls per exchange measured (§11.3) | **Met for CP3**; paid cost evidence is S8B-08 |
+| 37 | Safety parity | S3 at the END: the same gate over the same reader (verify T12b; the proof's R3; the worker spec) | **Met for CP3**; with CP2's (a) – (d), parity now covers every close point |
+| 39 | Not built on removing a check | the half coordinator is a separate definer; the full coordinator refuses call turns (O3a, verify T6) | **Met** |
+
+### 11.6 What is intentionally incomplete, and where it goes
+
+| Item | Owner |
+|---|---|
+| Barge-in, P4 / P5, TEXT_TURN in a call, F-01 audio, the injected-fault SYN part of #38, the full M0 / M1 / M1′ / M2 E2E closure | CP4 |
+| The native audio engine, the call UI, device acceptance | S8B-06 |
+| Calibration of `B_total`, `k`, `B_min` against the real provider's capacity, and the paid "analysis on / off" comparison | S8B-08 (the shipped values are the contract's) |
+| **Deploy order:** the API's text-path permit and the post-response gate call 0191's RPCs, so 0191 must be on a database before an API that carries CP3 is deployed against it. | HOSTED-DEPLOY (operator) |
+| `BACKGROUND_CAPACITY_DEFERRED`: a text exchange whose permit is not granted within 5 s is a retryable 503 cause (the stream's own retry), new in CP3. | recorded as a risk; S8B-08 calibrates the capacity |
+
+### 11.7 Re-anchors (each says what it replaced, in its own file)
+
+- `tests/s8b-05-live-call-contract.test.mjs`: 0191 is the last migration; the record states CP3 under review.
+- `tests/canonical-home-placement-engine-contract.test.mjs`, `tests/thread-establishment-evaluator-contract.test.mjs`:
+  0191's forward replacements are their origins plus the declared edits.
+- `tests/prod-retry-01-data-api-stale-state-contract.test.mjs`: 0191's half coordinator raises PT409 at four sites.
+- `tests/effective-live-focus-final-semantic-chain-cutover-contract.test.mjs`: the FINAL repository has five RPC call
+  sites (plus the half coordinator); the half path has its own retry loop, with the same bounded recovery, pinned on its own
+  slice after the exchange's; `establishExchange` takes an optional `backgroundPermitHeld`.
+- `tests/conversation-focus-runtime-integration-readiness-contract.test.mjs`: the FINAL repository reads the typed
+  database identity once, for the half coordinator's exact refusals only.
+- No re-anchor was needed for the B1 / Thread-layer confinement contracts. The worker reaches the Thread layer only through
+  the live-focus service (`establishmentIntegrityReason`). The proof takes the providers' types from the establishment
+  service's own bindings.
+- `database/verify-migration-0071.mjs`, `0150`, `0183`, `0185`, `0186`: the later replacements of the writer, the full
+  coordinator and the voice_private internals.
+
+### 11.8 Backlog (CP3 is not the closing change)
+
+`QAN-BL-VOICE-01` stays `DEFERRED — OWNED` by Stage 8B, `HIGH`. CP3 admits and tombstones nothing; every residue in §11.6
+is owned inside S8B-05 (CP4) or by a planned task whose contract already carries it (S8B-06, S8B-08, HOSTED-DEPLOY). It
+is reconciled at S8B-05's closing change (BG-08).
+
+### 11.9 Copy Gate
+
+Unchanged: the 40 rows of §9 stay PROPOSED. CP3 adds no user-facing text.

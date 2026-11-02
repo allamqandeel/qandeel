@@ -1352,6 +1352,21 @@ jobs:
       # call, no real person. It restores the gates and removes its fixtures.
       - name: Prove S8B-05 CP2 synthetic spoken turn against real PostgreSQL (free)
         run: npm run prove:live-call-spoken-turn-synthetic:integration
+      # S8B-05 CP3: migration 0191 (the ordered half-exchange establishment) - the queue states and their order by
+      # call_turn_index (pre-call exchanges first, O3b), the ASSISTANT half queued at the close, the half coordinator (no
+      # out-of-order, no duplicate commit), the claim / lease / retry / PARKED / ABANDONED_INTEGRITY paths, the shared session
+      # semantic lease, the shared background permits with L2's critical window, S3 after the END, erasure and the ACL.
+      - name: Verify S8B-05 CP3 ordered half establishment (0191) against real PostgreSQL
+        run: npm run verify:live-call-ordered-halves:integration
+      # S8B-05 CP3: Fast Live Analysis - the real analysis worker (two instances), the real half establishment and the shared
+      # permits over this database, synthetic live calls through 0189 / 0190's commands, fake providers over one shared
+      # capacity: M0 / M1 / M1' measured, the analysis order, crash replay with zero provider calls, a retried outage and S3
+      # after the END. CI runs the calibrated permit profile (the shipped-policy profile is the local comparison run). No
+      # provider, no paid call, no real person, no audio. It restores the gates and the policies and removes its fixtures.
+      - name: Prove S8B-05 CP3 Fast Live Analysis against real PostgreSQL (free)
+        env:
+          S8B05_CP3_PROFILES: CALIBRATED
+        run: npm run prove:live-analysis-synthetic:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

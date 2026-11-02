@@ -12,6 +12,7 @@ import { LIVE_NOTE_BYTES_PER_MS, type RealtimeRecognition } from '../live-note/l
 import { CallEndpointer, CALL_ENDPOINTING, type EndpointerEvent } from './call-endpointer';
 import { CallReply, callRetrievalTerms, type CallReplyEvent } from './call-reply';
 import { CALL_TURN_STORE, type CallTurnStore, type DeliveryState } from './call-turn.store';
+import { LiveCallAnalysisSignal } from './live-call-analysis.signal';
 import { LiveCallConversationBinding, type LiveCallReplyOutcome } from './live-call-conversation.port';
 
 /**
@@ -83,6 +84,8 @@ export class LiveCallTurnEngine implements LiveCallSpeechSink {
     @Optional() @Inject(LIVE_CALL_RECOGNITION) private readonly recognizer?: RealtimeRecognition | null,
     @Optional() @Inject(LIVE_CALL_SYNTHESIS_ROUTE) private readonly route?: ListenSynthesisRoute | null,
     @Optional() private readonly telemetry?: TelemetryService,
+    // S8B-05 CP3: the call analysis worker's kick (in memory; no database call on the voice path).
+    @Optional() private readonly analysis?: LiveCallAnalysisSignal,
   ) {}
 
   /** A proof's or a test's observer of instants and counts (no words); one at a time. */
@@ -98,8 +101,22 @@ export class LiveCallTurnEngine implements LiveCallSpeechSink {
     }
     return new CallTurnSession(channel, {
       store: this.store, recognizer: this.recognizer, route: this.route, conversation: () => this.binding.conversation,
-      signal: (op, outcome) => this.signal(op, outcome), observe: (o) => this.observer?.(o),
+      signal: (op, outcome) => this.signal(op, outcome), observe: (o) => {
+        this.observer?.(o);
+        this.kickAnalysis(channel.sessionId, o);
+      },
     });
+  }
+
+  /**
+   * S8B-05 CP3: the instants at which the session's analysis order can move - a committed turn (its USER half is queued,
+   * and an N1 close queued the previous reply's), the reply's first audio (L2's critical window ends) and the reply's
+   * close (its half is queued) - kick the worker. Synchronous and in memory; never awaited, never a failure of the call.
+   */
+  private kickAnalysis(sessionId: string, observation: CallTurnObservation): void {
+    if (observation.kind === 'COMMITTED') this.analysis?.kick(sessionId, 'TURN_COMMITTED');
+    else if (observation.kind === 'FIRST_AUDIO') this.analysis?.kick(sessionId, 'FIRST_AUDIO');
+    else if (observation.kind === 'REPLY_END') this.analysis?.kick(sessionId, 'EXCHANGE_CLOSED');
   }
 
   private signal(op: string, outcome: string): void {
