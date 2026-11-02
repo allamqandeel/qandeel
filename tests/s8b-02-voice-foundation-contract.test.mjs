@@ -191,8 +191,21 @@ test('CP2 boundary: the recording commands live in the media lifecycle alone, th
   // in voice/vertex-speech/ (fetch to aiplatform.googleapis.com, ADC through google-auth-library alone, no Gemini SDK; its
   // config reads the environment). Its fake Vertex server (testing/) is the one test-only node:http listener. Nothing
   // outside that folder imports it but voice.module.ts.
+  // RE-ANCHORED by S8B-05 CP1 (2026-11-02, contract v1.2 Part A, Scope C): voice/call/ is the live call's SERVER socket. Its
+  // gateway answers the HTTP server's upgrade (node:http types only, in gateway/live-call.gateway.ts alone) and speaks
+  // RFC 6455 itself; it dials nothing, reads no environment, opens no client socket and carries no provider. Its e2e spec
+  // alone runs a real WebSocket client against it, with a fake Supabase Auth listener.
   const VERTEX_DIR = 'apps/api/src/voice/vertex-speech/';
-  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/') && !p.startsWith('apps/api/src/voice/speechmatics/') && !p.startsWith(VERTEX_DIR))) {
+  const CALL_DIR = 'apps/api/src/voice/call/';
+  for (const path of files.filter((p) => p.startsWith(CALL_DIR))) {
+    const text = read(path);
+    assert.doesNotMatch(text, /\bfetch\(|from 'node:https'|require\('https?'\)|from 'ws'|axios|@speechmatics|@google\/|google-auth-library/u, `${path} dials no network and carries no provider`);
+    if (path.endsWith('.spec.ts')) continue;
+    assert.doesNotMatch(text, /process\.env|new WebSocket\(/u, `${path} reads no environment and opens no client socket`);
+    if (path !== `${CALL_DIR}gateway/live-call.gateway.ts`) assert.doesNotMatch(text, /from 'node:http'/u, `${path} touches no HTTP server`);
+    else assert.match(text, /^import type \{ IncomingMessage, Server \} from 'node:http';$/mu, 'the gateway imports node:http types only');
+  }
+  for (const path of files.filter((p) => p.startsWith('apps/api/src/voice/') && !p.startsWith('apps/api/src/voice/speechmatics/') && !p.startsWith(VERTEX_DIR) && !p.startsWith(CALL_DIR))) {
     assert.doesNotMatch(read(path), /\bfetch\(|from 'node:https?'|require\('https?'\)|WebSocket|from 'ws'|axios|process\.env|@speechmatics|@google\/|google-auth-library/u, `${path} carries no network code and reads no credential`);
   }
   for (const path of files.filter((p) => p.startsWith(VERTEX_DIR) && !p.endsWith('.spec.ts'))) {

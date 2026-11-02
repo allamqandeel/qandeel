@@ -316,6 +316,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /voice/live-replies/:replyId': 'AUTHENTICATED',
   'GET /voice/live-replies/:replyId/audio': 'AUTHENTICATED',
   'DELETE /voice/live-replies/:replyId': 'AUTHENTICATED',
+  // S8B-05 (CP1, 0189): call-truth, the owner's own call. The call's WebSocket upgrade is not a routed request: the
+  // gateway bounds it by itself (per address, per instance, per person; voice/call/gateway/live-call.gateway.ts).
+  'GET /voice/calls/truth': 'AUTHENTICATED',
 
   'GET /replay/capability': 'AUTHENTICATED',
   'GET /replay/conversations/:sessionId': 'AUTHENTICATED',

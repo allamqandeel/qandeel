@@ -318,11 +318,13 @@ export class VoiceMediaService {
    * One call segment, for S8B-05's writer (no route): add (consent, expiry, order, contiguity) → one streamed PUT of
    * exactly its bytes → store. Only `STORED` is the acknowledgement that lets the writer release the audio (§3.5 rule 3);
    * a failed PUT leaves the segment pending, and the seal or recovery turns it into a WRITER_LOSS gap.
+   * S8B-05 (0189): the live call's writer passes its connection epoch; the admission is then FENCED once the epoch has
+   * moved on (nothing is uploaded), while a segment admitted before that still uploads and stores.
    */
   async writeCallSegment(userId: string, recordingId: string, track: 'USER' | 'QANDEEL', segmentIndex: number, clockStartMs: number,
-    clockEndMs: number, body: Readable, byteSize: number, signal: AbortSignal): Promise<{ outcome: string }> {
+    clockEndMs: number, body: Readable, byteSize: number, signal: AbortSignal, connectionEpoch?: number): Promise<{ outcome: string }> {
     const added = await this.repository.addSegment(userId, recordingId, track, segmentIndex, clockStartMs, clockEndMs, byteSize,
-      VOICE_SEGMENT_LEASE_SECONDS).catch(() => undefined);
+      VOICE_SEGMENT_LEASE_SECONDS, connectionEpoch).catch(() => undefined);
     if (added === undefined) return { outcome: 'UNAVAILABLE' };
     if (added.outcome !== 'ADDED' || !added.storage_key) return { outcome: added.outcome };
     const deadline = Date.parse(added.upload_deadline ?? '') - Date.now();

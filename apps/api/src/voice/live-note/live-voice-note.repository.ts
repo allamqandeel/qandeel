@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DataApiError, readDataApiUpstreamIdentity } from '../../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
 import type { LiveVoiceNoteOpenOutcome, LiveVoiceNoteStore } from './live-voice-note.service';
 
@@ -22,11 +23,20 @@ export class LiveVoiceNoteRepository implements LiveVoiceNoteStore {
   }
 
   async open(input: { userId: string; sessionId: string; liveId: string; callId: string }): Promise<LiveVoiceNoteOpenOutcome> {
-    const row = await this.first<{ outcome: LiveVoiceNoteOpenOutcome }>('server_open_live_voice_note_v1', {
-      p_user_id: input.userId, p_session_id: input.sessionId, p_live_id: input.liveId, p_call_id: input.callId,
-      p_requested_model: LIVE_VOICE_NOTE_MODEL,
-    });
-    return row.outcome;
+    try {
+      const row = await this.first<{ outcome: LiveVoiceNoteOpenOutcome }>('server_open_live_voice_note_v1', {
+        p_user_id: input.userId, p_session_id: input.sessionId, p_live_id: input.liveId, p_call_id: input.callId,
+        p_requested_model: LIVE_VOICE_NOTE_MODEL,
+      });
+      return row.outcome;
+    } catch (error) {
+      // S8B-05 (0189): the realtime seats are shared with live calls; a full house is an explicit refusal, never a failure.
+      if (error instanceof DataApiError) {
+        const { databaseCode, databaseMessage } = readDataApiUpstreamIdentity(error);
+        if (databaseCode === 'P0001' && databaseMessage === 'REALTIME_CAPACITY_FULL') return 'CAPACITY_FULL';
+      }
+      throw error;
+    }
   }
 
   async close(input: { userId: string; liveId: string; state: 'FINISHED' | 'CANCELLED' | 'FAILED'; audioMs: number | null }): Promise<void> {
