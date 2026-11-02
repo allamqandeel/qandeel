@@ -809,6 +809,24 @@ BEGIN
   RETURN QUERY SELECT 'SETTLED'::text;
 END$$;
 
+-- The history's additive deliveryState (CA-05-02 §2.3): the meaning of each listed call reply of the owner's session, read on
+-- the server channel beside the owner's own turns (the voice-source table is readable by no role). A turn that is not a
+-- call reply is absent, never a fabricated state.
+CREATE FUNCTION public.server_read_call_reply_delivery_v1(p_user_id uuid, p_session_id uuid, p_turn_ids uuid[])
+RETURNS TABLE (turn_id uuid, delivery_state text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF p_user_id IS NULL OR p_session_id IS NULL OR p_turn_ids IS NULL OR cardinality(p_turn_ids) > 100 THEN
+    RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+  RETURN QUERY
+    SELECT vs.turn_id, vs.delivery_state
+      FROM public.conversation_turn_voice_sources vs
+     WHERE vs.user_id = p_user_id AND vs.session_id = p_session_id AND vs.turn_id = ANY (p_turn_ids)
+       AND vs.source_role = 'ASSISTANT' AND vs.source_modality = 'LIVE_CALL_SPEECH'
+     ORDER BY vs.turn_id;
+END$$;
+
 -- ---------------------------------------------------------------------------------------------------------------------
 -- 8. THE OWNER READS (G). SECURITY INVOKER: row-level security decides; no provider; no definer.
 -- ---------------------------------------------------------------------------------------------------------------------
@@ -1303,7 +1321,8 @@ BEGIN
     'public.server_close_live_call_exchange_v1(uuid,uuid,bigint,integer,text,uuid,uuid)',
     'public.server_begin_call_reply_speech_v1(uuid,uuid,bigint,integer,uuid,text)',
     'public.server_begin_call_transcription_v1(uuid,uuid,bigint,uuid,text)',
-    'public.server_settle_call_provider_call_v1(uuid,uuid,text,text,jsonb)'] LOOP
+    'public.server_settle_call_provider_call_v1(uuid,uuid,text,text,jsonb)',
+    'public.server_read_call_reply_delivery_v1(uuid,uuid,uuid[])'] LOOP
     EXECUTE format('ALTER FUNCTION %s OWNER TO postgres', fn);
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', fn);
     FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP

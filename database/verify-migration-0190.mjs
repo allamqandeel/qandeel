@@ -24,7 +24,7 @@
 //        call_turn_index, each reply the heard part only; two distinct terms, or one with a recall cue; at most two
 //   T8   AI-COST-01: one TTS ledger row per attempt bound to the exchange's USER turn, only while it is open; the call's
 //        recognition row GATEWAY_MEASURED; settled once
-//   T9   Export My Data carries deliveryState; account erasure removes every new row
+//   T9   Export My Data and the history read carry deliveryState; account erasure removes every new row
 //   TRC  races on two connections: natural close vs N1 commit (both orders), late PLAYOUT vs close, two closes, a spoken
 //        and a typed commit (one call_turn_index order)
 import assert from 'node:assert/strict';
@@ -54,6 +54,7 @@ const DEFINERS = [
   'public.server_begin_call_reply_speech_v1(uuid,uuid,bigint,integer,uuid,text)',
   'public.server_begin_call_transcription_v1(uuid,uuid,bigint,uuid,text)',
   'public.server_settle_call_provider_call_v1(uuid,uuid,text,text,jsonb)',
+  'public.server_read_call_reply_delivery_v1(uuid,uuid,uuid[])',
 ];
 const READS = ['public.call_context_exchanges_v1(uuid,uuid,integer)', 'public.call_turn_retrieval_v1(uuid,text[],boolean,integer)'];
 const INTERNAL = voiceInternals0190();
@@ -609,7 +610,7 @@ async function verifyBehaviour(report) {
       assert.equal((await speech(randomUUID())).outcome, 'CLOSED', 'no attempt after the close');
     });
 
-    await report.isolated('T9 Export My Data carries deliveryState; account erasure removes every new row', async () => {
+    await report.isolated('T9 Export My Data and the history read carry deliveryState; account erasure removes every new row', async () => {
       const x = await activeCall();
       const t = await spokenTurn(x, { audioTo: 1000 });
       await reply(x, t.idx, [['تمام', 400]], 'COMPLETE');
@@ -621,6 +622,15 @@ async function verifyBehaviour(report) {
       assert.match(text, /"deliveryState":"complete"/u);
       assert.match(text, /"confidenceBand":"high"/u);
       assert.equal(text.split('"deliveryState"').length - 1, 1, 'only the closed reply states a delivery (a USER source and the open exchange none)');
+      // The history's additive deliveryState: the owner's call reply only, never a USER turn or another person's session.
+      const turns = (await rows('SELECT turn_id, source_role FROM public.conversation_turn_voice_sources WHERE user_id = $1 ORDER BY attached_at', [x.user]));
+      const replyTurn = turns.find((r) => r.source_role === 'ASSISTANT').turn_id;
+      const ids = turns.map((r) => r.turn_id);
+      assert.deepEqual(await server('SELECT * FROM public.server_read_call_reply_delivery_v1($1, $2, $3)', [x.user, x.session, ids]),
+        [{ turn_id: replyTurn, delivery_state: 'COMPLETE' }]);
+      const stranger = await activeCall();
+      assert.deepEqual(await server('SELECT * FROM public.server_read_call_reply_delivery_v1($1, $2, $3)', [stranger.user, x.session, ids]), []);
+      await rejected(() => server('SELECT * FROM public.server_read_call_reply_delivery_v1($1, $2, $3)', [x.user, x.session, Array.from({ length: 101 }, () => randomUUID())]), ['22023']);
       assert.equal((await one('SELECT * FROM public.server_end_call_v1($1, $2, 1, $3)', [x.user, x.call, 'USER_ENDED'])).outcome, 'ENDED');
       const [del] = await rows(`INSERT INTO personal_data_private.account_deletions (user_id, command_id, status, requested_at, final_at)
           VALUES ($1, gen_random_uuid(), 'SCHEDULED', clock_timestamp() - interval '8 days', clock_timestamp() - interval '1 day') RETURNING id`, [x.user]);
