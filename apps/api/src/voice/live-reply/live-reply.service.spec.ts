@@ -180,15 +180,32 @@ describe('LiveReplyService (S8B-04 CP2, D-S3 + single stream)', () => {
 
   it('nothing paid starts when no phone connected within the grace; the text side still ends normally', async () => {
     const { route, store, service } = setup();
-    const now = Date.now();
+    // The clock is fixed before open, so the grace starts at exactly `opened` however long open takes.
+    const opened = Date.now();
+    let clock = opened;
+    jest.spyOn(Date, 'now').mockImplementation(() => clock);
     const reply = await openReply(service);
-    jest.spyOn(Date, 'now').mockReturnValue(now + LIVE_REPLY_FIRST_CONNECT_GRACE_MS + 1);
+    clock = opened + LIVE_REPLY_FIRST_CONNECT_GRACE_MS + 1;
     reply.release(S0, SPEECH);
     reply.end({ kind: 'COMPLETE', assistantTurnId: ASSISTANT });
     await tick(10);
     expect(route.calls).toHaveLength(0);
     expect(store.admits).toHaveLength(0);
     expect(store.finished).toMatchObject({ state: 'COMPLETE', segmentCount: 0, audioMs: 0 });
+  });
+
+  it('on the last millisecond of the grace the same reply still starts its synthesis (the clock above is what stops it)', async () => {
+    const { route, store, service } = setup();
+    const opened = Date.now();
+    let clock = opened;
+    jest.spyOn(Date, 'now').mockImplementation(() => clock);
+    const reply = await openReply(service);
+    clock = opened + LIVE_REPLY_FIRST_CONNECT_GRACE_MS;
+    reply.release(S0, SPEECH);
+    reply.end({ kind: 'COMPLETE', assistantTurnId: ASSISTANT });
+    await tick(10);
+    expect(route.calls).toHaveLength(1);
+    expect(store.admits.map((a) => a.index)).toEqual([0]);
   });
 
   it('cancel stops new synthesis at once; an attempt already running finishes and is kept', async () => {

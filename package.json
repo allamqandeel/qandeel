@@ -359,6 +359,7 @@
     "test:s8b-03-personal-voice-notes-contract": "node --test tests/s8b-03-personal-voice-notes-contract.test.mjs",
     "test:s8b-04-qandeel-voice-contract": "node --test tests/s8b-04-qandeel-voice-contract.test.mjs",
     "test:s8b-05-live-call-contract": "node --test tests/s8b-05-live-call-contract.test.mjs",
+    "test:s8b-06-native-audio-engine-contract": "node --test tests/s8b-06-native-audio-engine-contract.test.mjs",
     "verify:ci-01:intelligence-reality:local": "node scripts/ci-01/local-db.mjs run-baseline",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:qan-inf-02-windows-temp-harness-cleanup-contract": "node --test tests/qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs",

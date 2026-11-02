@@ -208,8 +208,15 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
   const ids = rows.map((row) => row.split('|')[1].trim());
   assert.equal(new Set(ids).size, ids.length, 'every row id is unique');
   const mobile = files('apps/mobile/src').filter((p) => /\.(?:ts|tsx)$/u.test(p));
-  assert.ok(!mobile.some((p) => p.includes('voice-call/')), 'no call surface on the phone in CP1');
-  for (const path of mobile) assert.doesNotMatch(read(path), /\bLC-\d{2}\b|qandeel\.live-call\.v1/u, `${path} carries no call copy and no call protocol`);
+  // S8B-06 CP1 (D-05-05) adds the phone's native engine and protocol client under src/voice-call/ — no surface and no
+  // call text: no component outside its device proof, and the protocol named inside that layer only.
+  const call = mobile.filter((p) => p.includes('voice-call/') && !/\/__(?:validation|tests|fixtures)__\//u.test(p));
+  assert.ok(call.every((p) => p.endsWith('.ts')), 'no call surface on the phone');
+  for (const path of mobile) {
+    assert.doesNotMatch(read(path), /\bLCE?-\d{2}\b/u, `${path} carries no call copy`);
+    if (!call.includes(path)) assert.doesNotMatch(read(path), /qandeel\.live-call\.v1/u, `${path} names no call protocol`);
+  }
+  for (const path of call) assert.doesNotMatch(read(path), /[؀-ۿ]/u, `${path} carries no call text`);
 });
 
 // S8B-05 CP2 (CA-05-02 §2.3, acceptance #27): an interrupted reply is never treated as complete. Today no post-response

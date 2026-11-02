@@ -5,7 +5,8 @@
 QANDEEL Reply & Playout Truth, §10) is **merged** through [PR #375](https://github.com/allamqandeel/qandeel/pull/375) as
 `f5de4c27`. CP3 (Ordered Half-Exchange Establishment & Fast Live Analysis, §11) is on `s8b/s8b-05-cp3` as a **Draft pull
 request, not merged; merge only on the Product Owner's explicit «ادمج»**. S8B-05 is **not closed**. CP4 is **not started
-and not authorized**; S8B-06 CP1 is its own pull request (#376), on which CP3 does not depend.
+and not authorized**. S8B-06 CP1 is merged through PR #376 as `e429ca35`; CP3 was synced with that `main` and does not
+depend on it.
 
 *(§0 – §9 are CP1's record as written, §10 CP2's; where a later checkpoint changed an earlier statement, its own section
 says so.)*
@@ -686,6 +687,7 @@ This broke S3 (contract Part A) and the guarantee that committed speech is not l
 v1.2 (CA-05-01; L2 – L5; A1 §1 – §3; R5′ / S3 at the END), with Fast Live Analysis as a stated priority. **Base:** `main`
 at `f5de4c27`, the merge of PR #375 (CP2). **Branch:** `s8b/s8b-05-cp3`. **Migration:** `0191` (forward-only, **not
 hosted**). **The next migration is `0192`.** PR #376 (S8B-06 CP1) is separate: CP3 neither touches it nor depends on it.
+It was merged during CP3 as `e429ca35`, and CP3 was synced with that `main`; the two share no file but the three locators.
 
 **Constraints kept:** no voice gate opened; no migration on a hosted database; no paid API, no F-01 or warning audio; no
 real person or voice (random UUIDs, fixed synthetic Arabic sentences, no audio at all in the CP3 proof); nothing merged.
@@ -717,9 +719,9 @@ real person or voice (random UUIDs, fixed synthetic Arabic sentences, no audio a
   the PostgREST hop (a service_role pg shim with PostgREST's error identity) and the providers (fakes with seeded
   latencies; the live reply's first token and every analysis call share ONE fake provider capacity of 8 slots).
 - **API specs:** the worker (10), the permits and the post-response gate (9), the half establishment and the text permit
-  (8). Every existing suite is unchanged. The full Jest run gave 7 713 passed and 1 skipped. Its one failure was an S8B-04
-  spec CP3 does not touch (`voice/live-reply`, a fixed 10 ms tick), while the static suite ran alongside; it passes 11 / 11
-  on its own.
+  (8). Every existing suite is unchanged. The full Jest run on the tree synced with `main` at `e429ca35` gave 7 715 passed,
+  1 skipped and 0 failed. Before the sync, one untouched S8B-04 spec (`voice/live-reply`, a clock race) failed once under
+  load; main's S8B-06 R2 fixed that race.
 - **Static contracts:** `tests/s8b-05-live-call-contract.test.mjs` adds the CP3 pins (§11.6); the re-anchors are listed
   in §11.7.
 
