@@ -24,6 +24,11 @@ const READY_AFTER_MS = 5000;
 const toggle = (name) => fs.existsSync(path.join(process.env.S803_OUT, name));
 const state = { consent: 'NONE', grantedVersion: null, records: new Map(), commands: new Map(), turns: [], order: 0 };
 const iso = (ms) => new Date(ms).toISOString();
+// The real server's consent words (voice_private.consent_state_v1, passed through by the API) — S8B-04 CP2 (D4): this fake
+// once answered in the phone's own words, which hid that the phone could not read the real server.
+const wireConsent = () => (state.consent === 'GRANTED'
+  ? (state.grantedVersion === CONSENT.version ? 'GRANTED_CURRENT' : 'VERSION_NOT_CURRENT')
+  : state.consent === 'WITHDRAWN' ? 'WITHDRAWN' : 'NOT_GRANTED');
 
 function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(body));
@@ -80,11 +85,11 @@ async function handle(req, res, url, authed, ctx) {
   if (req.method === 'GET' && p === '/voice/capability') {
     const available = !toggle('s803-gate-closed');
     ctx.log({ kind: 'ui-capability', available, consent: state.consent });
-    json(res, 200, { voiceNotesAvailable: available, consentState: state.consent, grantedVersion: state.grantedVersion, currentVersion: CONSENT.version });
+    json(res, 200, { voiceNotesAvailable: available, consentState: wireConsent(), grantedVersion: state.grantedVersion, currentVersion: CONSENT.version });
     return true;
   }
   if (req.method === 'GET' && p === '/voice/consent') {
-    json(res, 200, { consentState: state.consent, consentVersion: CONSENT.version, rows: CONSENT.rows });
+    json(res, 200, { consentState: wireConsent(), consentVersion: CONSENT.version, rows: CONSENT.rows });
     return true;
   }
   if (req.method === 'POST' && p === '/voice/consent/grant') {

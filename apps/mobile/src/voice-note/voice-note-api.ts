@@ -14,6 +14,17 @@
  *   GET    /voice/recordings/:recordingId/objects/:track/:segmentIndex   the bytes (Range, Authorization header)
  *   DELETE /voice/recordings/:recordingId                 the owner's early deletion
  *
+ * S8B-04 (CP2, the automatic voice reply and the Fast Voice Path):
+ *
+ *   POST   /voice/live-notes {sessionId, liveId}           a realtime transcription DURING a recording (after current consent)
+ *   POST   /voice/live-notes/:liveId/audio?seq=N           one PCM chunk, in order from 0
+ *   DELETE /voice/live-notes/:liveId                       the recording was cancelled: everything discarded
+ *   POST   /voice/notes/:sessionId/:commandId?liveId=&liveChunks=   the upload naming its live note (its transcript MAY stand)
+ *   POST   /voice/notes/:recordingId/turn?auto=1           commit and reply by voice → REPLYING {turnId, replyId}
+ *   GET    /voice/live-replies/:replyId?wait=&have=&final=&done=     the reply's text so far, final audio length, its answer
+ *   GET    /voice/live-replies/:replyId/audio              ONE audio stream (the bearer in a header)
+ *   DELETE /voice/live-replies/:replyId                    stop the voice (the text is unaffected)
+ *
  * The one ambiguity it refuses to hide: an upload with no readable answer MAY have been stored. That is UNKNOWN, never
  * "not sent"; the caller retries it with the SAME command id, which the server resolves to the same recording.
  */
@@ -38,7 +49,14 @@ export type VoiceNoteServerStatus = 'PROCESSING' | 'READY' | 'NO_SPEECH' | 'HELD
 const STATUSES: readonly VoiceNoteServerStatus[] = ['PROCESSING', 'READY', 'NO_SPEECH', 'HELD_CONSENT', 'FAILED_RETRYABLE', 'FAILED_FINAL', 'CANCELLED', 'COMMITTED'];
 
 export type VoiceNoteUploadResult =
-  | { readonly kind: 'ACCEPTED'; readonly recordingId: string; readonly acceptedAt: string | null; readonly availableUntil: string | null }
+  | {
+      readonly kind: 'ACCEPTED';
+      readonly recordingId: string;
+      readonly acceptedAt: string | null;
+      readonly availableUntil: string | null;
+      /** S8B-04 (CP2): the live transcript stood for this recording; it can be committed at once (no status reads). */
+      readonly transcriptReady: boolean;
+    }
   /** The voice gate is closed now (C-31). Nothing was stored. */
   | { readonly kind: 'NOT_AVAILABLE_NOW' }
   /** No current consent (C-32). Nothing was stored. */
@@ -73,6 +91,8 @@ export type VoiceNotePendingRead = { readonly kind: 'NOTES'; readonly notes: rea
 
 export type VoiceNoteCommitResult =
   | { readonly kind: 'COMMITTED'; readonly exchange: ConversationExchangeView }
+  /** S8B-04 (CP2): the turn was committed and its reply is being produced, spoken automatically, under `replyId`. */
+  | { readonly kind: 'REPLYING'; readonly turnId: string; readonly replyId: string }
   /** Not READY yet, the Session no longer takes turns, or a racing command: nothing was committed by this call. */
   | { readonly kind: 'CONFLICT' }
   | { readonly kind: 'CONSENT_REQUIRED' }
@@ -83,7 +103,49 @@ export type VoiceNoteCommitResult =
   /** No readable answer: the turn MAY be committed. A replay answers the same turn. */
   | { readonly kind: 'UNKNOWN' };
 
-export type VoiceConsentState = 'NONE' | 'GRANTED' | 'WITHDRAWN';
+/** S8B-04 (CP2): the live note named by an upload (its id and how many chunks were sent). */
+export interface VoiceLiveNoteRef {
+  readonly liveId: string;
+  readonly chunks: number;
+}
+
+export type VoiceLiveReplyState = 'STREAMING' | 'COMPLETE' | 'WITHHELD_TAIL' | 'FAILED' | 'CANCELLED';
+const LIVE_REPLY_STATES: readonly VoiceLiveReplyState[] = ['STREAMING', 'COMPLETE', 'WITHHELD_TAIL', 'FAILED', 'CANCELLED'];
+
+/** What the phone already has, so a long-poll answers only with something newer. */
+export interface VoiceLiveReplyKnown {
+  readonly textLength: number;
+  readonly final: boolean;
+  readonly exchange: boolean;
+}
+
+export interface VoiceLiveReplyView {
+  readonly state: VoiceLiveReplyState;
+  /** The reply's whole audio length once known (the player stops itself there); null while it is produced. */
+  readonly finalDurationMs: number | null;
+  /** The visible text released so far (only while the server instance holds the reply). */
+  readonly text: string | null;
+  /** The finished turn's answer (a typed turn's shape); null when the turn ended without one; absent: not yet. */
+  readonly exchange?: ConversationExchangeView | null;
+}
+export type VoiceLiveReplyRead = { readonly kind: 'STATUS'; readonly view: VoiceLiveReplyView } | { readonly kind: 'NOT_FOUND' } | { readonly kind: 'UNAVAILABLE' };
+
+/**
+ * The reader's consent as the phone uses it. `OUTDATED`: a consent to an earlier version, not withdrawn — it permits
+ * nothing, and the current text is asked for again (S8B-04 CP2, D4).
+ */
+export type VoiceConsentState = 'NONE' | 'GRANTED' | 'OUTDATED' | 'WITHDRAWN';
+
+/**
+ * S8B-04 (CP2, D4) — the server's consent states exactly as `voice_private.consent_state_v1` names them (the API passes
+ * them through), each read as the phone's state. Any other word is not understood, and nothing is offered on it.
+ */
+export const SERVER_VOICE_CONSENT_STATES: Readonly<Record<string, VoiceConsentState>> = Object.freeze({
+  GRANTED_CURRENT: 'GRANTED',
+  VERSION_NOT_CURRENT: 'OUTDATED',
+  NOT_GRANTED: 'NONE',
+  WITHDRAWN: 'WITHDRAWN',
+});
 export interface VoiceCapabilityView {
   readonly voiceNotesAvailable: boolean;
   readonly consentState: VoiceConsentState;
@@ -117,7 +179,8 @@ const isUuid = (value: unknown): value is string => typeof value === 'string' &&
 const instant = (value: unknown): string | null => (typeof value === 'string' && !Number.isNaN(Date.parse(value)) ? value : null);
 const count = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null);
 const status = (value: unknown): VoiceNoteServerStatus | null => (STATUSES as readonly unknown[]).includes(value) ? value as VoiceNoteServerStatus : null;
-const consentState = (value: unknown): VoiceConsentState | null => (value === 'NONE' || value === 'GRANTED' || value === 'WITHDRAWN' ? value : null);
+const consentState = (value: unknown): VoiceConsentState | null =>
+  (typeof value === 'string' && Object.prototype.hasOwnProperty.call(SERVER_VOICE_CONSENT_STATES, value) ? SERVER_VOICE_CONSENT_STATES[value]! : null);
 
 async function bodyOf(response: { json(): Promise<unknown> }): Promise<unknown> {
   try {
@@ -149,10 +212,11 @@ export class VoiceNoteApiClient {
   }
 
   /** The note's bytes, exactly once per call, under the caller's command id. */
-  async upload(sessionId: string, commandId: string, bytes: Uint8Array, signal: AbortSignal): Promise<VoiceNoteUploadResult> {
+  async upload(sessionId: string, commandId: string, bytes: Uint8Array, signal: AbortSignal, live?: VoiceLiveNoteRef): Promise<VoiceNoteUploadResult> {
     let response: Awaited<ReturnType<VoiceNoteFetch>>;
+    const query = live === undefined ? '' : `?liveId=${encodeURIComponent(live.liveId)}&liveChunks=${live.chunks}`;
     try {
-      response = await this.config.fetch(this.url(`/voice/notes/${encodeURIComponent(sessionId)}/${encodeURIComponent(commandId)}`), {
+      response = await this.config.fetch(this.url(`/voice/notes/${encodeURIComponent(sessionId)}/${encodeURIComponent(commandId)}${query}`), {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': VOICE_NOTE_CONTENT_TYPE, 'Content-Length': String(bytes.length) },
         body: bytes,
@@ -167,7 +231,10 @@ export class VoiceNoteApiClient {
     if (!response.ok) return { kind: 'REFUSED' };
     if (!isRecord(body)) return { kind: 'UNKNOWN' };
     if (body.outcome === 'ACCEPTED' && isUuid(body.recordingId)) {
-      return { kind: 'ACCEPTED', recordingId: body.recordingId.toLowerCase(), acceptedAt: instant(body.acceptedAt), availableUntil: instant(body.availableUntil) };
+      return {
+        kind: 'ACCEPTED', recordingId: body.recordingId.toLowerCase(), acceptedAt: instant(body.acceptedAt), availableUntil: instant(body.availableUntil),
+        transcriptReady: body.transcriptReady === true,
+      };
     }
     if (body.outcome === 'NOT_AVAILABLE_NOW') return { kind: 'NOT_AVAILABLE_NOW' };
     if (body.outcome === 'CONSENT_REQUIRED') return { kind: 'CONSENT_REQUIRED' };
@@ -220,8 +287,8 @@ export class VoiceNoteApiClient {
   }
 
   /** Commit a READY note as ONE user turn; the answer is the same turn shape as a typed turn's. A replay answers the same. */
-  async commitTurn(recordingId: string): Promise<VoiceNoteCommitResult> {
-    const answer = await this.send('POST', `/voice/notes/${encodeURIComponent(recordingId)}/turn`);
+  async commitTurn(recordingId: string, automaticVoiceReply = false): Promise<VoiceNoteCommitResult> {
+    const answer = await this.send('POST', `/voice/notes/${encodeURIComponent(recordingId)}/turn${automaticVoiceReply ? '?auto=1' : ''}`);
     if (answer === null || answer.status >= 500 && answer.status !== 503) return { kind: 'UNKNOWN' };
     const outcome = isRecord(answer.body) ? answer.body.outcome : undefined;
     if (answer.status === 503) return outcome === 'NOT_AVAILABLE_NOW' ? { kind: 'NOT_AVAILABLE_NOW' } : { kind: 'UNKNOWN' };
@@ -230,8 +297,74 @@ export class VoiceNoteApiClient {
     if (answer.status === 429) return { kind: 'ADMISSION_LIMITED' };
     if (answer.status === 404) return { kind: 'NOT_FOUND' };
     if (answer.status !== 200) return { kind: 'UNKNOWN' };
+    if (outcome === 'REPLYING' && isRecord(answer.body)) {
+      const { turnId, replyId } = answer.body;
+      return isUuid(turnId) && isUuid(replyId) ? { kind: 'REPLYING', turnId: turnId.toLowerCase(), replyId: replyId.toLowerCase() } : { kind: 'UNKNOWN' };
+    }
     const decoded = decodeSubmitResponse(answer.body);
     return decoded.ok ? { kind: 'COMMITTED', exchange: decoded.value } : { kind: 'UNKNOWN' };
+  }
+
+  /** S8B-04 (CP2, D-S1): a live note for the recording just begun. Anything but OPENED: record without it. */
+  async openLiveNote(sessionId: string, liveId: string): Promise<'OPENED' | 'NOT_OPENED'> {
+    const answer = await this.send('POST', '/voice/live-notes', { sessionId, liveId });
+    return answer !== null && answer.status === 200 && isRecord(answer.body) && answer.body.outcome === 'OPENED' ? 'OPENED' : 'NOT_OPENED';
+  }
+
+  /** One PCM chunk of the live note, exactly once, in order. False: the live note is no longer usable (keep recording). */
+  async appendLiveNote(liveId: string, seq: number, chunk: Uint8Array): Promise<boolean> {
+    try {
+      const response = await this.config.fetch(this.url(`/voice/live-notes/${encodeURIComponent(liveId)}/audio?seq=${seq}`), {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/octet-stream', 'Content-Length': String(chunk.length) },
+        body: chunk,
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The recording was cancelled or deleted: the live note and everything it heard are discarded. */
+  async cancelLiveNote(liveId: string): Promise<void> {
+    await this.send('DELETE', `/voice/live-notes/${encodeURIComponent(liveId)}`);
+  }
+
+  /** The automatic reply's status; with `waitMs`, a long-poll answered when something is newer than `known`. */
+  async liveReplyStatus(replyId: string, known: VoiceLiveReplyKnown, waitMs: number, signal?: AbortSignal): Promise<VoiceLiveReplyRead> {
+    const query = `wait=${Math.max(0, Math.round(waitMs))}&have=${known.textLength}&final=${known.final ? 1 : 0}&done=${known.exchange ? 1 : 0}`;
+    const answer = await this.send('GET', `/voice/live-replies/${encodeURIComponent(replyId)}?${query}`, undefined, signal);
+    if (answer === null || answer.status >= 500) return { kind: 'UNAVAILABLE' };
+    if (answer.status === 404) return { kind: 'NOT_FOUND' };
+    const body = answer.body;
+    if (answer.status !== 200 || !isRecord(body) || !(LIVE_REPLY_STATES as readonly unknown[]).includes(body.state) || !isRecord(body.audio)) {
+      return { kind: 'UNAVAILABLE' };
+    }
+    const finalDurationMs = body.audio.final === true ? count(body.audio.durationMs) : null;
+    let exchange: ConversationExchangeView | null | undefined;
+    if (body.exchange === null) exchange = null;
+    else if (body.exchange !== undefined) {
+      const decoded = decodeSubmitResponse(body.exchange);
+      if (!decoded.ok) return { kind: 'UNAVAILABLE' };
+      exchange = decoded.value;
+    }
+    return {
+      kind: 'STATUS',
+      view: {
+        state: body.state as VoiceLiveReplyState, finalDurationMs, text: typeof body.text === 'string' ? body.text : null,
+        ...(exchange === undefined ? {} : { exchange }),
+      },
+    };
+  }
+
+  /** The reply's ONE audio stream, read by the player with the bearer in a header — never a URL that carries one. */
+  liveReplyAudioUrl(replyId: string): string {
+    return this.url(`/voice/live-replies/${encodeURIComponent(replyId)}/audio`);
+  }
+
+  /** Stop the voice: no new synthesis. The text is unaffected. */
+  async cancelLiveReply(replyId: string): Promise<void> {
+    await this.send('DELETE', `/voice/live-replies/${encodeURIComponent(replyId)}`);
   }
 
   async capability(): Promise<VoiceCapabilityRead> {

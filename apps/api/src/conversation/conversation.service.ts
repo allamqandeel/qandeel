@@ -1,3 +1,4 @@
+import type { LiveReplySink } from '../voice/live-reply/live-reply.service';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
@@ -103,7 +104,7 @@ export class ConversationService {
    * owner's attribution, the UNCHANGED Orchestrator and the semantic establishment. Nothing is admitted here; a
    * replay of a committed turn returns its stored reply. Ownership is the caller token's (row-level security).
    */
-  async runCommittedTurn(userId: string, accessToken: string, sessionId: string, turnId: string): Promise<OrchestratedTurnResult> {
+  async runCommittedTurn(userId: string, accessToken: string, sessionId: string, turnId: string, options: { readonly liveReply?: LiveReplySink } = {}): Promise<OrchestratedTurnResult> {
     const gate: ForegroundTurnWorkGate = {
       begin: (workSessionId, userTurnId) => this.turnWork.begin(workSessionId, userId, userTurnId),
       end: (userTurnId, leaseId) => this.turnWork.end(userId, userTurnId, leaseId),
@@ -112,8 +113,9 @@ export class ConversationService {
       const turn = await this.repository.findTurn(accessToken, sessionId, userId, turnId);
       if (!turn || turn.role !== 'USER') throw new NotFoundException('Conversation turn was not found.');
       this.correlation.bindCanonical(turn.session_id, turn.id);
-      // S8B-04 (CP1): this runner is the Voice Note's only path, so its reply carries the speech channel (TM-01).
-      return this.establishSemanticChain(userId, await this.orchestrator.orchestrate(accessToken, userId, turn, { modality: 'VOICE_NOTE' }));
+      // S8B-04 (CP1): this runner is the Voice Note's only path, so its reply carries the speech channel (TM-01). CP2: with
+      // an automatic voice reply, the reply is released into it while it is generated.
+      return this.establishSemanticChain(userId, await this.orchestrator.orchestrate(accessToken, userId, turn, { modality: 'VOICE_NOTE', liveReply: options.liveReply }));
     }));
   }
 

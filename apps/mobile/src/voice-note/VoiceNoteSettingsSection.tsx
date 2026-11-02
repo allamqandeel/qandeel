@@ -67,6 +67,8 @@ export function VoiceNoteSettingsSection({ session, language }: { readonly sessi
     </Text>
   );
   const [, cancelLabel] = voiceNotePair('C-43', language);
+  // A consent to an earlier version permits nothing, but it is still held: it can be withdrawn like a current one.
+  const holdsConsent = own.consentState === 'GRANTED' || own.consentState === 'OUTDATED';
   return (
     <View testID="qandeel-settings-group-voice">
       <Text
@@ -79,10 +81,10 @@ export function VoiceNoteSettingsSection({ session, language }: { readonly sessi
       </Text>
       {line(voiceNoteText('C-45', language), 'qandeel-voice-retention')}
       {own.consentState === 'WITHDRAWN' ? line(voiceNoteText('C-48', language), 'qandeel-voice-consent-withdrawn', true) : null}
-      {own.consentState === 'GRANTED' && !confirming ? (
+      {holdsConsent && !confirming ? (
         <Act label={voiceNoteText('C-46', language)} onPress={() => setConfirming(true)} language={language} palette={palette} testID="qandeel-voice-withdraw" />
       ) : null}
-      {own.consentState === 'GRANTED' && confirming ? (
+      {holdsConsent && confirming ? (
         <View testID="qandeel-voice-withdraw-confirm">
           {line(voiceNoteText('C-47', language), 'qandeel-voice-withdraw-consequence')}
           <Act

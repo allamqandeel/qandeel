@@ -1,8 +1,12 @@
 import {
   BadRequestException, HttpException, HttpStatus, Inject, Injectable, NotFoundException, Optional, ServiceUnavailableException,
 } from '@nestjs/common';
-import type { Readable } from 'node:stream';
+import { ModuleRef } from '@nestjs/core';
+import { Transform, type Readable } from 'node:stream';
 import { TelemetryService } from '../observability/telemetry.service';
+import { proveM4aAudioDuration } from '../voice/m4a/m4a-audio-duration';
+import type { LiveTranscript } from '../voice/live-note/live-voice-note.service';
+import { FAST_VOICE_PATH, type FastVoicePath } from './fast-voice-path.port';
 import {
   PRIVATE_AUDIO_OBJECT_STORE, VOICE_OBJECT_MAX_BYTES, VoiceByteCountError, type PrivateAudioObjectStore, type VoiceAudioContentType,
   type VoiceByteRange,
@@ -36,8 +40,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const TRACKS = ['NOTE', 'USER', 'QANDEEL'] as const;
 type Track = (typeof TRACKS)[number];
 
+/** S8B-04 (CP2): a note's bytes are held in memory for the live transcript's duration proof only up to this size. */
+export const LIVE_NOTE_TEE_MAX_BYTES = 8 * 1024 * 1024;
+
 export type NoteUploadAnswer =
-  | { readonly outcome: 'ACCEPTED'; readonly recordingId: string; readonly acceptedAt: string | null; readonly availableUntil: string | null }
+  | { readonly outcome: 'ACCEPTED'; readonly recordingId: string; readonly acceptedAt: string | null; readonly availableUntil: string | null; readonly transcriptReady?: boolean }
   | { readonly outcome: 'NOT_AVAILABLE_NOW' | 'CONSENT_REQUIRED' | 'TOO_LARGE' | 'UNSUPPORTED' | 'SIZE_MISMATCH' };
 
 /** An object opened for one response: its status, headers and the store's own body stream. */
@@ -94,7 +101,17 @@ export class VoiceMediaService {
     private readonly repository: VoiceMediaRepository,
     @Inject(PRIVATE_AUDIO_OBJECT_STORE) private readonly store: PrivateAudioObjectStore,
     @Optional() private readonly telemetry?: TelemetryService,
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
+
+  /** S8B-04 (CP2): the providers' side of the fast path, when the Voice module provides it (resolved at call time). */
+  private fastVoicePath(): FastVoicePath | undefined {
+    try {
+      return this.moduleRef?.get<FastVoicePath>(FAST_VOICE_PATH, { strict: false }) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
 
   /**
    * A Voice Note: begin (gate and consent, in the database) → one streamed PUT of exactly the declared bytes, cancelled by
@@ -103,8 +120,24 @@ export class VoiceMediaService {
    * STORED, never readable, its key queued for erasure after the upload can no longer land (0183).
    */
   async uploadNote(userId: string, sessionId: string, commandId: string, contentType: unknown, contentLength: unknown,
-    body: Readable, clientSignal: AbortSignal): Promise<NoteUploadAnswer> {
+    body: Readable, clientSignal: AbortSignal, live?: { readonly liveId: string; readonly sentChunks: number }): Promise<NoteUploadAnswer> {
     if (!UUID.test(sessionId) || !UUID.test(commandId)) throw invalid();
+    if (live && (!UUID.test(live.liveId) || !Number.isSafeInteger(live.sentChunks) || live.sentChunks < 0)) throw invalid();
+    const path = live ? this.fastVoicePath() : undefined;
+    // S8B-04 (CP2): a live note this upload does not hand to its acceptance is discarded now (its ledger row settled).
+    let handedOver = false;
+    try {
+      return await this.uploadNoteWith(userId, sessionId, commandId, contentType, contentLength, body, clientSignal,
+        live && path ? { ...live, path, handOver: () => { handedOver = true; } } : undefined);
+    } finally {
+      if (live && path && !handedOver) void path.discardLiveNote(userId, live.liveId).catch(() => undefined);
+    }
+  }
+
+  private async uploadNoteWith(userId: string, sessionId: string, commandId: string, contentType: unknown, contentLength: unknown,
+    body: Readable, clientSignal: AbortSignal,
+    live: { readonly liveId: string; readonly sentChunks: number; readonly path: FastVoicePath; readonly handOver: () => void } | undefined,
+  ): Promise<NoteUploadAnswer> {
     if (String(contentType ?? '').split(';')[0].trim().toLowerCase() !== VOICE_NOTE_CONTENT_TYPE) return this.refused('UNSUPPORTED');
     const byteSize = Number(contentLength);
     if (!Number.isSafeInteger(byteSize) || byteSize <= 0) throw invalid();
@@ -123,8 +156,22 @@ export class VoiceMediaService {
     const recordingId = begun.recording_id;
     const deadline = Date.parse(begun.upload_deadline ?? '') - Date.now();
     const signal = AbortSignal.any([clientSignal, AbortSignal.timeout(Number.isFinite(deadline) && deadline > 0 ? deadline : 1)]);
+    // S8B-04 (CP2): with a live transcript, the bytes are also kept in memory (bounded) to prove the recording's duration
+    // without a second read, and the recognizer is finalized in parallel with the store PUT. Nothing here is shown or
+    // kept: the transcript is adopted only inside the acceptance's own transaction, below.
+    let upload: Readable = body;
+    let transcript: Promise<LiveTranscript> | null = null;
+    let proven: Promise<number | null> = Promise.resolve(null);
+    if (live && byteSize <= LIVE_NOTE_TEE_MAX_BYTES) {
+      live.handOver();
+      const tee = teeForDurationProof(body, byteSize);
+      upload = tee.stream;
+      proven = tee.durationMs;
+      transcript = live.path.finishLiveNote(userId, live.liveId, live.sentChunks, proven)
+        .catch((): LiveTranscript => ({ kind: 'UNUSABLE', reason: 'RECOGNIZER_FAILED' }));
+    }
     try {
-      await this.store.putStream(begun.storage_key, VOICE_NOTE_CONTENT_TYPE, body, byteSize, signal);
+      await this.store.putStream(begun.storage_key, VOICE_NOTE_CONTENT_TYPE, upload, byteSize, signal);
     } catch (error) {
       await this.discard(userId, recordingId);
       if (error instanceof VoiceByteCountError) {
@@ -133,7 +180,16 @@ export class VoiceMediaService {
       }
       throw this.failed('upload', unavailable());
     }
-    const accepted = await this.repository.acceptNote(userId, recordingId, byteSize).catch(() => undefined);
+    const heard = transcript ? await transcript : null;
+    const durationMs = heard?.kind === 'TRANSCRIBED' ? await proven : null;
+    // The live transcript is adopted with the acceptance in ONE transaction (no batch job can race it); otherwise the
+    // recording is accepted exactly as before and the batch path transcribes it.
+    const accepted = heard?.kind === 'TRANSCRIBED' && durationMs !== null
+      ? await this.repository.acceptLiveNote(userId, recordingId, byteSize, {
+        liveId: live!.liveId,
+        durationMs, transcript: heard.text, band: heard.band, uncertainTokens: heard.uncertainTokens, transcriptSha256: heard.transcriptSha256,
+      }).catch(() => undefined)
+      : await this.repository.acceptNote(userId, recordingId, byteSize).catch(() => undefined);
     // No answer: the note may have been accepted; it is neither discarded nor claimed. The sweep settles a pending one.
     if (accepted === undefined) throw this.failed('upload', unavailable());
     if (accepted.outcome !== 'ACCEPTED') {
@@ -143,7 +199,10 @@ export class VoiceMediaService {
       throw notFound();
     }
     this.signal('upload', 'success');
-    return { outcome: 'ACCEPTED', recordingId, acceptedAt: instant(accepted.accepted_at), availableUntil: instant(accepted.retention_expires_at) };
+    return {
+      outcome: 'ACCEPTED', recordingId, acceptedAt: instant(accepted.accepted_at), availableUntil: instant(accepted.retention_expires_at),
+      ...(live ? { transcriptReady: accepted.transcript_state === 'READY' } : {}),
+    };
   }
 
   /**
@@ -377,6 +436,36 @@ export class VoiceMediaService {
 type VoiceMediaOperation = 'upload' | 'read' | 'delete' | 'export_file';
 
 /** Reads a request body to its end without keeping it, bounded by its declared length (§5.2: no second upload). */
+/**
+ * S8B-04 (CP2) — passes the upload through unchanged while keeping its bytes (at most `byteSize`) to prove the M4A's audio
+ * duration from memory once the body ended. A body that fails, overflows or ends short proves nothing (null).
+ */
+function teeForDurationProof(body: Readable, byteSize: number): { stream: Readable; durationMs: Promise<number | null> } {
+  const chunks: Buffer[] = [];
+  let seen = 0;
+  let settle!: (value: number | null) => void;
+  const durationMs = new Promise<number | null>((resolve) => { settle = resolve; });
+  const stream = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      seen += chunk.length;
+      if (seen <= byteSize) chunks.push(chunk);
+      callback(null, chunk);
+    },
+    flush(callback) {
+      callback();
+      if (seen !== byteSize) return settle(null);
+      const whole = Buffer.concat(chunks, byteSize);
+      chunks.length = 0;
+      void proveM4aAudioDuration(async (offset, length) => whole.subarray(offset, Math.min(byteSize, offset + length)), byteSize)
+        .then((proof) => settle(proof.kind === 'PROVEN' ? proof.durationMs : null), () => settle(null));
+    },
+  });
+  stream.on('error', () => settle(null));
+  body.on('error', (error) => stream.destroy(error));
+  body.pipe(stream);
+  return { stream, durationMs };
+}
+
 async function drain(body: Readable, byteSize: number): Promise<void> {
   let seen = 0;
   try {

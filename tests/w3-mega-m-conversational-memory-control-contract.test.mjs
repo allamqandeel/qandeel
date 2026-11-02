@@ -71,7 +71,10 @@ function routeViolations(w) {
   if ((o.match(/this\.memoryControl\.plan\(/gu) ?? []).length !== 1) out.push('more than one Memory-control entry on the turn path');
   // RE-ANCHORED by S8B-03 CP1 (2026-10-31, E8): exactly one content-free line may follow a finalized turn - the
   // VOICE_MEMORY_COMMAND_NOT_HEARD count of a LOW spoken command (C-54); nothing else is added and the turn still ends here.
-  if (!/if \(!finalized\) return this\.currentResult\(accessToken, userId, claimed\);\n\s+(?:if \(memoryControl\.outcome === 'NOT_HEARD_CLEARLY'\) this\.telemetry\.recordOperationalOutcome\('VOICE_MEMORY_COMMAND_NOT_HEARD', 'memory_command', 'not_heard'\);\n\s+)?this\.telemetry\.recordTurnOutcome\('completed',selection\.path\);\n\s+return \{ userTurn: finalized\.userTurn, assistantTurn: finalized\.assistantTurn \};\n\s+\}\n\s+\}\n/u.test(o.slice(finalize)))
+  // RE-ANCHORED by S8B-04 CP2 (2026-11-02, D-S3): the automatic voice reply of a voice-note turn is told the end (FAILED
+  // when the finalization did not happen) and speaks the finalized fixed reply whole; both are no-ops for a typed turn,
+  // write nothing, and the turn still ends here.
+  if (!/if \(!finalized\) \{ options\.liveReply\?\.end\(\{ kind: 'FAILED' \}\); return this\.currentResult\(accessToken, userId, claimed\); \}\n\s+(?:if \(memoryControl\.outcome === 'NOT_HEARD_CLEARLY'\) this\.telemetry\.recordOperationalOutcome\('VOICE_MEMORY_COMMAND_NOT_HEARD', 'memory_command', 'not_heard'\);\n\s+)?this\.telemetry\.recordTurnOutcome\('completed',selection\.path\);\n\s+this\.speakWhole\(options\.liveReply, finalized\.assistantTurn\);\n\s+return \{ userTurn: finalized\.userTurn, assistantTurn: finalized\.assistantTurn \};\n\s+\}\n\s+\}\n/u.test(o.slice(finalize)))
     out.push('a Memory-control turn does not end with its own atomic finalization');
   // MEM-AR-01C (migration 0152) re-anchor: the runtime finalizes through v2, which keeps v1's turn, command and answer
   // checks verbatim and adds the owner's equivalence lock (v1's EXECUTE is revoked; its body stays, proved by verify-0128).

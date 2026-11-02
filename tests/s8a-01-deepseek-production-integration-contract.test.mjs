@@ -67,10 +67,15 @@ const detectors = {
       if (!new RegExp(`\\b${header}: null,`, 'u').test(client)) out.push(`the client nulls the SDK's ${header} source`);
     }
     if (!/static fromEnvironment\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(code)) out.push('the environment composition requires the accounting');
-    if (!/accountedDeepSeekChatCompletionsClient\(createDeepSeekClient\(config\), 'CONVERSATION_REPLY', accounting\)/u.test(code)) out.push('the environment composition is accounted');
+    // RE-ANCHORED by S8B-04 CP2 (2026-11-02, D-S2): one raw client, handed to the router only through its accounted create
+    // and its accounted stream, both under CONVERSATION_REPLY.
+    if (!/const client = createDeepSeekClient\(config\);\s*return new DeepSeekModelRouter\(\s*config,\s*accountedDeepSeekChatCompletionsClient\(client, 'CONVERSATION_REPLY', accounting\),\s*telemetry,\s*accountedDeepSeekStreamingChatCompletions\(client, 'CONVERSATION_REPLY', accounting\),\s*\);/u.test(code)) out.push('the environment composition is accounted');
     if (!/content: releaseModelOutput\(candidate, serverGuidance\),/u.test(code)) out.push('the reply passes the output release guard');
     if (!/choice\?\.finish_reason !== 'stop'/u.test(code)) out.push('only a complete answer is a reply');
-    if (!/stream: false,/u.test(code) || !/maxRetries: 0, signal/u.test(code)) out.push('one non-streamed attempt per turn');
+    // RE-ANCHORED by S8B-04 CP2 (2026-11-02, D-S2): \`generate\` stays one non-streamed attempt; the voice-note \`stream\` is one
+    // streamed attempt with the usage chunk; neither retries.
+    if (!/requestBody\(request, serverGuidance, modelConfiguration\), stream: false \}/u.test(code) || (code.match(/maxRetries: 0, signal/gu) ?? []).length !== 2
+      || !/requestBody\(request, serverGuidance, modelConfiguration\), stream: true, stream_options: \{ include_usage: true \} \}/u.test(code)) out.push('one non-streamed attempt per turn');
     return out;
   },
 
@@ -135,7 +140,7 @@ for (const [name, detect] of Object.entries(detectors)) {
 test('every detector catches a planted defect', () => {
   const planted = [
     ['routerViolations', (w) => ({ ...w, router: w.router.replace('const candidate = choice?.message?.content;', 'const candidate = choice?.message?.content ?? (choice?.message as never as { reasoning_content: string }).reasoning_content;') }), 'the router never reads the reasoning trace'],
-    ['routerViolations', (w) => ({ ...w, router: w.router.replace('stream: false,', 'stream: false, user: SYNTHETIC,') }), 'the router sends no end-user identifier'],
+    ['routerViolations', (w) => ({ ...w, router: w.router.replace('stream: false }', 'stream: false, user: SYNTHETIC }') }), 'the router sends no end-user identifier'],
     ['routerViolations', (w) => ({ ...w, client: w.client.replace('    project: null,\n', '') }), "the client nulls the SDK's project source"],
     ['routerViolations', (w) => ({ ...w, router: w.router.replace('content: releaseModelOutput(candidate, serverGuidance),', 'content: candidate.trim(),') }), 'the reply passes the output release guard'],
     ['configViolations', (w) => ({ ...w, client: w.client.replace("environment.NODE_ENV === 'production'", "environment.NODE_ENV === 'staging'") }), 'the router refuses to start in production'],

@@ -6,6 +6,9 @@ import type { HumanIntelligenceProviderSemantics } from './human-intelligence-pr
 import type { HypothesisReasoningContext } from '../hypothesis/hypothesis-reasoning-context.types';
 import type { RecommendationGroundingContext } from '../recommendation/recommendation-grounding.types';
 import type { QuestionContextV1 } from '../question/question-context.types';
+import type { SpeechHintCandidate } from '../speech-rendering/speech-markup';
+import type { SpeechExpression } from '../speech-rendering/speech-styles';
+import type { ModelOutputWithheldReason } from './model-output-release-guard';
 
 export type ProcessingPath = 'FAST' | 'DEEP';
 
@@ -105,8 +108,64 @@ export interface ModelRouterResult {
   };
 }
 
+/**
+ * S8B-04 CP2 (Fast Voice Path, D-S2): a VOICE NOTE reply streamed through the incremental release guard. `onRelease`
+ * receives each released piece synchronously and in order while the model is still writing; it never receives the tail.
+ */
+export interface ModelRouterReleasedSpeech {
+  readonly expression: SpeechExpression;
+  readonly hints: readonly SpeechHintCandidate[];
+}
+
+export interface ModelRouterStreamOptions {
+  /** The turn's Safety disposition is GUIDED: early release is off (the guard's own rule). */
+  readonly safetyGuided: boolean;
+  /**
+   * `speech`: the expression and the hint candidates of the released text so far, with offsets in THIS piece (a hint of
+   * an earlier piece is not repeated), so a piece spoken early carries its sentences' hints.
+   */
+  readonly onRelease: (piece: string, speech: ModelRouterReleasedSpeech) => void;
+  /** Aborts the provider stream (as the latency budget does). */
+  readonly signal?: AbortSignal;
+}
+
+/** Why the part after the released prefix was withheld: the guard's own reasons, or the stream ended badly after a release. */
+export type ModelRouterStreamWithheldReason = ModelOutputWithheldReason | 'MARKUP_MALFORMED' | 'PROVIDER_FAILED' | 'TRUNCATED';
+
+export interface ModelRouterStreamUsage {
+  inputTokens: number | null;
+  outputTokens: number | null;
+}
+
+/**
+ * COMPLETE: `text` is exactly what the non-streaming path stores; `tail` is the part not yet released through onRelease.
+ * WITHHELD_TAIL: something was released and the rest is withheld; `released` is exactly what onRelease received.
+ * Nothing released and no complete reply: `stream` throws ModelRouterProviderError, exactly as `generate` fails.
+ */
+export type ModelRouterStreamResult =
+  | {
+    kind: 'COMPLETE';
+    text: string;
+    tail: string;
+    expression: SpeechExpression;
+    hints: readonly SpeechHintCandidate[];
+    routingMetadata: { path: ProcessingPath };
+    usage: ModelRouterStreamUsage;
+  }
+  | {
+    kind: 'WITHHELD_TAIL';
+    released: string;
+    reason: ModelRouterStreamWithheldReason;
+    routingMetadata: { path: ProcessingPath };
+    usage: ModelRouterStreamUsage;
+  };
+
 export const MODEL_ROUTER = Symbol('MODEL_ROUTER');
-export interface ModelRouter { generate(request: ModelRouterRequest): Promise<ModelRouterResult>; }
+export interface ModelRouter {
+  generate(request: ModelRouterRequest): Promise<ModelRouterResult>;
+  /** S8B-04 CP2: optional; only a router that can stream a voice-note reply provides it. */
+  stream?(request: ModelRouterRequest, options: ModelRouterStreamOptions): Promise<ModelRouterStreamResult>;
+}
 
 // QHIA-013: the ONE canonical Human Intelligence authority charter, rendered
 // exactly once whenever any Human Intelligence envelope exists.

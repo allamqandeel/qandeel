@@ -21,7 +21,8 @@ const attributed = <T>(work: () => Promise<T>) => runWithAiUsageAttribution({ us
 
 describe('AI-COST-01 accounted provider transports', () => {
   it('S8A-03 (D1): DeepSeek Chat Completions is the only accounted transport', () => {
-    expect(Object.keys(transports).sort()).toEqual(['accountedDeepSeekChatCompletionsClient']);
+    // S8B-04 CP2: its streaming counterpart is the same DeepSeek Chat Completions transport, streamed.
+    expect(Object.keys(transports).sort()).toEqual(['accountedDeepSeekChatCompletionsClient', 'accountedDeepSeekStreamingChatCompletions']);
   });
 
   it('DeepSeek: a structured adapter request and its options reach the real client unchanged, the model comes from the server-built body', async () => {

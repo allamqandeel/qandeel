@@ -27,6 +27,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import process from 'node:process';
 import { createPersonalReplayRuntime, runVerifier } from './replay-personal-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
+import { fastVoiceApplied, VOICE_CONSENT_V3, VOICE_CONSENT_V3_AR_SHA256, VOICE_CONSENT_V3_EN_SHA256 } from './qandeel-voice-0188-anchor.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -102,7 +103,10 @@ async function setVoiceGate(flag = 'ENABLED', requirements = 'SATISFIED') {
   await rows(`SELECT * FROM voice_private.set_voice_launch_capability_v1('PERSONAL_VOICE_NOTE', $1, $2, 'verify-0187', 'real-PostgreSQL proof')`,
     [flag, requirements]);
 }
-const grant = async (user, version = 'VOICE_RECORDING_V2') =>
+// S8B-04 CP2 re-anchor (migration 0188): a fixture grants the current version (VOICE_RECORDING_V3 once 0188 is applied);
+// V2 stays installed as history, unchanged, and a V2 grant is then VERSION_NOT_CURRENT like a V1 one.
+let currentConsentVersion = 'VOICE_RECORDING_V2';
+const grant = async (user, version = currentConsentVersion) =>
   (await one('SELECT * FROM public.server_grant_voice_recording_consent_v1($1, $2, $3)', [user, randomUUID(), version])).outcome;
 const revoke = async (user) => (await one('SELECT * FROM public.server_revoke_voice_recording_consent_v1($1, $2)', [user, randomUUID()])).outcome;
 const consentState = async (user) => (await one('SELECT * FROM public.server_voice_consent_state_v1($1)', [user])).consent_state;
@@ -212,10 +216,15 @@ async function verifyCatalogue(report) {
     }
   });
 
-  await report.section('C0c VOICE_RECORDING_V2 current (K-01 ... K-15, both digests); VOICE_RECORDING_V1 historical and unchanged', async () => {
+  await report.section('C0c VOICE_RECORDING_V2 current (K-01 ... K-15, both digests), or history once 0188 installs V3; VOICE_RECORDING_V1 historical and unchanged', async () => {
     const texts = await rows('SELECT version, is_current, text_ar, text_en, text_ar_sha256, text_en_sha256 FROM voice_private.consent_texts ORDER BY version');
-    assert.equal(texts.length, 2, 'C0c exactly two texts');
-    assert.deepEqual(texts.map((t) => [t.version, t.is_current]), [['VOICE_RECORDING_V1', false], ['VOICE_RECORDING_V2', true]]);
+    const fastApplied = await fastVoiceApplied(rows);
+    assert.equal(texts.length, fastApplied ? 3 : 2, fastApplied ? 'C0c exactly three texts (0188 adds V3)' : 'C0c exactly two texts');
+    assert.deepEqual(texts.slice(0, 2).map((t) => [t.version, t.is_current]), [['VOICE_RECORDING_V1', false], ['VOICE_RECORDING_V2', !fastApplied]]);
+    if (fastApplied) {
+      assert.deepEqual([texts[2].version, texts[2].is_current, texts[2].text_ar_sha256, texts[2].text_en_sha256],
+        [VOICE_CONSENT_V3, true, VOICE_CONSENT_V3_AR_SHA256, VOICE_CONSENT_V3_EN_SHA256], 'C0c 0188: V3 is the current approved text');
+    }
     assert.deepEqual([texts[0].text_ar_sha256, texts[0].text_en_sha256], [V1_AR_SHA256, V1_EN_SHA256], 'C0c V1 unchanged');
     assert.deepEqual([texts[1].text_ar_sha256, texts[1].text_en_sha256], [V2_AR_SHA256, V2_EN_SHA256], 'C0c V2 digests');
     assert.equal(texts[1].text_ar.split('\n').length, 15, 'C0c V2 Arabic: K-01 ... K-15, one row per line');
@@ -224,7 +233,7 @@ async function verifyCatalogue(report) {
     assert.equal(sha256(sql.split('$consent_ar$')[1]), V2_AR_SHA256, 'C0c the file text is the installed text');
     assert.equal(sha256(sql.split('$consent_en$')[1]), V2_EN_SHA256, 'C0c the file text is the installed text');
     const [{ text_ar: served }] = await server('SELECT * FROM public.server_read_voice_consent_text_v1()');
-    assert.equal(sha256(served), V2_AR_SHA256, 'C0c the served consent text is V2');
+    assert.equal(sha256(served), fastApplied ? VOICE_CONSENT_V3_AR_SHA256 : V2_AR_SHA256, fastApplied ? 'C0c the served consent text is V3' : 'C0c the served consent text is V2');
   });
 
   await report.section('C0d four scopes DISABLED; erasure census clean; both relations ACCOUNT_CASCADE', async () => {
@@ -279,6 +288,9 @@ async function verifyBehaviour(report) {
       assert.equal((await start(user, reply, randomUUID())).outcome, 'CONSENT_REQUIRED');
       await revoke(user);
       assert.notEqual(await grant(user, 'VOICE_RECORDING_V1'), 'GRANTED', 'V-L V1 cannot be granted');
+      if (currentConsentVersion === VOICE_CONSENT_V3) {
+        assert.notEqual(await grant(user, 'VOICE_RECORDING_V2'), 'GRANTED', 'V-L 0188: V2 cannot be granted either');
+      }
       assert.equal(await grant(user), 'GRANTED');
       const ok = await readForListen(user, reply);
       assert.deepEqual(ok, { outcome: 'ELIGIBLE', content: REPLY, expression: 'CALM', hints: [] }, 'V-L eligible, CALM without a channel');
@@ -577,6 +589,7 @@ runVerifier('0187', async (setStage) => {
   await q("SET lock_timeout = '10s'");
   await q("SET statement_timeout = '120s'");
   const report = createScenarioReport('0187', { query: q, restore: () => owner() });
+  if (await fastVoiceApplied(rows)) currentConsentVersion = VOICE_CONSENT_V3;
   const humans = [randomUUID()];
   setStage('catalogue');
   await verifyCatalogue(report);

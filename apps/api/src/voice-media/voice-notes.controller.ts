@@ -20,6 +20,8 @@ const PRIVATE_NO_STORE = 'no-store, private';
  *   GET  /voice/notes/:recordingId/status                 the note's client state, never its text, band or attempts
  *   POST /voice/notes/:recordingId/transcription/retry    the owner's explicit retry, within the total bound
  *   POST /voice/notes/:recordingId/turn                   commit a READY note as one turn and answer the turn's reply
+ *        [?auto=1]                                        S8B-04 (CP2): answer {REPLYING, turnId, replyId} at once; the reply
+ *                                                         is spoken automatically (voice/live-replies/:replyId)
  */
 @Controller('voice')
 @UseGuards(SupabaseAuthGuard)
@@ -74,8 +76,8 @@ export class VoiceNotesController {
   @Post('notes/:recordingId/turn')
   @HttpCode(200)
   @Header('Cache-Control', PRIVATE_NO_STORE)
-  turn(@Req() request: AuthenticatedRequest, @Param('recordingId') recordingId: string) {
+  turn(@Req() request: AuthenticatedRequest, @Param('recordingId') recordingId: string, @Query('auto') auto?: string) {
     const { userId, accessToken } = request.authenticatedUser;
-    return this.notes.commitTurn(userId, accessToken, recordingId);
+    return this.notes.commitTurn(userId, accessToken, recordingId, auto === '1');
   }
 }

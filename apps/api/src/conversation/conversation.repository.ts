@@ -189,6 +189,21 @@ export class ConversationRepository {
     return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
   }
 
+  // S8B-04 (CP2, Fast Voice Path, D-S2): a voice-note reply whose whole failed the incremental output guard (or the
+  // provider) AFTER a part of it was let through and may have been heard. The definer locks this GENERATING turn, stores
+  // that part as the reply, records its delivery as WITHHELD_TAIL with the reason, and completes the turn WITHOUT a
+  // ConversationTurnCompleted event: no Memory, intelligence or later turn treats an incomplete reply as complete. A turn
+  // that is no longer GENERATING writes nothing.
+  async finalizeVoiceNoteWithheldTail(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition: 'ALLOW' | 'GUIDED'; reason: string }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
+    const { p_correlation_id, p_orchestration_id } = this.eventMetadata();
+    const rows = await this.serviceApi.rpc<Array<{ user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_voice_note_withheld_tail_v1', {
+      p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId,
+      p_content: input.content, p_safety_disposition: input.safetyDisposition, p_reason: input.reason,
+      p_correlation_id, p_orchestration_id,
+    });
+    return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
+  }
+
   // W3-MEGA-M (E2E-D-13) / MEM-AR-01C: the Memory-control finalization authority (migration 0152, v2). In ONE
   // transaction the database locks this GENERATING turn and any answered question, takes the owner's equivalence lock,
   // re-validates the target and its equivalent Memories under their row locks, applies the change, records the subject,

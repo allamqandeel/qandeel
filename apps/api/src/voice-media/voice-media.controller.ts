@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Header, HttpCode, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Delete, Get, Header, HttpCode, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Transform, type TransformCallback } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -59,6 +59,7 @@ export async function sendAudio(response: ServerResponse, open: (signal: AbortSi
  * consult the voice gate; the upload is refused by the database while the gate is closed (B12).
  *
  *   POST   /voice/notes/:sessionId/:commandId     the raw `audio/mp4` body with its Content-Length, streamed to the store
+ *          [?liveId=&liveChunks=]                 S8B-04 (CP2): adopt the transcript heard during the recording, if it qualifies
  *                                                 → ACCEPTED | NOT_AVAILABLE_NOW | CONSENT_REQUIRED | TOO_LARGE | ...
  *   GET    /voice/recordings/:recordingId         the readable recording's objects (track, index, type, size, clock)
  *   GET    /voice/recordings/:recordingId/objects/:track/:segmentIndex   the bytes, whole (200) or one Range (206)
@@ -75,11 +76,16 @@ export class VoiceMediaController {
   @HttpCode(200)
   @Header('Cache-Control', PRIVATE_NO_STORE)
   async uploadNote(@Req() request: AuthenticatedRequest & IncomingMessage, @Res({ passthrough: true }) response: ServerResponse,
-    @Param('sessionId') sessionId: string, @Param('commandId') commandId: string) {
+    @Param('sessionId') sessionId: string, @Param('commandId') commandId: string,
+    @Query('liveId') liveId?: string, @Query('liveChunks') liveChunks?: string) {
     const signal = clientGone(response);
+    // S8B-04 (CP2): the live note heard during this recording, and how many chunks the phone sent for it (both or neither).
+    if ((liveId === undefined) !== (liveChunks === undefined) || (liveChunks !== undefined && !/^d{1,7}$/u.test(liveChunks))) {
+      throw new BadRequestException({ outcome: 'INVALID_REQUEST' });
+    }
     try {
       return await this.voice.uploadNote(request.authenticatedUser.userId, sessionId, commandId, request.headers['content-type'],
-        request.headers['content-length'], request, signal);
+        request.headers['content-length'], request, signal, liveId !== undefined ? { liveId, sentChunks: Number(liveChunks) } : undefined);
     } finally {
       // A refused upload's body is drained and discarded, never stored.
       if (!request.readableEnded) request.resume();

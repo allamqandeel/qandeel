@@ -48,7 +48,7 @@ function Composed({ conversation, session, language, inFront = true }: {
   return <ConversationSurface controller={conversation} language={language} insets={INSETS} onOpenAnalysis={() => undefined} {...slots} />;
 }
 
-function world(options: { consent?: boolean; available?: boolean; denied?: boolean } = {}) {
+function world(options: { consent?: boolean; available?: boolean; denied?: boolean; outdated?: boolean } = {}) {
   const recorderFiles = new Set<string>();
   let recording = false;
   let elapsed = 0;
@@ -103,7 +103,7 @@ function world(options: { consent?: boolean; available?: boolean; denied?: boole
   const api = {
     upload: async () => {
       server.uploads += 1;
-      return { kind: 'ACCEPTED', recordingId: REC, acceptedAt: '2026-10-31T10:00:00.000Z', availableUntil: '2026-11-30T10:00:00.000Z' } as const;
+      return { kind: 'ACCEPTED', recordingId: REC, acceptedAt: '2026-10-31T10:00:00.000Z', availableUntil: '2026-11-30T10:00:00.000Z', transcriptReady: false } as const;
     },
     status: async (): Promise<VoiceNoteStatusRead> => ({
       kind: 'STATUS',
@@ -117,7 +117,7 @@ function world(options: { consent?: boolean; available?: boolean; denied?: boole
       return 'DELETED' as const;
     },
     capability: async (): Promise<VoiceCapabilityRead> => ({ kind: 'CAPABILITY', view: { voiceNotesAvailable: server.available, consentState: server.consent ? 'GRANTED' : 'NONE', consentCurrent: server.consent } }),
-    consent: async (): Promise<VoiceConsentRead> => ({ kind: 'CONSENT', version: VOICE_CONSENT_VERSION, state: 'NONE', rows: VOICE_CONSENT_COPY_ROWS.map((r) => ({ ...r })) }),
+    consent: async (): Promise<VoiceConsentRead> => ({ kind: 'CONSENT', version: VOICE_CONSENT_VERSION, state: options.outdated ? 'OUTDATED' : 'NONE', rows: VOICE_CONSENT_COPY_ROWS.map((r) => ({ ...r })) }),
     grant: async () => {
       server.consent = true;
       return 'DONE' as const;
@@ -282,10 +282,22 @@ describe.each(['ar', 'en'] as const)('Voice Notes on the Conversation surface (%
     const view = await mounted(language, w);
     await press(view, 'qandeel-voice-note-mic');
     for (const row of VOICE_CONSENT_COPY_ROWS) expect(view.getByText(row[language])).toBeTruthy();
-    expect(view.getByTestId('qandeel-voice-consent-agree').props.accessibilityLabel).toBe(VOICE_CONSENT_COPY_ROWS[9][language]);
+    expect(view.getByTestId('qandeel-voice-consent-agree').props.accessibilityLabel).toBe(VOICE_CONSENT_COPY_ROWS[VOICE_CONSENT_COPY_ROWS.length - 2][language]);
     await press(view, 'qandeel-voice-consent-agree');
     expect(view.queryByTestId('qandeel-voice-consent')).toBeNull();
     expect(view.getByTestId('qandeel-voice-note-capture')).toBeTruthy();
+  });
+
+  it('S8B-04 D4: an earlier consent is asked for again: R-01 above the full text, then the same agreement', async () => {
+    const view = await mounted(language, world({ consent: false, outdated: true }));
+    await press(view, 'qandeel-voice-note-mic');
+    expect(view.getByTestId('qandeel-voice-consent-renewal').props.children).toBe(voiceNoteText('R-01', language));
+    for (const row of VOICE_CONSENT_COPY_ROWS) expect(view.getByText(row[language])).toBeTruthy();
+    await press(view, 'qandeel-voice-consent-agree');
+    expect(view.getByTestId('qandeel-voice-note-capture')).toBeTruthy();
+    const first = await mounted(language, world({ consent: false }));
+    await press(first, 'qandeel-voice-note-mic');
+    expect(first.queryByTestId('qandeel-voice-consent-renewal')).toBeNull();
   });
 
   it('the gates DISABLED: no microphone at all; drafts already here would still show', async () => {

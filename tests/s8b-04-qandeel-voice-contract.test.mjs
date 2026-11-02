@@ -20,12 +20,22 @@ import test from 'node:test';
 //   - nothing in QANDEEL's voice code logs.
 // The behaviour itself is proven by verify-migration-0187, prove-0187 (pg locally and in CI; PostgREST in CI), the API
 // specs (speech-rendering, the reply channel, the Vertex adapter against its fake server, Listen) the record names.
+//
+// CP2 (the automatic voice reply and the Fast Voice Path, S8B-04's closing change, 2026-11-02; record §11) adds:
+//   - T2-01 … T2-07 and R-01 APPROVED verbatim in the record and the phone; VOICE_RECORDING_V3 (V2 with K-07, K-08 and
+//     K-13 replaced) current in the API and the phone, installed by 0188 under its guarded digests, with V2 and V1 kept as
+//     unchanged history; the record states S8B-04's closing state and the FVP amendment exists;
+//   - 0188 opens no voice gate and its verifier runs in CI;
+//   - one consent vocabulary across the layers (D4), and a released player stopped and released.
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8').replace(/\r\n/gu, '\n');
 const RECORD = 'docs/e2e/QANDEEL_S8B_04_QANDEEL_VOICE_IMPLEMENTATION_RECORD_v1.md';
 const AMENDMENT = 'docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_VA-11R_TTS_ABUSE_MONITORING_CONTROLLED_AMENDMENT_v1.0.md';
 const M0187 = 'database/migrations/0187_s8b_04_qandeel_voice_v1.sql';
+const M0188 = 'database/migrations/0188_s8b_04_fast_voice_path_v1.sql';
+const FVP = 'docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_FAST_VOICE_PATH_CONTROLLED_AMENDMENT_v1.0.md';
+const MOBILE_COPY = 'apps/mobile/src/voice-note/voice-note-copy.ts';
 const POLICY = 'apps/api/src/conversation/behavioral-response-policy.service.ts';
 const CONSENT = 'apps/api/src/voice-media/voice-consent-text.ts';
 const codeOnly = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/(^|[^:'"`\\])\/\/[^\n]*/gu, '$1');
@@ -50,6 +60,24 @@ function approvedRows() {
   }
   return rows;
 }
+/** CP2's APPROVED rows as the record states them: `| V3 K-07 | APPROVED | a | b |`, `| T2-01 | … |`, `| R-01 | … |`. */
+function approvedRowsCp2() {
+  const rows = new Map();
+  for (const line of read(RECORD).split('\n')) {
+    if (!/^\| (?:V3 K-\d{2}|T2-\d{2}|R-01) \| APPROVED \|/u.test(line)) continue;
+    const cells = line.slice(1, -1).split(/(?<!\\)\|/u).map((c) => c.trim().replace(/\\\|/gu, '|'));
+    rows.set(cells[0], { a: cells[2], b: cells[3] });
+  }
+  return rows;
+}
+/** `id: 'K-..', ar: '…', en: '…'` rows of a slice of a source file (single-quoted literals), unescaped. */
+const kRows = (text) => [...text.matchAll(/id: '(K-\d{2})',\s*ar: '((?:[^'\\]|\\')*)',\s*en: '((?:[^'\\]|\\')*)'/gu)]
+  .map((m) => ({ id: m[1], ar: unescape(m[2]), en: unescape(m[3]) }));
+const between = (text, from, to) => {
+  const start = text.indexOf(from);
+  assert.ok(start >= 0, `${from} is present`);
+  return text.slice(start, to ? text.indexOf(to, start) : undefined);
+};
 const ids = (prefix, n) => Array.from({ length: n }, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`);
 const constant = (text, name) => {
   const m = new RegExp(`export const ${name} = '((?:[^'\\\\]|\\\\')*)';`, 'u').exec(text);
@@ -57,17 +85,25 @@ const constant = (text, name) => {
   return unescape(m[1]);
 };
 
-test('the record carries every CP1 Copy Gate row APPROVED, states CP1 UNDER REVIEW (not CLOSED) and keeps H26 pending', () => {
+test('the record carries every CP1 and CP2 Copy Gate row APPROVED and states S8B-04\'s closing state (BG-09); H26 stays pending', () => {
   const rows = approvedRows();
   assert.deepEqual([...rows.keys()].sort(), [...ids('TM', 3), ...ids('S', 6), ...ids('K', 15), 'F-01'].sort());
+  assert.deepEqual([...approvedRowsCp2().keys()].sort(), ['R-01', ...ids('T2', 7), 'V3 K-07', 'V3 K-08', 'V3 K-13'].sort());
   const record = read(RECORD);
-  assert.doesNotMatch(record, /^\| (?:TM|S|K|F)-\d{2} \| PROPOSED \|/mu, 'no CP1 row is left PROPOSED');
+  assert.doesNotMatch(record, /^\| (?:TM|S|K|F|T2|R|V3 K)-\d{2} \| PROPOSED \|/mu, 'no Copy Gate row is left PROPOSED');
   const banner = /^\*\*Status:\*\* (.+)$/mu.exec(record)[1];
-  assert.match(banner, /^`S8B-04 CP1 UNDER REVIEW/u);
+  assert.match(banner, /^`S8B-04 CLOSED \/ READY FOR THE PRODUCT OWNER'S MERGE DECISION \(2026-11-02, the CP2 closing change/u);
+  assert.match(banner, /CP1 MERGED THROUGH PR #372 AS 54b5333e/u);
   assert.match(banner, /NOT MERGED \(MERGE ONLY ON THE PRODUCT OWNER'S EXPLICIT «ادمج»\)/u);
-  assert.match(banner, /MIGRATION 0187 NOT HOSTED — ALL FOUR VOICE GATES DISABLED — NO PAID PROVIDER CALL/u);
-  assert.doesNotMatch(banner, /\bCLOSED\b|\bFROZEN\b/u, 'CP1 is not declared closed');
-  assert.match(record, /\| H26 \| PENDING \|/u, 'H26 stays pending');
+  assert.match(banner, /THE PAID RUNS \(D-S5, SPEECHMATICS REALTIME QUALITY, P-1\) NOT RUN, NOT AUTHORIZED/u);
+  assert.match(banner, /MIGRATIONS 0187 AND 0188 NOT HOSTED — ALL FOUR VOICE GATES DISABLED — NO PAID PROVIDER CALL/u);
+  assert.doesNotMatch(banner, /UNDER REVIEW|\bFROZEN\b/u, 'neither a review banner nor frozen');
+  assert.match(record, /\| H26 \| PENDING \|/u, 'H26 stays pending (carried by QAN-BL-VOICE-05)');
+  assert.match(record, /## 11\. CP2 — the automatic voice reply and the Fast Voice Path \(S8B-04's closing change\)/u);
+  assert.match(record, /### 11\.11 S8B-04's closure \(BG-08 \/ BG-09\)/u);
+  assert.match(record, /\| D9 \| NOT AUTHORIZED/u);
+  assert.match(read(FVP), /^\*\*Status:\*\* `APPROVED BY THE PRODUCT OWNER \(2026-11-02/mu);
+  for (const rule of Array.from({ length: 10 }, (_, i) => `FVP-${i + 1}`)) assert.match(read(FVP), new RegExp(`^\\| ${rule} \\|`, 'mu'), `${rule} is stated`);
   for (const check of ['V-1', 'V-2', 'V-7']) assert.match(record, new RegExp(`^\\| ${check} \\|`, 'mu'), `${check} is recorded`);
   assert.match(record, /## Approvals needed before CP2/u);
   assert.match(read(AMENDMENT), /^\*\*Status:\*\* `APPROVED BY THE PRODUCT OWNER \(2026-11-01/mu);
@@ -86,13 +122,13 @@ test('TM-01 … TM-03 and S-01 … S-06 are verbatim in the code', () => {
   for (const [, expression, id, style] of inCode) assert.deepEqual([expression, unescape(style)], [rows.get(id).a, rows.get(id).b], `${id} is verbatim`);
 });
 
-test('K-01 … K-15: the current consent text in code equals the record, 0187 installs exactly it under the guarded digests, V1 stays history', () => {
+test('K-01 … K-15 (V2): the code equals the record, 0187 installs exactly it under the guarded digests; V2 and V1 stay history', () => {
   const rows = approvedRows();
   const code = read(CONSENT);
-  assert.match(code, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V2';/u);
+  // RE-ANCHORED by CP2 (migration 0188): V2 is history under its own constant; V3 is current (the next test).
+  assert.match(code, /export const VOICE_CONSENT_V2_VERSION = 'VOICE_RECORDING_V2';/u);
   assert.match(code, /export const VOICE_CONSENT_V1_VERSION = 'VOICE_RECORDING_V1';/u);
-  const inCode = [...code.matchAll(/id: '(K-\d{2})',\s*ar: '((?:[^'\\]|\\')*)',\s*en: '((?:[^'\\]|\\')*)'/gu)]
-    .map((m) => ({ id: m[1], ar: unescape(m[2]), en: unescape(m[3]) }));
+  const inCode = kRows(between(code, 'export const VOICE_CONSENT_V2_ROWS', 'export const VOICE_CONSENT_VERSION'));
   assert.deepEqual(inCode.map((r) => r.id), ids('K', 15));
   for (const r of inCode) assert.deepEqual([r.ar, r.en], [rows.get(r.id).a, rows.get(r.id).b], `${r.id} is verbatim`);
   assert.match(code, /export function consentText[\s\S]*VOICE_CONSENT_ROWS\.map/u, 'the served text is the current version');
@@ -107,6 +143,65 @@ test('K-01 … K-15: the current consent text in code equals the record, 0187 in
   assert.ok(anchor.includes(sha256(ar)) && anchor.includes(sha256(en)), 'the verifiers\' anchor pins the same digests');
   // V1 is never edited: 0186's text is still there, word for word, under its own digests.
   assert.match(read('database/migrations/0186_s8b_03_personal_voice_notes_v1.sql'), /'VOICE_RECORDING_V1'/u);
+});
+
+test('V3 (CP2): VOICE_RECORDING_V3 is V2 with K-07, K-08 and K-13 replaced, verbatim; 0188 installs exactly it under the guarded digests; the phone carries the same rows', () => {
+  const v2Rows = approvedRows();
+  const cp2 = approvedRowsCp2();
+  const code = read(CONSENT);
+  assert.match(code, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V3';/u);
+  const changed = kRows(between(code, 'export const VOICE_CONSENT_V3_CHANGED_ROWS', 'const V3_CHANGES'));
+  assert.deepEqual(changed.map((r) => r.id), ['K-07', 'K-08', 'K-13'], 'exactly three rows change');
+  for (const r of changed) assert.deepEqual([r.ar, r.en], [cp2.get(`V3 ${r.id}`).a, cp2.get(`V3 ${r.id}`).b], `V3 ${r.id} is verbatim`);
+  assert.match(code, /export const VOICE_CONSENT_ROWS: ReadonlyArray<VoiceConsentRow> = VOICE_CONSENT_V2_ROWS\.map\(\(row\) => V3_CHANGES\.get\(row\.id\) \?\? row\);/u);
+  const byId = new Map(changed.map((r) => [r.id, r]));
+  const v3 = ids('K', 15).map((id) => byId.get(id) ?? { id, ar: v2Rows.get(id).a, en: v2Rows.get(id).b });
+  const ar = v3.map((r) => r.ar).join('\n');
+  const en = v3.map((r) => r.en).join('\n');
+  const migration = read(M0188);
+  assert.equal(/\$consent_ar\$([\s\S]*?)\$consent_ar\$/u.exec(migration)[1], ar, 'the Arabic text 0188 installs is V3, one row per line');
+  assert.equal(/\$consent_en\$([\s\S]*?)\$consent_en\$/u.exec(migration)[1], en, 'the English text 0188 installs is V3, one row per line');
+  assert.match(migration, /install_consent_text_v1\(\n  'VOICE_RECORDING_V3',/u);
+  for (const digest of [sha256(ar), sha256(en)]) {
+    assert.ok(migration.includes(`t.text_ar_sha256 = '${digest}'`) || migration.includes(`t.text_en_sha256 = '${digest}'`), 'the deploy guard requires the V3 digest');
+    assert.ok(read('database/qandeel-voice-0188-anchor.mjs').includes(digest), 'the verifiers\' anchor pins the same digest');
+  }
+  // V2 and V1 stay as they are: 0188's guard requires their unchanged digests; 0187 still installs V2 word for word.
+  const v2ar = ids('K', 15).map((id) => v2Rows.get(id).a).join('\n');
+  assert.ok(migration.includes(`t.text_ar_sha256 = '${sha256(v2ar)}'`), 'V2 unchanged under 0188');
+  assert.ok(migration.includes("t.version = 'VOICE_RECORDING_V1' AND NOT t.is_current"), 'V1 historical under 0188');
+  assert.equal(/\$consent_ar\$([\s\S]*?)\$consent_ar\$/u.exec(read(M0187))[1], v2ar, '0187 is not edited');
+  // The phone carries the same version and rows: its guard refuses any other text (title first, agree / decline last).
+  const mobile = read(MOBILE_COPY);
+  assert.match(mobile, /export const VOICE_CONSENT_VERSION = 'VOICE_RECORDING_V3';/u);
+  assert.deepEqual(kRows(between(mobile, 'export const VOICE_CONSENT_COPY_ROWS', '];')), v3, 'the phone\'s K-01 … K-15 are the server\'s');
+});
+
+test('T2-01 … T2-07 and R-01 (CP2) are verbatim on the phone; R-01 is in no consent text', () => {
+  const cp2 = approvedRowsCp2();
+  const mobile = read(MOBILE_COPY);
+  const unquote = (s) => s.slice(1, -1).replace(/\\(.)/gu, '$1');
+  const inCode = new Map([...mobile.matchAll(/\{?\s*id: '((?:T2-\d{2})|R-01)',\s*ar: ('(?:[^'\\]|\\.)*'),\s*en: ('(?:[^'\\]|\\.)*'),?\s*\}?/gu)]
+    .map((m) => [m[1], { ar: unquote(m[2]), en: unquote(m[3]) }]));
+  assert.deepEqual([...inCode.keys()].sort(), [...ids('T2', 7), 'R-01'].sort());
+  for (const [id, row] of inCode) assert.deepEqual([row.ar, row.en], [cp2.get(id).a, cp2.get(id).b], `${id} is verbatim`);
+  assert.doesNotMatch(mobile, /T2-0\d[^\n]*PROPOSED|PROPOSED, Arabic and English, for the CP2 Copy Gate/u, 'no CP2 row is described as PROPOSED');
+  assert.ok(!read(M0188).includes(cp2.get('R-01').a) && !read(CONSENT).includes(cp2.get('R-01').a), 'R-01 is outside every consent text');
+});
+
+test('0188 is forward-only, one transaction, opens no voice gate, grants no client role, and its verifier runs in CI', () => {
+  const migration = read(M0188);
+  assert.equal((migration.match(/^BEGIN;$/gmu) ?? []).length, 1);
+  assert.equal((migration.match(/^COMMIT;$/gmu) ?? []).length, 1);
+  assert.doesNotMatch(migration, /DRAFT|PLACEHOLDER|PROPOSED/u, 'no draft word is left in the migration');
+  const code = codeOnly(migration);
+  assert.doesNotMatch(code, /set_voice_launch_capability_v1|(?:INSERT INTO|UPDATE)\s+voice_private\.voice_launch_capability_(?:states|events)/u, 'no gate is set');
+  assert.match(code, /every voice capability scope must remain DISABLED/u, 'the deploy guard refuses an open gate');
+  assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|authenticated|PUBLIC)\b/u, 'no client role is granted anything');
+  assert.match(code, /VOICE_RECORDING_V3 must be the current approved text and V2 and V1 historical and unchanged/u);
+  const pkg = JSON.parse(read('package.json'));
+  assert.equal(pkg.scripts['verify:fast-voice-path:integration'], 'node --env-file-if-exists=.env database/verify-migration-0188.mjs');
+  assert.match(read('.github/workflows/api-ci.yml'), /run: npm run verify:fast-voice-path:integration/u);
 });
 
 test('F-01 is verbatim in the code; CP1 ships its structure only, with no audio file', () => {
@@ -195,7 +290,8 @@ test('TM-01 on VOICE_NOTE turns only, TM-03 only with the hint policy on (CP1 OF
   assert.deepEqual(voiceNoteCallers, ['apps/api/src/conversation/conversation.service.ts'], 'only the Voice Note runner passes VOICE_NOTE');
   const service = read('apps/api/src/conversation/conversation.service.ts');
   const runner = /async runCommittedTurn\([\s\S]*?\n  \}\n/u.exec(service)[0];
-  assert.match(runner, /\{ modality: 'VOICE_NOTE' \}/u);
+  // RE-ANCHORED by S8B-04 CP2: the runner may also hand over the automatic voice reply (D-S2 / D-S3), nothing else.
+  assert.match(runner, /\{ modality: 'VOICE_NOTE'(?:, liveReply: options\.liveReply)? \}/u);
   assert.equal((codeOnly(service).match(/modality: 'VOICE_NOTE'/gu) ?? []).length, 1);
   for (const path of api.filter((p) => p !== POLICY)) {
     assert.doesNotMatch(read(path), /withSpokenCallReply|VOICE_SPOKEN_REPLY_GUIDANCE_TM_02/u, `${path} does not wire TM-02 (S8B-05)`);
@@ -218,4 +314,43 @@ test('nothing in QANDEEL\'s voice code logs, and no audio, text or token reaches
     assert.doesNotMatch(codeOnly(read(path)), /\bLogger\b|console\.|captureException|Sentry/u, `${path} logs nothing`);
   }
   assert.doesNotMatch(codeOnly(read('apps/api/src/voice/vertex-speech/vertex-speech.auth.ts')), /\btoken\b[^;]*\b(?:signal|record|emit)\(/u);
+});
+
+// S8B-04 CP2 (D4, the Product Owner's gate, 2026-11-02) — the consent words cross three layers unchanged: the states
+// voice_private.consent_state_v1 returns (0183) are what the API passes through, and the phone reads exactly those four
+// words (no word of its own). S8B-03 shipped a phone that read only NONE / GRANTED / WITHDRAWN, which no real server
+// sends: Voice Notes were never offered. The validation fakes answer in the server's words too.
+test('CP2 D4: the consent states of the database, the API and the phone are one vocabulary', () => {
+  const m0183 = read('database/migrations/0183_s8b_02_voice_foundation_v1.sql');
+  const fn = m0183.slice(m0183.indexOf('CREATE FUNCTION voice_private.consent_state_v1'), m0183.indexOf('CREATE FUNCTION public.server_voice_consent_state_v1'));
+  const dbStates = [...new Set([...fn.matchAll(/'([A-Z_]+)'/gu)].map((m) => m[1]).filter((w) => w !== 'VOICE_RECORDING'))].sort();
+  assert.deepEqual(dbStates, ['GRANTED_CURRENT', 'NOT_GRANTED', 'VERSION_NOT_CURRENT', 'WITHDRAWN']);
+  const service = codeOnly(read('apps/api/src/voice-media/voice-notes.service.ts'));
+  assert.match(service, /consentState: state\.consent_state,/u, 'GET /voice/consent passes the state through');
+  assert.match(service, /consentState: row\.consent_state,/u, 'GET /voice/capability passes the state through');
+  const api = codeOnly(read('apps/mobile/src/voice-note/voice-note-api.ts'));
+  const map = api.slice(api.indexOf('SERVER_VOICE_CONSENT_STATES'), api.indexOf('});', api.indexOf('SERVER_VOICE_CONSENT_STATES')));
+  const phoneWords = [...map.matchAll(/^\s+([A-Z_]+): '([A-Z]+)',$/gmu)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(phoneWords.map(([w]) => w).sort(), dbStates, 'the phone maps exactly the database states');
+  assert.deepEqual(Object.fromEntries(phoneWords), { GRANTED_CURRENT: 'GRANTED', VERSION_NOT_CURRENT: 'OUTDATED', NOT_GRANTED: 'NONE', WITHDRAWN: 'WITHDRAWN' });
+  assert.match(api, /const consentState = \(value: unknown\): VoiceConsentState \| null =>\s+\(typeof value === 'string' && Object\.prototype\.hasOwnProperty\.call\(SERVER_VOICE_CONSENT_STATES, value\)/u,
+    'the decoder reads through the map only');
+  assert.match(api, /consentCurrent: state === 'GRANTED' && answer\.body\.grantedVersion === answer\.body\.currentVersion && answer\.body\.currentVersion === VOICE_CONSENT_VERSION,/u,
+    'only a current consent to the version this build carries permits anything');
+  for (const fake of ['scripts/s8b-03/fake-voice-api.cjs', 'scripts/s8b-04/fake-auto-reply-server.cjs']) {
+    const words = [...codeOnly(read(fake)).matchAll(/consentState: '([A-Z_]+)'/gu)].map((m) => m[1]);
+    for (const word of words) assert.ok(dbStates.includes(word), `${fake} answers in the server's words (${word})`);
+  }
+  assert.match(read('scripts/s8b-03/fake-voice-api.cjs'), /'GRANTED_CURRENT' : 'VERSION_NOT_CURRENT'\)\s+: state\.consent === 'WITHDRAWN' \? 'WITHDRAWN' : 'NOT_GRANTED'\);/u);
+});
+
+// S8B-04 CP2 (device finding, 2026-11-02) — expo-audio's `remove()` on Android only forgets the player in its module
+// (`players.remove(player.id)`); the native player keeps playing until garbage collection. A voice let go while speaking
+// (leaving the conversation, the reply's announced end) went on unseen. The port stops and releases it, in this order.
+test('CP2: a released player is stopped and released, never left to garbage collection', () => {
+  const port = codeOnly(read('apps/mobile/src/voice-note/voice-note-player-port.ts'));
+  assert.match(port, /release: \(\) => \{\s+subscription\.remove\(\);\s+player\.pause\(\);\s+player\.remove\(\);\s+player\.release\(\);\s+\},/u);
+  const moduleSource = read('node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioModule.kt');
+  assert.match(moduleSource, /Function\("remove"\) \{ player: AudioPlayer ->\s+players\.remove\(player\.id\)\s+\}/u,
+    'the reason stands: if expo-audio ever stops the player in remove(), revisit this port');
 });

@@ -209,7 +209,10 @@ describe('S8A-05 CP4 — the Public reply\'s provider composition (A-5(d))', () 
     const composition = readFileSync(join(__dirname, 'public-reply-model-router.ts'), 'utf8');
     expect(composition).toContain('DeepSeekModelRouter.forPublicQandeel(undefined, productionAiProviderCallAccounting())');
     const router = readFileSync(join(__dirname, '../model-router/providers/deepseek/deepseek-model-router.ts'), 'utf8');
-    expect(router).toContain("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'PUBLIC_QANDEEL_REPLY', accounting)");
-    expect(router).toContain("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)");
+    // S8B-04 CP2: one raw client feeds the accounted create and the accounted stream, both under the router's own family.
+    expect(router).toContain("accountedDeepSeekChatCompletionsClient(client, 'PUBLIC_QANDEEL_REPLY', accounting)");
+    expect(router).toContain("accountedDeepSeekStreamingChatCompletions(client, 'PUBLIC_QANDEEL_REPLY', accounting)");
+    expect(router).toContain("accountedDeepSeekChatCompletionsClient(client, 'CONVERSATION_REPLY', accounting)");
+    expect(router).toContain("accountedDeepSeekStreamingChatCompletions(client, 'CONVERSATION_REPLY', accounting)");
   });
 });

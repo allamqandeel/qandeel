@@ -21,6 +21,9 @@ import { createVoiceNotePlayback, type VoiceNotePlayerPort } from './voice-note-
 import { createExpoVoiceNotePlayerPort } from './voice-note-player-port';
 import { createCaptureScreenHold, createExpoVoiceRecorderPort } from './voice-note-recorder-port';
 import { createVoiceNoteSession, withRecordingDeleted, type VoiceNoteSession } from './voice-note-session';
+import { createVoiceLiveNotes, type VoicePcmStreamPort } from './voice-live-note';
+import { createExpoVoicePcmStreamPort } from './voice-pcm-stream-port';
+import { createVoiceReplies } from './voice-reply';
 
 export interface VoiceNoteDevice {
   readonly store: VoiceDraftStore;
@@ -28,6 +31,8 @@ export interface VoiceNoteDevice {
   readonly recorder: () => VoiceRecorderPort;
   readonly player: VoiceNotePlayerPort;
   readonly screen: { hold(): void; release(): void };
+  /** S8B-04 (CP2, D-S1): the PCM stream beside the recorder for the live note; null: no live note on this device. */
+  readonly pcmStream: VoicePcmStreamPort | null;
 }
 
 /** The platform's parts. Building them touches nothing: the store opens, and a recorder is made, on first use. */
@@ -39,6 +44,7 @@ export function createDeviceVoiceNotes(): VoiceNoteDevice {
     recorder: createExpoVoiceRecorderPort,
     player: createExpoVoiceNotePlayerPort(),
     screen: createCaptureScreenHold(),
+    pcmStream: createExpoVoicePcmStreamPort(),
   };
 }
 
@@ -80,6 +86,7 @@ export function createInertVoiceNoteDevice(): VoiceNoteDevice {
       },
     },
     screen: { hold: () => undefined, release: () => undefined },
+    pcmStream: null,
   };
 }
 
@@ -108,16 +115,44 @@ export interface VoiceNoteSessionRuntimeOptions {
 export function createVoiceNoteSessionRuntime(options: VoiceNoteSessionRuntimeOptions): VoiceNoteSession {
   const { owner, sessionId, transport, device, foreground, isCurrent, conversation } = options;
   const newId = options.newId ?? mintVoiceNoteId;
+  const playback = createVoiceNotePlayback({
+    player: device.player, urlOf: (recordingId) => transport.api.playbackUrl(recordingId), authorization: transport.authorization, foreground,
+  });
+  // S8B-04 (CP2): the turn of a note sent here joins the conversation at once (its words arrive with its answer); the
+  // answer, once the turn is done, is merged over it by turn id like any server report.
+  const provisional = new Map<string, ConversationExchangeView>();
+  const replies = createVoiceReplies({
+    api: transport.api, player: device.player, authorization: transport.authorization, foreground, isCurrent,
+    onWillPlay: () => playback.pause(),
+    onExchange: (turnId, exchange) => {
+      const held = provisional.get(turnId);
+      provisional.delete(turnId);
+      if (exchange !== null) conversation.adopt(held?.voiceNote === undefined ? exchange : { ...exchange, voiceNote: held.voiceNote }, sessionId);
+      else if (held !== undefined) conversation.adopt({ ...held, replyState: 'FAILED' }, sessionId);
+    },
+  });
+  const liveNotes = createVoiceLiveNotes({ api: transport.api, stream: device.pcmStream, newId });
   return createVoiceNoteSession({
     api: transport.api,
     capture: createVoiceNoteCapture({ owner, sessionId, recorder: device.recorder(), store: device.store, foreground, newId, screen: device.screen }),
     notes: createVoiceNotesController({
       owner, sessionId, api: transport.api, store: device.store, files: device.files, foreground, isCurrent, newId,
       onCommitted: (exchange, of) => conversation.adopt(exchange, of),
+      onReplying: ({ recordingId, turnId, replyId, durationMs, availableUntil }) => {
+        const exchange: ConversationExchangeView = {
+          userTurn: { id: turnId, content: '', idempotencyKey: null, createdAt: new Date().toISOString() },
+          replyState: 'PENDING',
+          reply: null,
+          voiceNote: { recordingId, available: true, availableUntil, durationMs },
+        };
+        provisional.set(turnId, exchange);
+        conversation.adopt(exchange, sessionId);
+        replies.start(turnId, replyId);
+      },
     }),
-    playback: createVoiceNotePlayback({
-      player: device.player, urlOf: (recordingId) => transport.api.playbackUrl(recordingId), authorization: transport.authorization, foreground,
-    }),
+    playback,
+    replies,
+    liveNote: { begin: () => liveNotes.begin(sessionId), finish: () => liveNotes.finish(), cancel: () => liveNotes.cancel() },
     foreground,
     newId,
     isCurrent,

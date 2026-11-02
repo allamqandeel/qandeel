@@ -197,15 +197,25 @@ export function assertNoSpeechMarkup(text: string): void {
 export class SpeechMarkupStream {
   private acc = '';
   private emitted = 0;
+  private decided: { readonly expression: SpeechExpression; readonly hints: readonly SpeechHintCandidate[] } | null = null;
   overHold = false;
 
   constructor(private readonly options: { readonly safetyGuided: boolean }) {}
+
+  /**
+   * S8B-04 (CP2): the expression and hint candidates of the decided prefix (the same parser's reading of the text pushed
+   * so far), so a piece spoken before the reply is complete carries the hints its sentences already have.
+   */
+  get prefix(): { readonly expression: SpeechExpression; readonly hints: readonly SpeechHintCandidate[] } {
+    return this.decided ?? { expression: constrainSpeechExpression(DEFAULT_SPEECH_EXPRESSION, this.options.safetyGuided), hints: [] };
+  }
 
   push(chunk: string): string {
     this.acc += chunk;
     const cut = safeCut(this.acc);
     if (this.acc.length - cut > SPEECH_MARKUP_HOLD_LIMIT && ANY_OPENER.test(this.acc.slice(cut))) this.overHold = true;
     const prefix = stripSpeechMarkup(this.acc.slice(0, cut), { ...this.options, final: false });
+    if (prefix.kind === 'OK') this.decided = { expression: prefix.expression, hints: prefix.hints };
     if (prefix.kind !== 'OK' || prefix.text.length <= this.emitted) return '';
     const piece = prefix.text.slice(this.emitted);
     this.emitted = prefix.text.length;

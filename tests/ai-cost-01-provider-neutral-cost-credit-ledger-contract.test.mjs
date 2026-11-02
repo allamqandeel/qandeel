@@ -203,10 +203,20 @@ function censusViolations(world) {
   if (!/case 'deepseek':\s*return DeepSeekModelRouter\.fromEnvironment\(telemetry, productionAiProviderCallAccounting\(\)\);/u.test(ts(world.routerModule))) {
     out.push('the production Model Router is not composed with the accounting boundary');
   }
-  if (!ts(world.deepseekRouter).includes("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)")
+  // RE-ANCHORED by S8B-04 CP2 (2026-11-02, Fast Voice Path D-S2): each factory builds ONE raw client and hands the router
+  // only its accounted wrappers, the create and the stream, under the same family; the raw client itself is never handed.
+  const router = ts(world.deepseekRouter);
+  const accountedFactory = (name, family) => {
+    const block = between(router, `static ${name}(`, '\n  }\n');
+    return block.includes('const client = createDeepSeekClient(config);') && (block.match(/createDeepSeekClient\(/gu) ?? []).length === 1
+      && block.includes(`accountedDeepSeekChatCompletionsClient(client, '${family}', accounting)`)
+      && block.includes(`accountedDeepSeekStreamingChatCompletions(client, '${family}', accounting)`)
+      && !/[(,]\s*client\s*[,)]/u.test(block.replace(/accountedDeepSeek\w+\(client,/gu, ''));
+  };
+  if (!accountedFactory('fromEnvironment', 'CONVERSATION_REPLY')
     || !/static fromEnvironment\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(ts(world.deepseekRouter))) out.push('the DeepSeek reply client is not accounted');
   // S8A-05 CP4: the Public QANDEEL reply is the same router under its own family, composed with the production accounting.
-  if (!ts(world.deepseekRouter).includes("accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'PUBLIC_QANDEEL_REPLY', accounting)")
+  if (!accountedFactory('forPublicQandeel', 'PUBLIC_QANDEEL_REPLY')
     || !/static forPublicQandeel\(telemetry: TelemetryService \| undefined, accounting: AiProviderCallAccounting\)/u.test(ts(world.deepseekRouter))
     || !/DeepSeekModelRouter\.forPublicQandeel\(undefined, productionAiProviderCallAccounting\(\)\)/u.test(ts(world.publicReplyModule))
     || /createDeepSeekClient\(|new OpenAI\(|\.fromEnvironment\(/u.test(ts(world.publicReplyModule))) out.push('PUBLIC_QANDEEL_REPLY is not accounted');
@@ -359,7 +369,12 @@ function boundaryViolations(world) {
   const clientsCode = ts(world.clients);
   if (!/accounting\.track\(/u.test(between(clientsCode, 'export function accountedDeepSeekChatCompletionsClient', 'export '))) out.push('(25) accountedDeepSeekChatCompletionsClient reaches the provider outside the boundary');
   // S8A-03 (D1): the DeepSeek wrapper is the only accounted transport; no other provider wrapper exists to compose.
-  if ((clientsCode.match(/^export /gmu) ?? []).length !== 1) out.push('(25) a second accounted transport wrapper exists');
+  // RE-ANCHORED by S8B-04 CP2 (2026-11-02, D-S2): the streamed DeepSeek reply is the second DeepSeek wrapper, through the
+  // same boundary (one accounted invoke per streamed attempt); its two exported types carry no transport.
+  const exportedFunctions = (clientsCode.match(/^export function (\w+)/gmu) ?? []).map((line) => line.replace('export function ', ''));
+  const exportedOther = (clientsCode.match(/^export (?!function |interface )/gmu) ?? []).length;
+  if (exportedFunctions.join(',') !== 'accountedDeepSeekChatCompletionsClient,accountedDeepSeekStreamingChatCompletions' || exportedOther !== 0) out.push('(25) a second accounted transport wrapper exists');
+  if (!/accounting\.track\(/u.test(between(clientsCode, 'export function accountedDeepSeekStreamingChatCompletions', '\n}\n'))) out.push('(25) accountedDeepSeekStreamingChatCompletions reaches the provider outside the boundary');
   const settle = sql(fnBody(world.migration, 'public.settle_ai_provider_call_v1'));
   if (!/IF c\.call_state <> 'PENDING' THEN\s+IF c\.settlement_digest = v_digest THEN/u.test(settle) || !/RAISE EXCEPTION 'AI_PROVIDER_CALL_SETTLEMENT_CONFLICT' USING ERRCODE = 'PT409';/u.test(settle)
     || !/FOR UPDATE;/u.test(settle)) {
@@ -685,6 +700,7 @@ const PLANTED = [
   ['census: a binding makes its accounting decorator optional', 'censusViolations', () => plant('focusBinding', 'decorateClient: FocusResolutionClientDecorator,', 'decorateClient?: FocusResolutionClientDecorator,')],
   ['census: an adapter regains an unaccounted factory', 'censusViolations', () => plant('cuAdapter', 'export class DeepSeekCuSegmentationProvider implements CuSegmentationProvider {', 'export class DeepSeekCuSegmentationProvider implements CuSegmentationProvider {\n  static fromEnvironment(): void {}')],
   ['census: a second accounted transport wrapper returns', 'boundaryViolations', () => plant('clients', 'export function accountedDeepSeekChatCompletionsClient', 'export function accountedOpenAIResponsesClient(): void {}\nexport function accountedDeepSeekChatCompletionsClient')],
+  ['census: the streamed wrapper reaches the provider outside the boundary', 'boundaryViolations', () => plant('clients', 'onDelta: (content: string) => void) =>\n    accounting.track(', 'onDelta: (content: string) => void) =>\n    untracked(')],
   ['D1: the Model Router selects OpenAI again', 'deepSeekOnlyViolations', () => plant('routerModule', "case 'deepseek':", "case 'openai':\n    case 'deepseek':")],
   ['D1: the Model Router falls back instead of refusing', 'deepSeekOnlyViolations', () => plant('routerModule', "throw new Error('MODEL_PROVIDER must be deepseek.');", 'return DeepSeekModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());')],
   ['D1: a hidden fallback reads the OpenAI key', 'deepSeekOnlyViolations', () => plant('focusConfig', "const apiKey = requireDeepSeekQualification(environment, 'conversational focus resolution');", "const apiKey = requireDeepSeekQualification(environment, 'conversational focus resolution') || environment.OPENAI_API_KEY;")],
@@ -703,8 +719,11 @@ const PLANTED = [
   ['JSON: insufficient resources become an answer', 'jsonOutputViolations', () => plant('deepseekClient', "  if (choice?.finish_reason === 'insufficient_system_resource') throw new DeepSeekUnavailableError();\n", '')],
   ['JSON: an adapter bypasses the completion envelope', 'jsonOutputViolations', () => plant('cuAdapter', 'return parseProposal(deepSeekJsonContent(response), request);', 'return parseProposal((response as any).choices[0].message.content, request);')],
   ['JSON: an adapter retries behind the SDK', 'jsonOutputViolations', () => plant('threadAdapter', '{ timeout: this.config.timeoutMs, maxRetries: 0, signal: controller.signal }', '{ timeout: this.config.timeoutMs, maxRetries: 2, signal: controller.signal }')],
-  ['census: the DeepSeek reply client is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)", 'createDeepSeekClient(config)')],
-  ['census: the Public QANDEEL reply is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(createDeepSeekClient(config), 'PUBLIC_QANDEEL_REPLY', accounting)", 'createDeepSeekClient(config)')],
+  ['census: the DeepSeek reply client is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(client, 'CONVERSATION_REPLY', accounting)", 'client')],
+  ['census: the Public QANDEEL reply is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekChatCompletionsClient(client, 'PUBLIC_QANDEEL_REPLY', accounting)", 'client')],
+  // S8B-04 CP2: the streamed reply is accounted exactly as the created one, from the same one raw client.
+  ['census: the streamed DeepSeek reply is composed unaccounted', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekStreamingChatCompletions(client, 'CONVERSATION_REPLY', accounting)", 'client as never')],
+  ['census: the reply router builds a second raw client', 'censusViolations', () => plant('deepseekRouter', "accountedDeepSeekStreamingChatCompletions(client, 'CONVERSATION_REPLY', accounting)", "accountedDeepSeekStreamingChatCompletions(createDeepSeekClient(config), 'CONVERSATION_REPLY', accounting)")],
   ['census: the Public reply composition drops its family', 'censusViolations', () => plant('publicReplyModule', 'DeepSeekModelRouter.forPublicQandeel(undefined, productionAiProviderCallAccounting())', 'DeepSeekModelRouter.fromEnvironment(undefined, productionAiProviderCallAccounting())')],
   ['census: a semantic binding is composed unaccounted', 'censusViolations', () => plant('conversationModule', "deepSeekFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))", 'deepSeekFocusResolutionBinding()')],
   ['ops: a failed operations scan is swallowed by a silent catch', 'operationsScanViolations', () => plant('worker', "} catch (error) {\n        this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');\n        return;\n      }", '} catch {\n        return;\n      }')],

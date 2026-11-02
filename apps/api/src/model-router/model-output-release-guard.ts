@@ -37,13 +37,13 @@ export class ModelOutputWithheldError extends Error {
   }
 }
 
-const collapse = (text: string): string => text.replace(/\s+/gu, ' ');
+export const collapse = (text: string): string => text.replace(/\s+/gu, ' ');
 
 /**
  * The server-authored sentences of the guidance. Structured data containers are removed first: they carry the user's
  * own Memory and context, which a reply may legitimately say back to them.
  */
-function serverAuthoredSentences(serverGuidance: string): string[] {
+export function serverAuthoredSentences(serverGuidance: string): string[] {
   // The Shared attribution notes container holds the server's fixed header and instruction ahead of its `- [` note lines
   // (S8A-02 CP2, CA-S3); those instructions stay checked for verbatim echo, only the note lines are data.
   const prose = serverGuidance

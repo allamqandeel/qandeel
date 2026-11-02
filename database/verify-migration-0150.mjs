@@ -8,6 +8,7 @@
 //                         0150 statement is the defining statement with exactly that substitution
 //   POSTURE               owner, SECURITY DEFINER / INVOKER, search_path and who may EXECUTE are the frozen ones
 //   PT409_CENSUS          PT409 is raised by exactly the eleven and 0135's two AI-usage conflicts, nothing else
+//                         (re-anchored: 0175 / 0184 ledger begins and settles, 0187's one and 0188's two identity conflicts)
 //   SELF_CHECK p0..p6     the migration's own pre-condition and terminal self-check, re-run over the restored 0149
 //                         bodies: the honest file applies, and six weakened files are refused
 //   GUARD                 the cross-schema analysis of data-api-retry-hazard-guard.mjs: the twelve entry points let no
@@ -177,6 +178,12 @@ const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provi
  * It is not a stale-state site (the 23 stay 23); verify-migration-0187 V-A proves it writes no cost row.
  */
 const VOICE_PT409 = { name: 'public.server_admit_reply_speech_synthesis_v1', message: 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' };
+/**
+ * RE-ANCHORED by S8B-04 CP2 (migration 0188, 2026-11-02): the live note's open and a live reply segment's admission refuse
+ * a provider call id already in the ledger with the same 0135 identity conflict - TWO sites, one each, that exact message.
+ * Neither is a stale-state site (the 23 stay 23); verify-migration-0188 proves they write no cost row.
+ */
+const FAST_VOICE_PT409 = ['public.server_open_live_voice_note_v1', 'public.server_admit_live_reply_segment_v1'];
 
 // ------------------------------------------------------------------ session helpers
 /** A Data-API-shaped session inside the caller's transaction: the role PostgREST switches to, with its claims. */
@@ -272,11 +279,17 @@ async function verifyCatalog(report) {
     const [{ shared }] = await rows("SELECT to_regprocedure('public.begin_ai_provider_call_v2(uuid, uuid, uuid, uuid, text, text, text, text, text)') IS NOT NULL AS shared");
     const prior = PRIOR_PT409.filter((name) => shared || name !== 'public.begin_ai_provider_call_v2');
     const [{ voice }] = await rows("SELECT to_regclass('voice_private.reply_speech_segments') IS NOT NULL AS voice");
-    const expected = [...prior, ...(voice ? [VOICE_PT409.name] : []), ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
+    const [{ fast }] = await rows("SELECT to_regclass('voice_private.live_reply_streams') IS NOT NULL AS fast");
+    const expected = [...prior, ...(voice ? [VOICE_PT409.name] : []), ...(fast ? FAST_VOICE_PT409 : []),
+      ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
     assert.deepEqual(raisers, expected);
     const voiceSites = raiseCensus(analysis).filter((r) => r.code === 'PT409' && r.signature.startsWith(`${VOICE_PT409.name}(`));
     assert.deepEqual(voiceSites.map((r) => r.message), voice ? [VOICE_PT409.message] : [], '0187: exactly one identity-conflict site');
-    const ledgerOrVoice = [...PRIOR_PT409, VOICE_PT409.name];
+    for (const name of FAST_VOICE_PT409) {
+      const sites = raiseCensus(analysis).filter((r) => r.code === 'PT409' && r.signature.startsWith(`${name}(`));
+      assert.deepEqual(sites.map((r) => r.message), fast ? [VOICE_PT409.message] : [], `0188: exactly one identity-conflict site in ${name}`);
+    }
+    const ledgerOrVoice = [...PRIOR_PT409, VOICE_PT409.name, ...FAST_VOICE_PT409];
     assert.equal(raiseCensus(analysis).filter((r) => r.code === 'PT409' && !ledgerOrVoice.some((p) => r.signature.startsWith(`${p}(`))).length, 23, '23 stale-state sites');
   });
 }
