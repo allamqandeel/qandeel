@@ -189,9 +189,9 @@ export class ConversationRepository {
     return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
   }
 
-  // S8B-04 (CP2, Fast Voice Path, D-S2): a voice-note reply whose whole failed the release guard (or the provider) AFTER a
-  // part of it was released and may have been heard. The definer locks this GENERATING turn, stores the released part as
-  // the reply, records its delivery as WITHHELD_TAIL with the reason, and completes the turn WITHOUT a
+  // S8B-04 (CP2, Fast Voice Path, D-S2): a voice-note reply whose whole failed the incremental output guard (or the
+  // provider) AFTER a part of it was let through and may have been heard. The definer locks this GENERATING turn, stores
+  // that part as the reply, records its delivery as WITHHELD_TAIL with the reason, and completes the turn WITHOUT a
   // ConversationTurnCompleted event: no Memory, intelligence or later turn treats an incomplete reply as complete. A turn
   // that is no longer GENERATING writes nothing.
   async finalizeVoiceNoteWithheldTail(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; content: string; safetyDisposition: 'ALLOW' | 'GUIDED'; reason: string }): Promise<{ userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
