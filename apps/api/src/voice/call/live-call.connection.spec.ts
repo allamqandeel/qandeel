@@ -1,6 +1,6 @@
 import { readOggOpus } from './codec/ogg-opus';
 import { LiveCallConnection, LiveCallRegistry, tokenDeadline, type CallTransport } from './live-call.connection';
-import { NULL_LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink } from './live-call-speech.port';
+import { NULL_LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink, type PlayoutVerdict } from './live-call-speech.port';
 import { encodeAudioFrame, LIVE_CALL_CLOSE } from './live-call.protocol';
 import { InMemoryCallAuthority, ManualClock } from './testing/in-memory-call-authority';
 import { syntheticUplinkPackets } from './testing/synthetic-voice';
@@ -16,6 +16,11 @@ class FakeTransport implements CallTransport {
   readonly sent: Array<Record<string, unknown>> = [];
   closed: { code: number; reason: string } | null = null;
   bufferedBytes = 0;
+  readonly binary: Buffer[] = [];
+
+  sendBinary(frame: Buffer): void {
+    this.binary.push(frame);
+  }
 
   sendText(text: string): void {
     this.sent.push(JSON.parse(text) as Record<string, unknown>);
@@ -44,6 +49,8 @@ interface Harness {
   registry: LiveCallRegistry;
   signals: string[];
   pushed: number[];
+  playouts: Array<{ callTurnIndex: number; chunkSeq: number; playedMs: number }>;
+  verdict: { value: PlayoutVerdict };
   connect: (opts?: { userId?: string; tokenExpiresAt?: number; registry?: LiveCallRegistry }) => { connection: LiveCallConnection; transport: FakeTransport };
 }
 
@@ -53,9 +60,17 @@ function harness(authenticate: (authorization: string) => Promise<{ userId: stri
   const registry = new LiveCallRegistry();
   const signals: string[] = [];
   const pushed: number[] = [];
-  const speech: LiveCallSpeechSink = { open: () => ({ push: (_pcm, captureMs) => void pushed.push(captureMs), close: () => undefined }) };
+  const playouts: Harness['playouts'] = [];
+  const verdict: Harness['verdict'] = { value: 'IGNORED' };
+  const speech: LiveCallSpeechSink = {
+    open: () => ({
+      push: (_pcm, captureMs) => void pushed.push(captureMs),
+      playout: async (input) => { playouts.push(input); return verdict.value; },
+      close: () => undefined,
+    }),
+  };
   return {
-    authority, clock, registry, signals, pushed,
+    authority, clock, registry, signals, pushed, playouts, verdict,
     connect: (opts = {}) => {
       const transport = new FakeTransport();
       const connection = new LiveCallConnection(transport, opts.userId ?? USER, opts.tokenExpiresAt ?? clock.now() + 3_600_000, {
@@ -288,16 +303,44 @@ describe('S8B-05 CP1 one live call connection (protocol v1 over the call authori
     expect(h.authority.calls.size).toBe(1);
   });
 
-  it('answers the CP2-CP4 messages REFUSED NOT_SUPPORTED_YET, never ACK', async () => {
+  it('answers the CP3-CP4 messages REFUSED NOT_SUPPORTED_YET, never ACK', async () => {
     const h = harness();
     const { connection, transport } = await activeCall(h);
-    connection.onText(JSON.stringify({ type: 'PLAYOUT', msgId: 1, callTurnIndex: 0, chunkSeq: 0, playedMs: 20 }));
     connection.onText(JSON.stringify({ type: 'BARGE_IN', msgId: 2, callTurnIndex: 0, captureMs: 20 }));
     connection.onText(JSON.stringify({ type: 'TEXT_TURN', msgId: 3, clientTurnId: CALL, text: 'x' }));
     await settle();
-    expect(transport.of('REFUSED').map((m) => [m.reason, m.msgId])).toEqual([['NOT_SUPPORTED_YET', 1], ['NOT_SUPPORTED_YET', 2], ['NOT_SUPPORTED_YET', 3]]);
+    expect(transport.of('REFUSED').map((m) => [m.reason, m.msgId])).toEqual([['NOT_SUPPORTED_YET', 2], ['NOT_SUPPORTED_YET', 3]]);
     expect(transport.of('ACK')).toEqual([]);
     expect(transport.closed).toBeNull();
+  });
+
+  it('S8B-05 CP2: PLAYOUT goes to the speech stream once per msgId and is acknowledged; a resend is re-ACKed, never applied', async () => {
+    const h = harness();
+    const { connection, transport } = await activeCall(h);
+    connection.onText(JSON.stringify({ type: 'PLAYOUT', msgId: 1, callTurnIndex: 0, chunkSeq: 0, playedMs: 20 }));
+    await settle();
+    connection.onText(JSON.stringify({ type: 'PLAYOUT', msgId: 1, callTurnIndex: 0, chunkSeq: 0, playedMs: 20 }));
+    await settle();
+    expect(h.playouts).toEqual([{ callTurnIndex: 0, chunkSeq: 0, playedMs: 20 }]);
+    expect(transport.of('ACK').map((m) => m.msgId)).toEqual([1, 1]);
+    expect(transport.closed).toBeNull();
+  });
+
+  it('S8B-05 CP2: a PLAYOUT the reply never sent (VIOLATION) or before ACTIVE is a protocol violation', async () => {
+    const h = harness();
+    const { connection, transport } = await activeCall(h);
+    h.verdict.value = 'VIOLATION';
+    connection.onText(JSON.stringify({ type: 'PLAYOUT', msgId: 1, callTurnIndex: 0, chunkSeq: 9, playedMs: 200 }));
+    await settle();
+    expect(transport.last('REFUSED')).toMatchObject({ reason: 'PROTOCOL_VIOLATION' });
+    expect(transport.closed?.code).toBe(LIVE_CALL_CLOSE.PROTOCOL_VIOLATION);
+
+    const early = harness().connect();
+    early.connection.onText(hello());
+    await settle();
+    early.connection.onText(JSON.stringify({ type: 'PLAYOUT', msgId: 1, callTurnIndex: 0, chunkSeq: 0, playedMs: 20 }));
+    await settle();
+    expect(early.transport.last('REFUSED')).toMatchObject({ reason: 'PROTOCOL_VIOLATION' });
   });
 
   it('refuses a refreshed token of another person, and closes when the token expires unrenewed', async () => {
@@ -400,9 +443,10 @@ describe('S8B-05 CP1 one live call connection (protocol v1 over the call authori
     expect(tokenDeadline(token({ exp: 'x' }), now)).toBe(now + 600_000);
   });
 
-  it('the null speech sink of CP1 keeps nothing', () => {
-    const stream = NULL_LIVE_CALL_SPEECH_SINK.open({ userId: USER, callId: CALL });
+  it('the null speech sink keeps nothing and ignores every PLAYOUT', async () => {
+    const stream = NULL_LIVE_CALL_SPEECH_SINK.open({} as Parameters<LiveCallSpeechSink['open']>[0]);
     expect(stream.push(Buffer.alloc(640), 0)).toBeUndefined();
+    expect(await stream.playout({ callTurnIndex: 0, chunkSeq: 0, playedMs: 20 })).toBe('IGNORED');
     expect(stream.close()).toBeUndefined();
   });
 });

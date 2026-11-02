@@ -208,6 +208,10 @@ export class ConversationService {
     // S8B-03: which of these turns came from a Voice Note, and whether its recording can still be played (no key, no band).
     const voiceRows = this.voiceNotes && users.length > 0 ? await this.voiceNotes.sessionVoiceTurns(userId, sessionId, users.map((turn) => turn.id)) : [];
     const voiceByTurn = new Map(voiceRows.map((row) => [row.turn_id, row]));
+    // S8B-05 CP2 (CA-05-02): a live call reply's delivery state rides beside it, additively.
+    const deliveryRows = this.voiceNotes && assistants.length > 0
+      ? await this.voiceNotes.callReplyDelivery(userId, sessionId, assistants.map((turn) => turn.id)) : [];
+    const deliveryByReply = new Map(deliveryRows.map((row) => [row.turn_id, row.delivery_state]));
     const exchanges = users.map((userTurn): ConversationHistoryExchange => {
       const reply = replyBySource.get(userTurn.id);
       const voice = voiceByTurn.get(userTurn.id);
@@ -223,6 +227,7 @@ export class ConversationService {
         // terminal state. Anything else is still outstanding — never reported as failed or answered.
         replyState: reply ? 'COMPLETED' : userTurn.status === 'FAILED' ? 'FAILED' : 'PENDING',
         assistantTurn: reply ? { id: reply.id, content: reply.content, createdAt: reply.created_at } : null,
+        ...(reply && deliveryByReply.has(reply.id) ? { deliveryState: deliveryByReply.get(reply.id)! } : {}),
       };
     });
     return { exchanges, hasOlder };

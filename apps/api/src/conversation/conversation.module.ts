@@ -43,6 +43,10 @@ import { ConversationSemanticRuntimeRepository } from '../live-focus/conversatio
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
 import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
 import { costLedgerDecorator } from '../ai-usage/production-ai-provider-call-accounting';
+import type { ModelRouter } from '../model-router/model-router.types';
+import { TelemetryService } from '../observability/telemetry.service';
+import { LIVE_CALL_MODEL_ROUTER, LiveCallReplyService } from './live-call-reply.service';
+import { productionLiveCallRouter } from './live-call-model-router';
 
 /**
  * T-03A2: the LAZY CU segmentation binding.
@@ -188,6 +192,18 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     // binding repository, no second Data API boundary, and no new database
     // authority is introduced.
     ConversationContextActivationService,
+    // S8B-05 CP2 (contract §5): the live call's REALTIME reply. Its router is its own (FAST without thinking, first token
+    // 2 000 ms, 5 000 ms, max_tokens 160) over the call's keep-alive transport (L1), selected at its first generation like
+    // the text reply's; a test process binds none, so no call turn is answered there. The service registers itself into
+    // VoiceModule's LiveCallConversationBinding at start.
+    {
+      provide: LIVE_CALL_MODEL_ROUTER,
+      useFactory: (telemetry: TelemetryService): ModelRouter | null => {
+        return process.env.NODE_ENV === 'test' ? null : productionLiveCallRouter(telemetry);
+      },
+      inject: [TelemetryService],
+    },
+    LiveCallReplyService,
   ],
 })
 export class ConversationModule {}

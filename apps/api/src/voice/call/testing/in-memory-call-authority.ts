@@ -138,18 +138,22 @@ export class InMemoryCallAuthority implements LiveCallStore, CallSegmentMedia {
       : { callTruth: 'NO_CALL_KNOWN' as const, callId: null, callState: null, startedAt: null };
   }
 
-  trackState(): { endMs: number; next: number } {
-    const userSegments = this.segments.filter((s) => s.track === 'USER');
-    const userGaps = this.gaps.filter((g) => g.track === 'USER');
-    const endMs = Math.max(0, ...userSegments.map((s) => s.endMs), ...userGaps.map((g) => g.endMs));
-    return { endMs, next: userSegments.length };
+  trackState(track: 'USER' | 'QANDEEL' = 'USER'): { endMs: number; next: number } {
+    const segments = this.segments.filter((s) => s.track === track);
+    const gaps = this.gaps.filter((g) => g.track === track);
+    const endMs = Math.max(0, ...segments.map((s) => s.endMs), ...gaps.map((g) => g.endMs));
+    return { endMs, next: segments.length };
   }
 
   async readTracks(input: { userId: string; callId: string }): Promise<TrackState | null> {
     const call = this.own(input.userId, input.callId);
     if (!call?.recordingId) return null;
     const { endMs, next } = this.trackState();
-    return { recordingId: call.recordingId, recordingState: this.recordingState, userTrackEndMs: endMs, userNextSegment: next };
+    const qandeel = this.trackState('QANDEEL');
+    return {
+      recordingId: call.recordingId, recordingState: this.recordingState, userTrackEndMs: endMs, userNextSegment: next, qandeelTrackEndMs: qandeel.endMs,
+      qandeelNextSegment: qandeel.next,
+    };
   }
 
   /** 0189's writer fence: only the connection holding the current epoch of the recording's ACTIVE call writes. */
@@ -161,7 +165,7 @@ export class InMemoryCallAuthority implements LiveCallStore, CallSegmentMedia {
   async recordGap(input: { userId: string; recordingId: string; epoch: number; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: string }) {
     if (this.recordingState !== 'RECORDING') return 'RECORDING_CLOSED';
     if (this.fenced(input.recordingId, input.epoch)) return 'FENCED';
-    if (input.startMs !== this.trackState().endMs) return 'DISCONTINUOUS';
+    if (input.startMs !== this.trackState(input.track).endMs) return 'DISCONTINUOUS';
     this.gaps.push({ track: input.track, startMs: input.startMs, endMs: input.endMs, kind: input.kind });
     return 'RECORDED';
   }
@@ -175,7 +179,7 @@ export class InMemoryCallAuthority implements LiveCallStore, CallSegmentMedia {
     if (bytes.length !== byteSize) return { outcome: 'UNAVAILABLE' };
     if (!this.consent) return { outcome: 'CONSENT_REQUIRED' };
     if (this.recordingState !== 'RECORDING') return { outcome: 'EXPIRED' };
-    const { endMs, next } = this.trackState();
+    const { endMs, next } = this.trackState(track);
     if (segmentIndex !== next) return { outcome: 'OUT_OF_ORDER' };
     if (clockStartMs !== endMs) return { outcome: 'DISCONTINUOUS' };
     const failure = this.failNextWrites;

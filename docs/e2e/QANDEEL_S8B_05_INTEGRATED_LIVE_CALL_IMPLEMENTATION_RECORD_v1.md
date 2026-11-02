@@ -1,8 +1,11 @@
 # QANDEEL S8B-05 — Integrated Live Call: Implementation Record v1
 
-**Checkpoint:** S8B-05 CP1 — UNDER REVIEW (2026-11-02). CP1 (Call Authority, Gateway, Admission & User Track) is on
-`s8b/s8b-05-cp1` as a **Draft pull request, not merged; merge only on the Product Owner's explicit «ادمج»**. S8B-05 is
-**not closed**. CP2 – CP4 and S8B-06 are **not started and not authorized**.
+**Checkpoint:** S8B-05 CP2 — UNDER REVIEW (2026-11-02). CP1 (Call Authority, Gateway, Admission & User Track) is
+**merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`. CP2 (Realtime Spoken Turn,
+QANDEEL Reply & Playout Truth, §10) is on `s8b/s8b-05-cp2` as a **Draft pull request, not merged; merge only on the
+Product Owner's explicit «ادمج»**. S8B-05 is **not closed**. CP3, CP4 and S8B-06 are **not started and not authorized**.
+
+*(§0 – §9 are CP1's record as written; where CP2 changed a CP1 statement, §10 says so.)*
 
 ## 0. Authority, base, precedence
 
@@ -365,3 +368,308 @@ These are the 22 `RUNTIME_GATED` rows the contract names:
 
 **On the count:** the contract's inventory named 22 existing rows. They are listed exactly as found: 13 P4-C3 keys,
 VI-01 V01 – V07, G1.2's V07 principle and F-03.
+
+## 10. CP2 — Realtime Spoken Turn, QANDEEL Reply & Playout Truth (2026-11-02; UNDER REVIEW)
+
+**Authority:** the Product Owner's S8B-05 CP2 execution task (2026-11-02), «ابدأ الآن S8B-05 CP2 فقط.» Paused at a safe
+point at the Product Owner's request and resumed on «اكمل التاسك». CP2 only. Not included: the CA-05-01 coordinator, O1 – O3b,
+the queue worker, L2 – L5, full barge-in, an end-to-end reconnect proof, F-01 audio, any paid test, native code or UI, any
+protocol shape change, any gate, and any hosted migration.
+
+**Base:** `main` at `50938001` (PR #374, CP1, merged). **Branch:** `s8b/s8b-05-cp2`. **Migration:** `0190` (forward-only,
+not hosted). **The next migration is `0191`.**
+
+**Constraints kept:** every §0 constraint above. `VOICE_NOTE_LIVE_TRANSCRIPT` stays OFF; the call's recognizer does not
+depend on it.
+
+### 10.1 What CP2 delivers, against the authorized items
+
+| Item | Delivered | Where |
+|---|---|---|
+| **§3 ASR on the call** | The call has its own realtime recognizer (Speechmatics Enhanced `ar_en`, PCM 16 kHz), bound on the server key alone and **independent of** `VOICE_NOTE_LIVE_TRANSCRIPT`. The decoded uplink streams to it without a break. Partials never leave the engine: only FINAL words make a turn, and nothing reaches DeepSeek before the commit. There is one ledger row per connection, settled once. When the provider reports no usage, the gateway's measured audio settles it (`GATEWAY_MEASURED`). | `voice/voice.module.ts` (`LIVE_CALL_RECOGNITION`); `voice/call-turn/live-call-turn.engine.ts` |
+| **D-A1 endpointing** | The server runs the endpointer: a VAD on the decoded uplink (20 ms frames, RMS ≥ 300, armed after 100 ms of speech). After 500 ms of silence it sends ForceEndOfUtterance. The final is accepted at its last FINAL, or after 1 000 ms. The turn commits after 800 ms of silence (a starting value that was measured, not a fixed rule). Speech that resumes before the commit is the SAME turn, with its finals appended in order. | `voice/call-turn/call-endpointer.ts` |
+| **§4 the commit** | `server_commit_live_call_turn_v1` does all of this in one transaction: the N1 close of the open exchange; the call's next index (0189's `next_call_turn_index`, **from 1**); the USER turn (GENERATING, FAST); its voice source, with the anchor inside the USER track (the track is settled first); the call's turn order; the exchange; and the analysis queue item (R7′). It is idempotent per commit id. The phone gets `TURN_COMMITTED` (`role: USER`, `clientTurnId: null`). | `0190`; `voice/call-turn/call-turn.repository.ts` |
+| **§5 the REALTIME reply** | `LiveCallReplyService` lives in the conversation module and is bound into the engine through `LiveCallConversationBinding`, because voice cannot import the orchestrator. **S1 – S3:** the ONE Safety gate sees exactly the messages the reply gets (the folded window, with the turn last; in-call retrieval is never shown to it). Its verdict is stored once, before anything is generated. BLOCK speaks the deterministic response, whole and CALM, with no provider call. **Guidance:** the turn's text guidance, then TM-02 (`withSpokenCallReply`; no TM-01, per VA-7). **Assembly:** the ONE assembler. **Generation:** DeepSeek Flash, FAST, thinking disabled, a 2 000 ms first-token limit and 5 000 ms in total, `max_tokens` 160, the reply's `AbortSignal`, through the incremental release guard (GUIDED keeps early release off). The call is attributed to the call's owner, Session and spoken turn (AI-COST-01). **L1:** the live reply has its own router (`DeepSeekModelRouter.forLiveCall`) over its own warm keep-alive HTTPS agent (8 sockets, 4 free, 15 s), shared only with the call's TTS adapter. No background queue or limit sits on this path. | `conversation/live-call-reply.service.ts`, `live-call-model-router.ts` (the production router, kept out of `conversation.module.ts`), `conversation.module.ts`; `model-router/providers/deepseek/*`; `http-transport/live-call-keep-alive-fetch.ts` |
+| **§6 the reply sink** | `CallReply` sends Gemini TTS through the Listen route (its model, Achird, limits and admission), with its own adapter over the keep-alive transport. Each released piece gets one synthesis, in order. PCM 24 kHz becomes Opus 24 kHz in 20 ms frames, sent as `REPLY_AUDIO` under the connection's epoch (`chunkSeq` from 0, `offsetMs` = `chunkSeq` × 20). The route retries a retryable failure that happens before any audio. Each attempt gets one ledger row; an aborted attempt is settled with ABSENT usage, never zero. | `voice/call-turn/call-reply.ts`; `voice/call/live-call.connection.ts` |
+| **§7 PLAYOUT P1 – P3** | PLAYOUT is applied in ACTIVE only, and only a higher mark advances. A resend is re-ACKed. A mark for a closed reply, or for a reply this connection never sent, is IGNORED but still ACKed. A mark for a chunk never sent, or outside its chunk, is a `PROTOCOL_VIOLATION`. The database keeps the ONE confirmed mark. It sets the reply's clock start once, never before the QANDEEL track. After the close it rejects and counts every late command. | `call-reply.ts`; `live-call.connection.ts`; `0190` |
+| **§8 the QANDEEL track** | The same epoch-fenced writer (`UserTrackWriter.forTrack('QANDEEL', …)`) writes 24 kHz Ogg Opus. It holds only the packets the phone confirmed, placed at the reply's clock start + offset, with NOT_SPEAKING gaps where QANDEEL was silent. What is recorded as heard is never more than what was heard. | `voice/call/recording/user-track-writer.ts`; `live-call.connection.ts` |
+| **§9 CA-05-02** | There is ONE close function, and the first commit wins (natural end `PLAYED_OUT`, N1 `NEXT_TURN`, `GENERATION_FAILED`, `CALL_ENDING`). The heard mark = min(playout, produced, QANDEEL track end − clock start), floored to 20 ms. The reply text = the segments whose end ≤ the mark. `delivery_state` is COMPLETE, INTERRUPTED, WITHHELD_TAIL or FAILED. The close emits `ConversationTurnCompleted` v2 with the stored Safety (R5′). Export My Data and the history read both carry `deliveryState` (the `GET` turns read sets it on a call reply's exchange). The contract test proves no consumer reads a call reply without it. | `0190`; `conversation/conversation.service.ts`, `conversation.types.ts`, `voice-media/voice-notes.repository.ts`; `tests/s8b-05-live-call-contract.test.mjs` |
+| **§10 the context** | **N1:** one open exchange; a new turn closes it inside the same transaction. **C2:** the Session's earlier exchanges come first, then the call's by index; a typed turn in the call takes the same order. **C3:** a reply's content is what was heard. **D-05-08:** at most 12 of the call's exchanges or about 1 500 estimated tokens, never fewer than 4. Pre-call exchanges only fill up to 4. Tokens are estimated as UTF-8 bytes / 4; this over-counts Arabic, so the window errs short. **In-call retrieval:** triggered by two shared terms, or one with a recall cue (`فاكر`, `قلتلك`, `زي ما قلت`). It is one owner-scoped indexed read, raced against 80 ms, returning at most 2 exchanges and 1.5 KB, with zero provider calls. A late or failed read is skipped and counted, never an error. **An empty heard reply** is not inserted; its user words join the next user message. | `live-call-reply.service.ts`; `0190` (`call_context_exchanges_v1`, `call_turn_retrieval_v1`) |
+| **L6** | The commit takes the call's own row lock. It does not take 0131's admission or the analysis lock, so the next turn never waits for an analysis. CP2 runs no analysis: it writes the queue item, and the worker belongs to CP3. | `0190` |
+
+**The protocol:** no shape, field, limit or close code changed. PLAYOUT was removed from `NOT_YET_SUPPORTED`; BARGE_IN and
+TEXT_TURN stay `REFUSED NOT_SUPPORTED_YET`. The protocol document records the CP2 implementation notes.
+
+**CP1 statements that CP2 changes:**
+
+- §1 and §3 said the speech sink is the null sink. The sink is now the call turn engine (`voice/call-turn/`). It reaches
+  the conversation only through its binding, and `voice/call/` stays provider-free (the re-anchored S8B-05 contract; the
+  S8B-02 contract passes unchanged).
+- A call's turns are numbered from 1, as 0189 reserves them. The in-memory test store now numbers them the same way.
+
+### 10.2 Proofs (all free, all local or in CI; nothing paid, nothing hosted)
+
+**`database/verify-migration-0190.mjs` on real PostgreSQL 17: 18 / 18.**
+
+- **T0a – T0e:** the catalogue, the ACLs, the forward-replaced functions (each matches its origin plus exactly the
+  declared edits), the policy, every scope DISABLED, and the census.
+- **T1:** the commit is fenced, gated and consented; the USER anchor lies inside the USER track; everything happens in one
+  transaction; the commit is idempotent; a TEXT turn takes the same order.
+- **T2:** R2-G: fail, cancel, recover and any status write all refuse a call turn.
+- **T3:** Safety S1 – S3: stored once; storing the SAME value again succeeds; a different value is an error; there is no
+  close or N1 without a stored verdict.
+- **T4:** CA-05-02: the five cases, with the heard mark bounded by the QANDEEL track.
+- **T5:** PLAYOUT P1 – P3: the highest mark wins, the clock start is set once, late commands are rejected and counted, and
+  there is one close.
+- **T6:** N1 and the long call: 40 turns, never stopped by the text windows.
+- **T7:** context and retrieval under the owner's RLS.
+- **T8:** AI-COST-01: a TTS row per attempt, the recognition row `GATEWAY_MEASURED`, each settled once.
+- **T9:** Export My Data and the history read carry `deliveryState`; account erasure removes every new row.
+- **TRC-1 … TRC-4:** natural close vs N1 in both orders, a late PLAYOUT vs the close, a spoken vs a typed commit.
+
+The re-anchored verifiers 0150, 0153, 0168, 0183, 0185 and 0186 pass locally on the same database.
+
+**The synthetic spoken turn** (`apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts`, run as
+`npm run prove:live-call-spoken-turn-synthetic:integration`).
+
+- **Real components:** the gateway, the connection, the call authority, the call turn repository, `VoiceMediaService` and
+  the track writers; the call turn engine; `LiveCallReplyService` (the one Safety gate, the behavioral policy with TM-02,
+  the one assembler); the DeepSeek router with its accounted streaming client; and real PostgreSQL with 0190.
+- **Fakes, and only these:** Speechmatics (scripted FINALs), DeepSeek's SDK `create` (streamed chunks) and Gemini TTS.
+  Their delays are seeded log-normal draws from the contract's §8.1 figures (T 690 / 903 ms, G 136 / 243 ms,
+  S 655 / 764 ms). Memory and preferences are empty.
+- **The phone:** speaks protocol v1 over a real WebSocket with real libopus packets of a generated signal on a continuous
+  20 ms uplink, and plays the reply in real time with PLAYOUT.
+
+**Local PG17 result: 10 / 10** (S10 added by R1, §10.9). The report is kept with the contract folder as
+`CP2_SYNTHETIC_PROOF_local_pg17.txt`.
+
+- **S1:** 16 spoken turns committed (`TURN_COMMITTED` 1 … 16, `role: USER`), from FINAL words only; no partial reached the
+  database or any DeepSeek request. 404 `REPLY_AUDIO` frames, each Opus 24 kHz decoding to 480 samples, with exact
+  `chunkSeq` and `offsetMs`, at epoch 1. One REPLY_END per exchange, with `chunks` equal to the frames sent.
+- **S2:** the five delivery cases, with the phone's REPLY_END and the database agreeing on every one:
+  - COMPLETE ×12: heard = produced, both pieces in the text;
+  - INTERRUPTED, part heard: 280 of 560 ms, the first piece only, closed `NEXT_TURN`;
+  - INTERRUPTED, nothing heard: 0 of 560 ms, empty text;
+  - WITHHELD_TAIL: the stream was cut after the first piece; that piece was heard, closed `PLAYED_OUT`;
+  - FAILED: no audio, `GENERATION_FAILED`;
+  - 16 `ConversationTurnCompleted` events, one per close.
+- **S3:** 16 streamed DeepSeek requests, each with `max_tokens` 160, thinking disabled and the reply's abort signal, each
+  sent after its turn's commit.
+- **S4:** the reply after the interrupted one received the user's words and exactly the heard text, never the unheard
+  piece. After the unheard and the failed exchanges, their user words were folded into the next user message with no
+  empty reply inserted. Call turn 15 retrieved call turn 1 (`HIT`) after the window had moved past it.
+- **S5:** heard = recorded. The QANDEEL track holds exactly the 362 packets the phone confirmed (of 404 sent), byte for
+  byte and in order. The USER track holds all 3 556 uplink packets. There are 17 USER and 14 QANDEEL segments, all STORED
+  and all valid Ogg Opus.
+- **S6:** one ledger row per provider attempt, each settled once, nothing PENDING:
+  - the recognizer: 1 (`SUCCEEDED_USAGE_REPORTED`);
+  - DeepSeek: 16 (FAST, `CONVERSATION_REPLY`): 14 succeeded and 2 `FAILED_USAGE_UNKNOWN` (the failed stream and the cut
+    stream);
+  - Gemini: 29, one per synthesis attempt.
+- **S7:** the latency stages and the window comparison (§10.3, §10.4).
+- **S8:** the teardown leaves no fixture row, and every gate is as it was.
+- **S9 (#35):** a 165-turn call (about 55 minutes at 20 s per turn), built from the call's typed turns, then the real
+  REALTIME reply on the last turn. What was said in turn 1 comes back through in-call retrieval (`HIT`, 1 exchange; the
+  read took 2 ms locally, inside its 80 ms). The window is still 12. There is one provider request and one ledger row, both
+  the reply's; the retrieval made none.
+
+**In CI:**
+
+- The proof runs once against PostgreSQL in the full mode.
+- It also runs over the wire on the oldest and newest PostgREST lines of the existing loop (v12.2.9 and v16.4), in the
+  single-call mode: S1 – S6, S7's latency, S9 and S10. There, every server command and every owner read goes through
+  PostgREST under an authenticated JWT and RLS.
+- **The wire run is exercised for the first time in CI.** Locally only the full mode and the single-call mode ran, over
+  the pg shims; the single-call mode also passed 10 / 10.
+
+**API specs (Jest)** for the call: the CP2 suites below, plus the re-anchored `voice/call/` suites.
+
+| Spec | Tests | What it covers |
+|---|---|---|
+| `voice/call-turn/call-endpointer.spec.ts` | 4 | the five moments, resumed speech as the same turn, the thresholds |
+| `voice/call-turn/call-reply.spec.ts` | 9 | the five cases, P1, one close, the retry, the terms |
+| `voice/call-turn/live-call-turn.engine.spec.ts` | 7 | voice to a heard reply, finals only, N1 with its stored Safety, the recognizer settled by the gateway bytes, unbound; **R1: the S3 regression and the R1b race regression (§10.9)** |
+| `conversation/live-call-reply.service.spec.ts` | 20 | the window, the fold, retrieval, S1 / S2, BLOCK, GUIDED, a Safety not stored, the 80 ms skip, a provider failure; **#37 (b): six history-dependent cases from the gate's own spec give the call history the same verdict as the text history**; R1: the S3 recovery gives the reply's own verdict, and an unreadable context stores nothing |
+| `model-router/providers/deepseek/deepseek-live-call.spec.ts` | 4 | REALTIME (160, no thinking, 5 000 / 2 000 ms), the first-token abort settled once, the call's keep-alive fetch |
+| `http-transport/live-call-keep-alive-fetch.spec.ts` | 3 | HTTPS only, the body kinds, no redirect, abort |
+| `voice/call/live-call.connection.spec.ts` | 21 | PLAYOUT applied and ACKed, a violation for an unsent chunk |
+| `voice/call/recording/user-track-writer.spec.ts` | 9 | the QANDEEL track at 24 kHz |
+| `voice/call/live-call.protocol.spec.ts`, `gateway/live-call.gateway.e2e.spec.ts` | 8, 7 | re-anchored: PLAYOUT ACKed, BARGE_IN refused |
+
+**Static contracts:**
+
+- `tests/s8b-05-live-call-contract.test.mjs` (8): re-anchored for CP2 and extended to cover 0190, the delivery-state
+  consumer contract, and the CP2 proof in CI.
+- `tests/s8b-04-qandeel-voice-contract.test.mjs` (14): TM-02 only on the call reply, and the call's synthesis route.
+- `tests/s8b-02-voice-foundation-contract.test.mjs` (9), unchanged.
+- `tests/prod-retry-01-data-api-stale-state-contract.test.mjs`: re-anchored for 0190's two PT409 sites (the same one AI-usage
+  identity conflict as 0188, in the call reply speech begin and the call transcription begin).
+- `tests/ai-cost-01-provider-neutral-cost-credit-ledger-contract.test.mjs` (83): the call reply is attributed, proven
+  with a planted defect.
+
+### 10.3 Latency stages — **Synthetic estimate**
+
+These are loopback figures, with the fake providers drawing the contract's §8.1 delays. The network delay (N, 100 – 200 ms)
+is added, not measured. The sample is the 14 turns that played in call A (the approved window).
+
+| Stage | P50 | P95 |
+|---|---|---|
+| E: speech end → commit (the 800 ms silence + the final) | 827 ms | 902 ms |
+| context read (from the commit) | 2 ms | 5 ms |
+| Safety stored | 4 ms | 14 ms |
+| context ready (retrieval, Memory, preferences) | 6 ms | 19 ms |
+| T + G: commit → first released piece | 874 ms | 1 134 ms |
+| S: first released piece → first REPLY_AUDIO | 648 ms | 741 ms |
+| **speech end → first audio at the phone (measured, loopback)** | **2 336 ms** | **2 641 ms** |
+| speech end → first audio, with N added | ≈ 2 436 ms | ≈ 2 841 ms |
+
+- The server's own stages add about 5 ms at P50.
+- **The 1.5 s target is not met.** The synthetic P50 to first audio is 2 336 ms. It is inside the contract's planning sum
+  (≈ 2.4 – 2.6 s at P50) and is **not** a final performance success. The target is kept (D-A2); meeting it and proving it
+  end to end belongs to S8B-05 and S8B-06. CP2 does not try to improve it (the Product Owner's PR #375 review).
+- No real provider, network or device figure is claimed.
+
+### 10.4 The call window (D-05-08) against a window of 4
+
+The same scripted call ran twice with the same seeded delays: once with the approved window (12 / ≈ 1 500 / 4) and once
+with a window of 4.
+
+- The history the model receives grows with the call. At call turn 16 it is 12 exchanges (488 estimated tokens) against
+  4 (178).
+- **Estimated tokens per request: + 225 on average, + 340 at most** (call turns 6 – 16).
+- **First audio: no measurable difference on the server side.** The recorded run gave − 10 ms on average (P50 − 2 ms,
+  P95 + 15 ms); an earlier identical run gave + 9 ms (P50 + 4, P95 + 34). Both are inside the run-to-run noise: the
+  longer window's extra read, fold and assembly cost a few milliseconds at most. The fake DeepSeek does not model prompt
+  prefill, so the provider's cost of the longer prompt is not in this number; S8B-08 measures it.
+- The two calls end with identical delivery states.
+
+### 10.5 Acceptance items within CP2's scope (contract §11 as amended by v1.1, A1 and v1.2)
+
+| # | Item | CP2 proof | Status |
+|---|---|---|---|
+| 3 | Two-way audio | S1, S5 (real Opus up and down; the reply played and recorded) | **Met for SYN**; the device belongs to S8B-06 CP1 |
+| 4 | Understanding during the call | S1 (FINALs only, through the fake recognizer), the engine spec | **Met (FK + SYN)** |
+| 9 | DeepSeek and Gemini on their paths | S3; `deepseek-live-call.spec.ts`; the reply spec | **Met** |
+| 10 | Heard = recorded | S5; verify T4 / T5 | **Met for CP2** (rclone: CP4; the device: S8B-06) |
+| 11 | Sources and anchors | verify T0b, T1, T4 | **Met** |
+| 12 | Memory without inflation | the band on the voice source (T1); the event with the stored Safety for every close, including the interrupted one (T3, T4, S2) | **Met for the turn and its event**; capture through the half coordinator is CP3 |
+| 24 | Voice Notes, Text and Analysis not broken | the existing verifiers and suites; the full CI run on the pull request | **Pending the full CI run** |
+| 25 | No voice gate opened | 0190 opens none (contract test, T0e); S8 restores every gate | **Met** |
+| 27 | An interrupted reply is not treated as complete | T4, T9; the consumer contract test; S2 | **Met** |
+| 28 | Context continuity | the reply spec; S4 | **Met** |
+| 29 | A call turn ends only COMPLETED | T2 (R2-G) | **Met for R2-G**; the sweep's closure of an open exchange is CP3 |
+| 30 | No lost event for the user's words | T4; S2 (16 closes, 16 events, the interrupted and the failed ones included) | **Met for the event**; the half coordinator is CP3 |
+| 31 | The text and message paths unchanged | no text-path file changed beyond the optional `deliveryState` in the history read; O3 not active (no CP3) | **Met locally**; the full CI run is on the pull request |
+| 35 | D-05-08: window 12 + retrieval | S4, S7, S9 (minute 1 recalled at minute 55, zero provider calls, the tokens and the first-audio difference reported) | **Met (SYN)** |
+| 37 | Safety parity | (a) one gate implementation (the reply spec, the S8B-04 contract); (b) six history-dependent cases give the same verdict; (c) S4; (d) two writes → one value (T3); **S3 at the call's own close points (R1, §10.9): the reply's own verdict recovered by the same gate, S10** | **Met for (a) – (c), the PG half of (d), and S3 at N1 and the reply's close**; S3 in the sweep (the call's END, a crash) is CP3 |
+| 38 | Interruption and recording races | T5, TRC-1 … TRC-3 (late, repeated and post-close PLAYOUT; natural close + N1; text = confirmed segments; anchor ≤ mark; every late command rejected and counted) | **Met for the PG part (CP2)**; the injected-fault SYN part is CP4 |
+
+**Not claimed:** any real provider, network or device behaviour; any latency outside the synthetic estimate; barge-in;
+reconnection proven end to end with a reply in flight; the analysis halves.
+
+### 10.6 What is intentionally incomplete, and where it goes
+
+| Item | Owner |
+|---|---|
+| The half coordinator, O1 – O3b, the queue worker, and the sweep's closure of an open exchange: the exchange still open at the call's END, and S3 there (a turn whose Safety was never stored when the call ends or the process stops). Inside a live connection, S3 is CP2's (R1, §10.9). | CP3 (CA-05-01) |
+| L2 – L5 (the critical window, the concurrency and queue limits, the retry budget) | CP3 |
+| Full barge-in; echo exclusion of QANDEEL's voice from the ASR; F-01 audio; the end-to-end reconnect with a reply in flight. Until then, a PLAYOUT from an older connection after a resume is IGNORED, because the reply belongs to that connection. | CP4 |
+| TEXT_TURN in a call, P4 / P5, and the 0131 text windows around it. Until then, a REST text turn that races a call commit gets the 55000 retry. | CP4 |
+| The resume trusts the HELLO `sessionId` once the call authority has accepted the call; in 0189 it is the call's own session. | read and left as it stands |
+| A FINAL that arrives after the commit belongs to the next turn; nothing is lost or said twice. | by design (D-A1) |
+| Memory and preference commands spoken in a call are not acted on. The HIM, recommendation and question lanes are not on the REALTIME path; the bounded Memory gather and the hypothesis context are. | later Stage 8B work, under its own authority |
+| Ledger rows that stay usage-unknown when an interruption aborts a synthesis (ABSENT, never zero) | S8B-08 (cost evidence) |
+| `deliveryState` in the mobile history type, and the empty-bubble rule for a reply of which nothing was heard | S8B-06 (the call UI) |
+| Voice-note streaming in production: the voice note's router has no `stream` in the deferred composition. | read and left as it stands (S8B-04's scope) |
+
+**Conflicts with CP1 or S8B-06:** none that changes a frozen contract. Two alignments are recorded above:
+
+- the null sink is replaced by the engine (CP1 §1, §3);
+- call turns are numbered from 1, which S8B-06 must follow, since the protocol carries the number.
+
+### 10.7 Backlog (CP2 is not the closing change)
+
+`QAN-BL-VOICE-01` stays `DEFERRED — OWNED` by Stage 8B, `HIGH`; it was worked on, not delivered. CP2 admits and tombstones
+nothing. Every residue in §10.6 is owned inside S8B-05 (CP3 / CP4) or by a planned task whose contract already carries it
+(S8B-06, S8B-08). It is reconciled at S8B-05's closing change (BG-08).
+
+### 10.8 Copy Gate
+
+Unchanged: the 40 rows of §9 stay PROPOSED. CP2 adds no user-facing text: the server sends codes and audio, never copy.
+
+### 10.9 R1 — the Product Owner's PR #375 review: S3 inside the call (2026-11-02)
+
+**The defect (found by the review, at `c3e2c077`).**
+
+1. `LiveCallReplyService.replyOnce()` could end `FAILED` before storing the turn's Safety, when the read of
+   `call_context_exchanges_v1` failed.
+2. `CallReply` then tried to close the exchange, and 0190's `close_call_exchange_core_v1` refused with
+   `CALL_EXCHANGE_SAFETY_UNSETTLED`.
+3. The next spoken turn waited up to 5 s, then its commit's N1 was refused for the same reason. The user's new turn was
+   not committed, and its words were lost.
+
+This broke S3 (contract Part A) and the guarantee that committed speech is not lost.
+
+**The fix (the smallest change that closes S3 inside CP2; no migration, no coordinator, no worker, no sweep).**
+
+- **S3, as Part A states it: the same gate, the same context reader.** `LiveCallReplyService` now has one evaluation,
+  used by the reply and by the recovery alike: the owner's `call_context_exchanges_v1`, the D-05-08 window, the fold,
+  then the ONE `SafetyResponseGateService.evaluate`.
+  - `settleSafety()` reruns it and stores the verdict through the same 0190 command: STORED, or SAME when the generation
+    stored it after all. A different value stays the 0190 Safety error.
+  - The input is fixed: the reader returns only closed exchanges, and the ones before the turn are immutable under N1, so
+    the recovery gives the verdict the reply would have given.
+  - If the context cannot be read, it stores nothing and rejects. There is never a default and never another gate.
+- **Where it runs: the call's own two close points.**
+  - `CallReply` recovers the Safety before its own close (`GENERATION_FAILED`, `PLAYED_OUT`).
+  - The engine recovers it before every commit's N1, after the bounded 5 s wait for the generation to store it.
+  - One recovery is in flight at a time. Nothing closes an exchange without its stored Safety.
+- **The next turn is held, not lost.** If the recovery cannot be done because the context is unreadable, the finished
+  turn is held whole, in memory, on its connection:
+  - not committed, and no `TURN_COMMITTED` is sent;
+  - retried after 250 ms, doubling to 4 s;
+  - any words said meanwhile join it as ONE turn, in order, the way speech that resumes before a commit does;
+  - once the read is back, S3 stores the Safety, N1 closes the previous exchange, and the held turn commits with every
+    word;
+  - **R1b (the Product Owner's review at `7d585767`):** a retry never commits the held turn while the person is speaking.
+    If the endpointer is not IDLE (speech, or a commit silence still pending), the retry leaves the turn held. The turn
+    then joins the new words at that speech's commit, by the usual D-A1 rules, and only then is QANDEEL's reply started.
+    If that speech gives no words, the held turn is committed on its own. At `7d585767` a retry could commit it mid-speech;
+    the regression below failed there (two `TURN_COMMITTED` during speech) and passes now. No frozen value changed.
+- **Not covered here:** a turn held when the connection closes is not committed and was never announced; it goes with
+  the connection. The call's END and a crash, with S3 in the sweep, are CP3 (§10.6).
+
+**Proofs.**
+
+- **`live-call-turn.engine.spec.ts`, the S3 regression (deterministic):**
+  1. Turn 1 is committed, and its generation fails before storing Safety.
+  2. The exchange stays open without a Safety, and no REPLY_END is sent.
+  3. Turn 2 is spoken while the context is unreadable: it is held, and nothing is committed or announced. More words
+     join the held turn.
+  4. The read comes back: the gate's own verdict (GUIDED, not a default ALLOW) is stored once; N1 closes turn 1 FAILED
+     with one REPLY_END; turn 2 commits with all its words.
+  5. A repeat is SAME, and a different value is a conflict.
+- **`live-call-turn.engine.spec.ts`, the R1b race regression (deterministic):** turn 1 fails before its Safety, and turn 2
+  is held. The person speaks again, and the read comes back mid-speech. For five real seconds of speech (longer than any
+  retry delay) nothing is committed, announced or answered. After the commit silence there is ONE turn 2 with every word;
+  N1 closes turn 1 FAILED, and the reply starts only then.
+- **`live-call-reply.service.spec.ts`:**
+  - The recovery gives exactly the reply's gate input and verdict, with the real gate on a history-dependent case.
+  - An unreadable context stores nothing and is retried.
+- **The synthetic proof's S10, on real PostgreSQL with the real gateway, engine, reply service and gate** (local PG17,
+  both modes):
+  - The owner's context read is taken down while turn 1 is answered: its reply fails before Safety, and the exchange
+    stays open with `safety_disposition` NULL.
+  - Turn 2 and more words are held: the call keeps one call turn, the phone one TURN_COMMITTED, and 7 reads were
+    refused.
+  - The read comes back:
+    - turn 1 is closed `FAILED` / `NEXT_TURN`, with `safety_disposition` = the gate's verdict (GUIDED);
+    - its USER and ASSISTANT turns are `COMPLETED` (technically), with exactly one `ConversationTurnCompleted`
+      carrying GUIDED;
+    - turn 2 is committed with both utterances, as one turn, and played COMPLETE; one provider request.
+  - A repeated recovery through the same command returns SAME. A different value is refused with
+    `CALL_TURN_SAFETY_CONFLICT`, and the stored value is unchanged.
+- **Unchanged:** verify-0190 (18 / 18) and every other proof above; no migration changed. The R1 runs (full and single-call,
+  10 / 10 each) are kept as `CP2_R1_SYNTHETIC_PROOF_local_pg17*.txt`. The full run shared the machine with a Jest run, so
+  its latency (P50 2 469 ms) is not the reference; §10.3 keeps the quiet run (P50 2 336 ms).

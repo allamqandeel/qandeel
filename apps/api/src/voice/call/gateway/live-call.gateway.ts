@@ -46,6 +46,11 @@ class SocketTransport implements CallTransport {
     this.socket.write(encodeFrame(OPCODE.TEXT, Buffer.from(text, 'utf8')));
   }
 
+  sendBinary(frame: Buffer): void {
+    if (this.closed || this.socket.destroyed) return;
+    this.socket.write(encodeFrame(OPCODE.BINARY, frame));
+  }
+
   pong(data: Buffer): void {
     if (this.closed || this.socket.destroyed) return;
     this.socket.write(encodeFrame(OPCODE.PONG, data));
@@ -182,7 +187,7 @@ export class LiveCallGateway implements OnApplicationBootstrap, OnModuleDestroy 
 
   private wire(socket: Duplex, identity: { userId: string; accessToken: string }, head: Buffer): void {
     const transport = new SocketTransport(socket);
-    const { connection, forget } = this.calls.attach(transport, identity.userId, tokenDeadline(identity.accessToken, Date.now()));
+    const { connection, forget } = this.calls.attach(transport, identity.userId, tokenDeadline(identity.accessToken, Date.now()), undefined, identity.accessToken);
     const parser = new FrameParser();
     let gone = false;
     const lost = () => {

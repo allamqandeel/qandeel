@@ -15,6 +15,10 @@ import test from 'node:test';
 //   - call-truth is a classified route; the upgrade is the gateway's alone;
 //   - the call Copy Gate is one unified gate for both stages, every row PROPOSED, and no call text reaches the phone.
 // The behaviour itself is proven by verify-migration-0189, the synthetic proof and the API specs the record names.
+//
+// RE-ANCHORED by S8B-05 CP2 (migration 0190): PLAYOUT is applied and the server sends TURN_COMMITTED, REPLY_AUDIO and
+// REPLY_END; the speech sink is the call turn engine (`voice/call-turn/`), which reaches the conversation only through its
+// binding, while `voice/call/` stays provider-free; 0190 is the last migration. Each re-anchor below says what it replaced.
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8').replace(/\r\n/gu, '\n');
@@ -23,6 +27,8 @@ const PROTOCOL_DOC = 'docs/voice/QANDEEL_LIVE_CALL_PROTOCOL_v1.md';
 const PROTOCOL = 'apps/api/src/voice/call/live-call.protocol.ts';
 const CONNECTION = 'apps/api/src/voice/call/live-call.connection.ts';
 const M0189 = 'database/migrations/0189_s8b_05_live_call_authority_v1.sql';
+const M0190 = 'database/migrations/0190_s8b_05_live_call_spoken_turn_v1.sql';
+const CALL_TURN_DIR = 'apps/api/src/voice/call-turn/';
 const CALL_DIR = 'apps/api/src/voice/call/';
 const codeOnly = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/(^|[^:'"`\\])\/\/[^\n]*/gu, '$1');
 function walk(dir) {
@@ -77,12 +83,23 @@ test('protocol v1 is frozen identically in its document and its code', () => {
   assert.match(code, /docs\/voice\/QANDEEL_LIVE_CALL_PROTOCOL_v1\.md/u, 'the code names its document');
 });
 
-test('CP2 - CP4 messages are refused NOT_SUPPORTED_YET, never ACKed, and never sent by the server in CP1', () => {
+// RE-ANCHORED by S8B-05 CP2 (was: CP2 - CP4 refused and never sent). PLAYOUT is applied (ACTIVE only, the highest mark,
+// a violation for a chunk never sent); BARGE_IN and TEXT_TURN (CP3 - CP4) stay refused. TURN_COMMITTED and REPLY_END are
+// sent only by the call turn engine, through the connection's channel; REPLY_AUDIO is encoded by the connection alone.
+test('CP3 - CP4 messages are refused NOT_SUPPORTED_YET, never ACKed; the CP2 server messages come from the call turn engine alone', () => {
   const connection = codeOnly(read(CONNECTION));
   assert.match(connection, /if \(NOT_YET_SUPPORTED\.has\(message\.type\)\) \{\n\s+this\.send\(\{ type: 'REFUSED', reason: 'NOT_SUPPORTED_YET'/u);
+  assert.deepEqual(list(read(PROTOCOL), 'NOT_YET_SUPPORTED').sort(), ['BARGE_IN', 'TEXT_TURN']);
+  assert.match(connection, /case 'PLAYOUT': \{\n\s+if \(this\.phase !== 'ACTIVE'\) return this\.violation\(\);\n\s+if \(this\.repeated\(message\.msgId\)\) return;/u);
+  assert.match(connection, /if \(verdict === 'VIOLATION'\) return this\.violation\(\);\n\s+return this\.ack\(message\.msgId\);/u);
   for (const path of files(CALL_DIR).filter((p) => !p.endsWith('.spec.ts') && !p.includes('/testing/') && p !== PROTOCOL)) {
-    assert.doesNotMatch(codeOnly(read(path)), /type: '(?:TURN_COMMITTED|REPLY_END)'|encodeReplyAudioFrame/u, `${path} sends no CP2 message`);
+    assert.doesNotMatch(codeOnly(read(path)), /type: '(?:TURN_COMMITTED|REPLY_END)'/u, `${path} sends no turn message itself`);
+    if (path !== CONNECTION) assert.doesNotMatch(codeOnly(read(path)), /encodeReplyAudioFrame/u, `${path} encodes no reply audio`);
   }
+  assert.equal((connection.match(/encodeReplyAudioFrame\(/gu) ?? []).length, 1, 'one REPLY_AUDIO encoder, under the connection\'s epoch');
+  const senders = files('apps/api/src').filter((p) => !p.endsWith('.spec.ts') && !p.includes('/testing/') && p !== PROTOCOL)
+    .filter((p) => /type: '(?:TURN_COMMITTED|REPLY_END)'/u.test(codeOnly(read(p))));
+  assert.deepEqual(senders.sort(), [`${CALL_TURN_DIR}call-reply.ts`, `${CALL_TURN_DIR}live-call-turn.engine.ts`]);
 });
 
 test('0189 is forward-only, one transaction, opens no voice gate, grants no client role, and its proofs run in CI', () => {
@@ -95,7 +112,8 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|authenticated|PUBLIC)\b/u, 'no client role is granted anything');
   assert.match(code, /INSERT INTO account_erasure_private\.coverage_registry/u, 'the calls relation is in the erasure coverage');
   const migrations = readdirSync(join(root, 'database/migrations')).filter((f) => f.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0189_s8b_05_live_call_authority_v1.sql', 'CP1 adds exactly 0189 and nothing after it');
+  // RE-ANCHORED by S8B-05 CP2 (was: 0189 is the last migration): CP2 adds exactly 0190 after it.
+  assert.deepEqual(migrations.slice(-2), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql'], 'CP2 adds exactly 0190 after 0189');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
   assert.equal(scripts['prove:live-call-synthetic:integration'],
@@ -111,9 +129,22 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
     'the proof refuses any database but a loopback one');
 });
 
-test('the live call reaches no provider in CP1: the null speech sink, no engine, no orchestrator, no logging', () => {
+// RE-ANCHORED by S8B-05 CP2 (was: the null speech sink is bound). The sink is the call turn engine; voice/call/ still imports
+// no recognizer, synthesis, orchestrator, router or engine and logs nothing. The engine itself (voice/call-turn/) reaches the
+// conversation only through LiveCallConversationBinding: it imports no model router, DeepSeek or orchestrator, and logs
+// nothing. The call's recognizer is bound on the server key alone, never on VOICE_NOTE_LIVE_TRANSCRIPT.
+test('voice/call/ stays provider-free: the speech sink is the call turn engine, which reaches the conversation through its binding alone', () => {
   const module = read('apps/api/src/voice/voice.module.ts');
-  assert.match(module, /\{ provide: LIVE_CALL_SPEECH_SINK, useValue: NULL_LIVE_CALL_SPEECH_SINK \}/u, 'CP1 binds the null speech sink');
+  assert.match(module, /    LiveCallTurnEngine,\n    \{ provide: LIVE_CALL_SPEECH_SINK, useExisting: LiveCallTurnEngine \},/u, 'CP2 binds the call turn engine');
+  assert.doesNotMatch(codeOnly(module), /useValue: NULL_LIVE_CALL_SPEECH_SINK/u);
+  assert.match(module, /provide: LIVE_CALL_RECOGNITION,\n\s+useFactory: \(\): RealtimeRecognition \| null => \{\n\s+const config = loadSpeechmaticsRealtimeConfig\(\);\n\s+return config\.apiKey \? new SpeechmaticsRealtimeAdapter/u, 'the call recognizer needs the server key alone');
+  for (const path of files(CALL_TURN_DIR)) {
+    const text = read(path);
+    assert.doesNotMatch(text, /from '[./]*(?:conversation\/conversation|model-router|deepseek|ai-gateway|analysis)/u, `${path} imports no orchestrator, router or engine`);
+    assert.doesNotMatch(text, /from '[^']*\/(?:speechmatics|vertex-speech)\//u, `${path} imports no provider adapter`);
+    if (path.endsWith('.spec.ts') || path.includes('/testing/')) continue;
+    assert.doesNotMatch(codeOnly(text), /\bLogger\b|console\.|process\.stdout|process\.stderr|process\.env/u, `${path} logs nothing and reads no environment`);
+  }
   assert.match(module, /\{ provide: LIVE_CALL_STORE, useClass: LiveCallRepository \}/u);
   for (const path of files(CALL_DIR)) {
     const text = read(path);
@@ -122,7 +153,34 @@ test('the live call reaches no provider in CP1: the null speech sink, no engine,
     if (path.endsWith('.spec.ts') || path.includes('/testing/')) continue;
     assert.doesNotMatch(codeOnly(text), /\bLogger\b|console\.|process\.stdout|process\.stderr/u, `${path} logs nothing`);
   }
-  assert.match(read(`${CALL_DIR}live-call-speech.port.ts`), /CP1 binds NO recognizer/u);
+  assert.match(read(`${CALL_DIR}live-call-speech.port.ts`), /CP2 binds the call turn engine/u);
+});
+
+test('0190 is forward-only, one transaction, opens no voice gate, grants the client role only its owner reads, and its proofs run in CI', () => {
+  const migration = read(M0190);
+  assert.equal((migration.match(/^BEGIN;$/gmu) ?? []).length, 1);
+  assert.equal((migration.match(/^COMMIT;$/gmu) ?? []).length, 1);
+  const code = codeOnly(migration);
+  assert.doesNotMatch(code, /set_voice_launch_capability_v1\(|(?:INSERT INTO|UPDATE)\s+voice_private\.voice_launch_capability_(?:states|events)/u, 'no gate is set');
+  assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|PUBLIC)\b/u, 'nothing is granted to anon or PUBLIC');
+  assert.deepEqual([...code.matchAll(/GRANT ([A-Z]+)[^;]* TO authenticated/gu)].map((m) => m[1]).sort(), ['EXECUTE', 'SELECT'], 'authenticated: the RLS read of its call turns and the invoker reads only');
+  assert.match(code, /INSERT INTO account_erasure_private\.coverage_registry/u, 'the new relations are in the erasure coverage');
+  const scripts = JSON.parse(read('package.json')).scripts;
+  assert.equal(scripts['verify:live-call-spoken-turn:integration'], 'node --env-file-if-exists=.env database/verify-migration-0190.mjs');
+  const ci = read('.github/workflows/api-ci.yml');
+  const at = (needle) => { const i = ci.indexOf(needle); assert.ok(i >= 0, `CI runs ${needle}`); return i; };
+  assert.ok(at('run: npm run verify:live-call-authority:integration') < at('run: npm run verify:live-call-spoken-turn:integration'), '0190 is verified after 0189');
+  // The CP2 synthetic spoken turn: in the PostgreSQL job after the CP1 proof, and over the wire on the oldest and newest
+  // PostgREST lines (single-call mode); never pointed at anything but a loopback throwaway database.
+  assert.equal(scripts['prove:live-call-spoken-turn-synthetic:integration'],
+    'node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts');
+  assert.ok(at('run: npm run prove:live-call-synthetic:integration') < at('run: npm run prove:live-call-spoken-turn-synthetic:integration'), 'CP2 proof after the CP1 proof');
+  assert.ok(ci.includes('if [ "$version" = "v12.2.9" ] || [ "$version" = "v16.4" ]; then\n'
+    + '              S8B05_CP2_PROOF_SINGLE_CALL=1 POSTGREST_VERSION="$version" npm run --silent prove:live-call-spoken-turn-synthetic:integration'),
+  'the CP2 proof over the wire, on the oldest and the newest PostgREST line');
+  const proof = read('apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts');
+  assert.match(proof, /S8B05_CP2_PROOF_REFUSED: DATABASE_URL must name a loopback throwaway database/u);
+  assert.doesNotMatch(codeOnly(proof), /api\.deepseek\.com|speechmatics\.com|googleapis\.com|aiplatform/u, 'the proof reaches no provider');
 });
 
 test('call-truth is a classified, guarded, private route; the upgrade is the gateway\'s own', () => {
@@ -139,7 +197,8 @@ test('call-truth is a classified, guarded, private route; the upgrade is the gat
 
 test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no call text reaches the phone in CP1', () => {
   const record = read(RECORD);
-  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP1 — UNDER REVIEW/mu, 'the record states CP1 under review, not closed');
+  // RE-ANCHORED by S8B-05 CP2 (was: CP1 under review): CP1 merged (PR #374); the record states CP2 under review, not closed.
+  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP2 — UNDER REVIEW/mu, 'the record states CP2 under review, not closed');
   const rows = record.split('\n').filter((line) => /^\| (?:LC|LCE)-\d{2} \|/u.test(line));
   assert.ok(rows.length >= 30, 'the unified gate lists the existing and the new call rows');
   for (const row of rows) assert.match(row, /^\| (?:LC|LCE)-\d{2} \| PROPOSED \|/u, `${row.slice(0, 12)} is PROPOSED`);
@@ -155,4 +214,33 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
     if (!call.includes(path)) assert.doesNotMatch(read(path), /qandeel\.live-call\.v1/u, `${path} names no call protocol`);
   }
   for (const path of call) assert.doesNotMatch(read(path), /[؀-ۿ]/u, `${path} carries no call text`);
+});
+
+// S8B-05 CP2 (CA-05-02 §2.3, acceptance #27): an interrupted reply is never treated as complete. Today no post-response
+// consumer reads the source exchange's reply content: the authority reads only that a completed reply exists (no content),
+// and the capture's recent turns stop BEFORE the source turn (its own reply is newer, so never among them). A future
+// consumer that reads the reply content must read delivery_state with it; the export and the history carry it.
+test('no post-response consumer reads the source exchange\'s reply content without delivery_state; the export and the history carry it', () => {
+  const CONSUMER_DIRS = ['post-response-intelligence', 'background-intelligence', 'hypothesis', 'personal-understanding', 'human-model', 'memory', 'understanding']
+    .map((d) => `apps/api/src/${d}/`);
+  const consumers = CONSUMER_DIRS.flatMap((d) => files(d)).filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts'));
+  assert.ok(consumers.length > 20, 'the consumer folders are scanned');
+  for (const path of consumers) {
+    const code = codeOnly(read(path));
+    const readsDelivery = /delivery_state|deliveryState/u.test(code);
+    for (const line of code.split('\n').filter((l) => /role: 'eq\.ASSISTANT'|role=eq\.ASSISTANT/u.test(l))) {
+      if (!readsDelivery) assert.match(line, /select: TURN_FIELDS\b/u, `${path} reads an ASSISTANT turn without its content (or with delivery_state)`);
+    }
+    if (!readsDelivery) {
+      assert.doesNotMatch(code, /assistant(?:Turn)?\??\.content\b|reply_content|replyContent/u, `${path} reads no reply content without delivery_state`);
+    }
+  }
+  const data = codeOnly(read('apps/api/src/background-intelligence/background-intelligence-data-api.service.ts'));
+  assert.match(data, /const TURN_FIELDS = 'id,session_id,role,status,source_turn_id';/u, 'the completed-reply check selects no content');
+  assert.match(data, /return rows\.slice\(at < 0 \? rows\.length : at \+ 1\)\.slice\(0, limit\)/u, 'the recent turns stop before the source turn');
+  const m0190 = codeOnly(read(M0190));
+  assert.match(m0190, /'deliveryState', lower\(vs\.delivery_state\)/u, 'Export My Data carries the delivery state of a call reply');
+  assert.match(m0190, /CREATE FUNCTION public\.server_read_call_reply_delivery_v1\(/u);
+  const history = codeOnly(read('apps/api/src/conversation/conversation.service.ts'));
+  assert.match(history, /\.\.\.\(reply && deliveryByReply\.has\(reply\.id\) \? \{ deliveryState: deliveryByReply\.get\(reply\.id\)! \} : \{\}\)/u, 'the history carries it, additively');
 });

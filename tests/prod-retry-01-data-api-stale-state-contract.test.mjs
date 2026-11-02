@@ -117,9 +117,15 @@ test('40P01 is never converted, and PT409 is raised only by the eleven and the t
   // live note's ledger row and a live reply segment's one paid admission) each refuse a reused provider call id with the
   // same one AI-usage identity conflict - two sites, one per function - and no other PT409.
   const m0188 = '0188_s8b_04_fast_voice_path_v1.sql';
-  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175, m0184, m0187, m0188]);
-  assert.deepEqual(read(`${MIGRATIONS}/${m0188}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu),
-    Array(2).fill("RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"), m0188);
+  // S8B-05 CP2 RE-ANCHOR (2026-11-02): 0190's server_begin_call_reply_speech_v1 and server_begin_call_transcription_v1
+  // (a call reply segment's one paid synthesis and the call connection's recognizer row) each refuse a reused provider
+  // call id with the same one AI-usage identity conflict - two sites, one per function - and no other PT409.
+  const m0190 = '0190_s8b_05_live_call_spoken_turn_v1.sql';
+  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175, m0184, m0187, m0188, m0190]);
+  for (const name of [m0188, m0190]) {
+    assert.deepEqual(read(`${MIGRATIONS}/${name}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu),
+      Array(2).fill("RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"), name);
+  }
   for (const name of [m0170, m0175, m0187]) {
     const pt409 = read(`${MIGRATIONS}/${name}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu);
     assert.deepEqual(pt409, ["RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"], name);

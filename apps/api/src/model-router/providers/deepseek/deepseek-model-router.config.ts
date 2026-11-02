@@ -22,9 +22,29 @@ export const DEEPSEEK_MAX_RETRIES = 0;
 export interface DeepSeekModelRouterConfig {
   apiKey: string;
   resolveModel: typeof resolveDeepSeekModel;
-  maxOutputTokens: typeof DEEPSEEK_MAX_OUTPUT_TOKENS;
+  maxOutputTokens: Readonly<Record<ProcessingPath, number>>;
   timeoutMs: number;
   maxRetries: typeof DEEPSEEK_MAX_RETRIES;
+  /** S8B-05 CP2 (live call): no content delta within this budget aborts the stream. Absent: no first-token budget. */
+  firstTokenTimeoutMs?: number;
+}
+
+/**
+ * S8B-05 CP2 (contract §5, REALTIME): the live call's reply — DeepSeek Flash without thinking, max_tokens 160, the first
+ * token within 2 000 ms and the whole reply within 5 000 ms. Only the FAST path is ever asked of it.
+ */
+export const DEEPSEEK_LIVE_CALL = { maxOutputTokens: 160, timeoutMs: 5_000, firstTokenTimeoutMs: 2_000 } as const;
+
+export function loadDeepSeekLiveCallConfig(environment: NodeJS.ProcessEnv = process.env): DeepSeekModelRouterConfig {
+  const apiKey = requireDeepSeekQualification(environment, 'the live call reply');
+  return {
+    apiKey,
+    resolveModel: () => resolveDeepSeekModel('FAST'),
+    maxOutputTokens: { FAST: DEEPSEEK_LIVE_CALL.maxOutputTokens, DEEP: DEEPSEEK_LIVE_CALL.maxOutputTokens },
+    timeoutMs: DEEPSEEK_LIVE_CALL.timeoutMs,
+    maxRetries: DEEPSEEK_MAX_RETRIES,
+    firstTokenTimeoutMs: DEEPSEEK_LIVE_CALL.firstTokenTimeoutMs,
+  };
 }
 
 export function loadDeepSeekModelRouterConfig(

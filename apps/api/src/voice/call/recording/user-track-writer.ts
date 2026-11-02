@@ -18,6 +18,21 @@ export interface CallSegmentMedia {
  */
 export type WriterFailure = 'CONSENT_REQUIRED' | 'RECORDING_CLOSED' | 'STORAGE' | 'FENCED';
 
+/** Where a track stands: its durable end on the capture clock and its next segment index. */
+export interface TrackDurable {
+  readonly endMs: number;
+  readonly nextSegment: number;
+}
+
+/** USER: the uplink as received (16 kHz). QANDEEL (S8B-05 CP2): the reply audio the phone confirmed playing (24 kHz). */
+export type CallTrack = 'USER' | 'QANDEEL';
+const TRACK_RATE: Readonly<Record<CallTrack, number>> = { USER: 16_000, QANDEEL: 24_000 };
+
+type WriterDeps = {
+  readonly media: CallSegmentMedia; readonly store: Pick<LiveCallStore, 'readTracks' | 'recordGap'>; readonly userId: string; readonly callId: string;
+  readonly epoch: number;
+};
+
 type Op =
   | { readonly kind: 'segment'; packets: Buffer[]; startMs: number; readonly endMs: number; readonly bytes: number }
   | { readonly kind: 'gap'; readonly startMs: number; readonly endMs: number; readonly gap: GapKind };
@@ -36,14 +51,24 @@ type Op =
  *     (server_read_call_tracks_v1) before anything else is written, so a duplicate is dropped and nothing is overwritten;
  *   - the audio held (buffered plus in flight) is bounded by the caller through `pendingBytes`;
  *   - nothing is logged: no audio, no key, no recording id.
+ *
+ * S8B-05 CP2 — the same writer serves the QANDEEL track (`forTrack('QANDEEL', ...)`): the reply's downlink packets the
+ * phone confirmed playing, placed on the call's capture clock from the reply's clock start, with NOT_SPEAKING gaps where
+ * QANDEEL was silent. A packet that was not confirmed is never written (the recorded-as-heard is never more than the heard).
  */
 export class UserTrackWriter {
+  static forTrack(track: CallTrack, deps: WriterDeps, recordingId: string, durable: TrackDurable): UserTrackWriter {
+    return new UserTrackWriter(deps, recordingId, { userTrackEndMs: durable.endMs, userNextSegment: durable.nextSegment }, track);
+  }
+
   private buffer: Buffer[] = [];
   private bufferStartMs: number;
   private bufferBytes = 0;
   private inFlightBytes = 0;
   /** The end of everything accepted so far (written, in flight or buffered): the next packet's captureMs. */
   private acceptedEndMs: number;
+  /** The end of what the database holds for this track (stored segments and recorded gaps), as this writer knows it. */
+  private durableEndMs: number;
   private nextSegment: number;
   private chain: Promise<void> = Promise.resolve();
   private stopped = false;
@@ -52,14 +77,13 @@ export class UserTrackWriter {
   private stats = { segments: 0, packets: 0, gaps: 0, dropped: 0 };
 
   constructor(
-    private readonly deps: {
-      readonly media: CallSegmentMedia; readonly store: Pick<LiveCallStore, 'readTracks' | 'recordGap'>; readonly userId: string; readonly callId: string;
-      readonly epoch: number;
-    },
+    private readonly deps: WriterDeps,
     private readonly recordingId: string,
     durable: { readonly userTrackEndMs: number; readonly userNextSegment: number },
+    private readonly track: CallTrack = 'USER',
   ) {
     this.acceptedEndMs = durable.userTrackEndMs;
+    this.durableEndMs = durable.userTrackEndMs;
     this.bufferStartMs = durable.userTrackEndMs;
     this.nextSegment = durable.userNextSegment;
   }
@@ -67,6 +91,11 @@ export class UserTrackWriter {
   /** The captureMs the next packet must carry to be contiguous. */
   get expectedCaptureMs(): number {
     return this.acceptedEndMs;
+  }
+
+  /** The durable end: everything before it is stored or a recorded gap. After `flush()` with no failure, the accepted end. */
+  get storedEndMs(): number {
+    return this.durableEndMs;
   }
 
   get pendingBytes(): number {
@@ -84,7 +113,7 @@ export class UserTrackWriter {
   /** One contiguous packet (captureMs === expectedCaptureMs; the caller enforces it). */
   append(packet: Buffer, captureMs: number): void {
     if (this.stopped || this.failed) return;
-    if (captureMs !== this.acceptedEndMs) throw new RangeError('USER_TRACK_NOT_CONTIGUOUS');
+    if (captureMs !== this.acceptedEndMs) throw new RangeError('CALL_TRACK_NOT_CONTIGUOUS');
     if (this.buffer.length === 0) this.bufferStartMs = captureMs;
     this.buffer.push(packet);
     this.bufferBytes += packet.length;
@@ -160,11 +189,12 @@ export class UserTrackWriter {
 
   private async writeGap(op: Extract<Op, { kind: 'gap' }>): Promise<void> {
     const outcome = await this.deps.store.recordGap({
-      userId: this.deps.userId, recordingId: this.recordingId, epoch: this.deps.epoch, track: 'USER', startMs: op.startMs, endMs: op.endMs,
+      userId: this.deps.userId, recordingId: this.recordingId, epoch: this.deps.epoch, track: this.track, startMs: op.startMs, endMs: op.endMs,
       kind: op.gap,
     }).catch(() => 'UNAVAILABLE');
     if (outcome === 'RECORDED') {
       this.stats.gaps += 1;
+      this.durableEndMs = Math.max(this.durableEndMs, op.endMs);
       return;
     }
     if (outcome === 'FENCED') {
@@ -174,18 +204,22 @@ export class UserTrackWriter {
     const durable = await this.reconcile();
     if (!durable) return;
     // Already covered (a resend of the same gap, or another writer got there): nothing to add.
-    if (durable.userTrackEndMs >= op.endMs) return;
+    if (this.endOf(durable) >= op.endMs) {
+      this.durableEndMs = Math.max(this.durableEndMs, this.endOf(durable));
+      return;
+    }
     this.fail(outcome === 'CONSENT_REQUIRED' ? 'CONSENT_REQUIRED' : 'STORAGE');
   }
 
   private async writeSegment(op: Extract<Op, { kind: 'segment' }>, retry: boolean): Promise<void> {
-    const body = muxOggOpus(op.packets, { serial: this.nextSegment, inputRate: 16_000 });
+    const body = muxOggOpus(op.packets, { serial: this.nextSegment, inputRate: TRACK_RATE[this.track] });
     const index = this.nextSegment;
-    const result = await this.deps.media.writeCallSegment(this.deps.userId, this.recordingId, 'USER', index, op.startMs, op.endMs,
+    const result = await this.deps.media.writeCallSegment(this.deps.userId, this.recordingId, this.track, index, op.startMs, op.endMs,
       Readable.from([body]), body.length, this.abort.signal, this.deps.epoch).catch(() => ({ outcome: 'UNAVAILABLE' }));
     if (result.outcome === 'STORED') {
       this.nextSegment = index + 1;
       this.stats.segments += 1;
+      this.durableEndMs = Math.max(this.durableEndMs, op.endMs);
       return;
     }
     if (result.outcome === 'FENCED') {
@@ -205,27 +239,36 @@ export class UserTrackWriter {
     // track): the database says where the track stands, and only then is anything decided.
     const durable = await this.reconcile();
     if (!durable) return;
-    if (durable.userNextSegment > index && durable.userTrackEndMs >= op.endMs) {
+    this.durableEndMs = Math.max(this.durableEndMs, this.endOf(durable));
+    if (this.nextOf(durable) > index && this.endOf(durable) >= op.endMs) {
       // The add landed (its PUT or store may have failed: the seal turns a pending segment into a WRITER_LOSS gap).
-      this.nextSegment = durable.userNextSegment;
+      this.nextSegment = this.nextOf(durable);
       return;
     }
-    this.nextSegment = durable.userNextSegment;
+    this.nextSegment = this.nextOf(durable);
     // Drop what the track already holds (a resend another writer stored first), keep the rest contiguous.
-    while (op.packets.length > 0 && op.startMs < durable.userTrackEndMs) {
+    while (op.packets.length > 0 && op.startMs < this.endOf(durable)) {
       op.packets.shift();
       op.startMs += AUDIO_PACKET_MS;
       this.stats.dropped += 1;
     }
     if (op.packets.length === 0) return;
-    if (op.startMs !== durable.userTrackEndMs || !retry) {
+    if (op.startMs !== this.endOf(durable) || !retry) {
       this.fail('STORAGE');
       return;
     }
     await this.writeSegment(op, false);
   }
 
-  /** The database's view of the USER track; null (and a failure set) when the recording is no longer being written. */
+  private endOf(durable: TrackState): number {
+    return this.track === 'USER' ? durable.userTrackEndMs : durable.qandeelTrackEndMs;
+  }
+
+  private nextOf(durable: TrackState): number {
+    return this.track === 'USER' ? durable.userNextSegment : durable.qandeelNextSegment;
+  }
+
+  /** The database's view of the tracks; null (and a failure set) when the recording is no longer being written. */
   private async reconcile(): Promise<TrackState | null> {
     const durable = await this.deps.store.readTracks({ userId: this.deps.userId, callId: this.deps.callId }).catch(() => null);
     if (!durable) {

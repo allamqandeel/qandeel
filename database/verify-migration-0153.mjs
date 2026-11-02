@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { cleanupVerifierUsers } from './verifier-fixture-cleanup.mjs';
 import { substitutedBody, voiceFoundationApplied } from './voice-foundation-0183-substitutions.mjs';
+import { liveCallTurnsApplied, substitutedBody as liveCallBody } from './live-call-0190-substitutions.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -196,7 +197,11 @@ async function verifyCatalog() {
   // 0180 body with exactly the two declared D-7 edits (voice-foundation-0183-substitutions.mjs). Every claim below is
   // then made of the 0180 body that body is derived from.
   const voice = await voiceFoundationApplied(async (sql) => [await one(sql)]);
-  if (voice) assert.equal(liveBuilder, substitutedBody('personal-export'), 'the live builder is the 0183 re-statement');
+  // RE-ANCHORED by S8B-05 CP2 (migration 0190): once 0190 is applied the live builder is its re-statement, the 0183 body
+  // with exactly the one declared deliveryState edit (live-call-0190-substitutions.mjs).
+  const liveCall = voice && await liveCallTurnsApplied(async (sql) => [await one(sql)]);
+  if (voice) assert.equal(liveBuilder, liveCall ? liveCallBody('personal-export') : substitutedBody('personal-export'),
+    liveCall ? 'the live builder is the 0190 re-statement' : 'the live builder is the 0183 re-statement');
   const live = voice
     ? body(migrationText('0180_s8a_05_publish_from_qandeel_v1.sql'), 'CREATE OR REPLACE FUNCTION personal_data_private.build_personal_export_v1(')
     : liveBuilder;
