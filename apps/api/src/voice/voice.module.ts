@@ -6,7 +6,12 @@ import { ObservabilityModule } from '../observability/observability.module';
 import { FAST_VOICE_PATH, type FastVoicePath } from '../voice-media/fast-voice-path.port';
 import { VoiceMediaModule } from '../voice-media/voice-media.module';
 import { LiveCallGateway } from './call/gateway/live-call.gateway';
-import { LIVE_CALL_SPEECH_SINK, NULL_LIVE_CALL_SPEECH_SINK } from './call/live-call-speech.port';
+import { LIVE_CALL_SPEECH_SINK } from './call/live-call-speech.port';
+import { CallTurnRepository } from './call-turn/call-turn.repository';
+import { CALL_TURN_STORE } from './call-turn/call-turn.store';
+import { LiveCallConversationBinding } from './call-turn/live-call-conversation.port';
+import { LIVE_CALL_RECOGNITION, LIVE_CALL_SYNTHESIS_ROUTE, LiveCallTurnEngine } from './call-turn/live-call-turn.engine';
+import { liveCallFetch } from '../http-transport/live-call-keep-alive-fetch';
 import { LiveCallTruthController } from './call/live-call-truth.controller';
 import { LiveCallRepository } from './call/live-call.repository';
 import { LiveCallService } from './call/live-call.service';
@@ -57,6 +62,12 @@ import {
  * S8B-05 (CP1, 0189): the live call's server foundation - the call authority's store, the live call socket gateway (protocol
  * v1, `call/`), call-truth and the call sweep. The decoded uplink goes to the speech sink, and CP1 binds the NULL sink:
  * no recognizer, no orchestrator, no synthesis and no provider is reached by a live call.
+ *
+ * S8B-05 (CP2, 0190): the call turn engine replaces the NULL sink. Its recognizer is bound on the server key ALONE
+ * (contract §3: independent of VOICE_NOTE_LIVE_TRANSCRIPT, which stays OFF; a call is admitted only behind the
+ * PERSONAL_LIVE_CALL gate, 0189). Its synthesis is the Listen route over the call's own keep-alive transport (L1). The
+ * conversation registers its REALTIME reply into LiveCallConversationBinding (exported) at start. Without any of the three
+ * a call still runs and records, and its turns are not answered.
  */
 @Module({
   imports: [ObservabilityModule, VoiceMediaModule],
@@ -122,10 +133,29 @@ import {
     VoiceNoteTranscriptionWorker,
     MachineAsrConfidenceStartupCheck,
     { provide: LIVE_CALL_STORE, useClass: LiveCallRepository },
-    { provide: LIVE_CALL_SPEECH_SINK, useValue: NULL_LIVE_CALL_SPEECH_SINK },
+    { provide: CALL_TURN_STORE, useClass: CallTurnRepository },
+    LiveCallConversationBinding,
+    {
+      provide: LIVE_CALL_RECOGNITION,
+      useFactory: (): RealtimeRecognition | null => {
+        const config = loadSpeechmaticsRealtimeConfig();
+        return config.apiKey ? new SpeechmaticsRealtimeAdapter({ ...config, apiKey: config.apiKey }) : null;
+      },
+    },
+    {
+      provide: LIVE_CALL_SYNTHESIS_ROUTE,
+      useFactory: (listen: ListenSynthesisRoute | null): ListenSynthesisRoute | null => {
+        const config = loadVertexSpeechConfig();
+        if (!listen || !config.projectId) return null;
+        return { ...listen, adapter: new VertexSpeechAdapter({ ...config, projectId: config.projectId }, new AdcAccessTokenSource(), undefined, liveCallFetch()) };
+      },
+      inject: [LISTEN_SYNTHESIS_ROUTE],
+    },
+    LiveCallTurnEngine,
+    { provide: LIVE_CALL_SPEECH_SINK, useExisting: LiveCallTurnEngine },
     LiveCallService,
     LiveCallGateway,
   ],
-  exports: [VoiceMediaModule],
+  exports: [VoiceMediaModule, LiveCallConversationBinding, LiveCallTurnEngine],
 })
 export class VoiceModule {}

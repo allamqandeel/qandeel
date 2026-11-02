@@ -1335,11 +1335,23 @@ jobs:
       # REALTIME_CAPACITY_FULL), the sweep's truthful end reasons, call-truth, the NOT_SPEAKING gap and the recording races.
       - name: Verify S8B-05 CP1 live call authority (0189) against real PostgreSQL
         run: npm run verify:live-call-authority:integration
+      # S8B-05 CP2: migration 0190 (the realtime spoken turn) - the call turn commit (R2-G, R7'), the exchange with its
+      # stored safety (N1), the registered reply segments, the playout mark (P1-P3, one close wins), the delivery state in
+      # the completed event v2 / the export / the history, the call ledger per attempt and the commit / close / text races.
+      - name: Verify S8B-05 CP2 live call spoken turn (0190) against real PostgreSQL
+        run: npm run verify:live-call-spoken-turn:integration
       # S8B-05 CP1: the synthetic live call - the compiled gateway, connection, repository, media service and USER track writer
       # over this database, two instances, a synthetic client on a real WebSocket with real libopus packets of a generated
       # signal. No provider, no paid call, no real person. It restores the gates and the policy and removes its fixtures.
       - name: Prove S8B-05 CP1 synthetic live call against real PostgreSQL (free)
         run: npm run prove:live-call-synthetic:integration
+      # S8B-05 CP2: the synthetic spoken turn - a whole scripted call (16 spoken turns, the five delivery cases, in-call
+      # retrieval) through the compiled gateway, the call turn engine, the REALTIME reply service and the real DeepSeek router,
+      # over this database with 0190; fake Speechmatics / DeepSeek / Gemini with the contract's measured delays, a synthetic
+      # phone with real libopus packets. Then the same call with a window of 4 (the D-05-08 comparison). No provider, no paid
+      # call, no real person. It restores the gates and removes its fixtures.
+      - name: Prove S8B-05 CP2 synthetic spoken turn against real PostgreSQL (free)
+        run: npm run prove:live-call-spoken-turn-synthetic:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1475,6 +1487,12 @@ jobs:
             # S8B-05 (CP1): the synthetic live call over the wire - every call-authority and media command through this PostgREST
             # line (P0001 REALTIME_CAPACITY_FULL as PostgREST answers it, timestamps as it encodes them), two gateway instances.
             POSTGREST_VERSION="$version" npm run --silent prove:live-call-synthetic:integration || { docker logs "postgrest-$version"; exit 1; }
+            # S8B-05 (CP2): the synthetic spoken turn over the wire - the turn commit, Safety, segments, playout, close and ledger
+            # through this PostgREST line, and the owner's context and retrieval reads under an authenticated JWT and RLS. One call
+            # (the single-call mode), on the oldest and the newest line only: the window comparison is a measurement, run above.
+            if [ "$version" = "v12.2.9" ] || [ "$version" = "v16.4" ]; then
+              S8B05_CP2_PROOF_SINGLE_CALL=1 POSTGREST_VERSION="$version" npm run --silent prove:live-call-spoken-turn-synthetic:integration || { docker logs "postgrest-$version"; exit 1; }
+            fi
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

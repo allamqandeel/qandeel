@@ -203,6 +203,13 @@ export class VoiceNotesRepository {
     return this.all<SessionVoiceTurnRow>('server_read_session_voice_turns_v1', { p_user_id: userId, p_session_id: sessionId, p_turn_ids: turnIds });
   }
 
+  /** S8B-05 CP2 (CA-05-02, 0190): the delivery state of the live call replies among these assistant turns (others: no row). */
+  callReplyDelivery(userId: string, sessionId: string, assistantTurnIds: readonly string[]) {
+    return this.all<{ turn_id: string; delivery_state: 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED' }>('server_read_call_reply_delivery_v1', {
+      p_user_id: userId, p_session_id: sessionId, p_turn_ids: assistantTurnIds,
+    });
+  }
+
   capability(userId: string) {
     return this.first<VoiceCapabilityRow>('server_read_my_voice_note_capability_v1', { p_user_id: userId });
   }

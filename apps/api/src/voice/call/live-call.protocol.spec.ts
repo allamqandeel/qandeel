@@ -9,10 +9,10 @@ const S = '00000000-0000-4000-8000-000000000002';
 const I = '00000000-0000-4000-8000-000000000003';
 
 describe('S8B-05 CP1 protocol v1 (frozen)', () => {
-  it('names exactly the frozen client and server messages; CP2-CP4 shapes are parsed but never supported yet', () => {
+  it('names exactly the frozen client and server messages; CP3-CP4 shapes are parsed but never supported yet (CP2 supports PLAYOUT)', () => {
     expect([...CLIENT_MESSAGES]).toEqual(['HELLO', 'AUDIO', 'PLAYOUT', 'BARGE_IN', 'TEXT_TURN', 'MUTE', 'UNMUTE', 'TOKEN_REFRESH', 'HEARTBEAT', 'END']);
     expect([...SERVER_MESSAGES]).toEqual(['STATE', 'TURN_COMMITTED', 'REPLY_AUDIO', 'REPLY_END', 'REFUSED', 'CALL_ENDING', 'ACK']);
-    expect([...NOT_YET_SUPPORTED].sort()).toEqual(['BARGE_IN', 'PLAYOUT', 'TEXT_TURN']);
+    expect([...NOT_YET_SUPPORTED].sort()).toEqual(['BARGE_IN', 'TEXT_TURN']);
   });
 
   it('parses each text message only in its exact shape', () => {

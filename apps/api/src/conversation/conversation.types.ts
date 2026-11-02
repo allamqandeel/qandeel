@@ -72,6 +72,11 @@ export interface ConversationHistoryExchange {
   assistantTurn: { id: string; content: string; createdAt: string } | null;
   /** S8B-03: present only for a turn that came from a Voice Note; never a storage key or a confidence band. */
   voiceNote?: { recordingId: string; available: boolean; availableUntil: string | null; durationMs: number | null };
+  /**
+   * S8B-05 CP2 (CA-05-02): present only for a live call reply. The reply's content is what was heard: INTERRUPTED,
+   * WITHHELD_TAIL and FAILED replies are not complete answers (an empty one is never shown as a bubble, S8B-06).
+   */
+  deliveryState?: 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED';
 }
 
 export interface ConversationHistoryPage {

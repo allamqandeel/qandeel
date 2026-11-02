@@ -1,7 +1,7 @@
 import { readOggOpus } from '../codec/ogg-opus';
-import { OpusPacketDecoder } from '../codec/opus-codec';
+import { DOWNLINK_OPUS, OpusPacketDecoder, OpusPacketEncoder } from '../codec/opus-codec';
 import { InMemoryCallAuthority } from '../testing/in-memory-call-authority';
-import { syntheticUplinkPackets } from '../testing/synthetic-voice';
+import { synthPcm, syntheticUplinkPackets } from '../testing/synthetic-voice';
 import { UserTrackWriter } from './user-track-writer';
 
 const USER = '00000000-0000-4000-8000-0000000000a1';
@@ -55,7 +55,7 @@ describe('S8B-05 CP1 the USER track writer (real Opus packets, valid Ogg segment
     expect(authority.gaps).toEqual([{ track: 'USER', startMs: 1000, endMs: 3000, kind: 'MUTED' }]);
     expect(() => writer.append(PACKETS[0]!, 0)).not.toThrow(); // closed: refused silently
     const fresh = await started();
-    expect(() => fresh.writer.append(PACKETS[0]!, 20)).toThrow('USER_TRACK_NOT_CONTIGUOUS');
+    expect(() => fresh.writer.append(PACKETS[0]!, 20)).toThrow('CALL_TRACK_NOT_CONTIGUOUS');
   });
 
   it('adopts the database answer when a write answered ambiguously after its add landed (no duplicate, no overwrite)', async () => {
@@ -132,5 +132,30 @@ describe('S8B-05 CP1 the USER track writer (real Opus packets, valid Ogg segment
     await writer.close(true);
     expect(authority.segments).toEqual([]);
     expect(writer.pendingBytes).toBe(0);
+  });
+});
+
+describe('S8B-05 CP2 the QANDEEL track writer (the same writer, 24 kHz, its own segment numbers)', () => {
+  it('records NOT_SPEAKING as a gap and the confirmed reply packets as valid 24 kHz Ogg Opus, beside an untouched USER track', async () => {
+    const { authority, writer: user } = await started();
+    const encoder = new OpusPacketEncoder(DOWNLINK_OPUS.rate, DOWNLINK_OPUS.bitrate);
+    const reply = synthPcm(24_000, 60).map((pcm) => encoder.encode(pcm));
+    encoder.close();
+    const qandeel = UserTrackWriter.forTrack('QANDEEL', { media: authority, store: authority, userId: USER, callId: CALL, epoch: 1 },
+      authority.calls.get(CALL)!.recordingId!, { endMs: 0, nextSegment: 0 });
+    feed(user, 0, 150, 0);
+    qandeel.gap('NOT_SPEAKING', 2_000);
+    reply.forEach((packet, i) => qandeel.append(packet, 2_000 + i * 20));
+    expect(() => qandeel.append(reply[0]!, 1_000)).toThrow('CALL_TRACK_NOT_CONTIGUOUS');
+    await qandeel.close();
+    await user.close();
+    expect(authority.gaps).toEqual([{ track: 'QANDEEL', startMs: 0, endMs: 2_000, kind: 'NOT_SPEAKING' }]);
+    const tracks = authority.segments.map((s) => [s.track, s.index, s.startMs, s.endMs]);
+    expect(tracks).toEqual(expect.arrayContaining([['USER', 0, 0, 3_000], ['QANDEEL', 0, 2_000, 3_200]]));
+    const segment = authority.segments.find((s) => s.track === 'QANDEEL')!;
+    const ogg = readOggOpus(segment.bytes);
+    expect(ogg.inputRate).toBe(24_000);
+    expect(ogg.packets.every((p, i) => p.equals(reply[i]!))).toBe(true);
+    expect(qandeel.storedEndMs).toBe(3_200);
   });
 });

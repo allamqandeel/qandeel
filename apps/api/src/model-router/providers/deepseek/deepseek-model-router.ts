@@ -11,7 +11,7 @@ import {
 } from '../../model-router.types';
 import { releaseModelOutput } from '../../model-output-release-guard';
 import { IncrementalReleaseGuard, type IncrementalReleaseOutcome } from '../../incremental-release-guard';
-import { loadDeepSeekModelRouterConfig, type DeepSeekModelRouterConfig } from './deepseek-model-router.config';
+import { loadDeepSeekLiveCallConfig, loadDeepSeekModelRouterConfig, type DeepSeekModelRouterConfig } from './deepseek-model-router.config';
 import { createDeepSeekClient } from './deepseek-client';
 import { TelemetryService } from '../../../observability/telemetry.service';
 import { assertForegroundProviderBudget } from '../../../conversation/foreground-turn-work';
@@ -82,6 +82,22 @@ export class DeepSeekModelRouter implements ModelRouter {
     );
   }
 
+  /**
+   * S8B-05 CP2 (contract §5, REALTIME): the live call's reply — the same router, gate and accounting family as the
+   * conversation reply (the call's turns are the Session's turns), with the call's own budgets and its own keep-alive
+   * transport (L1), never shared with background work.
+   */
+  static forLiveCall(telemetry: TelemetryService | undefined, accounting: AiProviderCallAccounting, fetchImpl: typeof fetch): DeepSeekModelRouter {
+    const config = loadDeepSeekLiveCallConfig();
+    const client = createDeepSeekClient(config, fetchImpl);
+    return new DeepSeekModelRouter(
+      config,
+      accountedDeepSeekChatCompletionsClient(client, 'CONVERSATION_REPLY', accounting),
+      telemetry,
+      accountedDeepSeekStreamingChatCompletions(client, 'CONVERSATION_REPLY', accounting),
+    );
+  }
+
   constructor(
     private readonly config: DeepSeekModelRouterConfig,
     private readonly client: DeepSeekChatCompletionsClient,
@@ -149,6 +165,8 @@ export class DeepSeekModelRouter implements ModelRouter {
     const timeout = Math.min(request.latencyBudgetMs, this.config.timeoutMs);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
+    // S8B-05 CP2: the live call's first-token budget; the first content delta clears it.
+    let firstToken = this.config.firstTokenTimeoutMs === undefined ? undefined : setTimeout(() => controller.abort(), this.config.firstTokenTimeoutMs);
     const abortOnExternal = () => controller.abort();
     if (options.signal?.aborted) controller.abort();
     else options.signal?.addEventListener('abort', abortOnExternal, { once: true });
@@ -166,6 +184,10 @@ export class DeepSeekModelRouter implements ModelRouter {
 
     // Synchronous and in order; an onRelease that throws ends the stream as a provider failure.
     const onDelta = (content: string): void => {
+      if (firstToken !== undefined && content.length > 0) {
+        clearTimeout(firstToken);
+        firstToken = undefined;
+      }
       const before = guard.releasedText.length;
       const piece = guard.push(content);
       if (piece.length > 0) {
@@ -197,6 +219,7 @@ export class DeepSeekModelRouter implements ModelRouter {
       return withheld('PROVIDER_FAILED', UNKNOWN_USAGE);
     } finally {
       clearTimeout(timer);
+      if (firstToken !== undefined) clearTimeout(firstToken);
       options.signal?.removeEventListener('abort', abortOnExternal);
     }
 
