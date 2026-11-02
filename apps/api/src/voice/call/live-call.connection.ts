@@ -1,15 +1,17 @@
 import { isUplinkPacket, OpusPacketDecoder } from './codec/opus-codec';
 import {
-  decodeAudioFrame, encodeServerMessage, LIVE_CALL_CLOSE, LIVE_CALL_LIMITS, NOT_YET_SUPPORTED, parseClientMessage, type CallEndReason,
+  decodeAudioFrame, encodeReplyAudioFrame, encodeServerMessage, LIVE_CALL_CLOSE, LIVE_CALL_LIMITS, NOT_YET_SUPPORTED, parseClientMessage, type CallEndReason,
   type CallState, type ClientMessage, type RefusalReason, type ServerMessage,
 } from './live-call.protocol';
-import type { LiveCallSpeechSink, LiveCallSpeechStream } from './live-call-speech.port';
-import type { LiveCallStore } from './live-call.store';
-import { UserTrackWriter, type CallSegmentMedia } from './recording/user-track-writer';
+import type { LiveCallSpeechSink, LiveCallSpeechStream, LiveCallTurnChannel, ReplyAudioPacket } from './live-call-speech.port';
+import type { LiveCallStore, TrackState } from './live-call.store';
+import { UserTrackWriter, type CallSegmentMedia, type WriterFailure } from './recording/user-track-writer';
 
 /** What a connection needs from its socket (the RFC 6455 gateway, or a test double). */
 export interface CallTransport {
   sendText(text: string): void;
+  /** S8B-05 CP2: one binary frame towards the phone (REPLY_AUDIO). */
+  sendBinary(frame: Buffer): void;
   close(code: number, reason: string): void;
   /** Bytes queued towards the phone and not yet written. */
   readonly bufferedBytes: number;
@@ -120,6 +122,12 @@ class Bucket {
  *     grace) after flushing what it received; a fenced connection (a newer epoch exists) changes nothing at all;
  *   - CP2 / CP4 messages are answered REFUSED NOT_SUPPORTED_YET (never ACKed);
  *   - no audio, transcript, token or identifier is logged.
+ *
+ * S8B-05 CP2: the speech sink is the call turn engine when one is composed. It receives the decoded uplink and the
+ * phone's PLAYOUT confirmations, and reaches this connection only through its channel: TURN_COMMITTED, REPLY_AUDIO and
+ * REPLY_END go out on this socket, and the QANDEEL track (the reply audio confirmed playing) is written beside the USER
+ * track on the same clock, under the same epoch. A PLAYOUT is applied, or ignored when older, repeated or late (P1 / P3),
+ * and ACKed either way; BARGE_IN and TEXT_TURN are still refused NOT_SUPPORTED_YET.
  */
 export class LiveCallConnection {
   private phase: Phase = 'AWAIT_HELLO';
@@ -132,6 +140,11 @@ export class LiveCallConnection {
   private recordingId: string | null = null;
   private endsAt: number | null = null;
   private writer: UserTrackWriter | null = null;
+  /** S8B-05 CP2: the QANDEEL track writer (the reply audio the phone confirmed playing). */
+  private qandeel: UserTrackWriter | null = null;
+  private sessionId: string | null = null;
+  /** The capture instant of the latest uplink packet taken (the call's clock), for the reply's clock start. */
+  private latestCaptureMs = 0;
   private decoder: OpusPacketDecoder | null = null;
   private speech: LiveCallSpeechStream | null = null;
   private lastSeq: number | null = null;
@@ -156,6 +169,8 @@ export class LiveCallConnection {
     private readonly userId: string,
     tokenExpiresAt: number,
     private readonly deps: CallConnectionDeps,
+    /** The person's current access token (the upgrade's, then each TOKEN_REFRESH): owner reads of the call turn engine. */
+    private accessToken = '',
   ) {
     const now = deps.clock.now();
     this.lastInboundAt = now;
@@ -244,6 +259,15 @@ export class LiveCallConnection {
       case 'END':
         if (this.repeated(message.msgId)) return;
         return this.endByPerson(message.msgId);
+      case 'PLAYOUT': {
+        if (this.phase !== 'ACTIVE') return this.violation();
+        if (this.repeated(message.msgId)) return;
+        const verdict = this.speech
+          ? await this.speech.playout({ callTurnIndex: message.callTurnIndex, chunkSeq: message.chunkSeq, playedMs: message.playedMs }).catch(() => 'IGNORED')
+          : 'IGNORED';
+        if (verdict === 'VIOLATION') return this.violation();
+        return this.ack(message.msgId);
+      }
       default:
         if (NOT_YET_SUPPORTED.has(message.type)) {
           this.send({ type: 'REFUSED', reason: 'NOT_SUPPORTED_YET', msgId: 'msgId' in message ? message.msgId : null });
@@ -268,6 +292,7 @@ export class LiveCallConnection {
   private async hello(hello: Extract<ClientMessage, { type: 'HELLO' }>): Promise<void> {
     this.callId = hello.callId;
     this.clientInstanceId = hello.clientInstanceId;
+    this.sessionId = hello.sessionId;
     if (!hello.resume) {
       const begun = await this.deps.store.begin({ userId: this.userId, sessionId: hello.sessionId, callId: hello.callId, clientInstanceId: hello.clientInstanceId })
         .catch(() => null);
@@ -332,7 +357,7 @@ export class LiveCallConnection {
     if (this.phase === 'CLOSED') return;
     this.enqueue(async () => {
       this.handingOver = true;
-      await this.writer?.flush().catch(() => undefined);
+      await this.flushTracks();
     });
     await this.inbox;
   }
@@ -354,7 +379,7 @@ export class LiveCallConnection {
     this.fenced = true;
     this.phase = 'CLOSING';
     this.send({ type: 'REFUSED', reason: 'FENCED', msgId: null });
-    await this.writer?.close().catch(() => undefined);
+    await this.closeTracks();
     this.cleanup();
     this.transport.close(LIVE_CALL_CLOSE.FENCED, 'FENCED');
     this.deps.signal('connection', 'fenced');
@@ -366,13 +391,14 @@ export class LiveCallConnection {
       this.send({ type: 'REFUSED', reason: 'TOKEN_INVALID', msgId });
       return this.lose(LIVE_CALL_CLOSE.TOKEN, 'TOKEN_INVALID');
     }
+    this.accessToken = accessToken;
     this.armToken(tokenDeadline(accessToken, this.deps.clock.now()));
     this.ack(msgId);
   }
 
   private async endByPerson(msgId: number): Promise<void> {
     const reason = 'USER_ENDED';
-    await this.writer?.flush().catch(() => undefined);
+    await this.flushTracks();
     const ended = await this.deps.store.end({ userId: this.userId, callId: this.callId!, epoch: this.epoch!, reason }).catch(() => null);
     if (!ended) {
       // Not known to be ended: the connection is lost instead (the call is recovered, never left ACTIVE for ever).
@@ -401,7 +427,7 @@ export class LiveCallConnection {
       if (activated.outcome !== 'ACTIVE' || !activated.recordingId) return this.failCall(REFUSAL_OF[activated.outcome] ?? 'UNAVAILABLE');
       this.startedAt = activated.startedAt;
       this.recordingId = activated.recordingId;
-      this.openMedia(activated.recordingId, { userTrackEndMs: 0, userNextSegment: 0 });
+      this.openMedia(activated.recordingId, { userTrackEndMs: 0, userNextSegment: 0, qandeelTrackEndMs: 0, qandeelNextSegment: 0 });
       this.phase = 'ACTIVE';
       this.deps.signal('activate', 'success');
       this.sendState('ACTIVE');
@@ -434,18 +460,60 @@ export class LiveCallConnection {
     } catch {
       return this.violation();
     }
+    this.latestCaptureMs = frame.captureMs;
     this.speech?.push(pcm, frame.captureMs);
     writer.append(frame.packet, frame.captureMs);
     if (writer.pendingBytes > LIVE_CALL_LIMITS.maxPendingAudioBytes) return this.overloaded();
     if (writer.failure) return this.writerFailed();
   }
 
-  private openMedia(recordingId: string, durable: { userTrackEndMs: number; userNextSegment: number }): void {
-    this.writer = new UserTrackWriter(
-      { media: this.deps.media, store: this.deps.store, userId: this.userId, callId: this.callId!, epoch: this.epoch! }, recordingId, durable);
+  private openMedia(recordingId: string, durable: Pick<TrackState, 'userTrackEndMs' | 'userNextSegment' | 'qandeelTrackEndMs' | 'qandeelNextSegment'>): void {
+    const deps = { media: this.deps.media, store: this.deps.store, userId: this.userId, callId: this.callId!, epoch: this.epoch! };
+    this.writer = new UserTrackWriter(deps, recordingId, durable);
+    this.qandeel = UserTrackWriter.forTrack('QANDEEL', deps, recordingId, { endMs: durable.qandeelTrackEndMs, nextSegment: durable.qandeelNextSegment });
     this.decoder = new OpusPacketDecoder(16_000);
-    this.speech = this.deps.speech.open({ userId: this.userId, callId: this.callId! });
+    this.latestCaptureMs = Math.max(0, durable.userTrackEndMs - 20);
+    this.speech = this.deps.speech.open(this.channel());
     this.lastSeq = null;
+  }
+
+  /** What the call turn engine may do through this connection (S8B-05 CP2). */
+  private channel(): LiveCallTurnChannel {
+    const settle = async (writer: UserTrackWriter | null): Promise<number | null> => {
+      if (!writer) return null;
+      await writer.flush().catch(() => undefined);
+      return writer.failure ? null : writer.storedEndMs;
+    };
+    return {
+      userId: this.userId,
+      callId: this.callId!,
+      sessionId: this.sessionId!,
+      epoch: this.epoch!,
+      accessToken: () => this.accessToken,
+      latestCaptureMs: () => this.latestCaptureMs,
+      settleUserTrack: () => settle(this.writer),
+      qandeelEndMs: () => this.qandeel?.expectedCaptureMs ?? 0,
+      qandeelSilence: (endMs) => this.qandeel?.gap('NOT_SPEAKING', endMs),
+      qandeelAppend: (packet, clockMs) => this.qandeel?.append(packet, clockMs),
+      settleQandeelTrack: () => settle(this.qandeel),
+      send: (message) => this.send(message),
+      sendReplyAudio: (packet) => this.sendReplyAudio(packet),
+    };
+  }
+
+  /** Both tracks write what they took (USER first: it is the person's audio). */
+  private async flushTracks(): Promise<void> {
+    await this.writer?.flush().catch(() => undefined);
+    await this.qandeel?.flush().catch(() => undefined);
+  }
+
+  private async closeTracks(abandon = false): Promise<void> {
+    await this.writer?.close(abandon).catch(() => undefined);
+    await this.qandeel?.close(abandon).catch(() => undefined);
+  }
+
+  private writerFailure(): WriterFailure | null {
+    return this.writer?.failure ?? this.qandeel?.failure ?? null;
   }
 
   // ------------------------------------------------------------------ lease, silence, token, length
@@ -460,7 +528,7 @@ export class LiveCallConnection {
 
   private async renewLease(): Promise<void> {
     if (this.epoch === null || this.callId === null) return;
-    if (this.writer?.failure) return this.writerFailed();
+    if (this.writerFailure()) return this.writerFailed();
     const beat = await this.deps.store.heartbeat({ userId: this.userId, callId: this.callId, epoch: this.epoch }).catch(() => null);
     if (!beat) {
       this.deps.signal('lease', 'transport_failure');
@@ -491,7 +559,7 @@ export class LiveCallConnection {
 
   private async endByServer(): Promise<void> {
     if (this.phase !== 'ACTIVE') return;
-    await this.writer?.flush().catch(() => undefined);
+    await this.flushTracks();
     const ended = await this.deps.store.end({ userId: this.userId, callId: this.callId!, epoch: this.epoch!, reason: 'SERVER_ENDED' }).catch(() => null);
     if (!ended) return this.lose(LIVE_CALL_CLOSE.REFUSED, 'UNAVAILABLE');
     if (ended.outcome === 'FENCED') return this.beFenced();
@@ -536,7 +604,7 @@ export class LiveCallConnection {
   }
 
   private async writerFailed(): Promise<void> {
-    const failure = this.writer?.failure;
+    const failure = this.writerFailure();
     // The recording refused this connection's epoch: a newer connection holds the call, which goes on there.
     if (failure === 'FENCED') return this.beFenced();
     return this.failCall(failure === 'CONSENT_REQUIRED' ? 'CONSENT_REQUIRED' : 'UNAVAILABLE');
@@ -549,7 +617,7 @@ export class LiveCallConnection {
   private async failCall(reason: RefusalReason): Promise<void> {
     this.send({ type: 'REFUSED', reason, msgId: null });
     if (this.epoch !== null && this.callId !== null && !this.ended && !this.fenced) {
-      await this.writer?.close(true).catch(() => undefined);
+      await this.closeTracks(true);
       const ended = await this.deps.store.end({ userId: this.userId, callId: this.callId, epoch: this.epoch, reason: 'FAILED' }).catch(() => null);
       if (ended?.outcome === 'ENDED' || ended?.outcome === 'ALREADY_ENDED') {
         this.ended = true;
@@ -570,7 +638,7 @@ export class LiveCallConnection {
   private async beFenced(): Promise<void> {
     this.fenced = true;
     this.send({ type: 'REFUSED', reason: 'FENCED', msgId: null });
-    await this.writer?.close().catch(() => undefined);
+    await this.closeTracks();
     this.deps.signal('connection', 'fenced');
     await this.shut(LIVE_CALL_CLOSE.FENCED, 'FENCED');
   }
@@ -578,7 +646,7 @@ export class LiveCallConnection {
   /** The authority ended the call (its maximum, the sweep): what was received is already as written as it can be. */
   private async endedElsewhere(reason: CallEndReason | null): Promise<void> {
     this.ended = true;
-    await this.writer?.close(true).catch(() => undefined);
+    await this.closeTracks(true);
     this.send(this.state_('ENDED', reason));
     await this.shut(LIVE_CALL_CLOSE.NORMAL, 'ENDED');
   }
@@ -593,7 +661,7 @@ export class LiveCallConnection {
     const holding = (this.phase === 'ACTIVE' || this.phase === 'CONNECTING') && !this.fenced && !this.ended && this.epoch !== null;
     this.phase = 'CLOSING';
     if (holding) {
-      await this.writer?.close().catch(() => undefined);
+      await this.closeTracks();
       const suspended = await this.deps.store.suspend({ userId: this.userId, callId: this.callId!, epoch: this.epoch! }).catch(() => null);
       this.deps.signal('suspend', suspended ? (suspended.outcome === 'SUSPENDED' ? 'success' : 'refused_expected') : 'transport_failure');
     }
@@ -631,6 +699,13 @@ export class LiveCallConnection {
     if (this.phase === 'CLOSED') return;
     if (this.transport.bufferedBytes > LIVE_CALL_LIMITS.maxOutboundBufferBytes) return;
     this.transport.sendText(encodeServerMessage(message));
+  }
+
+  /** One reply packet (REPLY_AUDIO) while the call is ACTIVE; a stalled consumer gets nothing more (it is lost by its own bound). */
+  private sendReplyAudio(packet: ReplyAudioPacket): void {
+    if (this.phase !== 'ACTIVE' || this.epoch === null) return;
+    if (this.transport.bufferedBytes > LIVE_CALL_LIMITS.maxOutboundBufferBytes) return;
+    this.transport.sendBinary(encodeReplyAudioFrame({ epoch: this.epoch, ...packet }));
   }
 
   private sendState(state: CallState): void {

@@ -21,6 +21,9 @@ export interface TrackState {
   readonly recordingState: string;
   readonly userTrackEndMs: number;
   readonly userNextSegment: number;
+  /** S8B-05 CP2: the QANDEEL track (the reply audio the phone confirmed playing), on the same capture clock. */
+  readonly qandeelTrackEndMs: number;
+  readonly qandeelNextSegment: number;
 }
 
 export interface CallTruth {

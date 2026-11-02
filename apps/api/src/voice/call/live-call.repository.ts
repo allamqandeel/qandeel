@@ -89,7 +89,10 @@ export class LiveCallRepository implements LiveCallStore {
   }
 
   async readTracks(input: { userId: string; callId: string }): Promise<TrackState | null> {
-    const rows = await this.rows<{ recording_id: unknown; recording_state: unknown; user_track_end_ms: unknown; user_next_segment: unknown }>(
+    const rows = await this.rows<{
+      recording_id: unknown; recording_state: unknown; user_track_end_ms: unknown; user_next_segment: unknown; qandeel_track_end_ms: unknown;
+      qandeel_next_segment: unknown;
+    }>(
       'server_read_call_tracks_v1', { p_user_id: input.userId, p_call_id: input.callId },
     );
     if (rows.length === 0) return null;
@@ -97,7 +100,8 @@ export class LiveCallRepository implements LiveCallStore {
     const row = rows[0]!;
     return {
       recordingId: String(row.recording_id), recordingState: String(row.recording_state), userTrackEndMs: Number(row.user_track_end_ms),
-      userNextSegment: Number(row.user_next_segment),
+      userNextSegment: Number(row.user_next_segment), qandeelTrackEndMs: Number(row.qandeel_track_end_ms),
+      qandeelNextSegment: Number(row.qandeel_next_segment),
     };
   }
 

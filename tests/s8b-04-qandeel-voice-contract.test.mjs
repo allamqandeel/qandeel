@@ -258,7 +258,11 @@ test('the ONE speech route: Google Cloud through ADC, gemini-3.8-flash-tts, Achi
   assert.match(request, /responseModalities: \['AUDIO'\]/u);
   assert.match(read('apps/api/src/voice/vertex-speech/vertex-speech.adapter.ts'), /redirect: 'error'/u);
   const module = codeOnly(read('apps/api/src/voice/voice.module.ts'));
-  assert.equal((module.match(/new VertexSpeechAdapter\(/gu) ?? []).length, 1, 'one synthesis route, no fallback');
+  // RE-ANCHORED by S8B-05 CP2 (contract §5, L1): the live call's synthesis is the SAME route (model, Achird, limits and
+  // admission spread from it) with its own adapter instance over the call's keep-alive transport. Still one provider, one
+  // request body, no fallback.
+  assert.equal((module.match(/new VertexSpeechAdapter\(/gu) ?? []).length, 2, 'the Listen route and its live call transport, no fallback');
+  assert.match(module, /provide: LIVE_CALL_SYNTHESIS_ROUTE,[\s\S]*?return \{ \.\.\.listen, adapter: new VertexSpeechAdapter\(\{ \.\.\.config, projectId: config\.projectId \}, new AdcAccessTokenSource\(\), undefined, liveCallFetch\(\)\) \};[\s\S]*?inject: \[LISTEN_SYNTHESIS_ROUTE\]/u, 'the call route is the Listen route over the call transport');
   assert.doesNotMatch(module, /Fake[A-Z]\w*/u, 'no fake is composed');
   for (const path of [...files('apps/mobile/src'), 'apps/mobile/app.json', 'apps/mobile/app.config.js', 'apps/mobile/package.json']) {
     assert.doesNotMatch(read(path), /aiplatform\.googleapis|QANDEEL_VERTEX_TTS|google-auth-library/u, `${path} reaches no provider`);
@@ -284,7 +288,7 @@ test('Listen: the paid command is a POST; the GET reads the store only; one admi
   }
 });
 
-test('TM-01 on VOICE_NOTE turns only, TM-03 only with the hint policy on (CP1 OFF), TM-02 wired nowhere, lexicon disabled', () => {
+test('TM-01 on VOICE_NOTE turns only, TM-03 only with the hint policy on (CP1 OFF), TM-02 only on the live call reply, lexicon disabled', () => {
   const api = files('apps/api/src').filter((p) => !p.endsWith('.spec.ts'));
   const voiceNoteCallers = api.filter((p) => /modality: 'VOICE_NOTE'/u.test(codeOnly(read(p))));
   assert.deepEqual(voiceNoteCallers, ['apps/api/src/conversation/conversation.service.ts'], 'only the Voice Note runner passes VOICE_NOTE');
@@ -293,9 +297,17 @@ test('TM-01 on VOICE_NOTE turns only, TM-03 only with the hint policy on (CP1 OF
   // RE-ANCHORED by S8B-04 CP2: the runner may also hand over the automatic voice reply (D-S2 / D-S3), nothing else.
   assert.match(runner, /\{ modality: 'VOICE_NOTE'(?:, liveReply: options\.liveReply)? \}/u);
   assert.equal((codeOnly(service).match(/modality: 'VOICE_NOTE'/gu) ?? []).length, 1);
-  for (const path of api.filter((p) => p !== POLICY)) {
+  // RE-ANCHORED by S8B-05 CP2 (VA-7): S8B-05 consumes TM-02 in exactly one place, the live call's REALTIME reply, as the
+  // turn's text guidance then TM-02 (no TM-01: a call reply carries no delivery line; its expression is CALM unless one
+  // is parsed). Nothing else wires it.
+  const LIVE_CALL_REPLY = 'apps/api/src/conversation/live-call-reply.service.ts';
+  for (const path of api.filter((p) => p !== POLICY && p !== LIVE_CALL_REPLY)) {
     assert.doesNotMatch(read(path), /withSpokenCallReply|VOICE_SPOKEN_REPLY_GUIDANCE_TM_02/u, `${path} does not wire TM-02 (S8B-05)`);
   }
+  const callReply = codeOnly(read(LIVE_CALL_REPLY));
+  assert.equal((callReply.match(/withSpokenCallReply\(/gu) ?? []).length, 1);
+  assert.match(callReply, /behavioralGuidance: withSpokenCallReply\(textGuidance\)/u);
+  assert.doesNotMatch(callReply, /withVoiceNoteChannel|VOICE_DELIVERY_LINE_GUIDANCE_TM_01/u, 'the call reply adds no TM-01');
   const orchestrator = codeOnly(read('apps/api/src/conversation/conversation-orchestrator.service.ts'));
   assert.match(orchestrator, /voiceNote \? withVoiceNoteChannel\(textGuidance, \{ hints: SPEECH_HINT_POLICY !== 'OFF' \}\) : textGuidance/u);
   assert.match(read('apps/api/src/speech-rendering/speech-hints.ts'), /export const SPEECH_HINT_POLICY: SpeechHintPolicy = 'OFF';/u);

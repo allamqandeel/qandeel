@@ -305,6 +305,7 @@
     "verify:live-call-authority:integration": "node --env-file-if-exists=.env database/verify-migration-0189.mjs",
     "verify:live-call-spoken-turn:integration": "node --env-file-if-exists=.env database/verify-migration-0190.mjs",
     "prove:live-call-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-live-call-synthetic-proof.ts",
+    "prove:live-call-spoken-turn-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts",
     "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",
     "test:a3-02-native-push-platform-delivery-contract": "node --test tests/a3-02-native-push-platform-delivery-contract.test.mjs",
     "test:s4-01-shared-world-reachability-contract": "node --test tests/s4-01-shared-world-reachability-contract.test.mjs",

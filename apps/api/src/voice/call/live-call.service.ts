@@ -61,7 +61,9 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** The connection for one authenticated socket. `forget` must be called when the socket is gone. */
-  attach(transport: CallTransport, userId: string, tokenExpiresAt: number, clock: CallClock = REAL_CLOCK): { connection: LiveCallConnection; forget: () => void } {
+  attach(transport: CallTransport, userId: string, tokenExpiresAt: number, clock: CallClock = REAL_CLOCK, accessToken = ''): {
+    connection: LiveCallConnection; forget: () => void;
+  } {
     const connection = new LiveCallConnection(transport, userId, tokenExpiresAt, {
       store: this.store,
       media: this.media,
@@ -70,7 +72,7 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
       registry: this.registry,
       clock,
       signal: (operation, outcome) => this.signal(operation, outcome),
-    });
+    }, accessToken);
     this.live.set(connection, userId);
     return { connection, forget: () => void this.live.delete(connection) };
   }

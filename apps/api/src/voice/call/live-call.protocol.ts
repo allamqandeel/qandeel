@@ -112,7 +112,7 @@ export type ClientMessage =
   | { readonly type: 'UNMUTE'; readonly msgId: number; readonly captureMs: number }
   | { readonly type: 'TOKEN_REFRESH'; readonly msgId: number; readonly accessToken: string }
   | { readonly type: 'END'; readonly msgId: number }
-  // Shapes frozen in v1; their logic is CP2 / CP4. CP1 answers REFUSED NOT_SUPPORTED_YET and never claims success.
+  // Shapes frozen in v1. PLAYOUT is applied from CP2; BARGE_IN and TEXT_TURN (CP3 / CP4) are answered REFUSED NOT_SUPPORTED_YET.
   | { readonly type: 'PLAYOUT'; readonly msgId: number; readonly callTurnIndex: number; readonly chunkSeq: number; readonly playedMs: number }
   | { readonly type: 'BARGE_IN'; readonly msgId: number; readonly callTurnIndex: number; readonly captureMs: number }
   | { readonly type: 'TEXT_TURN'; readonly msgId: number; readonly clientTurnId: string; readonly text: string };
@@ -122,8 +122,8 @@ export type ClientMessageType = ClientMessage['type'];
 export const CLIENT_MESSAGES = Object.freeze(['HELLO', 'AUDIO', 'PLAYOUT', 'BARGE_IN', 'TEXT_TURN', 'MUTE', 'UNMUTE', 'TOKEN_REFRESH', 'HEARTBEAT', 'END'] as const);
 /** Every server→client message of v1, REPLY_AUDIO (binary) included. */
 export const SERVER_MESSAGES = Object.freeze(['STATE', 'TURN_COMMITTED', 'REPLY_AUDIO', 'REPLY_END', 'REFUSED', 'CALL_ENDING', 'ACK'] as const);
-/** The client messages whose logic is not in CP1 (frozen shape, refused honestly). */
-export const NOT_YET_SUPPORTED: ReadonlySet<ClientMessageType> = new Set(['PLAYOUT', 'BARGE_IN', 'TEXT_TURN']);
+/** The client messages whose logic is not implemented yet (frozen shape, refused honestly). S8B-05 CP2 implements PLAYOUT. */
+export const NOT_YET_SUPPORTED: ReadonlySet<ClientMessageType> = new Set(['BARGE_IN', 'TEXT_TURN']);
 
 // ------------------------------------------------------------------ server → client (text)
 export type ServerMessage =

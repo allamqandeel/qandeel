@@ -80,6 +80,7 @@ const FILES = {
   routerModule: 'apps/api/src/model-router/model-router.module.ts',
   conversationModule: 'apps/api/src/conversation/conversation.module.ts',
   conversationService: 'apps/api/src/conversation/conversation.service.ts',
+  liveCallReply: 'apps/api/src/conversation/live-call-reply.service.ts',
   foreground: 'apps/api/src/conversation/foreground-turn-work.ts',
   focusBinding: 'apps/api/src/conversational-focus/focus-resolution-binding.ts',
   threadBinding: 'apps/api/src/thread-establishment/thread-establishment-binding.ts',
@@ -517,6 +518,8 @@ function attributionViolations(world) {
   if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) =>\s*runForegroundTurnWork\(gate, foregroundTurnWorkDeadlineMs\(\), \(\) => this\.admitAndRunTurn\(/u.test(ts(world.conversationService))) out.push('the foreground request does not attribute its provider calls to the authenticated reader');
   // S8B-03 CP1: the committed Voice Note turn is charged to its owner the same way, in its own scope.
   if (!/return runWithAiUsageAttribution\(\{ userId \}, \(\) => runForegroundTurnWork\(gate, foregroundTurnWorkDeadlineMs\(\), async \(\) => \{\s*const turn = await this\.repository\.findTurn\(/u.test(ts(world.conversationService))) out.push('the committed voice-note turn does not attribute its provider calls to its owner');
+  // S8B-05 CP2: the live call's REALTIME reply is charged to the call's owner, correlated with its Session and spoken turn.
+  if (!/return runWithAiUsageAttribution\(\{ userId: request\.userId, sessionId: request\.sessionId, sourceTurnId: request\.userTurnId \}, \(\) => this\.replyOnce\(request\)\);/u.test(ts(world.liveCallReply))) out.push('the live call reply is not attributed to the call\'s owner and turn');
   if (!/withPostResponseAiUsageAttribution\(entry\.envelope, \(\) => this\.dispatcher\.dispatch\(entry\.envelope\)\)/u.test(ts(world.consumer))) out.push('post-response provider calls are not attributed');
   // S8A-04 CP1: the Shared semantic reading is charged to the sender the 0089 resolver names as the author of its message.
   // S8A-04 CP2 (0175): with the World and the causing message, for the reading and the placement alike.
@@ -735,6 +738,7 @@ const PLANTED = [
   ['ops: the registry drops the operations scan', 'operationsScanViolations', () => plant('telemetry', " ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],\n", '')],
   ['attribution: the foreground request is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () =>\n      runForegroundTurnWork(', 'return (() =>\n      runForegroundTurnWork(')],
   ['attribution: the committed voice-note turn is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {', 'return (() => runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), async () => {')],
+  ['attribution: the live call reply is unattributed', 'attributionViolations', () => plant('liveCallReply', 'return runWithAiUsageAttribution({ userId: request.userId, sessionId: request.sessionId, sourceTurnId: request.userTurnId }, () => this.replyOnce(request));', 'return this.replyOnce(request);')],
 ];
 
 for (const [name, detector, world] of PLANTED) {

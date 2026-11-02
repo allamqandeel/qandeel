@@ -3,13 +3,21 @@
 **Status:** FROZEN by S8B-05 CP1 (2026-11-02), under the Integrated Live Call Contract v1.2 FINAL (Part A, 05-CP1 Scope C).
 The code statement of the same protocol is `apps/api/src/voice/call/live-call.protocol.ts`, and
 `tests/s8b-05-live-call-contract.test.mjs` keeps the two identical. **A change is a new protocol version, never an edit of
-this one.**
+this one.** S8B-05 CP2 (2026-11-02) implemented PLAYOUT, TURN_COMMITTED, REPLY_AUDIO and REPLY_END in exactly these frozen
+shapes; no shape, field, limit or close code changed.
 
 **What CP1 implements:** the transport, authentication, HELLO / resume, the uplink audio and the USER track, MUTE / UNMUTE,
 TOKEN_REFRESH, HEARTBEAT, END, STATE, ACK, REFUSED and CALL_ENDING. **What is only frozen:** the shapes of PLAYOUT,
 BARGE_IN, TEXT_TURN (client) and TURN_COMMITTED, REPLY_AUDIO, REPLY_END (server). Their logic belongs to S8B-05 CP2 – CP4.
 In CP1 the server answers each of those client messages with `REFUSED NOT_SUPPORTED_YET` and never ACKs one, and it never
 sends any of those server messages.
+
+**What CP2 adds:** the spoken turn and QANDEEL's reply. The server sends TURN_COMMITTED for each committed spoken turn
+(`role: USER`, `clientTurnId: null`), REPLY_AUDIO for the reply (Opus 24 kHz, 20 ms, `chunkSeq` from 0, `offsetMs` =
+`chunkSeq` × 20) and one REPLY_END per exchange, carrying the delivery state of its one close. PLAYOUT is applied: only a
+higher mark advances, a resend is re-ACKed, a mark for a reply that is closed or that this connection never sent is
+ignored and still ACKed, and a mark for a chunk the server never sent (or outside its chunk) is `PROTOCOL_VIOLATION`.
+BARGE_IN and TEXT_TURN stay `REFUSED NOT_SUPPORTED_YET` (CP3 – CP4).
 
 ## 1. Transport
 
@@ -65,14 +73,14 @@ Big-endian, a 20-byte header, then one Opus packet of 1 … 1275 bytes.
 
 **Client → server (text, JSON, exact keys; any other key, a missing key or a bad value is a protocol violation):**
 
-| type | fields | CP1 |
+| type | fields | status |
 |---|---|---|
 | `HELLO` | `v: 1`, `callId`, `sessionId`, `clientInstanceId` (UUIDs), `resume: boolean` | implemented; first message, exactly once |
 | `HEARTBEAT` | `n` (u32) | implemented; once a second |
 | `MUTE` / `UNMUTE` | `msgId`, `captureMs` (multiple of 20) | implemented; ACKed |
 | `TOKEN_REFRESH` | `msgId`, `accessToken` (≤ 3500 chars, no whitespace) | implemented; the same person or the socket closes `4001` |
 | `END` | `msgId` | implemented; ends the call `USER_ENDED` |
-| `PLAYOUT` | `msgId`, `callTurnIndex`, `chunkSeq`, `playedMs` | shape frozen; `REFUSED NOT_SUPPORTED_YET` |
+| `PLAYOUT` | `msgId`, `callTurnIndex`, `chunkSeq`, `playedMs` | implemented (CP2); ACKed; the highest mark only |
 | `BARGE_IN` | `msgId`, `callTurnIndex`, `captureMs` | shape frozen; `REFUSED NOT_SUPPORTED_YET` |
 | `TEXT_TURN` | `msgId`, `clientTurnId`, `text` (1 … 2000 chars) | shape frozen; `REFUSED NOT_SUPPORTED_YET` |
 
@@ -80,16 +88,16 @@ AUDIO is the binary frame above.
 
 **Server → client:**
 
-| type | fields | CP1 |
+| type | fields | status |
 |---|---|---|
 | `STATE` | `callId`, `state`, `epoch`, `startedAt`, `resumeFromCaptureMs`, `lastMsgId`, `endsAt`, `endReason`, `heartbeatMs` | sent |
 | `ACK` | `msgId` | sent |
 | `REFUSED` | `reason`, `msgId` (or null) | sent |
 | `CALL_ENDING` | `endsInMs` (300000, then 60000) | sent |
-| `TURN_COMMITTED` | `callTurnIndex`, `role`, `turnId`, `clientTurnId` | shape frozen; not sent |
-| `REPLY_END` | `callTurnIndex`, `chunks`, `deliveryState` | shape frozen; not sent |
+| `TURN_COMMITTED` | `callTurnIndex`, `role`, `turnId`, `clientTurnId` | sent (CP2) |
+| `REPLY_END` | `callTurnIndex`, `chunks`, `deliveryState` | sent (CP2), once per exchange |
 
-REPLY_AUDIO is the binary frame above (CP2).
+REPLY_AUDIO is the binary frame above (sent from CP2).
 
 **`STATE.state`:** `CONNECTING` | `ACTIVE` | `RECONNECTING` | `ENDED`.
 
@@ -100,7 +108,7 @@ REPLY_AUDIO is the binary frame above (CP2).
 | reason | when |
 |---|---|
 | `PROTOCOL_VIOLATION` | the client broke this protocol |
-| `NOT_SUPPORTED_YET` | a CP2 – CP4 message in CP1 |
+| `NOT_SUPPORTED_YET` | a CP3 – CP4 message (BARGE_IN, TEXT_TURN) |
 | `CONSENT_REQUIRED` | no current voice consent |
 | `NOT_AVAILABLE_NOW` | the voice gate is closed |
 | `CAPACITY_FULL` | every realtime seat is taken (calls and live voice notes share them) |
@@ -162,7 +170,7 @@ REPLY_AUDIO is the binary frame above (CP2).
   "version": 1,
   "clientMessages": ["HELLO", "AUDIO", "PLAYOUT", "BARGE_IN", "TEXT_TURN", "MUTE", "UNMUTE", "TOKEN_REFRESH", "HEARTBEAT", "END"],
   "serverMessages": ["STATE", "TURN_COMMITTED", "REPLY_AUDIO", "REPLY_END", "REFUSED", "CALL_ENDING", "ACK"],
-  "notYetSupported": ["BARGE_IN", "PLAYOUT", "TEXT_TURN"],
+  "notYetSupported": ["BARGE_IN", "TEXT_TURN"],
   "frame": { "audioKind": 1, "replyAudioKind": 2, "headerBytes": 20, "maxOpusPacketBytes": 1275, "maxTextFrameBytes": 4096, "packetMs": 20 },
   "limits": {
     "heartbeatIntervalMs": 1000,

@@ -48,8 +48,10 @@ export function assertDeepSeekFlashSelection(environment: NodeJS.ProcessEnv, pre
   if (model && model !== DEEPSEEK_FLASH_MODEL) throw new Error(`${prefix}_MODEL must be ${DEEPSEEK_FLASH_MODEL}.`);
 }
 
-export function createDeepSeekClient(config: { apiKey: string; timeoutMs: number }): OpenAI {
+/** `fetchImpl`: S8B-05 CP2 (L1) — the live call's own keep-alive transport; absent, the SDK's default. */
+export function createDeepSeekClient(config: { apiKey: string; timeoutMs: number }, fetchImpl?: typeof fetch): OpenAI {
   return new OpenAI({
+    ...(fetchImpl ? { fetch: fetchImpl } : {}),
     apiKey: config.apiKey,
     baseURL: DEEPSEEK_API_BASE_URL,
     // The SDK would otherwise read these from OPENAI_* variables and send them to DeepSeek as headers.
