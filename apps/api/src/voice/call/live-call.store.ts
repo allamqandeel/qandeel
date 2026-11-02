@@ -44,5 +44,6 @@ export interface LiveCallStore {
   sweep(limit: number): Promise<number>;
   truth(userId: string): Promise<CallTruth>;
   readTracks(input: { userId: string; callId: string }): Promise<TrackState | null>;
-  recordGap(input: { userId: string; recordingId: string; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: GapKind }): Promise<string>;
+  /** A gap where the track ends, for the connection holding `epoch` (0189's fenced entry: FENCED once it moved on). */
+  recordGap(input: { userId: string; recordingId: string; epoch: number; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: GapKind }): Promise<string>;
 }

@@ -76,11 +76,19 @@ export class VoiceMediaRepository {
     });
   }
 
-  addSegment(userId: string, recordingId: string, track: string, segmentIndex: number, clockStartMs: number, clockEndMs: number, byteSize: number, leaseSeconds: number) {
-    return this.first<AddSegmentRow>('server_add_call_segment_v1', {
+  /**
+   * With a connection epoch: 0189's fenced entry (a live call's writer; FENCED once the epoch has moved on). Without one:
+   * 0183's entry, which 0189 answers FENCED for every call that has not ENDED.
+   */
+  addSegment(userId: string, recordingId: string, track: string, segmentIndex: number, clockStartMs: number, clockEndMs: number, byteSize: number,
+    leaseSeconds: number, connectionEpoch?: number) {
+    const args = {
       p_user_id: userId, p_recording_id: recordingId, p_track: track, p_segment_index: segmentIndex, p_clock_start_ms: clockStartMs,
       p_clock_end_ms: clockEndMs, p_byte_size: byteSize, p_lease_seconds: leaseSeconds,
-    });
+    };
+    return connectionEpoch === undefined
+      ? this.first<AddSegmentRow>('server_add_call_segment_v1', args)
+      : this.first<AddSegmentRow>('server_add_call_segment_v2', { ...args, p_connection_epoch: connectionEpoch });
   }
 
   storeSegment(userId: string, recordingId: string, track: string, segmentIndex: number, byteSize: number) {

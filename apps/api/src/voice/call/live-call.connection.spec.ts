@@ -224,11 +224,39 @@ describe('S8B-05 CP1 one live call connection (protocol v1 over the call authori
     expect(older.transport.last('REFUSED')).toMatchObject({ reason: 'FENCED' });
     expect(older.transport.closed?.code).toBe(LIVE_CALL_CLOSE.FENCED);
     expect(newer.transport.last('STATE')).toMatchObject({ state: 'ACTIVE', epoch: 2, resumeFromCaptureMs: 1600 });
+    // Written under epoch 1 while it still held the call: the fence (0189) refuses an older epoch, and nothing was lost.
     expect(h.authority.segments.map((s) => [s.startMs, s.endMs])).toEqual([[0, 1600]]);
     // The fenced connection changes nothing more.
     older.connection.onBinary(encodeAudioFrame({ epoch: 1, seq: 80, captureMs: 1600, packet: PACKETS[80]! }));
     await settle();
     expect(h.authority.calls.get(CALL)!.state).toBe('ACTIVE');
+  });
+
+  it('another instance\'s late segment is FENCED by the recording: it writes nothing, leaves 4003, and the phone\'s resend is the one truth', async () => {
+    const h = harness();
+    const older = await activeCall(h);
+    await audio(h, older.connection, 1, 1, 199, 1, 20); // 4 s held in the writer's buffer, not yet a segment
+    const newer = h.connect({ registry: new LiveCallRegistry() });
+    newer.connection.onText(hello(true));
+    await settle();
+    expect(newer.transport.last('STATE')).toMatchObject({ state: 'ACTIVE', epoch: 2, resumeFromCaptureMs: 0 });
+    // Before its lease renewal notices, the older connection cuts a segment: the recording answers FENCED.
+    for (let i = 0; i < 301; i += 25) { // the newer connection's phone stays alive meanwhile
+      await audio(h, older.connection, 1, 200 + i, Math.min(25, 301 - i), 200 + i, 4000 + i * 20);
+      newer.connection.onText(JSON.stringify({ type: 'HEARTBEAT', n: i }));
+    }
+    await settle();
+    expect(older.transport.last('REFUSED')).toMatchObject({ reason: 'FENCED' });
+    expect(older.transport.closed?.code).toBe(LIVE_CALL_CLOSE.FENCED);
+    expect(h.authority.segments).toEqual([]);
+    expect(h.authority.calls.get(CALL)).toMatchObject({ state: 'ACTIVE', epoch: 2 }); // not ended FAILED
+    // The phone resends from the durable end it was told, on the connection that holds the call.
+    await audio(h, newer.connection, 2, 0, 100, 0, 0);
+    newer.connection.onText(JSON.stringify({ type: 'END', msgId: 1 }));
+    await settle();
+    expect(h.authority.segments.map((s) => [s.startMs, s.endMs])).toEqual([[0, 2000]]);
+    expect(h.authority.gaps).toEqual([]);
+    expect(h.authority.calls.get(CALL)).toMatchObject({ state: 'ENDED', endReason: 'USER_ENDED', epoch: 2 });
   });
 
   it('a connection on another instance learns it is fenced at its next lease renewal and leaves without suspending', async () => {

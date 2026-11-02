@@ -3,14 +3,20 @@ import { muxOggOpus } from '../codec/ogg-opus';
 import { AUDIO_PACKET_MS, LIVE_CALL_LIMITS } from '../live-call.protocol';
 import type { GapKind, LiveCallStore, TrackState } from '../live-call.store';
 
-/** The voice-media writer seam (VoiceMediaService.writeCallSegment): add → one PUT of exactly its bytes → store. */
+/**
+ * The voice-media writer seam (VoiceMediaService.writeCallSegment): add (fenced by the connection epoch, 0189) → one PUT of
+ * exactly its bytes → store.
+ */
 export interface CallSegmentMedia {
   writeCallSegment(userId: string, recordingId: string, track: 'USER' | 'QANDEEL', segmentIndex: number, clockStartMs: number,
-    clockEndMs: number, body: Readable, byteSize: number, signal: AbortSignal): Promise<{ outcome: string }>;
+    clockEndMs: number, body: Readable, byteSize: number, signal: AbortSignal, connectionEpoch: number): Promise<{ outcome: string }>;
 }
 
-/** Why the writer stopped: the recording can no longer take the person's audio, and the call must not go on unrecorded. */
-export type WriterFailure = 'CONSENT_REQUIRED' | 'RECORDING_CLOSED' | 'STORAGE';
+/**
+ * Why the writer stopped: the recording can no longer take the person's audio, and the call must not go on unrecorded
+ * (CONSENT_REQUIRED, RECORDING_CLOSED, STORAGE); or FENCED: a newer connection holds the call, which goes on there.
+ */
+export type WriterFailure = 'CONSENT_REQUIRED' | 'RECORDING_CLOSED' | 'STORAGE' | 'FENCED';
 
 type Op =
   | { readonly kind: 'segment'; packets: Buffer[]; startMs: number; readonly endMs: number; readonly bytes: number }
@@ -23,6 +29,9 @@ type Op =
  *   - honest packets and times: a segment covers [first packet's captureMs, last + 20 ms), every packet is one 20 ms
  *     frame, and a hole is never filled with invented audio: it is a MUTED or RECONNECTION gap row (0183 / 0189);
  *   - in order, one write at a time: segment indexes and the track clock advance only on the database's answer;
+ *   - every admission and gap carries the connection's epoch (0189): once a newer connection holds the call the database
+ *     answers FENCED and this writer stops, writing nothing more (the phone resends from the new connection's durable end);
+ *     a segment it was admitted for before that still uploads and stores;
  *   - only `STORED` releases a segment's audio (0183 §3.5 rule 3); an ambiguous answer is reconciled from the database
  *     (server_read_call_tracks_v1) before anything else is written, so a duplicate is dropped and nothing is overwritten;
  *   - the audio held (buffered plus in flight) is bounded by the caller through `pendingBytes`;
@@ -43,7 +52,10 @@ export class UserTrackWriter {
   private stats = { segments: 0, packets: 0, gaps: 0, dropped: 0 };
 
   constructor(
-    private readonly deps: { readonly media: CallSegmentMedia; readonly store: Pick<LiveCallStore, 'readTracks' | 'recordGap'>; readonly userId: string; readonly callId: string },
+    private readonly deps: {
+      readonly media: CallSegmentMedia; readonly store: Pick<LiveCallStore, 'readTracks' | 'recordGap'>; readonly userId: string; readonly callId: string;
+      readonly epoch: number;
+    },
     private readonly recordingId: string,
     durable: { readonly userTrackEndMs: number; readonly userNextSegment: number },
   ) {
@@ -148,10 +160,15 @@ export class UserTrackWriter {
 
   private async writeGap(op: Extract<Op, { kind: 'gap' }>): Promise<void> {
     const outcome = await this.deps.store.recordGap({
-      userId: this.deps.userId, recordingId: this.recordingId, track: 'USER', startMs: op.startMs, endMs: op.endMs, kind: op.gap,
+      userId: this.deps.userId, recordingId: this.recordingId, epoch: this.deps.epoch, track: 'USER', startMs: op.startMs, endMs: op.endMs,
+      kind: op.gap,
     }).catch(() => 'UNAVAILABLE');
     if (outcome === 'RECORDED') {
       this.stats.gaps += 1;
+      return;
+    }
+    if (outcome === 'FENCED') {
+      this.fail('FENCED');
       return;
     }
     const durable = await this.reconcile();
@@ -165,10 +182,15 @@ export class UserTrackWriter {
     const body = muxOggOpus(op.packets, { serial: this.nextSegment, inputRate: 16_000 });
     const index = this.nextSegment;
     const result = await this.deps.media.writeCallSegment(this.deps.userId, this.recordingId, 'USER', index, op.startMs, op.endMs,
-      Readable.from([body]), body.length, this.abort.signal).catch(() => ({ outcome: 'UNAVAILABLE' }));
+      Readable.from([body]), body.length, this.abort.signal, this.deps.epoch).catch(() => ({ outcome: 'UNAVAILABLE' }));
     if (result.outcome === 'STORED') {
       this.nextSegment = index + 1;
       this.stats.segments += 1;
+      return;
+    }
+    if (result.outcome === 'FENCED') {
+      // Nothing was admitted: the newer connection's durable end is before this audio, and the phone resends it there.
+      this.fail('FENCED');
       return;
     }
     if (result.outcome === 'CONSENT_REQUIRED') {

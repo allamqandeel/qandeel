@@ -28,6 +28,10 @@
 --      explicitly; neither the stale-recording recovery nor the writer's own seal closes the recording of a call that has
 --      not ENDED (a reconnecting call's recording survives its grace); a live call's turn anchor must lie inside its
 --      track's recorded or gapped range.
+--   F. The writer fence (PR #374 review): a live call's segment or gap is admitted only through the v2 entries, for the
+--      connection holding the call's current epoch while it is ACTIVE, under the call row lock; the epoch-less 0183
+--      entries are FENCED for every call that has not ENDED. A segment admitted before a resume still completes (its
+--      store is epoch-free) or becomes a WRITER_LOSS gap at the seal.
 --
 -- ## What is deliberately NOT here
 --
@@ -580,7 +584,7 @@ BEGIN
 END$$;
 
 -- ---------------------------------------------------------------------------------------------------------------------
--- 5. CA-05-04: THE CALL-RECORDING CORRECTIONS (forward-replaced 0183 definers, same signatures).
+-- 5. CA-05-04: THE CALL-RECORDING CORRECTIONS (forward-replaced 0183 definers, same signatures; the epoch-fenced writes).
 -- ---------------------------------------------------------------------------------------------------------------------
 -- The open is now the call authority's: only for its ACTIVE call, with the call's own session and started_at, the call row
 -- locked first (a duplicate open waits for it, never a raw 23505). A recording that is no longer being written is never
@@ -631,10 +635,114 @@ BEGIN
   RETURN QUERY SELECT 'OPENED'::text, v_recording, p_started_at + interval '30 days';
 END$$;
 
--- A gap where the track's clock ends: RECONNECTION or MUTED on either track, NOT_SPEAKING on the QANDEEL track only.
--- WRITER_LOSS is still written only by a seal.
-CREATE OR REPLACE FUNCTION public.server_record_call_gap_v1(p_user_id uuid, p_recording_id uuid, p_track text,
-                                                           p_clock_start_ms bigint, p_clock_end_ms bigint, p_gap_kind text)
+-- THE WRITER FENCE (CA-05-04, contract v1.2: a connection whose epoch has moved on changes nothing about its call). A segment
+-- or a gap of a live call is admitted only for the connection holding the call's current epoch while the call is ACTIVE:
+-- the call row is locked FOR SHARE first (the same call -> recording order as the heartbeat, the end and the sweep), so an
+-- admission and a resume are serialized. An admission that committed before the resume is in the tracks the resumed
+-- connection reads (server_read_call_tracks_v1); one that comes after it is FENCED and writes nothing. The completion of a
+-- segment admitted under the then-current epoch (server_store_call_segment_v1, 0183) stays epoch-free: its index, clock
+-- range and size were fixed by the admission, its audio was captured before the authority moved, and an upload that never
+-- completes becomes a WRITER_LOSS gap at the seal, never silence.
+--
+-- Answers NULL when the write may go on, 'FENCED' for an older epoch or a call that is not ACTIVE, 'UNAVAILABLE' for a
+-- recording that is not the person's call recording or a call that has ENDED (its recording was sealed with it).
+CREATE FUNCTION voice_private.call_writer_fence_v1(p_user_id uuid, p_recording_id uuid, p_connection_epoch bigint)
+RETURNS text
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_call_id uuid;
+  v_call voice_private.calls;
+BEGIN
+  SELECT r.call_id INTO v_call_id FROM voice_private.recordings r
+   WHERE r.id = p_recording_id AND r.user_id = p_user_id AND r.recording_kind = 'LIVE_CALL';
+  IF v_call_id IS NULL THEN
+    RETURN 'UNAVAILABLE';
+  END IF;
+  SELECT * INTO v_call FROM voice_private.calls c WHERE c.id = v_call_id FOR SHARE;
+  IF NOT FOUND OR v_call.user_id <> p_user_id OR v_call.state = 'ENDED' THEN
+    RETURN 'UNAVAILABLE';
+  END IF;
+  IF v_call.state <> 'ACTIVE' OR v_call.connection_epoch <> p_connection_epoch THEN
+    RETURN 'FENCED';
+  END IF;
+  RETURN NULL;
+END$$;
+
+-- 0183's admission of the next segment of one track, verbatim, as the internal both entries below run after their own check.
+CREATE FUNCTION voice_private.add_call_segment_core_v1(p_user_id uuid, p_recording_id uuid, p_track text,
+                                                       p_segment_index integer, p_clock_start_ms bigint, p_clock_end_ms bigint,
+                                                       p_byte_size bigint, p_lease_seconds integer)
+RETURNS TABLE (outcome text, storage_key text, upload_deadline timestamptz)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_existing voice_private.recording_objects;
+  v_next integer;
+  v_key text;
+  v_deadline timestamptz;
+BEGIN
+  IF p_user_id IS NULL OR p_recording_id IS NULL OR p_track IS NULL OR p_track NOT IN ('USER', 'QANDEEL')
+     OR p_segment_index IS NULL OR p_segment_index < 0 OR p_clock_start_ms IS NULL OR p_clock_end_ms IS NULL
+     OR p_clock_start_ms < 0 OR p_clock_end_ms <= p_clock_start_ms OR p_byte_size IS NULL OR p_byte_size <= 0
+     OR p_lease_seconds IS NULL OR p_lease_seconds NOT BETWEEN 5 AND 120 THEN
+    RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+  PERFORM 1 FROM voice_private.recordings r
+   WHERE r.id = p_recording_id AND r.user_id = p_user_id AND r.recording_state = 'RECORDING' FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  -- D-6: nothing is recorded at or after the recording's expiry; the sweep closes it (server_sweep_voice_recordings_v1).
+  IF voice_private.recording_expired_v1(p_recording_id) THEN
+    RETURN QUERY SELECT 'EXPIRED'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  -- PRIV-W: consent is re-read BEFORE the idempotent replay, so a withdrawal stops an unfinished segment even when the
+  -- same index is asked for again; the key is not handed back.
+  IF voice_private.consent_state_v1(p_user_id) <> 'GRANTED_CURRENT' THEN
+    RETURN QUERY SELECT 'CONSENT_REQUIRED'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  SELECT * INTO v_existing FROM voice_private.recording_objects o
+   WHERE o.recording_id = p_recording_id AND o.track = p_track AND o.segment_index = p_segment_index;
+  IF FOUND THEN
+    IF v_existing.clock_start_ms = p_clock_start_ms AND v_existing.clock_end_ms = p_clock_end_ms
+       AND v_existing.byte_size = p_byte_size AND v_existing.object_state = 'PENDING_UPLOAD' THEN
+      RETURN QUERY SELECT 'ADDED'::text, v_existing.storage_key, v_existing.upload_deadline;
+    ELSE
+      RETURN QUERY SELECT 'OUT_OF_ORDER'::text, NULL::text, NULL::timestamptz;
+    END IF;
+    RETURN;
+  END IF;
+  SELECT coalesce(max(o.segment_index), -1) + 1 INTO v_next FROM voice_private.recording_objects o
+   WHERE o.recording_id = p_recording_id AND o.track = p_track;
+  IF p_segment_index <> v_next THEN
+    RETURN QUERY SELECT 'OUT_OF_ORDER'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  IF p_clock_start_ms <> voice_private.track_clock_end_v1(p_recording_id, p_track) THEN
+    RETURN QUERY SELECT 'DISCONTINUOUS'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  IF p_byte_size > voice_private.object_byte_ceiling_v1() THEN
+    RETURN QUERY SELECT 'TOO_LARGE'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  v_key := 'voice-call/' || gen_random_uuid()::text;
+  v_deadline := clock_timestamp() + voice_private.segment_upload_window_v1();
+  INSERT INTO voice_private.recording_objects (recording_id, track, segment_index, storage_key, object_state, content_type,
+                                               byte_size, clock_start_ms, clock_end_ms, upload_deadline)
+  VALUES (p_recording_id, p_track, p_segment_index, v_key, 'PENDING_UPLOAD', 'audio/ogg', p_byte_size, p_clock_start_ms,
+          p_clock_end_ms, v_deadline);
+  UPDATE voice_private.recordings r SET writer_lease_until = clock_timestamp() + make_interval(secs => p_lease_seconds)
+   WHERE r.id = p_recording_id;
+  RETURN QUERY SELECT 'ADDED'::text, v_key, v_deadline;
+END$$;
+
+-- 0183's gap, with 0189's NOT_SPEAKING (the QANDEEL track's listening time; WRITER_LOSS is still written only by a seal), as
+-- the internal both entries below run after their own check.
+CREATE FUNCTION voice_private.record_call_gap_core_v1(p_user_id uuid, p_recording_id uuid, p_track text,
+                                                      p_clock_start_ms bigint, p_clock_end_ms bigint, p_gap_kind text)
 RETURNS TABLE (outcome text)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
@@ -667,6 +775,78 @@ BEGIN
   INSERT INTO voice_private.recording_gaps (recording_id, track, clock_start_ms, clock_end_ms, gap_kind)
   VALUES (p_recording_id, p_track, p_clock_start_ms, p_clock_end_ms, p_gap_kind);
   RETURN QUERY SELECT 'RECORDED'::text;
+END$$;
+
+-- The live call's entries: the writer's connection epoch is checked under the call lock, then 0183's rules apply.
+CREATE FUNCTION public.server_add_call_segment_v2(p_user_id uuid, p_recording_id uuid, p_connection_epoch bigint, p_track text,
+                                                 p_segment_index integer, p_clock_start_ms bigint, p_clock_end_ms bigint,
+                                                 p_byte_size bigint, p_lease_seconds integer)
+RETURNS TABLE (outcome text, storage_key text, upload_deadline timestamptz)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_fence text;
+BEGIN
+  IF p_user_id IS NULL OR p_recording_id IS NULL OR p_connection_epoch IS NULL OR p_connection_epoch < 1 THEN
+    RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+  v_fence := voice_private.call_writer_fence_v1(p_user_id, p_recording_id, p_connection_epoch);
+  IF v_fence IS NOT NULL THEN
+    RETURN QUERY SELECT v_fence, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT * FROM voice_private.add_call_segment_core_v1(p_user_id, p_recording_id, p_track, p_segment_index,
+                                                                    p_clock_start_ms, p_clock_end_ms, p_byte_size, p_lease_seconds);
+END$$;
+
+CREATE FUNCTION public.server_record_call_gap_v2(p_user_id uuid, p_recording_id uuid, p_connection_epoch bigint, p_track text,
+                                                p_clock_start_ms bigint, p_clock_end_ms bigint, p_gap_kind text)
+RETURNS TABLE (outcome text)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_fence text;
+BEGIN
+  IF p_user_id IS NULL OR p_recording_id IS NULL OR p_connection_epoch IS NULL OR p_connection_epoch < 1 THEN
+    RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+  v_fence := voice_private.call_writer_fence_v1(p_user_id, p_recording_id, p_connection_epoch);
+  IF v_fence IS NOT NULL THEN
+    RETURN QUERY SELECT v_fence;
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT * FROM voice_private.record_call_gap_core_v1(p_user_id, p_recording_id, p_track, p_clock_start_ms,
+                                                                   p_clock_end_ms, p_gap_kind);
+END$$;
+
+-- 0183's entries, same signatures: a write that carries no epoch cannot prove the call authority, so it is FENCED for every
+-- call that has not ENDED. A call's recording is sealed in the transaction that ends the call, so in practice these write
+-- nothing to a call recording any more; they keep 0183's rules only for a recording no call authority holds.
+CREATE OR REPLACE FUNCTION public.server_add_call_segment_v1(p_user_id uuid, p_recording_id uuid, p_track text,
+                                                            p_segment_index integer, p_clock_start_ms bigint,
+                                                            p_clock_end_ms bigint, p_byte_size bigint, p_lease_seconds integer)
+RETURNS TABLE (outcome text, storage_key text, upload_deadline timestamptz)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM voice_private.recordings r JOIN voice_private.calls c ON c.id = r.call_id
+              WHERE r.id = p_recording_id AND c.state <> 'ENDED') THEN
+    RETURN QUERY SELECT 'FENCED'::text, NULL::text, NULL::timestamptz;
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT * FROM voice_private.add_call_segment_core_v1(p_user_id, p_recording_id, p_track, p_segment_index,
+                                                                    p_clock_start_ms, p_clock_end_ms, p_byte_size, p_lease_seconds);
+END$$;
+
+CREATE OR REPLACE FUNCTION public.server_record_call_gap_v1(p_user_id uuid, p_recording_id uuid, p_track text,
+                                                           p_clock_start_ms bigint, p_clock_end_ms bigint, p_gap_kind text)
+RETURNS TABLE (outcome text)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM voice_private.recordings r JOIN voice_private.calls c ON c.id = r.call_id
+              WHERE r.id = p_recording_id AND c.state <> 'ENDED') THEN
+    RETURN QUERY SELECT 'FENCED'::text;
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT * FROM voice_private.record_call_gap_core_v1(p_user_id, p_recording_id, p_track, p_clock_start_ms,
+                                                                   p_clock_end_ms, p_gap_kind);
 END$$;
 
 -- The writer's own seal: never the recording of a call that has not ENDED (CALL_LIVE). A fenced connection, or an
@@ -828,6 +1008,9 @@ BEGIN
     'voice_private.admit_live_voice_note_seat_v1()',
     'voice_private.end_call_v1(uuid,text,text)',
     'voice_private.reserve_call_turn_index_v1(uuid,uuid,bigint)',
+    'voice_private.call_writer_fence_v1(uuid,uuid,bigint)',
+    'voice_private.add_call_segment_core_v1(uuid,uuid,text,integer,bigint,bigint,bigint,integer)',
+    'voice_private.record_call_gap_core_v1(uuid,uuid,text,bigint,bigint,text)',
     'public.server_begin_call_v1(uuid,uuid,uuid,uuid)',
     'public.server_activate_call_v1(uuid,uuid,bigint)',
     'public.server_heartbeat_call_v1(uuid,uuid,bigint)',
@@ -838,7 +1021,10 @@ BEGIN
     'public.server_read_call_truth_v1(uuid)',
     'public.server_read_call_tracks_v1(uuid,uuid)',
     'public.server_open_call_recording_v1(uuid,uuid,uuid,timestamptz,integer)',
+    'public.server_add_call_segment_v1(uuid,uuid,text,integer,bigint,bigint,bigint,integer)',
+    'public.server_add_call_segment_v2(uuid,uuid,bigint,text,integer,bigint,bigint,bigint,integer)',
     'public.server_record_call_gap_v1(uuid,uuid,text,bigint,bigint,text)',
+    'public.server_record_call_gap_v2(uuid,uuid,bigint,text,bigint,bigint,text)',
     'public.server_seal_call_recording_v1(uuid,uuid)',
     'public.server_recover_stale_call_recordings_v1(integer,integer)',
     'public.server_attach_turn_voice_source_v1(uuid,uuid,uuid,text,text,text,bigint,bigint,boolean,text)'] LOOP

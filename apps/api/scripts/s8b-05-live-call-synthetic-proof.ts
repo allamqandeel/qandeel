@@ -228,7 +228,24 @@ async function main(): Promise<void> {
   process.stdout.write(`S8B-05 CP1 synthetic live call (transport: ${WIRE ? `PostgREST ${process.env.POSTGREST_VERSION ?? ''}`.trim() : 'service_role connection'})\n`);
   const objects = new InMemoryPrivateAudioObjectStore();
   const store = new LiveCallRepository(shim);
-  const media = new VoiceMediaService(new VoiceMediaRepository(shim), objects);
+  const mediaRepository = new VoiceMediaRepository(shim);
+  const media = new VoiceMediaService(mediaRepository, objects);
+  // Proof instruments only (P8): the next PUT can be held, as a slow upload is; the admissions' answers are counted.
+  let holdNextPut: Promise<void> | null = null;
+  const put = objects.putStream.bind(objects);
+  objects.putStream = async (...args: Parameters<typeof put>) => {
+    const hold = holdNextPut;
+    holdNextPut = null;
+    if (hold) await hold;
+    return put(...args);
+  };
+  const admissions: string[] = [];
+  const addSegment = mediaRepository.addSegment.bind(mediaRepository);
+  mediaRepository.addSegment = async (...args: Parameters<typeof addSegment>) => {
+    const row = await addSegment(...args);
+    admissions.push(`${String(row?.outcome)}@${String(args[8] ?? 'none')}`);
+    return row;
+  };
   const auth = {
     authenticate: async (authorization: string | undefined) => {
       const token = /^Bearer (.+)$/u.exec(authorization ?? '')?.[1] ?? '';
@@ -513,6 +530,68 @@ async function main(): Promise<void> {
         truthLapsed.callTruth === 'NO_CALL_KNOWN' && ended >= 1 && row.end_reason === 'SYSTEM_INTERRUPTED' && rec?.recording_state === 'STORED' && (await seats()) === 0,
         { truthWhileLapsed: truthLapsed.callTruth, endReason: row.end_reason, recordingState: rec?.recording_state });
     }
+
+    // P7 — the writer fence across instances (PR #374 review): instance A holds epoch 1 and has a segment admitted whose
+    // upload is still in flight, plus audio not yet written; the phone resumes on instance B (epoch 2). The admitted segment
+    // completes and counts in B's tracks; A's late write is FENCED by the database and writes nothing; the phone resends
+    // from B's durable end; the ended call's USER track is one contiguous truth, every packet the phone's own, in order.
+    {
+      const p = await person();
+      const call = randomUUID();
+      admissions.length = 0;
+      let releasePut!: () => void;
+      holdNextPut = new Promise<void>((resolve) => {
+        releasePut = resolve;
+      });
+      const a = new SyntheticPhone(instance.url, p.token);
+      await a.opened();
+      a.send(hello(p, call));
+      await a.waitFor((m) => m.state === 'CONNECTING');
+      // 10.4 s: segment 0 (0 - 10 000 ms) is cut and admitted under epoch 1, its PUT held; 400 ms stay in A's buffer.
+      await a.speak(1, 520, 0, 0);
+      const rec = await recordingOf(call);
+      const until = Date.now() + 8000;
+      while ((await segmentsOf(String(rec?.id))).length === 0 && Date.now() < until) await sleep(20);
+      const pendingBefore = (await segmentsOf(String(rec?.id))).map((x) => `${x.segment_state} ${x.s}-${x.e}`);
+      const keepA = setInterval(() => a.send({ type: 'HEARTBEAT', n: 0 }), 500);
+      const b = new SyntheticPhone(second.url, p.token);
+      await b.opened();
+      b.send(hello(p, call, true));
+      const resumed = await b.waitFor((m) => m.type === 'STATE');
+      const keepB = setInterval(() => b.send({ type: 'HEARTBEAT', n: 0 }), 500);
+      // A's upload finishes only now, after the authority moved: the segment it was admitted for is stored.
+      releasePut();
+      const fencedCode = await Promise.race([a.closed, sleep(9000).then(() => -1)]);
+      clearInterval(keepA);
+      const from = Number(resumed.resumeFromCaptureMs);
+      await b.speak(Number(resumed.epoch), 600 - from / 20, 0, from, from / 20);
+      clearInterval(keepB);
+      b.send({ type: 'END', msgId: 1 });
+      await b.waitFor((m) => m.state === 'ENDED');
+      const segs = await segmentsOf(String(rec?.id));
+      const gaps = await gapsOf(String(rec?.id));
+      const row = await callRow(call);
+      // Every stored packet is the phone's own packet for its capture instant: nothing mixed, nothing twice.
+      let inOrder = true;
+      let packets = 0;
+      for (const segment of segs.filter((x) => x.track === 'USER')) {
+        const ogg = readOggOpus(objects.objects.get(String(segment.storage_key))!.bytes);
+        ogg.packets.forEach((packet, i) => {
+          if (!packet.equals(PACKETS[((Number(segment.s) / 20) + i) % PACKETS.length]!)) inOrder = false;
+        });
+        packets += ogg.packets.length;
+      }
+      const track = await verifyTrack(String(rec?.id));
+      const contiguous = segs.every((x, i) => i === 0 || Number(x.s) === Number(segs[i - 1]!.e));
+      record('P7 writer fence across instances: the admitted segment completes, the old epoch\'s late write is FENCED, one truth',
+        pendingBefore.join() === 'PENDING_UPLOAD 0-10000' && resumed.epoch === 2 && from === 10000 && fencedCode === 4003
+        && admissions.includes('FENCED@1') && segs.every((x) => x.segment_state === 'STORED') && Number(segs[0]?.e) === 10000
+        && contiguous && gaps.length === 0 && packets === 600 && inOrder && track.packets === 600
+        && row.state === 'ENDED' && row.end_reason === 'USER_ENDED' && Number(row.connection_epoch) === 2 && rec?.id !== undefined,
+        { pendingWhenResumed: pendingBefore, resumedEpoch: resumed.epoch, resumeFrom: from, fencedCloseCode: fencedCode, admissions,
+          segments: segs.map((x) => `${x.segment_state} ${x.s}-${x.e}`), gaps: gaps.length, packets, packetsInOrder: inOrder,
+          endReason: row.end_reason, finalEpoch: Number(row.connection_epoch) });
+    }
   } finally {
     await instance.app.close();
     await second.app.close();
@@ -532,7 +611,7 @@ async function main(): Promise<void> {
       await check.end();
     }
   })();
-  record('P7 teardown: no fixture row left, every voice gate as it was', Object.values(left).every((n) => n === 0), left);
+  record('P8 teardown: no fixture row left, every voice gate as it was', Object.values(left).every((n) => n === 0), left);
   const passed = Object.values(results).every((r) => r.pass);
   process.stdout.write(`${JSON.stringify({ proof: 'S8B-05 CP1 synthetic live call', passed, results }, null, 1)}\n`);
   process.exitCode = passed ? 0 : 1;

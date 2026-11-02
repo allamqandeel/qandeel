@@ -51,13 +51,15 @@ The decoded uplink goes to `LIVE_CALL_SPEECH_SINK`, which CP1 binds to the **nul
 
 0189 is one transaction with a deploy guard. The guard requires all four voice scopes to be `DISABLED / UNSATISFIED`, the
 census to be clean and the ACLs to be exact. Every new definer is `public.server_*`, `SECURITY DEFINER`, uses
-`search_path = ''` and is executable by `service_role` only. The seven internals are executable by no role.
+`search_path = ''` and is executable by `service_role` only. The ten internals are executable by no role.
 `voice_private.calls` is `ACCOUNT_CASCADE` in the erasure coverage registry.
 
 **Forward replacements (0183 / 0185 semantics kept, extended for calls):**
 
 - `server_open_call_recording_v1`: only for the call's own ACTIVE start; the authority opens it.
 - `server_record_call_gap_v1`: adds NOT_SPEAKING on the QANDEEL track.
+- `server_add_call_segment_v1` / `server_record_call_gap_v1` (the writer fence, R1 below): a write that carries no epoch
+  is `FENCED` for every call that has not ENDED; 0183's rules are kept, unchanged, for a recording no call holds.
 - `seal_call_recording`: refuses `CALL_LIVE` while the call is not ENDED.
 - `server_recover_stale_call_recordings_v1`: skips any call that is not ENDED.
 - `server_attach_turn_voice_source_v1`: the anchor must lie inside the recorded ranges.
@@ -67,6 +69,30 @@ census to be clean and the ACLs to be exact. Every new definer is `public.server
 - They were re-anchored only where a call recording now needs its call: `database/live-call-0189-anchor.mjs` creates a
   fixture call, and the fixture is ended without a seal so 0183's own seal semantics stay under test.
 - Re-anchored: verify-0183, 0184, 0185 and 0186, and prove-0185 (which runs in CI only).
+
+**The writer fence (R1, the Product Owner's PR #374 review):** the contract requires that a connection whose epoch has
+moved on cannot change the call's truth, and the recording writes were outside that guarantee. 0189 now closes it in
+the database, with the smallest change:
+
+- **`server_add_call_segment_v2` / `server_record_call_gap_v2`** carry the writer's `connection_epoch`. They lock the
+  call row `FOR SHARE` first (the same call → recording order as the heartbeat, the end and the sweep, so no deadlock),
+  and admit only for the epoch the call holds while it is ACTIVE. Otherwise they answer `FENCED` and write nothing.
+  0183's admission and gap bodies run unchanged after the check (`add_call_segment_core_v1`,
+  `record_call_gap_core_v1`). The API's writer uses only these.
+- **An admission and a resume are serialized by the call lock.** An admission that committed before the resume is in
+  the tracks the resumed connection reads (`server_read_call_tracks_v1`), so the new connection writes after it. One
+  that comes after the resume is `FENCED`.
+- **A segment admitted before the authority moved is not lost.** Its completion (`server_store_call_segment_v1`, 0183)
+  stays epoch-free: its index, range and size were fixed by the admission, and its audio was captured before the
+  resume. If its upload never completes, the seal turns it into a `WRITER_LOSS` gap, never silence and never audio.
+  Nothing new is accepted from a fenced connection.
+- **Same-instance resume order.** Before the resume moves the epoch, the same phone's connection that holds the call on
+  this instance stops taking audio and writes what it took under its own, still current, epoch. Only then does the epoch
+  move and `yieldTo` fence it. Valid audio accepted before the resume is never refused by the new fence. A connection on
+  another instance whose late write is refused stops `FENCED` (`4003`). The call is not failed, and the phone resends
+  from the new connection's durable end.
+- The epoch-less 0183 entries stay for the earlier verifiers' fixtures, whose calls are ended by a plain update without a
+  seal. In production a call's recording is sealed in the transaction that ends the call.
 
 **Wire refusal:** the live-note seat refusal uses P0001 with the message `REALTIME_CAPACITY_FULL`, not a `PTnnn` code.
 PostgREST maps a `PTnnn` code to HTTP status nnn, so a P0001 refusal keeps the existing 4xx contract of the live-note
@@ -81,7 +107,7 @@ route.
 | `gateway/live-call.gateway.ts` | The `upgrade` handler. Exact path, method, version, key and subprotocol; the per-address upgrade rate (the HTTP throttler's tracker over Express's own `req.ip`); the per-instance and per-person caps; Supabase authentication before any socket; then the frame parser. |
 | `live-call.connection.ts` | One socket's call. It is a strict state machine over the authority, with one message at a time, token buckets, a bounded queue, lease renewal, silence, token expiry, CALL_ENDING, same-instance takeover and fencing. Lose → flush → suspend. |
 | `live-call.repository.ts` / `live-call.store.ts` | The authority's commands over the server channel. |
-| `recording/user-track-writer.ts` | The USER track. Only `STORED` releases audio; an ambiguous answer is reconciled from `server_read_call_tracks_v1`; same capture instant means same audio. |
+| `recording/user-track-writer.ts` | The USER track, written under the connection's epoch (0189's fenced entries; `FENCED` stops it without failing the call). Only `STORED` releases audio; an ambiguous answer is reconciled from `server_read_call_tracks_v1`. |
 | `codec/opus-codec.ts`, `codec/ogg-opus.ts` | Opus both directions; the Ogg Opus muxer and strict reader. |
 | `live-call.service.ts` | The instance's connections, call-truth and the sweep (every 5 s, off under tests and without the media store). |
 | `live-call-truth.controller.ts` | `GET /voice/calls/truth`. Guarded, `no-store, private`, classified `AUTHENTICATED` in the route census. |
@@ -91,7 +117,7 @@ Telemetry is the content-free domain `VOICE_LIVE_CALL`.
 
 ## 4. Proofs (all free, all local or in CI; nothing paid, nothing hosted)
 
-**`database/verify-migration-0189.mjs` on real PostgreSQL 17: 21 / 21.** Each line below is one scenario.
+**`database/verify-migration-0189.mjs` on real PostgreSQL 17: 24 / 24.** Each line below is one scenario.
 
 - **L0a – L0c:** the catalogue, ACLs, policy, gates and census.
 - **L1:** begin.
@@ -108,14 +134,27 @@ Telemetry is the content-free domain `VOICE_LIVE_CALL`.
 - **L12:** anchors and the track state.
 - **L13:** call-truth.
 - **L14:** durability and account erasure.
+- **L15:** the writer fence.
+  - The epoch-less entries are `FENCED` on a live call.
+  - An older epoch, an unknown epoch and a RECONNECTING call get `FENCED` and write nothing.
+  - A segment admitted before the resume counts in the resumed tracks and still stores.
+  - One never uploaded becomes a `WRITER_LOSS` gap at the end.
+  - An ENDED call or another person gets `UNAVAILABLE`.
 - **LRC-1 … LRC-4:** the races (two begins, the last seat, end vs sweep vs resume, two ends).
+- **LRC-5 / LRC-6:** an old epoch's late admission vs a resume, on two connections, in both orders.
+  - When the admission holds the call, the resume waits. The segment then counts in the resumed tracks and completes
+    after the resume.
+  - When the resume holds the call, the admission waits and is `FENCED`.
+  - The ended call's USER track is one contiguous truth: the old epoch's segments, the RECONNECTION gap, then the new
+    epoch's segment, never interleaved.
 
-The re-anchored verify-0183 / 0184 / 0185 / 0186 / 0188 pass locally.
+The re-anchored verify-0183 / 0184 / 0185 / 0186 / 0187 / 0188 pass locally on the same database (their count of 0189's
+internals moves from 7 to 10).
 
 **The synthetic live call** (`apps/api/scripts/s8b-05-live-call-synthetic-proof.ts`; `npm run
 prove:live-call-synthetic:integration`) runs the real gateway, connection, repository, `VoiceMediaService` and writer.
 There are two gateway instances over real PostgreSQL with 0189. The client is a synthetic phone on a real WebSocket,
-sending **real libopus packets** of a generated signal. Local PG17 result: **7 / 7** (report kept with the contract
+sending **real libopus packets** of a generated signal. Local PG17 result: **8 / 8** (report kept with the contract
 folder as `CP1_SYNTHETIC_PROOF_local_pg17.txt`).
 
 - **P1:** a whole call. CONNECTING holds one seat; ACTIVE comes at the first audio; 625 packets give segments [0, 10000)
@@ -131,26 +170,37 @@ folder as `CP1_SYNTHETIC_PROOF_local_pg17.txt`).
 - **P5:** a cross-instance resume. The old instance is fenced (`4003`). The resend of instants the old instance had
   already stored is dropped, so the track is [0, 1200) + [1200, 2200), 110 packets, no gap.
 - **P6:** a crashed instance (lapsed lease). Call-truth fails safe; the sweep ends `SYSTEM_INTERRUPTED` and seals.
-- **P7:** the teardown leaves no fixture row and every gate as it was.
+- **P7:** the writer fence across two instances (R1).
+  - Instance A holds epoch 1. Segment [0, 10000) is admitted and its upload is held in flight, with 400 ms more in A's
+    buffer.
+  - The phone resumes on instance B with epoch 2 and `resumeFromCaptureMs 10000`: the admitted segment counts.
+  - A's upload then completes (STORED). A's late write is refused by the database: the admissions read `ADDED@1`,
+    `FENCED@1`, `ADDED@2`. A closes `4003`.
+  - The phone resends from 10000 on B. The ended call (`USER_ENDED`, epoch 2) has [0, 10000) and [10000, 12000): 600
+    packets, every one the phone's own packet for its capture instant, in order, with no gap.
+- **P8:** the teardown leaves no fixture row and every gate as it was.
 
 In CI the same proof also runs through every PostgREST line of the existing loop.
 
-**API specs (Jest), 49 tests:**
+**API specs (Jest), 57 tests** (the earlier "49" was a miscount of 48):
 
 | Spec | Tests | What it covers |
 |---|---|---|
 | `codec/codec.spec.ts` | 8 | real Opus up and down, TOC, mux round-trip, lacing, corruption, CRC |
-| `live-call.protocol.spec.ts` | 9 | the frozen messages, exact shapes, binary layout, malformed frames, RFC 6455 framing and bounds |
-| `recording/user-track-writer.spec.ts` | 7 | segments decoded packet-for-packet, gaps, ambiguous writes landed or not, a takeover's resend, consent and closed recording, abandon |
-| `live-call.connection.spec.ts` | 18 | see below |
+| `live-call.protocol.spec.ts` | 8 | the frozen messages, exact shapes, binary layout, malformed frames, RFC 6455 framing and bounds |
+| `recording/user-track-writer.spec.ts` | 8 | segments decoded packet-for-packet, gaps, ambiguous writes landed or not, a takeover's resend, consent and closed recording, **FENCED** (an older epoch, a call no longer ACTIVE), abandon |
+| `live-call.connection.spec.ts` | 19 | see below |
 | `gateway/live-call.gateway.e2e.spec.ts` | 7 | see below |
+| `gateway/websocket-frames.spec.ts` | 7 | the RFC 6455 negatives (R1 review): unmasked, RSV, fragments, continuations, reserved opcodes, control > 125, 1009 from the header alone (text, binary, a 64-bit length), invalid UTF-8 (1007), a one-byte close, nothing parsed after an error or a close, the accept key |
 
 The connection spec covers:
 
 - begin, activate and end; MUTED gaps; msgId resends;
 - seq and capture rules, wrong epoch, random bytes;
 - lose → suspend → resume with a RECONNECTION gap;
-- same-instance and cross-instance fencing; resume of an ended call;
+- same-instance and cross-instance fencing (the same-instance handover written under the old epoch before the epoch
+  moves; another instance's late segment `FENCED`, 4003, the call not failed, the resend the one truth); resume of an
+  ended call;
 - NOT_SUPPORTED_YET; token refresh and expiry; CAPACITY_FULL; silence; the 60-minute end; consent withdrawn mid-call;
   overload.
 
@@ -176,12 +226,12 @@ The gateway e2e spec runs a **real WebSocket** against the **real `SupabaseAuthS
 
 | # | Item | CP1 proof | Status |
 |---|---|---|---|
-| 1 | A real call under the server's authority | L1 – L9, L13, LRC-1 … 4; synthetic P1 – P6 | **Met for CP1's scope** (the authority, the gateway and the USER track; no AI turn, no reply audio) |
+| 1 | A real call under the server's authority | L1 – L9, L13, L15, LRC-1 … 6; synthetic P1 – P7 | **Met for CP1's scope** (the authority, the gateway and the USER track; no AI turn, no reply audio) |
 | 2 | The same Personal Conversation | L1 (the person's own ACTIVE TEXT session, FK `(session_id, user_id)`), L2; synthetic P1 | **Met for CP1** (the turns themselves are CP2) |
 | 18 | Capacity is never exceeded | L9, LRC-2 (N+1 concurrent: exactly N); synthetic P4 (two instances, call + live note) | **Met** |
-| 20 | Recording and the 30-day retention | L3, L4, L12, L14; synthetic P1 / P2 (retention = `started_at` + 30 d, unchanged by a resume) | **Met for the USER track** (the QANDEEL track is CP2) |
+| 20 | Recording and the 30-day retention | L3, L4, L12, L14, L15, LRC-5 / 6; synthetic P1 / P2 / P7 (retention = `started_at` + 30 d, unchanged by a resume) | **Met for the USER track** (the QANDEEL track is CP2) |
 | 24 | Voice Notes, Text and Analysis not broken | the existing verifiers 0183 – 0188 and API suites pass; the text path and the engines are untouched (no file of theirs changed beyond the live note's capacity mapping) | **Met locally; the full CI run is on the pull request** |
-| 25 | No voice gate opened | 0189's deploy guard; L0c; the contract test; the synthetic proof restores every gate and P7 checks it | **Met** |
+| 25 | No voice gate opened | 0189's deploy guard; L0c; the contract test; the synthetic proof restores every gate and P8 checks it | **Met** |
 
 **Not claimed:**
 
@@ -195,16 +245,12 @@ The gateway e2e spec runs a **real WebSocket** against the **real `SupabaseAuthS
 
 **Real limits, documented and not blocking CP1:**
 
-- **The segment add does not check the epoch.** `add_call_segment` (0183 / 0185) has no epoch argument. A fenced
-  connection is stopped at the connection level: at once on the same instance, and at its next lease renewal (≤ 5 s) on
-  another. Its last in-flight segment can race the new instance's resend. Two things keep the track honest:
-  - the writer reconciles from the database, so the same capture instant is stored once;
-  - a segment the old instance had not finished is dropped, and its hole stays a recorded gap, never invented audio.
-
-  Synthetic P5 shows the benign case. An epoch-checked add is a candidate for CP2, where the QANDEEL writer needs the
-  same guard.
-- **"Same capture instant means same audio" is a protocol contract.** It is not verified byte for byte. A resend with
-  different bytes at a held instant would be dropped as a duplicate.
+- **Resolved in R1: the recording writes are fenced by the epoch** (§2, "The writer fence"). The earlier limit (an
+  epoch-less segment add, with honesty left to the writer's reconciliation) no longer stands. CP2's QANDEEL writer uses
+  the same v2 entries.
+- **"Same capture instant means same audio" is a protocol contract**, now only inside one epoch's writer (a resend on one
+  connection). It is not verified byte for byte: a resend with different bytes at a held instant would be dropped as a
+  duplicate.
 - **No independent Ogg decoder is used.** Validity is proven by the strict RFC 7845 reader (CRC, sequence, granules,
   headers, EOS) and by decoding every packet with libopus. There is no `ffmpeg` or `opusdec` on this machine.
 - **The upgrade limits are per instance.** The global, distributed limit and the guarantee that nothing reaches an origin
@@ -215,9 +261,10 @@ The gateway e2e spec runs a **real WebSocket** against the **real `SupabaseAuthS
 
 **Optional improvements (not blockers):**
 
-- an epoch argument on the segment add (above);
 - a distributed upgrade limit at the edge;
-- a byte-level check of resent packets.
+- a byte-level check of resent packets;
+- RFC 6455 §7.4 close-code range validation in the frame parser. Today any code is read, and the gateway answers a close
+  with a fixed 1000 / 1001. This is harmless and not a security defect (the R1 review of the negatives found no defect).
 
 ## 7. Readiness for S8B-06 CP1 (Android / AEC)
 
@@ -249,8 +296,8 @@ which stays `DEFERRED — OWNED`, `HIGH`; worked, not delivered.
 | `QAN-BL-ACE-02` | — |
 | `QAN-BL-MOB-01` | — |
 
-CP1 admits and tombstones nothing. The epoch-unchecked segment add (§6) is a CP2 design input inside S8B-05's own scope,
-not cross-task residue. If it is still open at S8B-05's closing change, it is reconciled there under BG-08.
+CP1 admits and tombstones nothing. The epoch-unchecked segment add that §6 listed is resolved inside CP1 (R1); nothing
+of it remains as residue.
 
 ## 9. Copy Gate — the unified call gate for both stages (D-05-03): every row PROPOSED
 

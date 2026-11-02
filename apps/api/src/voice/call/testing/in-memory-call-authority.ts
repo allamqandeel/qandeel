@@ -152,15 +152,23 @@ export class InMemoryCallAuthority implements LiveCallStore, CallSegmentMedia {
     return { recordingId: call.recordingId, recordingState: this.recordingState, userTrackEndMs: endMs, userNextSegment: next };
   }
 
-  async recordGap(input: { userId: string; recordingId: string; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: string }) {
+  /** 0189's writer fence: only the connection holding the current epoch of the recording's ACTIVE call writes. */
+  private fenced(recordingId: string, epoch: number): boolean {
+    const call = [...this.calls.values()].find((c) => c.recordingId === recordingId);
+    return !call || call.state !== 'ACTIVE' || call.epoch !== epoch;
+  }
+
+  async recordGap(input: { userId: string; recordingId: string; epoch: number; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: string }) {
     if (this.recordingState !== 'RECORDING') return 'RECORDING_CLOSED';
+    if (this.fenced(input.recordingId, input.epoch)) return 'FENCED';
     if (input.startMs !== this.trackState().endMs) return 'DISCONTINUOUS';
     this.gaps.push({ track: input.track, startMs: input.startMs, endMs: input.endMs, kind: input.kind });
     return 'RECORDED';
   }
 
-  async writeCallSegment(_userId: string, _recordingId: string, track: 'USER' | 'QANDEEL', segmentIndex: number, clockStartMs: number,
-    clockEndMs: number, body: Readable, byteSize: number): Promise<{ outcome: string }> {
+  async writeCallSegment(_userId: string, recordingId: string, track: 'USER' | 'QANDEEL', segmentIndex: number, clockStartMs: number,
+    clockEndMs: number, body: Readable, byteSize: number, _signal: AbortSignal, connectionEpoch: number): Promise<{ outcome: string }> {
+    if (this.recordingState === 'RECORDING' && this.fenced(recordingId, connectionEpoch)) return { outcome: 'FENCED' };
     const parts: Buffer[] = [];
     for await (const part of body) parts.push(part as Buffer);
     const bytes = Buffer.concat(parts);

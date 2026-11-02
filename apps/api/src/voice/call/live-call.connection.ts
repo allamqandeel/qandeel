@@ -139,6 +139,8 @@ export class LiveCallConnection {
   private muted = false;
   private muteSeen = false;
   private resumedGap = false;
+  /** A newer connection of the same phone is taking the call on this instance: what was received is being written. */
+  private handingOver = false;
   private fenced = false;
   private ended = false;
   /** A violation or overload was seen: nothing more is processed; the loss is already queued. */
@@ -279,7 +281,12 @@ export class LiveCallConnection {
       this.armLease();
       return;
     }
+    // The same phone's connection that holds the call on this instance writes what it received while its epoch still
+    // holds: 0189 fences every write of an older epoch, so the epoch moves on only after that audio is admitted.
+    const previous = this.handingOverFrom(hello.callId, hello.clientInstanceId);
+    if (previous) await previous.handOver();
     const resumed = await this.deps.store.resume({ userId: this.userId, callId: hello.callId, clientInstanceId: hello.clientInstanceId }).catch(() => null);
+    if (previous && resumed?.outcome !== 'RESUMED') previous.handingOver = false;
     if (!resumed) return this.refuseAndClose('UNAVAILABLE', 'resume');
     if (resumed.outcome === 'ENDED') {
       this.deps.signal('resume', 'refused_expected');
@@ -308,6 +315,26 @@ export class LiveCallConnection {
     this.sendState('ACTIVE');
     this.armLease();
     await this.renewLease();
+  }
+
+  /** The connection of the same person and phone that holds this call on this instance, if any. */
+  private handingOverFrom(callId: string, clientInstanceId: string): LiveCallConnection | null {
+    const previous = this.deps.registry.holder(callId);
+    return previous && previous !== this && previous.userId === this.userId && previous.clientInstanceId === clientInstanceId ? previous : null;
+  }
+
+  /**
+   * Before a resume of the same phone on this instance: audio stops being taken (the phone resends it on the new
+   * connection, from the durable end it is told) and what was taken is written under this connection's epoch, in order
+   * behind whatever this connection is doing. Then the resume moves the epoch on and `yieldTo` fences this connection.
+   */
+  async handOver(): Promise<void> {
+    if (this.phase === 'CLOSED') return;
+    this.enqueue(async () => {
+      this.handingOver = true;
+      await this.writer?.flush().catch(() => undefined);
+    });
+    await this.inbox;
   }
 
   /** Same-instance takeover: the connection that held this call is fenced and flushes what it received. */
@@ -361,7 +388,7 @@ export class LiveCallConnection {
 
   // ------------------------------------------------------------------ audio
   private async handleAudio(raw: Buffer): Promise<void> {
-    if (this.doomed || this.phase === 'CLOSING' || this.phase === 'CLOSED') return;
+    if (this.doomed || this.handingOver || this.phase === 'CLOSING' || this.phase === 'CLOSED') return;
     if (this.phase === 'AWAIT_HELLO') return this.violation();
     const frame = decodeAudioFrame(raw);
     if (!frame || frame.epoch !== this.epoch || !isUplinkPacket(frame.packet)) return this.violation();
@@ -414,7 +441,8 @@ export class LiveCallConnection {
   }
 
   private openMedia(recordingId: string, durable: { userTrackEndMs: number; userNextSegment: number }): void {
-    this.writer = new UserTrackWriter({ media: this.deps.media, store: this.deps.store, userId: this.userId, callId: this.callId! }, recordingId, durable);
+    this.writer = new UserTrackWriter(
+      { media: this.deps.media, store: this.deps.store, userId: this.userId, callId: this.callId!, epoch: this.epoch! }, recordingId, durable);
     this.decoder = new OpusPacketDecoder(16_000);
     this.speech = this.deps.speech.open({ userId: this.userId, callId: this.callId! });
     this.lastSeq = null;
@@ -509,6 +537,8 @@ export class LiveCallConnection {
 
   private async writerFailed(): Promise<void> {
     const failure = this.writer?.failure;
+    // The recording refused this connection's epoch: a newer connection holds the call, which goes on there.
+    if (failure === 'FENCED') return this.beFenced();
     return this.failCall(failure === 'CONSENT_REQUIRED' ? 'CONSENT_REQUIRED' : 'UNAVAILABLE');
   }
 

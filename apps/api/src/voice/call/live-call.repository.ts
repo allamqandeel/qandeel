@@ -101,9 +101,9 @@ export class LiveCallRepository implements LiveCallStore {
     };
   }
 
-  async recordGap(input: { userId: string; recordingId: string; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: GapKind }) {
-    const row = await this.first<{ outcome: string }>('server_record_call_gap_v1', {
-      p_user_id: input.userId, p_recording_id: input.recordingId, p_track: input.track, p_clock_start_ms: input.startMs,
+  async recordGap(input: { userId: string; recordingId: string; epoch: number; track: 'USER' | 'QANDEEL'; startMs: number; endMs: number; kind: GapKind }) {
+    const row = await this.first<{ outcome: string }>('server_record_call_gap_v2', {
+      p_user_id: input.userId, p_recording_id: input.recordingId, p_connection_epoch: input.epoch, p_track: input.track, p_clock_start_ms: input.startMs,
       p_clock_end_ms: input.endMs, p_gap_kind: input.kind,
     });
     return row.outcome;

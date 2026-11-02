@@ -408,11 +408,11 @@ async function verifyCatalogue(report) {
       assert.equal(internals.length, 4, 'S0b 0188 names four voice_private internals');
       declared.push(...internals);
     }
-    // S8B-05 CP1 re-anchor (migration 0189): 0189 adds seven voice_private internals of its own, held to the same rules
+    // S8B-05 CP1 re-anchor (migration 0189): 0189 adds ten voice_private internals of its own, held to the same rules
     // (verify-migration-0189 proves their shape).
     if (await liveCallApplied(rows)) {
       const internals = voiceInternals0189();
-      assert.equal(internals.length, 7, 'S0b 0189 names seven voice_private internals');
+      assert.equal(internals.length, 10, 'S0b 0189 names ten voice_private internals');
       declared.push(...internals);
     }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,

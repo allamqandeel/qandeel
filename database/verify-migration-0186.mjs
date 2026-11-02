@@ -382,9 +382,9 @@ async function verifyCatalogue(report) {
     const [{ n }] = await rows("SELECT count(*)::int n FROM pg_proc p JOIN pg_namespace s ON s.oid = p.pronamespace WHERE s.nspname = 'voice_private'");
     // S8B-04 CP2 re-anchor (migration 0188): plus 0188's four internals (verify-migration-0188 proves their shape).
     const voiceApplied = await qandeelVoiceApplied(rows);
-    // S8B-05 CP1 re-anchor (migration 0189): plus 0189's seven internals (verify-migration-0189 proves their shape).
-    const expected = 28 + (voiceApplied ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0) + (await liveCallApplied(rows) ? 7 : 0);
-    assert.equal(n, expected, `C0b voice_private holds exactly 20 + 8 (+ 6 from 0187, + 4 from 0188, + 7 from 0189) functions: ${expected}`);
+    // S8B-05 CP1 re-anchor (migration 0189): plus 0189's ten internals (verify-migration-0189 proves their shape).
+    const expected = 28 + (voiceApplied ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0) + (await liveCallApplied(rows) ? 10 : 0);
+    assert.equal(n, expected, `C0b voice_private holds exactly 20 + 8 (+ 6 from 0187, + 4 from 0188, + 10 from 0189) functions: ${expected}`);
     // v4 has no score parameter: the score is the band's constant.
     const [{ args }] = await rows('SELECT pg_get_function_arguments($1::regprocedure) AS args', [V4]);
     assert.doesNotMatch(args, /confidence/u, 'C0b v4 takes no confidence');

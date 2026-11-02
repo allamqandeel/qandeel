@@ -124,10 +124,10 @@ async function verifyCatalogue(report) {
     // settlement), each named by its own ACL block and proven by verify-migration-0186; 0185 itself still adds none.
     // S8B-04 re-anchor (migration 0187): 0187 adds six voice_private internals of its own (verify-migration-0187).
     // S8B-04 CP2 re-anchor (migration 0188): and four 0188 internals (verify-migration-0188).
-    // S8B-05 CP1 re-anchor (migration 0189): and seven 0189 internals (verify-migration-0189).
+    // S8B-05 CP1 re-anchor (migration 0189): and ten 0189 internals (verify-migration-0189).
     const expected = (await voiceNotesApplied(rows) ? 28 : 20) + (await qandeelVoiceApplied(rows) ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0)
-      + (await liveCallApplied(rows) ? 7 : 0);
-    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186, six 0187, four 0188 and seven 0189 ones): ${expected}`);
+      + (await liveCallApplied(rows) ? 10 : 0);
+    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186, six 0187, four 0188 and ten 0189 ones): ${expected}`);
     const [{ closed }] = await rows(`SELECT count(*)::int closed FROM voice_private.voice_launch_capability_states
                                       WHERE feature_flag_state = 'DISABLED' AND launch_requirements_state = 'UNSATISFIED'`);
     assert.equal(closed, 4, 'C0 all four voice scopes are DISABLED');

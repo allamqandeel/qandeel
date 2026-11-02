@@ -4,7 +4,7 @@
 // 0189 makes recordings.call_id the foreign key 0183 left to S8B-05 and hands a call recording's open to the call
 // authority: a LIVE_CALL recording now belongs to a voice_private.calls row, and server_open_call_recording_v1 answers
 // OPENED only for that row's ACTIVE call with its own session and started_at. Neither the stale-writer recovery nor the
-// writer's own seal closes the recording of a call that has not ENDED. 0189 also adds seven voice_private internals (each
+// writer's own seal closes the recording of a call that has not ENDED. 0189 also adds ten voice_private internals (each
 // named by its ACL block; no role executes them; verify-migration-0189 proves their shape).
 //
 // The earlier verifiers prove 0183's recording rules, not the call's: their fixture call is written straight into the
@@ -20,7 +20,7 @@ export async function liveCallApplied(rows) {
   return applied;
 }
 
-/** The voice_private functions 0189's ACL block names (seven). */
+/** The voice_private functions 0189's ACL block names (ten). */
 export function voiceInternals0189() {
   const text = readFileSync(new URL(`./migrations/${MIGRATION_0189}`, import.meta.url), 'utf8');
   const acl = text.indexOf('  FOREACH fn IN ARRAY ARRAY[');

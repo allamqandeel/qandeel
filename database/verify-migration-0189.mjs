@@ -4,7 +4,7 @@
 //
 //   L0   catalogue: the two relations postgres-owned, RLS on, no policy, no grant; calls ACCOUNT_CASCADE with cascading
 //        account and session keys; recordings.call_id references calls; the NOT_SPEAKING gap (QANDEEL only); every new or
-//        replaced definer service_role only, the seven internals no role's; the policy row (capacity 2, grace 30 s,
+//        replaced definer service_role only, the ten internals no role's; the policy row (capacity 2, grace 30 s,
 //        60-minute call); four scopes DISABLED; the census clean
 //   L1   begin: the person's own ACTIVE text session, the PERSONAL_LIVE_CALL gate, the CURRENT consent; idempotent per call
 //        id; another human's call id is a conflict; refusals write nothing
@@ -28,7 +28,12 @@
 //   L12  a live call's turn anchor lies inside its track's recorded or gapped range; where the tracks stand (for a resume)
 //   L13  call-truth: ACTIVE while held, NO_CALL_KNOWN otherwise (fails safe on a lapsed, unswept call); per person
 //   L14  the call record is durable; account erasure removes the call and its recording
-//   LRC  races on two connections: two begins of one person, two people for the last seat, end vs sweep vs resume, two ends
+//   L15  the writer fence (PR #374 review): a segment or gap only for the current epoch of an ACTIVE call; the epoch-less
+//        0183 entries FENCED for a call not ENDED; an older epoch, a RECONNECTING call: FENCED, nothing written; a segment
+//        admitted before the resume completes (its store is epoch-free) and counts in the resumed tracks; one never
+//        uploaded is a WRITER_LOSS gap at the end, never silence; ENDED / foreign: UNAVAILABLE
+//   LRC  races on two connections: two begins of one person, two people for the last seat, end vs sweep vs resume, two ends,
+//        an old epoch's late admission vs a resume, in both orders (one truth, the tracks never interleaved)
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -54,7 +59,10 @@ const DEFINERS = [
   'public.server_read_call_truth_v1(uuid)',
   'public.server_read_call_tracks_v1(uuid,uuid)',
   'public.server_open_call_recording_v1(uuid,uuid,uuid,timestamptz,integer)',
+  'public.server_add_call_segment_v1(uuid,uuid,text,integer,bigint,bigint,bigint,integer)',
+  'public.server_add_call_segment_v2(uuid,uuid,bigint,text,integer,bigint,bigint,bigint,integer)',
   'public.server_record_call_gap_v1(uuid,uuid,text,bigint,bigint,text)',
+  'public.server_record_call_gap_v2(uuid,uuid,bigint,text,bigint,bigint,text)',
   'public.server_seal_call_recording_v1(uuid,uuid)',
   'public.server_recover_stale_call_recordings_v1(integer,integer)',
   'public.server_attach_turn_voice_source_v1(uuid,uuid,uuid,text,text,text,bigint,bigint,boolean,text)',
@@ -153,10 +161,38 @@ const attach = (user, turnId, recording, start, endMs, role = 'USER') => (role =
     [user, turnId, recording, start, endMs])
   : one(`SELECT * FROM public.server_attach_turn_voice_source_v1($1, $2, $3, 'LIVE_CALL_SPEECH', NULL, NULL, $4, $5, true, 'COMPLETE')`,
     [user, turnId, recording, start, endMs]));
-const addSegment = async (user, recording, track, index, start, endMs) =>
+/** The live call's writes: the fenced entries (0189), with the writing connection's epoch. */
+const addSegment = async (user, recording, track, index, start, endMs, epoch = 1) =>
+  (await one('SELECT * FROM public.server_add_call_segment_v2($1, $2, $3, $4, $5, $6, $7, 4096, 20)', [user, recording, epoch, track, index, start, endMs])).outcome;
+const gap = async (user, recording, track, start, endMs, kind, epoch = 1) =>
+  (await one('SELECT * FROM public.server_record_call_gap_v2($1, $2, $3, $4, $5, $6, $7)', [user, recording, epoch, track, start, endMs, kind])).outcome;
+const storeSegment = async (user, recording, track, index) =>
+  (await one('SELECT * FROM public.server_store_call_segment_v1($1, $2, $3, $4, 4096)', [user, recording, track, index])).outcome;
+/** 0183's epoch-less entries. */
+const addSegmentV1 = async (user, recording, track, index, start, endMs) =>
   (await one('SELECT * FROM public.server_add_call_segment_v1($1, $2, $3, $4, $5, $6, 4096, 20)', [user, recording, track, index, start, endMs])).outcome;
-const gap = async (user, recording, track, start, endMs, kind) =>
+const gapV1 = async (user, recording, track, start, endMs, kind) =>
   (await one('SELECT * FROM public.server_record_call_gap_v1($1, $2, $3, $4, $5, $6)', [user, recording, track, start, endMs, kind])).outcome;
+const writes = async (recording) => {
+  await owner();
+  return (await rows(`SELECT (SELECT count(*)::int FROM voice_private.recording_objects WHERE recording_id = $1) AS objects,
+      (SELECT count(*)::int FROM voice_private.recording_gaps WHERE recording_id = $1) AS gaps`, [recording]))[0];
+};
+/** One track's pieces in clock order: each starts where the previous ended (never interleaved, never overlapping). */
+async function assertContiguous(recording, track) {
+  await owner();
+  const pieces = await rows(`SELECT clock_start_ms::bigint AS s, clock_end_ms::bigint AS e, kind FROM (
+      SELECT clock_start_ms, clock_end_ms, 'SEGMENT:' || object_state AS kind FROM voice_private.recording_objects
+       WHERE recording_id = $1 AND track = $2 AND object_state <> 'DISCARDED'
+      UNION ALL SELECT clock_start_ms, clock_end_ms, gap_kind FROM voice_private.recording_gaps WHERE recording_id = $1 AND track = $2) x
+      ORDER BY clock_start_ms, clock_end_ms`, [recording, track]);
+  let at = 0;
+  for (const piece of pieces) {
+    assert.equal(Number(piece.s), at, `${track} track: ${piece.kind} starts where the previous piece ended`);
+    at = Number(piece.e);
+  }
+  return pieces.map((x) => `${x.kind} ${x.s}-${x.e}`);
+}
 const ledgerRows = async (user) => (await rows('SELECT count(*)::int AS n FROM public.ai_provider_calls WHERE user_id = $1', [user]))[0].n;
 
 // ------------------------------------------------------------------ L0 catalogue
@@ -184,8 +220,8 @@ async function verifyCatalogue(report) {
     const [{ unique }] = await rows("SELECT indexdef AS unique FROM pg_indexes WHERE schemaname = 'voice_private' AND indexname = 'calls_one_open_idx'");
     assert.match(unique, /UNIQUE INDEX .* \(user_id\) WHERE \(state <> 'ENDED'::text\)/u);
   });
-  await report.section('L0b every new or replaced definer postgres-owned, pinned search_path, service_role only; the seven internals no role', async () => {
-    assert.equal(INTERNAL.length, 7);
+  await report.section('L0b every new or replaced definer postgres-owned, pinned search_path, service_role only; the ten internals no role', async () => {
+    assert.equal(INTERNAL.length, 10);
     for (const fn of [...DEFINERS, ...INTERNAL]) {
       const [p] = await rows(`SELECT pg_get_userbyid(p.proowner) AS owner, p.proconfig AS config,
           has_function_privilege('anon', p.oid, 'EXECUTE') AS anon, has_function_privilege('authenticated', p.oid, 'EXECUTE') AS auth,
@@ -548,6 +584,51 @@ async function verifyBehaviour(report) {
       assert.equal((await rows('SELECT count(*)::int AS n FROM voice_private.calls WHERE user_id = $1', [x.user]))[0].n, 0);
       assert.equal((await rows('SELECT count(*)::int AS n FROM voice_private.recordings WHERE user_id = $1', [x.user]))[0].n, 0);
     });
+
+    await report.isolated('L15 the writer fence: a segment or gap only for the current epoch of an ACTIVE call; an admitted segment completes or is a WRITER_LOSS gap', async () => {
+      const x = await activeCall();
+      // 0183's epoch-less entries cannot prove the authority: FENCED, nothing written.
+      assert.equal(await addSegmentV1(x.user, x.recording, 'USER', 0, 0, 1000), 'FENCED');
+      assert.equal(await gapV1(x.user, x.recording, 'USER', 0, 1000, 'MUTED'), 'FENCED');
+      assert.deepEqual(await writes(x.recording), { objects: 0, gaps: 0 });
+      await rejected(() => addSegment(x.user, x.recording, 'USER', 0, 0, 1000, null), ['22023']);
+      await owner();
+      await rejected(() => gap(x.user, x.recording, 'USER', 0, 1000, 'MUTED', 0), ['22023']);
+      await owner();
+      assert.equal(await addSegment(randomUUID(), x.recording, 'USER', 0, 0, 1000), 'UNAVAILABLE', 'another human');
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 0, 0, 1000, 2), 'FENCED', 'an epoch the call never gave');
+      // The current epoch: 0183's rules apply. Segment 0 stored; segment 1 admitted and still uploading.
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 0, 0, 1000), 'ADDED');
+      assert.equal(await storeSegment(x.user, x.recording, 'USER', 0), 'STORED');
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 1, 1000, 2000), 'ADDED');
+      // The connection is lost: RECONNECTING; even its own epoch writes nothing more.
+      assert.equal((await suspend(x.user, x.call, 1)).outcome, 'SUSPENDED');
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 2, 2000, 3000), 'FENCED');
+      assert.equal(await gap(x.user, x.recording, 'USER', 2000, 3000, 'RECONNECTION'), 'FENCED');
+      // The resume moves the epoch on. The admitted segment counts in the tracks the new connection reads.
+      const r = await resume(x.user, x.call, x.client);
+      assert.deepEqual([r.outcome, Number(r.connection_epoch)], ['RESUMED', 2]);
+      const [tracks] = await server('SELECT * FROM public.server_read_call_tracks_v1($1, $2)', [x.user, x.call]);
+      assert.deepEqual([Number(tracks.user_track_end_ms), tracks.user_next_segment], [2000, 2]);
+      // The older epoch's late writes: FENCED, nothing written (the index and the clock are untouched).
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 2, 2000, 3000, 1), 'FENCED');
+      assert.equal(await gap(x.user, x.recording, 'USER', 2000, 3000, 'RECONNECTION', 1), 'FENCED');
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 1, 1000, 2000, 1), 'FENCED', 'not even its own replay');
+      assert.deepEqual(await writes(x.recording), { objects: 2, gaps: 0 });
+      // ...but the segment it was admitted for before the resume still completes: its audio is not lost.
+      assert.equal(await storeSegment(x.user, x.recording, 'USER', 1), 'STORED');
+      // The new epoch writes on from where the tracks stand.
+      assert.equal(await gap(x.user, x.recording, 'USER', 2000, 2600, 'RECONNECTION', 2), 'RECORDED');
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 2, 2600, 3600, 2), 'ADDED');
+      assert.deepEqual(await assertContiguous(x.recording, 'USER'),
+        ['SEGMENT:STORED 0-1000', 'SEGMENT:STORED 1000-2000', 'RECONNECTION 2000-2600', 'SEGMENT:PENDING_UPLOAD 2600-3600']);
+      // Segment 2 never uploads: the end seals the recording and it becomes a WRITER_LOSS gap, never silence or audio.
+      assert.equal((await end(x.user, x.call, 2)).outcome, 'ENDED');
+      assert.deepEqual(await assertContiguous(x.recording, 'USER'),
+        ['SEGMENT:STORED 0-1000', 'SEGMENT:STORED 1000-2000', 'RECONNECTION 2000-2600', 'WRITER_LOSS 2600-3600']);
+      assert.equal(await addSegment(x.user, x.recording, 'USER', 3, 3600, 4600, 2), 'UNAVAILABLE', 'an ENDED call');
+      assert.equal(await gapV1(x.user, x.recording, 'USER', 3600, 4600, 'MUTED'), 'UNAVAILABLE', 'its recording is sealed');
+    });
   } finally {
     await q('ROLLBACK');
     await owner();
@@ -641,6 +722,60 @@ async function verifyRaces(report) {
       assert.deepEqual([a.outcome, r.outcome, r.end_reason], ['ENDED', 'ALREADY_ENDED', 'USER_ENDED']);
       const [rec] = await rows('SELECT recording_state, sealed_by FROM voice_private.recordings WHERE call_id = $1', [call]);
       assert.deepEqual(rec, { recording_state: 'STORED', sealed_by: 'WRITER' });
+    });
+
+    // R's call: the instance holding epoch 1 is writing when the phone resumes elsewhere (the connection is lost first).
+    const rClient = randomUUID();
+    const rb = await begin(R, sessions[2], rClient);
+    assert.equal(rb.outcome, 'BEGUN');
+    const ra = await activate(R, rb.call);
+    const [rCall, rRec] = [rb.call, ra.recording_id];
+    const addSql = 'SELECT * FROM public.server_add_call_segment_v2($1, $2, $3, $4, $5, $6, $7, 4096, 20)';
+    const resumeSql = 'SELECT * FROM public.server_resume_call_v1($1, $2, $3)';
+
+    await report.section('LRC-5 an old epoch\'s admission holds the call; the resume waits for it; the segment counts in the resumed tracks and still completes', async () => {
+      assert.equal(await addSegment(R, rRec, 'USER', 0, 0, 1000), 'ADDED');
+      assert.equal(await storeSegment(R, rRec, 'USER', 0), 'STORED');
+      await owner();
+      const late = (await sr(q, addSql, [R, rRec, 1, 'USER', 1, 1000, 2000])).rows[0];
+      assert.equal(late.outcome, 'ADDED', 'epoch 1 still holds the call: admitted');
+      const resumed = sr(q2, resumeSql, [R, rCall, rClient]);
+      assert.equal(await rt.stillPending(resumed), true, 'the resume waits on the admission\'s call lock');
+      await q('COMMIT');
+      await owner();
+      const r = (await resumed).rows[0];
+      await q2('COMMIT');
+      assert.deepEqual([r.outcome, Number(r.connection_epoch)], ['RESUMED', 2]);
+      const [tracks] = await server('SELECT * FROM public.server_read_call_tracks_v1($1, $2)', [R, rCall]);
+      assert.deepEqual([Number(tracks.user_track_end_ms), tracks.user_next_segment], [2000, 2], 'the resumed connection writes after it');
+      // The old instance finishes its upload after the authority moved: the admitted audio is kept.
+      assert.equal(await storeSegment(R, rRec, 'USER', 1), 'STORED');
+      // Its next write is fenced.
+      assert.equal(await addSegment(R, rRec, 'USER', 2, 2000, 3000, 1), 'FENCED');
+    });
+
+    await report.section('LRC-6 the resume holds the call; an old epoch\'s late admission waits for it and is FENCED: nothing written, the tracks one truth', async () => {
+      assert.equal((await suspend(R, rCall, 2)).outcome, 'SUSPENDED');
+      await owner();
+      const r = (await sr(q, resumeSql, [R, rCall, rClient])).rows[0];
+      assert.deepEqual([r.outcome, Number(r.connection_epoch)], ['RESUMED', 3]);
+      const late = sr(q2, addSql, [R, rRec, 2, 'USER', 2, 2000, 3000]);
+      assert.equal(await rt.stillPending(late), true, 'the late admission waits on the resume\'s call lock');
+      await q('COMMIT');
+      await owner();
+      const l = (await late).rows[0];
+      await q2('COMMIT');
+      assert.equal(l.outcome, 'FENCED', 'epoch 2 lost the call before its admission ran');
+      assert.deepEqual(await writes(rRec), { objects: 2, gaps: 0 });
+      // The holder of epoch 3 writes on; the ended call's tracks are one contiguous truth.
+      assert.equal(await gap(R, rRec, 'USER', 2000, 2400, 'RECONNECTION', 3), 'RECORDED');
+      assert.equal(await addSegment(R, rRec, 'USER', 2, 2400, 3400, 3), 'ADDED');
+      assert.equal(await storeSegment(R, rRec, 'USER', 2), 'STORED');
+      assert.equal((await end(R, rCall, 3)).outcome, 'ENDED');
+      assert.deepEqual(await assertContiguous(rRec, 'USER'),
+        ['SEGMENT:STORED 0-1000', 'SEGMENT:STORED 1000-2000', 'RECONNECTION 2000-2400', 'SEGMENT:STORED 2400-3400']);
+      const [row] = await rows('SELECT state, end_reason, connection_epoch::int AS epoch FROM voice_private.calls WHERE id = $1', [rCall]);
+      assert.deepEqual(row, { state: 'ENDED', end_reason: 'USER_ENDED', epoch: 3 });
     });
   } finally {
     await q('ROLLBACK').catch(() => undefined);

@@ -11,7 +11,7 @@ const PACKETS = syntheticUplinkPackets(800);
 async function started(authority = new InMemoryCallAuthority()) {
   await authority.begin({ userId: USER, sessionId: CALL, callId: CALL, clientInstanceId: CALL });
   const activated = await authority.activate({ userId: USER, callId: CALL, epoch: 1 });
-  const writer = new UserTrackWriter({ media: authority, store: authority, userId: USER, callId: CALL }, activated.recordingId!, { userTrackEndMs: 0, userNextSegment: 0 });
+  const writer = new UserTrackWriter({ media: authority, store: authority, userId: USER, callId: CALL, epoch: 1 }, activated.recordingId!, { userTrackEndMs: 0, userNextSegment: 0 });
   return { authority, writer };
 }
 
@@ -81,7 +81,7 @@ describe('S8B-05 CP1 the USER track writer (real Opus packets, valid Ogg segment
     feed(first, 0, 100, 0);
     await first.flush();
     // A second writer that believes the track ends at 1000 ms (a stale view) resends 1000..2000 then continues.
-    const second = new UserTrackWriter({ media: authority, store: authority, userId: USER, callId: CALL }, authority.calls.get(CALL)!.recordingId!,
+    const second = new UserTrackWriter({ media: authority, store: authority, userId: USER, callId: CALL, epoch: 1 }, authority.calls.get(CALL)!.recordingId!,
       { userTrackEndMs: 1000, userNextSegment: 0 });
     feed(second, 50, 100, 1000);
     await second.close();
@@ -103,6 +103,27 @@ describe('S8B-05 CP1 the USER track writer (real Opus packets, valid Ogg segment
     await closed.writer.flush();
     expect(closed.writer.failure).toBe('RECORDING_CLOSED');
     expect(closed.authority.segments).toEqual([]);
+  });
+
+  it('stops FENCED and writes nothing more once a newer connection holds the call (0189 fences the older epoch)', async () => {
+    const { authority, writer } = await started();
+    feed(writer, 0, 500, 0);
+    await writer.flush();
+    expect(authority.segments.map((s) => [s.index, s.startMs, s.endMs])).toEqual([[0, 0, 10_000]]);
+    authority.calls.get(CALL)!.epoch = 2; // a resume elsewhere moved the epoch on
+    feed(writer, 500, 100, 10_000);
+    await writer.flush();
+    expect(writer.failure).toBe('FENCED');
+    expect(authority.segments).toHaveLength(1);
+
+    const gapped = await started();
+    feed(gapped.writer, 0, 50, 0);
+    await gapped.writer.flush();
+    gapped.authority.calls.get(CALL)!.state = 'RECONNECTING'; // its own epoch, but the call is no longer ACTIVE
+    gapped.writer.gap('MUTED', 2000);
+    await gapped.writer.flush();
+    expect(gapped.writer.failure).toBe('FENCED');
+    expect(gapped.authority.gaps).toEqual([]);
   });
 
   it('abandons without writing when the call ended without it', async () => {
