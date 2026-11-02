@@ -1335,6 +1335,11 @@ jobs:
       # REALTIME_CAPACITY_FULL), the sweep's truthful end reasons, call-truth, the NOT_SPEAKING gap and the recording races.
       - name: Verify S8B-05 CP1 live call authority (0189) against real PostgreSQL
         run: npm run verify:live-call-authority:integration
+      # S8B-05 CP2: migration 0190 (the realtime spoken turn) - the call turn commit (R2-G, R7'), the exchange with its
+      # stored safety (N1), the registered reply segments, the playout mark (P1-P3, one close wins), the delivery state in
+      # the completed event v2 / the export / the history, the call ledger per attempt and the commit / close / text races.
+      - name: Verify S8B-05 CP2 live call spoken turn (0190) against real PostgreSQL
+        run: npm run verify:live-call-spoken-turn:integration
       # S8B-05 CP1: the synthetic live call - the compiled gateway, connection, repository, media service and USER track writer
       # over this database, two instances, a synthetic client on a real WebSocket with real libopus packets of a generated
       # signal. No provider, no paid call, no real person. It restores the gates and the policy and removes its fixtures.
