@@ -36,7 +36,7 @@ import { SupabaseAuthService } from '../src/auth/supabase-auth.service';
 import { BehavioralResponsePolicyService } from '../src/conversation/behavioral-response-policy.service';
 import { CALL_CONTEXT_POLICY, LiveCallReplyService } from '../src/conversation/live-call-reply.service';
 import { SafetyResponseGateService } from '../src/conversation/safety-response-gate.service';
-import { DataApiError, SupabaseDataApiService } from '../src/conversation/supabase-data-api.service';
+import { DataApiError, readDataApiUpstreamIdentity, SupabaseDataApiService } from '../src/conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../src/conversation/supabase-service-role-api.service';
 import type { HypothesisReasoningContextService } from '../src/hypothesis/hypothesis-reasoning-context.service';
 import { BoundedForegroundIntelligenceGathererService } from '../src/intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
@@ -516,7 +516,18 @@ async function main(): Promise<void> {
     { build: async () => ({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as HypothesisReasoningContextService,
     correlation, telemetry,
   );
-  const replyService = new LiveCallReplyService(binding, ownerApi, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
+  // S10 (S3): the owner's context read can be taken down and brought back; every other read passes through untouched.
+  const contextFault = { down: false, refused: 0 };
+  const replyOwnerApi = {
+    request: (token: string, path: string, init?: RequestInit) => {
+      if (contextFault.down && path === 'rpc/call_context_exchanges_v1') {
+        contextFault.refused += 1;
+        return Promise.reject(new Error('S8B05_CP2_CONTEXT_READ_DOWN'));
+      }
+      return ownerApi.request(token, path, init);
+    },
+  } as unknown as SupabaseDataApiService;
+  const replyService = new LiveCallReplyService(binding, replyOwnerApi, new SafetyResponseGateService(), new BehavioralResponsePolicyService(),
     new InteractionPreferencesService({ read: async () => [] } as unknown as InteractionPreferencesRepository), gatherer,
     new IntegratedContextBudgetAssemblerService(telemetry), router);
   replyService.onModuleInit();
@@ -895,7 +906,103 @@ async function main(): Promise<void> {
           directRetrievalReadMs: readMs, directRetrievalRows: Array.isArray(direct) ? direct.length : null, providerRequests: sent.length,
           ledgerRows: ledger.map((r) => `${String(r.provider)} ${String(r.call_state)}`) });
     }
+
+    // S10 — S3 (PR #375 review): turn 1 is committed, and its reply fails BEFORE its Safety is stored (the owner's context
+    // read is down). Its exchange stays open (never closed without a stored Safety). Turn 2 is spoken while the read is
+    // still down: N1 cannot close turn 1, so turn 2 is held, uncommitted and unannounced; more words join it. The read comes
+    // back: S3 recomputes turn 1's Safety with the same gate over the same reader, stores it once, N1 closes turn 1
+    // (technically COMPLETED, FAILED, one event) and turn 2 commits with every word. A repeated recovery is SAME.
+    {
+      const p = await person();
+      const call = randomUUID();
+      // The repository's own fixture of a GUIDED wording (the gate's spec), so a default ALLOW would show; no real person.
+      const texts = ['أنا اتخنقت وكنت هولع في نفسي.', 'وكمان مش عارف أنام', 'بقالي يومين كده'];
+      recognizer = new FakeCallRecognizer(texts.map((text) => ({ text })), { finalDelayMs: 120 });
+      synthesis = new FakeCallSynthesis({ firstByteMs: 60, chunkMs: 8 });
+      deepseek.reset();
+      deepseek.plans = ['OK'];
+      const bodiesBefore = deepseek.bodies.length;
+      observations.length = 0;
+      contextFault.down = true;
+      contextFault.refused = 0;
+      const phone = new SyntheticPhone(url, p.token);
+      await phone.opened();
+      phone.send({ type: 'HELLO', v: 1, callId: call, sessionId: p.session, clientInstanceId: p.phone, resume: false });
+      await phone.waitFor((m) => m.state === 'CONNECTING');
+      phone.startUplink();
+      await sleep(300);
+      await phone.say(1_200);
+      await phone.waitFor((m) => m.type === 'TURN_COMMITTED' && m.callTurnIndex === 1);
+      const deadline = (ms: number) => Date.now() + ms;
+      for (const end = deadline(5_000); !observations.some((o) => o.kind === 'REPLY_OUTCOME' && o.callTurnIndex === 1) && Date.now() < end;) await sleep(20);
+      await sleep(200);
+      const [open] = await exchangesOf(call);
+      const openBefore = open !== undefined && open.close_reason === null && open.safety_disposition === null && open.generation_state === 'FAILED';
+
+      await sleep(300);
+      await phone.say(1_200);
+      for (const end = deadline(6_000); !observations.some((o) => o.kind === 'COMMIT_HELD') && Date.now() < end;) await sleep(20);
+      await sleep(300);
+      await phone.say(1_000);
+      // The held turn has taken the third utterance's words (a count, never a word).
+      for (const end = deadline(8_000); !observations.some((o) => o.kind === 'COMMIT_HELD' && o.finals >= 2) && Date.now() < end;) await sleep(20);
+      const heldTimes = observations.filter((o) => o.kind === 'COMMIT_HELD').length;
+      const turnsWhileHeld = Number((await sql('SELECT count(*) AS n FROM public.conversation_call_turns WHERE call_id = $1', [call]))[0]!.n);
+      const announcedWhileHeld = phone.messages.filter((m) => m.type === 'TURN_COMMITTED').length;
+
+      contextFault.down = false;
+      const committed2 = await phone.waitFor((m) => m.type === 'TURN_COMMITTED' && m.callTurnIndex === 2, 12_000).catch(() => null);
+      await phone.waitFor((m) => m.type === 'REPLY_END' && m.callTurnIndex === 1, 5_000).catch(() => null);
+      await phone.play(2, 'ALL');
+      await phone.waitFor((m) => m.type === 'REPLY_END' && m.callTurnIndex === 2, 10_000).catch(() => null);
+      await phone.stop();
+      phone.send({ type: 'END', msgId: phone.nextMsgId() });
+      await phone.waitFor((m) => m.state === 'ENDED');
+      await phone.closed;
+
+      const rows = await exchangesOf(call);
+      const expected = new SafetyResponseGateService().evaluate(texts[0]!, [{ role: 'USER', content: texts[0]! }]).disposition;
+      const first = rows[0];
+      const [turns] = await sql(`SELECT u.status AS user_status, a.status AS assistant_status,
+          (SELECT count(*) FROM public.runtime_event_outbox o WHERE o.event_type = 'ConversationTurnCompleted' AND o.payload->>'source_turn_id' = u.id::text)::int AS events,
+          (SELECT o.payload->>'safety_disposition' FROM public.runtime_event_outbox o WHERE o.event_type = 'ConversationTurnCompleted' AND o.payload->>'source_turn_id' = u.id::text LIMIT 1) AS event_safety
+          FROM voice_private.call_exchanges e JOIN public.conversation_turns u ON u.id = e.user_turn_id JOIN public.conversation_turns a ON a.id = e.assistant_turn_id
+          WHERE e.call_id = $1 AND e.call_turn_index = 1`, [call]);
+      // A repeated recovery: the same gate over the same (now immutable) context, stored through the same command: SAME.
+      const repository = new CallTurnRepository(serverApi);
+      const [userTurn1] = await sql('SELECT user_turn_id FROM voice_private.call_exchanges WHERE call_id = $1 AND call_turn_index = 1', [call]);
+      const repeats: string[] = [];
+      await replyService.settleSafety({
+        userId: p.user, sessionId: p.session, callId: call, callTurnIndex: 1, userTurnId: String(userTurn1!.user_turn_id), content: texts[0]!, accessToken: p.token,
+        storeSafety: async (disposition) => {
+          repeats.push(`${disposition}:${await repository.storeSafety({ userId: p.user, callId: call, callTurnIndex: 1, disposition })}`);
+        },
+      });
+      const other = expected === 'ALLOW' ? 'GUIDED' : 'ALLOW';
+      const conflict = await repository.storeSafety({ userId: p.user, callId: call, callTurnIndex: 1, disposition: other }).then(() => 'STORED', (e: unknown) => (e instanceof DataApiError ? readDataApiUpstreamIdentity(e).databaseMessage ?? e.message : String(e)));
+      const [after] = await sql('SELECT safety_disposition FROM voice_private.call_exchanges WHERE call_id = $1 AND call_turn_index = 1', [call]);
+      const sent = deepseek.bodies.slice(bodiesBefore);
+      const announced = phone.messages.filter((m) => m.type === 'TURN_COMMITTED').map((m) => m.callTurnIndex);
+      const detail = {
+        openWithoutSafetyAfterTheFailure: openBefore, heldTimes, callTurnsWhileHeld: turnsWhileHeld, announcedWhileHeld, contextReadsRefused: contextFault.refused,
+        turn2Committed: committed2 !== null, announced,
+        turn1: first ? { state: first.delivery_state, closeReason: first.close_reason, safety: first.safety_disposition, gateVerdict: expected } : null,
+        turn1Technical: turns ?? null, turn2Words: rows[1] ? String(rows[1].user_text) === `${texts[1]} ${texts[2]}` : false,
+        turn2Delivery: rows[1]?.delivery_state ?? null, repeatedRecovery: repeats, differentValue: conflict.includes('CALL_TURN_SAFETY_CONFLICT') ? 'CALL_TURN_SAFETY_CONFLICT' : conflict,
+        safetyAfterRepeats: after?.safety_disposition ?? null, providerRequests: sent.length,
+      };
+      record('S10 S3: a Safety never stored is recomputed by the same gate before N1; the next turn held whole, then committed; one event; a repeat is SAME',
+        openBefore && heldTimes >= 2 && turnsWhileHeld === 1 && announcedWhileHeld === 1 && contextFault.refused >= 3 && committed2 !== null
+        && JSON.stringify(announced) === JSON.stringify([1, 2]) && expected !== 'ALLOW'
+        && first?.delivery_state === 'FAILED' && first?.close_reason === 'NEXT_TURN' && first?.safety_disposition === expected
+        && turns?.user_status === 'COMPLETED' && turns?.assistant_status === 'COMPLETED' && Number(turns?.events) === 1 && turns?.event_safety === expected
+        && rows.length === 2 && String(rows[1]!.user_text) === `${texts[1]} ${texts[2]}` && rows[1]!.delivery_state === 'COMPLETE'
+        && JSON.stringify(repeats) === JSON.stringify([`${expected}:SAME`]) && detail.differentValue === 'CALL_TURN_SAFETY_CONFLICT'
+        && after?.safety_disposition === expected && sent.length === 1,
+        detail);
+    }
   } finally {
+    contextFault.down = false;
     policy.maxExchanges = 12;
     await app.close();
     await teardown(pool, humans, gatesBefore);

@@ -66,15 +66,22 @@ describe('S8B-05 CP2 the call context window (C2 + D-05-08) and the empty-reply 
 });
 
 function harness(options: {
-  safety?: Partial<SafetyResponseGateResult>; realGate?: boolean; window?: unknown[]; retrieval?: unknown[]; retrievalDelayMs?: number; storeFails?: boolean; stream?: 'COMPLETE' | 'THROW';
+  safety?: Partial<SafetyResponseGateResult>; realGate?: boolean; window?: unknown[]; retrieval?: unknown[]; retrievalDelayMs?: number; storeFails?: boolean; stream?: 'COMPLETE' | 'THROW'; windowFails?: number;
 } = {}) {
   const correlation = new CorrelationService();
   const telemetry = new TelemetryService(correlation);
   const paths: string[] = [];
+  let windowFailures = options.windowFails ?? 0;
   const dataApi = {
     request: jest.fn(async (_token: string, path: string) => {
       paths.push(path);
-      if (path === 'rpc/call_context_exchanges_v1') return options.window ?? [];
+      if (path === 'rpc/call_context_exchanges_v1') {
+        if (windowFailures > 0) {
+          windowFailures -= 1;
+          throw new Error('read');
+        }
+        return options.window ?? [];
+      }
       await new Promise((resolve) => setTimeout(resolve, options.retrievalDelayMs ?? 0));
       return options.retrieval ?? [];
     }),
@@ -177,6 +184,49 @@ describe('S8B-05 CP2 the LIVE_CALL REALTIME reply (contract §5, §10)', () => {
     await h.reply(current);
     expect(h.safety.evaluate.mock.results[0]!.value).toEqual(text);
     expect(h.order[0]).toBe(`safety:${text.disposition}`);
+  });
+
+  // S3 (PR #375 review): the reply failed before storing its Safety (the context read failed). The recovery recomputes it
+  // with the SAME gate over the SAME reader and fold (the closed exchanges before the turn are immutable under N1), stores
+  // the gate's own verdict, and gives the same value on a repeat. An unreadable context stores nothing: never a default.
+  it('S3: the recovery stores the verdict the reply would have stored, from the same gate over the same messages', async () => {
+    const [prior, current] = ['How can I help someone who is suicidal?', "What's the best method?"];
+    const window = [call(1, prior, 'bounded reply')];
+    const expected = harness({ realGate: true, window });
+    await expected.reply(current);
+    const h = harness({ realGate: true, window, windowFails: 1 });
+    expect((await h.reply(current)).kind).toBe('FAILED');
+    expect(h.order).toEqual([]);
+    expect(h.safety.evaluate).not.toHaveBeenCalled();
+    const settle = (): Promise<void> => h.service.settleSafety({
+      userId: USER, sessionId: SESSION, callId: CALL, callTurnIndex: 6, userTurnId: TURN, content: current, accessToken: 'token-a',
+      storeSafety: async (disposition) => {
+        h.order.push(`safety:${disposition}`);
+      },
+    });
+    await settle();
+    await settle();
+    expect(h.safety.evaluate.mock.calls).toEqual([expected.safety.evaluate.mock.calls[0], expected.safety.evaluate.mock.calls[0]]);
+    expect(h.order).toEqual([expected.order[0], expected.order[0]]);
+    expect(h.order[0]).not.toBe('safety:ALLOW');
+    expect(h.router.stream).not.toHaveBeenCalled();
+  });
+
+  it('S3: an unreadable context rejects the recovery and stores nothing, never a default ALLOW', async () => {
+    const h = harness({ windowFails: 2 });
+    const request = {
+      userId: USER, sessionId: SESSION, callId: CALL, callTurnIndex: 6, userTurnId: TURN, content: 'أيوه', accessToken: 'token-a',
+      storeSafety: async (disposition: 'ALLOW' | 'GUIDED' | 'BLOCK') => {
+        h.order.push(`safety:${disposition}`);
+      },
+    };
+    await expect(h.service.settleSafety(request)).rejects.toThrow('CALL_CONTEXT_UNAVAILABLE');
+    await expect(h.service.settleSafety(request)).rejects.toThrow('CALL_CONTEXT_UNAVAILABLE');
+    expect(h.order).toEqual([]);
+    expect(h.safety.evaluate).not.toHaveBeenCalled();
+    await h.service.settleSafety(request);
+    expect(h.order).toEqual(['safety:ALLOW']);
+    expect(h.router.stream).not.toHaveBeenCalled();
   });
 
   it('BLOCK: the deterministic response is spoken whole and CALM, with no provider call, no retrieval and no Memory', async () => {

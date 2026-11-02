@@ -43,6 +43,11 @@ export interface CallReplyDeps {
   readonly signal: (op: string, outcome: string) => void;
   readonly observe: (event: CallReplyEvent) => void;
   readonly now: () => number;
+  /**
+   * S3: recompute and store the turn's Safety (the same gate over the same context reader) when the generation never
+   * stored it. Rejects when it cannot be done now. Absent, an exchange without a stored Safety is never closed.
+   */
+  readonly ensureSafety?: () => Promise<void>;
 }
 
 type Segment = { readonly text: string; readonly style: string; readonly piece: number; readonly first: boolean; readonly last: boolean };
@@ -102,6 +107,8 @@ export class CallReply {
   private closing = false;
   private closedState: DeliveryState | null = null;
   private resolveSafety!: () => void;
+  private safetyKnown = false;
+  private safetyRecovery: Promise<boolean> | null = null;
   /** Resolves once the turn's Safety is stored, or once the generation settled without storing it. */
   readonly safetySettled = new Promise<void>((resolve) => {
     this.resolveSafety = resolve;
@@ -120,7 +127,26 @@ export class CallReply {
   }
 
   safetyStored(): void {
+    this.safetyKnown = true;
     this.resolveSafety();
+  }
+
+  /**
+   * S3: true once the turn's Safety is stored, recovering it first when the generation ended (or stopped) before storing it;
+   * false when it cannot be recovered now (the context unreadable): the exchange then stays open, and nothing closes it
+   * without its stored Safety. One recovery at a time.
+   */
+  settleSafety(): Promise<boolean> {
+    if (this.safetyKnown) return Promise.resolve(true);
+    const ensure = this.deps.ensureSafety;
+    if (!ensure) return Promise.resolve(false);
+    this.safetyRecovery ??= ensure().then(() => {
+      this.safetyKnown = true;
+      return true;
+    }, () => false).finally(() => {
+      this.safetyRecovery = null;
+    });
+    return this.safetyRecovery;
   }
 
   // ------------------------------------------------------------------ generation side
@@ -459,6 +485,13 @@ export class CallReply {
   private async closeWith(reason: CloseReason): Promise<void> {
     if (this.closing || this.closed) return;
     this.closing = true;
+    // S3: an exchange is never closed without its stored Safety (the authority refuses it); recovered here first when the
+    // generation failed before storing it.
+    if (this.deps.ensureSafety && !(await this.settleSafety())) {
+      this.closing = false;
+      this.deps.signal('close', 'safety_unsettled');
+      return;
+    }
     const channel = this.deps.channel;
     // The QANDEEL track holds what was confirmed before the close reads it (the heard mark is bounded by it).
     await channel.settleQandeelTrack();

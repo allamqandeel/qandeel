@@ -7,11 +7,12 @@ import type { ModelRouter, ModelRouterContextMessage } from '../model-router/mod
 import { callRetrievalTerms } from '../voice/call-turn/call-reply';
 import {
   LiveCallConversationBinding, type LiveCallConversation, type LiveCallReleasedSpeech, type LiveCallReplyOutcome, type LiveCallReplyRequest,
+  type LiveCallSafetyRequest,
 } from '../voice/call-turn/live-call-conversation.port';
 import { withSpokenCallReply } from './behavioral-response-policy.service';
 import { BEHAVIORAL_RESPONSE_POLICY, type BehavioralResponsePolicy } from './behavioral-response-policy.types';
 import { resolveConversationLocale } from './conversation-turn-locale';
-import { SAFETY_RESPONSE_GATE, type SafetyResponseGate } from './safety-response-gate.types';
+import { SAFETY_RESPONSE_GATE, type SafetyResponseGate, type SafetyResponseGateResult } from './safety-response-gate.types';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 
 /** S8B-05 CP2 (contract §5, L1): the live call's own streaming router (REALTIME); null where no call reply may be generated. */
@@ -143,6 +144,13 @@ export class LiveCallReplyService implements LiveCallConversation, OnModuleInit 
     if (this.router?.stream) this.binding.bind(this);
   }
 
+  /** S3: the same reader, the same fold, the same gate as the reply; stored once (STORED, or SAME when it was). No provider. */
+  async settleSafety(request: LiveCallSafetyRequest): Promise<void> {
+    const evaluated = await this.evaluateSafety(request);
+    if (!evaluated) throw new Error('CALL_CONTEXT_UNAVAILABLE');
+    await request.storeSafety(evaluated.safety.disposition);
+  }
+
   reply(request: LiveCallReplyRequest): Promise<LiveCallReplyOutcome> {
     return runWithAiUsageAttribution({ userId: request.userId, sessionId: request.sessionId, sourceTurnId: request.userTurnId }, () => this.replyOnce(request));
   }
@@ -154,23 +162,14 @@ export class LiveCallReplyService implements LiveCallConversation, OnModuleInit 
     const router = this.router;
     if (!router?.stream) return { kind: 'FAILED', stages };
 
-    const windowRead = this.dataApi.request<ContextRow[]>(request.accessToken, 'rpc/call_context_exchanges_v1', {
-      method: 'POST', body: JSON.stringify({ p_session_id: request.sessionId, p_call_id: request.callId, p_limit: CALL_CONTEXT_POLICY.readLimit }),
-    });
+    const evaluation = this.evaluateSafety(request);
     const preferencesRead = this.interactionPreferences.readForTurn(request.accessToken, request.userId);
     preferencesRead.catch(() => undefined);
 
-    let rows: ContextRow[];
-    try {
-      rows = await windowRead;
-    } catch {
-      return { kind: 'FAILED', stages };
-    }
-    if (!Array.isArray(rows)) return { kind: 'FAILED', stages };
+    const evaluated = await evaluation;
+    if (!evaluated) return { kind: 'FAILED', stages };
     mark('context_read');
-    const window = selectCallWindow(rows);
-    const safetyView = foldCallExchanges(window.exchanges, request.content);
-    const safety = this.safetyGate.evaluate(request.content, safetyView.messages);
+    const { window, safety } = evaluated;
     try {
       await request.storeSafety(safety.disposition);
     } catch {
@@ -249,6 +248,24 @@ export class LiveCallReplyService implements LiveCallConversation, OnModuleInit 
       mark('generation_end');
       return { kind: 'FAILED', stages, context };
     }
+  }
+
+  /**
+   * S1: the call's context (C2 + the D-05-08 window, read by the owner) folded as the reply receives it, the turn last, and
+   * the ONE gate over it. Null when the context cannot be read (the turn is then neither answered nor judged by default).
+   */
+  private async evaluateSafety(request: LiveCallSafetyRequest): Promise<{ readonly window: ReturnType<typeof selectCallWindow>; readonly safety: SafetyResponseGateResult } | null> {
+    let rows: ContextRow[];
+    try {
+      rows = await this.dataApi.request<ContextRow[]>(request.accessToken, 'rpc/call_context_exchanges_v1', {
+        method: 'POST', body: JSON.stringify({ p_session_id: request.sessionId, p_call_id: request.callId, p_limit: CALL_CONTEXT_POLICY.readLimit }),
+      });
+    } catch {
+      return null;
+    }
+    if (!Array.isArray(rows)) return null;
+    const window = selectCallWindow(rows);
+    return { window, safety: this.safetyGate.evaluate(request.content, foldCallExchanges(window.exchanges, request.content).messages) };
   }
 
   /** In-call retrieval (A1 §4): one owner-scoped indexed read, raced against 80 ms; never an error for the reply. */

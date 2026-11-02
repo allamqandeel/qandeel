@@ -46,8 +46,17 @@ export interface LiveCallReplyOutcome {
   };
 }
 
+/** S3: what the Safety recovery of one committed turn needs: the turn, its reader's scope and the one store. */
+export type LiveCallSafetyRequest = Pick<LiveCallReplyRequest, 'userId' | 'sessionId' | 'callId' | 'callTurnIndex' | 'userTurnId' | 'content' | 'accessToken' | 'storeSafety'>;
+
 export interface LiveCallConversation {
   reply(request: LiveCallReplyRequest): Promise<LiveCallReplyOutcome>;
+  /**
+   * S3 (the turn's Safety was never stored: the generation failed or stopped before it): recompute it with the SAME gate
+   * over the SAME context reader (the closed exchanges before the turn are immutable under N1, so the input is the one
+   * the reply had) and store it once. Rejects, storing nothing, when the context cannot be read now; never a default.
+   */
+  settleSafety(request: LiveCallSafetyRequest): Promise<void>;
 }
 
 @Injectable()

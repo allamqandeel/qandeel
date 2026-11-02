@@ -27,8 +27,14 @@ export const LIVE_CALL_SYNTHESIS_ROUTE = Symbol('LIVE_CALL_SYNTHESIS_ROUTE');
 
 /** Uplink waiting for the recognizer to open (or for its send to accept), at most this much; beyond it the turn path stops. */
 const MAX_PENDING_RECOGNITION_MS = 10_000;
-/** A new turn waits at most this long for the previous exchange's Safety to be stored (N1 needs it), then commits anyway. */
+/**
+ * A new turn waits at most this long for the previous exchange's Safety to be stored by its generation; then S3 recomputes
+ * it (N1 never closes an exchange without it).
+ */
 const SAFETY_WAIT_MS = 5_000;
+/** A turn held because the previous exchange's Safety could not be recovered yet is retried after 250 ms, doubling to 4 s. */
+const HELD_RETRY_FIRST_MS = 250;
+const HELD_RETRY_MAX_MS = 4_000;
 const BAND_ORDER = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
 
 /** What a proof or a test may observe of a call's turns: instants and counts only, never a word. */
@@ -38,7 +44,15 @@ export type CallTurnObservation =
   | { readonly kind: 'FINAL_ACCEPTED'; readonly answered: boolean; readonly at: number }
   | { readonly kind: 'COMMITTED'; readonly callTurnIndex: number; readonly at: number; readonly closed: DeliveryState | null }
   | { readonly kind: 'COMMIT_REFUSED'; readonly outcome: string; readonly at: number }
+  | { readonly kind: 'COMMIT_HELD'; readonly attempt: number; readonly finals: number; readonly at: number }
   | { readonly kind: 'REPLY_OUTCOME'; readonly callTurnIndex: number; readonly outcome: LiveCallReplyOutcome; readonly at: number };
+
+/** A finished utterance not yet committed: its FINAL words in order and its place on the call clock. */
+interface SpokenTurn {
+  readonly words: readonly RecognizedSpeech[];
+  readonly turnStart: number;
+  readonly speechEnd: number;
+}
 
 const floor20 = (ms: number) => Math.floor(ms / AUDIO_PACKET_MS) * AUDIO_PACKET_MS;
 const ceil20 = (ms: number) => Math.ceil(ms / AUDIO_PACKET_MS) * AUDIO_PACKET_MS;
@@ -122,6 +136,10 @@ class CallTurnSession implements LiveCallSpeechStream {
   private turnChain: Promise<void> = Promise.resolve();
   private reply: CallReply | null = null;
   private readonly replies = new Map<number, CallReply>();
+  /** S3: a finished turn held, uncommitted and unannounced, until the previous exchange's Safety is recovered. */
+  private held: SpokenTurn | null = null;
+  private heldRetry: ReturnType<typeof setTimeout> | null = null;
+  private heldAttempts = 0;
   private closed = false;
 
   constructor(private readonly channel: LiveCallTurnChannel, private readonly deps: SessionDeps) {
@@ -225,15 +243,60 @@ class CallTurnSession implements LiveCallSpeechStream {
       this.deps.signal('commit', 'no_speech');
       return;
     }
+    // A held turn and the words said since are ONE turn, in order (as speech resumed before a commit is).
+    const held = this.takeHeld();
+    await this.commitSpoken(held ? { words: [...held.words, ...words], turnStart: held.turnStart, speechEnd } : { words, turnStart, speechEnd });
+  }
+
+  private takeHeld(): SpokenTurn | null {
+    const held = this.held;
+    this.held = null;
+    if (this.heldRetry) clearTimeout(this.heldRetry);
+    this.heldRetry = null;
+    return held;
+  }
+
+  /**
+   * S3: the previous exchange's Safety cannot be recovered now (its context unreadable). The turn is kept whole, neither
+   * committed nor announced, and retried (250 ms doubling to 4 s) until the recovery succeeds or the call goes.
+   */
+  private hold(turn: SpokenTurn): void {
+    this.held = turn;
+    this.deps.observe({ kind: 'COMMIT_HELD', attempt: this.heldAttempts, finals: turn.words.length, at: Date.now() });
+    this.deps.signal('commit', 'held_safety_unsettled');
+    const delay = Math.min(HELD_RETRY_MAX_MS, HELD_RETRY_FIRST_MS * 2 ** this.heldAttempts);
+    this.heldAttempts += 1;
+    this.heldRetry = setTimeout(() => {
+      this.heldRetry = null;
+      this.turnChain = this.turnChain.then(() => this.retryHeld()).catch(() => this.deps.signal('commit', 'integrity_failure'));
+    }, delay);
+  }
+
+  private async retryHeld(): Promise<void> {
+    if (this.closed) return;
+    const held = this.takeHeld();
+    if (held) await this.commitSpoken(held);
+  }
+
+  private async commitSpoken(turn: SpokenTurn): Promise<void> {
+    const { words, turnStart, speechEnd } = turn;
+    const content = words.map((w) => w.text.trim()).filter((t) => t !== '').join(' ');
     const band = words.reduce<RecognizedSpeech['band']>((worst, w) => (BAND_ORDER[w.band] < BAND_ORDER[worst] ? w.band : worst), 'HIGH');
     const previous = this.reply;
     if (previous && !previous.closed) {
-      // N1 closes the open exchange with its stored Safety: give the previous turn's Safety a bounded moment.
+      // N1 closes the open exchange with its stored Safety: give the previous turn's generation a bounded moment to store
+      // it, then S3 recomputes it (the same gate over the same reader). Never closed without it, never a default.
       let wait: ReturnType<typeof setTimeout> | undefined;
       await Promise.race([previous.safetySettled, new Promise((resolve) => { wait = setTimeout(resolve, SAFETY_WAIT_MS); })]);
       clearTimeout(wait);
+      if (this.closed) return;
+      if (!(await previous.settleSafety())) {
+        if (!this.closed) this.hold(turn);
+        return;
+      }
       await this.channel.settleQandeelTrack();
     }
+    this.heldAttempts = 0;
     const userEnd = await this.channel.settleUserTrack();
     if (userEnd === null || this.closed) return;
     const anchorStartMs = floor20(turnStart);
@@ -261,24 +324,33 @@ class CallTurnSession implements LiveCallSpeechStream {
   /** The REALTIME reply of one committed turn: Safety stored first, then generation released into the reply's audio. */
   private answer(callTurnIndex: number, userTurnId: string, content: string): void {
     const conversation = this.deps.conversation();
+    const channel = this.channel;
     const reply = new CallReply({
-      store: this.deps.store, route: this.deps.route, channel: this.channel, signal: this.deps.signal, observe: this.deps.observe, now: Date.now,
+      store: this.deps.store, route: this.deps.route, channel, signal: this.deps.signal, observe: this.deps.observe, now: Date.now,
+      // S3: the generation failed or stopped before storing the turn's Safety: the conversation recomputes and stores it.
+      ensureSafety: () => {
+        const bound = this.deps.conversation();
+        if (!bound) return Promise.reject(new Error('LIVE_CALL_CONVERSATION_UNBOUND'));
+        return bound.settleSafety({
+          userId: channel.userId, sessionId: channel.sessionId, callId: channel.callId, callTurnIndex, userTurnId, content,
+          accessToken: channel.accessToken(), storeSafety,
+        });
+      },
     }, callTurnIndex);
+    const storeSafety = async (disposition: 'ALLOW' | 'GUIDED' | 'BLOCK'): Promise<void> => {
+      const stored = await this.deps.store.storeSafety({ userId: channel.userId, callId: channel.callId, callTurnIndex, disposition });
+      if (stored !== 'STORED' && stored !== 'SAME') throw new Error('CALL_SAFETY_NOT_STORED');
+      reply.safetyStored();
+    };
     this.reply = reply;
     this.replies.set(callTurnIndex, reply);
     if (!conversation) {
       reply.generationEnded('FAILED');
       return;
     }
-    const channel = this.channel;
     void conversation.reply({
       userId: channel.userId, sessionId: channel.sessionId, callId: channel.callId, callTurnIndex, userTurnId, content,
-      accessToken: channel.accessToken(), signal: reply.signal,
-      storeSafety: async (disposition) => {
-        const stored = await this.deps.store.storeSafety({ userId: channel.userId, callId: channel.callId, callTurnIndex, disposition });
-        if (stored !== 'STORED' && stored !== 'SAME') throw new Error('CALL_SAFETY_NOT_STORED');
-        reply.safetyStored();
-      },
+      accessToken: channel.accessToken(), signal: reply.signal, storeSafety,
       release: (piece, speech) => reply.release(piece, speech),
     }).then(
       (outcome) => {
@@ -300,6 +372,8 @@ class CallTurnSession implements LiveCallSpeechStream {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    // A held turn was never committed nor announced; it goes with the connection (the open exchange is the sweep's, CP3).
+    if (this.takeHeld()) this.deps.signal('commit', 'held_at_close');
     for (const reply of this.replies.values()) reply.abort();
     void this.endRecognition();
   }

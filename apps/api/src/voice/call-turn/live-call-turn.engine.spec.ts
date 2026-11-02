@@ -1,4 +1,4 @@
-import { LiveCallConversationBinding, type LiveCallReplyOutcome, type LiveCallReplyRequest } from './live-call-conversation.port';
+import { LiveCallConversationBinding, type LiveCallConversation, type LiveCallReplyOutcome, type LiveCallReplyRequest } from './live-call-conversation.port';
 import { LiveCallTurnEngine, type CallTurnObservation } from './live-call-turn.engine';
 import { InMemoryCallTurnStore } from './testing/in-memory-call-turn-store';
 import { FakeCallSynthesis, fakeCallSynthesisRoute } from './testing/fake-call-synthesis';
@@ -23,13 +23,17 @@ async function until(condition: () => boolean, ms = 4_000): Promise<void> {
   }
 }
 
-function harness(script: string[], options: { disposition?: 'ALLOW' | 'GUIDED' | 'BLOCK'; bind?: boolean; finalDelayMs?: number } = {}) {
+function harness(script: string[], options: { disposition?: 'ALLOW' | 'GUIDED' | 'BLOCK'; bind?: boolean; finalDelayMs?: number; conversation?: LiveCallConversation } = {}) {
   const store = new InMemoryCallTurnStore();
   const binding = new LiveCallConversationBinding();
   const requests: LiveCallReplyRequest[] = [];
   const order: string[] = [];
-  if (options.bind !== false) {
+  if (options.conversation) binding.bind(options.conversation);
+  else if (options.bind !== false) {
     binding.bind({
+      settleSafety: async () => {
+        throw new Error('NOT_EXPECTED');
+      },
       reply: async (request): Promise<LiveCallReplyOutcome> => {
         requests.push(request);
         await request.storeSafety(options.disposition ?? 'ALLOW');
@@ -147,5 +151,67 @@ describe('S8B-05 CP2 the call turn engine (§3 – §8): voice in, a committed t
     expect(h.recognizer.sessions).toEqual([]);
     expect(h.store.calls).toEqual([]);
     expect(await h.stream.playout({ callTurnIndex: 1, chunkSeq: 0, playedMs: 20 })).toBe('IGNORED');
+  });
+
+  // S3 regression (PR #375 review): the generation of turn 1 fails BEFORE its Safety is stored (its context read failed).
+  // N1 must not close it without a stored Safety, and the next turn must be neither lost nor announced as committed: it is
+  // held, whole, until S3 recomputes turn 1's Safety with the same gate over the same reader once the read is back.
+  it('S3: a Safety never stored is recovered by the same gate before N1; the next turn is held, whole, until the context reads again', async () => {
+    let readable = false;
+    const settled: Array<{ callTurnIndex: number; content: string }> = [];
+    const requests: LiveCallReplyRequest[] = [];
+    // The gate's verdict for turn 1 over its fixed context: GUIDED, so a default ALLOW would be visible.
+    const gate = (content: string): 'ALLOW' | 'GUIDED' => (content === 'احكيلي حاجة' ? 'GUIDED' : 'ALLOW');
+    const h = harness(['احكيلي حاجة', 'أنا هنا', 'ولسه معاك'], {
+      conversation: {
+        reply: async (request): Promise<LiveCallReplyOutcome> => {
+          requests.push(request);
+          if (request.callTurnIndex === 1) return { kind: 'FAILED', stages: {} }; // the context read failed: nothing stored
+          await request.storeSafety(gate(request.content));
+          return { kind: 'FAILED', stages: {} };
+        },
+        settleSafety: async (request) => {
+          settled.push({ callTurnIndex: request.callTurnIndex, content: request.content });
+          if (!readable) throw new Error('CALL_CONTEXT_UNAVAILABLE');
+          await request.storeSafety(gate(request.content));
+        },
+      },
+    });
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.channel.of('TURN_COMMITTED').length === 1);
+    // The reply failed and its own close tried S3 and could not: the exchange stays open, without a Safety.
+    await until(() => settled.length >= 1);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(h.store.exchanges[0]).toMatchObject({ index: 1, safety: null, closed: null, generation: 'FAILED' });
+    expect(h.channel.of('REPLY_END')).toEqual([]);
+
+    // Turn 2 is spoken: N1 cannot close turn 1 yet, so turn 2 is HELD, not committed, not announced.
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.observed.some((o) => o.kind === 'COMMIT_HELD'));
+    expect(h.store.commits).toHaveLength(1);
+    expect(h.channel.of('TURN_COMMITTED')).toHaveLength(1);
+    // More words while held: the same held turn, nothing dropped.
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_000);
+    await until(() => h.observed.some((o) => o.kind === 'COMMIT_HELD' && o.finals === 2));
+    expect(h.store.commits).toHaveLength(1);
+
+    // The context reads again: S3 stores the gate's own verdict once, N1 closes turn 1 (FAILED), turn 2 commits whole.
+    readable = true;
+    await until(() => h.channel.of('TURN_COMMITTED').length === 2, 8_000);
+    expect(h.store.commits).toHaveLength(2);
+    expect(h.store.commits[1]!.content).toBe('أنا هنا ولسه معاك');
+    expect(h.store.exchanges[0]).toMatchObject({ index: 1, safety: 'GUIDED' });
+    expect(h.store.exchanges[0]!.closed).toMatchObject({ deliveryState: 'FAILED', reason: 'NEXT_TURN' });
+    expect(h.channel.of('REPLY_END').filter((e) => e.callTurnIndex === 1)).toEqual([expect.objectContaining({ deliveryState: 'FAILED' })]);
+    expect(h.channel.of('TURN_COMMITTED')[1]).toMatchObject({ callTurnIndex: 2, role: 'USER' });
+    // Every recovery was of turn 1's own words, never a default; the stored value never changes on a repeat.
+    expect(settled.every((s) => s.callTurnIndex === 1 && s.content === 'احكيلي حاجة')).toBe(true);
+    expect(await h.store.storeSafety({ callTurnIndex: 1, disposition: 'GUIDED' })).toBe('SAME');
+    await expect(h.store.storeSafety({ callTurnIndex: 1, disposition: 'ALLOW' })).rejects.toThrow('CALL_SAFETY_CONFLICT');
+    expect(requests.map((r) => r.callTurnIndex)).toEqual([1, 2]);
+    h.stream.close();
   });
 });
