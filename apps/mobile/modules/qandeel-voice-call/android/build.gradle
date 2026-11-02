@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.qandeel.mobile'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.qandeelvoicecall"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+  testOptions {
+    unitTests.returnDefaultValues = true
+  }
+}
+
+dependencies {
+  // S8B-06 CP1: Opus for the live call (D-C1). Concentus is a pure-Java port of the reference libopus, under the Opus
+  // BSD 3-clause licence (https://github.com/lostromb/concentus/blob/master/LICENSE); no transitive dependency, no NDK.
+  // Pinned exactly. Maven Central sha1 of the jar: 3658ef53df76c1fb635617c03320cd56dfdd49f3.
+  implementation 'io.github.jaredmdobson:concentus:1.0.2'
+  testImplementation 'junit:junit:4.13.2'
+}
