@@ -12,8 +12,9 @@
  *   Authorization: Bearer <access token>                    (the token never travels in the URL or in a message body
  *                                                            except TOKEN_REFRESH; no extension is negotiated)
  *
- *   An upgrade is refused with a plain HTTP status before any frame: 400 malformed, 401 not authenticated, 429 rate
- *   limited, 503 this instance is full. A text frame is one JSON control message; a binary frame is one audio frame.
+ *   An upgrade is refused with a plain HTTP status before any frame: 400 malformed, 401 not authenticated, 404 another
+ *   path (or any query), 426 not WebSocket version 13, 429 rate limited, 503 this instance is full or authentication is
+ *   unavailable. A text frame is one JSON control message; a binary frame is one audio frame.
  *   Messages are never fragmented (FIN set on every frame).
  *
  * ## Binary frames (big-endian, 20-byte header, then one Opus packet of 1 ... 1275 bytes)
@@ -141,7 +142,8 @@ export type ServerMessage =
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const MAX_U32 = 0xffff_ffff;
 const MAX_TEXT_TURN_CHARS = 2000;
-const MAX_TOKEN_CHARS = 8192;
+/** A refreshed token must fit one text frame with its envelope. */
+const MAX_TOKEN_CHARS = 3500;
 
 const isU32 = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_U32;
 const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value);

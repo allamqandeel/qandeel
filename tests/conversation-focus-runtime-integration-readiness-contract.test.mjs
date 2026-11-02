@@ -339,8 +339,18 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // 55000 / P0002 (nothing left to withdraw) as NOT_ACTIVE; anything else is unavailable, under the same rule.
   // RE-ANCHORED by S7-01 (migration 0169): the Personal Replay service reads it for exactly the same one typed refusal,
   // 22023, as the client's INVALID_REQUEST; every other refusal is unavailable, under the same rule.
+  // RE-ANCHORED by S8B-05 CP1 (migration 0189): the live voice note repository reads it for exactly one typed refusal -
+  // P0001 with the message REALTIME_CAPACITY_FULL, the realtime seat refusal 0189 adds to the frozen 0185 open command - as
+  // the note's CAPACITY_FULL outcome; P0001 alone is too broad, so the message is compared too, and never surfaced. Every
+  // other refusal is rethrown, under the same rule.
   // The list stays exact: any further production reader fails here.)
-  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts', 'apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-enrollment/introductions-enrollment.service.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/introductions-proposals/introduction-proposals.service.ts', 'apps/api/src/introductions-world/introduction-world.service.ts', 'apps/api/src/replay/replay.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts', 'apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-enrollment/introductions-enrollment.service.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/introductions-proposals/introduction-proposals.service.ts', 'apps/api/src/introductions-world/introduction-world.service.ts', 'apps/api/src/replay/replay.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts', 'apps/api/src/voice/live-note/live-voice-note.repository.ts']);
+  const liveNote = stripComments(read('apps/api/src/voice/live-note/live-voice-note.repository.ts'));
+  assert.equal((liveNote.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the live voice note repository reads the identity once');
+  assert.match(liveNote, /const \{ databaseCode, databaseMessage \} = readDataApiUpstreamIdentity\(error\);\n\s+if \(databaseCode === 'P0001' && databaseMessage === 'REALTIME_CAPACITY_FULL'\) return 'CAPACITY_FULL';\n\s+\}\n\s+throw error;/u,
+    'it recognises exactly the one typed seat refusal and rethrows everything else');
+  assert.equal((liveNote.match(/databaseMessage/gu) ?? []).length, 2, 'the message is compared once and never used otherwise');
+  assert.doesNotMatch(liveNote, /console\.|Logger|\$\{/u, 'the raw identity is never logged or interpolated');
   for (const file of ['apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts',
     'apps/api/src/introductions-enrollment/introductions-enrollment.service.ts', 'apps/api/src/replay/replay.service.ts']) {
     const source = stripComments(read(file));

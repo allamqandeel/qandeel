@@ -124,7 +124,7 @@ export class InMemoryCallAuthority implements LiveCallStore, CallSegmentMedia {
   finish(call: MemoryCall, reason: string): void {
     call.state = 'ENDED';
     call.endReason = reason;
-    if (call.recordingId) this.recordingState = 'SEALED';
+    if (call.recordingId) this.recordingState = 'STORED';
   }
 
   async sweep(): Promise<number> {

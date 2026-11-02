@@ -54,7 +54,7 @@ import {
  * VOICE_NOTE_LIVE_TRANSCRIPT=ADOPT (realtime quality accepted first); otherwise null and no audio is ever streamed. The
  * voice media module reaches both through FAST_VOICE_PATH, resolved at call time (it still imports no provider).
  *
- * S8B-05 (CP1, 0189): the live call's server foundation - the call authority's store, the WebSocket gateway (protocol
+ * S8B-05 (CP1, 0189): the live call's server foundation - the call authority's store, the live call socket gateway (protocol
  * v1, `call/`), call-truth and the call sweep. The decoded uplink goes to the speech sink, and CP1 binds the NULL sink:
  * no recognizer, no orchestrator, no synthesis and no provider is reached by a live call.
  */

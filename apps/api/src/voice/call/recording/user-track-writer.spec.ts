@@ -98,7 +98,7 @@ describe('S8B-05 CP1 the USER track writer (real Opus packets, valid Ogg segment
     expect(consent.writer.failure).toBe('CONSENT_REQUIRED');
 
     const closed = await started();
-    closed.authority.recordingState = 'SEALED';
+    closed.authority.recordingState = 'STORED';
     feed(closed.writer, 0, 500, 0);
     await closed.writer.flush();
     expect(closed.writer.failure).toBe('RECORDING_CLOSED');
