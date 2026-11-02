@@ -42,12 +42,11 @@ import { ConversationSemanticEstablishmentService } from '../live-focus/conversa
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
 import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
-import { costLedgerDecorator, productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
-import { DeepSeekModelRouter } from '../model-router/providers/deepseek/deepseek-model-router';
+import { costLedgerDecorator } from '../ai-usage/production-ai-provider-call-accounting';
 import type { ModelRouter } from '../model-router/model-router.types';
 import { TelemetryService } from '../observability/telemetry.service';
-import { liveCallFetch } from '../http-transport/live-call-keep-alive-fetch';
-import { deferredLiveCallRouter, LIVE_CALL_MODEL_ROUTER, LiveCallReplyService } from './live-call-reply.service';
+import { LIVE_CALL_MODEL_ROUTER, LiveCallReplyService } from './live-call-reply.service';
+import { productionLiveCallRouter } from './live-call-model-router';
 
 /**
  * T-03A2: the LAZY CU segmentation binding.
@@ -200,11 +199,7 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     {
       provide: LIVE_CALL_MODEL_ROUTER,
       useFactory: (telemetry: TelemetryService): ModelRouter | null => {
-        if (process.env.NODE_ENV === 'test') return null;
-        return deferredLiveCallRouter(() => {
-          if (process.env.MODEL_PROVIDER?.trim().toLowerCase() !== 'deepseek') throw new Error('MODEL_PROVIDER must be deepseek.');
-          return DeepSeekModelRouter.forLiveCall(telemetry, productionAiProviderCallAccounting(), liveCallFetch());
-        });
+        return process.env.NODE_ENV === 'test' ? null : productionLiveCallRouter(telemetry);
       },
       inject: [TelemetryService],
     },
