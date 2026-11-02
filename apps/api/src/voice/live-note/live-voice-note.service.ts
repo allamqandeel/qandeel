@@ -38,7 +38,7 @@ export interface RealtimeRecognition {
   openStream(request: { readonly language: 'ar_en'; readonly signal: AbortSignal }): Promise<FinalizableRecognitionSession>;
 }
 
-export type LiveVoiceNoteOpenOutcome = 'OPENED' | 'CONSENT_REQUIRED' | 'NOT_AVAILABLE_NOW' | 'SESSION_NOT_ACTIVE' | 'NOT_FOUND';
+export type LiveVoiceNoteOpenOutcome = 'OPENED' | 'CONSENT_REQUIRED' | 'NOT_AVAILABLE_NOW' | 'SESSION_NOT_ACTIVE' | 'NOT_FOUND' | 'CAPACITY_FULL';
 
 export interface LiveVoiceNoteStore {
   /** Admits the live note and begins its ledger row (PENDING), in one transaction. */
@@ -147,6 +147,10 @@ export class LiveVoiceNoteService {
       case 'NOT_AVAILABLE_NOW':
         this.signal('open', 'refused_expected');
         throw new ServiceUnavailableException({ outcome: 'NOT_AVAILABLE_NOW' });
+      case 'CAPACITY_FULL':
+        // S8B-05 (0189): every realtime seat is taken (calls and live notes together): the phone records without it.
+        this.signal('open', 'refused_expected');
+        throw new ServiceUnavailableException({ outcome: 'CAPACITY_FULL' });
       default:
         throw notFound();
     }

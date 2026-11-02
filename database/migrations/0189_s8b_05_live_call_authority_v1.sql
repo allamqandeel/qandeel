@@ -200,12 +200,13 @@ BEGIN
 END$$;
 
 -- A live voice note (0188) opens a realtime session too: it takes a seat from the same capacity, or is refused. The 0188
--- open is unchanged; its insert reaches this guard, and a refusal rolls its whole transaction back (no ledger row).
+-- open is unchanged; its insert reaches this guard, and a refusal rolls its whole transaction back (no ledger row). The
+-- refusal is P0001 with its own message (a PTnnn code would become that HTTP status at PostgREST); the API reads it.
 CREATE FUNCTION voice_private.admit_live_voice_note_seat_v1() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
   IF voice_private.realtime_seats_in_use_v1() >= (voice_private.live_call_policy_v1()).realtime_session_capacity THEN
-    RAISE EXCEPTION 'REALTIME_CAPACITY_FULL' USING ERRCODE = 'PT503',
+    RAISE EXCEPTION 'REALTIME_CAPACITY_FULL' USING ERRCODE = 'P0001',
       DETAIL = 'Every realtime session the provider account allows is in use.';
   END IF;
   RETURN NEW;
@@ -352,9 +353,10 @@ BEGIN
 END$$;
 
 -- The connection's heartbeat: renews the seat and, explicitly, the recording's writer lease (CA-05-04). A call past its
--- maximum length ends SERVER_ENDED here (D-05-06).
+-- maximum length ends SERVER_ENDED here (D-05-06). An ALIVE answer names the instant the server will end the call
+-- (started_at + the policy's maximum), so the connection can warn before it (CALL_ENDING) from the controlled policy.
 CREATE FUNCTION public.server_heartbeat_call_v1(p_user_id uuid, p_call_id uuid, p_connection_epoch bigint)
-RETURNS TABLE (outcome text, call_state text)
+RETURNS TABLE (outcome text, call_state text, ends_at timestamptz)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_policy voice_private.live_call_policy := voice_private.live_call_policy_v1();
@@ -366,19 +368,19 @@ BEGIN
     RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
   END IF;
   SELECT * INTO v_call FROM voice_private.calls c WHERE c.id = p_call_id AND c.user_id = p_user_id FOR UPDATE;
-  IF NOT FOUND THEN RETURN QUERY SELECT 'NOT_FOUND'::text, NULL::text; RETURN; END IF;
-  IF v_call.state = 'ENDED' THEN RETURN QUERY SELECT 'ENDED'::text, v_call.end_reason; RETURN; END IF;
-  IF v_call.connection_epoch <> p_connection_epoch THEN RETURN QUERY SELECT 'FENCED'::text, v_call.state; RETURN; END IF;
-  IF v_call.state = 'RECONNECTING' THEN RETURN QUERY SELECT 'RECONNECTING'::text, v_call.state; RETURN; END IF;
+  IF NOT FOUND THEN RETURN QUERY SELECT 'NOT_FOUND'::text, NULL::text, NULL::timestamptz; RETURN; END IF;
+  IF v_call.state = 'ENDED' THEN RETURN QUERY SELECT 'ENDED'::text, v_call.end_reason, NULL::timestamptz; RETURN; END IF;
+  IF v_call.connection_epoch <> p_connection_epoch THEN RETURN QUERY SELECT 'FENCED'::text, v_call.state, NULL::timestamptz; RETURN; END IF;
+  IF v_call.state = 'RECONNECTING' THEN RETURN QUERY SELECT 'RECONNECTING'::text, v_call.state, NULL::timestamptz; RETURN; END IF;
   IF v_call.state = 'ACTIVE' AND v_call.started_at + make_interval(secs => v_policy.max_call_seconds) <= v_now THEN
     PERFORM voice_private.end_call_v1(p_call_id, 'SERVER_ENDED', 'WRITER');
-    RETURN QUERY SELECT 'ENDED'::text, 'SERVER_ENDED'::text; RETURN;
+    RETURN QUERY SELECT 'ENDED'::text, 'SERVER_ENDED'::text, NULL::timestamptz; RETURN;
   END IF;
   v_until := v_now + make_interval(secs => v_policy.seat_lease_seconds);
   UPDATE voice_private.calls c SET seat_lease_until = v_until WHERE c.id = p_call_id;
   UPDATE voice_private.recordings r SET writer_lease_until = greatest(r.writer_lease_until, v_until)
    WHERE r.call_id = p_call_id AND r.recording_state = 'RECORDING';
-  RETURN QUERY SELECT 'ALIVE'::text, v_call.state;
+  RETURN QUERY SELECT 'ALIVE'::text, v_call.state, v_call.started_at + make_interval(secs => v_policy.max_call_seconds);
 END$$;
 
 -- The connection was lost: ACTIVE becomes RECONNECTING for the grace (the seat is kept until it ends); a call lost before
@@ -539,6 +541,23 @@ BEGIN
   END IF;
   RETURN QUERY SELECT 'NO_CALL_KNOWN'::text, NULL::uuid, NULL::text, NULL::timestamptz;
 END$$;
+
+-- Where a call's tracks stand, for the connection that writes them (after an activate or a resume, possibly on another
+-- instance): the recording, its state, and per track the clock end (recorded or gapped) and the next segment index, by
+-- 0183's own rules (track_clock_end_v1; every object counts for the index, as server_add_call_segment_v1 counts it).
+CREATE FUNCTION public.server_read_call_tracks_v1(p_user_id uuid, p_call_id uuid)
+RETURNS TABLE (recording_id uuid, recording_state text, user_track_end_ms bigint, user_next_segment integer,
+               qandeel_track_end_ms bigint, qandeel_next_segment integer)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT r.id, r.recording_state,
+         voice_private.track_clock_end_v1(r.id, 'USER'),
+         (SELECT coalesce(max(o.segment_index), -1) + 1 FROM voice_private.recording_objects o WHERE o.recording_id = r.id AND o.track = 'USER'),
+         voice_private.track_clock_end_v1(r.id, 'QANDEEL'),
+         (SELECT coalesce(max(o.segment_index), -1) + 1 FROM voice_private.recording_objects o WHERE o.recording_id = r.id AND o.track = 'QANDEEL')
+    FROM voice_private.recordings r
+    JOIN voice_private.calls c ON c.id = r.call_id
+   WHERE r.call_id = p_call_id AND c.user_id = p_user_id AND r.user_id = p_user_id;
+$$;
 
 -- The reference number of a call's next turn (CA-05-01 R1: structural order, never a timestamp). Reserved only by the
 -- connection holding the current epoch of an ACTIVE call; unique and increasing per call. CP2's turn commit calls it in
@@ -817,6 +836,7 @@ BEGIN
     'public.server_end_call_v1(uuid,uuid,bigint,text)',
     'public.server_sweep_calls_v1(integer)',
     'public.server_read_call_truth_v1(uuid)',
+    'public.server_read_call_tracks_v1(uuid,uuid)',
     'public.server_open_call_recording_v1(uuid,uuid,uuid,timestamptz,integer)',
     'public.server_record_call_gap_v1(uuid,uuid,text,bigint,bigint,text)',
     'public.server_seal_call_recording_v1(uuid,uuid)',

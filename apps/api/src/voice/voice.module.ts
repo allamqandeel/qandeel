@@ -5,6 +5,12 @@ import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-
 import { ObservabilityModule } from '../observability/observability.module';
 import { FAST_VOICE_PATH, type FastVoicePath } from '../voice-media/fast-voice-path.port';
 import { VoiceMediaModule } from '../voice-media/voice-media.module';
+import { LiveCallGateway } from './call/gateway/live-call.gateway';
+import { LIVE_CALL_SPEECH_SINK, NULL_LIVE_CALL_SPEECH_SINK } from './call/live-call-speech.port';
+import { LiveCallTruthController } from './call/live-call-truth.controller';
+import { LiveCallRepository } from './call/live-call.repository';
+import { LiveCallService } from './call/live-call.service';
+import { LIVE_CALL_STORE } from './call/live-call.store';
 import { LiveVoiceNoteController } from './live-note/live-voice-note.controller';
 import { LiveVoiceNoteRepository } from './live-note/live-voice-note.repository';
 import {
@@ -47,10 +53,14 @@ import {
  * and the live voice note (LiveVoiceNoteService). The realtime recognizer is bound ONLY when the server key is set AND
  * VOICE_NOTE_LIVE_TRANSCRIPT=ADOPT (realtime quality accepted first); otherwise null and no audio is ever streamed. The
  * voice media module reaches both through FAST_VOICE_PATH, resolved at call time (it still imports no provider).
+ *
+ * S8B-05 (CP1, 0189): the live call's server foundation - the call authority's store, the WebSocket gateway (protocol
+ * v1, `call/`), call-truth and the call sweep. The decoded uplink goes to the speech sink, and CP1 binds the NULL sink:
+ * no recognizer, no orchestrator, no synthesis and no provider is reached by a live call.
  */
 @Module({
   imports: [ObservabilityModule, VoiceMediaModule],
-  controllers: [ReplyListenController, LiveReplyController, LiveVoiceNoteController],
+  controllers: [ReplyListenController, LiveReplyController, LiveVoiceNoteController, LiveCallTruthController],
   providers: [
     SupabaseAuthService,
     SupabaseAuthGuard,
@@ -111,6 +121,10 @@ import {
     },
     VoiceNoteTranscriptionWorker,
     MachineAsrConfidenceStartupCheck,
+    { provide: LIVE_CALL_STORE, useClass: LiveCallRepository },
+    { provide: LIVE_CALL_SPEECH_SINK, useValue: NULL_LIVE_CALL_SPEECH_SINK },
+    LiveCallService,
+    LiveCallGateway,
   ],
   exports: [VoiceMediaModule],
 })

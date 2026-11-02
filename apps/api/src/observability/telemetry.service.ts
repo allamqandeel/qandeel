@@ -108,6 +108,9 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  // the store is replayed. Never a person, turn, listen, segment, word, hint, expression or byte.
  ['VOICE_REPLY_CHANNEL',new Map([['separate',new Set(['success','malformed','leak'])],['record',new Set(['success',...OPERATION_FAILURES])]])],
  ['VOICE_LISTEN',new Map([...['start','synthesis','audio','cancel'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','replayed','in_progress','refused_expected','overloaded','provider_failure',...OPERATION_FAILURES])]),['sweep',new Set(['success',...OPERATION_FAILURES])]])],
+ // S8B-05 (CP1): the live call (0189) - its commands, its lease, its connection's endings and the call sweep. A fenced
+ // connection, a protocol violation and an overload are the connection's own outcomes. Never a person, call, epoch, word or byte.
+ ['VOICE_LIVE_CALL',new Map([...['begin','activate','resume','suspend','end','lease','truth','upgrade'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['success','refused_expected','overloaded',...OPERATION_FAILURES])]),['connection',new Set(['fenced','violation','overloaded',...OPERATION_FAILURES])],['sweep',new Set(['success',...OPERATION_FAILURES])]])],
  // S6-07 (CP2): the forward dispatcher (migration 0166). A forward is success; a proposal another act moved first is
  // superseded_expected; one the core or its seam did not clear, or with no single conclusion, is blocked_expected; a held
  // pair is retry_expected; a held integrity refusal is integrity_failure. Never a person, proposal, view or count.

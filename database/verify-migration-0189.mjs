@@ -25,7 +25,7 @@
 //        rolled back: no ledger row); a reconnecting call keeps its seat; a lapsed seat is not counted; the end releases
 //   L10  call_turn_index: increasing per call, only for the current epoch of an ACTIVE call
 //   L11  NOT_SPEAKING: the QANDEEL track's gap, refused on the USER track by the definer and by the table
-//   L12  a live call's turn anchor lies inside its track's recorded or gapped range
+//   L12  a live call's turn anchor lies inside its track's recorded or gapped range; where the tracks stand (for a resume)
 //   L13  call-truth: ACTIVE while held, NO_CALL_KNOWN otherwise (fails safe on a lapsed, unswept call); per person
 //   L14  the call record is durable; account erasure removes the call and its recording
 //   LRC  races on two connections: two begins of one person, two people for the last seat, end vs sweep vs resume, two ends
@@ -52,6 +52,7 @@ const DEFINERS = [
   'public.server_end_call_v1(uuid,uuid,bigint,text)',
   'public.server_sweep_calls_v1(integer)',
   'public.server_read_call_truth_v1(uuid)',
+  'public.server_read_call_tracks_v1(uuid,uuid)',
   'public.server_open_call_recording_v1(uuid,uuid,uuid,timestamptz,integer)',
   'public.server_record_call_gap_v1(uuid,uuid,text,bigint,bigint,text)',
   'public.server_seal_call_recording_v1(uuid,uuid)',
@@ -332,6 +333,7 @@ async function verifyBehaviour(report) {
       await age('voice_private.recordings', x.recording, "writer_lease_until = clock_timestamp() + interval '1 second'");
       const h = await heartbeat(x.user, x.call);
       assert.deepEqual([h.outcome, h.call_state], ['ALIVE', 'ACTIVE']);
+      assert.equal(h.ends_at.getTime() - x.started.getTime(), 3600 * 1000, 'ALIVE names when the server ends it: started_at + the policy maximum');
       const row = await callRow(x.call);
       const rec = await recordingOf(x.call);
       assert.ok(row.seat_lease_until.getTime() > Date.now() + 15000, 'the seat lease moved on');
@@ -452,7 +454,9 @@ async function verifyBehaviour(report) {
       assert.equal(refused.outcome, 'CAPACITY_FULL', 'N+1');
       assert.equal(await callRow(refused.call), undefined, 'a refusal writes no call');
       // A live voice note takes a seat from the same capacity: refused explicitly, its whole transaction rolled back.
-      await rejected(() => server('SELECT * FROM public.server_open_live_voice_note_v1($1, $2, $3, $4, $5)', [c.user, c.session, randomUUID(), randomUUID(), RT_MODEL]), ['PT503']);
+      // P0001 (not a PTnnn code, which PostgREST would turn into that HTTP status): the API reads the message.
+      await rt.rejected(() => server('SELECT * FROM public.server_open_live_voice_note_v1($1, $2, $3, $4, $5)', [c.user, c.session, randomUUID(), randomUUID(), RT_MODEL]),
+        ['P0001'], /^REALTIME_CAPACITY_FULL$/u);
       assert.equal(await ledgerRows(c.user), 0, 'no ledger row for the refused note');
       // A reconnecting call keeps its seat.
       await suspend(a.user, a.call);
@@ -504,6 +508,11 @@ async function verifyBehaviour(report) {
       const x = await activeCall();
       assert.equal(await addSegment(x.user, x.recording, 'USER', 0, 0, 10000), 'ADDED');
       assert.equal(await gap(x.user, x.recording, 'QANDEEL', 0, 6000, 'NOT_SPEAKING'), 'RECORDED');
+      // Where the tracks stand, for a connection resuming on another instance; nothing for another human.
+      const [tracks] = await server('SELECT * FROM public.server_read_call_tracks_v1($1, $2)', [x.user, x.call]);
+      assert.deepEqual([tracks.recording_id, tracks.recording_state, Number(tracks.user_track_end_ms), tracks.user_next_segment,
+        Number(tracks.qandeel_track_end_ms), tracks.qandeel_next_segment], [x.recording, 'RECORDING', 10000, 1, 6000, 0]);
+      assert.deepEqual(await server('SELECT * FROM public.server_read_call_tracks_v1($1, $2)', [randomUUID(), x.call]), []);
       const u1 = await turn(x.user, x.session, 'USER');
       await rejected(() => attach(x.user, u1, x.recording, 2000, 10001), ['22023']);
       assert.equal((await attach(x.user, u1, x.recording, 2000, 10000)).outcome, 'ATTACHED');
