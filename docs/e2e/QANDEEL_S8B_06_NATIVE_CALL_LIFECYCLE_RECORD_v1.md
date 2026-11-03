@@ -104,7 +104,7 @@ deferral, First Audio, Live Focus, QAN-BL-VOICE-07, Stage 9, paid tests.
 | `prebuild:verify` (idempotency), `prebuild:verify-voice-note` (16 plants caught), launch identity, introduction photo | pass (local, Android) |
 | `tsc --noEmit`, ESLint | clean |
 | `tests/s8b-05-live-call-contract.test.mjs` test 7, **re-anchored** (CI R2; it was CP1's "no call copy on the phone"): the call copy may live in one file only, `live-call-copy.ts`. Every row there must equal the S8B-05 record's row character for character and still be `PROPOSED`, and every other mobile file still carries no call id and no call text. A planted one-character change is caught | **16 / 16 pass** (local) |
-| Swift (`swift test`, macOS host) and `xcodebuild test` (iOS simulator), the Kotlin JUnit job, API CI and Mobile CI (with the Release simulator build) | CI on the Draft PR: §8 |
+| Swift (`swift test`, macOS host) and `xcodebuild test` (iOS simulator), the Kotlin JUnit job, API CI and Mobile CI (with the Release simulator build) | **green** in CI on `b3c4399c` (§8) |
 
 ## 5. Android emulator proof (API 36)
 
@@ -274,8 +274,27 @@ Also a CallKit availability risk: CallKit's VoIP use is restricted in mainland C
 
 ## 8. CI on the Draft PR
 
-To be filled from the Draft PR's runs: API CI, Mobile CI (including the Xcode Release simulator build) and the S8B-06
-native call tests (Kotlin JUnit, `swift test`, `xcodebuild test`).
+**All green on `b3c4399c`** (runs 41733417026, 41733417032 and 41733417240):
+
+| Workflow | Job | Result |
+|---|---|---|
+| S8B-06 native call tests | iOS engine + coordinator (`swift test`, macOS host) | **success**: 75 tests, 0 failures |
+| S8B-06 native call tests | iOS engine + adapters (`xcodebuild test`, iPhone simulator) | **success**: 79 tests, 0 failures. The 4 simulator integration tests ran (none skipped), including the microphone denial |
+| S8B-06 native call tests | Android module JUnit (Kotlin) | **success**: 35 tests |
+| API CI | verify-api; validation evidence | **success** |
+| Mobile CI | fast mobile contract gate (including both S8B-06 contracts) | **success** |
+| Mobile CI | Android Release APK (x86_64); Android API 36 emulator boot smoke | **success** |
+| Mobile CI | **iOS Release simulator app**; iPhone 17 / iOS 26.5 simulator boot smoke | **success** |
+
+**CI rounds (CP2-caused, fixed narrowly, no assertion weakened):**
+
+- **R1** (`26af9464`). The first Swift compile on macOS refused three optional buffer pointers in a **test helper**
+  (`OpusTestSupport.swift`): libopus's annotated headers make them non-null. They are unwrapped there. The engine
+  itself compiled on the first run.
+- **R2** (`b3c4399c`). S8B-05's `s8b-05-live-call-contract` test 7 (CP1's "no call copy on the phone") was
+  re-anchored as §4 describes. The re-anchored test is stricter for the one file it allows.
+- **Not changed:** the only Swift warning, `.allowBluetooth` renamed `.allowBluetoothHFP` in the iOS 26 SDK. Using the
+  new name would tie the module to the newest Xcode.
 
 ## 9. Acceptance (the CP2 order; contract #21 and #36 in 06-CP2)
 
@@ -292,9 +311,9 @@ native call tests (Kotlin JUnit, `swift test`, `xcodebuild test`).
 | 9 | T-5 / T-1 (#36): heard with the screen locked, the notification updated | **PASS on the emulator**: heard from `TIMESTAMP`, both lines shown, once each. **The "real Android" clause is NOT PROVEN** (§6). iOS background playback: simulation and simulator only | §5 C4; §7.2 |
 | 10 | No paid provider; no raw audio in logs | **PASS** | Contract pins; the evidence |
 | 11 | Kotlin unit, Android build, API 36 emulator | **PASS** | §4, §5 |
-| 12 | Swift tests, iOS Release simulator build, simulator lifecycle tests | CI | §8 |
+| 12 | Swift tests, iOS Release simulator build, simulator lifecycle tests | **PASS** (CI): 75 / 75 on the host, 79 / 79 on the simulator, Release simulator app built, boot smoke | §8 |
 | 13 | Jest, tsc, ESLint, prebuild idempotency, re-anchoring | **PASS** (local) | §4 |
-| 14 | API and Mobile CI on the Draft PR | CI | §8 |
+| 14 | API and Mobile CI on the Draft PR | **PASS** on `b3c4399c` | §8 |
 | 15 | No gates, no migration, no protocol change | **PASS** | §0 |
 
 **Copy gaps for the Copy Gate (not decided here):**
