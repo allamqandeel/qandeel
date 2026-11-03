@@ -103,6 +103,7 @@ deferral, First Audio, Live Focus, QAN-BL-VOICE-07, Stage 9, paid tests.
 | `tests/s8b-06-native-call-lifecycle-contract.test.mjs` (8) and CP1's `tests/s8b-06-native-audio-engine-contract.test.mjs` (14) | **22 / 22 pass** (local) |
 | `prebuild:verify` (idempotency), `prebuild:verify-voice-note` (16 plants caught), launch identity, introduction photo | pass (local, Android) |
 | `tsc --noEmit`, ESLint | clean |
+| `tests/s8b-05-live-call-contract.test.mjs` test 7, **re-anchored** (CI R2; it was CP1's "no call copy on the phone"): the call copy may live in one file only, `live-call-copy.ts`. Every row there must equal the S8B-05 record's row character for character and still be `PROPOSED`, and every other mobile file still carries no call id and no call text. A planted one-character change is caught | **16 / 16 pass** (local) |
 | Swift (`swift test`, macOS host) and `xcodebuild test` (iOS simulator), the Kotlin JUnit job, API CI and Mobile CI (with the Release simulator build) | CI on the Draft PR: §8 |
 
 ## 5. Android emulator proof (API 36)
