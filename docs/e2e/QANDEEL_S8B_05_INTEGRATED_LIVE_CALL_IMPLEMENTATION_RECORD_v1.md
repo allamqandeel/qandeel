@@ -1438,3 +1438,15 @@ These were run on local PG17 against a template migrated from this branch's own 
   - the DEC-R1-2 study and its code;
   - the S6-06 reproduction with its diagnostics, rclone logs and the claim reproduction script;
   - the final CI order.
+
+### 11.15 R2 — API CI on `3d13b8ea`: a latent timing flake in `verify-migration-0189` (L4), fixed in the test only
+
+- **The failure.** API CI run 41610402755 failed at "Verify S8B-05 CP1 live call authority (0189)", scenario L4. The
+  message was `unexpected rejection code 23514 (wanted 23503)`, from `recordings_retention_check`.
+- **The cause.** L4 inserts a `LIVE_CALL` recording for a call that does not exist and expects the foreign key's 23503.
+  The insert set `started_at` and `retention_expires_at` from two separate `clock_timestamp()` calls. Those can differ by
+  a microsecond, and the check from 0183 (`retention_expires_at = started_at + interval '30 days'`) then refuses the row
+  first. This flake is already on main. It is the only such site in the verifiers (grep).
+- **The fix.** Both values now come from one `statement_timestamp()`, which is fixed within the statement. The scenario
+  still expects 23503, and nothing else changed: no migration, no product code, no sleep or retry.
+- **Local proof:** `verify-migration-0189` passes 24 / 24 on a fresh R2 template.

@@ -358,9 +358,12 @@ async function verifyBehaviour(report) {
       assert.equal((await recordingOf(b.call)).recording_state, 'STORED', 'the end sealed it');
       assert.equal((await openRec(c.user, c.session, b.call, started)).outcome, 'RECORDING_CLOSED', 'a sealed recording is never OPENED again');
       await owner();
+      // One instant for the anchor and its expiry (statement_timestamp() is fixed within the statement): two
+      // clock_timestamp() calls may differ by a microsecond, and recordings_retention_check (expiry = anchor + 30 days)
+      // would then refuse the row (23514) before the missing call could (S8B-05 CP3 R2, API CI run 41610402755).
       await rejected(() => q(`INSERT INTO voice_private.recordings (id, user_id, session_id, recording_kind, call_id, started_at, retention_expires_at,
-          recording_state, writer_lease_until) VALUES (gen_random_uuid(), $1, $2, 'LIVE_CALL', gen_random_uuid(), clock_timestamp(),
-          clock_timestamp() + interval '30 days', 'RECORDING', clock_timestamp() + interval '20 seconds')`, [c.user, c.session]), ['23503']);
+          recording_state, writer_lease_until) VALUES (gen_random_uuid(), $1, $2, 'LIVE_CALL', gen_random_uuid(), statement_timestamp(),
+          statement_timestamp() + interval '30 days', 'RECORDING', clock_timestamp() + interval '20 seconds')`, [c.user, c.session]), ['23503']);
     });
 
     await report.isolated('L5 heartbeat renews the seat and the recording\'s writer lease explicitly; FENCED for an older epoch; SERVER_ENDED past the maximum length', async () => {
