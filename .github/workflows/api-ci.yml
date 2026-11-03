@@ -1353,6 +1353,25 @@ jobs:
       # call, no real person. It restores the gates and removes its fixtures.
       - name: Prove S8B-05 CP2 synthetic spoken turn against real PostgreSQL (free)
         run: npm run prove:live-call-spoken-turn-synthetic:integration
+      # S8B-05 CP3: migration 0191 (the ordered half-exchange establishment) - the queue states and their order by
+      # call_turn_index (pre-call exchanges first, O3b), the ASSISTANT half queued at the close, the half coordinator (no
+      # out-of-order, no duplicate commit), the claim / lease / retry / PARKED / ABANDONED_INTEGRITY paths, the shared session
+      # semantic lease, the shared background permits with L2's critical window, S3 after the END, erasure and the ACL.
+      - name: Verify S8B-05 CP3 ordered half establishment (0191) against real PostgreSQL
+        run: npm run verify:live-call-ordered-halves:integration
+      # S8B-05 CP3: Fast Live Analysis - the real analysis worker (two instances), the real half establishment and the shared
+      # permits over this database, synthetic live calls through 0189 / 0190's commands, fake providers over one shared
+      # capacity: M0 / M1 / M1' measured, the analysis order, crash replay with zero provider calls, a retried outage and S3
+      # after the END, and S3's recovery across a real process restart (R4). CI runs all three permit profiles, so the shipped
+      # (16/2/2), the full-capacity (8/2/2) and the conservative (4/1/1) results stay visible in every run; it enforces the voice
+      # limit only for M1 under CONSERVATIVE, a test profile and not a launch setting (the Product Owner, DEC-R1-3: the values
+      # are settled by the real-provider calibration before launch); the others print REPORTED when they exceed it.
+      # No provider, no paid call, no real person, no audio. It restores the gates and the policies and removes its fixtures,
+      # the runtime outbox included (the A2 smoke below shares this database).
+      - name: Prove S8B-05 CP3 Fast Live Analysis against real PostgreSQL (free)
+        env:
+          S8B05_CP3_PROFILES: SHIPPED,CALIBRATED,CONSERVATIVE
+        run: npm run prove:live-analysis-synthetic:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

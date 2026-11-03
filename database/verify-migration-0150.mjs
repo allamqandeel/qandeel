@@ -46,6 +46,7 @@ import process from 'node:process';
 import { analyseRetryHazard, entryPoints, isWord, raiseCensus } from './data-api-retry-hazard-guard.mjs';
 import { createRuntime, runVerifier } from './public-runtime-verifier-support.mjs';
 import { createScenarioReport } from './verifier-scenarios.mjs';
+import { liveCallHalvesApplied, substitutedBody as liveCallHalfBody } from './live-call-0191-substitutions.mjs';
 
 const rt = createRuntime(process.env.DATABASE_URL);
 const { q, rows, actAs } = rt;
@@ -191,6 +192,13 @@ const FAST_VOICE_PT409 = ['public.server_open_live_voice_note_v1', 'public.serve
  * each, that exact message. Neither is a stale-state site (the 23 stay 23); verify-migration-0190 proves the refusal.
  */
 const LIVE_CALL_PT409 = ['public.server_begin_call_reply_speech_v1', 'public.server_begin_call_transcription_v1'];
+/**
+ * RE-ANCHORED by S8B-05 CP3 (migration 0191, 2026-11-02): the half coordinator of a numbered call turn checks the same two
+ * stale tokens as the coordinator, with the same two non-retryable PT409 refusals (0150's rule, from its first statement):
+ * TWO stale-state sites of its own, those exact messages, counted apart (the 23 stay 23). 0191 also re-states the
+ * coordinator with exactly its declared O3a edit; verify-migration-0191 proves both.
+ */
+const HALF_PT409 = { name: 'public.commit_conversation_units_call_half_v1', messages: ['STALE_CONVERSATIONAL_FOCUS_CONTEXT', 'STALE_THREAD_IDENTITY_CONTEXT'] };
 
 // ------------------------------------------------------------------ session helpers
 /** A Data-API-shaped session inside the caller's transaction: the role PostgREST switches to, with its claims. */
@@ -247,7 +255,10 @@ async function verifyCatalog(report) {
         assert.equal(origin.body.split("ERRCODE='40001'").length - 1, t.sites, `${t.live}: the defining body holds ${t.sites} sites`);
         assert.equal(origin.body.split('40001').length - 1, t.sites, `${t.live}: and no other 40001`);
       }
-      assert.equal(live.prosrc.replace(/\r\n/gu, '\n'), transform(t, origin.body), `${t.live}: the live body is the approved substitution`);
+      // S8B-05 CP3 re-anchor (migration 0191): the coordinator is live as 0191's declared re-statement of this 0150 body.
+      const successor = t.live === 'commit_finalized_exchange_with_full_semantic_chain_v1' && await liveCallHalvesApplied(rows);
+      assert.equal(live.prosrc.replace(/\r\n/gu, '\n'), successor ? liveCallHalfBody('full-coordinator-o3a') : transform(t, origin.body),
+        `${t.live}: the live body is the approved substitution${successor ? ' (and its declared 0191 successor)' : ''}`);
       if (t.sites !== 'CATCHER') assert.equal(live.prosrc.includes("ERRCODE='40001'"), false, `${t.live}: no 40001 refusal remains`);
       assert.equal(statementOf(M0150, t.live).statement, transform(t, originalStatement(t)), `${t.live}: 0150 is the defining statement, substituted`);
     }
@@ -288,7 +299,9 @@ async function verifyCatalog(report) {
     const [{ voice }] = await rows("SELECT to_regclass('voice_private.reply_speech_segments') IS NOT NULL AS voice");
     const [{ fast }] = await rows("SELECT to_regclass('voice_private.live_reply_streams') IS NOT NULL AS fast");
     const [{ liveCall }] = await rows("SELECT to_regclass('public.conversation_call_turns') IS NOT NULL AS \"liveCall\"");
+    const halves = await liveCallHalvesApplied(rows);
     const expected = [...prior, ...(voice ? [VOICE_PT409.name] : []), ...(fast ? FAST_VOICE_PT409 : []), ...(liveCall ? LIVE_CALL_PT409 : []),
+      ...(halves ? [HALF_PT409.name] : []),
       ...TARGETS.filter((t) => t.sites !== 'CATCHER').map((t) => `public.${t.live}`)].sort();
     assert.deepEqual(raisers, expected);
     const voiceSites = raiseCensus(analysis).filter((r) => r.code === 'PT409' && r.signature.startsWith(`${VOICE_PT409.name}(`));
@@ -301,7 +314,9 @@ async function verifyCatalog(report) {
       const sites = raiseCensus(analysis).filter((r) => r.code === 'PT409' && r.signature.startsWith(`${name}(`));
       assert.deepEqual(sites.map((r) => r.message), liveCall ? [VOICE_PT409.message] : [], `0190: exactly one identity-conflict site in ${name}`);
     }
-    const ledgerOrVoice = [...PRIOR_PT409, VOICE_PT409.name, ...FAST_VOICE_PT409, ...LIVE_CALL_PT409];
+    const halfSites = raiseCensus(analysis).filter((r) => r.code === 'PT409' && r.signature.startsWith(`${HALF_PT409.name}(`));
+    assert.deepEqual(halfSites.map((r) => r.message).sort(), halves ? HALF_PT409.messages : [], '0191: exactly the two stale-token sites of the half coordinator');
+    const ledgerOrVoice = [...PRIOR_PT409, VOICE_PT409.name, ...FAST_VOICE_PT409, ...LIVE_CALL_PT409, HALF_PT409.name];
     assert.equal(raiseCensus(analysis).filter((r) => r.code === 'PT409' && !ledgerOrVoice.some((p) => r.signature.startsWith(`${p}(`))).length, 23, '23 stale-state sites');
   });
 }

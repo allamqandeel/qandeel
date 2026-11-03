@@ -16,6 +16,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SUBSTITUTIONS, substitutedStatement } from '../database/voice-foundation-0183-substitutions.mjs';
+import { MIGRATION_0191, SUBSTITUTIONS as LIVE_CALL_SUBSTITUTIONS, substitutedStatement as liveCallStatement } from '../database/live-call-0191-substitutions.mjs';
 
 const root = new URL('../', import.meta.url);
 const rootPath = fileURLToPath(root);
@@ -95,6 +96,16 @@ function withoutVoiceRecreations(text) {
   return SUBSTITUTIONS.reduce((rest, substitution) => {
     const statement = substitutedStatement(substitution);
     assert.ok(rest.includes(statement), `${VOICE_MIGRATION} carries its declared re-creation ${substitution.key}`);
+    return rest.replace(statement, '');
+  }, text.replace(/\r\n/gu, '\n'));
+}
+// S8B-05 CP3 RE-ANCHOR (2026-11-02): migration 0191 likewise re-creates five earlier statements - its declared
+// substitutions, proven byte-for-byte by verify-migration-0191 (T0c) - and the conversation-unit writer among them already
+// touches the frozen Thread / Home substrate. Outside those re-creations it must carry none.
+function withoutLiveCallRecreations(text) {
+  return LIVE_CALL_SUBSTITUTIONS.reduce((rest, substitution) => {
+    const statement = liveCallStatement(substitution);
+    assert.ok(rest.includes(statement), `${MIGRATION_0191} carries its declared re-creation ${substitution.key}`);
     return rest.replace(statement, '');
   }, text.replace(/\r\n/gu, '\n'));
 }
@@ -329,6 +340,10 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     // S8B-02 RE-ANCHOR (2026-10-30): the Voice Foundation verifier commits a voice turn through the FINAL 0071 coordinator
     // with the frozen TE-01 provenance exactly as the 0072 verifier does, and never imports this evaluator.
     'database/verify-migration-0183.mjs',
+    // S8B-05 CP3 RE-ANCHOR (2026-11-02): the live call half verifier commits call halves and pre-call exchanges through the
+    // half and the FINAL 0071 coordinators with the frozen TE-01 provenance exactly as the 0072 verifier does, and never
+    // imports this evaluator.
+    'database/verify-migration-0191.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -336,7 +351,8 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
         `${file} re-proves the frozen gates in SQL and never imports the evaluator`);
       continue;
     }
-    const text = file === `database/migrations/${VOICE_MIGRATION}` ? withoutVoiceRecreations(read(file)) : read(file);
+    const text = file === `database/migrations/${VOICE_MIGRATION}` ? withoutVoiceRecreations(read(file))
+      : file === `database/migrations/${MIGRATION_0191}` ? withoutLiveCallRecreations(read(file)) : read(file);
     assert.doesNotMatch(text, /thread-establishment|ThreadEstablishment|THREAD_ESTABLISHMENT/u, `${file} does not reach the evaluator`);
   }
 });
@@ -401,7 +417,11 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
     .replaceAll('get_conversation_thread_identity_dossier_page_v1', '').replaceAll('STALE_THREAD_IDENTITY_CONTEXT', ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
     `outside its two verbatim re-creations ${RETRY_MIGRATION} carries no Thread / Home substrate`);
   for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION)) {
-    const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`)) : read(`database/migrations/${name}`);
+    const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
+      // (0191's half coordinator checks and reads the World Thread-identity clock exactly as the FINAL 0071 coordinator
+      // does - its stale-token contract - and touches no Thread or Home row; that clock's name is all it carries.)
+      : name === MIGRATION_0191 ? withoutLiveCallRecreations(read(`database/migrations/${name}`)).replace(/world_thread_identity|_THREAD_IDENTITY_CONTEXT/giu, '')
+        : read(`database/migrations/${name}`);
     assert.doesNotMatch(text, /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));

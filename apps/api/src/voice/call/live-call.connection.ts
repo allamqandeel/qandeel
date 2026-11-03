@@ -42,6 +42,8 @@ export interface CallConnectionDeps {
   readonly registry: LiveCallRegistry;
   readonly clock: CallClock;
   readonly signal: (operation: string, outcome: string) => void;
+  /** S8B-05 CP3 (O3b as amended by DEC-R1-1): the call analysis worker's in-memory kick once the call is ACTIVE. */
+  readonly analysisKick?: (sessionId: string) => void;
 }
 
 /** The connections this instance holds, by call: a resume here takes over from the older one (it is fenced). */
@@ -431,6 +433,9 @@ export class LiveCallConnection {
       this.phase = 'ACTIVE';
       this.deps.signal('activate', 'success');
       this.sendState('ACTIVE');
+      // The activation adopted the session's unestablished pre-call exchanges (0191): their analysis may start now. A kick,
+      // synchronous and in memory; never awaited, never a database call.
+      this.deps.analysisKick?.(this.sessionId!);
       await this.renewLease();
       if (this.phase !== 'ACTIVE') return;
     }

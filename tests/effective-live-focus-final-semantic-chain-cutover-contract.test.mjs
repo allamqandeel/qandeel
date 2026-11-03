@@ -296,7 +296,11 @@ test('THE CUTOVER: ONLY the FINAL chain is wired, the temporary T-03A2-only writ
   for (const rpc of ["'get_conversation_full_semantic_integrated_batch_snapshot_v1'", "'get_conversation_full_semantic_runtime_context_v1'", "'get_conversation_thread_identity_dossier_page_v1'", "'commit_finalized_exchange_with_full_semantic_chain_v1'"]) {
     assert.ok(repository.includes(rpc), `the repository calls ${rpc}`);
   }
-  assert.equal((repository.match(/this\.serviceApi\.rpc</gu) ?? []).length, 4, 'exactly four RPC call sites');
+  // RE-ANCHORED by S8B-05 CP3 (migration 0191; was: exactly four): the fifth call site is the half coordinator
+  // commit_conversation_units_call_half_v1, the call analysis worker's ONE commit of one half of a numbered call turn,
+  // over the same FINAL chain and the same two exact stale tokens; the text path still has its one 0071 coordinator.
+  assert.ok(repository.includes("'commit_conversation_units_call_half_v1'"), 'the repository calls the 0191 half coordinator');
+  assert.equal((repository.match(/this\.serviceApi\.rpc</gu) ?? []).length, 5, 'exactly five RPC call sites');
   assert.doesNotMatch(productionCode, /commit_conversation_units_v1|commit_finalized_exchange_conversation_units_v1|with_focus_v1|with_focus_and_thread_v1|with_focus_thread_lifecycle_v1|commit_conversation_units_with_full_semantic_chain_v1/u,
     'no legacy, predecessor or per-batch writer is ever called from the runtime');
   // The T-03A2 delivery reads: the snapshot now comes from the authenticated LF snapshot read; the LF catch-up read exists beside the committed-CU one.
@@ -332,11 +336,20 @@ test('bounded recovery: ONE shared semantic retry over BOTH exact stale tokens, 
   assert.match(service, /let retriesLeft = MAX_SEMANTIC_STALE_CONTEXT_RETRIES;/u);
   assert.match(service, /const stale = error instanceof StaleConversationalFocusContextError \|\| error instanceof StaleThreadIdentityContextError;\s*if \(!stale\) throw error;/u);
   assert.match(service, /if \(retriesLeft === 0\) throw new ConversationSemanticUnavailableError\('STALE_CONTEXT_RETRY_EXHAUSTED'/u);
-  assert.equal((service.match(/retriesLeft -= 1;/gu) ?? []).length, 1);
+  // RE-ANCHORED by S8B-05 CP3 (was: one retry loop): the call half path (establishCallHalf, after the exchange's own path)
+  // has its own loop with the SAME bounded recovery - the database winner first, ONE re-evaluation for the two exact stale
+  // tokens, segmentation reused - pinned below on its own slice; the exchange's loop is the first one, unchanged.
+  assert.equal((service.match(/retriesLeft -= 1;/gu) ?? []).length, 2);
   const loop = service.indexOf('for (;;) {');
+  const halfPath = service.indexOf('async establishCallHalf(');
+  assert.ok(loop < halfPath, 'the exchange\'s loop comes first');
+  const halfLoop = service.indexOf('for (;;) {', halfPath);
+  assert.ok(service.indexOf('const half = await this.segment(', halfPath) < halfLoop, 'the half is segmented once, before its retry loop');
+  assert.doesNotMatch(service.slice(halfLoop, service.indexOf('private halfFrom(')), /this\.segment\(/u, 'no segmentation inside the half\'s retry loop');
+  assert.ok(service.indexOf("if (halfState(fresh) === 'COMPLETE') return replay();", halfLoop) < service.indexOf('if (!stale) throw error;', halfLoop), 'the stored half is checked BEFORE the stale branch');
   assert.ok(service.indexOf('const halves = await Promise.all([userHalf, assistantHalf]);') < loop, 'segmentation happens once, before the retry loop');
   assert.ok(service.indexOf('const winner = this.canonicalDelivery(userTurn.session_id, fresh);', loop) < service.indexOf('if (!stale) throw error;', loop), 'the database winner is checked BEFORE the stale branch');
-  assert.doesNotMatch(service.slice(loop), /this\.segment\(/u, 'no segmentation inside the retry loop');
+  assert.doesNotMatch(service.slice(loop, halfPath), /this\.segment\(/u, 'no segmentation inside the retry loop');
   assert.match(service, /SEGMENTATION_FRONTIER_MOVED/u);
   assert.ok(service.indexOf('context = await this.repository.readRuntimeContext(', loop) > loop, 'the retry re-reads the context (and, through it, the identity version, the dossiers and the current LF)');
   assert.match(repository, /import \{ isStaleConversationalFocusContext \} from '\.\.\/conversational-focus\/conversation-focus-runtime\.repository';/u);
@@ -352,7 +365,9 @@ test('bounded recovery: ONE shared semantic retry over BOTH exact stale tokens, 
   for (const reason of ['PROVIDER_UNAVAILABLE', 'TRANSPORT_UNAVAILABLE', 'STALE_CONTEXT_RETRY_EXHAUSTED']) assert.ok(runtimeTypes.includes(reason));
   assert.doesNotMatch(productionCode, /failTurn|FAILED|regenerat|markFailed/u, 'a technical failure never fails or regenerates a completed turn');
   // The replay / partial gate precedes the context read; the context precedes any provider; the relation gate is first and outside the try.
-  assert.match(service, /async establishExchange\(userId: string, userTurn: ConversationTurn, assistantTurn: ConversationTurn\): Promise<ConversationLiveDelivery> \{\s*assertFinalizedExchangeRelation\(userTurn, assistantTurn\);\s*try \{/u);
+  // RE-ANCHORED by S8B-05 CP3 (was: three parameters): an optional fourth, backgroundPermitHeld, lets the call analysis
+  // worker establish a pre-call exchange under the permit it already holds; the relation gate is still first and outside the try.
+  assert.match(service, /async establishExchange\(\s*userId: string,\s*userTurn: ConversationTurn,\s*assistantTurn: ConversationTurn,\s*options: \{ readonly backgroundPermitHeld\?: boolean \} = \{\},\s*\): Promise<ConversationLiveDelivery> \{(?:\s*\/\/[^\n]*)*\s*assertFinalizedExchangeRelation\(userTurn, assistantTurn\);\s*try \{/u);
   assert.ok(service.indexOf('const replayed = this.canonicalDelivery(userTurn.session_id, snapshots);') < service.indexOf('await this.repository.readRuntimeContext('));
   assert.ok(service.indexOf('await this.repository.readRuntimeContext(') < service.indexOf('this.segment(userId, userTurn'));
   for (const rule of ["if (user.full_semantic_capture_state === 'PARTIAL' || assistant.full_semantic_capture_state === 'PARTIAL') {",

@@ -48,6 +48,7 @@ interface Harness {
   clock: ManualClock;
   registry: LiveCallRegistry;
   signals: string[];
+  kicks: string[];
   pushed: number[];
   playouts: Array<{ callTurnIndex: number; chunkSeq: number; playedMs: number }>;
   verdict: { value: PlayoutVerdict };
@@ -59,6 +60,7 @@ function harness(authenticate: (authorization: string) => Promise<{ userId: stri
   const clock = new ManualClock();
   const registry = new LiveCallRegistry();
   const signals: string[] = [];
+  const kicks: string[] = [];
   const pushed: number[] = [];
   const playouts: Harness['playouts'] = [];
   const verdict: Harness['verdict'] = { value: 'IGNORED' };
@@ -70,12 +72,13 @@ function harness(authenticate: (authorization: string) => Promise<{ userId: stri
     }),
   };
   return {
-    authority, clock, registry, signals, pushed, playouts, verdict,
+    authority, clock, registry, signals, kicks, pushed, playouts, verdict,
     connect: (opts = {}) => {
       const transport = new FakeTransport();
       const connection = new LiveCallConnection(transport, opts.userId ?? USER, opts.tokenExpiresAt ?? clock.now() + 3_600_000, {
         store: authority, media: authority, speech, authenticate, registry: opts.registry ?? registry, clock,
         signal: (op, outcome) => void signals.push(`${op}:${outcome}`),
+        analysisKick: (sessionId) => void kicks.push(sessionId),
       });
       return { connection, transport };
     },
@@ -132,6 +135,19 @@ describe('S8B-05 CP1 one live call connection (protocol v1 over the call authori
     expect(h.authority.segments.map((s) => [s.index, s.startMs, s.endMs])).toEqual([[0, 0, 10_000], [1, 10_000, 12_000]]);
     expect(h.authority.segments.reduce((n, s) => n + readOggOpus(s.bytes).packets.length, 0)).toBe(600);
     expect(h.signals).toEqual(expect.arrayContaining(['begin:success', 'activate:success', 'end:success']));
+  });
+
+  it('S8B-05 CP3 (O3b as amended by DEC-R1-1): the activation kicks the analysis worker once, with the session, after the ACTIVE state', async () => {
+    const h = harness();
+    const { connection, transport } = h.connect();
+    connection.onText(hello());
+    await settle();
+    expect(h.kicks).toEqual([]);
+    await audio(h, connection, 1, 0, 1, 0, 0);
+    expect(transport.last('STATE')).toMatchObject({ state: 'ACTIVE' });
+    expect(h.kicks).toEqual([SESSION]);
+    await audio(h, connection, 1, 1, 50, 1, 20);
+    expect(h.kicks).toEqual([SESSION]);
   });
 
   it('records a MUTED gap for the muted span; audio while muted is a violation', async () => {

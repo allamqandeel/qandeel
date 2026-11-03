@@ -17,6 +17,7 @@
 // any status-only transport error stay what they are. No Home coordinate,
 // LF label, SP or same-SP sequence crosses this boundary as authority.
 
+import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
 import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import { isStaleConversationalFocusContext } from '../conversational-focus/conversation-focus-runtime.repository';
 import { StaleConversationalFocusContextError } from '../conversational-focus/conversation-focus-runtime.types';
@@ -29,15 +30,20 @@ import {
   type ThreadIdentityDossierPageRequest,
 } from '../thread-lifecycle/conversation-thread-lifecycle-runtime.types';
 import {
+  mapCallHalfWithFullSemanticChainResult,
   mapConversationSemanticRuntimeContext,
   mapFinalizedExchangeWithFullSemanticChainResult,
   mapIntegratedFullSemanticBatchSnapshot,
 } from './conversation-semantic-runtime-mapper';
-import type {
-  CommitFinalizedExchangeWithFullSemanticChainRequest,
-  ConversationSemanticRuntimeContext,
-  FinalizedExchangeWithFullSemanticChainResult,
-  IntegratedFullSemanticBatchSnapshot,
+import {
+  CallHalfOrderError,
+  ConversationSemanticIntegrityError,
+  type CallHalfWithFullSemanticChainResult,
+  type CommitCallHalfWithFullSemanticChainRequest,
+  type CommitFinalizedExchangeWithFullSemanticChainRequest,
+  type ConversationSemanticRuntimeContext,
+  type FinalizedExchangeWithFullSemanticChainResult,
+  type IntegratedFullSemanticBatchSnapshot,
 } from './conversation-semantic-runtime.types';
 
 /** The narrow boundary the FINAL establishment service depends on; tests inject a fake. */
@@ -46,10 +52,33 @@ export interface ConversationSemanticRuntimeBoundary {
   readRuntimeContext(request: { sessionId: string; userId: string }): Promise<ConversationSemanticRuntimeContext>;
   readIdentityDossierPage(request: ThreadIdentityDossierPageRequest): Promise<ThreadIdentityDossierPage>;
   commitFinalizedExchangeWithFullSemanticChain(request: CommitFinalizedExchangeWithFullSemanticChainRequest): Promise<FinalizedExchangeWithFullSemanticChainResult>;
+  /** S8B-05 CP3: the ONE half of a numbered call turn, through the half coordinator of migration 0191. */
+  commitCallHalfWithFullSemanticChain?(request: CommitCallHalfWithFullSemanticChainRequest): Promise<CallHalfWithFullSemanticChainResult>;
 }
 
 function wireUnits(units: readonly ProposedLifecycleUnit[]) {
   return units.map((unit) => ({ unit_id: unit.unitId, span_start: unit.spanStart, span_end: unit.spanEnd }));
+}
+
+// S8B-05 CP3: the half coordinator's ordering and relation refusals (0191), each with nothing written. Anything else stays
+// what it is (the two stale conditions are typed by `typedStale`).
+const CALL_HALF_ORDER: Readonly<Record<string, CallHalfOrderError['reason']>> = {
+  CALL_HALF_OUT_OF_ORDER: 'OUT_OF_ORDER',
+  CALL_HALF_PREDECESSOR_ABANDONED: 'PREDECESSOR_ABANDONED',
+  SEMANTIC_ITEM_ABANDONED: 'ITEM_ABANDONED',
+};
+function typedCallHalf(error: unknown): never {
+  if (error instanceof DataApiError) {
+    const { databaseCode, databaseMessage } = readDataApiUpstreamIdentity(error);
+    if (databaseCode === '55000' && databaseMessage !== undefined && Object.hasOwn(CALL_HALF_ORDER, databaseMessage)) {
+      throw new CallHalfOrderError(CALL_HALF_ORDER[databaseMessage]);
+    }
+    if (databaseCode === '55000' && databaseMessage === 'FULL_SEMANTIC_BATCH_INTEGRITY') throw new ConversationSemanticIntegrityError('INCOMPLETE_FULL_SEMANTIC_CAPTURE');
+    if (databaseCode === '22023' && (databaseMessage === 'CALL_HALF_NOT_QUEUED' || databaseMessage === 'CALL_HALF_RELATION')) {
+      throw new ConversationSemanticIntegrityError('INVALID_CALL_HALF_RELATION');
+    }
+  }
+  return typedStale(error);
 }
 
 function typedStale(error: unknown): never {
@@ -144,6 +173,56 @@ export class ConversationSemanticRuntimeRepository implements ConversationSemant
       return mapFinalizedExchangeWithFullSemanticChainResult(Array.isArray(rows) ? rows[0] : undefined);
     } catch (error) {
       return typedStale(error);
+    }
+  }
+
+  async commitCallHalfWithFullSemanticChain(request: CommitCallHalfWithFullSemanticChainRequest): Promise<CallHalfWithFullSemanticChainResult> {
+    try {
+      const rows = await this.serviceApi.rpc<unknown[]>('commit_conversation_units_call_half_v1', {
+        p_session_id: request.sessionId,
+        p_user_id: request.userId,
+        p_call_id: request.callId,
+        p_call_turn_index: request.callTurnIndex,
+        p_half: request.half,
+        p_source_turn_id: request.sourceTurnId,
+        p_batch_id: request.batchId,
+        p_units: wireUnits(request.units),
+        p_focus_units: request.focusUnits,
+        p_thread_units: request.threadUnits,
+        p_lifecycle_units: request.lifecycleUnits,
+        p_live_focus_units: request.liveFocusUnits,
+        p_evaluator_version: request.evaluatorVersion,
+        p_policy_version: request.policyVersion,
+        p_segmentation_provider: request.segmentationProvider,
+        p_segmentation_model: request.segmentationModel,
+        p_segmentation_prompt_version: request.segmentationPromptVersion,
+        p_focus_evaluator_version: request.focusEvaluatorVersion,
+        p_focus_policy_version: request.focusPolicyVersion,
+        p_focus_provider: request.focusProvider,
+        p_focus_model: request.focusModel,
+        p_focus_prompt_version: request.focusPromptVersion,
+        p_focus_schema_version: request.focusSchemaVersion,
+        p_thread_evaluator_version: request.threadEvaluatorVersion,
+        p_thread_policy_version: request.threadPolicyVersion,
+        p_thread_provider: request.threadProvider,
+        p_thread_model: request.threadModel,
+        p_thread_prompt_version: request.threadPromptVersion,
+        p_thread_schema_version: request.threadSchemaVersion,
+        p_continuity_evaluator_version: request.continuityEvaluatorVersion,
+        p_continuity_policy_version: request.continuityPolicyVersion,
+        p_continuity_provider: request.continuityProvider,
+        p_continuity_model: request.continuityModel,
+        p_continuity_prompt_version: request.continuityPromptVersion,
+        p_continuity_schema_version: request.continuitySchemaVersion,
+        p_lifecycle_reducer_version: request.lifecycleReducerVersion,
+        p_lf_reducer_version: request.lfReducerVersion,
+        p_expected_current_sp: request.expectedCurrentSp,
+        p_expected_same_sp_event_sequence: request.expectedSameSpEventSequence,
+        p_expected_world_thread_identity_version: request.expectedWorldThreadIdentityVersion,
+      });
+      return mapCallHalfWithFullSemanticChainResult(Array.isArray(rows) ? rows[0] : undefined);
+    } catch (error) {
+      return typedCallHalf(error);
     }
   }
 }

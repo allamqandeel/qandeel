@@ -9,6 +9,7 @@ import { LiveCallGateway } from './call/gateway/live-call.gateway';
 import { LIVE_CALL_SPEECH_SINK } from './call/live-call-speech.port';
 import { CallTurnRepository } from './call-turn/call-turn.repository';
 import { CALL_TURN_STORE } from './call-turn/call-turn.store';
+import { LiveCallAnalysisSignal } from './call-turn/live-call-analysis.signal';
 import { LiveCallConversationBinding } from './call-turn/live-call-conversation.port';
 import { LIVE_CALL_RECOGNITION, LIVE_CALL_SYNTHESIS_ROUTE, LiveCallTurnEngine } from './call-turn/live-call-turn.engine';
 import { liveCallFetch } from '../http-transport/live-call-keep-alive-fetch';
@@ -135,6 +136,8 @@ import {
     { provide: LIVE_CALL_STORE, useClass: LiveCallRepository },
     { provide: CALL_TURN_STORE, useClass: CallTurnRepository },
     LiveCallConversationBinding,
+    // S8B-05 CP3: the call analysis worker's kick; the worker (ConversationModule) registers into it at start.
+    LiveCallAnalysisSignal,
     {
       provide: LIVE_CALL_RECOGNITION,
       useFactory: (): RealtimeRecognition | null => {
@@ -156,6 +159,6 @@ import {
     LiveCallService,
     LiveCallGateway,
   ],
-  exports: [VoiceMediaModule, LiveCallConversationBinding, LiveCallTurnEngine],
+  exports: [VoiceMediaModule, LiveCallConversationBinding, LiveCallAnalysisSignal, LiveCallTurnEngine],
 })
 export class VoiceModule {}

@@ -151,6 +151,22 @@ export class LiveCallReplyService implements LiveCallConversation, OnModuleInit 
     await request.storeSafety(evaluated.safety.disposition);
   }
 
+  /**
+   * S8B-05 CP3, S3 after the call ended (A3.1, R5′): the turn's Safety was never stored and no connection is left to read
+   * as the owner, so the call analysis sweep reads the SAME context reader through its service wrapper (0191's
+   * `server_read_call_context_v1`, which calls `call_context_exchanges_v1` for the owner) and the SAME fold and gate run
+   * here. Stored once; rejects, storing nothing, when the context cannot be read now - never a default disposition.
+   */
+  async settleEndedCallSafety(request: {
+    readonly content: string;
+    readonly readContext: () => Promise<unknown>;
+    readonly storeSafety: (disposition: 'ALLOW' | 'GUIDED' | 'BLOCK') => Promise<void>;
+  }): Promise<void> {
+    const evaluated = await this.evaluateSafetyOver(request.readContext, request.content);
+    if (!evaluated) throw new Error('CALL_CONTEXT_UNAVAILABLE');
+    await request.storeSafety(evaluated.safety.disposition);
+  }
+
   reply(request: LiveCallReplyRequest): Promise<LiveCallReplyOutcome> {
     return runWithAiUsageAttribution({ userId: request.userId, sessionId: request.sessionId, sourceTurnId: request.userTurnId }, () => this.replyOnce(request));
   }
@@ -254,18 +270,26 @@ export class LiveCallReplyService implements LiveCallConversation, OnModuleInit 
    * S1: the call's context (C2 + the D-05-08 window, read by the owner) folded as the reply receives it, the turn last, and
    * the ONE gate over it. Null when the context cannot be read (the turn is then neither answered nor judged by default).
    */
-  private async evaluateSafety(request: LiveCallSafetyRequest): Promise<{ readonly window: ReturnType<typeof selectCallWindow>; readonly safety: SafetyResponseGateResult } | null> {
-    let rows: ContextRow[];
+  private evaluateSafety(request: LiveCallSafetyRequest): Promise<{ readonly window: ReturnType<typeof selectCallWindow>; readonly safety: SafetyResponseGateResult } | null> {
+    return this.evaluateSafetyOver(() => this.dataApi.request<ContextRow[]>(request.accessToken, 'rpc/call_context_exchanges_v1', {
+      method: 'POST', body: JSON.stringify({ p_session_id: request.sessionId, p_call_id: request.callId, p_limit: CALL_CONTEXT_POLICY.readLimit }),
+    }), request.content);
+  }
+
+  /** The ONE fold and the ONE gate over the call's context rows, however they were read (S1, and S3 after the end). */
+  private async evaluateSafetyOver(
+    readContext: () => Promise<unknown>,
+    content: string,
+  ): Promise<{ readonly window: ReturnType<typeof selectCallWindow>; readonly safety: SafetyResponseGateResult } | null> {
+    let rows: unknown;
     try {
-      rows = await this.dataApi.request<ContextRow[]>(request.accessToken, 'rpc/call_context_exchanges_v1', {
-        method: 'POST', body: JSON.stringify({ p_session_id: request.sessionId, p_call_id: request.callId, p_limit: CALL_CONTEXT_POLICY.readLimit }),
-      });
+      rows = await readContext();
     } catch {
       return null;
     }
     if (!Array.isArray(rows)) return null;
-    const window = selectCallWindow(rows);
-    return { window, safety: this.safetyGate.evaluate(request.content, foldCallExchanges(window.exchanges, request.content).messages) };
+    const window = selectCallWindow(rows as ContextRow[]);
+    return { window, safety: this.safetyGate.evaluate(content, foldCallExchanges(window.exchanges, content).messages) };
   }
 
   /** In-call retrieval (A1 §4): one owner-scoped indexed read, raced against 80 ms; never an error for the reply. */

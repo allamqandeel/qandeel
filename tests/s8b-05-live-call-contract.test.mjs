@@ -113,7 +113,9 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   assert.match(code, /INSERT INTO account_erasure_private\.coverage_registry/u, 'the calls relation is in the erasure coverage');
   const migrations = readdirSync(join(root, 'database/migrations')).filter((f) => f.endsWith('.sql')).sort();
   // RE-ANCHORED by S8B-05 CP2 (was: 0189 is the last migration): CP2 adds exactly 0190 after it.
-  assert.deepEqual(migrations.slice(-2), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql'], 'CP2 adds exactly 0190 after 0189');
+  // RE-ANCHORED by S8B-05 CP3 (was: 0190 is the last migration): CP3 adds exactly 0191 after 0190.
+  assert.deepEqual(migrations.slice(-3), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
+    '0191_s8b_05_live_call_ordered_halves_v1.sql'], 'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
   assert.equal(scripts['prove:live-call-synthetic:integration'],
@@ -198,7 +200,8 @@ test('call-truth is a classified, guarded, private route; the upgrade is the gat
 test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no call text reaches the phone in CP1', () => {
   const record = read(RECORD);
   // RE-ANCHORED by S8B-05 CP2 (was: CP1 under review): CP1 merged (PR #374); the record states CP2 under review, not closed.
-  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP2 — UNDER REVIEW/mu, 'the record states CP2 under review, not closed');
+  // RE-ANCHORED by S8B-05 CP3 (was: CP2 under review): CP2 merged (PR #375); the record states CP3 under review, not closed.
+  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP3 — UNDER REVIEW/mu, 'the record states CP3 under review, not closed');
   const rows = record.split('\n').filter((line) => /^\| (?:LC|LCE)-\d{2} \|/u.test(line));
   assert.ok(rows.length >= 30, 'the unified gate lists the existing and the new call rows');
   for (const row of rows) assert.match(row, /^\| (?:LC|LCE)-\d{2} \| PROPOSED \|/u, `${row.slice(0, 12)} is PROPOSED`);
@@ -243,4 +246,132 @@ test('no post-response consumer reads the source exchange\'s reply content witho
   assert.match(m0190, /CREATE FUNCTION public\.server_read_call_reply_delivery_v1\(/u);
   const history = codeOnly(read('apps/api/src/conversation/conversation.service.ts'));
   assert.match(history, /\.\.\.\(reply && deliveryByReply\.has\(reply\.id\) \? \{ deliveryState: deliveryByReply\.get\(reply\.id\)! \} : \{\}\)/u, 'the history carries it, additively');
+});
+
+// S8B-05 CP3 (migration 0191; contract v1.2 Part A A3.3, A1 §1 - §3, L2 - L5): the ordered half establishment, the
+// durable ordered analysis worker, the shared background permits and S3 after the END. Statically: 0191 is forward-only,
+// opens no gate and grants no client role; L2 (M1) is the default and M1′ only when set exactly; the voice path makes no
+// database call for the analysis (an in-memory kick, never awaited) and no reply path asks a background permit; the worker
+// logs nothing; the verifier and the synthetic proof run in CI and the proof reaches no provider. The behaviour itself is
+// proven by verify-migration-0191, the CP3 synthetic proof and the live-analysis / establishment specs.
+const M0191 = 'database/migrations/0191_s8b_05_live_call_ordered_halves_v1.sql';
+const ANALYSIS_DIR = 'apps/api/src/live-analysis/';
+
+test('0191 is forward-only, one transaction, opens no voice gate, grants no client role, and its proofs run in CI', () => {
+  const migration = read(M0191);
+  assert.equal((migration.match(/^BEGIN;$/gmu) ?? []).length, 1);
+  assert.equal((migration.match(/^COMMIT;$/gmu) ?? []).length, 1);
+  const code = codeOnly(migration);
+  assert.doesNotMatch(code, /set_voice_launch_capability_v1\(|(?:INSERT INTO|UPDATE)\s+voice_private\.voice_launch_capability_(?:states|events)/u, 'no gate is set');
+  assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|authenticated|PUBLIC)\b/u, 'nothing is granted to a client role');
+  assert.match(code, /CREATE FUNCTION public\.server_acquire_background_permit_v1\(/u);
+  assert.match(code, /'contract v1\.2 A1 §3 \(B_total 16, B_min 2, k 2, two permits per person, a 120 s lease; calibrated in S8B-08\)'/u,
+    'the shipped permit policy is the contract\'s, calibrated later, not by CP3');
+  const scripts = JSON.parse(read('package.json')).scripts;
+  assert.equal(scripts['verify:live-call-ordered-halves:integration'], 'node --env-file-if-exists=.env database/verify-migration-0191.mjs');
+  assert.equal(scripts['prove:live-analysis-synthetic:integration'],
+    'node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts');
+  const ci = read('.github/workflows/api-ci.yml');
+  const at = (needle) => { const i = ci.indexOf(needle); assert.ok(i >= 0, `CI runs ${needle}`); return i; };
+  assert.ok(at('run: npm run verify:live-call-spoken-turn:integration') < at('run: npm run verify:live-call-ordered-halves:integration'), '0191 is verified after 0190');
+  assert.ok(at('run: npm run prove:live-call-spoken-turn-synthetic:integration') < at('run: npm run prove:live-analysis-synthetic:integration'), 'CP3 proof after the CP2 proof');
+  // DEC-R1-3 (the Product Owner, 2026-11-03): the SHIPPED, CALIBRATED and CONSERVATIVE results stay visible in CI; only M1
+  // under CONSERVATIVE, a test profile and not a launch setting, is enforced; the others are reported, never hidden.
+  assert.match(ci, /S8B05_CP3_PROFILES: SHIPPED,CALIBRATED,CONSERVATIVE\n\s*run: npm run prove:live-analysis-synthetic:integration/u,
+    'CI runs the CP3 proof under all three permit profiles');
+  const proof = read('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts');
+  assert.match(codeOnly(proof), /if \(impact\.M1_CONSERVATIVE\) \{\s*check\(/u, 'the voice limit is enforced for M1 under CONSERVATIVE');
+  assert.match(proof, /REPORTED {2}\$\{key\} exceeds the voice protection limit/u, 'every other profile is reported when it exceeds it');
+  assert.match(proof, /S8B05_CP3_PROOF_REFUSED: DATABASE_URL must name a loopback throwaway database/u);
+  assert.doesNotMatch(codeOnly(proof), /api\.deepseek\.com|speechmatics\.com|googleapis\.com|aiplatform|openai\.com/u, 'the proof reaches no provider');
+});
+
+// O3b as amended by DEC-R1-1 (the Product Owner, 2026-11-03; record §11.11): the call's ACTIVATION adopts the session's
+// unestablished pre-call exchanges, in the activation's own transaction; the first turn adopts only what completed after it,
+// after the activation's items (one order); the connection then kicks the worker in memory, never awaited, no database call.
+test('O3b as amended by DEC-R1-1: the activation adopts in its own transaction, the first turn only after it, and the kick stays in memory', () => {
+  const code = codeOnly(read(M0191));
+  const activate = code.slice(code.indexOf('CREATE OR REPLACE FUNCTION public.server_activate_call_v1('));
+  const activateBody = activate.slice(0, activate.indexOf('END$$;'));
+  assert.match(activateBody, /PERFORM voice_private\.adopt_pre_call_exchanges_v1\(p_call_id, p_user_id, v_call\.session_id, 1000\);\s*RETURN QUERY SELECT 'ACTIVE'::text, v_now,/u,
+    'the first ACTIVE adopts, in the same transaction, just before it answers');
+  const commit = code.slice(code.indexOf('CREATE OR REPLACE FUNCTION public.server_commit_live_call_turn_v1('));
+  assert.match(commit.slice(0, commit.indexOf('END$$;')), /IF v_index = 1 THEN\s*PERFORM voice_private\.adopt_pre_call_exchanges_v1\(p_call_id, p_user_id, v_call\.session_id, 0\);/u,
+    'the first turn adopts only what is left, with no reserve');
+  const adopt = code.slice(code.indexOf('CREATE FUNCTION voice_private.adopt_pre_call_exchanges_v1('));
+  assert.match(adopt.slice(0, adopt.indexOf('END$$;')), /CASE WHEN v_after IS NULL THEN p\.n - p\.total - p_reserve ELSE v_after \+ p\.n END[\s\S]*WHERE x\.idx < 1;/u,
+    'a later adoption continues after the call\'s last adopted item and never reaches a turn\'s index');
+  const connection = codeOnly(read('apps/api/src/voice/call/live-call.connection.ts'));
+  assert.match(connection, /this\.sendState\('ACTIVE'\);\s*this\.deps\.analysisKick\?\.\(this\.sessionId!\);/u, 'the kick follows the ACTIVE state');
+  assert.doesNotMatch(connection, /await [^;\n]*analysisKick/u, 'never awaited');
+  assert.match(codeOnly(read('apps/api/src/voice/call/live-call.service.ts')), /analysisKick: \(sessionId\) => this\.analysis\?\.kick\(sessionId, 'CALL_ACTIVATED'\),/u);
+});
+
+test('L2 is the default (M1) and M1′ only when set exactly; the voice path kicks in memory and no reply path asks a permit', () => {
+  const worker = codeOnly(read(`${ANALYSIS_DIR}call-analysis.worker.ts`));
+  assert.match(worker, /return environment\[CALL_ANALYSIS_START_ENV\] === 'AT_COMMIT' \? 'AT_COMMIT' : 'AFTER_FIRST_AUDIO';/u, 'the default is L2\'s yield');
+  assert.match(worker, /respectCriticalWindow: this\.deps\.start === 'AFTER_FIRST_AUDIO',/u);
+  const signal = codeOnly(read(`${CALL_TURN_DIR}live-call-analysis.signal.ts`));
+  assert.doesNotMatch(signal, /import [^;]*(?:supabase|service-role|data-api|repository)/iu, 'the signal reaches no database');
+  assert.match(signal, /try \{[\s\S]*?\} catch/u, 'a kick never throws into the voice path');
+  const engine = codeOnly(read(`${CALL_TURN_DIR}live-call-turn.engine.ts`));
+  assert.doesNotMatch(engine, /await [^;\n]*analysis/u, 'the engine never awaits the analysis');
+  // The live call reply, the typed reply and the voice-note reply never ask a background permit.
+  for (const path of ['apps/api/src/conversation/live-call-reply.service.ts', 'apps/api/src/conversation/conversation.service.ts',
+    ...files('apps/api/src/voice').filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts'))]) {
+    assert.doesNotMatch(codeOnly(read(path)), /BackgroundPermitGate|BACKGROUND_PERMIT_GATE|acquire_background_permit/u, `${path} asks no background permit`);
+  }
+  for (const path of files(ANALYSIS_DIR).filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts'))) {
+    assert.doesNotMatch(codeOnly(read(path)), /\bLogger\b|console\.|process\.stdout/u, `${path} logs nothing`);
+  }
+});
+
+// S8B-05 CP3 review correction (A2 smoke in API CI): a proof that drives an event-writing command leaves no runtime event
+// behind. The outbox names its subject `subject_user_id`, so the teardowns' `user_id` sweep never reaches it; a fixture event
+// left PENDING is older than any later event and fills the publisher's oldest-first batch (claim_runtime_events(20)), which
+// left the A2 smoke's own event PENDING after the CP3 proof. Every such teardown deletes by `subject_user_id` and the proof
+// counts what is left of the runtime outbox after it.
+test('every proof that writes runtime events removes its fixtures\' outbox rows by subject_user_id and proves none is left', () => {
+  const EVENT_WRITERS = /server_commit_live_call_turn_v1|server_close_live_call_exchange_v1|server_end_call_v1|server_close_ended_call_exchange_v1|finalize_conversation_turn/u;
+  const proofs = files('apps/api/scripts').filter((p) => p.endsWith('.ts')).filter((p) => {
+    const text = read(p);
+    return text.includes("column_name = 'user_id'") && EVENT_WRITERS.test(text);
+  });
+  assert.ok(proofs.includes('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts'), 'the CP3 proof is covered');
+  assert.ok(proofs.includes('apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts'), 'the CP2 proof is covered');
+  for (const path of proofs) {
+    const text = codeOnly(read(path));
+    const teardown = text.slice(text.indexOf('async function teardown('));
+    assert.match(teardown, /DELETE FROM public\.runtime_event_outbox WHERE subject_user_id = ANY\(\$1::uuid\[\]\)/u, `${path}: the teardown deletes its fixtures' events`);
+    assert.match(text, /count\(\*\) FROM public\.runtime_event_outbox WHERE subject_user_id = ANY\(\$1::uuid\[\]\)\)::int AS (?:events|outbox_events)/u,
+      `${path}: what the teardown left of the outbox is counted`);
+  }
+});
+
+// S8B-05 CP3 R2 (API CI, the S6-06 media proof's P04 on db832c72): a proof that adds call segments and ends calls leaves no
+// erasure key behind. The END seals the recording, which queues every never-uploaded segment's key (0183
+// seal_call_recording_v1); the queue keys on storage_key, so the teardowns' `user_id` sweep never reaches it. Left behind,
+// 426 `voice-call/` keys came due and filled the media erasure worker's oldest-first claim of 25, so P04's photo keys were
+// never claimed. Every such teardown deletes its fixtures' keys before their objects, and the proof counts what is left.
+test('every proof that seals call recordings removes its fixtures\' erasure queue keys and proves none is left', () => {
+  const proofs = files('apps/api/scripts').filter((p) => p.endsWith('.ts')).filter((p) => {
+    const text = read(p);
+    return text.includes("column_name = 'user_id'") && /server_add_call_segment_v\d/u.test(text) && /server_end_call_v1/u.test(text);
+  });
+  assert.ok(proofs.includes('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts'), 'the CP3 proof is covered');
+  for (const path of proofs) {
+    const text = codeOnly(read(path));
+    const teardown = text.slice(text.indexOf('async function teardown('));
+    const queue = teardown.indexOf('DELETE FROM introduction_sharing_private.media_erasure_queue WHERE storage_key IN');
+    const objects = teardown.indexOf('DELETE FROM voice_private.recording_objects WHERE recording_id IN');
+    assert.ok(queue >= 0, `${path}: the teardown deletes its fixtures' erasure keys`);
+    assert.ok(queue < objects, `${path}: before the objects that name them`);
+    assert.match(text, /count\(\*\) FROM introduction_sharing_private\.media_erasure_queue WHERE storage_key = ANY\(\$2::text\[\]\)\)::int AS erasure_queue_keys/u,
+      `${path}: what the teardown left of the erasure queue is counted`);
+  }
+  // verify-migration-0191's race fixtures are erased through the account erasure, which queues their keys the same way.
+  const verifier = codeOnly(read('database/verify-migration-0191.mjs'));
+  assert.match(verifier, /DELETE FROM introduction_sharing_private\.media_erasure_queue WHERE storage_key = ANY\(\$1::text\[\]\)/u, 'verify-0191 removes its fixtures\' erasure keys');
+  assert.match(verifier, /DELETE FROM account_erasure_private\.media_pending WHERE storage_key = ANY\(\$1::text\[\]\)/u, 'and their pending-erasure rows');
+  assert.match(verifier, /the race fixtures left erasure keys behind/u, 'and proves none is left');
 });
