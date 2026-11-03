@@ -24,9 +24,13 @@ import type { ThreadContinuityProvider, ThreadContinuityResolutionProposal } fro
 import type { ThreadIdentityDossier } from '../thread-lifecycle/thread-continuity.types';
 import { ConversationSemanticEstablishmentService } from './conversation-semantic-establishment.service';
 import type { ConversationSemanticRuntimeBoundary } from './conversation-semantic-runtime.repository';
+import type { BackgroundPermitGate } from '../live-analysis/background-permits';
 import {
+  CallHalfOrderError,
   ConversationSemanticIntegrityError,
   ConversationSemanticUnavailableError,
+  type CallHalfWithFullSemanticChainResult,
+  type CommitCallHalfWithFullSemanticChainRequest,
   type CommitFinalizedExchangeWithFullSemanticChainRequest,
   type ConversationSemanticRuntimeContext,
   type FinalizedExchangeWithFullSemanticChainResult,
@@ -849,5 +853,130 @@ describe('PROD-SEC-02 foreground work lease and deadline in the semantic phase',
     expect(focus.requests).toHaveLength(1);
     expect(b.thread.requests).toHaveLength(0);
     expect(b.h.commitFinalizedExchangeWithFullSemanticChain).not.toHaveBeenCalled();
+  });
+});
+
+// S8B-05 CP3: ONE half of a numbered call turn through the half coordinator (migration 0191), and the text path's ONE
+// shared background permit. The evaluation, canonicalization and recovery are the exchange's, reused for one half.
+describe('S8B-05 CP3: call half establishment and the shared background permit', () => {
+  const CALL = '99999999-9999-4999-8999-999999999999';
+  const halfResult = (request: CommitCallHalfWithFullSemanticChainRequest, firstSp = 1): CallHalfWithFullSemanticChainResult => {
+    const n = request.units.length;
+    return {
+      outcome: 'COMMITTED', live_head: n === 0 ? null : firstSp + n - 1, live_focus: NONE, live_focus_sp: null, live_focus_transitions: [],
+      unit_event: n === 0 ? null : { commit_batch_id: request.batchId, user_id: USER, session_id: SESSION, source_turn_id: request.sourceTurnId, first_sp: firstSp, last_sp: firstSp + n - 1, unit_count: n, created_at: 'now' },
+    };
+  };
+  function halfBuild(options: {
+    snapshot?: (call: number) => IntegratedFullSemanticBatchSnapshot;
+    commit?: (request: CommitCallHalfWithFullSemanticChainRequest, call: number) => Promise<CallHalfWithFullSemanticChainResult>;
+    permits?: BackgroundPermitGate;
+    segmentation?: RoleScriptedSegmentation;
+  } = {}) {
+    const h = harness();
+    let snapshotCalls = 0;
+    let commitCalls = 0;
+    h.readIntegratedBatchSnapshot.mockImplementation(async () => { snapshotCalls += 1; return (options.snapshot ?? (() => absent()))(snapshotCalls); });
+    const commitCallHalfWithFullSemanticChain = jest.fn(async (request: CommitCallHalfWithFullSemanticChainRequest) => {
+      commitCalls += 1;
+      return (options.commit ?? (async (r) => halfResult(r)))(request, commitCalls);
+    });
+    const boundary: ConversationSemanticRuntimeBoundary = { ...h.boundary, commitCallHalfWithFullSemanticChain };
+    const segmentation = options.segmentation ?? new RoleScriptedSegmentation(SEGMENTS);
+    const focus = new RecordingFocusProvider(FOCUS_SCENARIO);
+    const service = new ConversationSemanticEstablishmentService(boundary, () => segmentationBinding(segmentation), () => focusBinding(focus),
+      () => threadBinding(new RecordingThreadProvider(THREAD_SCENARIO)), () => continuityBinding(FakeThreadContinuityProvider.nominatingAll(DISTINCT)), options.permits);
+    return { service, h, segmentation, focus, commitCallHalfWithFullSemanticChain };
+  }
+  const generatingUser = turn({ status: 'GENERATING', completed_at: null });
+  const userHalf = { callId: CALL, callTurnIndex: 1, half: 'USER' } as const;
+
+  it('the USER half while its turn is GENERATING: its own CUs only (no hindsight), one half commit with both tokens', async () => {
+    const b = halfBuild();
+    const result = await b.service.establishCallHalf(USER, userHalf, generatingUser);
+    expect(result.outcome).toBe('COMMITTED');
+    expect(b.segmentation.requests.map((r) => r.sourceRole)).toEqual(['USER']);
+    expect(b.focus.requests.map((r) => r.currentCu.cuId)).toEqual([U1_ID, U2_ID]);
+    const [request] = b.commitCallHalfWithFullSemanticChain.mock.calls[0];
+    expect(request).toMatchObject({ callId: CALL, callTurnIndex: 1, half: 'USER', sourceTurnId: USER_TURN, batchId: USER_BATCH, expectedCurrentSp: null, expectedSameSpEventSequence: 0, expectedWorldThreadIdentityVersion: 0 });
+    expect([request.units.length, request.focusUnits.length, request.threadUnits.length, request.lifecycleUnits.length, request.liveFocusUnits.length]).toEqual([2, 2, 2, 2, 2]);
+    expect(result.delivery.committedEvents.map((e) => [e.firstSp, e.lastSp])).toEqual([[1, 2]]);
+    expect(b.h.commitFinalizedExchangeWithFullSemanticChain).not.toHaveBeenCalled();
+  });
+
+  it('an empty reply is the zero-unit batch: no segmentation call, no focus call, one half commit', async () => {
+    const b = halfBuild();
+    const empty = turn({ id: ASSISTANT_TURN, role: 'ASSISTANT', content: '', source_turn_id: USER_TURN });
+    const result = await b.service.establishCallHalf(USER, { callId: CALL, callTurnIndex: 1, half: 'ASSISTANT' }, empty);
+    expect(b.segmentation.requests).toHaveLength(0);
+    expect(b.focus.requests).toHaveLength(0);
+    expect(b.commitCallHalfWithFullSemanticChain.mock.calls[0][0].units).toEqual([]);
+    expect(result.delivery.committedEvents).toEqual([]);
+  });
+
+  it('a stored half is replayed through the coordinator with zero providers, no context read and an empty payload', async () => {
+    const b = halfBuild({
+      snapshot: () => complete(USER_BATCH, 'USER', 1, 2, 2),
+      commit: async (r) => ({ ...halfResult({ ...r, units: [{ unitId: U1_ID, spanStart: 0, spanEnd: 1 }, { unitId: U2_ID, spanStart: 1, spanEnd: 2 }] }), outcome: 'REPLAYED' }),
+    });
+    const result = await b.service.establishCallHalf(USER, userHalf, generatingUser);
+    expect(result.outcome).toBe('REPLAYED');
+    expect(b.segmentation.requests).toHaveLength(0);
+    expect(b.h.readRuntimeContext).not.toHaveBeenCalled();
+    expect(b.commitCallHalfWithFullSemanticChain.mock.calls[0][0]).toMatchObject({ units: [], focusUnits: [], liveFocusUnits: [], expectedSameSpEventSequence: 0 });
+  });
+
+  it('a partial half fails closed before any provider', async () => {
+    const b = halfBuild({ snapshot: () => absent({ full_semantic_capture_state: 'PARTIAL' }) });
+    await integrity(b.service.establishCallHalf(USER, userHalf, generatingUser));
+    expect(b.segmentation.requests).toHaveLength(0);
+  });
+
+  it('the relation gate: a GENERATING reply, a replying USER turn or index 0 cost zero reads', async () => {
+    const b = halfBuild();
+    await integrity(b.service.establishCallHalf(USER, { callId: CALL, callTurnIndex: 1, half: 'ASSISTANT' },
+      turn({ id: ASSISTANT_TURN, role: 'ASSISTANT', status: 'GENERATING', source_turn_id: USER_TURN })));
+    await integrity(b.service.establishCallHalf(USER, userHalf, turn({ source_turn_id: ASSISTANT_TURN })));
+    await integrity(b.service.establishCallHalf(USER, { callId: CALL, callTurnIndex: 0, half: 'USER' }, generatingUser));
+    expect(b.h.readIntegratedBatchSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('an ordering refusal passes through as CallHalfOrderError, never a semantic answer', async () => {
+    const b = halfBuild({ commit: async () => { throw new CallHalfOrderError('OUT_OF_ORDER'); } });
+    const error = await rejection(b.service.establishCallHalf(USER, { callId: CALL, callTurnIndex: 2, half: 'USER' }, generatingUser));
+    expect(error).toBeInstanceOf(CallHalfOrderError);
+    expect((error as CallHalfOrderError).reason).toBe('OUT_OF_ORDER');
+  });
+
+  it('one stale context earns ONE re-evaluation against a re-read context, segmentation reused; a second is retryable', async () => {
+    const once = halfBuild({ commit: async (r, call) => { if (call === 1) throw new StaleConversationalFocusContextError(); return halfResult(r); } });
+    expect((await once.service.establishCallHalf(USER, userHalf, generatingUser)).outcome).toBe('COMMITTED');
+    expect(once.h.readRuntimeContext).toHaveBeenCalledTimes(2);
+    expect(once.segmentation.requests).toHaveLength(1);
+    const twice = halfBuild({ commit: async () => { throw new StaleThreadIdentityContextError(); } });
+    expect(await unavailable(twice.service.establishCallHalf(USER, userHalf, generatingUser))).toBe('STALE_CONTEXT_RETRY_EXHAUSTED');
+  });
+
+  it('a text exchange asks ONE permit before its context, releases it, and defers retryably when none is granted', async () => {
+    const release = jest.fn(async () => undefined);
+    const granted: BackgroundPermitGate = { acquire: jest.fn(async () => ({ waitedMs: 3, release })) };
+    const b = build(harness());
+    const withPermit = new ConversationSemanticEstablishmentService(b.h.boundary, b.segmentationFactory, b.focusFactory, b.threadFactory, b.continuityFactory, granted);
+    await withPermit.establishExchange(USER, userTurn, assistantTurn);
+    expect(granted.acquire).toHaveBeenCalledWith(USER, 'TEXT_SEMANTIC_ANALYSIS', { respectCriticalWindow: false, maxWaitMs: 5_000 });
+    expect(release).toHaveBeenCalledTimes(1);
+
+    const none: BackgroundPermitGate = { acquire: jest.fn(async () => null) };
+    const d = build(harness());
+    const deferred = new ConversationSemanticEstablishmentService(d.h.boundary, d.segmentationFactory, d.focusFactory, d.threadFactory, d.continuityFactory, none);
+    expect(await unavailable(deferred.establishExchange(USER, userTurn, assistantTurn))).toBe('BACKGROUND_CAPACITY_DEFERRED');
+    expect(d.h.readRuntimeContext).not.toHaveBeenCalled();
+    expect(d.segmentationFactory).not.toHaveBeenCalled();
+
+    // The call analysis worker establishing a pre-call exchange already holds its unit's permit.
+    const e = build(harness());
+    const held = new ConversationSemanticEstablishmentService(e.h.boundary, e.segmentationFactory, e.focusFactory, e.threadFactory, e.continuityFactory, none);
+    await expect(held.establishExchange(USER, userTurn, assistantTurn, { backgroundPermitHeld: true })).resolves.toBeDefined();
+    expect(none.acquire).toHaveBeenCalledTimes(1);
   });
 });

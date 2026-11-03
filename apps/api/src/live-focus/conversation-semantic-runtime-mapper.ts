@@ -19,6 +19,7 @@ import { mapConversationThreadLifecycleRuntimeContext, mapIntegratedThreadLifecy
 import { THREAD_CAPTURE_STATES, type ThreadCaptureState } from '../thread-establishment/conversation-thread-runtime.types';
 import {
   ConversationSemanticIntegrityError,
+  type CallHalfWithFullSemanticChainResult,
   type ConversationSemanticRuntimeContext,
   type FinalizedExchangeWithFullSemanticChainResult,
   type IntegratedFullSemanticBatchSnapshot,
@@ -180,5 +181,25 @@ export function mapFinalizedExchangeWithFullSemanticChainResult(row: unknown): F
     live_focus: liveFocus,
     live_focus_sp: row.live_focus_sp as number | null,
     live_focus_transitions: transitions,
+  };
+}
+
+/**
+ * S8B-05 CP3: strictly maps the half coordinator's single row (0191). The LF and token facts are validated by the same
+ * mapper as the full coordinator's, read as a one-half exchange; the outcome is closed.
+ */
+export function mapCallHalfWithFullSemanticChainResult(row: unknown): CallHalfWithFullSemanticChainResult {
+  const reject = (): never => { throw new ConversationSemanticIntegrityError('CALL_HALF_DELIVERY_MISMATCH'); };
+  if (!isRecord(row) || (row.outcome !== 'COMMITTED' && row.outcome !== 'REPLAYED') || !('units' in row) || !('unit_event' in row)) return reject();
+  const mapped = mapFinalizedExchangeWithFullSemanticChainResult({
+    ...row, user_units: row.units, assistant_units: [], user_event: row.unit_event, assistant_event: null,
+  });
+  return {
+    outcome: row.outcome,
+    live_head: mapped.live_head,
+    live_focus: mapped.live_focus,
+    live_focus_sp: mapped.live_focus_sp,
+    unit_event: mapped.user_event,
+    live_focus_transitions: mapped.live_focus_transitions,
   };
 }

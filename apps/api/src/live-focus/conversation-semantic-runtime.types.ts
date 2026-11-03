@@ -79,7 +79,10 @@ export type ConversationSemanticIntegrityReason =
   | 'COMMITTED_WITHOUT_DELIVERY_EVENT'
   | 'DELIVERY_RANGE_MISMATCH'
   | 'LIVE_HEAD_NOT_ESTABLISHED'
-  | 'SEGMENTATION_FRONTIER_MOVED';
+  | 'SEGMENTATION_FRONTIER_MOVED'
+  // S8B-05 CP3: a call half that is not the numbered call turn its analysis item names, or a malformed half commit result.
+  | 'INVALID_CALL_HALF_RELATION'
+  | 'CALL_HALF_DELIVERY_MISMATCH';
 
 export class ConversationSemanticIntegrityError extends Error {
   constructor(readonly reason: ConversationSemanticIntegrityReason) {
@@ -104,7 +107,9 @@ export class ConversationSemanticUnavailableError extends Error {
       // PROD-SEC-02: the exchange's work lease is held by another live request, or the user is at the bound.
       | 'FOREGROUND_WORK_DEFERRED'
       // PROD-SEC-02: the request's foreground deadline passed, so no further provider call was started.
-      | 'FOREGROUND_DEADLINE_EXHAUSTED',
+      | 'FOREGROUND_DEADLINE_EXHAUSTED'
+      // S8B-05 CP3 (A1 §3): no shared background permit within the bounded wait; nothing was evaluated or written.
+      | 'BACKGROUND_CAPACITY_DEFERRED',
     options?: { cause?: unknown },
   ) {
     super(`Conversation semantic establishment is unavailable: ${reason}.`, options);
@@ -115,3 +120,51 @@ export class ConversationSemanticUnavailableError extends Error {
 
 /** The bounded stale-context recovery: exactly ONE semantic re-evaluation per request, shared by BOTH authorities. LF adds none. */
 export const MAX_SEMANTIC_STALE_CONTEXT_RETRIES = 1;
+
+/** S8B-05 CP3: the half of ONE numbered call turn that one call analysis item establishes. */
+export type CallHalf = 'USER' | 'ASSISTANT';
+
+/** The exact payload of `commit_conversation_units_call_half_v1` (migration 0191): ONE half, the FINAL chain, both tokens. */
+export interface CommitCallHalfWithFullSemanticChainRequest
+  extends Pick<CommitFinalizedExchangeWithFullSemanticChainRequest,
+    | 'sessionId' | 'userId' | 'evaluatorVersion' | 'policyVersion' | 'segmentationProvider' | 'segmentationModel'
+    | 'segmentationPromptVersion' | 'focusEvaluatorVersion' | 'focusPolicyVersion' | 'focusProvider' | 'focusModel'
+    | 'focusPromptVersion' | 'focusSchemaVersion' | 'threadEvaluatorVersion' | 'threadPolicyVersion' | 'threadProvider'
+    | 'threadModel' | 'threadPromptVersion' | 'threadSchemaVersion' | 'continuityEvaluatorVersion' | 'continuityPolicyVersion'
+    | 'continuityProvider' | 'continuityModel' | 'continuityPromptVersion' | 'continuitySchemaVersion'
+    | 'lifecycleReducerVersion' | 'lfReducerVersion' | 'expectedCurrentSp' | 'expectedSameSpEventSequence'
+    | 'expectedWorldThreadIdentityVersion'> {
+  readonly callId: string;
+  readonly callTurnIndex: number;
+  readonly half: CallHalf;
+  readonly sourceTurnId: string;
+  readonly batchId: string;
+  readonly units: CommitFinalizedExchangeWithFullSemanticChainRequest['userUnits'];
+  readonly focusUnits: CommitFinalizedExchangeWithFullSemanticChainRequest['userFocusUnits'];
+  readonly threadUnits: CommitFinalizedExchangeWithFullSemanticChainRequest['userThreadUnits'];
+  readonly lifecycleUnits: CommitFinalizedExchangeWithFullSemanticChainRequest['userLifecycleUnits'];
+  readonly liveFocusUnits: CommitFinalizedExchangeWithFullSemanticChainRequest['userLiveFocusUnits'];
+}
+
+/** The single row the half coordinator returns: COMMITTED now, or REPLAYED from storage (no token check). */
+export interface CallHalfWithFullSemanticChainResult {
+  readonly outcome: 'COMMITTED' | 'REPLAYED';
+  readonly live_head: number | null;
+  readonly live_focus: EffectiveLiveFocus;
+  readonly live_focus_sp: number | null;
+  readonly unit_event: FinalizedExchangeWithFullSemanticChainResult['user_event'];
+  readonly live_focus_transitions: readonly StoredLiveFocusTransition[];
+}
+
+/**
+ * S8B-05 CP3: the ordering conditions of the session's call analysis order (0191), each with nothing written. OUT_OF_ORDER
+ * is retryable once the earlier items settle; PREDECESSOR_ABANDONED and ITEM_ABANDONED mean the exchange was abandoned
+ * for integrity (B3) and is never established later. None of them is a semantic answer.
+ */
+export class CallHalfOrderError extends Error {
+  constructor(readonly reason: 'OUT_OF_ORDER' | 'PREDECESSOR_ABANDONED' | 'ITEM_ABANDONED') {
+    super(`Call half establishment refused by the analysis order: ${reason}.`);
+    this.name = 'CallHalfOrderError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

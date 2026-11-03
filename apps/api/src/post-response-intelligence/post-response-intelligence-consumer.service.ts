@@ -3,6 +3,7 @@ import { TelemetryService } from '../observability/telemetry.service';
 import { runWithAiUsageAttribution, type AiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import { PostResponseIntelligenceDispatcherService } from './post-response-intelligence-dispatcher.service';
 import { POST_RESPONSE_REDIS_CONSUMER, type PostResponseRedisConsumer } from './post-response-intelligence.types';
+import { POST_RESPONSE_BACKGROUND_GATE, type PostResponseBackgroundGate } from '../live-analysis/post-response-background-gate';
 
 @Injectable()
 export class PostResponseIntelligenceConsumerService implements OnModuleInit, OnModuleDestroy {
@@ -11,7 +12,9 @@ export class PostResponseIntelligenceConsumerService implements OnModuleInit, On
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private resumeRetry: (() => void) | undefined;
   private readonly retryDelayMs = boundedRetryDelay(process.env.POST_RESPONSE_REDIS_RETRY_MS);
-  constructor(@Inject(POST_RESPONSE_REDIS_CONSUMER) private readonly redis: PostResponseRedisConsumer, private readonly dispatcher: PostResponseIntelligenceDispatcherService,@Optional()private readonly telemetry?:TelemetryService) {}
+  // S8B-05 CP3 (v1.1 §1.6, A1 §3): each delivery enters the shared background work first (the session's semantic lease
+  // while a call is live or analyzed, then one shared permit); one not entered in time is left pending for reclaim.
+  constructor(@Inject(POST_RESPONSE_REDIS_CONSUMER) private readonly redis: PostResponseRedisConsumer, private readonly dispatcher: PostResponseIntelligenceDispatcherService,@Optional()private readonly telemetry?:TelemetryService,@Optional()@Inject(POST_RESPONSE_BACKGROUND_GATE)private readonly backgroundGate?:PostResponseBackgroundGate) {}
   onModuleInit(): void { if (this.redis.enabled && process.env.NODE_ENV !== 'test') this.task = this.run(); }
   async onModuleDestroy(): Promise<void> { this.stopped = true; this.interruptRetry(); await this.redis.close().catch(() => undefined); await this.task?.catch(() => undefined); await this.redis.close().catch(() => undefined); }
   private async run(): Promise<void> {
@@ -32,7 +35,12 @@ export class PostResponseIntelligenceConsumerService implements OnModuleInit, On
     const entries = [...await this.redis.reclaim(), ...await this.redis.read()];
     this.telemetry?.recordPostResponseDispatch('reclaim','success');this.telemetry?.recordPostResponseDispatch('read','success');
     for (const entry of entries) {
-      try { if (await withPostResponseAiUsageAttribution(entry.envelope, () => this.dispatcher.dispatch(entry.envelope))){this.telemetry?.recordPostResponseDispatch('event','terminal');await this.redis.ack(entry.id);this.telemetry?.recordPostResponseDispatch('ack','success');} }
+      try {
+        const entered = this.backgroundGate ? await this.backgroundGate.enter(entry.envelope) : null;
+        if (this.backgroundGate && !entered) { this.telemetry?.recordPostResponseDispatch('event','deferred'); continue; }
+        try { if (await withPostResponseAiUsageAttribution(entry.envelope, () => this.dispatcher.dispatch(entry.envelope))){this.telemetry?.recordPostResponseDispatch('event','terminal');await this.redis.ack(entry.id);this.telemetry?.recordPostResponseDispatch('ack','success');} }
+        finally { await entered?.release(); }
+      }
       catch { /* The pending entry is left for bounded reclaim after a transient failure. */ }
     }
   }

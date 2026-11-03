@@ -39,6 +39,8 @@ import { deepSeekThreadEstablishmentBinding, type ThreadEstablishmentBindingFact
 import { deepSeekThreadContinuityBinding, type ThreadContinuityBindingFactory } from '../thread-lifecycle/thread-continuity-binding';
 import { createDeepSeekClient } from '../model-router/providers/deepseek/deepseek-client';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
+import { DatabaseBackgroundPermitGate, UNGATED_BACKGROUND_PERMITS, type BackgroundPermitGate } from '../live-analysis/background-permits';
+import { BACKGROUND_PERMIT_GATE, CallAnalysisWorkerHost } from '../live-analysis/call-analysis-worker.host';
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
 import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
@@ -168,14 +170,24 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
         focus: FocusResolutionBindingFactory,
         thread: ThreadEstablishmentBindingFactory,
         continuity: ThreadContinuityBindingFactory,
-      ) => new ConversationSemanticEstablishmentService(repository, segmentation, focus, thread, continuity),
+        permits: BackgroundPermitGate,
+      ) => new ConversationSemanticEstablishmentService(repository, segmentation, focus, thread, continuity, permits),
       inject: [
         ConversationSemanticRuntimeRepository,
         CU_SEGMENTATION_BINDING_FACTORY,
         FOCUS_RESOLUTION_BINDING_FACTORY,
         THREAD_ESTABLISHMENT_BINDING_FACTORY,
         THREAD_CONTINUITY_BINDING_FACTORY,
+        BACKGROUND_PERMIT_GATE,
       ],
+    },
+    // S8B-05 CP3 (A1 §3): the PostgreSQL-shared background permits - one per call analysis half, text exchange
+    // establishment and post-response execution, across instances. A test process is ungated (no database there).
+    {
+      provide: BACKGROUND_PERMIT_GATE,
+      useFactory: (serviceApi: SupabaseServiceRoleApiService): BackgroundPermitGate =>
+        (process.env.NODE_ENV === 'test' ? UNGATED_BACKGROUND_PERMITS : new DatabaseBackgroundPermitGate(serviceApi)),
+      inject: [SupabaseServiceRoleApiService],
     },
     ConversationService,
     // S8B-03: the one runner of a committed Voice Note turn - the same Orchestrator path as a typed turn.
@@ -204,6 +216,8 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
       inject: [TelemetryService],
     },
     LiveCallReplyService,
+    // S8B-05 CP3: the Durable Ordered Analysis Worker - Live Analysis DURING the call, one half at a time, in 0191's order.
+    CallAnalysisWorkerHost,
   ],
 })
 export class ConversationModule {}

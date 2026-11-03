@@ -40,6 +40,7 @@ import {
 import { fastVoiceApplied, VOICE_CONSENT_V3, VOICE_CONSENT_V3_AR_SHA256, VOICE_CONSENT_V3_EN_SHA256 } from './qandeel-voice-0188-anchor.mjs';
 import { liveCallApplied } from './live-call-0189-anchor.mjs';
 import { liveCallTurnsApplied } from './live-call-0190-substitutions.mjs';
+import { liveCallHalvesApplied } from './live-call-0191-substitutions.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -386,8 +387,9 @@ async function verifyCatalogue(report) {
     // S8B-05 CP1 re-anchor (migration 0189): plus 0189's ten internals (verify-migration-0189 proves their shape).
     // S8B-05 CP2 re-anchor (migration 0190): plus 0190's six internals (verify-migration-0190 proves their shape).
     const expected = 28 + (voiceApplied ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0) + (await liveCallApplied(rows) ? 10 : 0)
-      + (await liveCallTurnsApplied(rows) ? 6 : 0);
-    assert.equal(n, expected, `C0b voice_private holds exactly 20 + 8 (+ 6 from 0187, + 4 from 0188, + 10 from 0189, + 6 from 0190) functions: ${expected}`);
+      + (await liveCallTurnsApplied(rows) ? 6 : 0) + (await liveCallHalvesApplied(rows) ? 8 : 0);
+    // S8B-05 CP3 re-anchor (migration 0191): plus 0191's eight internals (verify-migration-0191 proves their shape).
+    assert.equal(n, expected, `C0b voice_private holds exactly 20 + 8 (+ 6 from 0187, + 4 from 0188, + 10 from 0189, + 6 from 0190, + 8 from 0191) functions: ${expected}`);
     // v4 has no score parameter: the score is the band's constant.
     const [{ args }] = await rows('SELECT pg_get_function_arguments($1::regprocedure) AS args', [V4]);
     assert.doesNotMatch(args, /confidence/u, 'C0b v4 takes no confidence');

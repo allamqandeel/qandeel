@@ -44,6 +44,7 @@ import { qandeelVoiceApplied, VOICE_CONSENT_V2, voiceInternals0187 } from './qan
 import { fastVoiceApplied, historicalVoiceConsentVersions, VOICE_CONSENT_V3, voiceInternals0188 } from './qandeel-voice-0188-anchor.mjs';
 import { endFixtureCall, fixtureCall, liveCallApplied, voiceInternals0189 } from './live-call-0189-anchor.mjs';
 import { liveCallTurnsApplied, substitutedBody as liveCallBody, voiceInternals0190 } from './live-call-0190-substitutions.mjs';
+import { liveCallHalvesApplied, substitutedBody as liveCallHalfBody, voiceInternals0191 } from './live-call-0191-substitutions.mjs';
 
 // S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
 const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
@@ -423,6 +424,13 @@ async function verifyCatalogue(report) {
       assert.equal(internals.length, 6, 'S0b 0190 names six voice_private internals');
       declared.push(...internals);
     }
+    // S8B-05 CP3 re-anchor (migration 0191): 0191 adds eight voice_private internals of its own, held to the same rules
+    // (verify-migration-0191 proves their shape).
+    if (await liveCallHalvesApplied(rows)) {
+      const internals = voiceInternals0191();
+      assert.equal(internals.length, 8, 'S0b 0191 names eight voice_private internals');
+      declared.push(...internals);
+    }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,
           p.proconfig AS config, pg_get_userbyid(p.proowner) AS owner,
           EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0) AS to_public
@@ -485,9 +493,12 @@ async function verifyCatalogue(report) {
       // S8B-05 CP2 re-anchor (migration 0190): Export My Data is live as 0190's declared re-statement of this 0183 body
       // (live-call-0190-substitutions.mjs, whose origin is this statement; verify-migration-0190 proves the chain).
       const liveCallSuccessor = substitution.key === 'personal-export' && await liveCallTurnsApplied(rows);
-      const liveBody = liveCallSuccessor ? liveCallBody('personal-export')
+      // S8B-05 CP3 re-anchor (migration 0191): the batch writer is live as 0191's declared re-statement of this 0183 body,
+      // with exactly its INPUT-01 edit (live-call-0191-substitutions.mjs; verify-migration-0191 proves the chain).
+      const halfSuccessor = substitution.key === 'live-producer' && await liveCallHalvesApplied(rows);
+      const liveBody = halfSuccessor ? liveCallHalfBody('writer-input-01') : liveCallSuccessor ? liveCallBody('personal-export')
         : successor && await voiceNotesApplied(rows) ? notesBody(successor.key) : written.body;
-      assert.ok(live.some((r) => r.prosrc === liveBody), `S0d ${substitution.key}: the live body is the 0183 body (or its declared 0186 / 0190 successor)`);
+      assert.ok(live.some((r) => r.prosrc === liveBody), `S0d ${substitution.key}: the live body is the 0183 body (or its declared 0186 / 0190 / 0191 successor)`);
     }
     // The 0150 coordinator is not re-created: the producer it calls carries VA-3.
     assert.doesNotMatch(text, /FUNCTION public\.commit_finalized_exchange_with_full_semantic_chain_v1\(/u, 'S0d the coordinator is untouched');

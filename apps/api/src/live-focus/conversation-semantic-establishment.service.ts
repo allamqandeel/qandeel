@@ -47,6 +47,16 @@
 // LF has NO provider: the reducer is pure (D-01). The four existing lazy
 // bindings (segmentation, focus, Thread, continuity) are reused exactly; no
 // credential is read at construction.
+//
+// S8B-05 CP3 (contract v1.2, CA-05-01): a live call is established ONE HALF at
+// a time, in the session's analysis order, through the half coordinator of
+// migration 0191 (`establishCallHalf`). It reuses every step above for the
+// one half - the same gate shape, identities, snapshots, context, segmentation,
+// sequential B1 / Thread layer / LF walk, canonicalizations, tokens and bounded
+// recovery - with no hindsight: a half is evaluated against the committed
+// history before it and nothing after it. A text exchange's establishment
+// after its reply asks for ONE shared background permit before it reads its
+// context (A1 §3); its semantics and its reply are unchanged.
 
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConversationLiveDelivery, ConversationalUnitsCommittedWireEvent, LiveFocusTransitionWireEvent } from '@qandeel/runtime';
@@ -97,11 +107,16 @@ import { THREAD_CONTINUITY_PROMPT_VERSION } from '../thread-lifecycle/thread-con
 import { THREAD_CONTINUITY_SCHEMA_VERSION, ThreadContinuityProviderError } from '../thread-lifecycle/thread-continuity-provider.types';
 import { THREAD_CONTINUITY_EVALUATOR_VERSION, ThreadContinuityRejectedError } from '../thread-lifecycle/thread-continuity.types';
 import { THREAD_LIFECYCLE_POLICY_VERSION, THREAD_LIFECYCLE_REDUCER_VERSION, ThreadLifecycleRejectedError } from '../thread-lifecycle/thread-lifecycle.types';
+import { UNGATED_BACKGROUND_PERMITS, type BackgroundPermitGate } from '../live-analysis/background-permits';
 import type { ConversationSemanticRuntimeBoundary } from './conversation-semantic-runtime.repository';
 import {
+  CallHalfOrderError,
   ConversationSemanticIntegrityError,
   ConversationSemanticUnavailableError,
   MAX_SEMANTIC_STALE_CONTEXT_RETRIES,
+  type CallHalf,
+  type CallHalfWithFullSemanticChainResult,
+  type CommitCallHalfWithFullSemanticChainRequest,
   type ConversationSemanticRuntimeContext,
   type FinalizedExchangeWithFullSemanticChainResult,
   type IntegratedFullSemanticBatchSnapshot,
@@ -119,6 +134,38 @@ interface SegmentedHalf {
   readonly batch: CommitConversationUnitsRequest;
   readonly sourceFrontier: number;
 }
+
+/** The semantic result of ONE half, split from its sequence by its exact CU count. */
+interface EvaluatedHalf {
+  readonly focusUnits: readonly CanonicalCuFocusSemanticPayload[];
+  readonly threadUnits: ReturnType<typeof canonicalizePreparedThreadSequence>['units'];
+  readonly lifecycleUnits: ReturnType<typeof canonicalizePreparedThreadLayerSequence>['units'];
+  readonly liveFocusUnits: readonly CanonicalLiveFocusPayload[];
+}
+
+/** The provenance of one evaluation, identical for every half it produced. */
+interface EvaluationProvenance {
+  readonly focusProvenance: CanonicalFocusBatchProvenance;
+  readonly threadProvenance: CanonicalThreadBatchProvenance;
+  readonly lifecycleProvenance: CanonicalThreadLifecycleBatchProvenance;
+  readonly liveFocusProvenance: CanonicalLiveFocusBatchProvenance;
+}
+
+/** S8B-05 CP3: the analysis item a call half belongs to (migration 0191's queue key). */
+export interface CallHalfItem {
+  readonly callId: string;
+  readonly callTurnIndex: number;
+  readonly half: CallHalf;
+}
+
+/** S8B-05 CP3: one established call half - committed now, or replayed from storage - and its additive live delivery. */
+export interface CallHalfEstablishment {
+  readonly outcome: 'COMMITTED' | 'REPLAYED';
+  readonly delivery: ConversationLiveDelivery;
+}
+
+/** S8B-05 CP3 (A1 §3): how long a text exchange's establishment waits for a shared background permit before deferring. */
+export const TEXT_SEMANTIC_PERMIT_WAIT_MS = 5_000;
 
 /** The whole-exchange semantic result, already split by exact USER / ASSISTANT counts. */
 interface EvaluatedExchange {
@@ -148,6 +195,8 @@ export class ConversationSemanticEstablishmentService {
     private readonly createFocusBinding: FocusResolutionBindingFactory,
     private readonly createThreadBinding: ThreadEstablishmentBindingFactory,
     private readonly createContinuityBinding: ThreadContinuityBindingFactory,
+    // S8B-05 CP3 (A1 §3): the shared background permits; a runtime without them (unit tests) is ungated.
+    private readonly permits: BackgroundPermitGate = UNGATED_BACKGROUND_PERMITS,
   ) {}
 
   /**
@@ -170,41 +219,28 @@ export class ConversationSemanticEstablishmentService {
     }
   }
 
-  async establishExchange(userId: string, userTurn: ConversationTurn, assistantTurn: ConversationTurn): Promise<ConversationLiveDelivery> {
+  /**
+   * `backgroundPermitHeld`: S8B-05 CP3, the call analysis worker establishing a pre-call exchange (O3b) already holds
+   * this unit's background permit, so the text path's own permit is not asked for twice.
+   */
+  async establishExchange(
+    userId: string,
+    userTurn: ConversationTurn,
+    assistantTurn: ConversationTurn,
+    options: { readonly backgroundPermitHeld?: boolean } = {},
+  ): Promise<ConversationLiveDelivery> {
     // A. The ONE relation gate, including both COMPLETED statuses: before any
     // read, any binding construction, any provider call and any write. It
     // throws outside the try, so an invalid pair is never unavailability.
     assertFinalizedExchangeRelation(userTurn, assistantTurn);
     try {
-      return await this.run(userId, userTurn, assistantTurn);
+      return await this.run(userId, userTurn, assistantTurn, options.backgroundPermitHeld === true);
     } catch (error) {
-      if (error instanceof ConversationSemanticIntegrityError || error instanceof ConversationSemanticUnavailableError) throw error;
-      // The reused T-03B2b3 / T-03B3 mappers report their integrity failures in their own classes; they stay integrity.
-      if (error instanceof ConversationThreadIntegrityError || error instanceof ConversationThreadLifecycleIntegrityError) throw error;
-      // PROD-SEC-02: the request's foreground deadline stopped the walk before a further provider call. Nothing
-      // was committed (the commit is one integrated write), so this is retryable, never a semantic answer.
-      if (error instanceof ForegroundTurnDeadlineExceededError) throw new ConversationSemanticUnavailableError('FOREGROUND_DEADLINE_EXHAUSTED', { cause: error });
-      // A segmentation outage or rejection (T-03A1), a focus provider outage
-      // or rejected focus proposal (T-03B1a), a Thread provider outage or
-      // rejected promotion (T-03B2a), or a continuity provider outage or
-      // rejected proposal (T-03B3): retryable, never a lifecycle failure of
-      // the completed turns, and never reinterpreted as NONE, DISTINCT_NEW,
-      // NO_THREAD_ACTION or NO_ESTABLISHMENT.
-      if (error instanceof CommitmentRejectedError || error instanceof FocusResolutionProviderError
-        || error instanceof FocusEvaluationRejectedError || error instanceof ThreadEstablishmentProviderError
-        || error instanceof ThreadEstablishmentRejectedError || error instanceof ThreadContinuityProviderError
-        || error instanceof ThreadContinuityRejectedError) {
-        throw new ConversationSemanticUnavailableError('PROVIDER_UNAVAILABLE', { cause: error });
-      }
-      // A malformed lifecycle or LF context is a runtime integrity failure, never "no transition" and never NONE.
-      if (error instanceof ThreadLifecycleRejectedError) throw new ConversationThreadLifecycleIntegrityError('LIFECYCLE_CONTEXT_NOT_CLOSED');
-      if (error instanceof LiveFocusRejectedError) throw new ConversationSemanticIntegrityError('LIVE_FOCUS_CONTEXT_NOT_CLOSED');
-      if (error instanceof LiveFocusCanonicalizationError) throw new ConversationSemanticIntegrityError('LIVE_FOCUS_NOT_CANONICAL');
-      throw new ConversationSemanticUnavailableError('TRANSPORT_UNAVAILABLE', { cause: error });
+      return classifyEstablishmentFailure(error);
     }
   }
 
-  private async run(userId: string, userTurn: ConversationTurn, assistantTurn: ConversationTurn): Promise<ConversationLiveDelivery> {
+  private async run(userId: string, userTurn: ConversationTurn, assistantTurn: ConversationTurn, backgroundPermitHeld: boolean): Promise<ConversationLiveDelivery> {
     // B. Stable automatic identities: technical idempotency, exactly T-03A2's.
     const userBatchId = automaticCommitBatchId(userTurn.id);
     const assistantBatchId = automaticCommitBatchId(assistantTurn.id);
@@ -221,6 +257,26 @@ export class ConversationSemanticEstablishmentService {
     const work = await enterForegroundTurnWork(userTurn.session_id, userTurn.id);
     if (work === 'LIMITED' || work === 'IN_PROGRESS') throw new ConversationSemanticUnavailableError('FOREGROUND_WORK_DEFERRED');
 
+    // S8B-05 CP3 (A1 §3): ONE shared background permit for this unit, before its context is read. Its timing may be
+    // delayed; its semantics are not. Not granted in time: deferred exactly like PROD-SEC-02's deferral, nothing evaluated.
+    const permit = backgroundPermitHeld ? null
+      : await this.permits.acquire(userId, 'TEXT_SEMANTIC_ANALYSIS', { respectCriticalWindow: false, maxWaitMs: TEXT_SEMANTIC_PERMIT_WAIT_MS });
+    if (!backgroundPermitHeld && permit === null) throw new ConversationSemanticUnavailableError('BACKGROUND_CAPACITY_DEFERRED');
+    try {
+      return await this.runEstablishment(userId, userTurn, assistantTurn, snapshots, userBatchId, assistantBatchId);
+    } finally {
+      await permit?.release();
+    }
+  }
+
+  private async runEstablishment(
+    userId: string,
+    userTurn: ConversationTurn,
+    assistantTurn: ConversationTurn,
+    snapshots: readonly [IntegratedFullSemanticBatchSnapshot, IntegratedFullSemanticBatchSnapshot],
+    userBatchId: string,
+    assistantBatchId: string,
+  ): Promise<ConversationLiveDelivery> {
     // D. One authoritative context, read outside any database lock.
     let context = await this.repository.readRuntimeContext({ sessionId: userTurn.session_id, userId });
 
@@ -287,6 +343,93 @@ export class ConversationSemanticEstablishmentService {
         context = await this.repository.readRuntimeContext({ sessionId: userTurn.session_id, userId });
       }
     }
+  }
+
+  /**
+   * S8B-05 CP3, CA-05-01: establishes ONE half of a numbered call turn - the item the call analysis worker claimed - in
+   * the session's analysis order, through the half coordinator of migration 0191. The USER half is analyzable while its
+   * turn is still GENERATING (INPUT-01 as amended); a reply of which nothing was heard is the zero-unit batch, with no
+   * segmentation call. A half already established is replayed from storage with zero providers. The caller holds the
+   * unit's background permit. Failures keep the establishment vocabulary; an ordering refusal is a CallHalfOrderError.
+   */
+  async establishCallHalf(userId: string, item: CallHalfItem, turn: ConversationTurn): Promise<CallHalfEstablishment> {
+    assertCallHalfRelation(item, turn);
+    try {
+      return await this.runCallHalf(userId, item, turn);
+    } catch (error) {
+      if (error instanceof CallHalfOrderError) throw error;
+      return classifyEstablishmentFailure(error);
+    }
+  }
+
+  private async runCallHalf(userId: string, item: CallHalfItem, turn: ConversationTurn): Promise<CallHalfEstablishment> {
+    const commit = this.repository.commitCallHalfWithFullSemanticChain?.bind(this.repository);
+    if (!commit) throw new ConversationSemanticIntegrityError('INVALID_CALL_HALF_RELATION');
+    // B. The stable automatic identity, exactly T-03A2's.
+    const batchId = automaticCommitBatchId(turn.id);
+    const coordinates = { sessionId: turn.session_id, userId, callId: item.callId, callTurnIndex: item.callTurnIndex, half: item.half, sourceTurnId: turn.id, batchId };
+    // A half already in storage is replayed through the coordinator, which settles its item; nothing is evaluated.
+    const replay = async (): Promise<CallHalfEstablishment> => this.halfFrom(turn.session_id, await commit({ ...coordinates, ...EMPTY_HALF_REPLAY }));
+
+    // C. The half's FINAL-chain snapshot before any provider.
+    const snapshot = await this.repository.readIntegratedBatchSnapshot({ sessionId: turn.session_id, userId, sourceTurnId: turn.id, batchId });
+    if (halfState(snapshot) === 'COMPLETE') return replay();
+
+    // D. One authoritative context, read outside any database lock, and E. the half's segmentation (the zero-unit batch
+    // for an empty reply), concurrently: the segmentation reads no context and the context read waits on no provider, so
+    // neither waits for the other (both precede F, and the commit still checks the context's exact tokens).
+    const contextRead = this.repository.readRuntimeContext({ sessionId: turn.session_id, userId });
+    const segmented = this.segment(userId, turn, batchId, snapshot.source_frontier, { liveCallHalf: item.half });
+    contextRead.catch(() => undefined);
+    segmented.catch(() => undefined);
+    const [firstContext, half] = await Promise.all([contextRead, segmented]);
+    let context = firstContext;
+
+    let retriesLeft = MAX_SEMANTIC_STALE_CONTEXT_RETRIES;
+    for (;;) {
+      try {
+        // F -> J for the one half, against ONE context: no later turn is visible to it.
+        const { halves: [evaluated], provenance } = await this.evaluateHalves(turn.session_id, userId, [half], context);
+        // K. One half commit against BOTH exact tokens the context carried.
+        const committed = await commit({
+          ...coordinates,
+          units: half.batch.units,
+          focusUnits: evaluated.focusUnits,
+          threadUnits: evaluated.threadUnits,
+          lifecycleUnits: evaluated.lifecycleUnits,
+          liveFocusUnits: evaluated.liveFocusUnits,
+          ...segmentationProvenanceOf(half.batch, half.batch),
+          ...provenance.focusProvenance,
+          ...provenance.threadProvenance,
+          ...provenance.lifecycleProvenance,
+          ...provenance.liveFocusProvenance,
+          expectedCurrentSp: context.token.currentSp,
+          expectedSameSpEventSequence: context.token.sameSpEventSequence,
+          expectedWorldThreadIdentityVersion: context.worldThreadIdentityVersion,
+        });
+        // L. The additive live delivery.
+        return this.halfFrom(turn.session_id, committed);
+      } catch (error) {
+        // Recovery step 1: the database is authoritative; a stored half is the answer, partial history fails closed.
+        const fresh = await this.repository.readIntegratedBatchSnapshot({ sessionId: turn.session_id, userId, sourceTurnId: turn.id, batchId });
+        if (halfState(fresh) === 'COMPLETE') return replay();
+        // Recovery step 2: only the two exact typed stale conditions earn ONE re-evaluation; segmentation is reused.
+        const stale = error instanceof StaleConversationalFocusContextError || error instanceof StaleThreadIdentityContextError;
+        if (!stale) throw error;
+        if (retriesLeft === 0) throw new ConversationSemanticUnavailableError('STALE_CONTEXT_RETRY_EXHAUSTED', { cause: error });
+        retriesLeft -= 1;
+        if (fresh.source_frontier !== half.sourceFrontier) throw new ConversationSemanticIntegrityError('SEGMENTATION_FRONTIER_MOVED');
+        context = await this.repository.readRuntimeContext({ sessionId: turn.session_id, userId });
+      }
+    }
+  }
+
+  private halfFrom(sessionId: string, committed: CallHalfWithFullSemanticChainResult): CallHalfEstablishment {
+    const events = [committed.unit_event].filter(isPresent).map(toCommittedWireEvent);
+    return {
+      outcome: committed.outcome,
+      delivery: this.delivery(sessionId, committed.live_head, committed.live_focus, committed.live_focus_sp, events, committed.live_focus_transitions),
+    };
   }
 
   private readSnapshots(
@@ -374,25 +517,36 @@ export class ConversationSemanticEstablishmentService {
     return { liveHead, liveFocus: toLiveFocusWireValue(liveFocus), committedEvents: ordered, liveFocusTransitions };
   }
 
-  /** E. One half of the exchange through the T-03A2 commitment evaluator, unchanged in meaning. */
-  private async segment(userId: string, turn: ConversationTurn, batchId: string, sourceFrontier: number): Promise<SegmentedHalf> {
+  /**
+   * E. One half of the exchange through the T-03A2 commitment evaluator, unchanged in meaning. S8B-05 CP3: a live call's
+   * USER half is committable while its turn is GENERATING, and an empty reply half is the zero-unit batch, segmented by
+   * no provider.
+   */
+  private async segment(
+    userId: string,
+    turn: ConversationTurn,
+    batchId: string,
+    sourceFrontier: number,
+    options: { readonly liveCallHalf?: CallHalf } = {},
+  ): Promise<SegmentedHalf> {
     this.segmentation ??= this.createSegmentationBinding();
     const commitment = new ConversationUnitCommitmentService(
       this.segmentation.provider, this.segmentation.providerName, this.segmentation.providerModel,
     );
-    const batch = await commitment.evaluate(
-      {
-        sessionId: turn.session_id,
-        userId,
-        turnId: turn.id,
-        role: turn.role,
-        status: turn.status,
-        channel: 'TEXT',
-        content: turn.content,
-        sourceFrontier,
-      },
-      { batchId, newUnitId: (unit) => automaticCommitUnitId(batchId, unit) },
-    );
+    const source = {
+      sessionId: turn.session_id,
+      userId,
+      turnId: turn.id,
+      role: turn.role,
+      status: turn.status,
+      channel: 'TEXT' as const,
+      content: turn.content,
+      sourceFrontier,
+    };
+    const identity = { batchId, newUnitId: (unit: { readonly index: number; readonly spanStart: number; readonly spanEnd: number }) => automaticCommitUnitId(batchId, unit) };
+    const batch = options.liveCallHalf === 'ASSISTANT' && turn.content.length === 0
+      ? commitment.emptyReplyBatch(source, identity)
+      : await commitment.evaluate(source, { ...identity, liveCallUserTurn: options.liveCallHalf === 'USER' });
     return { turn, batch, sourceFrontier };
   }
 
@@ -405,9 +559,36 @@ export class ConversationSemanticEstablishmentService {
   private async evaluateExchange(
     sessionId: string,
     userId: string,
-    [user, assistant]: readonly [SegmentedHalf, SegmentedHalf],
+    exchange: readonly [SegmentedHalf, SegmentedHalf],
     context: ConversationSemanticRuntimeContext,
   ): Promise<EvaluatedExchange> {
+    const { halves: [user, assistant], provenance } = await this.evaluateHalves(sessionId, userId, exchange, context);
+    return {
+      userFocusUnits: user.focusUnits,
+      assistantFocusUnits: assistant.focusUnits,
+      userThreadUnits: user.threadUnits,
+      assistantThreadUnits: assistant.threadUnits,
+      userLifecycleUnits: user.lifecycleUnits,
+      assistantLifecycleUnits: assistant.lifecycleUnits,
+      userLiveFocusUnits: user.liveFocusUnits,
+      assistantLiveFocusUnits: assistant.liveFocusUnits,
+      ...provenance,
+    };
+  }
+
+  /**
+   * F -> J over the given halves IN ORDER (the whole exchange, or S8B-05 CP3's ONE call half) against ONE context, then
+   * the exact split by each half's CU count. A USER half precedes an ASSISTANT half; nothing later is visible to either.
+   */
+  private async evaluateHalves(
+    sessionId: string,
+    userId: string,
+    segmented: readonly SegmentedHalf[],
+    context: ConversationSemanticRuntimeContext,
+  ): Promise<{ readonly halves: readonly EvaluatedHalf[]; readonly provenance: EvaluationProvenance }> {
+    if (segmented.length === 0 || segmented.length > 2 || (segmented.length === 2 && (segmented[0].turn.role !== 'USER' || segmented[1].turn.role !== 'ASSISTANT'))) {
+      throw new ConversationSemanticIntegrityError('INVALID_SEMANTIC_RUNTIME_CONTEXT');
+    }
     this.focus ??= this.createFocusBinding();
     this.thread ??= this.createThreadBinding();
     this.continuity ??= this.createContinuityBinding();
@@ -439,8 +620,9 @@ export class ConversationSemanticEstablishmentService {
     const liveFocusProvenance: CanonicalLiveFocusBatchProvenance = { lfReducerVersion: LIVE_FOCUS_REDUCER_VERSION };
 
     // F. Exact prepared CurrentCu inputs from the proposed spans (T-03B2b3's derivation, reused).
-    const userCus = buildPreparedThreadCuInputs(user.turn, user.batch.units, context.priorContext);
-    const assistantCus = buildPreparedThreadCuInputs(assistant.turn, assistant.batch.units, context.priorContext);
+    const cusByHalf = segmented.map((half) => buildPreparedThreadCuInputs(half.turn, half.batch.units, context.priorContext));
+    const userCus = segmented.flatMap((half, index) => (half.turn.role === 'USER' ? cusByHalf[index] : []));
+    const assistantCus = segmented.flatMap((half, index) => (half.turn.role === 'ASSISTANT' ? cusByHalf[index] : []));
     const sequence = orderFinalizedExchange(userCus, assistantCus);
 
     // G. USER CUs in source order, then ASSISTANT CUs; strictly sequential.
@@ -508,22 +690,97 @@ export class ConversationSemanticEstablishmentService {
     const canonicalLiveFocus = canonicalizePreparedLiveFocusSequence(liveFocusDecisions, { sessionId });
     if (canonicalLiveFocus.units.length !== sequence.length) throw new ConversationSemanticIntegrityError('INVALID_SEMANTIC_RUNTIME_CONTEXT');
 
-    return {
-      userFocusUnits: canonicalFocus.units.slice(0, userCus.length),
-      assistantFocusUnits: canonicalFocus.units.slice(userCus.length),
-      userThreadUnits: canonicalThread.units.slice(0, userCus.length),
-      assistantThreadUnits: canonicalThread.units.slice(userCus.length),
-      userLifecycleUnits: canonicalLifecycle.units.slice(0, userCus.length),
-      assistantLifecycleUnits: canonicalLifecycle.units.slice(userCus.length),
-      userLiveFocusUnits: canonicalLiveFocus.units.slice(0, userCus.length),
-      assistantLiveFocusUnits: canonicalLiveFocus.units.slice(userCus.length),
-      focusProvenance,
-      threadProvenance,
-      lifecycleProvenance,
-      liveFocusProvenance,
-    };
+    let offset = 0;
+    const halves = cusByHalf.map((cus) => {
+      const range = [offset, offset + cus.length] as const;
+      offset += cus.length;
+      return {
+        focusUnits: canonicalFocus.units.slice(...range),
+        threadUnits: canonicalThread.units.slice(...range),
+        lifecycleUnits: canonicalLifecycle.units.slice(...range),
+        liveFocusUnits: canonicalLiveFocus.units.slice(...range),
+      };
+    });
+    return { halves, provenance: { focusProvenance, threadProvenance, lifecycleProvenance, liveFocusProvenance } };
   }
 }
+
+/**
+ * The establishment failure vocabulary, shared by an exchange and a call half: integrity stays integrity, every provider
+ * outage or rejection is retryable unavailability, and nothing is ever reinterpreted as a semantic answer.
+ */
+/**
+ * S8B-05 CP3: the reason of a permanent integrity failure of an establishment, or null for anything else (an outage, a
+ * stale context, an ordering refusal). The reused Thread-layer mappers report theirs in their own classes; the call
+ * analysis worker asks here, so it reaches the Thread layer only through this service.
+ */
+export function establishmentIntegrityReason(error: unknown): string | null {
+  if (error instanceof ConversationSemanticIntegrityError || error instanceof ConversationThreadIntegrityError
+    || error instanceof ConversationThreadLifecycleIntegrityError) {
+    return String((error as { reason?: unknown }).reason ?? error.name);
+  }
+  return null;
+}
+
+function classifyEstablishmentFailure(error: unknown): never {
+  if (error instanceof ConversationSemanticIntegrityError || error instanceof ConversationSemanticUnavailableError) throw error;
+  // The reused T-03B2b3 / T-03B3 mappers report their integrity failures in their own classes; they stay integrity.
+  if (error instanceof ConversationThreadIntegrityError || error instanceof ConversationThreadLifecycleIntegrityError) throw error;
+  // PROD-SEC-02: the request's foreground deadline stopped the walk before a further provider call. Nothing
+  // was committed (the commit is one integrated write), so this is retryable, never a semantic answer.
+  if (error instanceof ForegroundTurnDeadlineExceededError) throw new ConversationSemanticUnavailableError('FOREGROUND_DEADLINE_EXHAUSTED', { cause: error });
+  // A segmentation outage or rejection (T-03A1), a focus provider outage
+  // or rejected focus proposal (T-03B1a), a Thread provider outage or
+  // rejected promotion (T-03B2a), or a continuity provider outage or
+  // rejected proposal (T-03B3): retryable, never a lifecycle failure of
+  // the completed turns, and never reinterpreted as NONE, DISTINCT_NEW,
+  // NO_THREAD_ACTION or NO_ESTABLISHMENT.
+  if (error instanceof CommitmentRejectedError || error instanceof FocusResolutionProviderError
+    || error instanceof FocusEvaluationRejectedError || error instanceof ThreadEstablishmentProviderError
+    || error instanceof ThreadEstablishmentRejectedError || error instanceof ThreadContinuityProviderError
+    || error instanceof ThreadContinuityRejectedError) {
+    throw new ConversationSemanticUnavailableError('PROVIDER_UNAVAILABLE', { cause: error });
+  }
+  // A malformed lifecycle or LF context is a runtime integrity failure, never "no transition" and never NONE.
+  if (error instanceof ThreadLifecycleRejectedError) throw new ConversationThreadLifecycleIntegrityError('LIFECYCLE_CONTEXT_NOT_CLOSED');
+  if (error instanceof LiveFocusRejectedError) throw new ConversationSemanticIntegrityError('LIVE_FOCUS_CONTEXT_NOT_CLOSED');
+  if (error instanceof LiveFocusCanonicalizationError) throw new ConversationSemanticIntegrityError('LIVE_FOCUS_NOT_CANONICAL');
+  throw new ConversationSemanticUnavailableError('TRANSPORT_UNAVAILABLE', { cause: error });
+}
+
+/**
+ * S8B-05 CP3: the call half's relation gate, before any read: a USER half is a USER turn that is GENERATING or COMPLETED
+ * with no source turn; an ASSISTANT half is a COMPLETED reply to a source turn. The half coordinator re-proves the rest
+ * (the numbered call turn, its call, its index, its channel) under its locks.
+ */
+function assertCallHalfRelation(item: CallHalfItem, turn: ConversationTurn): void {
+  const valid = item.half === 'USER'
+    ? turn.role === 'USER' && (turn.status === 'GENERATING' || turn.status === 'COMPLETED') && turn.source_turn_id === null
+    : turn.role === 'ASSISTANT' && turn.status === 'COMPLETED' && turn.source_turn_id !== null;
+  if (!valid || !Number.isSafeInteger(item.callTurnIndex) || item.callTurnIndex < 1) {
+    throw new ConversationSemanticIntegrityError('INVALID_CALL_HALF_RELATION');
+  }
+}
+
+/** One half's FINAL-chain state: PARTIAL fails closed (never completed, replayed or repaired). */
+function halfState(snapshot: IntegratedFullSemanticBatchSnapshot): 'ABSENT' | 'COMPLETE' {
+  if (snapshot.full_semantic_capture_state === 'PARTIAL') throw new ConversationSemanticIntegrityError('INCOMPLETE_FULL_SEMANTIC_CAPTURE');
+  return snapshot.full_semantic_capture_state;
+}
+
+/**
+ * The payload of a REPLAY through the half coordinator: the stored half is returned and its item settled without a token
+ * check or a write of semantics, so nothing here is evaluated and no binding is constructed for it.
+ */
+const EMPTY_HALF_REPLAY: Omit<CommitCallHalfWithFullSemanticChainRequest, 'sessionId' | 'userId' | 'callId' | 'callTurnIndex' | 'half' | 'sourceTurnId' | 'batchId'> = Object.freeze({
+  units: [], focusUnits: [], threadUnits: [], lifecycleUnits: [], liveFocusUnits: [],
+  evaluatorVersion: '', policyVersion: '', segmentationProvider: '', segmentationModel: '', segmentationPromptVersion: '',
+  focusEvaluatorVersion: '', focusPolicyVersion: '', focusProvider: '', focusModel: '', focusPromptVersion: '', focusSchemaVersion: 0,
+  threadEvaluatorVersion: '', threadPolicyVersion: '', threadProvider: '', threadModel: '', threadPromptVersion: '', threadSchemaVersion: 0,
+  continuityEvaluatorVersion: '', continuityPolicyVersion: '', continuityProvider: '', continuityModel: '', continuityPromptVersion: '',
+  continuitySchemaVersion: 0, lifecycleReducerVersion: '', lfReducerVersion: '',
+  expectedCurrentSp: null, expectedSameSpEventSequence: 0, expectedWorldThreadIdentityVersion: 0,
+});
 
 /**
  * FIX-T03A2-01 / FIX-T03B2B3-01, applied to this boundary: the ONE gate proves

@@ -3,6 +3,7 @@ import { SupabaseAuthService } from '../../auth/supabase-auth.service';
 import { TelemetryService } from '../../observability/telemetry.service';
 import { VoiceMediaService } from '../../voice-media/voice-media.service';
 import { voiceWorkersEnabled } from '../../voice-media/voice-retention.worker';
+import { LiveCallAnalysisSignal } from '../call-turn/live-call-analysis.signal';
 import { LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink } from './live-call-speech.port';
 import { LiveCallConnection, LiveCallRegistry, REAL_CLOCK, type CallClock, type CallTransport } from './live-call.connection';
 import { LIVE_CALL_STORE, type CallTruth, type LiveCallStore } from './live-call.store';
@@ -36,6 +37,7 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
     @Inject(LIVE_CALL_SPEECH_SINK) private readonly speech: LiveCallSpeechSink,
     private readonly auth: SupabaseAuthService,
     @Optional() private readonly telemetry?: TelemetryService,
+    @Optional() private readonly analysis?: LiveCallAnalysisSignal,
   ) {}
 
   onModuleInit(): void {
@@ -72,6 +74,7 @@ export class LiveCallService implements OnModuleInit, OnModuleDestroy {
       registry: this.registry,
       clock,
       signal: (operation, outcome) => this.signal(operation, outcome),
+      analysisKick: (sessionId) => this.analysis?.kick(sessionId, 'CALL_ACTIVATED'),
     }, accessToken);
     this.live.set(connection, userId);
     return { connection, forget: () => void this.live.delete(connection) };

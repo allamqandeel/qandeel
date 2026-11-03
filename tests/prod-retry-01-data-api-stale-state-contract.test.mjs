@@ -121,7 +121,14 @@ test('40P01 is never converted, and PT409 is raised only by the eleven and the t
   // (a call reply segment's one paid synthesis and the call connection's recognizer row) each refuse a reused provider
   // call id with the same one AI-usage identity conflict - two sites, one per function - and no other PT409.
   const m0190 = '0190_s8b_05_live_call_spoken_turn_v1.sql';
-  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175, m0184, m0187, m0188, m0190]);
+  // S8B-05 CP3 RE-ANCHOR (2026-11-02): 0191 re-creates 0150's FINAL coordinator (its declared substitution, proven by
+  // verify-migration-0191 T0c and re-pinned by verify-migration-0150), so it re-carries that function's two stale-state
+  // conflicts; its call half coordinator, the coordinator's sibling in the T-03D family, raises the same two over the same
+  // two clocks. Four sites, two per function, and no other PT409.
+  const m0191 = '0191_s8b_05_live_call_ordered_halves_v1.sql';
+  assert.deepEqual(raisingPt409, ['0135_ai_usage_cost_credit_ledger_v1.sql', M0150_NAME, m0170, m0175, m0184, m0187, m0188, m0190, m0191]);
+  assert.deepEqual(read(`${MIGRATIONS}/${m0191}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE\s*=\s*'PT409'/gu),
+    Array(2).fill(["RAISE EXCEPTION 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' USING ERRCODE='PT409'", "RAISE EXCEPTION 'STALE_THREAD_IDENTITY_CONTEXT' USING ERRCODE='PT409'"]).flat(), m0191);
   for (const name of [m0188, m0190]) {
     assert.deepEqual(read(`${MIGRATIONS}/${name}`).replace(/--[^\n]*/gu, '').match(/RAISE EXCEPTION '[A-Z_]+' USING ERRCODE = 'PT409'/gu),
       Array(2).fill("RAISE EXCEPTION 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' USING ERRCODE = 'PT409'"), name);
