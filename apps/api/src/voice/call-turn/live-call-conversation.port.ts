@@ -21,8 +21,13 @@ export interface LiveCallReplyRequest {
   readonly callId: string;
   readonly callTurnIndex: number;
   readonly userTurnId: string;
-  /** The committed turn's words (finals only; never a partial). */
+  /** The committed turn's words (finals only; never a partial), or the message typed during the call. */
   readonly content: string;
+  /**
+   * S8B-05 CP4 (D-05-07): SPEECH (the default) is answered aloud; TEXT, a message typed during the call, is answered in
+   * text: the same Safety, context and REALTIME generation, without the spoken-reply guidance.
+   */
+  readonly channel?: 'SPEECH' | 'TEXT';
   readonly accessToken: string;
   /** Aborts the generation (a newer turn closed this exchange, the call ended). */
   readonly signal: AbortSignal;

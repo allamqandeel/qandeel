@@ -180,9 +180,10 @@ describe('S8B-05 CP1 the live call gateway over a real WebSocket, with real auth
     // S8B-05 CP2: PLAYOUT is supported; a mark for no reply of this connection is ignored and still acknowledged.
     client.send({ type: 'PLAYOUT', msgId: 1, callTurnIndex: 0, chunkSeq: 0, playedMs: 0 });
     expect(await client.waitFor((m) => m.type === 'ACK' && m.msgId === 1)).toMatchObject({ msgId: 1 });
-    client.send({ type: 'BARGE_IN', msgId: 3, callTurnIndex: 0, captureMs: 3000 });
-    expect(await client.waitFor((m) => m.type === 'REFUSED')).toMatchObject({ reason: 'NOT_SUPPORTED_YET', msgId: 3 });
-    client.send({ type: 'END', msgId: 2 });
+    // RE-ANCHORED by S8B-05 CP4 (was: REFUSED NOT_SUPPORTED_YET): a BARGE_IN for no reply of this connection is ACKed.
+    client.send({ type: 'BARGE_IN', msgId: 2, callTurnIndex: 0, captureMs: 3000 });
+    expect(await client.waitFor((m) => m.type === 'ACK' && m.msgId === 2)).toMatchObject({ msgId: 2 });
+    client.send({ type: 'END', msgId: 3 });
     expect(await client.waitFor((m) => m.state === 'ENDED')).toMatchObject({ endReason: 'USER_ENDED' });
     expect((await client.closed).code).toBe(1000);
     const [segment] = booted.authority.segments;

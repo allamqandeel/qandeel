@@ -8,6 +8,7 @@ import { VoiceMediaModule } from '../voice-media/voice-media.module';
 import { LiveCallGateway } from './call/gateway/live-call.gateway';
 import { LIVE_CALL_SPEECH_SINK } from './call/live-call-speech.port';
 import { CallTurnRepository } from './call-turn/call-turn.repository';
+import { callFailureLine, LIVE_CALL_FAILURE_LINE } from './call-turn/call-failure-line';
 import { CALL_TURN_STORE } from './call-turn/call-turn.store';
 import { LiveCallAnalysisSignal } from './call-turn/live-call-analysis.signal';
 import { LiveCallConversationBinding } from './call-turn/live-call-conversation.port';
@@ -26,6 +27,7 @@ import { LiveReplyController } from './live-reply/live-reply.controller';
 import { LiveReplyRepository } from './live-reply/live-reply.repository';
 import { LiveReplyService } from './live-reply/live-reply.service';
 import { LIVE_REPLY_STORE } from './live-reply/live-reply.store';
+import { loadSpokenFailureLine } from './failure-line/spoken-failure-line';
 import { loadSpeechmaticsRealtimeConfig } from './speechmatics/speechmatics-realtime.config';
 import { SpeechmaticsRealtimeAdapter } from './speechmatics/speechmatics-realtime.adapter';
 import { MachineAsrConfidenceStartupCheck } from './asr-confidence/machine-asr-confidence.startup-check';
@@ -154,6 +156,8 @@ import {
       },
       inject: [LISTEN_SYNTHESIS_ROUTE],
     },
+    // S8B-05 CP4: F-01 as the call plays it, from the pinned files; null while they are NOT_INSTALLED (D-05-02).
+    { provide: LIVE_CALL_FAILURE_LINE, useFactory: () => callFailureLine(loadSpokenFailureLine()) },
     LiveCallTurnEngine,
     { provide: LIVE_CALL_SPEECH_SINK, useExisting: LiveCallTurnEngine },
     LiveCallService,

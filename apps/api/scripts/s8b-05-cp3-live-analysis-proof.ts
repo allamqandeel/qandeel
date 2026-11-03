@@ -10,7 +10,8 @@
  * person, no real voice, no audio: the humans are random UUIDs, the words are fixed synthetic Arabic sentences.
  *
  * It measures, for M0 (analysis off), M1 (L2: provider work after the reply's first audio - the default) and M1′ (at the
- * commit): commit -> first analysis work, -> USER half committed, -> Live Focus update; First Audio P50 / P95 and its
+ * commit), and (S8B-05 CP4) M2 (five concurrent calls in M1 with the post-response work active, through the REAL
+ * post-response background gate, against the same five calls with everything off): commit -> first analysis work, -> USER half committed, -> Live Focus update; First Audio P50 / P95 and its
  * impact against M0; queue depth and backlog age; long-call lag; analysis provider calls per exchange and per minute. It
  * proves: the analysis order (FIFO by call_turn_index, pre-call first), one active worker per session across instances, no
  * duplicate batch, never a skip (a 429 / outage is retried), a committed half replayed with ZERO provider calls after a
@@ -37,6 +38,7 @@ import type { SupabaseServiceRoleApiService } from '../src/conversation/supabase
 import type { SourceAnchor } from '../src/conversation-unit/cu-anchor-mapper';
 import { CuSegmentationProviderError, type CuSegmentationProvider, type CuSegmentationRequest } from '../src/conversation-unit/cu-segmentation-provider.types';
 import { DatabaseBackgroundPermitGate } from '../src/live-analysis/background-permits';
+import { DatabasePostResponseBackgroundGate } from '../src/live-analysis/post-response-background-gate';
 import { CallAnalysisRepository } from '../src/live-analysis/call-analysis.repository';
 import { CallAnalysisWorker, type CallAnalysisObservation, type CallAnalysisStart } from '../src/live-analysis/call-analysis.worker';
 import { ConversationSemanticEstablishmentService } from '../src/live-focus/conversation-semantic-establishment.service';
@@ -78,6 +80,9 @@ const WORKLOAD = Object.freeze({
   segmentationMs: [200, 80] as const,
   focusMs: [240, 90] as const,
   threadMs: [220, 80] as const,
+  // S8B-05 CP4 (M2): one post-response provider call per closed exchange (the memory / intelligence work after a reply).
+  postResponseMs: [300, 100] as const,
+  m2Calls: 5,
   providerSlots: 8,
 });
 const FOCUS_NAMES = ['سامي', 'منى', 'كريم', 'هالة', 'يوسف', 'نادية', 'طارق', 'ليلى', 'عمر', 'سلمى', 'رامي', 'دينا'];
@@ -192,7 +197,7 @@ class PgServiceRoleRpc {
   }
 }
 
-type Kind = 'SEGMENTATION' | 'FOCUS' | 'THREAD' | 'CONTINUITY' | 'REPLY';
+type Kind = 'SEGMENTATION' | 'FOCUS' | 'THREAD' | 'CONTINUITY' | 'REPLY' | 'POST_RESPONSE';
 interface Providers {
   readonly counts: Record<Kind, number>;
   failNextSegmentations: number;
@@ -201,6 +206,8 @@ interface Providers {
   readonly thread: ThreadProvider;
   readonly continuity: ContinuityProvider;
   reply(): Promise<{ firstTokenAt: number; done: Promise<void> }>;
+  /** S8B-05 CP4 (M2): one post-response provider call on the same shared capacity. */
+  postResponse(): Promise<void>;
 }
 function providers(capacity: SharedCapacity, seed: number): Providers {
   // Two streams: the analysis latencies vary by seed; the live reply's draw the SAME sequence in every mode, so a mode's
@@ -210,7 +217,7 @@ function providers(capacity: SharedCapacity, seed: number): Providers {
   const jitterFrom = (r: () => number) => ([base, spread]: readonly [number, number]) => Math.max(10, Math.round(base + (r() - 0.5) * 2 * spread));
   const jitter = jitterFrom(random);
   const replyJitter = jitterFrom(replyRandom);
-  const counts: Record<Kind, number> = { SEGMENTATION: 0, FOCUS: 0, THREAD: 0, CONTINUITY: 0, REPLY: 0 };
+  const counts: Record<Kind, number> = { SEGMENTATION: 0, FOCUS: 0, THREAD: 0, CONTINUITY: 0, REPLY: 0, POST_RESPONSE: 0 };
   const call = async <T>(kind: Kind, ms: number, answer: () => T): Promise<T> => {
     counts[kind] += 1;
     const session = tracer.item.getStore()?.session ?? null;
@@ -264,6 +271,7 @@ function providers(capacity: SharedCapacity, seed: number): Providers {
       const done = sleep(WORKLOAD.replyTailMs).then(() => capacity.release());
       return { firstTokenAt, done };
     },
+    postResponse: () => call('POST_RESPONSE', jitter(WORKLOAD.postResponseMs), () => undefined),
   };
   return p;
 }
@@ -542,7 +550,7 @@ async function main(): Promise<void> {
 
     const runCall = async (
       x: Call, turns: number, wordsOffset: number, prov: Providers, signal: LiveCallAnalysisSignal, timings: TurnTiming[],
-      options: { leaveLastSafetyUnstored?: boolean; firstSpeakMs?: number } = {},
+      options: { leaveLastSafetyUnstored?: boolean; firstSpeakMs?: number; afterClose?: (x: Call) => void } = {},
     ) => {
       for (let i = 1; i <= turns; i += 1) {
         await sleep(i === 1 && options.firstSpeakMs !== undefined ? options.firstSpeakMs : WORKLOAD.userSpeakMs);
@@ -579,6 +587,7 @@ async function main(): Promise<void> {
         assert.equal(closed[0]!.outcome, 'CLOSED');
         const closeAt = now();
         signal.kick(x.session, 'EXCHANGE_CLOSED');
+        options.afterClose?.(x);
         timings.push({ session: x.session, idx, commitAt, firstAudioAt, closeAt });
       }
       assert.equal((await one('server_end_call_v1', { p_user_id: x.user, p_call_id: x.call, p_connection_epoch: 1, p_end_reason: 'USER_ENDED' })).outcome, 'ENDED');
@@ -614,12 +623,20 @@ async function main(): Promise<void> {
     type Profile = keyof typeof PERMIT_PROFILES;
     const profiles = (process.env.S8B05_CP3_PROFILES ?? 'SHIPPED,CALIBRATED,CONSERVATIVE').split(',').map((s) => s.trim()) as Profile[];
     for (const profile of profiles) assert.ok(profile in PERMIT_PROFILES, `unknown profile ${profile}`);
-    const modes: Array<{ key: string; start: CallAnalysisStart | null; profile: Profile | null }> = [
+    // S8B-05 CP4 (contract v1.1 §4.3, M2): five concurrent calls in M1 with the post-response work active (one delivery per
+    // closed exchange, through the REAL post-response background gate: the session lease, then a shared permit, L2
+    // respected), against the same five calls with analysis and post-response off (M0_M2). S8B05_CP3_M2=0 leaves it out.
+    const M2 = process.env.S8B05_CP3_M2 !== '0';
+    const modes: Array<{ key: string; start: CallAnalysisStart | null; profile: Profile | null; calls?: number; postResponse?: boolean }> = [
       { key: 'M0', start: null, profile: null },
       ...profiles.flatMap((profile) => [
         { key: `M1_${profile}`, start: 'AFTER_FIRST_AUDIO' as const, profile },
         { key: `M1_PRIME_${profile}`, start: 'AT_COMMIT' as const, profile },
       ]),
+      ...(M2 ? [
+        { key: 'M0_M2', start: null, profile: null, calls: WORKLOAD.m2Calls },
+        ...profiles.map((profile) => ({ key: `M2_${profile}`, start: 'AFTER_FIRST_AUDIO' as const, profile, calls: WORKLOAD.m2Calls, postResponse: true })),
+      ] : []),
     ];
     // A reliability-only run (R1 - R4, no measurement) for iterating on the scenarios; never what CI or the record runs.
     if (process.env.S8B05_CP3_RELIABILITY_ONLY === '1') modes.length = 0;
@@ -635,6 +652,7 @@ async function main(): Promise<void> {
         [v.total, v.minimum, v.weight, v.perUser, Number(permitPolicyBefore.lease_seconds), 's8b-05-cp3-proof', 'local synthetic proof']);
     };
     const firstAudio: Record<string, number[]> = {};
+    const result_postResponse = new Map<string, Record<string, number>>();
     for (const [modeIndex, mode] of modes.entries()) {
       await setPermitPolicy(mode.profile);
       const capacity = new SharedCapacity(WORKLOAD.providerSlots);
@@ -649,7 +667,7 @@ async function main(): Promise<void> {
       signal.bind(workers.length ? { kick: (sessionId, reason) => workers[(route.get(sessionId) ?? 0) % workers.length]!.kick(sessionId, reason) } : null);
       for (const w of workers) w.start();
 
-      const people = await Promise.all(Array.from({ length: WORKLOAD.shortCalls + 1 }, () => person()));
+      const people = await Promise.all(Array.from({ length: mode.calls ?? WORKLOAD.shortCalls + 1 }, () => person()));
       // O3b: every session has one unestablished pre-call text exchange the call adopts at the head of its order.
       const preCall = await Promise.all(people.map((p, i) => textExchange(p.user, p.session, userWords(100 + i), 'تمام، وبعدين؟')));
       const sessions = people.map((p) => p.session);
@@ -676,8 +694,30 @@ async function main(): Promise<void> {
         WHERE session_id = ANY($1::uuid[]) AND half = 'EXCHANGE' AND call_turn_index = $2`, [sessions, PRE_CALL]))[0]!.n);
       check(`${mode.key}: the activation adopted every pre-call exchange before any turn (O3b as amended by DEC-R1-1)`,
         adoptedAtActivation === preCall.length, `${adoptedAtActivation}/${preCall.length}`);
-      await Promise.all(calls.map((x, i) => runCall(x, i === 0 ? WORKLOAD.longTurns : WORKLOAD.shortTurns, i * 40, prov, signal, timings)));
+      // M2: each closed exchange's post-response delivery, never awaited by the call. Not entered in time, a delivery is
+      // retried as the stream's reclaim would retry it: delayed, never dropped (bounded here so a defect fails the proof).
+      const postGate = mode.postResponse ? new DatabasePostResponseBackgroundGate(serviceApi, new DatabaseBackgroundPermitGate(serviceApi)) : null;
+      const postJobs: Array<Promise<boolean>> = [];
+      const postResponse = postGate ? (x: Call) => {
+        postJobs.push((async () => {
+          const envelope = JSON.stringify({ subject_user_id: x.user, subject_session_id: x.session });
+          for (const deadline = now() + 120_000; now() < deadline;) {
+            const entry = await postGate.enter(envelope);
+            if (!entry) { await sleep(100); continue; }
+            try { await prov.postResponse(); } finally { await entry.release(); }
+            return true;
+          }
+          return false;
+        })());
+      } : undefined;
+      await Promise.all(calls.map((x, i) => runCall(x, i === 0 ? WORKLOAD.longTurns : WORKLOAD.shortTurns, i * 40, prov, signal, timings, { afterClose: postResponse })));
       const callsWallMs = now() - started;
+      if (postGate) {
+        const delivered = (await Promise.all(postJobs)).filter(Boolean).length;
+        result_postResponse.set(mode.key, { deliveries: postJobs.length, delivered, providerCalls: prov.counts.POST_RESPONSE });
+        check(`${mode.key}: every post-response delivery ran, delayed and never dropped (${delivered}/${timings.length})`,
+          delivered === timings.length && postJobs.length === timings.length);
+      }
       // The fake provider's utilization while the calls ran (replies and analysis together): above ~0.8, a queue forms.
       const providerUtilization = Number(capacity.utilization().toFixed(2));
       const drainMs = mode.start ? await drained(sessions) : null;
@@ -693,6 +733,7 @@ async function main(): Promise<void> {
         providerUtilization,
         exchanges: timings.length,
         replyProviderCalls: prov.counts.REPLY,
+        ...(result_postResponse.has(mode.key) ? { postResponse: result_postResponse.get(mode.key) } : {}),
       };
       if (mode.start) {
         const at = (o: CallAnalysisObservation) => o.at;
@@ -741,7 +782,7 @@ async function main(): Promise<void> {
           queueDepth: summary(depth),
           backlogAgeMs: summary(age),
           drainAfterLastCallMs: drainMs === null ? null : Math.round(drainMs),
-          analysisProviderCalls: { ...prov.counts, REPLY: undefined, total: analysisCalls },
+          analysisProviderCalls: { ...prov.counts, REPLY: undefined, POST_RESPONSE: undefined, total: analysisCalls },
           analysisCallsPerExchange: Number((analysisCalls / timings.length).toFixed(2)),
           analysisCallsPerMinute: Number((analysisCalls / ((callsWallMs + (drainMs ?? 0)) / 60_000)).toFixed(1)),
           establishedItems: halves.length,
@@ -798,7 +839,9 @@ async function main(): Promise<void> {
     const within = (i: { p50: number; p95: number }) => i.p50 <= 50 && i.p95 <= 100;
     const impact: Record<string, { p50: number; p95: number; withinVoiceProtection: boolean }> = {};
     for (const mode of modes.filter((m) => m.start)) {
-      const i = { p50: p(mode.key, 50) - p('M0', 50), p95: p(mode.key, 95) - p('M0', 95) };
+      // M2 is measured against the same five calls with everything off.
+      const base = mode.key.startsWith('M2_') ? 'M0_M2' : 'M0';
+      const i = { p50: p(mode.key, 50) - p(base, 50), p95: p(mode.key, 95) - p(base, 95) };
       impact[mode.key] = { ...i, withinVoiceProtection: within(i) };
     }
     report.firstAudioImpactMs = impact;

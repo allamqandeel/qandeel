@@ -1,19 +1,23 @@
 import type {
-  CallTurnStore, CloseReason, CloseResult, CommitInput, CommitResult, DeliveryState, GenerationEnd, PlayoutResult, ProviderSettleOutcome,
-  SafetyDisposition,
+  BargeInResult, CallTurnStore, CloseReason, CloseResult, CommitInput, CommitResult, DeliveryState, GenerationEnd, OpenExchange, PlayoutResult,
+  ProviderSettleOutcome, SafetyDisposition, TextReplyState,
 } from '../call-turn.store';
 
 interface Exchange {
   readonly index: number;
   readonly userTurnId: string;
   readonly content: string;
+  readonly channel: 'SPEECH' | 'TEXT';
+  readonly commitId: string;
   safety: SafetyDisposition | null;
+  bargeInMs: number | null;
+  textReply: { state: TextReplyState; text: string; terms: readonly string[] } | null;
   generation: 'GENERATING' | GenerationEnd;
   producedMs: number;
   markMs: number;
   clockStartMs: number | null;
   readonly segments: Array<{ seq: number; text: string; startMs: number; endMs: number }>;
-  closed: { deliveryState: DeliveryState; heardMarkMs: number; text: string; reason: CloseReason | 'NEXT_TURN' } | null;
+  closed: { deliveryState: DeliveryState; heardMarkMs: number; text: string; reason: CloseReason | 'NEXT_TURN' | 'TEXT_REPLIED' } | null;
 }
 
 /**
@@ -22,6 +26,9 @@ interface Exchange {
  * higher playout mark advances and the first fixes the clock, ONE close whose heard mark is bounded by the produced audio
  * in whole 20 ms packets, its text the registered segments whose end ≤ the mark, and its delivery state. The epoch fence
  * and the recording bound are proven against real PostgreSQL (verify-migration-0190), not here.
+ *
+ * S8B-05 CP4 (0192): a commit is idempotent by its commitId (a typed turn's clientTurnId); a barge-in onset is kept once
+ * while the exchange is open; a typed exchange closes TEXT_REPLIED with its text (or FAILED without), never by audio.
  */
 export class InMemoryCallTurnStore implements CallTurnStore {
   readonly exchanges: Exchange[] = [];
@@ -52,6 +59,8 @@ export class InMemoryCallTurnStore implements CallTurnStore {
     this.gate('commit');
     this.commits.push(input);
     if (input.epoch !== this.epoch) return { outcome: 'FENCED', callTurnIndex: null, turnId: null, closed: null };
+    const again = this.exchanges.find((e) => e.commitId === input.commitId);
+    if (again) return { outcome: 'ALREADY_COMMITTED', callTurnIndex: again.index, turnId: again.userTurnId, closed: null };
     const previous = this.open();
     let closed: CommitResult['closed'] = null;
     if (previous) {
@@ -62,8 +71,8 @@ export class InMemoryCallTurnStore implements CallTurnStore {
     // As 0189 reserves it: the call's next_call_turn_index, from 1, +1 per committed turn.
     const index = this.exchanges.length === 0 ? 1 : this.exchanges[this.exchanges.length - 1]!.index + 1;
     this.exchanges.push({
-      index, userTurnId: input.turnId, content: input.content, safety: null, generation: 'GENERATING', producedMs: 0, markMs: 0, clockStartMs: null,
-      segments: [], closed: null,
+      index, userTurnId: input.turnId, content: input.content, channel: input.channel, commitId: input.commitId, safety: null, bargeInMs: null,
+      textReply: null, generation: 'GENERATING', producedMs: 0, markMs: 0, clockStartMs: null, segments: [], closed: null,
     });
     return { outcome: 'COMMITTED', callTurnIndex: index, turnId: input.turnId, closed };
   }
@@ -103,7 +112,7 @@ export class InMemoryCallTurnStore implements CallTurnStore {
     return 'FINISHED';
   }
 
-  async confirmPlayout(input: { epoch: number; callTurnIndex: number; playedMs: number; clockStartMs: number }): Promise<PlayoutResult> {
+  async confirmPlayout(input: { epoch: number; callTurnIndex: number; playedMs: number; clockStartMs: number | null }): Promise<PlayoutResult> {
     this.gate('confirmPlayout');
     if (input.epoch !== this.epoch) return { outcome: 'FENCED', markMs: null, clockStartMs: null };
     const exchange = this.find(input.callTurnIndex);
@@ -126,7 +135,44 @@ export class InMemoryCallTurnStore implements CallTurnStore {
     return { outcome: 'CLOSED', assistantTurnId: input.assistantTurnId, deliveryState: result.deliveryState, heardMarkMs: result.heardMarkMs };
   }
 
+  async recordBargeIn(input: { epoch: number; callTurnIndex: number; captureMs: number }): Promise<BargeInResult> {
+    this.gate('recordBargeIn');
+    if (input.epoch !== this.epoch) return { outcome: 'FENCED', captureMs: null };
+    const exchange = this.find(input.callTurnIndex);
+    if (!exchange) return { outcome: 'NOT_FOUND', captureMs: null };
+    if (exchange.closed) return { outcome: 'CLOSED', captureMs: exchange.bargeInMs };
+    if (exchange.bargeInMs !== null) return { outcome: 'ALREADY_RECORDED', captureMs: exchange.bargeInMs };
+    exchange.bargeInMs = input.captureMs;
+    return { outcome: 'RECORDED', captureMs: input.captureMs };
+  }
+
+  async closeText(input: { callTurnIndex: number; state: TextReplyState; text: string; terms: readonly string[]; assistantTurnId: string }): Promise<CloseResult> {
+    this.gate('closeText');
+    const exchange = this.find(input.callTurnIndex);
+    if (!exchange) return { outcome: 'NOT_FOUND', assistantTurnId: null, deliveryState: null, heardMarkMs: null };
+    if (exchange.channel !== 'TEXT' || (input.state === 'FAILED') !== (input.text.trim() === '')) throw new Error('CALL_TEXT_REPLY_INVALID');
+    if (exchange.closed) return { outcome: 'ALREADY_CLOSED', assistantTurnId: input.assistantTurnId, deliveryState: exchange.closed.deliveryState, heardMarkMs: 0 };
+    if (exchange.safety === null) throw new Error('CALL_EXCHANGE_SAFETY_UNSETTLED');
+    if (input.state !== 'FAILED') exchange.textReply = { state: input.state, text: input.text, terms: input.terms };
+    const deliveryState: DeliveryState = input.state;
+    exchange.closed = { deliveryState, heardMarkMs: 0, text: input.text, reason: input.state === 'FAILED' ? 'GENERATION_FAILED' : 'TEXT_REPLIED' };
+    return { outcome: 'CLOSED', assistantTurnId: input.assistantTurnId, deliveryState, heardMarkMs: 0 };
+  }
+
+  async readOpenExchange(input: { epoch: number }): Promise<OpenExchange> {
+    this.gate('readOpenExchange');
+    if (input.epoch !== this.epoch) return { outcome: 'FENCED', callTurnIndex: null, userTurnId: null, content: null, channel: null, safety: null };
+    const open = this.open();
+    if (!open) return { outcome: 'NONE', callTurnIndex: null, userTurnId: null, content: null, channel: null, safety: null };
+    return { outcome: 'OPEN', callTurnIndex: open.index, userTurnId: open.userTurnId, content: open.content, channel: open.channel, safety: open.safety };
+  }
+
   private closeExchange(exchange: Exchange, reason: CloseReason | 'NEXT_TURN'): { deliveryState: DeliveryState; heardMarkMs: number } {
+    // A typed exchange has no audio: closed before its text reply, it is INTERRUPTED with nothing heard.
+    if (exchange.channel === 'TEXT') {
+      exchange.closed = { deliveryState: 'INTERRUPTED', heardMarkMs: 0, text: '', reason };
+      return { deliveryState: 'INTERRUPTED', heardMarkMs: 0 };
+    }
     let mark = exchange.clockStartMs === null ? 0 : Math.min(exchange.markMs, exchange.generation === 'GENERATING' ? exchange.markMs : exchange.producedMs);
     mark -= mark % 20;
     const text = exchange.segments.filter((s) => s.endMs <= mark).sort((a, b) => a.seq - b.seq).map((s) => s.text).join('');

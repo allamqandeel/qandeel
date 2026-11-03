@@ -45,6 +45,7 @@ import { fastVoiceApplied, historicalVoiceConsentVersions, VOICE_CONSENT_V3, voi
 import { endFixtureCall, fixtureCall, liveCallApplied, voiceInternals0189 } from './live-call-0189-anchor.mjs';
 import { liveCallTurnsApplied, substitutedBody as liveCallBody, voiceInternals0190 } from './live-call-0190-substitutions.mjs';
 import { liveCallHalvesApplied, substitutedBody as liveCallHalfBody, voiceInternals0191 } from './live-call-0191-substitutions.mjs';
+import { liveCallTextTurnApplied, voiceInternals0192 } from './live-call-0192-substitutions.mjs';
 
 // S8B-03 re-anchor (migration 0186): the approved consent text 0186 installs, and the one current text after any run.
 const NOTES_CONSENT_VERSION = 'VOICE_RECORDING_V1';
@@ -429,6 +430,13 @@ async function verifyCatalogue(report) {
     if (await liveCallHalvesApplied(rows)) {
       const internals = voiceInternals0191();
       assert.equal(internals.length, 8, 'S0b 0191 names eight voice_private internals');
+      declared.push(...internals);
+    }
+    // S8B-05 CP4 re-anchor (migration 0192): 0192 adds one voice_private internal of its own (the admission guard's trigger
+    // function), held to the same rules (verify-migration-0192 proves its shape).
+    if (await liveCallTextTurnApplied(rows)) {
+      const internals = voiceInternals0192();
+      assert.equal(internals.length, 1, 'S0b 0192 names one new voice_private internal');
       declared.push(...internals);
     }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,

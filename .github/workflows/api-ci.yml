@@ -1372,6 +1372,19 @@ jobs:
         env:
           S8B05_CP3_PROFILES: SHIPPED,CALIBRATED,CONSERVATIVE
         run: npm run prove:live-analysis-synthetic:integration
+      # S8B-05 CP4: migration 0192 (barge-in and the typed turn in a call) - the barge-in onset (the first one kept, late after
+      # the close), a barge-in followed by N1 closing INTERRUPTED with what was heard (never FAILED), the typed exchange closed
+      # TEXT_REPLIED with its text through the ONE close, N1 or the call's end closing it INTERRUPTED, the REST text turn
+      # refused while a call of the session is live (the 0131 race), the open-exchange read after a resume, and the lock races.
+      - name: Verify S8B-05 CP4 barge-in and typed turn in a call (0192) against real PostgreSQL
+        run: npm run verify:live-call-barge-in-text-turn:integration
+      # S8B-05 CP4: the synthetic live call closure - two instances of the compiled gateway, connection, call turn engine and
+      # REALTIME reply service over this database: BARGE_IN with residual echo, TEXT_TURN during QANDEEL's voice, a drop on
+      # the same instance mid-reply and mid-utterance, a drop during generation resumed on the other instance, the #38
+      # injected faults, the 60 minutes ending during a reply, retrieval / export, F-01 (a generated tone, not the F-01 voice)
+      # installed and not installed, and the account erasure. No provider, no paid call, no real person.
+      - name: Prove S8B-05 CP4 synthetic live call closure against real PostgreSQL (free)
+        run: npm run prove:live-call-closure-synthetic:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

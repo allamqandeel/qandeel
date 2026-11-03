@@ -3,6 +3,18 @@ import type {
   AsrConfidenceBand, FinalizableRecognitionSession, SpeechRecognitionUsage, StreamingRecognitionEvent,
 } from '../../speech-recognition.adapter';
 
+/**
+ * One scripted FINAL. S8B-05 CP4: `startMs` / `endMs` place it on the recognizer's stream (0 when not given), and a list
+ * answers one finalize() with several FINALs in order (a word of residual echo and the person's words, say).
+ */
+export interface FakeCallFinal {
+  readonly text: string;
+  readonly band?: AsrConfidenceBand;
+  readonly startMs?: number;
+  readonly endMs?: number;
+}
+export type FakeCallLine = FakeCallFinal | readonly FakeCallFinal[];
+
 /** An INTERIM the fake emits while audio arrives: a test proves it never leaves the engine. */
 export const FAKE_CALL_INTERIM = 'INTERIM-NEVER-COMMITTED';
 
@@ -15,7 +27,7 @@ export const FAKE_CALL_INTERIM = 'INTERIM-NEVER-COMMITTED';
 export class FakeCallRecognizer implements RealtimeRecognition {
   readonly sessions: FakeCallRecognitionSession[] = [];
 
-  constructor(private readonly script: Array<{ text: string; band?: AsrConfidenceBand }>, private readonly options: { finalDelayMs?: number; openDelayMs?: number; neverAnswer?: boolean } = {}) {}
+  constructor(private readonly script: readonly FakeCallLine[], private readonly options: { finalDelayMs?: number; openDelayMs?: number; neverAnswer?: boolean } = {}) {}
 
   async openStream(request: { readonly language: 'ar_en'; readonly signal: AbortSignal }): Promise<FinalizableRecognitionSession> {
     if (this.options.openDelayMs) await new Promise((resolve) => setTimeout(resolve, this.options.openDelayMs));
@@ -35,7 +47,7 @@ export class FakeCallRecognitionSession implements FinalizableRecognitionSession
   private next = 0;
 
   constructor(
-    private readonly script: Array<{ text: string; band?: AsrConfidenceBand }>,
+    private readonly script: readonly FakeCallLine[],
     private readonly options: { finalDelayMs?: number; neverAnswer?: boolean },
     signal: AbortSignal,
   ) {
@@ -76,7 +88,8 @@ export class FakeCallRecognitionSession implements FinalizableRecognitionSession
     await new Promise((resolve) => setTimeout(resolve, this.options.finalDelayMs ?? 0));
     const line = this.script[this.next];
     this.next += 1;
-    if (line) this.emit({ kind: 'FINAL', speech: { text: line.text, band: line.band ?? 'HIGH', startMs: 0, endMs: 0 } });
+    const finals: readonly FakeCallFinal[] = line === undefined ? [] : Array.isArray(line) ? line : [line as FakeCallFinal];
+    for (const f of finals) this.emit({ kind: 'FINAL', speech: { text: f.text, band: f.band ?? 'HIGH', startMs: f.startMs ?? 0, endMs: f.endMs ?? 0 } });
     return 'ANSWERED';
   }
 
