@@ -78,6 +78,9 @@ export class CallEndingWarning {
     const phase = next[event];
     if (phase === undefined) return;
     if (this.phase[id] === 'HEARD') return;
+    // The engine reports from two threads (the request's QUEUED, the playback's STARTED), so a QUEUED can reach JS after
+    // its STARTED (seen on the API 36 emulator). Only a REQUEUED (a hold cut the cue) takes a playing cue back.
+    if (this.phase[id] === 'PLAYING' && (event === 'QUEUED' || event === 'DUE')) return;
     this.phase[id] = phase;
   }
 

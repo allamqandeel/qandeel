@@ -70,4 +70,17 @@ describe('S8B-06 CP2 — the 60-minute warning policy', () => {
     w.onState(iso(10 * 60_000), 2000);
     expect(calls.filter((c) => c.op === 'schedule' && c.kind === 'T5')).toHaveLength(2);
   });
+
+  it('a QUEUED that reaches JS after its STARTED never takes the cue back; a REQUEUED (a hold) does', () => {
+    const w = new CallEndingWarning(port().p, lines);
+    w.onCue('STARTED', 'T1');
+    w.onCue('QUEUED', 'T1');
+    w.onCue('DUE', 'T1');
+    expect(w.phase.T1).toBe('PLAYING');
+    w.onCue('REQUEUED', 'T1');
+    expect(w.phase.T1).toBe('QUEUED');
+    w.onCue('STARTED', 'T1');
+    w.onCue('HEARD', 'T1');
+    expect(w.phase.T1).toBe('HEARD');
+  });
 });

@@ -38,7 +38,8 @@
  * scheduleEnd): STATE.endsAt = startedAt + the maximum length; CALL_ENDING { endsInMs: 300000 | 60000 } sent on EACH
  * connection whose call is ACTIVE when that instant arrives (a notice whose instant passed during an outage is not re-sent);
  * at endsAt the server's own end, STATE ENDED SERVER_ENDED, close 1000. The maximum length is a proof knob so the warning
- * is proven in minutes: POST /fv/max-length?ms= (default 3600000). POST /fv/ending?ms= sends one CALL_ENDING now.
+ * is proven in minutes: POST /fv/max-length?ms= (default 3600000; kept across /fv/reset until set again). POST /fv/ending?ms=
+ * sends one CALL_ENDING now.
  */
 'use strict';
 const http = require('node:http');
@@ -383,7 +384,7 @@ function createGateway(options = {}) {
       gaps: [], // { kind, fromMs, toMs }
       resendDropped: 0, violations: [], decodeErrors: 0, dtxPackets: 0, nonUplinkShape: 0,
       replies: new Map(), nextTurn: 1, maxLengthMs: knobs.maxLengthMs, notices: [],
-      epochsSeen: [1], helloCount: 0, resumeCount: 0, controlsAfterResume: [],
+      epochsSeen: [1], helloCount: 0, resumeCount: 0, controlsAfterResume: [], heartbeats: 0, silenceCloses: 0,
     };
   }
 
@@ -470,6 +471,7 @@ function createGateway(options = {}) {
       disarm(conn);
       if (code !== null) conn.wire.close(code);
       const call = conn.call;
+      if (call && code === CLOSE.SILENCE) call.silenceCloses += 1;
       if (call && call.conn === conn) {
         call.conn = null;
         suspend(call);
@@ -528,6 +530,7 @@ function createGateway(options = {}) {
     if (call.pendingControlCheck) call.controlsAfterResume.push(m.type === 'HEARTBEAT' ? null : m.type);
     switch (m.type) {
       case 'HEARTBEAT':
+        call.heartbeats += 1;
         return;
       case 'TOKEN_REFRESH':
         if (m.accessToken !== SYNTHETIC_TOKEN) return refuse('TOKEN_INVALID');
@@ -822,6 +825,7 @@ function createGateway(options = {}) {
     }));
     return {
       callId: call.callId, state: call.state, endReason: call.endReason, epochsSeen: call.epochsSeen, resumes: call.resumeCount,
+      heartbeats: call.heartbeats, silenceCloses: call.silenceCloses,
       maxLengthMs: call.maxLengthMs, startedAt: call.startedAt, notices: call.notices, muted: call.muted,
       uplinkPackets: up.length, firstCaptureMs: up[0]?.captureMs ?? null, lastCaptureMs: up.at(-1)?.captureMs ?? null,
       expectedCaptureMs: call.expectedCaptureMs, captureBreaks, seqBreaks, gaps: call.gaps, resendDropped: call.resendDropped,
@@ -943,7 +947,6 @@ function createGateway(options = {}) {
       current = null;
       knobs.durableLagMs = 0;
       knobs.playoutAckDelayMs = 0;
-      knobs.maxLengthMs = 3_600_000;
       return json(200, { reset: true });
     }
     return json(404, { error: 'NOT_FOUND' });
