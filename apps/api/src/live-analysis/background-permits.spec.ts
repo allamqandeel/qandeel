@@ -50,6 +50,27 @@ describe('S8B-05 CP3: the shared background permits', () => {
     expect(r.calls.filter((c) => c.name === 'server_acquire_background_permit_v1')).toHaveLength(2);
   });
 
+  it('a capacity wait asks again as soon as this instance frees capacity (a release or a close), never granted by it', async () => {
+    const r = clockedRpc(['GRANTED', 'WAIT_CAPACITY', 'GRANTED']);
+    const neverSleeps = jest.fn(() => new Promise<void>(() => undefined));
+    const gate = new DatabaseBackgroundPermitGate({ rpc: r.rpc as never }, { sleep: neverSleeps, now: r.now, random: () => 1 });
+    const held = await gate.acquire(USER, 'CALL_ANALYSIS', { respectCriticalWindow: false, maxWaitMs: 10_000 });
+    const waiting = gate.acquire(USER, 'CALL_ANALYSIS', { respectCriticalWindow: false, maxWaitMs: 10_000 });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(r.calls.filter((c) => c.name === 'server_acquire_background_permit_v1')).toHaveLength(2);
+    // The backoff never ends (sleep never resolves): only the release wakes the wait, and the database grants it.
+    await held!.release();
+    expect(await waiting).not.toBeNull();
+    expect(r.calls.filter((c) => c.name === 'server_acquire_background_permit_v1')).toHaveLength(3);
+
+    const closed = clockedRpc(['WAIT_CAPACITY', 'GRANTED']);
+    const other = new DatabaseBackgroundPermitGate({ rpc: closed.rpc as never }, { sleep: neverSleeps, now: closed.now, random: () => 1 });
+    const pending = other.acquire(USER, 'CALL_ANALYSIS', { respectCriticalWindow: false, maxWaitMs: 10_000 });
+    await new Promise((resolve) => setImmediate(resolve));
+    other.capacityMayHaveChanged();
+    expect(await pending).not.toBeNull();
+  });
+
   it('refuses an unknown outcome instead of guessing', async () => {
     const r = clockedRpc(['MAYBE']);
     const gate = new DatabaseBackgroundPermitGate({ rpc: r.rpc as never }, { sleep: r.sleep, now: r.now });

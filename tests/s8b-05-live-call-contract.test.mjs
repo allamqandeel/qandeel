@@ -298,3 +298,25 @@ test('L2 is the default (M1) and M1′ only when set exactly; the voice path kic
     assert.doesNotMatch(codeOnly(read(path)), /\bLogger\b|console\.|process\.stdout/u, `${path} logs nothing`);
   }
 });
+
+// S8B-05 CP3 review correction (A2 smoke in API CI): a proof that drives an event-writing command leaves no runtime event
+// behind. The outbox names its subject `subject_user_id`, so the teardowns' `user_id` sweep never reaches it; a fixture event
+// left PENDING is older than any later event and fills the publisher's oldest-first batch (claim_runtime_events(20)), which
+// left the A2 smoke's own event PENDING after the CP3 proof. Every such teardown deletes by `subject_user_id` and the proof
+// counts what is left of the runtime outbox after it.
+test('every proof that writes runtime events removes its fixtures\' outbox rows by subject_user_id and proves none is left', () => {
+  const EVENT_WRITERS = /server_commit_live_call_turn_v1|server_close_live_call_exchange_v1|server_end_call_v1|server_close_ended_call_exchange_v1|finalize_conversation_turn/u;
+  const proofs = files('apps/api/scripts').filter((p) => p.endsWith('.ts')).filter((p) => {
+    const text = read(p);
+    return text.includes("column_name = 'user_id'") && EVENT_WRITERS.test(text);
+  });
+  assert.ok(proofs.includes('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts'), 'the CP3 proof is covered');
+  assert.ok(proofs.includes('apps/api/scripts/s8b-05-cp2-spoken-turn-synthetic-proof.ts'), 'the CP2 proof is covered');
+  for (const path of proofs) {
+    const text = codeOnly(read(path));
+    const teardown = text.slice(text.indexOf('async function teardown('));
+    assert.match(teardown, /DELETE FROM public\.runtime_event_outbox WHERE subject_user_id = ANY\(\$1::uuid\[\]\)/u, `${path}: the teardown deletes its fixtures' events`);
+    assert.match(text, /count\(\*\) FROM public\.runtime_event_outbox WHERE subject_user_id = ANY\(\$1::uuid\[\]\)\)::int AS (?:events|outbox_events)/u,
+      `${path}: what the teardown left of the outbox is counted`);
+  }
+});

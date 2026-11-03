@@ -1,6 +1,6 @@
 # QANDEEL S8B-05 — Integrated Live Call: Implementation Record v1
 
-**Checkpoint:** S8B-05 CP3 — UNDER REVIEW (2026-11-02). CP1 (Call Authority, Gateway, Admission & User Track) is
+**Checkpoint:** S8B-05 CP3 — UNDER REVIEW (2026-11-02; R1, the Product Owner's correction order on PR #377, 2026-11-03, §11.10). CP1 (Call Authority, Gateway, Admission & User Track) is
 **merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`; CP2 (Realtime Spoken Turn,
 QANDEEL Reply & Playout Truth, §10) is **merged** through [PR #375](https://github.com/allamqandeel/qandeel/pull/375) as
 `f5de4c27`. CP3 (Ordered Half-Exchange Establishment & Fast Live Analysis, §11) is on `s8b/s8b-05-cp3` as a **Draft pull
@@ -893,3 +893,260 @@ is reconciled at S8B-05's closing change (BG-08).
 ### 11.9 Copy Gate
 
 Unchanged: the 40 rows of §9 stay PROPOSED. CP3 adds no user-facing text.
+
+### 11.10 R1 — the Product Owner's Comprehensive Correction Order on PR #377 (2026-11-03)
+
+**Scope:** PR #377 itself, at reviewed head `e43be547`. No new checkpoint and no new pull request. No paid call, no hosted
+migration, no voice gate, nothing merged. §11.1 – §11.9 are kept as written, and where R1 changes a statement this
+section says so. In particular, §11.3's tables are the pre-R1 run. Its column "commit → first analysis work" actually
+measured the **permit grant** (see 11.10.2).
+
+#### 11.10.1 The CI failure: `verify:a2-e2e-runtime-smoke` (Run 41545850635), root cause from data
+
+- **The failure.** The A2 smoke runs inside one `BEGIN … ROLLBACK`. It writes one runtime event, claims a batch of
+  `claim_runtime_events(20, …)` (oldest first: `ORDER BY created_at, event_id`), and asserts its own event `PUBLISHED`.
+  It read `PENDING` at `stage=OUTBOX_PUBLISH`.
+- **The cause.** CI runs the CP3 proof just before A2 on the same database. The CP3 teardown swept every table by
+  `user_id`. `public.runtime_event_outbox` names its subject `subject_user_id`, so that sweep never reached it.
+- **The data (local PG17, CI order):**
+  - after the pre-R1 CP3 proof there were **231** eligible outbox rows, every one orphaned (its subject user deleted);
+  - a rolled-back diagnostic claim took **20 / 20** orphaned `ConversationTurnCompleted v2.0` rows, older than anything A2
+    writes;
+  - A2 then reproduced CI's failure exactly (`PENDING`, expected `PUBLISHED`).
+- **Who leaves rows.** Each step was counted in CI order (verify-0189 → verify-0190 → the CP1 proof → the CP2 proof →
+  verify-0191 → the CP3 proof → post-response dispatch → A2). Only the CP3 proof left rows. The CP2 proof already deletes
+  the outbox by `subject_user_id` and counts it in its S8, so it is unchanged.
+- **The `RuntimeEventPublisher` was not defective and is unchanged.** The claim succeeded, nothing was swallowed, and the
+  batch was simply full of older rows.
+- **The fix.** The CP3 teardown deletes `runtime_event_outbox WHERE subject_user_id = ANY(<its fixtures' users>)`, only its
+  own fixtures' rows. A new `fixtureRowsLeft` check then counts its calls, exchanges, queue items, recordings, commit
+  batches, outbox events and users after the teardown, and **fails** unless every count is 0. The proof prints that line.
+- **The regression test.** `tests/s8b-05-live-call-contract.test.mjs` adds: "every proof that writes runtime events removes
+  its fixtures' outbox rows by subject_user_id and proves none is left". Every script under `apps/api/scripts` that writes
+  call turns must:
+  - delete its outbox rows by `subject_user_id`;
+  - count them after the teardown.
+
+  The test names the CP2 and CP3 proofs explicitly, so neither can drop out of its scope.
+- **What is not changed.** The batch size, any retry, the `PUBLISHED` assertion, and A2's place in CI.
+- **The reruns.** After the fix, in CI order, the outbox count was **0 after every step** and A2 passed. A2 alone on a
+  fresh database also passed. The final-code reruns are in 11.10.8.
+
+#### 11.10.2 Instrumentation: what was measured, and the honest names
+
+- The pre-R1 field `commitToFirstAnalysisWorkMs` was taken at the **permit grant**. It is now `commitToPermitGrantedMs`.
+- Two new fields sit beside it:
+  - `commitToClaimMs`: the session's head item claimed;
+  - `commitToFirstProviderCallMs`: the first analysis provider call actually started, the true "first analysis work".
+- The proof also records a per-USER-half breakdown, `userHalfStagesMs`, split into turn 1 and later turns:
+  - **Before the claim:** each millisecond between the commit and the claim is classified as wake, FIFO / pre-call
+    backlog, lock wait, the claim RPC, or scheduling.
+  - **The permit wait:** split by the outcome of each ask (L2 critical window, the per-person limit, capacity), the grant
+    RPC, and the number of asks.
+  - **After the permit:** the turn and snapshot reads, the context read, the dossier read, each provider (segmentation,
+    focus, thread, continuity), the provider capacity wait (queue) against the provider service time, the commit RPC,
+    and the local remainder.
+- How the spans are taken:
+  - The service_role shim times every RPC and attributes it to its session.
+  - The fake provider times every call with its capacity wait.
+  - Nothing reads or logs any content.
+- `SharedCapacity.utilization()` reports busy slot-time over slots × wall time.
+
+#### 11.10.3 Improvements made (no call removed, no order relaxed, no analysis shortened)
+
+| # | Change | Where | Why it is safe |
+|---|---|---|---|
+| I-1 | **0191 defect fixed: the permit cap is a COUNT of permits held, not a range of slot numbers.** Pre-R1, `server_acquire_background_permit_v1` granted any free slot in `1 … cap`. When live calls shrank the cap below the slots held, releasing a low slot let a new grant exceed the cap, in the very case the cap exists for. Now it refuses `WAIT_CAPACITY` while `count(*) ≥ cap`, then takes the lowest free slot in `1 … 64`. | 0191 (not merged, not hosted, so corrected in place) + `verify-migration-0191` **T11b** | T11b fills to the cap, shrinks it with two live calls, frees the lowest slot and asserts it is **still** `WAIT_CAPACITY` (cap − 2, held cap − 1), then `GRANTED` once the permits are freed. On the pre-R1 template it fails ("a freed low slot is not capacity"). |
+| I-2 | A capacity wait asks again **as soon as this instance frees capacity** (a permit release or an exchange close), instead of only at its backoff step. The backoff cap is 500 ms (was 1 000). | `background-permits.ts` (`capacityMayHaveChanged`), the worker's `kick('EXCHANGE_CLOSED')` | A wake only re-asks. The database still decides every grant, and the gate never grants itself one. |
+| I-3 | The permit is released **when the provider work ends**, before the queue item's settlement. | `call-analysis.worker.ts` | The permit covers provider work only (L3). The settlement is a database write. |
+| I-4 | The context read runs **concurrently with segmentation** in the half path. | `ConversationSemanticEstablishmentService.runCallHalf` | Segmentation does not read the context. Focus still starts only after both, and the order G / I is unchanged. |
+
+New specs:
+- the permit gate: "a capacity wait asks again as soon as this instance frees capacity (a release or a close), never
+  granted by it";
+- the worker: "the permit goes back when the provider work ends, before the settlement; a closed exchange wakes capacity
+  waits".
+
+The live-analysis and live-focus suites give 118 / 118.
+
+#### 11.10.4 Before / after — **Synthetic estimate** (local PG17, the workload of §11.3: 7 calls, 68 exchanges, seeds fixed, 8 fake slots)
+
+**USER half committed (= Live Focus updated), later turns (turns ≥ 2), P50 / P95 ms:**
+
+| Pace | Mode | Before R1 | After R1 |
+|---|---|---|---|
+| conversational (3 s) | M1 shipped | 1 679 / 1 993 | **1 641 / 1 920** |
+| conversational | M1′ shipped | 1 242 / 1 802 | **1 183 / 1 615** |
+| conversational | M1 calibrated | 1 785 / 2 659 | 1 741 / 2 143 |
+| conversational | M1′ calibrated | 1 755 / 2 643 | 1 463 / 2 061 |
+| stress (900 ms) | M1 shipped | 4 444 / 5 838 | 4 144 / 4 786 |
+| stress | M1′ shipped | 3 922 / 4 729 | 3 788 / 4 580 |
+| stress | M1 calibrated | 10 338 / 12 898 | **5 515 / 8 399** |
+| stress | M1′ calibrated | 6 348 / 11 853 | 5 622 / 9 253 |
+
+**All turns, after R1 (P50 / P95 ms):**
+
+| Pace / mode | commit → claim | → permit | → first provider call | → USER half = LF | close → reply half | queue depth | backlog age | long-call lag, turns 2 – 20 |
+|---|---|---|---|---|---|---|---|---|
+| conv., M1 shipped | 3 / 2 133 | 624 / 2 135 | 626 / 2 139 | 1 666 / 3 049 | 1 281 / 2 718 | 1 / 14 | 298 / 1 756 | ≈ 1.3 – 1.9 s |
+| conv., M1′ shipped | 3 / 2 067 | 5 / 2 067 | 9 / 2 069 | 1 219 / 2 915 | 882 / 2 645 | 0 / 11 | 0 / 1 419 | 1.4 s → ≈ 0.9 – 1.0 s |
+| conv., M1 calibrated | 3 / 2 251 | 809 / 2 252 | 812 / 2 255 | 1 817 / 3 211 | 1 351 / 2 830 | 1 / 14 | 401 / 1 887 | ≈ 1.1 – 2.2 s |
+| conv., M1′ calibrated | 3 / 2 256 | 760 / 2 258 | 762 / 2 263 | 1 594 / 3 173 | 1 175 / 2 791 | 1 / 11 | 72 / 1 881 | ≈ 0.8 – 2.0 s, ≈ 1.0 s at the end |
+| stress, M1 shipped | 2 901 / 3 574 | 2 916 / 3 575 | 2 921 / 3 577 | 3 996 / 4 786 | 3 902 / 4 480 | 4 / 32 | 2 905 / 4 580 | ≈ 3.5 – 4.3 s → 1.2 s |
+| stress, M1′ shipped | 2 518 / 3 374 | 2 580 / 3 375 | 2 584 / 3 376 | 3 737 / 4 580 | 3 487 / 4 282 | 2 / 30 | 1 328 / 4 495 | 3.7 s → ≈ 0.9 s |
+| stress, M1 calibrated | 3 866 / 7 266 | 4 337 / 7 457 | 4 342 / 7 459 | 5 393 / 8 399 | 4 975 / 8 174 | 13 / 48 | 4 893 / 8 414 | peak 7.4 s, ≈ 4.5 s at the end (was ≈ 10 – 11 s throughout) |
+| stress, M1′ calibrated | 3 506 / 8 441 | 4 246 / 8 445 | 4 248 / 8 450 | 4 976 / 9 253 | 4 889 / 9 341 | 14 / 49 | 3 714 / 9 486 | peak 6.3 s → 1.0 s |
+
+The workload is the same in every mode:
+- **6.62 analysis calls per exchange** (segmentation 150, focus 225, thread 75, continuity 0) and one reply call per
+  exchange. No call was removed, before or after.
+- Provider utilization: 0.25 – 0.26 at the conversational pace, 0.53 – 0.54 at the stress pace.
+
+**First Audio impact against M0 (analysis off), P50 / P95 ms; the limit is +50 / +100:**
+
+| Pace | Mode | Before R1 | After R1 |
+|---|---|---|---|
+| conversational | M1 shipped | +3 / +1 ✓ | +12 / −2 ✓ |
+| conversational | M1′ shipped | +36 / +80 ✓ | +38 / +26 ✓ |
+| conversational | M1 calibrated | −2 / +1 ✓ | +9 / −1 ✓ |
+| conversational | M1′ calibrated | +22 / +5 ✓ | +7 / 0 ✓ |
+| stress | M1 shipped | +48 / **+160** ✗ | +45 / **+162** ✗ |
+| stress | M1′ shipped | **+56** / **+130** ✗ | **+63** / **+137** ✗ |
+| stress | M1 calibrated | +31 / +91 ✓ | +19 / **+117** ✗ |
+| stress | M1′ calibrated | +34 / +49 ✓ | +23 / +35 ✓ |
+
+- **M1 calibrated at the stress pace is marginal and noisy.** The same configuration gave +54, +70, +91, +101 and +117 ms
+  at P95 across runs.
+- **The analysis now runs faster, and therefore competes more often** with the reply's first token for the same 8 slots.
+- **The shipped policy (`B_total 16`) fails the voice limit at the stress pace in both modes, before and after R1.** That
+  is a property of a cap set above the provider's capacity, not of the analysis code (11.10.6).
+
+#### 11.10.5 The targets, and why they are met or not
+
+The targets are P50 ≤ 1 000 ms and P95 ≤ 2 000 ms for the USER half, with First Audio within +50 / +100 ms.
+
+- **P50 ≤ 1 000 ms is not reachable on this workload without removing work.** The breakdown proves it.
+  - A two-sentence USER half needs four **sequential** provider calls: segmentation, then focus twice, then the thread
+    layer, in the order the contract fixes (G / I). Their service time alone is **885 – 950 ms at P50** (about 1.03 –
+    1.09 s at P95).
+  - The database adds about 35 – 60 ms: context read 18 – 32 ms (now concurrent with segmentation), commit RPC 15 – 17 ms,
+    plus the dossier and snapshot reads.
+  - The local remainder is about 2 ms.
+  - **M1 adds the L2 window by design: about 505 ms at P50**, the permit refused while the same person's reply is still
+    before its first audio.
+  - The best result is M1′ shipped at **1 183 ms P50**. The floor is the provider. Going lower would mean fewer or
+    parallel semantic calls, which R1 forbids and the contract's order does not allow.
+- **P95 ≤ 2 000 ms on later turns is met** by M1′ shipped (1 615) and M1 shipped (1 920) at the conversational pace. Both
+  calibrated profiles land at about 2.1 s.
+- **The all-turns P95 (≈ 2.9 – 3.2 s) comes from turn 1.** At the call's first commit, O3b adopts the session's pre-call
+  exchange at the head of the order, and O1 / O2 require it to be established first. Turn 1's backlog is therefore
+  **2.0 – 2.2 s at P50**, and turn 1's total is about 2.9 – 3.2 s.
+  - The lever is to adopt pre-call exchanges at the call's activation instead of at its first turn. The contract says
+    "عند أول دور", so that change is a **Product Owner decision** (DEC-R1-1). It is not made here.
+- **The stress pace is limited by each session's serial order, not by the provider.**
+  - At a 900 ms turn, one exchange cycle is about 1.95 s.
+  - The analysis of one exchange needs about 1.6 s of sequential provider work (USER half ≈ 930 ms, reply half ≈ 660 ms).
+  - Provider utilization is only 0.54.
+  - The queue therefore grows by construction: one item per session at a time, O1 / O2.
+  - The lever is segmentation pipelining: segmenting the next half while the current one is in focus / thread. It
+    conflicts with the one-item-per-session claim and with L2, so it is a **decision** (DEC-R1-2), not implemented.
+- **First Audio stays within the limit at the conversational pace in every profile after R1.** At the stress pace it
+  stays within the limit only under a cap at or below the capacity (11.10.6).
+
+#### 11.10.6 Background permits: the finding, a conservative setting, and the precondition
+
+- **Finding (kept visible, not hidden behind a green CI profile).** 0191 ships `B_total 16, k 2, B_min 2`, two per person.
+  At the stress pace on an 8-slot provider it fails the voice limit:
+  - pre-R1: M1 +33 / **+104** and M1′ **+58** / **+109** (§11.3);
+  - R1's runs: M1 +45 / **+162** and M1′ **+63** / **+137**.
+- **Why.** `B_total` above the provider's real capacity lets background work hold slots the reply's first token then waits
+  for. L2 protects only the same person's reply. Before I-1, a shrinking cap could also be exceeded.
+- **The improvement for voice priority without starving analysis.**
+  - I-1 makes the cap real.
+  - I-2 / I-3 hand capacity back the moment the provider work ends, so the analysis keeps its throughput under a lower
+    cap.
+- **A conservative setting to propose for the period before calibration (NOT applied; a PO decision, through
+  `set_background_permit_policy_v1`):** `B_total 4, k 1, B_min 1`, two per person. It does not assume the real capacity
+  is 8; it uses half of the fake's.
+
+  | Pace | Mode | First Audio impact | USER half, later turns | long-call lag |
+  |---|---|---|---|---|
+  | conversational | M1 conservative | +3 / +2 ✓ | 2 141 / 3 988 | ≈ 1.2 – 1.8 s from turn 8 |
+  | conversational | M1′ conservative | +12 / +5 ✓ | 1 919 / 3 638 | ≈ 0.9 – 1.1 s from turn 8 |
+  | stress | M1 conservative | +6 / +19 ✓ | 14 344 / 19 689 | ≈ 16 – 20 s |
+  | stress | M1′ conservative | +4 / +7 ✓ | 10 564 / 21 117 | peak 10.4 s → 5.7 s |
+
+  It protects the voice at both paces. In exchange, at the stress pace the analysis falls well behind, though it is never
+  skipped: 6.62 calls per exchange and drained after the call.
+- **Limits and risks.**
+  - The simulation does not prove the real provider's capacity, concurrency or rate limits. The fake is a FIFO of 8 slots
+    with assumed latencies.
+  - A cap too low delays analysis and Live Focus. A cap too high breaks the voice limit.
+  - Only a real-provider calibration settles the values.
+- **Precondition.** A calibration of `B_total / k / B_min` against the real provider (S8B-08) comes **before any launch and
+  before any uncontrolled paid load**. The M1 / M1′ / off comparison stays in S8B-08's plan. No value is changed in CP3.
+- **CI.** CI now runs the CP3 proof under `CONSERVATIVE`, and **asserts** the voice limit there for M1, the default. Every
+  other profile it runs is printed as `REPORTED … exceeds` when it fails, measured and never hidden. Pre-R1, CI ran
+  `CALIBRATED`.
+
+#### 11.10.7 M1 against M1′ after R1, and the recommendation (nothing changed without approval)
+
+- **Which is faster.** M1′, in every profile and at both paces:
+  - conversational shipped: 1 183 against 1 641 ms P50 (later turns);
+  - the long call converges to about 1 s with M1′ and 1.3 – 1.9 s with M1;
+  - stress shipped: 3 788 against 4 144;
+  - stress conservative: 10 564 against 14 344.
+
+  M1 pays the L2 window, about 0.5 s per USER half.
+- **Which protects the voice better.** M1 at the conversational pace (+12 / −2 against +38 / +26 shipped). Both are within
+  the limit there. At the stress pace the cap decides, not L2: both fail under the shipped cap and both pass under the
+  conservative one.
+- **Recommendation.**
+  - **Keep M1 (`AFTER_FIRST_AUDIO`) as the default.** It has the smallest First Audio cost where people actually talk.
+  - **Conditions for M1′ at launch:** S8B-08 measures the real provider with M1′'s First Audio within +50 / +100 ms
+    under the calibrated cap, at the expected concurrency.
+  - **Before merge:** no further engineering improvement is available without either removing semantic work or a
+    decision (DEC-R1-1, DEC-R1-2, DEC-R1-3).
+
+#### 11.10.8 Safety recovery across a real restart (R4) and the final verification
+
+- **R4 (new in the CP3 proof).** Two real OS processes (`spawnSync` of the same script):
+  1. A call ends while its last exchange's Safety is not stored. **Process A** runs the worker with a context reader that
+     fails every time. It makes two scans, leaves the exchange `OPEN` with no disposition, and writes nothing dependent:
+     A established `1:USER, 1:ASSISTANT, 2:USER` only.
+  2. A exits. **Process B** (another pid) starts with the reader recovered. It stores the Safety disposition, equal to
+     the same gate run independently over the same context, and closes the exchange **once** with `CALL_ENDING`:
+     - one completion event;
+     - one ASSISTANT half (B establishes `2:ASSISTANT`, COMPLETE);
+     - the queue stays in order;
+     - no duplicate commit.
+
+  Pending facts stay pending. There is no default ALLOW / BLOCK. No gap was found, so nothing else changed.
+- **`verify-migration-0191`: 27 / 27** on local PG17 (T11b added; 26 / 26 before).
+- **Final local verification on the R1 tree:** these were run on local PG17 against a template migrated from this branch's own 0190 and 0191.
+  - **CI order** (verify-0189 → verify-0190 → CP1 proof → CP2 proof → verify-0191 → CP3 proof under `CONSERVATIVE` → post-response
+    dispatch → A2): every step exits 0, and the runtime outbox holds **0** rows after every step.
+    - verify-0191 passes 27 / 27.
+    - The CP3 proof passes 35 / 35, including R4 and the teardown residue check (all zeros). First Audio stays within limits:
+      M1 +5 / −11, M1′ +12 / −1.
+    - A2 passes.
+  - **A2 alone** on a fresh database passes.
+  - **The CP3 proof with all three profiles at the conversational pace** passes 75 / 75. Every mode's First Audio is within
+    limits (+2 / +9 … +27 / +51).
+  - **Jest** (apps/api): 336 suites; 7 717 passed, 1 skipped, 0 failed.
+  - **Static contracts:** `node --test tests/*.test.mjs` gives 1 754 / 1 754.
+  - **Typecheck:** `tsc -p apps/api/tsconfig.scripts.json` is clean.
+  - **A non-vacuity check:** the new outbox test fails on the pre-R1 proof and passes on R1.
+  - **A note on the local harness, not on the code:** the scratch template behind the perf runs above (`base191c`) was built
+    from a pre-`d96f2a8c` 0190, which lacks one history read (`server_read_call_reply_delivery_v1`). Nothing in CP3 calls that
+    read. The template was rebuilt from this branch, and the final runs above use the rebuilt template.
+- **Reports:** `E:\QANDEEL_REPORTS\S8B-05\CP3-R1\` (the before / after / conservative runs, JSON and logs).
+
+#### 11.10.9 Open decisions for the Product Owner (none applied)
+
+| # | Decision | What it would change |
+|---|---|---|
+| DEC-R1-1 | Adopt pre-call exchanges (O3b) at the call's activation instead of at its first turn | Turn 1's ≈ 2 s backlog; contract wording "عند أول دور" |
+| DEC-R1-2 | Segmentation pipelining (the next half's segmentation while the current half is in focus / thread) | The stress-pace lag; conflicts with one item per session and L2 |
+| DEC-R1-3 | The permit values before calibration: the conservative `4 / 1 / 1` against the shipped `16 / 2 / 2` | The voice limit under load against analysis lag |
+| DEC-R1-4 | M1′ as the default | Not recommended before S8B-08 |

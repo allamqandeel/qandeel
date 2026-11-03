@@ -281,7 +281,13 @@ BEGIN
   IF (SELECT count(*) FROM voice_private.background_provider_permits p WHERE p.user_id = p_user_id) >= v_policy.per_user_permits THEN
     RETURN QUERY SELECT 'WAIT_USER_LIMIT'::text, NULL::integer, NULL::timestamptz, v_cap, v_live; RETURN;
   END IF;
-  SELECT min(s) INTO v_slot FROM generate_series(1, v_cap) s
+  -- The cap is a COUNT of the permits held, never a range of slot numbers: when live generations shrink it, permits granted
+  -- under the larger cap keep their slots until they are released, and no new permit is granted until fewer than the cap
+  -- remain (a free low slot alone would admit work past it, at the moment a live reply needs the capacity).
+  IF (SELECT count(*) FROM voice_private.background_provider_permits p) >= v_cap THEN
+    RETURN QUERY SELECT 'WAIT_CAPACITY'::text, NULL::integer, NULL::timestamptz, v_cap, v_live; RETURN;
+  END IF;
+  SELECT min(s) INTO v_slot FROM generate_series(1, 64) s
    WHERE NOT EXISTS (SELECT 1 FROM voice_private.background_provider_permits p WHERE p.slot = s);
   IF v_slot IS NULL THEN
     RETURN QUERY SELECT 'WAIT_CAPACITY'::text, NULL::integer, NULL::timestamptz, v_cap, v_live; RETURN;

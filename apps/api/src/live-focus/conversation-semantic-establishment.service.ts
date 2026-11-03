@@ -375,10 +375,15 @@ export class ConversationSemanticEstablishmentService {
     const snapshot = await this.repository.readIntegratedBatchSnapshot({ sessionId: turn.session_id, userId, sourceTurnId: turn.id, batchId });
     if (halfState(snapshot) === 'COMPLETE') return replay();
 
-    // D. One authoritative context, read outside any database lock.
-    let context = await this.repository.readRuntimeContext({ sessionId: turn.session_id, userId });
-    // E. The half's segmentation (the zero-unit batch for an empty reply).
-    const half = await this.segment(userId, turn, batchId, snapshot.source_frontier, { liveCallHalf: item.half });
+    // D. One authoritative context, read outside any database lock, and E. the half's segmentation (the zero-unit batch
+    // for an empty reply), concurrently: the segmentation reads no context and the context read waits on no provider, so
+    // neither waits for the other (both precede F, and the commit still checks the context's exact tokens).
+    const contextRead = this.repository.readRuntimeContext({ sessionId: turn.session_id, userId });
+    const segmented = this.segment(userId, turn, batchId, snapshot.source_frontier, { liveCallHalf: item.half });
+    contextRead.catch(() => undefined);
+    segmented.catch(() => undefined);
+    const [firstContext, half] = await Promise.all([contextRead, segmented]);
+    let context = firstContext;
 
     let retriesLeft = MAX_SEMANTIC_STALE_CONTEXT_RETRIES;
     for (;;) {

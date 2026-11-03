@@ -46,6 +46,11 @@ export interface BackgroundPermitObserver {
 export interface BackgroundPermitGate {
   /** A permit, or `null` when none was granted within `maxWaitMs` (nothing was started). */
   acquire(userId: string, kind: BackgroundWorkKind, request: BackgroundPermitRequest): Promise<BackgroundPermit | null>;
+  /**
+   * Optional: capacity may have been freed in this instance (a live reply's exchange closed). Every wait in this instance
+   * asks again now instead of after its backoff step. Grants nothing by itself; the database still decides.
+   */
+  capacityMayHaveChanged?(): void;
 }
 
 /** The gate of a runtime with no shared permits (unit tests, a module wired without the database): always granted. */
@@ -53,7 +58,7 @@ export const UNGATED_BACKGROUND_PERMITS: BackgroundPermitGate = Object.freeze({
   acquire: async (): Promise<BackgroundPermit> => ({ waitedMs: 0, release: async () => undefined }),
 });
 
-export const BACKGROUND_PERMIT_BACKOFF = Object.freeze({ firstMs: 50, maxMs: 1_000 });
+export const BACKGROUND_PERMIT_BACKOFF = Object.freeze({ firstMs: 50, maxMs: 500 });
 /** A held permit is renewed this often; the database lease (0191 policy, 120 s) is several renewals long. */
 export const BACKGROUND_PERMIT_RENEW_MS = 30_000;
 
@@ -72,6 +77,11 @@ export class DatabaseBackgroundPermitGate implements BackgroundPermitGate {
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly random: () => number;
   private readonly now: () => number;
+  /**
+   * Resolved when capacity may have been freed in this instance: a permit of this gate released, or a live reply's
+   * exchange closed. A release in another instance is found by the next ask, at most one backoff step later.
+   */
+  private freed: { readonly promise: Promise<void>; readonly resolve: () => void } | null = null;
 
   constructor(
     private readonly serviceApi: Pick<SupabaseServiceRoleApiService, 'rpc'>,
@@ -101,9 +111,28 @@ export class DatabaseBackgroundPermitGate implements BackgroundPermitGate {
       // Full jitter over the current step, never past the caller's bound.
       const step = Math.max(1, Math.round(backoff * (0.5 + this.random() / 2)));
       const pause = this.sleep(Math.min(step, Math.max(1, request.maxWaitMs - waitedMs)));
-      await (request.wake ? Promise.race([pause, request.wake()]) : pause);
+      // L2's window ends at this person's first audio (the caller's wake); capacity frees at a release or a close here.
+      const wakes: Array<Promise<void>> = [pause];
+      if (request.wake) wakes.push(request.wake());
+      if (outcome === 'WAIT_CAPACITY' || outcome === 'WAIT_USER_LIMIT') wakes.push(this.nextFreed());
+      await Promise.race(wakes);
       backoff = Math.min(BACKGROUND_PERMIT_BACKOFF.maxMs, backoff * 2);
     }
+  }
+
+  capacityMayHaveChanged(): void {
+    const freed = this.freed;
+    this.freed = null;
+    freed?.resolve();
+  }
+
+  private nextFreed(): Promise<void> {
+    if (!this.freed) {
+      let resolve: () => void = () => undefined;
+      const promise = new Promise<void>((r) => { resolve = r; });
+      this.freed = { promise, resolve };
+    }
+    return this.freed.promise;
   }
 
   private async ask(userId: string, kind: BackgroundWorkKind, holder: string, respectCriticalWindow: boolean): Promise<AcquireRow['outcome']> {
@@ -136,6 +165,8 @@ export class DatabaseBackgroundPermitGate implements BackgroundPermitGate {
         clearInterval(renew);
         try {
           await this.serviceApi.rpc('server_release_background_permit_v1', { p_holder: holder });
+          // The slot is free in the database now: this instance's waits ask again at once.
+          this.capacityMayHaveChanged();
         } catch {
           // A permit that cannot be returned lapses at its lease in the database.
         }

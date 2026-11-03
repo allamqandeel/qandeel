@@ -25,7 +25,8 @@
 //   T10  the shared session lock: a post-response execution BUSY while an analysis item is held, its reservation honoured
 //        by the next claim; NOT_REQUIRED for a text-only session; the next spoken turn never waits for it
 //   T11  the permits: per person, the adaptive cap under live generations, a renewal for the same holder, a lapsed lease
-//        freeing its slot; L2: WAIT_CRITICAL_WINDOW only while the reply has nothing heard or registered
+//        freeing its slot; L2: WAIT_CRITICAL_WINDOW only while the reply has nothing heard or registered; T11b the cap is a
+//        count of the permits held, so a cap shrunk under held permits admits nothing through a freed low slot
 //   T12  the call's end, every path: explicit end, the sweep and a new call's recovery close the open exchange with stored
 //        Safety once (CALL_ENDING, the ASSISTANT half queued, one ConversationTurnCompleted); with no Safety stored it stays
 //        OPEN, cannot be closed, is listed for S3, read with the same reader, then stored once and closed; never on a live call
@@ -580,6 +581,39 @@ async function verifyBehaviour(report) {
       assert.equal((await permit(others[1], randomUUID(), true)).outcome, 'GRANTED', 'a lapsed lease frees its slot');
       assert.equal((await one('SELECT * FROM public.server_release_background_permit_v1($1)', [holder])).outcome, 'NOT_HELD');
       await rejected(() => permit(x.user, randomUUID(), true, 'LIVE_VOICE_REPLY'), ['22023']);
+    });
+
+    await report.isolated('T11b the cap is a count of the permits held: when it shrinks, a freed low slot admits nothing until fewer than the cap remain', async () => {
+      await setPermits(6, 1, 1, 2);
+      await q('DELETE FROM voice_private.background_provider_permits');
+      const [{ live }] = await rows("SELECT count(*)::int AS live FROM voice_private.call_exchanges WHERE exchange_state = 'OPEN' AND generation_state = 'GENERATING' AND committed_at > clock_timestamp() - interval '2 minutes'");
+      const cap = Math.max(1, 6 - live);
+      assert.ok(cap >= 4, `the scenario needs room under the cap (live generations ${live})`);
+      const people = [await human(), await human(), await human()];
+      const held = [];
+      for (const person of people) for (let i = 0; i < 2 && held.length < cap; i += 1) {
+        const holder = randomUUID();
+        assert.equal((await permit(person, holder, false)).outcome, 'GRANTED');
+        held.push(holder);
+      }
+      assert.equal(held.length, cap, 'filled to the cap');
+      // Two live replies begin generating: the cap shrinks by two while every permit is still held.
+      const replies = [await activeCall(), await activeCall()];
+      for (const call of replies) await spokenTurn(call);
+      const outsider = await human();
+      const shrunk = await permit(outsider, randomUUID(), false);
+      assert.deepEqual([shrunk.outcome, shrunk.capacity], ['WAIT_CAPACITY', Math.max(1, cap - 2)]);
+      // Releasing the LOWEST slot frees a slot number, not capacity: still more permits held than the shrunk cap.
+      const [{ holder: lowest }] = await rows('SELECT holder FROM voice_private.background_provider_permits ORDER BY slot LIMIT 1');
+      assert.equal((await one('SELECT * FROM public.server_release_background_permit_v1($1)', [lowest])).outcome, 'RELEASED');
+      // cap - 1 permits are held against a cap of cap - 2: a slot range would grant slot 1 here; the count refuses.
+      const afterOne = await permit(outsider, randomUUID(), false);
+      assert.deepEqual([afterOne.outcome, afterOne.capacity], ['WAIT_CAPACITY', cap - 2], 'a freed low slot is not capacity');
+      assert.equal(Number((await rows('SELECT count(*)::int AS n FROM voice_private.background_provider_permits'))[0].n), cap - 1);
+      // Released down below the shrunk cap: granted again.
+      const rest = (await rows('SELECT holder FROM voice_private.background_provider_permits ORDER BY slot')).map((r) => r.holder);
+      for (const holder of rest) await one('SELECT * FROM public.server_release_background_permit_v1($1)', [holder]);
+      assert.equal((await permit(outsider, randomUUID(), false)).outcome, 'GRANTED');
     });
 
     await report.isolated('T12a the explicit end closes the open exchange with stored Safety once: CALL_ENDING, the reply half queued, one ConversationTurnCompleted', async () => {

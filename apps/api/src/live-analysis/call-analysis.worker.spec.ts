@@ -179,6 +179,26 @@ describe('S8B-05 CP3: the durable ordered analysis worker', () => {
     await w.stop();
   });
 
+  it('the permit goes back when the provider work ends, before the settlement; a closed exchange wakes capacity waits', async () => {
+    const store = fakeStore([claimed('USER', 1, 'u1')]);
+    const order: string[] = [];
+    const permits: BackgroundPermitGate = {
+      acquire: jest.fn(async () => ({ waitedMs: 0, release: async () => { order.push('release'); } })),
+      capacityMayHaveChanged: jest.fn(),
+    };
+    const settle = store.settle;
+    store.settle = jest.fn(async (input) => { order.push('settle'); return settle(input); });
+    const { w } = worker(store, { permits });
+    (w as unknown as { stopped: boolean }).stopped = false;
+    await w.drain(SESSION);
+    expect(order).toEqual(['release', 'settle']);
+    w.kick(SESSION, 'FIRST_AUDIO');
+    expect(permits.capacityMayHaveChanged).not.toHaveBeenCalled();
+    w.kick(SESSION, 'EXCHANGE_CLOSED');
+    expect(permits.capacityMayHaveChanged).toHaveBeenCalledTimes(1);
+    await w.stop();
+  });
+
   it('a kick is in memory and runs nothing once stopped', async () => {
     const store = fakeStore([claimed('USER', 1, 'u1')]);
     const { w } = worker(store);

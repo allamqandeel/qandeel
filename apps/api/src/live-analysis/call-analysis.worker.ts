@@ -133,6 +133,8 @@ export class CallAnalysisWorker implements LiveCallAnalysisListener {
     this.deps.observe?.({ kind: 'KICK', sessionId, reason, at: this.now() });
     // A drain waiting for its permit in L2's window asks again now rather than after its backoff step.
     if (reason === 'FIRST_AUDIO' || reason === 'EXCHANGE_CLOSED') this.wake(sessionId);
+    // A closed exchange is no longer a live generation: every capacity wait in this instance asks again now.
+    if (reason === 'EXCHANGE_CLOSED') this.deps.permits.capacityMayHaveChanged?.();
     setImmediate(() => this.track(this.drain(sessionId)));
   }
 
@@ -222,8 +224,12 @@ export class CallAnalysisWorker implements LiveCallAnalysisListener {
       this.later(sessionId, CALL_ANALYSIS_POLICY.busyRetryMs);
       return;
     }
+    let released: Promise<void> | null = null;
     try {
       const failure = await this.establish(sessionId, claim);
+      // The provider work is over: the slot goes back now, while the item is settled (the next item, here or anywhere,
+      // need not wait for the settlement's round trip to find it free).
+      released = permit.release();
       if (failure === null) {
         // An EXCHANGE item is settled COMPLETE by the worker (the full coordinator does not know the queue); a half was
         // settled COMPLETE by its own commit, so this only returns the session lease (ALREADY_SETTLED).
@@ -232,7 +238,7 @@ export class CallAnalysisWorker implements LiveCallAnalysisListener {
         await settle(failure.outcome, failure.code);
       }
     } finally {
-      await permit.release();
+      await (released ?? permit.release());
     }
   }
 

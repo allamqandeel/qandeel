@@ -1362,11 +1362,13 @@ jobs:
       # S8B-05 CP3: Fast Live Analysis - the real analysis worker (two instances), the real half establishment and the shared
       # permits over this database, synthetic live calls through 0189 / 0190's commands, fake providers over one shared
       # capacity: M0 / M1 / M1' measured, the analysis order, crash replay with zero provider calls, a retried outage and S3
-      # after the END. CI runs the calibrated permit profile (the shipped-policy profile is the local comparison run). No
-      # provider, no paid call, no real person, no audio. It restores the gates and the policies and removes its fixtures.
+      # after the END, and S3's recovery across a real process restart (R4). CI runs and enforces the conservative permit
+      # setting proposed before calibration; the shipped and full-capacity profiles are the record's local comparison runs.
+      # No provider, no paid call, no real person, no audio. It restores the gates and the policies and removes its fixtures,
+      # the runtime outbox included (the A2 smoke below shares this database).
       - name: Prove S8B-05 CP3 Fast Live Analysis against real PostgreSQL (free)
         env:
-          S8B05_CP3_PROFILES: CALIBRATED
+          S8B05_CP3_PROFILES: CONSERVATIVE
         run: npm run prove:live-analysis-synthetic:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
