@@ -64,19 +64,35 @@ export const SUBSTITUTIONS = [
     ]],
   },
   {
-    // O3b (A1 §1) and B1 (Part A, A3.3): at a call's first turn, the session's completed exchanges that were never
-    // established, after its last established one, take the head of this call's analysis order, in their current order.
+    // O3b (A1 §1, as amended by DEC-R1-1) and B1 (Part A, A3.3): the call's activation adopts the session's completed
+    // exchanges that were never established (activate-call-o3b, below); the first turn adopts only what completed after
+    // the activation, after the activation's items, so the one order is kept.
     key: 'commit-turn-o3b',
     origin: '0190_s8b_05_live_call_spoken_turn_v1.sql',
     header: 'FUNCTION public.server_commit_live_call_turn_v1(',
     edits: [[
       "  VALUES (p_call_id, v_index, 'USER', p_user_id, v_call.session_id, p_turn_id);\n",
       "  VALUES (p_call_id, v_index, 'USER', p_user_id, v_call.session_id, p_turn_id);\n"
-      + `  -- ${TAG}, O3b / B1): the call's first turn adopts the session's unestablished earlier exchanges at the head of its\n`
-      + '  -- analysis order.\n'
+      + `  -- ${TAG}, O3b / B1, as amended by DEC-R1-1): the call's first turn adopts the session's unestablished earlier\n`
+      + "  -- exchanges that completed after its activation, after the activation's, at the head of its analysis order.\n"
       + '  IF v_index = 1 THEN\n'
-      + '    PERFORM voice_private.adopt_pre_call_exchanges_v1(p_call_id, p_user_id, v_call.session_id);\n'
+      + '    PERFORM voice_private.adopt_pre_call_exchanges_v1(p_call_id, p_user_id, v_call.session_id, 0);\n'
       + '  END IF;\n',
+    ]],
+  },
+  {
+    // O3b as amended by DEC-R1-1 (the Product Owner, 2026-11-03): the call's activation adopts the session's unestablished
+    // pre-call exchanges at the head of its analysis order, in the SAME transaction as the activation, so their analysis
+    // runs before the person's first turn instead of after it. Once per call: only CONNECTING -> ACTIVE reaches here.
+    key: 'activate-call-o3b',
+    origin: '0189_s8b_05_live_call_authority_v1.sql',
+    header: 'FUNCTION public.server_activate_call_v1(',
+    edits: [[
+      "  RETURN QUERY SELECT 'ACTIVE'::text, v_now, v_open.recording_id, v_open.retention_expires_at;\n",
+      `  -- ${TAG}, O3b as amended by DEC-R1-1): the activation adopts the session's unestablished pre-call exchanges, keeping\n`
+      + '  -- 1000 slots below the first turn for an exchange that completes before it.\n'
+      + '  PERFORM voice_private.adopt_pre_call_exchanges_v1(p_call_id, p_user_id, v_call.session_id, 1000);\n'
+      + "  RETURN QUERY SELECT 'ACTIVE'::text, v_now, v_open.recording_id, v_open.retention_expires_at;\n",
     ]],
   },
   {

@@ -83,6 +83,9 @@ const WORKLOAD = Object.freeze({
 const FOCUS_NAMES = ['سامي', 'منى', 'كريم', 'هالة', 'يوسف', 'نادية', 'طارق', 'ليلى', 'عمر', 'سلمى', 'رامي', 'دينا'];
 const userWords = (i: number) => `${FOCUS_NAMES[i % FOCUS_NAMES.length]} كلمني النهارده عن الشغل. الموضوع ده شاغلني من امبارح.`;
 const REPLY = 'فاهمك، احكيلي حصل إيه بالظبط.';
+// RE-ANCHORED by DEC-R1-1 (was 0): the call's ACTIVATION adopts a session's one pre-call exchange, numbered -1000 (0191 keeps
+// the 1000 slots below the first turn for an exchange that completes between the activation and that turn).
+const PRE_CALL = -1000;
 
 function loopbackUrl(): string {
   const url = process.env.DATABASE_URL ?? '';
@@ -539,10 +542,10 @@ async function main(): Promise<void> {
 
     const runCall = async (
       x: Call, turns: number, wordsOffset: number, prov: Providers, signal: LiveCallAnalysisSignal, timings: TurnTiming[],
-      options: { leaveLastSafetyUnstored?: boolean } = {},
+      options: { leaveLastSafetyUnstored?: boolean; firstSpeakMs?: number } = {},
     ) => {
       for (let i = 1; i <= turns; i += 1) {
-        await sleep(WORKLOAD.userSpeakMs);
+        await sleep(i === 1 && options.firstSpeakMs !== undefined ? options.firstSpeakMs : WORKLOAD.userSpeakMs);
         await audio(x, 'USER', x.end.USER + 1000);
         const content = userWords(wordsOffset + i);
         const committed = await one('server_commit_live_call_turn_v1', {
@@ -620,6 +623,10 @@ async function main(): Promise<void> {
     ];
     // A reliability-only run (R1 - R4, no measurement) for iterating on the scenarios; never what CI or the record runs.
     if (process.env.S8B05_CP3_RELIABILITY_ONLY === '1') modes.length = 0;
+    // The DEC-R1-1 matrix alone (below): no M0 / M1 / M1′ load and no R1 - R4. It runs unchanged on a database without the
+    // amendment (adoption at the first turn), which is how its "before" is measured.
+    const O3B_ONLY = process.env.S8B05_CP3_SCENARIO === 'O3B';
+    if (O3B_ONLY) modes.length = 0;
     report.permitProfiles = { SHIPPED: { total: Number(permitPolicyBefore.total_permits), minimum: Number(permitPolicyBefore.minimum_permits),
       weight: Number(permitPolicyBefore.live_generation_weight), perUser: Number(permitPolicyBefore.per_user_permits) }, CALIBRATED: PERMIT_PROFILES.CALIBRATED, CONSERVATIVE: PERMIT_PROFILES.CONSERVATIVE };
     const setPermitPolicy = async (profile: Profile | null) => {
@@ -662,6 +669,13 @@ async function main(): Promise<void> {
       })();
       const started = now();
       const calls = await Promise.all(people.map((p) => begin(p)));
+      // The connection kicks the worker once the call is ACTIVE (O3b as amended by DEC-R1-1): the pre-call exchange's analysis
+      // may start while the person has not spoken yet.
+      for (const x of calls) signal.kick(x.session, 'CALL_ACTIVATED');
+      const adoptedAtActivation = Number((await sql(`SELECT count(*)::int AS n FROM voice_private.call_analysis_queue
+        WHERE session_id = ANY($1::uuid[]) AND half = 'EXCHANGE' AND call_turn_index = $2`, [sessions, PRE_CALL]))[0]!.n);
+      check(`${mode.key}: the activation adopted every pre-call exchange before any turn (O3b as amended by DEC-R1-1)`,
+        adoptedAtActivation === preCall.length, `${adoptedAtActivation}/${preCall.length}`);
       await Promise.all(calls.map((x, i) => runCall(x, i === 0 ? WORKLOAD.longTurns : WORKLOAD.shortTurns, i * 40, prov, signal, timings)));
       const callsWallMs = now() - started;
       // The fake provider's utilization while the calls ran (replies and analysis together): above ~0.8, a queue forms.
@@ -737,7 +751,7 @@ async function main(): Promise<void> {
         for (const [i, x] of calls.entries()) {
           const seen = observations.filter((o) => o.kind === 'ESTABLISHED' && o.sessionId === x.session).map((o) => `${(o as { callTurnIndex: number }).callTurnIndex}:${(o as { half: string }).half}`);
           const turns = i === 0 ? WORKLOAD.longTurns : WORKLOAD.shortTurns;
-          const expected = ['0:EXCHANGE', ...Array.from({ length: turns }, (_v, k) => [`${k + 1}:USER`, `${k + 1}:ASSISTANT`]).flat()];
+          const expected = [`${PRE_CALL}:EXCHANGE`, ...Array.from({ length: turns }, (_v, k) => [`${k + 1}:USER`, `${k + 1}:ASSISTANT`]).flat()];
           check(`${mode.key} session ${i}: established in the analysis order (pre-call first, FIFO by call_turn_index)`, JSON.stringify(seen) === JSON.stringify(expected),
             `${seen.length}/${expected.length}`);
         }
@@ -801,8 +815,86 @@ async function main(): Promise<void> {
       process.stdout.write(`  REPORTED  ${key} exceeds the voice protection limit: P50 +${value.p50} ms, P95 +${value.p95} ms (measured, not enforced)\n`);
     }
 
+    // ------------------------------------------------------------------------------------- DEC-R1-1: the first USER half
+    // O3b as amended by DEC-R1-1: the activation adopts the session's unestablished pre-call exchanges, so their analysis runs
+    // while the person has not spoken yet. Measured, per cell of 7 concurrent calls: the first turn's commit -> its USER half
+    // committed, and the first turn's First Audio, for 0, 1 and 2 pending pre-call exchanges and a gap from the activation to
+    // the first commit of 0.5, 1.5, 3 and 6 s, in M1 (the default) and M1′, under the shipped permit policy. Each cell's
+    // providers use the same seeds before and after, and its order is checked: every pre-call exchange first, then 1:USER.
+    if (O3B_ONLY || process.env.S8B05_CP3_O3B === '1') {
+      // The permit profile of the matrix (S8B05_CP3_O3B_PROFILE; the shipped policy by default).
+      const o3bProfile = (process.env.S8B05_CP3_O3B_PROFILE ?? 'SHIPPED') as Profile;
+      assert.ok(o3bProfile in PERMIT_PROFILES, `unknown profile ${o3bProfile}`);
+      await setPermitPolicy(o3bProfile);
+      const o3b: Record<string, Record<string, unknown>> = {};
+      const gaps = [500, 1500, 3000, 6000];
+      const O3B_CALLS = Number(process.env.S8B05_CP3_O3B_CALLS ?? WORKLOAD.shortCalls + 1);
+      const O3B_REPS = Number(process.env.S8B05_CP3_O3B_REPS ?? 1);
+      report.o3bCallsPerCell = O3B_CALLS;
+      report.o3bRepetitions = O3B_REPS;
+      for (const start of ['AFTER_FIRST_AUDIO', 'AT_COMMIT'] as const) {
+        const key = start === 'AT_COMMIT' ? 'M1_PRIME' : 'M1';
+        o3b[key] = {};
+        for (const pending of [0, 1, 2]) {
+          for (const [g, gap] of gaps.entries()) {
+            // A cell: O3B_CALLS concurrent calls (7: the shared provider's contention; 1: the person's own voice path alone),
+            // repeated O3B_REPS times on fresh people, every sample kept.
+            const firstHalf: number[] = [];
+            const firstAudioMs: number[] = [];
+            const counts = { SEGMENTATION: 0, FOCUS: 0, THREAD: 0, CONTINUITY: 0, items: 0 };
+            let ordered = true;
+            for (let rep = 0; rep < O3B_REPS; rep += 1) {
+              const prov = providers(new SharedCapacity(WORKLOAD.providerSlots), 3000 + pending * 10 + g + rep * 100);
+              const signal = new LiveCallAnalysisSignal();
+              const observations: CallAnalysisObservation[] = [];
+              tracer.spans = [];
+              const workers = [makeWorker(prov, start, observations, 'A'), makeWorker(prov, start, observations, 'B')];
+              const route = new Map<string, number>();
+              signal.bind({ kick: (sessionId, reason) => workers[(route.get(sessionId) ?? 0) % workers.length]!.kick(sessionId, reason) });
+              for (const w of workers) w.start();
+              const people = await Promise.all(Array.from({ length: O3B_CALLS }, () => person()));
+              for (const [i, p] of people.entries()) {
+                route.set(p.session, i);
+                for (let k = 0; k < pending; k += 1) await textExchange(p.user, p.session, userWords(200 + i * 3 + k), 'تمام، وبعدين؟');
+              }
+              const sessions = people.map((p) => p.session);
+              const timings: TurnTiming[] = [];
+              const calls = await Promise.all(people.map((p) => begin(p)));
+              for (const x of calls) signal.kick(x.session, 'CALL_ACTIVATED');
+              await Promise.all(calls.map((x, i) => runCall(x, 1, 300 + i, prov, signal, timings, { firstSpeakMs: gap })));
+              await drained(sessions);
+              for (const w of workers) await w.stop();
+              signal.bind(null);
+              for (const tm of timings) {
+                const o = observations.find((e) => e.kind === 'ESTABLISHED' && e.sessionId === tm.session && e.callTurnIndex === 1 && e.half === 'USER');
+                if (o) firstHalf.push(o.at - tm.commitAt);
+                firstAudioMs.push(tm.firstAudioAt - tm.commitAt);
+              }
+              ordered &&= calls.every((x) => {
+                const seen = observations.filter((o) => o.kind === 'ESTABLISHED' && o.sessionId === x.session).map((o) => { const e = o as { callTurnIndex: number; half: string }; return e.half === 'EXCHANGE' ? 'EXCHANGE' : `${e.callTurnIndex}:${e.half}`; });
+                return JSON.stringify(seen) === JSON.stringify([...Array.from({ length: pending }, () => 'EXCHANGE'), '1:USER', '1:ASSISTANT']);
+              });
+              for (const kind of ['SEGMENTATION', 'FOCUS', 'THREAD', 'CONTINUITY'] as const) counts[kind] += prov.counts[kind];
+              counts.items += calls.length * (pending + 2);
+            }
+            const analysisCalls = counts.SEGMENTATION + counts.FOCUS + counts.THREAD + counts.CONTINUITY;
+            check(`DEC-R1-1 ${key}, ${pending} pending, gap ${gap} ms: every pre-call exchange first, then 1:USER, 1:ASSISTANT, each once`,
+              ordered && firstHalf.length === O3B_CALLS * O3B_REPS);
+            o3b[key]![`pending${pending}_gap${gap}`] = {
+              firstUserHalfMs: summary(firstHalf),
+              firstAudioMs: summary(firstAudioMs),
+              analysisCalls: { ...counts, total: analysisCalls },
+            };
+            process.stdout.write(`  DEC-R1-1 ${key} pending ${pending} gap ${gap}: ${JSON.stringify(o3b[key]![`pending${pending}_gap${gap}`])}\n`);
+          }
+        }
+      }
+      report.o3bFirstUserHalf = o3b;
+      report.o3bProfile = o3bProfile;
+    }
+
     // ------------------------------------------------------------------------------------- reliability scenarios
-    {
+    if (!O3B_ONLY) {
       // R1 crashes, on real PostgreSQL. (a) An EXCHANGE item (a pre-call exchange) is committed by the full coordinator and
       // the process dies before the worker's COMPLETE settlement: the leases lapse, another instance claims it again, and it
       // is replayed from storage with ZERO provider calls. (b) A half is committed and the process dies before the session
@@ -842,13 +934,14 @@ async function main(): Promise<void> {
 
       const crashed = await run('crashing', () => true);
       check('R1a: the crashed instance committed the pre-call EXCHANGE and died before settling it (still CLAIMED)',
-        crashed.established.join(',') === '0:EXCHANGE' && (crashed.spent('0:EXCHANGE') ?? 0) > 0 && await state('EXCHANGE', 0) === 'CLAIMED');
+        crashed.established.join(',') === `${PRE_CALL}:EXCHANGE` && (crashed.spent(`${PRE_CALL}:EXCHANGE`) ?? 0) > 0 && await state('EXCHANGE', PRE_CALL) === 'CLAIMED');
       await lapse();
       const second = await run('survivor-1', (half) => half !== 'EXCHANGE');
       check('R1a: another instance re-claimed it after the lease lapsed and replayed it from storage with ZERO provider calls',
-        second.established[0] === '0:EXCHANGE' && second.spent('0:EXCHANGE') === 0 && await state('EXCHANGE', 0) === 'COMPLETE', `spent ${String(second.spent('0:EXCHANGE'))}`);
+        second.established[0] === `${PRE_CALL}:EXCHANGE` && second.spent(`${PRE_CALL}:EXCHANGE`) === 0 && await state('EXCHANGE', PRE_CALL) === 'COMPLETE',
+        `spent ${String(second.spent(`${PRE_CALL}:EXCHANGE`))}`);
       check('R1b: that instance committed the USER half and died before returning the lease: the item is COMPLETE by its own commit',
-        second.established.join(',') === '0:EXCHANGE,1:USER' && await state('USER', 1) === 'COMPLETE');
+        second.established.join(',') === `${PRE_CALL}:EXCHANGE,1:USER` && await state('USER', 1) === 'COMPLETE');
       await lapse();
       const third = await run('survivor-2', () => false);
       check('R1b: the next instance never establishes the committed half again; it goes on with the reply\'s half', third.established.join(',') === '1:ASSISTANT', third.established.join(','));
@@ -856,7 +949,7 @@ async function main(): Promise<void> {
         WHERE session_id = $1 GROUP BY source_turn_id HAVING count(*) > 1) d`, [x.session]))[0]!.n);
       check('R1: the order completed after both crashes with one batch per turn', await openItems([x.session]) === 0 && duplicates === 0);
     }
-    {
+    if (!O3B_ONLY) {
       // R2 a provider outage / 429: retried with backoff (RETRY_WAIT), never skipped; the next turn waits for it.
       const prov = providers(new SharedCapacity(WORKLOAD.providerSlots), 8);
       const observations: CallAnalysisObservation[] = [];
@@ -877,7 +970,7 @@ async function main(): Promise<void> {
       const order = observations.filter((o) => o.kind === 'ESTABLISHED').map((o) => `${(o as { callTurnIndex: number }).callTurnIndex}:${(o as { half: string }).half}`);
       check('R2: after the retry the order is intact: 1 USER, 1 ASSISTANT, 2 USER, 2 ASSISTANT', JSON.stringify(order) === JSON.stringify(['1:USER', '1:ASSISTANT', '2:USER', '2:ASSISTANT']), order.join(','));
     }
-    {
+    if (!O3B_ONLY) {
       // R3 S3 after the end: a turn committed with its Safety never stored; the call ends; the exchange stays OPEN; the sweep
       // recomputes Safety with the same gate over the same reader, stores it once, closes it once, and its halves are analyzed.
       const prov = providers(new SharedCapacity(WORKLOAD.providerSlots), 9);
@@ -911,7 +1004,7 @@ async function main(): Promise<void> {
       check('R3: the swept exchange\'s halves are analyzed in order after the end', settledAfterEnd
         && JSON.stringify(order) === JSON.stringify(['1:USER', '1:ASSISTANT', '2:USER', '2:ASSISTANT']), `${order.join(',')} | ${states}`);
     }
-    {
+    if (!O3B_ONLY) {
       // R4 Safety recovery across a REAL restart: the call ends with its last exchange's Safety never stored. Process A (a
       // separate OS process) runs a worker whose every context read fails: S3 leaves the exchange OPEN, scan after scan,
       // with no default disposition, while the facts that may be committed (1 USER, 1 ASSISTANT, 2 USER) are; then A dies
@@ -976,10 +1069,11 @@ async function main(): Promise<void> {
     report.gatesEnabledBeforeProof = gatesEnabledBefore;
     report.gatesEnabledDuringProof = enabledAfter;
   } finally {
+    const mediaKeys = await fixtureMediaKeys(pool, humans);
     await teardown(pool, humans, gatesBefore, policyBefore, permitPolicyBefore);
     const enabledFinal = Number((await sql("SELECT count(*) AS n FROM voice_private.voice_launch_capability_states WHERE feature_flag_state = 'ENABLED'"))[0]!.n);
     report.gatesEnabledAfterTeardown = enabledFinal;
-    report.fixtureRowsLeftAfterTeardown = await fixtureRowsLeft(pool, humans);
+    report.fixtureRowsLeftAfterTeardown = await fixtureRowsLeft(pool, humans, mediaKeys);
     await pool.end();
   }
   assert.equal(report.gatesEnabledAfterTeardown, report.gatesEnabledBeforeProof, 'every gate is restored');
@@ -990,15 +1084,22 @@ async function main(): Promise<void> {
   process.stdout.write(`S8B-05 CP3 synthetic proof: ${(report.checks as string[]).length} checks passed; no provider, no paid API, no real person, no audio.\n`);
 }
 
+/** The storage keys of the fixtures' recording objects, read before the teardown removes the objects. */
+async function fixtureMediaKeys(pool: PgPool, humans: string[]): Promise<string[]> {
+  return (await pool.query(`SELECT o.storage_key FROM voice_private.recording_objects o JOIN voice_private.recordings r ON r.id = o.recording_id
+    WHERE r.user_id = ANY($1::uuid[])`, [humans])).rows.map((row) => String(row.storage_key));
+}
+
 /** What the teardown left of the fixture humans: every count must be zero (a later suite shares this database). */
-async function fixtureRowsLeft(pool: PgPool, humans: string[]): Promise<Record<string, number>> {
+async function fixtureRowsLeft(pool: PgPool, humans: string[], mediaKeys: readonly string[]): Promise<Record<string, number>> {
   const [row] = (await pool.query(`SELECT (SELECT count(*) FROM voice_private.calls WHERE user_id = ANY($1::uuid[]))::int AS calls,
       (SELECT count(*) FROM voice_private.call_exchanges WHERE user_id = ANY($1::uuid[]))::int AS exchanges,
       (SELECT count(*) FROM voice_private.call_analysis_queue WHERE user_id = ANY($1::uuid[]))::int AS queue_items,
       (SELECT count(*) FROM voice_private.recordings WHERE user_id = ANY($1::uuid[]))::int AS recordings,
       (SELECT count(*) FROM public.conversation_unit_commit_batches WHERE user_id = ANY($1::uuid[]))::int AS commit_batches,
       (SELECT count(*) FROM public.runtime_event_outbox WHERE subject_user_id = ANY($1::uuid[]))::int AS outbox_events,
-      (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))::int AS users`, [humans])).rows;
+      (SELECT count(*) FROM introduction_sharing_private.media_erasure_queue WHERE storage_key = ANY($2::text[]))::int AS erasure_queue_keys,
+      (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))::int AS users`, [humans, mediaKeys])).rows;
   return row as Record<string, number>;
 }
 
@@ -1010,6 +1111,12 @@ async function teardown(pool: PgPool, humans: string[], gates: Array<Record<stri
     await client.query("SET LOCAL session_replication_role = 'replica'");
     const recordings = 'SELECT id FROM voice_private.recordings WHERE user_id = ANY($1::uuid[])';
     await client.query(`DELETE FROM voice_private.recording_gaps WHERE recording_id IN (${recordings})`, [humans]);
+    // A call's end seals its recording, which queues every never-uploaded segment's key for erasure (0183
+    // seal_call_recording_v1). The queue keys on storage_key, so the user_id sweep below never reaches it: left behind, the
+    // keys come due minutes later and fill the media erasure worker's oldest-first claim of 25 (it starved the S6-06 media
+    // proof's P04 in API CI). The fixtures' keys leave with their objects.
+    await client.query(`DELETE FROM introduction_sharing_private.media_erasure_queue WHERE storage_key IN
+      (SELECT o.storage_key FROM voice_private.recording_objects o WHERE o.recording_id IN (${recordings}))`, [humans]);
     await client.query(`DELETE FROM voice_private.recording_objects WHERE recording_id IN (${recordings})`, [humans]);
     // The outbox names its subject `subject_user_id`, so the `user_id` sweep below never reaches it: a fixture event left
     // PENDING is older than any later event and fills the publisher's oldest-first batch (it broke the A2 smoke in CI).

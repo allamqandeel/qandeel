@@ -35,8 +35,9 @@
 --      and close it CALL_ENDING.
 --   H. The forward replacements (database/live-call-0191-substitutions.mjs, each the latest statement verbatim with only
 --      the declared edits): the writer (INPUT-01: a numbered USER turn is committable while GENERATING), the full
---      coordinator (O3a, B3), 0190's close (R7′: the ASSISTANT half queued by the close), 0190's commit (O3b: the first
---      turn adopts the unestablished pre-call exchanges), 0189's end (G).
+--      coordinator (O3a, B3), 0190's close (R7′: the ASSISTANT half queued by the close), 0189's activation (O3b as amended by
+--      DEC-R1-1: the activation adopts the unestablished pre-call exchanges), 0190's commit (O3b: the first turn adopts
+--      what completed after the activation), 0189's end (G).
 --
 -- ## What is deliberately NOT here
 --
@@ -312,14 +313,25 @@ END$$;
 -- The session's completed exchanges (a COMPLETED USER turn and its COMPLETED reply) that are not call turns, have no
 -- commitment batch yet, follow the session's last established exchange (an older gap is the text path's own existing
 -- backlog, unchanged by this contract: v1.1 §1.4) and are in no queue yet: in their current order (the text context's
--- created_at, id), numbered 1 - n … 0.
-CREATE FUNCTION voice_private.adopt_pre_call_exchanges_v1(p_call_id uuid, p_user_id uuid, p_session_id uuid) RETURNS integer
+-- created_at, id).
+--
+-- O3b as amended by DEC-R1-1 (the Product Owner, 2026-11-03; record §11.11): the call's ACTIVATION adopts them, so their
+-- analysis runs while the person has not spoken yet, and the call's first turn adopts again only what completed in
+-- between (a text reply still generating at the activation). Numbering keeps the one order: a first adoption ends at
+-- -p_reserve (the activation keeps p_reserve slots free below 1), a later one continues after the call's last adopted item;
+-- an exchange that would not fit below 1 stays the text path's own, as one completing after the first turn always is.
+CREATE FUNCTION voice_private.adopt_pre_call_exchanges_v1(p_call_id uuid, p_user_id uuid, p_session_id uuid, p_reserve integer)
+RETURNS integer
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_last_at timestamptz;
   v_last_id uuid;
+  v_after integer;
   v_count integer;
 BEGIN
+  IF p_reserve IS NULL OR p_reserve < 0 THEN RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023'; END IF;
+  SELECT max(q.call_turn_index) INTO v_after
+    FROM voice_private.call_analysis_queue q WHERE q.call_id = p_call_id AND q.half = 'EXCHANGE';
   SELECT u.created_at, u.id INTO v_last_at, v_last_id
     FROM public.conversation_turns u
    WHERE u.session_id = p_session_id AND u.user_id = p_user_id AND u.role = 'USER'
@@ -338,8 +350,11 @@ BEGIN
        AND NOT EXISTS (SELECT 1 FROM voice_private.call_analysis_queue q WHERE q.turn_id = u.id)
        AND (v_last_at IS NULL OR (u.created_at, u.id) > (v_last_at, v_last_id)))
   INSERT INTO voice_private.call_analysis_queue (call_id, call_turn_index, half, user_id, session_id, turn_id, assistant_turn_id)
-  SELECT p_call_id, (p.n - p.total)::integer, 'EXCHANGE', p_user_id, p_session_id, p.user_turn_id, p.assistant_turn_id
-    FROM pending p;
+  SELECT p_call_id, x.idx, 'EXCHANGE', p_user_id, p_session_id, x.user_turn_id, x.assistant_turn_id
+    FROM (SELECT p.user_turn_id, p.assistant_turn_id,
+                 (CASE WHEN v_after IS NULL THEN p.n - p.total - p_reserve ELSE v_after + p.n END)::integer AS idx
+            FROM pending p) x
+   WHERE x.idx < 1;
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RETURN v_count;
 END$$;
@@ -1416,12 +1431,64 @@ BEGIN
   VALUES (p_call_id, v_index, p_user_id, v_call.session_id, p_turn_id, p_connection_epoch);
   INSERT INTO voice_private.call_analysis_queue (call_id, call_turn_index, half, user_id, session_id, turn_id)
   VALUES (p_call_id, v_index, 'USER', p_user_id, v_call.session_id, p_turn_id);
-  -- S8B-05 CP3 (0191, O3b / B1): the call's first turn adopts the session's unestablished earlier exchanges at the head of its
-  -- analysis order.
+  -- S8B-05 CP3 (0191, O3b / B1, as amended by DEC-R1-1): the call's first turn adopts the session's unestablished earlier
+  -- exchanges that completed after its activation, after the activation's, at the head of its analysis order.
   IF v_index = 1 THEN
-    PERFORM voice_private.adopt_pre_call_exchanges_v1(p_call_id, p_user_id, v_call.session_id);
+    PERFORM voice_private.adopt_pre_call_exchanges_v1(p_call_id, p_user_id, v_call.session_id, 0);
   END IF;
   RETURN QUERY SELECT 'COMMITTED'::text, v_index, p_turn_id, v_open.call_turn_index, v_closed_turn, v_closed_delivery, v_closed_mark;
+END$$;
+
+-- Forward-replaced from 0189_s8b_05_live_call_authority_v1.sql (substitution "activate-call-o3b" in database/live-call-0191-substitutions.mjs).
+CREATE OR REPLACE FUNCTION public.server_activate_call_v1(p_user_id uuid, p_call_id uuid, p_connection_epoch bigint)
+RETURNS TABLE (outcome text, started_at timestamptz, recording_id uuid, retention_expires_at timestamptz)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_policy voice_private.live_call_policy := voice_private.live_call_policy_v1();
+  v_call voice_private.calls;
+  v_now timestamptz;
+  v_open record;
+BEGIN
+  IF p_user_id IS NULL OR p_call_id IS NULL OR p_connection_epoch IS NULL THEN
+    RAISE EXCEPTION 'VOICE_REQUEST_INVALID' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_call FROM voice_private.calls c WHERE c.id = p_call_id AND c.user_id = p_user_id FOR UPDATE;
+  IF NOT FOUND THEN RETURN QUERY SELECT 'NOT_FOUND'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN; END IF;
+  IF v_call.state = 'ENDED' THEN RETURN QUERY SELECT 'ENDED'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN; END IF;
+  IF v_call.connection_epoch <> p_connection_epoch THEN
+    RETURN QUERY SELECT 'FENCED'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN;
+  END IF;
+  IF v_call.state = 'ACTIVE' THEN
+    RETURN QUERY SELECT 'ACTIVE'::text, v_call.started_at, r.id, r.retention_expires_at
+                   FROM voice_private.recordings r WHERE r.call_id = p_call_id;
+    RETURN;
+  END IF;
+  IF v_call.state <> 'CONNECTING' THEN
+    RETURN QUERY SELECT 'NOT_CONNECTING'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN;
+  END IF;
+  v_now := clock_timestamp();
+  IF v_call.connect_deadline <= v_now THEN
+    PERFORM voice_private.end_call_v1(p_call_id, 'FAILED', 'RECOVERY');
+    RETURN QUERY SELECT 'ENDED'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN;
+  END IF;
+  IF NOT voice_private.capability_enabled_v1('PERSONAL_LIVE_CALL') THEN
+    RETURN QUERY SELECT 'NOT_AVAILABLE_NOW'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN;
+  END IF;
+  IF voice_private.consent_state_v1(p_user_id) <> 'GRANTED_CURRENT' THEN
+    RETURN QUERY SELECT 'CONSENT_REQUIRED'::text, NULL::timestamptz, NULL::uuid, NULL::timestamptz; RETURN;
+  END IF;
+  UPDATE voice_private.calls c
+     SET state = 'ACTIVE', started_at = v_now, seat_lease_until = v_now + make_interval(secs => v_policy.seat_lease_seconds)
+   WHERE c.id = p_call_id;
+  SELECT * INTO v_open FROM public.server_open_call_recording_v1(p_user_id, v_call.session_id, p_call_id, v_now,
+                                                                  v_policy.seat_lease_seconds) o;
+  IF v_open.outcome IS DISTINCT FROM 'OPENED' THEN
+    RAISE EXCEPTION 'LIVE_CALL_RECORDING_NOT_OPENED' USING ERRCODE = '55000';
+  END IF;
+  -- S8B-05 CP3 (0191, O3b as amended by DEC-R1-1): the activation adopts the session's unestablished pre-call exchanges, keeping
+  -- 1000 slots below the first turn for an exchange that completes before it.
+  PERFORM voice_private.adopt_pre_call_exchanges_v1(p_call_id, p_user_id, v_call.session_id, 1000);
+  RETURN QUERY SELECT 'ACTIVE'::text, v_now, v_open.recording_id, v_open.retention_expires_at;
 END$$;
 
 -- Forward-replaced from 0189_s8b_05_live_call_authority_v1.sql (substitution "end-call-closes-exchange" in database/live-call-0191-substitutions.mjs).
@@ -2022,7 +2089,7 @@ BEGIN
     'voice_private.take_session_semantic_lease_v1(uuid,uuid,uuid,text,integer)',
     'voice_private.drop_session_semantic_lease_v1(uuid,uuid)',
     'voice_private.user_in_critical_window_v1(uuid)',
-    'voice_private.adopt_pre_call_exchanges_v1(uuid,uuid,uuid)',
+    'voice_private.adopt_pre_call_exchanges_v1(uuid,uuid,uuid,integer)',
     'public.commit_conversation_units_call_half_v1(uuid,uuid,uuid,integer,text,uuid,uuid,jsonb,jsonb,jsonb,jsonb,jsonb,text,text,text,text,text,text,text,text,text,text,integer,text,text,text,text,text,integer,text,text,text,text,text,integer,text,text,integer,bigint,bigint)',
     'public.server_acquire_background_permit_v1(uuid,text,uuid,boolean)',
     'public.server_release_background_permit_v1(uuid)',

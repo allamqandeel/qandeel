@@ -275,9 +275,36 @@ test('0191 is forward-only, one transaction, opens no voice gate, grants no clie
   const at = (needle) => { const i = ci.indexOf(needle); assert.ok(i >= 0, `CI runs ${needle}`); return i; };
   assert.ok(at('run: npm run verify:live-call-spoken-turn:integration') < at('run: npm run verify:live-call-ordered-halves:integration'), '0191 is verified after 0190');
   assert.ok(at('run: npm run prove:live-call-spoken-turn-synthetic:integration') < at('run: npm run prove:live-analysis-synthetic:integration'), 'CP3 proof after the CP2 proof');
+  // DEC-R1-3 (the Product Owner, 2026-11-03): the SHIPPED, CALIBRATED and CONSERVATIVE results stay visible in CI; only M1
+  // under CONSERVATIVE, a test profile and not a launch setting, is enforced; the others are reported, never hidden.
+  assert.match(ci, /S8B05_CP3_PROFILES: SHIPPED,CALIBRATED,CONSERVATIVE\n\s*run: npm run prove:live-analysis-synthetic:integration/u,
+    'CI runs the CP3 proof under all three permit profiles');
   const proof = read('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts');
+  assert.match(codeOnly(proof), /if \(impact\.M1_CONSERVATIVE\) \{\s*check\(/u, 'the voice limit is enforced for M1 under CONSERVATIVE');
+  assert.match(proof, /REPORTED {2}\$\{key\} exceeds the voice protection limit/u, 'every other profile is reported when it exceeds it');
   assert.match(proof, /S8B05_CP3_PROOF_REFUSED: DATABASE_URL must name a loopback throwaway database/u);
   assert.doesNotMatch(codeOnly(proof), /api\.deepseek\.com|speechmatics\.com|googleapis\.com|aiplatform|openai\.com/u, 'the proof reaches no provider');
+});
+
+// O3b as amended by DEC-R1-1 (the Product Owner, 2026-11-03; record §11.11): the call's ACTIVATION adopts the session's
+// unestablished pre-call exchanges, in the activation's own transaction; the first turn adopts only what completed after it,
+// after the activation's items (one order); the connection then kicks the worker in memory, never awaited, no database call.
+test('O3b as amended by DEC-R1-1: the activation adopts in its own transaction, the first turn only after it, and the kick stays in memory', () => {
+  const code = codeOnly(read(M0191));
+  const activate = code.slice(code.indexOf('CREATE OR REPLACE FUNCTION public.server_activate_call_v1('));
+  const activateBody = activate.slice(0, activate.indexOf('END$$;'));
+  assert.match(activateBody, /PERFORM voice_private\.adopt_pre_call_exchanges_v1\(p_call_id, p_user_id, v_call\.session_id, 1000\);\s*RETURN QUERY SELECT 'ACTIVE'::text, v_now,/u,
+    'the first ACTIVE adopts, in the same transaction, just before it answers');
+  const commit = code.slice(code.indexOf('CREATE OR REPLACE FUNCTION public.server_commit_live_call_turn_v1('));
+  assert.match(commit.slice(0, commit.indexOf('END$$;')), /IF v_index = 1 THEN\s*PERFORM voice_private\.adopt_pre_call_exchanges_v1\(p_call_id, p_user_id, v_call\.session_id, 0\);/u,
+    'the first turn adopts only what is left, with no reserve');
+  const adopt = code.slice(code.indexOf('CREATE FUNCTION voice_private.adopt_pre_call_exchanges_v1('));
+  assert.match(adopt.slice(0, adopt.indexOf('END$$;')), /CASE WHEN v_after IS NULL THEN p\.n - p\.total - p_reserve ELSE v_after \+ p\.n END[\s\S]*WHERE x\.idx < 1;/u,
+    'a later adoption continues after the call\'s last adopted item and never reaches a turn\'s index');
+  const connection = codeOnly(read('apps/api/src/voice/call/live-call.connection.ts'));
+  assert.match(connection, /this\.sendState\('ACTIVE'\);\s*this\.deps\.analysisKick\?\.\(this\.sessionId!\);/u, 'the kick follows the ACTIVE state');
+  assert.doesNotMatch(connection, /await [^;\n]*analysisKick/u, 'never awaited');
+  assert.match(codeOnly(read('apps/api/src/voice/call/live-call.service.ts')), /analysisKick: \(sessionId\) => this\.analysis\?\.kick\(sessionId, 'CALL_ACTIVATED'\),/u);
 });
 
 test('L2 is the default (M1) and M1′ only when set exactly; the voice path kicks in memory and no reply path asks a permit', () => {
@@ -319,4 +346,32 @@ test('every proof that writes runtime events removes its fixtures\' outbox rows 
     assert.match(text, /count\(\*\) FROM public\.runtime_event_outbox WHERE subject_user_id = ANY\(\$1::uuid\[\]\)\)::int AS (?:events|outbox_events)/u,
       `${path}: what the teardown left of the outbox is counted`);
   }
+});
+
+// S8B-05 CP3 R2 (API CI, the S6-06 media proof's P04 on db832c72): a proof that adds call segments and ends calls leaves no
+// erasure key behind. The END seals the recording, which queues every never-uploaded segment's key (0183
+// seal_call_recording_v1); the queue keys on storage_key, so the teardowns' `user_id` sweep never reaches it. Left behind,
+// 426 `voice-call/` keys came due and filled the media erasure worker's oldest-first claim of 25, so P04's photo keys were
+// never claimed. Every such teardown deletes its fixtures' keys before their objects, and the proof counts what is left.
+test('every proof that seals call recordings removes its fixtures\' erasure queue keys and proves none is left', () => {
+  const proofs = files('apps/api/scripts').filter((p) => p.endsWith('.ts')).filter((p) => {
+    const text = read(p);
+    return text.includes("column_name = 'user_id'") && /server_add_call_segment_v\d/u.test(text) && /server_end_call_v1/u.test(text);
+  });
+  assert.ok(proofs.includes('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts'), 'the CP3 proof is covered');
+  for (const path of proofs) {
+    const text = codeOnly(read(path));
+    const teardown = text.slice(text.indexOf('async function teardown('));
+    const queue = teardown.indexOf('DELETE FROM introduction_sharing_private.media_erasure_queue WHERE storage_key IN');
+    const objects = teardown.indexOf('DELETE FROM voice_private.recording_objects WHERE recording_id IN');
+    assert.ok(queue >= 0, `${path}: the teardown deletes its fixtures' erasure keys`);
+    assert.ok(queue < objects, `${path}: before the objects that name them`);
+    assert.match(text, /count\(\*\) FROM introduction_sharing_private\.media_erasure_queue WHERE storage_key = ANY\(\$2::text\[\]\)\)::int AS erasure_queue_keys/u,
+      `${path}: what the teardown left of the erasure queue is counted`);
+  }
+  // verify-migration-0191's race fixtures are erased through the account erasure, which queues their keys the same way.
+  const verifier = codeOnly(read('database/verify-migration-0191.mjs'));
+  assert.match(verifier, /DELETE FROM introduction_sharing_private\.media_erasure_queue WHERE storage_key = ANY\(\$1::text\[\]\)/u, 'verify-0191 removes its fixtures\' erasure keys');
+  assert.match(verifier, /DELETE FROM account_erasure_private\.media_pending WHERE storage_key = ANY\(\$1::text\[\]\)/u, 'and their pending-erasure rows');
+  assert.match(verifier, /the race fixtures left erasure keys behind/u, 'and proves none is left');
 });

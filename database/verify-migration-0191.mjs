@@ -16,6 +16,9 @@
 //   T6   O3a: the full coordinator refuses every numbered call turn; a text exchange is unchanged
 //   T7   O3b / B1: the unestablished pre-call exchanges after the last established one take the head, in order; the call's
 //        USER half waits for them; the worker establishes them through the full coordinator and settles them COMPLETE
+//   T7b  O3b as amended by DEC-R1-1: the activation adopts once (a retried activation adopts nothing); an exchange completing
+//        between the activation and the first turn is adopted by the first turn after the activation's items; an adoption
+//        that does not fit below 1 adopts nothing
 //   T8   the worker's claim: one claim per session (WAITING for another live claim), an expired lease re-claimed (a crashed
 //        worker), NOT_HOLDER for a stale holder; crash before the commit (nothing written) and after it (ALREADY_SETTLED,
 //        REPLAYED, zero providers)
@@ -291,7 +294,7 @@ async function verifyCatalogue(report) {
   });
   await report.section('T0c every forward-replaced function is its origin statement plus exactly the declared edits, in 0191 and live', async () => {
     const text = readFileSync(new URL(`./migrations/${MIGRATION_0191}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
-    assert.equal(SUBSTITUTIONS.length, 5);
+    assert.equal(SUBSTITUTIONS.length, 6);
     for (const substitution of SUBSTITUTIONS) {
       const declared = substitutedStatement(substitution);
       const written = extractStatement(text, substitution.header);
@@ -438,10 +441,14 @@ async function verifyBehaviour(report) {
       const p1 = await textExchange(user, session, 'لسه ما اتأسسش واحد.', 'طيب.');
       const p2 = await textExchange(user, session, 'ولا ده اتنين.', 'ماشي.');
       const x = await activeCall({ user, session });
+      // RE-ANCHORED by DEC-R1-1 (was: adopted at the first turn, numbered -1, 0): the ACTIVATION adopts them, before the person
+      // has said anything, ending at -1000 (the slots below the first turn kept for an exchange completing before it).
+      assert.deepEqual((await queueOf(session)).map((i) => [i.idx, i.half, i.turn_id].join()),
+        [[-1001, 'EXCHANGE', p1.userTurn], [-1000, 'EXCHANGE', p2.userTurn]].map((r) => r.join()), 'adopted at the activation, before any turn');
       const t = await spokenTurn(x);
       const queue = await queueOf(session);
       assert.deepEqual(queue.map((i) => [i.idx, i.half, i.turn_id, i.assistant_turn_id].join()).concat(JSON.stringify({ old, established, p1, p2 })),
-        [[-1, 'EXCHANGE', p1.userTurn, p1.assistantTurn], [0, 'EXCHANGE', p2.userTurn, p2.assistantTurn], [1, 'USER', t.turn, null]].map((r) => r.join()).concat(JSON.stringify({ old, established, p1, p2 })),
+        [[-1001, 'EXCHANGE', p1.userTurn, p1.assistantTurn], [-1000, 'EXCHANGE', p2.userTurn, p2.assistantTurn], [1, 'USER', t.turn, null]].map((r) => r.join()).concat(JSON.stringify({ old, established, p1, p2 })),
         'the suffix after the last established exchange, in order; the older gap is the text path\'s own');
       assert.ok(!queue.some((i) => i.turn_id === old.userTurn));
       // The worker's turn read: only turns the session's analysis order names, the owner's, at most two.
@@ -452,7 +459,7 @@ async function verifyBehaviour(report) {
       assert.equal((await read(await human(), [t.turn])).length, 0, 'another person reads nothing');
       await rejected(() => read(user, [p1.userTurn, p1.assistantTurn, t.turn]), ['22023'], /VOICE_REQUEST_INVALID/u);
       await rejected(() => commitHalf(x, t.idx, 'USER', t.turn, t.content), ['55000'], /CALL_HALF_OUT_OF_ORDER/u);
-      for (const [idx, e] of [[-1, p1], [0, p2]]) {
+      for (const [idx, e] of [[-1001, p1], [-1000, p2]]) {
         const token = randomUUID();
         const c = await claim(session, token);
         assert.deepEqual([c.outcome, c.call_turn_index, c.half, c.turn_id, c.assistant_turn_id], ['CLAIMED', idx, 'EXCHANGE', e.userTurn, e.assistantTurn]);
@@ -464,6 +471,63 @@ async function verifyBehaviour(report) {
       // The second turn adopts nothing more.
       await spokenTurn(x);
       assert.equal((await queueOf(session)).filter((i) => i.half === 'EXCHANGE').length, 2);
+    });
+
+    await report.isolated('T7b O3b as amended by DEC-R1-1: adopted once, at the activation; what completes before the first turn goes after it; nothing after the first turn; nothing that does not fit', async () => {
+      const user = await human();
+      const session = await newSession(user);
+      assert.equal(await grant(user), 'GRANTED');
+      const p1 = await textExchange(user, session, 'لسه ما اتأسسش.', 'طيب.');
+      // A text reply still generating when the call activates: its USER turn is claimed now and finalized after the activation.
+      const lateContent = 'وده كان لسه بيترد عليه.';
+      await asRole('authenticated', user);
+      const lateUser = randomUUID();
+      await rows('SELECT * FROM create_user_conversation_turn($1, $2, $3, $4)', [lateUser, session, lateContent, null]);
+      await asRole('service_role');
+      await rows('SELECT * FROM claim_conversation_turn($1, $2, $3, $4, $5)', [session, user, lateUser, ...ROUTE]);
+      await owner();
+      await q('UPDATE public.conversation_turns SET created_at = clock_timestamp() WHERE id = $1', [lateUser]);
+      const x = await activeCall({ user, session });
+      assert.deepEqual((await queueOf(session)).map((i) => [i.idx, i.half, i.turn_id].join()), [[-1000, 'EXCHANGE', p1.userTurn].join()],
+        'the activation adopts the completed exchange only; the one still generating is not an exchange yet');
+      // The same activation again (a retried command) adopts nothing more.
+      assert.equal((await one('SELECT * FROM public.server_activate_call_v1($1, $2, 1)', [user, x.call])).outcome, 'ACTIVE');
+      assert.equal((await queueOf(session)).length, 1, 'once per call');
+      await asRole('service_role');
+      const lateAssistant = randomUUID();
+      await rows('SELECT * FROM finalize_conversation_turn_v2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+        [session, user, lateUser, lateAssistant, 'ماشي.', 'ALLOW', randomUUID(), null, null, null]);
+      await owner();
+      await q('UPDATE public.conversation_turns SET created_at = clock_timestamp() WHERE id = $1', [lateAssistant]);
+      const t = await spokenTurn(x);
+      assert.deepEqual((await queueOf(session)).map((i) => [i.idx, i.half, i.turn_id].join()),
+        [[-1000, 'EXCHANGE', p1.userTurn], [-999, 'EXCHANGE', lateUser], [1, 'USER', t.turn]].map((r) => r.join()),
+        "the first turn adopts what completed after the activation, after the activation's items: the one order is kept");
+      await rejected(() => commitHalf(x, t.idx, 'USER', t.turn, t.content), ['55000'], /CALL_HALF_OUT_OF_ORDER/u);
+      for (const [idx, userTurn, content, assistantTurn, reply] of [[-1000, p1.userTurn, p1.content, p1.assistantTurn, p1.reply],
+        [-999, lateUser, lateContent, lateAssistant, 'ماشي.']]) {
+        const token = randomUUID();
+        const c = await claim(session, token);
+        assert.deepEqual([c.outcome, c.call_turn_index, c.turn_id], ['CLAIMED', idx, userTurn], 'claimed in order');
+        await commitExchange(x, userTurn, content, assistantTurn, reply);
+        assert.equal((await settle(x, idx, 'EXCHANGE', token, 'COMPLETE')).queue_state, 'COMPLETE');
+      }
+      assert.equal((await commitHalf(x, t.idx, 'USER', t.turn, t.content)).outcome, 'COMMITTED');
+      // After the first turn a text exchange is the text path's own, unchanged.
+      await playedReply(x, t.idx);
+      await textExchange(user, session, 'بعد أول دور.', 'تمام.');
+      await spokenTurn(x);
+      assert.equal((await queueOf(session)).filter((i) => i.half === 'EXCHANGE').length, 2, 'the second turn adopts nothing');
+      // An adoption that would not fit below the first turn adopts nothing (it stays the text path's own) and never takes a
+      // turn's index.
+      const y = await activeCall();
+      const e = await textExchange(y.user, y.session, 'آخر واحد.', 'تمام.');
+      await q(`INSERT INTO voice_private.call_analysis_queue (call_id, call_turn_index, half, user_id, session_id, turn_id, assistant_turn_id)
+        VALUES ($1, 0, 'EXCHANGE', $2, $3, $4, $5)`, [y.call, y.user, y.session, e.userTurn, e.assistantTurn]);
+      const g = await textExchange(y.user, y.session, 'ده مش هيلحق.', 'تمام.');
+      assert.equal((await rows('SELECT voice_private.adopt_pre_call_exchanges_v1($1, $2, $3, 0) AS n', [y.call, y.user, y.session]))[0].n, 0);
+      assert.ok(!(await queueOf(y.session)).some((i) => i.turn_id === g.userTurn), 'not adopted past 0');
+      await rejected(() => rows('SELECT voice_private.adopt_pre_call_exchanges_v1($1, $2, $3, -1) AS n', [y.call, y.user, y.session]), ['22023'], /VOICE_REQUEST_INVALID/u);
     });
 
     await report.isolated('T8 claims: one per session, an expired lease re-claimed, NOT_HOLDER for a stale holder; crash before the commit (nothing written), after it (ALREADY_SETTLED, REPLAYED)', async () => {
@@ -823,6 +887,11 @@ async function removeRaceFixtures(calls, gate, policy, permits) {
     assert.ok(['ENDED', 'ALREADY_ENDED'].includes(ended.outcome), ended.outcome);
   }
   await q('DELETE FROM voice_private.background_provider_permits WHERE user_id = ANY($1::uuid[])', [humans]);
+  // The account erasure queues the fixtures' segment keys for physical erasure (0183 erase_voice_v1), and those keys are
+  // never in any store. The queue keys on storage_key, so nothing below reaches them: left behind, they come due and take
+  // places in the media erasure worker's oldest-first claim of a later suite (S8B-05 CP3 R2, the S6-06 proof's P04).
+  const mediaKeys = (await rows(`SELECT o.storage_key FROM voice_private.recording_objects o JOIN voice_private.recordings r ON r.id = o.recording_id
+      WHERE r.user_id = ANY($1::uuid[])`, [humans])).map((row) => row.storage_key);
   for (const user of humans) {
     const [del] = await rows(`INSERT INTO personal_data_private.account_deletions (user_id, command_id, status, requested_at, final_at)
         VALUES ($1, gen_random_uuid(), 'SCHEDULED', clock_timestamp() - interval '8 days', clock_timestamp() - interval '1 day') RETURNING id`, [user]);
@@ -831,6 +900,8 @@ async function removeRaceFixtures(calls, gate, policy, permits) {
   await q('BEGIN');
   try {
     await q("SET LOCAL session_replication_role = 'replica'");
+    await q('DELETE FROM introduction_sharing_private.media_erasure_queue WHERE storage_key = ANY($1::text[])', [mediaKeys]);
+    await q('DELETE FROM account_erasure_private.media_pending WHERE storage_key = ANY($1::text[])', [mediaKeys]);
     await q('DELETE FROM personal_data_private.account_deletions WHERE user_id = ANY($1::uuid[])', [humans]);
     if (gate) {
       await q(`UPDATE voice_private.voice_launch_capability_states SET feature_flag_state = $2, launch_requirements_state = $3,
@@ -857,6 +928,9 @@ async function removeRaceFixtures(calls, gate, policy, permits) {
     throw error;
   }
   await rt.removeFixtureHumans(humans);
+  const [left] = await rows(`SELECT (SELECT count(*) FROM introduction_sharing_private.media_erasure_queue WHERE storage_key = ANY($1::text[]))::int AS queue,
+      (SELECT count(*) FROM account_erasure_private.media_pending WHERE storage_key = ANY($1::text[]))::int AS pending`, [mediaKeys]);
+  assert.deepEqual([left.queue, left.pending], [0, 0], `the race fixtures left erasure keys behind: ${JSON.stringify(left)}`);
 }
 
 runVerifier('0191', async (setStage) => {

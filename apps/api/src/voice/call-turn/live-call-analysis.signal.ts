@@ -12,7 +12,9 @@ export interface LiveCallAnalysisListener {
   kick(sessionId: string, reason: LiveCallAnalysisKick): void;
 }
 
-export type LiveCallAnalysisKick = 'TURN_COMMITTED' | 'FIRST_AUDIO' | 'EXCHANGE_CLOSED';
+// CALL_ACTIVATED (O3b as amended by DEC-R1-1): the activation adopted the session's pre-call exchanges, so their analysis
+// can start before the person's first turn.
+export type LiveCallAnalysisKick = 'CALL_ACTIVATED' | 'TURN_COMMITTED' | 'FIRST_AUDIO' | 'EXCHANGE_CLOSED';
 
 @Injectable()
 export class LiveCallAnalysisSignal {

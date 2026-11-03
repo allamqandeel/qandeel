@@ -1,6 +1,6 @@
 # QANDEEL S8B-05 — Integrated Live Call: Implementation Record v1
 
-**Checkpoint:** S8B-05 CP3 — UNDER REVIEW (2026-11-02; R1, the Product Owner's correction order on PR #377, 2026-11-03, §11.10). CP1 (Call Authority, Gateway, Admission & User Track) is
+**Checkpoint:** S8B-05 CP3 — UNDER REVIEW (2026-11-02; R1, the Product Owner's correction order on PR #377, 2026-11-03, §11.10; R2, the Product Owner's decisions on R1 and the API CI P04 fix, 2026-11-03, §11.11 – §11.14). CP1 (Call Authority, Gateway, Admission & User Track) is
 **merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`; CP2 (Realtime Spoken Turn,
 QANDEEL Reply & Playout Truth, §10) is **merged** through [PR #375](https://github.com/allamqandeel/qandeel/pull/375) as
 `f5de4c27`. CP3 (Ordered Half-Exchange Establishment & Fast Live Analysis, §11) is on `s8b/s8b-05-cp3` as a **Draft pull
@@ -700,7 +700,7 @@ real person or voice (random UUIDs, fixed synthetic Arabic sentences, no audio a
 | Queue states | 0191 | `PENDING → CLAIMED` (a lease) `→ COMPLETE`; `RETRY_WAIT` (a provider failure, 2 s then 4 s); `PARKED` (attempts or the daily budget exhausted, never dropped); `ABANDONED_INTEGRITY` (a permanent integrity failure confirmed once, declared with its reply, counted). |
 | O1, O2 | 0191 half coordinator | A half commits only when every earlier item of the session's order is terminal: the reply's half never before its USER half (O1); the next USER half never before the whole previous exchange (O2). Ordering is by `call_turn_index`, never by a timestamp. A refusal is retryable and writes nothing. |
 | O3a | 0191 (full coordinator, origin 0150) | The text path's full coordinator refuses every numbered call turn; a text exchange is unchanged. |
-| O3b / B1 | 0191 (commit turn, origin 0190) | A call's first commit adopts the session's unestablished pre-call exchanges as `EXCHANGE` items numbered `1 − n … 0`, at the head of the order. |
+| O3b / B1 | 0191 (commit turn, origin 0190) | A call's first commit adopts the session's unestablished pre-call exchanges as `EXCHANGE` items numbered `1 − n … 0`, at the head of the order. *(R2, DEC-R1-1: the call's activation now adopts them, numbered to −1000; the first commit adopts only what completed after the activation, §11.11.)* |
 | The Half-Exchange Semantic Coordinator | `commit_conversation_units_call_half_v1` + `ConversationSemanticEstablishmentService.establishCallHalf` | The existing engines are reused unchanged: segmentation → B1 focus → the Thread layer → LF, canonicalized; one half per batch with deterministic batch ids; D-07 (one stale re-evaluation); the USER half is analyzable while its turn is `GENERATING` (the writer, origin 0183, admits a GENERATING USER call turn and nothing else); an empty reply is a zero-unit batch with no segmentation call. It is a separate coordinator, not the full one with the COMPLETED check removed. No hindsight: a half sees only its own CUs and the committed past. |
 | The Durable Ordered Analysis Worker | `apps/api/src/live-analysis/` | One active worker per session across instances (0191's claim takes the session's semantic lease, an analysis lock separate from 0131's, and the head item's lease); FIFO; pre-call first; a crashed claim lapses and is re-claimed; a half committed before a crash is REPLAYED from storage with zero provider calls; B1 – B4, L5; a 429, an outage or the budget is a retry or PARKED, never a skip. |
 | Shared background permits (L2 – L5) | 0191 + `background-permits.ts` | PostgreSQL-shared permits across instances, `max(B_min, B_total − k × live generations)`, two per person, a 120 s lease renewed every 30 s. Covered: call analysis, the text exchange's semantic establishment after its reply, post-response intelligence / memory. Excluded: the live call reply, the typed reply, the voice-note reply (statically pinned). No database call on the voice path (an in-memory kick, never awaited); started calls are never cancelled; waits are bounded and measured. |
@@ -1088,6 +1088,14 @@ The targets are P50 ≤ 1 000 ms and P95 ≤ 2 000 ms for the USER half, with Fi
 - **CI.** CI now runs the CP3 proof under `CONSERVATIVE`, and **asserts** the voice limit there for M1, the default. Every
   other profile it runs is printed as `REPORTED … exceeds` when it fails, measured and never hidden. Pre-R1, CI ran
   `CALIBRATED`.
+- **The Product Owner's decision (DEC-R1-3, 2026-11-03, R2).**
+  - The default values are **not** changed: 0191 keeps `16 / 2 / 2`.
+  - `CONSERVATIVE` is **not** the launch setting merely because the voice passes there. Its analysis latency under stress
+    (10 – 14 s for a USER half) is unacceptable.
+  - SHIPPED, CALIBRATED and CONSERVATIVE stay visible side by side. **CI now runs all three** (R2), and enforces only M1
+    under CONSERVATIVE, as a test profile. The others print `REPORTED`. A static test pins both.
+  - The real-provider capacity calibration is a **precondition for launch**. It compares M1, M1′ and analysis off, and
+    covers the synchronized-arrival case of §11.11.4.
 
 #### 11.10.7 M1 against M1′ after R1, and the recommendation (nothing changed without approval)
 
@@ -1107,6 +1115,8 @@ The targets are P50 ≤ 1 000 ms and P95 ≤ 2 000 ms for the USER half, with Fi
     under the calibrated cap, at the expected concurrency.
   - **Before merge:** no further engineering improvement is available without either removing semantic work or a
     decision (DEC-R1-1, DEC-R1-2, DEC-R1-3).
+- **The Product Owner's decision (DEC-R1-4, 2026-11-03, R2):** M1′ is **not** the default. M1 stays, and M1′ is decided by
+  the S8B-08 comparison.
 
 #### 11.10.8 Safety recovery across a real restart (R4) and the final verification
 
@@ -1142,7 +1152,7 @@ The targets are P50 ≤ 1 000 ms and P95 ≤ 2 000 ms for the USER half, with Fi
     read. The template was rebuilt from this branch, and the final runs above use the rebuilt template.
 - **Reports:** `E:\QANDEEL_REPORTS\S8B-05\CP3-R1\` (the before / after / conservative runs, JSON and logs).
 
-#### 11.10.9 Open decisions for the Product Owner (none applied)
+#### 11.10.9 Open decisions for the Product Owner (as written in R1; their dispositions in R2 follow the table)
 
 | # | Decision | What it would change |
 |---|---|---|
@@ -1150,3 +1160,281 @@ The targets are P50 ≤ 1 000 ms and P95 ≤ 2 000 ms for the USER half, with Fi
 | DEC-R1-2 | Segmentation pipelining (the next half's segmentation while the current half is in focus / thread) | The stress-pace lag; conflicts with one item per session and L2 |
 | DEC-R1-3 | The permit values before calibration: the conservative `4 / 1 / 1` against the shipped `16 / 2 / 2` | The voice limit under load against analysis lag |
 | DEC-R1-4 | M1′ as the default | Not recommended before S8B-08 |
+
+**Dispositions (the Product Owner, 2026-11-03, R2):**
+- **DEC-R1-1:** approved direction, conditional on proof. Implemented, with the amendment annex: §11.11.
+- **DEC-R1-2:** a bounded study only. Closed with evidence, no amendment: §11.12.
+- **DEC-R1-3:** not approved. The values are unchanged, CONSERVATIVE is not a launch setting, and calibration is a
+  precondition for launch: §11.10.6.
+- **DEC-R1-4:** not approved. M1 stays the default: §11.10.7.
+
+### 11.11 R2 — DEC-R1-1: O3b at the call's activation (the Product Owner, 2026-11-03; approved direction, conditional on proof)
+
+**The decision.** Pre-call exchanges whose analysis is not established enter the analysis order when the call is
+**activated**, not at its first spoken turn. Conditions:
+- the mandatory order (old exchanges before the call's halves) holds;
+- nothing is skipped or analysed in hindsight;
+- the voice path is not slowed;
+- the number of semantic calls does not change;
+- idempotency and crash recovery hold.
+
+**The contract.** An explicit amendment annex of contract v1.2 replaces only O3b's timing line ("عند أول دور في المكالمة")
+and re-words acceptance item 33: `S8B-05_CONTRACT_v1.2_AMENDMENT_DEC-R1-1_O3B_TIMING.md`, next to the contract in the
+Product Owner's reports folder `S8B-05`. No other contract or item is opened. It takes effect in `main` only with the
+merge.
+
+#### 11.11.1 What changed (0191, not merged, not hosted, so corrected in place)
+
+| Where | Change |
+|---|---|
+| `voice_private.adopt_pre_call_exchanges_v1(call, user, session, p_reserve)` | Takes a **reserve**, refused `22023` if NULL or negative. With no EXCHANGE yet on the call, the session's unestablished pre-call exchanges are numbered in their present order so the last is `-p_reserve`. With some already adopted, a later adoption continues after the call's last EXCHANGE index. Nothing is adopted at index ≥ 1, the first turn's (`WHERE x.idx < 1`). |
+| `server_activate_call_v1` (0189's, forward-replaced in 0191 by the substitution `activate-call-o3b`) | The first `CONNECTING → ACTIVE`, **in the same transaction**, adopts with a reserve of 1000. The items end at −1000; slots −999 … 0 stay free for an exchange that completes before the first turn. A retried or replayed activation adopts nothing new (the exchanges are already on the call). |
+| `server_commit_live_call_turn_v1` (first turn) | Still adopts, now with reserve 0: only what completed between the activation and the first turn, after the activation's items. Nothing is adopted after the first turn (O3a governs text written during the call, unchanged). |
+| `LiveCallConnection` / `LiveCallService` | After the ACTIVE state is sent, the connection kicks the analysis worker with `CALL_ACTIVATED`, in memory and never awaited, with no database call on the voice path. |
+
+Not changed: the worker, the coordinators, L2–L5, the permits and their values, B1–B4, the text path, the number or kind
+of provider calls.
+
+#### 11.11.2 Proofs
+
+- **`verify-migration-0191`: 28 / 28** on local PG17. T7 was re-anchored (−1001 / −1000, adopted at activation, before any
+  turn). The new **T7b** covers:
+  - a retried activation adopts nothing;
+  - a text exchange in flight across the activation (created and claimed before it, finalized after) is adopted at the
+    first turn at −999, after −1000. Its claims run in order, and the USER half is refused `CALL_HALF_OUT_OF_ORDER`
+    until then;
+  - after a played reply, a text exchange and a second turn adopt nothing;
+  - an overflow (an EXCHANGE already at index 0) adopts 0;
+  - a negative reserve is refused `22023`.
+- **Static contracts.** A new test pins:
+  - the adoption inside the activation's transaction, just before its answer;
+  - the first turn's reserve-0 adoption;
+  - the continuation and the `< 1` bound;
+  - the kick after the ACTIVE state, never awaited.
+
+  It fails on the R1 0191.
+- **Jest:** the connection spec adds "the activation kicks the analysis worker once, with the session, after the ACTIVE state".
+- **The CP3 proof:** every mode kicks `CALL_ACTIVATED` and checks that the activation adopted every pre-call exchange
+  before any turn. The pre-call index is re-anchored to −1000.
+
+#### 11.11.3 Before / after — **Synthetic estimate** (local PG17, the CP3 workload, fake providers on 8 shared slots)
+
+The measured interval is the first turn's commit → its USER half committed, and the first turn's First Audio. Each cell
+was run "before" on the R1 0191 (`base191d`) and "after" on this 0191 (`base191e`). Variables:
+- 0, 1 or 2 pending pre-call exchanges;
+- the gap from the activation to the first turn's commit (it includes the person's whole first utterance and its
+  endpointing): 0.5 / 1.5 / 3 / 6 s.
+
+**The person's own path: one call, five repetitions per cell, SHIPPED permits.** P50 / P95 in ms.
+
+| Mode | Pending | Gap | First USER half, before → after | First Audio, before → after | Semantic calls |
+|---|---|---|---|---|---|
+| M1 | 0 | any | unchanged (1 452 – 1 587 → 1 469 – 1 550) | unchanged | 30 = 30 |
+| M1 | 1 | 0.5 s | 2 755 / 2 979 → **1 683 / 1 934** | 530 / 544 → 530 / 539 | 60 = 60 |
+| M1 | 1 | 1.5 s | 2 930 / 3 091 → **1 527 / 1 593** | 532 / 539 → 530 / 536 | 60 = 60 |
+| M1 | 1 | 3 s | 2 790 / 3 024 → **1 564 / 1 648** | 531 / 536 → 528 / 541 | 60 = 60 |
+| M1 | 1 | 6 s | 2 868 / 2 993 → **1 460 / 1 778** | 534 / 542 → 533 / 550 | 60 = 60 |
+| M1 | 2 | 0.5 s | 3 929 / 4 378 → **2 903 / 3 343** | 536 / 543 → 534 / 566 | 90 = 90 |
+| M1 | 2 | 1.5 s | 3 897 / 4 023 → **1 830 / 1 985** | 533 / 537 → 530 / 539 | 90 = 90 |
+| M1 | 2 | 3 s | 3 944 / 3 996 → **1 525 / 1 677** | 529 / 530 → 535 / 554 | 90 = 90 |
+| M1 | 2 | 6 s | 4 161 / 4 400 → **1 600 / 1 727** | 532 / 538 → 531 / 548 | 90 = 90 |
+| M1′ | 1 | 1.5 s | 2 437 / 2 487 → **987 / 1 100** | 532 / 540 → 544 / 547 | 60 = 60 |
+| M1′ | 2 | 3 s | 3 285 / 3 433 → **911 / 1 121** | 535 / 539 → 534 / 538 | 90 = 90 |
+
+- With pending exchanges and a gap of 1.5 s or more, turn 1's USER half returns to what a call with **no** pending
+  exchange costs: M1 ≈ 1.5 s, M1′ ≈ 0.9 – 1 s. Before, it was 2.8 – 4.2 s.
+- At 0.5 s the backlog is only partly absorbed: the person committed before the analysis finished.
+- **First Audio is unchanged in every cell**: ±12 ms P50, at most +23 ms P95.
+- The number of semantic calls is identical in every cell, before and after.
+- The order is identical in every cell: every pre-call EXCHANGE first, then `1:USER`, `1:ASSISTANT`, each once.
+
+**Shared capacity: seven calls activated and speaking at the same instant.** One run per cell, all three permit profiles,
+both modes. The full tables are in the reports.
+
+| Profile | Mode | Pending / gap | First USER half, before → after | First Audio, before → after |
+|---|---|---|---|---|
+| SHIPPED | M1 | 1 / 1.5 s | 3 326 / 3 436 → 1 794 / 1 972 | 519 / 653 → 514 / 648 |
+| SHIPPED | M1 | 2 / 3 s | 4 440 / 4 857 → 1 670 / 1 870 | 514 / 665 → 510 / 659 |
+| SHIPPED | M1 | 1 / 0.5 s | 3 189 / 3 345 → 2 566 / 2 682 | 520 / 646 → **681 / 739** |
+| SHIPPED | M1 | 2 / 1.5 s | 4 481 / 4 783 → 2 598 / 3 182 | 527 / 648 → **627 / 766** |
+| CALIBRATED | M1 | 1 / 0.5 s | 3 101 / 3 515 → 2 549 / 2 671 | 520 / 651 → **661 / 780** |
+| CALIBRATED | M1 | 2 / 1.5 s | 4 264 / 4 766 → 2 613 / 3 331 | 515 / 654 → **634 / 738** |
+| CONSERVATIVE | M1 | 2 / 0.5 s | 4 921 / 9 389 → 4 469 / 8 089 | 512 / 641 → **594 / 693** |
+| CONSERVATIVE | M1 | 1 / 1.5 s | 4 221 / 5 771 → 2 807 / 4 131 | 514 / 666 → **578** / 647 |
+| CONSERVATIVE | M1 | 2 / 3 s | 6 384 / 8 369 → 3 993 / 4 763 | 526 / 658 → **579 / 724** |
+| CONSERVATIVE | M1 | 2 / 6 s | 6 214 / 9 677 → 1 994 / 2 886 | 522 / 651 → 518 / 653 |
+
+#### 11.11.4 The voice path: what the numbers show, and the decision left
+
+- **The person's own voice path is not slowed.** On its own, the first reply starts as before in every cell.
+- **Shared capacity is a different matter.** When seven people connect and finish their first sentence at the same
+  instant, within 1.5 s of connecting, their pre-call analysis is still running on the shared provider when their seven
+  first replies start. Then:
+  - under SHIPPED and CALIBRATED, First Audio rises +54 … +161 ms P50;
+  - under CONSERVATIVE, it rises +52 … +82 ms P50 and up to +66 ms P95, in cells where the cap of 4 keeps the analysis
+    running longer (up to 3 s).
+- **Why.** L2 protects a person's reply from that person's work that has **not started**. Work started before the
+  critical window is never cancelled, and before DEC-R1-1 none existed at that instant. This is the same class as the
+  §11.10.6 finding (background work holding provider capacity that replies then wait for). Only the real provider's
+  capacity calibration (S8B-08) can say whether it exists outside the fake's shared FIFO of 8.
+- **The smallest further protection, NOT implemented (a decision):** an L2 check at each provider-call boundary inside an
+  item. The establishment would wait between segmentation, focus and thread while the person's reply is in its critical
+  window. This would bound the overlap to at most one provider call. It touches the semantic establishment service, which
+  the text path shares, and adds a wait inside an item.
+- **Recommendation: accept DEC-R1-1 as implemented.**
+  - The person's own path is unchanged.
+  - The calls are unchanged.
+  - The turn-1 backlog is removed where people actually talk (≥ 1.5 s).
+  - Synchronized arrivals at sub-1.5 s gaps are added to S8B-08's calibration plan, beside M1 / M1′ / off.
+- **Reports:** `E:\QANDEEL_REPORTS\S8B-05\CP3-R2\` (single-call and seven-call matrices, every profile, JSON and logs).
+
+### 11.12 R2 — DEC-R1-2: Segmentation pipelining, a bounded study, CLOSED with evidence
+
+**The question (the Product Owner, 2026-11-03).** Can a committed half's segmentation be prepared ahead, with:
+- no out-of-order commit;
+- no competition with the voice reply in its critical window;
+- no change to the ordering rules or L2?
+
+This was a study and a small synthetic proof, not a checkpoint.
+
+**What was tried (harness only; never in the product, removed from the proof after the study, kept in the reports as
+`DEC-R1-2_study_proof_with_segmentation_prefetch.ts`).**
+- When the worker claims an item, the session's **next** queued half is read from the database.
+- Its segmentation is asked of the provider **ahead**:
+  - under its own shared background permit, asked **once** (`maxWaitMs 0`), with L2's critical window respected in every
+    mode;
+  - nothing is prefetched inside the person's critical window or without capacity.
+- The half's own in-order establishment then uses that proposal instead of a second call.
+
+**Why that is safe.**
+- A segmentation's whole provider input is the committed text and its role, and a committed call turn never changes. So a
+  prefetched proposal is input-identical: never stale.
+- Nothing is written by a prefetch.
+- The commit stays in order.
+- The study counted every prefetch started and used: none was wasted (started = used), so the semantic calls stayed
+  **6.62 per exchange** in every run.
+
+**Results — Synthetic estimate** (the §11.3 workload, 7 calls, 68 exchanges, 8 fake slots; CALIBRATED and CONSERVATIVE).
+USER half, commit → committed, P50 / P95 in ms.
+
+| Pace | Mode / profile | Prefetches (of 136 halves) | Baseline | With prefetch | Long-call peak lag, baseline → prefetch |
+|---|---|---|---|---|---|
+| conversational (3 s) | all four | **0** | — | — | unchanged |
+| stress (0.9 s) | M1 CALIBRATED | 36 | 3 963 / 7 077 | 3 946 / **8 939** | 6.3 s → **9.7 s** |
+| stress | M1′ CALIBRATED | 27 | 3 380 / 7 358 | 2 887 / **8 933** | 3.7 s → **6.0 s** |
+| stress | M1 CONSERVATIVE | 17 | 10 021 / 18 255 | 9 882 / 17 849 | 11.5 s → 11.6 s |
+| stress | M1′ CONSERVATIVE | 11 | 9 463 / 15 863 | 7 572 / **18 367** | 11.7 s → 7.6 s |
+
+- **At the conversational pace there is nothing to pipeline.** When an item is claimed, the next half is never yet in the
+  queue (depth ≈ 1), so the prefetch never started.
+- **At the stress pace the bottleneck is the backlog** (capacity, the one-item-per-session order), not an item's own
+  service:
+  - a half's provider service is ≈ 0.9 s, of which segmentation is ≈ 0.2 s;
+  - the wait before it is 3 – 9 s.
+
+  A prefetch saves at most that 0.2 s, in 8 – 26 % of the halves. It also holds a permit, so it competes with the
+  in-order work for the same capacity.
+- P50 improved by 0.02 – 0.5 s in three configurations, within the run-to-run spread, and by 1.9 s in M1′ CONSERVATIVE.
+- **P95 got worse in three of four configurations** (+1.9 s / +1.6 s / +2.5 s), and the long call's peak lag got worse
+  under CALIBRATED.
+- First Audio was not worsened: under CONSERVATIVE, M1 and M1′ stay within limits with and without prefetch.
+
+**Verdict: no substantial improvement without a contract change. The idea is closed; no amendment is proposed and CP3 is
+not widened.** What would move the stress-pace lag is capacity (S8B-08's calibration), not pipelining one step of an
+item.
+
+### 11.13 R2 — API CI on `db832c72`: the S6-06 media proof's P04, root cause from data
+
+**The failure.** API CI run 41593403908, job `verify-api`. The S6-06 CP1 media proof
+(`database/prove-0162-introduction-media-store.mjs`) failed at P04: "P04 intro-media/… is gone from the data directory",
+`true !== false`. Everything before it passed:
+- the CP3 proof;
+- `verify-migration-0191`;
+- the A2 smoke (the outbox fix of §11.10.1 held).
+
+The removal answered `REMOVED`, the reads were refused at once, and the files existed before `worker.runOnce()`. The
+rclone log showed a `LIST BUCKET` and no `DELETE`.
+
+**Reproduced locally, exactly.** Local PG17, `rclone serve s3` v1.75.1 (the pinned version, sha256 checked against the
+release's SHA256SUMS) and PostgREST v12.2.9, as CI runs them.
+- **On a copy of the database after the local CI-order run** (verify-0189 → … → CP3 proof → A2), the proof fails at P04
+  with CI's message.
+- **On a fresh database** it passes.
+
+Temporary diagnostics were added to the proof for these runs only and removed after them (`s606-diag.cjs` in the reports).
+On the failing run they show:
+
+| Question | Answer from the data |
+|---|---|
+| The fixture rows after `REMOVED` | three `intro-media/` rows; `not_before` = the removal's `clock_timestamp()`, earlier than the database clock at the claim; `lease_id` / `lease_until` NULL; `attempts` 0; `image_series.series_state` `RETIRED` |
+| The rest of the queue | **426 `voice-call/` rows, all due** |
+| `server_claim_introduction_media_erasures_v1(25, 120)` (run in a rolled-back transaction just before `runOnce`) | **25 rows, all `voice-call/`**, no error; 0 fixture keys |
+| `runOnce()` | `{ swept: 0, erased: 0, deferred: 25, enqueued: 0 }` |
+| rclone | 1 `LIST BUCKET` (the cycle-1 reconciliation), 0 `DELETE`, 0 `HEAD` |
+| After `runOnce` | the three fixture rows unchanged; 25 voice keys deferred with a back-off |
+
+**So:** the claim neither returned zero rows nor failed silently, and DELETE / HEAD never ran. The claim leases the 25
+**oldest** due keys. 426 voice keys, older than the photo's, filled it. The proof's worker has no audio store, so it
+defers a voice key without contacting the storage server. That is why the log shows a listing and no delete.
+
+**Where the 426 keys came from: this pull request's own CP3 proof.**
+- It adds call segments (`server_add_call_segment_v2`) that are never uploaded, and ends its calls.
+- 0183's `seal_call_recording_v1` queues each pending segment's key with `not_before` = its upload deadline + the
+  late-upload grace, so they come due minutes later, by the time CI reaches the PostgREST step.
+- Its teardown removed the recording objects but not their queue rows: the queue keys on `storage_key`, so the
+  teardown's `user_id` sweep never reaches it.
+- On `main`, no proof before S6-06 leaves due voice keys. The CP1 and CP2 proofs add no call segment. That is why
+  `main` is green.
+
+**The fix (test-only, the narrowest).** No production change, no change to the S6-06 proof, no sleep, no retry:
+- The CP3 proof's teardown deletes its fixtures' erasure-queue keys before their recording objects.
+- Its residue check adds `erasure_queue_keys`. It reads the fixtures' keys before the teardown and must count 0 after it.
+- A new static test fails any proof that adds call segments and ends calls without both.
+- It is non-vacuous: it fails on the pre-fix proof.
+- The census after every CI step found the same class, smaller, in this PR's `verify-migration-0191`. Its race fixtures
+  are erased through the real account erasure (`server_erase_account_v1`), which correctly queues their segment keys:
+  6 queue rows and 6 `account_erasure_private.media_pending` rows were left behind. That is under the claim of 25, but
+  it is the same residue.
+  - Its teardown now reads the fixtures' keys before the erasure and removes both kinds of row with the deletion records.
+  - It asserts that none is left, and the static test pins it.
+  - `verify-migration-0191` passes 28 / 28 and leaves 0 / 0.
+
+The photo erasure engine is correct as written. A due key is never dropped: a deferred key backs off and the next cycle
+claims the next 25, and a production worker composes the audio store too.
+
+**After the fix.** The local CI order now runs the CP3 proof under all three profiles, as CI now does. After every step
+it counts the runtime outbox and the erasure queue, then runs the S6-06 proof on the same database:
+every step exits 0, and the runtime outbox and the erasure queue are **0 / 0 after every step** (before the fix: 426 due `voice-call/` keys after the CP3 proof, and 6 after `verify-0191`). The CP3 proof passes **82 / 82** under all three profiles, including its new residue check `erasure_queue_keys: 0`. The A2 smoke passes. **The S6-06 proof then passes on the same database** (`Verified S6-06 CP1 media path …`). It also passes alone on a fresh database.
+
+### 11.14 R2 — final verification on the R2 tree (local; GitHub CI on the pushed head is the gate)
+
+These were run on local PG17 against a template migrated from this branch's own 0190 and the R2 0191 (`base191e`):
+- **CI order** (verify-0189 → verify-0190 → CP1 proof → CP2 proof → verify-0191 → CP3 proof under SHIPPED, CALIBRATED and
+  CONSERVATIVE, as CI now runs it → post-response dispatch → A2), then the **S6-06 media proof on the same database**:
+  - every step exits 0, and the runtime outbox and the media erasure queue are 0 after every step;
+  - `verify-migration-0191` passes 28 / 28;
+  - the CP3 proof passes **82 / 82**, with its residue check all zeros, `erasure_queue_keys` included;
+  - First Audio impact against analysis off, at CI's stress pace:
+    - M1 CONSERVATIVE +6 / +12, enforced and passed;
+    - M1′ CONSERVATIVE +16 / −3;
+    - CALIBRATED +30 / +27 (M1) and +20 / +25 (M1′);
+    - SHIPPED +70 / +127 (M1) and +80 / +112 (M1′), printed `REPORTED`: the §11.10.6 finding, kept visible;
+  - A2 passes;
+  - S6-06 passes.
+- **S6-06 alone** on a fresh database passes.
+- **Jest** (apps/api): 336 suites; 7 718 passed, 1 skipped, 0 failed.
+- **Static contracts:** `node --test tests/*.test.mjs` gives 1 756 / 1 756. There are three new static tests, each shown
+  to fail without its change:
+  - O3b at activation;
+  - CI's three profiles;
+  - the erasure-queue residue.
+- **Typecheck:** `tsc` for apps/api and for `tsconfig.scripts.json` is clean.
+- **Not run locally:** the hosted database (nothing is hosted), any paid provider, any voice gate.
+- **Local harness:** rclone v1.75.1 for Windows (sha256 equal to the release's SHA256SUMS) and PostgREST v12.2.9 for
+  Windows (the official release asset, byte size equal to the release's), in the session's scratchpad only and deleted
+  after the runs. CI runs the Linux builds of the same versions.
+- **Reports:** `E:\QANDEEL_REPORTS\S8B-05\CP3-R2\`:
+  - the DEC-R1-1 matrices;
+  - the DEC-R1-2 study and its code;
+  - the S6-06 reproduction with its diagnostics, rclone logs and the claim reproduction script;
+  - the final CI order.

@@ -1,6 +1,14 @@
 # QANDEEL — Current State
 
-> **S8B-05 CP3 R1 — 2026-11-03 (current task; status only, no new task authority):** CP3 is **still UNDER REVIEW** on PR #377 (Draft, not merged; merge only on «ادمج»). This is the Product Owner's Comprehensive Correction Order applied to the same pull request, with no new checkpoint ([S8B-05 record](docs/e2e/QANDEEL_S8B_05_INTEGRATED_LIVE_CALL_IMPLEMENTATION_RECORD_v1.md) §11.10). The CP3 banner below is kept as written at `e43be547`.
+> **S8B-05 CP3 R2 — 2026-11-03 (current task; status only, no new task authority):** CP3 is **still UNDER REVIEW** on PR #377 (Draft, not merged; merge only on «ادمج»). These are the Product Owner's decisions on R1, plus the API CI fix, on the same pull request with no new checkpoint ([S8B-05 record](docs/e2e/QANDEEL_S8B_05_INTEGRATED_LIVE_CALL_IMPLEMENTATION_RECORD_v1.md) §11.11 – §11.14). The R1 and CP3 banners below are kept as written.
+>
+> **DEC-R1-1 is implemented, under an explicit amendment annex of contract v1.2.** That annex covers only O3b's timing and acceptance item 33. Unestablished pre-call exchanges now enter the analysis order at the call's **activation** (0191, not hosted), not at its first turn. The order, the number of semantic calls, idempotency and crash recovery are unchanged, and the person's own First Audio is unchanged. Turn 1's USER half drops from 2.8 – 4.2 s to ≈ 1.5 s with pending exchanges. One effect is left to S8B-08's calibration: synchronized arrivals within 1.5 s on a shared provider.
+>
+> **DEC-R1-2 (segmentation pipelining) is closed with evidence.** No amendment is proposed. **DEC-R1-3 / DEC-R1-4 are not approved:** the permit values and M1 are unchanged. CONSERVATIVE is a test profile and not a launch setting, and CI now shows all three profiles. Real-provider capacity calibration (M1 / M1′ / off) is a precondition for launch.
+>
+> **The API CI failure on `db832c72` is fixed at its root, in test code only.** S6-06's P04 failed because the CP3 proof's teardown left 426 due `voice-call/` erasure keys, and they filled the worker's claim of 25. The photo erasure engine is unchanged.
+>
+> **S8B-05 CP3 R1 — 2026-11-03 (as written then; status only, no new task authority):** CP3 is **still UNDER REVIEW** on PR #377 (Draft, not merged; merge only on «ادمج»). This is the Product Owner's Comprehensive Correction Order applied to the same pull request, with no new checkpoint ([S8B-05 record](docs/e2e/QANDEEL_S8B_05_INTEGRATED_LIVE_CALL_IMPLEMENTATION_RECORD_v1.md) §11.10). The CP3 banner below is kept as written at `e43be547`.
 >
 > **The CI failure is fixed at its root.** API CI's A2 smoke failed because the CP3 proof's teardown left its runtime outbox rows behind: 231 orphaned rows, and the outbox table keys on `subject_user_id`, which the teardown missed. The A2 smoke's oldest-first claim of 20 then never reached its own event. The teardown now deletes those rows and proves nothing is left, and a static regression test covers every event-writing proof. No test was weakened, and the publisher is unchanged.
 >
