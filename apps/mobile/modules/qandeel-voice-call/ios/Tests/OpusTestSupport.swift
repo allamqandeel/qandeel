@@ -9,7 +9,7 @@ func opusDecoder16k(_ error: inout Int32) -> OpaquePointer? {
 func opusDecode(_ decoder: OpaquePointer, _ packet: [UInt8]) -> Int32 {
   var out = [Int16](repeating: 0, count: 320 * 6)
   return packet.withUnsafeBufferPointer { bytes in
-    out.withUnsafeMutableBufferPointer { opus_decode(decoder, bytes.baseAddress, Int32(bytes.count), $0.baseAddress, Int32(320 * 6), 0) }
+    out.withUnsafeMutableBufferPointer { opus_decode(decoder, bytes.baseAddress, Int32(bytes.count), $0.baseAddress!, Int32(320 * 6), 0) }
   }
 }
 
@@ -24,7 +24,7 @@ func opusEncoder24k(_ error: inout Int32) -> OpaquePointer? {
 func opusEncode(_ encoder: OpaquePointer, _ pcm: [Int16]) -> [UInt8] {
   var out = [UInt8](repeating: 0, count: 1275)
   let n = pcm.withUnsafeBufferPointer { input in
-    out.withUnsafeMutableBufferPointer { opus_encode(encoder, input.baseAddress, Int32(pcm.count), $0.baseAddress, 1275) }
+    out.withUnsafeMutableBufferPointer { opus_encode(encoder, input.baseAddress!, Int32(pcm.count), $0.baseAddress!, 1275) }
   }
   return n > 0 ? Array(out[0..<Int(n)]) : []
 }
