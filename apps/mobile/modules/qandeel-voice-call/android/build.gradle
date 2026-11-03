@@ -22,5 +22,6 @@ dependencies {
   // BSD 3-clause licence (https://github.com/lostromb/concentus/blob/master/LICENSE); no transitive dependency, no NDK.
   // Pinned exactly. Maven Central sha1 of the jar: 3658ef53df76c1fb635617c03320cd56dfdd49f3.
   implementation 'io.github.jaredmdobson:concentus:1.0.2'
+  implementation 'androidx.core:core-telecom:1.0.1'
   testImplementation 'junit:junit:4.13.2'
 }

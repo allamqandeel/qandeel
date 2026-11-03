@@ -321,6 +321,9 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
   // instead of `false`, which would strip the microphone from the whole app.
   assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
     './plugins/with-qandeel-voice-backup',
+    // S8B-06 CP2 RE-ANCHOR (A6 06-CP2): the native call's own plugin (typed manifest + Info.plist mods only, no dangerous
+    // mod; pinned by tests/s8b-06-native-call-lifecycle-contract.test.mjs and the native Voice Note gate), before expo-audio.
+    './plugins/with-qandeel-voice-call',
     ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
     ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]]);
   // Exactly two dangerous mods: one Android install, one iOS install. Everything else is a typed mod.
@@ -338,9 +341,13 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
   // S8B-03 RE-ANCHOR (OD-6): one more plugin, `with-qandeel-voice-backup.js` — ONE typed manifest mod pointing
   // <application> at the two backup rule files the local module ships in its Android res/. It writes, copies or deletes
   // nothing, so it is not a Level-4 step either.
-  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH, 'apps/mobile/plugins/with-qandeel-push.js', 'apps/mobile/plugins/with-qandeel-voice-backup.js']);
+  // S8B-06 CP2 RE-ANCHOR (A6 06-CP2): one more plugin, `with-qandeel-voice-call.js` — TYPED manifest and Info.plist mods
+  // only (the call's service, its permissions, UIBackgroundModes audio). It writes, copies or deletes nothing: not a
+  // Level-4 step.
+  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH, 'apps/mobile/plugins/with-qandeel-push.js', 'apps/mobile/plugins/with-qandeel-voice-backup.js', 'apps/mobile/plugins/with-qandeel-voice-call.js']);
   assert.doesNotMatch(read('apps/mobile/plugins/with-qandeel-push.js'), /withDangerousMod|writeFileSync|copyFileSync|unlinkSync|rmSync/u);
   assert.doesNotMatch(read('apps/mobile/plugins/with-qandeel-voice-backup.js'), /withDangerousMod|writeFileSync|copyFileSync|unlinkSync|rmSync/u);
+  assert.doesNotMatch(read('apps/mobile/plugins/with-qandeel-voice-call.js'), /withDangerousMod|writeFileSync|copyFileSync|unlinkSync|rmSync/u);
   assert.match(read('tests/mobile-foundation-toolchain-contract.test.mjs'), /const level4Exceptions = new Set\(\['apps\/mobile\/plugins\/with-qandeel-launch-identity\.js'\]\);/u);
   const readme = read('apps/mobile/README.md');
   assert.match(readme, /\*\*W2-02 Level-4 exception — APPROVED \(bounded\)\.\*\*/u, 'the approved, bounded exception is recorded in the CNG policy');

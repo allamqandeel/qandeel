@@ -389,18 +389,23 @@ test('the one live-call socket lives in src/voice-call; ws:// and the forced cut
   assert.doesNotMatch(strip(client), /console\.|\?token=|accessToken=/u, 'no logging, never a token in the URL');
 });
 
-test('the native module is Android-only, a pinned codec, no call lifecycle, no logging, and VAD after AEC', () => {
+// S8B-06 CP2 RE-ANCHOR (A6 06-CP2): the module now has an iOS engine and the call lifecycle, owned and pinned by
+// tests/s8b-06-native-call-lifecycle-contract.test.mjs (the exact config, both platforms, the second dependency, which
+// files may speak Telecom). What CP1 pinned here still holds: the CP1 audio ENGINE files carry no call lifecycle, the
+// module logs nothing, writes no file and opens no network, and its audio rules are unchanged.
+test('the native audio engine: a pinned codec, no call lifecycle in the engine, no logging, and VAD after AEC', () => {
   const config = JSON.parse(read(`${MODULE}/expo-module.config.json`));
-  assert.deepEqual(config, { platforms: ['android'], android: { modules: ['expo.modules.qandeelvoicecall.QandeelVoiceCallModule'] } });
-  assert.equal(existsSync(join(root, MODULE, 'ios')), false, 'no iOS engine in CP1 (S8B-06 CP2)');
-  assert.equal(existsSync(join(root, MODULE, 'android/src/main/AndroidManifest.xml')), false, 'no manifest: no permission, no service');
+  assert.deepEqual(config.android, { modules: ['expo.modules.qandeelvoicecall.QandeelVoiceCallModule'] });
+  assert.equal(existsSync(join(root, MODULE, 'android/src/main/AndroidManifest.xml')), false, "no module manifest: the service and its permissions are the config plugin's");
   const gradle = read(`${MODULE}/android/build.gradle`);
   assert.match(gradle, /implementation 'io\.github\.jaredmdobson:concentus:1\.0\.2'/u);
-  assert.equal((gradle.match(/^\s*implementation /gmu) ?? []).length, 1, 'one runtime dependency');
   const kotlin = walk(`${MODULE}/android/src/main/java`).filter((f) => f.endsWith('.kt')).map((f) => strip(read(f))).join('\n');
-  for (const forbidden of [/android\.util\.Log\b/u, /\bLog\.[dviwe]\(/u, /println\(/u, /core\.telecom|ConnectionService|MANAGE_OWN_CALLS|startForeground|FOREGROUND_SERVICE|CallStyle|Notification/u,
+  for (const forbidden of [/android\.util\.Log\b/u, /\bLog\.[dviwe]\(/u, /println\(/u,
     /notifee/iu, /expo\.modules\.audio/u, /FileOutputStream|openFileOutput|cacheDir|filesDir/u, /java\.net\.|okhttp/iu]) {
     assert.doesNotMatch(kotlin, forbidden, `the native module: ${forbidden}`);
+  }
+  for (const file of ['CallAudioEngine.kt', 'OpusCodecs.kt', 'ReplyLedger.kt', 'SpeechOnsetDetector.kt', 'CuePlayer.kt', 'CueSchedule.kt']) {
+    assert.doesNotMatch(strip(read(`${KOTLIN}/${file}`)), /core\.telecom|ConnectionService|MANAGE_OWN_CALLS|startForeground|FOREGROUND_SERVICE|CallStyle|Notification/u, `${file}: the engine has no call lifecycle`);
   }
   const engine = read(`${KOTLIN}/CallAudioEngine.kt`);
   assert.match(engine, /MediaRecorder\.AudioSource\.VOICE_COMMUNICATION/u);

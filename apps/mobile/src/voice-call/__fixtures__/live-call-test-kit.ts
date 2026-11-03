@@ -123,6 +123,11 @@ export class ManualTimers implements LiveCallTimers {
     }
     this.t = end;
   }
+
+  /** The clock moves but no timer fires: JS timers paused, as on Android in the background (S8B-06 CP2). */
+  skip(ms: number): void {
+    this.t += ms;
+  }
 }
 
 export const CALL_ID = '11111111-1111-4111-8111-111111111111';

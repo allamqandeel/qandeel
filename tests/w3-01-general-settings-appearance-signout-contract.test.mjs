@@ -258,7 +258,9 @@ test('Android: a Level-3 local Expo module maps Dark / Light / System to the pla
   // the W2-02 and A3-02 contracts). No other plugin exists.
   // S8B-03 RE-ANCHOR: `with-qandeel-voice-backup.js` (one typed manifest mod, pinned by the W2-02 contract and the S8B-03
   // native Voice Note gate) joins them.
-  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN, 'apps/mobile/plugins/with-qandeel-push.js', 'apps/mobile/plugins/with-qandeel-voice-backup.js'], 'no other plugin');
+  // S8B-06 CP2 RE-ANCHOR: `with-qandeel-voice-call.js` (typed manifest + Info.plist mods only, pinned by the S8B-06 CP2
+  // contract and the native Voice Note gate) joins them.
+  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN, 'apps/mobile/plugins/with-qandeel-push.js', 'apps/mobile/plugins/with-qandeel-voice-backup.js', 'apps/mobile/plugins/with-qandeel-voice-call.js'], 'no other plugin');
 });
 
 test('iOS: the Launch Screen still follows the device (W2-02 unchanged); the root view is the World asset for its own appearance', () => {

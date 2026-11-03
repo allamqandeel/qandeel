@@ -713,6 +713,9 @@ test('the T-07 gate is registered at the root and in Mobile CI without a new nat
   // instead of `false`, which would strip the microphone from the whole app.
   assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
     './plugins/with-qandeel-voice-backup',
+    // S8B-06 CP2 RE-ANCHOR (A6 06-CP2): the native call's own plugin (typed manifest + Info.plist mods only, no dangerous
+    // mod; pinned by tests/s8b-06-native-call-lifecycle-contract.test.mjs and the native Voice Note gate), before expo-audio.
+    './plugins/with-qandeel-voice-call',
     ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
     ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]]);
   assert.equal(existsSync(new URL('apps/mobile/ios', root)), false);
