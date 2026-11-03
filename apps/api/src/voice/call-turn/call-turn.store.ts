@@ -12,6 +12,8 @@ export type DeliveryState = 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAIL
 export type SafetyDisposition = 'ALLOW' | 'GUIDED' | 'BLOCK';
 export type GenerationEnd = 'COMPLETE' | 'WITHHELD_TAIL' | 'FAILED';
 export type CloseReason = 'PLAYED_OUT' | 'GENERATION_FAILED' | 'CALL_ENDING';
+/** S8B-05 CP4 (0192, D-05-07): how a typed exchange's text reply ended (FAILED: nothing generated, no text). */
+export type TextReplyState = 'COMPLETE' | 'WITHHELD_TAIL' | 'FAILED';
 
 export interface CommitInput {
   readonly userId: string;
@@ -19,10 +21,12 @@ export interface CommitInput {
   readonly epoch: number;
   readonly turnId: string;
   readonly commitId: string;
+  /** S8B-05 CP4: SPEECH (a spoken turn: band and anchor) or TEXT (TEXT_TURN, typed during the call: neither). */
+  readonly channel: 'SPEECH' | 'TEXT';
   readonly content: string;
-  readonly band: 'HIGH' | 'MEDIUM' | 'LOW';
-  readonly anchorStartMs: number;
-  readonly anchorEndMs: number;
+  readonly band: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+  readonly anchorStartMs: number | null;
+  readonly anchorEndMs: number | null;
   readonly terms: readonly string[];
   /** The ids the previous open exchange is closed with (N1), when there is one. */
   readonly closeAssistantTurnId: string;
@@ -50,6 +54,22 @@ export interface PlayoutResult {
   readonly clockStartMs: number | null;
 }
 
+/** S8B-05 CP4 (0192, P4): a BARGE_IN's onset, the first one kept while the exchange is open; late (CLOSED) after it. */
+export interface BargeInResult {
+  readonly outcome: 'RECORDED' | 'ALREADY_RECORDED' | 'CLOSED' | 'FENCED' | 'NOT_FOUND';
+  readonly captureMs: number | null;
+}
+
+/** S8B-05 CP4 (0192, P5): the call's open exchange as the connection now holding the call finds it. */
+export interface OpenExchange {
+  readonly outcome: 'OPEN' | 'NONE' | 'FENCED' | 'NOT_FOUND';
+  readonly callTurnIndex: number | null;
+  readonly userTurnId: string | null;
+  readonly content: string | null;
+  readonly channel: 'SPEECH' | 'TEXT' | null;
+  readonly safety: SafetyDisposition | null;
+}
+
 export type ProviderSettleOutcome = 'SUCCEEDED' | 'FAILED' | 'CANCELLED_BEFORE_PROVIDER' | 'UNKNOWN';
 
 export interface CallTurnStore {
@@ -59,8 +79,20 @@ export interface CallTurnStore {
     userId: string; callId: string; epoch: number; callTurnIndex: number; seq: number; text: string; startMs: number; endMs: number; terms: readonly string[];
   }): Promise<'REGISTERED' | 'CLOSED' | 'FENCED' | 'NOT_FOUND'>;
   finishGeneration(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; state: GenerationEnd; producedMs: number }): Promise<string>;
-  confirmPlayout(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; playedMs: number; clockStartMs: number }): Promise<PlayoutResult>;
+  /** `clockStartMs` null: the reply's clock start is already stored (a confirmation resent to a newer connection, P5). */
+  confirmPlayout(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; playedMs: number; clockStartMs: number | null }): Promise<PlayoutResult>;
   close(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; reason: CloseReason; assistantTurnId: string; eventId: string }): Promise<CloseResult>;
+  /** S8B-05 CP4 (0192, P4): the onset of the person's speech that stopped QANDEEL; closes nothing. */
+  recordBargeIn(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; captureMs: number }): Promise<BargeInResult>;
+  /**
+   * S8B-05 CP4 (0192, D-05-07): the close of a typed exchange by its text reply, through the ONE close (the first close
+   * wins). Not fenced by the epoch: the text reply is the conversation's, whatever became of the connection.
+   */
+  closeText(input: {
+    userId: string; callId: string; callTurnIndex: number; state: TextReplyState; text: string; terms: readonly string[]; assistantTurnId: string; eventId: string;
+  }): Promise<CloseResult>;
+  /** S8B-05 CP4 (0192, P5): the open exchange an older connection left, for the connection now holding the call. */
+  readOpenExchange(input: { userId: string; callId: string; epoch: number }): Promise<OpenExchange>;
   /** AI-COST-01: one ledger row per synthesis attempt of a call reply (on the exchange's USER turn). */
   beginSpeech(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; providerCallId: string; model: string }): Promise<string>;
   /** AI-COST-01: the call's recognition, one ledger row per recognizer session. */

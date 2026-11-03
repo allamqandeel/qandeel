@@ -306,7 +306,9 @@ test('TM-01 on VOICE_NOTE turns only, TM-03 only with the hint policy on (CP1 OF
   }
   const callReply = codeOnly(read(LIVE_CALL_REPLY));
   assert.equal((callReply.match(/withSpokenCallReply\(/gu) ?? []).length, 1);
-  assert.match(callReply, /behavioralGuidance: withSpokenCallReply\(textGuidance\)/u);
+  // RE-ANCHORED by S8B-05 CP4 (was: TM-02 on every call reply): a turn typed during the call is answered in text (D-05-07),
+  // so it takes the turn's text guidance alone; every spoken call turn still takes TM-02, in that one place.
+  assert.match(callReply, /behavioralGuidance: request\.channel === 'TEXT' \? textGuidance : withSpokenCallReply\(textGuidance\)/u);
   assert.doesNotMatch(callReply, /withVoiceNoteChannel|VOICE_DELIVERY_LINE_GUIDANCE_TM_01/u, 'the call reply adds no TM-01');
   const orchestrator = codeOnly(read('apps/api/src/conversation/conversation-orchestrator.service.ts'));
   assert.match(orchestrator, /voiceNote \? withVoiceNoteChannel\(textGuidance, \{ hints: SPEECH_HINT_POLICY !== 'OFF' \}\) : textGuidance/u);

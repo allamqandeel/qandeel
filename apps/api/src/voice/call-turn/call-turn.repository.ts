@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
 import type {
-  CallTurnStore, CloseResult, CommitInput, CommitOutcome, CommitResult, DeliveryState, GenerationEnd, PlayoutResult, ProviderSettleOutcome,
-  SafetyDisposition,
+  BargeInResult, CallTurnStore, CloseResult, CommitInput, CommitOutcome, CommitResult, DeliveryState, GenerationEnd, OpenExchange, PlayoutResult,
+  ProviderSettleOutcome, SafetyDisposition, TextReplyState,
 } from './call-turn.store';
 
 const toNumber = (value: unknown): number | null => (value === null || value === undefined ? null : Number(value));
@@ -29,7 +29,7 @@ export class CallTurnRepository implements CallTurnStore {
       closed_delivery_state: unknown; closed_heard_mark_ms: unknown;
     }>('server_commit_live_call_turn_v1', {
       p_user_id: input.userId, p_call_id: input.callId, p_connection_epoch: input.epoch, p_turn_id: input.turnId, p_commit_id: input.commitId,
-      p_turn_channel: 'SPEECH', p_content: input.content, p_asr_confidence_band: input.band, p_anchor_start_ms: input.anchorStartMs,
+      p_turn_channel: input.channel, p_content: input.content, p_asr_confidence_band: input.band, p_anchor_start_ms: input.anchorStartMs,
       p_anchor_end_ms: input.anchorEndMs, p_retrieval_terms: input.terms, p_close_assistant_turn_id: input.closeAssistantTurnId,
       p_close_event_id: input.closeEventId,
     });
@@ -68,7 +68,7 @@ export class CallTurnRepository implements CallTurnStore {
     return row.outcome;
   }
 
-  async confirmPlayout(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; playedMs: number; clockStartMs: number }): Promise<PlayoutResult> {
+  async confirmPlayout(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; playedMs: number; clockStartMs: number | null }): Promise<PlayoutResult> {
     const row = await this.first<{ outcome: PlayoutResult['outcome']; playout_mark_ms: unknown; reply_clock_start_ms: unknown }>('server_confirm_call_playout_v1', {
       p_user_id: input.userId, p_call_id: input.callId, p_connection_epoch: input.epoch, p_call_turn_index: input.callTurnIndex, p_played_ms: input.playedMs,
       p_reply_clock_start_ms: input.clockStartMs,
@@ -85,6 +85,33 @@ export class CallTurnRepository implements CallTurnStore {
     return {
       outcome: row.outcome, assistantTurnId: toText(row.assistant_turn_id), deliveryState: toText(row.delivery_state) as DeliveryState | null,
       heardMarkMs: toNumber(row.heard_mark_ms),
+    };
+  }
+
+  async recordBargeIn(input: { userId: string; callId: string; epoch: number; callTurnIndex: number; captureMs: number }): Promise<BargeInResult> {
+    const row = await this.first<{ outcome: BargeInResult['outcome']; barge_in_capture_ms: unknown }>('server_record_call_barge_in_v1', {
+      p_user_id: input.userId, p_call_id: input.callId, p_connection_epoch: input.epoch, p_call_turn_index: input.callTurnIndex, p_capture_ms: input.captureMs,
+    });
+    return { outcome: row.outcome, captureMs: toNumber(row.barge_in_capture_ms) };
+  }
+
+  async closeText(input: {
+    userId: string; callId: string; callTurnIndex: number; state: TextReplyState; text: string; terms: readonly string[]; assistantTurnId: string; eventId: string;
+  }): Promise<CloseResult> {
+    const row = await this.first<{ outcome: CloseResult['outcome']; assistant_turn_id: unknown; delivery_state: unknown }>('server_close_live_call_text_exchange_v1', {
+      p_user_id: input.userId, p_call_id: input.callId, p_call_turn_index: input.callTurnIndex, p_reply_state: input.state, p_reply_text: input.text,
+      p_retrieval_terms: input.terms, p_assistant_turn_id: input.assistantTurnId, p_event_id: input.eventId,
+    });
+    return { outcome: row.outcome, assistantTurnId: toText(row.assistant_turn_id), deliveryState: toText(row.delivery_state) as DeliveryState | null, heardMarkMs: 0 };
+  }
+
+  async readOpenExchange(input: { userId: string; callId: string; epoch: number }): Promise<OpenExchange> {
+    const row = await this.first<{
+      outcome: OpenExchange['outcome']; call_turn_index: unknown; user_turn_id: unknown; content: unknown; turn_channel: unknown; safety_disposition: unknown;
+    }>('server_read_open_call_exchange_v1', { p_user_id: input.userId, p_call_id: input.callId, p_connection_epoch: input.epoch });
+    return {
+      outcome: row.outcome, callTurnIndex: toNumber(row.call_turn_index), userTurnId: toText(row.user_turn_id), content: toText(row.content),
+      channel: toText(row.turn_channel) as OpenExchange['channel'], safety: toText(row.safety_disposition) as SafetyDisposition | null,
     };
   }
 

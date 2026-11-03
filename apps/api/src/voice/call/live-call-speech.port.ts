@@ -1,4 +1,4 @@
-import type { ServerMessage } from './live-call.protocol';
+import type { RefusalReason, ServerMessage } from './live-call.protocol';
 
 /**
  * S8B-05 CP1 / CP2 — where a live call's decoded uplink goes: PCM s16le mono 16 kHz, the recognizer's input (D-C1), in capture
@@ -46,11 +46,23 @@ export interface LiveCallTurnChannel {
 /** A PLAYOUT the engine judged: APPLIED, IGNORED (older, duplicate or after the close: P1 / P3), or a VIOLATION. */
 export type PlayoutVerdict = 'APPLIED' | 'IGNORED' | 'VIOLATION';
 
+/** S8B-05 CP4: a TEXT_TURN's outcome: its USER turn committed (once, by its clientTurnId), or refused with a reason. */
+export type TextTurnVerdict = { readonly kind: 'COMMITTED' } | { readonly kind: 'REFUSED'; readonly reason: RefusalReason };
+
 export interface LiveCallSpeechStream {
   /** One decoded 20 ms frame at its capture instant. Never awaited on the audio path. */
   push(pcm16k: Buffer, captureMs: number): void;
   /** A PLAYOUT confirmation of the reply `callTurnIndex` (CP2). */
   playout(input: { readonly callTurnIndex: number; readonly chunkSeq: number; readonly playedMs: number }): Promise<PlayoutVerdict>;
+  /** S8B-05 CP4 (P4): the person began to speak over QANDEEL's reply `callTurnIndex` at `captureMs` (the call's clock). */
+  bargeIn(input: { readonly callTurnIndex: number; readonly captureMs: number }): Promise<'APPLIED' | 'IGNORED'>;
+  /** S8B-05 CP4 (D-05-07, P4): a message typed during the call; settles once its USER turn is committed, or refused. */
+  textTurn(input: { readonly clientTurnId: string; readonly text: string }): Promise<TextTurnVerdict>;
+  /**
+   * S8B-05 CP4: the connection is going (not ended): what the person said is committed while the connection still holds
+   * the call, before its tracks close (no lost words); bounded in time. Then `close`.
+   */
+  drain(): Promise<void>;
   close(): void;
 }
 
@@ -60,5 +72,8 @@ export interface LiveCallSpeechSink {
 
 /** No engine composed: the decoded audio stops here and a PLAYOUT has nothing to confirm. */
 export const NULL_LIVE_CALL_SPEECH_SINK: LiveCallSpeechSink = Object.freeze({
-  open: (): LiveCallSpeechStream => ({ push: () => undefined, playout: async () => 'IGNORED' as const, close: () => undefined }),
+  open: (): LiveCallSpeechStream => ({
+    push: () => undefined, playout: async () => 'IGNORED' as const, bargeIn: async () => 'IGNORED' as const,
+    textTurn: async () => ({ kind: 'REFUSED' as const, reason: 'UNAVAILABLE' as const }), drain: async () => undefined, close: () => undefined,
+  }),
 });

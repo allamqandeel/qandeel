@@ -9,7 +9,7 @@ const SECOND = 'كيف كان يومك حتى الآن؟';
 const CALM = { expression: 'CALM' as const, hints: [] };
 
 const commitInput = (content: string) => ({
-  userId: 'u', callId: 'c', epoch: 1, turnId: randomUUID(), commitId: randomUUID(), content, band: 'HIGH' as const, anchorStartMs: 0, anchorEndMs: 20,
+  userId: 'u', callId: 'c', epoch: 1, turnId: randomUUID(), commitId: randomUUID(), channel: 'SPEECH' as const, content, band: 'HIGH' as const, anchorStartMs: 0, anchorEndMs: 20,
   terms: [], closeAssistantTurnId: randomUUID(), closeEventId: randomUUID(),
 });
 

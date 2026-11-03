@@ -222,7 +222,8 @@ export class LiveCallReplyService implements LiveCallConversation, OnModuleInit 
     try {
       assembled = this.integratedContextBudget.assemble({
         task: 'CONVERSATIONAL_RESPONSE', path: 'FAST', complexity: 'LOW',
-        behavioralGuidance: withSpokenCallReply(textGuidance),
+        // S8B-05 CP4 (D-05-07): a message typed during the call is answered in text, without the spoken-reply guidance.
+        behavioralGuidance: request.channel === 'TEXT' ? textGuidance : withSpokenCallReply(textGuidance),
         ...(safety.safetyGuidance ? { safetyGuidance: safety.safetyGuidance } : {}),
         messages, currentUserContent, memoryContext,
         ...(hypothesis?.coverageState === 'AVAILABLE' ? { hypothesisContext: hypothesis.context } : {}),

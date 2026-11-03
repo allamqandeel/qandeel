@@ -34,7 +34,8 @@ export function callRetrievalTerms(text: string): string[] {
 export type CallReplyEvent =
   | { readonly kind: 'FIRST_AUDIO'; readonly callTurnIndex: number; readonly at: number }
   | { readonly kind: 'REPLY_END'; readonly callTurnIndex: number; readonly at: number; readonly deliveryState: DeliveryState; readonly chunks: number }
-  | { readonly kind: 'LATE'; readonly callTurnIndex: number; readonly what: 'CHUNK' | 'PLAYOUT' };
+  | { readonly kind: 'LATE'; readonly callTurnIndex: number; readonly what: 'CHUNK' | 'PLAYOUT' | 'BARGE_IN' }
+  | { readonly kind: 'FAILURE_LINE'; readonly callTurnIndex: number; readonly chunks: number; readonly at: number };
 
 export interface CallReplyDeps {
   readonly store: CallTurnStore;
@@ -48,6 +49,12 @@ export interface CallReplyDeps {
    * stored it. Rejects when it cannot be done now. Absent, an exchange without a stored Safety is never closed.
    */
   readonly ensureSafety?: () => Promise<void>;
+  /**
+   * S8B-05 CP4 (voice-runtime §4.5, CA-05-02): the fixed spoken failure line F-01 as reply packets (Opus 24 kHz, 20 ms) in
+   * the language of this exchange, played when nothing of the reply could be produced; null when its files are not
+   * installed (D-05-02): then nothing is played. Never synthesized, never reply speech.
+   */
+  readonly failureLine?: () => readonly Buffer[] | null;
 }
 
 type Segment = { readonly text: string; readonly style: string; readonly piece: number; readonly first: boolean; readonly last: boolean };
@@ -106,6 +113,16 @@ export class CallReply {
   private written = 0;
   private closing = false;
   private closedState: DeliveryState | null = null;
+  /**
+   * S8B-05 CP4: stopped by the person (BARGE_IN) or by the connection going: the generation is never finished, so the
+   * exchange stays open until the next turn (N1), the call's end or the sweep closes it with what was heard (INTERRUPTED).
+   */
+  private interrupted = false;
+  private onsetMs: number | null = null;
+  /** F-01 packets sent after a reply that produced nothing (chunkSeq from 0: the reply sent none). */
+  private readonly failurePackets: Buffer[] = [];
+  private failureClockStartMs: number | null = null;
+  private failureWritten = 0;
   private resolveSafety!: () => void;
   private safetyKnown = false;
   private safetyRecovery: Promise<boolean> | null = null;
@@ -124,6 +141,14 @@ export class CallReply {
 
   get producedMs(): number {
     return this.emitted.length * AUDIO_PACKET_MS;
+  }
+
+  /**
+   * S8B-05 CP4 (§5.2 step 5): where this reply was playing when the person began to speak over it, on the call clock:
+   * [clock start, onset). Null without a barge-in or before any playout was confirmed.
+   */
+  get bargedPlayback(): { readonly startMs: number; readonly onsetMs: number } | null {
+    return this.onsetMs === null || this.clockStartMs === null ? null : { startMs: this.clockStartMs, onsetMs: this.onsetMs };
   }
 
   safetyStored(): void {
@@ -182,8 +207,21 @@ export class CallReply {
 
   /** The exchange was closed elsewhere (N1: the next committed turn): stop everything, tell the phone. */
   closedBy(deliveryState: DeliveryState): void {
+    this.interrupted = true;
     this.abort();
     this.announceEnd(deliveryState);
+  }
+
+  /**
+   * S8B-05 CP4 (P4, §5.2): the person spoke over QANDEEL (`onsetMs`, the first one kept) or the connection went (null): the
+   * one AbortController stops the generation and every synthesis attempt, no later chunk is sent, and the generation is
+   * left unfinished, so nothing closes the exchange as FAILED: the close that follows (N1, the call's end, the sweep) keeps
+   * only what was heard. The uplink is untouched.
+   */
+  interrupt(onsetMs: number | null): void {
+    if (onsetMs !== null && this.onsetMs === null) this.onsetMs = onsetMs;
+    this.interrupted = true;
+    this.abort();
   }
 
   /** Stops the generation and every synthesis attempt (the call is going, or the exchange is closed). */
@@ -199,7 +237,9 @@ export class CallReply {
   async playout(input: { readonly chunkSeq: number; readonly playedMs: number }): Promise<PlayoutVerdict> {
     const { chunkSeq, playedMs } = input;
     // The phone confirms only what it was sent, inside the chunk it names.
-    if (chunkSeq >= this.emitted.length || playedMs < chunkSeq * AUDIO_PACKET_MS || playedMs > (chunkSeq + 1) * AUDIO_PACKET_MS) return 'VIOLATION';
+    if (chunkSeq >= this.emitted.length + this.failurePackets.length || playedMs < chunkSeq * AUDIO_PACKET_MS
+      || playedMs > (chunkSeq + 1) * AUDIO_PACKET_MS) return 'VIOLATION';
+    if (this.emitted.length === 0 && this.failurePackets.length > 0) return this.failurePlayout(playedMs);
     if (!this.closed && this.clockStartMs !== null && playedMs <= this.markMs) return 'IGNORED';
     const channel = this.deps.channel;
     const clockStartMs = this.clockStartMs
@@ -236,6 +276,27 @@ export class CallReply {
       this.written = Number.POSITIVE_INFINITY;
       this.deps.signal('qandeel_track', 'integrity_failure');
     }
+  }
+
+  /**
+   * S8B-05 CP4: F-01 heard on the phone goes to the QANDEEL track (what the person heard is recorded), never to the
+   * exchange: it is not the reply's speech (CA-05-02: FAILED, heard mark 0, no anchor), so no mark is confirmed for it.
+   */
+  private failurePlayout(playedMs: number): PlayoutVerdict {
+    const channel = this.deps.channel;
+    this.failureClockStartMs ??= Math.max(channel.qandeelEndMs(), floor20(Math.max(0, channel.latestCaptureMs() + AUDIO_PACKET_MS - playedMs)));
+    const heard = Math.min(Math.floor(playedMs / AUDIO_PACKET_MS), this.failurePackets.length);
+    if (heard <= this.failureWritten) return 'IGNORED';
+    try {
+      if (this.failureWritten === 0) channel.qandeelSilence(this.failureClockStartMs);
+      for (; this.failureWritten < heard; this.failureWritten += 1) {
+        channel.qandeelAppend(this.failurePackets[this.failureWritten]!, this.failureClockStartMs + this.failureWritten * AUDIO_PACKET_MS);
+      }
+    } catch {
+      this.failureWritten = Number.POSITIVE_INFINITY;
+      this.deps.signal('qandeel_track', 'integrity_failure');
+    }
+    return 'APPLIED';
   }
 
   // ------------------------------------------------------------------ synthesis
@@ -460,6 +521,8 @@ export class CallReply {
 
   // ------------------------------------------------------------------ finish and close
   private async maybeFinish(): Promise<void> {
+    // An interrupted reply is never finished (see `interrupt`): its close keeps what was heard.
+    if (this.interrupted) return;
     if (this.finishing || !this.generation || !this.emitEnded || this.running > 0) return;
     this.finishing = true;
     await this.registrations;
@@ -473,7 +536,11 @@ export class CallReply {
     }).catch(() => 'UNAVAILABLE');
     if (outcome !== 'FINISHED' && outcome !== 'ALREADY_FINISHED') return;
     this.finished = { state, producedMs };
-    if (producedMs === 0) await this.closeWith('GENERATION_FAILED');
+    if (producedMs === 0) {
+      // Nothing of the reply could be spoken: the fixed line F-01 tells the person, then the exchange closes FAILED.
+      this.sendFailureLine();
+      await this.closeWith('GENERATION_FAILED');
+    }
     else await this.maybeClosePlayedOut();
   }
 
@@ -507,10 +574,28 @@ export class CallReply {
     this.closing = false;
   }
 
+  /** F-01's packets as REPLY_AUDIO of this exchange, from chunkSeq 0 (the reply produced none); nothing when not installed. */
+  private sendFailureLine(): void {
+    if (this.interrupted || this.failurePackets.length > 0) return;
+    const packets = this.deps.failureLine?.() ?? null;
+    if (!packets || packets.length === 0) {
+      this.deps.signal('failure_line', 'not_installed');
+      return;
+    }
+    for (const packet of packets) {
+      const chunkSeq = this.failurePackets.length;
+      this.failurePackets.push(packet);
+      this.deps.channel.sendReplyAudio({ callTurnIndex: this.callTurnIndex, chunkSeq, offsetMs: chunkSeq * AUDIO_PACKET_MS, packet });
+    }
+    this.deps.observe({ kind: 'FAILURE_LINE', callTurnIndex: this.callTurnIndex, chunks: packets.length, at: this.deps.now() });
+    this.deps.signal('failure_line', 'played');
+  }
+
   private announceEnd(deliveryState: DeliveryState): void {
     if (this.closedState) return;
     this.closedState = deliveryState;
-    this.deps.channel.send({ type: 'REPLY_END', callTurnIndex: this.callTurnIndex, chunks: this.emitted.length, deliveryState });
-    this.deps.observe({ kind: 'REPLY_END', callTurnIndex: this.callTurnIndex, at: this.deps.now(), deliveryState, chunks: this.emitted.length });
+    const chunks = this.emitted.length + this.failurePackets.length;
+    this.deps.channel.send({ type: 'REPLY_END', callTurnIndex: this.callTurnIndex, chunks, deliveryState });
+    this.deps.observe({ kind: 'REPLY_END', callTurnIndex: this.callTurnIndex, at: this.deps.now(), deliveryState, chunks });
   }
 }
