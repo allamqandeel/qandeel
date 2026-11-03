@@ -1,6 +1,6 @@
 import { readOggOpus } from './codec/ogg-opus';
 import { LiveCallConnection, LiveCallRegistry, tokenDeadline, type CallTransport } from './live-call.connection';
-import { NULL_LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink, type PlayoutVerdict } from './live-call-speech.port';
+import { NULL_LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink, type PlayoutVerdict, type TextTurnVerdict } from './live-call-speech.port';
 import { encodeAudioFrame, LIVE_CALL_CLOSE } from './live-call.protocol';
 import { InMemoryCallAuthority, ManualClock } from './testing/in-memory-call-authority';
 import { syntheticUplinkPackets } from './testing/synthetic-voice';
@@ -52,6 +52,11 @@ interface Harness {
   pushed: number[];
   playouts: Array<{ callTurnIndex: number; chunkSeq: number; playedMs: number }>;
   verdict: { value: PlayoutVerdict };
+  /** S8B-05 CP4: what the speech stream was given, and the call's state when it was drained. */
+  bargeIns: Array<{ callTurnIndex: number; captureMs: number }>;
+  texts: Array<{ clientTurnId: string; text: string }>;
+  textVerdict: { value: TextTurnVerdict };
+  drains: string[];
   connect: (opts?: { userId?: string; tokenExpiresAt?: number; registry?: LiveCallRegistry }) => { connection: LiveCallConnection; transport: FakeTransport };
 }
 
@@ -64,15 +69,22 @@ function harness(authenticate: (authorization: string) => Promise<{ userId: stri
   const pushed: number[] = [];
   const playouts: Harness['playouts'] = [];
   const verdict: Harness['verdict'] = { value: 'IGNORED' };
+  const bargeIns: Harness['bargeIns'] = [];
+  const texts: Harness['texts'] = [];
+  const textVerdict: Harness['textVerdict'] = { value: { kind: 'COMMITTED' } };
+  const drains: string[] = [];
   const speech: LiveCallSpeechSink = {
     open: () => ({
       push: (_pcm, captureMs) => void pushed.push(captureMs),
       playout: async (input) => { playouts.push(input); return verdict.value; },
+      bargeIn: async (input) => { bargeIns.push(input); return 'APPLIED'; },
+      textTurn: async (input) => { texts.push(input); return textVerdict.value; },
+      drain: async () => void drains.push(authority.calls.get(CALL)?.state ?? 'NONE'),
       close: () => undefined,
     }),
   };
   return {
-    authority, clock, registry, signals, kicks, pushed, playouts, verdict,
+    authority, clock, registry, signals, kicks, pushed, playouts, verdict, bargeIns, texts, textVerdict, drains,
     connect: (opts = {}) => {
       const transport = new FakeTransport();
       const connection = new LiveCallConnection(transport, opts.userId ?? USER, opts.tokenExpiresAt ?? clock.now() + 3_600_000, {
@@ -319,15 +331,63 @@ describe('S8B-05 CP1 one live call connection (protocol v1 over the call authori
     expect(h.authority.calls.size).toBe(1);
   });
 
-  it('answers the CP3-CP4 messages REFUSED NOT_SUPPORTED_YET, never ACK', async () => {
+  // RE-ANCHORED by S8B-05 CP4 (was: BARGE_IN and TEXT_TURN are REFUSED NOT_SUPPORTED_YET, never ACKed).
+  it('S8B-05 CP4: BARGE_IN goes to the speech stream once per msgId and is ACKed; before ACTIVE it is a violation', async () => {
     const h = harness();
     const { connection, transport } = await activeCall(h);
-    connection.onText(JSON.stringify({ type: 'BARGE_IN', msgId: 2, callTurnIndex: 0, captureMs: 20 }));
-    connection.onText(JSON.stringify({ type: 'TEXT_TURN', msgId: 3, clientTurnId: CALL, text: 'x' }));
+    connection.onText(JSON.stringify({ type: 'BARGE_IN', msgId: 2, callTurnIndex: 1, captureMs: 20 }));
     await settle();
-    expect(transport.of('REFUSED').map((m) => [m.reason, m.msgId])).toEqual([['NOT_SUPPORTED_YET', 2], ['NOT_SUPPORTED_YET', 3]]);
-    expect(transport.of('ACK')).toEqual([]);
+    connection.onText(JSON.stringify({ type: 'BARGE_IN', msgId: 2, callTurnIndex: 1, captureMs: 20 }));
+    await settle();
+    expect(h.bargeIns).toEqual([{ callTurnIndex: 1, captureMs: 20 }]);
+    expect(transport.of('ACK').map((m) => m.msgId)).toEqual([2, 2]);
+    expect(transport.of('REFUSED')).toEqual([]);
+    const early = harness().connect();
+    early.connection.onText(hello());
+    await settle();
+    early.connection.onText(JSON.stringify({ type: 'BARGE_IN', msgId: 1, callTurnIndex: 1, captureMs: 0 }));
+    await settle();
+    expect(early.transport.last('REFUSED')).toMatchObject({ reason: 'PROTOCOL_VIOLATION' });
+  });
+
+  it('S8B-05 CP4: TEXT_TURN is ACKed once committed (not moving lastMsgId), refused with its reason, and a resend is applied by its clientTurnId', async () => {
+    const h = harness();
+    const { connection, transport } = await activeCall(h);
+    connection.onText(JSON.stringify({ type: 'TEXT_TURN', msgId: 5, clientTurnId: CALL, text: 'أهلا' }));
+    await settle();
+    expect(transport.of('ACK').map((m) => m.msgId)).toEqual([5]);
+    // The ACK did not move lastMsgId: a resend of the same typed turn (after a resume) is still given to the stream,
+    // which answers it from its first commit (one commit per clientTurnId).
+    connection.onText(JSON.stringify({ type: 'TEXT_TURN', msgId: 5, clientTurnId: CALL, text: 'أهلا' }));
+    await settle();
+    expect(h.texts).toEqual([{ clientTurnId: CALL, text: 'أهلا' }, { clientTurnId: CALL, text: 'أهلا' }]);
+    expect(transport.of('ACK').map((m) => m.msgId)).toEqual([5, 5]);
+    h.textVerdict.value = { kind: 'REFUSED', reason: 'CONSENT_REQUIRED' };
+    connection.onText(JSON.stringify({ type: 'TEXT_TURN', msgId: 6, clientTurnId: SESSION, text: 'x' }));
+    await settle();
+    expect(transport.last('REFUSED')).toMatchObject({ reason: 'CONSENT_REQUIRED', msgId: 6 });
+    expect(transport.of('ACK').map((m) => m.msgId)).toEqual([5, 5]);
     expect(transport.closed).toBeNull();
+  });
+
+  it('S8B-05 CP4: a lost connection drains its speech while the call is still ACTIVE, before its tracks close and it suspends', async () => {
+    const h = harness();
+    const first = await activeCall(h);
+    first.connection.onTransportClosed();
+    await settle();
+    expect(h.drains).toEqual(['ACTIVE']);
+    expect(h.authority.calls.get(CALL)!.state).toBe('RECONNECTING');
+  });
+
+  it('S8B-05 CP4: a resume on the same instance drains the older connection under its own epoch before the epoch moves on', async () => {
+    const h = harness();
+    const older = await activeCall(h);
+    const newer = h.connect();
+    newer.connection.onText(hello(true));
+    await settle();
+    expect(h.drains).toEqual(['ACTIVE']);
+    expect(newer.transport.last('STATE')).toMatchObject({ state: 'ACTIVE', epoch: 2 });
+    expect(older.transport.closed?.code).toBe(LIVE_CALL_CLOSE.FENCED);
   });
 
   it('S8B-05 CP2: PLAYOUT goes to the speech stream once per msgId and is acknowledged; a resend is re-ACKed, never applied', async () => {

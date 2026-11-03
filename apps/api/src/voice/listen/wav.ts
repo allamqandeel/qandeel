@@ -19,3 +19,16 @@ export function pcmToWav(pcm: Buffer, sampleRate: number): Buffer {
   header.writeUInt32LE(pcm.length, 40);
   return Buffer.concat([header, pcm], WAV_HEADER_BYTES + pcm.length);
 }
+
+/**
+ * S8B-05 CP4 — the PCM of a canonical 44-byte RIFF/WAVE file of signed 16-bit little-endian mono at `sampleRate` (the
+ * fixed failure line F-01). Anything else is refused: the file is pinned by its digest, so a different shape is an error.
+ */
+export function wavToPcm(wav: Buffer, sampleRate: number): Buffer {
+  const valid = wav.length > WAV_HEADER_BYTES && wav.toString('ascii', 0, 4) === 'RIFF' && wav.toString('ascii', 8, 12) === 'WAVE'
+    && wav.toString('ascii', 12, 16) === 'fmt ' && wav.readUInt32LE(16) === 16 && wav.readUInt16LE(20) === 1 && wav.readUInt16LE(22) === 1
+    && wav.readUInt32LE(24) === sampleRate && wav.readUInt16LE(34) === 16 && wav.toString('ascii', 36, 40) === 'data'
+    && wav.readUInt32LE(40) === wav.length - WAV_HEADER_BYTES && (wav.length - WAV_HEADER_BYTES) % 2 === 0;
+  if (!valid) throw new Error('WAV_UNSUPPORTED');
+  return wav.subarray(WAV_HEADER_BYTES);
+}

@@ -19,6 +19,27 @@ higher mark advances, a resend is re-ACKed, a mark for a reply that is closed or
 ignored and still ACKed, and a mark for a chunk the server never sent (or outside its chunk) is `PROTOCOL_VIOLATION`.
 BARGE_IN and TEXT_TURN stay `REFUSED NOT_SUPPORTED_YET` (CP3 – CP4).
 
+**What CP4 adds (S8B-05 CP4, 2026-11-03, migration 0192):** BARGE_IN and TEXT_TURN are applied in exactly their frozen
+shapes; no shape, field, limit or close code changed, and no message is `NOT_SUPPORTED_YET` any more.
+
+- **BARGE_IN** (ACTIVE only; a repeat is re-ACKed). QANDEEL's reply stops at once: no later REPLY_AUDIO for it. Its
+  generation is never finished, so the next committed turn closes it `INTERRUPTED` with only what was heard. The first
+  onset is recorded and the command ACKed. A BARGE_IN for a reply already closed is late (P3): ACKed and counted, nothing
+  changed.
+- **TEXT_TURN** (ACTIVE only). The typed turn takes its place in the call's order, behind any spoken turn still waiting,
+  and QANDEEL's voice stops as on a barge-in.
+  - It is ACKed once it is committed, or answered `REFUSED` with its reason (`CONSENT_REQUIRED`, `NOT_AVAILABLE_NOW`,
+    `FENCED`, `NOT_FOUND`, `UNAVAILABLE`). Its ACK does not move `STATE.lastMsgId`.
+  - It is applied once per `clientTurnId`. A resend (after a resume) is answered from the first commit and generates
+    nothing twice, so its `msgId` is not compared with the last applied one.
+  - The server then sends `TURN_COMMITTED` (`role: USER`, the `clientTurnId`). The reply is text: `TURN_COMMITTED`
+    (`role: ASSISTANT`, `clientTurnId: null`) when there is text to read, then `REPLY_END` with `chunks: 0`.
+- **A lost connection, or a resume of the same phone on this instance,** first commits what the person said on it, under
+  its own epoch: the utterance in progress and every turn waiting. A turn committed this way is not answered, since no one
+  would hear the answer. Its exchange's Safety is stored, so the next connection's first commit closes it.
+- **A PLAYOUT or BARGE_IN resent after a resume** for a reply an older connection sent is applied while that exchange is
+  still open, and rejected (P3) once it is closed.
+
 ## 1. Transport
 
 ```
@@ -81,8 +102,8 @@ Big-endian, a 20-byte header, then one Opus packet of 1 … 1275 bytes.
 | `TOKEN_REFRESH` | `msgId`, `accessToken` (≤ 3500 chars, no whitespace) | implemented; the same person or the socket closes `4001` |
 | `END` | `msgId` | implemented; ends the call `USER_ENDED` |
 | `PLAYOUT` | `msgId`, `callTurnIndex`, `chunkSeq`, `playedMs` | implemented (CP2); ACKed; the highest mark only |
-| `BARGE_IN` | `msgId`, `callTurnIndex`, `captureMs` | shape frozen; `REFUSED NOT_SUPPORTED_YET` |
-| `TEXT_TURN` | `msgId`, `clientTurnId`, `text` (1 … 2000 chars) | shape frozen; `REFUSED NOT_SUPPORTED_YET` |
+| `BARGE_IN` | `msgId`, `callTurnIndex`, `captureMs` | implemented (CP4); ACKed; the first onset only |
+| `TEXT_TURN` | `msgId`, `clientTurnId`, `text` (1 … 2000 chars) | implemented (CP4); ACKed once committed, once per `clientTurnId` |
 
 AUDIO is the binary frame above.
 
@@ -108,7 +129,7 @@ REPLY_AUDIO is the binary frame above (sent from CP2).
 | reason | when |
 |---|---|
 | `PROTOCOL_VIOLATION` | the client broke this protocol |
-| `NOT_SUPPORTED_YET` | a CP3 – CP4 message (BARGE_IN, TEXT_TURN) |
+| `NOT_SUPPORTED_YET` | a message not implemented yet (none since CP4) |
 | `CONSENT_REQUIRED` | no current voice consent |
 | `NOT_AVAILABLE_NOW` | the voice gate is closed |
 | `CAPACITY_FULL` | every realtime seat is taken (calls and live voice notes share them) |
@@ -170,7 +191,7 @@ REPLY_AUDIO is the binary frame above (sent from CP2).
   "version": 1,
   "clientMessages": ["HELLO", "AUDIO", "PLAYOUT", "BARGE_IN", "TEXT_TURN", "MUTE", "UNMUTE", "TOKEN_REFRESH", "HEARTBEAT", "END"],
   "serverMessages": ["STATE", "TURN_COMMITTED", "REPLY_AUDIO", "REPLY_END", "REFUSED", "CALL_ENDING", "ACK"],
-  "notYetSupported": ["BARGE_IN", "TEXT_TURN"],
+  "notYetSupported": [],
   "frame": { "audioKind": 1, "replyAudioKind": 2, "headerBytes": 20, "maxOpusPacketBytes": 1275, "maxTextFrameBytes": 4096, "packetMs": 20 },
   "limits": {
     "heartbeatIntervalMs": 1000,

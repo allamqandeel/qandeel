@@ -1,6 +1,6 @@
 import { isUplinkPacket, OpusPacketDecoder } from './codec/opus-codec';
 import {
-  decodeAudioFrame, encodeReplyAudioFrame, encodeServerMessage, LIVE_CALL_CLOSE, LIVE_CALL_LIMITS, NOT_YET_SUPPORTED, parseClientMessage, type CallEndReason,
+  decodeAudioFrame, encodeReplyAudioFrame, encodeServerMessage, LIVE_CALL_CLOSE, LIVE_CALL_LIMITS, parseClientMessage, type CallEndReason,
   type CallState, type ClientMessage, type RefusalReason, type ServerMessage,
 } from './live-call.protocol';
 import type { LiveCallSpeechSink, LiveCallSpeechStream, LiveCallTurnChannel, ReplyAudioPacket } from './live-call-speech.port';
@@ -122,14 +122,18 @@ class Bucket {
  *   - the decoded 16 kHz PCM goes to the speech sink (CP1: none);
  *   - a lost connection never ends a call and never becomes a new one: it suspends the call (RECONNECTING for the
  *     grace) after flushing what it received; a fenced connection (a newer epoch exists) changes nothing at all;
- *   - CP2 / CP4 messages are answered REFUSED NOT_SUPPORTED_YET (never ACKed);
+ *   - (CP1) CP2 / CP4 messages were answered REFUSED NOT_SUPPORTED_YET; CP4 applies the last of them;
  *   - no audio, transcript, token or identifier is logged.
  *
  * S8B-05 CP2: the speech sink is the call turn engine when one is composed. It receives the decoded uplink and the
  * phone's PLAYOUT confirmations, and reaches this connection only through its channel: TURN_COMMITTED, REPLY_AUDIO and
  * REPLY_END go out on this socket, and the QANDEEL track (the reply audio confirmed playing) is written beside the USER
  * track on the same clock, under the same epoch. A PLAYOUT is applied, or ignored when older, repeated or late (P1 / P3),
- * and ACKed either way; BARGE_IN and TEXT_TURN are still refused NOT_SUPPORTED_YET.
+ * and ACKed either way.
+ *
+ * S8B-05 CP4: BARGE_IN and TEXT_TURN are applied (no message is NOT_SUPPORTED_YET any more): a barge-in is ACKed once its
+ * onset is recorded; a typed turn is ACKed once committed, or REFUSED with the reason it was not. A connection that is
+ * lost, or handed over to the same phone's new connection, first drains its speech (the turns it heard are committed).
  */
 export class LiveCallConnection {
   private phase: Phase = 'AWAIT_HELLO';
@@ -270,11 +274,31 @@ export class LiveCallConnection {
         if (verdict === 'VIOLATION') return this.violation();
         return this.ack(message.msgId);
       }
-      default:
-        if (NOT_YET_SUPPORTED.has(message.type)) {
-          this.send({ type: 'REFUSED', reason: 'NOT_SUPPORTED_YET', msgId: 'msgId' in message ? message.msgId : null });
+      case 'BARGE_IN': {
+        // S8B-05 CP4 (P4): QANDEEL's voice stops at once; the onset is recorded (or the command is late, P3) and ACKed.
+        if (this.phase !== 'ACTIVE') return this.violation();
+        if (this.repeated(message.msgId)) return;
+        if (this.speech) await this.speech.bargeIn({ callTurnIndex: message.callTurnIndex, captureMs: message.captureMs }).catch(() => 'IGNORED');
+        return this.ack(message.msgId);
+      }
+      case 'TEXT_TURN': {
+        // S8B-05 CP4 (D-05-07, P4 / P5): the typed turn takes its place in the call's order now; its commit may wait for
+        // the previous exchange's Safety, so it is ACKed (or refused) when it settles, never blocking the uplink. One commit
+        // per clientTurnId: a resend after a resume (its msgId already counted) is applied again and settles with the first.
+        if (this.phase !== 'ACTIVE') return this.violation();
+        const msgId = message.msgId;
+        if (!this.speech) {
+          this.send({ type: 'REFUSED', reason: 'UNAVAILABLE', msgId });
           return;
         }
+        void this.speech.textTurn({ clientTurnId: message.clientTurnId, text: message.text }).then(
+          (verdict) => (verdict.kind === 'COMMITTED' ? this.ack(msgId, false) : this.send({ type: 'REFUSED', reason: verdict.reason, msgId })),
+          () => this.send({ type: 'REFUSED', reason: 'UNAVAILABLE', msgId }),
+        );
+        return;
+      }
+      default:
+        // S8B-05 CP4: every v1 client message is applied; nothing is NOT_SUPPORTED_YET (NOT_YET_SUPPORTED is empty).
         return this.violation();
     }
   }
@@ -360,6 +384,8 @@ export class LiveCallConnection {
     this.enqueue(async () => {
       this.handingOver = true;
       await this.flushTracks();
+      // S8B-05 CP4: what the person said on this connection is committed under its epoch before the epoch moves on.
+      if (this.phase === 'ACTIVE') await this.speech?.drain().catch(() => undefined);
     });
     await this.inbox;
   }
@@ -400,6 +426,8 @@ export class LiveCallConnection {
 
   private async endByPerson(msgId: number): Promise<void> {
     const reason = 'USER_ENDED';
+    // S8B-05 CP4: the person's last words before the END are a turn (committed, not answered) before the call ends.
+    await this.speech?.drain().catch(() => undefined);
     await this.flushTracks();
     const ended = await this.deps.store.end({ userId: this.userId, callId: this.callId!, epoch: this.epoch!, reason }).catch(() => null);
     if (!ended) {
@@ -564,6 +592,8 @@ export class LiveCallConnection {
 
   private async endByServer(): Promise<void> {
     if (this.phase !== 'ACTIVE') return;
+    // S8B-05 CP4: as at the person's END, what they were saying at the maximum length is committed first.
+    await this.speech?.drain().catch(() => undefined);
     await this.flushTracks();
     const ended = await this.deps.store.end({ userId: this.userId, callId: this.callId!, epoch: this.epoch!, reason: 'SERVER_ENDED' }).catch(() => null);
     if (!ended) return this.lose(LIVE_CALL_CLOSE.REFUSED, 'UNAVAILABLE');
@@ -664,8 +694,12 @@ export class LiveCallConnection {
   private async lose(code: number | null, reason: string): Promise<void> {
     if (this.phase === 'CLOSED') return;
     const holding = (this.phase === 'ACTIVE' || this.phase === 'CONNECTING') && !this.fenced && !this.ended && this.epoch !== null;
+    const active = this.phase === 'ACTIVE';
     this.phase = 'CLOSING';
     if (holding) {
+      // S8B-05 CP4: the utterance in progress and the turns waiting are committed (and the open exchange's Safety stored)
+      // while the tracks are still open, so the next connection, on any instance, closes the exchange and loses no word.
+      if (active) await this.speech?.drain().catch(() => undefined);
       await this.closeTracks();
       const suspended = await this.deps.store.suspend({ userId: this.userId, callId: this.callId!, epoch: this.epoch! }).catch(() => null);
       this.deps.signal('suspend', suspended ? (suspended.outcome === 'SUSPENDED' ? 'success' : 'refused_expected') : 'transport_failure');

@@ -45,6 +45,7 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import { extractStatement } from './voice-foundation-0183-substitutions.mjs';
 import { VOICE_CONSENT_V3 } from './qandeel-voice-0188-anchor.mjs';
 import { MIGRATION_0191, SUBSTITUTIONS, substitutedStatement, voiceInternals0191 } from './live-call-0191-substitutions.mjs';
+import { liveCallTextTurnApplied, substitutedBody as substitutedBody0192 } from './live-call-0192-substitutions.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -295,6 +296,9 @@ async function verifyCatalogue(report) {
   await report.section('T0c every forward-replaced function is its origin statement plus exactly the declared edits, in 0191 and live', async () => {
     const text = readFileSync(new URL(`./migrations/${MIGRATION_0191}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
     assert.equal(SUBSTITUTIONS.length, 6);
+    // S8B-05 CP4 (0192) forward-replaces the ONE close again (the typed exchange); once applied, the live body is 0192's,
+    // derived from this 0191 statement and 0192's declared edits.
+    const later = (await liveCallTextTurnApplied(rows)) ? { 'close-core-assistant-half': substitutedBody0192('close-core-text-exchange') } : {};
     for (const substitution of SUBSTITUTIONS) {
       const declared = substitutedStatement(substitution);
       const written = extractStatement(text, substitution.header);
@@ -302,7 +306,9 @@ async function verifyCatalogue(report) {
       assert.ok(substitution.edits.every(([, to]) => to.includes('S8B-05 CP3 (0191')), `${substitution.key}: the edit names its task`);
       const name = /FUNCTION ([a-z_]+\.[a-z_0-9]+)\(/u.exec(substitution.header)[1];
       const live = await rows("SELECT p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname || '.' || p.proname = $1", [name]);
-      assert.ok(live.some((r) => r.prosrc.replace(/\r\n/gu, '\n') === written.body), `${substitution.key}: the live body is the 0191 body`);
+      const expected = later[substitution.key] ?? written.body;
+      assert.ok(live.some((r) => r.prosrc.replace(/\r\n/gu, '\n') === expected),
+        `${substitution.key}: the live body is the ${later[substitution.key] ? '0192' : '0191'} body`);
     }
     assert.doesNotMatch(text, /FUNCTION public\.finalize_conversation_turn_v2\(/u, 'finalize v2 is not redefined');
     assert.doesNotMatch(text, /FUNCTION public\.server_store_call_turn_safety_v1\(/u, 'the one Safety store is reused');
@@ -513,18 +519,33 @@ async function verifyBehaviour(report) {
         assert.equal((await settle(x, idx, 'EXCHANGE', token, 'COMPLETE')).queue_state, 'COMPLETE');
       }
       assert.equal((await commitHalf(x, t.idx, 'USER', t.turn, t.content)).outcome, 'COMMITTED');
-      // After the first turn a text exchange is the text path's own, unchanged.
+      // After the first turn a text exchange is the text path's own, unchanged. S8B-05 CP4 (0192, A1 C2) refuses a typed
+      // REST turn admitted into the live call's session (the phone sends it as TEXT_TURN), so once 0192 is applied nothing
+      // of the text path can complete after the first turn, and the refusal writes nothing.
+      const textTurnApplied = await liveCallTextTurnApplied(rows);
       await playedReply(x, t.idx);
-      await textExchange(user, session, 'بعد أول دور.', 'تمام.');
+      if (textTurnApplied) {
+        await asRole('authenticated', user);
+        const refusedTurn = randomUUID();
+        await rejected(() => rows('SELECT * FROM create_user_conversation_turn($1, $2, $3, $4)', [refusedTurn, session, 'بعد أول دور.', null]),
+          ['55000'], /LIVE_CALL_IN_PROGRESS/u);
+        await owner();
+        assert.equal((await rows('SELECT count(*)::int AS n FROM public.conversation_turns WHERE id = $1', [refusedTurn]))[0].n, 0, 'nothing written');
+      } else {
+        await textExchange(user, session, 'بعد أول دور.', 'تمام.');
+      }
       await spokenTurn(x);
       assert.equal((await queueOf(session)).filter((i) => i.half === 'EXCHANGE').length, 2, 'the second turn adopts nothing');
       // An adoption that would not fit below the first turn adopts nothing (it stays the text path's own) and never takes a
-      // turn's index.
+      // turn's index. The bound is the adoption internal's own, whatever completed the exchanges: once 0192 is applied the
+      // two text exchanges of this fixture are written with its admission guard disabled inside this rolled-back scenario.
       const y = await activeCall();
+      if (textTurnApplied) await q('ALTER TABLE public.conversation_turns DISABLE TRIGGER conversation_turns_live_call_admission');
       const e = await textExchange(y.user, y.session, 'آخر واحد.', 'تمام.');
       await q(`INSERT INTO voice_private.call_analysis_queue (call_id, call_turn_index, half, user_id, session_id, turn_id, assistant_turn_id)
         VALUES ($1, 0, 'EXCHANGE', $2, $3, $4, $5)`, [y.call, y.user, y.session, e.userTurn, e.assistantTurn]);
       const g = await textExchange(y.user, y.session, 'ده مش هيلحق.', 'تمام.');
+      if (textTurnApplied) await q('ALTER TABLE public.conversation_turns ENABLE TRIGGER conversation_turns_live_call_admission');
       assert.equal((await rows('SELECT voice_private.adopt_pre_call_exchanges_v1($1, $2, $3, 0) AS n', [y.call, y.user, y.session]))[0].n, 0);
       assert.ok(!(await queueOf(y.session)).some((i) => i.turn_id === g.userTurn), 'not adopted past 0');
       await rejected(() => rows('SELECT voice_private.adopt_pre_call_exchanges_v1($1, $2, $3, -1) AS n', [y.call, y.user, y.session]), ['22023'], /VOICE_REQUEST_INVALID/u);

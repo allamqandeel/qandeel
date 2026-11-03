@@ -1,14 +1,12 @@
 # QANDEEL S8B-05 — Integrated Live Call: Implementation Record v1
 
-**Checkpoint:** S8B-05 CP3 — UNDER REVIEW (2026-11-02; R1, the Product Owner's correction order on PR #377, 2026-11-03, §11.10; R2, the Product Owner's decisions on R1 and the API CI P04 fix, 2026-11-03, §11.11 – §11.14). CP1 (Call Authority, Gateway, Admission & User Track) is
-**merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`; CP2 (Realtime Spoken Turn,
-QANDEEL Reply & Playout Truth, §10) is **merged** through [PR #375](https://github.com/allamqandeel/qandeel/pull/375) as
-`f5de4c27`. CP3 (Ordered Half-Exchange Establishment & Fast Live Analysis, §11) is on `s8b/s8b-05-cp3` as a **Draft pull
-request, not merged; merge only on the Product Owner's explicit «ادمج»**. S8B-05 is **not closed**. CP4 is **not started
-and not authorized**. S8B-06 CP1 is merged through PR #376 as `e429ca35`; CP3 was synced with that `main` and does not
-depend on it.
+**Task:** S8B-05 — Integrated Live Call (Stage 8B). This record covers CP1 (§0 – §9), CP2 (§10), CP3 (§11) and **CP4 —
+Final Live Call Integration & Closure, S8B-05's closing change** (§12).
+**Status:** `S8B-05 CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION (2026-11-03, the CP4 closing change; §12) — CP1 MERGED THROUGH PR #374 AS 50938001 — CP2 MERGED THROUGH PR #375 AS f5de4c27 — CP3 MERGED THROUGH PR #377 AS 5f1e0561 — CP4 ON s8b/s8b-05-cp4 AS A DRAFT PULL REQUEST, NOT MERGED (MERGE ONLY ON THE PRODUCT OWNER'S EXPLICIT «ادمج») — #34 NOT MET UNDER SHIPPED, OWNED BY GCR-01-A — MIGRATIONS 0189 – 0192 NOT HOSTED — ALL FOUR VOICE GATES DISABLED — NO PAID PROVIDER CALL, NO F-01 AUDIO GENERATED — NOT USER-READY`
 
-*(§0 – §9 are CP1's record as written, §10 CP2's; where a later checkpoint changed an earlier statement, its own section
+*(CP3's banner as written, before its merge: "S8B-05 CP3 — UNDER REVIEW (2026-11-02; R1, the Product Owner's correction order on PR #377, 2026-11-03, §11.10; R2, the Product Owner's decisions on R1 and the API CI P04 fix, 2026-11-03, §11.11 – §11.14). CP1 (Call Authority, Gateway, Admission & User Track) is **merged** through [PR #374](https://github.com/allamqandeel/qandeel/pull/374) as `50938001`; CP2 (Realtime Spoken Turn, QANDEEL Reply & Playout Truth, §10) is **merged** through [PR #375](https://github.com/allamqandeel/qandeel/pull/375) as `f5de4c27`. CP3 (Ordered Half-Exchange Establishment & Fast Live Analysis, §11) is on `s8b/s8b-05-cp3` as a **Draft pull request, not merged; merge only on the Product Owner's explicit «ادمج»**. S8B-05 is **not closed**. CP4 is **not started and not authorized**. S8B-06 CP1 is merged through PR #376 as `e429ca35`; CP3 was synced with that `main` and does not depend on it.")*
+
+*(§0 – §9 are CP1's record as written, §10 CP2's, §11 CP3's and §12 CP4's; where a later checkpoint changed an earlier statement, its own section
 says so.)*
 
 *(CP2's banner as written, before its merge: "S8B-05 CP2 — UNDER REVIEW (2026-11-02) … CP3, CP4 and S8B-06 are not started
@@ -1450,3 +1448,193 @@ These were run on local PG17 against a template migrated from this branch's own 
 - **The fix.** Both values now come from one `statement_timestamp()`, which is fixed within the statement. The scenario
   still expects 23503, and nothing else changed: no migration, no product code, no sleep or retry.
 - **Local proof:** `verify-migration-0189` passes 24 / 24 on a fresh R2 template.
+
+## 12. CP4 — Final Live Call Integration & Closure (2026-11-03; S8B-05's closing change)
+
+**Authority:** the Product Owner's «S8B-05 CP4: Final Live Call Integration & Closure — Product Owner Execution Direction»
+(2026-11-03): a boundary review first, then CP4's five parts (A full barge-in, B TEXT_TURN in a call, C end-to-end
+reconnection, D F-01 and recording integrity, E the complete synthetic integration), then the closure. **Base:** `main` at
+`5f1e0561`, the merge of PR #377 (CP3). **Branch:** `s8b/s8b-05-cp4`. **Migration:** `0192` (forward-only, **not
+hosted**). **The next migration is `0193`.**
+
+**Constraints kept:** no voice gate opened; no migration on a hosted database; no paid API; no F-01 or warning audio
+generated (the proof plays a generated tone from a temporary directory, never committed); no real person, voice or user
+data (random UUIDs, fixed synthetic Arabic and English sentences, synthetic tones); the S8B-06 Android engine is not
+rebuilt; no phone UI, no Replay, no S8B-07; no GCR-01 SHARED permit or deferral; M1, L2, `B_total`, `k`, `B_min` and the
+SHIPPED permit defaults unchanged; Safety stays in TypeScript (no second copy in the database); nothing merged.
+
+**Precedence of the other open work:** PR #378 (GCR-01, the Product Owner's pre-launch gate) is documentation only and not
+part of CP4. CP4 neither implements nor narrows it; its content is not touched, and the locators below are prepended
+beside it.
+
+### 12.1 The boundary review (sent to the Product Owner before the work, as directed)
+
+- **Already in place from CP1 – CP3:** the frozen protocol shapes of `BARGE_IN` and `TEXT_TURN`, both refused
+  `NOT_SUPPORTED_YET`; P1 – P3 (heard = confirmed playout, the anchor ≤ the mark, every late command rejected and
+  counted); N1 (the next commit closes the open exchange); resume and fencing by the connection epoch; the 30 s grace; the
+  QANDEEL track writer; R5′ / S3 at the END; the ordered halves (O1 – O3b) and the worker.
+- **Missing, and CP4's:** the barge-in onset and the echo bound; a typed exchange inside the call (D-05-07: its reply is
+  text, never spoken) and the guard of the 0131 text paths around a live call; the drain of a dropping connection's
+  speech; the open exchange an older connection left (P5); F-01's playout; the M2 mode of the matrix; the injected-fault
+  SYN part of #38 / #39.
+- **Not CP4's, kept out:** the native engine and the call UI (S8B-06), Replay (S8B-07), the paid evidence (S8B-08), the
+  First Audio contention correction and the ≤ 2 s Live Focus target (GCR-01-A).
+- **No architectural conflict** was found that the approved contract cannot hold. No decision needed the Product Owner
+  before the work.
+
+### 12.2 What CP4 delivers, against the five parts
+
+| Part | Where | How |
+|---|---|---|
+| **A — Barge-in** | `live-call.connection.ts`, `live-call-turn.engine.ts`, `call-reply.ts`, 0192 `server_record_call_barge_in_v1` | `BARGE_IN` (ACTIVE only, once per `msgId`, ACKed) stops QANDEEL's reply at once: no REPLY_AUDIO after the ACK, the generation is never finished, and the next committed turn closes it `INTERRUPTED` with only what was heard (N1, P1 – P3 unchanged). The first onset is stored (fenced by the epoch; it closes nothing). A barge-in for a closed exchange is late: ACKed, counted, nothing changed. **Echo exclusion:** a FINAL whose mapped capture end falls inside (the reply's playout start, the onset] is QANDEEL's own voice heard by the microphone and is left out of the person's turn; the turn's start moves to the onset, so the person's first words are kept and QANDEEL's voice is never recorded as theirs. The stream-to-capture map follows every uplink break. PLAYOUT, `deliveryState` and the recording stay correct: the QANDEEL track carries only the confirmed frames. |
+| **B — TEXT_TURN** | the connection, the engine (`CallTextReply`), 0192 (`server_close_live_call_text_exchange_v1`, the admission trigger), `live-call-reply.service.ts` | The typed turn takes its place in the call's single order, behind any spoken turn still waiting (one backlog of SPEECH and TEXT turns), and stops QANDEEL's voice as a barge-in does (T1 at sending, #40). Applied once per `clientTurnId` (the commit id), ACKed once committed without moving `lastMsgId`, or `REFUSED` with its reason. The reply is text (D-05-07): `TURN_COMMITTED` ASSISTANT when there is text, then `REPLY_END` with `chunks: 0`; a PLAYOUT on it is a violation. The exchange closes `TEXT_REPLIED` (`COMPLETE` or `WITHHELD_TAIL`), `FAILED`, or `INTERRUPTED` when N1 or the END closed it first. **The 0131 race:** a REST typed turn or a Voice Note admitted into a session whose call has not ended is refused `LIVE_CALL_IN_PROGRESS` (55000, nothing written), under the person's call lock, by one `BEFORE INSERT` trigger on the `RECEIVED` user row; neither frozen function is re-created; outside a call nothing changes. |
+| **C — Reconnection** | the connection (`lose`, `handOver`, `endByPerson`, `endByServer`), the engine (`drain`, the inherited exchange), 0192 `server_read_open_call_exchange_v1` | A dropping connection (or a same-phone resume on the same instance) first **drains** its speech under its own epoch (bounded at 3 s): spoken replies stop, the utterance in progress is force-ended, every waiting turn is committed in order and its exchange's Safety settled (S3). A drained turn is not answered (nobody would hear it). The connection that resumes (on the same instance or another) reads the open exchange the older connection left (fenced), settles its Safety once before its first commit, and that commit closes it (N1). The phone's resend from `resumeFromCaptureMs` fills the hole; an old epoch is `FENCED`. A PLAYOUT or BARGE_IN resent after the resume is applied while that exchange is still open, rejected (P3) once it is closed. |
+| **D — F-01 and recording integrity** | `call-failure-line.ts`, `voice.module.ts` (`LIVE_CALL_FAILURE_LINE`), `call-reply.ts`, `listen/wav.ts` (`wavToPcm`) | When a reply produced nothing (generation failed before any audio), the call plays the fixed failure line F-01 from its pinned files (D-05-02), encoded once per language as 20 ms Opus 24 kHz packets and chosen by the words of the exchange; it is written to the QANDEEL track only as far as it is heard, and the exchange stays `FAILED` with heard 0 (it is not a reply). **While the files are NOT_INSTALLED (the repository's state, unchanged), nothing is played**: no random text, no synthesized line, no assumed copy approval. Interruption, the call's end, a generation failure, an incomplete recording, deletion and retrieval are each proven (§12.3). |
+| **E — Synthetic integration** | `s8b-05-cp4-live-call-closure-proof.ts` (new); `s8b-05-cp3-live-analysis-proof.ts` (M2 added) | §12.3 and §12.4. Functional success is reported apart from the speed criterion. |
+
+### 12.3 Proofs (all free, all local or in CI; nothing paid, nothing hosted)
+
+- **`verify-migration-0192` — 15 / 15 on local PG17** (base: every migration through 0192): T0a – T0e (the exchange's new
+  columns and checks, ACL, the forward replacements identical to their origin plus the declared edits, the admission
+  trigger's shape, the four scopes DISABLED and the census), T1 (barge-in fenced, first onset kept, closes nothing; late
+  rejected and counted), T2 / T2b (N1 after a barge-in: only what was heard; before anything was heard: `INTERRUPTED`, never
+  `FAILED`), T3 / T3b / T4 (the typed exchange: `COMPLETE`, `WITHHELD_TAIL`, `FAILED`, no close without Safety, not fenced by
+  the epoch; closed first by N1 or the END: `INTERRUPTED`, the late text close `ALREADY_CLOSED`; a spoken exchange never by
+  text), T5 (the text paths refused while `CONNECTING`, `ACTIVE` and `RECONNECTING` within the grace; admitted elsewhere,
+  after the end and when lapsed), T6 (P5: the older connection's open exchange read by the holder; `NONE` once closed).
+- **The CP4 synthetic proof — 10 / 10 on local PG17.** Two Nest instances (A, B) with the real gateway, connection,
+  engine, reply service, Safety gate, recording writer and 0189 – 0192, over a real PostgreSQL; a synthetic phone (real
+  Opus up and down, resume with resend, confirmed playout); stand-ins only for the providers (a fake DeepSeek with OK /
+  FAIL / SLOW plans, the fake recognizer, a fake TTS) and the PostgREST hop (pg shims with PostgREST's error identity):
+
+  | | Scenario | Result |
+  |---|---|---|
+  | X1 | BARGE_IN during QANDEEL's voice | 0 reply frames after the ACK; onset stored; `INTERRUPTED`, heard 600 ms = played 600 ms; heard text = the first pieces only; the next turn is the person's words only (the echo excluded, observed), anchored from the onset |
+  | X2 | TEXT_TURN during QANDEEL's voice; REST in the call | the spoken reply `INTERRUPTED`, 0 frames after; one commit by `clientTurnId`, channel TEXT, `TEXT_REPLIED` / `COMPLETE`, ASSISTANT announced, `REPLY_END` chunks 0; the REST typed turn refused 55000 |
+  | X3 | a drop on the same instance mid-reply and mid-utterance | drained: one turn, every word, under epoch 1; resumed (epoch 2) within 1.5 s from capture 10 020 ms; 0 reply frames after the drop; turns 1 … 6 once each; no gap left |
+  | X4 | a drop during generation, resumed on the other instance | epoch 3 on B; the inherited exchange's Safety stored and closed by N1 (`INTERRUPTED`); 0 late frames; the next reply `COMPLETE`; an epoch-2 commit `FENCED` |
+  | X5 | injected faults | late / repeated PLAYOUT and a late BARGE_IN change nothing (2 rejections counted); a BARGE_IN lost with the network, resent at the resume, applied once |
+  | X6 | the 60 minutes end during a reply | `SERVER_ENDED`; the last reply `CALL_ENDING` / `INTERRUPTED` with what was heard; every exchange closed; the recording `STORED`, 0 ledger rows pending; QANDEEL track 85 packets = 85 confirmed (93 played; recorded ≤ heard); the USER track whole (1 580 packets, 31.6 s, 0 gaps) |
+  | X7 | order, context, retrieval, export | 11 call turns once each, 1 … n, spoken and typed in place; the next reply's context carries the typed exchange; in-call retrieval finds the typed turn; the export carries the delivery states |
+  | X8 | F-01 installed / not installed | installed (the tone fixture): 20 / 20 packets played and on the QANDEEL track, `FAILED`, heard 0; not installed: 0 packets, `FAILED` |
+  | X9 | account erasure | every row of the call removed (exchanges with their onsets and text replies, call turns, recordings) |
+  | X10 | teardown | no fixture row left (calls, exchanges, recordings, call turns, outbox events, ledger rows, users); every voice gate as it was |
+
+- **The CP3 proof with M2 — 113 / 113 checks on local PG17** under SHIPPED, CALIBRATED and CONSERVATIVE (§12.4).
+- **The CP1 and CP2 proofs on 0192 — the CP1 proof 8 / 8 and the CP2 proof 10 / 10, run in CI order on one fresh 0192 database (after every verifier), followed there by the CP4 proof 10 / 10 again.** The earlier verifiers on the 0192 tree: `verify-migration-0002`, `0063` – `0072`, `0082`, `0083`, `0090`, `0092`, `0093`, `0123`, `0128`, `0130`, `0131`, `0151`, `0152`, `0171`, `0172`, `0183` – `0192` (31 verifiers) all pass on that database.
+- **API specs:** the engine (8 new CP4 cases: barge-in with the echo bound, no exclusion without a barge-in, TEXT_TURN,
+  order behind a held turn, the drain, the resume with the inherited exchange and a resent PLAYOUT, F-01 installed / not
+  installed), the connection (4 new cases replacing the NOT_SUPPORTED one), `call-failure-line.spec.ts` (new), the
+  protocol and gateway specs re-anchored. Voice and conversation: 62 suites, 1 457 tests. The full API run: 337 suites; 7 732 passed, 1 skipped, 0 failed.
+- **Static contracts:** `tests/s8b-05-live-call-contract.test.mjs` 16 / 16, with three CP4 pins (0192's shape and the CI
+  order, F-01 NOT_INSTALLED and no logging, M2 reported not enforced) and the re-anchors of §12.7. `node --test tests/*.test.mjs database/tests/*.test.mjs` without `forward-safety-contract`: 3 034 / 3 034. That one test copies the repository and re-runs every suite; on this machine it ran past 9 minutes without finishing and was stopped, so it is left to CI. One S8B-04 pin is re-anchored (§12.7). `test:task-closure-governance-contract` 24 / 24.
+- **Mobile:** no mobile file changed; `src/voice-call` Jest 28 / 28 (the phone's protocol mirror still parses every reason code, `NOT_SUPPORTED_YET` included, which stays in the frozen protocol).
+- **Typecheck:** `tsc` for `apps/api` and for `tsconfig.scripts.json` is clean.
+- **CI:** the API workflow runs `verify-0192` after the CP3 proof, then the CP4 proof.
+
+### 12.4 M0 / M1 / M1′ / M2 — **Synthetic estimate** (functional success apart from the speed criterion)
+
+**Functional (enforced):** under every mode and profile, every exchange was established once in the analysis order (pre-call first, FIFO by `call_turn_index`), one active worker per session across the two instances, no duplicate batch, O3b adopted every pre-call exchange first, and in M2 every post-response delivery ran through the real post-response gate, delayed and never dropped (52 / 52 under each profile). The next turn was never refused by the analysis lock.
+
+**Speed (reported, not enforced here; the criterion and its correction are the Product Owner's GCR-01-A):**
+
+Local PG17, two instances, one fake provider of 8 shared slots, seeds fixed. M0 / M1 / M1′: 7 calls, 68 exchanges. M2: 5
+calls, 52 exchanges, each closed exchange followed by one post-response provider call; M0_M2 is the same 5 calls with
+analysis and post-response off. Impact = the mode against its own M0 (ms). **Synthetic estimate**, not a final
+performance result.
+
+| Mode | Profile | First Audio P50 / P95 | Impact P50 / P95 | Commit → Live Focus P50 / P95 |
+|---|---|---|---|---|
+| M0 | — | 533 / 664 | — | — |
+| M1 | SHIPPED | 602 / 795 | **+69 / +131** | 2 504 / 3 896 |
+| M1′ | SHIPPED | 623 / 775 | **+90 / +111** | 2 554 / 3 607 |
+| M1 | CALIBRATED | 560 / 723 | +27 / +59 | 3 722 / 8 806 |
+| M1′ | CALIBRATED | 577 / 721 | +44 / +57 | 3 534 / 7 471 |
+| M1 | CONSERVATIVE | 541 / 681 | +8 / +17 | 9 693 / 19 814 |
+| M1′ | CONSERVATIVE | 532 / 674 | −1 / +10 | 10 592 / 20 494 |
+| M0_M2 | — | 512 / 669 | — | — |
+| M2 | SHIPPED | 519 / 668 | +7 / −1 | 6 519 / 16 181 |
+| M2 | CALIBRATED | 513 / 668 | +1 / −1 | 7 763 / 18 507 |
+| M2 | CONSERVATIVE | 511 / 673 | −1 / +4 | 11 341 / 24 363 |
+
+The trade the table shows is the known one (§11.10.6): a stricter permit policy protects First Audio and delays Live
+Focus. In M2 the post-response work takes background permits too, so Live Focus waits longer while First Audio stays
+protected; M2's five calls press the provider less than M1's seven, so its impact is not comparable with M1's.
+
+**#34 (voice priority across users, §4.3 of v1.1: ≤ +50 ms P50 and ≤ +100 ms P95 against the same run's M0):** under SHIPPED, M1 **+69 / +131 ms** and M1′ **+90 / +111 ms**: **NOT MET** (printed `REPORTED`). Under CALIBRATED and CONSERVATIVE, and in M2 under all three profiles, it is within.
+This is the known First Audio contention the Product Owner deferred to GCR-01-A (2026-11-03, PR #378). CP4 does not
+implement the SHARED permit or the deferral, and does not change M1 or the SHIPPED defaults.
+
+**The Live Focus ≤ 2 s P95 target (GCR-01-A item 6), measured where the proof covers it:** commit → durable Live Focus
+P95 **3 896 ms** at best (M1 SHIPPED), up to 24 363 ms (M2 CONSERVATIVE); P50 2 504 – 11 341 ms. **Not met**; it stays GCR-01-A's to prove.
+
+### 12.5 Acceptance items (contract §11 as amended by v1.1, A1 and v1.2): CP4 and the closure
+
+| # | Item | CP4 proof | Status |
+|---|---|---|---|
+| 6 | Barge-in works | X1, X5; T1, T2, T2b; the engine and connection specs | **Met (SYN)**; the device (AND, a launch blocker) is S8B-06 |
+| 7 | The person's first words kept | X1 (the uplink never stops; the turn anchored from the onset; the echo left out) | **Met (SYN)**; AND → S8B-06, the paid text quality → S8B-08 |
+| 8 | No late audio | X1 – X4 (0 frames after the ACK, the drop, the resume) | **Met (U + SYN)** |
+| 10 | Heard = recorded | X1, X6 (the QANDEEL track = the confirmed frames), X8 (F-01 only as heard) | **Met (SYN + PG)**; the device → S8B-06 |
+| 13 | Live Focus and the map from approved speech, in order | X7; the M1 / M1′ / M2 modes (§12.4) | **Met** |
+| 15 | The map does not slow the voice | §12.4 | **Functional: met** (the next turn is never refused by the analysis lock; no item dropped). **The speed criterion: not met under SHIPPED (reported, §12.4; GCR-01-A)** |
+| 16 | Reconnection to the same call | X3, X4 (30 s, two instances, fencing) | **Met (PG + SYN)**; AND → S8B-06 |
+| 17 | Honest close on failure | X6, X8; T3b | **Met** |
+| 24 | Voice Notes, Text and Analysis not broken | the existing suites and verifiers on 0192; the admission trigger only inside a live call (T5) | **Met locally; the full CI run is on the pull request** |
+| 25 | No voice gate opened | 0192's guard; T0e; X10 | **Met** |
+| 31 | The text and message paths unchanged | T5 (refused only during a live call); the text suites unchanged | **Met** |
+| 32 | The queue under pressure | the CP3 proof's outage and budget cases, now with M2 (§12.4) | **Met (SYN)** |
+| 34 | Voice priority across users | §12.4 | **NOT MET under SHIPPED; within under CALIBRATED and CONSERVATIVE (SYN, reported)** → GCR-01-A |
+| 38 | Interruption and recording races (the SYN part) | X1 – X6 (late / repeated PLAYOUT, a barge-in lost then resent, a drop in and out of the grace, TEXT_TURN during speech, N1 + the END) | **Met (PG + SYN)** |
+| 39 | Pending analysis and the drop | the CP3 proof (O3b, faults on analysis only, drain in order, no hindsight, crash without duplicate) on 0192 | **Met (PG + SYN)** |
+| 40 | T1 at sending | X2 (sending stops QANDEEL's voice and closes it `INTERRUPTED` under P2) | **Met (SYN)**; DEV → S8B-06 CP3 |
+
+Items 3, 5, 14, 21 – 23 and 36 are device items (S8B-06); 7's and 33's paid parts are S8B-08's. Every other item is closed
+by its own checkpoint (§5, §10.5, §11.5).
+
+### 12.6 Exceptions and limits (each with its owner and date)
+
+| Exception / limit | Owner | Date |
+|---|---|---|
+| **#34 under SHIPPED**, the First Audio contention across users, and the ≤ 2 s Live Focus P95 target (§12.4): reported, not met | `GCR-01-A` (the Product Owner's decision of 2026-11-03, PR #378) | before voice launch |
+| **An instance crash** (as opposed to a disconnect) loses the transcript of an utterance not yet committed on that instance. Its audio is kept (the USER track is durable as received); nothing is lost on a disconnect (the drain). | `GCR-01` (instance loss), admitted as `QAN-BL-VOICE-07` | 2026-11-03 |
+| **A drained turn is not answered**, and **REPLY_END is not announced on the new connection** for an inherited exchange (the phone learns its close from the history). A PLAYOUT resent on the new connection writes no QANDEEL audio beyond what was recorded at the close (heard ≤ recorded at the close). If the resume fails after a same-instance hand-over, the older connection's speech stays drained, never lost. | `S8B-06` CP3 (the call UI and the device acceptance), admitted as `QAN-BL-VOICE-06` | 2026-11-03 |
+| **F-01's audio files** are NOT_INSTALLED; until they are, a reply that produced nothing is silent and closes `FAILED`. Generating them needs the Product Owner's separate permission and the Copy Gate (D-05-02). | `S8B-06` CP3 (with the call Copy Gate) | 2026-11-03 |
+| **Device items** (#3, #5, #6 AND, #14, #16 AND, #21 – #23, #36, #40 DEV) | `S8B-06` (contract plan) | per the contract |
+| **Paid evidence** (real speed, provider capacity, calibration of `B_total`, `k`, `B_min`) | `S8B-08` (`QAN-BL-VOICE-05`) | per the contract |
+| **Deploy order:** the API's typed-turn and barge-in paths call 0192's RPCs, so 0192 must be on a database before an API carrying CP4 is deployed against it. | `HOSTED-DEPLOY` (operator) | before any hosted deployment |
+
+### 12.7 Re-anchors (each says what it replaced, in its own file)
+
+- `tests/s8b-05-live-call-contract.test.mjs`: no message is `NOT_SUPPORTED_YET`; BARGE_IN and TEXT_TURN are applied while
+  ACTIVE; 0192 is the last migration.
+- `apps/api/src/voice/call/live-call.protocol.spec.ts`, `live-call.connection.spec.ts`, `gateway/live-call.gateway.e2e.spec.ts`:
+  the NOT_SUPPORTED cases replaced by the applied commands.
+- `tests/s8b-04-qandeel-voice-contract.test.mjs`: TM-02 is applied to every spoken call turn; a turn typed during the call takes
+  the text guidance alone, since its reply is text (D-05-07).
+- `database/verify-migration-0183.mjs`, `0185`, `0186`, `0191`: 0192's forward replacements of the close, the delivery read
+  and the voice_private internals.
+
+### 12.8 Backlog (BG-08) — the closing change
+
+S8B-05 owned no item by its own name. It worked `QAN-BL-VOICE-01` for Stage 8B: **worked, not delivered**; it stays
+`DEFERRED — OWNED` by Stage 8B, `HIGH`, with a current-truth note (the live call server is delivered; the device, the paid
+evidence, the gate decisions and GCR-01 remain).
+
+- **Admitted:** `QAN-BL-VOICE-06` (the resume residue of §12.6, owner `S8B-06`) and `QAN-BL-VOICE-07` (the instance crash
+  and the cross-user contention / Live Focus target, owner `GCR-01`).
+- **Tombstoned:** none.
+- **Read and left as they stand:** `QAN-BL-VOICE-02` … `05` (S8B-08), `QAN-BL-PROD-06` / `08` (0189 – 0192 not hosted),
+  `QAN-BL-LAUNCH-01` (the edge limit), `QAN-BL-AI-01`, `QAN-BL-ACE-02`, `QAN-BL-MOB-01`.
+- Every residue of §6, §10.6 and §11.6 is now closed by a checkpoint or owned: CP3's and CP4's items are delivered above;
+  S8B-06, S8B-08, GCR-01 and HOSTED-DEPLOY hold the rest.
+
+### 12.9 Copy Gate
+
+Unchanged: the 40 rows of §9 stay PROPOSED. CP4 adds no user-facing text: the server sends codes, audio and the reply's
+own text, never copy. F-01, TM-02 and C-12 are not reopened.
+
+### 12.10 Reports
+
+`E:\QANDEEL_REPORTS\S8B-05\CP4\` (outside the repository): the boundary review, the CP4 proof log, the CP3 proof with M2,
+the verifier runs.

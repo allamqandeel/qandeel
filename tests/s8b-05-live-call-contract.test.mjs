@@ -19,6 +19,9 @@ import test from 'node:test';
 // RE-ANCHORED by S8B-05 CP2 (migration 0190): PLAYOUT is applied and the server sends TURN_COMMITTED, REPLY_AUDIO and
 // REPLY_END; the speech sink is the call turn engine (`voice/call-turn/`), which reaches the conversation only through its
 // binding, while `voice/call/` stays provider-free; 0190 is the last migration. Each re-anchor below says what it replaced.
+//
+// RE-ANCHORED by S8B-05 CP4 (migration 0192): BARGE_IN and TEXT_TURN are applied, so no message is NOT_SUPPORTED_YET; 0192
+// is the last migration.
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8').replace(/\r\n/gu, '\n');
@@ -84,12 +87,19 @@ test('protocol v1 is frozen identically in its document and its code', () => {
 });
 
 // RE-ANCHORED by S8B-05 CP2 (was: CP2 - CP4 refused and never sent). PLAYOUT is applied (ACTIVE only, the highest mark,
-// a violation for a chunk never sent); BARGE_IN and TEXT_TURN (CP3 - CP4) stay refused. TURN_COMMITTED and REPLY_END are
-// sent only by the call turn engine, through the connection's channel; REPLY_AUDIO is encoded by the connection alone.
-test('CP3 - CP4 messages are refused NOT_SUPPORTED_YET, never ACKed; the CP2 server messages come from the call turn engine alone', () => {
+// a violation for a chunk never sent). TURN_COMMITTED and REPLY_END are sent only by the call turn engine, through the
+// connection's channel; REPLY_AUDIO is encoded by the connection alone.
+// RE-ANCHORED by S8B-05 CP4 (was: BARGE_IN and TEXT_TURN refused NOT_SUPPORTED_YET, never ACKed). Both are applied while
+// the call is ACTIVE: a BARGE_IN once per msgId, ACKed; a TEXT_TURN ACKed once committed (its ACK never moves lastMsgId,
+// one commit per clientTurnId) or REFUSED with its reason. Nothing is NOT_SUPPORTED_YET any more.
+test('every v1 client message is applied (none NOT_SUPPORTED_YET); the turn server messages come from the call turn engine alone', () => {
   const connection = codeOnly(read(CONNECTION));
-  assert.match(connection, /if \(NOT_YET_SUPPORTED\.has\(message\.type\)\) \{\n\s+this\.send\(\{ type: 'REFUSED', reason: 'NOT_SUPPORTED_YET'/u);
-  assert.deepEqual(list(read(PROTOCOL), 'NOT_YET_SUPPORTED').sort(), ['BARGE_IN', 'TEXT_TURN']);
+  assert.doesNotMatch(connection, /NOT_YET_SUPPORTED|'NOT_SUPPORTED_YET'/u, 'the connection refuses nothing as not supported');
+  assert.deepEqual(list(read(PROTOCOL), 'NOT_YET_SUPPORTED'), []);
+  assert.match(connection, /case 'BARGE_IN': \{\n\s+if \(this\.phase !== 'ACTIVE'\) return this\.violation\(\);\n\s+if \(this\.repeated\(message\.msgId\)\) return;/u);
+  assert.match(connection, /case 'TEXT_TURN': \{\n\s+if \(this\.phase !== 'ACTIVE'\) return this\.violation\(\);/u);
+  assert.match(connection, /verdict\.kind === 'COMMITTED' \? this\.ack\(msgId, false\) : this\.send\(\{ type: 'REFUSED', reason: verdict\.reason, msgId \}\)/u,
+    'a typed turn is ACKed once committed without moving lastMsgId, or refused with its reason');
   assert.match(connection, /case 'PLAYOUT': \{\n\s+if \(this\.phase !== 'ACTIVE'\) return this\.violation\(\);\n\s+if \(this\.repeated\(message\.msgId\)\) return;/u);
   assert.match(connection, /if \(verdict === 'VIOLATION'\) return this\.violation\(\);\n\s+return this\.ack\(message\.msgId\);/u);
   for (const path of files(CALL_DIR).filter((p) => !p.endsWith('.spec.ts') && !p.includes('/testing/') && p !== PROTOCOL)) {
@@ -114,8 +124,10 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   const migrations = readdirSync(join(root, 'database/migrations')).filter((f) => f.endsWith('.sql')).sort();
   // RE-ANCHORED by S8B-05 CP2 (was: 0189 is the last migration): CP2 adds exactly 0190 after it.
   // RE-ANCHORED by S8B-05 CP3 (was: 0190 is the last migration): CP3 adds exactly 0191 after 0190.
-  assert.deepEqual(migrations.slice(-3), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
-    '0191_s8b_05_live_call_ordered_halves_v1.sql'], 'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190');
+  // RE-ANCHORED by S8B-05 CP4 (was: 0191 is the last migration): CP4 adds exactly 0192 after 0191.
+  assert.deepEqual(migrations.slice(-4), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
+    '0191_s8b_05_live_call_ordered_halves_v1.sql', '0192_s8b_05_live_call_barge_in_text_turn_v1.sql'],
+  'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190, CP4 exactly 0192 after 0191');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
   assert.equal(scripts['prove:live-call-synthetic:integration'],
@@ -201,7 +213,12 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
   const record = read(RECORD);
   // RE-ANCHORED by S8B-05 CP2 (was: CP1 under review): CP1 merged (PR #374); the record states CP2 under review, not closed.
   // RE-ANCHORED by S8B-05 CP3 (was: CP2 under review): CP2 merged (PR #375); the record states CP3 under review, not closed.
-  assert.match(record, /^\*\*Checkpoint:\*\* S8B-05 CP3 — UNDER REVIEW/mu, 'the record states CP3 under review, not closed');
+  // RE-ANCHORED by S8B-05 CP4 (was: CP3 under review): CP3 merged (PR #377); CP4 is S8B-05's closing change, and the record
+  // states S8B-05 closed and ready for the Product Owner's merge decision (BG-09): not merged, gates closed, #34 not met.
+  assert.match(record, /^\*\*Status:\*\* `S8B-05 CLOSED \/ READY FOR THE PRODUCT OWNER'S MERGE DECISION \(2026-11-03, the CP4 closing change; §12\)/mu);
+  assert.match(record, /NOT MERGED \(MERGE ONLY ON THE PRODUCT OWNER'S EXPLICIT «ادمج»\) — #34 NOT MET UNDER SHIPPED, OWNED BY GCR-01-A — MIGRATIONS 0189 – 0192 NOT HOSTED — ALL FOUR VOICE GATES DISABLED/u);
+  assert.doesNotMatch(record.slice(0, record.indexOf('## 0.')), /^\*\*(?:Checkpoint|Status):\*\*[^\n]*UNDER REVIEW/mu, 'no current banner is a review banner');
+  assert.match(record, /### 12\.8 Backlog \(BG-08\) — the closing change/u);
   const rows = record.split('\n').filter((line) => /^\| (?:LC|LCE)-\d{2} \|/u.test(line));
   assert.ok(rows.length >= 30, 'the unified gate lists the existing and the new call rows');
   for (const row of rows) assert.match(row, /^\| (?:LC|LCE)-\d{2} \| PROPOSED \|/u, `${row.slice(0, 12)} is PROPOSED`);
@@ -374,4 +391,64 @@ test('every proof that seals call recordings removes its fixtures\' erasure queu
   assert.match(verifier, /DELETE FROM introduction_sharing_private\.media_erasure_queue WHERE storage_key = ANY\(\$1::text\[\]\)/u, 'verify-0191 removes its fixtures\' erasure keys');
   assert.match(verifier, /DELETE FROM account_erasure_private\.media_pending WHERE storage_key = ANY\(\$1::text\[\]\)/u, 'and their pending-erasure rows');
   assert.match(verifier, /the race fixtures left erasure keys behind/u, 'and proves none is left');
+});
+
+// S8B-05 CP4 (migration 0192; contract v1.2 P4 / P5, D-05-07, §5.2, CA-05-02 §2.2): barge-in, the typed turn in a call, the
+// drain and the resume, F-01. Statically: 0192 is forward-only, one transaction, opens no gate and grants no client role;
+// its verifier and the CP4 synthetic proof run in CI after CP3's, and the proof reaches no provider; F-01's files stay NOT
+// INSTALLED in the repository (the proof plays a generated tone from a temporary directory); the call turn engine logs
+// nothing and writes F-01 to the QANDEEL track only when heard; M2 joins the CP3 matrix, measured and reported.
+const M0192 = 'database/migrations/0192_s8b_05_live_call_barge_in_text_turn_v1.sql';
+const CP4_PROOF = 'apps/api/scripts/s8b-05-cp4-live-call-closure-proof.ts';
+
+test('0192 is forward-only, one transaction, opens no voice gate, grants no client role, and its proofs run in CI after CP3', () => {
+  const migration = read(M0192);
+  assert.equal((migration.match(/^BEGIN;$/gmu) ?? []).length, 1);
+  assert.equal((migration.match(/^COMMIT;$/gmu) ?? []).length, 1);
+  const code = codeOnly(migration);
+  assert.doesNotMatch(code, /set_voice_launch_capability_v1\(|(?:INSERT INTO|UPDATE)\s+voice_private\.voice_launch_capability_(?:states|events)/u, 'no gate is set');
+  assert.match(code, /every voice capability scope must remain DISABLED/u, 'the deploy guard refuses an open gate');
+  assert.doesNotMatch(code, /GRANT [^;]*TO (?:anon|authenticated|PUBLIC)\b/u, 'nothing is granted to a client role');
+  for (const fn of ['server_record_call_barge_in_v1', 'server_close_live_call_text_exchange_v1', 'server_read_open_call_exchange_v1']) {
+    assert.match(code, new RegExp(`CREATE FUNCTION public\\.${fn}\\(`, 'u'), fn);
+  }
+  assert.match(code, /CREATE TRIGGER conversation_turns_live_call_admission\s+BEFORE INSERT ON public\.conversation_turns/u,
+    'the REST text turn is refused while a call of the session is live (the 0131 race)');
+  const scripts = JSON.parse(read('package.json')).scripts;
+  assert.equal(scripts['verify:live-call-barge-in-text-turn:integration'], 'node --env-file-if-exists=.env database/verify-migration-0192.mjs');
+  assert.equal(scripts['prove:live-call-closure-synthetic:integration'],
+    `node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json ${CP4_PROOF}`);
+  const ci = read('.github/workflows/api-ci.yml');
+  const at = (needle) => { const i = ci.indexOf(needle); assert.ok(i >= 0, `CI runs ${needle}`); return i; };
+  assert.ok(at('run: npm run prove:live-analysis-synthetic:integration') < at('run: npm run verify:live-call-barge-in-text-turn:integration'), '0192 is verified after CP3');
+  assert.ok(at('run: npm run verify:live-call-barge-in-text-turn:integration') < at('run: npm run prove:live-call-closure-synthetic:integration'), 'the CP4 proof after 0192');
+  const proof = read(CP4_PROOF);
+  assert.match(proof, /S8B05_CP4_PROOF_REFUSED: DATABASE_URL must name a loopback throwaway database/u);
+  assert.doesNotMatch(codeOnly(proof), /api\.deepseek\.com|speechmatics\.com|googleapis\.com|aiplatform|openai\.com/u, 'the proof reaches no provider');
+});
+
+test('F-01 stays NOT_INSTALLED in the repository; the call plays it only from pinned files, and the engine logs nothing', () => {
+  const manifest = JSON.parse(read('apps/api/fixtures/voice-tts/manifest.json'));
+  assert.deepEqual([manifest.state, manifest.files.ar, manifest.files.en], ['NOT_INSTALLED', null, null], 'no F-01 audio is committed (D-05-02)');
+  const line = codeOnly(read(`${CALL_TURN_DIR}call-failure-line.ts`));
+  assert.match(line, /if \(loaded\.state !== 'READY'\) return null;/u, 'nothing is played while the files are not installed');
+  assert.doesNotMatch(line, /synthesize|SpeechSynthesis/u, 'F-01 is never synthesized at run time');
+  assert.match(codeOnly(read('apps/api/src/voice/voice.module.ts')), /provide: LIVE_CALL_FAILURE_LINE, useFactory: \(\) => callFailureLine\(loadSpokenFailureLine\(\)\)/u);
+  for (const path of files(CALL_TURN_DIR).filter((p) => !p.endsWith('.spec.ts') && !p.includes('/testing/'))) {
+    assert.doesNotMatch(codeOnly(read(path)), /console\.|Logger\b|\.log\(/u, `${path} logs nothing`);
+  }
+  const proof = read(CP4_PROOF);
+  assert.match(proof, /mkdtempSync\(join\(tmpdir\(\), 's8b05-cp4-f01-'\)\)/u, 'the proof\'s tone lives in a temporary directory');
+  assert.match(proof, /rmSync\(dir, \{ recursive: true, force: true \}\)/u, 'and is removed');
+});
+
+test('M2 joins the CP3 matrix (five calls, post-response through the real gate), measured against the same five calls and reported', () => {
+  const proof = read('apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts');
+  const code = codeOnly(proof);
+  assert.match(code, /\{ key: 'M0_M2', start: null, profile: null, calls: WORKLOAD\.m2Calls \}/u);
+  assert.match(code, /key: `M2_\$\{profile\}`, start: 'AFTER_FIRST_AUDIO' as const, profile, calls: WORKLOAD\.m2Calls, postResponse: true/u);
+  assert.match(code, /new DatabasePostResponseBackgroundGate\(serviceApi, new DatabaseBackgroundPermitGate\(serviceApi\)\)/u, 'the post-response work takes the real gate');
+  assert.match(code, /const base = mode\.key\.startsWith\('M2_'\) \? 'M0_M2' : 'M0';/u, 'M2 is measured against the same five calls with everything off');
+  assert.match(code, /every post-response delivery ran, delayed and never dropped/u);
+  assert.doesNotMatch(code, /if \(impact\.M2_/u, 'M2 is reported, not enforced (the speed criterion stays the Product Owner\'s GCR-01)');
 });
