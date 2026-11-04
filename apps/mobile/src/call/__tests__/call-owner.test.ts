@@ -171,6 +171,18 @@ describe('S8B-06 CP3 — what the call UI reads is the server\'s truth', () => {
     expect(kit.calls.ended).toBe(0);
   });
 
+  it('QAN-BL-VOICE-06 (2): a resume reads the history (no REPLY_END comes for the exchange the old link left open); the first ACTIVE does not', async () => {
+    const kit = await active();
+    expect(kit.calls.turns).toBe(0);
+    kit.socket.drop(LIVE_CALL_CLOSE.GOING_AWAY);
+    kit.timers.advance(250);
+    const second = kit.sockets[1]!;
+    second.open();
+    second.server(state({ state: 'ACTIVE', epoch: 2 }));
+    expect(kit.calls.turns).toBe(1);
+    expect(kit.owner.getState().activeSince).toBe(0);
+  });
+
   it('HELD is the platform\'s, and is shown as held, not as an end', async () => {
     const kit = await active();
     kit.platform.emit({ type: 'HELD', callId: CALL_ID, state: 'HELD', ignoredLate: 0 });

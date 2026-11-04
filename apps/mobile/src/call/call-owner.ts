@@ -330,6 +330,9 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
     switch (event.type) {
       case 'state':
         if (event.message.state === 'ACTIVE') {
+          // QAN-BL-VOICE-06 (2): a resumed connection gets no REPLY_END for the exchange the older one left open, and a
+          // turn it drained is kept unanswered; the thread and the Analysis learn both from the history, read now.
+          if (activeSince !== null) options.onCallTurn();
           activeSince ??= now();
           // After the client's own resume replay (it runs right after this event, from the same log): what waited goes
           // out once, behind what the log resends, never written a second time by that replay.
