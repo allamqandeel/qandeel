@@ -171,9 +171,24 @@ covers:
 
 | Run | Database | Result |
 | --- | --- | --- |
-| `FIXED`, `ALL` | a clone at `0194` | **14/14 PASS**. W and C commit SP 1 – 6 contiguously, with `5:ACTIVE→DORMANT:SUSTAINED_DEPARTURE` only. One Thread, bound at SP 1. Every stored row re-derives. The map reads reach the head: live head 6, Live Focus events at SP 1, 2, 4, 5, and a projection of one Thread. In the call, every half settles COMPLETE on its first attempt, in order. |
+| `FIXED`, `ALL` | a clone at `0194` | **22/22 PASS**. W and C commit SP 1 – 6 contiguously, with `5:ACTIVE→DORMANT:SUSTAINED_DEPARTURE` only. One Thread, bound at SP 1. Every stored row re-derives. The Living Map checks (T5) pass on both paths. In the call, every half settles COMPLETE on its first attempt, in order. |
 | `DEFECT`, `ALL` | a clone at `0193` | **5/5 PASS** (the defect reproduced). W's exchange 1 is refused with `NOT_CANONICAL` and **lost**. C's turn-2 USER half is refused three times and PARKED, and every later item waits behind it: the S8B-06 F-H device evidence. |
-| `DEFECT`, `PARK`, then `0194`, then `FIXED`, `RESUME` | the same database, migrated forward in between | **3/3**, then **7/7 PASS** (§5) |
+| `DEFECT`, `PARK`, then `0194`, then `FIXED`, `RESUME` | the same database, migrated forward in between | **3/3**, then **11/11 PASS** (§5) |
+
+**The Living Map checks (T5), strengthened at PO Review R1.** Before R1 they checked only that the projection read
+returned an object. The expectation is now taken from the durable rows alone: the CUs with their attention, the binding,
+the lifecycle events and the durable Live Focus transitions. It is never taken from the read path. Each check runs on W,
+C and RESUME:
+
+| Check | What it proves |
+| --- | --- |
+| The live head | The snapshot's `liveHead` and the projection's `liveHead` and `tc` all equal the committed head, SP 6. |
+| The expected Thread | The projection at the head holds exactly one Thread. Its id is the bound Thread's. It is established in this Session at SP 1, grounded on the establishing CU's focus, and `ESTABLISHED_DORMANT` (its state after SP 5). |
+| The Live Focus events | The delivered events are exactly `1:THREAD:<that Thread>`, then `2:` / `4:` / `5:EMERGING:<that CU's focus>`. They equal both the rule (the establishing CU puts the Thread in focus; each later USER CU that starts a focus puts that focus in; an ASSISTANT CU changes nothing) and the durable LF transitions. |
+| The current Live Focus | The snapshot, the last event and the projection agree on `EMERGING` at SP 5. |
+| No refusal, no loss | No server RPC refused anything during the path, and every USER CU's focus is delivered. |
+
+R1 changed no production logic. The strengthened checks found no defect.
 
 ## 5. The analysis continues after the former stall point (T5)
 
@@ -194,7 +209,8 @@ A 0193 database was left exactly as the defect leaves a call:
 4. **The rest of the order drained behind it, in order.**
 5. **Every CU was committed once, contiguously.** The second departure is DORMANT at SP 5, and nothing is earlier.
 6. **Every stored row re-derives.**
-7. **The map's reads reach the head.**
+7. **The Living Map reaches the head with the expected Thread and Live Focus** (the T5 checks of §4.2). No server RPC
+   refused anything after `0194`.
 
 No new reprocessing was added and no ordering rule was bypassed.
 
@@ -237,10 +253,10 @@ Local, on real PostgreSQL 17 (a throwaway cluster, synthetic people only, no pro
 | Fresh **sequential** install `0000` – `0194` (the Supabase-compatible bootstrap first, as in CI) | applied |
 | `0194` applied forward onto a database already at `0193` (the PARK / RESUME database), and re-applied | applied; idempotent |
 | `verify-migration-0066` … `0072`, `0150`, `0151`, `0183`, `0189` – `0194` on the sequential install | all exit 0 (`0070`: 580 assertions, unchanged; `0194`: 96) |
-| The integrated proof: FIXED on the sequential install / FIXED / DEFECT / PARK → RESUME | 14/14 · 14/14 · 5/5 · 3/3 → 7/7 |
+| The integrated proof: FIXED on the sequential install / FIXED / DEFECT / PARK → RESUME | 14/14 · 14/14 · 5/5 · 3/3 → 7/7 at the closing change; after PO Review R1's strengthened T5 checks: FIXED 22/22 · DEFECT 5/5 · PARK 3/3 → RESUME 11/11 |
 | `npm run test:database` | 1310 / 1310 |
 | Root contracts, `node --test tests/*.test.mjs` (including `test:task-closure-governance-contract` and the INTEL-04 contract) | 1747 / 1747 |
-| `npm run test:forward-safety-contract` | see below |
+| `npm run test:forward-safety-contract` | 35 / 35 (about 11 minutes locally) |
 | `apps/api` jest, full suite | 338 suites; 7745 passed, 1 skipped |
 | `apps/api` jest, `src/thread-lifecycle` | 7 suites, 106 tests |
 | `tsc -p apps/api/tsconfig.scripts.json --noEmit` | clean |
@@ -279,6 +295,10 @@ semantic establishment as transient:
 
 `0194` removes the one known cause. The paths' response to a refusal is outside this order ("any real scope expansion
 must be presented before it is implemented"). So is any repair of exchanges already lost.
+
+**The Product Owner's decision on `QAN-BL-INTEL-05` (PO Review R1, 2026-11-04).** It stays separate from INTEL-04. It
+needs a decision and handling **before the live analysis launches**: silently losing a message's analysis, or a PARK that
+persists because of a final refusal, is not acceptable launch behaviour. It is not started.
 
 **Read and left unchanged:** `QAN-BL-VOICE-01` … `05`, `07`, `08`, `09`, `QAN-BL-MOB-01`, `QAN-BL-MOB-02`,
 `QAN-BL-PROD-06` / `08` (`0189` – `0194` not hosted), `QAN-BL-VIS-01`.

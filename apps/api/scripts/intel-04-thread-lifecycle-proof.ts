@@ -288,22 +288,88 @@ async function main(): Promise<void> {
           FROM public.conversation_thread_lifecycle_events e WHERE e.cu_id = u.id), '[]'::jsonb)`, [session]);
     return bad.map((r) => Number(r.sp));
   };
+  /** A Live Focus value as `KIND` or `KIND:ref` (ids only, never words). */
+  const lfOf = (value: { kind: string; threadId?: string; emergingFocusId?: string } | null | undefined): string =>
+    value === null || value === undefined ? 'ABSENT' : value.kind === 'THREAD' ? `THREAD:${value.threadId}` : value.kind === 'EMERGING' ? `EMERGING:${value.emergingFocusId}` : value.kind;
   /** The map's reads, as the phone makes them: the temporal snapshot, the Live Focus events and the projection at the head. */
   const mapReads = async (user: string, session: string) => {
-    const snapshot = await temporal.sessionTemporalState(as(user), session) as unknown as { liveHead: number | null; liveFocus: unknown };
-    const lf = await temporal.liveFocusEvents(as(user), session) as unknown as { events: Array<{ atSp: number }> };
+    const snapshot = await temporal.sessionTemporalState(as(user), session) as unknown as
+      { liveHead: number | null; liveFocus: { kind: string; threadId?: string; emergingFocusId?: string }; liveFocusAtSp: number | null };
+    const lf = await temporal.liveFocusEvents(as(user), session) as unknown as
+      { events: Array<{ atSp: number; value: { kind: string; threadId?: string; emergingFocusId?: string } }> };
     const head = snapshot.liveHead;
-    let projection: { threads: number; liveHeadOk: boolean } | string = 'NO_HEAD';
+    let projection: { liveHead: number; tc: number; threads: Array<{ id: string; establishedInSession: boolean; establishedSp: number | null; groundingEmergingFocusId: string | null; state: string }>; liveFocus: string; liveFocusAtSp: number | null } | string = 'NO_HEAD';
     if (head !== null) {
       try {
-        const disclosure = await historical.historicalProjection(as(user), session, String(head), 'THREAD') as unknown as Record<string, unknown>;
-        const threadsOf = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
-        projection = { threads: threadsOf((disclosure.threads as unknown) ?? (disclosure.world as { threads?: unknown } | undefined)?.threads), liveHeadOk: true };
+        const disclosure = await historical.historicalProjection(as(user), session, String(head), 'THREAD') as unknown as {
+          liveHead: number; tc: number;
+          world: { threads: Array<{ id: string; establishedInSession: boolean; establishedSp: number | null; groundingEmergingFocusId: string | null; state: string }>;
+            liveFocus: { value: { kind: string; threadId?: string; emergingFocusId?: string }; atSp: number | null } };
+        };
+        projection = {
+          liveHead: disclosure.liveHead, tc: disclosure.tc,
+          threads: disclosure.world.threads.map((th) => ({ id: th.id, establishedInSession: th.establishedInSession, establishedSp: th.establishedSp, groundingEmergingFocusId: th.groundingEmergingFocusId, state: th.state })),
+          liveFocus: lfOf(disclosure.world.liveFocus.value), liveFocusAtSp: disclosure.world.liveFocus.atSp,
+        };
       } catch (error) {
         projection = `REFUSED ${(error as Error).message}`;
       }
     }
-    return { liveHead: head, liveFocusEvents: lf.events.map((e) => e.atSp), projection };
+    return { liveHead: head, liveFocus: lfOf(snapshot.liveFocus), liveFocusAtSp: snapshot.liveFocusAtSp, liveFocusEvents: lf.events.map((e) => `${e.atSp}:${lfOf(e.value)}`), projection };
+  };
+  /**
+   * What the map MUST show, from the durable rows alone (never from the read path): the committed head, the one Thread
+   * (its id, establishing SP, grounding focus and its lifecycle state at the head), and the expected Live Focus sequence -
+   * the establishing CU puts the Thread in focus, every later USER CU that starts a focus puts that Emerging Focus in focus,
+   * and an ASSISTANT CU (no focus) changes nothing. The durable LF transitions are read too, so the delivery is compared
+   * with both the rule and the store.
+   */
+  const expectedMap = async (session: string) => {
+    const cus = await sql(`SELECT u.session_position sp, u.source_role role, a.attention_kind k, a.emerging_focus_id f
+      FROM public.conversation_units u LEFT JOIN public.conversation_emerging_focus_attention_events a ON a.cu_id = u.id
+      WHERE u.session_id = $1 ORDER BY u.session_position`, [session]);
+    const binding = await sql('SELECT thread_id t, bound_sp sp, emerging_focus_id f FROM public.conversation_thread_focus_bindings WHERE session_id = $1 ORDER BY bound_sp', [session]);
+    const states = await sql(`SELECT DISTINCT ON (thread_id) thread_id t, to_state s FROM public.conversation_thread_lifecycle_events
+      WHERE session_id = $1 ORDER BY thread_id, session_position DESC, transition_ordinal DESC`, [session]);
+    const durableLf = await sql('SELECT session_position sp, to_kind k, to_ref r FROM public.conversation_live_focus_transitions WHERE session_id = $1 ORDER BY session_position, same_sp_event_sequence', [session]);
+    const thread = binding.length === 1 ? { id: String(binding[0]!.t), sp: Number(binding[0]!.sp), focus: String(binding[0]!.f) } : null;
+    const lf: string[] = [];
+    for (const cu of cus) {
+      if (cu.role !== 'USER' || cu.k !== 'START_NEW_FOCUS') continue;
+      lf.push(thread !== null && Number(cu.sp) === thread.sp ? `${cu.sp}:THREAD:${thread.id}` : `${cu.sp}:EMERGING:${cu.f}`);
+    }
+    const state = thread === null ? null : (states.find((r) => r.t === thread.id)?.s as string | undefined) ?? 'ACTIVE';
+    return {
+      head: cus.length === 0 ? null : Number(cus[cus.length - 1]!.sp), thread, state: state === null ? null : `ESTABLISHED_${state}`, lf,
+      durableLf: durableLf.map((r) => `${r.sp}:${r.k === 'NONE' ? 'NONE' : `${r.k}:${r.r}`}`),
+    };
+  };
+  /**
+   * T5, the Living Map reaches the head with the expected Thread and Live Focus, and nothing was refused or lost: the head,
+   * the projection's ONE Thread by id (established in this Session at its SP, grounded on its focus, in its lifecycle state),
+   * the exact Live Focus events (rule = store = delivery), the current Live Focus agreeing across snapshot, events and
+   * projection, and no refusal recorded by any server RPC during the run.
+   */
+  const mapChecks = async (label: string, session: string, reads: Awaited<ReturnType<typeof mapReads>>, refusalsSince: number) => {
+    const expected = await expectedMap(session);
+    const p = reads.projection;
+    check(`${label}: the live head reaches the committed head SP${expected.head}`, expected.head !== null && reads.liveHead === expected.head
+      && typeof p === 'object' && p.liveHead === expected.head && p.tc === expected.head, `snapshot ${reads.liveHead}, projection ${typeof p === 'object' ? `${p.liveHead}@tc${p.tc}` : p}`);
+    check(`${label}: the projection at the head holds the expected Thread, and only it`, typeof p === 'object' && expected.thread !== null && p.threads.length === 1
+      && p.threads[0]!.id === expected.thread.id && p.threads[0]!.establishedInSession && p.threads[0]!.establishedSp === expected.thread.sp
+      && p.threads[0]!.groundingEmergingFocusId === expected.thread.focus && p.threads[0]!.state === expected.state,
+      typeof p === 'object' ? `${JSON.stringify(p.threads)} expected ${expected.thread?.id}@SP${expected.thread?.sp} ${expected.state}` : p);
+    check(`${label}: the Live Focus events are exactly the expected ones (rule = store = delivery)`, expected.lf.length > 0
+      && JSON.stringify(reads.liveFocusEvents) === JSON.stringify(expected.lf) && JSON.stringify(expected.durableLf) === JSON.stringify(expected.lf),
+      `delivered ${reads.liveFocusEvents.map((e) => e.split(':').slice(0, 2).join(':')).join(',')}`);
+    const last = expected.lf[expected.lf.length - 1]!;
+    const lastSp = Number(last.split(':')[0]);
+    const lastValue = last.slice(last.indexOf(':') + 1);
+    check(`${label}: the current Live Focus agrees across the snapshot, the events and the projection`, reads.liveFocus === lastValue && reads.liveFocusAtSp === lastSp
+      && typeof p === 'object' && p.liveFocus === lastValue && p.liveFocusAtSp === lastSp, `${lastValue.split(':')[0]}@SP${lastSp}`);
+    check(`${label}: nothing refused and nothing lost (no server refusal; every USER CU's focus delivered)`, refusals.length === refusalsSince
+      && expected.lf.length === (await sql("SELECT count(*)::int n FROM public.conversation_units WHERE session_id = $1 AND source_role = 'USER'", [session]))[0]!.n,
+      `refusals ${refusals.length - refusalsSince}`);
   };
 
   try {
@@ -340,8 +406,7 @@ async function main(): Promise<void> {
         check('W/T5: every CU is committed once, contiguous SP1..SP6', JSON.stringify(t.cus) === JSON.stringify(['1:USER', '2:USER', '3:ASSISTANT', '4:USER', '5:USER', '6:ASSISTANT']), t.cus.join(','));
         check('W/T5: one Thread, one binding at its establishing CU', t.threads === 1 && JSON.stringify(t.bindings) === JSON.stringify(['1:ESTABLISHMENT']));
         check('W/T5: the SQL reducer re-derives every stored row', (await rederived(w.session)).length === 0);
-        check('W/T5: the map\'s reads reach the head (SP6): snapshot, Live Focus events and the projection', reads.liveHead === 6
-          && reads.liveFocusEvents.length > 0 && typeof reads.projection === 'object', JSON.stringify(reads));
+        await mapChecks('W/T5', w.session, reads, before);
       }
     }
 
@@ -393,6 +458,7 @@ async function main(): Promise<void> {
       process.stdout.write(`C. live call (the REAL worker and half coordinator, start ${callAnalysisStart()}, fake providers)\n`);
       const providers = fakeProviders();
       const observations: CallAnalysisObservation[] = [];
+      const callRefusalsBefore = refusals.length;
       const signal = new LiveCallAnalysisSignal();
       const w = worker(providers, observations);
       signal.bind(w);
@@ -438,7 +504,7 @@ async function main(): Promise<void> {
         check('C/T5: every CU committed once, contiguous (the cut reply has none)', JSON.stringify(t.cus) === JSON.stringify(CALL_CUS), t.cus.join(','));
         check('C/T5: one Thread, one binding at its establishing CU', t.threads === 1 && JSON.stringify(t.bindings) === JSON.stringify(['1:ESTABLISHMENT']));
         check('C/T5: the SQL reducer re-derives every stored row', (await rederived(x.session)).length === 0);
-        check('C/T5: the map\'s reads reach the head', reads.liveHead === t.cus.length && typeof reads.projection === 'object', JSON.stringify(reads));
+        await mapChecks('C/T5', x.session, reads, callRefusalsBefore);
       } else {
         const parked = items.find((i) => i.state === 'PARKED')!;
         check('C (defect): the turn-2 USER half is refused and PARKED', parked.item === `${t2.idx}:USER` && refusals.some((r) => r.token === NOT_CANONICAL), JSON.stringify(parked));
@@ -462,6 +528,7 @@ async function main(): Promise<void> {
       check('P: the migration changed no item: the head is still PARKED and every item is exactly as it was parked', head.state === 'PARKED' && JSON.stringify(before) === JSON.stringify(parkedWorld.items), `${head.item}=${head.state}/${head.attempts}, due ${String(due)}`);
       const providers = fakeProviders({ alreadyEstablished: true });
       const observations: CallAnalysisObservation[] = [];
+      const resumeRefusalsBefore = refusals.length;
       const w = worker(providers, observations);
       w.start();
       const waited = await waitFor(async () => (await queue(parkedWorld.session)).every((i) => i.state === 'COMPLETE'), 420_000, 'resumed order drained');
@@ -479,7 +546,7 @@ async function main(): Promise<void> {
       check('P/T5: every CU committed once, contiguous; the second departure is DORMANT there', JSON.stringify(t.cus) === JSON.stringify(CALL_CUS)
         && JSON.stringify(t.lifecycle) === JSON.stringify(['5:ACTIVE->DORMANT:SUSTAINED_DEPARTURE']), `${t.cus.join(',')} | ${t.lifecycle.join(',')}`);
       check('P/T5: the SQL reducer re-derives every stored row', (await rederived(parkedWorld.session)).length === 0);
-      check('P/T5: the map\'s reads reach the head', reads.liveHead === t.cus.length && typeof reads.projection === 'object', JSON.stringify(reads));
+      await mapChecks('P/T5', parkedWorld.session, reads, resumeRefusalsBefore);
     }
   } finally {
     if (humans.length > 0) await teardown(pool, humans);

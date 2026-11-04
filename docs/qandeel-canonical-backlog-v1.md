@@ -3676,6 +3676,7 @@ Admitted by `S8B-06` CP3 at the Product Owner's Copy Gate approval and final dev
 - **Severity:** `MEDIUM` — no known cause remains after `0194`; any future deterministic refusal would again stop a call's map or silently drop a written exchange's analysis.
 - **Reopen condition:** any deterministic refusal of a semantic establishment observed in a proof or in production, or before the live analysis is declared launch-ready.
 - **Required future properties:** a deterministic refusal is classified as such and never retried as transport; the person's Session is not frozen behind it with no visible state; nothing is reprocessed or backfilled without the Product Owner's decision; proven against real PostgreSQL in writing and in a call.
+- **The Product Owner's decision (INTEL-04 PO Review R1, 2026-11-04):** kept **separate from INTEL-04**. It **needs a decision and handling before the live analysis launches**: silently losing a message's analysis, or a PARK that persists because of a final refusal, is not acceptable launch behaviour. Not started; no owner is named yet.
 - **Status:** `OPEN — UNASSIGNED`
 
 Admitted by `INTEL-04` at its closing change (2026-11-04) under BG-06. Nothing here authorizes implementation (BG-07).
@@ -6013,6 +6014,15 @@ Draft PR #381).**
 - **Read and left unchanged:** `QAN-BL-VOICE-01` … `05`, `07`, `08`, `09`, `QAN-BL-VIS-01`, `QAN-BL-MOB-01`, `QAN-BL-MOB-02`, `QAN-BL-PROD-06` / `08` (`0189` – `0194` not hosted).
 - **BG-09:** the INTEL-04 record carries `INTEL-04 — CLOSED / READY FOR PO MERGE DECISION`; so do the locators.
 - **Index at INTEL-04's closing change: 101 items; 51 / 4 / 11 / 35 by status, 59 / 39 / 3 by severity.**
+
+**INTEL-04 — PO Review R1 (2026-11-04; the same PR #382).** The Product Owner accepted the direction of `0194`, the root
+cause proof and the queue's resumption after PARK, and asked for one limited correction: the integrated proof's T5 map
+checks now prove the head, the expected Thread in the projection (by id, establishing SP, grounding focus and state), the
+exact Live Focus events and no refusal or loss (record §4.2). No production logic changed.
+
+- **`QAN-BL-INTEL-05`:** kept separate; recorded as needing a decision and handling before the live analysis launches.
+  Status, owner and severity unchanged; not started.
+- **Index unchanged: 101 items; 51 / 4 / 11 / 35 by status, 59 / 39 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
