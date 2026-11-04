@@ -272,6 +272,21 @@ Local, on real PostgreSQL 17 (a throwaway cluster, synthetic people only, no pro
     import the evaluator.
 - **`tests/durable-thread-home-same-sp-substrate-contract.test.mjs`.** The integrated proof's one read-only Thread count
   is exempt by its exact text. The file must still reach no writer, canonicalizer or placement mirror.
+- **`tests/durable-reference-emerging-focus-sp-substrate-contract.test.mjs`** (T-03B1b1; **CI Correction R2**, 2026-11-04).
+  - **What failed.** API CI on `37a9c170` (`verify-api`) failed its scripts scan: "`intel-04-thread-lifecycle-proof.ts`
+    does not reach the substrate". R1's T5 checks added two reads naming `emerging_focus_id`: each CU's attention focus,
+    and the Thread binding's grounding focus.
+  - **The re-anchor.** Exactly those two `SELECT` texts are allowed, each exactly once. Each must be a plain SELECT that
+    calls no function. The rest of the file is held to the unchanged rule (`with_focus_v1`, `focus_runtime_context`,
+    `durable-focus`, `emerging_focus`) and reaches no canonicalizer in code. The file is not exempted, the forbidden
+    expression is not removed, and the 0066 writer, context read and canonicalizer stay forbidden.
+  - **The counter-test.** A new test plants eight unauthorized shapes into the real proof text, and every one is refused:
+    another substrate read, a write, the 0066 writer, the runtime context read, the canonicalizer, an allowed read used
+    twice, an allowed read turned into a write, and an allowed read widened.
+  - **What R2 did not change.** No `0194`, no production lifecycle engine, no T5 assertion, no graphics file, and no other
+    contract. `VAL-01` failed only as a consequence of API CI and is untouched.
+  - **Local results.** The T-03B1b1 contract passes 10/10, and every static root contract passes, 1748/1748. No SQL or
+    proof logic changed, so the PostgreSQL proofs were not re-run locally; CI runs them on the new head.
 
 ## 10. Backlog reconciliation (BG-08) and admission (BG-06)
 
