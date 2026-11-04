@@ -2,6 +2,8 @@
  * S8B-06 CP3 — the live call as the Product composes it. The composition (`integration/`) reaches the call ONLY through
  * this module: the call's one socket, its engine and its platform call stay in `voice-call/`, behind the owner.
  */
+import { BackHandler } from 'react-native';
+
 import type { LiveCallSocketFactory } from '../voice-call/live-call-client';
 import { loadCallPlatform, loadVoiceCallEngine, type CallPlatform, type VoiceCallEngine } from '../voice-call/voice-call-engine';
 
@@ -22,10 +24,19 @@ export interface CallDevice {
   readonly socketFactory?: LiveCallSocketFactory;
   /** The device proof's local server only; the call client still refuses anything but the loopback. */
   readonly insecureLoopbackForProof?: boolean;
+  /** The system Back key (R1); absent in tests unless a test asks. */
+  readonly backKey?: (handler: () => boolean) => () => void;
 }
 
 export function loadCallDevice(): CallDevice {
-  return { platform: loadCallPlatform(), engine: loadVoiceCallEngine() };
+  return {
+    platform: loadCallPlatform(),
+    engine: loadVoiceCallEngine(),
+    backKey: (handler) => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', handler);
+      return () => subscription.remove();
+    },
+  };
 }
 
 export type { CallPlatform, VoiceCallEngine };

@@ -110,6 +110,12 @@ export interface CallOwnerOptions {
   readonly socketFactory?: LiveCallSocketFactory;
   /** The device proof's local server only (the client still refuses anything but the loopback). */
   readonly insecureLoopbackForProof?: boolean;
+  /**
+   * R1: registers the system Back key's handler, returning its removal. It is registered once, with the owner, before
+   * the composition's surfaces register theirs, so it is the LOWEST: each surface's own Back (the Analysis back to the
+   * Conversation, Settings, Activity, …) is taken first. Absent where there is no Back key (Jest, unless a test asks).
+   */
+  readonly backKey?: (handler: () => boolean) => () => void;
   /** How long a written message waits for the server's truth after the call that should have carried it ended. */
   readonly settleAttempts?: number;
   readonly settleIntervalMs?: number;
@@ -227,6 +233,16 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
   const waiting: CarriedText[] = [];
 
   const live = () => !retired && options.isCurrent();
+
+  // R1 (the Product Owner, 2026-11-04): Back at the root during a call does not end it. The app goes to the background,
+  // the platform-call convention, instead of being finished (which ends the call through CP2's TASK_REMOVED). The call is
+  // ended only by End, the notification's Hang up, removing the app from Recents, or the server.
+  const releaseBack = options.backKey?.(() => {
+    if (!live()) return false;
+    const stage = stageOf();
+    if (stage === 'IDLE' || stage === 'PREPARING') return false;
+    return options.platform?.moveToBackground?.() === true;
+  }) ?? null;
 
   function publish(patch: Partial<CallOwnerState>): void {
     const next = { ...state, ...patch };
@@ -566,6 +582,7 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
       // The generation is going (a sign-out, an identity replacement): its call goes with it.
       controller?.end();
       retired = true;
+      releaseBack?.();
       listeners.clear();
     },
   };

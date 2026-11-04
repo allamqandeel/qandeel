@@ -171,6 +171,11 @@ export interface CallPlatform {
   requestRoute(route: CallRoute): boolean;
   /** The ongoing-call notification's line (Android; false on iOS, which has none). */
   updateCallNotification(text: string): boolean;
+  /**
+   * S8B-06 CP3 R1: send the app's task to the background without finishing it (Android). False where there is no such
+   * move (iOS has no Back key) or it did not happen. Optional: CP2's fakes have none.
+   */
+  moveToBackground?(): boolean;
   subscribe(listener: (event: CallLifecycleEvent) => void): () => void;
 }
 
@@ -193,6 +198,8 @@ interface NativeVoiceCall {
   resumeCall(): boolean;
   requestRoute(route: string): boolean;
   updateCallNotification(text: string): boolean;
+  /** Android only. */
+  moveToBackground?(): boolean;
   addListener(event: string, listener: (payload: Record<string, unknown>) => void): Subscription;
 }
 
@@ -240,6 +247,7 @@ function bindPlatform(native: NativeVoiceCall): CallPlatform {
     resumeCall: () => native.resumeCall(),
     requestRoute: (route) => native.requestRoute(route),
     updateCallNotification: (text) => native.updateCallNotification(text),
+    moveToBackground: () => (typeof native.moveToBackground === 'function' ? native.moveToBackground() : false),
     subscribe(listener) {
       const subscription = native.addListener('onCallLifecycle', (payload) => listener(payload as unknown as CallLifecycleEvent));
       return () => subscription.remove();

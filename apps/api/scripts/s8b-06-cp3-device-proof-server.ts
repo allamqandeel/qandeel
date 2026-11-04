@@ -39,10 +39,22 @@ import { SupabaseAiProviderCallLedger } from '../src/ai-usage/ai-provider-call-l
 import { SupabaseAuthGuard } from '../src/auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../src/auth/supabase-auth.service';
 import { BehavioralResponsePolicyService } from '../src/conversation/behavioral-response-policy.service';
+import { ConversationHistoricalProjectionController } from '../src/conversation/conversation-historical-projection.controller';
+import { ConversationTemporalController } from '../src/conversation/conversation-temporal.controller';
 import { LiveCallReplyService } from '../src/conversation/live-call-reply.service';
 import { SafetyResponseGateService } from '../src/conversation/safety-response-gate.service';
 import { DataApiError, type SupabaseDataApiService } from '../src/conversation/supabase-data-api.service';
 import type { SupabaseServiceRoleApiService } from '../src/conversation/supabase-service-role-api.service';
+import type { SourceAnchor } from '../src/conversation-unit/cu-anchor-mapper';
+import type { CuSegmentationRequest } from '../src/conversation-unit/cu-segmentation-provider.types';
+import { TemporalDeliveryRepository } from '../src/conversation-unit/temporal-delivery.repository';
+import { HistoricalProjectionRepository } from '../src/historical-projection/historical-projection.repository';
+import { DatabaseBackgroundPermitGate } from '../src/live-analysis/background-permits';
+import { CallAnalysisRepository } from '../src/live-analysis/call-analysis.repository';
+import { CallAnalysisWorker, callAnalysisStart, type CallAnalysisObservation } from '../src/live-analysis/call-analysis.worker';
+import { ConversationSemanticEstablishmentService } from '../src/live-focus/conversation-semantic-establishment.service';
+import { ConversationSemanticRuntimeRepository } from '../src/live-focus/conversation-semantic-runtime.repository';
+import { FakeThreadContinuityProvider } from '../src/thread-lifecycle/fake-thread-continuity.provider';
 import type { HypothesisReasoningContextService } from '../src/hypothesis/hypothesis-reasoning-context.service';
 import { BoundedForegroundIntelligenceGathererService } from '../src/intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { IntegratedContextBudgetAssemblerService } from '../src/intelligence-runtime/integrated-context-budget-assembler.service';
@@ -62,7 +74,7 @@ import { VoiceNotesService } from '../src/voice-media/voice-notes.service';
 import { readOggOpus } from '../src/voice/call/codec/ogg-opus';
 import { LiveCallGateway } from '../src/voice/call/gateway/live-call.gateway';
 import { LiveCallConnection } from '../src/voice/call/live-call.connection';
-import { LIVE_CALL_SPEECH_SINK } from '../src/voice/call/live-call-speech.port';
+import { LIVE_CALL_SPEECH_SINK, type LiveCallSpeechSink } from '../src/voice/call/live-call-speech.port';
 import { LiveCallTruthController } from '../src/voice/call/live-call-truth.controller';
 import { LiveCallRepository } from '../src/voice/call/live-call.repository';
 import { LiveCallService } from '../src/voice/call/live-call.service';
@@ -70,6 +82,7 @@ import { LIVE_CALL_PATH } from '../src/voice/call/live-call.protocol';
 import { LIVE_CALL_STORE } from '../src/voice/call/live-call.store';
 import type { CallFailureLine } from '../src/voice/call-turn/call-failure-line';
 import { CallTurnRepository } from '../src/voice/call-turn/call-turn.repository';
+import { LiveCallAnalysisSignal } from '../src/voice/call-turn/live-call-analysis.signal';
 import { LiveCallConversationBinding } from '../src/voice/call-turn/live-call-conversation.port';
 import { LiveCallTurnEngine, type CallTurnObservation } from '../src/voice/call-turn/live-call-turn.engine';
 import { fakeCallSynthesisRoute } from '../src/voice/call-turn/testing/fake-call-synthesis';
@@ -111,24 +124,90 @@ function evidence(kind: string, detail: Record<string, unknown>): void {
   if (EVENTS) appendFileSync(EVENTS, `${line}\n`);
 }
 
+/**
+ * R4 / F-F: the speech sink as composed, with each PLAYOUT the engine judged a VIOLATION reported in numbers only: the
+ * reply it names, the chunk and instant the phone confirmed, what this connection sent for that reply, and the rule's
+ * chunk bound. Nothing is changed: the verdict is the engine's.
+ */
+function watchedSink(sink: LiveCallSpeechSink): LiveCallSpeechSink {
+  return {
+    open(channel) {
+      const sent = new Map<number, { count: number; maxSeq: number }>();
+      const last = new Map<number, { chunkSeq: number; playedMs: number; verdict: string }>();
+      let lastPushAt: number | null = null;
+      const stream = sink.open({
+        ...channel,
+        accessToken: () => channel.accessToken(), latestCaptureMs: () => channel.latestCaptureMs(),
+        settleUserTrack: () => channel.settleUserTrack(), qandeelEndMs: () => channel.qandeelEndMs(),
+        qandeelSilence: (endMs) => channel.qandeelSilence(endMs), qandeelAppend: (packet, clockMs) => channel.qandeelAppend(packet, clockMs),
+        settleQandeelTrack: () => channel.settleQandeelTrack(), send: (message) => channel.send(message),
+        sendReplyAudio: (packet) => {
+          const was = sent.get(packet.callTurnIndex) ?? { count: 0, maxSeq: -1 };
+          sent.set(packet.callTurnIndex, { count: was.count + 1, maxSeq: Math.max(was.maxSeq, packet.chunkSeq) });
+          channel.sendReplyAudio(packet);
+        },
+      });
+      return {
+        ...stream,
+        push: (pcm, captureMs) => {
+          // R4: the phone's uplink is carried by its JS thread; a long gap between frames is a stalled phone (counted, no audio).
+          const at = Date.now();
+          if (lastPushAt !== null && at - lastPushAt >= 400) evidence('uplink-gap', { epoch: channel.epoch, ms: at - lastPushAt, captureMs });
+          lastPushAt = at;
+          stream.push(pcm, captureMs);
+        },
+        bargeIn: (input) => stream.bargeIn(input), textTurn: (input) => stream.textTurn(input),
+        drain: () => stream.drain(), close: () => stream.close(),
+        playout: async (input) => {
+          const verdict = await stream.playout(input);
+          if (verdict === 'VIOLATION') {
+            const mine = sent.get(input.callTurnIndex) ?? null;
+            evidence('playout-violation', {
+              epoch: channel.epoch, callTurnIndex: input.callTurnIndex, chunkSeq: input.chunkSeq, playedMs: input.playedMs,
+              sentHere: mine?.count ?? 0, maxSeqSentHere: mine?.maxSeq ?? null,
+              insideChunk: input.playedMs >= input.chunkSeq * 20 && input.playedMs <= (input.chunkSeq + 1) * 20,
+              previous: last.get(input.callTurnIndex) ?? null,
+            });
+          }
+          last.set(input.callTurnIndex, { chunkSeq: input.chunkSeq, playedMs: input.playedMs, verdict });
+          return verdict;
+        },
+      };
+    },
+  };
+}
+
+/** R2: the semantic establishment's RPCs (the S8B-05 CP3 analysis proof's allowlist), beside the server_* functions. */
+const SEMANTIC_RPC = /^(?:commit_conversation_units_call_half_v1|commit_finalized_exchange_with_full_semantic_chain_v1|get_conversation_full_semantic_integrated_batch_snapshot_v1|get_conversation_full_semantic_runtime_context_v1|get_conversation_thread_identity_dossier_page_v1)$/u;
+
+/** A value as PostgREST would pass it: the call RPCs' arrays as they are; the semantic RPCs' as the CP3 proof encodes them. */
+function rpcValue(name: string, v: unknown): unknown {
+  if (SEMANTIC_RPC.test(name)) {
+    return Array.isArray(v) && v.length > 0 && v.every((e) => typeof e === 'string') ? v : v !== null && typeof v === 'object' ? JSON.stringify(v) : v;
+  }
+  return v !== null && typeof v === 'object' && !Array.isArray(v) ? JSON.stringify(v) : v;
+}
+
 /** PostgREST's service_role hop, as a shim (the CP4 proof's): the same function, the same role, the same error identity. */
 class PgServiceRoleRpc {
   constructor(private readonly pool: PgPool) {}
 
   async rpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
-    if (!/^(?:server_[a-z0-9_]+|begin_ai_provider_call_v[12]|settle_ai_provider_call_v1)$/u.test(name)) throw new Error('S806CP3_PROOF_RPC_NAME');
+    if (!/^(?:server_[a-z0-9_]+|begin_ai_provider_call_v[12]|settle_ai_provider_call_v1)$/u.test(name) && !SEMANTIC_RPC.test(name)) throw new Error('S806CP3_PROOF_RPC_NAME');
     const entries = Object.entries(body);
     const args = entries.map(([key], i) => `${key} => $${i + 1}`).join(', ');
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SET LOCAL ROLE service_role');
-      const result = await client.query(`SELECT * FROM public.${name}(${args})`, entries.map(([, v]) => (v !== null && typeof v === 'object' && !Array.isArray(v) ? JSON.stringify(v) : v)));
+      const result = await client.query(`SELECT * FROM public.${name}(${args})`, entries.map(([, v]) => rpcValue(name, v)));
       await client.query('COMMIT');
       return JSON.parse(JSON.stringify(result.rows)) as T;
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
       const e = error as { code?: string; message?: string };
+      // The refusing function, its SQLSTATE and the database's own refusal text (first line; the proof's content is synthetic).
+      evidence('rpc-error', { rpc: name, code: e.code ?? null, reason: String(e.message ?? '').split(/\r?\n/u)[0]!.slice(0, 160) });
       throw new DataApiError(400, { databaseCode: e.code, databaseMessage: e.message });
     } finally {
       client.release();
@@ -313,8 +392,112 @@ async function main(): Promise<void> {
   const recognizer = new FakeCallRecognizer(script, { finalDelayMs: 150 });
   const recognition: RealtimeRecognition = { openStream: (request) => recognizer.openStream(request) };
   const failureLine: CallFailureLine = { ar: [], en: [] };
-  const engine = new LiveCallTurnEngine(new CallTurnRepository(serverApi), binding, recognition, fakeCallSynthesisRoute(new ProofToneSynthesis()), telemetry, undefined, failureLine);
+  // R2: the analysis's one in-process signal: the engine kicks it at a commit, the first audio and an exchange's close, and
+  // LiveCallService at the call's activation (S8B-05 CP3).
+  const signal = new LiveCallAnalysisSignal();
+  const engine = new LiveCallTurnEngine(new CallTurnRepository(serverApi), binding, recognition, fakeCallSynthesisRoute(new ProofToneSynthesis()), telemetry, signal, failureLine);
   engine.observe((o: CallTurnObservation) => evidence('turn', o as unknown as Record<string, unknown>));
+
+  // ---------------------------------------------------------------- R2: the live analysis (S8B-05 CP3), real, over fakes
+  // The REAL worker, queue repository, background permits and semantic establishment (B1, the Thread layer, LF) over
+  // THIS database. Only the four layer providers are synthetic (no model is called): the S8B-05 CP3 analysis proof's
+  // segmentation (one unit per sentence) and focus (a USER turn's first unit starts a focus on its first word), and a
+  // Thread provider that establishes the FIRST such focus by TE-01 on that word (so the phone's Map has a Thread to show)
+  // and then answers NO_ESTABLISHMENT, as that proof's does; with PROOF_R2_THREAD=none it never establishes (that proof's
+  // own configuration). Run 4 found why a call stalled after an establishment: when the establishing USER CU is followed
+  // at once by a USER CU that starts another focus (the reply between them was interrupted before a word was heard, so it
+  // has no unit), the database's relation (0070 `conversation_thread_cu_relation_v1`, `bound_sp < cu.session_position`)
+  // counts the establishing CU as away from its own Thread and derives SUSTAINED_DEPARTURE, while the reducer
+  // derives none (docs/thread-lifecycle-cross-session-continuity-v1.md §3: never away while its attention is on the
+  // Thread's bound focus): THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL, the item PARKED, every later item behind it.
+  type Bindings = ConstructorParameters<typeof ConversationSemanticEstablishmentService>;
+  type FocusProvider = ReturnType<Bindings[2]>['provider'];
+  type FocusProposal = Awaited<ReturnType<FocusProvider['propose']>>;
+  type ThreadProvider = ReturnType<Bindings[3]>['provider'];
+  type ThreadProposal = Awaited<ReturnType<ThreadProvider['propose']>>;
+  const layerCalls = { segmentation: 0, focus: 0, thread: 0 };
+  const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+  const segmentation = {
+    propose: async (request: CuSegmentationRequest) => {
+      layerCalls.segmentation += 1;
+      await wait(40);
+      const units: SourceAnchor[] = request.sourceText.split(/(?<=[.؟!])\s+/u).map((text) => text.trim()).filter((text) => text.length > 0)
+        .map((text) => ({ text, occurrence: 1 }));
+      return { units };
+    },
+  };
+  const focus: FocusProvider = {
+    propose: async (request) => {
+      layerCalls.focus += 1;
+      await wait(40);
+      const none: FocusProposal = {
+        functions: ['INFORM_REPORT'], sequencePosition: 'UNMARKED', targetCuId: null, references: [], claimAttributions: [],
+        attention: { kind: 'NO_INDEPENDENT_FOCUS', existingFocusCandidateId: null, groundingAnchor: null, reason: 'INCIDENTAL_OR_SUBORDINATE' },
+      };
+      if (request.currentCu.sourceRole !== 'USER' || request.currentCu.ordinalWithinTurn !== 0) return none;
+      const word = request.currentCu.committedText.split(/\s+/u)[0]!;
+      return {
+        ...none,
+        references: [{ anchor: { text: word, occurrence: 1 }, state: 'RESOLVED', resolvedHandleId: null, candidateHandleIds: [], newReference: true }],
+        attention: { kind: 'START_NEW_FOCUS', existingFocusCandidateId: null, groundingAnchor: { text: word, occurrence: 1 }, reason: 'DIRECT_SUBJECT' },
+      };
+    },
+  };
+  let threadProposed = process.env.PROOF_R2_THREAD === 'none';
+  const thread: ThreadProvider = {
+    propose: async (request): Promise<ThreadProposal> => {
+      layerCalls.thread += 1;
+      await wait(40);
+      if (threadProposed || request.currentCu.sourceRole !== 'USER' || request.currentFocusSemantics.attention.kind !== 'START_NEW_FOCUS') {
+        return { decision: 'NO_ESTABLISHMENT', path: null, evidenceCuIds: [], explicitSelectionAnchor: null };
+      }
+      const word = request.currentCu.committedText.split(/\s+/u)[0]!;
+      threadProposed = true;
+      return { decision: 'ESTABLISH_THREAD', path: 'TE-01', evidenceCuIds: [request.currentCu.cuId], explicitSelectionAnchor: { text: word, occurrence: 1 } };
+    },
+  };
+  const continuity = FakeThreadContinuityProvider.nominatingAll({ decision: 'DISTINCT_NEW', threadId: null, candidateThreadIds: [], currentEvidenceReferenceIndexes: [], priorEvidenceRefs: [] });
+  const permits = new DatabaseBackgroundPermitGate(serverApi);
+  const synthetic = { providerName: 'OPENAI', providerModel: 'gpt-5-mini' } as const;
+  const semantic = new ConversationSemanticEstablishmentService(
+    new ConversationSemanticRuntimeRepository(serverApi),
+    () => ({ provider: segmentation, ...synthetic }),
+    () => ({ provider: focus, ...synthetic }),
+    () => ({ provider: thread, ...synthetic }),
+    () => ({ provider: continuity, ...synthetic }),
+    permits,
+  );
+  const worker = new CallAnalysisWorker({
+    store: new CallAnalysisRepository(serverApi), semantic, permits, safety: replyService, start: callAnalysisStart(),
+    // Ids, counts and outcomes only; the periodic scan's kicks are left out.
+    observe: (o: CallAnalysisObservation) => {
+      if (o.kind === 'KICK' && o.reason === 'SCAN') return;
+      evidence('analysis', { ...(o as unknown as Record<string, unknown>), layerCalls: { ...layerCalls } });
+    },
+  });
+  signal.bind(worker);
+  worker.start();
+
+  /** R2: what the phone reads of the Analysis, as the real controllers answer it: the live head, counts, never content. */
+  const observed = <T extends object>(read: string, target: T): T => new Proxy(target, {
+    get(object, property, receiver) {
+      const value = Reflect.get(object, property, receiver) as unknown;
+      if (typeof value !== 'function') return value;
+      return async (...args: unknown[]) => {
+        const out = (await (value as (...a: unknown[]) => Promise<unknown>).apply(object, args)) as Record<string, unknown> | unknown[] | null;
+        const counts: Record<string, unknown> = {};
+        if (out && !Array.isArray(out)) {
+          for (const [key, v] of Object.entries(out)) {
+            if (Array.isArray(v)) counts[key] = v.length;
+            else if (typeof v === 'number' || (typeof v === 'string' && /^(?:liveHead|kind|state)$/u.test(key))) counts[key] = v;
+            else if (v && typeof v === 'object' && 'kind' in v) counts[key] = (v as { kind: unknown }).kind;
+          }
+        } else if (Array.isArray(out)) counts.items = out.length;
+        evidence('analysis-read', { read, method: String(property), ...counts });
+        return out;
+      };
+    },
+  });
   const objects = new InMemoryPrivateAudioObjectStore();
   const media = new VoiceMediaService(new VoiceMediaRepository(serverApi), objects);
   const notes = new VoiceNotesService(new VoiceNotesRepository(serverApi), serverApi, null as never);
@@ -452,14 +635,19 @@ async function main(): Promise<void> {
   }
 
   @Module({
-    controllers: [LiveCallTruthController, VoiceNotesController, ProofConversationController, ProofControlController],
+    controllers: [LiveCallTruthController, VoiceNotesController, ProofConversationController, ProofControlController,
+      ConversationTemporalController, ConversationHistoricalProjectionController],
     providers: [
+      // R2: the REAL temporal and historical-projection controllers, over the owner's channel, as the API composes them.
+      { provide: TemporalDeliveryRepository, useValue: observed('temporal', new TemporalDeliveryRepository(ownerApi)) },
+      { provide: HistoricalProjectionRepository, useValue: observed('historical-projection', new HistoricalProjectionRepository(ownerApi)) },
+      { provide: LiveCallAnalysisSignal, useValue: signal },
       { provide: SupabaseAuthService, useValue: auth },
       SupabaseAuthGuard,
       { provide: VoiceNotesService, useValue: notes },
       { provide: LIVE_CALL_STORE, useValue: new LiveCallRepository(serverApi) },
       { provide: VoiceMediaService, useValue: media },
-      { provide: LIVE_CALL_SPEECH_SINK, useValue: engine },
+      { provide: LIVE_CALL_SPEECH_SINK, useValue: watchedSink(engine) },
       LiveCallService,
       LiveCallGateway,
     ],
@@ -471,6 +659,7 @@ async function main(): Promise<void> {
   await app.listen(port, '127.0.0.1');
   evidence('listening', { port, ws: `ws://127.0.0.1:${port}${LIVE_CALL_PATH}`, user: PROOF_USER, session: PROOF_SESSION });
   const stop = async () => {
+    await worker.stop().catch(() => undefined);
     await app.close().catch(() => undefined);
     await pool.end().catch(() => undefined);
     process.exit(0);

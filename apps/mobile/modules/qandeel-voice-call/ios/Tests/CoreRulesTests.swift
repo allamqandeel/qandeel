@@ -66,6 +66,23 @@ final class ReplyLedgerTests: XCTestCase {
     XCTAssertEqual(ledger.lastMark, ReplyLedger.Mark(callTurnIndex: 3, chunkSeq: 1, playedMs: 40))
   }
 
+  func testACutFinalNeverPairsAnOlderRepliesHeardMarkWithTheReplyCut() {
+    // S8B-06 CP3 F-F: as ReplyLedgerTest.kt — reply 37 still heard from the queue, 38 admitted (current), 38 cut.
+    let ledger = ReplyLedger()
+    let end37 = play(ledger, 37, 300)
+    play(ledger, 38, 5, startFrame: end37)
+    XCTAssertNil(ledger.cutFinal(38, 210 * frames), "nothing of 38 was heard")
+    XCTAssertFalse(ledger.hasUnheard())
+    XCTAssertEqual(ledger.admit(38, 5), .LATE_AFTER_CUT)
+  }
+
+  func testACutFinalOfTheReplyHeardIsItsOwnHeardMark() {
+    let ledger = ReplyLedger()
+    play(ledger, 5, 20)
+    XCTAssertEqual(ledger.cutFinal(5, 10 * frames), ReplyLedger.Mark(callTurnIndex: 5, chunkSeq: 9, playedMs: 200))
+    XCTAssertEqual(ledger.cutFinal(5, 10 * frames), ReplyLedger.Mark(callTurnIndex: 5, chunkSeq: 9, playedMs: 200), "nothing new heard: the last mark of the same reply")
+  }
+
   func testRepeatsReorderedAndStalePacketsAreRefused() {
     let ledger = ReplyLedger()
     XCTAssertEqual(ledger.admit(5, 0), .ACCEPT)

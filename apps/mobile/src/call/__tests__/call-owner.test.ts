@@ -429,3 +429,88 @@ describe('S8B-06 CP3 — D-05-07 T1: typed during the call', () => {
     expect(kit.socket.controls().map((m) => m.type)).toContain('END');
   });
 });
+
+describe('S8B-06 CP3 R1 — system Back during a call (the Product Owner, 2026-11-04)', () => {
+  /** The owner's one Back handler, as the platform would call it when no surface took Back first. */
+  function backKey() {
+    const handlers: (() => boolean)[] = [];
+    let removed = 0;
+    return {
+      register: (handler: () => boolean) => {
+        handlers.push(handler);
+        return () => {
+          removed += 1;
+        };
+      },
+      press: () => handlers[0]!(),
+      count: () => handlers.length,
+      removed: () => removed,
+    };
+  }
+
+  it('registered once, with the owner; with no call Back is not taken (the platform default, as before)', () => {
+    const back = backKey();
+    const kit = setup({ backKey: back.register });
+    const moves = jest.fn(() => true);
+    kit.platform.moveToBackground = moves;
+    expect(back.count()).toBe(1);
+    expect(back.press()).toBe(false);
+    expect(moves).not.toHaveBeenCalled();
+  });
+
+  it('during the call Back sends the app to the background and the call goes on: no END, no platform end, still ACTIVE', async () => {
+    const back = backKey();
+    const kit = await active({ backKey: back.register });
+    const moves = jest.fn(() => true);
+    kit.platform.moveToBackground = moves;
+    expect(kit.owner.getState().stage).toBe('ACTIVE');
+    expect(back.press()).toBe(true);
+    expect(moves).toHaveBeenCalledTimes(1);
+    await flush();
+    expect(kit.owner.getState().stage).toBe('ACTIVE');
+    expect(kit.socket.controls().map((m) => m.type)).not.toContain('END');
+    expect(kit.platform.endCalls).toEqual([]);
+    // The person's own End still ends it.
+    kit.owner.end();
+    expect(kit.socket.controls().map((m) => m.type)).toContain('END');
+  });
+
+  it('while CONNECTING and RECONNECTING too: the call is up, so Back never ends it', async () => {
+    const back = backKey();
+    const kit = setup({ backKey: back.register });
+    kit.platform.moveToBackground = jest.fn(() => true);
+    await kit.owner.start();
+    await flush();
+    const socket = kit.sockets[0]!;
+    socket.open();
+    socket.server(state({ state: 'CONNECTING', epoch: 1 }));
+    await flush();
+    expect(kit.owner.getState().stage).toBe('CONNECTING');
+    expect(back.press()).toBe(true);
+    socket.server(state({ state: 'ACTIVE', epoch: 1, startedAt: new Date(0).toISOString() }));
+    socket.drop(LIVE_CALL_CLOSE.GOING_AWAY);
+    expect(kit.owner.getState().stage).toBe('RECONNECTING');
+    expect(back.press()).toBe(true);
+    expect(kit.platform.endCalls).toEqual([]);
+  });
+
+  it('counter-test: after the call ended Back is the platform\'s again; a move that did not happen is not claimed', async () => {
+    const back = backKey();
+    const kit = await active({ backKey: back.register });
+    kit.platform.moveToBackground = jest.fn(() => false);
+    expect(back.press()).toBe(false);
+    kit.platform.moveToBackground = jest.fn(() => true);
+    kit.owner.end();
+    kit.socket.server(state({ state: 'ENDED', epoch: 1, endReason: 'USER_ENDED' }));
+    expect(kit.owner.getState().stage).toBe('IDLE');
+    expect(back.press()).toBe(false);
+    expect(kit.platform.moveToBackground).not.toHaveBeenCalled();
+  });
+
+  it('retiring the generation removes its Back handler', () => {
+    const back = backKey();
+    const kit = setup({ backKey: back.register });
+    kit.owner.retire();
+    expect(back.removed()).toBe(1);
+  });
+});

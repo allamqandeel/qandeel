@@ -1,7 +1,7 @@
 /** S8B-06 CP1 — test doubles for the live-call client: a scripted socket and a manual clock. Test-only. */
 import type { LiveCallSocket, LiveCallSocketFactory, LiveCallTimers } from '../live-call-client';
 import {
-  decodeAudioFrame, encodeReplyAudioFrame, type AudioFrame, type ServerMessage,
+  decodeAudioFrame, encodeReplyAudioFrame, LIVE_CALL_CLOSE, type AudioFrame, type RefusalReason, type ServerMessage,
 } from '../live-call-protocol';
 
 export class FakeSocket implements LiveCallSocket {
@@ -146,3 +146,9 @@ export function state(over: Partial<Extract<ServerMessage, { type: 'STATE' }>>):
 
 export const reply = (epoch: number, callTurnIndex: number, chunkSeq: number): Uint8Array =>
   encodeReplyAudioFrame({ epoch, callTurnIndex, chunkSeq, offsetMs: chunkSeq * 20, packet: packet(chunkSeq) });
+
+/** The server's refusal of a connection, as it sends it: REFUSED, then the REFUSED close. */
+export function refuseConnection(socket: FakeSocket, reason: RefusalReason): void {
+  socket.server({ type: 'REFUSED', reason, msgId: null });
+  socket.drop(LIVE_CALL_CLOSE.REFUSED);
+}

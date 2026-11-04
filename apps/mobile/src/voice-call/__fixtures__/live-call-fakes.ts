@@ -98,6 +98,8 @@ export class FakeCallPlatform implements CallPlatform {
   capabilityValue: CallCapability = { supported: true, reason: null, microphoneGranted: true, inCall: false };
   readonly startCalls: CallStartOptions[] = [];
   readonly endCalls: (string | null)[] = [];
+  /** S8B-06 CP3 R1: absent unless a test gives the platform its move to the background. */
+  moveToBackground?: () => boolean;
   readonly notifications: string[] = [];
   readonly routes: CallRoute[] = [];
   resumes = 0;

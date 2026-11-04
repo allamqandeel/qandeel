@@ -89,6 +89,29 @@ class ReplyLedgerTest {
   }
 
   @Test
+  fun aCutFinalNeverPairsAnOlderRepliesHeardMarkWithTheReplyCut() {
+    // S8B-06 CP3 F-F (device run 5): reply 37 still plays from the queue when reply 38's first packets are admitted (the
+    // server closed 37 at the next commit; nothing cut it on the phone), so 38 is the current reply. A barge-in now cuts
+    // 38 while what was heard is 37's: 37's chunk 209 must not become 38's final mark (the server never sent 38's chunk
+    // 209 and refuses it: PROTOCOL_VIOLATION, 4002).
+    val ledger = ReplyLedger()
+    val end37 = play(ledger, 37, 300)
+    play(ledger, 38, 5, startFrame = end37)
+    assertNull("nothing of 38 was heard", ledger.cutFinal(38, 210 * frames))
+    assertFalse("neither reply plays on after the cut", ledger.hasUnheard())
+    assertEquals(ReplyLedger.Admit.LATE_AFTER_CUT, ledger.admit(38, 5))
+  }
+
+  @Test
+  fun aCutFinalOfTheReplyHeardIsItsOwnHeardMark() {
+    val ledger = ReplyLedger()
+    play(ledger, 5, 20)
+    assertEquals(ReplyLedger.Mark(5, 9, 200), ledger.cutFinal(5, 10 * frames))
+    ledger.advance(0)
+    assertEquals("nothing new heard: the last mark of the same reply", ReplyLedger.Mark(5, 9, 200), ledger.cutFinal(5, 10 * frames))
+  }
+
+  @Test
   fun theNextReplyAfterACutPlaysAndReportsNormally() {
     val ledger = ReplyLedger()
     val end = play(ledger, 7, 10)

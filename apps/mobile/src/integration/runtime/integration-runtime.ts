@@ -623,6 +623,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       engine: callDevice.engine,
       socketFactory: callDevice.socketFactory,
       insecureLoopbackForProof: callDevice.insecureLoopbackForProof,
+      backKey: callDevice.backKey,
       connectUrl: calls.connectUrl,
       authorization: calls.authorization,
       truth: () => calls.truth.read(),
