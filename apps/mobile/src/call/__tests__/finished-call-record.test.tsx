@@ -77,7 +77,7 @@ describe('S8B-06 CP3 R3 — the history carries the finished calls (decoder)', (
   const call = finished(CALL, '2026-11-04T10:00:00.250Z', '2026-11-04T10:01:05.750Z', 'PEER_LOST_AFTER_GRACE');
 
   it('accepts the calls beside the exchanges, and a page without them is exactly the page it was', async () => {
-    await expect(api({ ...historyBody([view]), calls: [call] }).readHistory(SESSION_A))
+    await expect(api({ ...(historyBody([view]) as object), calls: [call] }).readHistory(SESSION_A))
       .resolves.toEqual({ kind: 'PAGE', page: { exchanges: [view], hasOlder: false, calls: [call] } });
     await expect(api(historyBody([view])).readHistory(SESSION_A)).resolves.toEqual({ kind: 'PAGE', page: { exchanges: [view], hasOlder: false } });
   });
@@ -87,7 +87,7 @@ describe('S8B-06 CP3 R3 — the history carries the finished calls (decoder)', (
       'calls', [{ ...call, callId: '' }], [{ ...call, startedAt: 'yesterday' }], [{ ...call, endedAt: '2026-11-04T09:59:59.000Z' }],
       [{ ...call, endReason: 'HUNG_UP' }], [{ ...call, endReason: undefined }], [null],
     ]) {
-      await expect(api({ ...historyBody([view]), calls: bad }).readHistory(SESSION_A)).resolves.toEqual({ kind: 'UNAVAILABLE', reason: 'MALFORMED_RESPONSE' });
+      await expect(api({ ...(historyBody([view]) as object), calls: bad }).readHistory(SESSION_A)).resolves.toEqual({ kind: 'UNAVAILABLE', reason: 'MALFORMED_RESPONSE' });
     }
   });
 });
