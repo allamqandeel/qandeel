@@ -75,6 +75,9 @@ export { ConversationSessionApiClient } from './conversation/conversation-sessio
 export type {
   ConversationExchangeView,
   ConversationVoiceNoteView,
+  ConversationCallDeliveryState,
+  ConversationCallEndReason,
+  ConversationFinishedCallView,
   ConversationHistoryOutcome,
   ConversationHistoryPageView,
   ConversationReplyState,
@@ -297,3 +300,6 @@ export { FOREGROUND_CATCH_UP_INTERVAL_MS, MAX_CATCH_UP_BACKOFF_MS } from './live
 
 export type { BootstrapOverrides, MobileRuntimeEntry, MobileRuntimeEntryOptions, MobileRuntimeEntryResult } from './mobile-runtime-entry';
 export { createMobileRuntimeEntry } from './mobile-runtime-entry';
+// S8B-06 CP3 — the reader's own call as the server holds it (a read only; no socket here).
+export type { CallTruthApiConfig, CallTruthRead, ServerCallState } from './call-truth-api';
+export { CallTruthApiClient, callConnectUrl, decodeCallTruth } from './call-truth-api';

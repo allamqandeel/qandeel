@@ -2,7 +2,7 @@
 export type { VoiceNoteSession, VoiceNoteSessionState, VoiceNoteSessionNotice, VoiceConsentSheet } from './voice-note-session';
 export { consentRowsAreApproved, createVoiceNoteSession, withRecordingDeleted } from './voice-note-session';
 export type { VoiceNoteDevice } from './voice-note-runtime';
-export { createDeviceVoiceNotes, createInertVoiceNoteDevice, createVoiceNoteSessionRuntime, mintVoiceNoteId } from './voice-note-runtime';
+export { createDeviceVoiceNotes, createInertVoiceNoteDevice, createVoiceNoteSessionRuntime, microphoneForCall, mintVoiceNoteId } from './voice-note-runtime';
 export type { VoiceNoteSurfaceSlots } from './VoiceNoteViews';
 export { durationText, useVoiceNoteSurface, voiceNoteRest, VOICE_NOTE_SLAB_WIDTH } from './VoiceNoteViews';
 export { VoiceNoteApiClient } from './voice-note-api';

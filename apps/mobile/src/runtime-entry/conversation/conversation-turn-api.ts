@@ -65,12 +65,37 @@ export interface ConversationExchangeView {
   readonly reply: ConversationReplyView | null;
   /** S8B-03: present only for a turn that came from a Voice Note. */
   readonly voiceNote?: ConversationVoiceNoteView;
+  /**
+   * S8B-06 CP3: present only for a reply spoken in a live call — how much of it was heard (S8B-05 CA-05-02). Only
+   * COMPLETE is a reply heard whole; INTERRUPTED is never shown as complete.
+   */
+  readonly deliveryState?: ConversationCallDeliveryState;
+}
+
+export type ConversationCallDeliveryState = 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED';
+
+/** How a finished call ended, as the server's durable call record says (S8B-05 0189). */
+export type ConversationCallEndReason = 'USER_ENDED' | 'PEER_LOST_AFTER_GRACE' | 'SYSTEM_INTERRUPTED' | 'FAILED' | 'SERVER_ENDED';
+
+/**
+ * S8B-06 CP3 R3 (0193): a finished call of this Session, from the server's durable call record (J7): one that ended after
+ * it became ACTIVE, with the server's own instants and end reason. It is not a turn; a call may have left none.
+ */
+export interface ConversationFinishedCallView {
+  readonly callId: string;
+  readonly startedAt: string;
+  readonly endedAt: string;
+  readonly endReason: ConversationCallEndReason;
+  /** D6 (Copy Gate, 2026-11-04): the server says the call ended at the maximum length; its record is not "stopped". */
+  readonly atMaxLength: boolean;
 }
 
 export interface ConversationHistoryPageView {
   /** Oldest to newest. */
   readonly exchanges: readonly ConversationExchangeView[];
   readonly hasOlder: boolean;
+  /** S8B-06 CP3 R3: the finished calls of this page's window, oldest to newest by their end (absent: none). */
+  readonly calls?: readonly ConversationFinishedCallView[];
 }
 
 export interface ConversationTurnSubmission {
@@ -165,6 +190,27 @@ function decodeVoiceNote(value: unknown): Decoded<ConversationVoiceNoteView> {
   return { ok: true, value: { recordingId: value.recordingId, available: value.available, availableUntil: until, durationMs: duration } };
 }
 
+const DELIVERY_STATES: ReadonlySet<string> = new Set(['COMPLETE', 'INTERRUPTED', 'WITHHELD_TAIL', 'FAILED']);
+const END_REASONS: ReadonlySet<string> = new Set(['USER_ENDED', 'PEER_LOST_AFTER_GRACE', 'SYSTEM_INTERRUPTED', 'FAILED', 'SERVER_ENDED']);
+
+/** One finished call: both instants real, the end not before the start, a known end reason. Anything else is malformed. */
+function decodeFinishedCall(value: unknown): Decoded<ConversationFinishedCallView> {
+  if (!isRecord(value) || !isText(value.callId) || !isText(value.startedAt) || !isText(value.endedAt)) return { ok: false };
+  const started = Date.parse(value.startedAt);
+  const ended = Date.parse(value.endedAt);
+  if (!Number.isFinite(started) || !Number.isFinite(ended) || ended < started) return { ok: false };
+  if (typeof value.endReason !== 'string' || !END_REASONS.has(value.endReason)) return { ok: false };
+  // Only the server's own end can be the maximum length.
+  if (typeof value.atMaxLength !== 'boolean' || (value.atMaxLength && value.endReason !== 'SERVER_ENDED')) return { ok: false };
+  return {
+    ok: true,
+    value: {
+      callId: value.callId, startedAt: value.startedAt, endedAt: value.endedAt,
+      endReason: value.endReason as ConversationCallEndReason, atMaxLength: value.atMaxLength,
+    },
+  };
+}
+
 /** The read route's body: `{ exchanges: [{ userTurn, replyState, assistantTurn }], hasOlder }`. */
 export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistoryPageView> {
   if (!isRecord(body) || !Array.isArray(body.exchanges) || typeof body.hasOlder !== 'boolean') return { ok: false };
@@ -183,15 +229,29 @@ export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistor
     }
     // A reply and its state are one fact: COMPLETED carries exactly one reply, nothing else carries any.
     if ((state === 'COMPLETED') !== (reply !== null)) return { ok: false };
+    let exchange: ConversationExchangeView = { userTurn: user.value, replyState: state, reply };
     if (entry.voiceNote !== undefined) {
       const voiceNote = decodeVoiceNote(entry.voiceNote);
       if (!voiceNote.ok) return { ok: false };
-      exchanges.push({ userTurn: user.value, replyState: state, reply, voiceNote: voiceNote.value });
-      continue;
+      exchange = { ...exchange, voiceNote: voiceNote.value };
     }
-    exchanges.push({ userTurn: user.value, replyState: state, reply });
+    // S8B-06 CP3: a call reply's delivery state rides only beside a reply that exists.
+    if (entry.deliveryState !== undefined) {
+      if (reply === null || typeof entry.deliveryState !== 'string' || !DELIVERY_STATES.has(entry.deliveryState)) return { ok: false };
+      exchange = { ...exchange, deliveryState: entry.deliveryState as ConversationCallDeliveryState };
+    }
+    exchanges.push(exchange);
   }
-  return { ok: true, value: { exchanges, hasOlder: body.hasOlder } };
+  // S8B-06 CP3 R3: the page's finished calls ride beside its exchanges, additively (a server without them sends none).
+  if (body.calls === undefined) return { ok: true, value: { exchanges, hasOlder: body.hasOlder } };
+  if (!Array.isArray(body.calls)) return { ok: false };
+  const calls: ConversationFinishedCallView[] = [];
+  for (const entry of body.calls) {
+    const call = decodeFinishedCall(entry);
+    if (!call.ok) return { ok: false };
+    calls.push(call.value);
+  }
+  return { ok: true, value: { exchanges, hasOlder: body.hasOlder, calls } };
 }
 
 export class ConversationTurnApiClient {

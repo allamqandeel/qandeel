@@ -190,8 +190,23 @@ test('the Analysis world is dark, whatever the reader chose elsewhere, and contr
   assert.match(generated, /"strokeAlphaMultiplier": 0/u);
 });
 
+// S8B-06 CP3 R1 (F-G) — CONTROLLED RE-ANCHOR, PROPOSED to the Product Owner (CP3 record §5 F-G, §13 item 8; not yet
+// approved). The first Living Map draw held the JS thread for 3.3 s (the nebula's three raster passes, measured on the
+// phone), long enough for the server to close a live call, whose audio passes through the JS thread (4008 SILENCE). The
+// passes are now painted in bands with the JS thread released between them through ONE zero-delay task boundary in
+// WorldStrata.tsx. It times and moves nothing: a release without a delay carries no duration, order or pace. Exactly that
+// one line is set aside before this scan; a second release, a release with a delay, or any other timer is still rejected
+// (the counter-tests below).
+const WORLD_RELEASE = 'const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));';
+const setAsideWorldRelease = (text) => (text.split(WORLD_RELEASE).length === 2 ? text.replace(WORLD_RELEASE, '') : text);
+
 test('motion stays T-10\'s: the world reads the residual through the motion owner and animates nothing of its own', () => {
-  const all = Object.values(visualCode).join('\n') + canvas;
+  assert.equal(visualCode['WorldStrata.tsx'].split(WORLD_RELEASE).length, 2, 'the one world release is in WorldStrata.tsx');
+  assert.match(visualCode['WorldStrata.tsx'], /release: \(\) => Promise<void> = nextTask,/u, 'it is only the raster tile\'s release between bands');
+  for (const planted of [`${WORLD_RELEASE}\n${WORLD_RELEASE}`, WORLD_RELEASE.replace(', 0)', ', 16)'), `${WORLD_RELEASE}\nsetTimeout(tick, 0);`]) {
+    assert.equal(setAsideWorldRelease(planted).includes('setTimeout'), true, 'counter-test: any other timer is still rejected');
+  }
+  const all = setAsideWorldRelease(Object.values(visualCode).join('\n') + canvas);
   for (const forbidden of ['react-native-reanimated', 'withTiming', 'withSpring', 'withRepeat', 'useFrameCallback', 'setInterval', 'setTimeout', 'requestAnimationFrame', 'useClock', 'Easing']) {
     assert.equal(all.includes(forbidden), false, `the world must not use ${forbidden}`);
   }

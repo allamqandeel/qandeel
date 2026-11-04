@@ -325,7 +325,7 @@ final class CallEngineCore {
       ]
     } else {
       cutGeneration += 1
-      let final = ledger.cut(turn, presentedNow.frame) ?? (ledger.lastMark?.callTurnIndex == turn ? ledger.lastMark : nil)
+      let final = ledger.cutFinal(turn, presentedNow.frame)
       pending.removeAll { $0.callTurnIndex <= turn }
       // The cut reply is no longer audible: it stops being the echo reference, so it cannot be cut twice.
       recentWrites.removeAll()

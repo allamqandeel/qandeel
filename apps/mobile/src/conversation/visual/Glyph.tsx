@@ -44,6 +44,11 @@ export function Glyph({ name, color, direction }: GlyphProps) {
     >
       <Canvas style={{ width: size, height: size }}>
         <Group transform={[{ scale: size / GRID }]}>
+        {/* S8B-06 CP3: P2's own rotation of a glyph (the call entry's raised handset), about P2's own centre. */}
+        <Group
+          origin={'rotate' in glyph ? { x: glyph.rotate.cx, y: glyph.rotate.cy } : undefined}
+          transform={'rotate' in glyph ? [{ rotate: (glyph.rotate.degrees * Math.PI) / 180 }] : undefined}
+        >
           {glyph.strokes.map((stroke) => (
             <Path
               key={stroke.d}
@@ -81,6 +86,7 @@ export function Glyph({ name, color, direction }: GlyphProps) {
               color={color}
             />
           ))}
+        </Group>
         </Group>
       </Canvas>
     </View>

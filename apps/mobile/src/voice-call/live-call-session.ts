@@ -61,6 +61,10 @@ export class LiveCallSession {
   private personMuted = false;
   private held = false;
   private endSent = false;
+  /** CP3: the reply the engine last reported heard, until it drains or is cut (QANDEEL is audible). */
+  private audibleTurn: number | null = null;
+  /** CP3: the local cut asked for a typed message (T1): its forced barge-in sends no BARGE_IN. */
+  private textCuts = 0;
   ended: LiveCallEnd | null = null;
 
   constructor(private readonly options: LiveCallSessionOptions) {
@@ -86,6 +90,30 @@ export class LiveCallSession {
 
   get isHeld(): boolean {
     return this.held;
+  }
+
+  /** S8B-06 CP3: the person's own mute (a hold is not the person's mute). */
+  get isPersonMuted(): boolean {
+    return this.personMuted;
+  }
+
+  /** S8B-06 CP3: QANDEEL's voice is being heard (the engine's heard marks), until the reply drains or is cut. */
+  get isQandeelAudible(): boolean {
+    return this.audibleTurn !== null;
+  }
+
+  /**
+   * S8B-06 CP3 (D-05-07 T1, contract A3.2 P4) — a message the person typed, sent. Typing never stopped QANDEEL; sending
+   * does: while QANDEEL is audible its voice is cut here (the engine's local cut, no speech onset, so no BARGE_IN), the
+   * last heard mark goes first (PLAYOUT), then TEXT_TURN on the same ordered connection. The server closes the reply at
+   * the mark it holds (P2) and never waits for a later one. Returns the TEXT_TURN's msgId, or null when the call is gone.
+   */
+  sendText(clientTurnId: string, text: string): number | null {
+    if (this.ended || this.disposed) return null;
+    if (this.audibleTurn !== null && this.engine.cutReply?.() === true) this.textCuts += 1;
+    this.audibleTurn = null;
+    this.flushPlayout('CUT');
+    return this.client.sendText(clientTurnId, text);
   }
 
   /** The connection is muted while the person muted OR the call is held. */
@@ -164,16 +192,25 @@ export class LiveCallSession {
         this.client.sendAudio(event.captureMs, event.packet);
         return;
       case 'playout':
+        this.audibleTurn = event.callTurnIndex;
         this.latest = { callTurnIndex: event.callTurnIndex, chunkSeq: event.chunkSeq, playedMs: event.playedMs };
         if (!this.sent || this.sent.callTurnIndex !== event.callTurnIndex || event.playedMs - this.sent.playedMs >= this.playoutIntervalMs) {
           this.flushPlayout('PERIODIC');
         }
         return;
       case 'replyDrained':
+        if (this.audibleTurn === event.callTurnIndex) this.audibleTurn = null;
         this.flushPlayout('DRAINED');
         return;
       case 'bargeIn':
-        if (event.action === 'STOP') this.onCut(event);
+        if (event.action !== 'STOP') return;
+        this.audibleTurn = null;
+        // The cut a typed message asked for: its mark already went out ahead of TEXT_TURN; it is not the person speaking.
+        if (event.forced && this.textCuts > 0) {
+          this.textCuts -= 1;
+          return;
+        }
+        this.onCut(event);
         return;
       case 'hold':
         this.held = true;

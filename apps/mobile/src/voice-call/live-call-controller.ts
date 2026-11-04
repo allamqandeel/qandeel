@@ -169,6 +169,44 @@ export class LiveCallController {
     return this.session?.setMuted(muted) ?? false;
   }
 
+  // ------------------------------------------------------------------ S8B-06 CP3: what the call UI reads and asks
+
+  /** Another call holds the audio (the platform's HELD), as the platform last said. */
+  get isHeld(): boolean {
+    return this.held;
+  }
+
+  /** The link is lost and the client is reconnecting inside the grace. */
+  get isReconnecting(): boolean {
+    return this.reconnecting;
+  }
+
+  /** The person's (or the system's) mute, as sent to the server. */
+  get isMuted(): boolean {
+    return this.session?.isPersonMuted === true;
+  }
+
+  /** The person's route choice; the platform owns the route and answers with ENDPOINT. False when there is no call. */
+  requestRoute(route: 'EARPIECE' | 'SPEAKER'): boolean {
+    if (this.phase !== 'ACTIVE') return false;
+    return this.options.platform.requestRoute(route);
+  }
+
+  /** QANDEEL's voice is being heard now (the engine's heard marks). */
+  get isQandeelAudible(): boolean {
+    return this.session?.isQandeelAudible === true;
+  }
+
+  /**
+   * A message typed during the call (D-05-07 T1): its msgId, or null when the call cannot carry it now — not ACTIVE on the
+   * server yet (TEXT_TURN exists only in an ACTIVE call), or no longer there. A message sent while the link is lost waits
+   * in the client's log and goes out after the resume.
+   */
+  sendText(clientTurnId: string, text: string): number | null {
+    if (this.phase !== 'ACTIVE' || this.session === null || this.session.client.callState !== 'ACTIVE') return null;
+    return this.session.sendText(clientTurnId, text);
+  }
+
   // ------------------------------------------------------------------ sources
 
   private onPlatform(event: CallLifecycleEvent): void {

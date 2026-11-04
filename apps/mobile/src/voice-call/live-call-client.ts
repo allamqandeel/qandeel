@@ -174,6 +174,14 @@ export class LiveCallClient {
   /** The heard position of reply `callTurnIndex` (from the engine's presented frames only). */
   sendPlayout(callTurnIndex: number, chunkSeq: number, playedMs: number): void {
     if (this.ended) return;
+    // S8B-06 CP3 (QAN-BL-VOICE-06): only a higher mark advances a reply (P1 – P3), so this PLAYOUT supersedes every older
+    // one of the same reply still in the log. Without this, a reply that kept playing through an outage left one PLAYOUT
+    // per confirmation in the log (about ten a second), the resume resent them all at once, the server's control budget
+    // refused the connection (OVERLOADED) before applying any, and every later resume was refused the same way.
+    for (let i = this.log.length - 1; i >= 0; i -= 1) {
+      const item = this.log[i]!;
+      if (item.kind === 'control' && item.message.type === 'PLAYOUT' && item.message.callTurnIndex === callTurnIndex) this.log.splice(i, 1);
+    }
     this.control({ type: 'PLAYOUT', msgId: this.takeMsgId(), callTurnIndex, chunkSeq, playedMs });
   }
 
@@ -186,6 +194,19 @@ export class LiveCallClient {
   refreshToken(accessToken: string): void {
     if (this.ended) return;
     this.control({ type: 'TOKEN_REFRESH', msgId: this.takeMsgId(), accessToken });
+  }
+
+  /**
+   * S8B-06 CP3 (D-05-07 T1, contract A3.2 P4 / P5) — a message the person typed during the call, on this ordered channel.
+   * It is logged like every control and sent at once when the link is up; while the link is down it waits in the log and
+   * goes out after the resume's STATE. The server applies it once per `clientTurnId`, so a resend can never commit it twice.
+   * Returns its `msgId` (its ACK or REFUSED carries it), or null when the call has ended (the caller writes it normally).
+   */
+  sendText(clientTurnId: string, text: string): number | null {
+    if (this.ended) return null;
+    const msgId = this.takeMsgId();
+    this.control({ type: 'TEXT_TURN', msgId, clientTurnId, text });
+    return msgId;
   }
 
   end(): void {
@@ -305,7 +326,9 @@ export class LiveCallClient {
     let audio = 0;
     for (let i = 0; i < this.log.length; i += 1) {
       const item = this.log[i]!;
-      if (item.kind === 'control' && item.msgId <= lastMsgId && this.resuming) {
+      // A TEXT_TURN's ACK does not move `lastMsgId` and its msgId is never compared with it (protocol §0 CP4): it stays in
+      // the log until its own ACK or REFUSED, so a message typed before a later applied control is still resent.
+      if (item.kind === 'control' && item.message.type !== 'TEXT_TURN' && item.msgId <= lastMsgId && this.resuming) {
         this.log.splice(i, 1);
         i -= 1;
       }

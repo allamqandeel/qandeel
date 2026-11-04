@@ -143,6 +143,12 @@ class QandeelVoiceCallModule : Module() {
       LiveCallRegistry.updateNotification(text)
     }
 
+    // S8B-06 CP3 R1: system Back during a call leaves the app the way a platform call does. The task goes to the
+    // background (it is not finished, so CP2's TASK_REMOVED end is not reached); the call, its service and notification stay.
+    Function("moveToBackground") {
+      appContext.currentActivity?.moveTaskToBack(true) ?: false
+    }
+
     OnDestroy {
       engine?.stop("MODULE_DESTROYED")
       engine = null

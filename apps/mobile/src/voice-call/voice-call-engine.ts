@@ -121,6 +121,11 @@ export interface VoiceCallEngine {
   playCue?(id: string, kind: CueKind, forceAfterMs: number, notificationText: string | null): CueRequest;
   /** CP2: queue it `dueInMs` from now, on the engine's own clock (the local trigger). */
   scheduleCue?(id: string, kind: CueKind, dueInMs: number, forceAfterMs: number, notificationText: string | null): CueRequest;
+  /**
+   * CP3 (D-05-07 T1): stop QANDEEL's voice here, now, without speech — the same local cut as a detected barge-in (fade, the
+   * reply's queued packets dropped, its later packets refused), reported as a forced `bargeIn`. False when nothing runs.
+   */
+  cutReply?(): boolean;
 }
 
 export type CallRoute = 'EARPIECE' | 'SPEAKER' | 'WIRED_HEADSET' | 'BLUETOOTH';
@@ -166,6 +171,11 @@ export interface CallPlatform {
   requestRoute(route: CallRoute): boolean;
   /** The ongoing-call notification's line (Android; false on iOS, which has none). */
   updateCallNotification(text: string): boolean;
+  /**
+   * S8B-06 CP3 R1: send the app's task to the background without finishing it (Android). False where there is no such
+   * move (iOS has no Back key) or it did not happen. Optional: CP2's fakes have none.
+   */
+  moveToBackground?(): boolean;
   subscribe(listener: (event: CallLifecycleEvent) => void): () => void;
 }
 
@@ -188,6 +198,8 @@ interface NativeVoiceCall {
   resumeCall(): boolean;
   requestRoute(route: string): boolean;
   updateCallNotification(text: string): boolean;
+  /** Android only. */
+  moveToBackground?(): boolean;
   addListener(event: string, listener: (payload: Record<string, unknown>) => void): Subscription;
 }
 
@@ -217,6 +229,7 @@ function bind(native: NativeVoiceCall): VoiceCallEngine & { forceBargeIn(): bool
     enqueueReply: (callTurnIndex, chunkSeq, offsetMs, packet) => native.enqueueReply(callTurnIndex, chunkSeq, offsetMs, packet),
     describe: () => native.describe(),
     forceBargeIn: () => native.forceBargeIn(),
+    cutReply: () => native.forceBargeIn(),
     playCue: (id, kind, forceAfterMs, notificationText) => native.playCue(id, kind, forceAfterMs, notificationText),
     scheduleCue: (id, kind, dueInMs, forceAfterMs, notificationText) => native.scheduleCue(id, kind, dueInMs, forceAfterMs, notificationText),
     subscribe(listener) {
@@ -234,6 +247,7 @@ function bindPlatform(native: NativeVoiceCall): CallPlatform {
     resumeCall: () => native.resumeCall(),
     requestRoute: (route) => native.requestRoute(route),
     updateCallNotification: (text) => native.updateCallNotification(text),
+    moveToBackground: () => (typeof native.moveToBackground === 'function' ? native.moveToBackground() : false),
     subscribe(listener) {
       const subscription = native.addListener('onCallLifecycle', (payload) => listener(payload as unknown as CallLifecycleEvent));
       return () => subscription.remove();

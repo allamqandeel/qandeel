@@ -1,6 +1,7 @@
 import type { MemoryCommandVoiceBand, MemoryCommandVoiceSource } from '../memory/memory-control.types';
 import { Injectable } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import type { ConversationHistoryFinishedCall } from '../conversation/conversation.types';
 
 /**
  * S8B-03 (CP1, migration 0186) — the transcription, Voice Note turn and voice consent definers, on the server channel
@@ -208,6 +209,15 @@ export class VoiceNotesRepository {
     return this.all<{ turn_id: string; delivery_state: 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED' }>('server_read_call_reply_delivery_v1', {
       p_user_id: userId, p_session_id: sessionId, p_turn_ids: assistantTurnIds,
     });
+  }
+
+  /**
+   * S8B-06 CP3 R3 (0193): the person's finished calls of this Session whose end is in [endedFrom, endedBefore) (a null
+   * bound is open), the newest first, at most 100. Only calls that became ACTIVE; never content.
+   */
+  sessionFinishedCalls(userId: string, sessionId: string, endedFrom: string | null, endedBefore: string | null) {
+    return this.all<{ call_id: string; started_at: string; ended_at: string; end_reason: ConversationHistoryFinishedCall['endReason']; at_max_length: boolean }>(
+      'server_read_session_finished_calls_v1', { p_user_id: userId, p_session_id: sessionId, p_ended_from: endedFrom, p_ended_before: endedBefore });
   }
 
   capability(userId: string) {

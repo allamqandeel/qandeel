@@ -98,6 +98,15 @@ class ReplyLedger {
     return final
   }
 
+  /**
+   * S8B-06 CP3 (F-F): the barge-in cut of reply [callTurnIndex] and its final heard mark, the mark the phone sends before
+   * BARGE_IN: only a mark OF that reply. The reply cut is the newest admitted one, and an older reply's queued audio may
+   * still be what was heard (the server closed it at the next commit; nothing cut it here): its mark is not the cut
+   * reply's, and nothing of the cut reply was heard.
+   */
+  fun cutFinal(callTurnIndex: Long, presentedFrame: Long): Mark? =
+    (cut(callTurnIndex, presentedFrame) ?: lastMark)?.takeIf { it.callTurnIndex == callTurnIndex }
+
   /** True while booked audio of the reply now playing has not all been presented. */
   fun hasUnheard(): Boolean = book.isNotEmpty()
 

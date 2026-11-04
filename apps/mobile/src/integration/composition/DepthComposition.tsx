@@ -94,7 +94,8 @@ import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface, type UnderstandingShareResult } from '../../understanding';
 import { IntroductionsEntry, IntroductionsSurface, ProposalsSurface } from '../../introductions';
-import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
+import { ActivityEntry, ActivitySurface, AttentionStrip, CallSafeStrip, type ProductSurface } from '../../activity';
+import { CallLine, useCallSurface } from '../../call';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
@@ -578,6 +579,55 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // depth, a destination, another world, a selection mode) stops a capture and keeps it as a draft (C-17).
   const voiceSlots = useVoiceNoteSurface(onSignOut === undefined ? null : runtime.voiceNotes, locale.language,
     surface === 'CONVERSATION' && !replaying && !sharing);
+  // S8B-06 CP3 — the live call, in the Personal world only. The owner is the generation's, above this composition:
+  // crossing depths, opening the Analysis or another surface re-reads it and never reopens or ends anything.
+  const callOwner = onSignOut === undefined ? null : runtime.call;
+  const { exchanges, calls } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
+  const callSlots = useCallSurface(callOwner, exchanges, locale.language, calls);
+  const callLive = callSlots.live;
+  const voiceCompanion = voiceSlots.replyCompanion;
+  const callCompanion = callSlots.replyCompanion;
+  const replyCompanion = useCallback(
+    (exchange: Parameters<typeof callCompanion>[0]) => voiceCompanion?.(exchange) ?? callCompanion(exchange),
+    [voiceCompanion, callCompanion],
+  );
+  // The handset stands beside the microphone at the composer's END edge; while a call is up, neither does.
+  const composerEnd = callLive ? null : callSlots.composerEnd === null ? voiceSlots.composerEnd : (
+    <View style={{ flexDirection: locale.language === 'ar' ? 'row-reverse' : 'row', alignItems: 'center' }}>
+      {callSlots.composerEnd}
+      {voiceSlots.composerEnd}
+    </View>
+  );
+  const threadTail = voiceSlots.threadTail === null && callSlots.threadTail === null ? null : (
+    <>
+      {voiceSlots.threadTail}
+      {callSlots.threadTail}
+    </>
+  );
+  // G1.2: START is Analysis-first — once the call is actually connecting, the reader is taken to the Analysis.
+  // J3: an end the reader did not choose returns them to the Conversation, where writing is (and the notice says why).
+  // Both are reactions to the owner's own transitions, so they run in its subscription, never as a render's effect.
+  const callReaction = useRef({ cross, depth, area, attention });
+  useEffect(() => {
+    callReaction.current = { cross, depth, area, attention };
+  }, [cross, depth, area, attention]);
+  useEffect(() => {
+    if (callOwner === null) return undefined;
+    let before = callOwner.getState();
+    return callOwner.subscribe(() => {
+      const now = callOwner.getState();
+      const previous = before;
+      before = now;
+      const latest = callReaction.current;
+      if ((previous.stage === 'IDLE' || previous.stage === 'PREPARING') && now.stage === 'CONNECTING') {
+        latest.attention.refresh();
+        if (latest.depth === 'CONVERSATION' && latest.area === 'MY_WORLD') latest.cross('ANALYSIS');
+      }
+      if (now.unchosenEnds !== previous.unchosenEnds) latest.cross('CONVERSATION');
+    });
+  }, [callOwner]);
+  const [callBoxHeight, setCallBoxHeight] = useState(0);
+  const analysisInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + (callLive ? callBoxHeight : 0) }), [edges, callLive, callBoxHeight]);
   // S8B-03 — Settings: the Voice Notes section (C-44 … C-48) and the separate voice export act (C-49 … C-53).
   const voiceSettings = <VoiceNoteSettingsSection session={runtime.voiceNotes} language={locale.language} />;
   const saveVoices = useCallback((voices: ExportVoiceSet) => saveExportVoices(voices, runtime.voiceNotes.exportAccess), [runtime.voiceNotes]);
@@ -613,6 +663,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             {/* S7-02: the one saved / unavailable line; nothing unless the entry (Personal world only) answered. */}
             <ReplayNoticeLine controller={runtime.replayEntry} language={locale.language} insets={edges} action={onSignOut === undefined ? null : <ReplayPreviewAction player={replayPlayer} entry={runtime.replayEntry} language={locale.language} />} />
             <UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />
+            {/* S8B-06 CP3: the call line above the composer (writing stays during a call, D-05-07), or the call's notice. */}
+            {callSlots.aboveComposer}
           </>
         )}
         chromeEnd={onSignOut === undefined ? null : <ReplayEntryControl controller={runtime.replayEntry} language={locale.language} />}
@@ -621,11 +673,14 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         chromeStart={onSignOut === undefined ? null : (
           <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
         )}
-        composerEnd={voiceSlots.composerEnd}
+        composerEnd={composerEnd}
         composerOverride={voiceSlots.composerOverride}
-        threadTail={voiceSlots.threadTail}
+        threadTail={threadTail}
+        threadHead={callSlots.threadHead}
         utteranceBody={voiceSlots.utteranceBody}
-        replyCompanion={voiceSlots.replyCompanion}
+        replyCompanion={replyCompanion}
+        exchangeTrailer={callSlots.exchangeTrailer}
+        depthNameSuffix={callSlots.depthNameSuffix}
       />
     ) : (
       <AnalysisAppearanceScope>
@@ -638,7 +693,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           <LivingAnalysisMap
             runtime={runtime}
             locale={locale}
-            insets={edges}
+            insets={analysisInsets}
             fontScale={fontScale}
             envelope={envelope}
             onComposed={current ? beginFade : undefined}
@@ -650,12 +705,19 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
                   onReturnToConversation={() => cross('CONVERSATION')}
                   onHeight={setBandHeight}
                   focusControl={crossed && current}
+                  nameSuffix={callSlots.depthNameSuffix}
                   end={onSignOut === undefined ? null : <ReplayAnalysisEntry player={replayPlayer} entry={runtime.replayEntry} language={locale.language} />}
                 />
               ),
               height: bandHeight,
             }}
           />
+          {/* S8B-06 CP3 (P4-C3): the Analysis's call-line box, on the Dark family; the world is laid out above it. */}
+          {callLive && callOwner !== null ? (
+            <View testID="qandeel-analysis-call-box" style={[styles.callBox, { paddingBottom: edges.bottom, paddingLeft: edges.left, paddingRight: edges.right }]} onLayout={(event) => setCallBoxHeight(event.nativeEvent.layout.height - edges.bottom)}>
+              <CallLine owner={callOwner} language={locale.language} />
+            </View>
+          ) : null}
         </View>
       </AnalysisAppearanceScope>
     );
@@ -807,6 +869,15 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             onDismiss={() => attention.dismissStrip()}
           />
         ) : null}
+        {/*
+          S8B-06 CP3 — during a live call only a call-safe exception is presented (G3 §D, P3 §9): nonmodal, dismiss only, under
+          the upper chrome of whichever depth is in front. It resolves nothing and ends no call.
+        */}
+        {strip !== null && strip.form === 'CALL_SAFE' && callLive && leaving === null && !playerOpen ? (
+          <View style={[styles.callSafe, { top: depth === 'ANALYSIS' ? bandHeight : edges.top + CHROME_MIN_HEIGHT, left: edges.left + 12, right: edges.right + 12 }]}>
+            <CallSafeStrip key={strip.candidate.item.id} item={strip.candidate.item} language={locale.language} onDismiss={() => attention.dismissStrip()} />
+          </View>
+        ) : null}
         {/* A3-02 — the education before the OS prompt: never at the Analysis depth. */}
         {education && depth === 'CONVERSATION' && onSignOut !== undefined && !playerOpen ? (
           <PermissionEducationSheet language={locale.language} insets={edges} onAllow={() => void push.allow()} onNotNow={() => push.notNow()} />
@@ -824,4 +895,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   sharedArea: { position: 'absolute', top: 0, left: 0, right: 0 },
   switcher: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  callBox: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  callSafe: { position: 'absolute' },
 });

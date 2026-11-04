@@ -704,9 +704,24 @@ const REJECTED_TOKENS = [
   'InteractionManager',
 ];
 
+// S8B-06 CP3 R1 (F-G) — CONTROLLED RE-ANCHOR, PROPOSED to the Product Owner (CP3 record §5 F-G, §13 item 8; not yet
+// approved). The first Living Map draw held the JS thread for 3.3 s (the nebula's three raster passes, measured on the
+// phone), long enough for the server to close a live call, whose audio passes through the JS thread (4008 SILENCE). The
+// passes are now painted in bands with the JS thread released between them through ONE zero-delay task boundary in
+// WorldStrata.tsx. It times and moves nothing: a release without a delay carries no duration, order or pace. Exactly that
+// one line is set aside before the §16 scan; a second release, a release with a delay, or any other timer is still rejected
+// (the counter-tests below).
+const WORLD_RELEASE = 'const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));';
+const setAsideWorldRelease = (text) => (text.split(WORLD_RELEASE).length === 2 ? text.replace(WORLD_RELEASE, '') : text);
+
 test('§16 — no rejected pattern exists in any production motion surface', () => {
+  assert.equal(mapCode['visual/WorldStrata.tsx'].split(WORLD_RELEASE).length, 2, 'the one world release is in WorldStrata.tsx');
+  for (const planted of [`${WORLD_RELEASE}\n${WORLD_RELEASE}`, WORLD_RELEASE.replace(', 0)', ', 16)'), `${WORLD_RELEASE}\nsetTimeout(tick, 0);`]) {
+    assert.equal(setAsideWorldRelease(planted).includes('setTimeout'), true, 'counter-test: any other timer is still rejected');
+  }
+  const scanned = setAsideWorldRelease(productionText);
   for (const forbidden of REJECTED_TOKENS) {
-    assert.equal(productionText.includes(forbidden), false, `§16 rejects ${forbidden}`);
+    assert.equal(scanned.includes(forbidden), false, `§16 rejects ${forbidden}`);
   }
   for (const forbidden of [/\bring\b/iu, /\bbloom\b/iu, /\bripple\b/iu, /\bglow\b/iu, /\bbrass\b/iu, /\bignition\b/iu, /\bpulse\b/iu, /\bparallax\b/iu, /\bhalo\b/iu]) {
     assert.doesNotMatch(motionText, forbidden, `§16 rejects ${String(forbidden)}`);

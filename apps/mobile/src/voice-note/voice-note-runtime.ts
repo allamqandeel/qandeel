@@ -90,6 +90,17 @@ export function createInertVoiceNoteDevice(): VoiceNoteDevice {
   };
 }
 
+/**
+ * S8B-06 CP3 — the microphone for a live call, at the moment of the reader's press (G1.2 §5): the same recorder port and the
+ * same rule as a Voice Note's capture (the OS prompt only while the answer is still undetermined). True only when granted.
+ */
+export async function microphoneForCall(device: VoiceNoteDevice): Promise<boolean> {
+  const recorder = device.recorder();
+  let permission = await recorder.permission();
+  if (permission === 'UNDETERMINED') permission = await recorder.requestPermission();
+  return permission === 'GRANTED';
+}
+
 /** A command or draft id: a random version-4 UUID. It carries no reader data. */
 export function mintVoiceNoteId(): string {
   const hex = (count: number) => Array.from({ length: count }, () => Math.floor(Math.random() * 16).toString(16)).join('');

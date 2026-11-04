@@ -758,7 +758,7 @@ class CallAudioEngine(
         val hasStamp = output.getTimestamp(stamp)
         val latencyFrames = trackBufferFrames.toLong() + FALLBACK_HAL_LATENCY_FRAMES
         val presented = if (hasStamp) stamp.framePosition else maxOf(0L, head - latencyFrames)
-        val final = ledger.cut(turn, presented) ?: ledger.lastMark?.takeIf { it.callTurnIndex == turn }
+        val final = ledger.cutFinal(turn, presented)
         pending.removeAll { it.callTurnIndex <= turn }
         // The cut reply is no longer audible: it stops being the echo reference, so it cannot be cut twice.
         recentWrites.clear()

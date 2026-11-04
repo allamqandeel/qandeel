@@ -47,10 +47,14 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // S8B-03 CP2 added exactly two, deliberately, so the Voice Note client reaches this layer through the barrel only (T-12P):
   // decodeSubmitResponse, the one decoder of a committed turn's answer (a voice turn commits into the same exchange), and
   // EXPORT_VOICE_FILE_NAME, S8B-02's pattern of a voice export file's name (a RegExp, not reader-facing copy).
+  // S8B-06 CP3 added exactly three, deliberately: CallTruthApiClient, the read-only call-truth transport (a plain class, no
+  // socket), callConnectUrl, the call channel's address derived from the API base (a URL rule, not copy), and
+  // decodeCallTruth, its strict decoder (an unreadable truth is UNAVAILABLE, never "no call").
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
     'CONVERSATION_HISTORY_PAGE_LIMIT',
+    'CallTruthApiClient',
     'ConversationSessionApiClient',
     'ConversationTurnApiClient',
     'EXPORT_VOICE_FILE_NAME',
@@ -85,12 +89,14 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'SharedWorldApiClient',
     'UnderstandingApiClient',
     'bootstrapCanonicalRuntime',
+    'callConnectUrl',
     'createAppStateForegroundSignal',
     'createEphemeralAuthSessionStorage',
     'createForegroundLiveDriver',
     'createManualForegroundSignal',
     'createMobileAuthAuthority',
     'createMobileRuntimeEntry',
+    'decodeCallTruth',
     'decodeSubmitResponse',
     'describeConfigFailure',
     'isEmailIdentifier',
@@ -125,7 +131,7 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // S6-05's Introduction World transport is a plain class too, and so are S6-06's sharing and continuation transports.
     // S7-02's Replay entry transport is a plain class too, and so is S7-03's read-only Replay history transport, and S7-04's
     // Replay lifecycle transport.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient', 'IntroductionsEnrollmentApiClient', 'ReplayApiClient', 'ReplayHistoryApiClient', 'ReplayLifecycleApiClient'].includes(name)) continue;
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient', 'IntroductionSharingApiClient', 'IntroductionContinuationApiClient', 'IntroductionAlertsApiClient', 'IntroductionsEnrollmentApiClient', 'ReplayApiClient', 'ReplayHistoryApiClient', 'ReplayLifecycleApiClient', 'CallTruthApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

@@ -1,9 +1,9 @@
 /**
- * A3-01 — the call-safe strip (P3 §9), built as a reusable, truth-safe component and NOT MOUNTED on any Product route.
+ * A3-01 — the call-safe strip (P3 §9), built as a reusable, truth-safe component.
  *
- * No canonical Live Call authority exists on `main` (`QAN-BL-VOICE-01`), so nothing in production can truthfully say a
- * call is active (`call-truth.ts`). This component is therefore proved with validation fixtures only; the future
- * Stage 8 call owner mounts it, under these frozen rules, which it already implements:
+ * A3-01 built it unmounted: no canonical Live Call authority existed (`QAN-BL-VOICE-01`), so nothing in production could
+ * truthfully say a call is active (`call-truth.ts`). S8B-06 CP3's call owner now mounts it once, in DepthComposition, only
+ * while its call is live, under these frozen rules, which it already implements:
  *
  *   - only the two call-safe exceptions reach it (a genuinely critical security / account event; an exact-time reminder
  *     the reader explicitly requested) — `decidePresentation` decides that, never this view;

@@ -125,9 +125,12 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   // RE-ANCHORED by S8B-05 CP2 (was: 0189 is the last migration): CP2 adds exactly 0190 after it.
   // RE-ANCHORED by S8B-05 CP3 (was: 0190 is the last migration): CP3 adds exactly 0191 after 0190.
   // RE-ANCHORED by S8B-05 CP4 (was: 0191 is the last migration): CP4 adds exactly 0192 after 0191.
-  assert.deepEqual(migrations.slice(-4), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
-    '0191_s8b_05_live_call_ordered_halves_v1.sql', '0192_s8b_05_live_call_barge_in_text_turn_v1.sql'],
-  'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190, CP4 exactly 0192 after 0191');
+  // RE-ANCHORED by S8B-06 CP3 R3 (was: 0192 is the last migration; the Product Owner's CP3 Review R1 decision, R3 option
+  // A): exactly 0193, the finished-call read, follows 0192 and nothing else does (verify-migration-0193 proves it).
+  assert.deepEqual(migrations.slice(-5), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
+    '0191_s8b_05_live_call_ordered_halves_v1.sql', '0192_s8b_05_live_call_barge_in_text_turn_v1.sql',
+    '0193_s8b_06_session_finished_calls_read_v1.sql'],
+  'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190, CP4 exactly 0192 after 0191, S8B-06 CP3 R3 exactly 0193 after 0192');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
   assert.equal(scripts['prove:live-call-synthetic:integration'],
@@ -235,13 +238,34 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
   // other file still carries no call copy and no call text.
   const COPY_FILE = 'apps/mobile/src/voice-call/live-call-copy.ts';
   const gateRows = new Map(rows.map((row) => row.split('|').map((cell) => cell.trim())).map((cells) => [cells[1], cells]));
-  const copyRows = [...read(COPY_FILE).matchAll(/\{ id: '(LCE?-\d{2})', status: '(\w+)', ar: '([^']*)', en: '([^']*)' \}/gu)];
+  // RE-ANCHORED by S8B-06 CP3 (was: every phone row is this record's row): CP3 adds the call screen's rows (LC-19 … LC-22)
+  // and, by the Product Owner's direction (2026-11-04), redrafts the call rows' Arabic in simplified neutral Modern Standard
+  // Arabic. Those rows are the CP3 record's §4 gate table, every one still PROPOSED; for an id it lists, the CP3 table is the
+  // gate the phone is checked against, character for character. An id neither record lists still fails, and every CP3 row
+  // must be PROPOSED (counter-test: tests/s8b-06-cp3-call-ui-contract.test.mjs pins the same table both ways). English with
+  // an apostrophe is written in double quotes in the copy file; both quotings are read, and every row is still counted.
+  const CP3_RECORD = 'docs/e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md';
+  const cp3Record = read(CP3_RECORD);
+  // RE-ANCHORED by the Product Owner's S8B-06 CP3 Copy Gate approval (2026-11-04; was: every CP3 row and every phone row
+  // PROPOSED): the CP3 gate is CLOSED with its 36 rows APPROVED. The phone is still checked against that table character for
+  // character; a row of the CP3 table in any other state, or a phone row in any other state, still fails. This record's own
+  // rows (S8B-05's) are unchanged and stay PROPOSED above.
+  const cp3Rows = cp3Record.slice(cp3Record.indexOf('## 4. The Copy Gate')).split('\n').filter((line) => /^\| (?:LC|LCE)-\d{2} \|/u.test(line));
+  assert.ok(cp3Rows.length >= 30, 'the CP3 record lists the call rows the phone carries');
+  assert.match(cp3Record, /\*\*Gate status: CLOSED\*\* — \*\*all 36 rows APPROVED by the Product Owner\*\*/u);
+  for (const row of cp3Rows) {
+    assert.match(row, /^\| (?:LC|LCE)-\d{2} \| APPROVED \|/u, `${row.slice(0, 12)} is APPROVED in the CP3 gate`);
+    const cells = row.split('|').map((cell) => cell.trim());
+    gateRows.set(cells[1], cells);
+  }
+  const copyRows = [...read(COPY_FILE).matchAll(/\{ id: '(LCE?-\d{2})', status: '(\w+)', ar: '([^']*)', en: (?:'([^']*)'|"([^"]*)") \}/gu)]
+    .map(([whole, id, status, ar, single, double]) => [whole, id, status, ar, single ?? double]);
   assert.ok(copyRows.length > 0, 'the phone carries the call rows in one table');
   assert.equal(copyRows.length, (read(COPY_FILE).match(/\bid: '/gu) ?? []).length, 'every row of the table is checked');
   for (const [, id, status, ar, en] of copyRows) {
     const gate = gateRows.get(id);
     assert.ok(gate, `${id} is a row of the unified gate`);
-    assert.equal(status, 'PROPOSED', `${id} is still PROPOSED on the phone`);
+    assert.equal(status, 'APPROVED', `${id} is APPROVED on the phone (the CP3 gate)`);
     assert.equal(ar, gate[3], `${id} Arabic is the gate's, character for character`);
     assert.equal(en, gate[4], `${id} English is the gate's, character for character`);
   }

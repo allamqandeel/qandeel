@@ -89,7 +89,13 @@ export interface VoiceNoteSession {
   begin(): Promise<void>;
   /** C-16 on a draft row: its send, after the consent when there is none. */
   sendDraft(draftId: string): Promise<void>;
-  /** C-10 on the consent sheet: grant, then the act that asked for it (the capture, or a draft's send). */
+  /**
+   * S8B-06 CP3 — a live call asks for the same recording consent (VOICE_RECORDING_V3) before it starts: READY when it is
+   * current (the caller starts the call now), ASKED when the consent sheet was opened instead (its C-10 then runs `start`),
+   * UNAVAILABLE when the consent cannot be read. A call never starts on a consent we cannot vouch for.
+   */
+  prepareCall(start: () => Promise<void>): Promise<'READY' | 'ASKED' | 'UNAVAILABLE'>;
+  /** C-10 on the consent sheet: grant, then the act that asked for it (the capture, a draft's send, or a call). */
   agree(): Promise<void>;
   /** C-11: nothing changes. */
   decline(): void;
@@ -128,7 +134,7 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
   let retired = false;
   let consentVersion = VOICE_CONSENT_VERSION;
   /** What the consent sheet was opened for. */
-  let afterConsent: { readonly kind: 'CAPTURE' } | { readonly kind: 'SEND'; readonly draftId: string } = { kind: 'CAPTURE' };
+  let afterConsent: { readonly kind: 'CAPTURE' } | { readonly kind: 'SEND'; readonly draftId: string } | { readonly kind: 'CALL'; readonly start: () => Promise<void> } = { kind: 'CAPTURE' };
   const live = () => !retired && isCurrent();
 
   const set = (next: Partial<VoiceNoteSessionState>) => {
@@ -207,6 +213,19 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
       }
       await startCapture();
     },
+    async prepareCall(start) {
+      if (!live()) return 'UNAVAILABLE';
+      set({ notice: null });
+      const read = await api.capability();
+      if (!live()) return 'UNAVAILABLE';
+      if (read.kind !== 'CAPABILITY') return 'UNAVAILABLE';
+      // The consent is the same; the Voice Notes gate is not the call's (the call authority refuses a closed call gate).
+      set({ consentCurrent: read.view.consentCurrent, consentState: read.view.consentState });
+      if (read.view.consentCurrent) return 'READY';
+      afterConsent = { kind: 'CALL', start };
+      await openSheet();
+      return 'ASKED';
+    },
     async sendDraft(draftId) {
       if (!live()) return;
       set({ notice: null });
@@ -235,6 +254,7 @@ export function createVoiceNoteSession(options: VoiceNoteSessionOptions): VoiceN
       }
       set({ sheet: null, consentCurrent: true, consentState: 'GRANTED' });
       if (afterConsent.kind === 'SEND') await notes.send(afterConsent.draftId);
+      else if (afterConsent.kind === 'CALL') await afterConsent.start();
       else await startCapture();
     },
     decline() {

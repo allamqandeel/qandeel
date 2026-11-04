@@ -150,6 +150,23 @@ describe('S8B-05 CP2 the call turn engine (§3 – §8): voice in, a committed t
     h.stream.close();
   });
 
+  // S8B-06 CP3 R1 (F-D): room sound loud enough to arm the endpointer (RMS ≥ 300 for longer than 100 ms) is an utterance end
+  // like any other; what makes it a turn is the recognizer's FINAL words. A real recognizer hears no words in room sound,
+  // so no turn is committed (the device proof's scripted recognizer answered EVERY utterance end with a line, which is why
+  // its room sound became turns). The person's next words are their own turn, whole: nothing is lost after the noise.
+  it('F-D: a loud stretch the recognizer finds no words in makes no turn; the next words are committed whole', async () => {
+    const h = harness([[], 'the first words after the noise']);
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_200);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(h.store.commits).toEqual([]);
+    await h.speak('loud', 400);
+    await h.speak('quiet', 1_200);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(h.store.commits.map((c) => c.content)).toEqual(['the first words after the noise']);
+    h.stream.close();
+  });
+
   it('without the conversation bound, the call records but no recognizer opens and no turn is taken', async () => {
     const h = harness(['x'], { bind: false });
     await h.speak('loud', 400);

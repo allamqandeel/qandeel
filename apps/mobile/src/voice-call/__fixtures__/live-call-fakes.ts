@@ -35,6 +35,14 @@ export class FakeCallEngine implements VoiceCallEngine {
     this.muted.push(muted);
   }
 
+  /** CP3 (D-05-07 T1): the local cut a typed message asks for; reported as a forced barge-in, as the native engines do. */
+  cuts = 0;
+  cutReply(): boolean {
+    if (!this.running) return false;
+    this.cuts += 1;
+    return true;
+  }
+
   enqueueReply(): ReplyAdmission {
     return this.running ? 'ACCEPT' : 'NOT_RUNNING';
   }
@@ -90,6 +98,8 @@ export class FakeCallPlatform implements CallPlatform {
   capabilityValue: CallCapability = { supported: true, reason: null, microphoneGranted: true, inCall: false };
   readonly startCalls: CallStartOptions[] = [];
   readonly endCalls: (string | null)[] = [];
+  /** S8B-06 CP3 R1: absent unless a test gives the platform its move to the background. */
+  moveToBackground?: () => boolean;
   readonly notifications: string[] = [];
   readonly routes: CallRoute[] = [];
   resumes = 0;

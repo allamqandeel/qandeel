@@ -522,6 +522,18 @@ test('the barrel is an allowlist, and the deep modules are not a second public s
     const relative = file.slice(join(rootPath, MOBILE_SRC).length + 1).replace(/\\/gu, '/');
     if (relative.startsWith('integration/')) continue;
     if (!/\.tsx?$/u.test(file)) continue;
+    // RE-ANCHORED by S8B-06 CP3 (was: no file outside the layer deep-imports it): ONE device-proof root,
+    // voice-call/__validation__/S806Cp3ProofRoot.tsx, renders the PRODUCTION phase surface over a runtime it builds, as
+    // S7-05's proof root does from inside the layer. It cannot live inside the layer: its call device carries the proof-only
+    // loopback flag, which S8B-06 CP1's contract allows under voice-call/__validation__/ alone, and the layer may not name
+    // the live call. It is never a Product entry (its selector refuses without S806_DEVICE_PROOF=1). Counter-test: it
+    // reaches exactly the phase surface and the runtime, and every other file outside the layer still reaches the barrel only.
+    if (relative === 'voice-call/__validation__/S806Cp3ProofRoot.tsx') {
+      const deep = [...stripComments(readFileSync(file, 'utf8')).matchAll(/from\s+'([^']*\/integration\/[^']+)'/gu)].map((m) => m[1]).sort();
+      assert.deepEqual(deep, ['../../integration/composition/ProductRoot', '../../integration/runtime/integration-runtime'],
+        `${relative} reaches the phase surface and the runtime only`);
+      continue;
+    }
     // The leading `/` is load-bearing: without it this fires on T-06's own
     // `../timeline-integration/…`, which is a different owner's internal directory and none of this
     // guard's business. A guard that fails on unrelated correct code is a guard nobody keeps.

@@ -11,9 +11,11 @@
  * residual translation at its D2R parallax rate, on the UI runtime, from the presentation camera's own
  * derived value — no second animation system and no per-frame JS.
  */
+import { useEffect, useState } from 'react';
 import {
   BlendMode,
   BlurStyle,
+  ClipOp,
   FilterMode,
   FractalNoise,
   MipmapMode,
@@ -66,14 +68,20 @@ function drawBuckets(canvas: Parameters<Parameters<typeof createPicture>[0]>[0],
 interface StrataPictures {
   readonly dust: SkPicture;
   readonly stars: readonly SkPicture[];
+}
+
+interface NebulaPictures {
   readonly nebulaBase: SkPicture;
   readonly nebulaFar: SkPicture;
   readonly nebulaMap: SkPicture;
 }
 
 let pictures: StrataPictures | null = null;
+let nebula: NebulaPictures | null = null;
+let nebulaPainting: Promise<NebulaPictures> | null = null;
+let unpaintedNebula: NebulaPictures | null = null;
 
-/** Recorded on first use and kept for the life of the process: the strata never change. */
+/** The dust and the stars: recorded on first use and kept for the life of the process (the strata never change). */
 function strataPictures(): StrataPictures {
   if (pictures !== null) return pictures;
   const dustTile = WORLD_DUST.tile;
@@ -89,6 +97,20 @@ function strataPictures(): StrataPictures {
       drawBuckets(canvas, band.buckets as readonly Bucket[]);
     }, Skia.XYWHRect(0, 0, WORLD_STARS.tile, WORLD_STARS.tile)),
   );
+  pictures = { dust, stars };
+  return pictures;
+}
+
+/**
+ * The nebula's three passes, painted on first use and kept for the life of the process like the rest.
+ *
+ * S8B-06 CP3: each pass is a raster tile that costs about a second of the JS thread on a phone (HONOR ALI-NX1,
+ * 2026-11-04: 1 146, 1 053 and 1 012 ms). Painted in one go on the Analysis' first draw, they held the JS thread for
+ * 3.3 s, and a live call's audio, which passes through it, stopped long enough for the server to close the call (4008
+ * SILENCE). They are painted in bands instead (`rasterTile`), and until they are done the nebula draws nothing.
+ */
+function nebulaPictures(): Promise<NebulaPictures> {
+  if (nebulaPainting !== null) return nebulaPainting;
   const T = WORLD_NEBULA.tile;
   // The tile is painted with a margin of its own wrapped neighbourhood (the clouds are repeated across the edges and the
   // noises are stitched to the tile), so sampling it back never meets an edge: no seam where two tiles touch.
@@ -139,14 +161,43 @@ function strataPictures(): StrataPictures {
       canvas.drawRect(Skia.XYWHRect(-M, -M, T + 2 * M, T + 2 * M), veins);
       canvas.restore();
     });
-  pictures = {
-    dust,
-    stars,
-    nebulaBase: cloudPass(WORLD_NEBULA.base, 0),
-    nebulaFar: cloudPass(WORLD_NEBULA.far, 1),
-    nebulaMap: cloudPass(WORLD_NEBULA.map, 2),
-  };
-  return pictures;
+  nebulaPainting = (async () => {
+    const nebulaBase = await cloudPass(WORLD_NEBULA.base, 0);
+    const nebulaFar = await cloudPass(WORLD_NEBULA.far, 1);
+    const nebulaMap = await cloudPass(WORLD_NEBULA.map, 2);
+    nebula = { nebulaBase, nebulaFar, nebulaMap };
+    return nebula;
+  })().catch((error: unknown) => {
+    nebulaPainting = null;
+    throw error;
+  });
+  return nebulaPainting;
+}
+
+/** The nebula as it is now: the painted passes, or empty pictures while they are being painted. */
+function useNebula(): NebulaPictures {
+  const [shown, setShown] = useState<NebulaPictures>(() => nebula ?? unpainted());
+  useEffect(() => {
+    if (shown === nebula) return undefined;
+    let live = true;
+    void nebulaPictures().then((painted) => {
+      // Where nothing is painted differently (no raster surface, as in Jest), nothing is drawn again.
+      const same = painted.nebulaBase === shown.nebulaBase && painted.nebulaFar === shown.nebulaFar && painted.nebulaMap === shown.nebulaMap;
+      if (live && !same) setShown(painted);
+    });
+    return () => {
+      live = false;
+    };
+  }, [shown]);
+  return shown;
+}
+
+function unpainted(): NebulaPictures {
+  if (unpaintedNebula === null) {
+    const empty = createPicture(() => undefined, Skia.XYWHRect(0, 0, WORLD_NEBULA.tile, WORLD_NEBULA.tile));
+    unpaintedNebula = { nebulaBase: empty, nebulaFar: empty, nebulaMap: empty };
+  }
+  return unpaintedNebula;
 }
 
 // ------------------------------------------------------------------------------------- LA-VIS-01 material
@@ -228,27 +279,46 @@ function cloudLobes(cloud: { readonly x: number; readonly y: number; readonly r:
   return lobes;
 }
 
+/** S8B-06 CP3: how many bands of rows a raster tile is painted in, one band per JS task. */
+export const RASTER_BANDS = 8;
+
+const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 /**
  * Paints a square tile ONCE into a raster image and returns a picture that draws that image back at full size. A
  * fractal noise over a whole tile is too costly to evaluate again on every frame; an image is one textured quad.
+ *
+ * S8B-06 CP3: the image is painted in RASTER_BANDS bands of rows, and the JS thread is released before each band.
+ * Every band is the same drawing on the same surface, clipped (without anti-aliasing) to its own rows, and every step
+ * of the drawing is per pixel (gradients, a layer, a noise mask, a noise light; no blur), so the image is the one a
+ * single pass paints. It is snapshotted and drawn back exactly as before.
  */
-function rasterTile(size: number, margin: number, share: number, draw: (canvas: SkCanvas) => void): SkPicture {
+export async function rasterTile(
+  size: number,
+  margin: number,
+  share: number,
+  draw: (canvas: SkCanvas) => void,
+  release: () => Promise<void> = nextTask,
+): Promise<SkPicture> {
   const bounds = Skia.XYWHRect(0, 0, size, size);
-  // Everything happens while the picture records (once), so nothing here runs where no picture is recorded.
-  return createPicture((target) => {
-    const pixels = Math.round((size + 2 * margin) * share);
-    const surface = Skia.Surface.Make(pixels, pixels) ?? Skia.Surface.MakeOffscreen(pixels, pixels);
-    if (surface === null) {
-      draw(target);
-      return;
-    }
-    const canvas = surface.getCanvas();
+  const pixels = Math.round((size + 2 * margin) * share);
+  const surface = Skia.Surface.Make(pixels, pixels) ?? Skia.Surface.MakeOffscreen(pixels, pixels);
+  if (surface === null) return createPicture((target) => draw(target), bounds);
+  const canvas = surface.getCanvas();
+  const rows = Math.ceil(pixels / RASTER_BANDS);
+  for (let top = 0; top < pixels; top += rows) {
+    await release();
+    canvas.save();
+    canvas.clipRect(Skia.XYWHRect(0, top, pixels, Math.min(rows, pixels - top)), ClipOp.Intersect, false);
     canvas.scale(share, share);
     canvas.translate(margin, margin);
     draw(canvas);
-    surface.flush();
-    const snapshot = surface.makeImageSnapshot();
-    const image = snapshot.makeNonTextureImage?.() ?? snapshot;
+    canvas.restore();
+  }
+  surface.flush();
+  const snapshot = surface.makeImageSnapshot();
+  const image = snapshot.makeNonTextureImage?.() ?? snapshot;
+  return createPicture((target) => {
     target.drawImageRectOptions(image, Skia.XYWHRect(margin * share, margin * share, size * share, size * share), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
   }, bounds);
 }
@@ -462,15 +532,16 @@ export function WorldAtmosphere({
   readonly emptySpace: number;
 }) {
   const p = strataPictures();
+  const n = useNebula();
   return (
     <>
       <Group opacity={Math.min(1, ambient * 2) * QUIET.nebula}>
         <Stratum motion={motion} drift={drift.nebula} tile={WORLD_NEBULA.tile} envelope={envelope} opacity={1}>
           {() => (
             <>
-              <FadedPicture picture={p.nebulaBase} opacity={response.nebulaBase} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
-              <FadedPicture picture={p.nebulaFar} opacity={response.nebulaFar} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
-              <FadedPicture picture={p.nebulaMap} opacity={response.nebulaMap} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
+              <FadedPicture picture={n.nebulaBase} opacity={response.nebulaBase} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
+              <FadedPicture picture={n.nebulaFar} opacity={response.nebulaFar} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
+              <FadedPicture picture={n.nebulaMap} opacity={response.nebulaMap} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
             </>
           )}
         </Stratum>

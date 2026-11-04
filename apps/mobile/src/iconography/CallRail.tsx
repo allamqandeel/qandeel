@@ -20,8 +20,9 @@
  * audio truth, which only that runtime can provide (P2 §11.1). It invents no call copy either — the Voice and call
  * strings wait on the same runtime (P4-C2 §5).
  *
- * It is not mounted on the Product route: there is no Live Call to mount it in, and a call-shaped surface with nothing
- * behind it would be a fake. The VPORT-02 proof renders it in a validation entry only.
+ * Until S8B-06 CP3 it was not mounted on the Product route: there was no Live Call to mount it in, and a call-shaped
+ * surface with nothing behind it would be a fake. CP3 mounts it once, in the call line (`call/CallViews.tsx`), under the ONE
+ * call owner; the VPORT-02 proof still renders it in a validation entry.
  */
 import { Canvas, Group, Path, RoundedRect } from '@shopify/react-native-skia';
 import { useEffect } from 'react';

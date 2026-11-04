@@ -239,7 +239,14 @@ test('§6 — the Conversation belongs to the runtime generation and is retired 
   const runtime = code(read('apps/mobile/src/integration/runtime/integration-runtime.ts'));
   // S7-02 RE-ANCHOR: the same construction, held in a local just before the generation's object so the Replay entry can
   // READ the same conversation; the generation still carries it as `conversation` and retires it with itself.
-  assert.match(runtime, /const conversation = createConversationController\(\{\n\s*sessionId: bundle\.sessionId,\n\s*transport: entry\.conversationTurnsFor\(bundle\),\n\s*isCurrent,\n\s*onReplyCommitted: \(\) => built\.liveDriver\.requestImmediateCatchUp\(\),\n\s*\}\);\n\s*const built: IntegrationSessionRuntime = \{/u);
+  // S8B-06 CP3 RE-ANCHOR (D-05-07 T1; was `transport: entry.conversationTurnsFor(bundle)`): the same ONE turn route, held in
+  // a local so the call owner can read its history, wrapped so that a message typed during a live call is carried by the
+  // call (TEXT_TURN) and every other message takes this route unchanged. Counter-test: the wrapper is built from exactly
+  // that route and the generation's one call owner, and the route is obtained once.
+  assert.match(runtime, /const turns = entry\.conversationTurnsFor\(bundle\);/u);
+  assert.equal((runtime.match(/entry\.conversationTurnsFor\(/gu) ?? []).length, 1, 'the turn route is obtained once');
+  assert.equal((runtime.match(/createCallAwareConversationTransport\(/gu) ?? []).length, 1, 'one call-aware transport');
+  assert.match(runtime, /const conversation = createConversationController\(\{\n\s*sessionId: bundle\.sessionId,\n\s*transport: createCallAwareConversationTransport\(turns, call\),\n\s*isCurrent,\n\s*onReplyCommitted: \(\) => built\.liveDriver\.requestImmediateCatchUp\(\),\n\s*\}\);\n\s*const built: IntegrationSessionRuntime = \{/u);
   assert.match(runtime, /\n\s*conversation,\n/u);
   assert.equal((runtime.match(/createConversationController\(/gu) ?? []).length, 1, 'one Conversation per generation');
   assert.match(runtime, /session\.conversation\.retire\(\);/u);
@@ -300,8 +307,12 @@ test('§7 — no Voice, Replay, Activity, Settings, Understanding, Global Shell,
   // 20 px with P2's stroke for that size) and P2's utility `close`, drawn by the Voice Note slots. This layer still holds no
   // Voice code: the keys are neutral drawing names, the scan above still refuses `voice` and `microphone` here, and the
   // Voice Note logic lives in apps/mobile/src/voice-note/, handed to the surface through neutral slots.
-  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay', 'play', 'pause', 'mic', 'micRecording', 'close'],
-    'only the W1A glyphs, W3-01’s settings glyph, S7-02’s replay glyph, S7-04’s transport and S8B-03’s mic and close are ported');
+  // S8B-06 CP3 RE-ANCHOR (G1.2): P2's `call` (the handset of the Call Rail port's P2 call glyphs), drawn by the call entry in
+  // apps/mobile/src/call/. Like `mic`, the key is a neutral drawing name; the call logic lives outside this layer, and the
+  // scan above still refuses `voice` and `microphone` here. Counter-test: no file of this layer draws it.
+  for (const file of LAYER_PRODUCTION) assert.doesNotMatch(code(read(file)), /name="call"/u, `${file} draws no call glyph`);
+  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings', 'replay', 'play', 'pause', 'mic', 'micRecording', 'close', 'call'],
+    'only the W1A glyphs, W3-01’s settings glyph, S7-02’s replay glyph, S7-04’s transport, S8B-03’s mic and close and S8B-06’s call are ported');
 });
 
 // ---------------------------------------------------------------------------------------------

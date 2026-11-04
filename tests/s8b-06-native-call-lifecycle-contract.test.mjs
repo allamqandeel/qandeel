@@ -180,7 +180,12 @@ test('JS: one controller over the existing session and client; the warning is th
   const copy = read(`${CALL}/live-call-copy.ts`);
   const statuses = [...copy.matchAll(/status: '([A-Z_]+)'/gu)].map((m) => m[1]);
   assert.ok(statuses.length >= 7);
-  assert.ok(statuses.every((s) => s === 'PROPOSED'), 'no copy row is approved here (no Copy Gate approval)');
+  // RE-ANCHORED by the Product Owner's S8B-06 CP3 Copy Gate approval (2026-11-04; was: every row PROPOSED, CP2 approved
+  // none): the approval is the Product Owner's, recorded in the CP3 record's §4, and every row carries it. A row in any
+  // other state still fails; the CP3 contract pins each row to that table (tests/s8b-06-cp3-call-ui-contract.test.mjs).
+  assert.ok(statuses.every((s) => s === 'APPROVED'), 'every copy row carries the Product Owner\'s CP3 Copy Gate approval, none another state');
+  assert.match(read('docs/e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md'), /\*\*Gate status: CLOSED\*\* — \*\*all 36 rows APPROVED by the Product Owner\*\*/u,
+    'the approval is the Product Owner\'s, in the CP3 record');
   const media = walk('apps/mobile').filter((f) => !f.includes('node_modules') && !f.startsWith('apps/mobile/android/') && !f.startsWith('apps/mobile/ios/'))
     .filter((f) => /(?:^|\/)(?:voice-call|qandeel-voice-call)\//u.test(f) && /\.(mp3|wav|m4a|aac|caf|ogg|opus)$/iu.test(f));
   assert.deepEqual(media, [], 'no audio file: the warning fallback is a generated tone, no F-01 file, no TTS');
