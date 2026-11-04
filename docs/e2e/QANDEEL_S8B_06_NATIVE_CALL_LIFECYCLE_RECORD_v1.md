@@ -1,17 +1,29 @@
 # QANDEEL S8B-06 — Native Call Lifecycle (Android Core-Telecom, iOS CallKit and the iOS engine): Implementation Record v1
 
-**Checkpoint:** S8B-06 CP2 — IN PROGRESS / DRAFT (2026-11-04). CP2 (Native Call Lifecycle) is on `s8b/s8b-06-cp2` as
-Draft PR #380, **not merged; merge only on the Product Owner's explicit «ادمج»**. The Android lifecycle is proven on
-the API 36 emulator (§5). The **real-Android-phone proof is PENDING**: it needs the Product Owner's phone connected (§6).
-The iOS engine and lifecycle are proven by automated host and simulator tests only (§7). Real-iPhone tests are
-**deferred by the Product Owner** (2026-11-03) and are not a merge or launch blocker.
+**Checkpoint:** S8B-06 CP2 — DELIVERED / READY FOR THE PRODUCT OWNER'S MERGE REVIEW (2026-11-04). CP2 (Native Call
+Lifecycle) is on `s8b/s8b-06-cp2` as Draft PR #380, **not merged; merge only on the Product Owner's explicit «ادمج»**.
+
+- **Android** is proven on the API 36 emulator (§5) and on the **real phone**, HONOR ALI-NX1 on Android 15 with a secure
+  lock screen (§6). Every phone scenario passes:
+  - start and every end path, the second-call and microphone refusals;
+  - earpiece ↔ speaker during a call;
+  - a real cellular call (hold, MUTE, resume);
+  - #21 with the secure lock, the link drop and the grace timeout;
+  - #36 heard by the Product Owner with the phone locked;
+  - swipe-away.
+- **Not proven:** Bluetooth and wired routes, because no accessory was available (§6). `phoneCall` alone keeps the
+  microphone live in the background, so no `microphone` type was added.
+- **iOS:** the engine and lifecycle are proven by automated host and simulator tests, including the app-suspension
+  review (§7.5). Real-iPhone tests are **deferred by the Product Owner** (2026-11-03, FI 019) and are not a merge or launch
+  blocker.
 
 S8B-06 is **not closed**. S8B-06 CP3 is **not started and not authorized**.
 
 ## 0. Authority, base, precedence
 
 **Authority:** the Product Owner's S8B-06 CP2 execution order (2026-11-03), and the Product Owner's iOS-validation
-decision made in the same task (2026-11-03, §7).
+decision made in the same task (2026-11-03, §7). The real-phone proof (§6) and the iOS suspension review (§7.5) were run under the Product
+Owner's order "Real Android Device Proof & CP2 Closure" (2026-11-04).
 
 - **Binding contract:** `S8B-05_S8B-06_INTEGRATED_LIVE_CALL_CONTRACT_v1.2_FINAL_FOR_PO_EXECUTION_APPROVAL.md`, in the
   Product Owner's reports folder `S8B-05`.
@@ -92,13 +104,13 @@ deferral, First Audio, Live Focus, QAN-BL-VOICE-07, Stage 9, paid tests.
 | D1 | JS timers paused in the background, so a held or locked call would lose its heartbeat (the server closes after 3 s of silence) and could not reconnect | Design review against RN Android behaviour; then proven on the emulator (§5, C4 / C6) | A native 250 ms tick plus `NativePacedTimers` (both platforms) |
 | D2 | `ENDPOINT_REQUEST`: the route type overwrote the event's `type` key | Review, both platforms | `endpoint: {type}` |
 | D3 | `RESUMED` was reported after a microphone that failed to resume | Review, both platforms | The call ends as MICROPHONE; no RESUMED |
-| D4 | The warning phase went PLAYING → QUEUED when the engine's two threads reported out of order | Emulator, C4 | A QUEUED or DUE after STARTED is ignored; only REQUEUED (a hold) goes back. Test added |
+| D4 | The warning phase went PLAYING → QUEUED when the engine's two threads reported out of order | Emulator, C4; the same order seen on the real phone (§6 D4-H), where the fix held | A QUEUED or DUE after STARTED is ignored; only REQUEUED (a hold) goes back. Test added |
 
 ## 4. Host proofs
 
 | Proof | Result |
 |---|---|
-| Mobile Jest `src/voice-call` (protocol, client, session, controller, warning, paced timers) | **71 / 71 pass** (local) |
+| Mobile Jest `src/voice-call` (protocol, client, session, controller, warning, paced timers), including the 4 app-suspension tests of §7.5 | **75 / 75 pass** (local) |
 | Native JUnit `:qandeel-voice-call:testDebugUnitTest` (CP1's 18, plus lifecycle machine 6, cue player 6, cue schedule 5) | **35 / 35 pass** (local Gradle 9.3.1) |
 | `tests/s8b-06-native-call-lifecycle-contract.test.mjs` (8) and CP1's `tests/s8b-06-native-audio-engine-contract.test.mjs` (14) | **22 / 22 pass** (local) |
 | `prebuild:verify` (idempotency), `prebuild:verify-voice-note` (16 plants caught), launch identity, introduction photo | pass (local, Android) |
@@ -174,26 +186,112 @@ The selector was restored. The APK is kept with the evidence outside the reposit
 **Emulator observation (not a defect).** The emulator console's `gsm accept` for an incoming call makes the modem call
 active without Telecom's answer flow. Telecom then lists both calls ACTIVE and never holds QANDEEL's (host log `c5`).
 A real answer, which on a phone always goes through Telecom, holds it (C5b). The engine's own guard, the audio mode
-leaving IN_CALL, resumes but does not detect a call Telecom never reported. This stays a device item (§6).
+leaving IN_CALL, resumes but does not detect a call Telecom never reported. On the real phone, a real cellular call answered on the
+HONOR held QANDEEL's call correctly (§6 D5).
 
-## 6. Real Android phone — PENDING
+## 6. Real Android phone (HONOR ALI-NX1, Android 15 / API 35)
 
-The proof build is ready: `s806proof-a70cde59.apk`, arm64-v8a, package `com.qandeel.mobile.s806proof`, beside the
-installed `com.qandeel.mobile`, which it does not touch. The phone (HONOR ALI-NX1, `AWCX6R4603003224`) was not connected
-during this session. To resume:
+**Device:**
+- HONOR ALI-NX1, serial `AWCX6R4603003224`, build `ALI-N21 9.0.0.226`, Android 15 (API 35);
+- a **secure lock screen** (`KeyguardServiceDelegate secure=true`); locked means `deviceLocked=1` in `dumpsys trust`;
+- engine report: Qualcomm Fluence AEC attached and enabled, NS available, capture `VOICE_COMMUNICATION` at 16 kHz;
+- Telecom exposed `SPEAKER | EARPIECE`. No Bluetooth or wired headset was available (the Product Owner confirmed none).
 
-1. Connect the phone.
-2. Run `adb install -r` with that APK, then `adb reverse tcp:8806 tcp:8806`.
-3. Start the fake gateway with `--out QANDEEL_REPORTS/S8B-06/CP2/device-proof`.
-4. Run C1–C7 as in §5, plus the device-only items:
-   - EARPIECE / Bluetooth / wired routes;
-   - a real cellular call;
-   - the lock screen with a secure keyguard;
-   - #36 heard on the phone's earpiece and speaker;
-   - whether the phone needs the `microphone` FGS type in the background (G1.2: add it only if proven necessary);
-   - task removal (swipe away) → `TASK_REMOVED`.
+**Build:** the same proof APK as §5, `a70cde59…` (`adb install -r`). It is the separate package
+`com.qandeel.mobile.s806proof`. The installed `com.qandeel.mobile` (versionName 0.1.0, last updated 2026-09-11) was
+**not touched**: not uninstalled, replaced, cleared or launched.
 
-Until then, acceptance #36's "real Android" clause and #21 on a phone are **NOT PROVEN**.
+**Run:** 2026-11-04, 07:51–08:28 local time. The fake gateway ran on the laptop, reached over `adb reverse tcp:8806`.
+
+**Evidence:** `QANDEEL_REPORTS/S8B-06/CP2/device-proof/`, numbers and event codes only:
+- the device reports 001–011 (006 is a short probe call for the liveness read-out);
+- the host logs `c4p`, `c4h`, `c5p` and `c6p`;
+- the gateway's events;
+- two screenshots: the notification shade (the CallStyle notification) and the Recents card before the swipe;
+- the host scripts, in `QANDEEL_REPORTS/S8B-06/CP2/scripts/` (`c4p`, `c4h`, `c5p`, `c6p`, `mic`, `st`).
+
+**Microphone liveness.** Android can feed a background microphone silence instead of refusing it. Packet counts
+therefore prove nothing on their own, so at every step the host also read:
+- the AudioRecord's `silenced` flag (`dumpsys audio`);
+- the recording events that say "silenced";
+- the appops `RECORD_AUDIO` rejects;
+- the uid's process state;
+- the uplink's decoded level percentiles. A real microphone shows room noise; a silenced one decodes to digital zero.
+
+| # | Scenario | Result |
+|---|---|---|
+| D1 | Start, then the person's End | **PASS.** Telecom ACTIVE (self-managed), service `phoneCall` (`types=0x4`), audio mode `MODE_IN_COMMUNICATION` on the earpiece. End: `PERSON / USER_ENDED`, server-confirmed. Afterwards Telecom 0, service 0, notification 0, `MODE_NORMAL`. 1,089 packets, 0 capture or seq breaks, 0 violations (report 001) |
+| D2 | End from the notification's **Hang up** | **PASS.** `PLATFORM / NOTIFICATION / USER_ENDED`, server-confirmed; everything cleaned up (report 002). The CallStyle notification (`category=call`, one "Hang up" action, ongoing call timer) **was shown although `POST_NOTIFICATIONS` was never granted**. The proof app never requests it, and Android exempts a self-managed call's CallStyle |
+| D3 | The server ends the call | **PASS.** `SERVER / SERVER_ENDED`, server-confirmed; Telecom 0, service 0, notification 0, `MODE_NORMAL` (report 004) |
+| D2nd | A second call while one is open | **PASS.** `ALREADY_IN_CALL`: no session, no new gateway call, the first call still ACTIVE (report 003) |
+| D0 | A start without microphone permission | **PASS.** Permission revoked on the proof package only (`pm revoke`, granted again afterwards). `MIC_PERMISSION_DENIED`: no session, no gateway call, no Telecom call, no service (report 005) |
+| D7 | Routes, switched during one call | **PASS for SPEAKER and EARPIECE.** The sequence was SPEAKER, EARPIECE, BLUETOOTH, SPEAKER (report 004 trace). Each request through `requestEndpointChange` → `ENDPOINT_REQUEST … SUCCESS`, and Android's active communication device followed (`speaker` / `earpiece`). Capture went on across every switch: 0 capture breaks, 0 seq breaks. BLUETOOTH was refused locally (`requested=false`: no such endpoint). **Bluetooth and wired: NOT PROVEN** (no accessory available) |
+| D4 | **#21 + #36 with the secure lock screen**: a 6-minute call on the speaker, locked at 17 s, a link drop while locked, a 6 s reply while locked | **PASS** (report 007, host log `c4p`). See the D4 detail. Someone unlocked the phone at about 3 minutes, so T-1 in D4 ran unlocked; D4-H re-ran both warnings locked |
+| D4-H | **#36 heard by the Product Owner**: a 320 s call on the speaker, secure lock for the whole call | **PASS** (report 008, host log `c4h`). See the D4-H detail |
+| D5 | **A real incoming cellular call** (placed by the Product Owner from another phone, answered on the HONOR) | **PASS** (report 009, host log `c5p`). See the D5 detail |
+| D6 | **The server unreachable past the 30 s grace**, secure lock | **PASS** (report 010, host log `c6p`). See the D6 detail |
+| D8 | **Swipe away** (the proof app's card removed from Recents) during a call | **PASS** (report 011). `PLATFORM / TASK_REMOVED / USER_ENDED`, **server-confirmed 42 ms after** the platform's end. Telecom 0, service 0, notification 0, `MODE_NORMAL`. The process stayed alive long enough to send END and report. Only the proof app's card was removed |
+
+**D4 detail (secure lock from 17 s):**
+- the call stayed ACTIVE locked: Telecom ACTIVE, service in the foreground, uid state `fgsvc`;
+- the microphone was never silenced: `silenced:false`, 0 appops rejects, 0 silenced events. Locked uplink levels showed room
+  noise (p10 ≈ −82 dB, p90 ≈ −47 to −38 dB), with **no digital-zero frame** in any 10 s window;
+- the link dropped at 31.4 s and came back in **0.3 s on epoch 2** (`audioResent` 16). The notification went
+  "Reconnecting…" → ongoing;
+- the 6 s reply played to the end while locked: the gateway closed it `COMPLETE` with `playedMs` 6000, 29 PLAYOUTs;
+- at T-5: `CALL_ENDING 300000`, the notification read **"The call ends in 5 minutes"**, and the cue was **HEARD from
+  `TIMESTAMP`** (started at +63.9 s after waiting for a silence; HEARD at +64.5 s);
+- at T-1: `CALL_ENDING 60000`, the notification read **"One minute left in this call."**, and the cue was HEARD from
+  `TIMESTAMP` (+302.3 s);
+- the server's end at 360 s: `SERVER_ENDED`, server-confirmed; Telecom 0, service 0, notification 0;
+- totals: 18,001 packets over 360 s, 0 capture or seq breaks, 0 silence closes (358 heartbeats), 0 violations. Each
+  warning played once.
+
+**D4-H detail (the Product Owner listening, locked throughout):**
+- T-5 at 20.7 s: the notification read "The call ends in 5 minutes", and the cue was HEARD from `TIMESTAMP` at +21.3 s;
+- T-1 at 260.7 s: the notification read "One minute left in this call.", and the cue was HEARD from `TIMESTAMP` at
+  +261.9 s;
+- **The Product Owner confirmed hearing both warnings on the HONOR's speaker** (2026-11-04);
+- the trace shows a T-5 QUEUED reaching JS after its STARTED, the D4 defect's order, on the real phone. The phase
+  still ended HEARD, so D4's fix is confirmed on the device;
+- the server's end at 320 s cleaned everything up, still locked. Totals: 16,001 packets, 0 breaks, 0 silence closes,
+  each warning once.
+
+**D5 detail (a real cellular call):**
+- while it rang (`RINGING`, `com.android.phone`), QANDEEL's call stayed ACTIVE and kept sending;
+- once it was answered, Telecom put QANDEEL's call **ON_HOLD** (the cellular call ACTIVE, audio mode
+  `MODE_IN_CALL`):
+  - the engine reported `hold: TELECOM_INACTIVE`;
+  - MUTE was sent and the uplink stopped;
+  - the notification read **"The call is paused for another call."**;
+  - heartbeats kept the link up (0 silence closes over about 22 s);
+- when the cellular call ended:
+  - `RESUMED`, UNMUTE, the ongoing line back;
+  - the uplink resumed on the continuing capture clock: one declared MUTED gap, 139.44 → 161.62 s. The gateway counts
+    that gap as its one capture break, as in §5 C5b; 0 violations;
+- the End afterwards: `USER_ENDED`, server-confirmed; everything cleaned up and back to `MODE_NORMAL`;
+- the HONOR placed no call.
+
+**D6 detail (server unreachable, secure lock):**
+- the gateway was stopped 23 s into the call, with the phone locked;
+- the notification read **"Reconnecting…"** throughout the grace. 9 backoff attempts ran locked;
+- the call ended **32.35 s after the loss** as `SERVER / LOST`, **`serverConfirmed: false`**. It was never reported as
+  completed;
+- Telecom and the service were cleaned up while still locked (`deviceLocked=1`).
+
+**The foreground service type (G1.2).** **`phoneCall` alone is sufficient on this phone**, so `microphone` is not
+added:
+- the service ran with `types=0x00000004`;
+- capture stayed live in the background and under the secure lock: uid `fgsvc`, `silenced:false`, real levels, 0
+  rejects;
+- that held through the drop, the reply, T-5 and T-1.
+
+**Not proven on the phone:**
+- Bluetooth and wired routes (no accessory);
+- the warning heard on the earpiece. The Product Owner listened on the speaker, the route under test. The earpiece uses
+  the same playback path, and the route switch is proven by D7;
+- the person's own speech during a warning. That the cue never starts over QANDEEL or over the person's speech rests on
+  the unit and simulation tests (§4, §7.2); on the phone, T-5 waited 3.35 s for a silence in D4.
 
 ## 7. iOS — the Product Owner's decision and what is proven
 
@@ -241,7 +339,8 @@ Until then, acceptance #36's "real Android" clause and #21 on a phone are **NOT 
 - the real output latency used by PLAYOUT;
 - Bluetooth / receiver / speaker routing;
 - a real cellular-call interruption;
-- background suspension during a CallKit hold, and lock recovery;
+- background suspension during a CallKit hold, and lock recovery. The JS side of a suspension is reviewed and tested in
+  §7.5; the device behaviour stays NOT DEVICE-VERIFIED;
 - the CallKit system UI.
 
 Also a CallKit availability risk: CallKit's VoIP use is restricted in mainland China. The app refuses
@@ -272,6 +371,42 @@ Also a CallKit availability risk: CallKit's VoIP use is restricted in mainland C
 | `ENDPOINT_REQUEST` key and RESUMED-after-failure (D2 / D3) | Fixed in the shared coordinator | Event keys; mic-resume failure | Automated |
 | Cue events out of order (D4) | Fixed in the shared JS | `call-ending-warning.test.ts` | Automated (Jest) |
 
+### 7.5 iOS app suspension and resume: a bounded review (2026-11-04)
+
+The Product Owner asked for a review of the suspend / resume path, and especially of `NativePacedTimers` relying on
+native events while JS is in the background.
+
+**What can happen.** With a CallKit call active, the audio session keeps the app running: the engine's 20 ms timer
+(`VoiceProcessingAudioIO`) drives the 250 ms tick, while active and while held. If iOS ever suspends the app, for
+example during a long hold with the session deactivated, then neither JS timers nor native events run. The first
+event after the suspension is the resume.
+
+**Reviewed:**
+- `NativePacedTimers`: on resume, each overdue timeout fires once and an interval fires once, never in a burst;
+- the client's reconnect: the grace is measured from when the phone saw the loss;
+- the controller's end latch, `onServerEnded` (`serverConfirmed` is false only for the local `LOST`), and the verdict
+  wait;
+- the warning schedule: it is re-applied from `endsAt` on every STATE.
+
+**Result: no defect.** The PO's three questions are answered by 4 new Jest tests in `live-call-controller.test.ts`,
+under "a suspension (no JS, no native event for minutes), then the resume":
+
+| Question | Test | Result |
+|---|---|---|
+| A completed call without the server's confirmation? | a link lost before a held suspension: on resume one reconnect, then `LOST`, `serverConfirmed:false`; an End just before a suspension: `NO_SERVER_VERDICT`, unconfirmed, and a later `ENDED` changes nothing | never |
+| HELD / LOST lost? | the held line is kept through the suspension; RESUMED after it clears the hold with UNMUTE where the capture clock continues; a link the server closed during the suspension reconnects and the server's verdict (`PEER_LOST_AFTER_GRACE`, confirmed) decides | kept |
+| Late timers wrong on resume? | 10 minutes suspended: exactly one heartbeat on resume, no catch-up burst; the reconnect timer fires once | correct |
+
+A planted fault, the interval's due time not advanced, fails the no-burst test.
+
+**Recorded, not changed:**
+- the iOS engine clock is `mach_absolute_time`, which does not advance while the device sleeps. After a suspension
+  with the device asleep, a warning cue scheduled on that clock would fall due late;
+- the server's `CALL_ENDING` (queued at its own moment) and every STATE after a reconnect re-schedule from the wall
+  clock, so the warning is not lost. A real-iPhone check belongs to the deferred tests (FI 019);
+- an End sent just before a suspension resolves as `NO_SERVER_VERDICT` (unconfirmed) when the wait runs out on
+  resume. That is honest, never "completed", and the microphone and the CallKit call are already stopped.
+
 ## 8. CI on the Draft PR
 
 **All green on `b3c4399c`** (runs 41733417026, 41733417032 and 41733417240):
@@ -300,21 +435,22 @@ Also a CallKit availability risk: CallKit's VoIP use is restricted in mainland C
 
 | # | Item | Verdict | Source |
 |---|---|---|---|
-| 1 | One call; a second refused | **PASS** (emulator + unit) | §5 C2nd; Jest; Swift coordinator |
-| 2 | Start / refuse / end from every source | **PASS** for app, notification, server, permission and the second call (emulator). Unit-only for SYSTEM / MICROPHONE / ENGINE / SERVICE / TASK_REMOVED / APP_GONE. **NOT PROVEN on a phone** | §5; Kotlin machine; Swift coordinator; Jest |
+| 1 | One call; a second refused | **PASS** (phone, emulator, unit) | §6 D2nd; §5 C2nd; Jest; Swift coordinator |
+| 2 | Start / refuse / end from every source | **PASS on the phone**: app, notification Hang up, server, swipe-away (`TASK_REMOVED`), microphone denial, second call. Telecom, the service and the notification were cleaned up after each end, and the audio mode restored. Unit-only: SYSTEM / MICROPHONE / ENGINE / SERVICE / APP_GONE | §6 D1–D3, D0, D2nd, D8; §5; Kotlin machine; Swift coordinator; Jest |
 | 3 | Late callbacks | **PASS** (unit) | Jest (`ignoredLate`), Swift, Kotlin machine |
-| 4 | Focus / cellular call | **PASS** (emulator, C5b / C5c). **NOT PROVEN on a phone** | §5 |
-| 5 | Background / lock (#21) | **PASS** (emulator, screen off; no secure keyguard). **NOT PROVEN on a phone**; iOS NOT DEVICE-VERIFIED | §5 C4 / C6; §7 |
-| 6 | Routes | SPEAKER **PASS** (emulator). EARPIECE / Bluetooth **NOT PROVEN** | §5 C7 |
-| 7 | Reconnect within 30 s; a timeout with no false completion | **PASS** (emulator, locked) | §5 C4 / C6 |
-| 8 | Server END synchronised with the Telecom / CallKit cleanup | **PASS** (Android emulator); iOS automated | §5 C3 / C4; §7.1 |
-| 9 | T-5 / T-1 (#36): heard with the screen locked, the notification updated | **PASS on the emulator**: heard from `TIMESTAMP`, both lines shown, once each. **The "real Android" clause is NOT PROVEN** (§6). iOS background playback: simulation and simulator only | §5 C4; §7.2 |
+| 4 | Focus / cellular call | **PASS on the phone**: a real incoming cellular call → ON_HOLD, MUTE, uplink stopped, held line; UNMUTE and resume on the continuing clock; no state lost. Also the emulator (C5b / C5c) | §6 D5; §5 |
+| 5 | Background / lock (#21) | **PASS on the phone** with the **secure** lock screen: session, timers and heartbeats kept (0 silence closes), microphone live (not silenced). iOS NOT DEVICE-VERIFIED (JS side §7.5) | §6 D4 / D4-H / D6; §5 C4 / C6; §7 |
+| 6 | Routes | **PASS for SPEAKER and EARPIECE on the phone**, switched during the call with capture unbroken. **Bluetooth and wired: NOT PROVEN** (no accessory available; not marked PASS) | §6 D7; §5 C7 |
+| 7 | Reconnect within 30 s; a timeout with no false completion | **PASS on the phone**, locked: epoch 2 in 0.3 s; past the grace `LOST`, `serverConfirmed:false`, 32.35 s after the loss | §6 D4 / D6; §5 C4 / C6 |
+| 8 | Server END synchronised with the Telecom / CallKit cleanup | **PASS on the phone** (D3, D4, D4-H, locked); iOS automated | §6; §5; §7.1 |
+| 9 | T-5 / T-1 (#36): heard with the screen locked, the notification updated | **PASS on the phone**: with the secure lock, both notification lines shown, each cue once, HEARD only from the presented `TIMESTAMP`; **heard by the Product Owner on the speaker**. iOS background playback: simulation and simulator only | §6 D4 / D4-H; §5 C4; §7.2 |
 | 10 | No paid provider; no raw audio in logs | **PASS** | Contract pins; the evidence |
-| 11 | Kotlin unit, Android build, API 36 emulator | **PASS** | §4, §5 |
+| 11 | Kotlin unit, Android build, API 36 emulator, real phone | **PASS** | §4, §5, §6 |
 | 12 | Swift tests, iOS Release simulator build, simulator lifecycle tests | **PASS** (CI): 75 / 75 on the host, 79 / 79 on the simulator, Release simulator app built, boot smoke | §8 |
-| 13 | Jest, tsc, ESLint, prebuild idempotency, re-anchoring | **PASS** (local) | §4 |
-| 14 | API and Mobile CI on the Draft PR | **PASS** on `b3c4399c` | §8 |
+| 13 | Jest, tsc, ESLint, prebuild idempotency, re-anchoring | **PASS** (local): Jest 75 / 75 | §4 |
+| 14 | API and Mobile CI on the Draft PR | **PASS** on `b3c4399c`; see §8 for the later heads | §8 |
 | 15 | No gates, no migration, no protocol change | **PASS** | §0 |
+| 16 | The `phoneCall` FGS type alone (G1.2) | **PASS on the phone**: `microphone` not needed, not added | §6 |
 
 **Copy gaps for the Copy Gate (not decided here):**
 
@@ -334,7 +470,8 @@ CP2 hands CP3:
 
 - the controller events (phase / held / reconnecting / warning / notification / ended);
 - the copy gaps above;
-- the device items of §6 if they are still open when CP3 starts.
+- from §6, Bluetooth and wired routes (no accessory was available on 2026-11-04). They are to be proven with CP3's
+  real-phone E2E when an accessory exists.
 
 They are recorded here so that none is silently carried.
 
