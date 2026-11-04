@@ -317,3 +317,69 @@ describe('S8B-06 CP2 — the 60-minute warning through the controller', () => {
     expect(engine.cues.filter((c) => c.id === 'T5' && c.op === 'play')).toHaveLength(0);
   });
 });
+
+// iOS may suspend the app (a long CallKit hold, the audio session gone): then neither JS timers NOR native events run.
+// `timers.skip` is that suspension — the clock moves, nothing fires — and the first event after it is the resume.
+describe('S8B-06 CP2 — a suspension (no JS, no native event for minutes), then the resume', () => {
+  const held = { type: 'HELD' as const, callId: CALL_ID, state: 'HELD', ignoredLate: 0 };
+
+  it('a link lost before a held suspension: on resume ONE reconnect, then LOST past the grace — never completed', async () => {
+    const { controller, engine, platform, timers, sockets, socket } = await active();
+    platform.emit(held);
+    engine.emit({ type: 'hold', captureMs: 0, cause: 'CALLKIT_HOLD' });
+    socket.drop(LIVE_CALL_CLOSE.GOING_AWAY);
+    timers.skip(90_000);
+    expect(controller.phase).toBe('ACTIVE');
+    expect(platform.notifications.at(-1)).toBe(copy.held);
+    engine.emit({ type: 'tick', nowMs: 90_000 });
+    expect(sockets).toHaveLength(2);
+    sockets[1]!.drop(LIVE_CALL_CLOSE.GOING_AWAY);
+    expect(sockets).toHaveLength(2);
+    expect(controller.outcome).toEqual({ origin: 'SERVER', platformSource: null, reason: 'LOST', serverConfirmed: false });
+    expect(platform.endCalls).toEqual(['SERVER_LOST']);
+  });
+
+  it('a held suspension with the link still open: one heartbeat on resume (no burst), still held; the server decides the end', async () => {
+    const { controller, engine, platform, timers, sockets, socket } = await active();
+    platform.emit(held);
+    engine.emit({ type: 'hold', captureMs: 0, cause: 'CALLKIT_HOLD' });
+    const beats = () => socket.texts().filter((m) => m.type === 'HEARTBEAT').length;
+    const before = beats();
+    timers.skip(600_000);
+    engine.emit({ type: 'tick', nowMs: 600_000 });
+    engine.emit({ type: 'tick', nowMs: 600_010 });
+    expect(beats() - before).toBe(1);
+    expect(controller.phase).toBe('ACTIVE');
+    expect(platform.notifications.at(-1)).toBe(copy.held);
+    // The server closed the silent link long ago; the phone learns it now, reconnects, and the server gives its verdict.
+    socket.drop(LIVE_CALL_CLOSE.SILENCE);
+    timers.advance(250);
+    expect(sockets).toHaveLength(2);
+    sockets[1]!.open();
+    sockets[1]!.server(state({ state: 'ENDED', epoch: 2, endReason: 'PEER_LOST_AFTER_GRACE' }));
+    expect(controller.outcome).toEqual({ origin: 'SERVER', platformSource: null, reason: 'PEER_LOST_AFTER_GRACE', serverConfirmed: true });
+  });
+
+  it('RESUMED after a held suspension clears the hold: UNMUTE where the capture clock continues, still ACTIVE', async () => {
+    const { controller, engine, platform, timers, socket } = await active();
+    platform.emit(held);
+    engine.emit({ type: 'hold', captureMs: 0, cause: 'CALLKIT_HOLD' });
+    timers.skip(120_000);
+    platform.emit({ type: 'RESUMED', callId: CALL_ID, state: 'ACTIVE', ignoredLate: 0 });
+    engine.emit({ type: 'resume', captureMs: 120_000 });
+    expect(platform.notifications.at(-1)).toBe(copy.ongoing);
+    expect(socket.controls().filter((m) => m.type === 'MUTE' || m.type === 'UNMUTE').map((m) => m.captureMs)).toEqual([0, 120_000]);
+    expect(controller.phase).toBe('ACTIVE');
+  });
+
+  it('an End just before a suspension: the verdict wait runs out on resume — NO_SERVER_VERDICT, unconfirmed; a later ENDED changes nothing', async () => {
+    const { controller, timers, socket } = await active({ serverEndWaitMs: 5000 });
+    controller.end();
+    expect(socket.controls().filter((m) => m.type === 'END')).toHaveLength(1);
+    timers.skip(60_000);
+    timers.advance(0);
+    expect(controller.outcome).toEqual({ origin: 'PERSON', platformSource: null, reason: 'NO_SERVER_VERDICT', serverConfirmed: false });
+    socket.server(state({ state: 'ENDED', epoch: 1, endReason: 'USER_ENDED' }));
+    expect(controller.outcome).toEqual({ origin: 'PERSON', platformSource: null, reason: 'NO_SERVER_VERDICT', serverConfirmed: false });
+  });
+});
