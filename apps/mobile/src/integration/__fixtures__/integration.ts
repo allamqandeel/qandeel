@@ -13,6 +13,7 @@
  */
 
 import { createInertVoiceNoteDevice } from '../../voice-note';
+import type { CallDevice } from '../../call';
 import {
   TEST_CONFIG,
   authPortDouble,
@@ -93,6 +94,8 @@ export interface HarnessOptions {
   readonly sharedLinks?: SharedLinkSource;
   /** S5-03B R1: the projection route, registered before the bootstrap fetches anything; the happy path otherwise. */
   readonly projection?: Responder;
+  /** S8B-06 CP3: the call's device parts (fakes in a test); none by default, so the call is NOT_AVAILABLE. */
+  readonly callDevice?: CallDevice;
 }
 
 /**
@@ -130,6 +133,7 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
     sharedLinks: options.sharedLinks ?? NO_SHARED_LINKS,
     // S8B-03: an in-memory Voice Note device: no microphone, no player, no SQLite.
     voiceNoteDevice: createInertVoiceNoteDevice(),
+    callDevice: options.callDevice ?? { platform: null, engine: null },
   });
   if (!built.ok) throw new Error(`the harness could not build a runtime: ${built.phase.detail}`);
   const runtime = built.runtime;

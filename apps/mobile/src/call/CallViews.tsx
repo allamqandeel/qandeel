@@ -237,7 +237,7 @@ export interface CallSurfaceSlots {
   readonly live: boolean;
 }
 
-/** The call a turn belongs to: the history's own field, or the server's `live-call:` key. */
+/** The call a turn belongs to, from the server's own `live-call:` key (null for an ordinary turn). */
 export function callIdOf(exchange: ConversationExchangeView): string | null {
   return callIdOfKey(exchange.userTurn.idempotencyKey);
 }

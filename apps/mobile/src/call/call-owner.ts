@@ -39,11 +39,11 @@ import type { CallPlatform, VoiceCallEngine } from '../voice-call/voice-call-eng
 
 export type CallStage = 'IDLE' | 'PREPARING' | 'CONNECTING' | 'ACTIVE' | 'HELD' | 'RECONNECTING' | 'ENDING';
 
-/** J7: the finished call this generation saw end. Its length is the server's history's when that is known. */
+/** J7: the finished call this generation saw end. Its length is the phone's own count from ACTIVE to the end (runtime only). */
 export interface CallRecord {
   readonly callId: string;
   readonly lengthMs: number | null;
-  /** The call ended without the person choosing it (the record's «وقفت»). Known only in this runtime. */
+  /** The call ended without the person choosing it (the record's «توقفت»). Known only in this runtime. */
   readonly stopped: boolean;
 }
 
