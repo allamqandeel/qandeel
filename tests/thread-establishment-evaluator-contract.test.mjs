@@ -344,6 +344,9 @@ test('nothing reaches the slice: not ConversationModule, ConversationService, Ap
     // half and the FINAL 0071 coordinators with the frozen TE-01 provenance exactly as the 0072 verifier does, and never
     // imports this evaluator.
     'database/verify-migration-0191.mjs',
+    // INTEL-04 RE-ANCHOR (2026-11-04): the 0194 verifier commits exchanges through 0070's own coordinator with the frozen
+    // TE-01 provenance exactly as the 0070 verifier does, and never imports this evaluator.
+    'database/verify-migration-0194.mjs',
   ];
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src')), ...listFiles(join(rootPath, 'database'))].map((f) => relative(f))) {
     if (B2B2_DATABASE_FILES.includes(file)) {
@@ -416,7 +419,20 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   assert.doesNotMatch(recreated.reduce((text, [name]) => text.replace(statementOf(text, name), ''), retry)
     .replaceAll('get_conversation_thread_identity_dossier_page_v1', '').replaceAll('STALE_THREAD_IDENTITY_CONTEXT', ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
     `outside its two verbatim re-creations ${RETRY_MIGRATION} carries no Thread / Home substrate`);
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION)) {
+  // RE-ANCHORED by INTEL-04 (QAN-BL-INTEL-04): migration 0194 re-creates the 0070 relation conversation_thread_cu_relation_v1
+  // VERBATIM apart from its attention_on predicate (`b.bound_sp <= cu.session_position`, the establishing CU is on its own
+  // Thread). It is exempt for that one CREATE OR REPLACE statement, which must be exactly that substitution, and for its
+  // self-proof's two predicate literals; outside them it carries no Thread / Home substrate.
+  const RELATION_MIGRATION = '0194_intel_04_lifecycle_relation_at_binding_sp_v1.sql';
+  const relationFix = read(`database/migrations/${RELATION_MIGRATION}`);
+  const relationStatement = statementOf(relationFix, 'conversation_thread_cu_relation_v1');
+  assert.equal(relationStatement.replace(/\n *-- INTEL-04 \(0194\)[^\n]*/u, ''),
+    statementOf(read(`database/migrations/${B3_MIGRATION}`), 'conversation_thread_cu_relation_v1').replace(/^CREATE FUNCTION/u, 'CREATE OR REPLACE FUNCTION')
+      .replace('AND b.emerging_focus_id = att.emerging_focus_id AND b.bound_sp < cu.session_position', 'AND b.emerging_focus_id = att.emerging_focus_id AND b.bound_sp <= cu.session_position'),
+    `${RELATION_MIGRATION} re-creates conversation_thread_cu_relation_v1 verbatim apart from its attention_on predicate`);
+  assert.doesNotMatch(relationFix.replace(relationStatement, '').replace(/position\('[^']*' IN body\)/gu, ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
+    `outside its one verbatim re-creation ${RELATION_MIGRATION} carries no Thread / Home substrate`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION && candidate !== RELATION_MIGRATION)) {
     const text = name === VOICE_MIGRATION ? withoutVoiceRecreations(read(`database/migrations/${name}`))
       // (0191's half coordinator checks and reads the World Thread-identity clock exactly as the FINAL 0071 coordinator
       // does - its stale-token contract - and touches no Thread or Home row; that clock's name is all it carries.)

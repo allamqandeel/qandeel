@@ -181,3 +181,37 @@ describe('the deterministic lifecycle reducer (cases 1-20)', () => {
     expect(() => reduceThreadLifecycle({ ...input({}), currentFocusSemantics: null as unknown as CanonicalCuFocusSemanticPayload })).toThrow(ThreadLifecycleRejectedError);
   });
 });
+
+// INTEL-04 (QAN-BL-INTEL-04, migration 0194): the sequences of database/verify-migration-0194.mjs, reduced by the
+// application. The CU that establishes or binds a Thread is ON it, so ONE following departure changes nothing. Before
+// 0194 the database derived SUSTAINED_DEPARTURE here and refused these exact results; 0194 makes it derive them.
+describe('INTEL-04: the establishing CU is on its own Thread (the database agrees from 0194)', () => {
+  const start = (focus: string, extra: Partial<CanonicalCuFocusSemanticPayload> = {}) =>
+    bundle({ ...extra, attention: { kind: 'START_NEW_FOCUS', reason: 'DIRECT_SUBJECT', emerging_focus_id: focus, creates_focus: true, grounding_reference_index: 0 } });
+  const F_SLEEP = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+
+  it('T1 / T3. an establishment followed by ONE CU elsewhere derives nothing (written, and a reply with no unit between)', () => {
+    // The previous committed CU established T_AHMED on F_AHMED; this CU starts F_WORK, bound to nothing.
+    const visible = new Map([[F_AHMED, T_AHMED]]);
+    expect(compact(reduceThreadLifecycle(input({ currentFocusSemantics: start(F_WORK), previousFocusSemantics: start(F_AHMED), focusThreadBindings: visible, states: { [T_AHMED]: 'ACTIVE' } })))).toEqual([]);
+  });
+
+  it('T2. the SECOND consecutive CU elsewhere still makes it DORMANT, at that CU', () => {
+    const visible = new Map([[F_AHMED, T_AHMED]]);
+    expect(compact(reduceThreadLifecycle(input({ currentFocusSemantics: start(F_SLEEP), previousFocusSemantics: start(F_WORK), focusThreadBindings: visible, states: { [T_AHMED]: 'ACTIVE' } }))))
+      .toEqual([[T_AHMED, 'ACTIVE', 'DORMANT', 'SUSTAINED_DEPARTURE']]);
+  });
+
+  it('T4. an explicit shift right after the establishment still makes it DORMANT at once', () => {
+    const visible = new Map([[F_AHMED, T_AHMED]]);
+    const shift = start(F_WORK, { functions: ['REQUEST', 'FOCUS_SHIFT'] });
+    expect(compact(reduceThreadLifecycle(input({ currentFocusSemantics: shift, previousFocusSemantics: start(F_AHMED), focusThreadBindings: visible, states: { [T_AHMED]: 'ACTIVE' } }))))
+      .toEqual([[T_AHMED, 'ACTIVE', 'DORMANT', 'EXPLICIT_FOCUS_SHIFT']]);
+  });
+
+  it('T4. two Threads established in consecutive CUs: at the next CU elsewhere only the earlier one departs', () => {
+    const visible = new Map([[F_AHMED, T_AHMED], [F_WORK, T_WORK]]);
+    expect(compact(reduceThreadLifecycle(input({ currentFocusSemantics: start(F_SLEEP), previousFocusSemantics: start(F_WORK), focusThreadBindings: visible, states: { [T_AHMED]: 'ACTIVE', [T_WORK]: 'ACTIVE' } }))))
+      .toEqual([[T_AHMED, 'ACTIVE', 'DORMANT', 'SUSTAINED_DEPARTURE']]);
+  });
+});

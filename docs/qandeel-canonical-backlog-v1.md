@@ -231,9 +231,10 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-VOICE-06` | Live Call Resume Residue on the Phone: a Drained Turn Not Answered, No REPLY_END for an Inherited Exchange, a Resent PLAYOUT Bounded by the Close | `S8B-06 — Native Call (CP3: the call UI and device acceptance)` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VOICE-07` | Live Call Launch Capacity Residue: an Instance Crash Loses an Uncommitted Utterance's Transcript; Cross-User First Audio Contention (#34 under SHIPPED) and the ≤ 2 s Live Focus P95 Target | `GCR-01 — Growth & Capacity Readiness (GCR-01-A)` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-VOICE-08` | Live Call Endpointer on Real Speech: Room Sound on the Speaker Route Arms Utterance Ends | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-INTEL-04` | Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls | `INTEL-04 — Thread Lifecycle Derivation Correction` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-INTEL-04` | Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls | `INTEL-04 — Thread Lifecycle Derivation Correction` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-MOB-02` | Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-09` | Live Call 60-Minute Notice After a Late Rejoin: No CALL_ENDING Is Repeated on a Connection That Resumes Inside the Last Minute | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
+| `QAN-BL-INTEL-05` | Analysis Refusal Handling: a Deterministic Semantic-Establishment Refusal Is Treated as Transient (a Call Item Parks and Retries With No Terminal State; a Written Exchange's Chain Is Silently Skipped) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -3618,46 +3619,6 @@ Admitted by `S8B-06` CP3 at its closing change (2026-11-04) as the call's device
 R1 in the same Draft PR #381: F-B, F-F and F-E are fixed or proven in CP3 and the finished-call record (J7) is CP3's own
 open work (record §5, §13), so none of them is held here. Nothing here authorizes implementation (BG-07).
 
-### `QAN-BL-INTEL-04` — Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls
-
-- **Title / Finding:** for every committed CU the database re-derives the Thread lifecycle transitions and refuses a
-  payload that differs (`derive_conversation_thread_lifecycle_transitions_v1`, `0070`). Its relation
-  `conversation_thread_cu_relation_v1` decides that a CU's attention is on a Thread with `b.bound_sp < cu.session_position`,
-  so the CU that establishes a Thread (`bound_sp` = its own position) counts as **away** from it. The application's
-  reducer (`thread-lifecycle-reducer.ts`) and the record (`docs/thread-lifecycle-cross-session-continuity-v1.md` §3) treat
-  it as attention-on. When the establishing CU is followed directly, with no unit between, by a CU whose attention is
-  elsewhere, the database derives `ACTIVE → DORMANT (SUSTAINED_DEPARTURE)` and the reducer derives nothing. The commit is
-  refused on every attempt with `THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL` (22023), the item is PARKED, and the
-  Session's ordered analysis stops behind it: the Living Map freezes for the rest of the Session.
-- **Reach:** not specific to calls. In a call: a reply interrupted before a word is heard commits no ASSISTANT unit. In
-  writing: a multi-sentence turn whose next sentence starts another focus. Whether production has met it is unknown; no
-  hosted data was read. `ACTIVATE_EXISTING` likely shares the strict reading for the current CU's own new binding.
-- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §5 (F-H) and §6.1; the decision memo
-  `E:\QANDEEL_REPORTS\S8B-06\CP3\R1\S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md` (found by the R2 device proof on
-  2026-11-04, run 4; the archived throwaway database `proof806r2_run4`).
-- **Why not current work:** it is a defect of the established conversation engine, and its fix is a database change
-  (the recommended option A: a new forward-only migration replacing the relation with `bound_sp <= cu.session_position`,
-  with DB tests of the written and the call sequence and the existing `0070` suites). That is outside S8B-06 CP3's bounds
-  (R3 of PO Review R1: a change outside CP3 is presented first). CP3 changes nothing in the engine.
-- **The Product Owner's decision (2026-11-04, CP3 R1 decisions item 2):** a real defect of the analysis engine, not a
-  note. A separate high-priority correction task, `INTEL-04`, owned by the analysis engine and Semantic Establishment
-  path, in its own PR after S8B-06 CP3's current work, and **never inside PR #381**. Option A is the preferred direction,
-  but only once tests prove the changed `bound_sp` relation right, harmless to the earlier cases, and harmless to the
-  order of Threads. **A blocker of the live analysis's launch readiness** for as long as it can freeze a Conversation's
-  map. S8B-06's map-update proof (R2) is **not** a proof of every Thread lifecycle case before this is fixed.
-- **Owner task:** `INTEL-04 — Thread Lifecycle Derivation Correction` (named by the Product Owner, 2026-11-04).
-- **Severity:** `HIGH` — a person's Living Map can stop for the rest of a Session, in writing as in a call, with no
-  visible error.
-- **Reopen condition:** any reproduction outside the proof database, or `INTEL-04` closing without the properties below.
-- **Required future properties:** the database and the reducer derive the same transitions for this exact sequence (a
-  written turn and a call turn), proven against real PostgreSQL; no payload the record calls canonical is refused; the
-  earlier cases and the order of Threads are unchanged, proven by tests; the existing `0070` suites stay green; a hosted
-  migration only through `HOSTED-DEPLOY-01`. Until then the live analysis is not launch-ready.
-- **Status:** `DEFERRED — OWNED`
-
-Admitted by `S8B-06` CP3 under PO Review R1 (2026-11-04, Draft PR #381) under BG-06, and owned by the Product Owner's
-decision of the same day. Nothing here authorizes implementation (BG-07); `INTEL-04` starts on its own order.
-
 ### `QAN-BL-MOB-02` — Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message
 
 - **Title / Finding:** on the HONOR phone (Android 15, the system keyboard), after a written message is sent the composer
@@ -3705,6 +3666,19 @@ implementation (BG-07).
 
 Admitted by `S8B-06` CP3 at the Product Owner's Copy Gate approval and final device verification (2026-11-04, Draft PR
 #381) under BG-06. Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-INTEL-05` — Analysis Refusal Handling: a Deterministic Semantic-Establishment Refusal Is Treated as Transient (a Call Item Parks and Retries With No Terminal State; a Written Exchange's Chain Is Silently Skipped)
+
+- **Title / Finding:** both analysis paths treat a deterministic database refusal of a semantic establishment (for example `THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`, `22023`) as transient. **In a call** the analysis worker classifies it as a provider failure, `TRANSPORT_UNAVAILABLE`, not through `0191`'s integrity class: three attempts, then PARKED, then retried every 300 s within the person's daily attempt budget (then from the next UTC day), with no terminal state, while the Session's ordered analysis waits behind it. **In writing** there is no ordered queue: the refused exchange's semantic chain is never committed, its Thread never exists, and the next exchange takes its positions, with no visible error.
+- **Source:** [INTEL-04 record](e2e/QANDEEL_INTEL_04_THREAD_LIFECYCLE_DERIVATION_CORRECTION_RECORD_v1.md) §4.2 (the `DEFECT` runs), §6, §10; found by INTEL-04 while proving `QAN-BL-INTEL-04` (2026-11-04).
+- **Why not current work:** INTEL-04's order authorizes the lifecycle derivation correction only, forbids automatic reprocessing and backfill, and requires any real scope expansion to be presented first. `0194` removes the one known cause; how a path answers a refusal, and whether exchanges already lost are re-established, are Product Owner decisions.
+- **Owner task:** `UNASSIGNED`.
+- **Severity:** `MEDIUM` — no known cause remains after `0194`; any future deterministic refusal would again stop a call's map or silently drop a written exchange's analysis.
+- **Reopen condition:** any deterministic refusal of a semantic establishment observed in a proof or in production, or before the live analysis is declared launch-ready.
+- **Required future properties:** a deterministic refusal is classified as such and never retried as transport; the person's Session is not frozen behind it with no visible state; nothing is reprocessed or backfilled without the Product Owner's decision; proven against real PostgreSQL in writing and in a call.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `INTEL-04` at its closing change (2026-11-04) under BG-06. Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -4470,22 +4444,68 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 Admitted by `S8B-05` at its closing change (CP4, 2026-11-03) under BG-08 / BG-06. Nothing here authorizes implementation
 (BG-07).
 
+### `QAN-BL-INTEL-04` — Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls
+
+- **Closing task:** `INTEL-04 — Thread Lifecycle Derivation Correction`
+- **PR / SHA:** the INTEL-04 Draft PR from `intel/intel-04-thread-lifecycle-derivation` (not merged) / the merge SHA is recorded at merge
+- **Disposition:** delivered by migration `0194` (not hosted) and proven on real PostgreSQL; hosting only through `HOSTED-DEPLOY-01`.
+
+- **Title / Finding:** for every committed CU the database re-derives the Thread lifecycle transitions and refuses a
+  payload that differs (`derive_conversation_thread_lifecycle_transitions_v1`, `0070`). Its relation
+  `conversation_thread_cu_relation_v1` decides that a CU's attention is on a Thread with `b.bound_sp < cu.session_position`,
+  so the CU that establishes a Thread (`bound_sp` = its own position) counts as **away** from it. The application's
+  reducer (`thread-lifecycle-reducer.ts`) and the record (`docs/thread-lifecycle-cross-session-continuity-v1.md` §3) treat
+  it as attention-on. When the establishing CU is followed directly, with no unit between, by a CU whose attention is
+  elsewhere, the database derives `ACTIVE → DORMANT (SUSTAINED_DEPARTURE)` and the reducer derives nothing. The commit is
+  refused on every attempt with `THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL` (22023), the item is PARKED, and the
+  Session's ordered analysis stops behind it: the Living Map freezes for the rest of the Session.
+- **Reach:** not specific to calls. In a call: a reply interrupted before a word is heard commits no ASSISTANT unit. In
+  writing: a multi-sentence turn whose next sentence starts another focus. Whether production has met it is unknown; no
+  hosted data was read. `ACTIVATE_EXISTING` likely shares the strict reading for the current CU's own new binding.
+- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §5 (F-H) and §6.1; the decision memo
+  `E:\QANDEEL_REPORTS\S8B-06\CP3\R1\S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md` (found by the R2 device proof on
+  2026-11-04, run 4; the archived throwaway database `proof806r2_run4`).
+- **Why not current work:** it is a defect of the established conversation engine, and its fix is a database change
+  (the recommended option A: a new forward-only migration replacing the relation with `bound_sp <= cu.session_position`,
+  with DB tests of the written and the call sequence and the existing `0070` suites). That is outside S8B-06 CP3's bounds
+  (R3 of PO Review R1: a change outside CP3 is presented first). CP3 changes nothing in the engine.
+- **The Product Owner's decision (2026-11-04, CP3 R1 decisions item 2):** a real defect of the analysis engine, not a
+  note. A separate high-priority correction task, `INTEL-04`, owned by the analysis engine and Semantic Establishment
+  path, in its own PR after S8B-06 CP3's current work, and **never inside PR #381**. Option A is the preferred direction,
+  but only once tests prove the changed `bound_sp` relation right, harmless to the earlier cases, and harmless to the
+  order of Threads. **A blocker of the live analysis's launch readiness** for as long as it can freeze a Conversation's
+  map. S8B-06's map-update proof (R2) is **not** a proof of every Thread lifecycle case before this is fixed.
+- **Owner task:** `INTEL-04 — Thread Lifecycle Derivation Correction` (named by the Product Owner, 2026-11-04).
+- **Severity:** `HIGH` — a person's Living Map can stop for the rest of a Session, in writing as in a call, with no
+  visible error.
+- **Reopen condition:** any reproduction outside the proof database, or `INTEL-04` closing without the properties below.
+- **Required future properties:** the database and the reducer derive the same transitions for this exact sequence (a
+  written turn and a call turn), proven against real PostgreSQL; no payload the record calls canonical is refused; the
+  earlier cases and the order of Threads are unchanged, proven by tests; the existing `0070` suites stay green; a hosted
+  migration only through `HOSTED-DEPLOY-01`. Until then the live analysis is not launch-ready.
+- **Current truth (INTEL-04, its closing change, 2026-11-04; from `main` at `8e590234`, S8B-06 CP3 merged through PR #381; effective from its merge):** the root cause is proven ([INTEL-04 record](e2e/QANDEEL_INTEL_04_THREAD_LIFECYCLE_DERIVATION_CORRECTION_RECORD_v1.md) §1). One forward-only migration, `0194`, replaces `conversation_thread_cu_relation_v1` with `0070`'s body and one predicate changed: `attention_on` counts a binding made at or before the CU read (`b.bound_sp <= cu.session_position`). `targets_thread`, the derivation's loop and `own_thread`, the Session state and the validator keep their strict readings on purpose (record §3); `0070` is byte-identical; no row is written, backfilled or reprocessed. The reducer and the database now agree for the written and the call sequence (T1 – T4; T6 counter-test: `0070`'s relation restored in a rolled-back transaction refuses the payload again), on real PostgreSQL; the integrated proof (the real establishment service, worker, queue and map reads) commits through the former stall point, and a call item PARKED by the defect completes on its own parked retry after `0194`, in order (record §4, §5). The earlier cases and the order of Threads are unchanged; the `0070` suites stay green. Residue admitted as `QAN-BL-INTEL-05`. No graphics, map or Voice Gate change.
+- **Status:** `CLOSED — TOMBSTONE`
+
+Admitted by `S8B-06` CP3 under PO Review R1 (2026-11-04, Draft PR #381) under BG-06, and owned by the Product Owner's
+decision of the same day. Nothing here authorizes implementation (BG-07); `INTEL-04` starts on its own order.
+Tombstoned by `INTEL-04` at its closing change (2026-11-04) under BG-08; its finding, decision and properties are kept above as admitted.
+
 ---
 
 ## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 52 |
+| `DEFERRED — OWNED` | 51 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 34 |
-| **Total** | **100** |
+| `OPEN — UNASSIGNED` | 11 |
+| `CLOSED — TOMBSTONE` | 35 |
+| **Total** | **101** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 59 |
-| `MEDIUM` | 38 |
+| `MEDIUM` | 39 |
 | `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -5986,6 +6006,14 @@ Draft PR #381).**
 - **BG-09:** S8B-06 is **not closed**; the record and the locators say so.
 - **Index after the Copy Gate approval: 100 items; 52 / 4 / 10 / 34 by status, 59 / 38 / 3 by severity.**
 
+**INTEL-04 — Thread Lifecycle Derivation Correction, the closing change (2026-11-04; from `main` at `8e590234`, S8B-06 CP3 merged through PR #381; the INTEL-04 Draft PR, not merged).**
+
+- **BG-08:** `QAN-BL-INTEL-04` tombstoned (§6): migration `0194` (not hosted; next `0195`), proven on real PostgreSQL ([INTEL-04 record](e2e/QANDEEL_INTEL_04_THREAD_LIFECYCLE_DERIVATION_CORRECTION_RECORD_v1.md) §4, §5, §10).
+- **Admitted (BG-06):** `QAN-BL-INTEL-05` (`MEDIUM`, `OPEN — UNASSIGNED`): a deterministic refusal treated as transient, found by the `DEFECT` runs, outside the order's bounds.
+- **Read and left unchanged:** `QAN-BL-VOICE-01` … `05`, `07`, `08`, `09`, `QAN-BL-VIS-01`, `QAN-BL-MOB-01`, `QAN-BL-MOB-02`, `QAN-BL-PROD-06` / `08` (`0189` – `0194` not hosted).
+- **BG-09:** the INTEL-04 record carries `INTEL-04 — CLOSED / READY FOR PO MERGE DECISION`; so do the locators.
+- **Index at INTEL-04's closing change: 101 items; 51 / 4 / 11 / 35 by status, 59 / 39 / 3 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -6103,7 +6131,7 @@ Inherited after T-12 closure reconciliation:
 | `S8B-06 — Native Call` | `QAN-BL-VOICE-06` (admitted by S8B-05's closing change, 2026-11-03); *CP3, the closing change (2026-11-04, Draft PR #381 from `s8b/s8b-06-cp3` from `main` at `b007afca`; effective from its merge):* BG-08 reconciled (record §12): `QAN-BL-VOICE-06` tombstoned; `QAN-BL-VOICE-01` worked and not delivered (current-truth note); admitted `QAN-BL-VOICE-08` (S8B-08). *PO Review R1 (2026-11-04, the same PR):* `QAN-BL-VOICE-08` narrowed to F-D; admitted `QAN-BL-INTEL-04` and `QAN-BL-MOB-02` (`UNASSIGNED`); S8B-06 **not closed** (R3 and the `0070` decision with the Product Owner), not merged; *the R1 decisions (2026-11-04):* R3 delivered in CP3 (option A, `0193`); `QAN-BL-INTEL-04` owned by `INTEL-04 — Thread Lifecycle Derivation Correction` |
 | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `QAN-BL-VOICE-02`, `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (admitted by S8B-03's closing change, 2026-10-31); `QAN-BL-VOICE-05` (admitted by S8B-04's closing change, 2026-11-02); `QAN-BL-VOICE-08` (admitted by S8B-06's closing change, 2026-11-04) |
 | `GCR-01 — Growth & Capacity Readiness` | `QAN-BL-VOICE-07` (admitted by S8B-05's closing change, 2026-11-03) |
-| `INTEL-04 — Thread Lifecycle Derivation Correction` | `QAN-BL-INTEL-04` (admitted by S8B-06 CP3 under PO Review R1, 2026-11-04; owned by the Product Owner's decision of the same day) |
+| `INTEL-04 — Thread Lifecycle Derivation Correction` | `QAN-BL-INTEL-04` (admitted by S8B-06 CP3 under PO Review R1, 2026-11-04; owned by the Product Owner's decision of the same day); *the closing change (2026-11-04, the INTEL-04 Draft PR from `main` at `8e590234`; effective from its merge):* BG-08 reconciled: `QAN-BL-INTEL-04` tombstoned (`0194`, not hosted); admitted `QAN-BL-INTEL-05` (`UNASSIGNED`) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

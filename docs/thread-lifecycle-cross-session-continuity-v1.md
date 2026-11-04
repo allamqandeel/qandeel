@@ -233,3 +233,29 @@ order, the idempotent replay, the owner, the grants, `SECURITY DEFINER` and `sea
 (migration 0150 proves this about itself in one transaction).
 
 Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).
+
+## 11. Controlled forward amendment — INTEL-04 (migration `0194`)
+
+From `0194` (INTEL-04, `QAN-BL-INTEL-04`), `conversation_thread_cu_relation_v1` counts a focus → Thread binding made **at
+or before** the CU whose relation is read: `attention_on` uses `b.bound_sp <= cu.session_position`. Under `0070` it was
+strictly before.
+
+**The defect it corrects.** The CU that establishes a Thread, or binds an existing one by Session continuity, carries the
+binding at its own position. Under `0070` that CU was therefore "away" from its own Thread. One departure directly after
+it derived `SUSTAINED_DEPARTURE`. The reducer derived nothing, so its canonical payload was refused with
+`THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`, and the Session's ordered analysis stopped.
+
+**What is now true.** §3 holds in the database as it was written: a CU is never away while its attention is on the
+Thread's bound focus, including the binding that CU made itself.
+
+**What stays strict, deliberately:**
+- `targets_thread`;
+- the derivation's loop over Threads bound before the current CU, and its `own_thread` read (a Thread first bound at this
+  CU is a baseline, never a transition);
+- the Session lifecycle state, which reads strictly before `p_before_sp`;
+- the validator's structural refusal of a binding at or after the current position.
+
+**Unchanged:** every other function, row, identity, event, binding, Home and order. `0070` itself is byte-identical, and
+no stored row is rewritten.
+
+Record: [INTEL-04](e2e/QANDEEL_INTEL_04_THREAD_LIFECYCLE_DERIVATION_CORRECTION_RECORD_v1.md).
