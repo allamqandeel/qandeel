@@ -90,7 +90,9 @@ describe('S8B-06 CP1 — the live-call client over the frozen protocol', () => {
     first.server(state({ state: 'ACTIVE', epoch: 1, resumeFromCaptureMs: 0 }));
     for (let i = 0; i < 10; i += 1) client.sendAudio(i * 20, packet(i)); // 0 … 180 sent live
     client.sendPlayout(1, 4, 100); // msgId 1, never acknowledged
-    client.sendPlayout(1, 9, 200); // msgId 2, acknowledged
+    // S8B-06 CP3 re-anchor: the acknowledged PLAYOUT is of ANOTHER reply. A newer PLAYOUT of the SAME reply now supersedes
+    // the older one in the log (only a higher mark advances, P1 – P3); that case is the VOICE-06 test below.
+    client.sendPlayout(2, 9, 200); // msgId 2, acknowledged
     first.server({ type: 'ACK', msgId: 2 });
     first.drop(1006);
     for (let i = 10; i < 14; i += 1) client.sendAudio(i * 20, packet(i)); // produced while away: buffered only
@@ -137,6 +139,24 @@ describe('S8B-06 CP1 — the live-call client over the frozen protocol', () => {
     sockets[1]!.open();
     sockets[1]!.server(state({ state: 'ACTIVE', epoch: 2, resumeFromCaptureMs: 0, lastMsgId: 2 }));
     expect(sockets[1]!.order()).toEqual(['HELLO', 'PLAYOUT#3']);
+  });
+
+  it('QAN-BL-VOICE-06 (S8B-06 CP3 device proof): a reply played through an outage resends ONE PLAYOUT, its newest', () => {
+    // On the HONOR phone an 8 s black hole during a reply left ~80 unacknowledged PLAYOUTs; the resume resent them all,
+    // the server's control budget (20) refused the connection (OVERLOADED) before applying any, and every resume after it.
+    const { client, sockets, timers } = begun();
+    sockets[0]!.server(state({ state: 'ACTIVE', epoch: 1, resumeFromCaptureMs: 0 }));
+    client.sendPlayout(2, 0, 20); // #1, applied before the outage
+    sockets[0]!.server({ type: 'ACK', msgId: 1 });
+    sockets[0]!.drop(1006);
+    for (let j = 1; j <= 80; j += 1) client.sendPlayout(2, j, (j + 1) * 20); // #2 … #81, the reply kept playing
+    client.sendBargeIn(3, 900); // #82, another kind of control: kept
+    client.sendPlayout(4, 4, 100); // #83, another reply: kept
+    timers.advance(250);
+    sockets[1]!.open();
+    sockets[1]!.server(state({ state: 'ACTIVE', epoch: 2, resumeFromCaptureMs: 0, lastMsgId: 1 }));
+    expect(sockets[1]!.order()).toEqual(['HELLO', 'PLAYOUT#81', 'BARGE_IN#82', 'PLAYOUT#83']);
+    expect(sockets[1]!.texts().find((m) => m.type === 'PLAYOUT' && m.msgId === 81)).toMatchObject({ callTurnIndex: 2, chunkSeq: 80, playedMs: 1620 });
   });
 
   it('stops on FENCED and on a refusal, without reconnecting', () => {

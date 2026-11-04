@@ -129,6 +129,8 @@ export function callIdOfKey(key: string | null): string | null {
 const TEXT_RESEND_LIMIT = 3;
 /** The server's 60-minute bound (D-05-06): an end at or after it, said by the server, is the length limit. */
 const MAX_LENGTH_MARGIN_MS = 60 * 60_000 - 15_000;
+/** How close to the server's own `endsAt` a SERVER_ENDED is still the length limit (the phone's clock may be skewed). */
+const ENDS_AT_MARGIN_MS = 15_000;
 const TOKEN_CHECK_MS = 60_000;
 
 const realTimers: LiveCallTimers = {
@@ -162,7 +164,7 @@ function bearerToken(header: Record<string, string> | null): string {
 }
 
 /** Why the call did not start, or why it ended; null when the person chose the end. */
-export function noticeOf(outcome: LiveCallOutcome, activeForMs: number | null): { readonly notice: LiveCallNotice | null; readonly chosen: boolean } {
+export function noticeOf(outcome: LiveCallOutcome, activeForMs: number | null, untilEndsAtMs: number | null = null): { readonly notice: LiveCallNotice | null; readonly chosen: boolean } {
   const reason = String(outcome.reason);
   if (outcome.origin === 'START_FAILED') {
     if (reason === 'MIC_PERMISSION_DENIED') return { notice: 'MIC_PERMISSION', chosen: false };
@@ -192,8 +194,12 @@ export function noticeOf(outcome: LiveCallOutcome, activeForMs: number | null): 
     case 'UNAVAILABLE':
     case 'OVERLOADED':
       return { notice: activeForMs === null ? 'NOT_AVAILABLE' : 'STOPPED', chosen: false };
-    case 'SERVER_ENDED':
-      return { notice: activeForMs !== null && activeForMs >= MAX_LENGTH_MARGIN_MS ? 'MAX_LENGTH' : 'STOPPED', chosen: false };
+    case 'SERVER_ENDED': {
+      // S8B-06 CP3: the server's own `endsAt` (every STATE carries it) decides first; the phone's count from its ACTIVE is
+      // the fallback, and it starts late whenever the phone came to the call late (the device proof: a remount, a moved start).
+      const atLimit = (untilEndsAtMs !== null && untilEndsAtMs <= ENDS_AT_MARGIN_MS) || (activeForMs !== null && activeForMs >= MAX_LENGTH_MARGIN_MS);
+      return { notice: atLimit ? 'MAX_LENGTH' : 'STOPPED', chosen: false };
+    }
     default:
       return { notice: 'STOPPED', chosen: false };
   }
@@ -211,6 +217,8 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
   let controller: LiveCallController | null = null;
   let route: CallOwnerState['route'] = null;
   let activeSince: number | null = null;
+  /** The server's `endsAt` of this call, from its latest STATE (wall clock, ms). */
+  let endsAtMs: number | null = null;
   let lastTokenCheck = 0;
   let lastToken = '';
   const texts = new Map<string, CarriedText>();
@@ -329,6 +337,10 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
   function onClient(event: LiveCallClientEvent): void {
     switch (event.type) {
       case 'state':
+        if (event.message.state !== 'ENDED' && event.message.endsAt !== null) {
+          const at = Date.parse(event.message.endsAt);
+          if (Number.isFinite(at)) endsAtMs = at;
+        }
         if (event.message.state === 'ACTIVE') {
           // QAN-BL-VOICE-06 (2): a resumed connection gets no REPLY_END for the exchange the older one left open, and a
           // turn it drained is kept unanswered; the thread and the Analysis learn both from the history, read now.
@@ -418,7 +430,8 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
     const endedId = currentCallId;
     const since = activeSince;
     const activeForMs = since === null ? null : now() - since;
-    const { notice, chosen } = noticeOf(outcome, activeForMs);
+    const { notice, chosen } = noticeOf(outcome, activeForMs, endsAtMs === null ? null : endsAtMs - now());
+    endsAtMs = null;
     controller = null;
     currentCallId = null;
     activeSince = null;

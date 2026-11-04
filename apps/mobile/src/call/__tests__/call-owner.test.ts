@@ -250,6 +250,17 @@ describe('S8B-06 CP3 — the end: chosen or not (J3), and the record (J7)', () =
   ] as const)('noticeOf(%o) after %s ms → %s', (outcome, activeFor, notice, chosen) => {
     expect(noticeOf(outcome, activeFor)).toEqual({ notice, chosen });
   });
+
+  it('S8B-06 CP3 device proof: a SERVER_ENDED at the server\'s endsAt is the length limit, however late the phone came', () => {
+    const ended = { origin: 'SERVER', platformSource: null, reason: 'SERVER_ENDED', serverConfirmed: true } as const;
+    // The HONOR proof: the phone had counted 5 minutes when the server's 60 minutes ended (its start was moved).
+    expect(noticeOf(ended, 5 * 60_000, 2_000)).toEqual({ notice: 'MAX_LENGTH', chosen: false });
+    expect(noticeOf(ended, 5 * 60_000, -3_000)).toEqual({ notice: 'MAX_LENGTH', chosen: false });
+    // Counter-tests: a server end well before endsAt is not the limit; without endsAt the phone's own count decides.
+    expect(noticeOf(ended, 59 * 60_000, 60_000)).toEqual({ notice: 'STOPPED', chosen: false });
+    expect(noticeOf(ended, 5 * 60_000, null)).toEqual({ notice: 'STOPPED', chosen: false });
+    expect(noticeOf(ended, 60 * 60_000, null)).toEqual({ notice: 'MAX_LENGTH', chosen: false });
+  });
 });
 
 describe('S8B-06 CP3 — D-05-07 T1: typed during the call', () => {

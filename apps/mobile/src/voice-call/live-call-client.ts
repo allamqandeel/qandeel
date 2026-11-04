@@ -174,6 +174,14 @@ export class LiveCallClient {
   /** The heard position of reply `callTurnIndex` (from the engine's presented frames only). */
   sendPlayout(callTurnIndex: number, chunkSeq: number, playedMs: number): void {
     if (this.ended) return;
+    // S8B-06 CP3 (QAN-BL-VOICE-06): only a higher mark advances a reply (P1 – P3), so this PLAYOUT supersedes every older
+    // one of the same reply still in the log. Without this, a reply that kept playing through an outage left one PLAYOUT
+    // per confirmation in the log (about ten a second), the resume resent them all at once, the server's control budget
+    // refused the connection (OVERLOADED) before applying any, and every later resume was refused the same way.
+    for (let i = this.log.length - 1; i >= 0; i -= 1) {
+      const item = this.log[i]!;
+      if (item.kind === 'control' && item.message.type === 'PLAYOUT' && item.message.callTurnIndex === callTurnIndex) this.log.splice(i, 1);
+    }
     this.control({ type: 'PLAYOUT', msgId: this.takeMsgId(), callTurnIndex, chunkSeq, playedMs });
   }
 
