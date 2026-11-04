@@ -260,6 +260,7 @@ jobs:
       - {name: "Verify S8B-05 CP1 live call static contract (protocol v1 frozen identically in the document and the code, 0189 forward-only and wired, the gateway answering the upgrade itself with no client socket, no environment and no provider, the null speech sink, the CP2-CP4 messages never ACKed, no logging, no voice gate opened, the Copy Gate rows PROPOSED)", run: npm run test:s8b-05-live-call-contract}
       - {name: "Verify S8B-06 CP1 native audio engine contract (the phone and the fake gateway speak the frozen live-call protocol v1 byte for byte, the gateway e2e on a real socket with libopus FEC uplink, one socket in src/voice-call, ws:// and the forced cut proof-only, the Android-only module with a pinned codec, no call lifecycle, no logging, VAD after AEC at 200 ms, no provider)", run: npm run test:s8b-06-native-audio-engine-contract}
       - {name: "Verify S8B-06 CP2 native call lifecycle contract (Core-Telecom 1.0.1 outgoing, routes via requestEndpointChange only, the one phoneCall service with a CallStyle End; CallKit outgoing only with includesCallsInRecents=false and UIBackgroundModes audio only; the complete iOS engine with vendored libopus FEC, onset rules, presented-position PLAYOUT; typed plugin mods; Voice Notes foreground-only; copy rows PROPOSED, no audio file, no provider; the native tests wired)", run: npm run test:s8b-06-native-call-lifecycle-contract}
+      - {name: "Verify INTEL-04 Thread lifecycle derivation contract (0070 byte-identical; 0194 forward-only, one function, exactly the attention_on predicate made bound_sp <= cu.session_position and every other strict reading kept; no write, no queue reset, no grant; the verifier and the integrated proof wired after the migrations; no graphics, no provider; the record and QAN-BL-INTEL-04 closed)", run: npm run test:intel-04-thread-lifecycle-derivation-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1391,6 +1392,24 @@ jobs:
       # did not become ACTIVE nor the live call, the person's and the Session's isolation, the window, no client role.
       - name: Verify S8B-06 CP3 finished-call record read (0193) against real PostgreSQL
         run: npm run verify:session-finished-calls:integration
+      # INTEL-04: migration 0194 (QAN-BL-INTEL-04) - the Thread lifecycle relation counts the CU that establishes or binds a
+      # Thread as ON it, so one departure right after an establishment is never SUSTAINED_DEPARTURE. The verifier proves
+      # T1 - T4 through 0070's own coordinator and the T6 counter-test (0070's relation put back inside a rolled-back
+      # transaction refuses the reducer's payload again); verify-migration-0070 above already runs unchanged on top of 0194.
+      - name: Verify INTEL-04 Thread lifecycle relation (0194) against real PostgreSQL
+        run: npm run verify:intel-04-lifecycle-relation:integration
+      # INTEL-04: the integrated proof - the REAL establishment service, call analysis worker, queue, permits and the map's
+      # read controllers, written and in a call whose reply is cut before a word is heard; fake layer providers, no paid
+      # call. It runs on a throwaway clone of this database, dropped afterwards, so none of its fixtures reach a later step.
+      - name: Prove INTEL-04 Thread lifecycle continuity, written and in a call, against real PostgreSQL (free)
+        run: |
+          base="${DATABASE_URL%/*}"
+          clone="intel04_proof_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          psql "$base/postgres" -X -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE \"$clone\" TEMPLATE \"${DATABASE_URL##*/}\""
+          status=0
+          DATABASE_URL="$base/$clone" npm run prove:intel-04-lifecycle-synthetic:integration || status=$?
+          psql "$base/postgres" -X -v ON_ERROR_STOP=1 -q -c "DROP DATABASE \"$clone\" WITH (FORCE)"
+          exit "$status"
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

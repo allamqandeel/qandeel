@@ -66,6 +66,30 @@ function vocabulary(name) {
   return [...match[1].matchAll(/'([A-Z_]+)'/gu)].map((m) => m[1]);
 }
 
+// INTEL-04 RE-ANCHOR (PO CI Correction R2, 2026-11-04): the INTEL-04 integrated proof's T5 Living Map checks READ two
+// durable rows to know which focus the map must show: each CU's attention focus, and the Thread binding's grounding focus.
+// Exactly these two SELECT texts are allowed, each exactly once. The rest of the file is held to the same rule as every
+// other script, so any other use of the substrate still fails: another read, a write, a 0066 writer, the context read or
+// the canonicalizer. The forbidden expression itself is unchanged.
+const INTEL_04_PROOF = 'apps/api/scripts/intel-04-thread-lifecycle-proof.ts';
+const INTEL_04_PROOF_READS = Object.freeze([
+  'SELECT u.session_position sp, u.source_role role, a.attention_kind k, a.emerging_focus_id f\n'
+    + '      FROM public.conversation_units u LEFT JOIN public.conversation_emerging_focus_attention_events a ON a.cu_id = u.id\n'
+    + '      WHERE u.session_id = $1 ORDER BY u.session_position',
+  'SELECT thread_id t, bound_sp sp, emerging_focus_id f FROM public.conversation_thread_focus_bindings WHERE session_id = $1 ORDER BY bound_sp',
+]);
+const SCRIPT_SUBSTRATE = /with_focus_v1|focus_runtime_context|durable-focus|emerging_focus/u;
+/** The INTEL-04 proof reaches the substrate through its two allowed reads alone. Throws otherwise. */
+function assertIntel04ProofReachesOnlyItsReads(text) {
+  for (const query of INTEL_04_PROOF_READS) {
+    assert.ok(/^SELECT /u.test(query) && !/\b(?:INSERT|UPDATE|DELETE|TRUNCATE|MERGE|CALL)\b|_v1\(/iu.test(query), 'an allowed text is a plain SELECT that calls no function');
+    assert.equal(text.split(query).length - 1, 1, `${INTEL_04_PROOF} carries the allowed read exactly once: ${query.split('\n')[0]}`);
+  }
+  const rest = INTEL_04_PROOF_READS.reduce((remaining, query) => remaining.replace(query, ''), text);
+  assert.doesNotMatch(rest, SCRIPT_SUBSTRATE, `${INTEL_04_PROOF} does not reach the substrate outside its two allowed reads`);
+  assert.doesNotMatch(stripComments(rest), /canonicaliz|DurableFocus|durableFocus/u, `${INTEL_04_PROOF} reaches no canonicalizer`);
+}
+
 test('migration 0066 exists, is the newest, and 0064 / 0065 are byte-identical', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
   // (T-03B1b2 added 0067, a read/audit-only migration pinned by its own contract.)
@@ -237,7 +261,11 @@ test('the new writer, coordinator and context read are production-inert; the T-0
       assert.match(read(file), /commit_finalized_exchange_with_full_semantic_chain_v1/u, `${file} establishes the exchange through the ONE production coordinator`);
       continue;
     }
-    assert.doesNotMatch(read(file), /with_focus_v1|focus_runtime_context|durable-focus|emerging_focus/u, `${file} does not reach the substrate`);
+    if (file === INTEL_04_PROOF) {
+      assertIntel04ProofReachesOnlyItsReads(read(file));
+      continue;
+    }
+    assert.doesNotMatch(read(file), SCRIPT_SUBSTRATE, `${file} does not reach the substrate`);
   }
   // Mobile CI is not touched (MOB-CI-01 preserved).
   assert.doesNotMatch(mobileCi, /durable-reference|0066/u);
@@ -346,4 +374,24 @@ test('the gates are registered at the root and in API CI', () => {
   assert.ok(apiCi.indexOf('test:durable-reference-emerging-focus-sp-substrate-contract') < apiCi.indexOf('Apply all migrations to fresh PostgreSQL'));
   assert.ok(apiCi.indexOf('verify:durable-reference-emerging-focus-sp-substrate:integration') > apiCi.indexOf('verify:session-semantic-clock-sp-lh-delivery:integration'));
   assert.equal((apiCi.match(/verify:durable-reference-emerging-focus-sp-substrate:integration/gu) ?? []).length, 1);
+});
+
+test('INTEL-04 re-anchor counter-test: only the two allowed reads pass; any other substrate use in the proof still fails', () => {
+  const proof = read(INTEL_04_PROOF);
+  assertIntel04ProofReachesOnlyItsReads(proof);
+  const [attentionRead, bindingRead] = INTEL_04_PROOF_READS;
+  const planted = {
+    'another substrate read': `${proof}\nawait sql('SELECT emerging_focus_id FROM public.conversation_emerging_focuses WHERE session_id = $1', [session]);\n`,
+    'a write to the substrate': `${proof}\nawait sql('UPDATE public.conversation_emerging_focus_attention_events SET attention_kind = $1', ['NONE']);\n`,
+    'the 0066 writer': `${proof}\nawait shim.rpc('commit_finalized_exchange_with_focus_v1', {});\n`,
+    'the runtime context read': `${proof}\nawait shim.rpc('get_conversation_focus_runtime_context_v1', {});\n`,
+    'the canonicalizer': `import { canonicalizeDurableFocusBundle } from '../src/conversational-focus/durable-focus-canonicalizer';\n${proof}`,
+    'an allowed read used twice': `${proof}\nawait sql(\`${bindingRead}\`, [session]);\n`,
+    'an allowed read turned into a write': proof.replace(bindingRead, 'DELETE FROM public.conversation_thread_focus_bindings WHERE emerging_focus_id IS NOT NULL'),
+    'an allowed read widened': proof.replace(attentionRead, attentionRead.replace('a.emerging_focus_id f', 'a.emerging_focus_id f, a.*')),
+  };
+  for (const [shape, text] of Object.entries(planted)) {
+    assert.notEqual(text, proof, `${shape}: the mutation applied`);
+    assert.throws(() => assertIntel04ProofReachesOnlyItsReads(text), assert.AssertionError, `${shape} is refused`);
+  }
 });

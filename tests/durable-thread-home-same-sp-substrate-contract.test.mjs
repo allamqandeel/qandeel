@@ -438,8 +438,14 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
     assert.doesNotMatch(stripComments(text), /thread|Thread|durable-thread|with_focus_and_thread/u, `${name} is untouched by T-03B2b2`);
   }
   assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator');
+  // INTEL-04 RE-ANCHOR (2026-11-04): its integrated proof READS conversation_threads once, to count a synthetic person's
+  // Threads (no duplicated identity); it writes no Thread row and reaches no writer, canonicalizer or placement mirror.
+  const INTEL_04_PROOF = 'apps/api/scripts/intel-04-thread-lifecycle-proof.ts';
   for (const file of [...listFiles(join(rootPath, 'apps/api/scripts')), ...listFiles(join(rootPath, 'apps/mobile/src'))].map(relative)) {
-    assert.doesNotMatch(read(file), /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate`);
+    const text = file === INTEL_04_PROOF
+      ? read(file).replace('SELECT count(*)::int n FROM public.conversation_threads t JOIN public.conversation_sessions s ON s.user_id = t.user_id WHERE s.id = $1', '')
+      : read(file);
+    assert.doesNotMatch(text, /with_focus_and_thread|durable-thread|conversation_threads|thread_home/u, `${file} does not reach the substrate`);
   }
   // FORWARD-SAFE (R2-02): a whole-lockfile hash and an exhaustive root devDependency set both make
   // future authorized dependencies fail an old contract. The frozen fact is the renderer VERSION;
