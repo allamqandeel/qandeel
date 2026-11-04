@@ -1,7 +1,8 @@
 # QANDEEL S8B-06 — Call UI, Live Map & End-to-End Device Closure: Implementation Record v1
 
-**Checkpoint:** S8B-06 CP3, PO Review R1 (2026-11-04) — **S8B-06 = NOT CLOSED: R1 corrections delivered; two decisions
-outside CP3's bounds are with the Product Owner (R3, the finished-call record; and the `0070` Thread-lifecycle defect)**.
+**Checkpoint:** S8B-06 CP3, PO Review R1 and the Product Owner's R1 decisions (2026-11-04) — **S8B-06 = NOT CLOSED: the R1
+corrections and R3 (the finished-call record from durable truth, migration `0193`) are delivered; R3's check on the real
+phone is outstanding (the phone was not connected), and the gates of §13 wait on the Product Owner**.
 On `s8b/s8b-06-cp3` as Draft PR #381 from `main` at `b007afca`, **not merged; merge only on the Product Owner's explicit
 «ادمج»**. Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
 
@@ -11,10 +12,13 @@ On `s8b/s8b-06-cp3` as Draft PR #381 from `main` at `b007afca`, **not merged; me
   - R2 the Living Map is proven from speech to the phone;
   - R4: F-F found and fixed, F-E proven, F-D settled by a test;
   - plus a stall that dropped every first call of a process (F-G), found and fixed on the way.
-- **Not done in CP3, by R3's own rule** (a change outside CP3 is presented first):
-  - the finished-call record from durable truth (J7: a length after a restart, and the zero-turn call) needs a
-    migration; three alternatives are with the Product Owner (§13).
-  - the `0070` defect found by R2 is a database change in another engine (`QAN-BL-INTEL-04`).
+- **The Product Owner's R1 decisions** (2026-11-04, §13):
+  - **R3, option A, delivered here:** migration `0193` (one service-role read of a Session's finished calls) and an
+    additive `calls` field on the history page. The record's length and «توقفت» come from the server's `started_at`,
+    `ended_at` and `end_reason`, so they survive a restart, and a call that left no turn keeps its record (§2.1, §9.3).
+  - **F-H, `0070`:** a real engine defect, owned by a separate high-priority task `INTEL-04` in its own PR, never in this
+    one (`QAN-BL-INTEL-04`). It blocks the live analysis's launch readiness, and R2's proof is not a proof of every Thread
+    lifecycle case.
 - **Android:** the twelve items run on the real HONOR phone against the real S8B-05 server (synthetic providers, a
   throwaway local database) (§6), and R1's items on APKs 5 and 6 (§6.1).
 - **iOS:** by the approved method, CI (§8); the real iPhone is deferred (FI 019).
@@ -49,8 +53,8 @@ On `s8b/s8b-06-cp3` as Draft PR #381 from `main` at `b007afca`, **not merged; me
 
 ## 2. What CP3 delivers
 
-All of it is phone code above CP2's call. **No server change, no migration, no protocol change.** CP1's engine and CP2's
-lifecycle are reused, and S8B-05's server is the one the device proof talks to.
+All of it is phone code above CP2's call, **except R3** (§2.1): no other server change, no other migration, and no
+protocol change. CP1's engine and CP2's lifecycle are reused, and S8B-05's server is the one the device proof talks to.
 
 *PO Review R1* added three narrow changes beneath this layer (§5, §8):
 - F-B: Android's `moveToBackground`;
@@ -115,6 +119,36 @@ was added.
 - `w1a-01`: the one turn route is wrapped by the call-aware transport, and obtained once.
 - The glyph pin admits `call`.
 - `runtime-entry/scope`: three exports are added.
+
+### 2.1 R3 — the finished-call record from durable truth (the Product Owner's R1 decision, option A)
+
+- **Migration `0193`** (`database/migrations/0193_s8b_06_session_finished_calls_read_v1.sql`; the number was checked
+  free on `main` and every remote branch before use; forward-only, one transaction, **not applied to any hosted
+  database**): `public.server_read_session_finished_calls_v1(p_user_id, p_session_id, p_ended_from, p_ended_before)`.
+  - A pinned, STABLE security definer, EXECUTE to `service_role` only, like every `server_*` read.
+  - It reads `voice_private.calls` and nothing else: no turn, no content, no transcript, no recording.
+  - It returns only the person's calls of that Session that are `ENDED` and became `ACTIVE` (`started_at IS NOT NULL`):
+    a call refused before ACTIVE was not a call, and the live call stays call truth's (0189). At most 100, the newest.
+  - It changes no table, no call transition, no recording rule, no retention (V3, 30 days from the start), no Replay and
+    no export; its deploy guard keeps the four voice scopes `DISABLED` and every call definer away from client roles.
+- **The API** (`ConversationService.listTurns`, through `VoiceNotesRepository.sessionFinishedCalls`): the history page
+  carries `calls: [{ callId, startedAt, endedAt, endReason }]`, **only when the page's window holds one**, so the page an
+  older phone reads is byte-for-byte the earlier shape. The window is the page's own, `[its oldest user turn, the
+  cursor)`, open at the newest end and, on the oldest page, at the old end: every finished call is on exactly one page,
+  a zero-turn call included. The read uses the caller's own identity after the owner check of the Session.
+- **The phone** (`decodeHistoryResponse`, the conversation controller, `useCallSurface`, a `threadHead` slot of the
+  Conversation):
+  - the decoder takes `calls` strictly (real instants, the end not before the start, a known end reason); a page
+    without it is unchanged;
+  - the controller keeps the calls of every page read, one per call;
+  - the record's length is the server's `endedAt − startedAt`, and «توقفت» (LC-21) is any `endReason` but
+    `USER_ENDED`;
+  - a call with turns keeps its record after its last turn; a call that left none is drawn at its end's place (after
+    the last exchange that began before it ended, before the first one, or alone in an empty thread);
+  - the phone's own count stands only for the call it just saw end, until a read carries the server's record (the end
+    already re-reads the history); the live call is never drawn as finished.
+- **The device proof server** reads the same `0193` through the API's repository with the same window rule (its
+  history route is the proof's stand-in for the API's, as before).
 
 ## 3. Design compliance (the order's binding points)
 
@@ -192,7 +226,7 @@ words, the Voice Notes rows) is not touched. The phone carries exactly these row
 | F-E | **proven (R1)** | once, a capacity refusal about 4 s after the press left the reader on the Analysis with no notice | two composition tests: a refusal inside the start's act, and one after the Analysis is drawn and laid out. Both return to the Conversation with LC-02, and both pass without a code change. On the phone (APK 6) with 0 seats: a refusal held 2.5 s per direction by the relay (it reached the phone about 10.8 s after the press, with the Analysis drawn and CONNECTING shown), and the first refusal straight after a fresh microphone grant. Each gave LC-02 and Writing (§6.1). The original once-seen case is consistent with F-G (a JS stall in the first draw) and was not seen again |
 | F-F | defect, **found and fixed (R1)** | PROTOCOL_VIOLATION closes (4002) around barge-ins | **cause:** the native barge-in cut the newest ADMITTED reply (`ledger.currentTurn`) but sent the last heard mark. When an older reply's queued audio was still playing (the server closed it at the next commit; nothing had cut it locally), that mark belonged to the older reply. The phone sent PLAYOUT(newer reply, the older reply's chunk), past what the server had sent for that reply (run 5: turn 38, chunk 209, 154 packets sent), and the server closed 4002. **Fix:** `ReplyLedger.cutFinal` (Kotlin and Swift) returns only a mark of the reply cut, and nothing when nothing of it was heard. A failing-first Kotlin test reproduces run 5's sequence. After the fix: 37 / 37 module tests, and on the phone 7 overlap-shaped barge-ins with 0 violations (run 6; run 5 had 5 and 3) |
 | F-G | defect, **found and fixed (R1)** | the first Living Map draw of a process held the JS thread for **3.3 s** (measured on the phone: the nebula's three raster passes 1 146 / 1 053 / 1 012 ms, dust and stars 57 ms). The call's uplink passes through the JS thread, so the server closed the call 4008 SILENCE after 3 s and the phone reconnected. It hit every first call of a process whose first projection arrived during ACTIVE (runs 4 – 7, deterministic). It is LA-VIS-01's code, but CP3's Analysis-first start puts that draw inside the call | each raster pass is painted in 8 bands of rows, with the JS thread released before each band, on the same surface with a non-anti-aliased clip. Every step of the drawing is per pixel (no blur), so the image is the one a single pass paints, drawn back exactly as before. The nebula draws nothing until it is painted, so the first frame shows the dust and the stars. A new test proves the banding: every row once, the same transform, a release before each band, one snapshot. The golden tree is unchanged. **APK 6 (run 8): the same fresh-database condition, with a Thread drawn: no 4008, no uplink gap ≥ 400 ms** |
-| F-H | pre-existing defect, **outside CP3 (PO decision)** | R2 found that `0070`'s relation counts the CU establishing a Thread as away from it, so the next CU's lifecycle payload is refused (`THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`) and the Session's analysis stalls. Reproduced in run 4 and again in run 8 (turn 2's USER half refused three times, PARKED) | decision memo `R1/S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md`. Recommended: a new migration under the thread-lifecycle owner. Admitted `QAN-BL-INTEL-04` (`UNASSIGNED`). CP3 changes nothing in the engine |
+| F-H | pre-existing defect, **outside CP3 (PO decision)** | R2 found that `0070`'s relation counts the CU establishing a Thread as away from it, so the next CU's lifecycle payload is refused (`THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`) and the Session's analysis stalls. Reproduced in run 4 and again in run 8 (turn 2's USER half refused three times, PARKED) | decision memo `R1/S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md`. Admitted `QAN-BL-INTEL-04`. **The Product Owner's decision (2026-11-04):** a real engine defect, owned by `INTEL-04 — Thread Lifecycle Derivation Correction`, a separate high-priority PR of the analysis engine and Semantic Establishment path, never inside PR #381; option A preferred once tests prove the `bound_sp` change right and harmless to the earlier cases and the order of Threads; a blocker of the live analysis's launch readiness. CP3 changes nothing in the engine |
 | F-I | pre-existing defect, **outside CP3** | the written composer: after a send, the keyboard's last composing word returns at the start of the next message ("ime check one" sent, then "two" typed, gave "oneime check two"). Reproduced with no call | admitted `QAN-BL-MOB-02` (`UNASSIGNED`) |
 | T1 | observation | once in the PO's own run, «تعذّر التأكد من إرسال الرسالة.» (UNCONFIRMED) for a typed message. Not reproduced in 9 tries; the PO's 4 retries all committed | it coincided with the 4008 SILENCE of F-G at 15:51:35, so the message was typed into the dropped connection. The UNCONFIRMED notice was the honest one. With F-G fixed that drop is gone |
 
@@ -263,7 +297,17 @@ any evidence file. The evidence lines carry ids, counts and timings; the recogni
 | **F-G** (runs 5 – 7, the measurement build, run 8) | **found, measured, fixed** — before: one 4008 SILENCE at the first projection in runs 5, 6 and 7 (3.07 s, 3.07 s, 3.08 s after it). Measured on the phone: 1 146 + 1 053 + 1 012 ms of nebula raster in one JS task. After (APK 6, run 8, the same condition): no close, no uplink gap ≥ 400 ms, 11 turns committed | `stall-proof/` |
 | **F-E** (APK 6) | **PASS** — 0 seats. A refusal held 2.5 s each way: the Analysis drawn, CONNECTING with LC-01, then LC-02 and Writing. The first refusal after a fresh microphone grant also gave LC-02 and Writing. *(That grant was given by a tap on the proof app's own one-time prompt; the proof app's grant stays one-time, and the original app was not touched.)* A first try that held every byte 4 s was not a refusal at all: the server's 3 s wait for HELLO closed it (4008), and the phone showed LCE-20 and Writing, honestly. That is a setting no network produces | `stall-proof/run8/fe*.png` |
 
- (phone, transport and playback, apart from the synthetic providers)
+### 6.2 R3 on the phone — outstanding
+
+The Product Owner asked for an app-restart test on the phone. **It has not run: the phone was not connected when R3 was
+delivered.** APK 7 (R3, the separate proof package) is built and waiting (§9.3). The check, on a fresh throwaway
+database with `0193`:
+1. a call with turns, ended by the person; a zero-turn call; a call the server refuses (0 seats, never ACTIVE);
+2. force-stop the proof app and open it again;
+3. read the Conversation's tree (not a screenshot): the first call's record with the server's length, the zero-turn
+   call's record at its place, and no record of the refused call.
+
+## 7. Latency N (phone, transport and playback, apart from the synthetic providers)
 
 All figures are measured on the phone's own capture clock, over the 75 replies of the device proof that started on a free
 QANDEEL track. A reply that had to wait for the previous reply's audio is excluded: that wait is the track's order, not
@@ -333,6 +377,44 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
   - `npm run test:task-closure-governance-contract` is in this run.
 - **CI:** the exact-head checks of this commit are reported on PR #381, and this record claims none it has not seen.
 
+### 9.3 R3 and the R1 decisions (2026-11-04; logs in `E:\QANDEEL_REPORTS\S8B-06\CP3\R3\`)
+
+- **Migration `0193` against real PostgreSQL 17** (a throwaway local database migrated `0001` – `0192`, then `0193`):
+  - `verify-migration-0193`: **9 / 9** (the catalogue; a zero-turn call and a call with turns with the server's instants
+    and end reason, newest first; never a call that did not become ACTIVE, never the live call; the person's and the
+    Session's isolation; the window; no client role) (`verify-0193.log`);
+  - **its counter-test:** the same verifier against a weakened read (the `started_at IS NOT NULL` rule removed) fails
+    T0b and T2, 7 / 9 (`verify-0193-weakened-counter-test.log`);
+  - the verifiers that census or replace what 0193 sits beside, on the same `0193` database: `0150` 28 / 28, `0183`
+    20 / 20, `0185` 3 / 3, `0186` 29 / 29, `0189` 24 / 24, `0190` 18 / 18, `0191` 28 / 28, `0192` 15 / 15;
+  - CI runs `verify-migration-0193` after the CP4 closure proof (`api-ci.yml`), on its fresh database of every migration.
+- **API:** `conversation-history-finished-calls.spec.ts` with the existing history spec, **31 / 31**; `tsc --noEmit`
+  clean (the API project and the scripts project).
+- **Phone:** `call/__tests__/finished-call-record.test.tsx` (the decoder strict, the controller across pages, the
+  record after a restart, the server's record over the phone's count, the zero-turn call at its place and alone, the
+  never-ACTIVE counter-test, the live call never finished) **15 / 15**; the CP3 composition suite with the new restart
+  test over `DepthComposition` **6 / 6**; `tsc --noEmit` clean.
+- **Contracts:** the S8B-05 contract's migration-tail pin is re-anchored to name exactly `0193` after `0192` (any other
+  migration still fails it).
+- **The whole mobile Jest suite** (`jest-r3-full-clean.log`): 267 suites, **3 346 tests: 3 340 pass**. The 6
+  failures are `w2-account-access` 3 and `depth` 3.
+  - **They are on `main` too, with the same cause** (the Product Owner's item 7): the same two suites on a clean
+    worktree of `main` at `b007afca` fail the same 6 tests with the same messages (`R1/jest-baseline-main-b007afca.log`).
+  - **The cause:** these tests expect the English copy, and the app takes its language from the device's `Intl`
+    locale (`device-locale.ts`). This machine's runtime resolves `ar-EG` (`new Intl.DateTimeFormat().resolvedOptions()`),
+    so the tree renders Arabic ("المحادثة" where "Conversation" is expected). On CI (`en-US`) both suites pass: on
+    `ed1ced8c` the full suite was 266 suites, 3 330 / 3 330 (`R1/jest-ci-ed1ced8c-excerpt.txt`). They are not counted
+    as passing here.
+  - **A first full run under load is not counted:** run while the APK build compiled, it failed 64 tests in 7 suites,
+    mostly 5 s timeouts and "Unable to find" while each suite took 65 – 126 s (`jest-r3-full.log`). The seven suites
+    alone then failed only the same 6 (`jest-r3-seven-rerun.log`), and the clean full run above is the figure.
+- **Root contracts** except `forward-safety` (CI runs it): **1 740 / 1 740** (`root-contracts-r3.log`).
+- **APK 7** (R3, the separate proof package): `40260eef568a1f86fb4cd907c55fabb356b1a6ac8d6ac0455aac2a0ae5490e58`
+  (`R3/s806cp3proof-apk7.apk`, `R3/build-apk7.log`); `apps/mobile/android` removed after the build.
+- **CI:** the exact-head checks are on PR #381; this record claims none it has not seen. On `ed1ced8c` every Linux check
+  passed; the three iOS jobs were never run (the hosted macOS runners were not acquired, the jobs cancelled with no step)
+  and VAL-01's native evidence failed only because of them.
+
 ## 10. Acceptance (the order)
 
 | Order item | Status |
@@ -340,10 +422,10 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 | Device E2E items 1 – 12 on the real HONOR phone against the real S8B-05 server, a separate proof app | **MET** after R1 (§6, §6.1): item 5 through the real analysis path, F-B fixed |
 | R1 Back | **MET** (§6.1) |
 | R2 the Living Map from speech | **MET** (§6.1). The `0070` stall it found is reported, not passed (F-H) |
-| R3 the finished-call record from durable truth | **NOT MET — awaiting the Product Owner's decision** (§13): it needs a migration, which R3 says to present first |
+| R3 the finished-call record from durable truth | **MET in code, against real PostgreSQL and in the phone's tests** (option A, §2.1, §9.3). **The app-restart check on the real phone is outstanding** (§6.2): the phone was not connected |
 | R4 F-D, F-E, F-F | **MET** (§5, §6.1) |
 | R5 one Copy Gate review pack; no paid TTS; the local tone kept | **MET** — `R1/S8B-06_CP3_COPY_GATE_REVIEW_PACK_AND_AUDIO_PLAN.md`: 36 rows ar + en with IDs, none approved, and the generation plan with its exact cost (at most USD 0.023, a hard cap of USD 0.05) for a separate decision. No audio fixture is pinned as a production asset |
-| R6 tests, record, backlog, PROJECT_MAP, VOICE-08 | this change |
+| R6 tests, record, backlog, PROJECT_MAP, VOICE-08 | this change; R3 and the R1 decisions in §9.3, §12, §13 |
 | iOS through CI as far as possible | **MET by the approved method** (§8); real iPhone deferred (FI 019) |
 | Latency N apart from the synthetic provider latency | **MET** (§7) |
 | No paid call; no original app touched; no Fake Gateway in place of the integrated server; no copy approved; CP2's tone unchanged | **MET** |
@@ -351,10 +433,15 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 
 ## 11. Limitations (not hidden)
 
-- **A past call's length:** a record read back from the history after a relaunch shows "Voice call" without its length,
-  because the length is the phone's runtime knowledge. The same holds for LC-21 "stopped". This is R3, open (§13).
-  Seen again on APK 6 after a relaunch.
-- **A call with no committed turn** leaves no durable record after a relaunch. This is R3, open (§13).
+- **R3 on the phone:** the length after a relaunch and the zero-turn record are proven in code, against real PostgreSQL
+  and in the phone's tests, not yet on the phone (§6.2). Before R3, APK 6 showed "Voice call" with no length after a
+  relaunch.
+- **A record older than the loaded pages** appears when its page is read (scrolling up), like the turns beside it. At
+  most 100 finished calls are carried per page window.
+- **A server without `0193`** cannot serve the history at all once this API is deployed (the read is not optional). The
+  migration goes before the API, through `HOSTED-DEPLOY-01` (`QAN-BL-PROD-06` / `08`); nothing is hosted here.
+- **INTEL-04 (`0070`):** until it is fixed, a Conversation's Living Map can still freeze, and R2's map-update proof is not
+  a proof of every Thread lifecycle case.
 - **A Thread's mass sprite** (`world-mass.ts`, 448 px) is still recorded in one JS task when first drawn. It was not
   measured alone. By pixels it is about a tenth of one nebula pass, and run 8 drew one with no uplink gap ≥ 400 ms. Many
   new Threads in one projection are not measured.
@@ -397,14 +484,46 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
   - `QAN-BL-MOB-02`, the Android composer's composing word (F-I): `MEDIUM`, `OPEN — UNASSIGNED`.
 - **BG-09:** S8B-06 is not closed, and this record's banner says so.
 
+**The Product Owner's R1 decisions (the same PR):**
+- **R3** is delivered here (option A), not backlog; nothing of it is deferred.
+- **`QAN-BL-INTEL-04` owned** by `INTEL-04 — Thread Lifecycle Derivation Correction` (`DEFERRED — OWNED`, `HIGH`), a
+  separate PR of the analysis engine and Semantic Establishment path after this work, never inside PR #381; a blocker of
+  the live analysis's launch readiness.
+- **Read and left unchanged:** `QAN-BL-VOICE-01` … `05`, `07`, `08`, `QAN-BL-MOB-01` / `02`, `QAN-BL-PROD-06` / `08`
+  (`0189` – `0193` not hosted).
+- **Index: 99 items; 52 / 4 / 9 / 34 by status, 59 / 38 / 2 by severity.**
+
 ## 13. Decision and what the Product Owner decides
 
 **S8B-06 = NOT CLOSED.**
-- The R1 corrections are delivered on Draft PR #381.
-- CP3 can close once R3 is decided and, if A or B is chosen, delivered in this PR.
+- The R1 corrections and R3 are delivered on Draft PR #381.
+- What remains before CP3's final review: R3's app-restart check on the real phone (§6.2), CI on the last commit, and the
+  Product Owner's gates below.
 - Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
 
-The Product Owner's decisions, none taken by this record:
+**The Product Owner's R1 decisions (2026-11-04)**, recorded as given:
+- **R3:** option A approved, and `0193` on PR #381 once the number was checked free (it was) — **delivered** (§2.1).
+- **F-H / `0070`:** a real engine defect; `INTEL-04`, a separate high-priority PR, never in PR #381; option A preferred
+  once tests prove it; a launch blocker of the live analysis (§5, §12).
+- **F-G:** the banded nebula accepted **in principle**, as a performance correction and not a redesign. Its **final**
+  approval waits on: the final image proven identical; LA-VIS-01's contracts unbroken; the T-10 / VPORT exceptions kept
+  minimal with a counter-test (they are: one zero-delay release, set aside only when it occurs exactly once, with three
+  counter-tests, and a pin moved by one blob); no audio freeze or drop on the first draw (run 8: none); and the first
+  nebula appearance's delay documented and reviewed visually by the Product Owner (§11: about 3 s after the dust and the
+  stars). No frozen contract is weakened or widened.
+- **Copy Gate:** one review table of the 36 rows, Arabic and English with each row's ID, the decisions needing a choice
+  marked (D1 – D6): `R3/S8B-06_CP3_COPY_GATE_REVIEW_TABLE.md`. **No text is approved by this record.**
+- **P-A / P-B:** no paid TTS is authorized. CP2's local tone stays for now, unchanged. The F-01, T-5 and T-1 plan with its
+  cost and assets is kept for a separate decision (`R1/…_AUDIO_PLAN.md` §3). No production audio file is claimed
+  installed.
+- **D-CP3-1: accepted for now.** The call entry shows on supporting devices, with a safe, clear refusal (LC-17) while the
+  gate is closed; no gate is opened.
+- **D-CP3-2: approved.** A turn cut before its reply arrived stays visible as said and unanswered; no reply is invented or
+  repeated.
+- **CI and final review:** the affected tests and CI on the last commit; the six Jest failures proven on `main` with the
+  same cause (§9.3).
+
+**Still the Product Owner's** (none taken by this record): the 36 Copy Gate rows and D1 – D6, P-A and P-B, F-G's final approval, and the merge, only on «ادمج». The list as it was put at PO Review R1 follows, for the trail:
 1. **R3, the finished-call record (J7):** memo `R1/S8B-06_CP3_R3_CALL_HISTORY_DECISION.md`.
    - **A (recommended):** migration `0193`, a service-role read of the Session's ended calls, plus an additive `calls`
      field on the history page. The record is then drawn from the server's `started_at` / `ended_at` / `end_reason`.
