@@ -21,14 +21,28 @@
  *   H1     lifecycle: five open / end cycles, the engine stopped after each; mute; describe after stop.
  *   P0     start WITHOUT microphone permission: the engine refuses and the call is ended (no silent call).
  *
+ * S8B-06 CP2 adds the native call lifecycle: the PRODUCTION LiveCallController with the real platform call (Android
+ * Core-Telecom + the phoneCall foreground service + the CallStyle notification) and the real engine, against the same gateway.
+ *   CALL   opens one call and leaves it open; the host then drives it (the screen lock, the notification's End, a cellular
+ *          call, the gateway's /fv/drop, /fv/end, /fv/ending and /fv/max-length, stopping the gateway). JS timers are paused
+ *          in the background, so nothing here waits on one while the screen is locked: the call reports when it ends.
+ *   END    the person's End.   SPK / EAR / BT   a route through the platform.   RES   ask the platform to resume a held call.
+ *   2ND    a second call while one is open: refused before any socket or microphone (ALREADY_IN_CALL).
+ *   CP0    a call WITHOUT microphone permission: refused before any socket (the gateway sees no connection).
+ *   RPT    posts the last call's report again (after the gateway was stopped and restarted).
+ * A call's report is its content-free trace (phases, platform events, states, cue events; counts for audio events),
+ * its outcome, the client's counters and the gateway's summary.
+ *
  * Results are shown (testID `s806-log`) and posted to the gateway as numbers only: no audio, no samples, no token.
  */
 import { useState } from 'react';
 import { PermissionsAndroid, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
+import { LiveCallController, LiveCallStartError, type LiveCallControllerEvent, type LiveCallOutcome } from '../live-call-controller';
+import { liveCallSurfaceCopy, type LiveCallSurfaceCopy } from '../live-call-copy';
 import { LiveCallSession, type LiveCallSessionEvent } from '../live-call-session';
-import { loadVoiceCallEngine, type EngineBargeIn, type EngineStartOptions } from '../voice-call-engine';
+import { loadCallPlatform, loadVoiceCallEngine, type CallRoute, type EngineBargeIn, type EngineStartOptions } from '../voice-call-engine';
 
 const GATEWAY = 'http://127.0.0.1:8806';
 const SOCKET_URL = 'ws://127.0.0.1:8806/voice/calls/connect';
@@ -454,6 +468,186 @@ async function noPermission(log: Log) {
   log(`P0: granted=${String(granted)} startFailed=${String(result.startFailed)} ended=${String(result.ended)} uplink=${String(summary.call?.uplinkPackets)}`);
 }
 
+// ------------------------------------------------------------------ CP2: the native call lifecycle
+
+/** The proof's own copy: the PROPOSED rows (CP2 approves none), English so the notification is readable in the evidence. */
+const PROOF_COPY: LiveCallSurfaceCopy = liveCallSurfaceCopy('en');
+const COPY_KEY = new Map(Object.entries(PROOF_COPY).map(([key, text]) => [text, key]));
+
+/** Content-free: the event's type and codes only; audio events are counted, never kept. */
+function traceLine(event: LiveCallControllerEvent): string | null {
+  switch (event.type) {
+    case 'phase':
+      return `phase:${event.phase}`;
+    case 'held':
+      return `held:${String(event.held)}`;
+    case 'reconnecting':
+      return `reconnecting:${String(event.reconnecting)}`;
+    case 'warning':
+      return `warning:${event.kind}:${event.phase}`;
+    case 'notification':
+      return `notification:${COPY_KEY.get(event.text) ?? 'UNKNOWN_TEXT'}`;
+    case 'ended': {
+      const o = event.outcome;
+      return `ended:${o.origin}:${String(o.platformSource)}:${String(o.reason)}:${String(o.serverConfirmed)}`;
+    }
+    case 'platform': {
+      const e = event.event;
+      if (e.type === 'ENDED') return `platform:ENDED:${e.source}:${String(e.detail)}`;
+      if (e.type === 'ENDPOINT') return `platform:ENDPOINT:${e.endpoint.type}`;
+      if (e.type === 'ENDPOINT_REQUEST') return `platform:ENDPOINT_REQUEST:${e.endpoint.type}:${e.result}`;
+      if (e.type === 'ENDPOINTS') return `platform:ENDPOINTS:${e.endpoints.map((x) => x.type).join('|')}`;
+      if (e.type === 'SYSTEM_MUTE') return `platform:SYSTEM_MUTE:${String(e.muted)}`;
+      return `platform:${e.type}:${e.state}`;
+    }
+    case 'session': {
+      const s = event.event;
+      if (s.source === 'client') {
+        const e = s.event;
+        if (e.type === 'state') return `state:${e.message.state}:epoch${String(e.message.epoch)}:${e.resumed ? 'resumed' : 'first'}`;
+        if (e.type === 'connection') return `connection:${e.phase}`;
+        if (e.type === 'callEnding') return `callEnding:${e.endsInMs}`;
+        if (e.type === 'ended') return `serverEnded:${e.reason}`;
+        return null;
+      }
+      if (s.source === 'session') return `session:${s.event.type}`;
+      const e = s.event;
+      if (e.type === 'engineState') return `engine:${e.state}:${String(e.reason)}`;
+      if (e.type === 'hold') return `engine:hold:${e.cause}`;
+      if (e.type === 'resume') return 'engine:resume';
+      if (e.type === 'cue') return `cue:${e.id}:${e.event}:${e.forced ? 'forced' : 'gap'}:${String(e.source)}`;
+      if (e.type === 'focus') return `engine:focus:${e.state}`;
+      if (e.type === 'fault') return `engine:fault:${e.code}`;
+      if (e.type === 'route') return `engine:route:${e.change}`;
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+interface LifecycleCall {
+  readonly label: string;
+  readonly controller: LiveCallController;
+  readonly openedAt: number;
+  readonly trace: string[];
+  readonly counts: Record<string, number>;
+  report: Record<string, unknown> | null;
+}
+
+const lifecycle2: { live: LifecycleCall | null; last: LifecycleCall | null } = { live: null, last: null };
+
+const COUNTED = new Set(['uplink', 'playout', 'tick', 'levels', 'replyAdmission', 'speech', 'bargeIn', 'bargeInTrace', 'replyDrained']);
+
+function newController(log: Log, label: string, onEnded: (call: LifecycleCall, outcome: LiveCallOutcome) => void): LifecycleCall | string {
+  const platform = loadCallPlatform();
+  const engine = loadVoiceCallEngine();
+  if (!platform || !engine) return 'NOT_LINKED';
+  const trace: string[] = [];
+  const counts: Record<string, number> = {};
+  const openedAt = clock();
+  const holder: { call: LifecycleCall | null } = { call: null };
+  const controller = new LiveCallController({
+    platform,
+    engine,
+    copy: PROOF_COPY,
+    engineOptions: { route: 'EARPIECE', capture: 'VOICE_COMMUNICATION', aec: true, bargeIn: 'STOP' },
+    session: { url: SOCKET_URL, accessToken: () => SYNTHETIC_TOKEN, callId: uuid(), sessionId: uuid(), clientInstanceId: uuid(), insecureLoopbackForProof: true },
+    onEvent: (event) => {
+      if (event.type === 'session' && event.event.source === 'engine' && COUNTED.has(event.event.event.type)) {
+        const t = event.event.event.type;
+        counts[t] = (counts[t] ?? 0) + 1;
+        return;
+      }
+      const line = traceLine(event);
+      if (line === null) return;
+      trace.push(`${Math.round(clock() - openedAt)} ${line}`);
+      log(`${label} ${line}`);
+      if (event.type === 'ended' && holder.call) onEnded(holder.call, event.outcome);
+    },
+  });
+  holder.call = { label, controller, openedAt, trace, counts, report: null };
+  return holder.call;
+}
+
+async function postReport(log: Log, call: LifecycleCall) {
+  for (let i = 0; i < 30; i += 1) {
+    try {
+      const summary = (await gateway('/fv/summary', 'GET')) as { call: Record<string, unknown> | null };
+      const body = JSON.stringify({ test: call.label, ...call.report, gateway: summary.call });
+      await fetch(`${GATEWAY}/fv/report`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      log(`${call.label}: report posted`);
+      return;
+    } catch {
+      await wait(2000);
+    }
+  }
+  log(`${call.label}: report NOT posted (gateway unreachable); press RPT`);
+}
+
+async function openLifecycleCall(log: Log) {
+  if (lifecycle2.live) {
+    log('a call is already open');
+    return;
+  }
+  await gateway('/fv/reset');
+  const call = newController(log, `C-${Date.now() % 100000}`, (c, outcome) => {
+    c.report = {
+      device: device(), outcome, trace: c.trace, counts: c.counts, ignoredLate: c.controller.ignoredLate, warningPhase: c.controller.warning.phase,
+      counters: c.controller.session?.client.counters ?? null, engineAfter: loadVoiceCallEngine()?.describe() ?? null,
+      durationMs: Math.round(clock() - c.openedAt), capabilityAfter: loadCallPlatform()?.capability() ?? null,
+    };
+    if (lifecycle2.live === c) lifecycle2.live = null;
+    lifecycle2.last = c;
+    void postReport(log, c);
+  });
+  if (typeof call === 'string') {
+    log(call);
+    return;
+  }
+  lifecycle2.live = call;
+  try {
+    await call.controller.start();
+    log(`${call.label} started (phase ${call.controller.phase})`);
+  } catch (error) {
+    if (lifecycle2.live === call) lifecycle2.live = null;
+    log(`${call.label} start refused: ${error instanceof LiveCallStartError ? error.code : String(error)}`);
+  }
+}
+
+/** A refused start: the outcome, and whether the gateway saw a new call (it must not). */
+async function refusedStart(log: Log, test: string) {
+  const before = (await gateway('/fv/summary', 'GET')) as { call: Record<string, unknown> | null };
+  const call = newController(log, test, () => undefined);
+  if (typeof call === 'string') {
+    log(call);
+    return;
+  }
+  let code: string | null = null;
+  try {
+    await call.controller.start();
+  } catch (error) {
+    code = error instanceof LiveCallStartError ? error.code : String(error);
+  }
+  await wait(1500);
+  const after = (await gateway('/fv/summary', 'GET')) as { call: Record<string, unknown> | null };
+  const result = {
+    device: device(), refusedWith: code, phase: call.controller.phase, outcome: call.controller.outcome, sessionCreated: call.controller.session !== null,
+    trace: call.trace, gatewayCallBefore: before.call?.callId ?? null, gatewayCallAfter: after.call?.callId ?? null,
+    newGatewayCall: (after.call?.callId ?? null) !== (before.call?.callId ?? null), liveCallStillOpen: lifecycle2.live?.controller.phase ?? null,
+    capability: loadCallPlatform()?.capability() ?? null,
+  };
+  await post(test, result);
+  log(`${test}: refused=${String(code)} session=${String(result.sessionCreated)} newGatewayCall=${String(result.newGatewayCall)} live=${String(result.liveCallStillOpen)}`);
+}
+
+function route(log: Log, to: CallRoute) {
+  const requested = loadCallPlatform()?.requestRoute(to) ?? false;
+  const live = lifecycle2.live;
+  if (live) live.trace.push(`${Math.round(clock() - live.openedAt)} request:${to}:${String(requested)}`);
+  log(`route ${to} requested=${String(requested)}`);
+}
+
 // ------------------------------------------------------------------ screen
 
 const SPEAKER_ON: EngineStartOptions = { route: 'SPEAKER', capture: 'VOICE_COMMUNICATION', aec: true, bargeIn: 'STOP' };
@@ -463,7 +657,7 @@ const proof = { busy: false };
 
 export function S806AudioProofRoot() {
   const [cueText, setCueText] = useState<string | null>(null);
-  const [lines, setLines] = useState<string[]>([`S8B-06 CP1 proof — ${Platform.OS} ${String(Platform.Version)}`]);
+  const [lines, setLines] = useState<string[]>([`S8B-06 CP1/CP2 proof — ${Platform.OS} ${String(Platform.Version)}`]);
   const log: Log = (line) => setLines((current) => [...current.slice(-80), line]);
 
   const run = (label: string, task: () => Promise<void>) => async () => {
@@ -504,6 +698,18 @@ export function S806AudioProofRoot() {
     ['L1', () => lateAndReordered(log)],
     ['R1', () => resume(log)],
     ['H1', () => lifecycle(log)],
+    ['CALL', () => openLifecycleCall(log)],
+    ['2ND', () => refusedStart(log, 'C2-second-call')],
+    ['CP0', () => refusedStart(log, 'C0-no-permission')],
+  ];
+  // The open call's controls are never blocked by a running task (the call stays open between them).
+  const live: [string, () => void][] = [
+    ['END', () => (lifecycle2.live ? lifecycle2.live.controller.end() : log('no open call'))],
+    ['SPK', () => route(log, 'SPEAKER')],
+    ['EAR', () => route(log, 'EARPIECE')],
+    ['BT', () => route(log, 'BLUETOOTH')],
+    ['RES', () => log(`resume requested=${String(loadCallPlatform()?.resumeCall() ?? false)}`)],
+    ['RPT', () => (lifecycle2.last ? void postReport(log, lifecycle2.last) : log('no ended call'))],
   ];
 
   return (
@@ -517,6 +723,11 @@ export function S806AudioProofRoot() {
       <View style={styles.grid}>
         {buttons.map(([label, task]) => (
           <Pressable key={label} testID={`s806-${label.split(' ')[0]!.toLowerCase()}`} accessibilityRole="button" onPress={run(label, task)} style={styles.button}>
+            <Text style={styles.buttonText}>{label}</Text>
+          </Pressable>
+        ))}
+        {live.map(([label, action]) => (
+          <Pressable key={label} testID={`s806-${label.toLowerCase()}`} accessibilityRole="button" onPress={action} style={[styles.button, styles.live]}>
             <Text style={styles.buttonText}>{label}</Text>
           </Pressable>
         ))}
@@ -536,6 +747,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#ffffff', paddingTop: 48, paddingHorizontal: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   button: { width: '23%', paddingVertical: 14, backgroundColor: '#1f3b57', borderRadius: 8, alignItems: 'center' },
+  live: { backgroundColor: '#5a2a1f' },
   buttonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
   log: { flex: 1, marginTop: 12 },
   cue: { fontSize: 34, fontWeight: '700', color: '#b00020', textAlign: 'center', paddingVertical: 16 },

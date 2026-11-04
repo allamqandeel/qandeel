@@ -36,6 +36,7 @@
         }
       ],
       "./plugins/with-qandeel-voice-backup",
+      "./plugins/with-qandeel-voice-call",
       [
         "expo-audio",
         {

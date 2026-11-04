@@ -229,11 +229,27 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
   // call text: no component outside its device proof, and the protocol named inside that layer only.
   const call = mobile.filter((p) => p.includes('voice-call/') && !/\/__(?:validation|tests|fixtures)__\//u.test(p));
   assert.ok(call.every((p) => p.endsWith('.ts')), 'no call surface on the phone');
+  // RE-ANCHORED by S8B-06 CP2 (was: no call copy anywhere on the phone, CP1's boundary): CP2's order puts the native call
+  // surface's words on the phone (the CallStyle notification and its T-5 / T-1 lines, the CallKit name). They live in ONE
+  // file; every row there is this record's row character for character and still PROPOSED (no Copy Gate approval); every
+  // other file still carries no call copy and no call text.
+  const COPY_FILE = 'apps/mobile/src/voice-call/live-call-copy.ts';
+  const gateRows = new Map(rows.map((row) => row.split('|').map((cell) => cell.trim())).map((cells) => [cells[1], cells]));
+  const copyRows = [...read(COPY_FILE).matchAll(/\{ id: '(LCE?-\d{2})', status: '(\w+)', ar: '([^']*)', en: '([^']*)' \}/gu)];
+  assert.ok(copyRows.length > 0, 'the phone carries the call rows in one table');
+  assert.equal(copyRows.length, (read(COPY_FILE).match(/\bid: '/gu) ?? []).length, 'every row of the table is checked');
+  for (const [, id, status, ar, en] of copyRows) {
+    const gate = gateRows.get(id);
+    assert.ok(gate, `${id} is a row of the unified gate`);
+    assert.equal(status, 'PROPOSED', `${id} is still PROPOSED on the phone`);
+    assert.equal(ar, gate[3], `${id} Arabic is the gate's, character for character`);
+    assert.equal(en, gate[4], `${id} English is the gate's, character for character`);
+  }
   for (const path of mobile) {
-    assert.doesNotMatch(read(path), /\bLCE?-\d{2}\b/u, `${path} carries no call copy`);
+    if (path !== COPY_FILE) assert.doesNotMatch(read(path), /\bLCE?-\d{2}\b/u, `${path} carries no call copy`);
     if (!call.includes(path)) assert.doesNotMatch(read(path), /qandeel\.live-call\.v1/u, `${path} names no call protocol`);
   }
-  for (const path of call) assert.doesNotMatch(read(path), /[؀-ۿ]/u, `${path} carries no call text`);
+  for (const path of call) if (path !== COPY_FILE) assert.doesNotMatch(read(path), /[؀-ۿ]/u, `${path} carries no call text`);
 });
 
 // S8B-05 CP2 (CA-05-02 §2.3, acceptance #27): an interrupted reply is never treated as complete. Today no post-response

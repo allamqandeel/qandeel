@@ -186,6 +186,9 @@ test('App language: the system’s own setting — no in-app switch, no stored l
   // instead of `false`, which would strip the microphone from the whole app.
   assert.deepEqual(app.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
     './plugins/with-qandeel-voice-backup',
+    // S8B-06 CP2 RE-ANCHOR (A6 06-CP2): the native call's own plugin (typed manifest + Info.plist mods only, no dangerous
+    // mod; pinned by tests/s8b-06-native-call-lifecycle-contract.test.mjs and the native Voice Note gate), before expo-audio.
+    './plugins/with-qandeel-voice-call',
     ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
     ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]], 'no new native plugin and no new Level-4 step');
   // The one locale authority is unchanged: the device is still read once, by the same call.

@@ -33,6 +33,13 @@
  * POST /fv/durable-lag?ms=  POST /fv/playout-ack-delay?ms=  POST /fv/end  GET /fv/summary  GET /fv/levels?from=&to=
  *   POST /fv/gate?mode=none|prbs|duck|silent  GET /fv/echo?turn=&cands=
  * POST /fv/report (the proof app's own content-free report)  POST /fv/reset
+ *
+ * S8B-06 CP2 — the server's 60-minute rule (D-05-06), as the frozen connection does it (live-call.connection.ts
+ * scheduleEnd): STATE.endsAt = startedAt + the maximum length; CALL_ENDING { endsInMs: 300000 | 60000 } sent on EACH
+ * connection whose call is ACTIVE when that instant arrives (a notice whose instant passed during an outage is not re-sent);
+ * at endsAt the server's own end, STATE ENDED SERVER_ENDED, close 1000. The maximum length is a proof knob so the warning
+ * is proven in minutes: POST /fv/max-length?ms= (default 3600000; kept across /fv/reset until set again). POST /fv/ending?ms=
+ * sends one CALL_ENDING now.
  */
 'use strict';
 const http = require('node:http');
@@ -359,7 +366,8 @@ function createGateway(options = {}) {
   };
 
   // gate: the reply's reference pattern for the echo analysis (echo-analysis.cjs): none | prbs | silent.
-  const knobs = { durableLagMs: 0, playoutAckDelayMs: 0, gate: 'none' };
+  const knobs = { durableLagMs: 0, playoutAckDelayMs: 0, gate: 'none', maxLengthMs: 3_600_000 };
+  const NOTICES_MS = [300_000, 60_000];
   /** callId → call */
   const calls = new Map();
   let current = null; // the newest connection
@@ -375,8 +383,8 @@ function createGateway(options = {}) {
       uplink: [], // { captureMs, seq, epoch, bytes, levelDb, lbrr, config, receivedAt }
       gaps: [], // { kind, fromMs, toMs }
       resendDropped: 0, violations: [], decodeErrors: 0, dtxPackets: 0, nonUplinkShape: 0,
-      replies: new Map(), nextTurn: 1,
-      epochsSeen: [1], helloCount: 0, resumeCount: 0, controlsAfterResume: [],
+      replies: new Map(), nextTurn: 1, maxLengthMs: knobs.maxLengthMs, notices: [],
+      epochsSeen: [1], helloCount: 0, resumeCount: 0, controlsAfterResume: [], heartbeats: 0, silenceCloses: 0,
     };
   }
 
@@ -384,7 +392,7 @@ function createGateway(options = {}) {
     return {
       type: 'STATE', callId: call.callId, state: call.state, epoch: call.state === 'ENDED' ? null : call.epoch, startedAt: call.startedAt,
       resumeFromCaptureMs: call.state === 'ACTIVE' ? call.expectedCaptureMs : null, lastMsgId: call.lastMsgId,
-      endsAt: call.startedAt ? new Date(Date.parse(call.startedAt) + 3_600_000).toISOString() : null, endReason: call.endReason,
+      endsAt: call.startedAt ? new Date(Date.parse(call.startedAt) + call.maxLengthMs).toISOString() : null, endReason: call.endReason,
       heartbeatMs: LIMITS.heartbeatIntervalMs,
     };
   }
@@ -397,6 +405,38 @@ function createGateway(options = {}) {
     if (call.graceTimer) clearTimeout(call.graceTimer);
     record('call_ended', { reason });
     say(`call ended ${reason}`);
+  }
+
+  /** The frozen connection's scheduleEnd, on this connection: the notices still ahead, then the server's own end. */
+  function armEnding(conn, call) {
+    if (call.state !== 'ACTIVE' || !call.startedAt) return;
+    const endsAt = Date.parse(call.startedAt) + call.maxLengthMs;
+    const now = Date.now();
+    conn.timers = conn.timers ?? [];
+    for (const notice of NOTICES_MS) {
+      const at = endsAt - notice - now;
+      if (at < 0) continue;
+      conn.timers.push(setTimeout(() => {
+        if (conn.closed || call.state !== 'ACTIVE') return;
+        call.notices.push({ endsInMs: notice, epoch: conn.epoch, at: Date.now() });
+        record('call_ending', { endsInMs: notice, epoch: conn.epoch });
+        conn.wire.text({ type: 'CALL_ENDING', endsInMs: notice });
+      }, at));
+    }
+    conn.timers.push(setTimeout(() => {
+      if (conn.closed || call.state !== 'ACTIVE') return;
+      endCall(call, 'SERVER_ENDED');
+      conn.wire.text(stateMessage(call));
+      conn.closed = true;
+      clearInterval(conn.silence);
+      conn.wire.close(CLOSE.NORMAL);
+    }, Math.max(0, endsAt - now)));
+    for (const t of conn.timers) t.unref?.();
+  }
+
+  function disarm(conn) {
+    for (const t of conn.timers ?? []) clearTimeout(t);
+    conn.timers = [];
   }
 
   function suspend(call) {
@@ -428,8 +468,10 @@ function createGateway(options = {}) {
       if (conn.closed) return;
       conn.closed = true;
       clearInterval(conn.silence);
+      disarm(conn);
       if (code !== null) conn.wire.close(code);
       const call = conn.call;
+      if (call && code === CLOSE.SILENCE) call.silenceCloses += 1;
       if (call && call.conn === conn) {
         call.conn = null;
         suspend(call);
@@ -488,6 +530,7 @@ function createGateway(options = {}) {
     if (call.pendingControlCheck) call.controlsAfterResume.push(m.type === 'HEARTBEAT' ? null : m.type);
     switch (m.type) {
       case 'HEARTBEAT':
+        call.heartbeats += 1;
         return;
       case 'TOKEN_REFRESH':
         if (m.accessToken !== SYNTHETIC_TOKEN) return refuse('TOKEN_INVALID');
@@ -576,6 +619,7 @@ function createGateway(options = {}) {
     record('resumed', { epoch: call.epoch, resumeFromCaptureMs: call.resumeFromSent, lastMsgId: call.lastMsgId });
     say(`call resumed (epoch ${call.epoch}, resumeFrom ${call.resumeFromSent})`);
     conn.wire.text(stateMessage(call));
+    armEnding(conn, call);
   }
 
   function audio(conn, bytes, { violation }) {
@@ -597,6 +641,7 @@ function createGateway(options = {}) {
       record('call_active', {});
       say('call ACTIVE');
       conn.wire.text(stateMessage(call));
+      armEnding(conn, call);
     }
     if (conn.lastSeq !== null) {
       if (frame.seq <= conn.lastSeq) {
@@ -780,6 +825,8 @@ function createGateway(options = {}) {
     }));
     return {
       callId: call.callId, state: call.state, endReason: call.endReason, epochsSeen: call.epochsSeen, resumes: call.resumeCount,
+      heartbeats: call.heartbeats, silenceCloses: call.silenceCloses,
+      maxLengthMs: call.maxLengthMs, startedAt: call.startedAt, notices: call.notices, muted: call.muted,
       uplinkPackets: up.length, firstCaptureMs: up[0]?.captureMs ?? null, lastCaptureMs: up.at(-1)?.captureMs ?? null,
       expectedCaptureMs: call.expectedCaptureMs, captureBreaks, seqBreaks, gaps: call.gaps, resendDropped: call.resendDropped,
       violations: call.violations, decodeErrors: call.decodeErrors, dtxPackets: call.dtxPackets,
@@ -837,6 +884,21 @@ function createGateway(options = {}) {
         call.conn.wire.close(CLOSE.NORMAL);
       }
       return json(200, { ended: true });
+    }
+    if (req.method === 'POST' && url.pathname === '/fv/max-length') {
+      const ms = num('ms', 3_600_000);
+      if (!Number.isInteger(ms) || ms < 60_000 || ms > 3_600_000) return json(400, { error: 'BAD_MAX_LENGTH' });
+      knobs.maxLengthMs = ms;
+      return json(200, knobs);
+    }
+    if (req.method === 'POST' && url.pathname === '/fv/ending') {
+      const ms = num('ms', 60_000);
+      if (!NOTICES_MS.includes(ms)) return json(400, { error: 'BAD_NOTICE' });
+      if (!call?.conn || call.conn.closed || call.state !== 'ACTIVE') return json(409, { error: 'NOT_ACTIVE' });
+      call.notices.push({ endsInMs: ms, epoch: call.conn.epoch, at: Date.now(), forced: true });
+      record('call_ending', { endsInMs: ms, epoch: call.conn.epoch, forced: true });
+      call.conn.wire.text({ type: 'CALL_ENDING', endsInMs: ms });
+      return json(200, { sent: ms });
     }
     if (req.method === 'POST' && url.pathname === '/fv/gate') {
       const mode = url.searchParams.get('mode');

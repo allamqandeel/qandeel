@@ -43,9 +43,21 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   playout   the heard position comes from `AudioTrack.getTimestamp` (frames PRESENTED at a monotonic time), never from
  *             what was queued or written; a missing timestamp falls back to the mixer position minus a pessimistic latency.
  *
- * It owns no transport, no protocol and no call lifecycle (no Telecom, no foreground service — that is S8B-06 CP2): the JS
- * client sends what it emits. It stores nothing and logs nothing; no audio leaves it except the uplink packets handed to
- * the client. Level traces (dBFS numbers only, never samples) are produced only when the proof build asks for them.
+ * It owns no transport, no protocol and no call lifecycle: the JS client sends what it emits, and the call's platform
+ * lifecycle (Core-Telecom, the foreground service, the notification) is [LiveCallRegistry]'s. It stores nothing and logs
+ * nothing; no audio leaves it except the uplink packets handed to the client. Level traces (dBFS numbers only, never
+ * samples) are produced only when the proof build asks for them.
+ *
+ * S8B-06 CP2 adds, without rebuilding any of the above:
+ *   owner     [AudioOwner.TELECOM] — the production call. Telecom owns the audio mode, the route (its endpoints) and the
+ *             audio focus of a Telecom call, so the engine sets NONE of them: no `setMode`, no `setCommunicationDevice`,
+ *             no focus request; it only reports device changes. [AudioOwner.SELF] keeps CP1's own session (the CP1 proof).
+ *   hold      [hold] releases the microphone (`AudioRecord.stop`) and pauses the speaker: nothing is captured, encoded or
+ *             sent while another call has the audio, and the reply then playing is struck at its PRESENTED position (never
+ *             confirmed beyond it; no BARGE_IN — the person did not interrupt). [resume] starts both again; the capture
+ *             clock jumps by the held time, so the client brackets the hole with MUTE / UNMUTE (a MUTED gap).
+ *   cue       [playCue] — the 60-minute warning ([CuePlayer]) in the same track, at the first suitable silence, HEARD only
+ *             once the platform presented its last frame.
  */
 class CallAudioEngine(
   private val context: Context,
@@ -65,6 +77,8 @@ class CallAudioEngine(
     val rawMedia: Boolean get() = this != VOICE_COMMUNICATION && this != UNPROCESSED_PROOF
   }
   enum class BargeInAction { STOP, REPORT_ONLY }
+  /** Who owns the audio mode, the route and the focus: the engine itself (CP1) or Telecom (the production call, CP2). */
+  enum class AudioOwner { SELF, TELECOM }
 
   data class EngineOptions(
     val route: Route,
@@ -73,6 +87,7 @@ class CallAudioEngine(
     val bargeIn: BargeInAction,
     val vad: VadConfig,
     val trace: Boolean,
+    val owner: AudioOwner = AudioOwner.SELF,
   )
 
   interface EngineSink {
@@ -87,6 +102,18 @@ class CallAudioEngine(
     fun fault(code: String)
     fun focus(state: String)
     fun route(change: String, devices: List<String>)
+    /** The microphone and the speaker stopped at [captureMs] (the first capture instant not sent). */
+    fun held(captureMs: Long, cause: String)
+    /** They run again; [captureMs] is the first capture instant sent after the hole. */
+    fun resumed(captureMs: Long)
+    /** A warning cue's progress: QUEUED, STARTED, HEARD (presented) or DROPPED. */
+    fun cue(event: String, id: String, forced: Boolean, source: String?)
+    /**
+     * The engine's own clock, every [TICK_MS] while it runs — held included. React Native pauses JS timers while the app
+     * is in the background (a locked screen, another call in front), so the client's heartbeat and reconnect timers are
+     * paced by this tick too (`native-paced-timers.ts`); it carries no audio and no content.
+     */
+    fun tick(nowMs: Long)
   }
 
   private class Pending(val callTurnIndex: Long, val chunkSeq: Long, val offsetMs: Long, val packet: ByteArray)
@@ -120,6 +147,23 @@ class CallAudioEngine(
 
   @Volatile private var muted = false
   @Volatile private var captureMsNow = 0L
+  /** The capture clock's next frame index (the capture thread writes it; [hold] / [resume] read it). */
+  @Volatile private var nextFrameIndex = 0L
+  @Volatile private var held = false
+  /** Set by [resume] for the capture thread: the frame index the clock continues at. */
+  @Volatile private var resumeFrameIndex = -1L
+  private val holdMonitor = Object()
+  private var heldAtNs = 0L
+  @Volatile private var lastSpeechNs = Long.MIN_VALUE
+  @Volatile private var lastReplyWriteNs = Long.MIN_VALUE
+
+  // Under [lock]: the warning cue.
+  private val cuePlayer = CuePlayer()
+  private val cueSchedule = CueSchedule()
+  private val cueBuffer = ShortArray(DownlinkOpusDecoder.FRAME_SAMPLES)
+  private val recentCueWrites = ArrayDeque<Written>()
+  private class CueBooking(val id: String, val endFrame: Long, val forced: Boolean)
+  private var cueBooking: CueBooking? = null
 
   // Under [lock].
   private var framesWritten = 0L
@@ -154,13 +198,19 @@ class CallAudioEngine(
         sink.focus("LOSS")
         Thread { stop("FOCUS_LOSS") }.start()
       }
-      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+        // S8B-06 CP2: another call (or app) has the audio for a while: a real hold, the microphone released.
         sink.focus("LOSS_TRANSIENT")
+        Thread { hold("FOCUS_LOSS_TRANSIENT") }.start()
+      }
+      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+        sink.focus("LOSS_TRANSIENT_CAN_DUCK")
         synchronized(lock) { focusFaded = true; applyVolume() }
       }
       AudioManager.AUDIOFOCUS_GAIN -> {
         sink.focus("GAIN")
         synchronized(lock) { focusFaded = false; applyVolume() }
+        if (held) Thread { resume() }.start()
       }
     }
   }
@@ -191,15 +241,136 @@ class CallAudioEngine(
   /** Stops and releases everything, restores the audio mode, the route and the focus. Idempotent; never throws. */
   fun stop(reason: String) {
     if (!running.compareAndSet(true, false)) return
+    synchronized(holdMonitor) { holdMonitor.notifyAll() }
+    val dropped = synchronized(lock) {
+      listOfNotNull(cuePlayer.abortPlaying(), cuePlayer.dropPending()) + cueSchedule.clear()
+    }
     val self = Thread.currentThread()
     for (thread in listOf(captureThread, playbackThread)) {
       if (thread != null && thread !== self) try { thread.join(1000) } catch (_: InterruptedException) {}
     }
     releaseAll()
+    for (id in dropped) sink.cue("DROPPED", id, false, null)
     sink.state("STOPPED", reason)
   }
 
   fun isRunning(): Boolean = running.get()
+
+  fun isHeld(): Boolean = held
+
+  /**
+   * S8B-06 CP2 — another call has the audio. The microphone is released and the speaker paused, at once; the reply then
+   * playing is struck at its PRESENTED position (its final heard mark is reported, nothing later ever is), and reply
+   * packets are refused until [resume]. Idempotent. Returns false when not running or already held.
+   */
+  fun hold(cause: String): Boolean {
+    val final: ReplyLedger.Mark?
+    val presentedFrame: Long
+    val heldAt: Long
+    val droppedCue: String?
+    synchronized(lock) {
+      if (!running.get() || held) return false
+      held = true
+      heldAtNs = System.nanoTime()
+      heldAt = nextFrameIndex * ReplyLedger.PACKET_MS
+      faded = true
+      applyVolume()
+      val output = track
+      val stamp = AudioTimestamp()
+      val hasStamp = output?.getTimestamp(stamp) ?: false
+      val head = (output?.playbackHeadPosition?.toLong() ?: 0L) and 0xffffffffL
+      presentedFrame = if (hasStamp) stamp.framePosition else maxOf(0L, head - trackBufferFrames - FALLBACK_HAL_LATENCY_FRAMES)
+      final = ledger.cut(ledger.currentTurn, presentedFrame)
+      pending.clear()
+      recentWrites.clear()
+      recentCueWrites.clear()
+      restorePending = true
+      droppedCue = cuePlayer.abortPlaying(requeue = true)
+      cueBooking = null
+    }
+    final?.let { sink.playout(it, presentedFrame, "HOLD") }
+    droppedCue?.let { sink.cue("REQUEUED", it, false, null) }
+    try { record?.stop() } catch (_: Throwable) {}
+    try { track?.pause() } catch (_: Throwable) {}
+    sink.held(heldAt, cause)
+    return true
+  }
+
+  /**
+   * The audio is the call's again: the microphone and the speaker start, and the capture clock continues after the held
+   * time (rounded up to whole 20 ms frames, at least one), which the client brackets with UNMUTE. Returns false when not
+   * held, or when the microphone cannot start again (then the engine stops with MIC_RESUME_FAILED).
+   */
+  fun resume(): Boolean {
+    synchronized(lock) { if (!running.get() || !held) return false }
+    val source = record
+    try {
+      source?.startRecording()
+    } catch (_: Throwable) {}
+    if (source == null || source.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+      sink.fault("MIC_RESUME_FAILED")
+      Thread { stop("MIC_RESUME_FAILED") }.start()
+      return false
+    }
+    try { track?.play() } catch (_: Throwable) {}
+    val heldFrames = maxOf(1L, (System.nanoTime() - heldAtNs + FRAME_NS - 1) / FRAME_NS)
+    val continueAt = nextFrameIndex + heldFrames
+    // The event goes out BEFORE the capture thread produces the first packet after the hole: UNMUTE precedes it.
+    sink.resumed(continueAt * ReplyLedger.PACKET_MS)
+    synchronized(lock) { held = false }
+    synchronized(holdMonitor) {
+      resumeFrameIndex = continueAt
+      holdMonitor.notifyAll()
+    }
+    return true
+  }
+
+  /**
+   * S8B-06 CP2 — queues a warning cue ([CuePlayer]): [pcm] at 24 kHz, or the local tone for [kind] when null. Returns
+   * QUEUED, REPEATED (this id was already asked for) or NOT_RUNNING.
+   */
+  fun playCue(id: String, kind: String, forceAfterMs: Long, pcm: ShortArray? = null): String {
+    val (result, superseded) = synchronized(lock) {
+      if (!running.get()) return "NOT_RUNNING"
+      requestCueLocked(id, kind, forceAfterMs, pcm)
+    }
+    superseded?.let { sink.cue("SUPERSEDED", it, false, null) }
+    if (result == "QUEUED") sink.cue("QUEUED", id, false, null)
+    return result
+  }
+
+  /**
+   * S8B-06 CP2 — the LOCAL trigger of a warning cue: it is queued [dueInMs] from now by the engine's own playback thread,
+   * which keeps running with the screen locked or the app in the background (where the JS timers do not). A later call
+   * for the same id moves its time while it has not fired; once fired (or played through [playCue]) the id is REPEATED.
+   * At its time the cue is queued exactly as [playCue] queues it and DUE is reported (the module updates the call's
+   * notification from it, natively). Returns SCHEDULED, REPEATED, SUPERSEDED or NOT_RUNNING.
+   */
+  fun scheduleCue(id: String, kind: String, dueInMs: Long, forceAfterMs: Long): String = synchronized(lock) {
+    if (!running.get()) return "NOT_RUNNING"
+    cueSchedule.schedule(id, kind, System.nanoTime() / 1_000_000L + maxOf(0L, dueInMs), forceAfterMs)
+  }
+
+  /** Under [lock]. [CueSchedule] decides (once per id; a T-5 never after a T-1); the player plays. */
+  private fun requestCueLocked(id: String, kind: String, forceAfterMs: Long, pcm: ShortArray?): Pair<String, String?> {
+    cueSchedule.admit(id, kind)?.let { return it to null }
+    val before = cuePlayer.pendingId
+    if (!cuePlayer.request(id, pcm ?: CuePlayer.tone(kind), System.nanoTime() / 1_000_000L, forceAfterMs)) return "REPEATED" to null
+    cueSchedule.asked(id, kind)
+    return "QUEUED" to before?.takeIf { it != id }
+  }
+
+  /** Queues every scheduled cue whose time has come (the playback thread, every pass, held or not). */
+  private fun fireDueCues(nowNs: Long) {
+    val fired = ArrayList<Pair<CueSchedule.Entry, Pair<String, String?>>>()
+    synchronized(lock) {
+      for (cue in cueSchedule.due(nowNs / 1_000_000L)) fired += cue to requestCueLocked(cue.id, cue.kind, cue.forceAfterMs, null)
+    }
+    for ((cue, outcome) in fired) {
+      outcome.second?.let { sink.cue("SUPERSEDED", it, false, null) }
+      sink.cue(if (outcome.first == "QUEUED") "DUE" else outcome.first, cue.id, false, cue.kind)
+    }
+  }
 
   fun setMuted(value: Boolean) {
     muted = value
@@ -209,6 +380,7 @@ class CallAudioEngine(
   fun enqueueReply(callTurnIndex: Long, chunkSeq: Long, offsetMs: Long, packet: ByteArray): String {
     synchronized(lock) {
       if (!running.get()) return "NOT_RUNNING"
+      if (held) return "HELD"
       if (pending.size >= MAX_PENDING_PACKETS) return "OVERFLOW"
       val admit = ledger.admit(callTurnIndex, chunkSeq)
       if (admit == ReplyLedger.Admit.ACCEPT) pending.addLast(Pending(callTurnIndex, chunkSeq, offsetMs, packet))
@@ -269,6 +441,10 @@ class CallAudioEngine(
         "timestampMisses" to timestampMisses,
         "captureMs" to captureMsNow,
         "muted" to muted,
+        "audioOwner" to options.owner.name,
+        "held" to held,
+        "cuePending" to cuePlayer.pendingId,
+        "cuePlaying" to cuePlayer.playingId,
       )
     }
   }
@@ -276,6 +452,11 @@ class CallAudioEngine(
   // ------------------------------------------------------------------ opening and releasing
 
   private fun openSession() {
+    if (options.owner == AudioOwner.TELECOM) {
+      // Telecom owns the mode, the route (its endpoints) and the focus of a Telecom call: the engine touches none of them.
+      audioManager.registerAudioDeviceCallback(deviceCallback, Handler(Looper.getMainLooper()))
+      return
+    }
     savedMode = audioManager.mode
     @Suppress("DEPRECATION")
     savedSpeaker = audioManager.isSpeakerphoneOn
@@ -396,6 +577,15 @@ class CallAudioEngine(
     try { track?.release() } catch (_: Throwable) {}
     track = null
     try { audioManager.unregisterAudioDeviceCallback(deviceCallback) } catch (_: Throwable) {}
+    if (options.owner == AudioOwner.TELECOM) {
+      synchronized(lock) {
+        pending.clear()
+        recentWrites.clear()
+        recentCueWrites.clear()
+        dueTraces.clear()
+      }
+      return
+    }
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (routeSet) audioManager.clearCommunicationDevice()
@@ -414,6 +604,7 @@ class CallAudioEngine(
     synchronized(lock) {
       pending.clear()
       recentWrites.clear()
+      recentCueWrites.clear()
       dueTraces.clear()
     }
   }
@@ -431,10 +622,25 @@ class CallAudioEngine(
     var secondLevels = ArrayList<Double>(50)
     var secondRefs = ArrayList<Double?>(50)
     while (running.get()) {
+      if (held) {
+        // S8B-06 CP2: the microphone is released; nothing is read, encoded or sent until resume moves the clock on.
+        synchronized(holdMonitor) {
+          while (held && running.get() && resumeFrameIndex < 0) holdMonitor.wait(50)
+        }
+        if (!running.get()) return
+        if (resumeFrameIndex >= 0) {
+          frameIndex = resumeFrameIndex
+          nextFrameIndex = frameIndex
+          resumeFrameIndex = -1
+          wasMuted = true // a fresh encoder state after the hole, as after a mute
+        }
+        continue
+      }
       var got = 0
-      while (got < frame.size && running.get()) {
+      while (got < frame.size && running.get() && !held) {
         val n = source.read(frame, got, frame.size - got)
         if (n < 0) {
+          if (held) break
           sink.fault("CAPTURE_LOST")
           Thread { stop("CAPTURE_LOST") }.start()
           return
@@ -442,6 +648,7 @@ class CallAudioEngine(
         got += n
       }
       if (!running.get()) return
+      if (held || got < frame.size) continue // a frame cut by the hold is never sent
       val now = System.nanoTime()
       val captureMs = frameIndex * ReplyLedger.PACKET_MS
       captureMsNow = captureMs
@@ -471,9 +678,13 @@ class CallAudioEngine(
       var ref: Double?
       synchronized(lock) {
         audible = audibleLocked(now)
-        ref = if (audible) referenceLocked(now) else null
+        // The cue is the call's own output too: its echo residue is guarded like a reply's, but a cue is never "cut".
+        val cueRef = cueReferenceLocked(now)
+        val replyRef = if (audible) referenceLocked(now) else null
+        ref = if (cueRef == null) replyRef else if (replyRef == null) cueRef else maxOf(cueRef, replyRef)
       }
       val decision = detector.push(level, ref, captureMs)
+      if (decision.speechFrame) lastSpeechNs = now
       if (options.trace) {
         synchronized(lock) {
           traceRing.addLast(FrameTrace(captureMs, captureTimeNs, level, ref, audible))
@@ -496,7 +707,16 @@ class CallAudioEngine(
         }
       }
       frameIndex += 1
+      nextFrameIndex = frameIndex
     }
+  }
+
+  /** The loudest cue slice written within the echo window, or null. */
+  private fun cueReferenceLocked(now: Long): Double? {
+    while (recentCueWrites.isNotEmpty() && now - recentCueWrites.first().atNs > ECHO_WINDOW_NS) recentCueWrites.removeFirst()
+    var max: Double? = null
+    for (w in recentCueWrites) if (max == null || w.levelDb > max) max = w.levelDb
+    return max
   }
 
   /** QANDEEL is audible: booked reply audio not yet all presented, or reply audio written within the echo window. */
@@ -604,7 +824,19 @@ class CallAudioEngine(
     val silence = ShortArray(DownlinkOpusDecoder.FRAME_SAMPLES)
     val stamp = AudioTimestamp()
     var lastCheck = 0L
+    var lastTickNs = 0L
     while (running.get()) {
+      val loopNs = System.nanoTime()
+      fireDueCues(loopNs)
+      if (loopNs - lastTickNs >= TICK_MS * 1_000_000L) {
+        lastTickNs = loopNs
+        sink.tick(loopNs / 1_000_000L)
+      }
+      if (held) {
+        // The speaker is paused for the other call: nothing is written, so nothing is presented or confirmed.
+        synchronized(holdMonitor) { if (held && running.get()) holdMonitor.wait(20) }
+        continue
+      }
       val next: Pending?
       synchronized(lock) {
         if (restorePending) {
@@ -617,7 +849,8 @@ class CallAudioEngine(
           faded = false
           applyVolume()
         }
-        next = pending.removeFirstOrNull()?.takeIf { ledger.stillPlayable(it.callTurnIndex) }
+        // A cue that started plays to its end; a reply arriving meanwhile waits for it.
+        next = if (cuePlayer.playingId != null) null else pending.removeFirstOrNull()?.takeIf { ledger.stillPlayable(it.callTurnIndex) }
       }
       if (next != null) {
         val samples = try {
@@ -634,7 +867,8 @@ class CallAudioEngine(
           synchronized(lock) {
             framesWritten += samples
             if (ledger.booked(next.callTurnIndex, next.chunkSeq, next.offsetMs, start, samples.toLong())) {
-              recentWrites.addLast(Written(System.nanoTime(), level))
+              lastReplyWriteNs = System.nanoTime()
+              recentWrites.addLast(Written(lastReplyWriteNs, level))
               while (recentWrites.size > 64) recentWrites.removeFirst()
               drainTurn = next.callTurnIndex
               drainChunk = next.chunkSeq
@@ -642,9 +876,31 @@ class CallAudioEngine(
           }
         }
       } else {
-        if (!writeFully(output, silence, silence.size)) break
-        synchronized(lock) { framesWritten += silence.size }
-        silenceFrames += silence.size
+        val nowNs = System.nanoTime()
+        val slice = synchronized(lock) {
+          if (held) null
+          else cuePlayer.nextSlice(
+            nowNs / 1_000_000L,
+            qandeelAudible = ledger.hasUnheard() || pending.isNotEmpty() || audibleLocked(nowNs),
+            msSinceQandeel = sinceMs(nowNs, lastReplyWriteNs),
+            msSinceUserSpeech = sinceMs(nowNs, lastSpeechNs),
+            out = cueBuffer,
+          )
+        }
+        if (slice != null) {
+          if (slice.first) sink.cue("STARTED", slice.id, slice.forced, null)
+          if (!writeFully(output, cueBuffer, slice.samples)) break
+          synchronized(lock) {
+            framesWritten += slice.samples
+            recentCueWrites.addLast(Written(System.nanoTime(), SpeechOnsetDetector.levelDb(cueBuffer, slice.samples)))
+            while (recentCueWrites.size > 64) recentCueWrites.removeFirst()
+            if (slice.last) cueBooking = CueBooking(slice.id, framesWritten, slice.forced)
+          }
+        } else {
+          if (!writeFully(output, silence, silence.size)) break
+          synchronized(lock) { framesWritten += silence.size }
+          silenceFrames += silence.size
+        }
       }
       val now = System.nanoTime()
       if (now - lastCheck >= PLAYOUT_CHECK_NS) {
@@ -661,8 +917,14 @@ class CallAudioEngine(
     val presented = if (hasStamp) stamp.framePosition else maxOf(0L, head - trackBufferFrames - FALLBACK_HAL_LATENCY_FRAMES)
     var mark: ReplyLedger.Mark?
     var drained: Pair<Long, Long>? = null
+    var heardCue: CueBooking? = null
     synchronized(lock) {
       mark = ledger.advance(presented)
+      val cue = cueBooking
+      if (cue != null && presented >= cue.endFrame) {
+        heardCue = cue
+        cueBooking = null
+      }
       if (drainTurn >= 0 && !ledger.hasUnheard() && pending.none { it.callTurnIndex == drainTurn }) {
         drained = drainTurn to drainChunk
         drainTurn = -1
@@ -673,7 +935,10 @@ class CallAudioEngine(
       sink.playout(it, presented, if (hasStamp) "TIMESTAMP" else "HEAD_MINUS_LATENCY")
     }
     drained?.let { sink.replyDrained(it.first, it.second) }
+    heardCue?.let { sink.cue("HEARD", it.id, it.forced, if (hasStamp) "TIMESTAMP" else "HEAD_MINUS_LATENCY") }
   }
+
+  private fun sinceMs(nowNs: Long, thenNs: Long): Long = if (thenNs == Long.MIN_VALUE) Long.MAX_VALUE else (nowNs - thenNs) / 1_000_000L
 
   private fun writeFully(output: AudioTrack, data: ShortArray, count: Int): Boolean {
     var offset = 0
@@ -725,6 +990,8 @@ class CallAudioEngine(
 
   companion object {
     const val RAMP_MS = 8L
+    /** The pace of [Sink.tick]: four times a second, well inside the server's 3 s silence close. */
+    const val TICK_MS = 250L
     const val MAX_PENDING_PACKETS = 1500
     private const val ECHO_WINDOW_NS = 400_000_000L
     private const val PLAYOUT_CHECK_NS = 40_000_000L
@@ -733,5 +1000,6 @@ class CallAudioEngine(
     private const val TRACE_FRAMES = 200
     private const val TRACE_AFTER_MS = 600L
     private const val TRACE_BEFORE_NS = 700_000_000L
+    private const val FRAME_NS = 20_000_000L
   }
 }

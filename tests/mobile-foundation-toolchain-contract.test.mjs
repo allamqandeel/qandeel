@@ -188,8 +188,13 @@ test('app config carries provisional technical identifiers only and no architect
   // manifest mod only; its two rule files ship in the local module's Android res/, no dangerous mod) and Expo's
   // first-party expo-audio with background recording and playback OFF and the approved C-12; the picker carries C-12
   // instead of `false`, which would strip the microphone from the whole app.
+  // S8B-06 CP2 RE-ANCHOR (contract v1.0 §9 / §11, A6 06-CP2): exactly one more plugin, the native call's own (typed
+  // manifest + Info.plist mods only, no dangerous mod): the phoneCall foreground service, its two permissions and
+  // MANAGE_OWN_CALLS on Android, UIBackgroundModes audio (never voip) on iOS. It precedes expo-audio, whose background
+  // switches stay OFF — the Voice Note never records in the background (C-17).
   assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
     './plugins/with-qandeel-voice-backup',
+    './plugins/with-qandeel-voice-call',
     ['expo-audio', { microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings.", enableBackgroundRecording: false, enableBackgroundPlayback: false }],
     ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: "Qandeel uses the microphone when recording voice messages and during calls. It isn't used to play recordings." }]]);
   assert.equal('newArchEnabled' in expo, false, 'New Architecture is structural on this SDK line; no toggle may be reintroduced');

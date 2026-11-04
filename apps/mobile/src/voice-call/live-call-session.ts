@@ -12,6 +12,13 @@
  *     speaking, on the same ordered connection — the order the frozen protocol allows (contract A3.2 P4).
  *
  * The server decides what the cut means (S8B-05 CP2–CP4); the phone never claims a barge-in succeeded on the server.
+ *
+ * S8B-06 CP2 — a HOLD (another call took the audio: the engine released the microphone and paused the speaker) is a MUTED
+ * hole in the frozen protocol, with no new event: MUTE at the first frame the engine did not produce, UNMUTE at the frame
+ * where its capture clock continues, so the server's USER track records an honest MUTED gap (the server accepts the clock
+ * jump only after a MUTE). The person's own mute is kept apart from the hold: the connection is muted while either holds,
+ * and a resume never unmutes a person who muted. A hold before the server activated the call cannot be bracketed (MUTE
+ * exists only in an ACTIVE call), so that call ends honestly instead of sending a clock jump the server would refuse.
  */
 import type { LiveCallClientEvent, LiveCallClientOptions, LiveCallEnd } from './live-call-client';
 import { LiveCallClient } from './live-call-client';
@@ -23,7 +30,9 @@ export type LiveCallSessionEvent =
   | { readonly source: 'session'; readonly event: { readonly type: 'engineStartFailed'; readonly code: string } }
   | { readonly source: 'session'; readonly event: { readonly type: 'replyAdmission'; readonly callTurnIndex: number; readonly chunkSeq: number; readonly admission: ReplyAdmission } }
   | { readonly source: 'session'; readonly event: { readonly type: 'playoutSent'; readonly callTurnIndex: number; readonly chunkSeq: number; readonly playedMs: number; readonly cause: 'PERIODIC' | 'DRAINED' | 'CUT' } }
-  | { readonly source: 'session'; readonly event: { readonly type: 'bargeInSent'; readonly callTurnIndex: number; readonly captureMs: number } };
+  | { readonly source: 'session'; readonly event: { readonly type: 'bargeInSent'; readonly callTurnIndex: number; readonly captureMs: number } }
+  | { readonly source: 'session'; readonly event: { readonly type: 'muteSent'; readonly muted: boolean; readonly captureMs: number; readonly cause: 'PERSON' | 'HOLD' } }
+  | { readonly source: 'session'; readonly event: { readonly type: 'holdBeforeActive' } };
 
 export interface LiveCallSessionOptions extends Omit<LiveCallClientOptions, 'onEvent'> {
   readonly engine: VoiceCallEngine;
@@ -49,6 +58,9 @@ export class LiveCallSession {
   private latest: Mark | null = null;
   private sent: Mark | null = null;
   private lastCaptureMs = -20;
+  private personMuted = false;
+  private held = false;
+  private endSent = false;
   ended: LiveCallEnd | null = null;
 
   constructor(private readonly options: LiveCallSessionOptions) {
@@ -63,14 +75,30 @@ export class LiveCallSession {
     this.client.connect();
   }
 
+  /** The person's mute. False when the call is not ACTIVE or nothing changes. */
   setMuted(muted: boolean): boolean {
-    const at = this.lastCaptureMs + 20;
-    if (!this.client.setMuted(muted, at)) return false;
+    if (this.ended || this.client.callState !== 'ACTIVE' || muted === this.personMuted) return false;
+    this.personMuted = muted;
     this.engine.setMuted(muted);
+    this.syncMute(this.lastCaptureMs + 20, 'PERSON');
     return true;
   }
 
+  get isHeld(): boolean {
+    return this.held;
+  }
+
+  /** The connection is muted while the person muted OR the call is held. */
+  private syncMute(captureMs: number, cause: 'PERSON' | 'HOLD'): void {
+    const desired = this.personMuted || this.held;
+    if (this.client.isMuted === desired) return;
+    if (this.client.setMuted(desired, captureMs)) this.emit({ source: 'session', event: { type: 'muteSent', muted: desired, captureMs, cause } });
+  }
+
+  /** Sends END once (the person, the platform and an engine failure may all ask). */
   end(): void {
+    if (this.endSent) return;
+    this.endSent = true;
     this.client.end();
   }
 
@@ -123,7 +151,7 @@ export class LiveCallSession {
         const code = (error as { code?: string })?.code ?? 'ENGINE_START_FAILED';
         this.emit({ source: 'session', event: { type: 'engineStartFailed', code } });
         // Without audio there is no call: end it honestly rather than leave a silent one open.
-        this.client.end();
+        this.end();
       },
     );
   }
@@ -146,6 +174,19 @@ export class LiveCallSession {
         return;
       case 'bargeIn':
         if (event.action === 'STOP') this.onCut(event);
+        return;
+      case 'hold':
+        this.held = true;
+        if (this.client.callState !== 'ACTIVE') {
+          this.emit({ source: 'session', event: { type: 'holdBeforeActive' } });
+          this.end();
+          return;
+        }
+        this.syncMute(event.captureMs, 'HOLD');
+        return;
+      case 'resume':
+        this.held = false;
+        this.syncMute(event.captureMs, 'HOLD');
         return;
       default:
     }

@@ -1,6 +1,11 @@
 {
-  "platforms": ["android"],
+  "platforms": ["android", "apple"],
   "android": {
     "modules": ["expo.modules.qandeelvoicecall.QandeelVoiceCallModule"]
+  },
+  "apple": {
+    "modules": ["QandeelVoiceCallModule"],
+    "podspecPath": ["ios/QandeelOpus.podspec", "ios/QandeelVoiceCall.podspec"],
+    "swiftModuleName": "QandeelVoiceCall"
   }
 }

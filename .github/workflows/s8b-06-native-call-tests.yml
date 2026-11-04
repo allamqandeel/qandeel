@@ -1,0 +1,131 @@
+name: S8B-06 native call tests
+# S8B-06 CP2 — the native call's own unit and simulator tests, on every change to the module, its config plugin or this
+# workflow. VALIDATION ONLY: no credential, no provider, no network service, nothing paid.
+#
+#   kotlin-unit   the Android module's JUnit tests (`:qandeel-voice-call:testDebugUnitTest`) in the generated project:
+#                 the lifecycle machine, the cue player and schedule, Opus, the reply ledger, the onset detector.
+#   swift-host    `swift test` on the macOS host: the iOS engine's decisions, libopus (vendored) and the call coordinator
+#                 with CallKit's and AVAudioSession's events injected (the AVFoundation / CallKit adapters compile out).
+#   swift-ios-simulator
+#                 the same package built for iOS and tested on the iOS simulator (`xcodebuild test`): every adapter
+#                 compiles for iOS, and the real AVAudioSession accepts the call's session, the simulator's call path
+#                 starts and ends, and a missing microphone permission is refused with nothing left open.
+#
+# The iOS RELEASE simulator build of the whole app (both pods through CocoaPods) is Mobile CI's `build-ios`.
+# A GitHub runner has no microphone and the simulator no CallKit: physical echo cancellation, CallKit, Bluetooth and the
+# lock screen on an iPhone are NOT DEVICE-VERIFIED here (deferred by the Product Owner). Nothing here retries.
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/modules/qandeel-voice-call/**'
+      - 'apps/mobile/plugins/with-qandeel-voice-call.js'
+      - 'apps/mobile/app.json'
+      - '.github/workflows/s8b-06-native-call-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/modules/qandeel-voice-call/**'
+      - 'apps/mobile/plugins/with-qandeel-voice-call.js'
+      - '.github/workflows/s8b-06-native-call-tests.yml'
+  workflow_dispatch:
+concurrency:
+  group: s8b-06-native-call-tests-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+jobs:
+  kotlin-unit:
+    name: Android module JUnit (Kotlin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - {name: Generate the Android project (CNG), run: npm run prebuild:android --workspace @qandeel/mobile}
+      - name: Run the module's JUnit tests
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :qandeel-voice-call:testDebugUnitTest --no-daemon
+      - name: Upload the JUnit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8b-06-kotlin-unit-reports
+          path: apps/mobile/modules/qandeel-voice-call/android/build/reports/tests/
+          if-no-files-found: warn
+
+  swift-host:
+    name: iOS engine + coordinator (swift test, macOS host)
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: swift test
+        working-directory: apps/mobile/modules/qandeel-voice-call/ios
+        run: swift test 2>&1 | tee "$RUNNER_TEMP/swift-host.log"; test "${PIPESTATUS[0]}" -eq 0
+        shell: bash
+      - name: Upload the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: s8b-06-swift-host-log, path: '${{ runner.temp }}/swift-host.log', if-no-files-found: warn}
+
+  swift-ios-simulator:
+    name: iOS engine + adapters (xcodebuild test, iOS simulator)
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Pick an available iPhone simulator
+        id: sim
+        shell: bash
+        run: |
+          udid="$(xcrun simctl list devices available -j | node -e '
+            const d = JSON.parse(require("fs").readFileSync(0, "utf8")).devices;
+            const ios = Object.keys(d).filter((k) => k.includes("iOS")).sort().reverse();
+            for (const k of ios) { const p = d[k].find((x) => /^iPhone/.test(x.name)); if (p) { console.log(p.udid); process.exit(0); } }
+            process.exit(1);')"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices | grep "$udid"
+      - name: xcodebuild test on the simulator
+        working-directory: apps/mobile/modules/qandeel-voice-call/ios
+        shell: bash
+        run: |
+          scheme="$(xcodebuild -list -json | node -e '
+            const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const s = (j.workspace || j.project).schemes;
+            console.log(s.find((x) => x.endsWith("-Package")) || s.find((x) => x === "QandeelVoiceCall") || s[0]);')"
+          echo "scheme: $scheme"
+          xcodebuild test -scheme "$scheme" -destination "id=${{ steps.sim.outputs.udid }}" -skipPackagePluginValidation \
+            -resultBundlePath "$RUNNER_TEMP/s806-ios.xcresult" 2>&1 | tee "$RUNNER_TEMP/swift-ios.log"
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Upload the log and the result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8b-06-swift-ios-simulator
+          path: |
+            ${{ runner.temp }}/swift-ios.log
+            ${{ runner.temp }}/s806-ios.xcresult
+          if-no-files-found: warn
