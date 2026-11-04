@@ -1,8 +1,9 @@
 # QANDEEL S8B-06 — Call UI, Live Map & End-to-End Device Closure: Implementation Record v1
 
-**Checkpoint:** S8B-06 CP3, PO Review R1 and the Product Owner's R1 decisions (2026-11-04) — **S8B-06 = NOT CLOSED: the R1
-corrections and R3 (the finished-call record from durable truth, migration `0193`) are delivered; R3's check on the real
-phone is outstanding (the phone was not connected), and the gates of §13 wait on the Product Owner**.
+**Checkpoint:** S8B-06 CP3, the Product Owner's Copy Gate approval and the final Android device verification (2026-11-04) —
+**S8B-06 = NOT CLOSED: the R1 corrections, R3 (migration `0193`) and the approved copy (36 rows APPROVED, D1 – D6) are
+delivered and proven on the real phone; F-G's final visual approval, P-A / P-B and the merge wait on the Product Owner
+(§13)**.
 On `s8b/s8b-06-cp3` as Draft PR #381 from `main` at `b007afca`, **not merged; merge only on the Product Owner's explicit
 «ادمج»**. Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
 
@@ -23,8 +24,10 @@ On `s8b/s8b-06-cp3` as Draft PR #381 from `main` at `b007afca`, **not merged; me
   throwaway local database) (§6), and R1's items on APKs 5 and 6 (§6.1).
 - **iOS:** by the approved method, CI (§8); the real iPhone is deferred (FI 019).
 - **Latency N** is measured apart from the synthetic providers (§7).
-- **The Copy Gate stays OPEN:** 36 rows, all PROPOSED (§4), with one review pack for the Product Owner. No paid call
-  was made.
+- **The Copy Gate is CLOSED:** the Product Owner approved the 36 rows with D1 – D6 and three corrections (§4); D6 is
+  carried by `0193`'s `at_max_length` (§2.1). Approving the text authorized no paid voice: no paid call was made.
+- **The final Android device verification** (APK 8, §6.2): the three R3 tests and two more (the 60-minute end, a stop),
+  across two restarts of the proof app, agree with PostgreSQL record for record. F-G's visual evidence is in §6.3.
 
 ## 0. Authority, base, precedence
 
@@ -94,8 +97,8 @@ protocol change. CP1's engine and CP2's lifecycle are reused, and S8B-05's serve
 - **Voice Notes:** the call asks for the microphone by the same recorder rule (`microphoneForCall`: the OS prompt only
   while the answer is undetermined) and for the same consent (`prepareCall`, VOICE_RECORDING_V3). There is no second
   consent, and the call never starts on a consent the phone cannot read.
-- **The Copy Gate:** 36 rows, all PROPOSED, in simplified neutral Modern Standard Arabic by the Product Owner's direction
-  (§4). Approved copy is untouched.
+- **The Copy Gate:** 36 rows in simplified neutral Modern Standard Arabic by the Product Owner's direction, APPROVED by the
+  Product Owner on 2026-11-04 (§4). Copy approved before, outside this gate, is untouched.
 
 **Jest (the suites CP3 adds or changes):**
 
@@ -142,7 +145,11 @@ was added.
     without it is unchanged;
   - the controller keeps the calls of every page read, one per call;
   - the record's length is the server's `endedAt − startedAt`, and «توقفت» (LC-21) is any `endReason` but
-    `USER_ENDED`;
+    `USER_ENDED`, **except the end at the maximum length** (the Product Owner's D6, 2026-11-04): `0193` also returns
+    `at_max_length`, true only for a `SERVER_ENDED` call that lasted the policy's `max_call_seconds` (within 15 s, the
+    phone's own margin for a STATE's `endsAt`), because `SERVER_ENDED` is not bound to one cause and the reason alone
+    must not decide. The API carries it as `atMaxLength`; the decoder requires it, and refuses it on any other reason.
+    The phone's own record (before the server's arrives) leaves «توقفت» out after LC-05's end too;
   - a call with turns keeps its record after its last turn; a call that left none is drawn at its end's place (after
     the last exchange that began before it ended, before the first one, or alone in an empty thread);
   - the phone's own count stands only for the call it just saw end, until a read carries the server's record (the end
@@ -158,7 +165,7 @@ was added.
 | J3 | an unchosen end returns to the Conversation (`unchosenEnds`); the person's own End (app, notification, system UI) does not move them (§6 item 8 and item 11) |
 | J7 | one record line per finished call, never interactive; LC-21 when not chosen |
 | D-05-02 | **no** F-01 file, no T-5 / T-1 clip and no TTS call: they wait on the separate paid approval (P-A). CP2's local warning tone is unchanged |
-| D-05-03 | every call row is the §4 gate row, PROPOSED; nothing approved on the PO's behalf |
+| D-05-03 | every call row is the §4 gate row; nothing approved on the PO's behalf (the 36 rows APPROVED by the Product Owner, 2026-11-04) |
 | D-05-06 | T-5 / T-1 in the app (LC-06 / LC-07) and on the notification (LC-13 / LC-19); the end at the limit LC-05 |
 | D-05-07 T1 / #40 | composer and typing do not cut the voice; the send cuts it, the mark goes first, TEXT_TURN, INTERRUPTED (P2) |
 | #14 / #22 | the Analysis is shown during the call; the person moves Conversation ↔ Analysis without ending it |
@@ -319,15 +326,78 @@ any evidence file. The evidence lines carry ids, counts and timings; the recogni
 | **F-G** (runs 5 – 7, the measurement build, run 8) | **found, measured, fixed** — before: one 4008 SILENCE at the first projection in runs 5, 6 and 7 (3.07 s, 3.07 s, 3.08 s after it). Measured on the phone: 1 146 + 1 053 + 1 012 ms of nebula raster in one JS task. After (APK 6, run 8, the same condition): no close, no uplink gap ≥ 400 ms, 11 turns committed | `stall-proof/` |
 | **F-E** (APK 6) | **PASS** — 0 seats. A refusal held 2.5 s each way: the Analysis drawn, CONNECTING with LC-01, then LC-02 and Writing. The first refusal after a fresh microphone grant also gave LC-02 and Writing. *(That grant was given by a tap on the proof app's own one-time prompt; the proof app's grant stays one-time, and the original app was not touched.)* A first try that held every byte 4 s was not a refusal at all: the server's 3 s wait for HELLO closed it (4008), and the phone showed LCE-20 and Writing, honestly. That is a setting no network produces | `stall-proof/run8/fe*.png` |
 
-### 6.2 R3 on the phone — outstanding
+### 6.2 R3 and the approved copy on the phone — the final Android device verification (2026-11-04, APK 8)
 
-The Product Owner asked for an app-restart test on the phone. **It has not run: the phone was not connected when R3 was
-delivered.** APK 7 (R3, the separate proof package) is built and waiting (§9.3). The check, on a fresh throwaway
-database with `0193`:
-1. a call with turns, ended by the person; a zero-turn call; a call the server refuses (0 seats, never ACTIVE);
-2. force-stop the proof app and open it again;
-3. read the Conversation's tree (not a screenshot): the first call's record with the server's length, the zero-turn
-   call's record at its place, and no record of the refused call.
+**Set-up.** HONOR ALI-NX1 (`AWCX6R4603003224`). **APK 8** `4ea79aa2…7407` = commit `1877534a` (R3, the approved copy, D6)
+with the proof entry, installed over the proof package `com.qandeel.mobile.s806cp3proof` only; **the original
+`com.qandeel.mobile` was not touched** (its install time stays 2026-09-11). The real S8B-05 server (the proof server, its
+three providers synthetic: no paid call) on a fresh throwaway database `proof806r3` = `0001` – `0192` + the new `0193`;
+the relay `8816 → 8806` and `adb reverse`. The phone's language is English, so the screen shows the English rows; the
+Arabic rows are proven by the phone's tests in both languages (§9.4). The microphone prompt (one-time grant) was
+answered by the phone's owner. Evidence: `E:\QANDEEL_REPORTS\S8B-06\CP3\R3\phone\` (the server's events, the trees, the
+database rows; the two frames are cropped below the status bar).
+
+| Test | On the phone | PostgreSQL (`voice_private.calls`, `0193`) | Result |
+|---|---|---|---|
+| **1. A call with turns**, ended by End | 23 exchanges committed; after End the Conversation shows «Voice call ended, 3:05»; the replies cut by a barge-in show the approved LC-15 «Reply interrupted» | `8181c1c4` ENDED `USER_ENDED`, 185.454 s, 46 call-turn halves | **PASS** |
+| **2. A zero-turn call** (ACTIVE, muted at once, End) | «Voice call ended, 0:12», drawn after the first call's record (its end is after the last exchange) | `7c00900d` ENDED `USER_ENDED`, 12.574 s, **0 turns** | **PASS** |
+| **3. A refused call** (0 seats on this throwaway database) | the approved LC-02 «Calls are busy right now. Try again shortly; writing is available.», back on the Conversation with Writing; no record | **no row at all**: the refusal came before a call was begun | **PASS** |
+| **4. D6, the 60-minute end** (the proof's `/proof/ends-in` moves THIS call's start; no policy changed) | with T-1 sent (`ends-in=90`): LC-05 «The call ended after 60 minutes. You can keep going in writing or start a new call.» and «Voice call ended, 60:00», **no «stopped»** | `3f039197` ENDED `SERVER_ENDED`, 3 600.047 s, `at_max_length` **true** | **PASS** |
+| **5. D6 counter-case, a stop** (the relay stalled past the 30 s grace) | LCE-20 «The call stopped. You can keep going in writing.» and «Voice call · 2:31 · stopped» (the phone's own count) | `0fad0676` ENDED `PEER_LOST_AFTER_GRACE`, `at_max_length` false | **PASS** |
+| **Restart** (`am force-stop` of the proof app, reopened; twice) | a new process (pid 29944, then again) reads every record from the server: 3:05, 0:12, 60:00, 60:00, and «4:42 · stopped» | the same five calls, the same lengths (call 5's end is the sweep's instant, below) | **PASS** |
+
+- **Read from the server, not the phone:** after each restart the phone holds no runtime record, so every line above came
+  from the history's `calls` (`0193`). Call 5 shows it best: the phone's own count said 2:31, the server's record after
+  the restart says 4:42, because the server ended the call when its recovery sweep ran.
+- **The sweep:** the API runs `server_sweep_calls_v1` on its own timer (`LiveCallService`); the proof server does not
+  host that service, so the call stayed RECONNECTING after the phone gave up. The same RPC was run once, as
+  `service_role`, in the timer's place (`ended: 1`). Nothing else was done by hand.
+- **A harness edge, then the real order (test 4):** a first run with `ends-in=20` moved the start past both warnings, so
+  the server sent no CALL_ENDING (T-5 and T-1 were already past) and the phone, which learns the limit from them (F-C),
+  said LCE-20 at the end; its record still read 60:00 with no «stopped», from the server's `at_max_length`
+  (`72580e74`, `SERVER_ENDED`, 3 600.064 s, true). A real 60-minute call always passes T-1, and the re-run with T-1
+  (`ends-in=90`) is test 4. The case it points at is in §11.
+- **An observation (test 1):** about a minute in, while the microphone prompt was being answered, the system's in-call
+  screen came to the front and Telecom reported the call ON_HOLD; the server saw a 33 s uplink gap and the call stayed on
+  epoch 1 (no drop, no reconnect) and went on. Its cause was not established; it is CP2's HELD path, not R3.
+- **The first map draw during call 1** (a fresh process, the first projection during ACTIVE): no 4008, no reconnect.
+- **INTEL-04:** three `0070` refusals (`THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`) in call 1, as known (F-H); outside
+  this PR.
+- **Stopped after the tests:** the proof server, the relay and `adb reverse` (no logcat was run). The evidence is kept.
+
+### 6.3 F-G — the visual evidence for the Product Owner's review (2026-11-04)
+
+The same phone, the same throwaway database (unchanged between the captures: no call in between), the same steps: a
+fresh process of the proof app, the Analysis opened from the Conversation, frames from the tap (each `screencap` takes
+about 1.6 s), then the settled image twice. **APK 5** (`83054ea2…`, before F-G) against **APK 8** (after it), and each
+twice. Frames are compared pixel by pixel over the whole screen below the status bar (1 200 × 2 512 = 3 014 400 pixels).
+Evidence: `R3/fg/` (frames, strips, diffs; `scripts/frames.cjs`, `scripts/fg-capture.sh`).
+
+| Comparison | Pixels that differ |
+|---|---|
+| APK 8 settled, 3 s later, same process | **0** |
+| APK 8 run 1 vs run 2 (two processes) | **0** |
+| APK 5 run 1 vs run 2 | **0** |
+| **APK 5 vs APK 8, settled** (both runs) | **29 of 3 014 400**, always the same 29: **blue channel only, ±1 of 255**, in three small clusters (2 px at x 745, 14 px around x 279 / y 775, 13 px around x 205 / y 952, inside the Thread mass's glow) |
+
+- **The final image is not bit-identical.** Positions, colours and details are the same to the eye and in every pixel but
+  those 29, which differ by one level of one channel. The banded painting is the only drawing change between the two
+  builds, so the difference is attributed to it; why those pixels round differently was not established. The record's
+  earlier statement that the image is "the one a single pass paints" is therefore exact only to within ±1 in 29 pixels.
+  Whether that meets "the final image identical" is the Product Owner's decision.
+- **The first draw (frames from the tap):**
+  - **APK 5:** the map area is blank for at least 3.3 s (the JS thread is held: frames at 0.2, 1.6 and 3.3 s), then the
+    whole image at once, complete by the 5.0 s frame.
+  - **APK 8:** the Thread's mass, the dust and the stars are drawn by the 1.6 s frame, on a dark field without the
+    nebula (frames at 1.6, 3.2 and 4.7 s are the same); the nebula appears between the 4.7 s and the 6.3 s frames, all at
+    once, and the 6.3 s frame is the settled image exactly (0 pixels differ).
+  - So on this run the nebula arrives about 1.3 s later than APK 5's complete image, and 3 – 5 s after the rest of the
+    map, not "about 3 s after the dust and the stars" measured from the first projection (§11): from the tap it is up to
+    about 6 s. The intermediate state is a correct map (the same Thread, at the same place) without its nebula backdrop;
+    whether it reads as misleading is the Product Owner's visual review. Strips: `R3/fg/apk5-run1/first-draw-strip.png`,
+    `R3/fg/apk8-run1/first-draw-strip.png`, `R3/fg/settled-apk5-vs-apk8.png`; the 29 pixels in
+    `R3/fg/diff-apk5-vs-apk8-settled.png`.
+- **LA-VIS-01 and the frozen contracts:** §9.4.
 
 ## 7. Latency N (phone, transport and playback, apart from the synthetic providers)
 
@@ -437,6 +507,27 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
   passed; the three iOS jobs were never run (the hosted macOS runners were not acquired, the jobs cancelled with no step)
   and VAL-01's native evidence failed only because of them.
 
+### 9.4 The Copy Gate approval, D6 and the final device verification (2026-11-04; logs in `R3\`)
+
+- **`0193` with D6, against real PostgreSQL 17** (a fresh database `0001` – `0192` + the amended `0193`):
+  `verify-migration-0193` **10 / 10** (`verify-0193-d6.log`), T6 new: a `SERVER_ENDED` call that lasted 3 600 s and one
+  of 3 590 s are `at_max_length`; one of 3 580 s, the person's own end at 3 600 s, and the early `SERVER_ENDED` of T1 are
+  not; T0b now pins the rule (the server's end AND the policy's length) and the policy as the only other relation read.
+- **API:** the finished-calls spec with the history spec, **41 / 41** (a D6 test added); `tsc` clean (the API and the
+  scripts projects).
+- **Phone:** the call, voice-call, conversation, runtime-entry and CP3 composition suites **549 / 549**
+  (`jest-copy-gate-d6-affected.log`): D6 in both languages with its counter-test (the same reason and length without the
+  server's fact still reads «stopped»), the decoder strict on `atMaxLength`, the owner's record at the maximum not
+  stopped (a CP2 assertion RE-ANCHORED by D6) with a counter-test (an early `SERVER_ENDED` stays stopped); mobile `tsc`
+  and ESLint clean (0 errors).
+- **The whole mobile Jest suite** (`jest-copy-gate-full.log`): 267 suites, **3 349 tests: 3 343 pass**. The 6 failures are the same 6 tests by name as on `main` at `b007afca` (`w2-account-access` 3, `depth` 3; the `ar-EG` locale of this machine, §9.3), and nothing else; no other suite reads the old wording.
+- **Contracts:** the three copy pins RE-ANCHORED from PROPOSED to APPROVED (the CP3 contract, the S8B-05 contract's CP3
+  table, the CP2 lifecycle contract), each still failing a row in any other state; the CP3 contract also pins the decided
+  wording of LCE-20, LC-01, LC-02, LC-11, LC-12, LC-13, LC-15 and D1 (no Western digit inside an Arabic sentence). Its
+  counter-test: LC-13 set back to «5» fails it. The voice and LA-VIS-01 contracts **129 / 129**; every root contract except `forward-safety` (CI runs it) **1 740 / 1 740** (`root-contracts-copy-gate.log`).
+- **LA-VIS-01 (F-G's condition):** LA-VIS-01's contracts (`living-analysis-map-runtime`, T-10, VPORT-01, VPORT-02) **66 / 66** (`la-vis-01-contracts.log`), with the F-G exceptions exactly as they were (one zero-delay release set aside only when it occurs exactly once, with its counter-tests; VPORT-02's one moved pin): **nothing widened since PO Review R1**. The screen golden, the golden equivalence, the world-visual and public-field tests and the bands test **107 / 107** (`la-vis-01-jest.log`); both golden files are byte-unchanged from `main`. They prove the element tree, not the GPU pixels; the pixels are §6.3.
+- **The device:** §6.2 (R3, D6) and §6.3 (F-G).
+
 ## 10. Acceptance (the order)
 
 | Order item | Status |
@@ -444,20 +535,25 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 | Device E2E items 1 – 12 on the real HONOR phone against the real S8B-05 server, a separate proof app | **MET** after R1 (§6, §6.1): item 5 through the real analysis path, F-B fixed |
 | R1 Back | **MET** (§6.1) |
 | R2 the Living Map from speech | **MET** (§6.1). The `0070` stall it found is reported, not passed (F-H) |
-| R3 the finished-call record from durable truth | **MET in code, against real PostgreSQL and in the phone's tests** (option A, §2.1, §9.3). **The app-restart check on the real phone is outstanding** (§6.2): the phone was not connected |
+| R3 the finished-call record from durable truth | **MET** — in code, against real PostgreSQL, in the phone's tests (option A, §2.1, §9.3) and **on the real phone across two restarts** (§6.2) |
+| The Copy Gate (the Product Owner's approval, 2026-11-04) | **MET** — 36 rows APPROVED with D1 – D6 and the three corrections (§4); D6 carried by `at_max_length` (§2.1, §6.2, §9.4); LC-19 unchanged (no digit to correct, §4) |
+| F-G's final approval | **WITH THE PRODUCT OWNER** — evidence in §6.3: the settled image differs in 29 pixels by ±1 of one channel; the nebula's first appearance is up to about 6 s after the tap |
 | R4 F-D, F-E, F-F | **MET** (§5, §6.1) |
 | R5 one Copy Gate review pack; no paid TTS; the local tone kept | **MET** — `R1/S8B-06_CP3_COPY_GATE_REVIEW_PACK_AND_AUDIO_PLAN.md`: 36 rows ar + en with IDs, none approved, and the generation plan with its exact cost (at most USD 0.023, a hard cap of USD 0.05) for a separate decision. No audio fixture is pinned as a production asset |
 | R6 tests, record, backlog, PROJECT_MAP, VOICE-08 | this change; R3 and the R1 decisions in §9.3, §12, §13 |
 | iOS through CI as far as possible | **MET by the approved method** (§8); real iPhone deferred (FI 019) |
 | Latency N apart from the synthetic provider latency | **MET** (§7) |
-| No paid call; no original app touched; no Fake Gateway in place of the integrated server; no copy approved; CP2's tone unchanged | **MET** |
+| No paid call; no original app touched; no Fake Gateway in place of the integrated server; no copy approved on the Product Owner's behalf; CP2's tone unchanged | **MET** (the copy was approved by the Product Owner, §4) |
 | Record, locators, backlog, memory, report, one Draft PR | this change |
 
 ## 11. Limitations (not hidden)
 
-- **R3 on the phone:** the length after a relaunch and the zero-turn record are proven in code, against real PostgreSQL
-  and in the phone's tests, not yet on the phone (§6.2). Before R3, APK 6 showed "Voice call" with no length after a
-  relaunch.
+- **The live notice at the maximum length** comes from the CALL_ENDING warnings (F-C). A connection that resumes inside
+  the call's last minute (T-1 already past) receives none, and the phone then falls back to its own count; when that
+  count started late, the moment of the end can show LCE-20 instead of LC-05 (§6.2's first run shows the shape). The
+  record is right either way: it reads the server's `at_max_length`. Making the server repeat the warning on a resume is
+  a protocol change of S8B-05's, not made here.
+- **F-G is not bit-identical** (§6.3): 29 pixels of the settled map differ by ±1 in one channel.
 - **A record older than the loaded pages** appears when its page is read (scrolling up), like the turns beside it. At
   most 100 finished calls are carried per page window.
 - **A server without `0193`** cannot serve the history at all once this API is deployed (the read is not optional). The
@@ -467,14 +563,15 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 - **A Thread's mass sprite** (`world-mass.ts`, 448 px) is still recorded in one JS task when first drawn. It was not
   measured alone. By pixels it is about a tenth of one nebula pass, and run 8 drew one with no uplink gap ≥ 400 ms. Many
   new Threads in one projection are not measured.
-- **The nebula on a first draw** now appears about 3 s after the dust and the stars (F-G), instead of the whole screen
-  freezing for 3.3 s.
+- **The nebula on a first draw** now appears after the rest of the map (F-G): about 3 s after the first projection, and
+  up to about 6 s after the tap into the Analysis on a fresh process (§6.3), instead of the whole map area staying blank
+  for 3.3 s and more.
 - **"0% of the view range"** shows under the Analysis after a call. It was seen and not investigated; it is not call copy.
 - **OS push during a call:** only in-app attention is deferred; the platform's push is not suppressed.
 - **The token check** runs on a 60 s cadence during a call.
 - **Item 5** is partial on the device (§6).
-- **LC-13 / LC-19 digits:** they show Western digits ("5", "1") while LC-01 / LC-05 use Arabic-Indic digits ("٣٠", "٦٠").
-  This is a Copy Gate consistency question for the Product Owner.
+- **LC-19's digit:** D1 asks for Arabic-Indic digits in Arabic sentences; LC-19's Arabic «تنتهي المكالمة خلال دقيقة» has no
+  digit, so it was left as approved. Writing «١» into it would be new wording; it is a one-row Copy Gate edit if wanted.
 - **The first call after APK 2's reinstall** ended FAILED in 3 s (an activation refusal, transient); the retry worked.
 - **Not proven:** Bluetooth and wired routes (no accessory; CP2's finding).
 - **Not real speech:** the proof used the synthetic tone. Real TTS, F-01 and the T-5 / T-1 clips wait on P-A.
@@ -518,9 +615,9 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 ## 13. Decision and what the Product Owner decides
 
 **S8B-06 = NOT CLOSED.**
-- The R1 corrections and R3 are delivered on Draft PR #381.
-- What remains before CP3's final review: R3's app-restart check on the real phone (§6.2), CI on the last commit, and the
-  Product Owner's gates below.
+- The R1 corrections, R3 and the approved copy are delivered on Draft PR #381 and proven on the real phone (§6.2).
+- What remains before CP3's final review: CI on the last commit (the hosted macOS runners), F-G's final visual approval
+  (§6.3) and the Product Owner's gates below.
 - Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
 
 **The Product Owner's R1 decisions (2026-11-04)**, recorded as given:
@@ -534,7 +631,8 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
   nebula appearance's delay documented and reviewed visually by the Product Owner (§11: about 3 s after the dust and the
   stars). No frozen contract is weakened or widened.
 - **Copy Gate:** one review table of the 36 rows, Arabic and English with each row's ID, the decisions needing a choice
-  marked (D1 – D6): `R3/S8B-06_CP3_COPY_GATE_REVIEW_TABLE.md`. **No text is approved by this record.**
+  marked (D1 – D6): `R3/S8B-06_CP3_COPY_GATE_REVIEW_TABLE.md` (now the approved table; the review version is kept beside
+  it). No text was approved by this record: the approval is the Product Owner's (above).
 - **P-A / P-B:** no paid TTS is authorized. CP2's local tone stays for now, unchanged. The F-01, T-5 and T-1 plan with its
   cost and assets is kept for a separate decision (`R1/…_AUDIO_PLAN.md` §3). No production audio file is claimed
   installed.
@@ -545,7 +643,13 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 - **CI and final review:** the affected tests and CI on the last commit; the six Jest failures proven on `main` with the
   same cause (§9.3).
 
-**Still the Product Owner's** (none taken by this record): the 36 Copy Gate rows and D1 – D6, P-A and P-B, F-G's final approval, and the merge, only on «ادمج». The list as it was put at PO Review R1 follows, for the trail:
+**The Product Owner's Copy Gate approval and device order (2026-11-04)**, recorded as given: the 36 rows APPROVED with
+D1 – D6 and the corrections of LC-02, LC-15 and LC-01 (§4); the final Android device verification with APK 8 (§6.2); F-G's
+evidence asked for, its final visual approval kept by the Product Owner (§6.3); Auto-fix allowed for this task's code and
+test failures only, never for the hosted macOS runners.
+
+**Still the Product Owner's** (none taken by this record): F-G's final visual approval (§6.3: the 29 pixels, the first
+draw), P-A and P-B, and the merge, only on «ادمج». The list as it was put at PO Review R1 follows, for the trail:
 1. **R3, the finished-call record (J7):** memo `R1/S8B-06_CP3_R3_CALL_HISTORY_DECISION.md`.
    - **A (recommended):** migration `0193`, a service-role read of the Session's ended calls, plus an additive `calls`
      field on the history page. The record is then drawn from the server's `started_at` / `ended_at` / `end_reason`.

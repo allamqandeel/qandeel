@@ -233,6 +233,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-VOICE-08` | Live Call Endpointer on Real Speech: Room Sound on the Speaker Route Arms Utterance Ends | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-04` | Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls | `INTEL-04 — Thread Lifecycle Derivation Correction` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MOB-02` | Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-VOICE-09` | Live Call 60-Minute Notice After a Late Rejoin: No CALL_ENDING Is Repeated on a Connection That Resumes Inside the Last Minute | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -494,7 +495,7 @@ happens to reversible history — are defined here.
 - **Current truth (S8B-03 CP2, S8B-03's closing change, 2026-10-31; a Draft pull request from `s8b/s8b-03-cp2`, from `main` at `e68ca146` (CP1 merged through PR #370); effective from its merge):** worked and **not delivered**. S8B-03 now provides the Personal Voice Note end to end, closed by its gate: the recorder (`expo-audio`, AAC-LC mono 16 kHz 32 kbps, foreground only), the private local draft with its narrow backup exclusion, upload / processing / commit / recovery, the slab with the Timeline-language player, consent before the first note, Settings and the voice file saver, the native Voice Note gate in Mobile CI, and the device proof on the Product Owner's Android phone and the iOS Simulator ([S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §9 … §14). All 60 Copy Gate rows are approved. **Admitted at this closure:** `QAN-BL-VOICE-02` (the external proof conditions), `QAN-BL-VOICE-03` (the duration proof refuses Android's software-encoder first frame), `QAN-BL-VOICE-04` (the physical-device list), `QAN-BL-MOB-01` (`expo-sqlite` after BACK). **Remaining under this item:** S8B-04 Speech Rendering; S8B-05 the Live Call gateway; S8B-06 AEC and barge-in; S8B-07 Replay audio; S8B-08 cost, privacy and launch evidence with `VOICE-02` … `04`; `HOSTED-DEPLOY-01` the hosted store and `0186`. Every voice gate stays `DISABLED`; no user can record a Voice Note until those and the gate's launch decision.
 - **Current truth (S8B-04 CP2, S8B-04's closing change, 2026-11-02; a Draft pull request from `s8b/s8b-04-cp2`, from `main` at `54b5333e` (CP1 merged through PR #372); effective from its merge):** worked and **not delivered**. S8B-04 CP1 delivered Speech Rendering, the production TTS route (Google Cloud `gemini-3.8-flash-tts`, Achird, ADC only; [VA-11R](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_VA-11R_TTS_ABUSE_MONITORING_CONTROLLED_AMENDMENT_v1.0.md)) and Listen's server (migration `0187`). CP2 delivers the automatic spoken reply to a Personal Voice Note and the live note during recording under the [Fast Voice Path controlled amendment FVP v1.0](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_FAST_VOICE_PATH_CONTROLLED_AMENDMENT_v1.0.md) (accept-first; VA-1 / VA-2 on the voice-note path only; migration `0188` with `VOICE_RECORDING_V3`) — [S8B-04 record](e2e/QANDEEL_S8B_04_QANDEEL_VOICE_IMPLEMENTATION_RECORD_v1.md) §11. Calls, barge-in and realtime conversation stay with S8B-05; every gate stays `DISABLED`, nothing is hosted, no paid provider call was made. S8B-04's unrun paid evidence is `QAN-BL-VOICE-05`. Owner, severity and status unchanged.
 - **Current truth (S8B-05 CP4, S8B-05's closing change, 2026-11-03; a Draft pull request from `s8b/s8b-05-cp4`, from `main` at `5f1e0561` (CP1 – CP3 merged through PRs #374, #375 and #377); effective from its merge):** worked and **not delivered**. S8B-05 delivers the Integrated Live Call's server ([S8B-05 record](e2e/QANDEEL_S8B_05_INTEGRATED_LIVE_CALL_IMPLEMENTATION_RECORD_v1.md) §0 – §12): the call authority, the gateway and protocol v1 with every v1 client message applied, the spoken turn and QANDEEL's reply with playout truth, the ordered half-exchange analysis, full barge-in with the echo bound, the typed turn inside the call and the guard of the text paths around it, the drain and the resume across instances, F-01's playout from pinned files (NOT_INSTALLED, so nothing is played), and the M0 / M1 / M1′ / M2 matrix; migrations `0189` – `0192`, not hosted. **Admitted at this closure:** `QAN-BL-VOICE-06` (S8B-06) and `QAN-BL-VOICE-07` (GCR-01). **Remaining under this item:** S8B-06 the native engine, the call UI and the device proofs; S8B-07 Replay audio; S8B-08 the paid evidence; GCR-01 capacity; `HOSTED-DEPLOY-01` the hosted migrations. Every voice gate stays `DISABLED`. Owner, severity and status unchanged.
-- **Current truth (S8B-06 CP3, S8B-06's closing change, 2026-11-04; Draft PR #381 from `s8b/s8b-06-cp3`, from `main` at `b007afca` (CP1 / CP2 merged through PRs #376 and #380); effective from its merge):** worked and **not delivered**. S8B-06 delivers the native call on the phone: CP1's engine with AEC and local barge-in, CP2's lifecycle (Core-Telecom, CallKit), and CP3's call owner, call screen, Analysis-first start, typed turn during the call and Living Map catch-up, proven end to end on the real HONOR phone against the real S8B-05 server with synthetic providers ([S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §6; latency N §7). The Copy Gate's 36 call rows stay PROPOSED; F-01 and the T-5 / T-1 clips are not generated (P-A). **Tombstoned at this closure:** `QAN-BL-VOICE-06`. **Admitted:** `QAN-BL-VOICE-08` (S8B-08). **PO Review R1 (2026-11-04, the same PR):** S8B-06 is **not closed**: Back, the protocol-violation reconnect and the first Living Map draw that stalled a call are fixed and proven on the phone (record §5, §6), the finished-call record (J7) is read from the server's durable call record after the Product Owner's R3 decision (option A, migration `0193`, not hosted), and `VOICE-08` holds only the endpointer on real speech. **Remaining under this item:** S8B-07 Replay audio; S8B-08 the paid evidence and the call's launch evidence (`VOICE-02` … `05`, `VOICE-08`); GCR-01 capacity (`VOICE-07`); `HOSTED-DEPLOY-01` the hosted migrations. Every voice gate stays `DISABLED`. Owner, severity and status unchanged.
+- **Current truth (S8B-06 CP3, S8B-06's closing change, 2026-11-04; Draft PR #381 from `s8b/s8b-06-cp3`, from `main` at `b007afca` (CP1 / CP2 merged through PRs #376 and #380); effective from its merge):** worked and **not delivered**. S8B-06 delivers the native call on the phone: CP1's engine with AEC and local barge-in, CP2's lifecycle (Core-Telecom, CallKit), and CP3's call owner, call screen, Analysis-first start, typed turn during the call and Living Map catch-up, proven end to end on the real HONOR phone against the real S8B-05 server with synthetic providers ([S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §6; latency N §7). The Copy Gate's 36 call rows are APPROVED by the Product Owner (2026-11-04, D1 – D6; record §4); F-01 and the T-5 / T-1 clips are not generated (P-A: approving the text authorized no paid voice). **Tombstoned at this closure:** `QAN-BL-VOICE-06`. **Admitted:** `QAN-BL-VOICE-08` (S8B-08). **PO Review R1 (2026-11-04, the same PR):** S8B-06 is **not closed**: Back, the protocol-violation reconnect and the first Living Map draw that stalled a call are fixed and proven on the phone (record §5, §6), the finished-call record (J7) is read from the server's durable call record after the Product Owner's R3 decision (option A, migration `0193`, not hosted), and `VOICE-08` holds only the endpointer on real speech. **Remaining under this item:** S8B-07 Replay audio; S8B-08 the paid evidence and the call's launch evidence (`VOICE-02` … `05`, `VOICE-08`); GCR-01 capacity (`VOICE-07`); `HOSTED-DEPLOY-01` the hosted migrations. Every voice gate stays `DISABLED`. Owner, severity and status unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
@@ -3678,6 +3679,33 @@ decision of the same day. Nothing here authorizes implementation (BG-07); `INTEL
 Admitted by `S8B-06` CP3 under PO Review R1 (2026-11-04, Draft PR #381) under BG-06. Nothing here authorizes
 implementation (BG-07).
 
+### `QAN-BL-VOICE-09` — Live Call 60-Minute Notice After a Late Rejoin: No CALL_ENDING Is Repeated on a Connection That Resumes Inside the Last Minute
+
+- **Title / Finding:** the phone tells the 60-minute end (LC-05) from a stop (LCE-20) by the server's CALL_ENDING
+  warnings (T-5, T-1; S8B-06 CP3 F-C), and failing those by its own count from ACTIVE. The server sends a warning only
+  while it is still ahead (`scheduleEnd`), so a connection that resumes after T-1 gets none. When the phone's own count
+  also started late (the app reopened during the call), the moment of the end can say LCE-20 «The call stopped» instead
+  of LC-05. Seen once in the device proof, by moving the call's start 20 s before its end (record §6.2). **The record is
+  right either way:** it reads the server's `at_max_length` (`0193`, the Product Owner's D6), and a real call that keeps
+  its connection through T-1 shows LC-05 (record §6.2, test 4).
+- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §6.2 and §11 (the final
+  Android device verification, 2026-11-04).
+- **Why deferred:** the fix is in S8B-05's live-call protocol (repeat the remaining time to a resumed connection, or carry
+  `endsAt` in the resumed STATE), a merged contract with its own change control, and outside S8B-06 CP3's bounds; the
+  record that remains after the call is already right.
+- **Owner task:** `UNASSIGNED` — the Product Owner names it (a candidate: S8B-08's launch evidence, beside
+  `QAN-BL-VOICE-04`).
+- **Severity:** `LOW` — the words of one notice at one rare moment; no call, turn, recording or record is wrong.
+- **Reopen condition:** before `LIVE_CALL` opens, or any report of LCE-20 at a 60-minute end on a connection that did
+  not resume.
+- **Required future properties:** a call that reaches its maximum length says LC-05 whatever its connection did in the last
+  minute, proven by a test of the real server order (a resume after T-1); the warnings stay T-5 and T-1, from the
+  controlled policy; no change to the record (D6) or to the call's end.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `S8B-06` CP3 at the Product Owner's Copy Gate approval and final device verification (2026-11-04, Draft PR
+#381) under BG-06. Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4450,15 +4478,15 @@ Admitted by `S8B-05` at its closing change (CP4, 2026-11-03) under BG-08 / BG-06
 | --- | ---: |
 | `DEFERRED — OWNED` | 52 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 9 |
+| `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 34 |
-| **Total** | **99** |
+| **Total** | **100** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 59 |
 | `MEDIUM` | 38 |
-| `LOW` | 2 |
+| `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
 
@@ -5942,6 +5970,21 @@ and refused deferring CP3's own functions to S8B-08.
   `QAN-BL-MOB-02`, `QAN-BL-PROD-06` / `08` (`0189` – `0193` not hosted).
 - **BG-09:** S8B-06 is **not closed**; the record and the locators say so.
 - **Index after the R1 decisions: 99 items; 52 / 4 / 9 / 34 by status, 59 / 38 / 2 by severity.**
+
+**S8B-06 CP3 — the Product Owner's Copy Gate approval and the final Android device verification (2026-11-04; the same
+Draft PR #381).**
+
+- **The Copy Gate is closed:** the 36 call rows are APPROVED with D1 – D6 and three corrections (record §4). It was never
+  a backlog item; nothing of it is deferred. D6 (the 60-minute end is not «توقفت») is delivered in `0193`
+  (`at_max_length`), not deferred.
+- **R3 proven on the real phone** (record §6.2): nothing of it is deferred.
+- **Admitted:** `QAN-BL-VOICE-09` (`UNASSIGNED`, `LOW`), the 60-minute notice after a rejoin inside the last minute: S8B-05's
+  protocol, outside CP3's bounds (§5).
+- **F-G's final visual approval** is the Product Owner's (record §6.3), not a backlog item.
+- **Read and left unchanged:** `QAN-BL-VOICE-01` (its S8B-06 note updated for the approved copy) … `05`, `07`, `08`,
+  `QAN-BL-MOB-01`, `QAN-BL-MOB-02`, `QAN-BL-INTEL-04`, `QAN-BL-PROD-06` / `08` (`0189` – `0193` not hosted).
+- **BG-09:** S8B-06 is **not closed**; the record and the locators say so.
+- **Index after the Copy Gate approval: 100 items; 52 / 4 / 10 / 34 by status, 59 / 38 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
