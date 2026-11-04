@@ -230,7 +230,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-VOICE-05` | QANDEEL's Voice Paid Evidence Not Run: Real Speed, Live-Transcript Quality, Voice Quality (D-S5, Speechmatics Realtime, P-1) and Their Preconditions | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-VOICE-06` | Live Call Resume Residue on the Phone: a Drained Turn Not Answered, No REPLY_END for an Inherited Exchange, a Resent PLAYOUT Bounded by the Close | `S8B-06 — Native Call (CP3: the call UI and device acceptance)` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VOICE-07` | Live Call Launch Capacity Residue: an Instance Crash Loses an Uncommitted Utterance's Transcript; Cross-User First Audio Contention (#34 under SHIPPED) and the ≤ 2 s Live Focus P95 Target | `GCR-01 — Growth & Capacity Readiness (GCR-01-A)` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-VOICE-08` | Live Call Device-Proof Residue: Back Ends the Call, an Unexplained Protocol-Violation Reconnect, a Once-Missed Capacity Notice, Room Sound Commits Turns, a Past Call's Length and the Zero-Turn Record | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-VOICE-08` | Live Call Endpointer on Real Speech: Room Sound on the Speaker Route Arms Utterance Ends | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-INTEL-04` | Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-MOB-02` | Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -492,7 +494,7 @@ happens to reversible history — are defined here.
 - **Current truth (S8B-03 CP2, S8B-03's closing change, 2026-10-31; a Draft pull request from `s8b/s8b-03-cp2`, from `main` at `e68ca146` (CP1 merged through PR #370); effective from its merge):** worked and **not delivered**. S8B-03 now provides the Personal Voice Note end to end, closed by its gate: the recorder (`expo-audio`, AAC-LC mono 16 kHz 32 kbps, foreground only), the private local draft with its narrow backup exclusion, upload / processing / commit / recovery, the slab with the Timeline-language player, consent before the first note, Settings and the voice file saver, the native Voice Note gate in Mobile CI, and the device proof on the Product Owner's Android phone and the iOS Simulator ([S8B-03 record](e2e/QANDEEL_S8B_03_PERSONAL_VOICE_NOTES_IMPLEMENTATION_RECORD_v1.md) §9 … §14). All 60 Copy Gate rows are approved. **Admitted at this closure:** `QAN-BL-VOICE-02` (the external proof conditions), `QAN-BL-VOICE-03` (the duration proof refuses Android's software-encoder first frame), `QAN-BL-VOICE-04` (the physical-device list), `QAN-BL-MOB-01` (`expo-sqlite` after BACK). **Remaining under this item:** S8B-04 Speech Rendering; S8B-05 the Live Call gateway; S8B-06 AEC and barge-in; S8B-07 Replay audio; S8B-08 cost, privacy and launch evidence with `VOICE-02` … `04`; `HOSTED-DEPLOY-01` the hosted store and `0186`. Every voice gate stays `DISABLED`; no user can record a Voice Note until those and the gate's launch decision.
 - **Current truth (S8B-04 CP2, S8B-04's closing change, 2026-11-02; a Draft pull request from `s8b/s8b-04-cp2`, from `main` at `54b5333e` (CP1 merged through PR #372); effective from its merge):** worked and **not delivered**. S8B-04 CP1 delivered Speech Rendering, the production TTS route (Google Cloud `gemini-3.8-flash-tts`, Achird, ADC only; [VA-11R](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_VA-11R_TTS_ABUSE_MONITORING_CONTROLLED_AMENDMENT_v1.0.md)) and Listen's server (migration `0187`). CP2 delivers the automatic spoken reply to a Personal Voice Note and the live note during recording under the [Fast Voice Path controlled amendment FVP v1.0](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-04_FAST_VOICE_PATH_CONTROLLED_AMENDMENT_v1.0.md) (accept-first; VA-1 / VA-2 on the voice-note path only; migration `0188` with `VOICE_RECORDING_V3`) — [S8B-04 record](e2e/QANDEEL_S8B_04_QANDEEL_VOICE_IMPLEMENTATION_RECORD_v1.md) §11. Calls, barge-in and realtime conversation stay with S8B-05; every gate stays `DISABLED`, nothing is hosted, no paid provider call was made. S8B-04's unrun paid evidence is `QAN-BL-VOICE-05`. Owner, severity and status unchanged.
 - **Current truth (S8B-05 CP4, S8B-05's closing change, 2026-11-03; a Draft pull request from `s8b/s8b-05-cp4`, from `main` at `5f1e0561` (CP1 – CP3 merged through PRs #374, #375 and #377); effective from its merge):** worked and **not delivered**. S8B-05 delivers the Integrated Live Call's server ([S8B-05 record](e2e/QANDEEL_S8B_05_INTEGRATED_LIVE_CALL_IMPLEMENTATION_RECORD_v1.md) §0 – §12): the call authority, the gateway and protocol v1 with every v1 client message applied, the spoken turn and QANDEEL's reply with playout truth, the ordered half-exchange analysis, full barge-in with the echo bound, the typed turn inside the call and the guard of the text paths around it, the drain and the resume across instances, F-01's playout from pinned files (NOT_INSTALLED, so nothing is played), and the M0 / M1 / M1′ / M2 matrix; migrations `0189` – `0192`, not hosted. **Admitted at this closure:** `QAN-BL-VOICE-06` (S8B-06) and `QAN-BL-VOICE-07` (GCR-01). **Remaining under this item:** S8B-06 the native engine, the call UI and the device proofs; S8B-07 Replay audio; S8B-08 the paid evidence; GCR-01 capacity; `HOSTED-DEPLOY-01` the hosted migrations. Every voice gate stays `DISABLED`. Owner, severity and status unchanged.
-- **Current truth (S8B-06 CP3, S8B-06's closing change, 2026-11-04; Draft PR #381 from `s8b/s8b-06-cp3`, from `main` at `b007afca` (CP1 / CP2 merged through PRs #376 and #380); effective from its merge):** worked and **not delivered**. S8B-06 delivers the native call on the phone: CP1's engine with AEC and local barge-in, CP2's lifecycle (Core-Telecom, CallKit), and CP3's call owner, call screen, Analysis-first start, typed turn during the call and Living Map catch-up, proven end to end on the real HONOR phone against the real S8B-05 server with synthetic providers ([S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §6; latency N §7). The Copy Gate's 36 call rows stay PROPOSED; F-01 and the T-5 / T-1 clips are not generated (P-A). **Tombstoned at this closure:** `QAN-BL-VOICE-06`. **Admitted:** `QAN-BL-VOICE-08` (S8B-08). **Remaining under this item:** S8B-07 Replay audio; S8B-08 the paid evidence and the call's launch evidence (`VOICE-02` … `05`, `VOICE-08`); GCR-01 capacity (`VOICE-07`); `HOSTED-DEPLOY-01` the hosted migrations. Every voice gate stays `DISABLED`. Owner, severity and status unchanged.
+- **Current truth (S8B-06 CP3, S8B-06's closing change, 2026-11-04; Draft PR #381 from `s8b/s8b-06-cp3`, from `main` at `b007afca` (CP1 / CP2 merged through PRs #376 and #380); effective from its merge):** worked and **not delivered**. S8B-06 delivers the native call on the phone: CP1's engine with AEC and local barge-in, CP2's lifecycle (Core-Telecom, CallKit), and CP3's call owner, call screen, Analysis-first start, typed turn during the call and Living Map catch-up, proven end to end on the real HONOR phone against the real S8B-05 server with synthetic providers ([S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §6; latency N §7). The Copy Gate's 36 call rows stay PROPOSED; F-01 and the T-5 / T-1 clips are not generated (P-A). **Tombstoned at this closure:** `QAN-BL-VOICE-06`. **Admitted:** `QAN-BL-VOICE-08` (S8B-08). **PO Review R1 (2026-11-04, the same PR):** S8B-06 is **not closed**: Back, the protocol-violation reconnect and the first Living Map draw that stalled a call are fixed and proven on the phone (record §5, §6), the finished-call record (J7) awaits the Product Owner's R3 decision, and `VOICE-08` holds only the endpointer on real speech. **Remaining under this item:** S8B-07 Replay audio; S8B-08 the paid evidence and the call's launch evidence (`VOICE-02` … `05`, `VOICE-08`); GCR-01 capacity (`VOICE-07`); `HOSTED-DEPLOY-01` the hosted migrations. Every voice gate stays `DISABLED`. Owner, severity and status unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
@@ -3592,40 +3594,82 @@ or a paid run (BG-07).
 Admitted by `S8B-05` at its closing change (CP4, 2026-11-03) under BG-08 / BG-06. Nothing here authorizes implementation
 (BG-07).
 
-### `QAN-BL-VOICE-08` — Live Call Device-Proof Residue: Back Ends the Call, an Unexplained Protocol-Violation Reconnect, a Once-Missed Capacity Notice, Room Sound Commits Turns, a Past Call's Length and the Zero-Turn Record
+### `QAN-BL-VOICE-08` — Live Call Endpointer on Real Speech: Room Sound on the Speaker Route Arms Utterance Ends
 
-- **Title / Finding:** S8B-06 CP3's integrated device proof (HONOR ALI-NX1, the real S8B-05 server, synthetic providers)
-  closed its matrix with these left open:
-  - (1) **F-B:** Back at the root during a call finishes the activity, the task is removed and the call ends as
-    USER_ENDED, so a person who presses Back to leave the app ends their call.
-  - (2) **F-F:** one PROTOCOL_VIOLATION close (4002) around a barge-in just after an unlock. The phone resumed once and
-    lost nothing; the trigger is unidentified, and three later calls did not reproduce it.
-  - (3) **F-E:** once, a capacity refusal that arrived about 4 s after the press left the reader on the Analysis with no
-    visible notice. Four later refusals were correct.
-  - (4) **F-D:** the server endpointer (RMS ≥ 300) commits turns from ordinary room sound on the speaker route.
-  - (5) A finished call read back from the history after a relaunch shows "Voice call" without its length or LC-21.
-  - (6) A call with no committed turn leaves no durable record.
-- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §5, §6, §11.
-- **Anti-duplication:** `QAN-BL-VOICE-04` is the Voice Note's physical-device list; `QAN-BL-VOICE-05` is the paid speech
-  evidence; `QAN-BL-VOICE-07` is capacity under load. None holds these.
-- **Why deferred:**
-  - (1) needs a Product decision and a native change.
-  - (2) and (3) were not reproducible within CP3. The proof server keeps the instrumentation that names the refusing
-    check.
-  - (4) is a tuning question for real speech.
-  - (5) and (6) need a durable call summary on the history, a server change.
-- **Owner task:** `S8B-08 — Voice Cost, Privacy & Launch Evidence` (the launch evidence of calls).
-- **Severity:** `HIGH` — (1) can end a person's call by surprise; a launch blocker for `LIVE_CALL`.
-- **Reopen condition:** S8B-08 starts, the Product Owner decides F-B, or before `LIVE_CALL` opens.
-- **Required future properties:**
-  - Back during a call behaves as the Product Owner decides, proven on a real phone;
-  - (2) and (3) reproduced and explained, or shown absent over a preregistered run;
-  - the endpointer judged on real speech;
-  - a past call's record honest about what it knows;
-  - no frozen protocol shape changed without a controlled change.
+- **Title / Finding:** the server endpointer counts RMS ≥ 300 for more than 100 ms as speech, and on the speaker route
+  ordinary room sound arms it, so an utterance end follows. Whether that becomes a turn depends on the recognizer's
+  words: the device proof's scripted recognizer answered every utterance end with a line, so its room sound became turns.
+  A real recognizer that hears no words commits nothing, and the person's next words are their own turn, whole (the
+  engine test of PO Review R1, F-D). What only real speech can show is whether room sound on a real phone costs the
+  person anything: a recognizer session opened for noise, a delay, or words it invents.
+- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §5 (F-D) and §12; PO Review R1 (2026-11-04), R4.
+- **Why deferred:** it is a measurement with the real recognizer (Speechmatics), a paid provider; the Product Owner
+  authorized no paid call in S8B-06, and R4 leaves only genuinely paid-provider quality work to S8B-08.
+- **Owner task:** `S8B-08 — Voice Cost, Privacy & Launch Evidence` (the paid real-speech evidence, beside `QAN-BL-VOICE-05`).
+- **Severity:** `MEDIUM` — no turn is committed without recognized words; the cost is provider time and possibly latency.
+- **Reopen condition:** S8B-08's paid real-speech run, or before `LIVE_CALL` opens.
+- **Required future properties:** measured on a real phone with the real recognizer on the speaker route: room sound
+  commits no turn and loses none of the person's words; any change to the threshold keeps first-word capture and
+  barge-in (the CP1 / S8B-05 proofs) and goes through the S8B-05 contract's own change control.
 - **Status:** `DEFERRED — OWNED`
 
-Admitted by `S8B-06` at its closing change (CP3, 2026-11-04) under BG-08 / BG-06. Nothing here authorizes
+Admitted by `S8B-06` CP3 at its closing change (2026-11-04) as the call's device-proof residue, and narrowed by PO Review
+R1 in the same Draft PR #381: F-B, F-F and F-E are fixed or proven in CP3 and the finished-call record (J7) is CP3's own
+open work (record §5, §13), so none of them is held here. Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-INTEL-04` — Thread Lifecycle Derivation Disagreement (`0070`): the Establishing CU Counts as Away From Its Own Thread, a Canonical Payload Is Refused and the Session's Analysis Stalls
+
+- **Title / Finding:** for every committed CU the database re-derives the Thread lifecycle transitions and refuses a
+  payload that differs (`derive_conversation_thread_lifecycle_transitions_v1`, `0070`). Its relation
+  `conversation_thread_cu_relation_v1` decides that a CU's attention is on a Thread with `b.bound_sp < cu.session_position`,
+  so the CU that establishes a Thread (`bound_sp` = its own position) counts as **away** from it. The application's
+  reducer (`thread-lifecycle-reducer.ts`) and the record (`docs/thread-lifecycle-cross-session-continuity-v1.md` §3) treat
+  it as attention-on. When the establishing CU is followed directly, with no unit between, by a CU whose attention is
+  elsewhere, the database derives `ACTIVE → DORMANT (SUSTAINED_DEPARTURE)` and the reducer derives nothing. The commit is
+  refused on every attempt with `THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL` (22023), the item is PARKED, and the
+  Session's ordered analysis stops behind it: the Living Map freezes for the rest of the Session.
+- **Reach:** not specific to calls. In a call: a reply interrupted before a word is heard commits no ASSISTANT unit. In
+  writing: a multi-sentence turn whose next sentence starts another focus. Whether production has met it is unknown; no
+  hosted data was read. `ACTIVATE_EXISTING` likely shares the strict reading for the current CU's own new binding.
+- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §5 (F-H) and §6.2; the decision memo
+  `E:\QANDEEL_REPORTS\S8B-06\CP3\R1\S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md` (found by the R2 device proof on
+  2026-11-04, run 4; the archived throwaway database `proof806r2_run4`).
+- **Why not current work:** it is a defect of the established conversation engine, and its fix is a database change
+  (the recommended option A: a new forward-only migration replacing the relation with `bound_sp <= cu.session_position`,
+  with DB tests of the written and the call sequence and the existing `0070` suites). That is outside S8B-06 CP3's bounds
+  (R3 of PO Review R1: a change outside CP3 is presented first). CP3 changes nothing in the engine. It is not a CP3
+  blocker: R2 is proven without it (record §6.2), and the Product Owner decides whether it is.
+- **Owner task:** `UNASSIGNED` — the Product Owner decides A, B or C (the memo) and names the owning task.
+- **Severity:** `HIGH` — a person's Living Map can stop for the rest of a Session, in writing as in a call, with no
+  visible error.
+- **Reopen condition:** the Product Owner's decision on the memo, or any reproduction outside the proof database.
+- **Required future properties:** the database and the reducer derive the same transitions for this exact sequence (a
+  written turn and a call turn), proven against real PostgreSQL; no payload the record calls canonical is refused; the
+  existing `0070` suites stay green; a hosted migration only through `HOSTED-DEPLOY-01`.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `S8B-06` CP3 under PO Review R1 (2026-11-04, Draft PR #381) under BG-06. Nothing here authorizes
+implementation (BG-07).
+
+### `QAN-BL-MOB-02` — Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message
+
+- **Title / Finding:** on the HONOR phone (Android 15, the system keyboard), after a written message is sent the composer
+  shows empty, but the keyboard's last composing word comes back: typing the next message starts with it ("ime check one"
+  sent, then "two" typed, gave "oneime check two" on the device). Reproduced in writing with no call, so it is the
+  composer's, not the call's.
+- **Source:** [S8B-06 CP3 record](e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md) §5 (F-I), seen during the CP3 R1 device proof (2026-11-04), evidence
+  `E:\QANDEEL_REPORTS\S8B-06\CP3\stall-proof\ime-*.png`.
+- **Why not current work:** it is pre-existing and outside S8B-06's scope (the written composer is not CP3's code); its fix
+  (ending the keyboard's composition when the composer is cleared) needs its own device proof across keyboards.
+- **Owner task:** `UNASSIGNED`.
+- **Severity:** `MEDIUM` — the person's next message can carry a word they did not mean to send; it is visible before
+  sending.
+- **Reopen condition:** a mobile composer task, or before any release build.
+- **Required future properties:** after a send, no keyboard composition survives into the next message, proven on a real
+  Android phone with the system keyboard and one other; nothing typed is lost.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `S8B-06` CP3 under PO Review R1 (2026-11-04, Draft PR #381) under BG-06. Nothing here authorizes
 implementation (BG-07).
 
 ## 6. Tombstones
@@ -4400,14 +4444,14 @@ Admitted by `S8B-05` at its closing change (CP4, 2026-11-03) under BG-08 / BG-06
 | --- | ---: |
 | `DEFERRED — OWNED` | 51 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 8 |
+| `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 34 |
-| **Total** | **97** |
+| **Total** | **99** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 59 |
-| `MEDIUM` | 36 |
+| `MEDIUM` | 38 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -5867,6 +5911,19 @@ merge of PR #372; effective from its merge).** BG-08 is run here ([S8B-04 record
 - **BG-09:** the S8B-06 CP3 record carries S8B-06's closing state; so do the locators.
 - **Index at S8B-06's closing change: 97 items; 51 / 4 / 8 / 34 by status, 59 / 36 / 2 by severity.**
 
+**S8B-06 CP3 — PO Review R1 (2026-11-04; the same Draft PR #381).** The Product Owner did not accept ENGINEERING COMPLETE
+and refused deferring CP3's own functions to S8B-08.
+
+- **`QAN-BL-VOICE-08` narrowed:** F-B (Back) and F-F (the protocol-violation reconnect) are fixed and proven on the phone;
+  F-E (the capacity notice) is proven by tests and on the phone; the finished-call record (J7: a past call's length and
+  the zero-turn record) is CP3's own open work awaiting the Product Owner's R3 decision (record §13), not backlog. Only
+  F-D, the endpointer on real speech, stays: a paid-provider measurement. Severity `HIGH` → `MEDIUM`.
+- **Admitted (BG-06):** `QAN-BL-INTEL-04` (`0070` Thread lifecycle disagreement, `HIGH`, `OPEN — UNASSIGNED`) and
+  `QAN-BL-MOB-02` (the Android composer's composing word, `MEDIUM`, `OPEN — UNASSIGNED`).
+- **Read and left unchanged:** `QAN-BL-VOICE-01` … `05`, `QAN-BL-VOICE-07`, `QAN-BL-VIS-01`, `QAN-BL-MOB-01`.
+- **BG-09:** S8B-06 is **not closed**; the record and the locators say so.
+- **Index after PO Review R1: 99 items; 51 / 4 / 10 / 34 by status, 59 / 38 / 2 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -5981,7 +6038,7 @@ Inherited after T-12 closure reconciliation:
 | `S8B-03 — Personal Voice Notes` | none owned by its own name at kickoff (BG-05, 2026-10-31, from `main` at `a3b04d7a`, S8B-02 merged through PR #368); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-PROD-06` / `08` (`HOSTED-DEPLOY-01`), `QAN-BL-AI-01` (Stage 8A), `QAN-BL-AI-03` (Stage 9), `QAN-BL-ACE-02`, `QAN-BL-LAUNCH-06`, `QAN-BL-CI-01` / `02` / `03`; *CP1 (2026-10-31, a Draft pull request from `s8b/s8b-03-cp1`; effective from its merge):* admitted and tombstoned nothing; a current-truth note on `QAN-BL-VOICE-01`; S8B-03 not closed; *CP2, the closing change (2026-10-31, a Draft pull request from `s8b/s8b-03-cp2` from `main` at `e68ca146`; effective from its merge):* `QAN-BL-VOICE-01` reconciled (worked, not delivered; a current-truth note); admitted `QAN-BL-VOICE-02` / `03` / `04` (S8B-08) and `QAN-BL-MOB-01` (Stage 9); tombstoned nothing; S8B-03 CLOSED, not merged |
 | `S8B-04 — QANDEEL's Voice` | none owned by its own name at kickoff (BG-05, 2026-11-01, from `main` at `71b1088b`); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); *CP1 (merged through PR #372 as `54b5333e`):* admitted and tombstoned nothing; *CP2, the closing change (2026-11-02):* admitted `QAN-BL-VOICE-05` (owner S8B-08); read and left as they stand: `QAN-BL-VOICE-02` … `04`, `QAN-BL-PROD-06` / `08`, `QAN-BL-AI-01`, `QAN-BL-ACE-02`, `QAN-BL-MOB-01`; *merged through PR #373 as `194559e0` (2026-11-02; recorded by S8B-05 CP1)* |
 | `S8B-05 — Integrated Live Call` | none owned by its own name at kickoff (BG-05, 2026-11-02, from `main` at `194559e0`, S8B-04 merged through PR #373); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); read and left as they stand: `QAN-BL-VOICE-02` … `05` (S8B-08), `QAN-BL-PROD-06` / `08` (`0189` not hosted), `QAN-BL-LAUNCH-01` (the edge limit on the call upgrade), `QAN-BL-AI-01`, `QAN-BL-ACE-02`, `QAN-BL-MOB-01`; *CP1 (2026-11-02, a Draft pull request from `s8b/s8b-05-cp1`; effective from its merge):* admitted and tombstoned nothing; S8B-05 not closed; *CP1 merged through PR #374 as `50938001` (recorded by CP2)*; *CP2 (2026-11-02, a Draft pull request from `s8b/s8b-05-cp2`; effective from its merge):* admitted and tombstoned nothing; its residue is owned inside S8B-05 (CP3 / CP4) or by S8B-06 / S8B-08 (record §10.6); S8B-05 not closed; *CP2 merged through PR #375 as `f5de4c27`*; *CP3 (2026-11-02 / 03, PR #377; record §11):* admitted and tombstoned nothing; *merged through PR #377 as `5f1e0561` (2026-11-03; recorded by CP4)*; *CP4, the closing change (2026-11-03, a Draft pull request from `s8b/s8b-05-cp4` from `main` at `5f1e0561`; effective from its merge):* BG-08 reconciled (record §12.8): `QAN-BL-VOICE-01` worked and not delivered, still `DEFERRED — OWNED` by Stage 8B (current-truth note); admitted `QAN-BL-VOICE-06` (S8B-06) and `QAN-BL-VOICE-07` (GCR-01); tombstoned nothing; S8B-05 CLOSED, not merged |
-| `S8B-06 — Native Call` | `QAN-BL-VOICE-06` (admitted by S8B-05's closing change, 2026-11-03); *CP3, the closing change (2026-11-04, Draft PR #381 from `s8b/s8b-06-cp3` from `main` at `b007afca`; effective from its merge):* BG-08 reconciled (record §12): `QAN-BL-VOICE-06` tombstoned; `QAN-BL-VOICE-01` worked and not delivered (current-truth note); admitted `QAN-BL-VOICE-08` (S8B-08); S8B-06 ENGINEERING COMPLETE, not merged |
+| `S8B-06 — Native Call` | `QAN-BL-VOICE-06` (admitted by S8B-05's closing change, 2026-11-03); *CP3, the closing change (2026-11-04, Draft PR #381 from `s8b/s8b-06-cp3` from `main` at `b007afca`; effective from its merge):* BG-08 reconciled (record §12): `QAN-BL-VOICE-06` tombstoned; `QAN-BL-VOICE-01` worked and not delivered (current-truth note); admitted `QAN-BL-VOICE-08` (S8B-08). *PO Review R1 (2026-11-04, the same PR):* `QAN-BL-VOICE-08` narrowed to F-D; admitted `QAN-BL-INTEL-04` and `QAN-BL-MOB-02` (`UNASSIGNED`); S8B-06 **not closed** (R3 and the `0070` decision with the Product Owner), not merged |
 | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `QAN-BL-VOICE-02`, `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (admitted by S8B-03's closing change, 2026-10-31); `QAN-BL-VOICE-05` (admitted by S8B-04's closing change, 2026-11-02); `QAN-BL-VOICE-08` (admitted by S8B-06's closing change, 2026-11-04) |
 | `GCR-01 — Growth & Capacity Readiness` | `QAN-BL-VOICE-07` (admitted by S8B-05's closing change, 2026-11-03) |
 

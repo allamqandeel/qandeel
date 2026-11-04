@@ -1,15 +1,26 @@
 # QANDEEL S8B-06 — Call UI, Live Map & End-to-End Device Closure: Implementation Record v1
 
-**Checkpoint:** S8B-06 CP3, S8B-06's closing change — **S8B-06 = ENGINEERING COMPLETE / READY FOR PO MERGE REVIEW**
-(2026-11-04). On `s8b/s8b-06-cp3` as a Draft PR from `main` at `b007afca`, **not merged; merge only on the Product Owner's
-explicit «ادمج»**. Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
+**Checkpoint:** S8B-06 CP3, PO Review R1 (2026-11-04) — **S8B-06 = NOT CLOSED: R1 corrections delivered; two decisions
+outside CP3's bounds are with the Product Owner (R3, the finished-call record; and the `0070` Thread-lifecycle defect)**.
+On `s8b/s8b-06-cp3` as Draft PR #381 from `main` at `b007afca`, **not merged; merge only on the Product Owner's explicit
+«ادمج»**. Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
 
-- **Android:** the twelve device items run on the real HONOR phone against the real S8B-05 server (synthetic providers,
-  a throwaway local database). Three defects were found and fixed on the way (F-A, and F-C in two steps) (§5, §6).
-- **Open for the Product Owner:** F-B, the Back key ending a call (§5). Item 5 is partial on the device (§6).
+- **PO Review R1** did not accept the earlier "ENGINEERING COMPLETE" and refused deferring CP3's functions to S8B-08.
+  Its corrections are in this same PR (§5, §6.1):
+  - R1 Back no longer ends a call;
+  - R2 the Living Map is proven from speech to the phone;
+  - R4: F-F found and fixed, F-E proven, F-D settled by a test;
+  - plus a stall that dropped every first call of a process (F-G), found and fixed on the way.
+- **Not done in CP3, by R3's own rule** (a change outside CP3 is presented first):
+  - the finished-call record from durable truth (J7: a length after a restart, and the zero-turn call) needs a
+    migration; three alternatives are with the Product Owner (§13).
+  - the `0070` defect found by R2 is a database change in another engine (`QAN-BL-INTEL-04`).
+- **Android:** the twelve items run on the real HONOR phone against the real S8B-05 server (synthetic providers, a
+  throwaway local database) (§6), and R1's items on APKs 5 and 6 (§6.1).
 - **iOS:** by the approved method, CI (§8); the real iPhone is deferred (FI 019).
 - **Latency N** is measured apart from the synthetic providers (§7).
-- **The Copy Gate stays OPEN:** 36 rows, all PROPOSED (§4). No paid call was made.
+- **The Copy Gate stays OPEN:** 36 rows, all PROPOSED (§4), with one review pack for the Product Owner. No paid call
+  was made.
 
 ## 0. Authority, base, precedence
 
@@ -38,8 +49,13 @@ explicit «ادمج»**. Not VOICE LAUNCH READY: every voice gate stays `DISABLE
 
 ## 2. What CP3 delivers
 
-All of it is phone code above CP2's call. **No server change, no migration, no protocol change, no native change**: CP1's
-engine and CP2's lifecycle are reused byte for byte, and S8B-05's server is the one the device proof talks to.
+All of it is phone code above CP2's call. **No server change, no migration, no protocol change.** CP1's engine and CP2's
+lifecycle are reused, and S8B-05's server is the one the device proof talks to.
+
+*PO Review R1* added three narrow changes beneath this layer (§5, §8):
+- F-B: Android's `moveToBackground`;
+- F-F: the native barge-in mark, on Android and iOS;
+- F-G: the Living Map's raster painting, on the JS thread.
 
 - **One call owner** (`apps/mobile/src/call/call-owner.ts`), in memory, built once per runtime generation above
   `DepthComposition` and retired with it, the only Product constructor of CP2's `LiveCallController`. It owns:
@@ -171,10 +187,14 @@ words, the Voice Notes rows) is not touched. The phone carries exactly these row
 |---|---|---|---|
 | F-A | defect, **fixed** (004aa557) | VOICE-06 resume loop: during an outage the client's replay log kept every unacknowledged PLAYOUT. The resume resent them all and overflowed the server's control budget (OVERLOADED 4005), and the call looped through epochs 1 → 34 (APK 1) | the client keeps ONE PLAYOUT per reply, its newest (P1–P3: only a higher mark advances). New test fails without the fix; the CP1 resume test re-anchored to another reply's PLAYOUT, assertions unchanged. APK 2: one resume, ACTIVE 978 ms after the network returned |
 | F-C | defect, **fixed in two steps** (004aa557, 6f7c0f7b) | at the server's length limit the phone said STOPPED (LCE-20) instead of LC-05: the notice relied on the phone's own count from its ACTIVE. The first fix read a STATE's `endsAt`, but the server sends its opening STATE **before** it has read `endsAt`, so the phone never got one (APK 2, still STOPPED) | the phone now takes the end from CALL_ENDING (T-5 / T-1), in its own clock (no device clock skew); a STATE's `endsAt` still counts. The new test of the real server order fails without the change; its counter-test (an end minutes early) stays STOPPED. **APK 3: LC-05 shown and back to Writing** |
-| F-B | finding, **open (PO decision)** | Back at the root during a call finishes the activity (app-request), the task is removed, and the call ends as USER_ENDED (CP2's TASK_REMOVED path). A person who presses Back to leave the app ends their call | proposed: Back during a live call moves the app to the background instead (the platform-call convention). This needs a native call and an APK, so it is not done without the PO's decision. Admitted in `QAN-BL-VOICE-08` (§12) |
-| F-D | environment | the server endpointer (RMS ≥ 300 counts as speech) commits turns from ordinary room sound on the speaker route, so most proof turns came from the room | a server tuning observation for the paid real-speech evidence; nothing changed. `QAN-BL-VOICE-08` |
-| F-E | observation, not reproduced | the first capacity refusal after a permission grant left the reader on the Analysis with no visible notice (the refusal arrived about 4 s after the press); the next four were correct (LC-02, back to Writing) | recorded; `QAN-BL-VOICE-08` |
-| F-F | observation, not reproduced | one PROTOCOL_VIOLATION close (4002) at 14:17:40.112 during the PO's run, around a barge-in just after the unlock. The phone resumed once (epoch 1 → 2) and nothing was lost. The connection's checks were traced: the PLAYOUT bounds and the barge-in onset are consistent, so the trigger is unidentified. The proof server now records the refusing check and every close code; three later calls with lock / unlock and barge-ins produced none | recorded; `QAN-BL-VOICE-08` |
+| F-B | defect, **fixed (R1)** | Back at the root during a call finished the activity, the task was removed, and the call ended as USER_ENDED (CP2's TASK_REMOVED path) | the call owner holds the lowest-priority Back handler during a call (every stage but IDLE / PREPARING). The depth's own Back goes first (Analysis → Conversation), then the app moves to the background (Android `moveTaskToBack`, a new native `moveToBackground`) and the call continues. End and CP2's removal from Recents still end it. Five owner tests and a composition test; the device proof is §6.1 (R1) |
+| F-D | harness, **settled (R1)** | the server endpointer (RMS ≥ 300 counts as speech) arms an utterance end from room sound on the speaker route, and most proof turns came from the room | the endpointer only marks an utterance end; a turn needs the recognizer's words. The proof's scripted recognizer answered every utterance end with a line, so room sound became turns. A real recognizer that hears no words commits nothing. New engine test: a loud stretch with no words makes no turn, and the next words are committed whole. Nothing in production changed, so first-word capture and barge-in are untouched. Whether room sound costs anything with the real recognizer is a paid measurement: `QAN-BL-VOICE-08` (S8B-08) |
+| F-E | **proven (R1)** | once, a capacity refusal about 4 s after the press left the reader on the Analysis with no notice | two composition tests: a refusal inside the start's act, and one after the Analysis is drawn and laid out. Both return to the Conversation with LC-02, and both pass without a code change. On the phone (APK 6) with 0 seats: a refusal held 2.5 s per direction by the relay (it reached the phone about 10.8 s after the press, with the Analysis drawn and CONNECTING shown), and the first refusal straight after a fresh microphone grant. Each gave LC-02 and Writing (§6.1). The original once-seen case is consistent with F-G (a JS stall in the first draw) and was not seen again |
+| F-F | defect, **found and fixed (R1)** | PROTOCOL_VIOLATION closes (4002) around barge-ins | **cause:** the native barge-in cut the newest ADMITTED reply (`ledger.currentTurn`) but sent the last heard mark. When an older reply's queued audio was still playing (the server closed it at the next commit; nothing had cut it locally), that mark belonged to the older reply. The phone sent PLAYOUT(newer reply, the older reply's chunk), past what the server had sent for that reply (run 5: turn 38, chunk 209, 154 packets sent), and the server closed 4002. **Fix:** `ReplyLedger.cutFinal` (Kotlin and Swift) returns only a mark of the reply cut, and nothing when nothing of it was heard. A failing-first Kotlin test reproduces run 5's sequence. After the fix: 37 / 37 module tests, and on the phone 7 overlap-shaped barge-ins with 0 violations (run 6; run 5 had 5 and 3) |
+| F-G | defect, **found and fixed (R1)** | the first Living Map draw of a process held the JS thread for **3.3 s** (measured on the phone: the nebula's three raster passes 1 146 / 1 053 / 1 012 ms, dust and stars 57 ms). The call's uplink passes through the JS thread, so the server closed the call 4008 SILENCE after 3 s and the phone reconnected. It hit every first call of a process whose first projection arrived during ACTIVE (runs 4 – 7, deterministic). It is LA-VIS-01's code, but CP3's Analysis-first start puts that draw inside the call | each raster pass is painted in 8 bands of rows, with the JS thread released before each band, on the same surface with a non-anti-aliased clip. Every step of the drawing is per pixel (no blur), so the image is the one a single pass paints, drawn back exactly as before. The nebula draws nothing until it is painted, so the first frame shows the dust and the stars. A new test proves the banding: every row once, the same transform, a release before each band, one snapshot. The golden tree is unchanged. **APK 6 (run 8): the same fresh-database condition, with a Thread drawn: no 4008, no uplink gap ≥ 400 ms** |
+| F-H | pre-existing defect, **outside CP3 (PO decision)** | R2 found that `0070`'s relation counts the CU establishing a Thread as away from it, so the next CU's lifecycle payload is refused (`THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`) and the Session's analysis stalls. Reproduced in run 4 and again in run 8 (turn 2's USER half refused three times, PARKED) | decision memo `R1/S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md`. Recommended: a new migration under the thread-lifecycle owner. Admitted `QAN-BL-INTEL-04` (`UNASSIGNED`). CP3 changes nothing in the engine |
+| F-I | pre-existing defect, **outside CP3** | the written composer: after a send, the keyboard's last composing word returns at the start of the next message ("ime check one" sent, then "two" typed, gave "oneime check two"). Reproduced with no call | admitted `QAN-BL-MOB-02` (`UNASSIGNED`) |
+| T1 | observation | once in the PO's own run, «تعذّر التأكد من إرسال الرسالة.» (UNCONFIRMED) for a typed message. Not reproduced in 9 tries; the PO's 4 retries all committed | it coincided with the 4008 SILENCE of F-G at 15:51:35, so the message was typed into the dropped connection. The UNCONFIRMED notice was the honest one. With F-G fixed that drop is gone |
 
 ## 6. Device evidence (HONOR ALI-NX1, Android 15, the real S8B-05 server)
 
@@ -204,11 +224,11 @@ words, the Voice Notes rows) is not touched. The phone carries exactly these row
 | 2 | audio received, the reply generated and played | **PASS** — committed turns, tone replies played; a reply played out has heard = produced (12 000 ms, PLAYED_OUT) | server-events.jsonl |
 | 3 | barge-in: only the heard part is kept | **PASS** (PO, speaking over the tone) — interrupted replies keep the text of the segments heard: heard 9 200 / 9 860 / 10 220 ms kept the first segment (38 chars), heard 5 200 ms kept none (the text is segment-granular, each tone segment about 6 s) | DB exchanges |
 | 4 | typed while QANDEEL speaks (T1, #40) | **PASS** — the TEXT turn cut the playing reply at heard 2 320 ms (NEXT_TURN, INTERRUPTED) and was answered TEXT_REPLIED (text only, no audio) | m04-*.png |
-| 5 | the Analysis / Living Map during the call | **PARTIAL on the device** — the Analysis stays open through the call and every committed call turn asks it again (the catch-up; the history is re-read after each turn). The map's CONTENT on the device is a fixture: the server-side map during a call is S8B-05 CP3's proof (real PG + Jest) | logcat.txt, server `history` lines |
+| 5 | the Analysis / Living Map during the call | **PASS after R1 (R2, §6.1)** — the full path on the phone: speech → the real S8B-05 CP3 analysis worker and Semantic Establishment (only the four layer providers synthetic) → Live Focus and the historical projection → the phone's map. *(R0 had shown only the catch-up, with fixture content.)* | §6.1 |
 | 6 | Conversation ↔ Analysis during the call | **PASS** — both ways with the call running, the CallRail in both | m06, m10 |
 | 7 | reconnect during an incomplete reply (VOICE-06) | **PASS on APK 2 after F-A** — an 8 s outage: one resume (epoch 1 → 2), ACTIVE 978 ms after the network returned, the history re-read at once, the in-flight reply closed with heard 0 (nothing was confirmed through the outage) | relay.log, m07-loop.png (APK 1) |
-| 8 | the end: app, server, system | **PASS** for the app's End (USER_ENDED, close 1000), the server's end (SERVER_ENDED at the limit) and the notification's Hang up (PO; USER_ENDED, the reply it cut closed CALL_ENDING with heard 9 860 ms). The person's own end leaves them where they are (J3). System Back: **F-B** | po-session-state.log |
-| 9 | lock, background, a real cellular call | **PASS** (PO) — locked 14:17:26 – 31 with turns committed while locked; a real incoming call put the call ON_HOLD 14:17:51 – 59 (the server stayed ACTIVE), then ACTIVE again. Background by Back: **F-B** | po-session-state.log |
+| 8 | the end: app, server, system | **PASS** for the app's End (USER_ENDED, close 1000), the server's end (SERVER_ENDED at the limit) and the notification's Hang up (PO; USER_ENDED, the reply it cut closed CALL_ENDING with heard 9 860 ms). The person's own end leaves them where they are (J3). System Back: **F-B**, fixed in R1 (§6.1) | po-session-state.log |
+| 9 | lock, background, a real cellular call | **PASS** (PO) — locked 14:17:26 – 31 with turns committed while locked; a real incoming call put the call ON_HOLD 14:17:51 – 59 (the server stayed ACTIVE), then ACTIVE again. Background by Back: fixed in R1 (§6.1) | po-session-state.log |
 | 10 | the warnings and the maximum length | **PASS** — T-5: LC-06 on screen and LC-13 on the notification; T-1: LC-07 (APK 3, with the rail); the server's end at the limit; LC-05 on APK 3 (F-C) | m10-*.png, m10-t1-apk3.png, m10-lc05-apk3.png |
 | 11 | the record and the return to Writing | **PASS** — "Voice call · {length}" (LC-21 "stopped" when not chosen), the composer and the call entry back after an unchosen end | m11-after-end.png |
 | 12 | microphone denial, capacity, a second call, a failure | **PASS** — denial: LC-08 + LC-09, no call created (7 calls before and after). Capacity (0 seats): LC-02 and back to Writing, 4 / 4 after F-E. A second call: ALREADY_IN_CALL (4004), the first untouched. A failure: a start the server refused showed LCE-20 honestly | m12-*.png |
@@ -216,7 +236,34 @@ words, the Voice Notes rows) is not touched. The phone carries exactly these row
 **Recording retention:** `started_at` + 30 days, verified in the database. **No raw audio, transcript or token** is in
 any evidence file. The evidence lines carry ids, counts and timings; the recognizer's script is synthetic.
 
-## 7. Latency N (phone, transport and playback, apart from the synthetic providers)
+### 6.1 PO Review R1 on the phone (2026-11-04, APK 5 and APK 6)
+
+- **APKs:**
+  - APK 5 `83054ea2…1902`: R1, F-F and the R2 wiring. Source in `R1/apk5-source/`.
+  - The measurement build `eeaeeb65…0578`: timing logs only, never committed (`stall-proof/`).
+  - APK 6 `8a4e76ea…7d17e`: F-G. Source in `stall-proof/apk6-source/`.
+  - All are under `E:\QANDEEL_REPORTS\S8B-06\CP3\` and use the same separate proof package. The original
+    `com.qandeel.mobile` was never removed, replaced or cleared.
+- **The server** is the same proof server, now also running the real analysis path:
+  - S8B-05 CP3's `CallAnalysisWorker` and Semantic Establishment;
+  - the real temporal and historical-projection controllers;
+  - only the four layer providers (segmentation, focus, thread, relation) are synthetic, and no model is called.
+  - `PROOF_R2_THREAD=none` keeps the thread layer from establishing a Thread, which is the S8B-05 CP3 proof's own
+    configuration.
+  - It reports a PLAYOUT the engine judged a VIOLATION, and an uplink gap ≥ 400 ms, in numbers only.
+  - Each run starts from a fresh throwaway database; the earlier ones are archived as `proof806r2_run4` … `_run7`.
+
+| Item | Result | Evidence |
+|---|---|---|
+| **R1 Back** (APK 5) | **PASS** — during a live call: Back on the Analysis returns to the Conversation; Back again moves the app to the background and the call goes on (the server ACTIVE, Telecom ACTIVE, turns still committed). Reopening shows the live call; End then gives ENDED USER_ENDED and Telecom none. Swiping the proof card out of Recents still ends it (CP2). Hiding the screen was not taken as proof: the server and Telecom state were read each time | `R1/r1-*.png`, `R1/r1-session.log` |
+| **R2 with a Thread** (run 4, APK 5) | **PASS, then stalled by F-H** — turn 1 established a Thread, Live Focus moved to it, and the phone drew it. Turn 2 was then refused by `0070` (F-H) and the analysis stopped | `r2-proof/`, `R1/r2-lifecycle-stall-evidence.txt` |
+| **R2 without a Thread** (run 5, APK 5) | **PASS** — 72 halves established, 36 Live Focus transitions, 0 RPC errors. The live head went 1 → 80, the projection was re-read after every turn, and the phone's Analysis visibly advanced (empty → 1, 2 → 1 – 4 …) | `r2-proof/r5-map-*.png`, `r5-analysis-*.png` |
+| **R2 with a Thread on APK 6** (run 8) | **PASS** — a fresh conversation. Turn 1 established a Thread; the first projection carried it during ACTIVE; the phone drew the nebula and the Thread's mass while the call went on (0:18, 0:44). F-H then refused turn 2 again | `stall-proof/run8/r8-*.png`, `run8/server-events.jsonl` |
+| **F-F** (run 6, APK 5) | **PASS** — 7 barge-ins over an older reply's queued audio, 0 PLAYOUT violations, 0 closes 4002 | `ff-proof/` |
+| **F-G** (runs 5 – 7, the measurement build, run 8) | **found, measured, fixed** — before: one 4008 SILENCE at the first projection in runs 5, 6 and 7 (3.07 s, 3.07 s, 3.08 s after it). Measured on the phone: 1 146 + 1 053 + 1 012 ms of nebula raster in one JS task. After (APK 6, run 8, the same condition): no close, no uplink gap ≥ 400 ms, 11 turns committed | `stall-proof/` |
+| **F-E** (APK 6) | **PASS** — 0 seats. A refusal held 2.5 s each way: the Analysis drawn, CONNECTING with LC-01, then LC-02 and Writing. The first refusal after a fresh microphone grant also gave LC-02 and Writing. *(That grant was given by a tap on the proof app's own one-time prompt; the proof app's grant stays one-time, and the original app was not touched.)* A first try that held every byte 4 s was not a refusal at all: the server's 3 s wait for HELLO closed it (4008), and the phone showed LCE-20 and Writing, honestly. That is a setting no network produces | `stall-proof/run8/fe*.png` |
+
+ (phone, transport and playback, apart from the synthetic providers)
 
 All figures are measured on the phone's own capture clock, over the 75 replies of the device proof that started on a free
 QANDEEL track. A reply that had to wait for the previous reply's audio is excluded: that wait is the track's order, not
@@ -237,8 +284,12 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 
 ## 8. iOS
 
-- CP3 adds **no native code**: the call owner, the views and the composition are shared TypeScript over CP2's lifecycle.
-  The iOS engine and CallKit are CP2's, unchanged.
+- CP3 R0 added no native code. **R1 adds two narrow native changes:**
+  - Android's `moveToBackground` (F-B). It is Android only: iOS has no Back key.
+  - `ReplyLedger.cutFinal` (F-F), in Kotlin and in Swift (`CallEngineCore.swift`), with the same two rule tests in
+    `ReplyLedgerTest.kt` and `CoreRulesTests.swift`.
+  - The iOS engine and CallKit are otherwise CP2's, unchanged.
+- The Swift tests run in CI only (`s8b-06-native-call-tests.yml`); the Kotlin tests ran locally (37 / 37).
 - iOS is proven by the approved method (#23): Mobile CI's iOS lanes on the Draft PR head (the Jest suites, and CP2's
   native call tests on the simulator).
 - Real-iPhone tests stay **deferred by the Product Owner** (2026-11-03, FI 019), not a merge or launch blocker.
@@ -265,11 +316,34 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 - **CI on PR #381:** the exact-head checks of this closing commit are reported on the pull request itself. This record
   claims no CI result it has not seen; `forward-safety` is proven only there.
 
+### 9.2 PO Review R1 verification (2026-11-04)
+
+- **Kotlin** (`:qandeel-voice-call:testDebugUnitTest`, local):
+  - before the F-F fix, only the new reproduction test fails (`R1/ff-kotlin-prefix.log`);
+  - after it, 37 / 37 pass (`R1/ff-kotlin-fixed.log`).
+- **Mobile Jest:** the call, voice-call, voice-note, integration, map and runtime-entry suites, `R1/jest-r1-final.log`:
+  112 suites, 1 114 tests: 1 108 pass. The 6 failures are the known baseline (`w2-account-access` 3, `depth` 3, which look up an English label in a tree that renders Arabic), and none is from CP3. The new banding test (`map/__tests__/world-strata-bands.test.ts`) and the golden-equivalence suite pass, so the golden tree is unchanged.
+- **TypeScript and ESLint:** `tsc --noEmit` is clean for the mobile project and the API scripts project, and ESLint is
+  clean on the touched map files.
+- **API:** the call-turn engine spec, the F-D test included: 16 / 16.
+- **Root contracts:** the files except `forward-safety`, `R1/root-contracts-r1.log`: **1 740 / 1 740 pass**.
+  - The first run found six failures, all from this change. The backlog edit had dropped the `## 6. Tombstones` heading, now restored.
+  - F-G meets three frozen pins of the world: the T-10 §16 and VPORT-01 timer scans, and the VPORT-02 byte pin of `WorldStrata.tsx`.
+  - Each is re-anchored narrowly with counter-tests, marked PROPOSED to the Product Owner (§13 item 8). A delayed timer planted in `WorldStrata.tsx` is still rejected by both scans.
+  - `npm run test:task-closure-governance-contract` is in this run.
+- **CI:** the exact-head checks of this commit are reported on PR #381, and this record claims none it has not seen.
+
 ## 10. Acceptance (the order)
 
 | Order item | Status |
 |---|---|
-| Device E2E items 1 – 12 on the real HONOR phone against the real S8B-05 server, a separate proof app | **MET**, with item 5 partial on the device (map content a fixture) and F-B open for the PO (§6) |
+| Device E2E items 1 – 12 on the real HONOR phone against the real S8B-05 server, a separate proof app | **MET** after R1 (§6, §6.1): item 5 through the real analysis path, F-B fixed |
+| R1 Back | **MET** (§6.1) |
+| R2 the Living Map from speech | **MET** (§6.1). The `0070` stall it found is reported, not passed (F-H) |
+| R3 the finished-call record from durable truth | **NOT MET — awaiting the Product Owner's decision** (§13): it needs a migration, which R3 says to present first |
+| R4 F-D, F-E, F-F | **MET** (§5, §6.1) |
+| R5 one Copy Gate review pack; no paid TTS; the local tone kept | **MET** — `R1/S8B-06_CP3_COPY_GATE_REVIEW_PACK_AND_AUDIO_PLAN.md`: 36 rows ar + en with IDs, none approved, and the generation plan with its exact cost (at most USD 0.023, a hard cap of USD 0.05) for a separate decision. No audio fixture is pinned as a production asset |
+| R6 tests, record, backlog, PROJECT_MAP, VOICE-08 | this change |
 | iOS through CI as far as possible | **MET by the approved method** (§8); real iPhone deferred (FI 019) |
 | Latency N apart from the synthetic provider latency | **MET** (§7) |
 | No paid call; no original app touched; no Fake Gateway in place of the integrated server; no copy approved; CP2's tone unchanged | **MET** |
@@ -278,8 +352,15 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 ## 11. Limitations (not hidden)
 
 - **A past call's length:** a record read back from the history after a relaunch shows "Voice call" without its length,
-  because the length is the phone's runtime knowledge. The same holds for LC-21 "stopped".
-- **A call with no committed turn** leaves no durable record after a relaunch.
+  because the length is the phone's runtime knowledge. The same holds for LC-21 "stopped". This is R3, open (§13).
+  Seen again on APK 6 after a relaunch.
+- **A call with no committed turn** leaves no durable record after a relaunch. This is R3, open (§13).
+- **A Thread's mass sprite** (`world-mass.ts`, 448 px) is still recorded in one JS task when first drawn. It was not
+  measured alone. By pixels it is about a tenth of one nebula pass, and run 8 drew one with no uplink gap ≥ 400 ms. Many
+  new Threads in one projection are not measured.
+- **The nebula on a first draw** now appears about 3 s after the dust and the stars (F-G), instead of the whole screen
+  freezing for 3.3 s.
+- **"0% of the view range"** shows under the Analysis after a call. It was seen and not investigated; it is not call copy.
 - **OS push during a call:** only in-app attention is deferred; the platform's push is not suppressed.
 - **The token check** runs on a 60 s cadence during a call.
 - **Item 5** is partial on the device (§6).
@@ -306,18 +387,40 @@ latency. Script: `E:\QANDEEL_REPORTS\S8B-06\CP3\scripts\latency.mjs`; result: `d
 - **Read and left unchanged:** `QAN-BL-VOICE-02` … `05`, `QAN-BL-VOICE-07`, `QAN-BL-PROD-06` / `08` (`0189` – `0192` not
   hosted), `QAN-BL-MOB-01`, `QAN-BL-LAUNCH-01`.
 
+**PO Review R1 (the same PR):**
+- **`QAN-BL-VOICE-08` narrowed** to F-D, the endpointer on real speech, a paid-provider measurement. Severity `MEDIUM`.
+  F-B and F-F are fixed and F-E is proven here. The finished-call record is CP3's own open work (R3, §13), not backlog.
+  Nothing that is CP3's stays in it.
+- **Admitted (BG-06):**
+  - `QAN-BL-INTEL-04`, the `0070` Thread-lifecycle disagreement (F-H): `HIGH`, `OPEN — UNASSIGNED`, and the Product
+    Owner names the owner;
+  - `QAN-BL-MOB-02`, the Android composer's composing word (F-I): `MEDIUM`, `OPEN — UNASSIGNED`.
+- **BG-09:** S8B-06 is not closed, and this record's banner says so.
+
 ## 13. Decision and what the Product Owner decides
 
-**S8B-06 = ENGINEERING COMPLETE / READY FOR PO MERGE REVIEW.** Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
+**S8B-06 = NOT CLOSED.**
+- The R1 corrections are delivered on Draft PR #381.
+- CP3 can close once R3 is decided and, if A or B is chosen, delivered in this PR.
+- Not VOICE LAUNCH READY: every voice gate stays `DISABLED`.
 
 The Product Owner's decisions, none taken by this record:
-1. **The Copy Gate:** the 36 rows of §4 (ar + en), every one PROPOSED, including the LC-13 / LC-19 digit style (§11).
-2. **P-A:** the paid TTS generation of F-01 and of the T-5 / T-1 clips (D-05-02); nothing generated.
-3. **P-B:** keep CP2's local tone, or replace it with the clips once generated.
-4. **D-CP3-1, the call entry:** the entry is offered whenever the platform supports a call, and a closed call gate is
-   refused at the start with LC-17. Hiding the entry while the gate is closed would need a new capability read, which is
-   a migration, so it is not done.
-5. **D-CP3-2, VOICE-06 behaviour (1):** a turn drained by a drop stays in the thread as said and unanswered, and the
-   person goes on. The alternative is that QANDEEL answers it after the resume.
-6. **F-B:** Back during a call ends it today; the proposed fix is that Back moves the app to the background.
-7. **The merge:** only on «ادمج».
+1. **R3, the finished-call record (J7):** memo `R1/S8B-06_CP3_R3_CALL_HISTORY_DECISION.md`.
+   - **A (recommended):** migration `0193`, a service-role read of the Session's ended calls, plus an additive `calls`
+     field on the history page. The record is then drawn from the server's `started_at` / `ended_at` / `end_reason`.
+   - **B:** the same read behind a separate route.
+   - **C:** derive the record from the call turns; it does not meet the zero-turn case.
+   - **And whether `0193` may be added on PR #381.**
+2. **F-H, `0070`** (`QAN-BL-INTEL-04`): memo `R1/S8B-06_CP3_R2_THREAD_LIFECYCLE_0070_DECISION.md`, A / B / C and the owning
+   task.
+3. **The Copy Gate:** the 36 rows (§4; the review pack in `R1/`), every one PROPOSED, including the LC-13 / LC-19 digit
+   style (§11).
+4. **P-A:** the paid TTS generation of F-01 and of the T-5 / T-1 clips (D-05-02). The plan and its exact cost are in the
+   pack; nothing is generated.
+5. **P-B:** keep CP2's local tone (the interim), or replace it with the clips once generated.
+6. **D-CP3-1, the call entry:** the entry is offered whenever the platform supports a call, and a closed call gate is
+   refused at the start with LC-17.
+7. **D-CP3-2, VOICE-06 behaviour (1):** a turn drained by a drop stays in the thread as said and unanswered.
+8. **F-G, a change in LA-VIS-01's code** (the nebula painted in bands): the pixels are unchanged, but the nebula now appears
+   about 3 s after the rest on a first draw. Noted for the Product Owner.
+9. **The merge:** only on «ادمج».
