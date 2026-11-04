@@ -195,8 +195,9 @@ export function noticeOf(outcome: LiveCallOutcome, activeForMs: number | null, u
     case 'OVERLOADED':
       return { notice: activeForMs === null ? 'NOT_AVAILABLE' : 'STOPPED', chosen: false };
     case 'SERVER_ENDED': {
-      // S8B-06 CP3: the server's own `endsAt` (every STATE carries it) decides first; the phone's count from its ACTIVE is
-      // the fallback, and it starts late whenever the phone came to the call late (the device proof: a remount, a moved start).
+      // S8B-06 CP3: the server's own end decides first (its CALL_ENDING notice, or a STATE's `endsAt` when one carries it);
+      // the phone's count from its ACTIVE is the fallback, and it starts late whenever the phone came to the call late (the
+      // device proof: a remount, a moved start).
       const atLimit = (untilEndsAtMs !== null && untilEndsAtMs <= ENDS_AT_MARGIN_MS) || (activeForMs !== null && activeForMs >= MAX_LENGTH_MARGIN_MS);
       return { notice: atLimit ? 'MAX_LENGTH' : 'STOPPED', chosen: false };
     }
@@ -352,6 +353,11 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
             if (live()) for (const text of waiting.splice(0)) dispatch(text);
           });
         }
+        return;
+      case 'callEnding':
+        // The server's own count, in the phone's clock (no skew): the STATE that opens a connection is sent before the
+        // server has read `endsAt`, so this notice (T-5, T-1) is what tells the phone when the server will end the call.
+        endsAtMs = now() + event.endsInMs;
         return;
       case 'turnCommitted': {
         const { clientTurnId, role, turnId } = event.message;

@@ -261,6 +261,25 @@ describe('S8B-06 CP3 — the end: chosen or not (J3), and the record (J7)', () =
     expect(noticeOf(ended, 5 * 60_000, null)).toEqual({ notice: 'STOPPED', chosen: false });
     expect(noticeOf(ended, 60 * 60_000, null)).toEqual({ notice: 'MAX_LENGTH', chosen: false });
   });
+
+  it('S8B-06 CP3 device proof: the server\'s CALL_ENDING tells the phone when the limit is (its STATE carries no endsAt)', async () => {
+    // The real server's order (HONOR, APK 2): STATE ACTIVE with endsAt null, CALL_ENDING 60 s before, then SERVER_ENDED.
+    const kit = await active();
+    kit.timers.advance(5 * 60_000);
+    kit.socket.server({ type: 'CALL_ENDING', endsInMs: 60_000 });
+    kit.timers.advance(60_000);
+    kit.socket.server(state({ state: 'ENDED', epoch: 1, endReason: 'SERVER_ENDED' }));
+    expect(kit.owner.getState()).toMatchObject({ notice: 'MAX_LENGTH', unchosenEnds: 1 });
+  });
+
+  it('counter-test: a SERVER_ENDED minutes before the CALL_ENDING\'s end is not the limit', async () => {
+    const kit = await active();
+    kit.timers.advance(5 * 60_000);
+    kit.socket.server({ type: 'CALL_ENDING', endsInMs: 5 * 60_000 });
+    kit.timers.advance(60_000);
+    kit.socket.server(state({ state: 'ENDED', epoch: 1, endReason: 'SERVER_ENDED' }));
+    expect(kit.owner.getState()).toMatchObject({ notice: 'STOPPED', unchosenEnds: 1 });
+  });
 });
 
 describe('S8B-06 CP3 — D-05-07 T1: typed during the call', () => {
