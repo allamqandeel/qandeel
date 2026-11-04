@@ -184,7 +184,10 @@ jest.mock('@shopify/react-native-skia', () => {
       XYWHRect: (x, y, width, height) => ({ x, y, width, height }),
       // The tone curve's effect: an inert handle, so the element tree carrying it can be asserted.
       RuntimeEffect: { Make: () => Object.freeze({ __standIn: 'SkRuntimeEffect' }) },
+      // S8B-06 CP3 — no raster surface here, so a raster tile records its drawing directly (and that, as above, draws nothing).
+      Surface: { Make: () => null, MakeOffscreen: () => null },
     },
+    ClipOp: { Difference: 0, Intersect: 1 },
     PointMode: { Points: 0, Lines: 1, Polygon: 2 },
     StrokeCap: { Butt: 0, Round: 1, Square: 2 },
     BlurStyle: { Normal: 0, Solid: 1, Outer: 2, Inner: 3 },

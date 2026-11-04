@@ -166,6 +166,11 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // in one runtime interleaving, left the world never coming to rest (proven before and after by
   // apps/mobile/src/map/__tests__/world-resize-race.test.tsx). Nothing painted changes; both goldens unchanged. Previous
   // pin: WorldCanvas 28dcc706.
+  // S8B-06 CP3 R1 (F-G) — CONTROLLED RE-ANCHOR, PROPOSED to the Product Owner (CP3 record §5 F-G, §13 item 8; not yet
+  // approved): WorldStrata paints the nebula's raster tiles in bands, releasing the JS thread between them, because the
+  // single 3.3 s pass closed live calls. The pixels are the same (every step is per pixel, painted on one surface under a
+  // non-anti-aliased clip); the nebula draws nothing until it is painted. Both goldens unchanged. Previous pin: WorldStrata
+  // 366f7d15.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
@@ -173,7 +178,7 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'e0ddba0057a6506cc5b68454a7a41b8f923bbb5f'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '8b81a4e4c6fb002e3e9c5088a316d5844723638b'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', '366f7d15dec55fa90fec9d525a4794303d2d303f'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'e17cef8d90b4c4c9543d9164091b6e266a388896'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
