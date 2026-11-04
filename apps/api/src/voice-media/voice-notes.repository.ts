@@ -216,7 +216,7 @@ export class VoiceNotesRepository {
    * bound is open), the newest first, at most 100. Only calls that became ACTIVE; never content.
    */
   sessionFinishedCalls(userId: string, sessionId: string, endedFrom: string | null, endedBefore: string | null) {
-    return this.all<{ call_id: string; started_at: string; ended_at: string; end_reason: ConversationHistoryFinishedCall['endReason'] }>(
+    return this.all<{ call_id: string; started_at: string; ended_at: string; end_reason: ConversationHistoryFinishedCall['endReason']; at_max_length: boolean }>(
       'server_read_session_finished_calls_v1', { p_user_id: userId, p_session_id: sessionId, p_ended_from: endedFrom, p_ended_before: endedBefore });
   }
 

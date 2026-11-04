@@ -249,8 +249,8 @@ describe('S8B-06 CP3 — the call over DepthComposition', () => {
     const body = {
       ...(historyBody(turns) as object),
       calls: [
-        { callId: SILENT, startedAt: at(0), endedAt: at(1), endReason: 'SERVER_ENDED' },
-        { callId: CALL, startedAt: at(1), endedAt: at(126), endReason: 'USER_ENDED' },
+        { callId: SILENT, startedAt: at(0), endedAt: at(1), endReason: 'SERVER_ENDED', atMaxLength: false },
+        { callId: CALL, startedAt: at(1), endedAt: at(126), endReason: 'USER_ENDED', atMaxLength: false },
       ],
     };
     // A fresh runtime: the phone holds no record of either call (no call ran in this generation).

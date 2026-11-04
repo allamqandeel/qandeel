@@ -9,6 +9,12 @@
 --      the server's own instants (voice-runtime §3: "one canonical call record per Live Call ... started / ended
 --      instants, end reason"). The history page (GET /conversation/sessions/:id/turns) carries them additively, within
 --      the page's window [p_ended_from, p_ended_before) of ended_at; a NULL bound is open. At most 100, the newest.
+--      * at_max_length (the Product Owner's Copy Gate decision D6, 2026-11-04): the call ended at the policy's maximum
+--        length, so its record does not say «توقفت». SERVER_ENDED is the server's own end and the contract does not bind
+--        it to one cause, so the reason alone does not decide: it is the maximum length only when the call also lasted
+--        the policy's max_call_seconds (D-05-06, 60 minutes), within the 15 s the connection's end timer may run ahead of
+--        this clock (the same margin the phone allows a STATE's endsAt). The policy read is today's (a controlled
+--        change; 0189's deploy guard pins 3600).
 --      * A call that never became ACTIVE (started_at NULL: refused, or never connected) was not a call and is never
 --        returned. A call not ENDED is the live call, read through call truth (0189), and is not returned either.
 --      * Security definer, EXECUTE to service_role only, like every server_* read; it reads no turn, no content, no
@@ -26,10 +32,12 @@ BEGIN;
 -- 1. THE READ (A).
 -- ---------------------------------------------------------------------------------------------------------------------
 CREATE FUNCTION public.server_read_session_finished_calls_v1(p_user_id uuid, p_session_id uuid, p_ended_from timestamptz, p_ended_before timestamptz)
-RETURNS TABLE (call_id uuid, started_at timestamptz, ended_at timestamptz, end_reason text)
+RETURNS TABLE (call_id uuid, started_at timestamptz, ended_at timestamptz, end_reason text, at_max_length boolean)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
-  SELECT c.id, c.started_at, c.ended_at, c.end_reason
-    FROM voice_private.calls c
+  SELECT c.id, c.started_at, c.ended_at, c.end_reason,
+         c.end_reason = 'SERVER_ENDED'
+           AND c.ended_at >= c.started_at + make_interval(secs => p.max_call_seconds) - interval '15 seconds'
+    FROM voice_private.calls c CROSS JOIN voice_private.live_call_policy p
    WHERE c.user_id = p_user_id AND c.session_id = p_session_id
      AND c.state = 'ENDED' AND c.started_at IS NOT NULL
      AND (p_ended_from IS NULL OR c.ended_at >= p_ended_from)

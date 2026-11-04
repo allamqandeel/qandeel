@@ -246,10 +246,15 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
   // an apostrophe is written in double quotes in the copy file; both quotings are read, and every row is still counted.
   const CP3_RECORD = 'docs/e2e/QANDEEL_S8B_06_CALL_UI_LIVE_MAP_DEVICE_CLOSURE_RECORD_v1.md';
   const cp3Record = read(CP3_RECORD);
+  // RE-ANCHORED by the Product Owner's S8B-06 CP3 Copy Gate approval (2026-11-04; was: every CP3 row and every phone row
+  // PROPOSED): the CP3 gate is CLOSED with its 36 rows APPROVED. The phone is still checked against that table character for
+  // character; a row of the CP3 table in any other state, or a phone row in any other state, still fails. This record's own
+  // rows (S8B-05's) are unchanged and stay PROPOSED above.
   const cp3Rows = cp3Record.slice(cp3Record.indexOf('## 4. The Copy Gate')).split('\n').filter((line) => /^\| (?:LC|LCE)-\d{2} \|/u.test(line));
   assert.ok(cp3Rows.length >= 30, 'the CP3 record lists the call rows the phone carries');
+  assert.match(cp3Record, /\*\*Gate status: CLOSED\*\* — \*\*all 36 rows APPROVED by the Product Owner\*\*/u);
   for (const row of cp3Rows) {
-    assert.match(row, /^\| (?:LC|LCE)-\d{2} \| PROPOSED \|/u, `${row.slice(0, 12)} is PROPOSED in the CP3 gate`);
+    assert.match(row, /^\| (?:LC|LCE)-\d{2} \| APPROVED \|/u, `${row.slice(0, 12)} is APPROVED in the CP3 gate`);
     const cells = row.split('|').map((cell) => cell.trim());
     gateRows.set(cells[1], cells);
   }
@@ -260,7 +265,7 @@ test('the call Copy Gate is one gate for both stages, every row PROPOSED, and no
   for (const [, id, status, ar, en] of copyRows) {
     const gate = gateRows.get(id);
     assert.ok(gate, `${id} is a row of the unified gate`);
-    assert.equal(status, 'PROPOSED', `${id} is still PROPOSED on the phone`);
+    assert.equal(status, 'APPROVED', `${id} is APPROVED on the phone (the CP3 gate)`);
     assert.equal(ar, gate[3], `${id} Arabic is the gate's, character for character`);
     assert.equal(en, gate[4], `${id} English is the gate's, character for character`);
   }

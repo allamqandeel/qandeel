@@ -255,9 +255,12 @@ interface RecordFacts {
 const NO_CALLS: readonly ConversationFinishedCallView[] = Object.freeze([]);
 const instant = (iso: string): number => Date.parse(iso);
 
-/** The server's finished-call record (0193): its length is the server's ended − started; it stopped unless the person ended it. */
+/**
+ * The server's finished-call record (0193): its length is the server's ended − started. It stopped unless the person ended
+ * it or it reached the maximum length (D6: the server's at_max_length, never SERVER_ENDED alone).
+ */
 function serverFacts(call: ConversationFinishedCallView): RecordFacts {
-  return { lengthMs: Math.max(0, instant(call.endedAt) - instant(call.startedAt)), stopped: call.endReason !== 'USER_ENDED' };
+  return { lengthMs: Math.max(0, instant(call.endedAt) - instant(call.startedAt)), stopped: call.endReason !== 'USER_ENDED' && !call.atMaxLength };
 }
 
 export function useCallSurface(

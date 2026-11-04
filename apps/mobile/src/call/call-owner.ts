@@ -465,7 +465,8 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
       ...IDLE_STATE,
       notice,
       // A call that never became ACTIVE leaves no record: nothing of it was a call.
-      record: endedId !== null && since !== null ? { callId: endedId, lengthMs: activeForMs, stopped: !chosen } : state.record,
+      // D6 (Copy Gate): the end at the maximum length is not "stopped", though the person did not choose it.
+      record: endedId !== null && since !== null ? { callId: endedId, lengthMs: activeForMs, stopped: !chosen && notice !== 'MAX_LENGTH' } : state.record,
       unchosenEnds: chosen ? state.unchosenEnds : state.unchosenEnds + 1,
     });
     options.onCallEnded();

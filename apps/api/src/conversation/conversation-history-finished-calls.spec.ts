@@ -32,8 +32,8 @@ function turn(overrides: Partial<ConversationTurn> = {}): ConversationTurn {
     updated_at: 'now', completed_at: 'now', ...overrides,
   };
 }
-const row = (id: string, started: string, ended: string, reason = 'USER_ENDED') =>
-  ({ call_id: id, started_at: started, ended_at: ended, end_reason: reason });
+const row = (id: string, started: string, ended: string, reason = 'USER_ENDED', atMax = false) =>
+  ({ call_id: id, started_at: started, ended_at: ended, end_reason: reason, at_max_length: atMax });
 
 describe('ConversationService.listTurns — the finished calls of the Session (S8B-06 CP3 R3, 0193)', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -63,7 +63,7 @@ describe('ConversationService.listTurns — the finished calls of the Session (S
     const page = await service.listTurns(USER_ID, TOKEN, SESSION_ID, {});
     expect(page).toEqual({
       exchanges: [], hasOlder: false,
-      calls: [{ callId: 'call-1', startedAt: '2026-11-04T10:00:00.250Z', endedAt: '2026-11-04T10:01:05.750Z', endReason: 'PEER_LOST_AFTER_GRACE' }],
+      calls: [{ callId: 'call-1', startedAt: '2026-11-04T10:00:00.250Z', endedAt: '2026-11-04T10:01:05.750Z', endReason: 'PEER_LOST_AFTER_GRACE', atMaxLength: false }],
     });
     // The newest (and only) page: both ends open. The caller's own identity, never one from the query.
     expect(voiceNotes.sessionFinishedCalls).toHaveBeenCalledWith(USER_ID, SESSION_ID, null, null);
@@ -80,6 +80,17 @@ describe('ConversationService.listTurns — the finished calls of the Session (S
     const page = await service.listTurns(USER_ID, TOKEN, SESSION_ID, {});
     expect(page.calls?.map((c) => [c.callId, c.endReason])).toEqual([['call-old', 'USER_ENDED'], ['call-new', 'SERVER_ENDED']]);
     expect(page.exchanges.map((e) => e.userTurn.id)).toEqual([turns[0].id, turns[1].id]);
+  });
+
+  it("D6: the maximum length is the server's fact (0193), carried as it is read; the same reason without it is not", async () => {
+    voiceNotes.sessionFinishedCalls.mockResolvedValue([
+      row('call-max', '2026-11-04T09:00:00Z', '2026-11-04T10:00:00Z', 'SERVER_ENDED', true),
+      row('call-early', '2026-11-04T08:00:00Z', '2026-11-04T08:10:00Z', 'SERVER_ENDED', false),
+    ]);
+    const page = await service.listTurns(USER_ID, TOKEN, SESSION_ID, {});
+    expect(page.calls?.map((c) => [c.callId, c.endReason, c.atMaxLength])).toEqual([
+      ['call-early', 'SERVER_ENDED', false], ['call-max', 'SERVER_ENDED', true],
+    ]);
   });
 
   it('a page with no finished call carries no calls field: the page an older phone reads is the same as before', async () => {

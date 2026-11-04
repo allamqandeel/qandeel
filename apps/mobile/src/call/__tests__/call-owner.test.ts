@@ -215,7 +215,17 @@ describe('S8B-06 CP3 — the end: chosen or not (J3), and the record (J7)', () =
     const kit = await active();
     kit.timers.advance(60 * 60_000);
     kit.socket.server(state({ state: 'ENDED', epoch: 1, endReason: 'SERVER_ENDED' }));
-    expect(kit.owner.getState()).toMatchObject({ notice: 'MAX_LENGTH', unchosenEnds: 1, record: { stopped: true } });
+    // RE-ANCHORED by the Product Owner's Copy Gate decision D6 (2026-11-04; was: record { stopped: true }): the end at the
+    // 60-minute maximum is a natural end, not «توقفت». The notice and the unchosen count are unchanged; the counter-test
+    // below keeps an earlier SERVER_ENDED stopped.
+    expect(kit.owner.getState()).toMatchObject({ notice: 'MAX_LENGTH', unchosenEnds: 1, record: { stopped: false } });
+  });
+
+  it('D6 counter-test: a SERVER_ENDED before the maximum length is STOPPED, and so is its record', async () => {
+    const kit = await active();
+    kit.timers.advance(5 * 60_000);
+    kit.socket.server(state({ state: 'ENDED', epoch: 1, endReason: 'SERVER_ENDED' }));
+    expect(kit.owner.getState()).toMatchObject({ notice: 'STOPPED', unchosenEnds: 1, record: { stopped: true } });
   });
 
   it('an end during the reconnection (the grace passed) is STOPPED, never completed', async () => {

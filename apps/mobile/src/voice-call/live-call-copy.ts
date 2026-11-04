@@ -7,54 +7,58 @@
  * S8B-06 CP3 — the call UI's words join the same ONE table: the S8B-05 record's §9.1 / §9.2 rows the call screen shows, and
  * the four rows CP3 drafts (LC-19 … LC-22, in the CP3 record's §4 gate table). The two gaps CP2 left are closed by drafted
  * rows of their own: the T-1 notification line is LC-19 (CP2 used LC-07) and the Android channel name is LC-20 (CP2 used
- * LC-11). Every row is still PROPOSED: CP3 approves no copy either.
+ * LC-11).
+ *
+ * The Product Owner's Copy Gate approval (2026-11-04): all 36 rows APPROVED, with D1 – D6 and three corrections (LC-01,
+ * LC-02, LC-15), recorded in the CP3 record's §4. Each row here is that table's row, character for character; changing a
+ * word is a Copy Gate change, never a code change.
  */
 import type { ChromeLanguage } from '../orientation-chrome/types';
 
 export interface LiveCallCopyRow {
   readonly id: string;
-  readonly status: 'PROPOSED';
+  readonly status: 'APPROVED';
   readonly ar: string;
   readonly en: string;
 }
 
 export const LIVE_CALL_COPY_ROWS: readonly LiveCallCopyRow[] = [
-  { id: 'LCE-01', status: 'PROPOSED', ar: 'مكالمة صوتية', en: 'Voice call' },
-  { id: 'LCE-02', status: 'PROPOSED', ar: 'مكالمة صوتية', en: 'Voice call' },
-  { id: 'LCE-03', status: 'PROPOSED', ar: 'مكالمة صوتية انتهت، مدتها {d}', en: 'Voice call ended, {d}' },
-  { id: 'LCE-04', status: 'PROPOSED', ar: 'كتم الميكروفون', en: 'Mute microphone' },
-  { id: 'LCE-05', status: 'PROPOSED', ar: 'تشغيل الميكروفون', en: 'Turn microphone on' },
-  { id: 'LCE-06', status: 'PROPOSED', ar: 'إنهاء المكالمة', en: 'End call' },
-  { id: 'LCE-07', status: 'PROPOSED', ar: 'السماعة الخارجية', en: 'Speaker' },
-  { id: 'LCE-08', status: 'PROPOSED', ar: 'المكالمة مستمرة', en: 'the call continues' },
-  { id: 'LCE-09', status: 'PROPOSED', ar: 'جارٍ الاتصال', en: 'Connecting' },
-  { id: 'LCE-10', status: 'PROPOSED', ar: 'الميكروفون يعمل', en: 'Microphone on' },
-  { id: 'LCE-11', status: 'PROPOSED', ar: 'الميكروفون مكتوم', en: 'Microphone muted' },
-  { id: 'LCE-12', status: 'PROPOSED', ar: 'مدة المكالمة {d}', en: 'Call time {d}' },
-  { id: 'LCE-19', status: 'PROPOSED', ar: 'انقطع الاتصال. جارٍ إعادة الاتصال.', en: 'The call dropped. Reconnecting.' },
-  { id: 'LCE-20', status: 'PROPOSED', ar: 'توقفت المكالمة. الكتابة متاحة.', en: "The call isn't working. You can keep going in writing." },
-  { id: 'LCE-21', status: 'PROPOSED', ar: 'الميكروفون غير متاح لقنديل. الكتابة متاحة.', en: "The microphone isn't available to Qandeel. Writing is available." },
-  { id: 'LC-01', status: 'PROPOSED', ar: 'يُحفظ صوت المكالمة ٣٠ يومًا من بدايتها.', en: "The call's audio is kept for 30 days from its start." },
-  { id: 'LC-02', status: 'PROPOSED', ar: 'المكالمات مشغولة الآن. حاول بعد قليل، والكتابة متاحة.', en: 'Calls are busy right now. Try again shortly; writing is available.' },
-  { id: 'LC-03', status: 'PROPOSED', ar: 'المكالمة جارية على جهاز آخر.', en: 'The call is active on another device.' },
-  { id: 'LC-04', status: 'PROPOSED', ar: 'جارٍ إعادة الاتصال…', en: 'Reconnecting…' },
-  { id: 'LC-05', status: 'PROPOSED', ar: 'انتهت المكالمة بعد ٦٠ دقيقة. يمكنك المتابعة كتابةً أو بدء مكالمة جديدة.', en: 'The call ended after 60 minutes. You can keep going in writing or start a new call.' },
-  { id: 'LC-06', status: 'PROPOSED', ar: 'بقيت خمس دقائق على نهاية المكالمة.', en: 'Five minutes left in this call.' },
-  { id: 'LC-07', status: 'PROPOSED', ar: 'بقيت دقيقة واحدة على نهاية المكالمة.', en: 'One minute left in this call.' },
-  { id: 'LC-08', status: 'PROPOSED', ar: 'يحتاج قنديل إلى إذن الميكروفون لإجراء المكالمة. الكتابة متاحة.', en: 'Qandeel needs microphone access for the call. Writing is available.' },
-  { id: 'LC-09', status: 'PROPOSED', ar: 'افتح الإعدادات', en: 'Open settings' },
-  { id: 'LC-10', status: 'PROPOSED', ar: 'المكالمة متوقفة مؤقتًا بسبب مكالمة أخرى.', en: 'The call is paused for another call.' },
-  { id: 'LC-11', status: 'PROPOSED', ar: 'مكالمة مع QANDEEL', en: 'Call with QANDEEL' },
-  { id: 'LC-12', status: 'PROPOSED', ar: 'QANDEEL', en: 'QANDEEL' },
-  { id: 'LC-13', status: 'PROPOSED', ar: 'تنتهي المكالمة خلال 5 دقائق', en: 'The call ends in 5 minutes' },
-  { id: 'LC-15', status: 'PROPOSED', ar: 'قوطِع', en: 'Interrupted' },
-  { id: 'LC-16', status: 'PROPOSED', ar: 'تحتاج المكالمة إلى موافقتك على تسجيل الصوت.', en: 'A call needs your consent to voice recording.' },
-  { id: 'LC-17', status: 'PROPOSED', ar: 'المكالمات غير متاحة الآن. الكتابة متاحة.', en: "Calls aren't available right now. Writing is available." },
-  { id: 'LC-18', status: 'PROPOSED', ar: 'لديك مكالمة جارية بالفعل.', en: 'You already have a call in progress.' },
-  { id: 'LC-19', status: 'PROPOSED', ar: 'تنتهي المكالمة خلال دقيقة', en: 'The call ends in 1 minute' },
-  { id: 'LC-20', status: 'PROPOSED', ar: 'المكالمات', en: 'Calls' },
-  { id: 'LC-21', status: 'PROPOSED', ar: 'توقفت', en: 'stopped' },
-  { id: 'LC-22', status: 'PROPOSED', ar: 'قنديل يتحدث', en: 'QANDEEL is speaking' },
+  { id: 'LCE-01', status: 'APPROVED', ar: 'مكالمة صوتية', en: 'Voice call' },
+  { id: 'LCE-02', status: 'APPROVED', ar: 'مكالمة صوتية', en: 'Voice call' },
+  { id: 'LCE-03', status: 'APPROVED', ar: 'مكالمة صوتية انتهت، مدتها {d}', en: 'Voice call ended, {d}' },
+  { id: 'LCE-04', status: 'APPROVED', ar: 'كتم الميكروفون', en: 'Mute microphone' },
+  { id: 'LCE-05', status: 'APPROVED', ar: 'تشغيل الميكروفون', en: 'Turn microphone on' },
+  { id: 'LCE-06', status: 'APPROVED', ar: 'إنهاء المكالمة', en: 'End call' },
+  { id: 'LCE-07', status: 'APPROVED', ar: 'السماعة الخارجية', en: 'Speaker' },
+  { id: 'LCE-08', status: 'APPROVED', ar: 'المكالمة مستمرة', en: 'the call continues' },
+  { id: 'LCE-09', status: 'APPROVED', ar: 'جارٍ الاتصال', en: 'Connecting' },
+  { id: 'LCE-10', status: 'APPROVED', ar: 'الميكروفون يعمل', en: 'Microphone on' },
+  { id: 'LCE-11', status: 'APPROVED', ar: 'الميكروفون مكتوم', en: 'Microphone muted' },
+  { id: 'LCE-12', status: 'APPROVED', ar: 'مدة المكالمة {d}', en: 'Call time {d}' },
+  { id: 'LCE-19', status: 'APPROVED', ar: 'انقطع الاتصال. جارٍ إعادة الاتصال.', en: 'The call dropped. Reconnecting.' },
+  { id: 'LCE-20', status: 'APPROVED', ar: 'توقفت المكالمة. يمكنك المتابعة كتابةً.', en: 'The call stopped. You can keep going in writing.' },
+  { id: 'LCE-21', status: 'APPROVED', ar: 'الميكروفون غير متاح لقنديل. الكتابة متاحة.', en: "The microphone isn't available to Qandeel. Writing is available." },
+  { id: 'LC-01', status: 'APPROVED', ar: 'يُحتفظ بتسجيل المكالمة لمدة ٣٠ يومًا من بدايتها.', en: 'The call recording is kept for 30 days from its start.' },
+  { id: 'LC-02', status: 'APPROVED', ar: 'خدمة المكالمات مشغولة حاليًا. حاول بعد قليل، ويمكنك المتابعة كتابةً.', en: 'Calls are busy right now. Try again shortly; writing is available.' },
+  { id: 'LC-03', status: 'APPROVED', ar: 'المكالمة جارية على جهاز آخر.', en: 'The call is active on another device.' },
+  { id: 'LC-04', status: 'APPROVED', ar: 'جارٍ إعادة الاتصال…', en: 'Reconnecting…' },
+  { id: 'LC-05', status: 'APPROVED', ar: 'انتهت المكالمة بعد ٦٠ دقيقة. يمكنك المتابعة كتابةً أو بدء مكالمة جديدة.', en: 'The call ended after 60 minutes. You can keep going in writing or start a new call.' },
+  { id: 'LC-06', status: 'APPROVED', ar: 'بقيت خمس دقائق على نهاية المكالمة.', en: 'Five minutes left in this call.' },
+  { id: 'LC-07', status: 'APPROVED', ar: 'بقيت دقيقة واحدة على نهاية المكالمة.', en: 'One minute left in this call.' },
+  { id: 'LC-08', status: 'APPROVED', ar: 'يحتاج قنديل إلى إذن الميكروفون لإجراء المكالمة. الكتابة متاحة.', en: 'Qandeel needs microphone access for the call. Writing is available.' },
+  { id: 'LC-09', status: 'APPROVED', ar: 'افتح الإعدادات', en: 'Open settings' },
+  { id: 'LC-10', status: 'APPROVED', ar: 'المكالمة متوقفة مؤقتًا بسبب مكالمة أخرى.', en: 'The call is paused for another call.' },
+  { id: 'LC-11', status: 'APPROVED', ar: 'مكالمة مع قنديل', en: 'Call with QANDEEL' },
+  { id: 'LC-12', status: 'APPROVED', ar: 'QANDEEL', en: 'QANDEEL' },
+  { id: 'LC-13', status: 'APPROVED', ar: 'تنتهي المكالمة خلال ٥ دقائق', en: 'The call ends in 5 minutes' },
+  { id: 'LC-15', status: 'APPROVED', ar: 'تمت مقاطعة الرد', en: 'Reply interrupted' },
+  { id: 'LC-16', status: 'APPROVED', ar: 'تحتاج المكالمة إلى موافقتك على تسجيل الصوت.', en: 'A call needs your consent to voice recording.' },
+  { id: 'LC-17', status: 'APPROVED', ar: 'المكالمات غير متاحة الآن. الكتابة متاحة.', en: "Calls aren't available right now. Writing is available." },
+  { id: 'LC-18', status: 'APPROVED', ar: 'لديك مكالمة جارية بالفعل.', en: 'You already have a call in progress.' },
+  { id: 'LC-19', status: 'APPROVED', ar: 'تنتهي المكالمة خلال دقيقة', en: 'The call ends in 1 minute' },
+  { id: 'LC-20', status: 'APPROVED', ar: 'المكالمات', en: 'Calls' },
+  { id: 'LC-21', status: 'APPROVED', ar: 'توقفت', en: 'stopped' },
+  { id: 'LC-22', status: 'APPROVED', ar: 'قنديل يتحدث', en: 'QANDEEL is speaking' },
 ];
 
 const BY_ID = new Map(LIVE_CALL_COPY_ROWS.map((row) => [row.id, row]));

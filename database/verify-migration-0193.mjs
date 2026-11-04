@@ -3,7 +3,7 @@
 // is rolled back.
 //
 //   T0   catalogue: the one new read is postgres-owned, a pinned SECURITY DEFINER, STABLE, EXECUTE to service_role only;
-//        it reads voice_private.calls and nothing else (no turn, no content, no recording); it is bounded (100) and
+//        it reads voice_private.calls and the call policy (D6) and nothing else (no turn, no content, no recording); it is bounded (100) and
 //        returns only ENDED calls that became ACTIVE; nothing else in 0193 creates, alters or grants anything; four scopes
 //        DISABLED; the census clean
 //   T1   a call that ended with no turn is returned with the server's started_at, ended_at and end_reason; a call with
@@ -12,6 +12,8 @@
 //   T3   isolation: another person's id reads nothing of this Session; another Session of the same person is not this one's
 //   T4   the window: [p_ended_from, p_ended_before) of ended_at, each bound open when NULL
 //   T5   the client roles: anon and authenticated may not execute it (42501)
+//   T6   D6: at_max_length only for a SERVER_ENDED call that lasted the policy's maximum (within 15 s); an earlier
+//        SERVER_ENDED, and the person's own end at any length, are not the maximum length
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -103,13 +105,15 @@ async function verifyCatalogue(report) {
     assert.equal(p.volatility, 's', 'STABLE: it writes nothing');
     assert.deepEqual([p.anon, p.auth, p.service, p.everyone], [false, false, true, false]);
   });
-  await report.section('T0b it reads voice_private.calls only: no turn, no content, no recording; ENDED and ACTIVE-once only; bounded', async () => {
+  await report.section('T0b it reads voice_private.calls and the call policy only: no turn, no content, no recording; ENDED and ACTIVE-once only; bounded', async () => {
     const [{ src }] = await rows('SELECT p.prosrc AS src FROM pg_proc p WHERE p.oid = $1::regprocedure', [READ]);
     const relations = [...src.matchAll(/\b(?:FROM|JOIN)\s+([a-z_]+\.[a-z_0-9]+)/gu)].map((m) => m[1]);
-    assert.deepEqual(relations, ['voice_private.calls']);
+    assert.deepEqual(relations, ['voice_private.calls', 'voice_private.live_call_policy'], "the calls, and the policy's maximum (D6)");
     assert.doesNotMatch(src, /content|transcript|recording|segment|conversation_turns/u);
     assert.match(src, /c\.user_id = p_user_id AND c\.session_id = p_session_id/u, 'the person and the Session');
     assert.match(src, /c\.state = 'ENDED' AND c\.started_at IS NOT NULL/u, 'only a call that ended after it became ACTIVE');
+    assert.match(src, /c\.end_reason = 'SERVER_ENDED'\s+AND c\.ended_at >= c\.started_at \+ make_interval\(secs => p\.max_call_seconds\) - interval '15 seconds'/u,
+      "the maximum length is the server's end AND the policy's length, never the reason alone");
     assert.match(src, /LIMIT 100;/u);
   });
   await report.section('T0c 0193 creates exactly the one function, alters no relation and grants no client role', async () => {
@@ -158,6 +162,7 @@ async function verifyBehaviour(report) {
         assert.deepEqual([row.started_at.toISOString(), row.ended_at.toISOString(), row.end_reason],
           [truth.started_at.toISOString(), truth.ended_at.toISOString(), reason], 'the durable instants and reason, as stored');
         assert.ok(row.ended_at >= row.started_at);
+        assert.equal(row.at_max_length, false, 'neither reached the maximum length');
       }
     });
 
@@ -213,6 +218,37 @@ async function verifyBehaviour(report) {
         await rejected(() => rows(READ_SQL, [p.user, p.session, null, null]), ['42501'], /permission denied/u);
         await owner();
       }
+    });
+
+    await report.isolated("T6 D6: the maximum length is a SERVER_ENDED call that lasted the policy's maximum, never the reason alone", async () => {
+      const p = await person();
+      const [{ max }] = await rows('SELECT max_call_seconds AS max FROM voice_private.live_call_policy');
+      assert.equal(max, 3600);
+      // A call that has lasted `seconds`: its start moved back inside this rolled-back transaction, the call's guard
+      // trigger set aside for that one row (started_at is written once by design; nothing else is touched).
+      const lasted = async (seconds) => {
+        const x = await call(p);
+        await owner();
+        await q('SET LOCAL session_replication_role = replica');
+        await q("UPDATE voice_private.calls SET started_at = started_at - make_interval(secs => $2) WHERE id = $1", [x.call, seconds]);
+        await q('SET LOCAL session_replication_role = origin');
+        return x;
+      };
+      const full = await lasted(3600);
+      assert.equal(await endCall(full, 'SERVER_ENDED'), 'ENDED');
+      const atMargin = await lasted(3590);
+      assert.equal(await endCall(atMargin, 'SERVER_ENDED'), 'ENDED');
+      const early = await lasted(3580);
+      assert.equal(await endCall(early, 'SERVER_ENDED'), 'ENDED');
+      const own = await lasted(3600);
+      assert.equal(await endCall(own, 'USER_ENDED'), 'ENDED');
+      const got = new Map((await read(p.user, p.session)).map((r) => [r.call_id, r]));
+      assert.equal(got.size, 4);
+      assert.equal(got.get(full.call).at_max_length, true, 'SERVER_ENDED at the maximum');
+      assert.equal(got.get(atMargin.call).at_max_length, true, 'SERVER_ENDED within the 15 s margin');
+      assert.equal(got.get(early.call).at_max_length, false, 'SERVER_ENDED 20 s before the maximum is not the maximum length');
+      assert.equal(got.get(own.call).at_max_length, false, "the person's own end is never the maximum length");
+      assert.equal(got.get(early.call).end_reason, 'SERVER_ENDED', 'the same reason, a different fact: the reason alone does not decide');
     });
   } finally {
     await q('ROLLBACK');

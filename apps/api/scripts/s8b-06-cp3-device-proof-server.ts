@@ -526,7 +526,7 @@ async function main(): Promise<void> {
     // S8B-06 CP3 R3: the finished calls through the API's own 0193 read and the same window rule as ConversationService
     // (the newest page: open at the newest end, from its oldest turn when an older page exists).
     const callRows = await notesRepository.sessionFinishedCalls(PROOF_USER, PROOF_SESSION, hasOlder ? iso(page[0].created_at) : null, null);
-    const calls = callRows.map((c) => ({ callId: c.call_id, startedAt: iso(c.started_at), endedAt: iso(c.ended_at), endReason: c.end_reason })).reverse();
+    const calls = callRows.map((c) => ({ callId: c.call_id, startedAt: iso(c.started_at), endedAt: iso(c.ended_at), endReason: c.end_reason, atMaxLength: c.at_max_length === true })).reverse();
     return {
       exchanges: page.map((u) => {
         const reply = bySource.get(String(u.id));

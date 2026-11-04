@@ -88,6 +88,8 @@ export interface ConversationHistoryFinishedCall {
   startedAt: string;
   endedAt: string;
   endReason: 'USER_ENDED' | 'PEER_LOST_AFTER_GRACE' | 'SYSTEM_INTERRUPTED' | 'FAILED' | 'SERVER_ENDED';
+  /** D6 (Copy Gate, 2026-11-04): the call ended at the policy's maximum length (0193 decides it, never the reason alone). */
+  atMaxLength: boolean;
 }
 
 export interface ConversationHistoryPage {

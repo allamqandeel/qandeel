@@ -167,53 +167,75 @@ was added.
 | Analysis-first, no analysis on the phone | catch-up requests only; the root contract refuses an engine in `call/` |
 | Privacy | no transcript, audio, token or memory content in any log; the proof server's evidence lines carry ids, counts and timings only |
 
-## 4. The Copy Gate (D-05-03) — every row PROPOSED
+## 4. The Copy Gate (D-05-03) — every row APPROVED by the Product Owner (2026-11-04)
 
 **Register (the Product Owner's direction, 2026-11-04):** the Arabic is simplified, neutral Modern Standard Arabic, not
 colloquial. The S8B-05 drafts that were colloquial are redrafted here; this table supersedes those rows for the phone.
-The English is unchanged. No row is approved by this record; previously approved copy (F-01, TM-02, C-12, the G1.1 depth
-words, the Voice Notes rows) is not touched. The phone carries exactly these rows (`apps/mobile/src/voice-call/live-call-copy.ts`).
+Previously approved copy (F-01, TM-02, C-12, the G1.1 depth words, the Voice Notes rows) is not touched. The phone carries exactly these rows (`apps/mobile/src/voice-call/live-call-copy.ts`).
 
 | ID | Status | Arabic | English | Moment |
 |---|---|---|---|---|
-| LCE-01 | PROPOSED | مكالمة صوتية | Voice call | the call control in the Conversation (accessible name) |
-| LCE-02 | PROPOSED | مكالمة صوتية | Voice call | the finished-call record (J7), its word |
-| LCE-03 | PROPOSED | مكالمة صوتية انتهت، مدتها {d} | Voice call ended, {d} | the record's accessible summary |
-| LCE-04 | PROPOSED | كتم الميكروفون | Mute microphone | CallRail mute |
-| LCE-05 | PROPOSED | تشغيل الميكروفون | Turn microphone on | CallRail unmute |
-| LCE-06 | PROPOSED | إنهاء المكالمة | End call | CallRail end |
-| LCE-07 | PROPOSED | السماعة الخارجية | Speaker | CallRail route toggle |
-| LCE-08 | PROPOSED | المكالمة مستمرة | the call continues | accessible suffix of the depth controls during a call |
-| LCE-09 | PROPOSED | جارٍ الاتصال | Connecting | the CONNECTING line |
-| LCE-10 | PROPOSED | الميكروفون يعمل | Microphone on | assistive status only |
-| LCE-11 | PROPOSED | الميكروفون مكتوم | Microphone muted | assistive status only |
-| LCE-12 | PROPOSED | مدة المكالمة {d} | Call time {d} | the call time, accessible |
-| LCE-19 | PROPOSED | انقطع الاتصال. جارٍ إعادة الاتصال. | The call dropped. Reconnecting. | the RECONNECTING line in the app |
-| LCE-20 | PROPOSED | توقفت المكالمة. الكتابة متاحة. | The call isn't working. You can keep going in writing. | a failed start / an end the reader did not choose (J3) |
-| LCE-21 | PROPOSED | الميكروفون غير متاح لقنديل. الكتابة متاحة. | The microphone isn't available to Qandeel. Writing is available. | the microphone stopped during the call |
-| LC-01 | PROPOSED | يُحفظ صوت المكالمة ٣٠ يومًا من بدايتها. | The call's audio is kept for 30 days from its start. | the disclosure line, CONNECTING only |
-| LC-02 | PROPOSED | المكالمات مشغولة الآن. حاول بعد قليل، والكتابة متاحة. | Calls are busy right now. Try again shortly; writing is available. | CAPACITY_FULL |
-| LC-03 | PROPOSED | المكالمة جارية على جهاز آخر. | The call is active on another device. | OTHER_DEVICE |
-| LC-04 | PROPOSED | جارٍ إعادة الاتصال… | Reconnecting… | the notification's reconnecting line |
-| LC-05 | PROPOSED | انتهت المكالمة بعد ٦٠ دقيقة. يمكنك المتابعة كتابةً أو بدء مكالمة جديدة. | The call ended after 60 minutes. You can keep going in writing or start a new call. | the end at the maximum length |
-| LC-06 | PROPOSED | بقيت خمس دقائق على نهاية المكالمة. | Five minutes left in this call. | T-5 in the app; the T-5 clip's spoken text |
-| LC-07 | PROPOSED | بقيت دقيقة واحدة على نهاية المكالمة. | One minute left in this call. | T-1 in the app; the T-1 clip's spoken text |
-| LC-08 | PROPOSED | يحتاج قنديل إلى إذن الميكروفون لإجراء المكالمة. الكتابة متاحة. | Qandeel needs microphone access for the call. Writing is available. | microphone permission refused |
-| LC-09 | PROPOSED | افتح الإعدادات | Open settings | the action beside LC-08 |
-| LC-10 | PROPOSED | المكالمة متوقفة مؤقتًا بسبب مكالمة أخرى. | The call is paused for another call. | HELD (app and notification) |
-| LC-11 | PROPOSED | مكالمة مع QANDEEL | Call with QANDEEL | the ongoing-call notification line |
-| LC-12 | PROPOSED | QANDEEL | QANDEEL | the display name and notification title |
-| LC-13 | PROPOSED | تنتهي المكالمة خلال 5 دقائق | The call ends in 5 minutes | the notification at T-5 |
-| LC-15 | PROPOSED | قوطِع | Interrupted | the interrupted-reply marker |
-| LC-16 | PROPOSED | تحتاج المكالمة إلى موافقتك على تسجيل الصوت. | A call needs your consent to voice recording. | CONSENT_REQUIRED |
-| LC-17 | PROPOSED | المكالمات غير متاحة الآن. الكتابة متاحة. | Calls aren't available right now. Writing is available. | NOT_AVAILABLE_NOW / the call gate closed |
-| LC-18 | PROPOSED | لديك مكالمة جارية بالفعل. | You already have a call in progress. | ALREADY_IN_CALL |
-| LC-19 | PROPOSED | تنتهي المكالمة خلال دقيقة | The call ends in 1 minute | NEW: the notification at T-1 (CP2 used LC-07) |
-| LC-20 | PROPOSED | المكالمات | Calls | NEW: the Android notification channel name (CP2 used LC-11) |
-| LC-21 | PROPOSED | توقفت | stopped | NEW: the record's suffix when the reader did not end the call |
-| LC-22 | PROPOSED | قنديل يتحدث | QANDEEL is speaking | NEW: the assistive status while QANDEEL is audible |
+| LCE-01 | APPROVED | مكالمة صوتية | Voice call | the call control in the Conversation (accessible name) |
+| LCE-02 | APPROVED | مكالمة صوتية | Voice call | the finished-call record (J7), its word |
+| LCE-03 | APPROVED | مكالمة صوتية انتهت، مدتها {d} | Voice call ended, {d} | the record's accessible summary |
+| LCE-04 | APPROVED | كتم الميكروفون | Mute microphone | CallRail mute |
+| LCE-05 | APPROVED | تشغيل الميكروفون | Turn microphone on | CallRail unmute |
+| LCE-06 | APPROVED | إنهاء المكالمة | End call | CallRail end |
+| LCE-07 | APPROVED | السماعة الخارجية | Speaker | CallRail route toggle |
+| LCE-08 | APPROVED | المكالمة مستمرة | the call continues | accessible suffix of the depth controls during a call |
+| LCE-09 | APPROVED | جارٍ الاتصال | Connecting | the CONNECTING line |
+| LCE-10 | APPROVED | الميكروفون يعمل | Microphone on | assistive status only |
+| LCE-11 | APPROVED | الميكروفون مكتوم | Microphone muted | assistive status only |
+| LCE-12 | APPROVED | مدة المكالمة {d} | Call time {d} | the call time, accessible |
+| LCE-19 | APPROVED | انقطع الاتصال. جارٍ إعادة الاتصال. | The call dropped. Reconnecting. | the RECONNECTING line in the app |
+| LCE-20 | APPROVED | توقفت المكالمة. يمكنك المتابعة كتابةً. | The call stopped. You can keep going in writing. | a failed start / an end the reader did not choose (J3) |
+| LCE-21 | APPROVED | الميكروفون غير متاح لقنديل. الكتابة متاحة. | The microphone isn't available to Qandeel. Writing is available. | the microphone stopped during the call |
+| LC-01 | APPROVED | يُحتفظ بتسجيل المكالمة لمدة ٣٠ يومًا من بدايتها. | The call recording is kept for 30 days from its start. | the disclosure line, CONNECTING only |
+| LC-02 | APPROVED | خدمة المكالمات مشغولة حاليًا. حاول بعد قليل، ويمكنك المتابعة كتابةً. | Calls are busy right now. Try again shortly; writing is available. | CAPACITY_FULL |
+| LC-03 | APPROVED | المكالمة جارية على جهاز آخر. | The call is active on another device. | OTHER_DEVICE |
+| LC-04 | APPROVED | جارٍ إعادة الاتصال… | Reconnecting… | the notification's reconnecting line |
+| LC-05 | APPROVED | انتهت المكالمة بعد ٦٠ دقيقة. يمكنك المتابعة كتابةً أو بدء مكالمة جديدة. | The call ended after 60 minutes. You can keep going in writing or start a new call. | the end at the maximum length |
+| LC-06 | APPROVED | بقيت خمس دقائق على نهاية المكالمة. | Five minutes left in this call. | T-5 in the app; the T-5 clip's spoken text |
+| LC-07 | APPROVED | بقيت دقيقة واحدة على نهاية المكالمة. | One minute left in this call. | T-1 in the app; the T-1 clip's spoken text |
+| LC-08 | APPROVED | يحتاج قنديل إلى إذن الميكروفون لإجراء المكالمة. الكتابة متاحة. | Qandeel needs microphone access for the call. Writing is available. | microphone permission refused |
+| LC-09 | APPROVED | افتح الإعدادات | Open settings | the action beside LC-08 |
+| LC-10 | APPROVED | المكالمة متوقفة مؤقتًا بسبب مكالمة أخرى. | The call is paused for another call. | HELD (app and notification) |
+| LC-11 | APPROVED | مكالمة مع قنديل | Call with QANDEEL | the ongoing-call notification line |
+| LC-12 | APPROVED | QANDEEL | QANDEEL | the display name and notification title |
+| LC-13 | APPROVED | تنتهي المكالمة خلال ٥ دقائق | The call ends in 5 minutes | the notification at T-5 |
+| LC-15 | APPROVED | تمت مقاطعة الرد | Reply interrupted | the interrupted-reply marker |
+| LC-16 | APPROVED | تحتاج المكالمة إلى موافقتك على تسجيل الصوت. | A call needs your consent to voice recording. | CONSENT_REQUIRED |
+| LC-17 | APPROVED | المكالمات غير متاحة الآن. الكتابة متاحة. | Calls aren't available right now. Writing is available. | NOT_AVAILABLE_NOW / the call gate closed |
+| LC-18 | APPROVED | لديك مكالمة جارية بالفعل. | You already have a call in progress. | ALREADY_IN_CALL |
+| LC-19 | APPROVED | تنتهي المكالمة خلال دقيقة | The call ends in 1 minute | NEW: the notification at T-1 (CP2 used LC-07) |
+| LC-20 | APPROVED | المكالمات | Calls | NEW: the Android notification channel name (CP2 used LC-11) |
+| LC-21 | APPROVED | توقفت | stopped | NEW: the record's suffix when the reader did not end the call |
+| LC-22 | APPROVED | قنديل يتحدث | QANDEEL is speaking | NEW: the assistive status while QANDEEL is audible |
 
-**Gate status: OPEN** — awaiting the Product Owner's decision per row.
+**Gate status: CLOSED** — **all 36 rows APPROVED by the Product Owner** ("QANDEEL — S8B-06 CP3, PO Approval — Copy Gate &
+Final Android Device Verification", 2026-11-04): a formal approval of the 36 rows of the review table
+(`R3/S8B-06_CP3_COPY_GATE_REVIEW_TABLE.md`), with these decisions and corrections, applied as given:
+- **D1 — digits (option C):** Arabic-Indic digits inside Arabic sentences (٣٠, ٦٠, ٥, ١); Western digits in the call time
+  and the lengths (`05:30`, `12:45`); English uses Western digits. **LC-13** is corrected to «٥». **LC-19**'s Arabic
+  «تنتهي المكالمة خلال دقيقة» carries no digit at all (the number is said in the word «دقيقة»), so it already meets the
+  rule and is unchanged; no wording was invented for it.
+- **D2 — the name:** QANDEEL is the brand in the notification title and the display name (**LC-12** QANDEEL); inside a
+  natural Arabic sentence «قنديل» (**LC-11** «مكالمة مع قنديل», "Call with QANDEEL").
+- **D3 — option A:** **LCE-20** «توقفت المكالمة. يمكنك المتابعة كتابةً.» / "The call stopped. You can keep going in
+  writing." No line implies an unproven fault, and no end is shown as certain before the server's truth arrives.
+- **D4:** two lines kept: **LCE-19** in the app, **LC-04** in the notification.
+- **D5:** **LC-06** and **LC-07** approved, Arabic and English, shown and spoken. Approving the text authorizes no paid voice:
+  no TTS call is made until a separate permission (P-A); CP2's local tone plays.
+- **D6:** the call's natural end at the 60-minute maximum is **not** «توقفت». The record tells the three ends apart from the
+  server's truth: the person's own end (`USER_ENDED`), the maximum length, and a stop (a lost connection, a failure, an
+  early server end). Because `SERVER_ENDED` is not bound to one cause, the reason alone does not decide: `0193` returns
+  `at_max_length`, true only for a `SERVER_ENDED` call that lasted the policy's `max_call_seconds` (within 15 s), §2.1.
+- **Corrections:** **LC-02** «خدمة المكالمات مشغولة حاليًا. حاول بعد قليل، ويمكنك المتابعة كتابةً.» (English unchanged);
+  **LC-15** «تمت مقاطعة الرد» / "Reply interrupted"; **LC-01** «يُحتفظ بتسجيل المكالمة لمدة ٣٠ يومًا من بدايتها.» / "The call
+  recording is kept for 30 days from its start." (the wording only: the retention, 30 days from the start, and the privacy
+  policy are unchanged).
+
+No copy approved earlier outside this gate was reopened.
 
 ## 5. Defects found by the device proof, and findings
 

@@ -221,6 +221,7 @@ export class ConversationService {
       startedAt: new Date(row.started_at).toISOString(),
       endedAt: new Date(row.ended_at).toISOString(),
       endReason: row.end_reason,
+      atMaxLength: row.at_max_length === true,
     })).reverse();
     const exchanges = users.map((userTurn): ConversationHistoryExchange => {
       const reply = replyBySource.get(userTurn.id);

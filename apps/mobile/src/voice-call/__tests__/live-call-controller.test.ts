@@ -61,7 +61,7 @@ describe('S8B-06 CP2 — one call, one end latch, server authority', () => {
     const { controller, platform, sockets, engine } = setup();
     await controller.start();
     expect(platform.startCalls).toEqual([{
-      callId: CALL_ID, displayName: 'QANDEEL', notificationTitle: 'QANDEEL', notificationText: 'مكالمة مع QANDEEL', channelName: copy.channelName, route: 'EARPIECE',
+      callId: CALL_ID, displayName: 'QANDEEL', notificationTitle: 'QANDEEL', notificationText: 'مكالمة مع قنديل', channelName: copy.channelName, route: 'EARPIECE',
     }]);
     expect(sockets).toHaveLength(1);
     sockets[0]!.open();
@@ -181,7 +181,7 @@ describe('S8B-06 CP2 — one call, one end latch, server authority', () => {
     const second = sockets[1]!;
     second.open();
     second.server(state({ state: 'ACTIVE', epoch: 2, resumeFromCaptureMs: 0, lastMsgId: 0 }));
-    expect(platform.notifications.at(-1)).toBe('مكالمة مع QANDEEL');
+    expect(platform.notifications.at(-1)).toBe('مكالمة مع قنديل');
 
     second.drop(LIVE_CALL_CLOSE.GOING_AWAY);
     for (let i = 0; i < 40 && controller.phase !== 'ENDED'; i += 1) {
@@ -245,7 +245,7 @@ describe('S8B-06 CP2 — one call, one end latch, server authority', () => {
     engine.emit({ type: 'uplink', captureMs: 6040, packet: packet(2) });
     expect(socket.order()).toEqual(['HELLO', 'A0@0', 'A1@20', 'MUTE#1', 'UNMUTE#2', 'A2@6040']);
     expect(socket.controls().filter((m) => m.type === 'MUTE' || m.type === 'UNMUTE').map((m) => m.captureMs)).toEqual([40, 6040]);
-    expect(platform.notifications.at(-1)).toBe('مكالمة مع QANDEEL');
+    expect(platform.notifications.at(-1)).toBe('مكالمة مع قنديل');
   });
 
   it('a resume never unmutes a person who muted during the hold', async () => {
@@ -291,7 +291,7 @@ describe('S8B-06 CP2 — the 60-minute warning through the controller', () => {
   it('schedules T-5 and T-1 on the engine clock from STATE.endsAt, with their notification lines', async () => {
     const { engine } = await active({ endsAt: at(60 * 60_000) });
     expect(engine.cues).toEqual([
-      { op: 'schedule', id: 'T5', kind: 'T5', dueInMs: 55 * 60_000, text: 'تنتهي المكالمة خلال 5 دقائق', result: 'SCHEDULED' },
+      { op: 'schedule', id: 'T5', kind: 'T5', dueInMs: 55 * 60_000, text: 'تنتهي المكالمة خلال ٥ دقائق', result: 'SCHEDULED' },
       { op: 'schedule', id: 'T1', kind: 'T1', dueInMs: 59 * 60_000, text: copy.notificationT1, result: 'SCHEDULED' },
     ]);
   });
@@ -300,7 +300,7 @@ describe('S8B-06 CP2 — the 60-minute warning through the controller', () => {
     const { controller, engine, platform, socket } = await active({ endsAt: at(60 * 60_000) });
     socket.server({ type: 'CALL_ENDING', endsInMs: 300_000 });
     expect(engine.cues.at(-1)).toMatchObject({ op: 'play', id: 'T5', result: 'QUEUED' });
-    expect(platform.notifications.at(-1)).toBe('تنتهي المكالمة خلال 5 دقائق');
+    expect(platform.notifications.at(-1)).toBe('تنتهي المكالمة خلال ٥ دقائق');
     expect(controller.warning.phase.T5).toBe('QUEUED');
     engine.emit({ type: 'cue', event: 'STARTED', id: 'T5', forced: false, source: null });
     expect(controller.warning.phase.T5).toBe('PLAYING');

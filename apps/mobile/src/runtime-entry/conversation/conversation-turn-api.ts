@@ -86,6 +86,8 @@ export interface ConversationFinishedCallView {
   readonly startedAt: string;
   readonly endedAt: string;
   readonly endReason: ConversationCallEndReason;
+  /** D6 (Copy Gate, 2026-11-04): the server says the call ended at the maximum length; its record is not "stopped". */
+  readonly atMaxLength: boolean;
 }
 
 export interface ConversationHistoryPageView {
@@ -198,9 +200,14 @@ function decodeFinishedCall(value: unknown): Decoded<ConversationFinishedCallVie
   const ended = Date.parse(value.endedAt);
   if (!Number.isFinite(started) || !Number.isFinite(ended) || ended < started) return { ok: false };
   if (typeof value.endReason !== 'string' || !END_REASONS.has(value.endReason)) return { ok: false };
+  // Only the server's own end can be the maximum length.
+  if (typeof value.atMaxLength !== 'boolean' || (value.atMaxLength && value.endReason !== 'SERVER_ENDED')) return { ok: false };
   return {
     ok: true,
-    value: { callId: value.callId, startedAt: value.startedAt, endedAt: value.endedAt, endReason: value.endReason as ConversationCallEndReason },
+    value: {
+      callId: value.callId, startedAt: value.startedAt, endedAt: value.endedAt,
+      endReason: value.endReason as ConversationCallEndReason, atMaxLength: value.atMaxLength,
+    },
   };
 }
 

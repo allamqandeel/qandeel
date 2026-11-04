@@ -28,8 +28,8 @@ const IDLE: CallOwnerState = {
 };
 // The fixture's clock: exchange order n is created at 10:mm:ss with n seconds past 10:00 (2026-09-28, UTC).
 const at = (seconds: number, ms = 0) => new Date(Date.UTC(2026, 8, 28, 10, 0, seconds, ms)).toISOString();
-const finished = (callId: string, started: string, ended: string, endReason: ConversationFinishedCallView['endReason'] = 'USER_ENDED'): ConversationFinishedCallView =>
-  ({ callId, startedAt: started, endedAt: ended, endReason });
+const finished = (callId: string, started: string, ended: string, endReason: ConversationFinishedCallView['endReason'] = 'USER_ENDED', atMaxLength = false): ConversationFinishedCallView =>
+  ({ callId, startedAt: started, endedAt: ended, endReason, atMaxLength });
 
 function owner(initial: Partial<CallOwnerState> = {}): { owner: CallOwner; set: (patch: Partial<CallOwnerState>) => Promise<void> } {
   let state: CallOwnerState = { ...IDLE, ...initial };
@@ -86,6 +86,8 @@ describe('S8B-06 CP3 R3 — the history carries the finished calls (decoder)', (
     for (const bad of [
       'calls', [{ ...call, callId: '' }], [{ ...call, startedAt: 'yesterday' }], [{ ...call, endedAt: '2026-11-04T09:59:59.000Z' }],
       [{ ...call, endReason: 'HUNG_UP' }], [{ ...call, endReason: undefined }], [null],
+      // D6: the maximum-length fact is required, a boolean, and only ever the server's own end.
+      [{ ...call, atMaxLength: undefined }], [{ ...call, atMaxLength: 'yes' }], [{ ...call, atMaxLength: true }],
     ]) {
       await expect(api({ ...(historyBody([view]) as object), calls: bad }).readHistory(SESSION_A)).resolves.toEqual({ kind: 'UNAVAILABLE', reason: 'MALFORMED_RESPONSE' });
     }
@@ -135,6 +137,16 @@ describe.each(['ar', 'en'] as const)('S8B-06 CP3 R3 — the record drawn from th
     // The person's own End: no «stopped».
     const chosen = await render(<Host callOwner={owner().owner} exchanges={turns} calls={[finished(CALL, at(2), at(2 + 75))]} language={language} />);
     expect(chosen.getByTestId(CALL_RECORD_TEST_ID).props.accessibilityLabel).toBe(copy.recordSummary('1:15'));
+  });
+
+  it("D6: the end at the maximum length is not «stopped»: the server's at_max_length decides, never SERVER_ENDED alone", async () => {
+    const turns = [exchange('written', { order: 1 }), callTurn('1', 2)];
+    const hour = 60 * 60;
+    const atMax = await render(<Host callOwner={owner().owner} exchanges={turns} calls={[finished(CALL, at(2), at(2 + hour), 'SERVER_ENDED', true)]} language={language} />);
+    expect(atMax.getByTestId(CALL_RECORD_TEST_ID).props.accessibilityLabel).toBe(copy.recordSummary('60:00'));
+    // Counter-test: the same reason and the same length, without the server's fact, still reads «stopped».
+    const without = await render(<Host callOwner={owner().owner} exchanges={turns} calls={[finished(CALL, at(2), at(2 + hour), 'SERVER_ENDED')]} language={language} />);
+    expect(without.getByTestId(CALL_RECORD_TEST_ID).props.accessibilityLabel).toBe(`${copy.recordSummary('60:00')}. ${copy.recordStopped}`);
   });
 
   it('the server\'s record stands over the phone\'s own count once a read carries it', async () => {

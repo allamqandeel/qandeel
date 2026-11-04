@@ -9,7 +9,8 @@
 //   Map       analysis-first: a committed call turn or a reply's end asks the Foreground Live Driver for a catch-up; no
 //             analysis on the phone, no new engine.
 //   T1        typed during a call: TEXT_TURN on the call's channel through the Conversation's ONE transport.
-//   Copy      every call row is the CP3 record's §4 gate row, character for character, and still PROPOSED (D-05-03).
+//   Copy      every call row is the CP3 record's §4 gate row, character for character, and APPROVED by the Product Owner
+//             (2026-11-04), with the decided wording of D1 – D3 and the three corrections pinned here (D-05-03).
 //   Audio     no audio file and no TTS call: F-01 / T-5 / T-1 assets wait on a separate Product Owner approval; CP2's local
 //             warning tone is unchanged.
 //
@@ -43,21 +44,43 @@ const gateRows = () => {
 const copyRows = () => [...read(COPY_FILE).matchAll(/\{ id: '(LCE?-\d{2})', status: '(\w+)', ar: '([^']*)', en: (?:'([^']*)'|"([^"]*)") \}/gu)]
   .map(([, id, status, ar, single, double]) => ({ id, status, ar, en: single ?? double }));
 
-test('the Copy Gate: the phone carries exactly the CP3 record\'s §4 rows, both ways, every one PROPOSED', () => {
+// The Product Owner's Copy Gate approval (2026-11-04): the rows whose wording the decision fixed, exactly as given.
+const DECIDED = {
+  'LCE-20': ['توقفت المكالمة. يمكنك المتابعة كتابةً.', 'The call stopped. You can keep going in writing.'],
+  'LC-01': ['يُحتفظ بتسجيل المكالمة لمدة ٣٠ يومًا من بدايتها.', 'The call recording is kept for 30 days from its start.'],
+  'LC-02': ['خدمة المكالمات مشغولة حاليًا. حاول بعد قليل، ويمكنك المتابعة كتابةً.', 'Calls are busy right now. Try again shortly; writing is available.'],
+  'LC-11': ['مكالمة مع قنديل', 'Call with QANDEEL'],
+  'LC-12': ['QANDEEL', 'QANDEEL'],
+  'LC-13': ['تنتهي المكالمة خلال ٥ دقائق', 'The call ends in 5 minutes'],
+  'LC-15': ['تمت مقاطعة الرد', 'Reply interrupted'],
+};
+
+// RE-ANCHORED by the Product Owner's Copy Gate approval (2026-11-04; was: every row PROPOSED, the gate OPEN): the 36 rows are
+// APPROVED and the gate CLOSED. Still both ways and character for character; the decided wording is pinned (DECIDED), and
+// a row in any other state, or a Western digit inside an Arabic sentence (D1), still fails.
+test('the Copy Gate: the phone carries exactly the CP3 record\'s §4 rows, both ways, every one APPROVED', () => {
   const gate = gateRows();
   const phone = copyRows();
   assert.equal(phone.length, (read(COPY_FILE).match(/\bid: '/gu) ?? []).length, 'every row of the copy table is read');
   assert.deepEqual(phone.map((r) => r.id).sort(), gate.map((cells) => cells[1]).sort(), 'the same ids, no more and no fewer');
+  assert.equal(gate.length, 36, 'the 36 rows the Product Owner approved');
   for (const cells of gate) {
-    assert.equal(cells[2], 'PROPOSED', `${cells[1]} is PROPOSED in the gate: this record approves no copy`);
+    assert.equal(cells[2], 'APPROVED', `${cells[1]} is APPROVED in the gate`);
     const row = phone.find((r) => r.id === cells[1]);
-    assert.equal(row.status, 'PROPOSED', `${cells[1]} is PROPOSED on the phone`);
+    assert.equal(row.status, 'APPROVED', `${cells[1]} is APPROVED on the phone`);
+    // D1: Arabic-Indic digits inside an Arabic sentence; a {d} placeholder takes the Western call time.
+    assert.doesNotMatch(row.ar, /[0-9]/u, `${cells[1]}: no Western digit in the Arabic sentence (D1)`);
     assert.equal(row.ar, cells[3], `${cells[1]} Arabic, character for character`);
     assert.equal(row.en, cells[4], `${cells[1]} English, character for character`);
   }
+  for (const [id, [ar, en]] of Object.entries(DECIDED)) {
+    const row = phone.find((r) => r.id === id);
+    assert.deepEqual([row.ar, row.en], [ar, en], `${id} is the Product Owner's decided wording`);
+  }
   const record = read(RECORD);
   assert.match(record, /\*\*Register \(the Product Owner's direction, 2026-11-04\):\*\* the Arabic is simplified, neutral Modern Standard Arabic, not\ncolloquial\./u);
-  assert.match(record, /\*\*Gate status: (?:OPEN|CLOSED)\*\*/u);
+  assert.match(record, /\*\*Gate status: CLOSED\*\* — \*\*all 36 rows APPROVED by the Product Owner\*\*/u);
+  assert.match(record, /- \*\*D6:\*\* the call's natural end at the 60-minute maximum is \*\*not\*\* «توقفت»/u);
 });
 
 test('the native surface and the call screen read these exact rows (the counter-test of the CP2 Jest re-anchor)', () => {
