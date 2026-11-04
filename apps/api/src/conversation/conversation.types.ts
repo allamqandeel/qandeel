@@ -79,8 +79,25 @@ export interface ConversationHistoryExchange {
   deliveryState?: 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED';
 }
 
+/**
+ * S8B-06 CP3 R3 (0193): a finished call of the Session, from the server's durable call record: a call that ended after it
+ * became ACTIVE. Its instants and its end reason are the server's; a call that never became ACTIVE is never one.
+ */
+export interface ConversationHistoryFinishedCall {
+  callId: string;
+  startedAt: string;
+  endedAt: string;
+  endReason: 'USER_ENDED' | 'PEER_LOST_AFTER_GRACE' | 'SYSTEM_INTERRUPTED' | 'FAILED' | 'SERVER_ENDED';
+}
+
 export interface ConversationHistoryPage {
   exchanges: ConversationHistoryExchange[];
   /** True when older committed user turns exist before the first exchange of this page. */
   hasOlder: boolean;
+  /**
+   * S8B-06 CP3 R3 (0193): present only when the page's window holds a finished call, oldest to newest by its end. The
+   * window is the page's own: from this page's oldest user turn (open when there is no older page) up to the cursor (open
+   * for the newest page), so every finished call is on exactly one page, a call that left no turn included.
+   */
+  calls?: ConversationHistoryFinishedCall[];
 }

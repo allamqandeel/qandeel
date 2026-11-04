@@ -9,7 +9,7 @@ import { act, fireEvent, render, type RenderResult } from '@testing-library/reac
 import { BackHandler } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
-import { CALL_ENTRY_TEST_ID, CALL_LINE_TEST_ID, CALL_NOTICE_TEST_ID, loadCallDevice, type CallDevice } from '../../call';
+import { CALL_ENTRY_TEST_ID, CALL_LINE_TEST_ID, CALL_NOTICE_TEST_ID, CALL_RECORD_TEST_ID, liveCallKey, loadCallDevice, type CallDevice } from '../../call';
 import { historyBody, exchange } from '../../conversation/__fixtures__/conversation';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { FakeCallEngine, FakeCallPlatform } from '../../voice-call/__fixtures__/live-call-fakes';
@@ -31,11 +31,11 @@ async function laidOut(view: RenderResult, which: 'conversation' | 'analysis'): 
   await settled();
 }
 
-async function withCall(extra: Partial<CallDevice> = {}): Promise<{ h: IntegrationHarness; view: RenderResult; sockets: FakeSocket[]; platform: FakeCallPlatform }> {
+async function withCall(extra: Partial<CallDevice> = {}, history: unknown = historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })])): Promise<{ h: IntegrationHarness; view: RenderResult; sockets: FakeSocket[]; platform: FakeCallPlatform }> {
   const platform = new FakeCallPlatform();
   const { factory, sockets } = socketRecorder();
   const h = await harness({ foreground: 'ACTIVE', callDevice: { platform, engine: new FakeCallEngine(), socketFactory: factory, ...extra } });
-  h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })]) } : { status: 500, body: {} }));
+  h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: history } : { status: 500, body: {} }));
   h.http.on(VOICE_CAPABILITY_ROUTE, () => currentConsentCapability());
   h.http.on('/voice/calls/truth', () => ({ status: 200, body: { callTruth: 'NO_CALL_KNOWN', callId: null, callState: null, startedAt: null } }));
   const view = await render(
@@ -233,6 +233,33 @@ describe('S8B-06 CP3 — the call over DepthComposition', () => {
     expect(view.queryAllByTestId(/^qandeel-depth-(conversation|analysis)$/u).map((l) => l.props.testID)).toEqual(['qandeel-depth-conversation']);
     expect(view.getByTestId(CALL_NOTICE_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(CALL_ENTRY_TEST_ID)).toBeTruthy();
+    h.dispose();
+  });
+
+  it("R3: after a restart the finished calls are the server's: a call's length after its last turn, a call that left no turn at its place", async () => {
+    const CALL = 'f0000000-0000-4000-8000-000000000021';
+    const SILENT = 'f0000000-0000-4000-8000-000000000022';
+    const turns = [
+      exchange('fixture: said in the call', { order: 2, key: liveCallKey(CALL, '00000001-0000-4000-8000-000000000000') }),
+      exchange('fixture: written after', { order: 200, key: 'fixture-written' }),
+    ];
+    // The fixture clock: order n is n seconds past 10:00 on 2026-09-28. The silent call (no turn, ended by the server) ran
+    // from 0:00 to 0:01, before the first turn; the call ran from 0:01 to 2:06, its one turn at 0:02.
+    const at = (seconds: number) => new Date(Date.UTC(2026, 8, 28, 10, 0, seconds)).toISOString();
+    const body = {
+      ...(historyBody(turns) as object),
+      calls: [
+        { callId: SILENT, startedAt: at(0), endedAt: at(1), endReason: 'SERVER_ENDED' },
+        { callId: CALL, startedAt: at(1), endedAt: at(126), endReason: 'USER_ENDED' },
+      ],
+    };
+    // A fresh runtime: the phone holds no record of either call (no call ran in this generation).
+    const { h, view } = await withCall({}, body);
+    const records = view.getAllByTestId(CALL_RECORD_TEST_ID);
+    expect(records).toHaveLength(2);
+    expect(view.getByTestId('qandeel-conversation-head')).toContainElement(records[0]);
+    expect(records[0].props.accessibilityLabel).toMatch(/0:01/u);
+    expect(records[1].props.accessibilityLabel).toMatch(/2:05/u);
     h.dispose();
   });
 });

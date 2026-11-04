@@ -154,6 +154,11 @@ export interface ConversationSurfaceProps {
    */
   readonly threadTail?: ReactElement | null;
   /**
+   * S8B-06 CP3 R3 (J7): what the composition draws before the first loaded exchange (the record of a finished call that
+   * ended before it). Presentation only; never a turn, never interactive here, hidden while a selection mode is on.
+   */
+  readonly threadHead?: ReactElement | null;
+  /**
    * S8B-03 (P4-C3): the composition may draw the body of a committed utterance itself — for an exchange it recognizes —
    * inside the same slab, on the same edge. It answers null for every other exchange, whose words are drawn here.
    */
@@ -466,6 +471,7 @@ export function ConversationSurface({
   composerEnd = null,
   composerOverride = null,
   threadTail = null,
+  threadHead = null,
   utteranceBody = null,
   replyCompanion = null,
   exchangeTrailer = null,
@@ -748,7 +754,14 @@ export function ConversationSurface({
         keyExtractor={(exchange) => exchange.userTurn.id}
         renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} replyCompanion={rowInputs.replyCompanion} exchangeTrailer={rowInputs.exchangeTrailer} />}
         extraData={rowInputs}
-        ListHeaderComponent={state.exchanges.length > 0 ? historyFailure : null}
+        ListHeaderComponent={state.exchanges.length > 0 ? (
+          threadHead === null || selection !== null ? historyFailure : (
+            <View>
+              {historyFailure}
+              <View testID="qandeel-conversation-head">{threadHead}</View>
+            </View>
+          )
+        ) : null}
         // An empty list is either a history that could not be read, or — once READ — a genuinely empty
         // Conversation, which is where the W1B-01 opening belongs.
         ListEmptyComponent={state.history === 'READY' ? (opening ?? null) : historyFailure}

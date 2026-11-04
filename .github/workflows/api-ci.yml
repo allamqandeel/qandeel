@@ -1386,6 +1386,11 @@ jobs:
       # installed and not installed, and the account erasure. No provider, no paid call, no real person.
       - name: Prove S8B-05 CP4 synthetic live call closure against real PostgreSQL (free)
         run: npm run prove:live-call-closure-synthetic:integration
+      # S8B-06 CP3 R3: migration 0193 (the finished-call record from durable truth) - the one service-role read of a Session's
+      # finished calls: a zero-turn call and a call with turns with the server's instants and end reason, never a call that
+      # did not become ACTIVE nor the live call, the person's and the Session's isolation, the window, no client role.
+      - name: Verify S8B-06 CP3 finished-call record read (0193) against real PostgreSQL
+        run: npm run verify:session-finished-calls:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

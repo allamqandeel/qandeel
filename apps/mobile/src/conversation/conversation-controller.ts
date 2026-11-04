@@ -43,6 +43,7 @@
  */
 import type {
   ConversationExchangeView,
+  ConversationFinishedCallView,
   ConversationHistoryOutcome,
   ConversationSubmitOutcome,
   ConversationTurnSubmission,
@@ -77,6 +78,11 @@ export interface ConversationPresentationState {
   readonly history: HistoryStatus;
   /** The conversation-so-far, oldest to newest, one entry per committed user turn. */
   readonly exchanges: readonly ConversationExchangeView[];
+  /**
+   * S8B-06 CP3 R3: the finished calls the read pages carried (the server's durable record, J7), oldest to newest by their
+   * end. Not turns: the Conversation draws each one at its place in the thread.
+   */
+  readonly calls: readonly ConversationFinishedCallView[];
   readonly hasOlder: boolean;
   readonly loadingOlder: boolean;
   /** The composer's text. While a submission is unresolved it is that submission's words. */
@@ -168,6 +174,14 @@ const compareExchanges = (a: ConversationExchangeView, b: ConversationExchangeVi
   return a.userTurn.id < b.userTurn.id ? -1 : 1;
 };
 
+/** S8B-06 CP3 R3: merge the finished calls a page carried into the held ones (one per call), oldest to newest by their end. */
+function mergeCalls(held: readonly ConversationFinishedCallView[], incoming: readonly ConversationFinishedCallView[] | undefined): readonly ConversationFinishedCallView[] {
+  if (incoming === undefined || incoming.length === 0) return held;
+  const byId = new Map<string, ConversationFinishedCallView>();
+  for (const call of [...held, ...incoming]) byId.set(call.callId, call);
+  return [...byId.values()].sort((a, b) => Date.parse(a.endedAt) - Date.parse(b.endedAt) || (a.callId < b.callId ? -1 : a.callId > b.callId ? 1 : 0));
+}
+
 /** Merge server-reported exchanges into the held ones. The newer report of the same turn wins. */
 function mergeExchanges(held: readonly ConversationExchangeView[], incoming: readonly ConversationExchangeView[]): ConversationExchangeView[] {
   const byId = new Map<string, ConversationExchangeView>();
@@ -187,6 +201,7 @@ export function createConversationController(options: ConversationControllerOpti
   let state: ConversationPresentationState = Object.freeze({
     history: 'LOADING',
     exchanges: Object.freeze([]),
+    calls: Object.freeze([]),
     hasOlder: false,
     loadingOlder: false,
     draft: '',
@@ -298,7 +313,7 @@ export function createConversationController(options: ConversationControllerOpti
     if (read.kind === 'PAGE') {
       const found = read.page.exchanges.find((exchange) => exchange.userTurn.idempotencyKey === key);
       if (found !== undefined) {
-        update({ exchanges: mergeExchanges(state.exchanges, read.page.exchanges) });
+        update({ exchanges: mergeExchanges(state.exchanges, read.page.exchanges), calls: mergeCalls(state.calls, read.page.calls) });
         commit(key, found);
         if (found.replyState === 'COMPLETED') reenterEstablishment(content, key);
         return;
@@ -349,6 +364,7 @@ export function createConversationController(options: ConversationControllerOpti
         update({
           history: 'READY',
           exchanges: mergeExchanges(state.exchanges, read.page.exchanges),
+          calls: mergeCalls(state.calls, read.page.calls),
           // Only the first page decides whether older turns exist; a refresh never hides them.
           hasOlder: first ? read.page.hasOlder : state.hasOlder,
         });
@@ -384,7 +400,10 @@ export function createConversationController(options: ConversationControllerOpti
       void transport.readHistory(sessionId, { before }).then((read) => {
         if (!live()) return;
         if (read.kind === 'PAGE') {
-          update({ loadingOlder: false, hasOlder: read.page.hasOlder, exchanges: mergeExchanges(state.exchanges, read.page.exchanges) });
+          update({
+            loadingOlder: false, hasOlder: read.page.hasOlder, exchanges: mergeExchanges(state.exchanges, read.page.exchanges),
+            calls: mergeCalls(state.calls, read.page.calls),
+          });
         } else {
           // Nothing to say: the held conversation is still true, and scrolling up asks again.
           update({ loadingOlder: false });

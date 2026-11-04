@@ -582,8 +582,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // S8B-06 CP3 — the live call, in the Personal world only. The owner is the generation's, above this composition:
   // crossing depths, opening the Analysis or another surface re-reads it and never reopens or ends anything.
   const callOwner = onSignOut === undefined ? null : runtime.call;
-  const { exchanges } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
-  const callSlots = useCallSurface(callOwner, exchanges, locale.language);
+  const { exchanges, calls } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
+  const callSlots = useCallSurface(callOwner, exchanges, locale.language, calls);
   const callLive = callSlots.live;
   const voiceCompanion = voiceSlots.replyCompanion;
   const callCompanion = callSlots.replyCompanion;
@@ -676,6 +676,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         composerEnd={composerEnd}
         composerOverride={voiceSlots.composerOverride}
         threadTail={threadTail}
+        threadHead={callSlots.threadHead}
         utteranceBody={voiceSlots.utteranceBody}
         replyCompanion={replyCompanion}
         exchangeTrailer={callSlots.exchangeTrailer}

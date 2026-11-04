@@ -523,6 +523,10 @@ async function main(): Promise<void> {
     const delivery = replies.length === 0 ? [] : await notesRepository.callReplyDelivery(PROOF_USER, PROOF_SESSION, replies.map((r) => String(r.id)));
     const deliveryOf = new Map(delivery.map((d) => [d.turn_id, d.delivery_state]));
     const iso = (v: unknown) => new Date(String(v)).toISOString();
+    // S8B-06 CP3 R3: the finished calls through the API's own 0193 read and the same window rule as ConversationService
+    // (the newest page: open at the newest end, from its oldest turn when an older page exists).
+    const callRows = await notesRepository.sessionFinishedCalls(PROOF_USER, PROOF_SESSION, hasOlder ? iso(page[0].created_at) : null, null);
+    const calls = callRows.map((c) => ({ callId: c.call_id, startedAt: iso(c.started_at), endedAt: iso(c.ended_at), endReason: c.end_reason })).reverse();
     return {
       exchanges: page.map((u) => {
         const reply = bySource.get(String(u.id));
@@ -534,6 +538,7 @@ async function main(): Promise<void> {
         };
       }),
       hasOlder,
+      ...(calls.length > 0 ? { calls } : {}),
     };
   };
 
@@ -544,7 +549,7 @@ async function main(): Promise<void> {
     async history(@Param('sessionId') sessionId: string, @Query('limit') limit?: string) {
       if (sessionId !== PROOF_SESSION) throw new HttpException('not found', 404);
       const page = await exchanges(Math.min(Number(limit ?? 30) || 30, 100));
-      evidence('history', { exchanges: page.exchanges.length });
+      evidence('history', { exchanges: page.exchanges.length, calls: page.calls?.length ?? 0 });
       return page;
     }
 

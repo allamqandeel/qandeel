@@ -5,6 +5,7 @@ import { ConversationRepository } from './conversation.repository';
 import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
 import type {
   ConversationHistoryExchange,
+  ConversationHistoryFinishedCall,
   ConversationHistoryPage,
   ConversationSession,
   ConversationTurn,
@@ -212,6 +213,15 @@ export class ConversationService {
     const deliveryRows = this.voiceNotes && assistants.length > 0
       ? await this.voiceNotes.callReplyDelivery(userId, sessionId, assistants.map((turn) => turn.id)) : [];
     const deliveryByReply = new Map(deliveryRows.map((row) => [row.turn_id, row.delivery_state]));
+    // S8B-06 CP3 R3 (0193): the finished calls whose end falls in this page's window, from the server's durable record.
+    const callRows = this.voiceNotes
+      ? await this.voiceNotes.sessionFinishedCalls(userId, sessionId, hasOlder ? users[0].created_at : null, cursor?.createdAt ?? null) : [];
+    const calls = callRows.map((row): ConversationHistoryFinishedCall => ({
+      callId: row.call_id,
+      startedAt: new Date(row.started_at).toISOString(),
+      endedAt: new Date(row.ended_at).toISOString(),
+      endReason: row.end_reason,
+    })).reverse();
     const exchanges = users.map((userTurn): ConversationHistoryExchange => {
       const reply = replyBySource.get(userTurn.id);
       const voice = voiceByTurn.get(userTurn.id);
@@ -230,7 +240,7 @@ export class ConversationService {
         ...(reply && deliveryByReply.has(reply.id) ? { deliveryState: deliveryByReply.get(reply.id)! } : {}),
       };
     });
-    return { exchanges, hasOlder };
+    return { exchanges, hasOlder, ...(calls.length > 0 ? { calls } : {}) };
   }
 
   private validateHistoryQuery(query: unknown): { limit: number; before?: string } {

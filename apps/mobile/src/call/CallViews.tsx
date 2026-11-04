@@ -9,7 +9,9 @@
  *     and QANDEEL speaking are told to assistive technology only (one polite announcement, and the line's own value).
  *   - **The notice:** why a call did not start or stopped (J3), in the Conversation, with Open settings for the microphone.
  *   - **The record (J7):** a finished call's centred, non-interactive mark, «مكالمة صوتية · m:ss» (· «وقفت»), after the
- *     call's last turn, or at the thread's end for a call that left none.
+ *     call's last turn, or at its end's place in the thread for a call that left none. Its length and «وقفت» are the
+ *     server's durable record (R3, 0193: ended − started, and an end the person did not choose), so they survive a
+ *     restart; the phone's own count stands only for the call it just saw end, until a read carries the record.
  *   - **Interrupted:** a call reply the person cut is marked as cut (its own Copy Gate row), never shown as complete.
  *
  * Every word is a Live Call copy row (`live-call-copy.ts`), every one PROPOSED until the Copy Gate decides.
@@ -21,7 +23,7 @@ import { Control, Glyph, MIN_TARGET, readerDirection, readerSide, typeStyle, use
 import type { ConversationPalette, ConversationReplyCompanion } from '../conversation';
 import { CallRail } from '../iconography';
 import type { ChromeLanguage } from '../orientation-chrome/types';
-import type { ConversationExchangeView } from '../runtime-entry';
+import type { ConversationExchangeView, ConversationFinishedCallView } from '../runtime-entry';
 import { liveCallScreenCopy, type LiveCallScreenCopy } from '../voice-call/live-call-copy';
 import { callIdOfKey, type CallOwner, type CallOwnerState, type CallRecord } from './call-owner';
 
@@ -231,6 +233,8 @@ export interface CallSurfaceSlots {
   readonly aboveComposer: ReactElement | null;
   readonly exchangeTrailer: (exchange: ConversationExchangeView) => ReactElement | null;
   readonly replyCompanion: (exchange: ConversationExchangeView) => ConversationReplyCompanion | null;
+  /** S8B-06 CP3 R3: the records of finished calls that ended before the first loaded exchange (null: none). */
+  readonly threadHead: ReactElement | null;
   /** The record of a call that left no turn. */
   readonly threadTail: ReactElement | null;
   readonly depthNameSuffix: string | null;
@@ -242,10 +246,26 @@ export function callIdOf(exchange: ConversationExchangeView): string | null {
   return callIdOfKey(exchange.userTurn.idempotencyKey);
 }
 
+/** S8B-06 CP3 R3: what the record of one call says. The server's record (its own instants and end reason) stands first. */
+interface RecordFacts {
+  readonly lengthMs: number | null;
+  readonly stopped: boolean;
+}
+
+const NO_CALLS: readonly ConversationFinishedCallView[] = Object.freeze([]);
+const instant = (iso: string): number => Date.parse(iso);
+
+/** The server's finished-call record (0193): its length is the server's ended − started; it stopped unless the person ended it. */
+function serverFacts(call: ConversationFinishedCallView): RecordFacts {
+  return { lengthMs: Math.max(0, instant(call.endedAt) - instant(call.startedAt)), stopped: call.endReason !== 'USER_ENDED' };
+}
+
 export function useCallSurface(
   owner: CallOwner | null,
   exchanges: readonly ConversationExchangeView[],
   language: ChromeLanguage,
+  // S8B-06 CP3 R3: the finished calls the history carried, from the server's durable record (oldest to newest by their end).
+  calls: readonly ConversationFinishedCallView[] = NO_CALLS,
 ): CallSurfaceSlots {
   const state = useCallOwnerState(owner);
   const copy = liveCallScreenCopy(language);
@@ -261,13 +281,45 @@ export function useCallSurface(
   }, [exchanges]);
   const record: CallRecord | null = state?.record ?? null;
   const currentCallId = state?.callId ?? null;
+  // R3: a finished call that left no turn in the loaded thread is drawn at its end's place: after the last exchange that
+  // began before it ended, or before the first exchange (or alone, in an empty thread). Its place comes from the server's
+  // instants; the call that is live now is never drawn as finished.
+  const placed = useMemo(() => {
+    const server = new Map(calls.map((call) => [call.callId, call]));
+    const after = new Map<string, ConversationFinishedCallView[]>();
+    const head: ConversationFinishedCallView[] = [];
+    for (const call of calls) {
+      if (lastOfCall.has(call.callId) || call.callId === currentCallId) continue;
+      const end = instant(call.endedAt);
+      let at: string | null = null;
+      for (const exchange of exchanges) {
+        if (instant(exchange.userTurn.createdAt) <= end) at = exchange.userTurn.id;
+        else break;
+      }
+      if (at === null) head.push(call);
+      else after.set(at, [...(after.get(at) ?? []), call]);
+    }
+    return { server, after, head };
+  }, [calls, exchanges, lastOfCall, currentCallId]);
+  const factsOf = useCallback((callId: string): RecordFacts => {
+    const known = placed.server.get(callId);
+    if (known !== undefined) return serverFacts(known);
+    // The call this runtime just saw end, until a read carries the server's record of it.
+    if (record !== null && record.callId === callId) return { lengthMs: record.lengthMs, stopped: record.stopped };
+    return { lengthMs: null, stopped: false };
+  }, [placed, record]);
+  const recordRow = useCallback((callId: string): ReactElement => {
+    const facts = factsOf(callId);
+    return <CallRecordRow key={callId} lengthMs={facts.lengthMs} stopped={facts.stopped} language={language} />;
+  }, [factsOf, language]);
   const exchangeTrailer = useCallback((exchange: ConversationExchangeView): ReactElement | null => {
     const callId = callIdOf(exchange);
-    if (callId === null || callId === currentCallId || lastOfCall.get(callId) !== exchange.userTurn.id) return null;
-    const known = record !== null && record.callId === callId ? record : null;
-    const lengthMs = known?.lengthMs ?? null;
-    return <CallRecordRow lengthMs={lengthMs} stopped={known?.stopped === true} language={language} />;
-  }, [currentCallId, lastOfCall, record, language]);
+    const own = callId !== null && callId !== currentCallId && lastOfCall.get(callId) === exchange.userTurn.id ? [callId] : [];
+    const later = (placed.after.get(exchange.userTurn.id) ?? []).map((call) => call.callId);
+    const rows = [...own, ...later];
+    if (rows.length === 0) return null;
+    return rows.length === 1 ? recordRow(rows[0]) : <>{rows.map(recordRow)}</>;
+  }, [currentCallId, lastOfCall, placed, recordRow]);
   const replyCompanion = useCallback((exchange: ConversationExchangeView): ConversationReplyCompanion | null => {
     if (exchange.deliveryState !== 'INTERRUPTED' || exchange.reply === null) return null;
     return {
@@ -275,16 +327,23 @@ export function useCallSurface(
       control: <InterruptedMark turnId={exchange.userTurn.id} language={language} />,
     };
   }, [language]);
+  const head = placed.head;
+  const threadHead = head.length === 0 || exchanges.length === 0 ? null : <>{head.map((call) => recordRow(call.callId))}</>;
+  // An empty thread draws its finished calls at the tail, oldest first; then the call this runtime just saw end, when no
+  // read has carried its record yet and it left no turn.
+  const tailCalls = exchanges.length === 0 ? head.map((call) => call.callId) : [];
+  if (record !== null && !lastOfCall.has(record.callId) && !placed.server.has(record.callId)) tailCalls.push(record.callId);
+  const threadTail = tailCalls.length === 0 ? null : <>{tailCalls.map(recordRow)}</>;
   if (owner === null || state === null) {
-    return { composerEnd: null, aboveComposer: null, exchangeTrailer, replyCompanion, threadTail: null, depthNameSuffix: null, live: false };
+    return { composerEnd: null, aboveComposer: null, exchangeTrailer, replyCompanion, threadHead, threadTail, depthNameSuffix: null, live: false };
   }
-  const tailRecord = record !== null && !lastOfCall.has(record.callId) ? <CallRecordRow lengthMs={record.lengthMs} stopped={record.stopped} language={language} /> : null;
   return {
     composerEnd: live ? null : <CallEntryControl owner={owner} language={language} />,
     aboveComposer: live ? <CallLine owner={owner} language={language} /> : <CallNoticeLine owner={owner} language={language} />,
     exchangeTrailer,
     replyCompanion,
-    threadTail: tailRecord,
+    threadHead,
+    threadTail,
     depthNameSuffix: live ? copy.continuesSuffix : null,
     live,
   };
