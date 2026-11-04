@@ -375,8 +375,21 @@ test('the one live-call socket lives in src/voice-call; ws:// and the forced cut
   const mobile = walk('apps/mobile/src').filter((f) => /\.(ts|tsx)$/u.test(f));
   const sockets = mobile.filter((f) => /\bnew WebSocket\b|\bWebSocket as\b/u.test(strip(read(f))));
   assert.deepEqual(sockets, ['apps/mobile/src/voice-call/live-call-client.ts']);
+  // RE-ANCHORED by S8B-06 CP3 (was: no file of runtime-entry/ or integration/ names the live call): CP3's composition test
+  // drives the PRODUCTION phase surface with a call on CP1's fakes, and T-12 keeps every integration test inside the layer
+  // (no deep import from outside it). A TEST (`__tests__/`) may import CP1's call FIXTURES (`voice-call/__fixtures__/`) and
+  // nothing else of the call; every production file of both layers still names no live call. Counter-test: such a test
+  // reaches the fixtures only and names the call nowhere else, and it opens no socket (the check above).
   for (const f of mobile.filter((p) => p.startsWith('apps/mobile/src/runtime-entry/') || p.startsWith('apps/mobile/src/integration/'))) {
-    assert.doesNotMatch(read(f), /voice-call\/|live-call/u, `${f} does not reach the live call`);
+    const source = read(f);
+    if (/\/__tests__\//u.test(f)) {
+      for (const [, target] of source.matchAll(/from '([^']*(?:voice-call\/|live-call)[^']*)'/gu)) {
+        assert.match(target, /^(?:\.\.\/)+voice-call\/__fixtures__\/live-call-[\w-]+$/u, `${f} reaches the call's fixtures only`);
+      }
+      assert.doesNotMatch(source.replace(/from '(?:\.\.\/)+voice-call\/__fixtures__\/live-call-[\w-]+'/gu, ''), /voice-call\/|live-call/u, `${f} names the call only through its fixtures`);
+      continue;
+    }
+    assert.doesNotMatch(source, /voice-call\/|live-call/u, `${f} does not reach the live call`);
   }
   for (const f of mobile.filter((p) => /insecureLoopbackForProof:\s*true/u.test(read(p)))) assert.match(f, /^apps\/mobile\/src\/voice-call\/__validation__\//u, f);
   // voice-call-engine.ts only binds the native call; every caller is the device proof.

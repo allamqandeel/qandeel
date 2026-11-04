@@ -13,7 +13,7 @@ import { historyBody, exchange } from '../../conversation/__fixtures__/conversat
 import { resize } from '../../responsive/__fixtures__/composition';
 import { FakeCallEngine, FakeCallPlatform } from '../../voice-call/__fixtures__/live-call-fakes';
 import { socketRecorder, state, type FakeSocket } from '../../voice-call/__fixtures__/live-call-test-kit';
-import { VOICE_CONSENT_VERSION } from '../../voice-note/voice-note-copy';
+import { VOICE_CAPABILITY_ROUTE, currentConsentCapability } from '../../voice-note/__fixtures__/voice-capability';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 
@@ -35,7 +35,7 @@ async function withCall(): Promise<{ h: IntegrationHarness; view: RenderResult; 
   const { factory, sockets } = socketRecorder();
   const h = await harness({ foreground: 'ACTIVE', callDevice: { platform, engine: new FakeCallEngine(), socketFactory: factory } });
   h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })]) } : { status: 500, body: {} }));
-  h.http.on('/voice/capability', () => ({ status: 200, body: { voiceNotesAvailable: true, consentState: 'GRANTED_CURRENT', grantedVersion: VOICE_CONSENT_VERSION, currentVersion: VOICE_CONSENT_VERSION } }));
+  h.http.on(VOICE_CAPABILITY_ROUTE, () => currentConsentCapability());
   h.http.on('/voice/calls/truth', () => ({ status: 200, body: { callTruth: 'NO_CALL_KNOWN', callId: null, callState: null, startedAt: null } }));
   const view = await render(
     <SafeAreaProvider initialMetrics={METRICS}>
