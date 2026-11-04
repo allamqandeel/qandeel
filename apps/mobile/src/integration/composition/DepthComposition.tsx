@@ -95,7 +95,7 @@ import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface, type UnderstandingShareResult } from '../../understanding';
 import { IntroductionsEntry, IntroductionsSurface, ProposalsSurface } from '../../introductions';
 import { ActivityEntry, ActivitySurface, AttentionStrip, CallSafeStrip, type ProductSurface } from '../../activity';
-import { CallLine, useCallOwnerState, useCallSurface } from '../../call';
+import { CallLine, useCallSurface } from '../../call';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
@@ -582,7 +582,6 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // S8B-06 CP3 — the live call, in the Personal world only. The owner is the generation's, above this composition:
   // crossing depths, opening the Analysis or another surface re-reads it and never reopens or ends anything.
   const callOwner = onSignOut === undefined ? null : runtime.call;
-  const callState = useCallOwnerState(callOwner);
   const { exchanges } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
   const callSlots = useCallSurface(callOwner, exchanges, locale.language);
   const callLive = callSlots.live;
@@ -606,24 +605,27 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     </>
   );
   // G1.2: START is Analysis-first — once the call is actually connecting, the reader is taken to the Analysis.
-  const callStage = callState?.stage ?? 'IDLE';
-  const previousStage = useRef(callStage);
-  useEffect(() => {
-    const before = previousStage.current;
-    previousStage.current = callStage;
-    if ((before === 'IDLE' || before === 'PREPARING') && callStage === 'CONNECTING') {
-      attention.refresh();
-      if (depth === 'CONVERSATION' && area === 'MY_WORLD') cross('ANALYSIS');
-    }
-  }, [callStage, depth, area, cross, attention]);
   // J3: an end the reader did not choose returns them to the Conversation, where writing is (and the notice says why).
-  const unchosenEnds = callState?.unchosenEnds ?? 0;
-  const seenUnchosen = useRef(unchosenEnds);
+  // Both are reactions to the owner's own transitions, so they run in its subscription, never as a render's effect.
+  const callReaction = useRef({ cross, depth, area, attention });
   useEffect(() => {
-    if (unchosenEnds === seenUnchosen.current) return;
-    seenUnchosen.current = unchosenEnds;
-    cross('CONVERSATION');
-  }, [unchosenEnds, cross]);
+    callReaction.current = { cross, depth, area, attention };
+  }, [cross, depth, area, attention]);
+  useEffect(() => {
+    if (callOwner === null) return undefined;
+    let before = callOwner.getState();
+    return callOwner.subscribe(() => {
+      const now = callOwner.getState();
+      const previous = before;
+      before = now;
+      const latest = callReaction.current;
+      if ((previous.stage === 'IDLE' || previous.stage === 'PREPARING') && now.stage === 'CONNECTING') {
+        latest.attention.refresh();
+        if (latest.depth === 'CONVERSATION' && latest.area === 'MY_WORLD') latest.cross('ANALYSIS');
+      }
+      if (now.unchosenEnds !== previous.unchosenEnds) latest.cross('CONVERSATION');
+    });
+  }, [callOwner]);
   const [callBoxHeight, setCallBoxHeight] = useState(0);
   const analysisInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + (callLive ? callBoxHeight : 0) }), [edges, callLive, callBoxHeight]);
   // S8B-03 — Settings: the Voice Notes section (C-44 … C-48) and the separate voice export act (C-49 … C-53).

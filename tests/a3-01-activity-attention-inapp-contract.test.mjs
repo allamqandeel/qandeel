@@ -142,10 +142,27 @@ test('5 — no Activity entry or strip in the Analysis; the entry is composed on
   assert.equal((chrome.match(/<Control\b/gu) ?? []).length, 1, 'the chrome still draws exactly one control of its own');
   assert.match(chrome, /chromeStart === null \? null : <View testID="qandeel-chrome-start">\{chromeStart\}<\/View>/u);
   assert.match(code(`${ACTIVITY}/presentation.ts`), /if \(context\.surface === 'ANALYSIS'\) return \{ kind: 'WAIT' \};/u, 'ordinary attention waits inside the Analysis');
-  // The call-safe strip is built, not mounted: no call authority exists (QAN-BL-VOICE-01).
-  for (const file of mobileProduction.filter((f) => !f.endsWith('CallSafeStrip.tsx'))) assert.doesNotMatch(code(file), /<CallSafeStrip\b/u, `${file} mounts no call-safe strip`);
+  // RE-ANCHORED by S8B-06 CP3 (was: the call-safe strip is built, not mounted, since no call authority existed —
+  // QAN-BL-VOICE-01): CP3's order mounts it under the call owner. It is mounted exactly once, in DepthComposition, only for
+  // the CALL_SAFE form and only while a call is live; the call truth the decision reads is the owner's stage (a call the
+  // phone started and the server has not ended), never a constant. PRODUCTION_CALL_TRUTH stays NO_CALL_KNOWN for every
+  // other caller. Counter-test: an ACTIVE truth appears in exactly two more production places — the owner-fed decision in
+  // the integration runtime and the decoder of the server's own `GET /voice/calls/truth` answer — and nowhere else.
+  const callSafeHosts = mobileProduction.filter((f) => !f.endsWith('CallSafeStrip.tsx') && /<CallSafeStrip\b/u.test(code(f)));
+  assert.equal(callSafeHosts.length, 1, 'the call-safe strip has one host');
+  assert.ok(callSafeHosts[0].endsWith('integration/composition/DepthComposition.tsx'), 'the host is the composition');
+  assert.equal((depth.match(/<CallSafeStrip\b/gu) ?? []).length, 1, 'mounted once');
+  assert.match(depth, /strip !== null && strip\.form === 'CALL_SAFE' && callLive && leaving === null && !playerOpen \?/u, 'only the call-safe form, only during a live call');
   assert.match(code(`${ACTIVITY}/call-truth.ts`), /PRODUCTION_CALL_TRUTH: CallTruth = Object\.freeze\(\{ kind: 'NO_CALL_KNOWN' \}\)/u);
-  assert.doesNotMatch(mobileProduction.filter((f) => !f.endsWith('call-truth.ts') && !f.endsWith('presentation.ts')).map(code).join('\n'), /kind: 'ACTIVE'/u, 'nothing in production fabricates an active call');
+  const RUNTIME = 'integration/runtime/integration-runtime.ts';
+  const TRUTH_API = 'runtime-entry/call-truth-api.ts';
+  const runtime = code(`${MOBILE}/${RUNTIME}`);
+  const truthApi = code(`${MOBILE}/${TRUTH_API}`);
+  assert.match(runtime, /call: \(\) => \(call\.getState\(\)\.stage === 'IDLE' \|\| call\.getState\(\)\.stage === 'PREPARING' \? \{ kind: 'NO_CALL_KNOWN' \} : \{ kind: 'ACTIVE' \}\) \}\)/u, 'the attention reads the owner\'s stage');
+  assert.equal((runtime.match(/kind: 'ACTIVE'/gu) ?? []).length, 1, 'one owner-fed ACTIVE in the runtime');
+  assert.match(truthApi, /return \{ kind: 'ACTIVE', callId, callState: callState as ServerCallState, startedAt \};/u, 'the server\'s answer, decoded');
+  assert.equal((truthApi.match(/kind: 'ACTIVE'/gu) ?? []).length, 2, 'the decoder\'s type and its one return');
+  assert.doesNotMatch(mobileProduction.filter((f) => !f.endsWith('call-truth.ts') && !f.endsWith('presentation.ts') && !f.endsWith(RUNTIME) && !f.endsWith(TRUTH_API)).map(code).join('\n'), /kind: 'ACTIVE'/u, 'nothing else in production fabricates an active call');
 });
 
 test('6 — no global raw count: presence only, server and device', () => {

@@ -108,7 +108,7 @@ test('Return acts stay text-led: no icon, arrow or chevron reaches any return ac
   assert.match(layer, /<Text style=\{\[type\('action'\), \{ color: wordInk \}\]\}>\{words\}<\/Text>/u);
 });
 
-test('the Call Rail is the frozen Keyed Seam, truth-safe, and mounted on no Product route', () => {
+test('the Call Rail is the frozen Keyed Seam, truth-safe, and mounted only under the call owner (S8B-06 CP3)', () => {
   const generated = read(GENERATED);
   assert.match(generated, /"end": 27/u, 'End Call renders at the frozen 27 px');
   assert.match(generated, /"width": 44/u);
@@ -123,9 +123,17 @@ test('the Call Rail is the frozen Keyed Seam, truth-safe, and mounted on no Prod
   assert.match(rail, /accessibilityState=\{\{ checked: muted \}\}/u);
   assert.match(rail, /blendMode="clear"/u);
   assert.match(rail, /route === null \? null :/u, 'an unknown route is absent, never guessed');
-  // Not mounted on the Product route: the only consumers are the barrel and validation entries.
+  // RE-ANCHORED by S8B-06 CP3 (was: not mounted on the Product route, since no Live Call existed to put behind it): CP3's
+  // order mounts the rail under the ONE call owner. Its only Product consumer is the call line (call/CallViews.tsx), and every
+  // input it receives is that owner's state or command (mute, route, End) — still nothing that could carry a level or a
+  // speaking trace, as the checks above pin. Counter-test: one rail, and the props handed to it are exactly these.
   const consumers = production.filter((path) => path !== `${ICONOGRAPHY}/CallRail.tsx` && path !== `${ICONOGRAPHY}/index.ts` && /\bCallRail\b/u.test(code(path)));
-  assert.deepEqual(consumers, [], 'no Product surface mounts a call surface with nothing behind it');
+  assert.deepEqual(consumers, [`${MOBILE}/call/CallViews.tsx`], 'the call line is the one Product surface with the rail, and a real call is behind it');
+  const line = code(`${MOBILE}/call/CallViews.tsx`);
+  assert.equal((line.match(/<CallRail\b/gu) ?? []).length, 1, 'one rail');
+  const mounted = line.slice(line.indexOf('<CallRail'), line.indexOf('/>', line.indexOf('<CallRail')));
+  assert.deepEqual([...mounted.matchAll(/^\s+(\w+)=/gmu)].map((m) => m[1]), ['palette', 'language', 'labels', 'muted', 'route', 'onToggleMute', 'onToggleRoute', 'onEndCall'], 'the owner\'s state and commands only');
+  assert.match(mounted, /muted=\{state\.muted\}\s+route=\{state\.route\}\s+onToggleMute=\{\(\) => owner\.toggleMute\(\)\}\s+onToggleRoute=\{\(\) => owner\.toggleRoute\(\)\}\s+onEndCall=\{\(\) => owner\.end\(\)\}/u);
 });
 
 test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped', () => {

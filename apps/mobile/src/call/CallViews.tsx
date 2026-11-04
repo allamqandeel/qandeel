@@ -10,7 +10,7 @@
  *   - **The notice:** why a call did not start or stopped (J3), in the Conversation, with Open settings for the microphone.
  *   - **The record (J7):** a finished call's centred, non-interactive mark, «مكالمة صوتية · m:ss» (· «وقفت»), after the
  *     call's last turn, or at the thread's end for a call that left none.
- *   - **Interrupted:** a call reply the person cut is marked as cut (LC-15), never shown as complete.
+ *   - **Interrupted:** a call reply the person cut is marked as cut (its own Copy Gate row), never shown as complete.
  *
  * Every word is a Live Call copy row (`live-call-copy.ts`), every one PROPOSED until the Copy Gate decides.
  */
@@ -94,7 +94,7 @@ function useCallClock(activeSince: number | null): number | null {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (activeSince === null) return undefined;
-    setNow(Date.now());
+    // The first second shows 0:00 (the time is never earlier than the call); the clock's next tick reads the real time.
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [activeSince]);
@@ -212,7 +212,7 @@ export function CallRecordRow({ lengthMs, stopped, language }: { readonly length
   );
 }
 
-/** LC-15: a call reply the person cut. Never interactive; never "complete". */
+/** The interrupted mark: a call reply the person cut. Never interactive; never "complete". */
 function InterruptedMark({ turnId, language }: { readonly turnId: string; readonly language: ChromeLanguage }) {
   const palette = usePalette();
   return (
@@ -239,7 +239,7 @@ export interface CallSurfaceSlots {
 
 /** The call a turn belongs to: the history's own field, or the server's `live-call:` key. */
 export function callIdOf(exchange: ConversationExchangeView): string | null {
-  return exchange.liveCall?.callId ?? callIdOfKey(exchange.userTurn.idempotencyKey);
+  return callIdOfKey(exchange.userTurn.idempotencyKey);
 }
 
 export function useCallSurface(
@@ -265,7 +265,7 @@ export function useCallSurface(
     const callId = callIdOf(exchange);
     if (callId === null || callId === currentCallId || lastOfCall.get(callId) !== exchange.userTurn.id) return null;
     const known = record !== null && record.callId === callId ? record : null;
-    const lengthMs = exchange.liveCall?.lengthMs ?? known?.lengthMs ?? null;
+    const lengthMs = known?.lengthMs ?? null;
     return <CallRecordRow lengthMs={lengthMs} stopped={known?.stopped === true} language={language} />;
   }, [currentCallId, lastOfCall, record, language]);
   const replyCompanion = useCallback((exchange: ConversationExchangeView): ConversationReplyCompanion | null => {

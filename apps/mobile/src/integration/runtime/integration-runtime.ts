@@ -159,7 +159,7 @@ import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator }
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
 import { createProjectionCoordinator, type ProjectionCoordinator } from '../projection/projection-coordinator';
-import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, mintVoiceNoteId, type VoiceNoteDevice, type VoiceNoteSession } from '../../voice-note';
+import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, microphoneForCall, mintVoiceNoteId, type VoiceNoteDevice, type VoiceNoteSession } from '../../voice-note';
 import { createCallAwareConversationTransport, createCallOwner, loadCallDevice, type CallDevice, type CallOwner } from '../../call';
 
 /**
@@ -628,7 +628,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       truth: () => calls.truth.read(),
       readHistory: () => turns.readHistory(bundle.sessionId),
       consent: (start) => built.voiceNotes.prepareCall(start),
-      requestMicrophone: async () => (await voiceNoteDevice.recorder().requestPermission()) === 'GRANTED',
+      requestMicrophone: () => microphoneForCall(voiceNoteDevice),
       language: deviceProductLanguage,
       onCallTurn: () => {
         built.conversation.ensureHistory();

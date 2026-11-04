@@ -39,12 +39,29 @@ async function active(over: { serverEndWaitMs?: number; endsAt?: string | null }
 
 const ended = (source: CallEndSource) => ({ type: 'ENDED' as const, callId: CALL_ID, state: 'ENDING', ignoredLate: 0, source, detail: null });
 
+// RE-ANCHORED by S8B-06 CP3: the literals these tests compared were S8B-05 drafts. CP3 closed CP2's two gaps with drafted
+// rows of their own (the Android channel name, the T-1 notification line) and, by the Product Owner's direction, redrafted
+// the Arabic in simplified Modern Standard Arabic; every row is still PROPOSED. The tests read the lines through the copy
+// table. Row ids stay in the copy table only (the S8B-05 pin), so the counter-test that pins WHICH row each line of the
+// native surface is lives in the root contract (tests/s8b-06-cp3-call-ui-contract.test.mjs); here, the lines are distinct
+// where they must be.
+describe('S8B-06 CP3 — the native call surface reads the copy table', () => {
+  it('the channel name is not the ongoing line, and the T-1 notification is not the in-call T-1 line', () => {
+    for (const language of ['ar', 'en'] as const) {
+      const lines = liveCallSurfaceCopy(language);
+      expect(lines.channelName).not.toBe(lines.ongoing);
+      expect(lines.notificationT1).not.toBe(lines.warningT1);
+      expect(lines.notificationT5).not.toBe(lines.warningT5);
+    }
+  });
+});
+
 describe('S8B-06 CP2 — one call, one end latch, server authority', () => {
   it('starts the platform call first, then the socket, then the engine inside it (PLATFORM_CALL)', async () => {
     const { controller, platform, sockets, engine } = setup();
     await controller.start();
     expect(platform.startCalls).toEqual([{
-      callId: CALL_ID, displayName: 'QANDEEL', notificationTitle: 'QANDEEL', notificationText: 'مكالمة مع QANDEEL', channelName: 'مكالمة مع QANDEEL', route: 'EARPIECE',
+      callId: CALL_ID, displayName: 'QANDEEL', notificationTitle: 'QANDEEL', notificationText: 'مكالمة مع QANDEEL', channelName: copy.channelName, route: 'EARPIECE',
     }]);
     expect(sockets).toHaveLength(1);
     sockets[0]!.open();
@@ -159,7 +176,7 @@ describe('S8B-06 CP2 — one call, one end latch, server authority', () => {
     const { controller, platform, timers, sockets, socket } = await active();
     socket.drop(LIVE_CALL_CLOSE.GOING_AWAY);
     expect(controller.phase).toBe('ACTIVE');
-    expect(platform.notifications.at(-1)).toBe('بيرجع الاتصال…');
+    expect(platform.notifications.at(-1)).toBe(copy.reconnecting);
     timers.advance(250);
     const second = sockets[1]!;
     second.open();
@@ -221,7 +238,7 @@ describe('S8B-06 CP2 — one call, one end latch, server authority', () => {
     engine.emit({ type: 'uplink', captureMs: 20, packet: packet(1) });
     platform.emit({ type: 'HELD', callId: CALL_ID, state: 'HELD', ignoredLate: 0 });
     engine.emit({ type: 'hold', captureMs: 40, cause: 'TELECOM_INACTIVE' });
-    expect(platform.notifications.at(-1)).toBe('المكالمة متوقفة مؤقتًا بسبب مكالمة تانية.');
+    expect(platform.notifications.at(-1)).toBe(copy.held);
     expect(controller.phase).toBe('ACTIVE');
     engine.emit({ type: 'resume', captureMs: 6040 });
     platform.emit({ type: 'RESUMED', callId: CALL_ID, state: 'ACTIVE', ignoredLate: 0 });
@@ -275,7 +292,7 @@ describe('S8B-06 CP2 — the 60-minute warning through the controller', () => {
     const { engine } = await active({ endsAt: at(60 * 60_000) });
     expect(engine.cues).toEqual([
       { op: 'schedule', id: 'T5', kind: 'T5', dueInMs: 55 * 60_000, text: 'تنتهي المكالمة خلال 5 دقائق', result: 'SCHEDULED' },
-      { op: 'schedule', id: 'T1', kind: 'T1', dueInMs: 59 * 60_000, text: 'فاضل دقيقة على نهاية المكالمة.', result: 'SCHEDULED' },
+      { op: 'schedule', id: 'T1', kind: 'T1', dueInMs: 59 * 60_000, text: copy.notificationT1, result: 'SCHEDULED' },
     ]);
   });
 
@@ -311,7 +328,7 @@ describe('S8B-06 CP2 — the 60-minute warning through the controller', () => {
     sockets.at(-1)!.open();
     sockets.at(-1)!.server(state({ state: 'ACTIVE', epoch: 2, resumeFromCaptureMs: 0, endsAt: at(60 * 60_000) }));
     const last = engine.cues.slice(-1);
-    expect(last).toEqual([{ op: 'schedule', id: 'T1', kind: 'T1', dueInMs: 0, text: 'فاضل دقيقة على نهاية المكالمة.', result: 'SCHEDULED' }]);
+    expect(last).toEqual([{ op: 'schedule', id: 'T1', kind: 'T1', dueInMs: 0, text: copy.notificationT1, result: 'SCHEDULED' }]);
     engine.fire('T1', 'T1');
     engine.fire('T5', 'T5');
     expect(engine.cues.filter((c) => c.id === 'T5' && c.op === 'play')).toHaveLength(0);

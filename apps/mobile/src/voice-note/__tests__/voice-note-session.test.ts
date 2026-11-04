@@ -10,6 +10,7 @@ import { VOICE_CONSENT_COPY_ROWS, VOICE_CONSENT_VERSION } from '../voice-note-co
 import type { VoiceNotesController } from '../voice-note-controller';
 import type { VoiceNotePlayback } from '../voice-note-playback';
 import { consentRowsAreApproved, createVoiceNoteSession, withRecordingDeleted } from '../voice-note-session';
+import { createInertVoiceNoteDevice, microphoneForCall } from '../voice-note-runtime';
 import type { VoiceCapabilityRead, VoiceConsentRead } from '../voice-note-api';
 
 jest.mock('expo-sqlite/kv-store', () => ({ SQLiteStorage: jest.fn() }));
@@ -266,5 +267,65 @@ describe('voice note session', () => {
     expect(t.notes.retire).toHaveBeenCalled();
     expect(t.playback.retire).toHaveBeenCalled();
     expect(t.rec.calls).toContain('stop');
+  });
+});
+
+describe('S8B-06 CP3 — a live call asks for the same recording consent (VOICE_RECORDING_V3)', () => {
+  it('READY when the consent is current: no sheet, nothing recorded, the call starts itself', async () => {
+    const t = setup();
+    const start = jest.fn(async () => undefined);
+    await expect(t.session.prepareCall(start)).resolves.toBe('READY');
+    expect(start).not.toHaveBeenCalled();
+    expect(t.session.getState().sheet).toBeNull();
+    expect(t.rec.calls).toEqual([]);
+  });
+
+  it('ASKED when it is not: the sheet opens, and agreeing grants the version and then starts the call (not a capture)', async () => {
+    const t = setup({ consent: false });
+    const start = jest.fn(async () => undefined);
+    await expect(t.session.prepareCall(start)).resolves.toBe('ASKED');
+    expect(t.session.getState().sheet).toMatchObject({ phase: 'READY' });
+    expect(start).not.toHaveBeenCalled();
+    await t.session.agree();
+    expect(t.api.calls).toEqual(['capability', 'consent', `grant:${VOICE_CONSENT_VERSION}`]);
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(t.session.capture.getState().kind).not.toBe('RECORDING');
+    expect(t.rec.calls).toEqual([]);
+  });
+
+  it('declining starts no call', async () => {
+    const t = setup({ consent: false });
+    const start = jest.fn(async () => undefined);
+    await t.session.prepareCall(start);
+    t.session.decline();
+    await Promise.resolve();
+    expect(start).not.toHaveBeenCalled();
+    expect(t.api.calls).not.toContain(`grant:${VOICE_CONSENT_VERSION}`);
+  });
+
+  it('the Voice Notes gate is not the call\'s: a closed Voice Notes gate with a current consent is still READY', async () => {
+    const t = setup({ available: false });
+    await expect(t.session.prepareCall(async () => undefined)).resolves.toBe('READY');
+  });
+});
+
+describe('S8B-06 CP3 — the microphone for a call, at the press', () => {
+  const device = (permission: MicrophonePermission, answer: MicrophonePermission) => {
+    const asked: string[] = [];
+    const port = { ...recorder(permission).port, requestPermission: async () => { asked.push('prompt'); return answer; } };
+    return { asked, device: { ...createInertVoiceNoteDevice(), recorder: () => port } };
+  };
+  it('the OS prompt only while the answer is undetermined; true only when granted', async () => {
+    const granted = device('GRANTED', 'DENIED');
+    await expect(microphoneForCall(granted.device)).resolves.toBe(true);
+    expect(granted.asked).toEqual([]);
+    const denied = device('DENIED', 'GRANTED');
+    await expect(microphoneForCall(denied.device)).resolves.toBe(false);
+    expect(denied.asked).toEqual([]);
+    const ask = device('UNDETERMINED', 'GRANTED');
+    await expect(microphoneForCall(ask.device)).resolves.toBe(true);
+    expect(ask.asked).toEqual(['prompt']);
+    const refused = device('UNDETERMINED', 'DENIED');
+    await expect(microphoneForCall(refused.device)).resolves.toBe(false);
   });
 });

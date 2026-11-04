@@ -76,7 +76,6 @@ export type {
   ConversationExchangeView,
   ConversationVoiceNoteView,
   ConversationCallDeliveryState,
-  ConversationLiveCallView,
   ConversationHistoryOutcome,
   ConversationHistoryPageView,
   ConversationReplyState,

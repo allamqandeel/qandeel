@@ -70,17 +70,9 @@ export interface ConversationExchangeView {
    * COMPLETE is a reply heard whole; INTERRUPTED is never shown as complete.
    */
   readonly deliveryState?: ConversationCallDeliveryState;
-  /** S8B-06 CP3: present only for a turn of a live call: which call, and its length once the call has ended. */
-  readonly liveCall?: ConversationLiveCallView;
 }
 
 export type ConversationCallDeliveryState = 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED';
-
-/** S8B-06 CP3 (J7): the call a turn belongs to. `lengthMs` is null while the call is still open (no record yet). */
-export interface ConversationLiveCallView {
-  readonly callId: string;
-  readonly lengthMs: number | null;
-}
 
 export interface ConversationHistoryPageView {
   /** Oldest to newest. */
@@ -182,13 +174,6 @@ function decodeVoiceNote(value: unknown): Decoded<ConversationVoiceNoteView> {
 
 const DELIVERY_STATES: ReadonlySet<string> = new Set(['COMPLETE', 'INTERRUPTED', 'WITHHELD_TAIL', 'FAILED']);
 
-function decodeLiveCall(value: unknown): Decoded<ConversationLiveCallView> {
-  if (!isRecord(value) || !isText(value.callId)) return { ok: false };
-  const length = value.lengthMs;
-  if (length !== null && !(typeof length === 'number' && Number.isInteger(length) && length >= 0)) return { ok: false };
-  return { ok: true, value: { callId: value.callId, lengthMs: length } };
-}
-
 /** The read route's body: `{ exchanges: [{ userTurn, replyState, assistantTurn }], hasOlder }`. */
 export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistoryPageView> {
   if (!isRecord(body) || !Array.isArray(body.exchanges) || typeof body.hasOlder !== 'boolean') return { ok: false };
@@ -217,11 +202,6 @@ export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistor
     if (entry.deliveryState !== undefined) {
       if (reply === null || typeof entry.deliveryState !== 'string' || !DELIVERY_STATES.has(entry.deliveryState)) return { ok: false };
       exchange = { ...exchange, deliveryState: entry.deliveryState as ConversationCallDeliveryState };
-    }
-    if (entry.liveCall !== undefined) {
-      const liveCall = decodeLiveCall(entry.liveCall);
-      if (!liveCall.ok) return { ok: false };
-      exchange = { ...exchange, liveCall: liveCall.value };
     }
     exchanges.push(exchange);
   }

@@ -331,7 +331,11 @@ export function createCallOwner(options: CallOwnerOptions): CallOwner {
       case 'state':
         if (event.message.state === 'ACTIVE') {
           activeSince ??= now();
-          for (const text of waiting.splice(0)) dispatch(text);
+          // After the client's own resume replay (it runs right after this event, from the same log): what waited goes
+          // out once, behind what the log resends, never written a second time by that replay.
+          if (waiting.length > 0) void Promise.resolve().then(() => {
+            if (live()) for (const text of waiting.splice(0)) dispatch(text);
+          });
         }
         return;
       case 'turnCommitted': {
