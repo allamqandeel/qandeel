@@ -164,6 +164,13 @@ export interface ConversationSurfaceProps {
    * reply. It answers null for every other exchange; the words stay this layer's, the companion's logic stays outside it.
    */
   readonly replyCompanion?: ((exchange: ConversationExchangeView) => ConversationReplyCompanion | null) | null;
+  /**
+   * S8B-06 CP3 (J7): what the composition draws after one exchange, across the thread (a finished call's record). It is
+   * never a turn, never interactive here, and answers null for every other exchange.
+   */
+  readonly exchangeTrailer?: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
+  /** S8B-06 CP3 (G1.2): words the composition appends to the depth control's accessible name (the call continues). */
+  readonly depthNameSuffix?: string | null;
 }
 
 /** S8B-04 (CP2): what the composition hands as one reply's companion. */
@@ -306,7 +313,7 @@ function Selectable({ id, label, gap, selection, palette, language, children }: 
   );
 }
 
-function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody, replyCompanion }: {
+function ExchangeRow({ exchange, copy, palette, language, contentWidth, selection, utteranceBody, replyCompanion, exchangeTrailer }: {
   readonly exchange: ConversationExchangeView;
   readonly copy: ConversationCopy;
   readonly palette: ConversationPalette;
@@ -315,6 +322,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   readonly selection: ConversationSelection | null;
   readonly utteranceBody: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
   readonly replyCompanion: ((exchange: ConversationExchangeView) => ConversationReplyCompanion | null) | null;
+  readonly exchangeTrailer: ((exchange: ConversationExchangeView) => ReactElement | null) | null;
 }) {
   const mine = readerSide(language);
   const theirs = oppositeSide(mine);
@@ -326,6 +334,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
   // P4-C3 §1's own width and insets), so the place it sits in is then neither one assistive element nor a surface.
   const body = utteranceBody === null ? null : utteranceBody(exchange);
   const companion = replyCompanion === null ? null : replyCompanion(exchange);
+  const trailer = exchangeTrailer === null ? null : exchangeTrailer(exchange);
   // A reply still produced shows the words released so far, as a reply's words; the committed reply replaces them.
   const releasedText = exchange.reply === null && exchange.replyState === 'PENDING' && companion?.text ? companion.text : null;
   const companionControl = companion?.control ? (
@@ -385,6 +394,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth, selectio
         <StatusLine text={copy.waitingForReply} tone="waiting" side={theirs} palette={palette} language={language} testID={`qandeel-reply-pending-${exchange.userTurn.id}`} />
       )}
       {companionControl}
+      {trailer === null ? null : <View testID={`qandeel-exchange-trailer-${exchange.userTurn.id}`} style={{ alignSelf: 'stretch', marginTop: 20 }}>{trailer}</View>}
     </View>
   );
 }
@@ -458,6 +468,8 @@ export function ConversationSurface({
   threadTail = null,
   utteranceBody = null,
   replyCompanion = null,
+  exchangeTrailer = null,
+  depthNameSuffix = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -471,7 +483,7 @@ export function ConversationSurface({
   const fallback = readerDirection(language);
   const contentWidth = Math.max(0, width - insets.left - insets.right - THREAD_GUTTER * 2);
   // The rows re-render when the mode or the handed body changes; both are held by reference.
-  const rowInputs = useMemo(() => ({ selection, utteranceBody, replyCompanion }), [selection, utteranceBody, replyCompanion]);
+  const rowInputs = useMemo(() => ({ selection, utteranceBody, replyCompanion, exchangeTrailer }), [selection, utteranceBody, replyCompanion, exchangeTrailer]);
 
   useEffect(() => {
     controller.ensureHistory();
@@ -662,7 +674,7 @@ export function ConversationSurface({
         <Control
           palette={palette}
           language={language}
-          accessibilityLabel={copy.doorName}
+          accessibilityLabel={depthNameSuffix === null ? copy.doorName : copy.doorName + depthNameSuffix}
           onPress={onOpenAnalysis}
           testID="qandeel-depth-to-analysis"
           controlRef={(node) => {
@@ -734,7 +746,7 @@ export function ConversationSurface({
         testID="qandeel-conversation-thread"
         data={state.exchanges}
         keyExtractor={(exchange) => exchange.userTurn.id}
-        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} replyCompanion={rowInputs.replyCompanion} />}
+        renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} selection={rowInputs.selection} utteranceBody={rowInputs.utteranceBody} replyCompanion={rowInputs.replyCompanion} exchangeTrailer={rowInputs.exchangeTrailer} />}
         extraData={rowInputs}
         ListHeaderComponent={state.exchanges.length > 0 ? historyFailure : null}
         // An empty list is either a history that could not be read, or — once READ — a genuinely empty

@@ -30,6 +30,7 @@ import { createAuthSessionStorage, type AuthSessionStorage } from './auth/auth-s
 import { createMobileAuthAuthority, type MobileAuthAuthority } from './auth/mobile-auth-authority';
 import { createAuthorizationHeader, createAuthorizedFetch, NO_CAPTURED_CREDENTIAL } from './auth/request-credential';
 import { createSupabaseAuthPort, type SupabaseAuthPort } from './auth/supabase-auth-port';
+import { CallTruthApiClient, callConnectUrl } from './call-truth-api';
 import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstrap';
 import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
@@ -195,6 +196,12 @@ export interface MobileRuntimeEntry {
    * auth generation, and the bearer header the media player is handed for the note's bytes (null for another identity).
    */
   voiceNotesFor(bundle: CanonicalRuntimeBundle): { readonly api: VoiceNoteApiClient; readonly authorization: () => Record<string, string> | null };
+  /**
+   * S8B-06 CP3 — the live call's server-side reads for a bundle this coordinator produced: the call truth on the same AC-01
+   * seam bound to the bundle's own auth generation, the call channel's address, and the bearer the channel is opened with
+   * (null for another identity). No socket is opened here.
+   */
+  callsFor(bundle: CanonicalRuntimeBundle): { readonly truth: CallTruthApiClient; readonly connectUrl: string | null; readonly authorization: () => Record<string, string> | null };
   /**
    * A3-02 — the device-registration client for a bundle this coordinator produced, on the same AC-01 seam bound to the
    * bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -407,6 +414,13 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
       // The same seam: it only sets the bearer and passes the request and the platform's response through untouched, so
       // a photo's raw bytes go out, and a rendition's come back, exactly as the platform fetch carries them.
       return new IntroductionSharingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) as unknown as IntroductionSharingFetch });
+    },
+    callsFor(bundle) {
+      return {
+        truth: new CallTruthApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) }),
+        connectUrl: callConnectUrl(config.apiBaseUrl),
+        authorization: createAuthorizationHeader({ credential, authGeneration: bundle.authGeneration }),
+      };
     },
     voiceNotesFor(bundle) {
       // The same seam as the photos: it only sets the bearer and passes a note's raw bytes through untouched.

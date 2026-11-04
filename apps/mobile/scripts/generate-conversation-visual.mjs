@@ -209,6 +209,18 @@ for (const [name, size] of [['mic', 24], ['micRecording', 20]]) {
 }
 glyphs.close = { size: 24, mirrorsInRtl: false, ...primitives(utilInner('close', { size: 24 }).inner) };
 if (glyphs.close.strokes.length !== 1 || glyphs.close.strokes[0].strokeWidth !== strokeFor(24)) throw new Error('P2 close is not one stroke at the optical stroke for 24 px');
+// S8B-06 CP3 — the Live Call entry (G1.2 §C: the handset at the Conversation line's END, 44 px from the microphone): P2's
+// own `call`, the End Call handset raised in outline (`sig.mjs` draws it as the same path inside one rotation group), at
+// the line's 24 px and P2's optical stroke. The rotation is P2's and is carried as data, not dropped. Not directional.
+const callMarkup = SIG.call(open, 24);
+const callRotation = /^<g transform="rotate\((-?[0-9.]+) ([0-9.]+) ([0-9.]+)\)">(.*)<\/g>$/u.exec(callMarkup);
+if (!callRotation) throw new Error('P2 call is no longer the handset inside one rotation group');
+glyphs.call = {
+  size: 24, mirrorsInRtl: false,
+  rotate: { degrees: Number(callRotation[1]), cx: Number(callRotation[2]), cy: Number(callRotation[3]) },
+  ...primitives(callRotation[4]),
+};
+if (glyphs.call.strokes.length !== 1 || glyphs.call.strokes[0].strokeWidth !== strokeFor(24)) throw new Error('P2 call is not one handset stroke at the optical stroke for 24 px');
 
 
 // ------------------------------------------------------------------------------------------ type

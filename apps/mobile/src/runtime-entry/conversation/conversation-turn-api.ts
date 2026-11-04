@@ -65,6 +65,21 @@ export interface ConversationExchangeView {
   readonly reply: ConversationReplyView | null;
   /** S8B-03: present only for a turn that came from a Voice Note. */
   readonly voiceNote?: ConversationVoiceNoteView;
+  /**
+   * S8B-06 CP3: present only for a reply spoken in a live call — how much of it was heard (S8B-05 CA-05-02). Only
+   * COMPLETE is a reply heard whole; INTERRUPTED is never shown as complete.
+   */
+  readonly deliveryState?: ConversationCallDeliveryState;
+  /** S8B-06 CP3: present only for a turn of a live call: which call, and its length once the call has ended. */
+  readonly liveCall?: ConversationLiveCallView;
+}
+
+export type ConversationCallDeliveryState = 'COMPLETE' | 'INTERRUPTED' | 'WITHHELD_TAIL' | 'FAILED';
+
+/** S8B-06 CP3 (J7): the call a turn belongs to. `lengthMs` is null while the call is still open (no record yet). */
+export interface ConversationLiveCallView {
+  readonly callId: string;
+  readonly lengthMs: number | null;
 }
 
 export interface ConversationHistoryPageView {
@@ -165,6 +180,15 @@ function decodeVoiceNote(value: unknown): Decoded<ConversationVoiceNoteView> {
   return { ok: true, value: { recordingId: value.recordingId, available: value.available, availableUntil: until, durationMs: duration } };
 }
 
+const DELIVERY_STATES: ReadonlySet<string> = new Set(['COMPLETE', 'INTERRUPTED', 'WITHHELD_TAIL', 'FAILED']);
+
+function decodeLiveCall(value: unknown): Decoded<ConversationLiveCallView> {
+  if (!isRecord(value) || !isText(value.callId)) return { ok: false };
+  const length = value.lengthMs;
+  if (length !== null && !(typeof length === 'number' && Number.isInteger(length) && length >= 0)) return { ok: false };
+  return { ok: true, value: { callId: value.callId, lengthMs: length } };
+}
+
 /** The read route's body: `{ exchanges: [{ userTurn, replyState, assistantTurn }], hasOlder }`. */
 export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistoryPageView> {
   if (!isRecord(body) || !Array.isArray(body.exchanges) || typeof body.hasOlder !== 'boolean') return { ok: false };
@@ -183,13 +207,23 @@ export function decodeHistoryResponse(body: unknown): Decoded<ConversationHistor
     }
     // A reply and its state are one fact: COMPLETED carries exactly one reply, nothing else carries any.
     if ((state === 'COMPLETED') !== (reply !== null)) return { ok: false };
+    let exchange: ConversationExchangeView = { userTurn: user.value, replyState: state, reply };
     if (entry.voiceNote !== undefined) {
       const voiceNote = decodeVoiceNote(entry.voiceNote);
       if (!voiceNote.ok) return { ok: false };
-      exchanges.push({ userTurn: user.value, replyState: state, reply, voiceNote: voiceNote.value });
-      continue;
+      exchange = { ...exchange, voiceNote: voiceNote.value };
     }
-    exchanges.push({ userTurn: user.value, replyState: state, reply });
+    // S8B-06 CP3: a call reply's delivery state rides only beside a reply that exists.
+    if (entry.deliveryState !== undefined) {
+      if (reply === null || typeof entry.deliveryState !== 'string' || !DELIVERY_STATES.has(entry.deliveryState)) return { ok: false };
+      exchange = { ...exchange, deliveryState: entry.deliveryState as ConversationCallDeliveryState };
+    }
+    if (entry.liveCall !== undefined) {
+      const liveCall = decodeLiveCall(entry.liveCall);
+      if (!liveCall.ok) return { ok: false };
+      exchange = { ...exchange, liveCall: liveCall.value };
+    }
+    exchanges.push(exchange);
   }
   return { ok: true, value: { exchanges, hasOlder: body.hasOlder } };
 }

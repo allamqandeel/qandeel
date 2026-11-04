@@ -188,6 +188,19 @@ export class LiveCallClient {
     this.control({ type: 'TOKEN_REFRESH', msgId: this.takeMsgId(), accessToken });
   }
 
+  /**
+   * S8B-06 CP3 (D-05-07 T1, contract A3.2 P4 / P5) — a message the person typed during the call, on this ordered channel.
+   * It is logged like every control and sent at once when the link is up; while the link is down it waits in the log and
+   * goes out after the resume's STATE. The server applies it once per `clientTurnId`, so a resend can never commit it twice.
+   * Returns its `msgId` (its ACK or REFUSED carries it), or null when the call has ended (the caller writes it normally).
+   */
+  sendText(clientTurnId: string, text: string): number | null {
+    if (this.ended) return null;
+    const msgId = this.takeMsgId();
+    this.control({ type: 'TEXT_TURN', msgId, clientTurnId, text });
+    return msgId;
+  }
+
   end(): void {
     if (this.ended) return;
     this.control({ type: 'END', msgId: this.takeMsgId() });
@@ -305,7 +318,9 @@ export class LiveCallClient {
     let audio = 0;
     for (let i = 0; i < this.log.length; i += 1) {
       const item = this.log[i]!;
-      if (item.kind === 'control' && item.msgId <= lastMsgId && this.resuming) {
+      // A TEXT_TURN's ACK does not move `lastMsgId` and its msgId is never compared with it (protocol §0 CP4): it stays in
+      // the log until its own ACK or REFUSED, so a message typed before a later applied control is still resent.
+      if (item.kind === 'control' && item.message.type !== 'TEXT_TURN' && item.msgId <= lastMsgId && this.resuming) {
         this.log.splice(i, 1);
         i -= 1;
       }

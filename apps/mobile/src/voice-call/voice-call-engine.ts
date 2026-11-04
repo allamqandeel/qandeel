@@ -121,6 +121,11 @@ export interface VoiceCallEngine {
   playCue?(id: string, kind: CueKind, forceAfterMs: number, notificationText: string | null): CueRequest;
   /** CP2: queue it `dueInMs` from now, on the engine's own clock (the local trigger). */
   scheduleCue?(id: string, kind: CueKind, dueInMs: number, forceAfterMs: number, notificationText: string | null): CueRequest;
+  /**
+   * CP3 (D-05-07 T1): stop QANDEEL's voice here, now, without speech — the same local cut as a detected barge-in (fade, the
+   * reply's queued packets dropped, its later packets refused), reported as a forced `bargeIn`. False when nothing runs.
+   */
+  cutReply?(): boolean;
 }
 
 export type CallRoute = 'EARPIECE' | 'SPEAKER' | 'WIRED_HEADSET' | 'BLUETOOTH';
@@ -217,6 +222,7 @@ function bind(native: NativeVoiceCall): VoiceCallEngine & { forceBargeIn(): bool
     enqueueReply: (callTurnIndex, chunkSeq, offsetMs, packet) => native.enqueueReply(callTurnIndex, chunkSeq, offsetMs, packet),
     describe: () => native.describe(),
     forceBargeIn: () => native.forceBargeIn(),
+    cutReply: () => native.forceBargeIn(),
     playCue: (id, kind, forceAfterMs, notificationText) => native.playCue(id, kind, forceAfterMs, notificationText),
     scheduleCue: (id, kind, dueInMs, forceAfterMs, notificationText) => native.scheduleCue(id, kind, dueInMs, forceAfterMs, notificationText),
     subscribe(listener) {

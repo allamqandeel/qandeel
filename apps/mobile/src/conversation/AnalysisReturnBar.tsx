@@ -30,11 +30,13 @@ export interface AnalysisReturnBarProps {
    * upper chrome has). Without it the band is exactly what it always was.
    */
   readonly end?: ReactNode;
+  /** S8B-06 CP3 (G1.2): words the composition appends to the way back's accessible name (the call continues). */
+  readonly nameSuffix?: string | null;
 }
 
 export const ANALYSIS_RETURN_BAR_MIN_HEIGHT = 48;
 
-export function AnalysisReturnBar({ language, insets, onReturnToConversation, onHeight, focusControl = false, end = null }: AnalysisReturnBarProps) {
+export function AnalysisReturnBar({ language, insets, onReturnToConversation, onHeight, focusControl = false, end = null, nameSuffix = null }: AnalysisReturnBarProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = conversationCopy(language);
@@ -69,7 +71,7 @@ export function AnalysisReturnBar({ language, insets, onReturnToConversation, on
         <Control
           palette={palette}
           language={language}
-          accessibilityLabel={copy.backName}
+          accessibilityLabel={nameSuffix === null ? copy.backName : copy.backName + nameSuffix}
           onPress={onReturnToConversation}
           testID="qandeel-depth-to-conversation"
           controlRef={(node) => {

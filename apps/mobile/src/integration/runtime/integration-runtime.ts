@@ -159,7 +159,8 @@ import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator }
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
 import { createProjectionCoordinator, type ProjectionCoordinator } from '../projection/projection-coordinator';
-import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, type VoiceNoteDevice, type VoiceNoteSession } from '../../voice-note';
+import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, mintVoiceNoteId, type VoiceNoteDevice, type VoiceNoteSession } from '../../voice-note';
+import { createCallAwareConversationTransport, createCallOwner, loadCallDevice, type CallDevice, type CallOwner } from '../../call';
 
 /**
  * The three frozen promoted-act authorities, as ONE value.
@@ -296,6 +297,11 @@ export interface IntegrationSessionRuntime {
    * kept as the account's draft, polling and playback stop. The drafts themselves stay the account's, on this device.
    */
   readonly voiceNotes: VoiceNoteSession;
+  /**
+   * S8B-06 CP3: the ONE live call of this generation (in memory, above the composition): navigation reads it and never
+   * reopens it. Retired with the generation: a call still up is ended.
+   */
+  readonly call: CallOwner;
   /** S6-07: the governed enrollment and the reader's three consents (0165), retired with the generation. */
   readonly introductionEnrollment: EnrollmentController;
   /**
@@ -420,6 +426,8 @@ export interface IntegrationRuntimeOptions extends MobileRuntimeEntryOptions {
   readonly sharedLinks?: SharedLinkSource;
   /** S8B-03 — the device's Voice Note parts. Production: the drafts store, `expo-audio` and the screen hold; tests: their own. */
   readonly voiceNoteDevice?: VoiceNoteDevice;
+  /** S8B-06 CP3 — the device's call parts. Production: the native platform call and engine; tests and proofs: their own. */
+  readonly callDevice?: CallDevice;
 }
 
 export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}): IntegrationRuntimeResult {
@@ -443,6 +451,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   const pushPlatform: PushPlatformPort = options.pushPlatform ?? createExpoPushPlatformPort();
   // S8B-03 — the device's Voice Note parts, once: the drafts are the account's on this device, across generations.
   const voiceNoteDevice: VoiceNoteDevice = options.voiceNoteDevice ?? createDeviceVoiceNotes();
+  // S8B-06 CP3 — the device's call parts, once: one platform call and one engine for the app.
+  const callDevice: CallDevice = options.callDevice ?? loadCallDevice();
   const pushDeviceStore: PushDeviceStore = options.pushDeviceStore ?? createPushDeviceStore();
   const notificationEntries = createNotificationEntryInbox();
   const unsubscribePush: (() => void)[] = [
@@ -488,6 +498,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
+    session.call.retire();
     session.voiceNotes.retire();
     session.replayPlayer.retire();
     session.replayEntry.retire();
@@ -601,9 +612,34 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     // W1A-01: the Conversation of THIS Session, on the T-12P transport bound to this identity. The Session id is the
     // bundle's own — never a literal, a fixture or a synthesised one — and a committed reply asks THIS generation's one
     // driver to catch up, which is how Analysis learns.
+    // S8B-06 CP3: the call of THIS Session. A message typed during it goes on the call's channel (D-05-07 T1); every
+    // committed call turn and reply end asks this generation's one driver to catch up and the conversation to read again.
+    const calls = entry.callsFor(bundle);
+    const turns = entry.conversationTurnsFor(bundle);
+    const call = createCallOwner({
+      sessionId: bundle.sessionId,
+      isCurrent,
+      platform: callDevice.platform,
+      engine: callDevice.engine,
+      socketFactory: callDevice.socketFactory,
+      insecureLoopbackForProof: callDevice.insecureLoopbackForProof,
+      connectUrl: calls.connectUrl,
+      authorization: calls.authorization,
+      truth: () => calls.truth.read(),
+      readHistory: () => turns.readHistory(bundle.sessionId),
+      consent: (start) => built.voiceNotes.prepareCall(start),
+      requestMicrophone: async () => (await voiceNoteDevice.recorder().requestPermission()) === 'GRANTED',
+      language: deviceProductLanguage,
+      onCallTurn: () => {
+        built.conversation.ensureHistory();
+        built.liveDriver.requestImmediateCatchUp();
+      },
+      onCallEnded: () => built.attention.refresh(),
+      newId: mintVoiceNoteId,
+    });
     const conversation = createConversationController({
       sessionId: bundle.sessionId,
-      transport: entry.conversationTurnsFor(bundle),
+      transport: createCallAwareConversationTransport(turns, call),
       isCurrent,
       onReplyCommitted: () => built.liveDriver.requestImmediateCatchUp(),
     });
@@ -628,6 +664,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         sessionId: bundle.sessionId, transport: entry.replayFor(bundle), conversation, isCurrent,
         create: (choice) => built.publicWorld.compose?.createFromSource(choice) ?? Promise.resolve({ kind: 'FAILED' }),
       }) : null,
+      call,
       // S8B-03: Voice Notes of THIS conversation; a committed note joins it through the conversation's own merge.
       voiceNotes: createVoiceNoteSessionRuntime({
         owner: bundle.userId, sessionId: bundle.sessionId, transport: entry.voiceNotesFor(bundle), device: voiceNoteDevice,
@@ -661,7 +698,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       introductionParticipation: createParticipationController({ transport: continuation, isCurrent, foreground: entry.foreground }),
       introductionShares: createIntroductionSharesController({ transport: sharing, deletion: shared, isCurrent }),
       // A3-01: Activity, on the Activity transport bound to this identity. Attention re-reads when a row is seen or opened.
-      attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent }),
+      // S8B-06 CP3 (G3 §D): during a live call only the call-safe exceptions are presented; what waited is read after it.
+      attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent,
+        call: () => (call.getState().stage === 'IDLE' || call.getState().stage === 'PREPARING' ? { kind: 'NO_CALL_KNOWN' } : { kind: 'ACTIVE' }) }),
       activityFeed: createActivityFeedController({ transport: activity, isCurrent, onAttentionChanged: () => built.attention.refresh() }),
       activityPreferences: createActivityPreferencesController({ transport: activity, isCurrent }),
       push,
