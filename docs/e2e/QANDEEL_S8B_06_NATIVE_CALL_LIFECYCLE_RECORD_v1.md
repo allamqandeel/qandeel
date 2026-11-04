@@ -421,6 +421,18 @@ A planted fault, the interval's due time not advanced, fails the no-burst test.
 | Mobile CI | Android Release APK (x86_64); Android API 36 emulator boot smoke | **success** |
 | Mobile CI | **iOS Release simulator app**; iPhone 17 / iOS 26.5 simulator boot smoke | **success** |
 
+**All green on `9368cf43`** (the head after the real-phone proof: the suspension tests of `65728675` and the record):
+
+- S8B-06 native call tests (run 41786209820): `swift test`, `xcodebuild test` 79 / 79, Kotlin JUnit — **success**;
+- API CI (run 41786209883): the change-aware contracts and validation evidence — **success**. `verify-api` was skipped by
+  the change-aware plan, because no API path changed;
+- Mobile CI (run 41786209850): the fast contract gate, the Android Release APK and API 36 smoke, the iOS Release simulator
+  app — **success**. The iOS boot smoke (iPhone 17 / iOS 26.5) **succeeded on attempt 2**.
+  - Attempt 1 was classified `INFRASTRUCTURE — ios-boot-smoke` by the workflow itself. Maestro's XCTest driver answered
+    `terminateApp` with HTTP 500 during "Launch app with clear state", before the app ran, and the step reached its
+    780 s bound;
+  - it was re-run unchanged. Nothing in the iOS binary had changed since `b3c4399c`, where the smoke passed.
+
 **CI rounds (CP2-caused, fixed narrowly, no assertion weakened):**
 
 - **R1** (`26af9464`). The first Swift compile on macOS refused three optional buffer pointers in a **test helper**
@@ -448,7 +460,7 @@ A planted fault, the interval's due time not advanced, fails the no-burst test.
 | 11 | Kotlin unit, Android build, API 36 emulator, real phone | **PASS** | §4, §5, §6 |
 | 12 | Swift tests, iOS Release simulator build, simulator lifecycle tests | **PASS** (CI): 75 / 75 on the host, 79 / 79 on the simulator, Release simulator app built, boot smoke | §8 |
 | 13 | Jest, tsc, ESLint, prebuild idempotency, re-anchoring | **PASS** (local): Jest 75 / 75 | §4 |
-| 14 | API and Mobile CI on the Draft PR | **PASS** on `b3c4399c`; see §8 for the later heads | §8 |
+| 14 | API and Mobile CI on the Draft PR | **PASS** on `b3c4399c`; and on the post-proof head `9368cf43` (one infrastructure re-run of the iOS smoke, §8) | §8 |
 | 15 | No gates, no migration, no protocol change | **PASS** | §0 |
 | 16 | The `phoneCall` FGS type alone (G1.2) | **PASS on the phone**: `microphone` not needed, not added | §6 |
 
