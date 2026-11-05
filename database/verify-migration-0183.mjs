@@ -739,6 +739,28 @@ async function verifyBehaviour(report) {
       })();
       assert.ok(refused.error ? /REPLAY_RENDER_MEDIUM_UNAVAILABLE/u.test(refused.error.message) : refused.row.outcome !== 'PREVIEW_READY',
         `A5 the preview is refused (${refused.error?.message ?? refused.row?.outcome})`);
+      // RE-ANCHORED by S8B-07 CP1-A (was: the preview is refused, whatever the cause; the Product Owner's CP1-A authorization,
+      // a declared re-anchor): on 0195 the refusal is pinned to its cause - this fixture note has no recorded duration, so its
+      // window cannot be proven to be [0, duration) (NOTE_SHAPE_INVALID) - and the same draft is admitted as a V2 contract
+      // once the note's recorded duration is the anchor's end. Still refused under V1: no V1 row ever bears audio.
+      const [{ audio }] = await rows("SELECT to_regprocedure('public.replay_derive_source_window_binding_v1(uuid,uuid)') IS NOT NULL AS audio");
+      if (audio) {
+        await owner();
+        const [{ spec }] = await rows(`SELECT sp.id AS spec FROM public.replay_selection_spec_versions sp WHERE sp.replay_id = $1
+            ORDER BY sp.selection_revision DESC LIMIT 1`, [created.replay_id]);
+        const [cause] = await rows('SELECT * FROM public.replay_derive_source_window_binding_v1($1, $2)', [spec, A]);
+        assert.deepEqual([cause.binding_digest, cause.refusal_cause], [null, 'NOTE_SHAPE_INVALID'], 'A5 the refusal is pinned: the note has no recorded duration');
+        await q(`INSERT INTO voice_private.note_transcriptions (recording_id, user_id, session_id, state, duration_ms, committed_turn_id)
+                 VALUES ($1, $2, $3, 'COMMITTED', 4200, $4)`, [note.id, A, session, turnsIds[0]]);
+        const admitted = await rt.preview(A, randomUUID(), created.replay_id, created.draft_revision);
+        assert.equal(admitted.outcome, 'PREVIEW_READY', `A5 with readable, covered anchors the same draft is admitted (${admitted.outcome})`);
+        await owner();
+        const [contract] = await rows(`SELECT c.contract_schema_id, c.source_medium_class, c.source_window_binding_digest IS NOT NULL AS bound
+            FROM public.replay_versions v JOIN public.replay_render_contract_versions c ON c.id = v.render_contract_version_id
+           WHERE v.id = $1`, [admitted.replay_version_id]);
+        assert.deepEqual(contract, { contract_schema_id: 'QANDEEL_REPLAY_RENDER_CONTRACT_V2', source_medium_class: 'ORIGINAL_MEDIA_PRESERVED', bound: true },
+          'A5 it is admitted only as V2, bound to its windows');
+      }
       // A text Replay of the same conversation previews and finalizes; its Moments print text. The same item planted as
       // audio (fixture surgery) prints none.
       const text = await rt.bringTo(A, { session }, 'FINALIZED', { first: 5, last: 6 });

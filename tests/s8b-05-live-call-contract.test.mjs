@@ -129,10 +129,13 @@ test('0189 is forward-only, one transaction, opens no voice gate, grants no clie
   // A): exactly 0193, the finished-call read, follows 0192 and nothing else does (verify-migration-0193 proves it).
   // RE-ANCHORED by INTEL-04 (was: 0193 is the last migration; QAN-BL-INTEL-04, the Product Owner's execution order): exactly
   // 0194, the Thread lifecycle relation correction, follows 0193 and nothing else does (verify-migration-0194 proves it).
-  assert.deepEqual(migrations.slice(-6), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
+  // RE-ANCHORED by S8B-07 CP1-A (was: 0194 is the last migration; the Product Owner's CP1-A authorization, a declared
+  // re-anchor): exactly 0195, the original-audio source truth, follows 0194 and nothing else does (verify-migration-0195).
+  assert.deepEqual(migrations.slice(-7), ['0189_s8b_05_live_call_authority_v1.sql', '0190_s8b_05_live_call_spoken_turn_v1.sql',
     '0191_s8b_05_live_call_ordered_halves_v1.sql', '0192_s8b_05_live_call_barge_in_text_turn_v1.sql',
-    '0193_s8b_06_session_finished_calls_read_v1.sql', '0194_intel_04_lifecycle_relation_at_binding_sp_v1.sql'],
-  'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190, CP4 exactly 0192 after 0191, S8B-06 CP3 R3 exactly 0193 after 0192, INTEL-04 exactly 0194 after 0193');
+    '0193_s8b_06_session_finished_calls_read_v1.sql', '0194_intel_04_lifecycle_relation_at_binding_sp_v1.sql',
+    '0195_s8b_07_replay_original_audio_source_truth_v1.sql'],
+  'CP2 adds exactly 0190 after 0189, CP3 exactly 0191 after 0190, CP4 exactly 0192 after 0191, S8B-06 CP3 R3 exactly 0193 after 0192, INTEL-04 exactly 0194 after 0193, S8B-07 CP1-A exactly 0195 after 0194');
   const scripts = JSON.parse(read('package.json')).scripts;
   assert.equal(scripts['verify:live-call-authority:integration'], 'node --env-file-if-exists=.env database/verify-migration-0189.mjs');
   assert.equal(scripts['prove:live-call-synthetic:integration'],

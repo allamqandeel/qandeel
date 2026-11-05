@@ -562,7 +562,10 @@ async function verifyStatic() {
   ok((await bodyOf(STATE)).includes('b.bound_sp < p_before_sp'), 'the then-valid state still reads strictly before');
   ok((await bodyOf(VALIDATOR)).includes('bound.bound_sp >= p_cu.session_position'), 'the validator still refuses a binding at or after the current CU');
   const migrations = readdirSync('database/migrations').filter((name) => name.endsWith('.sql')).sort();
-  strict(migrations.at(-1), M0194, '0194 is the last migration');
+  // RE-ANCHORED by S8B-07 CP1-A (was: 0194 is the last migration; the Product Owner's CP1-A authorization, a declared
+  // re-anchor): exactly 0195, the original-audio source truth, follows 0194 and nothing else does (verify-migration-0195).
+  strict(migrations.at(-2), M0194, '0194 is followed only by 0195');
+  strict(migrations.at(-1), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
   const m0194 = readFileSync(`database/migrations/${M0194}`, 'utf8');
   const executable = m0194.replace(/^\s*--.*$/gmu, '');
   ok(!/GRANT /u.test(executable), '0194 grants nothing');

@@ -235,6 +235,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MOB-02` | Written Composer on Android: the Last Composing Word Returns at the Start of the Next Message | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-09` | Live Call 60-Minute Notice After a Late Rejoin: No CALL_ENDING Is Repeated on a Connection That Resumes Inside the Last Minute | `UNASSIGNED` | `LOW` | `OPEN — UNASSIGNED` |
 | `QAN-BL-INTEL-05` | Analysis Refusal Handling: a Deterministic Semantic-Establishment Refusal Is Treated as Transient (a Call Item Parks and Retries With No Terminal State; a Written Exchange's Chain Is Silently Skipped) | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-NAV-03` | Shared / Public World Replay Surface | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -468,6 +469,13 @@ happens to reversible history — are defined here.
   route state; interruption/reconnection semantics; durable Voice Note audio if history playback is
   shipped; consent/retention/deletion for any Personal original audio; and a reviewed source
   contract before audio-led Replay can claim the original call.
+- **Current truth (S8B-07 CP1-A, 2026-11-05; from `main` at `e9311ca1`; a Draft PR, effective from its merge):** the
+  reviewed source contract for audio-led Personal Replay exists in data and truth: migration `0195` (not hosted) binds an
+  original-audio Replay item to its recording's window (Render Contract V2 and the Source Window Binding Digest), refuses
+  any selection whose audio would not be exact (Whole-Turn Closure; no fabricated audio, no V1 fallback), derives the
+  source's availability live and leaves the I-06D evidence to the creator's reconciliation
+  ([S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §2 – §6). No audio is played or rendered yet
+  (CP1-B, not authorized). Owner, severity, status and reopen condition unchanged.
 - **Arabic speech-pronunciation quality (Product Owner direction, 2026-10-20; Stage 8B handoff, no implementation authorized):** the future Voice runtime must have a **context-aware Arabic pronunciation/vocalization preparation step before TTS**, capable of resolving unvowelled words whose meaning/pronunciation changes with diacritics, respecting the user dialogue, intended meaning and relevant dialect. Evaluate selective diacritization or provider-compatible phonetic hints rather than indiscriminately rewriting all displayed words. The speech-only representation must not mutate user-visible conversation text, stored original utterances, Memories or factual meaning; avoid inventing a pronunciation when context does not establish it. Test ambiguous minimal pairs in context, Egyptian and supported Arabic dialects, proper names, latency/streaming fit and the chosen TTS voice. This is within **the existing VOICE-01 item** — no second backlog item, count/state/owner change. Stage 8A may preserve necessary text/context interfaces but does not implement, claim or close this TTS requirement.
 - **Current truth (S8B-01 CP1, 2026-10-28; on `s8b/s8b-01-voice-runtime-contract` from `main` at `8b476114`; effective from its merge):** Stage 8B has started (the Product Owner's S8B-00 decision D-1) and owns this item. The required future properties, the Arabic speech-pronunciation handoff and the P4 residues are unchanged; S8B-01 CP1 addresses them only as a candidate contract — the [Voice Runtime contract](voice-runtime-v1.md), the [S8B-01 Voice Runtime Controlled Amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md) VA-1 … VA-10 (approved in principle, D-8) and a locked non-production benchmark harness ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md)). No runtime, provider, durable audio source or gate exists; nothing is implemented, and the item is not delivered.
 - **Current truth (S8B-01 CP2 and CP3, 2026-10-28 … 2026-10-30; CP2 merged through PR #365 as `47121434`; CP3 on `s8b/s8b-01-cp3`, effective from its merge):** the Product Owner selected the providers at CP2: Google Gemini TTS `gemini-3.8-flash-tts`, voice Achird, one path ([S8B-01 record](e2e/QANDEEL_S8B_01_VOICE_RUNTIME_CONTRACT_PROVIDER_EVIDENCE_RECORD_v1.md) §9.10), and Speechmatics Enhanced `ar_en`, the proof verdict `NOT ACCEPTED` (5 / 6) kept, barge-in on a real Android device a condition blocking the launch of calls (§9.21). CP3, S8B-01's closing change (record §10), records the VA-4 starting values, the cost model, the formats and the render placement, and the Product Owner's decisions on them (D-A1 … D-F1, 2026-10-30, record §10.9; call retention `started_at` + 30 days; Voice Notes in AAC-LC / M4A; launch now, scale when needed, with no Enterprise launch condition), none implemented, and records the lifecycle of VA-1 … VA-11: none in force for production, every one `NOT IMPLEMENTED`. The implementing obligations stay inside Stage 8B under this item, each with its task: S8B-02 (foundation, store, expiry), S8B-03 (Voice Notes), S8B-04 (Speech Rendering, contextual expression, selective vocalization, VA-11 §4), S8B-05 (conversation speed and interruption), S8B-06 (AEC and barge-in on a real Android device), S8B-07 (Replay and its distribution), S8B-08 (cost, privacy and launch evidence). No runtime, adapter, durable audio source or gate exists; the item is not delivered.
@@ -3681,6 +3689,27 @@ Admitted by `S8B-06` CP3 at the Product Owner's Copy Gate approval and final dev
 
 Admitted by `INTEL-04` at its closing change (2026-11-04) under BG-06. Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-NAV-03` — Shared / Public World Replay Surface
+
+- **Title / Finding:** Replay exists only for the Personal World. No Shared or Public World Replay surface exists, and none
+  is owned: `QAN-BL-NAV-02` was tombstoned for the Personal Analysis Replay alone (S7-05), and the approved voice plan's
+  S8B-07 CP3 is Shared Voice Notes, not a Shared Replay.
+- **Source:** the S8B-07 CP0 reconciled package v1.1 (D-01), and the Product Owner's decision D-01(a) (2026-11-05), which
+  keeps CP3 for Shared Voice Notes and records this surface separately; [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §1, §10.
+- **Why not current work:** S8B-07 delivers the Personal original-audio Replay only. A Shared or Public Replay needs its own
+  consent, participant and distribution contract, which no task holds.
+- **Owner task:** `UNASSIGNED` — no owner is invented (D-01(a)).
+- **Severity:** `MEDIUM` — no shipped surface promises it; a Shared or Public World simply has no Replay.
+- **Reopen condition:** a roadmap or Architecture decision opens a Shared or Public World Replay, or any task claims to
+  replay a Shared or Public conversation.
+- **Required future properties:** every participant's consent and visibility respected; no participant's private source,
+  text or audio reaches another without that participant's approved share; the Personal Replay's truth, currency and
+  erasure laws (I-06, `0169`, `0195`) are not weakened; proven against real PostgreSQL.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `S8B-07` CP1-A (2026-11-05, Draft PR from `s8b/s8b-07-cp1a`) under BG-06, at the Product Owner's decision
+D-01(a). Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4499,14 +4528,14 @@ Tombstoned by `INTEL-04` at its closing change (2026-11-04) under BG-08; its fin
 | --- | ---: |
 | `DEFERRED — OWNED` | 51 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 11 |
+| `OPEN — UNASSIGNED` | 12 |
 | `CLOSED — TOMBSTONE` | 35 |
-| **Total** | **101** |
+| **Total** | **102** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 59 |
-| `MEDIUM` | 39 |
+| `MEDIUM` | 40 |
 | `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -6024,6 +6053,15 @@ exact Live Focus events and no refusal or loss (record §4.2). No production log
   Status, owner and severity unchanged; not started.
 - **Index unchanged: 101 items; 51 / 4 / 11 / 35 by status, 59 / 39 / 3 by severity.**
 
+**S8B-07 CP1-A — Original Audio Source Truth (2026-11-05; from `main` at `e9311ca1`, INTEL-04 merged through PR #382; a Draft PR, not merged).**
+
+- **BG-05 (kickoff):** no item names S8B-07 as its owner; it works `QAN-BL-VOICE-01` for Stage 8B (worked, not delivered; a current-truth note).
+- **Admitted (BG-06):** `QAN-BL-NAV-03` (`MEDIUM`, `OPEN — UNASSIGNED`), the Shared / Public World Replay Surface, at the Product Owner's D-01(a).
+- **Not admitted:** the analytical subject-authority producer (CP0 D-07 is not decided).
+- **Read and left unchanged:** `QAN-BL-ACCT-03` (`0195` adds no relation; it reopens at CP2-B and CP3), `QAN-BL-INTEL-05`, `QAN-BL-VOICE-02` … `05`, `07`, `08`, `09`, `QAN-BL-PRIV-05`, `QAN-BL-PROD-06` / `08` / `09` (`0195` not hosted).
+- **BG-09:** S8B-07 is not closed; its record carries `CP1-A DELIVERED — NOT CLOSED`, and so do the locators.
+- **Index at S8B-07 CP1-A: 102 items; 51 / 4 / 12 / 35 by status, 59 / 40 / 3 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -6142,6 +6180,7 @@ Inherited after T-12 closure reconciliation:
 | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `QAN-BL-VOICE-02`, `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (admitted by S8B-03's closing change, 2026-10-31); `QAN-BL-VOICE-05` (admitted by S8B-04's closing change, 2026-11-02); `QAN-BL-VOICE-08` (admitted by S8B-06's closing change, 2026-11-04) |
 | `GCR-01 — Growth & Capacity Readiness` | `QAN-BL-VOICE-07` (admitted by S8B-05's closing change, 2026-11-03) |
 | `INTEL-04 — Thread Lifecycle Derivation Correction` | `QAN-BL-INTEL-04` (admitted by S8B-06 CP3 under PO Review R1, 2026-11-04; owned by the Product Owner's decision of the same day); *the closing change (2026-11-04, the INTEL-04 Draft PR from `main` at `8e590234`; effective from its merge):* BG-08 reconciled: `QAN-BL-INTEL-04` tombstoned (`0194`, not hosted); admitted `QAN-BL-INTEL-05` (`UNASSIGNED`) |
+| `S8B-07 — Original Audio Replay, Media Rendering & Distribution` | none owned by its own name at kickoff (BG-05, 2026-11-05, from `main` at `e9311ca1`); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); *CP1-A (2026-11-05, a Draft PR from `s8b/s8b-07-cp1a`; effective from its merge):* admitted `QAN-BL-NAV-03` (`UNASSIGNED`, D-01(a)); tombstoned nothing; S8B-07 not closed |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

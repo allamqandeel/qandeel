@@ -36,10 +36,13 @@ test('0070 is the historical migration and stays byte-identical (the Product Own
     '0070 itself still reads both of its relation predicates strictly');
 });
 
-test('0194 is the last migration, forward-only, and replaces exactly one predicate of exactly one function', () => {
+test('0194 is forward-only, followed only by 0195, and replaces exactly one predicate of exactly one function', () => {
   const migrations = readdirSync(join(root, 'database/migrations')).filter((file) => file.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), M0194, '0194 is the last migration');
-  assert.equal(migrations.at(-2), '0193_s8b_06_session_finished_calls_read_v1.sql', '0194 directly follows 0193');
+  // RE-ANCHORED by S8B-07 CP1-A (was: 0194 is the last migration; the Product Owner's CP1-A authorization, a declared
+  // re-anchor): exactly 0195, the original-audio source truth, follows 0194 and nothing else does.
+  assert.equal(migrations.at(-1), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
+  assert.equal(migrations.at(-2), M0194, '0194 is followed only by 0195');
+  assert.equal(migrations.at(-3), '0193_s8b_06_session_finished_calls_read_v1.sql', '0194 directly follows 0193');
   const sql = read(`database/migrations/${M0194}`);
   const code = codeOnly(sql);
   assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);
