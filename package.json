@@ -312,6 +312,7 @@
     "prove:live-call-closure-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/s8b-05-cp4-live-call-closure-proof.ts",
     "verify:session-finished-calls:integration": "node --env-file-if-exists=.env database/verify-migration-0193.mjs",
     "verify:intel-04-lifecycle-relation:integration": "node --env-file-if-exists=.env database/verify-migration-0194.mjs",
+    "verify:s8b-07-replay-audio-source-truth:integration": "node --env-file-if-exists=.env database/verify-migration-0195.mjs",
     "prove:intel-04-lifecycle-synthetic:integration": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/intel-04-thread-lifecycle-proof.ts",
     "test:intel-04-thread-lifecycle-derivation-contract": "node --test tests/intel-04-thread-lifecycle-derivation-contract.test.mjs",
     "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",

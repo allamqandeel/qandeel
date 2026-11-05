@@ -1410,6 +1410,14 @@ jobs:
           DATABASE_URL="$base/$clone" npm run prove:intel-04-lifecycle-synthetic:integration || status=$?
           psql "$base/postgres" -X -v ON_ERROR_STOP=1 -q -c "DROP DATABASE \"$clone\" WITH (FORCE)"
           exit "$status"
+      # S8B-07 CP1-A: migration 0195 (Original Audio Source Truth) - Render Contract V2 and the Source Window Binding: the
+      # binding CHECK refuses a NULL or malformed V2 binding and any V1 binding (real INSERTs); an all-text selection is V1
+      # exactly as before; an original-audio selection is V2 only when every window resolves (whole turn, readable, its own
+      # track, covered), else refused with its cause; the plan read (service_role); expiry, deletion and a due erasure make
+      # the source unavailable at once, and only the creator's reconciliation records it; two sessions serialize a preview
+      # and a deletion. Rows only - no media byte, no gate opened, no provider.
+      - name: Verify S8B-07 CP1-A original-audio source truth (0195) against real PostgreSQL
+        run: npm run verify:s8b-07-replay-audio-source-truth:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
