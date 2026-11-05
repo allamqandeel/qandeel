@@ -31,16 +31,21 @@ const replayRow = (overrides: Record<string, unknown> = {}) => ({
   draft_first_tc: 1, draft_last_tc: 2, draft_source_state: 'CURRENT', draft_updated_at: AT, current_replay_version_id: VERSION, current_replay_version_revision: 1,
   current_version_finalized: false, ...overrides,
 });
+// S8B-07 CP1-A (Product Owner S-2 option (a)): the fixture carries the real V1 render contract of 0102, value for value,
+// because the version decoder now admits only the two approved contracts. The values it carried before could never be
+// stored (0102's CHECKs refuse them); no assertion is weakened.
 const POLICIES = {
-  original_medium_policy: 'ORIGINAL_MEDIUM_TRUTH_V1', source_text_policy: 'EXACT_COMMITTED_TEXT_V1', semantic_cut_policy: 'WHOLE_ITEM_ONLY_V1',
-  temporal_discontinuity_policy: 'EXPLICIT_GAP_V1', timing_integrity_policy: 'NO_SYNTHETIC_TIMING_V1', analytical_projection_policy: 'SEALED_TC_ONLY_V1',
-  camera_emphasis_policy: 'NONE_V1', motion_policy: 'NONE_V1', caption_provenance_policy: 'SOURCE_TEXT_V1', accessibility_parity_policy: 'PARITY_V1',
-  reduced_motion_parity_policy: 'PARITY_V1', editorial_annotation_policy: 'NONE_V1',
+  original_medium_policy: 'PRESERVE_ORIGINAL_MEDIUM_ONLY', source_text_policy: 'EXACT_SOURCE_TEXT', semantic_cut_policy: 'WHOLE_ITEM_ONLY_PROVEN_SAFE',
+  temporal_discontinuity_policy: 'PERCEPTIBLE_DISCONTINUITY_REQUIRED', timing_integrity_policy: 'PRESENTATION_PACING_DECLARED',
+  analytical_projection_policy: 'BOUND_HISTORICAL_PROJECTION_DIGEST', camera_emphasis_policy: 'EMPHASIS_WITHOUT_MEANING_CREATION',
+  motion_policy: 'EXPLANATORY_MOTION_ONLY', caption_provenance_policy: 'DERIVED_CAPTION_DISTINCT_FROM_SOURCE',
+  accessibility_parity_policy: 'EQUIVALENT_TRUTH_REQUIRED', reduced_motion_parity_policy: 'EQUIVALENT_TRUTH_REQUIRED',
+  editorial_annotation_policy: 'NO_EDITORIAL_ANNOTATION',
 };
 const versionRow = (overrides: Record<string, unknown> = {}) => ({
   replay_id: REPLAY, replay_version_id: VERSION, replay_version_revision: 1, version_created_at: AT, is_current: true, finalized: false,
   coverage_class: 'SELECTED_EXCERPT', moment_count: 2, temporal_discontinuity_count: 0, first_tc: 1, last_tc: 2, render_contract_revision: 1,
-  render_contract_schema: 'qandeel.replay.render-contract.v1', source_medium_class: 'TEXT_ONLY', ...POLICIES,
+  render_contract_schema: 'QANDEEL_REPLAY_RENDER_CONTRACT_V1', source_medium_class: 'ORIGINAL_TEXT_ONLY', ...POLICIES,
   source_layer: 'DEREFERENCEABLE', analytical_layer: 'SEALED_HISTORICAL_EVIDENCE', viewing_state: 'VIEWABLE', not_viewable_class: null, ...overrides,
 });
 const momentRow = (ordinal: number, overrides: Record<string, unknown> = {}) => ({
@@ -227,7 +232,7 @@ describe('S7-01 - ReplayService', () => {
     it('reads one version with its render truth contract and both layers', async () => {
       const view = await service.version('token', REPLAY, VERSION);
       expect(view).toMatchObject({ outcome: 'FOUND', isCurrent: true, finalized: false, momentCount: 2,
-        renderContract: { revision: 1, sourceMediumClass: 'TEXT_ONLY', policies: { originalMedium: 'ORIGINAL_MEDIUM_TRUTH_V1', editorialAnnotation: 'NONE_V1' } },
+        renderContract: { revision: 1, sourceMediumClass: 'ORIGINAL_TEXT_ONLY', policies: { originalMedium: 'PRESERVE_ORIGINAL_MEDIUM_ONLY', editorialAnnotation: 'NO_EDITORIAL_ANNOTATION' } },
         viewing: { state: 'VIEWABLE', notViewableClass: null, sourceLayer: 'DEREFERENCEABLE', analyticalLayer: 'SEALED_HISTORICAL_EVIDENCE' } });
       repository.version.mockResolvedValue([versionRow({ viewing_state: 'NOT_VIEWABLE', not_viewable_class: 'SOURCE_NOT_CURRENTLY_AVAILABLE', source_layer: 'NOT_DEREFERENCEABLE' })]);
       await expect(service.version('token', REPLAY, VERSION)).resolves.toMatchObject({ viewing: { state: 'NOT_VIEWABLE', notViewableClass: 'SOURCE_NOT_CURRENTLY_AVAILABLE' } });

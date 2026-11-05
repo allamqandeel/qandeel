@@ -46,6 +46,8 @@ const files = (dir) => readdirSync(join(root, dir)).flatMap((name) => {
   return statSync(join(root, path)).isDirectory() ? files(path) : [path];
 });
 const sha = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
+// S8B-07 CP1-A (the Product Owner's S-1 option (a), 2026-11-05): the one Replay migration approved after 0169. Not a pattern.
+const APPROVED_LATER_REPLAY_MIGRATIONS = Object.freeze(['0195_s8b_07_replay_original_audio_source_truth_v1.sql']);
 
 const PLAYER = 'apps/mobile/src/replay-player';
 const CLIENT = 'apps/mobile/src/runtime-entry/replay-lifecycle-api.ts';
@@ -85,7 +87,10 @@ const FROZEN = [
   // EXISTS answer `false` beside a null version as "no version yet" and leaves it as the wire's null; a contradiction
   // stays refused. Nothing else in the service changed; 0169 and the wire are unchanged.
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope leaves as its class `CONVERSATION_SESSION` alone, its exact canonical form verified first, anything else refused whole).
-  ['apps/api/src/replay/replay.service.ts', '2a3bdb2328f943d4de022ce60f1285dd26cce66717df0dd88b0c5fe0724afc83'],
+  // S8B-07 CP1-A RE-ANCHOR (2026-11-05, the Product Owner's S-2 option (a)): the version decoder admits exactly the two
+  // approved render contracts, V1 as 0102 and V2 as 0195 (D-04), value for value; any other schema, medium or policy is
+  // refused whole. The wire, the G-1 summary decoder and the F-2 scope decoder are unchanged; nothing else in the service changed.
+  ['apps/api/src/replay/replay.service.ts', '5ea4073008e1a65ee65fa8657911934ebcc9fcdccfa6819250d25b0275328510'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
   ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
@@ -205,7 +210,9 @@ const DETECTORS = {
     // Re-anchored by S8A-01 (0170): S7-04 adds no migration, and nothing after 0169 is a Replay migration.
     const later = w.migrations.filter((name) => name.slice(0, 4) > '0169');
     if (!w.migrations.some((name) => name.startsWith('0169_'))) out.push('0169 is missing');
-    for (const name of later) if (/replay/iu.test(name)) out.push(`a Replay migration follows 0169 (${name})`);
+    // RE-ANCHORED by S8B-07 CP1-A (2026-11-05, the Product Owner's S-1 option (a)): exactly one Replay migration may follow
+    // 0169, the approved 0195 named in APPROVED_LATER_REPLAY_MIGRATIONS, matched by its whole file name. Any other is refused.
+    for (const name of later) if (/replay/iu.test(name) && !APPROVED_LATER_REPLAY_MIGRATIONS.includes(name)) out.push(`a Replay migration follows 0169 (${name})`);
     return out;
   },
 
@@ -399,6 +406,11 @@ const PLANTED = [
   ['G-1 left failing', 'apiViolations', editList('frozen', 'apps/api/src/replay/replay.service.ts', 'versionId === null ? row.current_version_finalized !== false :', 'versionId === null ? finalized !== null :')],
   ['an S7-02 approved row reworded', 'apiViolations', editList('frozen', 'apps/mobile/src/replay-entry/copy.ts', "ar: 'هذا غير متاح الآن.'", "ar: 'غير متاح.'")],
   ['a new migration', 'apiViolations', () => ({ ...shipped(), migrations: [...shipped().migrations, '0170_replay_player_v1.sql'] })],
+  // S8B-07 CP1-A: the S-1 exception admits the one approved file name and nothing near it.
+  ['a later Replay migration after the approved 0195', 'apiViolations', () => ({ ...shipped(), migrations: [...shipped().migrations, '0196_s8b_07_replay_original_audio_source_truth_v2.sql'] })],
+  ['a second Replay migration numbered 0195', 'apiViolations', () => ({ ...shipped(), migrations: [...shipped().migrations, '0195_replay_shared_surface_v1.sql'] })],
+  ['the approved 0195 name with a suffix', 'apiViolations', () => ({ ...shipped(), migrations: [...shipped().migrations, '0195_s8b_07_replay_original_audio_source_truth_v1.sql.bak'] })],
+  ['an unapproved Replay migration in upper case', 'apiViolations', () => ({ ...shipped(), migrations: [...shipped().migrations, '0197_REPLAY_render_v3.sql'] })],
   ['the depth beneath rebuilt', 'navigationViolations', edit('depth', '', 'const personalOpen = personalReachable && !introductionsShown && !playerOpen;', 'const personalOpen = personalReachable && !introductionsShown;')],
   ['the player in every world', 'navigationViolations', edit('depth', '', "{onSignOut !== undefined && area === 'MY_WORLD' ? <ReplayPlayer", "{onSignOut !== undefined ? <ReplayPlayer")],
   ['Activity opened beneath the passage', 'navigationViolations', edit('depth', '', 'const openActivity = useCallback(() => {\n    // S7-04: Activity is not entered from beneath the Replay passage; the passage closes first.\n    replayPlayer.close();', 'const openActivity = useCallback(() => {')],
@@ -430,6 +442,17 @@ for (const [name, detector, plant] of PLANTED) {
     assert.notDeepEqual(DETECTORS[detector](plant()), [], name);
   });
 }
+
+test('S8B-07 CP1-A: the S-1 re-anchor admits exactly the approved 0195, and the guard still holds after 0169', () => {
+  const w = shipped();
+  assert.deepEqual([...APPROVED_LATER_REPLAY_MIGRATIONS], ['0195_s8b_07_replay_original_audio_source_truth_v1.sql']);
+  assert.ok(w.migrations.includes(APPROVED_LATER_REPLAY_MIGRATIONS[0]), 'the approved 0195 is in the repository');
+  assert.deepEqual(DETECTORS.apiViolations(w), [], 'the approved 0195 is admitted');
+  const later = w.migrations.filter((name) => name.slice(0, 4) > '0169' && /replay/iu.test(name));
+  assert.deepEqual(later, [...APPROVED_LATER_REPLAY_MIGRATIONS], 'no other Replay migration follows 0169');
+  const refused = DETECTORS.apiViolations({ ...w, migrations: [...w.migrations, '0198_replay_any_v1.sql'] });
+  assert.deepEqual(refused, ['a Replay migration follows 0169 (0198_replay_any_v1.sql)']);
+});
 
 test('this contract is registered at the root and runs once in API CI', () => {
   const w = shipped();

@@ -49,6 +49,27 @@ const POLICY_COLUMNS = {
   captionProvenance: 'caption_provenance_policy', accessibilityParity: 'accessibility_parity_policy',
   reducedMotionParity: 'reduced_motion_parity_policy', editorialAnnotation: 'editorial_annotation_policy',
 } as const;
+// S8B-07 CP1-A (Product Owner S-2 option (a), 2026-11-05): a version's render contract is decoded only as one of the two
+// approved contracts, value for value: V1 exactly as 0102's CHECKs, V2 exactly as 0195's (D-04). Any other schema, medium
+// or policy is refused whole. The wire is unchanged: the same keys and the same view.
+const SHARED_RENDER_POLICIES = {
+  originalMedium: 'PRESERVE_ORIGINAL_MEDIUM_ONLY', semanticCut: 'WHOLE_ITEM_ONLY_PROVEN_SAFE',
+  temporalDiscontinuity: 'PERCEPTIBLE_DISCONTINUITY_REQUIRED', analyticalProjection: 'BOUND_HISTORICAL_PROJECTION_DIGEST',
+  cameraEmphasis: 'EMPHASIS_WITHOUT_MEANING_CREATION', motion: 'EXPLANATORY_MOTION_ONLY', captionProvenance: 'DERIVED_CAPTION_DISTINCT_FROM_SOURCE',
+  accessibilityParity: 'EQUIVALENT_TRUTH_REQUIRED', reducedMotionParity: 'EQUIVALENT_TRUTH_REQUIRED', editorialAnnotation: 'NO_EDITORIAL_ANNOTATION',
+} as const;
+const RENDER_CONTRACTS: Readonly<Record<string, { sourceMediumClass: string; policies: Record<keyof typeof POLICY_COLUMNS, string> }>> = {
+  QANDEEL_REPLAY_RENDER_CONTRACT_V1: { sourceMediumClass: 'ORIGINAL_TEXT_ONLY', policies: {
+    ...SHARED_RENDER_POLICIES, sourceText: 'EXACT_SOURCE_TEXT', timingIntegrity: 'PRESENTATION_PACING_DECLARED' } },
+  QANDEEL_REPLAY_RENDER_CONTRACT_V2: { sourceMediumClass: 'ORIGINAL_MEDIA_PRESERVED', policies: {
+    ...SHARED_RENDER_POLICIES, sourceText: 'EXACT_SOURCE_TEXT_AUDIO_TRANSCRIPT_DERIVED', timingIntegrity: 'ORIGINAL_SOURCE_CLOCK_WITH_DECLARED_TEXT_PACING' } },
+};
+const isApprovedRenderContract = (row: ReplayRow): row is ReplayRow & { readonly render_contract_schema: string; readonly source_medium_class: string } => {
+  const contract = typeof row.render_contract_schema === 'string' && Object.prototype.hasOwnProperty.call(RENDER_CONTRACTS, row.render_contract_schema)
+    ? RENDER_CONTRACTS[row.render_contract_schema] : undefined;
+  return contract !== undefined && row.source_medium_class === contract.sourceMediumClass
+    && Object.entries(POLICY_COLUMNS).every(([key, column]) => row[column] === contract.policies[key as keyof typeof POLICY_COLUMNS]);
+};
 const VERSION_KEYS = ['replay_id', 'replay_version_id', 'replay_version_revision', 'version_created_at', 'is_current', 'finalized', 'coverage_class',
   'moment_count', 'temporal_discontinuity_count', 'first_tc', 'last_tc', 'render_contract_revision', 'render_contract_schema', 'source_medium_class',
   ...Object.values(POLICY_COLUMNS), 'source_layer', 'analytical_layer', 'viewing_state', 'not_viewable_class'];
@@ -61,7 +82,6 @@ const isUuid = (value: unknown): value is string => typeof value === 'string' &&
 const isInstant = (value: unknown): value is string => typeof value === 'string' && INSTANT.test(value) && Number.isFinite(Date.parse(value));
 const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const isPosition = (value: unknown): value is number => isCount(value) && value >= 1 && value <= INT4_MAX;
-const isText = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 const isOneOf = <T extends string>(value: unknown, allowed: readonly T[]): value is T => typeof value === 'string' && (allowed as readonly string[]).includes(value);
 const isRow = (row: unknown, keys: readonly string[]): row is ReplayRow => {
   if (!row || typeof row !== 'object' || Array.isArray(row)) return false;
@@ -254,8 +274,7 @@ export class ReplayService {
         || !isPosition(row.replay_version_revision) || !isInstant(row.version_created_at) || typeof row.is_current !== 'boolean' || typeof row.finalized !== 'boolean'
         || !isOneOf(row.coverage_class, COVERAGE) || !isPosition(row.moment_count) || !isCount(row.temporal_discontinuity_count)
         || !isPosition(row.first_tc) || !isPosition(row.last_tc) || row.last_tc < row.first_tc
-        || !isPosition(row.render_contract_revision) || !isText(row.render_contract_schema) || !isText(row.source_medium_class)
-        || Object.values(POLICY_COLUMNS).some((column) => !isText(row[column]))
+        || !isPosition(row.render_contract_revision) || !isApprovedRenderContract(row)
         || !isOneOf(row.source_layer, ['DEREFERENCEABLE', 'NOT_DEREFERENCEABLE'] as const)
         || !isOneOf(row.analytical_layer, ['SEALED_HISTORICAL_EVIDENCE', 'SEALED_EVIDENCE_INCOMPLETE'] as const)
         || !isOneOf(row.viewing_state, ['VIEWABLE', 'NOT_VIEWABLE'] as const)

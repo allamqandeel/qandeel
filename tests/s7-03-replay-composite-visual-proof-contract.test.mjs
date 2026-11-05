@@ -95,7 +95,10 @@ const FROZEN = [
   // EXISTS answer `false` beside a null version as "no version yet" and leaves it as the wire's null; a contradiction
   // stays refused. Nothing else in the service changed; 0169 and the wire are unchanged.
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope leaves as its class `CONVERSATION_SESSION` alone, its exact canonical form verified first, anything else refused whole).
-  ['apps/api/src/replay/replay.service.ts', '2a3bdb2328f943d4de022ce60f1285dd26cce66717df0dd88b0c5fe0724afc83'],
+  // S8B-07 CP1-A RE-ANCHOR (2026-11-05, the Product Owner's S-2 option (a)): the version decoder admits exactly the two
+  // approved render contracts, V1 as 0102 and V2 as 0195 (D-04), value for value; any other schema, medium or policy is
+  // refused whole. The wire, the G-1 summary decoder and the F-2 scope decoder are unchanged; nothing else in the service changed.
+  ['apps/api/src/replay/replay.service.ts', '5ea4073008e1a65ee65fa8657911934ebcc9fcdccfa6819250d25b0275328510'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
   ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],

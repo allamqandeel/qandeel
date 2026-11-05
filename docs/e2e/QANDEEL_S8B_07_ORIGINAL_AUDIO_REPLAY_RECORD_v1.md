@@ -5,10 +5,11 @@ On `s8b/s8b-07-cp1a` as a Draft PR from `main` at `e9311ca1`, **not merged; merg
 «ادمج»**. **CP1-B is not started and not authorized.** S8B-07 is not closed. Migration `0195` is **not hosted**. Every
 voice gate stays `DISABLED`, and the Personal Replay gate has no open state. Not VOICE LAUNCH READY.
 
-- **Two stop items are raised for the Product Owner, not resolved here** (§9):
-  - **S-1:** the S7-04 contract forbids any Replay migration after `0169`, and `0195` is one by the name the order
-    approved;
-  - **S-2:** tightening the API version decoder needs the S7-03 / S7-04 hash pins re-anchored.
+- **The two stop items of the first delivery are resolved by the Product Owner (2026-11-05), both under option (a)**
+  (§9):
+  - **S-1:** a declared, exact re-anchor of the S7-04 guard admits only `0195`;
+  - **S-2:** the API version decoder admits exactly the V1 and V2 render contracts, with the S7-03 / S7-04 hash pins
+    re-anchored as declared.
 - No test outside the declared re-anchors (§7) was changed.
 
 ## 1. Authority
@@ -66,9 +67,15 @@ NULL, i.e. untimed).
   directly. That keeps verify-0155 R05's consumer set exact.
 - It returns no key, URL, path or text.
 
-**The API is unchanged.** The 0169 version read passes the D-04 values through the existing decoder, proven by
-`apps/api/src/replay/replay-render-contract-v2.spec.ts`. The mobile composite refuses a V2 version whole
-(`RENDER_CONTRACT_NOT_HONOURED`) until CP1-B. No mobile code changed.
+**The API decoder admits exactly the two approved contracts** (S-2 option (a)).
+- `replay.service.ts`'s version decoder accepts V1 exactly as `0102`'s CHECKs and V2 exactly as `0195`'s (D-04), value
+  for value: the schema, the medium and all twelve policies.
+- Any other schema, any mix of the two, and any single policy changed is refused whole (`UNAVAILABLE`).
+- The wire keeps its shape: the same keys, and no binding, key, plan or new field. The repository, the controller, the
+  types and `0169` are unchanged.
+- Proven by `apps/api/src/replay/replay-render-contract-v2.spec.ts` (positive and negative).
+- The mobile composite still refuses a V2 version whole (`RENDER_CONTRACT_NOT_HONOURED`) until CP1-B. No mobile code
+  changed, and `projection-adapter.ts` keeps its S7-04 hash.
 
 ## 3. The Product Owner's four mandatory corrections
 
@@ -156,6 +163,28 @@ NULL, i.e. untimed).
 2. **`database/verify-migration-0194.mjs`:** "0194 is the last migration" → "exactly 0195 follows 0194".
 3. **`tests/intel-04-thread-lifecycle-derivation-contract.test.mjs`:** the same re-anchor.
 4. **`tests/s8b-05-live-call-contract.test.mjs`:** the `slice(-7)` list adds `0195`, with its RE-ANCHORED line.
+5. **`tests/s7-04-replay-player-navigation-contract.test.mjs`, the "no Replay migration after `0169`" guard** (S-1
+   option (a)).
+   - `APPROVED_LATER_REPLAY_MIGRATIONS` holds exactly one whole file name,
+     `0195_s8b_07_replay_original_audio_source_truth_v1.sql`. It is not a pattern or a prefix, and no future Replay
+     migration is admitted. The guard itself is kept.
+   - Proof: a new test asserts that the list is exactly that name, that `0195` is admitted, that it is the only Replay
+     migration after `0169`, and that `0198_replay_any_v1.sql` is refused with the guard's message.
+   - Four new planted cases are refused: `0196_s8b_07_replay_original_audio_source_truth_v2.sql`,
+     `0195_replay_shared_surface_v1.sql`, the approved name with a `.bak` suffix, and `0197_REPLAY_render_v3.sql`. The
+     existing `0170_replay_player_v1.sql` case still holds.
+6. **`tests/s7-03-replay-composite-visual-proof-contract.test.mjs` and `tests/s7-04-…`: the `replay.service.ts` hash**
+   (S-2 option (a)).
+   - Both pins move from `2a3bdb23…` to `5ea40730…`, each with an `S8B-07 CP1-A RE-ANCHOR` comment.
+   - The only change in the file is the decoder. The service diff adds the two contract constants and
+     `isApprovedRenderContract`, replaces the `isText` checks of the schema, the medium and the policies with it, and
+     drops the now-unused `isText`.
+   - Every other pin, the G-1 decode lines, the F-2 scope checks and every other S7-03 / S7-04 guarantee are untouched,
+     and both contracts pass in full.
+7. **`apps/api/src/replay/replay.spec.ts`, the fixture** (a consequence of S-2).
+   - Its version fixture carried V1 values that `0102`'s CHECKs could never store (`qandeel.replay.render-contract.v1`,
+     `TEXT_ONLY`, `NONE_V1` …). It now carries the real V1 values, and its one expectation names the same real values.
+   - No assertion is removed or weakened. The spec is not pinned by any contract.
 
 **Not re-anchored:**
 - **verify-0102 V07:** its insert carries the V1 schema and still fails `medium_check` / `timing_check`. It passes
@@ -173,42 +202,43 @@ rows only, no media byte):
     700 ms lock timeout). After the commit, the deletion proceeds and the finalization answers `SOURCE_CHANGED`.
 - `verify-migration-0100` … `0107`, `0169` and `0183` … `0194` on the `0195` database: **all pass**, with the declared
   re-anchors.
-- The contract tests:
-  - `tests/*` without the forward-safety mirror, after this record and the backlog: 1 746 / 1 748 pass.
-    - One failure is stop item S-1 (§9), the S7-04 rule.
-    - The other was a parallel-run collision: QAN-INF-02 saw another test's live temp directory. Run alone, it passes
-      14 / 14.
-    - Without the experimental line, the forward-safety mirror fails on S-1 alone (an earlier run: 1 772 / 1 783, all
-      11 failures S-1).
+- **Re-run after the S-1 / S-2 corrections**, on fresh clones: `verify-migration-0195`, `0169`, `0183`, `0102` and `0103`,
+  all pass. `0195` itself is unchanged since `91472f13`.
+- **The contract tests,** on the final tree:
+  - every `tests/*.test.mjs` except the forward-safety mirror: **1 753 / 1 753**;
+  - the forward-safety mirror (`tests/forward-safety-contract.test.mjs`): **35 / 35**;
+  - the Stage 7 contracts `s7-01` … `s7-05`: **159 / 159**. Only `s7-03` (one pin) and `s7-04` (one pin, the guard,
+    four planted cases and one proof test) changed;
   - `test:task-closure-governance-contract`: passes.
-  - The two re-anchored contract tests: pass.
+  - **An environmental flake, shown by independent re-runs:**
+    - the first full run, before the corrections, had one QAN-INF-02 failure: it saw another test's live temp directory
+      while the suites ran in parallel;
+    - run alone, QAN-INF-02 passes 14 / 14;
+    - in the final full run it passes.
 - `verifier-hazards`: 0 findings.
-- **The forward-safety mirror, as an experiment only:** with the S-1 one-line re-anchor applied temporarily (never
-  committed, reverted after the run), `tests/forward-safety-contract.test.mjs` passes 35 / 35. That shows S-1 is the only
-  blocker there. Without that line, the mirror fails on the S7-04 rule.
-- **API:** `replay.spec.ts` and `replay-render-contract-v2.spec.ts`, 67 / 67.
+- **API (jest):**
+  - the four Replay suites: **84 / 84**, including the new decoder positives and negatives;
+  - the whole API: 6 166 / 6 167 tests, 267 / 339 suites.
+  - **Every failure is environmental**, one cause: the local `node_modules` (a junction) has no `openai` package, so the
+    72 suites and the one test that load `deepseek-client.ts` cannot compile. None is a Replay suite. CI installs the
+    dependencies with `npm ci`.
 
 **Predicted, not executed:** the exact-head API CI and Mobile CI. CI is the authority, and the local PostgreSQL is only a
 pre-check. No paid service, provider call, hosted database or device was used.
 
-## 9. Stop items for the Product Owner
+## 9. Stop items: as raised, and as resolved
 
 - **S-1 — the S7-04 "no Replay migration after `0169`" rule.**
-  - `tests/s7-04-replay-player-navigation-contract.test.mjs:205-208` refuses any migration after `0169` whose name
-    contains "replay". `0195_s8b_07_replay_original_audio_source_truth_v1.sql` is the name the CP1-A order gives. The
-    rule is not among the declared re-anchors.
-  - Nothing was changed. The test fails, and so does every forward-safety mirror run that executes it.
-  - **Options:**
-    - (a) a declared re-anchor: "nothing after `0169` is a Replay migration except S8B-07's `0195`", one line, the same
-      form as the earlier RE-ANCHORED lines;
-    - (b) rename the migration. **Not recommended:** it would dodge the guard's intent, and the name was approved.
+  - **As raised (first delivery, commit `91472f13`):** `0195`'s approved name contains "replay", and the S7-04 rule was
+    not among the declared re-anchors. Nothing was changed; the test failed.
+  - **Resolved by the Product Owner, option (a):** a limited re-anchor that admits only `0195`. The guard is kept,
+    nothing is widened to future Replay migrations, and the proof required is in §7 item 5.
 - **S-2 — an exact API decoder.**
-  - The order asks the version decoder to accept exactly the V1 or the V2 policy row. `apps/api/src/replay/replay.service.ts`
-    and `replay.types.ts` are pinned by sha256 in the S7-03 and S7-04 contracts.
-  - The decoder today accepts any non-empty policy text, so V2 passes (spec above), but not exactly.
-  - **Options:**
-    - (a) tighten it in this PR, with the two S7 hash pins re-anchored as declared;
-    - (b) keep the permissive decoder until CP1-B, where the mobile side changes anyway.
+  - **As raised:** the decoder accepted any non-empty policy text, and `replay.service.ts` is hash-pinned by S7-03 and
+    S7-04.
+  - **Resolved by the Product Owner, option (a):** the decoder is tightened to the exact V1 and V2 values. V1 behaviour is
+    unchanged, any unknown schema or changed policy is refused, the wire is unchanged, and the phone still refuses V2. The
+    hash re-anchor is declared and limited to that change (§2, §7 items 6 and 7), with real positive and negative tests.
 
 ## 10. Backlog (BG-05 / BG-06 / BG-08)
 
