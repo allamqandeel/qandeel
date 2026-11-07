@@ -261,6 +261,7 @@ jobs:
       - {name: "Verify S8B-06 CP1 native audio engine contract (the phone and the fake gateway speak the frozen live-call protocol v1 byte for byte, the gateway e2e on a real socket with libopus FEC uplink, one socket in src/voice-call, ws:// and the forced cut proof-only, the Android-only module with a pinned codec, no call lifecycle, no logging, VAD after AEC at 200 ms, no provider)", run: npm run test:s8b-06-native-audio-engine-contract}
       - {name: "Verify S8B-06 CP2 native call lifecycle contract (Core-Telecom 1.0.1 outgoing, routes via requestEndpointChange only, the one phoneCall service with a CallStyle End; CallKit outgoing only with includesCallsInRecents=false and UIBackgroundModes audio only; the complete iOS engine with vendored libopus FEC, onset rules, presented-position PLAYOUT; typed plugin mods; Voice Notes foreground-only; copy rows PROPOSED, no audio file, no provider; the native tests wired)", run: npm run test:s8b-06-native-call-lifecycle-contract}
       - {name: "Verify INTEL-04 Thread lifecycle derivation contract (0070 byte-identical; 0194 forward-only, one function, exactly the attention_on predicate made bound_sp <= cu.session_position and every other strict reading kept; no write, no queue reset, no grant; the verifier and the integrated proof wired after the migrations; no graphics, no provider; the record and QAN-BL-INTEL-04 closed)", run: npm run test:intel-04-thread-lifecycle-derivation-contract}
+      - {name: "Verify S8B-07 CP1-B media worker contract (the BtbN ffmpeg 9.0.2 LGPL pin sha256-checked, the proof wired with the in-memory store and with rclone S3, each entry point refusing every role but its own, the Replay role directly with pg pinned, sources read-only and processing files under voice-transient/ only, the API key rule unchanged)", run: npm run test:s8b-07-cp1b-media-worker-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1427,6 +1428,29 @@ jobs:
       # media byte, no gate opened, no provider.
       - name: Verify S8B-07 CP1-B transient media authority (0196) against real PostgreSQL
         run: npm run verify:s8b-07-transient-media:integration
+      # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
+      # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
+      # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.
+      - name: Install the pinned ffmpeg 9.0.2 (BtbN LGPL, sha256-checked) for the Replay media proofs
+        run: |
+          set -euo pipefail
+          ffmpeg_tag=autobuild-2026-10-31-12-59
+          ffmpeg_asset=ffmpeg-n9.0.2-39-g7adfbe40dc-linux64-lgpl-9.0.tar.xz
+          ffmpeg_sha256=6046d6731b26f58887e953561551d254a6eec9fbca4100dfeab56e19af8328d5
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$ffmpeg_asset" "https://github.com/BtbN/FFmpeg-Builds/releases/download/$ffmpeg_tag/$ffmpeg_asset"
+          echo "$ffmpeg_sha256  $RUNNER_TEMP/$ffmpeg_asset" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          tar -xJf "$RUNNER_TEMP/$ffmpeg_asset" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          "$RUNNER_TEMP/ffmpeg/bin/ffmpeg" -hide_banner -version | head -1
+          echo "FFMPEG_BIN=$RUNNER_TEMP/ffmpeg/bin/ffmpeg" >> "$GITHUB_ENV"
+          echo "FFPROBE_BIN=$RUNNER_TEMP/ffmpeg/bin/ffprobe" >> "$GITHUB_ENV"
+      # S8B-07 CP1-B step 2: the compiled media worker, reaper and independent watchdog of the Replay pool, as the Replay
+      # database role, against this database, the pinned ffmpeg and an in-memory store (the rclone S3 run is in the PostgREST
+      # step below) - start-up refusals, listening and three-run Replay mixes measured by Goertzel, fail-closed classes, the
+      # erasure timetable and the outage, generations, recovery, the watchdog with no pool, and a 60-minute file. Synthetic
+      # tones only; no gate is left open; the Replay role's LOGIN is granted for the run and revoked after it.
+      - name: Prove S8B-07 CP1-B media worker, reaper and watchdog against real PostgreSQL and the pinned ffmpeg (in-memory store)
+        run: npm run prove:s8b-07-media-worker:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1479,6 +1503,9 @@ jobs:
             [ "$status" != "000" ] && break
             sleep 1
           done
+          # S8B-07 CP1-B step 2: the media-worker proof again, with the Replay pool's S3 adapter against this rclone server (a CI
+          # stand-in, never a hosted proof). It removes every object it wrote, so the bucket listings below see none of them.
+          REPLAY_PROOF_STORE=s3 npm run --silent prove:s8b-07-media-worker:integration || { tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
           declare -A release_sha256=(
             [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
             [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279

@@ -415,7 +415,7 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 |---|---|---|
 | 0 | Documentation first (this section, K-9, CA-07B-1 FINAL) | done in this change |
 | 1 | Migration `0196_s8b_07_transient_media_v1.sql` and its verifier on a disposable PostgreSQL 17 | done locally: `verify-migration-0196.mjs` 31/31 on a disposable PG17, earlier verifiers re-anchored (each re-anchor named); not yet run in CI |
-| 2 | Media worker, reaper and watchdog (`REPLAY_MEDIA` / `REPLAY_WATCHDOG`) | not started |
+| 2 | Media worker, reaper and watchdog (`REPLAY_MEDIA` / `REPLAY_WATCHDOG`) | done locally: `apps/api/src/replay-media/` (API jest 344 suites green), `prove-0196-media-worker.mjs` 21/21 on a disposable PG17 with the pinned ffmpeg 9.0.2 and the in-memory store (60-min listening file 34.8 s against the 128 s D-06.5 cap); the rclone S3 run and the BtbN pin run only in CI; not yet run in CI |
 | 3 | Replay Media Service (the five routes, bounded Range responses) | not started |
 | 4 | V-24a First Audio isolation (not a proof of pool separation) | not started |
 | 5 | Mobile | not started |

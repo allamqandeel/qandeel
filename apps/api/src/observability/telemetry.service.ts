@@ -115,6 +115,14 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  // superseded_expected; one the core or its seam did not clear, or with no single conclusion, is blocked_expected; a held
  // pair is retry_expected; a held integrity refusal is integrity_failure. Never a person, proposal, view or count.
  ['INTRODUCTIONS_FORWARD',new Map([['dispatch',new Set(['success','superseded_expected','blocked_expected','retry_expected',...OPERATION_FAILURES])],['reconcile',new Set(['success',...OPERATION_FAILURES])]])],
+ // S8B-07 CP1-B (INFRA-07, contract §0.2, §18): the Replay pool's media worker and the independent Replay watchdog. A job
+ // that failed closed by the database's or the worker's decision is failed_closed; a file that reached its cap or lost
+ // its source is expired; a lease another claim holds is lease_lost; a key the store has not yet proven gone is
+ // deferred. TRANSIENT_ERASURE_LATE is emitted on every cycle while a recorded violation is outstanding. Never a person,
+ // call, version, artifact, key, plan, digest, byte count or duration as a label.
+ ['REPLAY_MEDIA',new Map([['job',new Set(['success','failed_closed','expired','lease_lost',...OPERATION_FAILURES])],['reap',new Set(['success','deferred',...OPERATION_FAILURES])],['sweep',new Set(['success',...OPERATION_FAILURES])],['heartbeat',new Set(['success',...OPERATION_FAILURES])]])],
+ ['REPLAY_WATCHDOG',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['backstop',new Set(['success','deferred',...OPERATION_FAILURES])],['health',new Set(['success',...OPERATION_FAILURES])],['heartbeat',new Set(['success',...OPERATION_FAILURES])]])],
+ ['TRANSIENT_ERASURE_LATE',new Map([['erasure',new Set(['late'])]])],
  ['PUSH_DELIVERY',new Map([
   ['plan',new Set(['success',...OPERATION_FAILURES])],
   ['claim',new Set(['success',...OPERATION_FAILURES])],
@@ -135,6 +143,10 @@ const PRIVACY_OPERATION_STATES:ReadonlyMap<string,ReadonlyMap<string,boolean>>=n
  ['ACCOUNT_ERASURE',new Map([['blocked_shared_standard',false],['blocked_public',false],['blocked_replay',false],['blocked_unregistered',false],
   ['blocked_unclassified',false],['retrying',false],['integrity_holding',false],['media_pending',true],['uncovered_classes',false]])],
 ]);
+// S8B-07 CP1-B (contract §18.2 / §18.3): the Replay watchdog's content-free health gauges. Ages in milliseconds and
+// counts are VALUES; the only label is the closed metric name. An absent heartbeat is not emitted, so its absence is
+// the dead-man input of the managed alert (configured at HOSTED-DEPLOY-01).
+const REPLAY_HEALTH_METRICS:ReadonlySet<string>=new Set(['oldest_pending_age_ms','pending_over_60s','pool_heartbeat_age_ms','watchdog_heartbeat_age_ms','erasures_due','erasures_late']);
 const PRIVACY_EXPORT_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSIENT_DATABASE','CONSTRAINT_OR_INTEGRITY','RESOURCE_OR_CAPACITY','INTERNAL_OTHER']);
 const OPERATIONS_POLICY_VERSION='1';
 // AI-COST-01: the finite label registries of provider-call accounting. The DB ledger (migration 0135) is the
@@ -168,6 +180,7 @@ export class TelemetryService{
  private readonly operationalOutcomes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.operations.outcomes'),{});
  private readonly privacyOperationStateCounts:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy.state_count'),{});
  private readonly privacyOperationOldestAges:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy.oldest_age',{unit:'s'}),{});
+ private readonly replayHealth:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.replay.health'),{});
  private readonly privacyExportRecentFailures:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy_export.recent_failures'),{});
  private readonly aiUsageAccounting:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.accounting'),{});
  private readonly aiUsageProviderCalls:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.provider_calls'),{});
@@ -281,6 +294,11 @@ export class TelemetryService{
  // legal domain/state pair and the policy version. An illegal pair, a negative,
  // fractional or unsafe number, or an age offered for a state without one is
  // DROPPED. Fail-soft.
+ // S8B-07 CP1-B: one Replay health gauge; an unknown metric or a negative, fractional or unsafe value is DROPPED.
+ recordReplayHealth(metric:string,value:number):void{this.safeVoid(()=>{
+  if(!REPLAY_HEALTH_METRICS.has(metric)||!Number.isSafeInteger(value)||value<0)return;
+  this.replayHealth.record?.(value,{metric,policy_version:OPERATIONS_POLICY_VERSION});
+ });}
  recordPrivacyOperationState(domain:string,state:string,count:number,oldestAgeSeconds?:number):void{this.safeVoid(()=>{
   const hasAge=PRIVACY_OPERATION_STATES.get(domain)?.get(state);
   if(hasAge===undefined||!Number.isSafeInteger(count)||count<0)return;
