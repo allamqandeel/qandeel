@@ -1,5 +1,50 @@
 # QANDEEL — Product Roadmap
 
+> **PRODUCT OWNER DECISION — 2026-11-07 / S8B-07 INFRA-07: Dedicated Replay Infrastructure & Future Credit Accounting. CONTRACT & PROJECT MAP UPDATE ONLY; NOT IMPLEMENTED; NO RESOURCE CREATED.** Full text: the [S8B-07 record §12](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md).
+>
+> - **(1) Separate compute.** All Replay work runs on a **Replay Media Compute Pool** physically separate from the **Live Voice Compute Pool**. That covers listening to a finished call, audio preparation and mixing, private Replay playback, video rendering and A/V sync, and export / distribution files.
+>   - The Live Voice pool keeps its resources, has absolute priority and hosts no Replay worker.
+>   - CPU affinity or a dedicated core on a live host is **not** sufficient.
+>   - **There is no fallback to Live Voice hosts:** insufficient Replay capacity defers or temporarily refuses Replay work.
+>   - Shared PostgreSQL, object storage, network, background queues and API resources must be isolated and proven.
+>   - Mandatory acceptance: First Audio and live reply speed hold under high, concurrent Replay + video-render load.
+> - **(2) Hosting.** GCP project `qandeel-replay` (QANDEEL Replay), created by the Product Owner, is the **proposed** destination. Cloud Run Jobs is a candidate for video rendering only. No Job, Service, account, API, container or deployment is created; the current voice project is unchanged.
+> - **(3) Timing.**
+>   - No Replay starts during a running call.
+>   - After the call, a Replay can be made while the original recording exists and is valid.
+>   - The original audio matches the map's historical image, on the existing time boundaries only; no per-word timing.
+>   - The final video needs A/V sync and device tests.
+>   - CP1-A Source Truth and Whole-Turn Closure are unchanged.
+> - **(4) Destinations.** `DOWNLOAD`, `SHARE_EXTERNALLY` and `PUBLISH_TO_PUBLIC_WORLD` are confirmed.
+>   - **No automatic expiry of the final video** because of time or the source's expiry, in any of them.
+>   - Processing files stay under their cleanup contract.
+>   - No maximum Replay duration is set.
+> - **(5) Stage 9.** Replay joins the **unified Credit balance** (below), resource-metered, with reservation then settlement and no final charge for a failed, undelivered job.
+>   - **No hard spending cap** that stops service for customers with credit; alerts only.
+>   - Concurrency and queue limits protect resources and are not a financial cap.
+>   - **No price or Credit rate is set.**
+>
+> - **(6) PO approvals, 2026-11-07 (status `S8B-07 INFRA-07 — PO DECISIONS RECORDED — READY FOR FINAL CONTRACT REVIEW`; record §12.4):**
+>   - P-1 every Replay route, control and streaming runs on the Replay pool; the Live API keeps only the finished-call read.
+>   - P-2 V-24a before the CP1-B merge; V-24b on two independent environments before any hosted Replay or any gate.
+>   - P-3 the Replay DB role's limits, as initial values.
+>   - **P-4, with change:** no Replay watchdog on the Live API or on call servers. There is now an independent monitor that detects a dead Replay pool and alerts.
+>   - P-5 per-job resource data.
+>   - P-6 / P-7 confirmed.
+>   - A new mandatory **Cloud Run HTTP Range streaming test** (V-35).
+>   - Not approved at that point: CA-07B-1's final text, the Copy Gate R1.1, the D-06.7 values and their proof, the D-05.7 sample, the CP1-B start. *(Approved in (7) below, except the CP1-B start.)*
+>
+> - **(7) CP1-B final contract approvals, 2026-11-07 (record §12.5). Status: `S8B-07 CP1-B — FINAL CONTRACT APPROVALS RECORDED`.**
+>   - **CA-07B-1 APPROVED AS FINAL,** with continuation across the 58-min cap (WP0 contract §20, as corrected in R5.1) and every added test;
+>   - **HC-1 … HC-5 APPROVED** as binding acceptance criteria, not as passed tests;
+>   - **the Copy Gate R1.1 APPROVED:** 28 rows, CL-11 without its final full stop in both languages, and the operational mapping;
+>   - **D-06.7 APPROVED** as a binding performance criterion; its proof is still required;
+>   - **D-05.7 option (b) APPROVED:** no sound asset now; FI 020 in the local log;
+>   - **G-6 CONFIRMED AS WRITTEN,** including `readable_for_ms`.
+>   - **CP1-B is not authorized;** migration `0196` is not created; no merge without «ادمج». K-9 stays with CP1-B step 0.
+>
+> No migration, code, gate, hosted deployment, paid call or merge is authorized by this entry.
+
 > **POST-MERGE RECONCILIATION — 2026-11-03 / PRODUCT OWNER (STATUS ONLY).** **S8B-05 is CLOSED / MERGED through CP4 PR #379 as `47f84755`** (head `f11ddb7c`, both API CI and Mobile CI green). CP1–CP4 are engineering-complete. The synthetic First Audio SHIPPED regression (+69/+131 ms P50/P95) and Live Focus P95 3.9 s **remain NOT MET**; the server-crash/uncommitted-transcript gap is a **HIGH pre-launch correctness blocker** owned by GCR-01 / `QAN-BL-VOICE-07`. F-01's approved audio assets are **NOT_INSTALLED** and visible resume UX (`QAN-BL-VOICE-06`) remains S8B-06 CP3. No migration 0189–0192 was hosted, all Voice Gates remain DISABLED, and no paid AI or voice launch is authorized. This update supersedes stale CP4 "not merged" status in historical snapshots below; the old records are preserved as history.
 
 > **PO ROADMAP ADDITION — 2026-11-03: GCR-01 / Growth & Capacity Readiness, mandatory Stage 8B PRE-LAUNCH GATE, not yet implemented.** Prove 1,000 users at launch (including a 100%-simultaneous 1,000-live-call stress target), certify 10,000-user capacity before 1,000 registered accounts, 50,000 before 10,000, then scale proactively. Confirm real quotas/agreements, cross-instance reply protection, P50/P95/P99 and economically bounded capacity. **The known CP3 shared-provider First Audio regression was deferred to GCR-01 and CP3 merged as `5f1e0561` with green CI, without implementing the prototype.** this is **NOT** a launch waiver, a passed First Audio SHIPPED test or permission to open Voice Gates. The **SHARED permits + remote claim deferral + contention-conditional SPEECH_START/L2** design must be evaluated/implemented with safe read-failure and missing-onset handling, per-call and distributed worker correctness, bounded false speech, **<= +50ms P50 / <= +100ms P95 First Audio versus M0**, plus a **USER half commit -> durable Live Focus <=2,000ms P95 target at proven load**; also measure actual speech-end -> Live Focus, long-call lag and provider/DB cost. Separate SHIPPED/CALIBRATED hard-fail CI protection; S8B-08 owns real provider calibration. Seven-call synthetic proof does not certify 1,000 concurrent calls. One finite unified monthly credit balance covers calls, text, voice notes, analyses and billable inference; Stage 9 owns pricing and billing, while 650 EGP/60m and 1,000 EGP/120m remain illustrative only. No hosted migration, paid call, vendor purchase or launch gate is authorized. Full acceptance and PO deferral rationale: [Project Map](QANDEEL_PROJECT_MAP.md).
@@ -247,6 +292,17 @@ Existing CW2-08 authority remains binding:
 - Credits never modify consent, ownership or truth.
 The roadmap freezes **no** credit formula, price, rollover rule, top-up rule, visible unit, allowance or exhaustion
 behavior.
+
+**PO decision 2026-11-07 (S8B-07 INFRA-07-06), approved for future planning:**
+- One unified Credit balance across QANDEEL's services, **including Replay**.
+- Replay cost is measured from resources, duration, storage and transfer, not guessed.
+- Credits are reserved before the work and settled after it.
+- No final charge for a failed, undelivered job (the settlement policy comes later).
+- Replay prices and margins are set in this stage. Cost is measured per job, per video minute and per customer.
+- Gradual scaling.
+- **No global hard spending cap** on the Replay project that stops service for customers with credit. Monitoring and alerts, no automatic disabling.
+- Concurrency and queue limits protect resources; they are not a financial cap.
+- No Credit price or Credits per Replay minute is set now.
 #### Complete Account / Authentication Lifecycle
 T-14 already provides the narrow Product Sign-In Gateway, but deliberately excludes logo/lantern/brand treatment,
 sign-up, password reset, onboarding, social auth and broader credential UX.
