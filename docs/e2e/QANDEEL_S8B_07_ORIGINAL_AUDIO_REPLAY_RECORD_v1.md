@@ -1,6 +1,16 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Checkpoint:** S8B-07 CP1-A — Original Audio Source Truth (2026-11-05) — **CP1-A DELIVERED — NOT CLOSED**.
+**Checkpoint:** S8B-07 CP1-B — Retained Call Listening & Original Audio Replay Playback (2026-11-07) — **CP1-B IN
+PROGRESS** (§13). On `s8b/s8b-07-cp1b` from `main` at `9eace91d`; **not merged; merge only on the Product Owner's
+explicit «ادمج»**. S8B-07 is not closed. Every voice gate stays `DISABLED`, and the Personal Replay gate has no open
+state. Not VOICE LAUNCH READY.
+
+**Post-merge reconciliation (K-9, recorded by CP1-B step 0):**
+- CP1-A merged through PR #383 as `2beaa7c0`. Migration `0195` is **not hosted**.
+- INFRA-07 and the CP1-B final contract approvals (§12 – §12.5) merged through PR #384 as `9eace91d`.
+- The CP1-A banner below is its pre-merge snapshot.
+
+*(Pre-merge snapshot, as written at CP1-A's delivery:)* **Checkpoint:** S8B-07 CP1-A — Original Audio Source Truth (2026-11-05) — **CP1-A DELIVERED — NOT CLOSED**.
 On `s8b/s8b-07-cp1a` as a Draft PR from `main` at `e9311ca1`, **not merged; merge only on the Product Owner's explicit
 «ادمج»**. **CP1-B is not started and not authorized.** S8B-07 is not closed. Migration `0195` is **not hosted**. Every
 voice gate stays `DISABLED`, and the Personal Replay gate has no open state. Not VOICE LAUNCH READY.
@@ -375,3 +385,49 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 - any Google Cloud or other hosted resource;
 - any gate change;
 - any merge without the Product Owner's «ادمج».
+
+## 13. CP1-B — Retained Call Listening & Original Audio Replay Playback (IN PROGRESS, 2026-11-07)
+
+**Status:** `CP1-B — IN PROGRESS`.
+
+**Authority:**
+- The Product Owner's execution authorization (2026-11-07), after PR #384 merged as `9eace91d`.
+- The approved WP0 package, contract version **R5.1**, outside the repository: `E:\QANDEEL_REPORTS\S8B-07\CP1-B\WP0\`.
+  - A frozen copy with checksums was taken at the start: `…\CP1-B\frozen-R5.1-at-cp1b-start\`.
+  - Where texts differ, the later approved decisions bind: INFRA-07 and R5.1 over the earlier drafts.
+- The six decisions of §12.5.
+
+**CA-07B-1 recorded as FINAL (step 0):**
+- The binding texts (approval sheet §2.3 / §2.4) are the new §6 of the
+  [S8B-01 Controlled Amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md), with the continuation rules of WP0 contract §20. The §2 effect table
+  gains the row CA-07B-1 → S8B-07 CP1-B.
+- The two narrowed lines stay verbatim, each with a pointer:
+  - `docs/voice-runtime-v1.md` §9.1;
+  - the S8B-01 record §10.3, the listening row.
+- **It binds from CP1-B's merge.** Until then, nothing in it is in force.
+- **The board's A9 note** (outside the repository; not a UI string and not a Copy Gate row) is corrected to CA-07B-1
+  point 2, with no visual change: a released file is never reused. The Addendum §6 reading "the next tap within the cap
+  reuses it" predates R5.1, and is superseded by it.
+
+**Steps (WP0 Execution Order §2; each green before the next):**
+
+| Step | Content | State |
+|---|---|---|
+| 0 | Documentation first (this section, K-9, CA-07B-1 FINAL) | done in this change |
+| 1 | Migration `0196_s8b_07_transient_media_v1.sql` and its verifier on a disposable PostgreSQL 17 | not started |
+| 2 | Media worker, reaper and watchdog (`REPLAY_MEDIA` / `REPLAY_WATCHDOG`) | not started |
+| 3 | Replay Media Service (the five routes, bounded Range responses) | not started |
+| 4 | V-24a First Audio isolation (not a proof of pool separation) | not started |
+| 5 | Mobile | not started |
+| 6 | Device proof (HONOR and the iOS Simulator) | not started |
+
+**Not authorized:**
+- any hosted resource or deployment (`0196` is never applied to a hosted database);
+- paid AI;
+- any gate change;
+- CP2-A or CP2-B;
+- any Replay work on a Live Voice host, and any fallback to one;
+- a merge without the Product Owner's «ادمج».
+
+V-24b, V-35b and the hosted alert policies remain pre-deployment conditions (HOSTED-DEPLOY-01). They need a separate
+authorization for resources and cost.

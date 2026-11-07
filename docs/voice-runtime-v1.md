@@ -390,6 +390,7 @@ still being written at its expiry is sealed and expired by the retention sweep; 
 - It is rendered on demand from the retained source.
 - It is **not** a private video library. No permanent private video copy is kept (PO decisions 5, 9). Processing files
   are deleted on completion, and in any case within 1 hour, never outliving the source.
+  *(Amended by CA-07B-1 from the merge of S8B-07 CP1-B: the [S8B-01 Controlled Amendment §6](canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md).)*
 - `FINALIZED` is the frozen technical state of the bound versions (§34). It is not a stored file (D-5c as clarified).
 - After the source expires, a finalized private Replay's source-content layer is unavailable (§31–§32), and no
   text-only stand-in presents a derived transcript as source (§40).
