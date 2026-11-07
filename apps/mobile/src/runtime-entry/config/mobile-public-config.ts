@@ -27,7 +27,16 @@ export interface MobilePublicConfig {
    * the key — is the actual boundary. A secret key bypasses RLS and is rejected below.
    */
   readonly supabasePublishableKey: string;
+  /**
+   * S8B-07 CP1-B (INFRA-07): the Replay Media Service's origin, OPTIONAL. Absent, nothing of original audio is fetched:
+   * every listening or Replay playback says it cannot be played now (CL-05 / RA-12, the approved `NONE` mapping).
+   * Present only when configured; the same HTTPS origin rule as the API's.
+   */
+  readonly replayMediaBaseUrl?: string;
 }
+
+/** S8B-07 CP1-B: the optional `extra` key, read by this authority only, never required. */
+export const MOBILE_OPTIONAL_PUBLIC_CONFIG_KEYS = Object.freeze(['qandeelReplayMediaBaseUrl'] as const);
 
 /** The exact `extra` keys this authority reads, in the order they are reported. */
 export const MOBILE_PUBLIC_CONFIG_KEYS = Object.freeze([
@@ -36,7 +45,7 @@ export const MOBILE_PUBLIC_CONFIG_KEYS = Object.freeze([
   'supabasePublishableKey',
 ] as const);
 
-export type MobilePublicConfigKey = (typeof MOBILE_PUBLIC_CONFIG_KEYS)[number];
+export type MobilePublicConfigKey = (typeof MOBILE_PUBLIC_CONFIG_KEYS)[number] | (typeof MOBILE_OPTIONAL_PUBLIC_CONFIG_KEYS)[number];
 
 export type MobilePublicConfigFailure =
   /** One or more keys are absent, blank or not a string. */
@@ -266,6 +275,13 @@ export function readMobilePublicConfig(
     const issue = absoluteUrlIssue(values[key], allowLoopbackHttp);
     if (issue !== null) return { ok: false, failure: { kind: 'MALFORMED', key, detail: issue } };
   }
+  // S8B-07 CP1-B: optional; when given at all it must be a valid origin (never repaired, never defaulted).
+  const replayRaw: unknown = extra.qandeelReplayMediaBaseUrl;
+  const replayMediaBaseUrl = replayRaw === undefined || replayRaw === null || replayRaw === '' ? null : replayRaw;
+  if (replayMediaBaseUrl !== null) {
+    const issue = typeof replayMediaBaseUrl === 'string' ? absoluteUrlIssue(replayMediaBaseUrl, allowLoopbackHttp) : 'must be a string';
+    if (issue !== null) return { ok: false, failure: { kind: 'MALFORMED', key: 'qandeelReplayMediaBaseUrl', detail: issue } };
+  }
 
   // R1-04A — an ALLOWLIST, not a denylist. Only two shapes are documented as publishable, so
   // anything else fails closed rather than being handed to the SDK to find out. Neither branch ever
@@ -316,6 +332,7 @@ export function readMobilePublicConfig(
       apiBaseUrl: values.qandeelApiBaseUrl,
       supabaseUrl: values.supabaseUrl,
       supabasePublishableKey: publishable,
+      ...(replayMediaBaseUrl === null ? {} : { replayMediaBaseUrl: replayMediaBaseUrl as string }),
     },
   };
 }

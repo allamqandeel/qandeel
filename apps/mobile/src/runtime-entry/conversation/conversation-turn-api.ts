@@ -88,7 +88,18 @@ export interface ConversationFinishedCallView {
   readonly endReason: ConversationCallEndReason;
   /** D6 (Copy Gate, 2026-11-04): the server says the call ended at the maximum length; its record is not "stopped". */
   readonly atMaxLength: boolean;
+  /**
+   * S8B-07 CP1-B (0196 G, contract §0.4): whether the call's recording can be listened to, additively (absent: a server
+   * without listening, and nothing is offered). PREPARING while it is sealed, AVAILABLE while readable, else UNAVAILABLE.
+   */
+  readonly recordingStatus?: ConversationCallRecordingStatus;
+  /** The recording's own readable deadline (its retention limit), only while AVAILABLE. */
+  readonly availableUntil?: string | null;
+  /** The cause, only where the database PROVES it (EXPIRED, or the owner's own deletion); never inferred. */
+  readonly unavailableReason?: 'EXPIRED' | 'DELETED' | null;
 }
+
+export type ConversationCallRecordingStatus = 'PREPARING' | 'AVAILABLE' | 'UNAVAILABLE';
 
 export interface ConversationHistoryPageView {
   /** Oldest to newest. */
@@ -202,13 +213,19 @@ function decodeFinishedCall(value: unknown): Decoded<ConversationFinishedCallVie
   if (typeof value.endReason !== 'string' || !END_REASONS.has(value.endReason)) return { ok: false };
   // Only the server's own end can be the maximum length.
   if (typeof value.atMaxLength !== 'boolean' || (value.atMaxLength && value.endReason !== 'SERVER_ENDED')) return { ok: false };
-  return {
-    ok: true,
-    value: {
-      callId: value.callId, startedAt: value.startedAt, endedAt: value.endedAt,
-      endReason: value.endReason as ConversationCallEndReason, atMaxLength: value.atMaxLength,
-    },
+  const base: ConversationFinishedCallView = {
+    callId: value.callId, startedAt: value.startedAt, endedAt: value.endedAt,
+    endReason: value.endReason as ConversationCallEndReason, atMaxLength: value.atMaxLength,
   };
+  // S8B-07 CP1-B: the recording's availability rides additively, all three fields together, exactly as 0196 G states them.
+  if (value.recordingStatus === undefined && value.availableUntil === undefined && value.unavailableReason === undefined) return { ok: true, value: base };
+  const status = value.recordingStatus;
+  if (status !== 'PREPARING' && status !== 'AVAILABLE' && status !== 'UNAVAILABLE') return { ok: false };
+  const until = value.availableUntil;
+  if (status === 'AVAILABLE' ? !isText(until) || !Number.isFinite(Date.parse(until)) : until !== null) return { ok: false };
+  const reason = value.unavailableReason;
+  if (reason !== null && (status !== 'UNAVAILABLE' || (reason !== 'EXPIRED' && reason !== 'DELETED'))) return { ok: false };
+  return { ok: true, value: { ...base, recordingStatus: status, availableUntil: until as string | null, unavailableReason: reason as 'EXPIRED' | 'DELETED' | null } };
 }
 
 /** The read route's body: `{ exchanges: [{ userTurn, replyState, assistantTurn }], hasOlder }`. */

@@ -12,9 +12,11 @@ const FAILED_STATES = new Set(['error', 'failed']);
 
 export function createExpoVoiceNotePlayerPort(): VoiceNotePlayerPort {
   return {
-    async create(url, headers, onStatus) {
+    async create(url, headers, onStatus, options) {
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, shouldPlayInBackground: false, interruptionMode: 'doNotMix' });
+      // Streaming only (S8B-07 CP1-B §15.3): never `downloadFirst`, so no copy of the audio is written to the device.
       const player = createAudioPlayer({ uri: url, headers }, { updateInterval: 250 });
+      if (options?.muted === true) player.volume = 0;
       const subscription = player.addListener('playbackStatusUpdate', (status) => {
         const view: VoiceNotePlayerStatus = {
           loaded: status.isLoaded,
@@ -30,6 +32,10 @@ export function createExpoVoiceNotePlayerPort(): VoiceNotePlayerPort {
         play: () => player.play(),
         pause: () => player.pause(),
         seekTo: (positionMs) => player.seekTo(positionMs / 1000),
+        setVolume: (volume) => {
+          player.volume = Math.min(1, Math.max(0, volume));
+        },
+        currentPositionMs: () => player.currentTime * 1000,
         // `remove()` only forgets the player in the module; the native player keeps playing until it is released
         // (S8B-04 CP2 device finding), so it is stopped and released here, not left to garbage collection.
         release: () => {

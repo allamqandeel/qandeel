@@ -48,6 +48,11 @@ const S7_02_REPLAY_CLIENT = 'apps/mobile/src/runtime-entry/replay-api.ts';
 const S7_03_REPLAY_HISTORY_CLIENT = 'apps/mobile/src/runtime-entry/replay-history-api.ts';
 /** S7-04 RE-ANCHOR: the ONE client of the three lifecycle commands (the player's own), by POST only. */
 const S7_04_REPLAY_LIFECYCLE_CLIENT = 'apps/mobile/src/runtime-entry/replay-lifecycle-api.ts';
+/**
+ * S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5; CA-07B-1 §20): the ONE client of the Replay Media Service's playback set
+ * (`POST /replay/:replayId/versions/:versionId/playback/:commandId`, on the media service's own base URL), by its one route.
+ */
+const S8B_07_REPLAY_MEDIA_CLIENT = 'apps/mobile/src/original-audio/transient-media-api.ts';
 const API_FILES = ['replay.controller.ts', 'replay.module.ts', 'replay.repository.ts', 'replay.service.ts', 'replay.types.ts'];
 
 const shipped = () => ({
@@ -168,7 +173,14 @@ const DETECTORS = {
       if (/create_my_replay|ReplayModule/u.test(text)) out.push(`${path}: no mobile code names a Replay wrapper or the API module`);
       if (/\/__(tests|fixtures)__\//u.test(path)) continue;
       const calls = /['`]\/replay\/|\/replay\b['`]/u.test(text);
-      if (calls && path !== S7_02_REPLAY_CLIENT && path !== S7_03_REPLAY_HISTORY_CLIENT && path !== S7_04_REPLAY_LIFECYCLE_CLIENT) {
+      // S8B-07 CP1-B: the Replay Media Service's playback set, and only it (the command that asks for a version's set).
+      if (calls && path === S8B_07_REPLAY_MEDIA_CLIENT
+          && (/\/(preview|finalize|reopen|drafts|revisions|capability|conversations|moments|analysis|export|share|publish|download|library)\b/u.test(tsCode(text))
+            || !/`\/replay\/\$\{encodeURIComponent\(replayId\)\}\/versions\/\$\{encodeURIComponent\(versionId\)\}\/playback\/\$\{encodeURIComponent\(commandId\)\}`/u.test(text)
+            || (tsCode(text).match(/\/replay\//gu) ?? []).length !== 1)) {
+        out.push(`${path}: the media client asks for a version's playback set, and nothing else of Replay`);
+      }
+      if (calls && path !== S7_02_REPLAY_CLIENT && path !== S7_03_REPLAY_HISTORY_CLIENT && path !== S7_04_REPLAY_LIFECYCLE_CLIENT && path !== S8B_07_REPLAY_MEDIA_CLIENT) {
         out.push(`${path}: S7-01 has no player or client; the clients are ${S7_02_REPLAY_CLIENT} and ${S7_03_REPLAY_HISTORY_CLIENT}`);
       }
       if (calls && path === S7_02_REPLAY_CLIENT && /\/(preview|finalize|reopen|versions|moments|analysis)\b/u.test(tsCode(text))) out.push(`${path}: the history reads are S7-03's client's`);

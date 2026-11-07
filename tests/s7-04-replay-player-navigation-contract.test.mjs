@@ -99,7 +99,11 @@ const FROZEN = [
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D2: the English of all 14 S7-03 rows APPROVED word for word; no Arabic changed).
   ['apps/mobile/src/replay-composite/copy.ts', '927c24f51f7e1e2189e315235089b10ce7b670b6b87974df1638813d691f1d7b'],
   ['apps/mobile/src/replay-composite/viewpoint-store.ts', '56166095f5578bf4789b2552f6c3e21d54bd064573f99aeb423fedbfe1fb23bb'],
-  ['apps/mobile/src/replay-composite/projection-adapter.ts', '3a3ea0257acd4b139acbf4a5f34416e4c11da35288985d6c07c790db848daf9f'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5; the execution order's "the mobile V2 acceptance (mirror of the API tuple;
+  // the S7-04 pin re-anchored, declared)"): the adapter honours exactly the two approved render contracts, V1 unchanged and
+  // V2 as 0195 (D-04) value for value, and renders an ORIGINAL_AUDIO moment only under V2; MIXED and any other tuple stay
+  // refused whole. The disclosure, the depth law and the viewpoint key are unchanged.
+  ['apps/mobile/src/replay-composite/projection-adapter.ts', 'a6610f18d4aea6b20babfc1afa0859c0ce47755487b888958b2d569018647a56'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope is decoded as exactly its class).
   ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'afc05df83bb2de9266cb12775e89ac5963a908072185e35be010321f431cba91'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
@@ -221,7 +225,9 @@ const DETECTORS = {
     const depth = tsCode(w.depth);
     if (!depth.includes('const reachable = current && !settingsShown && !understandingShown;')) out.push('the depth beneath is kept, not rebuilt');
     if (!depth.includes('const personalOpen = personalReachable && !introductionsShown && !playerOpen;')) out.push('the depth beneath the passage is out of reach');
-    if (!/\{onSignOut !== undefined && area === 'MY_WORLD' \? <ReplayPlayer controller=\{replayPlayer\} language=\{locale\.language\} insets=\{edges\} \/> : null\}/u.test(depth)) out.push('the player is a passage of the Personal world only');
+    // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5): the player may carry this generation's original-audio surface (Sheet B),
+    // and nothing else; it is still a passage of the Personal world only.
+    if (!/\{onSignOut !== undefined && area === 'MY_WORLD' \? <ReplayPlayer controller=\{replayPlayer\} language=\{locale\.language\} insets=\{edges\}(?: surface=\{replayAudioSurface\})? \/> : null\}/u.test(depth)) out.push('the player is a passage of the Personal world only');
     if (!/depth === 'ANALYSIS' \|\| playerOpen \? 'ANALYSIS'/u.test(depth)) out.push('the attention surface counts the passage as the Analysis');
     if (!/const openActivity = useCallback\(\(\) => \{\n\s+replayPlayer\.close\(\);/u.test(depth)) out.push('Activity closes the passage first');
     if ((depth.match(/replayPlayer\.close\(\);/gu) ?? []).length < 3) out.push('Direct Entry, Activity and public links each close the passage');
@@ -249,7 +255,9 @@ const DETECTORS = {
   generationViolations(w) {
     const out = [];
     const runtime = tsCode(w.runtime);
-    if (!/replayPlayer: createReplayPlayerController\(\{\n\s+sessionId: bundle\.sessionId, reads: entry\.replayFor\(bundle\), commands: entry\.replayLifecycleFor\(bundle\), history: entry\.replayHistoryFor\(bundle\), isCurrent,\n\s+\}\),/u.test(runtime)) {
+    // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5): the player may also take this generation's original-audio clock source
+    // (Sheet B, the clock-source port), and nothing else; its transports are still that generation's own.
+    if (!/replayPlayer: createReplayPlayerController\(\{\n\s+sessionId: bundle\.sessionId, reads: entry\.replayFor\(bundle\), commands: entry\.replayLifecycleFor\(bundle\), history: entry\.replayHistoryFor\(bundle\), isCurrent,\n(?:\s+momentClock: replayAudio\.clockSource,\n)?\s+\}\),/u.test(runtime)) {
       out.push('one player per generation, on that generation\'s transports');
     }
     if (!/session\.replayPlayer\.retire\(\);\n\s+session\.replayEntry\.retire\(\);/u.test(runtime)) out.push('the player is retired with its generation');

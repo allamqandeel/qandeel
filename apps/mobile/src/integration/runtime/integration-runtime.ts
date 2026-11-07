@@ -161,6 +161,8 @@ import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/s
 import { createProjectionCoordinator, type ProjectionCoordinator } from '../projection/projection-coordinator';
 import { createDeviceVoiceNotes, createVoiceNoteSessionRuntime, microphoneForCall, mintVoiceNoteId, type VoiceNoteDevice, type VoiceNoteSession } from '../../voice-note';
 import { createCallAwareConversationTransport, createCallOwner, loadCallDevice, type CallDevice, type CallOwner } from '../../call';
+import { createCallListening, createReplayAudio, createPlaybackOwner, type CallListening, type PlaybackOwner, type ReplayAudio } from '../../original-audio';
+import { mintReplayCommandId } from '../../replay-entry';
 
 /**
  * The three frozen promoted-act authorities, as ONE value.
@@ -302,6 +304,19 @@ export interface IntegrationSessionRuntime {
    * reopens it. Retired with the generation: a call still up is ended.
    */
   readonly call: CallOwner;
+  /**
+   * S8B-07 CP1-B (contract §7): the phone's ONE playback slot (a Voice Note, a call's recording, a Replay's audio), under
+   * the live call: a call that begins releases the call or Replay audio, and refuses it while it runs. Retired with the
+   * generation.
+   */
+  readonly playbackOwner: PlaybackOwner;
+  /**
+   * S8B-07 CP1-B (VA-10): listening to THIS Session's finished calls, on the Replay Media transport bound to this identity
+   * (none configured: every play says it cannot be played now). In memory only; retired with the generation.
+   */
+  readonly callListening: CallListening;
+  /** S8B-07 CP1-B: the original audio of this generation's Replay player (Sheet B), its clock source and views. */
+  readonly replayAudio: ReplayAudio;
   /** S6-07: the governed enrollment and the reader's three consents (0165), retired with the generation. */
   readonly introductionEnrollment: EnrollmentController;
   /**
@@ -498,10 +513,13 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
+    session.callListening.retire();
+    session.playbackOwner.retire();
     session.call.retire();
     session.voiceNotes.retire();
     session.replayPlayer.retire();
     session.replayEntry.retire();
+    session.replayAudio.retire();
     session.publicShare?.retire();
     session.conversation.retire();
     session.account.retire();
@@ -638,6 +656,13 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       onCallEnded: () => built.attention.refresh(),
       newId: mintVoiceNoteId,
     });
+    // S8B-07 CP1-B: the live call outranks every playback; any stage but IDLE is the call's (it may own the audio session).
+    const playbackOwner = createPlaybackOwner({ isLive: () => call.getState().stage !== 'IDLE', subscribe: (listener) => call.subscribe(listener) });
+    const transientMedia = entry.transientMediaFor(bundle);
+    const replayAudio = createReplayAudio({
+      api: transientMedia?.api ?? null, owner: playbackOwner, player: voiceNoteDevice.player, foreground: entry.foreground,
+      authorization: transientMedia?.authorization ?? (() => null), newCommandId: mintReplayCommandId,
+    });
     const conversation = createConversationController({
       sessionId: bundle.sessionId,
       transport: createCallAwareConversationTransport(turns, call),
@@ -666,14 +691,21 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         create: (choice) => built.publicWorld.compose?.createFromSource(choice) ?? Promise.resolve({ kind: 'FAILED' }),
       }) : null,
       call,
+      playbackOwner,
+      callListening: createCallListening({
+        api: transientMedia?.api ?? null, owner: playbackOwner, player: voiceNoteDevice.player, foreground: entry.foreground,
+        authorization: transientMedia?.authorization ?? (() => null), newCommandId: mintReplayCommandId,
+      }),
       // S8B-03: Voice Notes of THIS conversation; a committed note joins it through the conversation's own merge.
       voiceNotes: createVoiceNoteSessionRuntime({
         owner: bundle.userId, sessionId: bundle.sessionId, transport: entry.voiceNotesFor(bundle), device: voiceNoteDevice,
-        foreground: entry.foreground, isCurrent, conversation,
+        foreground: entry.foreground, isCurrent, conversation, playbackOwner,
       }),
       // S7-04: the Replay player, on the same identity's transports; it never touches the conversation.
+      replayAudio,
       replayPlayer: createReplayPlayerController({
         sessionId: bundle.sessionId, reads: entry.replayFor(bundle), commands: entry.replayLifecycleFor(bundle), history: entry.replayHistoryFor(bundle), isCurrent,
+        momentClock: replayAudio.clockSource,
       }),
       // W1B-01: the account's first use, on the T-12P account transport bound to this identity.
       account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),

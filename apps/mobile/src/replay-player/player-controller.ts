@@ -28,6 +28,14 @@
  * Playing stops at the last moment, on pause, on close, on retirement, whenever a command is issued, and whenever the
  * version stops being viewable (REVOKED, NOT_VIEWABLE, FAILED, NOT_FOUND). No timer and no answer outlives the epoch it
  * belongs to: closing, reopening or retiring bumps it, and anything that lands later is dropped.
+ *
+ * ## S8B-07 CP1-B: a clock source, for the versions it times (Sheet B, B2A)
+ *
+ * Given a `momentClock` source, a version the source takes (a V2 version) has its own clock: a moment the clock owns is
+ * presented by the clock, and the moment shown follows the clock's report; every other moment keeps the declared reading
+ * pace, unchanged (B2X). Pause holds the clock and the reading timer together; a Spine commit or a step runs the target
+ * from its start; a command, closing, another version or retirement lets the clock go. A clock that has ENDED is never
+ * replaced by the reading pace: nothing plays. Without a source, or for every V1 version, nothing here changes.
  */
 import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 
@@ -43,6 +51,7 @@ import type {
   ReplayReadResult,
   ReplayReopenResult,
 } from '../runtime-entry';
+import type { ReplayMomentClock, ReplayMomentClockSource } from './moment-clock';
 
 /** The reads this owner needs (the S7-02 `ReplayApiClient` satisfies them). */
 export interface ReplayPlayerReads {
@@ -159,6 +168,8 @@ export interface ReplayPlayerControllerOptions {
   /** Mints a command id. Injectable so a test can name ids; production uses the S7-02 minting. */
   readonly newCommandId?: () => string;
   readonly scheduler?: ReplayPlayerScheduler;
+  /** S8B-07 CP1-B: the clock of the versions it times. Absent: every version is paced as in S7-04. */
+  readonly momentClock?: ReplayMomentClockSource;
 }
 
 const DEPTHS: readonly HistoricalSemanticDepth[] = ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'];
@@ -195,6 +206,12 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
   let unsubscribeComposite: (() => void) | null = null;
   /** The last read that failed, so Try again repeats exactly it. */
   let failedRead: (() => void) | null = null;
+  /** The version's clock, once its composite is READY and VIEWABLE and the source takes it. */
+  let clock: { readonly versionId: string; readonly instance: ReplayMomentClock; readonly unsubscribe: () => void } | null = null;
+  /** The moment last handed to the clock, and the one it was asked to present next (its pause before it may still run). */
+  let asked: number | null = null;
+  let awaiting: number | null = null;
+  let lastClockState: unknown = null;
 
   const live = () => !retired && isCurrent();
   const view = () => state.open;
@@ -211,6 +228,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
 
   // ------------------------------------------------------------------------------------------- the version
   function attach(composite: ReplayCompositeController | null): void {
+    detachClock();
     unsubscribeComposite?.();
     unsubscribeComposite = composite === null ? null : composite.subscribe(onComposite);
     composite?.open();
@@ -238,7 +256,8 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     if (!live()) return;
     const current = view();
     if (current === null) return;
-    // Viewing withdrawn, or never granted: nothing plays.
+    // Viewing withdrawn, or never granted: nothing plays, and the clock is let go.
+    if (ordinals() === null) detachClock();
     if (current.playing && ordinals() === null) {
       patch({ playing: false });
       return;
@@ -267,12 +286,125 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     timer = null;
   }
 
-  function rearm(): void {
+  // ------------------------------------------------------------------------------------------- the clock
+  function detachClock(): void {
+    if (clock === null) return;
+    const gone = clock;
+    clock = null;
+    asked = null;
+    awaiting = null;
+    lastClockState = null;
+    gone.unsubscribe();
+    gone.instance.retire();
+  }
+
+  /** The clock of the version shown, made once it may be read (READY and VIEWABLE), when the source takes it. */
+  function ensureClock(): ReplayMomentClock | null {
+    const source = options.momentClock;
+    const composite = view()?.composite ?? null;
+    if (source === undefined || composite === null || !live()) return clock?.instance ?? null;
+    const read = composite.state();
+    if (read.status !== 'READY' || read.version.viewing.state !== 'VIEWABLE') return null;
+    if (clock !== null && clock.versionId === read.version.versionId) return clock.instance;
+    detachClock();
+    const instance = source(read.version, read.moments);
+    if (instance === null) return null;
+    clock = { versionId: read.version.versionId, instance, unsubscribe: instance.subscribe(onClock) };
+    return instance;
+  }
+
+  function clockEnded(): boolean {
+    return clock?.instance.getState().phase === 'ENDED';
+  }
+
+  function holdClock(): void {
+    const instance = clock?.instance ?? null;
+    if (instance === null) return;
+    const { phase } = instance.getState();
+    if (phase === 'RUNNING' || phase === 'PREPARING' || phase === 'DONE') instance.hold();
+  }
+
+  function stopPlaying(): void {
+    if (view()?.playing) patch({ playing: false });
+  }
+
+  /** The clock's report: the moment it presents, the end of what it was asked to run, or that it stopped. */
+  function onClock(): void {
     const current = view();
-    if (!live() || current === null || !current.playing || current.command !== null) {
-      disarm();
+    const instance = clock?.instance ?? null;
+    if (!live() || current === null || instance === null) return;
+    const now = instance.getState();
+    if (now === lastClockState) return;
+    lastClockState = now;
+    if (now.phase === 'RUNNING' && now.ordinal !== null) {
+      awaiting = null;
+      if (current.playing && now.ordinal !== current.ordinal) {
+        asked = now.ordinal;
+        patch({ ordinal: now.ordinal });
+      }
       return;
     }
+    if (now.phase === 'DONE') {
+      if (!current.playing) return;
+      const order = ordinals();
+      const at = order === null ? -1 : order.indexOf(now.through ?? current.ordinal);
+      const target = order === null || at < 0 ? undefined : order[at + 1];
+      // Stop at the end: the last moment stays on screen.
+      if (target === undefined) {
+        stopPlaying();
+        return;
+      }
+      advanceTo(target);
+      return;
+    }
+    if (now.phase === 'ENDED' || now.phase === 'FAILED') {
+      awaiting = null;
+      stopPlaying();
+      return;
+    }
+    // Held by something that outranks it (a live call, another playback): the player stops with it.
+    if (now.phase === 'HELD' && current.playing && (awaiting !== null || instance.owns(current.ordinal))) stopPlaying();
+  }
+
+  /** The next moment in order while playing: the clock's, as the next in order (it keeps the pause before it), or paced. */
+  function advanceTo(target: number): void {
+    const instance = clock?.instance ?? null;
+    if (instance === null || !instance.owns(target)) {
+      patch({ ordinal: target });
+      return;
+    }
+    awaiting = target;
+    asked = target;
+    if (!instance.run(target, 'ADVANCE')) {
+      awaiting = null;
+      stopPlaying();
+    }
+  }
+
+  function rearm(): void {
+    const current = view();
+    const instance = ensureClock();
+    if (!live() || current === null || !current.playing || current.command !== null) {
+      disarm();
+      holdClock();
+      return;
+    }
+    if (instance !== null && awaiting !== null) {
+      disarm();
+      if (instance.getState().phase === 'HELD' && !instance.resume()) stopPlaying();
+      return;
+    }
+    if (instance !== null && instance.owns(current.ordinal)) {
+      disarm();
+      const now = instance.getState();
+      if ((now.phase === 'RUNNING' || now.phase === 'PREPARING') && (now.ordinal ?? asked) === current.ordinal) return;
+      const resume = now.phase === 'HELD' && (now.ordinal ?? asked) === current.ordinal;
+      asked = current.ordinal;
+      if (!(resume ? instance.resume() : instance.run(current.ordinal, 'START'))) stopPlaying();
+      return;
+    }
+    // A paced moment (B2X): the clock stops presenting, and the reading pace times it.
+    holdClock();
     const text = settledText();
     if (text === null) {
       disarm();
@@ -296,7 +428,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
         }
         // Stop at the end: the last moment stays on screen.
         if (at === order.length - 1) patch({ playing: false });
-        else patch({ ordinal: order[at + 1] });
+        else advanceTo(order[at + 1]!);
       }, readingPaceMs(text)),
     };
   }
@@ -388,6 +520,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
   function issue(command: ReplayPlayerCommand): void {
     const sending = Object.freeze({ ...command, phase: 'SENDING' as const });
     unresolved.set(sending.replayId, sending);
+    awaiting = null;
     patch({ command: sending, problem: null, notice: null, playing: false });
     const sent: Promise<ReplayPreviewResult | ReplayFinalizeResult | ReplayReopenResult> = sending.act === 'PREVIEW'
       ? commands.preview(sending.id, sending.replayId, sending.expected as number)
@@ -489,6 +622,7 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
     const at = order.indexOf(current.ordinal);
     const target = order[at + delta];
     if (at < 0 || target === undefined) return;
+    awaiting = null;
     patch({ ordinal: target });
   }
 
@@ -548,6 +682,8 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
       const current = view();
       const order = ordinals();
       if (!live() || current === null || order === null || current.command !== null) return;
+      // A clock that has ENDED is never replaced by the reading pace (no fallback): nothing plays.
+      if (clockEnded()) return;
       // At the last moment, Play starts again from the first.
       const atLast = order.indexOf(current.ordinal) === order.length - 1;
       patch({ playing: true, ...(atLast ? { ordinal: order[0] } : {}) });
@@ -565,7 +701,9 @@ export function createReplayPlayerController(options: ReplayPlayerControllerOpti
       const current = view();
       const order = ordinals();
       if (!live() || current === null || order === null || current.command !== null || !order.includes(ordinal)) return;
-      if (ordinal !== current.ordinal) patch({ ordinal });
+      if (ordinal === current.ordinal) return;
+      awaiting = null;
+      patch({ ordinal });
     },
     transport() {
       const current = view();

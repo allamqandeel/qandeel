@@ -109,11 +109,16 @@ export function entryFor(role, recipe) {
   return null;
 }
 
-/** The three build-time configuration variables `apps/mobile/app.config.js` reads, and only those. */
+/**
+ * The build-time configuration variables `apps/mobile/app.config.js` reads, and only those. S8B-07 CP1-B adds the
+ * fourth, OPTIONAL one (the Replay Media Service's origin): an artifact built with or without it is told apart like the
+ * others, so one is never reused for a job that runs the other way.
+ */
 export const CONFIGURATION_KEYS = Object.freeze([
   'QANDEEL_API_BASE_URL',
   'QANDEEL_SUPABASE_URL',
   'QANDEEL_SUPABASE_PUBLIC_KEY',
+  'QANDEEL_REPLAY_MEDIA_BASE_URL',
 ]);
 
 const fail = (message) => {

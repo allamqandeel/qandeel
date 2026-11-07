@@ -418,7 +418,7 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 | 2 | Media worker, reaper and watchdog (`REPLAY_MEDIA` / `REPLAY_WATCHDOG`) | done locally: `apps/api/src/replay-media/` (API jest 344 suites green), `prove-0196-media-worker.mjs` 21/21 on a disposable PG17 with the pinned ffmpeg 9.0.2 and the in-memory store (60-min listening file 34.8 s against the 128 s D-06.5 cap); the rclone S3 run and the BtbN pin run only in CI; not yet run in CI |
 | 3 | Replay Media Service (the five routes, bounded Range responses) | done locally (details below): `replay-media-service.main.ts` under `REPLAY_MEDIA` / `REPLAY_POOL` only; API jest green; `prove-0196-media-service.mjs` 15/15 on a disposable PG17 with the in-memory store; `verify-migration-0196.mjs` 32/32 after the step-3 amendment; the rclone S3 run and the PostgREST proof (`prove-0185`) run only in CI; not yet run in CI |
 | 4 | V-24a First Audio isolation (not a proof of pool separation) | done locally (details below): `prove-0196-first-audio-isolation.mjs` on a disposable PG17 with the in-memory store, 3 interleaved repetitions per mode, D-06.7 PASS for M0 and M1_SHIPPED in each full run; `verify-migration-0196.mjs` 33/33 after the step-4 amendment; the rclone S3 run (with the store upload probe) runs only in CI; not yet run in CI. **Not V-24b.** |
-| 5 | Mobile | not started |
+| 5 | Mobile | done locally (details below): `apps/mobile/src/original-audio/` and the Replay player's clock port; mobile jest 3 447 / 3 453 green (the 6 failures are the same at the step-4 head, locale-dependent on this machine, not caused here); `tsc` clean; `expo lint` 0 errors (no warning in a changed line); the S7, S8B-03 / 04 / 05 / 06 and CP1-B root contracts green; not yet run in CI. **HC-1 … HC-5 are not proven by these tests** (step 6) |
 | 6 | Device proof (HONOR and the iOS Simulator) | not started |
 
 **Step 3, what it adds and what it changed (each change declared in the PR body):**
@@ -576,6 +576,132 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
   upload probe: the call writer's own `S3PrivateAudioObjectStore`, putting to the same store under the load.
 - **Not proven here:** V-24b (on the hosted pools), V-35b and the hosted alert policies stay pre-deployment conditions
   (HOSTED-DEPLOY-01). The CI run (4 vCPU, rclone S3) has not happened yet.
+
+**Step 5, the phone (Sheet A: call listening; Sheet B: the original audio of a V2 Replay):**
+- **The engine (`transient-playback.ts`, one per subject `call:<callId>` / `replay:<versionId>`).** Contract §15, §19.2,
+  §20 on the phone:
+  - streaming only, through the existing Voice Note player port (`createAudioPlayer({ uri, headers })`, never
+    `downloadFirst`); no file, no storage, no cache; the played position lives in memory only;
+  - the stop rules of §15.2: the local deadline, the status check every 10 s while playing, a player error, the
+    owner's own deletion first;
+  - the Range resume of §19.2: the exact position read from the player, the status first, at most 3 resumes a minute
+    (backoff 0 / 1 / 2 s); a drop and the 10-minute response cap resume without a lost or a repeated span;
+  - the renewal before the end (§20 rule 1, lead L = 5 min within 3 – 10 min) and the hand-over (rules 2 and 3: a
+    muted standby, the 20 – 40 ms ramp, a released file never reused);
+  - one playback slot for the phone (`playback-owner.ts`): a Voice Note, a call recording and a Replay take it from
+    each other; **a live call refuses a transient play and evicts the one playing**, releasing its player and its set.
+- **Sheet A, the finished call's record** (`CallRecordListening`, through a companion seam of the S8B-06 record, whose
+  J7 mark is unchanged):
+  - A0 PREPARING: CL-10, and the play not available;
+  - A1 – A6: CL-01 / 02 / 03, CL-04 after 1 s without audio, CL-05 when it cannot be played now (`NONE`, `BUSY`,
+    `LIVE_CALL_ACTIVE`);
+  - A11: CL-08 and CL-09 under the time;
+  - A7 / A8: CL-06 / CL-07 only for the cause the server proves, otherwise CL-11, in this session only.
+- **Sheet B, the Replay player.** The S7-04 player takes a neutral clock port (`replay-player/moment-clock.ts`; the
+  player names no audio). Its implementation is `original-audio/replay-audio-clock.ts`, injected by the integration
+  runtime only for a V2 version with an audio moment; V1 has no clock and is unchanged.
+  - The B2A time authorities:
+    - the Spine and the position change only at a window's start or a text item's start (V-23, C-B2, D-05.5);
+    - the moment line moves only within its window (B2S);
+    - a Spine tap starts the target window from its start (B2T);
+    - a TEXT moment stops the audio, shows no line and keeps the V1 pace (B2X, V-29);
+    - pause freezes both.
+  - One window per turn (C-B1): a turn's later units present its one window. The boundary pause is the phone's (§5.4):
+    the real elapsed time when proven and not shortened, otherwise 1.5 s.
+  - The frames and notices:
+    - RA-04 / RA-05 above the next moment;
+    - RA-06 … RA-08 under the window (NOT_SPEAKING is silent);
+    - RA-15 announced at a MIX's start (accessibility only);
+    - RA-11 after 1 s, RA-12 with the existing «Try again»;
+    - RA-01 / RA-02 in place of the V1 pacing line, for V2 only.
+  - An audio moment's text is shown under RA-03 as DERIVED, never as the original message.
+  - B13: once it can no longer play, RA-09 / RA-10 only for a proven cause, otherwise RA-17, and **the reading is
+    withheld: no fallback** to text or to the reading pace.
+  - B1a – B1c: the S7-02 selection is unchanged (a turn is one message with one mark). A voice turn of several units
+    carries RA-16 as its mark's hint, and RA-13 under it where the server gives its length.
+- **The mobile V2 acceptance (declared re-anchor below):**
+  - the adapter honours exactly V1 and V2, V2 the mirror of the API's tuple value for value;
+  - an ORIGINAL_AUDIO moment is renderable only under V2, MIXED never;
+  - the same analysis draws the same disclosure whatever the medium: the medium changes what is heard, never what is
+    drawn.
+- **Configuration:** the Replay Media Service's origin, `qandeelReplayMediaBaseUrl` (optional, no secret). When it is
+  absent, the approved `NONE` mapping applies (CL-05 / RA-12) and nothing is fetched. The native manifest's
+  configuration keys add it.
+- **D-05.7 (b):** no UI sound ships.
+
+**Copy Gate R1.1, as shipped.** These are the 28 rows the Product Owner APPROVED on 2026-11-07, with CL-11 without its
+final full stop. `original-audio-copy.ts` carries exactly these; `tests/s8b-07-cp1b-mobile-playback-contract.test.mjs`
+pins them.
+
+| Row | Arabic | English | Status |
+|---|---|---|---|
+| CL-01 | تشغيل تسجيل المكالمة | Play call recording | APPROVED |
+| CL-02 | إيقاف تسجيل المكالمة مؤقتًا | Pause call recording | APPROVED |
+| CL-03 | تسجيل المكالمة | Call recording | APPROVED |
+| CL-04 | جارٍ تحضير التشغيل… | Getting playback ready… | APPROVED |
+| CL-05 | تعذّر تشغيل تسجيل المكالمة الآن | The call recording can't be played right now | APPROVED |
+| CL-06 | انتهت مدة الاحتفاظ بتسجيل المكالمة | The call recording's retention period has ended | APPROVED |
+| CL-07 | حُذف تسجيل المكالمة | The call recording was deleted | APPROVED |
+| CL-08 | يُحتفظ بالتسجيل حتى {date} كحدٍّ أقصى | The recording is kept until {date} at the latest | APPROVED |
+| CL-09 | إعادة عرض من هذه المكالمة | Replay from this call | APPROVED |
+| CL-10 | جارٍ تجهيز التسجيل | The recording is being prepared | APPROVED |
+| CL-11 | تسجيل هذه المكالمة غير متاح | This call's recording isn't available | APPROVED |
+| RA-01 | يُسمع الصوت داخل المقاطع المختارة بتوقيته الأصلي، وقد تُختصر الفواصل بينها مع الإشارة إلى ذلك. | Audio in the selected passages keeps its original timing; pauses between them may be shortened, and are marked when they are. | APPROVED |
+| RA-02 | يُسمع الصوت داخل المقاطع المختارة بتوقيته الأصلي، وقد تُختصر الفواصل بينها مع الإشارة إلى ذلك. وتُعرض الرسائل المكتوبة بإيقاع مناسب للقراءة. | Audio in the selected passages keeps its original timing; pauses between them may be shortened, and are marked when they are. Written messages are shown at a reading pace. | APPROVED |
+| RA-03 | نص مستخرج آليًا من الصوت، وليس الصوت الأصلي | Text transcribed from the audio, not the original audio | APPROVED |
+| RA-04 | مضى هنا {d} في التسجيل، واختُصر هذا الفاصل عند الاستماع. | {d} passed here in the recording; this interval is shortened for listening. | APPROVED |
+| RA-05 | من تسجيل آخر. | From another recording. | APPROVED |
+| RA-06 | انقطع الاتصال هنا {d}. | The connection dropped here for {d}. | APPROVED |
+| RA-07 | كان الميكروفون مكتومًا هنا {d}. | The microphone was muted here for {d}. | APPROVED |
+| RA-08 | فُقد هنا جزء من التسجيل مدته {d}. | A {d} part of the recording was lost here. | APPROVED |
+| RA-09 | انتهت مدة الاحتفاظ بالتسجيل الأصلي، فلم يعد تشغيل إعادة العرض هذه ممكنًا. | The original recording's retention period has ended, so this Replay can no longer play. | APPROVED |
+| RA-10 | حُذف التسجيل الأصلي، فلم يعد تشغيل إعادة العرض هذه ممكنًا. | The original recording was deleted, so this Replay can no longer play. | APPROVED |
+| RA-11 | يُجهَّز الصوت… | Preparing the audio… | APPROVED |
+| RA-12 | تعذّر تشغيل الصوت الآن. | The audio can't be played right now. | APPROVED |
+| RA-13 | مقطع صوتي كامل · {d} | A whole voice passage · {d} | APPROVED |
+| RA-14 | صوت هذه اللحظة | This moment's audio | APPROVED |
+| RA-15 | يُسمع صوتان معًا هنا. | Two voices are heard together here. | APPROVED |
+| RA-16 | يُختار هذا المقطع الصوتي كاملًا | This voice passage is selected as a whole | APPROVED |
+| RA-17 | لم يعد تشغيل إعادة العرض هذه ممكنًا. | This Replay can no longer play. | APPROVED |
+
+**Step 5, verification (functional, on jest's fake clock; not the device's):**
+- `original-audio`, 104 tests:
+  - the engine (29): Play / Pause / Seek / Resume; Range resume after a drop and after the 10-minute cap; no
+    duplicated or lost audio; renewal near the end; no CL-11 while the source is available; the live call's priority;
+    no persistent leak; the delayed-Range latency simulation;
+  - the client (19);
+  - the Replay clock in the S7-04 controller (14);
+  - the Replay surface rendered in Arabic and English (14);
+  - the call record rendered in Arabic and English, with the state → copy mapping (18);
+  - the V2 contract in the adapter (4);
+  - the voice-turn selection in the real Conversation surface (6).
+- The S7-02 / S7-03 / S7-04 / S7-05 and S8B-03 Voice Note suites are green and unchanged in what they assert.
+- The full mobile jest: 272 / 274 suites, 3 447 / 3 453 tests. The 6 failures (`depth.test.tsx`,
+  `w2-account-access.test.tsx`) fail the same way at the step-4 head on this machine: the surface renders the Arabic
+  copy where the tests expect English. Step 5 does not cause them, and CI decides them.
+- Not run locally: the iOS Simulator and an Android emulator (this machine is Windows). The native runs belong to
+  Mobile CI and step 6.
+
+**Step 5, declared re-anchors (each stated in the PR body):**
+1. `tests/s7-04-…`, the FROZEN hash of `projection-adapter.ts`: `3a3ea025…` → `a6610f18…` (the V2 acceptance above).
+2. `tests/s7-04-…`, `generationViolations`: the player's creation may add exactly
+   `momentClock: replayAudio.clockSource,` (the clock port), and nothing else.
+3. `tests/s7-04-…`, `navigationViolations`: `<ReplayPlayer …>` may add exactly `surface={replayAudioSurface}`.
+4. `tests/s7-01-…`, `mobileViolations`: `original-audio/transient-media-api.ts` is the one client of the Replay Media
+   Service's playback route, and only of it (one `/replay/` route, the playback set, no other Replay path).
+5. `scripts/phase-m/native-artifact-manifest.mjs`: the fourth build-time configuration key, optional.
+6. `conversation/ConversationSurface.tsx`: a selection mark may carry the composition's own `hint` and one `beneath`
+   line. They are wordless in the Conversation layer; the S7-02 seams and rules are unchanged.
+
+**Step 5, deviations and limits (declared, none material):**
+- At the local deadline the phone sorts the cause with a new-command POST (the same `0196` predicates). A set still
+  PENDING has no artifact to DELETE, so it is left to the server's own expiry.
+- Announcements (RA-15, gaps) follow the engine's 1 s tick, so a MIX shorter than 1 s may go unannounced. This is
+  checked on the device.
+- RA-13 needs a length. The history gives a Voice Note's duration but no per-turn length for a call's turns, so a call
+  turn carries RA-16 only.
+- `play()` on the last moment starts from the first (the S7-04 rule, unchanged).
+- Whether the platform player writes a cache file while streaming is checked on the device (step 6).
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);

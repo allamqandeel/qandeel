@@ -45,7 +45,27 @@ export interface ReplayPlayerProps {
   readonly controller: ReplayPlayerController;
   readonly language: ChromeLanguage;
   readonly insets: Edges;
+  /** S8B-07 CP1-B: what the controller's clock source shows for the versions it times. Absent: exactly the S7-04 player. */
+  readonly surface?: ReplayPlayerSurface;
 }
+
+/**
+ * S8B-07 CP1-B (Sheet B): the moment controls a clock source adds for the version shown, read by a hook so they follow its
+ * own state. Null: the version is the player's alone (every V1 version).
+ */
+export interface ReplayPlayerSurface {
+  useControls(view: ReplayPlayerView, language: ChromeLanguage): ReplayPlayerSurfaceControls | null;
+}
+
+export interface ReplayPlayerSurfaceControls {
+  /** The declaration that replaces the reading-pace line for this version (or its status, when it can no longer play). */
+  readonly note: ReactNode;
+  readonly moment: NonNullable<ReplayMomentControls['moment']>;
+  /** The version can no longer play: no reading is shown in its place. */
+  readonly withheld: boolean;
+}
+
+const NO_SURFACE: ReplayPlayerSurface = { useControls: () => null };
 
 const noSubscription = () => () => undefined;
 const noRevision = () => 0;
@@ -55,11 +75,12 @@ function useCompositeRevision(composite: ReplayCompositeController | null): void
   useSyncExternalStore(composite === null ? noSubscription : composite.subscribe, composite === null ? noRevision : composite.revision);
 }
 
-export function ReplayPlayer({ controller, language, insets }: ReplayPlayerProps) {
+export function ReplayPlayer({ controller, language, insets, surface = NO_SURFACE }: ReplayPlayerProps) {
   const { open } = useSyncExternalStore(controller.subscribe, controller.getState);
   const shown = open !== null;
   const [barHeight, setBarHeight] = useState(insets.top + BAR_MIN_HEIGHT);
   useCompositeRevision(open?.composite ?? null);
+  const added = useSurfaceControls(surface, open, language);
 
   // Android system Back while the passage is shown is the passage's own way back, and nothing else.
   useEffect(() => {
@@ -79,7 +100,8 @@ export function ReplayPlayer({ controller, language, insets }: ReplayPlayerProps
   const transport = controller.transport();
   const controls: ReplayMomentControls | null = !transport.available ? null : {
     instrument: <Transport controller={controller} view={open} transport={transport} language={language} />,
-    note: <PacingLine language={language} />,
+    note: added === null ? <PacingLine language={language} /> : added.note,
+    ...(added === null ? {} : { moment: added.moment, withheld: added.withheld }),
   };
 
   let body: ReactNode;
@@ -96,6 +118,17 @@ export function ReplayPlayer({ controller, language, insets }: ReplayPlayerProps
     </View>
   );
 }
+
+/** The surface's hook, always called (with no open view, it is given none). */
+function useSurfaceControls(surface: ReplayPlayerSurface, open: ReplayPlayerView | null, language: ChromeLanguage): ReplayPlayerSurfaceControls | null {
+  const controls = surface.useControls(open ?? CLOSED, language);
+  return open === null ? null : controls;
+}
+
+const CLOSED: ReplayPlayerView = Object.freeze({
+  origin: 'CONVERSATION', replayId: null, reading: false, lifecycle: null, draftRevision: null, version: null, composite: null,
+  ordinal: 1, playing: false, command: null, problem: null, notice: null,
+});
 
 /** No version to show yet (reading, previewing) or none at all: the same surface, with nothing drawn in its world. */
 function PlayerStage({ view, language, insets, top }: { readonly view: ReplayPlayerView; readonly language: ChromeLanguage; readonly insets: Edges; readonly top: LivingAnalysisTopBand }) {

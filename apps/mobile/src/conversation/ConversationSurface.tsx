@@ -74,6 +74,12 @@ export interface ConversationSelectionMark {
   /** The range's joining line continues to the message above / below. */
   readonly joinAbove: boolean;
   readonly joinBelow: boolean;
+  /**
+   * S8B-07 CP1-B: the composition's own words for this message while the mode is on, if any: its screen-reader hint, and
+   * one line under it. This layer writes none of them.
+   */
+  readonly hint?: string;
+  readonly beneath?: string;
 }
 
 /**
@@ -269,10 +275,12 @@ function StatusLine({ text, tone, side, palette, testID, language }: {
  * when it is not selectable, stays what it is), with its mark in the END gutter: a shape, never colour alone. The gap
  * above the message is inside it, so the range's joining line runs unbroken from one message to the next.
  */
-function Selectable({ id, label, gap, selection, palette, language, children }: {
+function Selectable({ id, label, gap, side, selection, palette, language, children }: {
   readonly id: string;
   readonly label: string;
   readonly gap: number;
+  /** The message's own side: the composition's line under it sits there. */
+  readonly side: PhysicalSide;
   readonly selection: ConversationSelection;
   readonly palette: ConversationPalette;
   readonly language: ChromeLanguage;
@@ -292,6 +300,7 @@ function Selectable({ id, label, gap, selection, palette, language, children }: 
       accessibilityRole={selectable ? 'checkbox' : undefined}
       accessibilityState={selectable ? { checked: state.mark === 'IN', disabled: !selection.interactive } : undefined}
       accessibilityLabel={label}
+      {...(selectable && state.hint !== undefined ? { accessibilityHint: state.hint } : {})}
       accessibilityLanguage={language}
       disabled={!selectable || !selection.interactive}
       onPress={() => selection.onToggle(id)}
@@ -314,6 +323,14 @@ function Selectable({ id, label, gap, selection, palette, language, children }: 
         />
       ) : null}
       {children}
+      {selectable && state.beneath !== undefined ? (
+        <Text
+          testID={`qandeel-selection-beneath-${id}`}
+          style={{ ...typeStyle('metadata'), color: palette.tertiary, alignSelf: alignSelfFor(side), textAlign: textAlignFor(side), writingDirection: readerDirection(language), marginTop: 4 }}
+        >
+          {state.beneath}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -417,7 +434,7 @@ function SelectingExchangeRow({ exchange, copy, palette, language, contentWidth,
   const fallback = readerDirection(language);
   return (
     <View>
-      <Selectable id={exchange.userTurn.id} label={copy.userTurnName(exchange.userTurn.content)} gap={28} selection={selection} palette={palette} language={language}>
+      <Selectable id={exchange.userTurn.id} label={copy.userTurnName(exchange.userTurn.content)} gap={28} side={mine} selection={selection} palette={palette} language={language}>
         <View
           testID={`qandeel-utterance-${exchange.userTurn.id}`}
           style={{
@@ -435,7 +452,7 @@ function SelectingExchangeRow({ exchange, copy, palette, language, contentWidth,
         </View>
       </Selectable>
       {exchange.reply !== null ? (
-        <Selectable id={exchange.reply.id} label={copy.replyTurnName(exchange.reply.content)} gap={16} selection={selection} palette={palette} language={language}>
+        <Selectable id={exchange.reply.id} label={copy.replyTurnName(exchange.reply.content)} gap={16} side={theirs} selection={selection} palette={palette} language={language}>
           <View
             testID={`qandeel-reply-${exchange.reply.id}`}
             style={{ alignSelf: alignSelfFor(theirs), maxWidth: Math.max(0, contentWidth - REPLY_END_INSET) }}

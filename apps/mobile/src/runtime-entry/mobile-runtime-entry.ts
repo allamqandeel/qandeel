@@ -53,6 +53,7 @@ import { PushApiClient } from './push-api';
 import { SharedWorldApiClient } from './shared-world-api';
 import { PublicWorldApiClient } from './public-world-api';
 import { VoiceNoteApiClient, type VoiceNoteFetch } from '../voice-note/voice-note-api';
+import { TransientMediaApiClient, type TransientMediaFetch } from '../original-audio/transient-media-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -202,6 +203,12 @@ export interface MobileRuntimeEntry {
    * (null for another identity). No socket is opened here.
    */
   callsFor(bundle: CanonicalRuntimeBundle): { readonly truth: CallTruthApiClient; readonly connectUrl: string | null; readonly authorization: () => Record<string, string> | null };
+  /**
+   * S8B-07 CP1-B — the Replay Media Service's client for a bundle this coordinator produced, on the same AC-01 seam bound to
+   * the bundle's own auth generation (the Replay pool's own origin, INFRA-07 P-1, never the API's), and the bearer header
+   * the player is handed for the audio. Null when no Replay Media origin is configured (`NONE`).
+   */
+  transientMediaFor(bundle: CanonicalRuntimeBundle): { readonly api: TransientMediaApiClient; readonly authorization: () => Record<string, string> | null } | null;
   /**
    * A3-02 — the device-registration client for a bundle this coordinator produced, on the same AC-01 seam bound to the
    * bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -419,6 +426,13 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
       return {
         truth: new CallTruthApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) }),
         connectUrl: callConnectUrl(config.apiBaseUrl),
+        authorization: createAuthorizationHeader({ credential, authGeneration: bundle.authGeneration }),
+      };
+    },
+    transientMediaFor(bundle) {
+      if (config.replayMediaBaseUrl === undefined) return null;
+      return {
+        api: new TransientMediaApiClient({ baseUrl: config.replayMediaBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) as unknown as TransientMediaFetch }),
         authorization: createAuthorizationHeader({ credential, authGeneration: bundle.authGeneration }),
       };
     },

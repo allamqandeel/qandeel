@@ -375,6 +375,7 @@
     "test:s8b-07-cp1b-media-worker-contract": "node --test tests/s8b-07-cp1b-media-worker-contract.test.mjs",
     "test:s8b-07-cp1b-media-service-contract": "node --test tests/s8b-07-cp1b-media-service-contract.test.mjs",
     "test:s8b-07-cp1b-first-audio-isolation-contract": "node --test tests/s8b-07-cp1b-first-audio-isolation-contract.test.mjs",
+    "test:s8b-07-cp1b-mobile-playback-contract": "node --test tests/s8b-07-cp1b-mobile-playback-contract.test.mjs",
     "test:s8b-06-cp3-call-ui-contract": "node --test tests/s8b-06-cp3-call-ui-contract.test.mjs",
     "verify:ci-01:intelligence-reality:local": "node scripts/ci-01/local-db.mjs run-baseline",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",

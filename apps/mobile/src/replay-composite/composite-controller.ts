@@ -110,7 +110,7 @@ export function createReplayCompositeController(reader: ReplayHistoryReader, rep
     else if (!consistent(version.version, moments.moments)) {
       // The two reads do not describe one version, or disagree about whether it may be viewed: neither is used.
       state = { status: 'FAILED' };
-    } else if (!honoursRenderContract(version.version) || !moments.moments.every(isRenderableMedium)) state = { status: 'NOT_RENDERABLE' };
+    } else if (!honoursRenderContract(version.version) || !moments.moments.every((moment) => isRenderableMedium(moment, version.version))) state = { status: 'NOT_RENDERABLE' };
     else state = { status: 'READY', version: version.version, moments: moments.moments };
     changed();
   };
