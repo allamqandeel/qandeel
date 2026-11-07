@@ -57,6 +57,9 @@
 --     still be uploading it; a refused completion re-opens the key's erasure.
 --   * The completion locks the source FOR SHARE as 0195 H does, inline: 0195's lock function is auth.uid()-scoped and the
 --     Replay pool calls with no human session.
+--   * The proven reason (§0.4, R1.1, V-30) rides on the set rows and the status check as `reason` (EXPIRED | DELETED |
+--     NULL), and on a refused new request in the DETAIL of TRANSIENT_NOT_AVAILABLE; it is computed only from the source
+--     recordings' own columns, never inferred (voice_private.transient_unavailable_reason_v1).
 --   * The generation PCM compare (§20 point 4) is enforced at completion: the worker reports the digest, the database
 --     refuses a mismatch against the newest earlier file of the same plan with GENERATION_MISMATCH.
 --
@@ -336,15 +339,52 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
               ELSE 0::bigint END;
 $$;
 
+-- The PROVEN reason a subject's source is not readable (§0.4, R1.1): EXPIRED only when every unreadable source recording
+-- expired (by its state, or by its clock at the instant), DELETED only when every one was deleted by its owner; NULL
+-- otherwise: a readable source, an account erasure, a missing voice source, mixed causes, or anything unknown. The phone
+-- never infers a cause (V-30).
+CREATE FUNCTION voice_private.transient_unavailable_reason_v1(p_user_id uuid, p_owner_kind text, p_subject_id uuid)
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  WITH src AS (
+    SELECT r.id, r.recording_state, r.deleted_reason, r.retention_expires_at
+      FROM voice_private.recordings r
+     WHERE p_owner_kind = 'LISTENING' AND r.id = p_subject_id AND r.user_id = p_user_id
+    UNION ALL
+    SELECT r.id, r.recording_state, r.deleted_reason, r.retention_expires_at
+      FROM public.replay_versions v
+      JOIN public.replays rp ON rp.id = v.replay_id AND rp.created_by_user_id = p_user_id
+      JOIN public.replay_source_manifest_items i ON i.manifest_version_id = v.source_manifest_version_id
+      LEFT JOIN public.conversation_units cu ON cu.id = i.personal_conversation_unit_id
+      LEFT JOIN public.conversation_turn_voice_sources vs ON vs.turn_id = cu.source_turn_id
+      LEFT JOIN voice_private.recordings r ON r.id = vs.recording_id
+     WHERE p_owner_kind = 'REPLAY_PLAYBACK' AND v.id = p_subject_id AND i.original_medium = 'ORIGINAL_AUDIO'
+  ), gone AS (
+    SELECT CASE WHEN s.id IS NULL THEN 'UNKNOWN'
+                WHEN s.recording_state = 'EXPIRED'
+                  OR (s.recording_state IN ('STORED', 'RECORDING') AND clock_timestamp() >= s.retention_expires_at) THEN 'EXPIRED'
+                WHEN s.recording_state = 'DELETED' AND s.deleted_reason = 'OWNER' THEN 'DELETED'
+                ELSE 'UNKNOWN' END AS cause
+      FROM src s
+     WHERE s.id IS NULL OR NOT voice_private.recording_readable_v1(p_user_id, s.id)
+  )
+  SELECT CASE WHEN count(*) = 0 THEN NULL
+              WHEN bool_and(g.cause = 'EXPIRED') THEN 'EXPIRED'
+              WHEN bool_and(g.cause = 'DELETED') THEN 'DELETED' END
+    FROM gone g;
+$$;
+
 -- One set, as the wire describes it (no key, no recording, no digest). A live file whose cap or source has passed is
 -- answered EXPIRED at once, before any sweep writes it.
 CREATE FUNCTION voice_private.transient_set_rows_v1(p_user_id uuid, p_set_id uuid)
 RETURNS TABLE (set_id uuid, artifact_id uuid, run_ordinal integer, generation integer, job_state text,
-               failure_class text, expected_duration_ms bigint, duration_ms bigint, readable_for_ms bigint)
+               failure_class text, expected_duration_ms bigint, duration_ms bigint, readable_for_ms bigint,
+               reason text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_first voice_private.transient_media_artifacts;
   v_ok boolean;
+  v_reason text;
 BEGIN
   SELECT a.* INTO v_first FROM voice_private.transient_media_artifacts a
    WHERE a.set_id = p_set_id AND a.user_id = p_user_id ORDER BY a.run_ordinal LIMIT 1;
@@ -352,12 +392,15 @@ BEGIN
     RETURN;
   END IF;
   v_ok := voice_private.transient_source_readable_v1(p_user_id, v_first.owner_kind, v_first.subject_id);
+  IF NOT v_ok THEN
+    v_reason := voice_private.transient_unavailable_reason_v1(p_user_id, v_first.owner_kind, v_first.subject_id);
+  END IF;
   RETURN QUERY
     SELECT a.set_id, a.id, a.run_ordinal, a.generation,
            CASE WHEN a.job_state IN ('PENDING', 'RUNNING', 'READY')
                      AND (NOT v_ok OR clock_timestamp() >= a.expires_at) THEN 'EXPIRED' ELSE a.job_state END,
            a.failure_class, a.expected_duration_ms, a.duration_ms,
-           voice_private.transient_readable_for_ms_v1(a.job_state, a.expires_at, v_ok)
+           voice_private.transient_readable_for_ms_v1(a.job_state, a.expires_at, v_ok), v_reason
       FROM voice_private.transient_media_artifacts a
      WHERE a.set_id = p_set_id AND a.user_id = p_user_id
      ORDER BY a.run_ordinal;
@@ -402,7 +445,8 @@ $$;
 CREATE FUNCTION public.server_request_transient_media_v1(p_user_id uuid, p_owner_kind text, p_subject_ref uuid,
                                                          p_command_id uuid)
 RETURNS TABLE (set_id uuid, artifact_id uuid, run_ordinal integer, generation integer, job_state text,
-               failure_class text, expected_duration_ms bigint, duration_ms bigint, readable_for_ms bigint)
+               failure_class text, expected_duration_ms bigint, duration_ms bigint, readable_for_ms bigint,
+               reason text)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_policy voice_private.transient_media_policy;
@@ -455,7 +499,9 @@ BEGIN
 
   -- 3. A new command: ownership and readability now; no start during the person's live call (RT-1).
   IF NOT voice_private.transient_source_readable_v1(p_user_id, p_owner_kind, v_subject) THEN
-    RAISE EXCEPTION 'TRANSIENT_NOT_AVAILABLE' USING ERRCODE = 'P0002';
+    -- The proven reason rides in the refusal's DETAIL (EXPIRED | DELETED | empty), never in its message.
+    RAISE EXCEPTION 'TRANSIENT_NOT_AVAILABLE' USING ERRCODE = 'P0002',
+      DETAIL = coalesce(voice_private.transient_unavailable_reason_v1(p_user_id, p_owner_kind, v_subject), '');
   END IF;
   IF EXISTS (SELECT 1 FROM voice_private.calls c WHERE c.user_id = p_user_id AND c.state <> 'ENDED') THEN
     RAISE EXCEPTION 'LIVE_CALL_ACTIVE' USING ERRCODE = 'P0001';
@@ -876,7 +922,7 @@ BEGIN
 END$$;
 
 CREATE FUNCTION public.server_check_transient_media_v1(p_user_id uuid, p_artifact_id uuid)
-RETURNS TABLE (readable boolean, job_state text, failure_class text, readable_for_ms bigint)
+RETURNS TABLE (readable boolean, job_state text, failure_class text, readable_for_ms bigint, reason text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   v_a voice_private.transient_media_artifacts;
@@ -895,7 +941,8 @@ BEGIN
   v_state := CASE WHEN v_a.job_state IN ('PENDING', 'RUNNING', 'READY')
                        AND (NOT v_ok OR clock_timestamp() >= v_a.expires_at) THEN 'EXPIRED' ELSE v_a.job_state END;
   RETURN QUERY SELECT v_state = 'READY', v_state, v_a.failure_class,
-                      voice_private.transient_readable_for_ms_v1(v_a.job_state, v_a.expires_at, v_ok);
+                      voice_private.transient_readable_for_ms_v1(v_a.job_state, v_a.expires_at, v_ok),
+                      CASE WHEN NOT v_ok THEN voice_private.transient_unavailable_reason_v1(p_user_id, v_a.owner_kind, v_a.subject_id) END;
 END$$;
 
 -- The phone leaving the record or the player: the set is RELEASED and its keys are due now; it is never read or
@@ -1147,6 +1194,7 @@ BEGIN
     'voice_private.transient_set_rows_v1(uuid,uuid)',
     'voice_private.end_transient_set_v1(uuid,text,text,timestamptz)',
     'voice_private.transient_source_end_instant_v1(text,uuid)',
+    'voice_private.transient_unavailable_reason_v1(uuid,text,uuid)',
     'public.server_request_transient_media_v1(uuid,text,uuid,uuid)',
     'public.server_read_transient_media_map_v1(uuid,uuid,uuid)',
     'public.server_claim_transient_media_jobs_v1(integer)',

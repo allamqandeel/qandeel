@@ -4,15 +4,18 @@ import { GUARDS_METADATA, METHOD_METADATA, MODULE_METADATA, PATH_METADATA } from
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from '../app.module';
+import { ReplayMediaServiceModule } from '../replay-media/replay-media-service.module';
 import { parseProxyConfiguration } from './client-address';
 import { configureHttpSecurity } from './http-security';
 import { RATE_LIMIT_POLICIES, type RateLimitClass } from './rate-limit.policy';
 import { censusClassOf, routeKeyOf, ROUTE_RATE_LIMIT_CENSUS } from './route-rate-limit.census';
 
 /**
- * PROD-SEC-01 (SEC-A) — the route census against the REAL application graph. Every controller reachable from
+ * PROD-SEC-01 (SEC-A) — the route census against the REAL application graphs. Every controller reachable from
  * AppModule, every routed handler on it: each one is named by the census with a deliberate class, nothing stale is
- * named, and every route that carries no authentication guard is classified as health or pre-authentication.
+ * named, and every route that carries no authentication guard is classified as health or pre-authentication. S8B-07
+ * CP1-B: the Replay Media Service (the Replay pool's own HTTP process, INFRA-07 P-1) is QANDEEL's second HTTP
+ * application, read the same way; its `/health` is the same probe key as the API's.
  */
 
 type Constructor = abstract new (...args: never[]) => unknown;
@@ -44,18 +47,28 @@ const isGuarded = (controller: Constructor, handler: string) =>
   ((Reflect.getMetadata(GUARDS_METADATA, controller) as unknown[] | undefined)?.length ?? 0) > 0 ||
   ((Reflect.getMetadata(GUARDS_METADATA, (controller.prototype as Record<string, object>)[handler]) as unknown[] | undefined)?.length ?? 0) > 0;
 
-describe('the route census covers the real application exactly', () => {
-  const controllers = controllersOf(AppModule);
-  const routes = [...controllers].flatMap((controller) =>
-    handlersOf(controller).map((handler) => {
-      const fn = (controller.prototype as Record<string, object>)[handler];
-      return { controller, handler, fn, key: routeKeyOf(controller, fn) as string };
-    }),
-  );
+const routesOf = (root: unknown) => [...controllersOf(root)].flatMap((controller) =>
+  handlersOf(controller).map((handler) => {
+    const fn = (controller.prototype as Record<string, object>)[handler];
+    return { controller, handler, fn, key: routeKeyOf(controller, fn) as string };
+  }),
+);
 
-  it('finds every application route, each once', () => {
-    expect(routes.length).toBeGreaterThanOrEqual(40);
-    expect(new Set(routes.map((route) => route.key)).size).toBe(routes.length);
+describe('the route census covers the real applications exactly', () => {
+  const apiRoutes = routesOf(AppModule);
+  const replayRoutes = routesOf(ReplayMediaServiceModule);
+  const routes = [...apiRoutes, ...replayRoutes];
+
+  it('finds every application route, each once per application', () => {
+    expect(apiRoutes.length).toBeGreaterThanOrEqual(40);
+    expect(new Set(apiRoutes.map((route) => route.key)).size).toBe(apiRoutes.length);
+    expect(replayRoutes.map((route) => route.key).sort()).toEqual([
+      'DELETE /voice/transient/:artifactId', 'GET /health', 'GET /voice/transient/:artifactId', 'GET /voice/transient/:artifactId/status',
+      'POST /replay/:replayId/versions/:versionId/playback/:commandId', 'POST /voice/listening/:callId/:commandId',
+    ]);
+    // The two applications share only the probe; no API route is served by the Replay pool, nor the reverse.
+    const api = new Set(apiRoutes.map((route) => route.key));
+    expect(replayRoutes.map((route) => route.key).filter((key) => api.has(key))).toEqual(['GET /health']);
   });
 
   it('classifies one handler mounted under two controllers as two routes', () => {
@@ -92,7 +105,7 @@ describe('the route census covers the real application exactly', () => {
     }
     expect(mismatched).toEqual([]);
     // The pre-authentication surface, stated: health, Login ID availability and the three Login ID routes.
-    expect(unauthenticated.sort()).toEqual([
+    expect([...new Set(unauthenticated)].sort()).toEqual([
       'GET /health', 'GET /health/live', 'GET /health/ready',
       'POST /account/login-id-availability', 'POST /account/login-id-resend-verification', 'POST /account/login-id-sign-in', 'POST /account/login-id-verify-email',
     ]);

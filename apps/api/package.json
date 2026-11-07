@@ -7,6 +7,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:replay-media-worker": "node --max-old-space-size=384 dist/replay-media/media-worker.main.js",
+    "start:replay-media-service": "node dist/replay-media/replay-media-service.main.js",
     "start:replay-watchdog": "node dist/replay-media/replay-watchdog.main.js",
     "test": "jest --runInBand"
   },

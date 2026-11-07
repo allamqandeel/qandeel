@@ -90,6 +90,16 @@ export interface ConversationHistoryFinishedCall {
   endReason: 'USER_ENDED' | 'PEER_LOST_AFTER_GRACE' | 'SYSTEM_INTERRUPTED' | 'FAILED' | 'SERVER_ENDED';
   /** D6 (Copy Gate, 2026-11-04): the call ended at the policy's maximum length (0193 decides it, never the reason alone). */
   atMaxLength: boolean;
+  /**
+   * S8B-07 CP1-B (0196 G, contract §0.4): whether the call's recording can be listened to: PREPARING while it is still
+   * being sealed, AVAILABLE while it is readable, UNAVAILABLE otherwise. No recording id is on the wire: listening is
+   * addressed by `callId`.
+   */
+  recordingStatus: 'PREPARING' | 'AVAILABLE' | 'UNAVAILABLE';
+  /** When the recording stops being readable (its own expiry); only while AVAILABLE. */
+  availableUntil: string | null;
+  /** The cause, only when the database PROVES it (EXPIRED, or the owner's own deletion); otherwise null. Never inferred. */
+  unavailableReason: 'EXPIRED' | 'DELETED' | null;
 }
 
 export interface ConversationHistoryPage {

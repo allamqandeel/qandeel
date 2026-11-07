@@ -120,7 +120,13 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  // its source is expired; a lease another claim holds is lease_lost; a key the store has not yet proven gone is
  // deferred. TRANSIENT_ERASURE_LATE is emitted on every cycle while a recorded violation is outstanding. Never a person,
  // call, version, artifact, key, plan, digest, byte count or duration as a label.
- ['REPLAY_MEDIA',new Map([['job',new Set(['success','failed_closed','expired','lease_lost',...OPERATION_FAILURES])],['reap',new Set(['success','deferred',...OPERATION_FAILURES])],['sweep',new Set(['success',...OPERATION_FAILURES])],['heartbeat',new Set(['success',...OPERATION_FAILURES])]])],
+ // Step 3 (the Replay Media Service, on the Replay pool only): a request, a status, a release, a per-request read, and
+ // how each response ended (complete, or the termination class of contract §15 / §19). Never a person, artifact or byte.
+ ['REPLAY_MEDIA',new Map([['job',new Set(['success','failed_closed','expired','lease_lost',...OPERATION_FAILURES])],['reap',new Set(['success','deferred',...OPERATION_FAILURES])],['sweep',new Set(['success',...OPERATION_FAILURES])],['heartbeat',new Set(['success',...OPERATION_FAILURES])],
+   ['request',new Set(['success','refused_expected','busy','live_call_active','command_reused',...OPERATION_FAILURES])],
+   ['status',new Set(['success','refused_expected',...OPERATION_FAILURES])],['release',new Set(['success','refused_expected',...OPERATION_FAILURES])],
+   ['read',new Set(['success','refused_expected',...OPERATION_FAILURES])],
+   ['stream',new Set(['complete','source_end','recheck','lifetime','idle','client_gone','store_failed'])]])],
  ['REPLAY_WATCHDOG',new Map([['sweep',new Set(['success',...OPERATION_FAILURES])],['backstop',new Set(['success','deferred',...OPERATION_FAILURES])],['health',new Set(['success',...OPERATION_FAILURES])],['heartbeat',new Set(['success',...OPERATION_FAILURES])]])],
  ['TRANSIENT_ERASURE_LATE',new Map([['erasure',new Set(['late'])]])],
  ['PUSH_DELIVERY',new Map([

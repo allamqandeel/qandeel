@@ -216,8 +216,13 @@ export class VoiceNotesRepository {
    * bound is open), the newest first, at most 100. Only calls that became ACTIVE; never content.
    */
   sessionFinishedCalls(userId: string, sessionId: string, endedFrom: string | null, endedBefore: string | null) {
-    return this.all<{ call_id: string; started_at: string; ended_at: string; end_reason: ConversationHistoryFinishedCall['endReason']; at_max_length: boolean }>(
-      'server_read_session_finished_calls_v1', { p_user_id: userId, p_session_id: sessionId, p_ended_from: endedFrom, p_ended_before: endedBefore });
+    // S8B-07 CP1-B (0196 G): v2 is the 0193 read plus the recording's status, its readable deadline and a PROVEN reason
+    // (contract §0.4, V-26): the only Replay-related read the API keeps (INFRA-07 P-1). It names no recording.
+    return this.all<{
+      call_id: string; started_at: string; ended_at: string; end_reason: ConversationHistoryFinishedCall['endReason']; at_max_length: boolean;
+      recording_status: string | null; available_until: string | null; unavailable_reason: string | null;
+    }>(
+      'server_read_session_finished_calls_v2', { p_user_id: userId, p_session_id: sessionId, p_ended_from: endedFrom, p_ended_before: endedBefore });
   }
 
   capability(userId: string) {

@@ -33,6 +33,7 @@ function graphOf(entry: string): Set<string> {
 const api = graphOf('main.ts');
 const worker = graphOf('replay-media/media-worker.main.ts');
 const watchdog = graphOf('replay-media/replay-watchdog.main.ts');
+const service = graphOf('replay-media/replay-media-service.main.ts');
 const sourceOf = (files: Set<string>) => [...files].map((f) => [f, readFileSync(join(SRC, f), 'utf8')] as const);
 
 describe('V-33: the API (the Voice Gateway\'s process) holds no Replay work', () => {
@@ -58,7 +59,7 @@ describe('V-33: the API (the Voice Gateway\'s process) holds no Replay work', ()
 });
 
 describe('V-33: the Replay pool\'s graphs hold no Voice Gateway, no Redis and no API channel', () => {
-  for (const [name, graph] of [['media worker', worker], ['watchdog', watchdog]] as const) {
+  for (const [name, graph] of [['media worker', worker], ['watchdog', watchdog], ['Replay Media Service', service]] as const) {
     it(`the ${name} graph`, () => {
       const forbidden = [...graph].filter((f) => f === 'app.module.ts' || f.startsWith('voice/call/gateway/')
         || f.startsWith('conversation/') || f.includes('redis') || f === 'voice-media/voice-media.module.ts');
@@ -72,6 +73,25 @@ describe('V-33: the Replay pool\'s graphs hold no Voice Gateway, no Redis and no
 
   it('the watchdog mixes nothing: no ffmpeg, no mixer, no worker', () => {
     expect([...watchdog].filter((f) => /replay-ffmpeg|transient-mixer|media-worker/u.test(f))).toEqual([]);
+  });
+
+  it('the Replay Media Service streams and mixes nothing: no ffmpeg, no mixer, no worker; the same bearer check as the API', () => {
+    expect([...service].filter((f) => /replay-ffmpeg|transient-mixer|media-worker/u.test(f))).toEqual([]);
+    expect(service.has('auth/supabase-auth.guard.ts')).toBe(true);
+    expect(service.has('replay-media/transient-media.controller.ts')).toBe(true);
+    // It reuses the Range parser's leaf, never the Voice Media service or its service-role repository.
+    expect(service.has('voice-media/byte-range.ts')).toBe(true);
+    expect([...service].filter((f) => /voice-media\/voice-media\.(?:service|repository|controller)|voice-notes/u.test(f))).toEqual([]);
+    for (const [file, text] of sourceOf(service)) expect([file, /process\.env\.DATABASE_URL\b|SUPABASE_SECRET_KEY/u.test(text)]).toEqual([file, false]);
+  });
+
+  it('the transient routes exist only on the Replay pool: no API file declares them', () => {
+    // The route census (http-security) names them as data, to classify them; no API file routes or loads them.
+    for (const [file, text] of sourceOf(api)) {
+      expect([file, /@(?:Get|Post|Delete)\('(?:voice\/listening|voice\/transient|replay\/:replayId\/versions\/:versionId\/playback)/u.test(text)])
+        .toEqual([file, false]);
+      expect([file, /TransientMediaController|ReplayMediaServiceModule|transient-media\.controller/u.test(text)]).toEqual([file, false]);
+    }
   });
 
   it('the media worker loads nothing of the call path, not even its codec (no opusscript on the Replay pool)', () => {

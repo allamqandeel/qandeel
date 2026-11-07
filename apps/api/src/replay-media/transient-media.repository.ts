@@ -54,8 +54,83 @@ export interface ReplayHealthRow {
   readonly erasures_late: number;
 }
 
+/** One row of a set, as `server_request_transient_media_v1` answers it (no key, no recording, no digest). */
+export interface TransientSetRow {
+  readonly set_id: string;
+  readonly artifact_id: string;
+  readonly run_ordinal: number;
+  readonly generation: number;
+  readonly job_state: 'PENDING' | 'RUNNING' | 'READY' | 'FAILED' | 'RELEASED' | 'EXPIRED';
+  readonly failure_class: string | null;
+  readonly expected_duration_ms: string | number;
+  readonly duration_ms: string | number | null;
+  readonly readable_for_ms: string | number;
+  readonly reason: 'EXPIRED' | 'DELETED' | null;
+}
+
+/** One row of the presentation map's source (`server_read_transient_media_map_v1`): the plan, with each row's run. */
+export interface TransientMapRow {
+  readonly entry_ordinal: number;
+  readonly row_kind: 'RUN' | 'ITEM' | 'WINDOW' | 'AUDIBLE' | 'MIX' | 'HELD' | 'GAP' | 'TEXT' | 'BOUNDARY';
+  readonly run_ordinal: number | null;
+  readonly window_ordinal: number | null;
+  readonly selected_ordinal: number | null;
+  readonly track: 'USER' | 'QANDEEL' | 'NOTE' | null;
+  readonly clock_start_ms: string | number | null;
+  readonly clock_end_ms: string | number | null;
+  readonly elapsed_ms: string | number | null;
+  readonly gap_kind: string | null;
+  readonly boundary_kind: 'SAME_RECORDING' | 'CROSS_RECORDING' | null;
+}
+
+/** The per-request read (every GET, every Range): the key stays in this process, the deadline is the database's. */
+export interface TransientReadRow {
+  readonly storage_key: string;
+  readonly byte_size: string | number;
+  readonly duration_ms: string | number;
+  readonly serve_until: Date;
+  readonly db_now: Date;
+}
+
+export interface TransientCheckRow {
+  readonly readable: boolean;
+  readonly job_state: TransientSetRow['job_state'];
+  readonly failure_class: string | null;
+  readonly readable_for_ms: string | number;
+  readonly reason: 'EXPIRED' | 'DELETED' | null;
+}
+
 export class TransientMediaRepository {
   constructor(private readonly db: ReplayDatabase) {}
+
+  // ---- The Replay Media Service (step 3): every answer is the database's, on every request ----
+
+  request(userId: string, ownerKind: 'LISTENING' | 'REPLAY_PLAYBACK', subjectRef: string, commandId: string): Promise<TransientSetRow[]> {
+    return this.db.query<TransientSetRow>('SELECT * FROM public.server_request_transient_media_v1($1, $2, $3, $4)',
+      [userId, ownerKind, subjectRef, commandId]);
+  }
+
+  map(userId: string, replayId: string, versionId: string): Promise<TransientMapRow[]> {
+    return this.db.query<TransientMapRow>('SELECT * FROM public.server_read_transient_media_map_v1($1, $2, $3)', [userId, replayId, versionId]);
+  }
+
+  async read(userId: string, artifactId: string): Promise<TransientReadRow | null> {
+    const [row] = await this.db.query<TransientReadRow>('SELECT * FROM public.server_read_transient_media_v1($1, $2)', [userId, artifactId]);
+    return row ?? null;
+  }
+
+  async check(userId: string, artifactId: string): Promise<TransientCheckRow | null> {
+    const [row] = await this.db.query<TransientCheckRow>('SELECT * FROM public.server_check_transient_media_v1($1, $2)', [userId, artifactId]);
+    return row ?? null;
+  }
+
+  async release(userId: string, artifactId: string): Promise<TransientSetRow['job_state'] | null> {
+    const [row] = await this.db.query<{ job_state: TransientSetRow['job_state'] }>(
+      'SELECT * FROM public.server_release_transient_media_v1($1, $2)', [userId, artifactId]);
+    return row?.job_state ?? null;
+  }
+
+  // ---- The media worker, the reaper and the watchdog (step 2) ----
 
   claimJobs(limit: number): Promise<ClaimedJob[]> {
     return this.db.query<ClaimedJob>('SELECT * FROM public.server_claim_transient_media_jobs_v1($1)', [limit]);

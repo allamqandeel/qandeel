@@ -262,6 +262,7 @@ jobs:
       - {name: "Verify S8B-06 CP2 native call lifecycle contract (Core-Telecom 1.0.1 outgoing, routes via requestEndpointChange only, the one phoneCall service with a CallStyle End; CallKit outgoing only with includesCallsInRecents=false and UIBackgroundModes audio only; the complete iOS engine with vendored libopus FEC, onset rules, presented-position PLAYOUT; typed plugin mods; Voice Notes foreground-only; copy rows PROPOSED, no audio file, no provider; the native tests wired)", run: npm run test:s8b-06-native-call-lifecycle-contract}
       - {name: "Verify INTEL-04 Thread lifecycle derivation contract (0070 byte-identical; 0194 forward-only, one function, exactly the attention_on predicate made bound_sp <= cu.session_position and every other strict reading kept; no write, no queue reset, no grant; the verifier and the integrated proof wired after the migrations; no graphics, no provider; the record and QAN-BL-INTEL-04 closed)", run: npm run test:intel-04-thread-lifecycle-derivation-contract}
       - {name: "Verify S8B-07 CP1-B media worker contract (the BtbN ffmpeg 9.0.2 LGPL pin sha256-checked, the proof wired with the in-memory store and with rclone S3, each entry point refusing every role but its own, the Replay role directly with pg pinned, sources read-only and processing files under voice-transient/ only, the API key rule unchanged)", run: npm run test:s8b-07-cp1b-media-worker-contract}
+      - {name: "Verify S8B-07 CP1-B Replay Media Service contract (REPLAY_MEDIA on the Replay pool only, the five routes behind the shipped bearer guard, no-store on every answer, the 5 s / 2 s re-check, destroy never end, the 10 min cap, F-1 NOTE only, the proof wired with the in-memory store and with rclone S3)", run: npm run test:s8b-07-cp1b-media-service-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1451,6 +1452,13 @@ jobs:
       # tones only; no gate is left open; the Replay role's LOGIN is granted for the run and revoked after it.
       - name: Prove S8B-07 CP1-B media worker, reaper and watchdog against real PostgreSQL and the pinned ffmpeg (in-memory store)
         run: npm run prove:s8b-07-media-worker:integration
+      # S8B-07 CP1-B step 3: the Replay Media Service (the shipped module over real HTTP, as the Replay role, the shipped
+      # bearer guard against a loopback /auth/v1/user), its files made by the shipped worker with the pinned ffmpeg, an
+      # in-memory store (the rclone S3 run is in the PostgREST step below) - start-up refusals, the five routes, V-31 / V-34
+      # over HTTP, V-32 (a) - (h) with a slow client and the measured cut times, V-35a resumes, a 60-minute file in bounded
+      # responses, no-store and no id out. Synthetic tones only; the Replay role's LOGIN is granted for the run, revoked after.
+      - name: Prove S8B-07 CP1-B Replay Media Service against real PostgreSQL (in-memory store)
+        run: npm run prove:s8b-07-media-service:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1506,6 +1514,8 @@ jobs:
           # S8B-07 CP1-B step 2: the media-worker proof again, with the Replay pool's S3 adapter against this rclone server (a CI
           # stand-in, never a hosted proof). It removes every object it wrote, so the bucket listings below see none of them.
           REPLAY_PROOF_STORE=s3 npm run --silent prove:s8b-07-media-worker:integration || { tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
+          # S8B-07 CP1-B step 3: the Replay Media Service proof again, every file read through the S3 adapter's ranged GET.
+          REPLAY_PROOF_STORE=s3 npm run --silent prove:s8b-07-media-service:integration || { tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
           declare -A release_sha256=(
             [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
             [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279

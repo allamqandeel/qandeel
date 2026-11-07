@@ -66,7 +66,7 @@ const HELPERS = Object.freeze([
   'voice_private.transient_media_artifact_removed_v1()', 'voice_private.transient_source_readable_v1(uuid,text,uuid)',
   'voice_private.transient_plan_runs_v1(uuid,uuid)', 'voice_private.transient_readable_for_ms_v1(text,timestamp with time zone,boolean)',
   'voice_private.transient_set_rows_v1(uuid,uuid)', 'voice_private.end_transient_set_v1(uuid,text,text,timestamp with time zone)',
-  'voice_private.transient_source_end_instant_v1(text,uuid)',
+  'voice_private.transient_source_end_instant_v1(text,uuid)', 'voice_private.transient_unavailable_reason_v1(uuid,text,uuid)',
 ]);
 const RELATIONS = Object.freeze(['voice_private.transient_media_policy', 'voice_private.transient_media_artifacts',
   'voice_private.transient_media_requests', 'voice_private.transient_media_erasures', 'voice_private.replay_pool_heartbeats']);
@@ -827,6 +827,53 @@ async function verifyBehaviour(report) {
       const [row] = (await service('SELECT * FROM public.server_read_session_finished_calls_v2($1, $2, NULL, NULL)', [A, session]))
         .filter((r) => r.call_id === stored.call);
       assert.equal(row.available_until.getTime(), until.getTime(), 'available_until is the recording\'s own expiry');
+    });
+
+    await report.isolated('V30 the transient reason is PROVEN: EXPIRED / DELETED only when every unreadable source proves it; otherwise null', async () => {
+      const reasonOf = async (user, artifact) => (await checkOf(user, artifact)).reason;
+      const refusalDetail = async (user, kind, ref) => (await rejected(() => request(user, kind, ref), ['P0002'], /TRANSIENT_NOT_AVAILABLE/u)).detail;
+      // LISTENING: readable → null; the owner's deletion → DELETED; an expiry at the instant → EXPIRED; an account erasure → null.
+      const ok = await listener();
+      const [a0] = await listen(ok);
+      await makeReady(a0.set_id);
+      assert.equal(await reasonOf(ok.user, a0.artifact_id), null, 'a readable source has no reason');
+      await releaseOf(ok.user, a0.artifact_id);
+      assert.equal(await reasonOf(ok.user, a0.artifact_id), null, 'a released file of a readable source: no source reason');
+      const del = await listener();
+      const [a1] = await listen(del);
+      await makeReady(a1.set_id);
+      await service('SELECT * FROM public.server_delete_voice_recording_v1($1, $2)', [del.user, del.recording]);
+      assert.equal(await reasonOf(del.user, a1.artifact_id), 'DELETED');
+      assert.equal((await listen(del, (await ledgerOf(del.user))[0].command_id))[0].reason, 'DELETED', 'the known command carries it too');
+      assert.equal(await refusalDetail(del.user, 'LISTENING', del.call), 'DELETED', 'a new command is refused with it');
+      const exp = await listener();
+      const [a2] = await listen(exp);
+      await makeReady(a2.set_id);
+      await sourceEndsIn(exp.recording, -1000);
+      assert.equal(await reasonOf(exp.user, a2.artifact_id), 'EXPIRED', 'expired at the instant, no sweep run');
+      assert.equal(await refusalDetail(exp.user, 'LISTENING', exp.call), 'EXPIRED');
+      const era = await listener();
+      const [a3] = await listen(era);
+      await owner();
+      await q("SET LOCAL session_replication_role = 'replica'");
+      await q(`UPDATE voice_private.recordings SET recording_state = 'DELETED', deleted_reason = 'ACCOUNT_ERASURE', terminal_at = clock_timestamp() WHERE id = $1`, [era.recording]);
+      await q("SET LOCAL session_replication_role = 'origin'");
+      assert.equal(await reasonOf(era.user, a3.artifact_id), null, 'an account erasure is not a proven cause');
+      assert.equal(await refusalDetail(era.user, 'LISTENING', era.call), '', 'refused with no reason');
+      // REPLAY_PLAYBACK: one owner-deleted source → DELETED; another source then expired → mixed → null; all expired → EXPIRED.
+      const r = await threeRunReplay();
+      const set = await request(r.user, 'REPLAY_PLAYBACK', r.version);
+      assert.ok(set.every((x) => x.reason === null));
+      await service('SELECT * FROM public.server_delete_voice_recording_v1($1, $2)', [r.user, r.c2.recording]);
+      assert.equal(await reasonOf(r.user, set[0].artifact_id), 'DELETED', 'every unreadable source was deleted by its owner');
+      assert.equal(await refusalDetail(r.user, 'REPLAY_PLAYBACK', r.version), 'DELETED');
+      await sourceEndsIn(r.c1.recording, -1000);
+      assert.equal(await reasonOf(r.user, set[0].artifact_id), null, 'mixed causes → null');
+      assert.equal(await refusalDetail(r.user, 'REPLAY_PLAYBACK', r.version), '');
+      const x = await threeRunReplay();
+      const xs = await request(x.user, 'REPLAY_PLAYBACK', x.version);
+      for (const rec of [x.note, x.c1.recording, x.c2.recording]) await sourceEndsIn(rec, -1000);
+      assert.equal(await reasonOf(x.user, xs[0].artifact_id), 'EXPIRED', 'every unreadable source expired');
     });
 
     await report.isolated('V34 no start during a live call; after the call ends and the recording is sealed: PREPARING then AVAILABLE, then allowed', async () => {

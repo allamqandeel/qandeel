@@ -41,6 +41,11 @@ export interface TransientAudioStore {
   /** The stored size of a processing file, or null when none exists. */
   headTransient(key: string, meter: StoreMeter | null, signal: AbortSignal): Promise<number | null>;
   removeTransient(key: string, meter: StoreMeter | null, signal: AbortSignal): Promise<void>;
+  /**
+   * The Replay Media Service's read (step 3): the store's own body stream of one processing file, whole or one byte
+   * range, never buffered; null when it does not exist. The operation cap holds only while the store begins to answer.
+   */
+  openTransient(key: string, range: { readonly start: number; readonly end: number } | null, signal: AbortSignal): Promise<Readable | null>;
 }
 
 /** A source larger than the caller's bound. Names no key. */
@@ -177,6 +182,22 @@ export class S3TransientAudioStore implements TransientAudioStore {
         await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: signal });
       } catch (error) {
         if (!isMissingMediaObject(error)) throw error;
+      }
+    });
+  }
+
+  openTransient(key: string, range: { readonly start: number; readonly end: number } | null, signal: AbortSignal): Promise<Readable | null> {
+    if (!TRANSIENT_KEY.test(key)) throw new Error('a processing-file key out of shape');
+    const { client, bucket } = this.s3();
+    return this.gate.run(async () => {
+      try {
+        const answer = await client.send(new GetObjectCommand({
+          Bucket: bucket, Key: key, ...(range ? { Range: `bytes=${range.start}-${range.end}` } : {}),
+        }), { abortSignal: signal });
+        return answer.Body instanceof Readable ? answer.Body : null;
+      } catch (error) {
+        if (isMissingMediaObject(error)) return null;
+        throw error;
       }
     });
   }

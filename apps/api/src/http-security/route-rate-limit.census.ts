@@ -331,6 +331,17 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /replay/:replayId/versions/:versionId': 'AUTHENTICATED',
   'GET /replay/:replayId/versions/:versionId/moments': 'AUTHENTICATED',
   'GET /replay/:replayId/versions/:versionId/moments/:ordinal/analysis': 'AUTHENTICATED',
+
+  // S8B-07 CP1-B (INFRA-07 P-1): the Replay Media Service's routes, served by the Replay pool's own process
+  // (replay-media/replay-media-service.main.ts), never by the API; its `/health` is the probe above. No new class. The
+  // work a request can start is bounded by the database (one live set per subject, the per-person set cap, the queue
+  // cap → BUSY) and a retried command is idempotent, so the two requests take the authenticated class, as the status
+  // poll, each Range resume and the release do.
+  'POST /voice/listening/:callId/:commandId': 'AUTHENTICATED',
+  'POST /replay/:replayId/versions/:versionId/playback/:commandId': 'AUTHENTICATED',
+  'GET /voice/transient/:artifactId/status': 'AUTHENTICATED',
+  'GET /voice/transient/:artifactId': 'AUTHENTICATED',
+  'DELETE /voice/transient/:artifactId': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

@@ -27,6 +27,7 @@ function fakeStore(over: Partial<TransientAudioStore> = {}): TransientAudioStore
     removeTransient: async (k: string) => {
       removed.push(k);
     },
+    openTransient: async () => null,
     ...over,
   };
 }

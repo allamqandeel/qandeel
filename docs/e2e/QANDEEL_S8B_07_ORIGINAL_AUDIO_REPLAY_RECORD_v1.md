@@ -416,10 +416,56 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 | 0 | Documentation first (this section, K-9, CA-07B-1 FINAL) | done in this change |
 | 1 | Migration `0196_s8b_07_transient_media_v1.sql` and its verifier on a disposable PostgreSQL 17 | done locally: `verify-migration-0196.mjs` 31/31 on a disposable PG17, earlier verifiers re-anchored (each re-anchor named); not yet run in CI |
 | 2 | Media worker, reaper and watchdog (`REPLAY_MEDIA` / `REPLAY_WATCHDOG`) | done locally: `apps/api/src/replay-media/` (API jest 344 suites green), `prove-0196-media-worker.mjs` 21/21 on a disposable PG17 with the pinned ffmpeg 9.0.2 and the in-memory store (60-min listening file 34.8 s against the 128 s D-06.5 cap); the rclone S3 run and the BtbN pin run only in CI; not yet run in CI |
-| 3 | Replay Media Service (the five routes, bounded Range responses) | not started |
+| 3 | Replay Media Service (the five routes, bounded Range responses) | done locally (details below): `replay-media-service.main.ts` under `REPLAY_MEDIA` / `REPLAY_POOL` only; API jest green; `prove-0196-media-service.mjs` 15/15 on a disposable PG17 with the in-memory store; `verify-migration-0196.mjs` 32/32 after the step-3 amendment; the rclone S3 run and the PostgREST proof (`prove-0185`) run only in CI; not yet run in CI |
 | 4 | V-24a First Audio isolation (not a proof of pool separation) | not started |
 | 5 | Mobile | not started |
 | 6 | Device proof (HONOR and the iOS Simulator) | not started |
+
+**Step 3, what it adds and what it changed (each change declared in the PR body):**
+- **The service.** The five routes of contract §6 and `/health` (§18.3), on the Replay pool's own HTTP process. It
+  reaches PostgreSQL only as `qandeel_replay_media` (a LOGIN of that role itself) and verifies the bearer with the
+  API's own `SupabaseAuthGuard`. Every answer is `Cache-Control: no-store, private`, a refusal too, and the audio
+  never carries a Content-Disposition. The in-stream termination follows §15: the `serve_until − db_now` timer, the 5 s
+  re-check with its 2 s fail-closed budget, and destroy, never end. Each response is capped at 10 min (§19); the cap can
+  only be lowered.
+- **V-32, server part,** measured on PG17 with a client reading at ≤ 16 KiB/s:
+  - (a) owner deletion, (c) release, (d) account erasure, (e) the version leaving CURRENT, (g) a release through
+    instance A while the stream is on B: destroyed 3.4 – 3.6 s after the commit (bound ≤ 7 s).
+  - (b) a known end: destroyed 0 – 15 ms from `serve_until` (bound ± 1 s).
+  - (f) a re-check held by a lock, or its connection killed: destroyed (fail-closed).
+  - Every cut: no write after the termination instant (an instrumented counter on the response), bytes received below
+    the file size, and the next Range answered 404. Under (f) the source is still readable, so the next Range is 206.
+  - (h) the control: every byte, with 11 – 13 re-checks answered true.
+  - The cut is one point of the 5 s period. For a commit, the analytical worst case is one period plus the check's own
+    answer, inside the 7 s bound.
+- **V-35a, server parts:**
+  - a request timeout, two network drops and an instance restart mid-response: each read resumed with Range to a
+    byte-identical file;
+  - every answered request re-ran `server_read_transient_media_v1`;
+  - a 60-minute file, with the cap lowered to 1 s: 16 bounded responses;
+  - the source ending between two Range requests: the second is refused.
+  - The phone parts (exact played position, ≤ 3 resumes per minute, no local file) are step 5.
+- **V-31 (API) and V-34 over HTTP:**
+  - parallel POSTs of one command: one `artifactId` and one ledger row;
+  - a reused command: `409 {outcome: COMMAND_REUSED}` and nothing else;
+  - a live call: `409 LIVE_CALL_ACTIVE` for listening and for playback, nothing created; once the call has ended,
+    allowed.
+- **`0196` amended (forward, before any merge or hosted apply):** `voice_private.transient_unavailable_reason_v1` gives
+  the PROVEN reason of §0.4. It is EXPIRED or DELETED only when every unreadable source proves that same cause, and
+  null otherwise (an account erasure is not a proven cause). It is carried by the set rows, by the refusal's DETAIL and
+  by `server_check_transient_media_v1`. A new verify-0196 scenario, V30, proves it.
+- **F-1 narrowed (contract §0.3):** the Voice Media object route serves `NOTE` only, and a call track answers 404.
+  - **Re-anchored, declared:** `prove-0185` V09's two call-track reads now expect 404. The stored bytes are checked in
+    the bucket itself, and "stays readable" is checked through `recording_readable_v1`.
+- **The finished-call read v2 (`0196` G):** the API's history page reads `server_read_session_finished_calls_v2`. The
+  page now carries `recordingStatus`, `availableUntil` and `unavailableReason`, fail-closed to `UNAVAILABLE`.
+  - **Re-anchored, declared:** the conversation spec's repository test names v2.
+- **PROD-SEC-01 SEC-A:**
+  - The five routes are classified in the one route census (`AUTHENTICATED`; no new class), and the service carries
+    the same global rate limit (`HttpSecurityModule`).
+  - The census spec reads both applications. They share only the probe, `GET /health`.
+  - V-33's static check now reads route decorators, because the census names the routes as data.
+- **Deferred to step 5:** the phone's Replay media base URL (configuration, no secret) and `BUSY` under placement `NONE`.
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);
