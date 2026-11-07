@@ -24,6 +24,7 @@ import { endFixtureCall, fixtureCall, liveCallApplied } from './live-call-0189-a
 import { liveCallTurnsApplied } from './live-call-0190-substitutions.mjs';
 import { liveCallHalvesApplied } from './live-call-0191-substitutions.mjs';
 import { liveCallTextTurnApplied } from './live-call-0192-substitutions.mjs';
+import { transientMediaApplied } from './transient-media-0196-census.mjs';
 
 const rt = createPersonalReplayRuntime(process.env.DATABASE_URL);
 const { q, rows, asRole } = rt;
@@ -130,11 +131,12 @@ async function verifyCatalogue(report) {
     // S8B-05 CP1 re-anchor (migration 0189): and ten 0189 internals (verify-migration-0189).
     const expected = (await voiceNotesApplied(rows) ? 28 : 20) + (await qandeelVoiceApplied(rows) ? 6 : 0) + (await fastVoiceApplied(rows) ? 4 : 0)
       + (await liveCallApplied(rows) ? 10 : 0) + (await liveCallTurnsApplied(rows) ? 6 : 0) + (await liveCallHalvesApplied(rows) ? 8 : 0)
-      + (await liveCallTextTurnApplied(rows) ? 1 : 0);
+      + (await liveCallTextTurnApplied(rows) ? 1 : 0) + (await transientMediaApplied(rows) ? 9 : 0);
     // S8B-05 CP2 re-anchor (migration 0190): and six 0190 internals (verify-migration-0190).
     // S8B-05 CP3 re-anchor (migration 0191): and eight 0191 internals (verify-migration-0191).
     // S8B-05 CP4 re-anchor (migration 0192): and one 0192 internal (verify-migration-0192).
-    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186, six 0187, four 0188, ten 0189, six 0190, eight 0191 and one 0192 ones): ${expected}`);
+    // S8B-07 CP1-B re-anchor (migration 0196): and nine 0196 internals (verify-migration-0196).
+    assert.equal(n, expected, `C0 voice_private holds exactly the twenty 0183 functions (and the eight 0186, six 0187, four 0188, ten 0189, six 0190, eight 0191, one 0192 and nine 0196 ones): ${expected}`);
     const [{ closed }] = await rows(`SELECT count(*)::int closed FROM voice_private.voice_launch_capability_states
                                       WHERE feature_flag_state = 'DISABLED' AND launch_requirements_state = 'UNSATISFIED'`);
     assert.equal(closed, 4, 'C0 all four voice scopes are DISABLED');

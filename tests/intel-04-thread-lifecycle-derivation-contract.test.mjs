@@ -40,9 +40,12 @@ test('0194 is forward-only, followed only by 0195, and replaces exactly one pred
   const migrations = readdirSync(join(root, 'database/migrations')).filter((file) => file.endsWith('.sql')).sort();
   // RE-ANCHORED by S8B-07 CP1-A (was: 0194 is the last migration; the Product Owner's CP1-A authorization, a declared
   // re-anchor): exactly 0195, the original-audio source truth, follows 0194 and nothing else does.
-  assert.equal(migrations.at(-1), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
-  assert.equal(migrations.at(-2), M0194, '0194 is followed only by 0195');
-  assert.equal(migrations.at(-3), '0193_s8b_06_session_finished_calls_read_v1.sql', '0194 directly follows 0193');
+  // RE-ANCHORED by S8B-07 CP1-B (was: 0195 is the last migration; the Product Owner's CP1-B execution authorization, a
+  // declared re-anchor): exactly 0196, the transient media authority, follows 0195 and nothing else does (verify-migration-0196).
+  assert.equal(migrations.at(-1), '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
+  assert.equal(migrations.at(-2), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
+  assert.equal(migrations.at(-3), M0194, '0194 is followed only by 0195');
+  assert.equal(migrations.at(-4), '0193_s8b_06_session_finished_calls_read_v1.sql', '0194 directly follows 0193');
   const sql = read(`database/migrations/${M0194}`);
   const code = codeOnly(sql);
   assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);

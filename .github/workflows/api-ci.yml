@@ -1418,6 +1418,15 @@ jobs:
       # and a deletion. Rows only - no media byte, no gate opened, no provider.
       - name: Verify S8B-07 CP1-A original-audio source truth (0195) against real PostgreSQL
         run: npm run verify:s8b-07-replay-audio-source-truth:integration
+      # S8B-07 CP1-B: migration 0196 (the transient media authority) - retained call listening and original-audio Replay
+      # playback files: the command ledger (one row and one set per command, COMMAND_REUSED for another kind or subject), the
+      # R5.1 continuation (generation G + 1 below L, reuse when G covers the source, never more than two live generations,
+      # expires_at = least(created_at + 58 min, E), the PCM compare), the reads cut at the instant, the Replay-owned erasure
+      # ledger and its late marks, no start during a live call, the finished-call read v2 with a proven reason, the Replay
+      # pool role's limits, and 16 separate connections released together plus two 1000-round property tests. Rows only - no
+      # media byte, no gate opened, no provider.
+      - name: Verify S8B-07 CP1-B transient media authority (0196) against real PostgreSQL
+        run: npm run verify:s8b-07-transient-media:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
