@@ -407,6 +407,11 @@ still being written at its expiry is sealed and expired by the retention sweep; 
   destinations, no private video. **Approved** by the Product Owner (D-C1, record §10.9): a resource-bounded background
   worker inside the existing architecture, which never competes with the latency of live calls; no second Replay engine
   and no microservice. S8B-07 implements and proves it.
+- *PO decision INFRA-07 (2026-11-07; the [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §12):*
+  - every Replay operation runs on a Replay Media Compute Pool physically separate from the Live Voice Compute Pool;
+  - there is no fallback to a live host;
+  - the mandatory acceptance is First Audio under concurrent Replay and render load.
+  - It tightens the placement above, and does not change the formats.
 
 **9.3 The three destinations** (PO decision 6). They are independent and use I-06C's existing destination actions,
 authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
@@ -417,6 +422,10 @@ authority and `EXPORT_PRIVACY_SANITIZATION` (§46):
 | `SHARE_EXTERNALLY` | a transient rendered file, handed to the OS share sheet | the same; an external copy cannot be recalled (§31) |
 | `PUBLISH_TO_PUBLIC_WORLD` | a **Public Experience** with its own playable published media, bound through I-06C's `REPLAY_ARTIFACT` bridge (`0104`) | governed by Public World law (withdrawal, consent revocation, privacy, erasure); **the source's expiry does not withdraw it** (PO decision 7; CW2-05 §31) |
 
+- *Confirmed by the PO (INFRA-07-05, 2026-11-07):*
+  - the delivered or published final video has no automatic expiry because of time or the source's expiry;
+  - the transient files above stay processing files;
+  - no maximum Replay duration is set.
 - Distribution needs the same authorities as today, for example Shared participants' approvals for a Shared source
   (CW2-05 §22–§23). No new power is opened (PO decision 11).
 - **In Stage 8B,** all three are built and proven end to end against a disposable environment with every gate closed.

@@ -1,5 +1,50 @@
 # QANDEEL — Current State
 
+> **PRODUCT OWNER DECISION — 2026-11-07 / S8B-07 INFRA-07: Dedicated Replay Infrastructure & Future Credit Accounting. CONTRACT & PROJECT MAP UPDATE ONLY; NOT IMPLEMENTED; NO RESOURCE CREATED.** Full text: the [S8B-07 record §12](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md).
+>
+> - **(1) Separate compute.** All Replay work runs on a **Replay Media Compute Pool** physically separate from the **Live Voice Compute Pool**. That covers listening to a finished call, audio preparation and mixing, private Replay playback, video rendering and A/V sync, and export / distribution files.
+>   - The Live Voice pool keeps its resources, has absolute priority and hosts no Replay worker.
+>   - CPU affinity or a dedicated core on a live host is **not** sufficient.
+>   - **There is no fallback to Live Voice hosts:** insufficient Replay capacity defers or temporarily refuses Replay work.
+>   - Shared PostgreSQL, object storage, network, background queues and API resources must be isolated and proven.
+>   - Mandatory acceptance: First Audio and live reply speed hold under high, concurrent Replay + video-render load.
+> - **(2) Hosting.** GCP project `qandeel-replay` (QANDEEL Replay), created by the Product Owner, is the **proposed** destination. Cloud Run Jobs is a candidate for video rendering only. No Job, Service, account, API, container or deployment is created; the current voice project is unchanged.
+> - **(3) Timing.**
+>   - No Replay starts during a running call.
+>   - After the call, a Replay can be made while the original recording exists and is valid.
+>   - The original audio matches the map's historical image, on the existing time boundaries only; no per-word timing.
+>   - The final video needs A/V sync and device tests.
+>   - CP1-A Source Truth and Whole-Turn Closure are unchanged.
+> - **(4) Destinations.** `DOWNLOAD`, `SHARE_EXTERNALLY` and `PUBLISH_TO_PUBLIC_WORLD` are confirmed.
+>   - **No automatic expiry of the final video** because of time or the source's expiry, in any of them.
+>   - Processing files stay under their cleanup contract.
+>   - No maximum Replay duration is set.
+> - **(5) Stage 9.** Replay joins the **unified Credit balance** (below), resource-metered, with reservation then settlement and no final charge for a failed, undelivered job.
+>   - **No hard spending cap** that stops service for customers with credit; alerts only.
+>   - Concurrency and queue limits protect resources and are not a financial cap.
+>   - **No price or Credit rate is set.**
+>
+> - **(6) PO approvals, 2026-11-07 (status `S8B-07 INFRA-07 — PO DECISIONS RECORDED — READY FOR FINAL CONTRACT REVIEW`; record §12.4):**
+>   - P-1 every Replay route, control and streaming runs on the Replay pool; the Live API keeps only the finished-call read.
+>   - P-2 V-24a before the CP1-B merge; V-24b on two independent environments before any hosted Replay or any gate.
+>   - P-3 the Replay DB role's limits, as initial values.
+>   - **P-4, with change:** no Replay watchdog on the Live API or on call servers. There is now an independent monitor that detects a dead Replay pool and alerts.
+>   - P-5 per-job resource data.
+>   - P-6 / P-7 confirmed.
+>   - A new mandatory **Cloud Run HTTP Range streaming test** (V-35).
+>   - Not approved at that point: CA-07B-1's final text, the Copy Gate R1.1, the D-06.7 values and their proof, the D-05.7 sample, the CP1-B start. *(Approved in (7) below, except the CP1-B start.)*
+>
+> - **(7) CP1-B final contract approvals, 2026-11-07 (record §12.5). Status: `S8B-07 CP1-B — FINAL CONTRACT APPROVALS RECORDED`.**
+>   - **CA-07B-1 APPROVED AS FINAL,** with continuation across the 58-min cap (WP0 contract §20, as corrected in R5.1) and every added test;
+>   - **HC-1 … HC-5 APPROVED** as binding acceptance criteria, not as passed tests;
+>   - **the Copy Gate R1.1 APPROVED:** 28 rows, CL-11 without its final full stop in both languages, and the operational mapping;
+>   - **D-06.7 APPROVED** as a binding performance criterion; its proof is still required;
+>   - **D-05.7 option (b) APPROVED:** no sound asset now; FI 020 in the local log;
+>   - **G-6 CONFIRMED AS WRITTEN,** including `readable_for_ms`.
+>   - **CP1-B is not authorized;** migration `0196` is not created; no merge without «ادمج». K-9 stays with CP1-B step 0.
+>
+> No migration, code, gate, hosted deployment, paid call or merge is authorized by this entry.
+
 > **S8B-07 CP1-A — ORIGINAL AUDIO SOURCE TRUTH — 2026-11-05 (current task; status only, no new task authority):** **S8B-07 CP1-A DELIVERED — NOT CLOSED** on a Draft PR from `s8b/s8b-07-cp1a` (from `main` at `e9311ca1`, INTEL-04 merged through [PR #382](https://github.com/allamqandeel/qandeel/pull/382)); **not merged; merge only on «ادمج»; CP1-B not started and not authorized** ([S8B-07 record](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)). Under the Product Owner's decisions D-01(a), D-03 (Selection-Exact Audio, L-1 … L-8, Whole-Turn Closure), D-04 (Render Contract V2 + the Source Window Binding Digest; V1 unchanged) and D-08(a) (availability derived live; the I-06D evidence written only at the creator's reconciliation, no automatic event), one forward-only migration, `0195` (**not hosted**), adds the source-window resolver, the binding, `replay_render_contract_digest_v2`, the V2 path of the contract builder, V2 truth currency, original-audio source currency, the recording lock and the service-role plan read `resolve_replay_version_audio_plan_v1`; no media byte, no mobile code, no wire word, no gate opened. Proven locally on PostgreSQL 17 (verify-0195 16 / 16 with the four mandatory corrections; the Replay and Voice verifiers green with four declared re-anchors); exact-head CI not yet run. **Both stop items were resolved by the Product Owner under option (a)** (record §7, §9): a declared S7-04 re-anchor admits exactly `0195`, and the API version decoder admits exactly the V1 and V2 render contracts (S7-03 / S7-04 hash pins re-anchored as declared; the wire unchanged; the phone still refuses V2). `QAN-BL-NAV-03` (the Shared / Public Replay Surface) admitted `UNASSIGNED`.
 
 > *(Pre-merge snapshot; INTEL-04 merged through PR #382 as `e9311ca1`:)* **INTEL-04 — THREAD LIFECYCLE DERIVATION CORRECTION — THE CLOSING CHANGE — 2026-11-04 (as written then; status only, no new task authority):** **INTEL-04 is CLOSED / READY FOR PO MERGE DECISION** on its Draft PR from `intel/intel-04-thread-lifecycle-derivation` (from `main` at `8e590234`, S8B-06 CP3 merged through [PR #381](https://github.com/allamqandeel/qandeel/pull/381)); **not merged; merge only on «ادمج»** ([INTEL-04 record](docs/e2e/QANDEEL_INTEL_04_THREAD_LIFECYCLE_DERIVATION_CORRECTION_RECORD_v1.md)). **The root cause is proven:** `0070`'s `conversation_thread_cu_relation_v1` read `attention_on` with `b.bound_sp < cu.session_position`, so the CU that establishes (or binds) a Thread was away from it; one departure derived `SUSTAINED_DEPARTURE`, the reducer's canonical payload was refused (`THREAD_LIFECYCLE_TRANSITIONS_NOT_CANONICAL`), a call's analysis PARKED and a written exchange's analysis was lost. **Migration `0194`** (forward-only; **not hosted**; next `0195`) re-creates that one function with exactly that predicate made `<=`; every other strict reading is kept on purpose, `0070` is byte-identical, nothing is backfilled or reprocessed. Proven on real PostgreSQL (T1 – T6, the integrated written and call proof, a PARKED item completing on its own retry after `0194`). **Backlog:** `QAN-BL-INTEL-04` tombstoned; `QAN-BL-INTEL-05` admitted (`MEDIUM`, `UNASSIGNED`: a deterministic refusal treated as transient). **PO Review R1 (2026-11-04):** the integrated proof's T5 Living Map checks are strengthened (the head, the expected Thread by id in the projection, the exact Live Focus events, no refusal or loss: FIXED 22/22, PARK → RESUME 11/11; no production change); `QAN-BL-INTEL-05` stays separate and needs a decision and handling before the live analysis launches. No graphics, map, Voice Gate or provider change; every voice gate stays `DISABLED`.

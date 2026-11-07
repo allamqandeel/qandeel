@@ -263,3 +263,115 @@ pre-check. No paid service, provider call, hosted database or device was used.
 - Any gate opened; any retention written; any provider or paid call; any hosted deployment.
 - Not reopened: S8B-06 or INTEL-04. Not merged into this task: INTEL-05 or GCR.
 - `finalize_replay_version_v1`, `prepare_replay_preview_v1`, `0104` and every I-06C function are not replaced.
+
+## 12. The Product Owner's INFRA-07 decision (2026-11-07): Dedicated Replay Infrastructure & Future Credit Accounting
+
+**What this section is.** A contract and project-map update only. It is not CP1-B and does not implement or authorize
+anything:
+- no migration, code, gate change, hosted deployment, paid call, Google Cloud resource or merge.
+
+The analysis, the Delta and the open decisions are in the WP0 package,
+`E:\QANDEEL_REPORTS\S8B-07\S8B-07_DEDICATED_REPLAY_INFRASTRUCTURE_UPDATE.md`. That file is outside the repository.
+
+### 12.1 The decisions
+
+| ID | Decision |
+|---|---|
+| INFRA-07-01 | Every Replay operation runs on a **Replay Media Compute Pool**, physically independent of the **Live Voice Compute Pool**: listening to a finished call, preparing and mixing audio, private Replay playback, video rendering and A/V sync, export / distribution files. The Live Voice pool keeps its resources, has absolute priority and hosts no Replay worker. The Replay pool owns its queue and cannot borrow live-call resources. Same-host separation (processes, CPU affinity, a dedicated core) is **not** sufficient. Shared PostgreSQL, object storage, network, background queues and API resources are isolated and proven. Two GCP projects alone prove nothing. **Mandatory acceptance:** under high, concurrent Replay + video-render load, First Audio and live reply speed stay within the approved limits. Insufficient Replay resources → deferred or temporarily refused; **never** Live Voice resources |
+| INFRA-07-02 | GCP project `qandeel-replay` ("QANDEEL Replay"; billing "My Billing Account"; Cloud Run Jobs available, none created) is the **proposed** destination. Cloud Run Jobs is a candidate for video rendering, not a final choice for every workload. The current voice project is unchanged |
+| INFRA-07-03 | The Dedicated Replay Compute Pool is an **architectural condition**, with no fallback to Live Voice hosts. It supersedes the WP0 proposal of CPU affinity or a dedicated core on the same host (A-5) |
+| INFRA-07-04 | No Replay starts during a running call. After the call, a Replay can be made while the original recording exists and is valid. The original audio matches the map's historical image. The established time boundaries are used, with no per-word timing. The final video needs A/V sync and device playback tests. CP1-A Source Truth and Whole-Turn Closure are unchanged |
+| INFRA-07-05 | Confirmed, not a change: the three destinations (§9.3 of the [Voice Runtime contract](../voice-runtime-v1.md)). **No automatic expiry of the final video** because of time or the source's expiry. The phone copy is the user's; the external copy also follows the receiving platform, and QANDEEL claims no control after delivery; the published copy follows Public World privacy, withdrawal, deletion and permissions. Processing files are not the final video and stay under their cleanup contract. No maximum Replay duration is set: it needs its own decision from CP2's measurements and cost |
+| INFRA-07-06 | Stage 9 (future planning): Replay joins the unified Credit balance ([Project Map](../../QANDEEL_PROJECT_MAP.md), unified credits). Not implemented, and no price set |
+
+### 12.2 How the earlier texts read with it
+
+- **D-C1** (S8B-01 record §10.9) and §9.2 of the Voice Runtime contract: "a resource-bounded background worker inside the
+  existing architecture". INFRA-07-01 **tightens** "runs apart from the Voice Gateway's process" into separate compute
+  pools. One codebase with deployment roles, one database and one PostgreSQL job table keep "no second Replay engine and
+  no microservice". No Controlled Amendment is needed.
+- **Hosting:** "Backend V1: Railway" is a recommended baseline, not frozen (the Foundation Freeze lists deployment sizing as
+  configurable). A Replay pool on GCP is a deviation recorded for `HOSTED-DEPLOY-01`.
+- **Confirmed by the Product Owner on 2026-11-07 (§12.4):**
+  - (P-6) a delivery not completed when its source expires fails (PO decision 10), so only a delivered or published video
+    is the never-expiring final video;
+  - (P-7) GCR-01's "bounded spending" read as planned, credit-backed, monitored spend.
+- **CP1-B's own WP0 decisions P-1 … P-5** are in the WP0 package, and were decided on 2026-11-07 (§12.4):
+  - the Replay Media Service;
+  - V-24a / V-24b;
+  - the Replay DB role;
+  - the watchdog;
+  - the resource columns.
+
+### 12.3 Backlog
+
+Nothing is admitted or tombstoned by this documentation change. The hosted two-pool proof (V-24b) and the GCP resources
+are residue for CP1-B's closing change to admit under BG-08, with `HOSTED-DEPLOY-01` / GCR-01 as candidate owners.
+
+### 12.4 The Product Owner's approvals (2026-11-07)
+
+Status: `S8B-07 INFRA-07 — PO DECISIONS RECORDED — READY FOR FINAL CONTRACT REVIEW`. Documentation and decision recording
+only.
+
+| # | Decision | Recorded as |
+|---|---|---|
+| P-1 | Every Replay media, control and streaming route runs on the Replay Media Compute Pool. The Live API keeps only the finished-call read | **APPROVED** |
+| P-2 | V-24a before the CP1-B merge. V-24b, true isolation on two independent environments, before any hosted Replay deployment or any gate opening. It is re-run with video-render load at CP2-A | **APPROVED** |
+| P-3 | The Replay PostgreSQL role: `CONNECTION LIMIT` 10, `statement_timeout` 5 s, `lock_timeout` 1 s, `idle_in_transaction_session_timeout` 10 s | **APPROVED AS INITIAL VALUES**, reviewed by measurement; not permanent growth limits |
+| P-4 | No Replay violation watchdog in the Live API or on call servers. Monitoring is an independent party that uses no Live Voice resource, detects the Replay pool's own failure, raises an alert, and does not depend only on a worker that may stop | **APPROVED WITH CHANGE** |
+| P-5 | Content-free resource data per Replay job for Stage 9 | **APPROVED** |
+| P-6 | A delivery not completed before its source expires fails. A delivered or published final video does not expire because the source did; privacy, deletion and withdrawal still apply | **CONFIRMED** |
+| P-7 | A disciplined economy is cost planning, measurement, Credits and monitoring, not a hard spending cap that stops Replay for customers with credit | **CONFIRMED** |
+| new | A mandatory Cloud Run HTTP Range streaming test, V-35:<br>- Range resume with no lost and no duplicated audio;<br>- the end of a request, a network loss and a reconnect;<br>- no single non-resumable request for a whole recording;<br>- authorization on every new request;<br>- the stop at the source's end (V-32);<br>- no unauthorized audio copy on the phone.<br>A minimum instance count is not treated as a fix for the request timeout | **RECORDED** |
+
+**Binding separation:**
+- Live Voice priority is absolute.
+- No Replay worker, video rendering or Replay monitoring runs on a call server.
+- There is no fallback.
+- PostgreSQL, the object store, the network and the queues are protected.
+- `qandeel-replay` exists and is billed, with no Job.
+- No hosted resource is created by this decision.
+
+**Consequences in the WP0 package** (outside the repository; the Delta is in
+`E:\QANDEEL_REPORTS\S8B-07\S8B-07_DEDICATED_REPLAY_INFRASTRUCTURE_UPDATE.md` §14):
+- the same-host DEDICATED / SHARED modes and live-call yield are withdrawn;
+- transient keys use a Replay-owned erasure ledger, so the shared `media_erasure_queue` and its CHECK are untouched;
+- a scheduled `REPLAY_WATCHDOG` deployment and managed alerting replace the API-side watchdog;
+- the tests V-35 (streaming) and V-36 (independent monitoring) are added.
+
+**Not approved at that point** *(approved in §12.5, except the CP1-B start)*:
+- CA-07B-1's final text;
+- the Copy Gate R1.1;
+- the D-06.7 final values and their proof;
+- the D-05.7 sample;
+- the CP1-B implementation start.
+
+Nothing is admitted or tombstoned here. §12.3 stands, and the hosted alert policies join the V-24b residue it names.
+
+### 12.5 CP1-B final contract approvals (Product Owner, 2026-11-07)
+
+**Status:** `S8B-07 CP1-B — FINAL CONTRACT APPROVALS RECORDED`.
+- After the final review of R5.1, the Product Owner approved the six decisions below. They are recorded as approved,
+  with no edit.
+- The full texts are in the WP0 package, outside the repository:
+  - `E:\QANDEEL_REPORTS\S8B-07\CP1-B\S8B-07_CP1-B_FINAL_PO_APPROVAL_SHEET.md` (§0 records the approvals);
+  - the contract `CP1-B_MEDIA_RUNTIME_CONTRACT.md` §20;
+  - the copy `CP1-B_COPY_GATE_R1.1_FINAL.md`.
+
+| # | Decision | Status |
+|---|---|---|
+| 1 | **CA-07B-1** (sheet §2.3 / §2.4, with §20 in sheet §2.6 as corrected in R5.1, and every added test: V-27 (h), V-31 (l) … (t) including s1 / s2 / s3, V-35 (8) … (10)):<br>- readability ends with the source, absolutely;<br>- the in-stream cut follows A-2;<br>- physical deletion is asynchronous, due at the first end, with a 120 s **target** under healthy operation, so a **target** within 1 hour of creation, not a guarantee;<br>- misses are recorded and retried;<br>- continuation across the 58-min cap, on at most two live generations, enforced by the single write path;<br>- no extension of the source's retention | **APPROVED AS FINAL** |
+| 2 | **HC-1 … HC-5:** acceptance criteria for the hand-over (no lost samples; no audible stop) | **APPROVED** as binding criteria, **not** as passed tests |
+| 3 | **Copy Gate R1.1:**<br>- all 28 rows;<br>- CL-11 without its final full stop: «تسجيل هذه المكالمة غير متاح» / "This call's recording isn't available";<br>- the operational mapping (`NONE`, `LIVE_CALL_ACTIVE`, Range resume, continuation) onto existing rows, with no new row | **APPROVED** |
+| 4 | **D-06.7:**<br>- First Audio ≤ +25 ms p50 / ≤ +50 ms p95 against a matched baseline, as medians of ≥ 3 interleaved repetitions;<br>- V-24a before the CP1-B merge;<br>- V-24b on two independent compute environments before any hosted Replay or any gate, re-run at CP2-A | **APPROVED** as a binding performance criterion; its proof is still required |
+| 5 | **D-05.7 option (b):**<br>- no new UI sound asset now;<br>- the visual frame, the screen-reader announcement and the pacing line are kept;<br>- the future sound improvement is FI 020 in the local Future Improvements log (recording is not an authorization) | **APPROVED** |
+| 6 | **G-6:** the (a) recommendations of D-02 … D-02.4 (with `readable_for_ms`), D-05.1 … D-05.6, D-06.1 and D-06.3 … D-06.6, and the later architectural decisions | **CONFIRMED AS WRITTEN** |
+
+**Consistency corrections applied in the WP0 package (R5.1):** K-1 … K-8, K-10, K-11 (sheet §6.2). K-9 (the CP1-A
+post-merge wording of the locators) stays with CP1-B step 0, as the approved execution order sets.
+
+**Not authorized by this section:**
+- CP1-B, any code, and migration `0196`;
+- any Google Cloud or other hosted resource;
+- any gate change;
+- any merge without the Product Owner's «ادمج».
