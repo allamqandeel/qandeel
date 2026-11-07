@@ -571,7 +571,9 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Backpressure (D-06.4): a set is one job; not a financial cap (P-7).
+  -- Backpressure (D-06.4): a set is one job; not a financial cap (P-7). Admission is serialized (found by V-24a): two
+  -- requests that each counted 31 pending sets must not both add one, so the bounds hold under concurrency too.
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('qandeel.transient-admission.v1', 0));
   IF (SELECT count(DISTINCT a.set_id) FROM voice_private.transient_media_artifacts a
        WHERE a.user_id = p_user_id AND a.job_state IN ('PENDING', 'RUNNING')) >= v_policy.active_sets_per_user
      OR (SELECT count(DISTINCT a.set_id) FROM voice_private.transient_media_artifacts a

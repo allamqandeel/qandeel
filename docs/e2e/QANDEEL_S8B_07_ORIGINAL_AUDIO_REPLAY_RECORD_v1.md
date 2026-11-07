@@ -417,7 +417,7 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 | 1 | Migration `0196_s8b_07_transient_media_v1.sql` and its verifier on a disposable PostgreSQL 17 | done locally: `verify-migration-0196.mjs` 31/31 on a disposable PG17, earlier verifiers re-anchored (each re-anchor named); not yet run in CI |
 | 2 | Media worker, reaper and watchdog (`REPLAY_MEDIA` / `REPLAY_WATCHDOG`) | done locally: `apps/api/src/replay-media/` (API jest 344 suites green), `prove-0196-media-worker.mjs` 21/21 on a disposable PG17 with the pinned ffmpeg 9.0.2 and the in-memory store (60-min listening file 34.8 s against the 128 s D-06.5 cap); the rclone S3 run and the BtbN pin run only in CI; not yet run in CI |
 | 3 | Replay Media Service (the five routes, bounded Range responses) | done locally (details below): `replay-media-service.main.ts` under `REPLAY_MEDIA` / `REPLAY_POOL` only; API jest green; `prove-0196-media-service.mjs` 15/15 on a disposable PG17 with the in-memory store; `verify-migration-0196.mjs` 32/32 after the step-3 amendment; the rclone S3 run and the PostgREST proof (`prove-0185`) run only in CI; not yet run in CI |
-| 4 | V-24a First Audio isolation (not a proof of pool separation) | not started |
+| 4 | V-24a First Audio isolation (not a proof of pool separation) | done locally (details below): `prove-0196-first-audio-isolation.mjs` on a disposable PG17 with the in-memory store, 3 interleaved repetitions per mode, D-06.7 PASS for M0 and M1_SHIPPED in each full run; `verify-migration-0196.mjs` 33/33 after the step-4 amendment; the rclone S3 run (with the store upload probe) runs only in CI; not yet run in CI. **Not V-24b.** |
 | 5 | Mobile | not started |
 | 6 | Device proof (HONOR and the iOS Simulator) | not started |
 
@@ -466,6 +466,116 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
   - The census spec reads both applications. They share only the probe, `GET /health`.
   - V-33's static check now reads route decorators, because the census names the routes as data.
 - **Deferred to step 5:** the phone's Replay media base URL (configuration, no secret) and `BUSY` under placement `NONE`.
+
+**Step 4, V-24a (INFRA-07 P-2, D-06.7) — NOT A PROOF OF POOL SEPARATION:**
+- **What it is.** `database/prove-0196-first-audio-isolation.mjs` runs the approved S8B-05 CP3 harness
+  (`apps/api/scripts/s8b-05-cp3-live-analysis-proof.ts`, fake providers with their seeded latencies, 68 exchanges per
+  mode) for M0 and M1_SHIPPED, in the order B1 L1 B2 L2 B3 L3: a baseline with no Replay load, then the same harness
+  under the Replay load, three times. Every run in one session on one machine, with one database. It is a local
+  isolation measurement on a shared machine; it is **not** V-24b, and not a proof that the pools are separate hosts.
+- **The load (L runs).** A separate process, `prove-0196-first-audio-isolation-replay-load.mjs`, started behind the
+  shipped guard `assertReplayPoolProcess('REPLAY_MEDIA')` and connected as `qandeel_replay_media` itself, with its whole
+  CONNECTION LIMIT of 10 (two service instances 3 + 2, two workers 2 + 2, the watchdog 1):
+  - two Replay Media Service instances (the shipped module, the global rate limit on, bound to 127.0.0.1);
+  - two media workers at the D-06.1 maximum (concurrency 2 each) with the pinned ffmpeg 9.0.2, the reaper, and the
+    watchdog every 10 s (deployed: 60 s);
+  - 38 simulated people, each its own loopback address and two request loops on two subjects of their own (the D-06.4
+    per-person bound): sealed 10-minute and 60-minute calls and Replays of a 6-minute call. Each loop requests, polls,
+    reads the whole file in 1 – 3 Range responses at full speed, then DELETEs. That is 76 sets wanted for 32 queue
+    places, so the queue stays at its bound and `BUSY` is answered. The loops retry `BUSY` and poll every 250 ms, far
+    above a phone, which shows CL-05 on `BUSY` and checks status every 10 s while playing (contract §15.2);
+  - one listener at natural speed (64 KiB/s) on a 60-minute file, cut and resumed with Range every 5 s.
+  - Every path ran: preparation, mixing, streaming, Range, the definers, the store and the erasure.
+- **Saturation is asserted, or nothing is compared (V24A-1).** Each L run: `BUSY` > 0, 24 ≤ pending ≤ 32, workers
+  busy at their bound ≥ 70 % of samples, ≥ 8 Replay sessions, the watchdog ran, erasures happened; each B run: no
+  Replay session.
+- **Placement and no fallback (V24A-2, V24A-3).** Sampled every 500 ms from `pg_stat_activity`: at most 10 Replay
+  sessions, no unnamed and no foreign-named session of the Replay role, no other role calling a transient definer, and
+  no live session waiting on a lock held by a Replay session. After the last L run the pool is killed with SIGKILL and
+  work pending: 15 s later no Replay session exists and no job changed state or lease (no other process took it).
+- **The rate limit and the 10-minute cap (V24A-4, step 4 point 4).** The natural listener's response is cut every 5 s
+  and resumed with Range from the exact byte, as at each 10-minute response cap (the cap itself is unchanged), so a
+  resume is measured under the load. Asserted in every L run:
+  - no 429 and no refusal for the natural listener;
+  - no phone's read of a READY file refused (every read and Range part answered 200 / 206; counted per route, so a
+    refused read cannot hide among admission's `BUSY`).
+
+  The rate limit is per client address (a phone is one address). The 10-minute cap ends a response, not the playback,
+  and the step-3 proof already shows the byte-identical resume.
+- **Results of the final run (local-r4, on the committed code; Windows 11, i7-11850H, 16 logical CPUs, 31 GiB, PG17, the
+  in-memory store).** Every run in ms; the verdict compares the medians of three:
+
+  | Mode | | rep 1 | rep 2 | rep 3 | median | Δ (bound) | verdict |
+  |---|---|---|---|---|---|---|---|
+  | M0 | baseline p50 | 530 | 535 | 530 | 530 | | |
+  | M0 | load p50 | 524 | 527 | 535 | 527 | −3 (≤ +25) | PASS |
+  | M0 | baseline p95 | 671 | 668 | 670 | 670 | | |
+  | M0 | load p95 | 658 | 671 | 669 | 669 | −1 (≤ +50) | PASS |
+  | M1_SHIPPED | baseline p50 | 595 | 589 | 601 | 595 | | |
+  | M1_SHIPPED | load p50 | 589 | 607 | 608 | 607 | +12 (≤ +25) | PASS |
+  | M1_SHIPPED | baseline p95 | 795 | 809 | 811 | 809 | | |
+  | M1_SHIPPED | load p95 | 775 | 818 | 792 | 792 | −17 (≤ +50) | PASS |
+
+  Absolute targets: worst p50 535 / 608 ms (≤ 1.5 s), worst p95 671 / 818 ms (≤ 2.5 s), worst max 687 / 911 ms
+  (< 3 s), all PASS. The isolation result (the Δ) and the absolute reply speed are separate verdicts. The absolute one
+  is reached with the harness's fake providers, so it says nothing about real provider latency.
+
+  Two earlier full runs, with the generator before its fixes below, also passed D-06.7: local-r1 M0 Δ 0 / +1,
+  M1_SHIPPED Δ −2 / −5; local-r2 M0 Δ +5 / +2, M1_SHIPPED Δ 0 / −31.
+- **The load in the final run (each L run, about two minutes):**
+  - Requests: 3 801 / 3 769 / 3 763, of which `BUSY` 3 720 / 3 679 / 3 649.
+  - Pending sets: max 32 in every run. Workers busy at their bound in 95 – 97 % of samples. Replay sessions: 10 of 10.
+  - Files made: 53 / 58 / 41 (mixing wall time 368 – 578 s per run across four lanes). Erased: 46 / 54 / 43.
+  - Streamed: 111 / 128 / 122 MB in 89 / 114 / 84 reads and Range parts, every one answered 200 / 206.
+  - 429: 0. The natural listener: 20 / 20 / 19 resumes, 0 refusals.
+  - CPU mean ≈ 87 % (max 98 – 99 %) against ≈ 10 – 11 % in the baselines. Load process RSS 232 – 247 MiB; its event
+    loop's delay p99 21 – 23 ms.
+  - No fallback: 32 sets pending when the pool was killed; 15 s later 0 Replay sessions and 0 jobs changed.
+- **What the load cost the call path (reported, not hidden).** The call path's database commands (commit, Safety,
+  begin, activate, end) rose in p95 from 23 – 27 ms in the baselines to 41 – 49 ms under load, with max 91 – 136 ms
+  against 47 – 73 ms. Single statements did not move (p95 9 – 24 ms against 13 – 18 ms). No live session waited on a
+  Replay lock. The only live lock waits were live-to-live advisory waits (`begin_call`,
+  `acquire_background_permit`). The cause is CPU scheduling on one shared machine. First Audio did not move beyond the
+  margin.
+- **What the storm cost the Replay service itself (reported; no contract bound applies; cause not isolated).**
+  - **What was seen.** Under a `BUSY` storm of about 30 requests a second, every route answered slowly, cheap status
+    polls included: first byte p50 0.6 – 0.9 s, p95 1.7 – 2.0 s, max 2.0 – 4.4 s. The natural listener's resume first
+    byte was p50 545 – 762 ms, max 1 060 ms. In the earlier runs it was p50 ≈ 22 ms; there, a person's two loops
+    shared one set, and the storm was about half as large.
+  - **What was ruled out, by a diagnostic trial** (one repetition, the same code, a sampler of the Replay role's
+    sessions every 100 ms, ≈ 8 700 session samples):
+    - the admission lock: 2 samples waited on it;
+    - the database pool: all five service connections were busy at once in 7 % of samples, and the sessions were
+      mostly idle;
+    - the load process's event loop: its delay p99 was ≤ 23 ms.
+  - **Where it sits, then:** outside PostgreSQL, in the one load process that hosts both services, the auth gateway,
+    76 client loops and the workers' orchestration, on a machine at 87 – 99 % CPU. It was not isolated further.
+  - The contract sets no bound for a Replay read's first byte. A resume at a 10-minute cap is no audible stop while
+    the player's buffer leads, which is the phone's part (step 5). A phone does not retry `BUSY` itself. The service's
+    own latency under its pool's own CPUs belongs to V-24b.
+- **Found by V-24a and fixed (forward, before any merge or hosted apply):** `0196`'s admission let two requests that
+  each counted 31 pending sets both add one (33 observed against the bound of 32).
+  `server_request_transient_media_v1` now takes one transaction advisory lock
+  (`qandeel.transient-admission.v1`) before it counts. A new verify-0196 scenario, V31u, proves it: one person's 16
+  parallel requests leave 2 active sets; 16 people against 31 pending sets admit exactly one. The scenario fails on the
+  old `0196`. C1c is narrowed, declared: exactly this one advisory key, and no other advisory or table lock.
+- **The proof's own faults, found and fixed before the final run (no criterion changed):**
+  - BUSY was never reached at first, so the phones were raised to 38 (76 loops for 32 places).
+  - A Range cut was counted as status 0, so no resume was recorded; the client now keeps the response status.
+  - The natural listener now starts first, so its 60-minute file is made before the queue fills.
+  - A connecting session (state `NULL`, no name yet) was taken for an unnamed Replay session; it is counted apart.
+  - The harness's own teardown, which deletes its people's rows from every table with a `user_id`, was taken for a
+    foreign transient session. Now only a call of a transient definer counts.
+  - A person's two loops asked for the same subject, so they shared one set (`0196` (b)), and one loop's release cut
+    the other's read with 404. That is the contract working; no phone plays one recording in two players. Each loop
+    now has a subject of its own, and refused reads are counted per route and asserted to be none.
+- **The harness, additive and report-only (declared):** a mode filter (`S8B05_CP3_MODES`), skipping its reliability
+  blocks when filtered; the raw First Audio samples; a timer around the call path's SQL. Nothing it measures or
+  decides changed, which `tests/s8b-07-cp1b-first-audio-isolation-contract.test.mjs` pins.
+- **CI:** the contract test, and the proof once in the rclone step (`REPLAY_PROOF_STORE=s3`). There it adds the store
+  upload probe: the call writer's own `S3PrivateAudioObjectStore`, putting to the same store under the load.
+- **Not proven here:** V-24b (on the hosted pools), V-35b and the hosted alert policies stay pre-deployment conditions
+  (HOSTED-DEPLOY-01). The CI run (4 vCPU, rclone S3) has not happened yet.
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);

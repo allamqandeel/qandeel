@@ -263,6 +263,7 @@ jobs:
       - {name: "Verify INTEL-04 Thread lifecycle derivation contract (0070 byte-identical; 0194 forward-only, one function, exactly the attention_on predicate made bound_sp <= cu.session_position and every other strict reading kept; no write, no queue reset, no grant; the verifier and the integrated proof wired after the migrations; no graphics, no provider; the record and QAN-BL-INTEL-04 closed)", run: npm run test:intel-04-thread-lifecycle-derivation-contract}
       - {name: "Verify S8B-07 CP1-B media worker contract (the BtbN ffmpeg 9.0.2 LGPL pin sha256-checked, the proof wired with the in-memory store and with rclone S3, each entry point refusing every role but its own, the Replay role directly with pg pinned, sources read-only and processing files under voice-transient/ only, the API key rule unchanged)", run: npm run test:s8b-07-cp1b-media-worker-contract}
       - {name: "Verify S8B-07 CP1-B Replay Media Service contract (REPLAY_MEDIA on the Replay pool only, the five routes behind the shipped bearer guard, no-store on every answer, the 5 s / 2 s re-check, destroy never end, the 10 min cap, F-1 NOTE only, the proof wired with the in-memory store and with rclone S3)", run: npm run test:s8b-07-cp1b-media-service-contract}
+      - {name: "Verify S8B-07 CP1-B V-24a First Audio isolation contract (D-06.7 +25 / +50 ms over medians of at least 3 interleaved repetitions for M0 and M1_SHIPPED, the S8B-05 CP3 harness unchanged, a separate Replay pool process as the Replay role at every bound, not a proof of pool separation, the 0196 admission lock, wired in the rclone step)", run: npm run test:s8b-07-cp1b-first-audio-isolation-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1516,6 +1517,12 @@ jobs:
           REPLAY_PROOF_STORE=s3 npm run --silent prove:s8b-07-media-worker:integration || { tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
           # S8B-07 CP1-B step 3: the Replay Media Service proof again, every file read through the S3 adapter's ranged GET.
           REPLAY_PROOF_STORE=s3 npm run --silent prove:s8b-07-media-service:integration || { tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
+          # S8B-07 CP1-B step 4: V-24a, First Audio isolation (D-06.7) - the S8B-05 CP3 live-call harness (M0 and M1_SHIPPED,
+          # unchanged, fake providers) in three interleaved baseline / load repetitions, the load being a separate Replay pool
+          # process as the Replay role saturating every Replay path at its bounds, its S3 adapter and the call writer's store
+          # client against this rclone server. NOT a proof of pool separation: this runner's 4 vCPUs are shared (V-24b, on two
+          # separate pools, comes before any hosted Replay or any gate).
+          REPLAY_PROOF_STORE=s3 npm run --silent prove:s8b-07-first-audio-isolation:integration || { tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
           declare -A release_sha256=(
             [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
             [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279

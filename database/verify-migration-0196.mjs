@@ -18,7 +18,8 @@
 //       V34 no start during a live call; V36 the content-free health and the heartbeats; C-B4 the job reads only the
 //       plan's run and only intersecting segments; the map carries no recording
 //   R   on COMMITTED fixtures, separate connections released together by a lock barrier: V-31 b, c, d, e (race), l, m,
-//       n, q, r2; the property tests p and t (1000 rounds each); V-13 the completion and the owner's deletion serialize
+//       n, q, r2, u (the D-06.4 bounds under concurrency, found by V-24a); the property tests p and t (1000 rounds each);
+//       V-13 the completion and the owner's deletion serialize
 //
 // Every scenario but R runs inside one transaction that is rolled back; R commits its fixtures and removes them
 // (session_replication_role = replica, fixture surgery only). No media byte exists anywhere: objects are rows only.
@@ -395,8 +396,15 @@ async function verifyCatalogue(report) {
     assert.deepEqual(await rt.resultColumns(F.READ), ['storage_key', 'byte_size', 'duration_ms', 'serve_until', 'db_now']);
     const src = (await rows(`SELECT string_agg(p.prosrc, E'\\n') s FROM pg_proc p
                               WHERE p.proname ~ 'transient' OR p.proname = 'server_read_session_finished_calls_v2'`))[0].s;
-    assert.doesNotMatch(src, /retention_expires_at\s*=|UPDATE voice_private\.recordings|media_erasure_queue|pg_advisory|LOCK TABLE|\bEXECUTE\s/u,
-      'V-14: nothing writes a retention; nothing touches the shared queue; no advisory or table lock; no dynamic SQL');
+    // One advisory lock only: the request's admission (V31u), on a key of its own. No other advisory or table lock, so no
+    // Replay definer can wait on, or hold, a lock the live call path takes (its keys are per person, `qandeel.live-*`).
+    const ADMISSION = "pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('qandeel.transient-admission.v1', 0))";
+    assert.equal(src.split(ADMISSION).length - 1, 1, 'exactly one admission lock, in the request');
+    assert.doesNotMatch(src.split(ADMISSION).join(''), /retention_expires_at\s*=|UPDATE voice_private\.recordings|media_erasure_queue|pg_advisory|LOCK TABLE|\bEXECUTE\s/u,
+      'V-14: nothing writes a retention; nothing touches the shared queue; no other advisory or table lock; no dynamic SQL');
+    const [{ elsewhere }] = await rows(`SELECT count(*)::int AS elsewhere FROM pg_proc p
+                                         WHERE p.prosrc LIKE '%qandeel.transient-admission%' AND p.proname <> 'server_request_transient_media_v1'`);
+    assert.equal(elsewhere, 0, 'the admission key is the request\'s alone');
     const replayFns = (await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                                     WHERE n.nspname = 'public' AND p.proname ~ 'transient|finished_calls_v2' AND p.proname ~ 'replay'`));
     assert.deepEqual(replayFns, [], '0169 A03: no new public function is named replay');
@@ -1135,6 +1143,54 @@ async function verifyRace(report, humans) {
     assert.deepEqual(out.filter((o) => !o.ok).map((o) => o.e.message), []);
     assert.ok(out.every((o) => o.v[0].set_id === g2.set_id), 'every caller reuses G + 1 (it covers the source)');
     assert.deepEqual(await liveGenerations(l.user), [1, 2], 'no third generation');
+  });
+
+  // V31u (found by V-24a, which saw 33 pending sets under load): the D-06.4 bounds hold under concurrency, not only one
+  // request at a time. Without the admission lock every caller counts the same snapshot and adds its set.
+  const pendingNow = async () => {
+    await owner();
+    return Number((await rows("SELECT count(DISTINCT set_id)::int AS n FROM voice_private.transient_media_artifacts WHERE job_state = 'PENDING'"))[0].n);
+  };
+  await report.section('V31u D-06.4 under concurrency: one person\'s 16 new subjects at once → never a third active set; 16 people at once against 31 pending → exactly one admitted, never 33', async () => {
+    await owner();
+    const [policy] = await rows('SELECT active_sets_per_user, pending_sets_max FROM voice_private.transient_media_policy WHERE singleton');
+    assert.deepEqual([policy.active_sets_per_user, policy.pending_sets_max], [2, 32]);
+    assert.ok(await pendingNow() <= 29, 'room for the per-person case');
+    const P = await listenerCommitted();
+    await committed(() => listen(P));
+    const calls = [];
+    for (let i = 0; i < 16; i += 1) {
+      calls.push(await committed(async () => (await callRecording(P.user, await newSession(P.user), TWO_TRACKS)).call));
+    }
+    const mine = await together(16, (c, i) => req(c, P.user, 'LISTENING', calls[i], randomUUID()));
+    assert.deepEqual([...new Set(mine.filter((o) => !o.ok).map((o) => o.e.message))], ['BUSY'], 'every refusal is BUSY');
+    assert.equal(mine.filter((o) => o.ok).length, 1, 'exactly one more set for the person');
+    await owner();
+    const [{ active }] = await rows(`SELECT count(DISTINCT set_id)::int AS active FROM voice_private.transient_media_artifacts
+                                      WHERE user_id = $1 AND job_state IN ('PENDING', 'RUNNING')`, [P.user]);
+    assert.equal(active, 2, 'never a third active set');
+
+    const opened = [];
+    while (await pendingNow() < 31) {
+      const l = await listenerCommitted();
+      const [row] = await committed(() => listen(l));
+      opened.push([l.user, row.artifact_id]);
+    }
+    assert.equal(await pendingNow(), 31, 'one place left');
+    const people = [];
+    for (let i = 0; i < 16; i += 1) people.push(await listenerCommitted());
+    const out = await together(16, (c, i) => req(c, people[i].user, 'LISTENING', people[i].call, randomUUID()));
+    assert.deepEqual([...new Set(out.filter((o) => !o.ok).map((o) => o.e.message))], ['BUSY'], 'every refusal is BUSY');
+    assert.equal(out.filter((o) => o.ok).length, 1, 'exactly one admitted');
+    assert.equal(await pendingNow(), 32, 'never above the bound of 32 pending sets');
+    // The queue is left as the later scenarios need it: every set this scenario opened is released by its owner.
+    for (const o of out.filter((x) => x.ok)) opened.push([people[out.indexOf(o)].user, o.v[0].artifact_id]);
+    await owner();
+    for (const r of await rows("SELECT user_id, id FROM voice_private.transient_media_artifacts WHERE user_id = $1 AND job_state = 'PENDING'", [P.user])) {
+      opened.push([r.user_id, r.id]);
+    }
+    await committed(async () => { for (const [user, artifact] of opened) await releaseOf(user, artifact); });
+    assert.ok(await pendingNow() <= 29, 'the queue is free again');
   });
 
   // V31p / t: 1000 random rounds over several connections; the invariants after every step.

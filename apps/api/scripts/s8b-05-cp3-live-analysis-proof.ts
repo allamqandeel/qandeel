@@ -468,6 +468,13 @@ async function main(): Promise<void> {
   if (process.env.S8B05_CP3_CHILD) await child(JSON.parse(process.env.S8B05_CP3_CHILD) as ChildSpec);
   const pool = new Pool({ connectionString: loopbackUrl(), max: 24 });
   const sql = async (text: string, values: unknown[] = []) => (await pool.query(text, values)).rows;
+  // S8B-07 CP1-B V-24a (report only): the live call's own statements, timed, so the call path's database latency is
+  // reported beside its First Audio. Nothing here changes what a statement does or when it runs.
+  const callPathMs: number[] = [];
+  const callSql = async (text: string, values: unknown[] = []) => {
+    const at = now();
+    try { return await sql(text, values); } finally { callPathMs.push(now() - at); }
+  };
   const shim = new PgServiceRoleRpc(pool);
   const serviceApi = shim as unknown as SupabaseServiceRoleApiService;
   process.stdout.write('S8B-05 CP3 Fast Live Analysis synthetic proof (transport: service_role connection; providers: fakes over one shared capacity)\n');
@@ -539,7 +546,7 @@ async function main(): Promise<void> {
       return { ...p, call, recording: String(a.recording_id), next: { USER: 0, QANDEEL: 0 }, end: { USER: 0, QANDEEL: 0 } };
     };
     const audio = async (x: Call, track: 'USER' | 'QANDEEL', endMs: number) => {
-      const r = await sql('SELECT * FROM public.server_add_call_segment_v2($1, $2, 1, $3, $4, $5, $6, 4096, 20)', [x.user, x.recording, track, x.next[track], x.end[track], endMs]);
+      const r = await callSql('SELECT * FROM public.server_add_call_segment_v2($1, $2, 1, $3, $4, $5, $6, 4096, 20)', [x.user, x.recording, track, x.next[track], x.end[track], endMs]);
       assert.equal(r[0]!.outcome, 'ADDED');
       x.next[track] += 1;
       x.end[track] = endMs;
@@ -560,7 +567,7 @@ async function main(): Promise<void> {
           p_user_id: x.user, p_call_id: x.call, p_connection_epoch: 1, p_turn_id: randomUUID(), p_commit_id: randomUUID(), p_turn_channel: 'SPEECH',
           p_content: content, p_asr_confidence_band: 'HIGH', p_turn_start_ms: x.end.USER - 1000, p_turn_end_ms: x.end.USER, p_retrieval_terms: [],
           p_provider_call_id: randomUUID(), p_event_id: randomUUID(),
-        }).catch(async () => (await sql('SELECT * FROM public.server_commit_live_call_turn_v1($1, $2, 1, $3, $4, \'SPEECH\', $5, \'HIGH\', $6, $7, $8, $9, $10)',
+        }).catch(async () => (await callSql('SELECT * FROM public.server_commit_live_call_turn_v1($1, $2, 1, $3, $4, \'SPEECH\', $5, \'HIGH\', $6, $7, $8, $9, $10)',
           [x.user, x.call, randomUUID(), randomUUID(), content, x.end.USER - 1000, x.end.USER, [], randomUUID(), randomUUID()]))[0]!);
         assert.equal(committed.outcome, 'COMMITTED');
         const idx = Number(committed.call_turn_index);
@@ -573,17 +580,17 @@ async function main(): Promise<void> {
         }
         assert.equal((await one('server_store_call_turn_safety_v1', { p_user_id: x.user, p_call_id: x.call, p_call_turn_index: idx, p_safety_disposition: 'ALLOW' })).outcome, 'STORED');
         const reply = await prov.reply();
-        const registered = await sql('SELECT * FROM public.server_register_call_reply_segment_v1($1, $2, 1, $3, 0, $4, 0, 400, $5)', [x.user, x.call, idx, REPLY, []]);
+        const registered = await callSql('SELECT * FROM public.server_register_call_reply_segment_v1($1, $2, 1, $3, 0, $4, 0, 400, $5)', [x.user, x.call, idx, REPLY, []]);
         assert.equal(registered[0]!.outcome, 'REGISTERED');
         await sleep(Math.max(0, WORKLOAD.ttsFirstAudioMs - (now() - reply.firstTokenAt)));
         const firstAudioAt = now();
         signal.kick(x.session, 'FIRST_AUDIO');
         await reply.done;
-        assert.equal((await sql('SELECT * FROM public.server_finish_call_reply_generation_v1($1, $2, 1, $3, \'COMPLETE\', 400)', [x.user, x.call, idx]))[0]!.outcome, 'FINISHED');
+        assert.equal((await callSql('SELECT * FROM public.server_finish_call_reply_generation_v1($1, $2, 1, $3, \'COMPLETE\', 400)', [x.user, x.call, idx]))[0]!.outcome, 'FINISHED');
         const start = x.end.QANDEEL;
-        assert.equal((await sql('SELECT * FROM public.server_confirm_call_playout_v1($1, $2, 1, $3, 400, $4)', [x.user, x.call, idx, start]))[0]!.outcome, 'ADVANCED');
+        assert.equal((await callSql('SELECT * FROM public.server_confirm_call_playout_v1($1, $2, 1, $3, 400, $4)', [x.user, x.call, idx, start]))[0]!.outcome, 'ADVANCED');
         await audio(x, 'QANDEEL', start + 400);
-        const closed = await sql('SELECT * FROM public.server_close_live_call_exchange_v1($1, $2, 1, $3, \'PLAYED_OUT\', $4, $5)', [x.user, x.call, idx, randomUUID(), randomUUID()]);
+        const closed = await callSql('SELECT * FROM public.server_close_live_call_exchange_v1($1, $2, 1, $3, \'PLAYED_OUT\', $4, $5)', [x.user, x.call, idx, randomUUID(), randomUUID()]);
         assert.equal(closed[0]!.outcome, 'CLOSED');
         const closeAt = now();
         signal.kick(x.session, 'EXCHANGE_CLOSED');
@@ -640,6 +647,13 @@ async function main(): Promise<void> {
     ];
     // A reliability-only run (R1 - R4, no measurement) for iterating on the scenarios; never what CI or the record runs.
     if (process.env.S8B05_CP3_RELIABILITY_ONLY === '1') modes.length = 0;
+    // S8B-07 CP1-B V-24a: a measurement-only run of the named modes, unchanged (e.g. M0,M1_SHIPPED), repeated by the First
+    // Audio isolation proof with and without Replay load; R1 - R4 are left out of it. Never what this proof's CI step runs.
+    const MEASURE_ONLY = (process.env.S8B05_CP3_MODES ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (MEASURE_ONLY.length > 0) {
+      for (const key of MEASURE_ONLY) assert.ok(modes.some((m) => m.key === key), `unknown mode ${key}`);
+      modes.splice(0, modes.length, ...modes.filter((m) => MEASURE_ONLY.includes(m.key)));
+    }
     // The DEC-R1-1 matrix alone (below): no M0 / M1 / M1′ load and no R1 - R4. It runs unchanged on a database without the
     // amendment (adoption at the first turn), which is how its "before" is measured.
     const O3B_ONLY = process.env.S8B05_CP3_SCENARIO === 'O3B';
@@ -667,6 +681,7 @@ async function main(): Promise<void> {
       signal.bind(workers.length ? { kick: (sessionId, reason) => workers[(route.get(sessionId) ?? 0) % workers.length]!.kick(sessionId, reason) } : null);
       for (const w of workers) w.start();
 
+      callPathMs.length = 0;
       const people = await Promise.all(Array.from({ length: mode.calls ?? WORKLOAD.shortCalls + 1 }, () => person()));
       // O3b: every session has one unestablished pre-call text exchange the call adopts at the head of its order.
       const preCall = await Promise.all(people.map((p, i) => textExchange(p.user, p.session, userWords(100 + i), 'تمام، وبعدين؟')));
@@ -727,8 +742,15 @@ async function main(): Promise<void> {
       signal.bind(null);
 
       firstAudio[mode.key] = timings.map((t) => t.firstAudioAt - t.commitAt);
+      // V-24a (report only): the raw samples, and the call path's database latency - its own statements, and the traced
+      // commands it sends (the commit, the Safety store, begin / activate / end) - taken from the spans already recorded.
+      const CALL_PATH_RPC = /^server_(?:commit_live_call_turn|store_call_turn_safety|begin_call|activate_call|end_call)_v1$/u;
+      const samples = (report.firstAudioSamplesMs ??= {}) as Record<string, number[]>;
+      samples[mode.key] = firstAudio[mode.key]!.map((v) => Math.round(v * 10) / 10);
       const result: Record<string, unknown> = {
         firstAudioMs: summary(firstAudio[mode.key]!),
+        callPathStatementMs: summary(callPathMs),
+        callPathRpcMs: summary(tracer.spans.filter((s) => CALL_PATH_RPC.test(s.stage)).map((s) => s.end - s.start)),
         callsWallMs: Math.round(callsWallMs),
         providerUtilization,
         exchanges: timings.length,
@@ -937,7 +959,7 @@ async function main(): Promise<void> {
     }
 
     // ------------------------------------------------------------------------------------- reliability scenarios
-    if (!O3B_ONLY) {
+    if (!O3B_ONLY && MEASURE_ONLY.length === 0) {
       // R1 crashes, on real PostgreSQL. (a) An EXCHANGE item (a pre-call exchange) is committed by the full coordinator and
       // the process dies before the worker's COMPLETE settlement: the leases lapse, another instance claims it again, and it
       // is replayed from storage with ZERO provider calls. (b) A half is committed and the process dies before the session
@@ -992,7 +1014,7 @@ async function main(): Promise<void> {
         WHERE session_id = $1 GROUP BY source_turn_id HAVING count(*) > 1) d`, [x.session]))[0]!.n);
       check('R1: the order completed after both crashes with one batch per turn', await openItems([x.session]) === 0 && duplicates === 0);
     }
-    if (!O3B_ONLY) {
+    if (!O3B_ONLY && MEASURE_ONLY.length === 0) {
       // R2 a provider outage / 429: retried with backoff (RETRY_WAIT), never skipped; the next turn waits for it.
       const prov = providers(new SharedCapacity(WORKLOAD.providerSlots), 8);
       const observations: CallAnalysisObservation[] = [];
@@ -1013,7 +1035,7 @@ async function main(): Promise<void> {
       const order = observations.filter((o) => o.kind === 'ESTABLISHED').map((o) => `${(o as { callTurnIndex: number }).callTurnIndex}:${(o as { half: string }).half}`);
       check('R2: after the retry the order is intact: 1 USER, 1 ASSISTANT, 2 USER, 2 ASSISTANT', JSON.stringify(order) === JSON.stringify(['1:USER', '1:ASSISTANT', '2:USER', '2:ASSISTANT']), order.join(','));
     }
-    if (!O3B_ONLY) {
+    if (!O3B_ONLY && MEASURE_ONLY.length === 0) {
       // R3 S3 after the end: a turn committed with its Safety never stored; the call ends; the exchange stays OPEN; the sweep
       // recomputes Safety with the same gate over the same reader, stores it once, closes it once, and its halves are analyzed.
       const prov = providers(new SharedCapacity(WORKLOAD.providerSlots), 9);
@@ -1047,7 +1069,7 @@ async function main(): Promise<void> {
       check('R3: the swept exchange\'s halves are analyzed in order after the end', settledAfterEnd
         && JSON.stringify(order) === JSON.stringify(['1:USER', '1:ASSISTANT', '2:USER', '2:ASSISTANT']), `${order.join(',')} | ${states}`);
     }
-    if (!O3B_ONLY) {
+    if (!O3B_ONLY && MEASURE_ONLY.length === 0) {
       // R4 Safety recovery across a REAL restart: the call ends with its last exchange's Safety never stored. Process A (a
       // separate OS process) runs a worker whose every context read fails: S3 leaves the exchange OPEN, scan after scan,
       // with no default disposition, while the facts that may be committed (1 USER, 1 ASSISTANT, 2 USER) are; then A dies
