@@ -531,6 +531,11 @@ async function w01Startup(report, env) {
     // The database session must be the Replay role (a superuser session refuses), and ffmpeg the pin.
     const pool = { QANDEEL_COMPUTE_ROLE: 'REPLAY_MEDIA', QANDEEL_REPLAY_PLACEMENT: 'REPLAY_POOL' };
     await refuses(W, { ...pool, REPLAY_MEDIA_DATABASE_URL: process.env.DATABASE_URL }, /connects only as qandeel_replay_media/u);
+    // A superuser login that only sets the role at connection time (current_user = the Replay role, session_user = postgres)
+    // could leave it again: refused, as is any session not authenticated as the Replay role itself.
+    const roleOption = new URL(process.env.DATABASE_URL);
+    roleOption.searchParams.set('options', `-c role=${POOL}`);
+    await refuses(W, { ...pool, REPLAY_MEDIA_DATABASE_URL: roleOption.toString() }, /connects only as qandeel_replay_media/u);
     await refuses(D, { ...pool, QANDEEL_COMPUTE_ROLE: 'REPLAY_WATCHDOG', REPLAY_MEDIA_DATABASE_URL: process.env.DATABASE_URL },
       /connects only as qandeel_replay_media/u);
     await refuses(W, { ...pool, FFMPEG_BIN: node }, /pinned ffmpeg 9\.0\.2/u);
@@ -553,6 +558,50 @@ async function w01Startup(report, env) {
     const [{ w }] = await rows("SELECT count(*)::int w FROM voice_private.replay_pool_heartbeats WHERE role = 'REPLAY_WATCHDOG'");
     assert.ok(w >= 1, 'the watchdog wrote its run heartbeat');
     await committed(() => q("DELETE FROM voice_private.replay_pool_heartbeats"));
+  });
+}
+
+/**
+ * The production authentication model, on the real server: the pool's sessions are LOGINs of qandeel_replay_media itself
+ * (session_user = current_user, no SET ROLE), with the role's own settings in force, no way into another role, no table
+ * access, and CONNECTION LIMIT 10 enforced by PostgreSQL for those logins.
+ */
+async function w01bAuthentication(report, replayUrl) {
+  await report.section('W01b P-3 / V-33: the pool logs in AS the Replay role; its limits hold; no way into postgres or service_role', async () => {
+    const { Client } = requireApi('pg');
+    const [who] = await db.query(`SELECT session_user, current_user, current_setting('statement_timeout') st,
+      current_setting('lock_timeout') lt, current_setting('idle_in_transaction_session_timeout') it`, []);
+    assert.deepEqual([who.session_user, who.current_user, who.st, who.lt, who.it], [POOL, POOL, '5s', '1s', '10s'],
+      'authenticated as the Replay role itself, its role settings in force');
+    const client = new Client({ connectionString: replayUrl });
+    await client.connect();
+    const codeOf = (statement) => statement.then(() => null, (error) => error.code ?? 'NO_CODE');
+    try {
+      assert.equal(await codeOf(client.query('SET ROLE postgres')), '42501', 'no SET ROLE into postgres');
+      assert.equal(await codeOf(client.query('SET ROLE service_role')), '42501', 'no SET ROLE into service_role');
+      assert.equal(await codeOf(client.query('SELECT 1 FROM voice_private.transient_media_artifacts LIMIT 1')), '42501', 'no table read');
+      assert.equal(await codeOf(client.query('SELECT 1 FROM public.users LIMIT 1')), '42501', 'no read of the API tables');
+      assert.equal(await codeOf(client.query("SELECT public.server_delete_voice_recording_v1(gen_random_uuid(), gen_random_uuid())")), '42501',
+        'no service_role definer');
+    } finally {
+      await client.end();
+    }
+    // CONNECTION LIMIT 10, enforced by the server for these logins (the pool's own open sessions count).
+    await owner();
+    const [{ open }] = await rows('SELECT count(*)::int open FROM pg_stat_activity WHERE usename = $1', [POOL]);
+    const extra = [];
+    try {
+      for (let i = open; i < 10; i += 1) {
+        const c = new Client({ connectionString: replayUrl });
+        await c.connect();
+        extra.push(c);
+      }
+      const over = new Client({ connectionString: replayUrl });
+      assert.equal(await codeOf(over.connect()), '53300', 'the eleventh login is refused (too many connections for role)');
+      await over.end().catch(() => undefined);
+    } finally {
+      for (const c of extra) await c.end().catch(() => undefined);
+    }
   });
 }
 
@@ -1111,6 +1160,7 @@ runVerifier('prove-0196-media-worker', async (setStage) => {
     await ReplayWatchdogService.preflight(db, ps.store);
     setStage('startup');
     await w01Startup(report, childEnv);
+    await w01bAuthentication(report, url.toString());
     setStage('worker');
     const reference = await w02Listening(report, ps, worker);
     await w03Offset(report, ps, worker, reference);

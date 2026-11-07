@@ -69,16 +69,24 @@ export function replayDatabaseFrom(env: NodeJS.ProcessEnv): PgReplayDatabase {
 }
 
 /**
- * V-28 / V-33: the session runs as the Replay role, the role keeps its approved limits, and it holds no table privilege
- * and no superuser power. Refuses (throws) otherwise; the entry point then does not start.
+ * V-28 / V-33: the session AUTHENTICATED as the Replay role itself (session_user, not only current_user: a superuser
+ * login that sets the role at connection time, `options=-c role=…`, or any member role that SET ROLEs into it, can leave
+ * the role again and is refused), the role belongs to no other role (it can SET ROLE to nothing), it keeps its approved
+ * limits, and it holds no table privilege and no superuser power. Refuses (throws) otherwise; the entry point then does
+ * not start. The role is NOLOGIN in 0196: a deployment grants it LOGIN with its own credential (HOSTED-DEPLOY-01).
  */
 export async function assertReplayDatabaseRole(db: ReplayDatabase): Promise<void> {
-  const [role] = await db.query<{ current_user: string; rolconnlimit: number; rolconfig: string[] | null; rolsuper: boolean; rolbypassrls: boolean }>(
-    `SELECT current_user, r.rolconnlimit, r.rolconfig, r.rolsuper, r.rolbypassrls
-       FROM pg_catalog.pg_roles r WHERE r.rolname = current_user`, []);
-  if (role === undefined || role.current_user !== REPLAY_DATABASE_ROLE) {
+  const [role] = await db.query<{
+    session_user: string; current_user: string; rolconnlimit: number; rolconfig: string[] | null; rolsuper: boolean;
+    rolbypassrls: boolean; memberships: number;
+  }>(
+    `SELECT session_user, current_user, r.rolconnlimit, r.rolconfig, r.rolsuper, r.rolbypassrls,
+            (SELECT count(*)::int FROM pg_catalog.pg_auth_members m WHERE m.member = r.oid) AS memberships
+       FROM pg_catalog.pg_roles r WHERE r.rolname = session_user`, []);
+  if (role === undefined || role.session_user !== REPLAY_DATABASE_ROLE || role.current_user !== REPLAY_DATABASE_ROLE) {
     throw new ReplayDatabaseRefusal(`the Replay pool connects only as ${REPLAY_DATABASE_ROLE}`);
   }
+  if (Number(role.memberships) !== 0) throw new ReplayDatabaseRefusal('the Replay role must belong to no other role');
   if (role.rolsuper || role.rolbypassrls) throw new ReplayDatabaseRefusal('the Replay role must not be a superuser or bypass RLS');
   if (Number(role.rolconnlimit) !== REPLAY_ROLE_CONNECTION_LIMIT) {
     throw new ReplayDatabaseRefusal(`the Replay role's CONNECTION LIMIT must be ${REPLAY_ROLE_CONNECTION_LIMIT}`);

@@ -66,7 +66,12 @@ test('the database: the Replay role directly, pg pinned exactly, the limits chec
   assert.equal(lock.packages['apps/api'].dependencies.pg, '8.23.0');
   const db = read(`${RM}/replay-database.ts`);
   for (const pin of ["export const REPLAY_DATABASE_ROLE = 'qandeel_replay_media';", 'REPLAY_MEDIA_DATABASE_URL', 'rolconnlimit',
-    'information_schema.role_table_grants']) assert.ok(db.includes(pin), pin);
+    'information_schema.role_table_grants', 'FROM pg_catalog.pg_auth_members m WHERE m.member = r.oid',
+    "role.session_user !== REPLAY_DATABASE_ROLE || role.current_user !== REPLAY_DATABASE_ROLE"]) assert.ok(db.includes(pin), pin);
+  assert.doesNotMatch(db, /env\.DATABASE_URL\b|query\(\s*['"`]SET ROLE|set_config\('role'/u, 'no fallback to the API database URL and no role switching');
+  const proof = read('database/prove-0196-media-worker.mjs');
+  assert.ok(proof.includes("ALTER ROLE ${POOL} LOGIN PASSWORD"), 'the proof logs in as the Replay role itself');
+  assert.ok(proof.includes("roleOption.searchParams.set('options', `-c role=${POOL}`)"), 'and proves a superuser login with a role option is refused');
   for (const file of ['media-worker.module.ts', 'replay-watchdog.module.ts', 'transient-media.repository.ts']) {
     assert.doesNotMatch(read(`${RM}/${file}`), /SupabaseServiceRoleApiService|SUPABASE_SERVICE_ROLE_KEY|redis/u, file);
   }

@@ -44,12 +44,16 @@ describe('the Replay pool\'s database role (P-3) and bounds (D-06.1, D-06.5)', (
     query: async <R>(text: string) => (text.includes('role_table_grants') ? [{ n: grants }] : [role]) as R[],
     close: async () => undefined,
   });
-  const good = { current_user: 'qandeel_replay_media', rolconnlimit: 10, rolsuper: false, rolbypassrls: false,
+  const good = { session_user: 'qandeel_replay_media', current_user: 'qandeel_replay_media', memberships: 0, rolconnlimit: 10, rolsuper: false, rolbypassrls: false,
     rolconfig: ['statement_timeout=5s', 'lock_timeout=1s', 'idle_in_transaction_session_timeout=10s'] };
 
   it('starts only as qandeel_replay_media with CONNECTION LIMIT 10, the three timeouts and no table privilege', async () => {
     await expect(assertReplayDatabaseRole(fake(good))).resolves.toBeUndefined();
     await expect(assertReplayDatabaseRole(fake({ ...good, current_user: 'service_role' }))).rejects.toThrow('connects only as qandeel_replay_media');
+    // A superuser (or service_role) login that only SET ROLEs into the Replay role is refused: it could leave it again.
+    await expect(assertReplayDatabaseRole(fake({ ...good, session_user: 'postgres' }))).rejects.toThrow('connects only as qandeel_replay_media');
+    await expect(assertReplayDatabaseRole(fake({ ...good, session_user: 'service_role' }))).rejects.toThrow('connects only as qandeel_replay_media');
+    await expect(assertReplayDatabaseRole(fake({ ...good, memberships: 1 }))).rejects.toThrow('belong to no other role');
     await expect(assertReplayDatabaseRole(fake({ ...good, rolconnlimit: -1 }))).rejects.toThrow('CONNECTION LIMIT must be 10');
     await expect(assertReplayDatabaseRole(fake({ ...good, rolconfig: ['statement_timeout=60s', 'lock_timeout=1s', 'idle_in_transaction_session_timeout=10s'] })))
       .rejects.toThrow('statement_timeout must be 5s');
