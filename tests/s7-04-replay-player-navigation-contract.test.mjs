@@ -119,7 +119,11 @@ const FROZEN = [
   ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '08687f8e87ff34a9c37ea69260041fc55cc3138ea42c272697763586a72407ab'],
   ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '667fb2c56c78781367a43cc42c1e349319f573ad66dde4f1edc56d97bc54ea64'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, the Product Owner's order on QAN-BL-MOB-05): a Map read whose fetch ENDED without an
+  // answer (a failed read, a payload refused at the trust boundary, no credential) counts as settled, so the composition
+  // reports its measured first state and the depth fades it in; before, the depth stayed half-crossed. The projection, its
+  // cache, the Map, the chrome and every refusal are unchanged; a read still on its way is still not settled.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '20679fd47ad3a0c0ae52ff45ba30f233051f7040e8fbf3fd24bae699c659b0d3'],
 ];
 
 const shipped = () => {

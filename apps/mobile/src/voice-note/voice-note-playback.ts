@@ -142,9 +142,12 @@ export function createVoiceNotePlayback(options: VoiceNotePlaybackOptions): Voic
       held.loadTimer = null;
     }
     if (status.finished) {
-      // At the end the note rests at its start again, with its played mark kept.
+      // At the end the note rests at its start again, with its played mark kept, and stays still. The Android player
+      // still wishes to play after its end (Media3 keeps `playWhenReady`), so a seek alone started the note again while
+      // its control showed Play (QAN-BL-MOB-04, HONOR): it is paused before it is moved.
       setPosition(recordingId, 0);
       setPhase(recordingId, 'PAUSED');
+      held.player?.pause();
       void held.player?.seekTo(0).catch(() => undefined);
       return;
     }

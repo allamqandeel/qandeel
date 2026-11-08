@@ -84,7 +84,11 @@ const FROZEN = [
   ['apps/mobile/src/map/projection/map-scene.ts', '8ef371bdcbaacde1456e98ed58592ab71c3521fe835a097e5b418fd66e67211e'],
   ['apps/mobile/src/map/inspection/map-actions.ts', 'd2291a0399ab7389b014dc9daed32e59996311c1f01a52e7b1ba573451814957'],
   ['apps/mobile/src/map/inspection/entitlement.ts', '3c916840363d088ebe34cf12d501dc5717d25adfb261c3b493a72e165fb0f243'],
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '667fb2c56c78781367a43cc42c1e349319f573ad66dde4f1edc56d97bc54ea64'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, the Product Owner's order on QAN-BL-MOB-05): a Map read whose fetch ENDED without an
+  // answer (a failed read, a payload refused at the trust boundary, no credential) counts as settled, so the composition
+  // reports its measured first state and the depth fades it in; before, the depth stayed half-crossed. The projection, its
+  // cache, the Map, the chrome and every refusal are unchanged; a read still on its way is still not settled.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '20679fd47ad3a0c0ae52ff45ba30f233051f7040e8fbf3fd24bae699c659b0d3'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],

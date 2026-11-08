@@ -135,7 +135,7 @@ function systemBack() {
 
 async function openAnalysis(view: RenderResult): Promise<void> {
   await press(view, 'qandeel-depth-to-analysis');
-  await fireEvent(view.getByTestId('qandeel-depth-analysis'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
+  await fireEvent(view.getByTestId('qandeel-depth-analysis', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
   await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
   await act(async () => {
     await settle();
@@ -292,7 +292,7 @@ describe('E2E-D-10 — Dark / Light / System, painted from the canonical familie
     expect(h.runtime.appearance.getState().effective).toBe('LIGHT');
 
     await press(view, 'qandeel-depth-to-conversation');
-    await fireEvent(view.getByTestId('qandeel-depth-conversation'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
+    await fireEvent(view.getByTestId('qandeel-depth-conversation', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
     await act(async () => {
       await settle();
     });

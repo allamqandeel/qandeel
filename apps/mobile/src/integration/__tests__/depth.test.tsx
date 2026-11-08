@@ -11,7 +11,10 @@ import { BackHandler } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
+import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 import { MAP_SURFACE_TEST_ID } from '../../map';
+import { disclosureFixture } from '../../map/__fixtures__/disclosure';
+import type { Responder } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { DEPTH_CROSSFADE_MS } from '../../conversation';
 import { exchange, historyBody, submitBody } from '../../conversation/__fixtures__/conversation';
 import { resize } from '../../responsive/__fixtures__/composition';
@@ -46,9 +49,9 @@ async function press(view: RenderResult, testID: string): Promise<void> {
   });
 }
 
-/** The incoming depth's first layout — the moment its cross-fade may begin. */
+/** The incoming depth's first layout — the moment its cross-fade may begin. (Until it is drawn it is hidden from assistive technology.) */
 async function laidOut(view: RenderResult, which: 'conversation' | 'analysis'): Promise<void> {
-  await fireEvent(view.getByTestId(`qandeel-depth-${which}`), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
+  await fireEvent(view.getByTestId(`qandeel-depth-${which}`, { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
   await act(async () => {
     await settle();
   });
@@ -313,6 +316,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
 
   it('the fade into Analysis waits for the Analysis WORLD to compose — not its empty first layout — so it cannot become a cut; turning back mid-wait still resolves', async () => {
     const timing = watchFades();
+    const back = systemBack();
     const h = await signedIn();
     const view = await onRoute(h);
     await press(view, 'qandeel-depth-to-analysis');
@@ -324,8 +328,9 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     expect(fadesIn(timing)).toHaveLength(0);
     expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
     // The reader turns back before the world composed: the Conversation is still mounted, lays out no
-    // more, and fades back at once — nothing is left waiting.
-    await press(view, 'qandeel-depth-to-conversation');
+    // more, and fades back at once — nothing is left waiting. (The undrawn Analysis takes no touch, QAN-BL-MOB-05, so
+    // the way back while it waits is Back, as the depth owner states.)
+    await back.press();
     expect(fadesIn(timing)).toHaveLength(1);
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
     expect(layersMounted(view)).toBe(1);
@@ -367,12 +372,14 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
 
   it('turning back to an Analysis that has not been drawn yet waits for it again — it never fades into it early', async () => {
     const timing = watchFades();
+    const back = systemBack();
     const h = await signedIn();
     const view = await onRoute(h);
     await press(view, 'qandeel-depth-to-analysis');
     await laidOut(view, 'analysis');
-    // Back to the Conversation mid-wait (it is drawn, so it fades at once), then forward again at once.
-    await press(view, 'qandeel-depth-to-conversation');
+    // Back to the Conversation mid-wait (it is drawn, so it fades at once), then forward again at once. (Through Back:
+    // the undrawn Analysis takes no touch, QAN-BL-MOB-05.)
+    await back.press();
     expect(fadesIn(timing)).toHaveLength(1);
     await press(view, 'qandeel-depth-to-analysis');
     expect(fadesIn(timing)).toHaveLength(1);
@@ -424,6 +431,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     await openAnalysis(view);
     expect(back.live()).toHaveLength(1);
     await back.press();
+    await laidOut(view, 'conversation');
     expect(back.live()).toHaveLength(0);
     expect(await back.press()).toBe(false);
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
@@ -454,4 +462,62 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     view.unmount();
     h.dispose();
   });
+});
+
+describe('QAN-BL-MOB-05 — an Analysis not yet drawn takes no touch, and one that cannot be drawn still arrives', () => {
+  const LIVE_HEAD = 6;
+  /** Every projection read ends without an answer, as `fail` says. */
+  const projection = (fail: 'HTTP_503' | 'BEYOND_ITS_LIVE_HEAD'): Responder => (request) => {
+    const params = new URL(request.url).searchParams;
+    const tc = Number(params.get('tc') ?? LIVE_HEAD);
+    const depth = (params.get('depth') ?? 'WORLD') as HistoricalSemanticDepth;
+    // The device's own shape (the proof world's fixture lagged the real Live Head): refused at the trust boundary.
+    if (fail === 'BEYOND_ITS_LIVE_HEAD') return { status: 200, body: disclosureFixture({ depth, sessionId: SESSION_A, tc, liveHead: tc - 1, threads: [] }) };
+    return { status: 503, body: {} };
+  };
+  const layer = (view: RenderResult, which: 'conversation' | 'analysis') => view.getByTestId(`qandeel-depth-${which}`, { includeHiddenElements: true });
+
+  it('while the incoming Analysis is mounted but not drawn, it takes no touch and is hidden from assistive technology', async () => {
+    const timing = watchFades();
+    const h = await signedIn();
+    const view = await onRoute(h);
+    await press(view, 'qandeel-depth-to-analysis');
+    await laidOut(view, 'analysis');
+    expect(fadesIn(timing)).toHaveLength(0);
+    expect(layer(view, 'analysis').props.pointerEvents).toBe('none');
+    expect(layer(view, 'analysis').props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(layer(view, 'analysis').props.accessibilityElementsHidden).toBe(true);
+    // Once drawn, it fades in and is the one interactive depth.
+    await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
+    await act(async () => {
+      await settle();
+    });
+    expect(fadesIn(timing)).toHaveLength(1);
+    expect(layer(view, 'analysis').props.pointerEvents).toBe('auto');
+    expect(layer(view, 'analysis').props.accessibilityElementsHidden).toBe(false);
+    view.unmount();
+    h.dispose();
+  });
+
+  it.each(['HTTP_503', 'BEYOND_ITS_LIVE_HEAD'] as const)(
+    'a Map read that ends without an answer (%s) is the Analysis’s real first state: it fades in, takes touch, and returns',
+    async (fail) => {
+      const timing = watchFades();
+      const h = await harness({ liveHead: LIVE_HEAD, projection: projection(fail) });
+      h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })]) } : { status: 500, body: {} }));
+      const view = await onRoute(h);
+      await openAnalysis(view);
+      expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+      // Before the fix the fade never began: the Analysis stayed invisible OVER the Conversation and took every touch.
+      expect(fadesIn(timing)).toHaveLength(1);
+      expect(layer(view, 'analysis').props.pointerEvents).toBe('auto');
+      // And the way back works at once, without a restart.
+      await cross(view, 'qandeel-depth-to-conversation', 'conversation');
+      expect(fadesIn(timing)).toHaveLength(2);
+      expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
+      expect(layer(view, 'conversation').props.pointerEvents).toBe('auto');
+      view.unmount();
+      h.dispose();
+    },
+  );
 });

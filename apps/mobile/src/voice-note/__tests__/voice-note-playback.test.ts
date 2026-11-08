@@ -127,6 +127,63 @@ describe('voice note playback', () => {
     expect(t.playback.getState()).toEqual({ current: { recordingId: A, phase: 'PAUSED' }, positions: { [A]: 0 } });
   });
 
+  it('QAN-BL-MOB-04: at the end the note stays still; only Play starts it again, from its start', async () => {
+    // The Android player as Media3 behaves (expo-audio 57, BaseAudioPlayer.kt): `play()` / `pause()` set the wish to
+    // play, the end does not clear it, and a seek on an ended player that still wishes to play resumes it.
+    const made: { emit: (s: Partial<VoiceNotePlayerStatus>) => void; sounding: () => boolean; calls: string[] }[] = [];
+    const port: VoiceNotePlayerPort = {
+      create: async (_url, _headers, onStatus) => {
+        const calls: string[] = [];
+        let wish = false;
+        let ended = false;
+        let sounding = false;
+        const status = (s: Partial<VoiceNotePlayerStatus>) => onStatus({ loaded: true, playing: sounding, positionMs: 0, durationMs: 4000, finished: false, failed: false, ...s });
+        made.push({
+          calls,
+          sounding: () => sounding,
+          emit: (s) => {
+            if (s.finished === true) {
+              ended = true;
+              sounding = false;
+            }
+            status(s);
+          },
+        });
+        return {
+          play: () => { calls.push('play'); wish = true; sounding = true; ended = false; },
+          pause: () => { calls.push('pause'); wish = false; sounding = false; },
+          seekTo: async (ms) => {
+            calls.push(`seek:${ms}`);
+            if (ended && wish) {
+              ended = false;
+              sounding = true;
+              status({ positionMs: ms });
+            }
+          },
+          release: () => calls.push('release'),
+        };
+      },
+    };
+    const playback = createVoiceNotePlayback({
+      player: port, urlOf: (id) => `https://api.test/voice/recordings/${id}/objects/NOTE/0`, authorization: () => ({ Authorization: 'Bearer t' }),
+      foreground: createManualForegroundSignal('ACTIVE'), setTimer: () => null, clearTimer: () => undefined,
+    });
+    await playback.toggle(A);
+    made[0].emit({ positionMs: 1200 });
+    made[0].emit({ finished: true, playing: false, positionMs: 4000 });
+    await Promise.resolve();
+    expect(made[0].sounding()).toBe(false);
+    expect(made[0].calls).toEqual(['play', 'pause', 'seek:0']);
+    expect(playback.getState()).toEqual({ current: { recordingId: A, phase: 'PAUSED' }, positions: { [A]: 0 } });
+    // Play alone starts it again, from its start; pause and resume are unchanged.
+    await playback.toggle(A);
+    expect(made[0].sounding()).toBe(true);
+    expect(playback.getState().current).toEqual({ recordingId: A, phase: 'PLAYING' });
+    await playback.toggle(A);
+    expect(made[0].sounding()).toBe(false);
+    expect(made[0].calls).toEqual(['play', 'pause', 'seek:0', 'play', 'pause']);
+  });
+
   it('nothing plays unseen: leaving the foreground pauses, and a tap while away does nothing', async () => {
     const t = setup();
     await t.playback.toggle(A);

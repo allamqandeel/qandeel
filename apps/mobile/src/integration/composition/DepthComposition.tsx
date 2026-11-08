@@ -13,7 +13,8 @@
  * The boundary behaves as the G3 closure froze it: F2's symmetric appearance cross-fade in standard
  * motion, and under Reduced Motion no cross-fade — the same truth with no movement. The outgoing
  * depth stays opaque beneath while the incoming one resolves over it, so no third colour ever shows
- * through the fade. Only the incoming depth is interactive or exposed to assistive technology.
+ * through the fade. Only the incoming depth is interactive or exposed to assistive technology, and only once it is
+ * drawn (QAN-BL-MOB-05): while it waits to be drawn, nothing takes a touch, and Back still returns.
  *
  * Android's system Back is the same act as the Analysis band's «المحادثة» / Conversation control: at
  * the Analysis depth it returns to the Conversation through the same boundary, and it pushes and pops
@@ -200,6 +201,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // (found on the W1A-01 proof emulator too). There is no timeout that could start the fade earlier:
   // until the Analysis is drawn, the Conversation stays visible beneath it, and Back still returns.
   const pendingFade = useRef<number | null>(null);
+  // QAN-BL-MOB-05: while the incoming depth is not drawn yet it is mounted at zero opacity OVER the visible one, so it
+  // takes no touch and is hidden from assistive technology until its fade begins: nothing the reader cannot see answers
+  // a tap, and no tap lands on a control drawn somewhere else (found on HONOR: the call rail answered 400 px below).
+  const [awaitingDraw, setAwaitingDraw] = useState(false);
   // The running fade's duration; zero when no fade is running. Read on the UI runtime per frame.
   const fading = useSharedValue(0);
   // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
@@ -223,6 +228,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     const duration = pendingFade.current;
     if (duration === null) return;
     pendingFade.current = null;
+    setAwaitingDraw(false);
     fading.set(duration);
     fadeFrames.setActive(true);
   }, [fadeFrames, fading]);
@@ -239,6 +245,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       if (duration <= 0) {
         // Reduced Motion: a cut. The new depth is simply there.
         pendingFade.current = null;
+        setAwaitingDraw(false);
         incoming.set(1);
         setLeaving(null);
         setDepth(to);
@@ -252,6 +259,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       setLeaving(depth);
       setDepth(to);
       pendingFade.current = duration;
+      setAwaitingDraw(true);
       if (conversationStillMounted) beginFade();
     },
     [beginFade, depth, fading, incoming, leaving, reduceMotion],
@@ -768,6 +776,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           // S6-01: beneath the Introductions preparation, too. S7-04: and beneath the Replay passage — the depth it was
           // opened from keeps every state it had.
           const personalOpen = personalReachable && !introductionsShown && !playerOpen;
+          // QAN-BL-MOB-05: and never before it is drawn.
+          const open = personalOpen && !(current && awaitingDraw);
           return (
             <Animated.View
               key={which}
@@ -775,9 +785,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
-              pointerEvents={personalOpen ? 'auto' : 'none'}
-              importantForAccessibility={personalOpen ? 'auto' : 'no-hide-descendants'}
-              accessibilityElementsHidden={!personalOpen}
+              pointerEvents={open ? 'auto' : 'none'}
+              importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!open}
             >
               {layer(which, current)}
             </Animated.View>

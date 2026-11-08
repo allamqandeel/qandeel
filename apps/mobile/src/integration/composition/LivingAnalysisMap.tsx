@@ -38,7 +38,7 @@
  * Live, the journey and the composite spatial cause. The element tree is unchanged, and the screen golden proves it.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
 import { MapSurface, mapInspectionContext, mapProjectionRequest, type MapActionOutcome } from '../../map';
@@ -96,8 +96,18 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   // Fetching is an effect, never a render: a request issued during render would run again on every
   // pass React discards. `ensure` is idempotent per key, so a re-render with an unchanged viewpoint
   // issues nothing at all and a render loop cannot become a fetch loop.
+  //
+  // QAN-BL-MOB-05: a fetch that ENDED without an answer (a failed read, a payload refused at the trust boundary, no
+  // credential) leaves its key NOT_FETCHED, retryable and truthful, but it is not still being fetched. It is remembered
+  // here, for that exact viewpoint, so the composition below can tell "settled with nothing to draw" from "on its way".
+  const [unanswered, setUnanswered] = useState<{ readonly sessionId: string; readonly tc: number; readonly depth: string } | null>(null);
   useEffect(() => {
-    if (request !== null) void projection.ensure(request);
+    if (request === null) return;
+    void projection.ensure(request).then((outcome) => {
+      if (outcome === 'NOT_FETCHED' || outcome === 'NOT_AUTHENTICATED' || outcome === 'IDENTITY_MISMATCH') {
+        setUnanswered({ sessionId: request.sessionId, tc: request.tc, depth: request.depth });
+      }
+    });
   }, [projection, request]);
   useEffect(() => {
     if (trackRequest !== null) void projection.ensure(trackRequest);
@@ -187,10 +197,14 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   /**
    * The projection is SETTLED and still cannot be drawn: there is no viewpoint, it was refused, or it
    * holds no scene. The measured composition — whose chrome states exactly that — is then this
-   * surface's real first state. A projection still being fetched is not settled.
+   * surface's real first state. A projection still being fetched is not settled; one whose fetch ended without an
+   * answer is (QAN-BL-MOB-05): waiting for it would hold the depth boundary half-crossed for as long as the app runs.
    */
+  const fetchEndedUnanswered =
+    request !== null && entry?.status === 'NOT_FETCHED' && unanswered !== null
+    && unanswered.sessionId === request.sessionId && unanswered.tc === request.tc && unanswered.depth === request.depth;
   const settledWithoutMap =
-    request === null || (entry !== null && entry.status !== 'NOT_FETCHED' && (mapContext === null || !mapContext.ok));
+    request === null || fetchEndedUnanswered || (entry !== null && entry.status !== 'NOT_FETCHED' && (mapContext === null || !mapContext.ok));
 
   return (
     // The ONE Living Analysis surface, with the Personal world's projection and capabilities: the Map in the measured
