@@ -35,7 +35,7 @@ import type { CanonicalStore, SemanticDepth } from '../state';
 import { commitMoment } from '../temporal-navigation';
 import type { ReplayAnalysisState, ReplayCompositeController } from './composite-controller';
 import { replayCompositeCopy } from './copy';
-import { discloseReplayMoment } from './projection-adapter';
+import { discloseReplayMoment, hasOwnReading } from './projection-adapter';
 import { createReplayViewpointStore } from './viewpoint-store';
 
 export const REPLAY_COMPOSITE_TEST_ID = 'qandeel-replay-composite';
@@ -265,6 +265,8 @@ function MomentReading({ controller, store, version, moment, language, analysis,
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const derived = (role: 'metadata' | 'supporting') => ({ ...typeStyle(role), color: palette.tertiary, writingDirection: writing as 'rtl' | 'ltr', textAlign: readerSide(language) });
   const viewpoint = store.getState();
+  // An original-audio moment is read by its own sound, with no text (0183 R-1; F-2 adds none): S8B-07 CP1-B F-1.
+  const readable = version.viewing.state === 'VIEWABLE' && hasOwnReading(moment);
 
   return (
     <>
@@ -277,15 +279,15 @@ function MomentReading({ controller, store, version, moment, language, analysis,
       ) : null}
 
       {presented === null ? null : presented.before}
-      {version.viewing.state === 'NOT_VIEWABLE' || moment.text === null ? (
+      {!readable ? (
         <NotViewable version={version} language={language} palette={palette} />
-      ) : presented === null ? (
-        <SourceMessage moment={moment} text={moment.text} language={language} palette={palette} />
-      ) : (
+      ) : presented !== null ? (
         <PresentedSource moment={moment} text={moment.text} presented={presented} language={language} palette={palette} />
-      )}
+      ) : moment.text !== null ? (
+        <SourceMessage moment={moment} text={moment.text} language={language} palette={palette} />
+      ) : null}
 
-      {version.viewing.state === 'VIEWABLE' && moment.text !== null ? (
+      {readable ? (
         <View style={{ rowGap: 4 }}>
           <Text testID="qandeel-replay-temporal" style={derived('supporting')}>{temporalSentence(language, temporalLineModel(store).temporal)}</Text>
           {drawn ? (
@@ -329,22 +331,25 @@ function SourceMessage({ moment, text, language, palette }: {
  * it is never taken for the source.
  */
 function PresentedSource({ moment, text, presented, language, palette }: {
-  readonly moment: ReplayHistoryMoment; readonly text: string; readonly presented: ReplayMomentPresentation;
+  readonly moment: ReplayHistoryMoment; readonly text: string | null; readonly presented: ReplayMomentPresentation;
   readonly language: ChromeLanguage; readonly palette: ConversationPalette;
 }) {
   const turns = conversationCopy(language);
   const speaker = moment.sourceRole === 'USER' ? sharedCopy(language).you : turns.product;
-  const direction = paragraphDirection(text, readerDirection(language));
+  const direction = text === null ? readerDirection(language) : paragraphDirection(text, readerDirection(language));
   return (
     <View style={{ rowGap: 6 }}>
       <View testID="qandeel-replay-source" style={{ backgroundColor: palette.field, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
         <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
         {presented.source}
       </View>
-      <View testID="qandeel-replay-derived" accessible accessibilityLabel={`${presented.caption} ${text}`} style={{ rowGap: 2 }}>
-        <Text testID="qandeel-replay-derived-caption" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{presented.caption}</Text>
-        <Text testID="qandeel-replay-derived-text" style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }}>{text}</Text>
-      </View>
+      {/* The DERIVED transcript only when the server gives one: none does today (F-2), and nothing stands in for it. */}
+      {text === null ? null : (
+        <View testID="qandeel-replay-derived" accessible accessibilityLabel={`${presented.caption} ${text}`} style={{ rowGap: 2 }}>
+          <Text testID="qandeel-replay-derived-caption" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{presented.caption}</Text>
+          <Text testID="qandeel-replay-derived-text" style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }}>{text}</Text>
+        </View>
+      )}
       {presented.beneath}
     </View>
   );

@@ -26,18 +26,23 @@ const commandId = () => {
   return `d0000000-0000-4000-8000-${commands.toString(16).padStart(12, '0')}`;
 };
 
-export const moment = (ordinal: number, originalMedium: 'ORIGINAL_TEXT' | 'ORIGINAL_AUDIO', text: string, sourceRole: 'USER' | 'ASSISTANT' = 'USER'): ReplayHistoryMoment =>
+export const moment = (ordinal: number, originalMedium: 'ORIGINAL_TEXT' | 'ORIGINAL_AUDIO', text: string | null, sourceRole: 'USER' | 'ASSISTANT' = 'USER'): ReplayHistoryMoment =>
   ({ ordinal, tc: ordinal, sourceRole, originalMedium, omittedBefore: 0, text });
 
-/** 1 text · 2 audio · 3 audio (a turn of two units: 3 and 4) · 5 text · 6 audio (another recording). */
+/**
+ * 1 text · 2 audio · 3 audio (a turn of two units: 3 and 4) · 5 text · 6 audio (another recording). An original-audio moment
+ * carries no text, as the server reads it (0183 R-1; S8B-07 CP1-B F-1 on HONOR: the step 5 fixture gave it text).
+ */
 export const MOMENTS: readonly ReplayHistoryMoment[] = [
   moment(1, 'ORIGINAL_TEXT', 'first'),
-  moment(2, 'ORIGINAL_AUDIO', 'heard two'),
-  moment(3, 'ORIGINAL_AUDIO', 'heard three', 'ASSISTANT'),
-  moment(4, 'ORIGINAL_AUDIO', 'heard four', 'ASSISTANT'),
+  moment(2, 'ORIGINAL_AUDIO', null),
+  moment(3, 'ORIGINAL_AUDIO', null, 'ASSISTANT'),
+  moment(4, 'ORIGINAL_AUDIO', null, 'ASSISTANT'),
   moment(5, 'ORIGINAL_TEXT', 'fifth'),
-  moment(6, 'ORIGINAL_AUDIO', 'heard six'),
+  moment(6, 'ORIGINAL_AUDIO', null),
 ];
+/** The same moments as text, for a V1 version (all text). */
+export const MOMENTS_AS_TEXT: readonly ReplayHistoryMoment[] = MOMENTS.map((m) => ({ ...m, originalMedium: 'ORIGINAL_TEXT' as const, text: m.text ?? `spoken ${m.ordinal}` }));
 
 export const RUN0: readonly PresentationSpan[] = [
   { kind: 'WINDOW', fromMs: 0, toMs: 6_000, track: 'USER', momentOrdinal: 2 },

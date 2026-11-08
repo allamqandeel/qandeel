@@ -21,7 +21,7 @@ import { resize } from '../../responsive/__fixtures__/composition';
 import type { ReplayAnalysisResult, ReplayHistoryMoment, ReplayHistoryVersion, ReplayMomentAnalysis } from '../../runtime-entry';
 import { createReplayCompositeController, type ReplayHistoryReader } from '../composite-controller';
 import { REPLAY_COMPOSITE_COPY_GATE, REPLAY_COMPOSITE_COPY_ROWS, replayCompositeCopy } from '../copy';
-import { REPLAY_RENDER_CONTRACT_V1, discloseReplayMoment, replayViewpointKey } from '../projection-adapter';
+import { REPLAY_RENDER_CONTRACT_V1, REPLAY_RENDER_CONTRACT_V2, discloseReplayMoment, replayViewpointKey } from '../projection-adapter';
 import { REPLAY_COMPOSITE_TEST_ID, ReplayMomentComposite, ReplayPreviewLimit } from '../ReplayMomentComposite';
 import { DERIVED_GAP, REPLAY_WIRE, replayScene, replayWireClient, type ReplayProofSceneName, type ReplayWireScene } from '../__fixtures__/replay-wire';
 
@@ -549,6 +549,64 @@ describe('S7-03 review — the version and its moments are used only when they a
     const { view, controller, reads } = await mount(scene, 1);
     expect(controller.state().status).toBe('FAILED');
     expectNothingHistorical(view);
+    expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
+  });
+});
+
+// S8B-07 CP1-B F-1 (HONOR, step 6): a V2 version mixing text and original audio, as the server answers it — an
+// original-audio moment carries no text (0183 R-1), and F-2 adds none. Ordinal 2 is the audio moment here.
+const mixedV2 = (edit: (scene: { version: Record<string, any>; moments: { moments: Record<string, any>[] } }) => void = () => undefined) =>
+  cloneScene(replayScene('main'), (scene) => {
+    scene.version.renderContract = { ...scene.version.renderContract, schema: REPLAY_RENDER_CONTRACT_V2.schema,
+      sourceMediumClass: REPLAY_RENDER_CONTRACT_V2.sourceMediumClass, policies: { ...REPLAY_RENDER_CONTRACT_V2.policies } };
+    const audio = scene.moments.moments[1]!;
+    audio.originalMedium = 'ORIGINAL_AUDIO';
+    audio.text = null;
+    edit(scene);
+  });
+
+describe('S8B-07 CP1-B F-1 — a mixed V2 version is read as the server gives it', () => {
+  it('is READY: the text moments with their text, the audio moment with none, and its analysis read like any other', async () => {
+    const { view, controller, reads, show } = await mount(mixedV2(), 2);
+    expect(controller.state().status).toBe('READY');
+    // The audio moment: never "not viewable", never a derived transcript, and its analysis is read.
+    expect(view.queryByTestId('qandeel-replay-not-viewable')).toBeNull();
+    expect(view.queryByTestId('qandeel-replay-derived-text')).toBeNull();
+    expect(view.getByTestId('qandeel-replay-temporal')).toBeTruthy();
+    expect(reads.some((read) => read.startsWith('analysis 2 '))).toBe(true);
+    // A text moment of the same version: its committed text, as before.
+    await show(1);
+    expect(view.getByTestId('qandeel-replay-source')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-replay-not-viewable')).toBeNull();
+  });
+
+  it('discloses the audio moment’s analysis without text; a text moment without its text is still refused', async () => {
+    const { version, moments } = await decoded(mixedV2());
+    const answer = await replayWireClient(mixedV2()).momentAnalysis(version.replayId, version.versionId, 2, 'WORLD');
+    if (answer.kind !== 'ANSWERED' || answer.analysis.outcome !== 'AVAILABLE') throw new Error('the scene must answer');
+    expect(discloseReplayMoment(version, moments[1]!, answer.analysis).status).toBe('DISCLOSED');
+    expect(discloseReplayMoment(version, { ...moments[1]!, originalMedium: 'ORIGINAL_TEXT' }, answer.analysis)).toEqual({ status: 'REFUSED', reason: 'NO_MOMENT_TEXT' });
+  });
+
+  it.each([
+    ['the audio moment carries text', (wire: { moments: { moments: Record<string, any>[] } }) => { wire.moments.moments[1]!.text = 'نص لا يجوز أن يظهر'; }],
+    ['a text moment arrives without its text', (wire: { moments: { moments: Record<string, any>[] } }) => { wire.moments.moments[2]!.text = null; }],
+  ])('fails whole when %s', async (_name, edit) => {
+    const { view, controller, reads } = await mount(mixedV2(edit), 1);
+    expect(controller.state().status).toBe('FAILED');
+    expectNothingHistorical(view);
+    expect(readerFacing(view.toJSON()).join(' ')).not.toContain('نص لا يجوز أن يظهر');
+    expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
+  });
+
+  it('NOT_VIEWABLE: no moment carries text, the audio moment included, and nothing is analysed', async () => {
+    const scene = mixedV2((wire) => {
+      wire.version.viewing = { state: 'NOT_VIEWABLE', notViewableClass: 'SOURCE_NOT_CURRENTLY_AVAILABLE', sourceLayer: 'NOT_DEREFERENCEABLE', analyticalLayer: 'SEALED_HISTORICAL_EVIDENCE' };
+      for (const moment of wire.moments.moments) moment.text = null;
+    });
+    const { view, controller, reads } = await mount(scene, 2);
+    expect(controller.state().status).toBe('READY');
+    expect(view.getByTestId('qandeel-replay-not-viewable')).toBeTruthy();
     expect(reads.filter((read) => read.startsWith('analysis'))).toEqual([]);
   });
 });

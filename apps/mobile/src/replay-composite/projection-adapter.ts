@@ -110,6 +110,14 @@ export function isRenderableMedium(moment: ReplayHistoryMoment, version?: Replay
   return version !== undefined && renderContractOf(version) === 'V2' && moment.originalMedium === 'ORIGINAL_AUDIO';
 }
 
+/**
+ * The moment's own reading is here: a text moment's committed text, or an original-audio moment's own sound, which never
+ * carries text (0183 R-1; S8B-07 CP1-B F-1). A text moment without its text has nothing to read.
+ */
+export function hasOwnReading(moment: ReplayHistoryMoment): boolean {
+  return moment.text !== null || moment.originalMedium === 'ORIGINAL_AUDIO';
+}
+
 /** The Replay viewpoint's own key: a Replay version is not the conversation's Session, and never borrows its id. */
 export function replayViewpointKey(version: Pick<ReplayHistoryVersion, 'replayId' | 'versionId'>): string {
   return `replay:${version.replayId}:${version.versionId}`;
@@ -154,7 +162,7 @@ export function discloseReplayMoment(version: ReplayHistoryVersion, moment: Repl
   if (!honoursRenderContract(version)) return refused('RENDER_CONTRACT_NOT_HONOURED');
   if (!isRenderableMedium(moment, version)) return refused('MEDIUM_NOT_RENDERABLE');
   if (version.viewing.state !== 'VIEWABLE') return refused('NOT_VIEWABLE');
-  if (moment.text === null) return refused('NO_MOMENT_TEXT');
+  if (!hasOwnReading(moment)) return refused('NO_MOMENT_TEXT');
   if (analysis.ordinal !== moment.ordinal || analysis.tc !== moment.tc) return refused('NOT_THIS_MOMENT');
   if (moment.tc < version.firstTc || moment.tc > version.lastTc) return refused('OUTSIDE_THE_VERSION');
   if (!positionsAtOrBefore(analysis, moment.tc)) return refused('BEYOND_THE_MOMENT');

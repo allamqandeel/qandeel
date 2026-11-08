@@ -1,7 +1,7 @@
 /**
  * S8B-07 CP1-B step 5 (Sheet B) — the S7-04 player rendered with the original-audio surface, in Arabic and English: the
- * V2 pacing declaration (RA-01 / RA-02) in place of the V1 line, a text moment exactly as in V1, an audio moment's
- * transcript under RA-03 (never as the original), its line (RA-14), the frame above the moment of another recording
+ * V2 pacing declaration (RA-01 / RA-02) in place of the V1 line, a text moment exactly as in V1, an audio moment with no
+ * transcript (the server gives none: F-1, F-2 open) and never the original's text, its line (RA-14), the frame above the moment of another recording
  * (RA-05) and the recorded gap under it (RA-06), the proven or generic end (RA-09 / RA-10 / RA-17) with the reading
  * withheld (B13: no fallback), RA-12 with the existing «Try again», and a V1 version untouched. FUNCTIONAL only: what the
  * screen reader and the ear make of it is the device's (step 6).
@@ -59,7 +59,7 @@ afterEach(async () => {
 });
 
 describe.each(['ar', 'en'] as const)('the V2 player surface (%s)', (language) => {
-  it('declares the V2 pace (RA-02, not the V1 line); a text moment is V1\'s, an audio moment its transcript under RA-03', async () => {
+  it('declares the V2 pace (RA-02, not the V1 line); a text moment is V1\'s, an audio moment its own surface with no transcript', async () => {
     const { view, w } = await mount(language);
     expect(text(view, 'qandeel-replay-pacing')).toBe(originalAudioText('RA-02', language));
     expect(text(view, 'qandeel-replay-pacing')).not.toBe(replayPlayerCopy(language).pacing);
@@ -68,12 +68,12 @@ describe.each(['ar', 'en'] as const)('the V2 player surface (%s)', (language) =>
     expect(text(view, 'qandeel-replay-text')).toBe('first');
     expect(view.queryByTestId('qandeel-replay-derived')).toBeNull();
     expect(view.queryByTestId('qandeel-replay-audio-line-1-line')).toBeNull();
-    // Moment 2 is audio: the transcript is shown as DERIVED, never as the original message.
+    // Moment 2 is audio: its own source surface, never the original message's text, and no RA-03 transcript, since the
+    // server gives none (F-1 on HONOR; F-2 open): nothing stands in for it, and it is never "not viewable".
     await show(w, 2);
     expect(view.queryByTestId('qandeel-replay-text')).toBeNull();
-    expect(text(view, 'qandeel-replay-derived-caption')).toBe(originalAudioText('RA-03', language));
-    expect(text(view, 'qandeel-replay-derived-text')).toBe('heard two');
-    expect(view.getByTestId('qandeel-replay-derived').props.accessibilityLabel).toBe(`${originalAudioText('RA-03', language)} heard two`);
+    expect(view.queryByTestId('qandeel-replay-derived')).toBeNull();
+    expect(view.queryByTestId('qandeel-replay-not-viewable')).toBeNull();
     expect(view.queryByTestId('qandeel-replay-source')).not.toBeNull();
     // Nothing is known of the audio before the map arrives: no line yet, and no request until play.
     expect(view.queryByTestId('qandeel-replay-audio-line-2-line')).toBeNull();

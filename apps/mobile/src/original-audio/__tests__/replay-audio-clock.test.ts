@@ -10,7 +10,7 @@ import { REPLAY_RENDER_CONTRACT_V1 } from '../../replay-composite';
 import type { PresentationSpan } from '../presentation-map';
 import { planFor } from '../replay-audio-clock';
 import { announcementText, frameText, replayEndedRow } from '../ReplayAudioViews';
-import { CROSS, MOMENTS, RUN0, RUN1, pace, run, until, world } from '../__fixtures__/replay-audio-world';
+import { CROSS, MOMENTS, MOMENTS_AS_TEXT, RUN0, RUN1, pace, run, until, world } from '../__fixtures__/replay-audio-world';
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -279,14 +279,13 @@ describe('fail closed, and V1 unchanged', () => {
   });
 
   it('a V1 version has no clock: the S7-04 pace for every moment, and no request', async () => {
-    const text = MOMENTS.map((m) => ({ ...m, originalMedium: 'ORIGINAL_TEXT' as const }));
-    const w = world({ contract: REPLAY_RENDER_CONTRACT_V1, moments: text });
+    const w = world({ contract: REPLAY_RENDER_CONTRACT_V1, moments: MOMENTS_AS_TEXT });
     await w.open();
     expect(w.clock()).toBeNull();
     w.player.play();
     await run(pace('first'));
     expect(w.ordinal()).toBe(2);
-    await run(pace('heard two'));
+    await run(pace('spoken 2'));
     expect(w.ordinal()).toBe(3);
     expect(w.server.calls).toEqual([]);
   });

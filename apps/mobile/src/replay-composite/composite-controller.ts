@@ -32,7 +32,7 @@ import type {
   ReplayMomentsResult,
   ReplayVersionResult,
 } from '../runtime-entry';
-import { honoursRenderContract, isRenderableMedium } from './projection-adapter';
+import { hasOwnReading, honoursRenderContract, isRenderableMedium } from './projection-adapter';
 
 /** The three reads, as `ReplayHistoryApiClient` answers them. */
 export interface ReplayHistoryReader {
@@ -75,10 +75,15 @@ export interface ReplayCompositeController {
 const LOADING = Object.freeze({ status: 'LOADING' as const });
 const keyOf = (ordinal: number, depth: HistoricalSemanticDepth) => `${ordinal} ${depth}`;
 
-/** The two reads describe one viewable-or-not version: the moment count and range, and text exactly when viewable. */
+/**
+ * The two reads describe one viewable-or-not version: the moment count and range, and the text moments' text exactly when
+ * viewable. An original-audio moment never carries text (0183 R-1), viewable or not (S8B-07 CP1-B F-1, as the API reads it).
+ */
 function consistent(version: ReplayHistoryVersion, moments: readonly ReplayHistoryMoment[]): boolean {
   if (moments.length !== version.momentCount || moments.some((moment) => moment.tc < version.firstTc || moment.tc > version.lastTc)) return false;
-  return version.viewing.state === 'VIEWABLE' ? moments.every((moment) => moment.text !== null) : moments.every((moment) => moment.text === null);
+  if (moments.some((moment) => moment.originalMedium === 'ORIGINAL_AUDIO' && moment.text !== null)) return false;
+  const texts = moments.filter((moment) => moment.originalMedium !== 'ORIGINAL_AUDIO');
+  return version.viewing.state === 'VIEWABLE' ? texts.every((moment) => moment.text !== null) : texts.every((moment) => moment.text === null);
 }
 
 export function createReplayCompositeController(reader: ReplayHistoryReader, replayId: string, versionId: string): ReplayCompositeController {
@@ -168,8 +173,8 @@ export function createReplayCompositeController(reader: ReplayHistoryReader, rep
     },
     ensureAnalysis(ordinal: number, depth: HistoricalSemanticDepth) {
       if (state.status !== 'READY' || state.version.viewing.state !== 'VIEWABLE') return;
-      // No analysis is read for a moment whose original text is not here.
-      if (!state.moments.some((moment) => moment.ordinal === ordinal && moment.text !== null)) return;
+      // No analysis is read for a moment whose own reading is not here (a text moment without its text).
+      if (!state.moments.some((moment) => moment.ordinal === ordinal && hasOwnReading(moment))) return;
       const key = keyOf(ordinal, depth);
       if (analyses.has(key)) return;
       analyses.set(key, LOADING);
