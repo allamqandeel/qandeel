@@ -92,6 +92,12 @@ export async function streamTransient(response: ServerResponse, opened: OpenedTr
   const timers: NodeJS.Timeout[] = [];
   let idle: NodeJS.Timeout | null = null;
   let checking = false;
+  // A termination settles the response on its own: `pipeline` does not settle when the streams are destroyed while a
+  // whole body waits behind an unread socket (a fast store, a slow or gone phone; S8B-07 CP1-B step 6, HONOR, r10).
+  let terminated: () => void = () => undefined;
+  const termination = new Promise<void>((resolve) => {
+    terminated = resolve;
+  });
 
   const gate = new Transform({
     transform(chunk: Buffer, _encoding: BufferEncoding, done: TransformCallback) {
@@ -117,6 +123,7 @@ export async function streamTransient(response: ServerResponse, opened: OpenedTr
     opened.body.destroy();
     gate.destroy();
     response.destroy();
+    terminated();
   };
 
   response.statusCode = opened.status;
@@ -144,7 +151,7 @@ export async function streamTransient(response: ServerResponse, opened: OpenedTr
   timers.push(setTimeout(tick, timing.recheckEveryMs));
   idle = setTimeout(() => terminate('IDLE'), timing.idleMs);
 
-  await pipeline(opened.body, gate, response).then(() => {
+  await Promise.race([pipeline(opened.body, gate, response).then(() => {
     if (ended === null) {
       ended = 'COMPLETE';
       endedAt = Date.now();
@@ -152,7 +159,7 @@ export async function streamTransient(response: ServerResponse, opened: OpenedTr
   }, () => {
     // A store failure mid-body, or the termination above: the headers are sent, so the connection is cut.
     terminate('STORE_FAILED');
-  });
+  }), termination]);
   stopTimers();
   return { outcome: ended ?? 'STORE_FAILED', bytesSent, bytesRefusedAfterTermination: bytesRefused, endedAt };
 }

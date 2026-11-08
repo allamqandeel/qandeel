@@ -1,5 +1,5 @@
 import { createServer, get, type IncomingMessage, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { connect, type AddressInfo } from 'node:net';
 import { Readable } from 'node:stream';
 import { boundedRecheck, streamTimingFrom, streamTransient, type StreamReport, type TransientStreamTiming } from './transient-stream';
 
@@ -17,6 +17,22 @@ function slowBody(chunks: number, everyMs: number): Readable {
       }
       sent += 1;
       setTimeout(() => this.push(Buffer.alloc(CHUNK, sent % 251)), everyMs);
+    },
+  });
+}
+
+/** A body read from memory in 16 KiB pieces (a fast store, as the step 6 proof pool's): it is read whole at once. */
+function memoryBody(size: number): Readable {
+  let at = 0;
+  return new Readable({
+    read() {
+      if (at >= size) {
+        this.push(null);
+        return;
+      }
+      const next = Math.min(16 * CHUNK, size - at);
+      at += next;
+      this.push(Buffer.alloc(next, 7));
     },
   });
 }
@@ -94,6 +110,40 @@ describe('a transient response (contract §15, §19.1)', () => {
     const { fetched, report } = await serve(() => slowBody(200, 10), 200 * CHUNK, 60_000, { ...FAST, lifetimeMs: 200, recheckEveryMs: 10_000 }, async () => true);
     expect(report.outcome).toBe('LIFETIME');
     expect([fetched.error, fetched.bytes < 200 * CHUNK]).toEqual([true, true]);
+  });
+
+  // S8B-07 CP1-B step 6 (HONOR, r10): a whole body handed to the socket before the client has read it (a fast store, a
+  // slow or gone phone) is a response that has ended but not finished; a termination then must still settle the report,
+  // or the pool never records the outcome and keeps the request open for ever.
+  it.each([
+    ['IDLE', { ...FAST, idleMs: 200, recheckEveryMs: 10_000 }, false],
+    ['LIFETIME', { ...FAST, lifetimeMs: 200, recheckEveryMs: 10_000 }, false],
+    ['CLIENT_GONE', { ...FAST, recheckEveryMs: 10_000 }, true],
+  ] as const)('a termination after the body is handed to an unread socket settles: %s', async (outcome, timing, leave) => {
+    const size = 200 * CHUNK;
+    let report: Promise<StreamReport> | undefined;
+    const server: Server = createServer((_request, response) => {
+      report = streamTransient(response, { status: 200, contentLength: size, contentRange: null,
+        body: memoryBody(size), serveForMs: 60_000 }, timing, async () => true);
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const socket = connect((server.address() as AddressInfo).port, '127.0.0.1');
+    socket.on('error', () => undefined);
+    socket.pause(); // never read: the body waits in the socket buffers
+    socket.write('GET / HTTP/1.1\r\nHost: x\r\n\r\n');
+    if (leave) setTimeout(() => socket.destroy(), 200);
+    const outcomeOf = async () => {
+      while (report === undefined) await new Promise((resolve) => setTimeout(resolve, 10));
+      return (await report).outcome;
+    };
+    let timer: NodeJS.Timeout | undefined;
+    const settled = await Promise.race([outcomeOf(), new Promise<string>((resolve) => { timer = setTimeout(() => resolve('NOT SETTLED'), 3_000); })]);
+    clearTimeout(timer);
+    socket.destroy();
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    // Settled, never left open; COMPLETE when the kernel took the whole body before the termination (a loaded runner).
+    expect([outcome, 'COMPLETE']).toContain(settled);
   });
 
   it('the first re-check runs one period after the response starts, never before the first byte', async () => {
