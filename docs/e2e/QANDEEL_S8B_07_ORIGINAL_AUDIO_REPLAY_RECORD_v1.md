@@ -755,7 +755,7 @@ verbatim, each marked superseded by this amendment. The failed results below sta
 - **HC-1 (a):** unchanged.
 - **HC-1 (b′), at a switch:**
   - content lost **0 (≤ 1 ms)** (unchanged);
-  - content repeated **≤ 100 ms** (was 10 ms).
+  - content repeated **≤ 100 ms** (was 10 ms). *Superseded by Decision 3 below: ≤ 150 ms, final.*
 
   It is measured on the content clock: `(new content's first sample) − (old content's last sample)`, which is the
   HC-1 lag step plus the silence. Everywhere else (a Range resume, a seek) HC-1 is unchanged.
@@ -855,6 +855,87 @@ The HONOR measurements are in `E:\QANDEEL_REPORTS\S8B-07\CP1-B\step6\captures` (
    - `proof/level-diag.mjs` places the peak always in the last 10 ms window, the one ending at the −6 dB edge, inside the system's own ≈ 10 ms fade at the pause. Without that window the deviation is ≤ 0.05 dB (batch 2: 11 / 11).
    - As written (the silence is between the −6 dB edges, HC-2 holds outside it), those windows fail. Counting the system fade as part of the pause is the Product Owner's decision.
    - **Correction:** Spike A's report said "within ± 3.01 dB". That was wrong; spike 2 shows 3.16 dB. The report now carries the correction, and the original line is kept.
+   - **Answered** by Decision 4 below.
+
+**Step 6, CA-07B-2 Decisions 3 and 4 (Product Owner, FINAL, 2026-11-08):**
+
+Both decisions narrow how CA-07B-2 is read at a switch. Nothing above is removed: the 100 ms text, the 21 ms allowance
+and every failed result stay recorded.
+
+- **Why Decision 2 (≤ 100 ms) could not hold (r5, `620006ef`):**
+  - The place a stopped player reports differs from what was heard by an amount that changes from player to player
+    (−4 … 89 ms). The new player's start also varies by ≈ 40 ms (AAC frames).
+  - Taken with no allowance, the content gap at a switch spanned **−81.4 … +45.9 ms (127 ms)** over 112 switches. No
+    fixed allowance fits that span in a 100 ms window with nothing lost.
+  - On r5 (21 ms behind): batch 5 passed 21 / 21. The H10 session, with a resume before each switch, repeated
+    102.1 and 102.4 ms. Batch 6 (22 switches, each after a resume) lost 4.2 – 24.9 ms in 5.
+- **Decision 3: content repeated at a switch ≤ 150 ms, final.**
+  - Loss stays 0 (≤ 1 ms). The pause stays ≤ 1 000 ms. Nothing may be heard twice at once, and no unexplained audio.
+  - The 150 ms is not widened again without the Product Owner. If the final measurement fails, the work stops and
+    reports.
+  - The Product Owner allowed the new player to start about two frames (≈ 43 ms) behind.
+  - Batch 6's own data shows 43 ms would still leave one observed switch losing ≈ 2.9 ms. **57 ms**, inside the
+    approved 150, puts every observed gap at −138 … −11 ms: nothing lost, at most 150 ms heard twice.
+  - **r6 (`cc194161`): `resumeBehindMs` = 57, `maxRepeatMs` = 150.** It is not counted as a pass until it is proven on
+    HONOR on the final build, after a pause and a resume, and after a seek.
+  - §20.2′ step 4 reads: "a new player starts the `G + 1` file `resumeBehindMs` (57 ms) before that place; the place
+    shown holds". A user resume of the paused run starts the same way. A seek, a first start, a moment's start and the
+    Range resume stay exact.
+- **Decision 4: HC-2 at the edge of the pause (a limited reading of HC-2, not a waiver).**
+  - The phone's own fade when the old player stops is part of the transition, and its time counts inside the
+    1 000 ms. That fade is the last **10 ms before the −6 dB edge**, the window established on HONOR.
+  - **Inside that window, a fade and nothing else.**
+    - No 10 ms window that reaches into it may be more than 3 dB above the level (a fade only lowers).
+    - The 1 ms level may not climb back more than 1.5 dB above its lowest point, walking to the edge (a dip that comes
+      back is a defect). On HONOR the rebound is ≤ 0.83 dB over 166 edges.
+  - **Outside that window,** the 10 ms level stays within ± 3 dB in the second before.
+  - **Unchanged over the whole second, the fade window included:**
+    - HC-2a's drop (< 3 ms);
+    - HC-3;
+    - the loss, the repeat, the second copy and the unexplained audio.
+  - **New: HC-3 across the pause itself,** with the same 7.31 dB limit. The controls showed why it is needed: a
+    click strong enough to break the content's shape moves the content edge back before it, into the pause, where
+    HC-3 was not measured. The switch still failed, as a loss, but under the wrong criterion. On HONOR this measure
+    is ≤ 0.3 dB.
+  - The second after the pause is read as written.
+  - **The earlier results, re-read:** of 166 edges in every capture (r3 – r5), 13 fail HC-2 as written (≤ 3.70 dB),
+    and none fails the reading. Outside the window the deviation is ≤ 0.06 dB.
+  - The as-written value is still computed and reported beside it, and no earlier report was overwritten.
+- **The measurement's own controls** (`switch-controls.mjs`, on the real switch-free capture): **29 / 29 pass**.
+  - The 16 earlier controls are unchanged.
+  - **2 positive controls**, each with the HONOR fade at the switch (linear over 20 ms, −6 dB 10 ms before the
+    stop). The fade alone passes (1.94 dB as written). A steeper monotone fade inside the 10 ms (4.21 dB as written)
+    passes too: the reading admits only what it was meant to.
+  - **11 negative controls**, each failing under the criterion it targets:
+
+    | Defect | Where | Fails on |
+    |---|---|---|
+    | a click at the content's peak | inside the window | HC-3 across the pause, and loss |
+    | a click at a quarter of the peak | inside the window | HC-3 before |
+    | a 4 dB dip that comes back | inside the window | fade rebound (3.29 dB) |
+    | a 4 dB rise | inside the window | fade rebound (3.53 dB) |
+    | 5 ms of content removed | inside the window | loss, unexplained, HC-3 across the pause |
+    | 10 ms of a second copy at −6 dB | inside the window | loss, fade rebound |
+    | a 3.5 dB dip of 12 ms ending 11 ms before the edge | beside the window | HC-2 level (3.5 dB) |
+    | a 4 dB step 20 – 30 ms before the edge | beside the window | HC-2 level (3.78 dB) |
+    | a 4 ms dropout 11 – 15 ms before the edge | beside the window | loss, HC-3 across the pause |
+    | a click at the content's peak 15 ms before the edge | beside the window | loss, HC-3 across the pause |
+    | a 3.5 dB dip right after the pause | the second after | HC-2 level after |
+- **Volume:** fixed at 4 / 16 for every measurement (not changed).
+- **Long tests:** 10 / 15-minute sessions and the accelerated clock during development. The ≈ 61-minute session runs
+  once, as the final acceptance, after the transitions and the short sessions pass.
+- **The contract test** `s8b-07-cp1b-mobile-playback-contract` now pins `maxSilenceMs` 1 000, `maxRepeatMs` 150,
+  `resumeBehindMs` 57 (below `maxRepeatMs`) and `stopWaitMs` 300.
+- **Unchanged:**
+  - HC-1 (a);
+  - the loss limit;
+  - HC-2 everywhere except that 10 ms window;
+  - HC-3 and HC-4;
+  - HC-5: ≥ 20 transitions and the one long session, zero degraded (the old generation `RELEASED`, never `EXPIRED`),
+    ≤ 2 live generations;
+  - the 30-day retention and the 58-minute cap;
+  - the bit-exact digest;
+  - privacy, deletion, credits and pricing.
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);
