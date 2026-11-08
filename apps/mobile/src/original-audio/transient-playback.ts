@@ -52,6 +52,8 @@ export const TRANSIENT_HANDOVER = Object.freeze({
   marginMs: 10_000,
   /** The new file starts this far before the paused place read from the old player (HONOR, step 6). */
   resumeBehindMs: 0,
+  /** The longest the switch waits for the paused player to say it has stopped before reading its place. */
+  stopWaitMs: 300,
 });
 /** §19.2: at most this many resumes a minute, with this back-off before each. */
 export const TRANSIENT_RESUME = Object.freeze({ perMinute: 3, windowMs: 60_000, backoffMs: Object.freeze([0, 1_000, 2_000]) });
@@ -158,6 +160,8 @@ interface Live {
   loaded: boolean;
   lastPositionMs: number;
   seeking: number;
+  /** Called once by the player's first status that is no longer playing (the hand-over waits for it). */
+  onStopped?: () => void;
 }
 
 const INITIAL: TransientPlaybackState = Object.freeze({
@@ -432,6 +436,11 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       return;
     }
     if (status.loaded) live.loaded = true;
+    if (!status.playing && live.onStopped !== undefined) {
+      const stopped = live.onStopped;
+      live.onStopped = undefined;
+      stopped();
+    }
     if (status.finished) {
       const length = held?.runs[live.runIndex]?.durationMs ?? 0;
       const at = Math.max(readPosition(live), Math.round(status.positionMs));
@@ -695,14 +704,27 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
    * new file starts there, less the device's resume allowance. Then the old player is released and its file let go.
    */
   function switchToNext(live: Live): void {
-    if (next === null || current !== live) return;
+    if (next === null || current !== live || live.onStopped !== undefined) return;
+    const my = epoch;
+    let done = false;
+    const timer = setTimer(() => finish(), TRANSIENT_HANDOVER.stopWaitMs);
+    // The place is read once the player has stopped: while it plays, its reported place trails what has already been
+    // sent to the output (step 6, HONOR: 17 – 60 ms), and reading it then would repeat that much.
+    function finish(): void {
+      if (done) return;
+      done = true;
+      clearTimer(timer);
+      live.onStopped = undefined;
+      if (my !== epoch || current !== live || next === null || intent !== 'PLAY') return;
+      resumeAt = { runIndex: live.runIndex, positionMs: Math.max(0, readPosition(live) - TRANSIENT_HANDOVER.resumeBehindMs) };
+      void startNext(false);
+    }
+    live.onStopped = finish;
     try {
       live.player?.pause();
     } catch {
-      // Released below in any case.
+      finish();
     }
-    resumeAt = { runIndex: live.runIndex, positionMs: Math.max(0, readPosition(live) - TRANSIENT_HANDOVER.resumeBehindMs) };
-    void startNext(false);
   }
 
   const unsubscribeForeground = options.foreground.subscribe(() => {
