@@ -76,6 +76,13 @@ test('no Arabic outside the copy file; the proven cause only', () => {
   assert.ok(views.includes("return reason === 'EXPIRED' ? 'RA-09' : reason === 'DELETED' ? 'RA-10' : 'RA-17';"));
 });
 
+test('CA-07B-2 r7 (HONOR, step 6): a released player is muted before it is paused and released, so its buffered tail is never heard', () => {
+  const release = /release: \(\) => \{([\s\S]*?)\n\s*\},/u.exec(tsCode(port))?.[1] ?? '';
+  const order = ['player.volume = 0;', 'player.pause();', 'player.remove();', 'player.release();'].map((s) => release.indexOf(s));
+  assert.ok(order.every((i) => i >= 0), 'mute, pause, remove, release are all there');
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'muted first, then paused, removed and released');
+});
+
 test('streaming only: never downloadFirst, no file, no storage, no cache; the position kept in memory', () => {
   assert.ok(port.includes('const player = createAudioPlayer({ uri: url, headers }, { updateInterval: 250 });'));
   assert.doesNotMatch(tsCode(port), /downloadFirst/u);

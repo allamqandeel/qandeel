@@ -33,9 +33,12 @@ export function createExpoVoiceNotePlayerPort(): VoiceNotePlayerPort {
         seekTo: (positionMs) => player.seekTo(positionMs / 1000),
         currentPositionMs: () => player.currentTime * 1000,
         // `remove()` only forgets the player in the module; the native player keeps playing until it is released
-        // (S8B-04 CP2 device finding), so it is stopped and released here, not left to garbage collection.
+        // (S8B-04 CP2 device finding), so it is stopped and released here, not left to garbage collection. It is muted
+        // first: on HONOR a stopped player let out its last buffered audio (≈ 43 ms) at release, after a switch's fade
+        // (S8B-07 CP1-B step 6, CA-07B-2 r7); nothing of a released player is heard.
         release: () => {
           subscription.remove();
+          player.volume = 0;
           player.pause();
           player.remove();
           player.release();
