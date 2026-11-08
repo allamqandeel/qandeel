@@ -10,6 +10,15 @@ import type { VoiceNotePlayerPort, VoiceNotePlayerStatus } from './voice-note-pl
 
 const FAILED_STATES = new Set(['error', 'failed']);
 
+/**
+ * A failed player. On Android `expo-audio` never reports an 'error' state: a source error (a 503, a refused or broken
+ * answer) arrives as the status's `error` message, with the state back to 'idle'. Without it the reader waited on
+ * "Getting playback ready" for ever, and the §19.2 resume never ran (S8B-07 CP1-B step 6, HONOR, r9).
+ */
+export function playerFailed(status: { readonly playbackState: string; readonly error?: string | null }): boolean {
+  return FAILED_STATES.has(String(status.playbackState).toLowerCase()) || (typeof status.error === 'string' && status.error.length > 0);
+}
+
 export function createExpoVoiceNotePlayerPort(): VoiceNotePlayerPort {
   return {
     async create(url, headers, onStatus) {
@@ -23,7 +32,7 @@ export function createExpoVoiceNotePlayerPort(): VoiceNotePlayerPort {
           positionMs: status.currentTime * 1000,
           durationMs: status.duration * 1000,
           finished: status.didJustFinish,
-          failed: FAILED_STATES.has(String(status.playbackState).toLowerCase()),
+          failed: playerFailed(status),
         };
         onStatus(view);
       });
