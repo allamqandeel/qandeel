@@ -308,7 +308,9 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     expect(c.transitions).toBeGreaterThanOrEqual(1);
     expect(c.overlapMs).toBe(0);
     expect(c.lostMs).toBe(0);
+    // The fake reports its exact place, so nothing is repeated here; the phone may repeat up to maxRepeatMs (step 6).
     expect(c.repeatedMs).toBeLessThanOrEqual(TRANSIENT_HANDOVER.resumeBehindMs);
+    expect(TRANSIENT_HANDOVER).toMatchObject({ maxSilenceMs: 1_000, maxRepeatMs: 100 });
     // The silence is the new player's own start (the fake's 400 ms), inside the bound measured on the phone (HC-2′).
     expect(c.largestSilenceMs).toBeGreaterThan(0);
     expect(c.largestSilenceMs).toBeLessThanOrEqual(TRANSIENT_HANDOVER.maxSilenceMs);

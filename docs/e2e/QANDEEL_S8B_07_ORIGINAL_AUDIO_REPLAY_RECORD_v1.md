@@ -419,7 +419,7 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 | 3 | Replay Media Service (the five routes, bounded Range responses) | done locally (details below): `replay-media-service.main.ts` under `REPLAY_MEDIA` / `REPLAY_POOL` only; API jest green; `prove-0196-media-service.mjs` 15/15 on a disposable PG17 with the in-memory store; `verify-migration-0196.mjs` 32/32 after the step-3 amendment; the rclone S3 run and the PostgREST proof (`prove-0185`) run only in CI; not yet run in CI |
 | 4 | V-24a First Audio isolation (not a proof of pool separation) | done locally (details below): `prove-0196-first-audio-isolation.mjs` on a disposable PG17 with the in-memory store, 3 interleaved repetitions per mode, D-06.7 PASS for M0 and M1_SHIPPED in each full run; `verify-migration-0196.mjs` 33/33 after the step-4 amendment; the rclone S3 run (with the store upload probe) runs only in CI; not yet run in CI. **Not V-24b.** |
 | 5 | Mobile | done locally (details below): `apps/mobile/src/original-audio/` and the Replay player's clock port; mobile jest 3 447 / 3 453 green (the 6 failures are the same at the step-4 head, locale-dependent on this machine, not caused here); `tsc` clean; `expo lint` 0 errors (no warning in a changed line); the S7, S8B-03 / 04 / 05 / 06 and CP1-B root contracts green; not yet run in CI. **HC-1 … HC-5 are not proven by these tests** (step 6) |
-| 6 | Device proof (HONOR and the iOS Simulator) | not started |
+| 6 | Device proof (HONOR and the iOS Simulator) | in progress: HC-4 calibrated (re-run at volume 4 / 16); the §20 hand-over amended by CA-07B-2 (below) after HONOR proved the R5.1 standby path cannot meet HC-1 / HC-2; F-1 fixed (below); the transitions, the 61-minute session and the independent checks are still to run |
 
 **Step 3, what it adds and what it changed (each change declared in the PR body):**
 - **The service.** The five routes of contract §6 and `/health` (§18.3), on the Replay pool's own HTTP process. It
@@ -702,6 +702,140 @@ pins them.
   turn carries RA-16 only.
 - `play()` on the last moment starts from the first (the S7-04 rule, unchanged).
 - Whether the platform player writes a cache file while streaming is checked on the device (step 6).
+
+**Step 6, CA-07B-2 — the generation hand-over on one player (CONTROLLED AMENDMENT, Product Owner, 2026-11-08):**
+
+A limited controlled change of WP0 contract §20 phone rules 2 and 3 (§20.2, §20.3) and of the approval sheet's §2.7
+criteria HC-1 (b), HC-2 and HC-5, as they apply at a generation switch. The R5.1 texts stay in the WP0 package
+verbatim, each marked superseded by this amendment. The failed results below stay recorded; none was removed.
+
+- **The original decision (R5.1, APPROVED 2026-11-07).**
+  - §20.2: a muted standby player for `G + 1`, aligned to −10 ms ≤ o ≤ 0 in at most 3 re-seeks, then a 20 – 40 ms
+    complementary volume ramp.
+  - HC-1 (b): content lost 0 (≤ 1 ms), repeated ≤ 10 ms.
+  - HC-2: no ≥ 3 ms dip of more than 6 dB, and the 10 ms level within ± 3 dB, in ± 500 ms of the transition.
+  - HC-5: every transition passes, and zero `TRANSIENT_HANDOVER_DEGRADED`.
+- **What HONOR showed** (step 6, HONOR ALI-NX1, Android 15, the phone's own output captured with scrcpy
+  `--audio-dup`, the shipped code at `6c9fa895`): 12 transitions, **none passed**.
+  - The pilot repeated 114.7 ms; the other 11 took the degraded path, with a silence of 280 – 455 ms.
+  - The **"muted" standby was audible** for 80 – 200 ms after each start or seek. A leak test found a second copy of
+    the content (correlation ≈ 1.0; control ≈ 0.05).
+  - The alignment could not reach the 10 ms window: the warm-seek jitter of ± 20 – 40 ms is wider than the window,
+    and the player's reported place is not the audible one right after a seek.
+- **Decision 1 (2026-11-08): a short pause is accepted.**
+  - The pause is at most 1 000 ms on the phone's actual output, with one player.
+  - No crossfade, no ramp, no muted standby.
+  - **Why:** the seamless path cannot be built reliably on the platform player. A short pause at most once per 58 min
+    of listening is acceptable, and it removes the second player and its leak.
+- **Spike A (10 transitions, one player):**
+  - The silence was 580 – 665 ms; nothing was lost; nothing was heard together.
+  - But **17 – 70 ms was repeated**: the old player's reported place at the pause and the new player's start each
+    vary by ≈ 37 ms, so no fixed allowance fits the 10 ms window.
+  - Reading the place after the player confirmed it had stopped returned the same value.
+- **Decision 2 (2026-11-08): a repeat of at most 100 ms, at the switch only.**
+  - No content may be lost (the approved ≤ 1 ms measurement tolerance; never skipped speech).
+  - The two generations are never heard together, and no unexplained audio.
+  - No new native player and no second player while these criteria are met.
+
+**The amended texts:**
+- **§20.2, the normal path (replaces R5.1 §20.2 1 – 4).** When `G + 1` is `READY` while playing, and the held file
+  would stop being readable before its run ends:
+  1. the subject's one player is paused;
+  2. its place is read once it reports it has stopped (at most 300 ms);
+  3. it is released, and its set let go (`DELETE`: `RELEASED`, erasure due at once);
+  4. a new player starts the `G + 1` file at that place.
+
+  The place does not move while it is silent, and CL-04 / RA-11 shows if the silence passes 1 s. A pause during the
+  switch keeps the saved place, and the resume starts the new file there. A live call releases the player and both sets.
+  There is **one player at all times**: §7's standby exception is removed.
+- **§20.3, the degraded path (replaces R5.1 §20.3).** It applies when `G + 1` is not `READY` before the held file
+  stops being readable, or when `G + 1` is `FAILED`. It is the same sequence as R5.1: pause → place → release → new
+  player → seek → play, with CL-04 / RA-11 after 1 s, CL-05 / RA-12 on a failed renewal, and the content-free event.
+  The trigger "the standby cannot align" no longer exists. It is still **not** the accepted path.
+- **HC-1 (a):** unchanged.
+- **HC-1 (b′), at a switch:**
+  - content lost **0 (≤ 1 ms)** (unchanged);
+  - content repeated **≤ 100 ms** (was 10 ms).
+
+  It is measured on the content clock: `(new content's first sample) − (old content's last sample)`, which is the
+  HC-1 lag step plus the silence. Everywhere else (a Range resume, a seek) HC-1 is unchanged.
+- **HC-2′, at a switch:**
+  - the silence between the −6 dB edges is **≤ 1 000 ms**;
+  - outside it (the second before and the second after) HC-2 is unchanged;
+  - no second copy of the content in the silence or in ± 500 ms of it;
+  - **no unexplained audio** in the silence. One 1 ms block at an edge is the measurement's resolution, so the
+    allowance is ≤ 2 ms.
+- **HC-3:** unchanged (≤ the calibration + 3 dB, around the switch including its edges).
+- **HC-4:** unchanged. It now also requires the switch measurement's own controls (16; below), and a new calibration
+  whenever the capture or processing chain changes.
+- **HC-5:**
+  - ≥ 20 transitions and the one real ≈ 61-minute session, unchanged.
+  - Every transition passes HC-1 (b′), HC-2′ and HC-3.
+  - Zero degraded transitions, proven per transition: the old generation is `RELEASED`, never `EXPIRED`.
+- **Unchanged:**
+  - the 30-day retention;
+  - the 58-minute file cap;
+  - ≤ 2 live generations and the one write path;
+  - the bit-exact `pcm_digest`;
+  - the stop rules;
+  - no audio on the device;
+  - privacy, deletion, credits and pricing.
+
+**The measurement (`proof/switch-measure.mjs`, outside the repository).** Per switch, against the generation's own
+decoded file:
+- the offset before and after;
+- the content edges (1 ms blocks, 0.25 ms hops, a fade still counted as heard);
+- the −6 dB level edges;
+- the recording's own silence in the gap (never counted as a pause or as loss);
+- a search for a second copy at any lag within ± 1.5 s (|corr| ≥ 0.8);
+- HC-2 / HC-3 in the second either side.
+
+**Its controls** (`switch-controls.mjs`, on a real switch-free capture): **16 / 16 pass**:
+- pauses of 300, 999, 1 001 and 1 500 ms;
+- 2, 5 and 6.5 ms lost;
+- 20 ms repeated;
+- 600 ms of natural silence with no switch, and a switch inside it;
+- a second copy at −6 and −12 dB, before and after;
+- a constant 6.5 ms shift (no switch);
+- a clean capture (nothing).
+
+**The capture level.** The phone's media volume was lowered to 4 / 16 for the household's sake, and stays fixed
+there for every measurement. The volume changes the loudspeaker only, not the captured signal: the gain to the
+reference was 1.364 against 1.366 – 1.368 at 16 / 16. HC-4 was re-run at 4 / 16: 133 windows, zero detections, HF
+excess 4.31 dB, so **the HC-3 limit is now 7.31 dB** (stricter than the earlier 7.52).
+
+**Contract tests changed (none loosened):**
+- In jest, the standby, alignment and ramp cases are replaced. (8) now asserts:
+  - one player alive;
+  - no overlap and no loss;
+  - the old player paused, then released;
+  - the silence > 0 and ≤ `maxSilenceMs`.
+- New cases:
+  - the place holding through the silence;
+  - CL-04 for a switch slower than 1 s;
+  - a pause or a live call during the switch;
+  - the Replay clock keeping its moment through the switch (§8 of the decision: no event runs ahead).
+- The voice-note player port loses the step-5 `muted` option and `setVolume`; the S8B-03 behaviour is unchanged.
+- EO V-35 (8)'s standby text is superseded by this amendment.
+
+**F-3 (the degraded event).**
+- The content-free `TRANSIENT_HANDOVER_DEGRADED` remains, for the degraded path only. It has no receiver: the app has
+  no telemetry channel, and none is added.
+- In CP1-B it is a test seam. HC-5's "zero degraded" is proven per transition from the server's own lifecycle: the old
+  generation `RELEASED` (switched), not `EXPIRED`.
+- A silence over 1 s is shown to the reader as CL-04. It is measured on HONOR, never collected from devices.
+- **No mandatory monitoring requirement remains open in CP1-B.** Hosted monitoring stays HOSTED-DEPLOY-01's.
+
+**F-1 (a mixed V2 Replay could not be read).**
+- **The cause:** 0183 R-1 gives an original-audio moment no text, while the S7-04 rule "the text of every moment, or
+  of none" refused every version that mixed text and audio, both in the API (`replay.service.ts`) and on the phone
+  (`replay-history-api.ts`).
+- **The fix:**
+  - the one viewing answer now covers the moments that are not original audio;
+  - an original-audio moment must carry no text, or the version is refused whole;
+  - MIXED is unchanged, and a V1 version reads exactly as before.
+- **F-2 is not touched:** no text is shown for an audio moment. VA-8 R-1 is not widened, and there is no new ASR
+  path. The Product Owner's decision is pending.
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);

@@ -18,10 +18,10 @@
  *                    with a new command; never while paused; the same set back with less than L left: it covers the
  *                    source, so it is never renewed again and plays to E. On play or resume below L: renewed first.
  *   Hand-over (§20.2, amended by the PO 2026-11-08: CA-07B-2) ONE player, never two. G+1 READY while playing, and the file
- *                    stops being readable before the run ends: the old player is paused FIRST and its place read from
- *                    it paused (minus the device's measured resume allowance); it is released and its file let go
+ *                    stops being readable before the run ends: the old player is paused FIRST and its place read once
+ *                    it has stopped; it is released and its file let go
  *                    (DELETE); the new file's player is created there and started. A short silence (≤ 1 s, measured
- *                    on the phone's output), no content lost, nothing heard twice beyond HC-1's precision, the two
+ *                    on the phone's output), no content lost, at most 100 ms heard twice at the switch, the two
  *                    generations never heard together; the position does not move while it is silent.
  *   Degraded         G+1 not READY when the file stops being readable, or G+1 FAILED: the continuation is asked for
  *                    and started at the saved place when it is ready; `TRANSIENT_HANDOVER_DEGRADED` (content-free).
@@ -44,13 +44,19 @@ export const TRANSIENT_STATUS_EVERY_MS = 10_000;
 export const TRANSIENT_WAITING_NOTICE_MS = 1_000;
 /** The POST of a set being prepared is asked again (same command) this often. */
 export const TRANSIENT_POLL_MS = 1_000;
-/** §20.2 hand-over (CA-07B-2): one player; the silence it may cause is bounded on the phone's output (HC-2′). */
+/**
+ * §20.2 hand-over (CA-07B-2, Product Owner 2026-11-08): one player. `maxSilenceMs` and `maxRepeatMs` are the acceptance
+ * bounds on the phone's output (HC-2′, HC-1 (b′)), not tuning: nothing here waits or seeks by them.
+ */
 export const TRANSIENT_HANDOVER = Object.freeze({
   /** HC-2′: the silence between the old file's last heard sample and the new file's first, on the phone's output. */
   maxSilenceMs: 1_000,
+  /** HC-1 (b′): content heard twice, at the switch only (no content is ever lost). */
+  maxRepeatMs: 100,
   /** The switch is made once the file would stop being readable this close to (or before) the run's end. */
   marginMs: 10_000,
-  /** The new file starts this far before the paused place read from the old player (HONOR, step 6). */
+  /** The new file starts this far before the paused place read from the old player (HONOR: the read already trails
+   *  what was heard by 17 – 70 ms, so no allowance is added). */
   resumeBehindMs: 0,
   /** The longest the switch waits for the paused player to say it has stopped before reading its place. */
   stopWaitMs: 300,
