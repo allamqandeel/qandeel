@@ -20,9 +20,10 @@
  *   Hand-over (§20.2, amended by the PO 2026-11-08: CA-07B-2) ONE player, never two. G+1 READY while playing, and the file
  *                    stops being readable before the run ends: the old player is paused FIRST and its place read once
  *                    it has stopped; it is released and its file let go
- *                    (DELETE); the new file's player is created there and started. A short silence (≤ 1 s, measured
- *                    on the phone's output), no content lost, at most 100 ms heard twice at the switch, the two
- *                    generations never heard together; the position does not move while it is silent.
+ *                    (DELETE); the new file's player is created there, one frame behind, and started. A short
+ *                    silence (≤ 1 s, measured on the phone's output), no content lost, at most 100 ms heard twice at
+ *                    the switch, the two generations never heard together; the position does not move while it is
+ *                    silent, nor back.
  *   Degraded         G+1 not READY when the file stops being readable, or G+1 FAILED: the continuation is asked for
  *                    and started at the saved place when it is ready; `TRANSIENT_HANDOVER_DEGRADED` (content-free).
  *
@@ -55,9 +56,13 @@ export const TRANSIENT_HANDOVER = Object.freeze({
   maxRepeatMs: 100,
   /** The switch is made once the file would stop being readable this close to (or before) the run's end. */
   marginMs: 10_000,
-  /** The new file starts this far before the paused place read from the old player (HONOR: the read already trails
-   *  what was heard by 17 – 70 ms, so no allowance is added). */
-  resumeBehindMs: 0,
+  /**
+   * The new file starts this far before the place read from the stopped old player: one AAC frame. On HONOR (step 6,
+   * 35 switches at 0) the content gap at a switch fell on one of four values one frame apart, +4.3 / −17 / −38 / −60 ms,
+   * and +4.3 is content lost (HC-1 (b′) allows 0). One frame behind, they are −17 / −38 / −60 / −81: nothing lost,
+   * at most 81 ms heard twice (≤ maxRepeatMs). Never more than maxRepeatMs.
+   */
+  resumeBehindMs: 21,
   /** The longest the switch waits for the paused player to say it has stopped before reading its place. */
   stopWaitMs: 300,
 });
@@ -172,6 +177,12 @@ interface Live {
    * its reported place runs two AAC frames (≈ 43 ms) ahead of what is heard, and the next switch loses that much).
    */
   started: boolean;
+  /**
+   * The reader's place never goes below this for this player: a player that continues the content starts one frame
+   * BEHIND the saved place (`TRANSIENT_HANDOVER.resumeBehindMs`), and those first milliseconds are heard twice, but the
+   * place shown, the Replay clock and the next read never move back (CA-07B-2 §8: no event runs ahead or back).
+   */
+  floorMs: number;
   /** Called once by the player's first status that is no longer playing (the hand-over waits for it). */
   onStopped?: () => void;
 }
@@ -239,11 +250,11 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   function readPosition(live: Live): number {
     try {
       const exact = live.player?.currentPositionMs?.();
-      if (typeof exact === 'number' && Number.isFinite(exact) && exact >= 0) return Math.round(exact);
+      if (typeof exact === 'number' && Number.isFinite(exact) && exact >= 0) return Math.max(live.floorMs, Math.round(exact));
     } catch {
       // A player that cannot answer keeps its last reported place.
     }
-    return live.lastPositionMs;
+    return Math.max(live.floorMs, live.lastPositionMs);
   }
 
   function releasePlayer(player: VoiceNotePlayer | null): void {
@@ -398,7 +409,8 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   }
 
   /** The player for (runIndex, positionMs) on the held set; plays when the reader wants it to. */
-  async function openRun(runIndex: number, positionMs: number, autoplay: boolean): Promise<void> {
+  /** `behindMs`: a continuation of the content (a switch, a resume) starts this much before the place (never before 0). */
+  async function openRun(runIndex: number, positionMs: number, autoplay: boolean, behindMs = 0): Promise<void> {
     const source = held;
     const artifactId = source?.runs[runIndex]?.artifactId ?? null;
     if (source === null || artifactId === null) {
@@ -415,7 +427,8 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     tokens += 1;
     // A start away from 0 counts as seeking from the outset: a status the new player reports before its seek (its place
     // 0) never moves the reader's clock back (CA-07B-2: the place does not move while the switch is silent).
-    const live: Live = { token: tokens, artifactId, runIndex, player: null, loaded: false, lastPositionMs: positionMs, seeking: positionMs > 0 ? 1 : 0, started: false };
+    const from = Math.max(0, positionMs - behindMs);
+    const live: Live = { token: tokens, artifactId, runIndex, player: null, loaded: false, lastPositionMs: positionMs, seeking: from > 0 ? 1 : 0, started: false, floorMs: positionMs };
     current = live;
     if (autoplay) expectAudio(runIndex, positionMs);
     else set({ runIndex, positionMs });
@@ -431,8 +444,8 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       return;
     }
     live.player = created;
-    if (positionMs > 0) {
-      await created.seekTo(positionMs).catch(() => undefined);
+    if (from > 0) {
+      await created.seekTo(from).catch(() => undefined);
       live.seeking -= 1;
     }
     if (my !== epoch || current !== live) return;
@@ -465,7 +478,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       return;
     }
     if (status.loaded && live.seeking === 0) {
-      live.lastPositionMs = Math.max(0, Math.round(status.positionMs));
+      live.lastPositionMs = Math.max(live.floorMs, Math.round(status.positionMs));
       if (state.positionMs !== live.lastPositionMs) set({ positionMs: live.lastPositionMs });
     }
     if (status.loaded && status.playing && intent === 'PLAY') {
@@ -700,7 +713,8 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     next = null;
     renewalFailed = false;
     publishSet(held);
-    if (intent === 'PLAY') await openRun(at.runIndex, at.positionMs, true);
+    // The new file continues the content: one frame behind the saved place (HC-1 (b′): nothing lost).
+    if (intent === 'PLAY') await openRun(at.runIndex, at.positionMs, true, TRANSIENT_HANDOVER.resumeBehindMs);
   }
 
   /** The hand-over is needed only when the file stops being readable before its run ends (§20 rule 1, last bullet). */
@@ -716,7 +730,8 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   /**
    * §20.2 (CA-07B-2): ONE player. The old one is paused FIRST, so the two generations are never heard together, and its
    * place is read from it paused (a playing player's reported place runs ahead of, or behind, what is heard: step 6); the
-   * new file starts there, less the device's resume allowance. Then the old player is released and its file let go.
+   * new file starts one frame behind it (`resumeBehindMs`), the reader's place held. Then the old player is released
+   * and its file let go.
    */
   function switchToNext(live: Live): void {
     if (next === null || current !== live || live.onStopped !== undefined) return;
@@ -731,7 +746,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       clearTimer(timer);
       live.onStopped = undefined;
       if (my !== epoch || current !== live || next === null || intent !== 'PLAY') return;
-      resumeAt = { runIndex: live.runIndex, positionMs: Math.max(0, readPosition(live) - TRANSIENT_HANDOVER.resumeBehindMs) };
+      resumeAt = { runIndex: live.runIndex, positionMs: readPosition(live) };
       void startNext(false);
     }
     live.onStopped = finish;
@@ -794,7 +809,10 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         armDeadline();
         return true;
       }
-      void openRun(runIndex, positionMs, true);
+      // A resume of the paused player's run at its own place continues the content: one frame behind it, like a switch.
+      // Any other start (the first, a seek, a moment's start) is exactly where it was asked.
+      const resuming = current !== null && current.started && current.runIndex === runIndex && positionMs === state.positionMs;
+      void openRun(runIndex, positionMs, true, resuming ? TRANSIENT_HANDOVER.resumeBehindMs : 0);
       return true;
     },
     pause() {

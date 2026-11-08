@@ -117,15 +117,16 @@ describe('starting, pausing, seeking (play / pause / seek / resume)', () => {
     await run(11_000);
     expect(w.engine.getState()).toMatchObject({ phase: 'PAUSED', positionMs: 0 });
     // CA-07B-2: a player that has played is never started again nor seeked; the resume and the seek each create a new
-    // player at the place, and the one before it is released first (one player at all times).
+    // player, and the one before it is released first (one player at all times). The resume continues the content, so
+    // it starts one frame behind the place (nothing lost); the seek starts exactly where it was asked.
     expect(w.players.made).toHaveLength(3);
-    expect(w.players.made[1]!.calls[0]).toBe(`seek:${at}`);
+    expect(w.players.made[1]!.calls[0]).toBe(`seek:${at - TRANSIENT_HANDOVER.resumeBehindMs}`);
     expect(w.players.made[2]!.calls[0]).toBe('seek:50000');
     expect(w.players.made.map((p) => p.calls.filter((call) => call === 'play').length)).toEqual([1, 1, 1]);
     expect(w.players.made.every((p) => p.released)).toBe(true);
     expect(w.players.alive.max).toBe(1);
     const c = continuityOf(w.players.audible);
-    expect(c.repeatedMs).toBe(0);
+    expect(c.repeatedMs).toBe(TRANSIENT_HANDOVER.resumeBehindMs); // the resume starts one frame behind; the place held
   });
 
   it('pausing while the set is prepared asks nothing more until the next play', async () => {
@@ -315,8 +316,10 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     expect(c.transitions).toBeGreaterThanOrEqual(1);
     expect(c.overlapMs).toBe(0);
     expect(c.lostMs).toBe(0);
-    // The fake reports its exact place, so nothing is repeated here; the phone may repeat up to maxRepeatMs (step 6).
-    expect(c.repeatedMs).toBeLessThanOrEqual(TRANSIENT_HANDOVER.resumeBehindMs);
+    // The fake reports its exact place, so exactly the allowance is repeated here; the phone adds its own read error,
+    // measured on its output (step 6), within maxRepeatMs.
+    expect(c.repeatedMs).toBe(TRANSIENT_HANDOVER.resumeBehindMs);
+    expect(TRANSIENT_HANDOVER.resumeBehindMs).toBeLessThan(TRANSIENT_HANDOVER.maxRepeatMs);
     expect(TRANSIENT_HANDOVER).toMatchObject({ maxSilenceMs: 1_000, maxRepeatMs: 100 });
     // The silence is the new player's own start (the fake's 400 ms), inside the bound measured on the phone (HC-2′).
     expect(c.largestSilenceMs).toBeGreaterThan(0);
@@ -341,7 +344,7 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     expect(new Set(preparing.map((x) => x.positionMs)).size).toBe(1);
     for (let i = 1; i < samples.length; i += 1) expect(samples[i]!.positionMs).toBeGreaterThanOrEqual(samples[i - 1]!.positionMs);
     const last = w.players.made[w.players.made.length - 1]!;
-    expect(last.calls).toContain(`seek:${preparing[0]!.positionMs}`);
+    expect(last.calls).toContain(`seek:${preparing[0]!.positionMs - TRANSIENT_HANDOVER.resumeBehindMs}`);
     expect(continuityOf(w.players.audible).lostMs).toBe(0);
   });
 
@@ -376,7 +379,7 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     await run(6_000);
     expect(w.engine.getState().phase).toBe('PLAYING');
     const last = w.players.made[w.players.made.length - 1]!;
-    expect(last.calls).toContain(`seek:${at}`);
+    expect(last.calls).toContain(`seek:${at - TRANSIENT_HANDOVER.resumeBehindMs}`);
     expect(continuityOf(w.players.audible).lostMs).toBe(0);
   });
 
