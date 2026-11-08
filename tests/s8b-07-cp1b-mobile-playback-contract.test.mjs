@@ -5,6 +5,7 @@
 //               stop; no Arabic outside the copy file; a proven cause only (CL-06 / CL-07 / RA-09 / RA-10)
 //   streaming   never `downloadFirst`; no file system, storage or cache in original-audio; the position in memory only
 //   the rules   status every 10 s while playing, ≤ 3 resumes a minute, the renewal lead L, the 1 s notice (§15.2, §19.2)
+//   hand-over   CA-07B-2 HC-1 at a switch: silence ≤ 1 s, repeat ≤ 150 ms (PO final), a continuation 57 ms behind
 //   separation  original-audio imports no map, Living Analysis, projection or composite view; the Replay player names
 //               no audio and takes only a neutral clock port; V1 has no clock
 //   V2 mirror   the mobile V2 tuple is the API's, value for value
@@ -93,6 +94,16 @@ test('the phone\'s rules: status every 10 s, at most 3 resumes a minute, the ren
     'export const TRANSIENT_WAITING_NOTICE_MS = 1_000;',
     'export const TRANSIENT_RESUME = Object.freeze({ perMinute: 3, windowMs: 60_000, backoffMs: Object.freeze([0, 1_000, 2_000]) });',
   ]) assert.ok(engine.includes(pin), pin);
+});
+
+test('CA-07B-2 HC-1 at a switch (PO final, 2026-11-08): silence ≤ 1 s, repeat ≤ 150 ms, a continuation 57 ms behind, below the repeat', () => {
+  const handover = /export const TRANSIENT_HANDOVER = Object\.freeze\(\{([\s\S]*?)\n\}\);/u.exec(engine)?.[1] ?? '';
+  const value = (name) => Number(new RegExp(`^\\s*${name}: ([\\d_]+),$`, 'mu').exec(tsCode(handover))?.[1]?.replace(/_/gu, ''));
+  assert.equal(value('maxSilenceMs'), 1_000);
+  assert.equal(value('maxRepeatMs'), 150, 'the PO set 150 ms as final; it is not widened without the PO');
+  assert.equal(value('resumeBehindMs'), 57);
+  assert.ok(value('resumeBehindMs') < value('maxRepeatMs'), 'the allowance never reaches the repeat limit');
+  assert.equal(value('stopWaitMs'), 300);
 });
 
 test('audio and graphics apart: original-audio draws nothing of the map, the Replay player names no audio', () => {

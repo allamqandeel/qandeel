@@ -118,7 +118,7 @@ describe('starting, pausing, seeking (play / pause / seek / resume)', () => {
     expect(w.engine.getState()).toMatchObject({ phase: 'PAUSED', positionMs: 0 });
     // CA-07B-2: a player that has played is never started again nor seeked; the resume and the seek each create a new
     // player, and the one before it is released first (one player at all times). The resume continues the content, so
-    // it starts one frame behind the place (nothing lost); the seek starts exactly where it was asked.
+    // it starts `resumeBehindMs` behind the place (nothing lost); the seek starts exactly where it was asked.
     expect(w.players.made).toHaveLength(3);
     expect(w.players.made[1]!.calls[0]).toBe(`seek:${at - TRANSIENT_HANDOVER.resumeBehindMs}`);
     expect(w.players.made[2]!.calls[0]).toBe('seek:50000');
@@ -126,7 +126,7 @@ describe('starting, pausing, seeking (play / pause / seek / resume)', () => {
     expect(w.players.made.every((p) => p.released)).toBe(true);
     expect(w.players.alive.max).toBe(1);
     const c = continuityOf(w.players.audible);
-    expect(c.repeatedMs).toBe(TRANSIENT_HANDOVER.resumeBehindMs); // the resume starts one frame behind; the place held
+    expect(c.repeatedMs).toBe(TRANSIENT_HANDOVER.resumeBehindMs); // the resume starts `resumeBehindMs` behind; the place held
   });
 
   it('pausing while the set is prepared asks nothing more until the next play', async () => {
@@ -320,7 +320,7 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     // measured on its output (step 6), within maxRepeatMs.
     expect(c.repeatedMs).toBe(TRANSIENT_HANDOVER.resumeBehindMs);
     expect(TRANSIENT_HANDOVER.resumeBehindMs).toBeLessThan(TRANSIENT_HANDOVER.maxRepeatMs);
-    expect(TRANSIENT_HANDOVER).toMatchObject({ maxSilenceMs: 1_000, maxRepeatMs: 100 });
+    expect(TRANSIENT_HANDOVER).toMatchObject({ maxSilenceMs: 1_000, maxRepeatMs: 150 });
     // The silence is the new player's own start (the fake's 400 ms), inside the bound measured on the phone (HC-2′).
     expect(c.largestSilenceMs).toBeGreaterThan(0);
     expect(c.largestSilenceMs).toBeLessThanOrEqual(TRANSIENT_HANDOVER.maxSilenceMs);

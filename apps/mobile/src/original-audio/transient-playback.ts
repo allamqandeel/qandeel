@@ -20,8 +20,8 @@
  *   Hand-over (§20.2, amended by the PO 2026-11-08: CA-07B-2) ONE player, never two. G+1 READY while playing, and the file
  *                    stops being readable before the run ends: the old player is paused FIRST and its place read once
  *                    it has stopped; it is released and its file let go
- *                    (DELETE); the new file's player is created there, one frame behind, and started. A short
- *                    silence (≤ 1 s, measured on the phone's output), no content lost, at most 100 ms heard twice at
+ *                    (DELETE); the new file's player is created there, `resumeBehindMs` behind, and started. A short
+ *                    silence (≤ 1 s, measured on the phone's output), no content lost, at most 150 ms heard twice at
  *                    the switch, the two generations never heard together; the position does not move while it is
  *                    silent, nor back.
  *   Degraded         G+1 not READY when the file stops being readable, or G+1 FAILED: the continuation is asked for
@@ -52,17 +52,17 @@ export const TRANSIENT_POLL_MS = 1_000;
 export const TRANSIENT_HANDOVER = Object.freeze({
   /** HC-2′: the silence between the old file's last heard sample and the new file's first, on the phone's output. */
   maxSilenceMs: 1_000,
-  /** HC-1 (b′): content heard twice, at the switch only (no content is ever lost). */
-  maxRepeatMs: 100,
+  /** HC-1 (b′): content heard twice, at the switch only (no content is ever lost). 100 → 150: PO, 2026-11-08 (final). */
+  maxRepeatMs: 150,
   /** The switch is made once the file would stop being readable this close to (or before) the run's end. */
   marginMs: 10_000,
   /**
-   * The new file starts this far before the place read from the stopped old player: one AAC frame. On HONOR (step 6,
-   * 35 switches at 0) the content gap at a switch fell on one of four values one frame apart, +4.3 / −17 / −38 / −60 ms,
-   * and +4.3 is content lost (HC-1 (b′) allows 0). One frame behind, they are −17 / −38 / −60 / −81: nothing lost,
-   * at most 81 ms heard twice (≤ maxRepeatMs). Never more than maxRepeatMs.
+   * A continuation (a switch, a resume) starts this far before the saved place. On HONOR (step 6) the place a stopped
+   * player reports differs from what was heard by an amount that varies per player, so the content gap at a switch,
+   * with no allowance, spanned −81.4 … +45.9 ms over 112 switches (positive = lost). 57 ms puts all of it at −138 … −11:
+   * nothing lost, at most 150 ms heard twice (`maxRepeatMs`), about 11 ms of margin each side. Never ≥ maxRepeatMs.
    */
-  resumeBehindMs: 21,
+  resumeBehindMs: 57,
   /** The longest the switch waits for the paused player to say it has stopped before reading its place. */
   stopWaitMs: 300,
 });
@@ -178,8 +178,8 @@ interface Live {
    */
   started: boolean;
   /**
-   * The reader's place never goes below this for this player: a player that continues the content starts one frame
-   * BEHIND the saved place (`TRANSIENT_HANDOVER.resumeBehindMs`), and those first milliseconds are heard twice, but the
+   * The reader's place never goes below this for this player: a player that continues the content starts
+   * `TRANSIENT_HANDOVER.resumeBehindMs` BEHIND the saved place, and those first milliseconds are heard twice, but the
    * place shown, the Replay clock and the next read never move back (CA-07B-2 §8: no event runs ahead or back).
    */
   floorMs: number;
@@ -713,7 +713,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     next = null;
     renewalFailed = false;
     publishSet(held);
-    // The new file continues the content: one frame behind the saved place (HC-1 (b′): nothing lost).
+    // The new file continues the content: `resumeBehindMs` behind the saved place (HC-1 (b′): nothing lost).
     if (intent === 'PLAY') await openRun(at.runIndex, at.positionMs, true, TRANSIENT_HANDOVER.resumeBehindMs);
   }
 
@@ -730,7 +730,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   /**
    * §20.2 (CA-07B-2): ONE player. The old one is paused FIRST, so the two generations are never heard together, and its
    * place is read from it paused (a playing player's reported place runs ahead of, or behind, what is heard: step 6); the
-   * new file starts one frame behind it (`resumeBehindMs`), the reader's place held. Then the old player is released
+   * new file starts `resumeBehindMs` behind it, the reader's place held. Then the old player is released
    * and its file let go.
    */
   function switchToNext(live: Live): void {
@@ -809,7 +809,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         armDeadline();
         return true;
       }
-      // A resume of the paused player's run at its own place continues the content: one frame behind it, like a switch.
+      // A resume of the paused player's run at its own place continues the content: `resumeBehindMs` behind, like a switch.
       // Any other start (the first, a seek, a moment's start) is exactly where it was asked.
       const resuming = current !== null && current.started && current.runIndex === runIndex && positionMs === state.positionMs;
       void openRun(runIndex, positionMs, true, resuming ? TRANSIENT_HANDOVER.resumeBehindMs : 0);
