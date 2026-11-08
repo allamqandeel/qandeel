@@ -403,7 +403,80 @@ async function captured(fn) {
   process.stderr.write = keep;
   try { return await fn(); } finally { process.stdout.write = out; process.stderr.write = err; }
 }
-async function startInstance(ps, db, timing, port = 0) {
+/**
+ * The paced reads' link: a local stream socket (a Unix socket; a named pipe on Windows) whose connections are handed to
+ * the instance's own HTTP server, so the compiled service, its controller and its stream run unchanged. Its buffer is
+ * fixed, where TCP loopback auto-tunes: on the Linux CI runner the loopback path took a whole 6-minute file within
+ * 5 ms, so the server had COMPLETED before any cut and a slow reader exerted no back-pressure at all (PR #385, API CI
+ * at 644a73b7). `linkCapacity` measures both, and the stream stage refuses to run on a link that could absorb a file.
+ */
+let links = 0;
+function newLinkPath() {
+  links += 1;
+  return process.platform === 'win32' ? `\\\\.\\pipe\\qandeel-prove-0196-${process.pid}-${links}`
+    : join(tmpdir(), `qandeel-prove-0196-${process.pid}-${links}.sock`);
+}
+async function listenLink(onSocket, path = newLinkPath()) {
+  const sockets = new Set();
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.once('close', () => sockets.delete(socket));
+    onSocket(socket);
+  });
+  await new Promise((done, fail) => {
+    server.once('error', fail);
+    server.listen(path, () => done());
+  });
+  return {
+    link: { socketPath: path },
+    close: () => new Promise((closed) => {
+      for (const socket of sockets) socket.destroy();
+      server.close(() => closed());
+    }),
+  };
+}
+/**
+ * The bytes a server can hand to a link while its reader is paused, before back-pressure reaches it: what a slow reader
+ * can never hold back (capped at 16 MiB).
+ */
+async function linkCapacity(kind) {
+  const total = 16 * 1024 * 1024;
+  let accepted = 0;
+  const server = http.createServer((request, response) => {
+    response.setHeader('Content-Length', String(total));
+    const piece = Buffer.alloc(16 * 1024);
+    const pump = () => {
+      while (accepted < total) {
+        accepted += piece.length;
+        if (!response.write(piece)) {
+          response.once('drain', pump);
+          return;
+        }
+      }
+      response.end();
+    };
+    pump();
+  });
+  const piped = kind === 'link' ? await listenLink((socket) => server.emit('connection', socket)) : null;
+  if (!piped) await new Promise((done) => server.listen(0, '127.0.0.1', () => done()));
+  const target = piped ? piped.link : { host: '127.0.0.1', port: server.address().port };
+  await new Promise((done) => {
+    const request = http.request({ ...target, path: '/', agent: false }, (response) => {
+      response.once('data', () => response.pause());
+      setTimeout(() => {
+        response.destroy();
+        done();
+      }, 1_500);
+    });
+    request.on('error', () => done());
+    request.end();
+  });
+  server.closeAllConnections();
+  if (piped) await piped.close();
+  else await new Promise((done) => server.close(() => done()));
+  return accepted;
+}
+async function startInstance(ps, db, timing, { port = 0, linkPath } = {}) {
   const reports = [];
   const counter = { reads: 0, checks: 0 };
   // The Replay role's own connection, counted at the statement: every per-request read and every in-stream re-check.
@@ -425,10 +498,13 @@ async function startInstance(ps, db, timing, port = 0) {
   configureHttpSecurity(app, parseProxyConfiguration({ NODE_ENV: 'test' }));
   await TransientPlaybackService.preflight(counted, ps.store, process.env);
   await app.listen(port, '127.0.0.1');
-  return { app, db, port: app.getHttpServer().address().port, reports, counter };
+  const httpServer = app.getHttpServer();
+  const paced = await listenLink((socket) => httpServer.emit('connection', socket), linkPath);
+  return { app, db, port: httpServer.address().port, link: paced.link, closeLink: paced.close, reports, counter };
 }
 /** Kills an instance as a crash or a rollout would: every open connection dropped, then the server closed. */
 async function killInstance(instance) {
+  await instance.closeLink();
   instance.app.getHttpServer().closeAllConnections();
   await instance.app.close();
 }
@@ -447,15 +523,17 @@ const statusOf = (i, l, artifact) => call(i, 'GET', `/voice/transient/${artifact
 const releaseOf = (i, l, artifact) => call(i, 'DELETE', `/voice/transient/${artifact}`, l.token);
 
 /**
- * One GET of the audio by a client that reads at most `rate` bytes per second (it pauses the socket, so the server sees
- * real back-pressure). Resolves when the response closes: its status, headers, bytes, and whether it ended in an error.
+ * One GET of the audio by a client that reads at most `rate` bytes per second. It pauses the socket, and `link` is an
+ * instance's paced link (see `newLinkPath`), so the server sees real back-pressure once that link's fixed buffer is full.
+ * Resolves when the response closes: its status, headers, bytes, and whether it ended in an error.
  */
-function slowGet(port, artifact, token, { range = null, rate = SLOW, onFirstByte = null } = {}) {
+function slowGet(link, artifact, token, { range = null, rate = SLOW, onFirstByte = null } = {}) {
+  assert.ok(typeof link?.socketPath === 'string', 'a paced read goes over a paced link');
   return new Promise((done) => {
     let settled = false;
     const finish = (value) => { if (!settled) { settled = true; done(value); } };
     const request = http.request({
-      host: '127.0.0.1', port, path: `/voice/transient/${artifact}`, method: 'GET', agent: false,
+      socketPath: link.socketPath, path: `/voice/transient/${artifact}`, method: 'GET', agent: false,
       headers: { Authorization: `Bearer ${token}`, ...(range ? { Range: range } : {}) },
     }, (response) => {
       const chunks = [];
@@ -566,12 +644,12 @@ async function s02Wire(report, A, ps, L, other) {
     // Another person's file: every route answers 404, and the file is untouched.
     const theirs = { ...other };
     assert.equal((await statusOf(A, theirs, first.body.artifactId)).status, 404);
-    assert.equal((await slowGet(A.port, first.body.artifactId, theirs.token, { rate: 1 << 30 })).status, 404);
+    assert.equal((await slowGet(A.link, first.body.artifactId, theirs.token, { rate: 1 << 30 })).status, 404);
     assert.equal((await releaseOf(A, theirs, first.body.artifactId)).status, 404);
     assert.equal((await statusOf(A, L, first.body.artifactId)).body.state, 'PENDING', 'their DELETE released nothing');
     assert.equal((await call(A, 'GET', '/voice/transient/not-an-id', L.token)).status, 404);
     // A file not READY is not read.
-    assert.equal((await slowGet(A.port, first.body.artifactId, L.token, { rate: 1 << 30 })).status, 404, 'a PENDING file → 404');
+    assert.equal((await slowGet(A.link, first.body.artifactId, L.token, { rate: 1 << 30 })).status, 404, 'a PENDING file → 404');
     artifact = first.body.artifactId;
   });
   return artifact;
@@ -636,14 +714,14 @@ async function s05Control(report, A, ps, X, artifact) {
     const checks = A.counter.checks;
     const reported = A.reports.length;
     const started = Date.now();
-    const r = await slowGet(A.port, artifact, X.token);
+    const r = await slowGet(A.link, artifact, X.token);
     const rep = await reportAfter(A, reported);
     assert.deepEqual([r.status, r.error, r.bytes, sha(r.body)], [200, false, file.size, file.digest], 'every byte, a clean end');
     assert.equal(rep.outcome, 'COMPLETE');
     assert.equal(r.headers['content-length'], String(file.size));
     const rechecks = A.counter.checks - checks;
     const wallMs = Date.now() - started;
-    // The re-check runs while the server is still sending (the loopback path buffers the last few hundred KiB).
+    // The re-check runs while the server is still sending (the paced link holds back all but its fixed capacity).
     const sendingMs = rep.endedAt - started;
     assert.ok(rechecks >= 3 && rechecks >= Math.floor(sendingMs / DEFAULT_STREAM_TIMING.recheckEveryMs) - 1,
       `the re-check ran every 5 s while sending (${rechecks} in ${sendingMs} ms)`);
@@ -662,7 +740,7 @@ async function cut(label, instance, ps, person, artifact, trigger, { expect = 'R
   const reported = instance.reports.length;
   const wired = wire.length;
   let fired = null;
-  const r = await slowGet(instance.port, artifact, person.token, {
+  const r = await slowGet(instance.link, artifact, person.token, {
     onFirstByte: () => {
       if (!trigger) return;
       fired = sleep(1_500).then(trigger);
@@ -676,6 +754,7 @@ async function cut(label, instance, ps, person, artifact, trigger, { expect = 'R
   const stat = wire[wired];
   assert.ok(stat, 'the response was instrumented');
   assert.equal(r.status, 200);
+  assert.notEqual(rep.outcome, 'COMPLETE', `${label}: the server was still sending when the cut came (precondition)`);
   assert.equal(r.error, true, `${label}: destroyed (an error, never a clean end)`);
   assert.equal(rep.outcome, expect, `${label}: terminated by ${expect}`);
   assert.equal(stat.ended, false, `${label}: end() never called`);
@@ -690,7 +769,7 @@ async function cut(label, instance, ps, person, artifact, trigger, { expect = 'R
   } else {
     assert.ok(cutMs >= 0 && cutMs <= boundMs, `${label}: cut ${cutMs} ms after the commit (≤ ${boundMs})`);
   }
-  const next = await slowGet(instance.port, artifact, person.token, { range: `bytes=${r.bytes}-`, rate: 1 << 30 });
+  const next = await slowGet(instance.link, artifact, person.token, { range: `bytes=${r.bytes}-`, rate: 1 << 30 });
   assert.equal(next.status, nextStatus, `${label}: the next Range → ${nextStatus}`);
   measured.push({ case: label, outcome: rep.outcome, cutMs, bytesReceived: r.bytes, bytesSent: rep.bytesSent, size: file.size,
     writesAfterTermination: stat.writesAfterDestroy, nextRange: next.status });
@@ -723,7 +802,7 @@ async function s06Cuts(report, ctx) {
       [Z.recording]);
     });
     const [{ e }] = await rows('SELECT retention_expires_at AS e FROM voice_private.recordings WHERE id = $1', [Z.recording]);
-    const early = await slowGet(A.port, zArtifact, Z.token, { range: 'bytes=0-1023', rate: 1 << 30 });
+    const early = await slowGet(A.link, zArtifact, Z.token, { range: 'bytes=0-1023', rate: 1 << 30 });
     assert.deepEqual([early.status, early.bytes, early.error], [206, 1024, false], 'a Range before the end is served');
     await cut('b known end', A, ps, Z, zArtifact, null, { expect: 'SOURCE_END', boundMs: KNOWN_END_BOUND_MS, endAt: e.getTime() });
     const st = await statusOf(A, Z, zArtifact);
@@ -811,10 +890,11 @@ async function s06Cuts(report, ctx) {
 }
 
 /**
- * A TCP hop in front of an instance: it can enforce a request timeout, and drop the network for a while once a
- * connection has carried a given number of bytes (`dropAfter`, one entry per new connection), then let it back.
+ * A hop in front of an instance's paced link, itself a paced link (so neither leg can absorb the file): it can enforce a
+ * request timeout, and drop the network for a while once a connection has carried a given number of bytes
+ * (`dropAfter`, one entry per new connection), then let it back.
  */
-function startProxy(targetPort) {
+function startProxy(target) {
   const open = new Set();
   const state = { timeoutMs: 0, down: false, dropAfter: [], dropForMs: 800, drops: 0 };
   const drop = (forMs) => {
@@ -829,7 +909,7 @@ function startProxy(targetPort) {
       client.destroy();
       return;
     }
-    const upstream = net.connect(targetPort, '127.0.0.1');
+    const upstream = net.connect(target.socketPath);
     const pair = [client, upstream];
     open.add(pair);
     const close = () => { client.destroy(); upstream.destroy(); open.delete(pair); };
@@ -849,21 +929,22 @@ function startProxy(targetPort) {
       });
     }
   });
-  return new Promise((done) => server.listen(0, '127.0.0.1', () => done({
-    port: server.address().port,
+  const socketPath = newLinkPath();
+  return new Promise((done) => server.listen(socketPath, () => done({
+    link: { socketPath },
     state,
     close: () => new Promise((closed) => { for (const [c, u] of open) { c.destroy(); u.destroy(); } server.close(() => closed()); }),
   })));
 }
 /** The phone's resume rule, server side: after an early end, ask the status, then resume with Range from the byte reached. */
-async function resumableRead(port, statusInstance, person, artifact, size, { rate, during = null }) {
+async function resumableRead(link, statusInstance, person, artifact, size, { rate, during = null }) {
   const parts = [];
   let offset = 0;
   let answered = 0;
   let refusedConnections = 0;
   const contentRanges = [];
   for (let attempt = 0; offset < size && attempt < 200; attempt += 1) {
-    const r = await slowGet(port, artifact, person.token, { range: `bytes=${offset}-`, rate, onFirstByte: during ? () => during(answered) : null });
+    const r = await slowGet(link, artifact, person.token, { range: `bytes=${offset}-`, rate, onFirstByte: during ? () => during(answered) : null });
     if (r.status === 0) {
       refusedConnections += 1;
       await sleep(200);
@@ -884,7 +965,7 @@ async function resumableRead(port, statusInstance, person, artifact, size, { rat
 }
 
 async function s07Resume(report, ctx) {
-  // A 6-minute file read at 64 KiB/s: the server is still sending long after the first cut (the loopback path absorbs
+  // A 6-minute file read at 64 KiB/s: the server is still sending long after the first cut (a paced link absorbs
   // a few hundred KiB, so a smaller file would leave the server finished before any cut).
   const { A, ps, X: H, xArtifact: hArtifact } = ctx;
   const FAST_READ = 64 * 1024;
@@ -892,11 +973,11 @@ async function s07Resume(report, ctx) {
     const file = await fileOf(ps, hArtifact);
     const rate = FAST_READ;
     // (1) a hop that ends every request after 3 s (the Cloud Run request timeout, lowered).
-    const proxy = await startProxy(A.port);
+    const proxy = await startProxy(A.link);
     try {
       proxy.state.timeoutMs = 3_000;
       const reads = A.counter.reads;
-      const t = await resumableRead(proxy.port, () => A, H, hArtifact, file.size, { rate });
+      const t = await resumableRead(proxy.link, () => A, H, hArtifact, file.size, { rate });
       assert.equal(sha(t.bytes), file.digest, '(1) the resumed file is byte-identical: no gap, no overlap');
       assert.ok(t.answered >= 2, `(1) the timeout ended a response and the read resumed (${t.answered} responses)`);
       assert.equal(A.counter.reads - reads, t.answered, '(3) every answered request re-ran server_read_transient_media_v1');
@@ -904,7 +985,7 @@ async function s07Resume(report, ctx) {
       // (2) the network drops twice mid-response (after 200 kB of each of the next two connections), for 0.8 s each.
       proxy.state.timeoutMs = 0;
       proxy.state.dropAfter = [200_000, 200_000];
-      const n = await resumableRead(proxy.port, () => A, H, hArtifact, file.size, { rate });
+      const n = await resumableRead(proxy.link, () => A, H, hArtifact, file.size, { rate });
       assert.equal(proxy.state.drops, 2, '(2) the network dropped twice mid-response');
       assert.equal(sha(n.bytes), file.digest, '(2) byte-identical across the drops');
       assert.ok(n.answered >= 3, `(2) resumed after each drop (${n.answered} responses, ${n.refusedConnections} refused connects)`);
@@ -914,8 +995,8 @@ async function s07Resume(report, ctx) {
     }
     // An instance restart mid-response (a rollout or a scale-in): B is killed, B′ starts on the same address.
     let restarted = null;
-    const port = ctx.B.port;
-    const r = await resumableRead(port, () => A, H, hArtifact, file.size, {
+    const { port, link } = ctx.B;
+    const r = await resumableRead(link, () => A, H, hArtifact, file.size, {
       rate,
       during: (i) => {
         if (i !== 0) return;
@@ -924,7 +1005,7 @@ async function s07Resume(report, ctx) {
           await ctx.B.db.close();
           await sleep(400);
           const db = new PgReplayDatabase(ctx.replayUrl, 2);
-          ctx.B = await startInstance(ps, db, DEFAULT_STREAM_TIMING, port);
+          ctx.B = await startInstance(ps, db, DEFAULT_STREAM_TIMING, { port, linkPath: link.socketPath });
         });
       },
     });
@@ -940,9 +1021,9 @@ async function s07Resume(report, ctx) {
     const L = await startInstance(ps, db, { ...DEFAULT_STREAM_TIMING, lifetimeMs: 1_000 });
     try {
       const reads = L.counter.reads;
-      // Read at 512 KiB/s: each response then carries more than the loopback path buffers, so the cap, not the file's
+      // Read at 512 KiB/s: each response then carries more than a paced link buffers, so the cap, not the file's
       // end, ends every response but the last.
-      const t = await resumableRead(L.port, () => A, S, sArtifact, file.size, { rate: 8 * FAST_READ });
+      const t = await resumableRead(L.link, () => A, S, sArtifact, file.size, { rate: 8 * FAST_READ });
       assert.equal(sha(t.bytes), file.digest, 'byte-identical');
       assert.ok(t.answered >= 6, `≥ 6 bounded responses (${t.answered})`);
       assert.equal(L.counter.reads - reads, t.answered, 'every response re-ran the read');
@@ -1078,10 +1159,23 @@ runVerifier('prove-0196-media-service', async (setStage) => {
     }
     await run(async () => {
       const big = await fileOf(ps, ctx.hArtifact);
-      const unsatisfiable = await slowGet(A.port, ctx.hArtifact, H.token, { range: `bytes=${big.size}-`, rate: 1 << 30 });
+      const unsatisfiable = await slowGet(A.link, ctx.hArtifact, H.token, { range: `bytes=${big.size}-`, rate: 1 << 30 });
       assert.equal(unsatisfiable.status, 416, 'a Range past the end → 416');
     });
     setStage('stream');
+    // V-32's and V-35a's precondition: a cut must find the server still sending. A paced reader holds back all but the
+    // link's capacity, so the server is still sending until the reader has taken size − capacity. 20 s at 16 KiB/s
+    // covers the 1.5 s trigger, the 7 s bound and S05's three 5 s re-checks; S07's 3 s timeout at 64 KiB/s crosses two
+    // links (the hop's and the instance's). TCP loopback is measured beside it, for the record only.
+    const capacity = { link: await linkCapacity('link'), tcpLoopback: await linkCapacity('tcp') };
+    measured.push({ case: 'paced link capacity (bytes a paused reader cannot hold back)', ...capacity });
+    const sizes = [];
+    for (const key of ['xArtifact', 'yArtifact', 'zArtifact', 'uArtifact', 'gArtifact', 'rArtifact']) sizes.push((await fileOf(ps, ctx[key])).size);
+    const smallest = Math.min(...sizes);
+    assert.ok(capacity.link + SLOW * 20 < smallest,
+      `precondition: the paced link holds ${capacity.link} bytes, so a ${smallest}-byte file is still being sent 20 s into a 16 KiB/s read`);
+    assert.ok(2 * capacity.link + 64 * 1024 * 3 < sizes[0],
+      `precondition: two paced links hold ${2 * capacity.link} bytes, so S07's 3 s timeout at 64 KiB/s cuts a response still being sent`);
     await run(() => s05Control(report, A, ps, X, ctx.xArtifact));
     await run(() => s07Resume(report, ctx));
     await run(() => s06Cuts(report, ctx));
