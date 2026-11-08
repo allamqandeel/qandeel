@@ -1972,6 +1972,9 @@ Admitted by MEM-AR-01C under BG-06 in its closing change (CQ-2). Nothing here au
 - **Required future properties (Exit Gate):** PD-01 … PD-09 each pass on physical iOS and Android hardware against the
   production API, with evidence recorded; nothing in the A3-02 law (disclosure, revalidation, per-device evidence,
   no badge, no relay) is relaxed to pass them.
+- **Out of scope (the Product Owner's decision on the accessibility testing scope, 2026-11-08, recorded by S8B-07
+  CP1-B):** PD-09's assistive-technology check (VoiceOver / TalkBack on the education sheet and the device section). It
+  stays NOT PROVEN, not PASS. PD-01 … PD-08 and the rest of PD-09 are unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by A3-02 under BG-06 (the A3-02 Task Contract defers physical-device proof to named pre-release gates; the roadmap
@@ -3532,6 +3535,9 @@ Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06
 - **Reopen condition:** before `PERSONAL_VOICE_NOTE` opens, or when a physical-device validation pass is scheduled.
 - **Required future properties:** each item proven on a physical Android and iOS device with recorded evidence, or
   accepted as a stated limit by the Product Owner.
+- **Accepted as a stated limit (the Product Owner's decision on the accessibility testing scope, 2026-11-08, recorded by
+  S8B-07 CP1-B):** the TalkBack and VoiceOver part. It is not proven and needs no further proof; it stays NOT PROVEN, not
+  PASS. Every other part of this list is unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06. Nothing here authorizes implementation
@@ -6205,6 +6211,13 @@ exact Live Focus events and no refusal or loss (record §4.2). No production log
   proof world's projection fixture that lagged the real Live Head is a harness fault, outside the repository, and the
   spoken RA-15 / RA-16 stay a NOT PROVEN line of the record's matrix, not an item.
 - **Index after the order: 106 items; 52 / 4 / 13 / 37 by status, 61 / 42 / 3 by severity.**
+- **The Product Owner's decision on the accessibility testing scope (2026-11-08):** every additional TalkBack and
+  VoiceOver test planned is cancelled, RA-15 / RA-16 included; they block neither CP1-B's merge nor the launch, and are
+  not carried forward as a future task. `QAN-BL-VOICE-04`'s TalkBack / VoiceOver part and `QAN-BL-NOTIF-05`'s PD-09
+  assistive-technology check are accepted as a stated limit; their other parts, owners and statuses are unchanged. The
+  historical results stay NOT PROVEN, not PASS. The subject reopens only on a specific official Apple App Store or
+  Google Play acceptance condition, with its reference text presented first. No item is admitted or tombstoned; the
+  index is unchanged.
 
 ## 8. What is deliberately not in this backlog
 

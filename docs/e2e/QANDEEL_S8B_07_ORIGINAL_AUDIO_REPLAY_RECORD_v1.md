@@ -1134,10 +1134,25 @@ place with a test that fails without it, and re-proven on the device. None chang
   - The emulator proves only that the native tree carries a mark's hint (`uiautomator` reads `hint`).
   - This proof world has no voice turn of several units, so RA-16 has no mark to carry. RA-15 needs a V2 MIX playing
     through the Replay pool.
-  - Plan: one emulator run with such a fixture. Read RA-16 from the node's `hint`, and RA-15 as a `TYPE_ANNOUNCEMENT`
-    from `uiautomator events`. This needs no personal device; it records the accessibility events, not the speech.
+  - The plan written here (one emulator run with such a fixture) is withdrawn and was not run: the Product Owner's
+    decision on the accessibility testing scope (below) puts any further proof out of scope.
 - **Evidence** (outside the repository): `E:QANDEEL_REPORTSS8B-07CP1-Bmob05-emu`, `mob05-fix`, `mob04-emu`, `ra-emu`.
   The emulator's host microphone was off, and only synthetic audio was recorded.
+
+**The Product Owner's decision on the accessibility testing scope (2026-11-08, after the order above):**
+- Every additional TalkBack and VoiceOver test planned is cancelled, the RA-15 / RA-16 proof included. The Product Owner
+  reviewed the official Apple App Store and Google Play policies and found no general requirement that an ordinary app
+  pass such tests to be accepted.
+- No new TalkBack or VoiceOver proof is run. RA-15 and RA-16 do not block CP1-B's merge or the app's launch.
+- The historical results stay as they were: the spoken RA-15 / RA-16 are **NOT PROVEN, not PASS**; iOS VoiceOver was
+  never run, so it is NOT PROVEN too. Nothing is claimed about either.
+- The code and its regression tests stay: RA-15, RA-16, every accessibility label, hint and announcement, and the
+  contracts that pin them. Nothing is weakened or removed.
+- These tests are not carried forward as a future task. The screen-reader parts of `QAN-BL-VOICE-04` and
+  `QAN-BL-NOTIF-05` (PD-09) are accepted as a stated limit, in the backlog. The rest of both items is unchanged.
+- The subject reopens only if a specific official condition for acceptance in the Apple App Store or Google Play
+  appears, and its reference text is presented before any work.
+- No store listing claims VoiceOver or TalkBack support that has not been proven.
 
 **CI correction (step 6):** 0196 has ten `voice_private` internals since step 3 (`transient_unavailable_reason_v1`).
 The 0183, 0185 and 0186 verifiers still counted nine, so `verify-api` failed at `e9a155f7`. The count is now ten in
@@ -1158,9 +1173,9 @@ all three. This corrects their stale count; it does not loosen the census, which
 | RA-08's floor (999 / 1 000 ms) | ✔ (jest) | | |
 | Arabic / RTL on HONOR | ✔ | | |
 | TalkBack: labels, focus, RA-13 | ✔ | | |
-| TalkBack: the spoken RA-15 / RA-16 | | | ✔ (jest only) |
+| TalkBack: the spoken RA-15 / RA-16 | | | ✔ (jest only; no further proof, out of scope by the PO's decision of 2026-11-08; not a blocker) |
 | iOS: Simulator build and boot smoke | ✔ (CI) | | |
-| iOS VoiceOver | | ✔ (a real device) | |
+| iOS VoiceOver | | | ✔ (never run; no further proof, out of scope by the PO's decision of 2026-11-08; not a blocker) |
 | F-2 (RA-03 source) | | ✔ (PO decision) | |
 | F-3 receiver and hosted alert | | ✔ (`QAN-BL-PROD-11`, HOSTED-DEPLOY-01) | |
 | V-24b, V-35b, hosted alert policies | | ✔ (HOSTED-DEPLOY-01) | |
