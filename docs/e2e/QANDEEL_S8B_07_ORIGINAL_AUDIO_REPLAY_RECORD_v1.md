@@ -837,6 +837,25 @@ excess 4.31 dB, so **the HC-3 limit is now 7.31 dB** (stricter than the earlier 
 - **F-2 is not touched:** no text is shown for an audio moment. VA-8 R-1 is not widened, and there is no new ASR
   path. The Product Owner's decision is pending.
 
+**Step 6, after CA-07B-2 — two proven defects fixed within the amendment (2026-11-08):**
+
+The HONOR measurements are in `E:\QANDEEL_REPORTS\S8B-07\CP1-B\step6\captures` (outside the repository, content-free). The volume stayed at 4 / 16 throughout. Neither fix changes a threshold, adds a player or touches the server.
+
+1. **A resume or a seek of the same player (r3 → r4, `c4054cb2`).**
+   - **What was seen (batch 3, 8 switches each preceded by a pause and a resume):** once a player had been paused and played again, or seeked, its reported place ran two AAC frames (42.67 ms) ahead of what was heard. The next switch then lost 4 – 26 ms (7 / 8).
+   - **The fix:** a player that has played is never started again, nor seeked. A resume or a seek releases it and creates a new one at the place (create, seek, play), the only start proven on the phone. A player prepared at a Replay boundary that has not played yet still starts in place.
+2. **One AAC frame at a switch and at a resume (r4 → r5, `620006ef`).**
+   - **What was seen (r4: batch 4, 21 switches mixing none / pause-resume / seek; the H10 session, 14 switches):** the content gap at a switch always fell on one of four values one AAC frame apart: +4.3 / −17 / −38 / −60 ms. +4.3 is 4 ms lost (7 / 35). It followed a player made by a resume or by a switch alike. A user resume showed the same pattern.
+   - **The fix:** the new file at a switch, and a resume of the paused run at its own place, start `resumeBehindMs` = 21 ms (one frame) behind the place: −17 / −38 / −60 / −81, nothing lost, at most 81 ms heard twice (≤ 100).
+   - **The reader's place does not move back.** Each player holds a floor at the place it continues from, so the place shown, the Replay clock and the next read never go below it (§8 of the decision).
+   - **Unchanged and exact:** a seek, a first start, a moment's start and the Range resume (§19.2).
+   - **§20.2′ step 4 reads accordingly:** "a new player starts the `G + 1` file one AAC frame (21 ms) before that place; the place shown holds".
+3. **An open question for the Product Owner: HC-2 at the edge of the pause (not waived).**
+   - In the second before a switch, the 10 ms level deviation exceeds 3 dB in some switches (up to 3.70 dB, in every batch, both builds).
+   - `proof/level-diag.mjs` places the peak always in the last 10 ms window, the one ending at the −6 dB edge, inside the system's own ≈ 10 ms fade at the pause. Without that window the deviation is ≤ 0.05 dB (batch 2: 11 / 11).
+   - As written (the silence is between the −6 dB edges, HC-2 holds outside it), those windows fail. Counting the system fade as part of the pause is the Product Owner's decision.
+   - **Correction:** Spike A's report said "within ± 3.01 dB". That was wrong; spike 2 shows 3.16 dB. The report now carries the correction, and the original line is kept.
+
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);
 - paid AI;
