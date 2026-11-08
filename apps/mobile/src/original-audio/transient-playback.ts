@@ -166,6 +166,12 @@ interface Live {
   loaded: boolean;
   lastPositionMs: number;
   seeking: number;
+  /**
+   * The player has been told to play. A player that has played is never started again, nor seeked: a resume or a seek
+   * creates a new one at the place (CA-07B-2, step 6 on HONOR: after a pause and a resume, or a seek, of the SAME player,
+   * its reported place runs two AAC frames (≈ 43 ms) ahead of what is heard, and the next switch loses that much).
+   */
+  started: boolean;
   /** Called once by the player's first status that is no longer playing (the hand-over waits for it). */
   onStopped?: () => void;
 }
@@ -409,7 +415,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     tokens += 1;
     // A start away from 0 counts as seeking from the outset: a status the new player reports before its seek (its place
     // 0) never moves the reader's clock back (CA-07B-2: the place does not move while the switch is silent).
-    const live: Live = { token: tokens, artifactId, runIndex, player: null, loaded: false, lastPositionMs: positionMs, seeking: positionMs > 0 ? 1 : 0 };
+    const live: Live = { token: tokens, artifactId, runIndex, player: null, loaded: false, lastPositionMs: positionMs, seeking: positionMs > 0 ? 1 : 0, started: false };
     current = live;
     if (autoplay) expectAudio(runIndex, positionMs);
     else set({ runIndex, positionMs });
@@ -430,7 +436,10 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       live.seeking -= 1;
     }
     if (my !== epoch || current !== live) return;
-    if (autoplay && intent === 'PLAY') created.play();
+    if (autoplay && intent === 'PLAY') {
+      live.started = true;
+      created.play();
+    }
     armDeadline();
     if (intent === 'PLAY') ensureTick();
   }
@@ -776,8 +785,10 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
         void renew(true);
         return true;
       }
-      if (current !== null && current.player !== null && current.runIndex === runIndex) {
+      if (current !== null && current.player !== null && current.runIndex === runIndex && !current.started) {
+        // A player prepared at a Replay boundary that has not played yet starts in place; any other start is a new player.
         if (Math.abs(readPosition(current) - positionMs) > 1) void current.player.seekTo(positionMs).catch(() => undefined);
+        current.started = true;
         current.player.play();
         set({ phase: 'PLAYING', runIndex, positionMs });
         armDeadline();
@@ -807,7 +818,7 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     seek(runIndex, positionMs) {
       if (retired || state.phase === 'ENDED') return;
       const to = Math.max(0, Math.round(positionMs));
-      if (current !== null && current.player !== null && current.runIndex === runIndex) {
+      if (current !== null && current.player !== null && current.runIndex === runIndex && !current.started) {
         const live = current;
         live.lastPositionMs = to;
         live.seeking += 1;

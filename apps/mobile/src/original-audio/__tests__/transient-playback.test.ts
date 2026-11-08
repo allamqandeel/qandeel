@@ -116,7 +116,14 @@ describe('starting, pausing, seeking (play / pause / seek / resume)', () => {
     w.engine.seek(0, 50_000);
     await run(11_000);
     expect(w.engine.getState()).toMatchObject({ phase: 'PAUSED', positionMs: 0 });
-    expect(w.players.made).toHaveLength(1);
+    // CA-07B-2: a player that has played is never started again nor seeked; the resume and the seek each create a new
+    // player at the place, and the one before it is released first (one player at all times).
+    expect(w.players.made).toHaveLength(3);
+    expect(w.players.made[1]!.calls[0]).toBe(`seek:${at}`);
+    expect(w.players.made[2]!.calls[0]).toBe('seek:50000');
+    expect(w.players.made.map((p) => p.calls.filter((call) => call === 'play').length)).toEqual([1, 1, 1]);
+    expect(w.players.made.every((p) => p.released)).toBe(true);
+    expect(w.players.alive.max).toBe(1);
     const c = continuityOf(w.players.audible);
     expect(c.repeatedMs).toBe(0);
   });
