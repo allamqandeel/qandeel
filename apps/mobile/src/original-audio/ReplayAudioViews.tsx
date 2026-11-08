@@ -9,7 +9,8 @@
  *   the frames        above a moment: the record of the pause before it — RA-04 (shortened, with its true length) or
  *                     RA-05 (another recording, never a length); under the moment, the same frame while that pause is
  *                     held (B7 – B9). A pause kept at its real length has no frame (B6)
- *   the gaps          under a window, one line per recorded gap by kind: RA-06 / RA-07 / RA-08; NOT_SPEAKING has no text
+ *   the gaps          under a window, one line per recorded gap by kind: RA-06 / RA-07 / RA-08; NOT_SPEAKING has no text,
+ *                     and neither has a writer loss under one second (RA-08's floor, PO 2026-11-08)
  *   the notices       RA-11 after 1 s without audio; RA-12 (error ink) with the existing Stage 7 «Try again» (B14)
  *   no longer         RA-09 / RA-10 only for the cause the server PROVES, otherwise RA-17; the reading is withheld (B13)
  *   assistive tech    RA-15 when two voices start together, a gap's line as it starts, RA-04 / RA-05 as the pause starts
@@ -26,7 +27,7 @@ import type { ReplayPlayerController, ReplayPlayerSurface, ReplayPlayerSurfaceCo
 import type { ReplayHistoryMoment } from '../runtime-entry';
 import { AudioLine } from './AudioLine';
 import { originalAudioLengthText, originalAudioText, type OriginalAudioCopyId } from './original-audio-copy';
-import { spanAt, type PresentationBoundary, type PresentationSpan } from './presentation-map';
+import { spanAt, type PresentationBoundary, type PresentationGapKind, type PresentationSpan } from './presentation-map';
 import type { ReplayAudio } from './replay-audio';
 import type { ReplayAudioAnnouncement, ReplayAudioClock } from './replay-audio-clock';
 import type { TransientUnavailableReason } from './transient-media-api';
@@ -48,13 +49,27 @@ export function frameText(of: PresentationBoundary | { readonly kind: 'HELD'; re
 
 const GAP_ROWS = { RECONNECTION: 'RA-06', MUTED: 'RA-07', WRITER_LOSS: 'RA-08' } as const;
 
+/**
+ * RA-08's floor (Product Owner, 2026-11-08, a limited Copy Gate amendment): a writer loss shorter than one second has no
+ * line and no announcement, so the reader never sees "0:00" for a lost part. The span itself, its length, the recording's
+ * timing and the presentation map are unchanged; RA-06 and RA-07 are unchanged.
+ */
+export const WRITER_LOSS_LINE_MIN_MS = 1_000;
+
+/** A recorded gap's line (RA-06 / RA-07 / RA-08), or none: NOT_SPEAKING, and a writer loss under RA-08's floor. */
+export function gapText(gapKind: PresentationGapKind, ms: number, language: ChromeLanguage): string | null {
+  if (gapKind === 'NOT_SPEAKING') return null;
+  if (gapKind === 'WRITER_LOSS' && ms < WRITER_LOSS_LINE_MIN_MS) return null;
+  return originalAudioLengthText(GAP_ROWS[gapKind], language, ms);
+}
+
 /** What a screen reader is told as a span starts, in the reader's language (the same truth the lines give). */
 export function announcementText(announcement: ReplayAudioAnnouncement, language: ChromeLanguage): string | null {
   switch (announcement.kind) {
     case 'MIX':
       return originalAudioText('RA-15', language);
     case 'GAP':
-      return announcement.gapKind === 'NOT_SPEAKING' ? null : originalAudioLengthText(GAP_ROWS[announcement.gapKind], language, announcement.ms);
+      return gapText(announcement.gapKind, announcement.ms, language);
     case 'HELD':
       return originalAudioLengthText('RA-04', language, announcement.elapsedMs);
     default:
@@ -148,8 +163,11 @@ function Beneath({ clock, ordinal, language }: { readonly clock: ReplayAudioCloc
   const detail = clock.detail();
   const window = place?.window ?? null;
   const run = place === null ? null : detail.plan?.runs[place.runIndex] ?? null;
-  const gaps = run === null || window === null ? [] : run.spans.filter((span): span is Extract<PresentationSpan, { kind: 'GAP' }> =>
-    span.kind === 'GAP' && span.gapKind !== 'NOT_SPEAKING' && span.fromMs >= window.fromMs && span.toMs <= window.toMs);
+  const gaps = run === null || window === null ? [] : run.spans.flatMap((span) => {
+    if (span.kind !== 'GAP' || span.fromMs < window.fromMs || span.toMs > window.toMs) return [];
+    const text = gapText(span.gapKind, span.toMs - span.fromMs, language);
+    return text === null ? [] : [{ fromMs: span.fromMs, text }];
+  });
   const here = window !== null && presentedWindow(clock) === window;
   // The pause after this moment, while it is held: a boundary before the next run, or a held interval inside the run.
   let holding: string | null = null;
@@ -161,7 +179,7 @@ function Beneath({ clock, ordinal, language }: { readonly clock: ReplayAudioCloc
   return (
     <View testID={`${REPLAY_AUDIO_TEST_ID}-beneath-${ordinal}`} style={{ rowGap: 4 }}>
       {gaps.map((gap) => (
-        <Line key={`${gap.fromMs}`} text={originalAudioLengthText(GAP_ROWS[gap.gapKind as keyof typeof GAP_ROWS], language, gap.toMs - gap.fromMs)} language={language}
+        <Line key={`${gap.fromMs}`} text={gap.text} language={language}
           testID={`${REPLAY_AUDIO_TEST_ID}-gap-${ordinal}-${gap.fromMs}`} />
       ))}
       {holding === null ? null : <Frame text={holding} language={language} testID={`${REPLAY_AUDIO_TEST_ID}-holding`} />}

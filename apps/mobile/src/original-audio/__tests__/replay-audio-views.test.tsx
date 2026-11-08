@@ -14,7 +14,7 @@ import { REPLAY_PLAYER_TEST_ID, ReplayPlayer, replayPlayerCopy } from '../../rep
 import { resize } from '../../responsive/__fixtures__/composition';
 import { originalAudioLengthText, originalAudioText } from '../original-audio-copy';
 import { createReplayAudioSurface } from '../ReplayAudioViews';
-import { run, until, world, type WorldOptions } from '../__fixtures__/replay-audio-world';
+import { RUN0, RUN1, run, until, world, type WorldOptions } from '../__fixtures__/replay-audio-world';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.setTimeout(60000);
@@ -110,6 +110,23 @@ describe.each(['ar', 'en'] as const)('the V2 player surface (%s)', (language) =>
     // Moment 2 is the first of its recording: no frame above it.
     await show(w, 2);
     expect(view.queryByTestId('qandeel-replay-audio-before-2')).toBeNull();
+  });
+
+  it('RA-08\'s floor under the moment: a 999 ms writer loss has no line, a 1 000 ms one has RA-08; RA-06 is unchanged', async () => {
+    const spans = [RUN0, [...RUN1,
+      { kind: 'GAP', fromMs: 2_500, toMs: 3_499, track: 'USER', gapKind: 'WRITER_LOSS' },
+      { kind: 'GAP', fromMs: 3_600, toMs: 4_600, track: 'USER', gapKind: 'WRITER_LOSS' },
+    ] as const];
+    const { view, w } = await mount(language, { server: { spans } });
+    await show(w, 5);
+    await act(async () => { w.player.play(); });
+    await act(async () => { await until(() => w.clock()!.getState().ordinal === 6); });
+    await tick(500);
+    expect(text(view, 'qandeel-replay-audio-gap-6-1000')).toBe(originalAudioLengthText('RA-06', language, 1_000));
+    expect(view.queryByTestId('qandeel-replay-audio-gap-6-2500')).toBeNull();
+    expect(text(view, 'qandeel-replay-audio-gap-6-3600')).toBe(originalAudioLengthText('RA-08', language, 1_000));
+    // The loss itself stays in the map: the server's spans are kept whole, only the line is not shown.
+    expect(w.clock()!.detail().plan!.runs[1]!.spans.filter((span) => span.kind === 'GAP')).toHaveLength(3);
   });
 
   it('the source deleted: RA-10 only because the server proves it, the reading withheld, nothing plays after (B13)', async () => {

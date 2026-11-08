@@ -440,11 +440,11 @@ async function verifyCatalogue(report) {
       assert.equal(internals.length, 1, 'S0b 0192 names one new voice_private internal');
       declared.push(...internals);
     }
-    // S8B-07 CP1-B re-anchor (migration 0196): 0196 adds nine voice_private internals of its own (the transient media guards
+    // S8B-07 CP1-B re-anchor (migration 0196): 0196 adds ten voice_private internals of its own (the transient media guards
     // and helpers), held to the same rules (verify-migration-0196 proves their shape).
     if (await transientMediaApplied(rows)) {
       const internals = voiceInternals0196();
-      assert.equal(internals.length, 9, 'S0b 0196 names nine voice_private internals');
+      assert.equal(internals.length, 10, 'S0b 0196 names ten voice_private internals');
       declared.push(...internals);
     }
     const functions = await rows(`SELECT p.oid::regprocedure::text AS sig, n.nspname AS schema, p.proname AS name, p.prosecdef AS definer,

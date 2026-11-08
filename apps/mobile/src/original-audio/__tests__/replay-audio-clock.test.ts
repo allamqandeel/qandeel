@@ -7,6 +7,7 @@
  * are FUNCTIONAL results on a fake clock; HC-1 … HC-5 are the device's (step 6).
  */
 import { REPLAY_RENDER_CONTRACT_V1 } from '../../replay-composite';
+import { originalAudioLengthText } from '../original-audio-copy';
 import type { PresentationSpan } from '../presentation-map';
 import { planFor } from '../replay-audio-clock';
 import { announcementText, frameText, replayEndedRow } from '../ReplayAudioViews';
@@ -303,5 +304,16 @@ describe('the words (Copy Gate R1.1)', () => {
     expect(announcementText({ kind: 'MIX' }, 'ar')).toBe('يُسمع صوتان معًا هنا.');
     expect(announcementText({ kind: 'GAP', gapKind: 'MUTED', ms: 3_000 }, 'en')).toBe('The microphone was muted here for 0:03.');
     expect(announcementText({ kind: 'GAP', gapKind: 'NOT_SPEAKING', ms: 3_000 }, 'en')).toBeNull();
+  });
+
+  // RA-08's floor (Product Owner, 2026-11-08): a writer loss under one second is not announced; from one second it is.
+  // RA-06 and RA-07 keep every length, a sub-second one included.
+  it.each(['ar', 'en'] as const)('RA-08 at its floor: 1 and 999 ms say nothing, 1 000 ms says RA-08 (%s)', (language) => {
+    expect(announcementText({ kind: 'GAP', gapKind: 'WRITER_LOSS', ms: 1 }, language)).toBeNull();
+    expect(announcementText({ kind: 'GAP', gapKind: 'WRITER_LOSS', ms: 999 }, language)).toBeNull();
+    expect(announcementText({ kind: 'GAP', gapKind: 'WRITER_LOSS', ms: 1_000 }, language)).toBe(originalAudioLengthText('RA-08', language, 1_000));
+    expect(announcementText({ kind: 'GAP', gapKind: 'WRITER_LOSS', ms: 1_000 }, language)).not.toContain('0:00');
+    expect(announcementText({ kind: 'GAP', gapKind: 'RECONNECTION', ms: 999 }, language)).toBe(originalAudioLengthText('RA-06', language, 999));
+    expect(announcementText({ kind: 'GAP', gapKind: 'MUTED', ms: 999 }, language)).toBe(originalAudioLengthText('RA-07', language, 999));
   });
 });

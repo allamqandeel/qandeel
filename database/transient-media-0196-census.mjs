@@ -1,6 +1,6 @@
 // S8B-07 CP1-B (migration 0196): what earlier verifiers that census voice_private count once 0196 is applied.
 //
-// 0196 adds nine voice_private internals (the transient media guards and helpers), each named by its own ACL block and
+// 0196 adds ten voice_private internals (the transient media guards and helpers), each named by its own ACL block and
 // proven by verify-migration-0196; it forward-replaces no earlier function. Derived from the migration text, never copied,
 // so an earlier census and 0196 cannot drift.
 import { readFileSync } from 'node:fs';

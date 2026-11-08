@@ -1,7 +1,7 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Checkpoint:** S8B-07 CP1-B — Retained Call Listening & Original Audio Replay Playback (2026-11-07) — **CP1-B IN
-PROGRESS** (§13). On `s8b/s8b-07-cp1b` from `main` at `9eace91d`; **not merged; merge only on the Product Owner's
+**Checkpoint:** S8B-07 CP1-B — Retained Call Listening & Original Audio Replay Playback (2026-11-07) — **CP1-B DELIVERED
+— READY FOR PO MERGE REVIEW — NOT CLOSED** (§13, 2026-11-08; Draft PR #385). On `s8b/s8b-07-cp1b` from `main` at `9eace91d`; **not merged; merge only on the Product Owner's
 explicit «ادمج»**. S8B-07 is not closed. Every voice gate stays `DISABLED`, and the Personal Replay gate has no open
 state. Not VOICE LAUNCH READY.
 
@@ -386,9 +386,10 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 - any gate change;
 - any merge without the Product Owner's «ادمج».
 
-## 13. CP1-B — Retained Call Listening & Original Audio Replay Playback (IN PROGRESS, 2026-11-07)
+## 13. CP1-B — Retained Call Listening & Original Audio Replay Playback (DELIVERED, 2026-11-08)
 
-**Status:** `CP1-B — IN PROGRESS`.
+**Status:** `CP1-B DELIVERED — READY FOR PO MERGE REVIEW — NOT CLOSED` (Draft PR #385). S8B-07 stays open: CP2-A and
+CP2-B are not started and not authorized.
 
 **Authority:**
 - The Product Owner's execution authorization (2026-11-07), after PR #384 merged as `9eace91d`.
@@ -419,7 +420,7 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 | 3 | Replay Media Service (the five routes, bounded Range responses) | done locally (details below): `replay-media-service.main.ts` under `REPLAY_MEDIA` / `REPLAY_POOL` only; API jest green; `prove-0196-media-service.mjs` 15/15 on a disposable PG17 with the in-memory store; `verify-migration-0196.mjs` 32/32 after the step-3 amendment; the rclone S3 run and the PostgREST proof (`prove-0185`) run only in CI; not yet run in CI |
 | 4 | V-24a First Audio isolation (not a proof of pool separation) | done locally (details below): `prove-0196-first-audio-isolation.mjs` on a disposable PG17 with the in-memory store, 3 interleaved repetitions per mode, D-06.7 PASS for M0 and M1_SHIPPED in each full run; `verify-migration-0196.mjs` 33/33 after the step-4 amendment; the rclone S3 run (with the store upload probe) runs only in CI; not yet run in CI. **Not V-24b.** |
 | 5 | Mobile | done locally (details below): `apps/mobile/src/original-audio/` and the Replay player's clock port; mobile jest 3 447 / 3 453 green (the 6 failures are the same at the step-4 head, locale-dependent on this machine, not caused here); `tsc` clean; `expo lint` 0 errors (no warning in a changed line); the S7, S8B-03 / 04 / 05 / 06 and CP1-B root contracts green; not yet run in CI. **HC-1 … HC-5 are not proven by these tests** (step 6) |
-| 6 | Device proof (HONOR and the iOS Simulator) | done on HONOR except the checks that need the Product Owner (details below, "Step 6 results"): HC-4 calibrated (re-run at volume 4 / 16); the §20 hand-over amended by CA-07B-2 Decisions 1 – 5 after HONOR proved the R5.1 standby path cannot meet HC-1 / HC-2; HC-1 … HC-3 at 24 switches PASS (r7, Decision 5); HC-5 PASS (the 24 switches and the real ≈ 61-minute session on r11); F-1, F-5, F-7, F-8 and F-9 fixed and re-proven on the device (r7 – r11). **Not proven:** TalkBack (RA-15 / RA-16), Arabic / RTL on the device, a live call during playback and a new voice note (the microphone), and iOS VoiceOver (the macOS CI job) |
+| 6 | Device proof (HONOR and the iOS Simulator) | done (details below, "Step 6 results" and "The final matrix"): HC-4 calibrated (re-run at volume 4 / 16); the §20 hand-over amended by CA-07B-2 Decisions 1 – 5 after HONOR proved the R5.1 standby path cannot meet HC-1 / HC-2; HC-1 … HC-3 at 24 switches PASS (r7, Decision 5); HC-5 PASS (the 24 switches and the real ≈ 61-minute session on r11); F-1, F-5, F-7, F-8 and F-9 fixed and re-proven on the device (r7 – r11). A new voice note, a live call during listening, TalkBack and Arabic run on HONOR at the Product Owner's approval (2026-11-08). **Not proven / deferred:** TalkBack's spoken RA-15 / RA-16, and iOS VoiceOver (a real device) |
 
 **Step 3, what it adds and what it changed (each change declared in the PR body):**
 - **The service.** The five routes of contract §6 and `/health` (§18.3), on the Replay pool's own HTTP process. It
@@ -663,6 +664,20 @@ pins them.
 | RA-15 | يُسمع صوتان معًا هنا. | Two voices are heard together here. | APPROVED |
 | RA-16 | يُختار هذا المقطع الصوتي كاملًا | This voice passage is selected as a whole | APPROVED |
 | RA-17 | لم يعد تشغيل إعادة العرض هذه ممكنًا. | This Replay can no longer play. | APPROVED |
+
+**RA-08's floor: a limited Copy Gate amendment (Product Owner, 2026-11-08).** The row's words above are unchanged. The
+amendment only decides when RA-08 is shown:
+- A writer loss greater than 0 and under 1 000 ms has no RA-08 line and no announcement. "0:00" is never shown.
+- A loss of 1 000 ms or more keeps RA-08 with its approved text.
+- What it does not change:
+  - the loss itself, the recording's timing and the presentation map (the span stays whole in the plan);
+  - measurements and diagnostics;
+  - playback errors, a loss of content during renewal, and the HC limits;
+  - RA-06, RA-07 and every other row.
+- It only hides an unneeded line on the screen. The lost content is not treated as present, and the recording's history
+  is unchanged.
+- Code: `WRITER_LOSS_LINE_MIN_MS` in `ReplayAudioViews.tsx`. Tests at 1, 999 and 1 000 ms, in both languages, with RA-06
+  and RA-07 unchanged at 999 ms (`replay-audio-clock`, `replay-audio-views`); with the floor at 0, 4 of them fail.
 
 **Step 5, verification (functional, on jest's fake clock; not the device's):**
 - `original-audio`, 104 tests:
@@ -998,12 +1013,18 @@ place with a test that fails without it, and re-proven on the device. None chang
 - S7-03 and S7-04: `replay.service.ts` (F-1).
 - S7-04: `replay-history-api.ts` (F-1) and `projection-adapter.ts` (r11, `hasOwnReading`).
 - S8B-04: the player port's release now mutes first (r7, F-5). The stop-and-release order is unchanged.
+- **Reviewed at closure (2026-11-08):** each of the four is an exact hash or an exact pattern of the file as it now
+  stands, with its reason declared beside it. Every other assertion of those tests is unchanged: the S7-03 / S7-04 guard
+  lists, the decoders, the V1 behaviour and the S8B-04 stop-and-release order. None widens what an S7 or S8B contract
+  admits. RA-08 changed none of the pinned files (`projection-adapter.ts` keeps `cc4b7a4f…`).
 
 **Local verification at the end of step 6:**
-- API jest: 347 suites, 7 821 passed, 1 skipped.
-- Mobile jest: 3 463 passed, with the same 6 locale-dependent failures as at the step-4 head (`w2-account-access`, `depth`).
+- API jest: 347 suites, 7 821 passed, 1 skipped (r11; no API code changed after it).
+- Mobile jest (with RA-08's floor): 3 467 passed, with the same 6 locale-dependent failures as at the step-4 head
+  (`w2-account-access`, `depth`).
 - Root contracts: 1 782 / 1 782 (forward-safety is run in CI only).
 - Task-closure governance: 24 / 24.
+- The 0183 / 0185 / 0186 verifiers run against PostgreSQL in CI only (`node --check` locally).
 
 **Step 6 results (HONOR ALI-NX1, Android 15, volume 4 / 16; evidence in `E:\QANDEEL_REPORTS\S8B-07\CP1-B\step6`):**
 
@@ -1022,19 +1043,79 @@ place with a test that fails without it, and re-proven on the device. None chang
 | B1a – B1c (selection, RA-13) | PASS | needed the proof server's temporal service and commit events (harness only, no product code) |
 | F-1 on real data | PASS after r11 | |
 | Replay V1 regression | PASS | a one-message V1 version: its own pacing line, no audio surface, no request to the pool |
-| Voice-note regression | failure path PASS; success path NOT PROVEN on the device | the proof server's in-memory store lost the note's bytes on a restart (503, a harness gap); a new note needs the microphone |
-| Live-call regression (a call during playback) | NOT PROVEN on the device | needs the microphone; jest covers the release of the player and both sets |
-| TalkBack (labels, RA-15, RA-16) | NOT PROVEN | needs TalkBack turned on by the Product Owner |
-| Arabic / RTL on the device | NOT PROVEN | the app follows the device locale; changing it is the Product Owner's. jest covers both languages |
-| iOS VoiceOver | NOT PROVEN | needs the macOS CI job |
+| Voice-note regression, failure path (r11) | PASS | a 503 from the proof server's store (its bytes lost on a restart) → "The message can't be played right now" in ≈ 3 s, the player released |
+| Voice-note regression, success path (r12) | PASS | a new 5.8 s note recorded with the microphone, settled by the proof server's deterministic test fake (no provider, no cost; NO_SPEECH, so nothing committed), then played to its end with no failure (`playing=true` 0 → 5 833 ms). The note then loops on Android: `QAN-BL-MOB-04`, older than CP1-B |
+| Live call during listening (r12) | PASS | listening played 3.3 s; the call's start paused and released its player 20 ms apart, 2.4 s before the call's `started_at`; nothing played after; the generation ended `RELEASED`; the call ended `USER_ENDED`. The rail took touches below where it was drawn: `QAN-BL-MOB-05`, cause not established |
+| TalkBack (r12) | RAN; labels and focus PASS; the spoken RA-15 / RA-16 NOT PROVEN | TalkBack turned on and then off, its settings restored exactly. Under it, the selection's voice passage is one checkbox with its label, and RA-13 is its visible line. adb cannot move TalkBack's focus on HONOR (no root; a tap bypasses it), and the hint (RA-16) and the announcement (RA-15) are spoken only. jest covers both |
+| Arabic / RTL (r12) | PASS | the proof app only (`set-app-locales ar`), then restored to `[]`; the system stayed `en-US`. Arabic rows and RTL on the call listening line (its thumb from the right, CL-05 in Arabic), RA-13 «مقطع صوتي كامل · 0:09», the selection and the whole-conversation part |
+| iOS | CI PASS; VoiceOver DEFERRED | the iOS Release simulator build and its boot smoke pass in Mobile CI. VoiceOver does not run on the Simulator, so nothing about it is claimed: it is deferred to a real device (`QAN-BL-VOICE-04`'s physical-device list) |
 
-**Observations, no change made:**
-- **RA-08 / RA-06 / RA-07 below one second:** `lengthText` floors to m:ss, so a sub-second writer loss reads "A 0:00
-  part of the recording was lost here." A copy or format decision for the Product Owner.
-- **O-1:** the history orders two exchanges of the same second by id (the API gives seconds). It predates CP1-B; the
-  proof fixtures were adjusted only. Proposed for the backlog as its own item.
-- **F-2:** RA-03 is now reachable only if a future field gives an audio moment's derived text. VA-8 R-1 is not widened.
-- **F-3:** the degraded event has no receiver; HC-5 is proven from the server's lifecycle.
+**Observations (step 6):**
+- **RA-08 below one second:** implemented as the Product Owner's limited Copy Gate amendment (above, after the 28 rows).
+- **O-1:** the phone orders two exchanges whose user turns share one `createdAt` by their random id
+  (`compareExchanges`; the API pages `created_at DESC, id DESC`). It predates CP1-B; only the proof fixtures were
+  changed. Admitted as `QAN-BL-MOB-03`.
+- **F-2:** see the Product Owner's decisions below.
+- **F-3:** see the Product Owner's decisions below.
+- **Proof-harness limits, not product failures:**
+  - the proof server's audio store lives in memory, so a recording made before its restart cannot be served (CL-05,
+    fail-safe);
+  - a live call recorded in the proof session is not in the pool's store (CL-05, fail-safe);
+  - one fixture holds 3 s of audio under a 1:00 record.
+
+**The Product Owner's decisions after step 6 (2026-11-08):**
+- **HC-1 … HC-5:** approved, the real session past the 58-minute expiry included.
+- **RA-08:** a limited Copy Gate amendment (above). Implemented with its boundary tests.
+- **O-1:** recorded in the backlog as its own item (`QAN-BL-MOB-03`), not fixed in CP1-B.
+- **F-2, deferred:**
+  - The decision stands: no RA-03 text in Replay V2, VA-8 R-1 not widened, no new ASR path and no paid service.
+  - The research (`conversation_turns.content` as a possible source of an audio moment's text) stays in
+    `E:QANDEEL_REPORTSS8B-07CP1-Bstep6F2_RESEARCH.md`, with the decision deferred.
+  - It does not block CP1-B. A new decision of the Product Owner reopens it.
+- **F-3:**
+  - `TRANSIENT_HANDOVER_DEGRADED` reaches no receiver. The composition passes no `onEvent`, the app has no telemetry
+    channel, and the API has no route for a client's events.
+  - No approved monitoring path allows a limited change inside CP1-B. A receiver needs a change to the approved route
+    contract (§6).
+  - So it is recorded as `QAN-BL-PROD-11` under HOSTED-DEPLOY-01. It blocks the deployment, not the merge.
+  - It is not described as complete: HC-5 is proven from the server's own lifecycle, not from the event.
+- **iOS:** run what the Simulator and CI can prove; VoiceOver deferred to a real device; no new iOS task.
+- **No repeat** of the 61-minute test or of the transitions for copy, documentation or accessibility changes: the
+  playback engine and its timing did not change after r11 (RA-08 changes a line's visibility only).
+
+**Found in step 6's last checks, outside CP1-B, admitted (BG-06):**
+- `QAN-BL-MOB-04` (HIGH): a voice note on Android starts again from its start at its end, while its control shows
+  "play". It is S8B-03's end-of-note branch, which CP1-B did not change.
+- `QAN-BL-MOB-05` (HIGH): during a live call on HONOR, the call rail takes touches ≈ 400 px below where it is drawn.
+  After a call, the screen takes no touch until the app restarts. CP1-B changed no layout of the call surface or the
+  switcher. The cause is not established, and `main` was not tried on the phone.
+
+**CI correction (step 6):** 0196 has ten `voice_private` internals since step 3 (`transient_unavailable_reason_v1`).
+The 0183, 0185 and 0186 verifiers still counted nine, so `verify-api` failed at `e9a155f7`. The count is now ten in
+all three. This corrects their stale count; it does not loosen the census, which still requires the exact number.
+
+**The final matrix (CP1-B, 2026-11-08):**
+
+| Area | PASS | DEFERRED | NOT PROVEN |
+|---|---|---|---|
+| HC-1 … HC-3 (24 switches, Decision 5) | ✔ | | |
+| HC-4 calibration | ✔ | | |
+| HC-5 (24 switches; the real ≈ 61-minute session) | ✔ | | |
+| Range resume; Range after the lifetime cap | ✔ | | |
+| V-32 deletion while playing (device) | ✔ | | |
+| No audio stored on the phone; a corrupt segment fails safe | ✔ | | |
+| A0 → A1; B1a – B1c (RA-13); F-1 on real data | ✔ | | |
+| Regressions: Replay V1; voice note (failure and success); a live call during listening | ✔ | | |
+| RA-08's floor (999 / 1 000 ms) | ✔ (jest) | | |
+| Arabic / RTL on HONOR | ✔ | | |
+| TalkBack: labels, focus, RA-13 | ✔ | | |
+| TalkBack: the spoken RA-15 / RA-16 | | | ✔ (jest only) |
+| iOS: Simulator build and boot smoke | ✔ (CI) | | |
+| iOS VoiceOver | | ✔ (a real device) | |
+| F-2 (RA-03 source) | | ✔ (PO decision) | |
+| F-3 receiver and hosted alert | | ✔ (`QAN-BL-PROD-11`, HOSTED-DEPLOY-01) | |
+| V-24b, V-35b, hosted alert policies | | ✔ (HOSTED-DEPLOY-01) | |
+| `QAN-BL-MOB-04`, `QAN-BL-MOB-05` (outside CP1-B) | | | open, unassigned |
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);
