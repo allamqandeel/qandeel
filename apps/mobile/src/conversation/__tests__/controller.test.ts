@@ -8,11 +8,14 @@ import {
   ABANDONED_REPLY_RECHECKS,
   ABANDONED_REPLY_RECHECK_MS,
   MAX_SUBMISSION_LENGTH,
+  PREPARING_RECHECKS,
+  PREPARING_RECHECK_MS,
   SUBMISSION_CONFIRMATION_WINDOW_MS,
   createConversationController,
   mintSubmissionKey,
   type ConversationController,
 } from '..';
+import type { ConversationFinishedCallView, ConversationHistoryOutcome } from '../../runtime-entry';
 import { exchange, flush, page, scriptedTransport, type ScriptedTransport } from '../__fixtures__/conversation';
 
 const SESSION = '11111111-1111-4111-8111-111111111111';
@@ -524,5 +527,86 @@ describe('W1A-01 — one runtime generation', () => {
       expect(key.length).toBeLessThanOrEqual(128);
       expect(key).toMatch(/^w1a-[0-9a-z-]+$/u);
     }
+  });
+});
+
+describe('S8B-07 CP1-B — A0 → A1: a PREPARING call record is read again until it is sealed (bounded)', () => {
+  const CALL = '22222222-2222-4222-8222-222222222222';
+  const call = (recordingStatus: 'PREPARING' | 'AVAILABLE'): ConversationFinishedCallView => ({
+    callId: CALL, startedAt: '2026-11-08T10:00:00.000Z', endedAt: '2026-11-08T10:01:00.000Z', endReason: 'USER_ENDED', atMaxLength: false,
+    recordingStatus, availableUntil: recordingStatus === 'AVAILABLE' ? '2026-12-08T10:00:00.000Z' : null, unavailableReason: null,
+  } as ConversationFinishedCallView);
+  const withCalls = (calls: ConversationFinishedCallView[]): ConversationHistoryOutcome => {
+    const outcome = page([exchange('fixture: earlier words')]);
+    return outcome.kind === 'PAGE' ? { kind: 'PAGE', page: { ...outcome.page, calls } } : outcome;
+  };
+  const armed = (r: Rig) => r.timers.filter((timer) => timer.ms === PREPARING_RECHECK_MS && !timer.cleared);
+
+  it('the record turns playable once the server reports it sealed, with no further reads', async () => {
+    const r = rig();
+    r.controller.ensureHistory();
+    r.transport.answerRead(withCalls([call('PREPARING')]));
+    await flush();
+    expect(r.controller.getState().calls[0].recordingStatus).toBe('PREPARING');
+    expect(armed(r)).toHaveLength(1);
+    armed(r)[0].callback();
+    expect(r.transport.reads).toHaveLength(2);
+    r.transport.answerRead(withCalls([call('AVAILABLE')]));
+    await flush();
+    expect(r.controller.getState().calls[0].recordingStatus).toBe('AVAILABLE');
+    expect(r.timers.filter((timer) => timer.ms === PREPARING_RECHECK_MS)).toHaveLength(1);
+    expect(r.transport.pending().reads).toBe(0);
+  });
+
+  it('nothing is read again when no record is PREPARING (no polling)', async () => {
+    const r = rig();
+    r.controller.ensureHistory();
+    r.transport.answerRead(withCalls([call('AVAILABLE')]));
+    await flush();
+    expect(r.timers.filter((timer) => timer.ms === PREPARING_RECHECK_MS)).toHaveLength(0);
+    expect(r.transport.reads).toHaveLength(1);
+  });
+
+  it('a record still PREPARING is asked about at most PREPARING_RECHECKS times, then stays truthfully PREPARING', async () => {
+    const r = rig();
+    r.controller.ensureHistory();
+    r.transport.answerRead(withCalls([call('PREPARING')]));
+    await flush();
+    for (let index = 0; index < PREPARING_RECHECKS; index += 1) {
+      const [timer] = armed(r);
+      expect(timer).toBeDefined();
+      timer.callback();
+      timer.cleared = true;
+      r.transport.answerRead(withCalls([call('PREPARING')]));
+      await flush();
+    }
+    expect(r.transport.reads).toHaveLength(1 + PREPARING_RECHECKS);
+    expect(r.timers.filter((timer) => timer.ms === PREPARING_RECHECK_MS)).toHaveLength(PREPARING_RECHECKS);
+    expect(r.controller.getState().calls[0].recordingStatus).toBe('PREPARING');
+  });
+
+  it('a read that cannot answer still counts and the record is asked about again', async () => {
+    const r = rig();
+    r.controller.ensureHistory();
+    r.transport.answerRead(withCalls([call('PREPARING')]));
+    await flush();
+    armed(r)[0].callback();
+    armed(r)[0].cleared = true;
+    r.transport.answerRead({ kind: 'UNAVAILABLE', reason: 'NETWORK' });
+    await flush();
+    expect(armed(r)).toHaveLength(1);
+    expect(r.controller.getState().calls[0].recordingStatus).toBe('PREPARING');
+  });
+
+  it('retirement cancels the pending re-read; nothing is read after it', async () => {
+    const r = rig();
+    r.controller.ensureHistory();
+    r.transport.answerRead(withCalls([call('PREPARING')]));
+    await flush();
+    const [timer] = armed(r);
+    r.controller.retire();
+    expect(timer.cleared).toBe(true);
+    timer.callback();
+    expect(r.transport.reads).toHaveLength(1);
   });
 });
