@@ -247,7 +247,8 @@ export function decodeReplayVersion(value: unknown, replayId: string, versionId:
   }
 }
 
-/** `GET …/moments`: ordinals 1 .. n in canonical chronology, and one viewing answer for all of them (every text, or none). */
+/** `GET …/moments`: ordinals 1 .. n in canonical chronology, and one viewing answer for the text moments (every text, or none);
+ * an original-audio moment never carries text. */
 export function decodeReplayMoments(value: unknown): ReplayMomentsResult {
   if (isRecord(value) && Object.keys(value).length === 1 && value.outcome === 'UNAVAILABLE') return { kind: 'NOT_FOUND' };
   try {
@@ -269,7 +270,9 @@ export function decodeReplayMoments(value: unknown): ReplayMomentsResult {
     if (moments.length === 0) return refuse('moments: none');
     if (moments.some((moment, index) => moment.ordinal !== index + 1 || (index > 0 && moment.tc <= moments[index - 1].tc))) return refuse('moments: not 1 .. n in chronology');
     if (moments[0].omittedBefore !== 0) return refuse('moments[0]: nothing is omitted before the first moment');
-    if (new Set(moments.map((moment) => moment.text === null)).size !== 1) return refuse('moments: the text of every moment, or of none');
+    // An original-audio moment never carries text (0183 R-1); the one viewing answer is the other moments' (S8B-07 CP1-B F-1).
+    if (moments.some((moment) => moment.originalMedium === 'ORIGINAL_AUDIO' && moment.text !== null)) return refuse('moments: an audio moment carries no text');
+    if (new Set(moments.filter((moment) => moment.originalMedium !== 'ORIGINAL_AUDIO').map((moment) => moment.text === null)).size > 1) return refuse('moments: the text of every text moment, or of none');
     return { kind: 'FOUND', moments };
   } catch (error) {
     if (error instanceof Refused) return { kind: 'UNAVAILABLE' };

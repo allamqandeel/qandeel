@@ -257,6 +257,26 @@ describe('S7-01 - ReplayService', () => {
       }
     });
 
+    it('a mixed V2 version: each text moment its text, each original-audio moment none (S8B-07 CP1-B F-1)', async () => {
+      const audio = (n: number, extra: Record<string, unknown> = {}) => momentRow(n, { original_medium: 'ORIGINAL_AUDIO', source_text: null, ...extra });
+      repository.moments.mockResolvedValue([momentRow(1), audio(2), momentRow(3), audio(4)]);
+      await expect(service.moments('token', REPLAY, VERSION)).resolves.toMatchObject({ outcome: 'FOUND', moments: [
+        { ordinal: 1, originalMedium: 'ORIGINAL_TEXT', text: 'message 1' }, { ordinal: 2, originalMedium: 'ORIGINAL_AUDIO', text: null },
+        { ordinal: 3, originalMedium: 'ORIGINAL_TEXT', text: 'message 3' }, { ordinal: 4, originalMedium: 'ORIGINAL_AUDIO', text: null },
+      ] });
+      // all audio, and a NOT_VIEWABLE mixed version (no text anywhere): found, with none
+      repository.moments.mockResolvedValue([audio(1), audio(2)]);
+      await expect(service.moments('token', REPLAY, VERSION)).resolves.toMatchObject({ moments: [{ text: null }, { text: null }] });
+      repository.moments.mockResolvedValue([momentRow(1, { source_text: null }), audio(2)]);
+      await expect(service.moments('token', REPLAY, VERSION)).resolves.toMatchObject({ moments: [{ text: null }, { text: null }] });
+      // an audio moment that carries any text, or text moments that disagree, are refused whole
+      for (const bad of [[momentRow(1), audio(2, { source_text: 'a transcript' })], [momentRow(1), audio(2), momentRow(3, { source_text: null })],
+        [momentRow(1), momentRow(2, { original_medium: 'MIXED', source_text: null })]]) {
+        repository.moments.mockResolvedValue(bad);
+        await expect(service.moments('token', REPLAY, VERSION)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      }
+    });
+
     it('discloses a moment\'s analysis through the T-03C depth law, with no Session identity, Live Head, revision or Moments', async () => {
       const world = await service.momentAnalysis('token', REPLAY, VERSION, '2', undefined);
       expect(world).toMatchObject({ outcome: 'AVAILABLE', ordinal: 2, tc: 2, depth: 'WORLD', thread: { status: 'DEPTH_WITHHELD' }, session: { status: 'DEPTH_WITHHELD' },
