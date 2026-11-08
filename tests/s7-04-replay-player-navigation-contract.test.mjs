@@ -90,7 +90,10 @@ const FROZEN = [
   // S8B-07 CP1-A RE-ANCHOR (2026-11-05, the Product Owner's S-2 option (a)): the version decoder admits exactly the two
   // approved render contracts, V1 as 0102 and V2 as 0195 (D-04), value for value; any other schema, medium or policy is
   // refused whole. The wire, the G-1 summary decoder and the F-2 scope decoder are unchanged; nothing else in the service changed.
-  ['apps/api/src/replay/replay.service.ts', '5ea4073008e1a65ee65fa8657911934ebcc9fcdccfa6819250d25b0275328510'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`, CA-07B-2 record): a mixed V2 version's moments are
+  // readable. The one viewing answer covers the moments that are not original audio; an original-audio moment carries no
+  // text, or the version is refused whole. MIXED, V1 and the wire are unchanged; nothing else in the service changed.
+  ['apps/api/src/replay/replay.service.ts', 'c473807ae960916cd3ebec4c63d78054affa32a1b1f54c8fce1010dbd20964f9'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
   ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
@@ -103,9 +106,15 @@ const FROZEN = [
   // the S7-04 pin re-anchored, declared)"): the adapter honours exactly the two approved render contracts, V1 unchanged and
   // V2 as 0195 (D-04) value for value, and renders an ORIGINAL_AUDIO moment only under V2; MIXED and any other tuple stay
   // refused whole. The disclosure, the depth law and the viewpoint key are unchanged.
-  ['apps/mobile/src/replay-composite/projection-adapter.ts', 'a6610f18d4aea6b20babfc1afa0859c0ce47755487b888958b2d569018647a56'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 third place, r11 `feaad0fb`): `hasOwnReading` is added, and a moment
+  // is disclosed when it has its own reading: its text, or its original audio (an audio moment carries no text). The
+  // two approved render contracts, the depth law and the viewpoint key are unchanged.
+  ['apps/mobile/src/replay-composite/projection-adapter.ts', 'cc4b7a4fddfbd55c8d2f3d603fdac92832b89063a7f478b87bc311587cf31307'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope is decoded as exactly its class).
-  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'afc05df83bb2de9266cb12775e89ac5963a908072185e35be010321f431cba91'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`): the moments decoder mirrors the API: the viewing answer
+  // covers the text moments, an original-audio moment carries no text, or the answer is refused whole. The scope decoder
+  // and the wire are unchanged.
+  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'f899611757e902f04da555d8113ef86aef8079f4ff47ff74a1e5ab470a2ceed8'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '08687f8e87ff34a9c37ea69260041fc55cc3138ea42c272697763586a72407ab'],
   ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],

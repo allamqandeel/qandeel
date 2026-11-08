@@ -98,7 +98,10 @@ const FROZEN = [
   // S8B-07 CP1-A RE-ANCHOR (2026-11-05, the Product Owner's S-2 option (a)): the version decoder admits exactly the two
   // approved render contracts, V1 as 0102 and V2 as 0195 (D-04), value for value; any other schema, medium or policy is
   // refused whole. The wire, the G-1 summary decoder and the F-2 scope decoder are unchanged; nothing else in the service changed.
-  ['apps/api/src/replay/replay.service.ts', '5ea4073008e1a65ee65fa8657911934ebcc9fcdccfa6819250d25b0275328510'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`, CA-07B-2 record): a mixed V2 version's moments are
+  // readable. The one viewing answer covers the moments that are not original audio; an original-audio moment carries no
+  // text, or the version is refused whole. MIXED, V1 and the wire are unchanged; nothing else in the service changed.
+  ['apps/api/src/replay/replay.service.ts', 'c473807ae960916cd3ebec4c63d78054affa32a1b1f54c8fce1010dbd20964f9'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
   ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],

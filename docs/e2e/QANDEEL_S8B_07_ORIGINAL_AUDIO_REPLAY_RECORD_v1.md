@@ -419,7 +419,7 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 | 3 | Replay Media Service (the five routes, bounded Range responses) | done locally (details below): `replay-media-service.main.ts` under `REPLAY_MEDIA` / `REPLAY_POOL` only; API jest green; `prove-0196-media-service.mjs` 15/15 on a disposable PG17 with the in-memory store; `verify-migration-0196.mjs` 32/32 after the step-3 amendment; the rclone S3 run and the PostgREST proof (`prove-0185`) run only in CI; not yet run in CI |
 | 4 | V-24a First Audio isolation (not a proof of pool separation) | done locally (details below): `prove-0196-first-audio-isolation.mjs` on a disposable PG17 with the in-memory store, 3 interleaved repetitions per mode, D-06.7 PASS for M0 and M1_SHIPPED in each full run; `verify-migration-0196.mjs` 33/33 after the step-4 amendment; the rclone S3 run (with the store upload probe) runs only in CI; not yet run in CI. **Not V-24b.** |
 | 5 | Mobile | done locally (details below): `apps/mobile/src/original-audio/` and the Replay player's clock port; mobile jest 3 447 / 3 453 green (the 6 failures are the same at the step-4 head, locale-dependent on this machine, not caused here); `tsc` clean; `expo lint` 0 errors (no warning in a changed line); the S7, S8B-03 / 04 / 05 / 06 and CP1-B root contracts green; not yet run in CI. **HC-1 … HC-5 are not proven by these tests** (step 6) |
-| 6 | Device proof (HONOR and the iOS Simulator) | in progress: HC-4 calibrated (re-run at volume 4 / 16); the §20 hand-over amended by CA-07B-2 (below) after HONOR proved the R5.1 standby path cannot meet HC-1 / HC-2; F-1 fixed (below); the transitions, the 61-minute session and the independent checks are still to run |
+| 6 | Device proof (HONOR and the iOS Simulator) | done on HONOR except the checks that need the Product Owner (details below, "Step 6 results"): HC-4 calibrated (re-run at volume 4 / 16); the §20 hand-over amended by CA-07B-2 Decisions 1 – 5 after HONOR proved the R5.1 standby path cannot meet HC-1 / HC-2; HC-1 … HC-3 at 24 switches PASS (r7, Decision 5); HC-5 PASS (the 24 switches and the real ≈ 61-minute session on r11); F-1, F-5, F-7, F-8 and F-9 fixed and re-proven on the device (r7 – r11). **Not proven:** TalkBack (RA-15 / RA-16), Arabic / RTL on the device, a live call during playback and a new voice note (the microphone), and iOS VoiceOver (the macOS CI job) |
 
 **Step 3, what it adds and what it changed (each change declared in the PR body):**
 - **The service.** The five routes of contract §6 and `/health` (§18.3), on the Replay pool's own HTTP process. It
@@ -897,7 +897,8 @@ and every failed result stay recorded.
     click strong enough to break the content's shape moves the content edge back before it, into the pause, where
     HC-3 was not measured. The switch still failed, as a loss, but under the wrong criterion. On HONOR this measure
     is ≤ 0.3 dB.
-  - The second after the pause is read as written.
+  - The second after the pause is read as written. *Superseded by Decision 5 below: the first 10 ms after the start
+    are read the same way.*
   - **The earlier results, re-read:** of 166 edges in every capture (r3 – r5), 13 fail HC-2 as written (≤ 3.70 dB),
     and none fails the reading. Outside the window the deviation is ≤ 0.06 dB.
   - The as-written value is still computed and reported beside it, and no earlier report was overwritten.
@@ -936,6 +937,104 @@ and every failed result stay recorded.
   - the 30-day retention and the 58-minute cap;
   - the bit-exact digest;
   - privacy, deletion, credits and pricing.
+
+**Step 6, CA-07B-2 Decision 5: HC-2 at the start of the new generation (CONTROLLED AMENDMENT, Product Owner,
+2026-11-08):**
+
+A limited controlled change of CA-07B-2's HC-2′ and of Decision 4, as they apply at a switch. It changes how the
+natural fade is measured. It is **not** a general permission to exceed the audio quality limits.
+
+- **What HONOR showed (r7, `2f620428`; the final batch of 24 transitions, NONE / PAUSE_RESUME / SEEK / NEAR_EXPIRY):**
+  - 23 / 24 passed as written.
+  - One switch (NEAR_EXPIRY, 4 → 5) read **3.22 dB** for HC-2's level in the second after the pause. Its maximum was
+    in the first 10 ms after the new player's start: outside them 0.02 dB, rise 0, rebound 0.49 dB, the pause 558.75 ms,
+    nothing lost, 81.17 ms repeated, no second copy.
+  - Decision 4 had read only the last 10 ms before the pause. The second after was read as written, so the switch
+    failed. It is kept recorded as a failure as written.
+- **Decision 5:**
+  - The natural fade in the **first 10 ms after the start** is part of the transition. It is read exactly as
+    Decision 4 reads the last 10 ms before the stop: a fade only inside the window (no 10 ms window more than 3 dB above
+    the level, no rebound above 1.5 dB), and ± 3 dB outside both windows.
+  - Both windows count **inside the 1 000 ms**: the transition is the pause plus 2 × 10 ms.
+  - The windows never widen on their own: a slower fade, or a defect that starts inside a window and runs past it, fails.
+  - The exception never hides a loss, a repeat over 150 ms, two generations heard together, a click or unexplained
+    audio.
+- **The criteria at a switch, final:**
+  - a pause ≤ 1 000 ms, both fade windows counted;
+  - repeated ≤ 150 ms;
+  - lost 0 (≤ 1 ms);
+  - nothing heard together, and no unexplained audio (≤ 2 ms);
+  - HC-2 ± 3 dB outside the last 10 ms before and the first 10 ms after;
+  - HC-3 ≤ 7.31 dB (4 / 16) either side and across the pause.
+
+  The pause and the repeat limits are not raised, and the exceptions are not widened, without a new Product Owner
+  decision.
+- **Correction:** Decision 4's line "the second after the pause is read as written" is marked superseded where it
+  stands; it is not removed.
+- **The measurement's controls: 46 / 46 pass.** These are the 29 above and 17 new ones mirrored on the start side:
+  - a defect from S + 5 to S + 40 ms;
+  - a slow fade to S + 30 ms, which the window does not absorb;
+  - a dropout across the window's edge;
+  - a 965 ms gap, which fails since 985 + 20 > 1 000, while 955 ms passes.
+- **The r7 batch re-read under Decision 5, without re-recording:** **24 / 24 PASS**, each kind 6 / 6.
+  - The pause ≤ 686.5 ms; the transition with both windows ≤ 706.5 ms; repeated ≤ 129.17 ms; lost 0; unexplained
+    ≤ 1 ms; no second copy.
+  - HC-2 after, outside the start window, ≤ 0.03 dB; the start's rise ≤ 0.01 dB and rebound ≤ 0.49 dB.
+  - Every field outside Decision 5's is identical to the original run. The as-written value stays in the report beside
+    it, not as a criterion.
+- **No re-test for a tool change:** the re-read used the same captures. Later builds re-run the long session only (below).
+
+**Step 6, the remaining work (r8 – r11, 2026-11-08):** each defect below was proven on HONOR, fixed in the narrowest
+place with a test that fails without it, and re-proven on the device. None changes a threshold or adds a player.
+
+| | What HONOR showed | The fix | On HONOR after the fix |
+|---|---|---|---|
+| F-7 (r8, `851e6173`) | A0 → A1: a call row stayed on PREPARING after the recording was sealed; the history was read only at first open, per call turn and after a send | while a shown call row is PREPARING, the newest page is re-read every 5 s, at most 36 times; nothing is written | PREP2 sealed → AVAILABLE on the next read (2.9 s), then played |
+| F-8 (r9, `e21e4125`) | a failed source (a 503) left "Getting playback ready" for ever: `expo-audio` on Android reports a source error in `status.error` with the state `idle`, never `error` | the player port reads a non-empty error as a failure | three Range resumes, then CL-05 |
+| F-9 (r10, `57748f39`, server only) | a response ended by its 10 min lifetime (V-35) was never reported: with the whole body already in an unread socket, destroying the streams does not settle `pipeline` | a termination settles the response itself | H15, lifetime lowered to 20 s: cut at 20.0 s, the phone's Range `491520-` → 206, played on with one exact offset (1 277 points, no switch) |
+| F-1, third place (r11, `feaad0fb`) | the Replay screen still refused a mixed V2 version: `consistent()` asked a text of every moment of a VIEWABLE version | the viewing answer covers the text moments; an audio moment carries no text or the version is refused whole; an audio moment is read by its sound (no RA-03 text, F-2 open) | the mixed Replay opens and plays 1 → 10 of 10, RA-05 and RA-14 shown, no text on an audio moment, a text moment shows its text |
+
+**Contract pins re-anchored in step 6 (each declared beside its pin; nothing loosened):**
+- S7-03 and S7-04: `replay.service.ts` (F-1).
+- S7-04: `replay-history-api.ts` (F-1) and `projection-adapter.ts` (r11, `hasOwnReading`).
+- S8B-04: the player port's release now mutes first (r7, F-5). The stop-and-release order is unchanged.
+
+**Local verification at the end of step 6:**
+- API jest: 347 suites, 7 821 passed, 1 skipped.
+- Mobile jest: 3 463 passed, with the same 6 locale-dependent failures as at the step-4 head (`w2-account-access`, `depth`).
+- Root contracts: 1 782 / 1 782 (forward-safety is run in CI only).
+- Task-closure governance: 24 / 24.
+
+**Step 6 results (HONOR ALI-NX1, Android 15, volume 4 / 16; evidence in `E:\QANDEEL_REPORTS\S8B-07\CP1-B\step6`):**
+
+| Check | Result | Note |
+|---|---|---|
+| HC-4 calibration | PASS | 133 windows, zero detections; HC-3 limit 7.31 dB |
+| HC-1 … HC-3 at ≥ 20 switches (r7, Decision 5) | PASS 24 / 24 | above |
+| HC-5, zero degraded and ≤ 2 live, the 24 switches | PASS | 24 / 24 `RELEASED`, zero `EXPIRED`, at most 2 live, every PCM equal to G1's |
+| HC-5, the real ≈ 61-minute session (r11) | PASS | H60 from its start in real time, the clock not moved, the default stream timing; one 62:00 capture. G1 was `RELEASED` at the one switch (53:03 of content), 266 s before its real 58:00 expiry. Playback ran on G2 past that expiry to 60:00. Zero `EXPIRED`, at most 2 live, the two files byte-identical. Measured over the whole span (7 chunks, 37 390 points): no step, silence or loss anywhere but the switch, including the Range resume 50:21 into the capture. The switch: pause 644.75 ms (transition 664.75), repeated 59.42 ms, lost 0, no second copy, unexplained 1 ms, HC-2 outside the fade windows ≤ 0.05 dB, HC-3 ≤ 0.89 dB |
+| Range resume mid-body (`cut-h60-slow`) | PASS | cut mid-body, Range `1360209-` → 206, one exact offset over 1 127 points |
+| Range after the lifetime cap (V-35) | PASS after F-9 | above |
+| V-32 deletion while playing (device) | PASS | the owner's DELETE from a second session (200 in 30 ms); the phone's player stopped 4.7 s later (bound ≤ 10 s), after one status round; no generation left live |
+| No audio stored on the phone | PASS | Data 1.99 MB, Cache 1.88 MB after > 90 MB streamed; no external folder. The release build allows no `run-as`, so this is the system's own count, not a file listing |
+| A corrupt segment | PASS (fail-safe) | both generations `FAILED / DECODE_FAILED`, nothing streamed, one retry, CL-05 |
+| A0 → A1 | PASS after F-7 | |
+| B1a – B1c (selection, RA-13) | PASS | needed the proof server's temporal service and commit events (harness only, no product code) |
+| F-1 on real data | PASS after r11 | |
+| Replay V1 regression | PASS | a one-message V1 version: its own pacing line, no audio surface, no request to the pool |
+| Voice-note regression | failure path PASS; success path NOT PROVEN on the device | the proof server's in-memory store lost the note's bytes on a restart (503, a harness gap); a new note needs the microphone |
+| Live-call regression (a call during playback) | NOT PROVEN on the device | needs the microphone; jest covers the release of the player and both sets |
+| TalkBack (labels, RA-15, RA-16) | NOT PROVEN | needs TalkBack turned on by the Product Owner |
+| Arabic / RTL on the device | NOT PROVEN | the app follows the device locale; changing it is the Product Owner's. jest covers both languages |
+| iOS VoiceOver | NOT PROVEN | needs the macOS CI job |
+
+**Observations, no change made:**
+- **RA-08 / RA-06 / RA-07 below one second:** `lengthText` floors to m:ss, so a sub-second writer loss reads "A 0:00
+  part of the recording was lost here." A copy or format decision for the Product Owner.
+- **O-1:** the history orders two exchanges of the same second by id (the API gives seconds). It predates CP1-B; the
+  proof fixtures were adjusted only. Proposed for the backlog as its own item.
+- **F-2:** RA-03 is now reachable only if a future field gives an audio moment's derived text. VA-8 R-1 is not widened.
+- **F-3:** the degraded event has no receiver; HC-5 is proven from the server's lifecycle.
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);
