@@ -1090,6 +1090,55 @@ place with a test that fails without it, and re-proven on the device. None chang
   After a call, the screen takes no touch until the app restarts. CP1-B changed no layout of the call surface or the
   switcher. The cause is not established, and `main` was not tried on the phone.
 
+**The Product Owner's order of 2026-11-08: fix API CI and the mobile defects before the merge.**
+
+- **A — the media service proof on Linux CI (`prove-0196-media-service`, 9 / 15 at `644a73b7`: S05, S06 a – g, S07 1 – 3).**
+  - The cause is the harness alone. The product (`transient-stream.ts`, the controller, r10's settling) is unchanged.
+  - The proof's slow reader paused a socket over TCP loopback. On Linux, loopback autotuning gives MB-scale buffers, so
+    the kernel took the whole file (1.48 MB) before the reader read: the server's pipeline finished, and the cut came after
+    it, not during it. On Windows the loopback buffer is ≈ 0.4 MB, which is why it passed there. This is §15.3's own
+    statement, that bytes already in kernel buffers cannot be recalled, met by a harness that let the kernel hold
+    everything.
+  - The fix (`29a546f1`): the paced reads cross a Unix socket (a named pipe on Windows), a fixed-capacity link handed to
+    the same `http.Server`. Its capacity is measured at the start and must leave the stream still running at the cut. A
+    precondition asserts that no cut lands on a response that is already `COMPLETE`.
+  - Nothing else changed: every assertion; the 15 scenarios; the 5 s re-check with its 2 s fail-closed budget; the 7 s
+    bound; ± 1 s at a known end; destroy, never end; no deletion, retention or privacy change; and the 16 KiB/s reader.
+  - Locally, on PostgreSQL 17: 15 / 15, each cut by `RECHECK` or `SOURCE_END` after 344 064 of 1 482 114 bytes, at 3.4 – 4.5 s.
+    A known end lands within 2 ms. Writes after termination: 0. The next Range answers 404, or 206 for (f).
+  - CI on the final head is in PR #385.
+- **MOB-05 — fixed in `0a614db5` and tombstoned.**
+  - The cause predates CP1-B (W1A-01's fade, and S8B-06 CP3's crossing to the Analysis when a call connects).
+  - A Map read that ended without an answer stayed `NOT_FETCHED`. The composition read that as "still being fetched",
+    so the fade never began, and the invisible Analysis took every touch.
+  - The trigger on the phone was the proof world's projection fixture (Live Head 10) lagging the real Live Head (11). In
+    production any failed read does the same.
+  - The fix:
+    - a read that ended unanswered is settled, for that exact viewpoint, with no timer;
+    - an incoming depth takes no touch, and is hidden from assistive technology, until it is drawn;
+    - Back still returns.
+  - Three jest tests fail without the fix and pass with it.
+  - On the Android emulator (API 36), before and after:
+    - before, the defect reproduced exactly;
+    - after, the rail acts where it is drawn;
+    - a call ended from the rail or from its notification leaves a usable screen;
+    - the composer and the switcher work at once, with no restart.
+  - HONOR was not re-run.
+- **MOB-04 — fixed in `0a614db5` and tombstoned.**
+  - At its end, a note is paused before it is moved to its start. Media3 keeps `playWhenReady` past the end.
+  - A Media3-modelled jest test fails without the fix.
+  - On the emulator, with a 25 s synthetic note:
+    - before, the platform's PlayerBase log shows a new AudioTrack `started` at each end;
+    - after, nothing starts, Play restarts from 0, and Pause pauses.
+- **TalkBack RA-15 / RA-16 (spoken): still NOT PROVEN, and jest PASS is not read as a device PASS.**
+  - The emulator proves only that the native tree carries a mark's hint (`uiautomator` reads `hint`).
+  - This proof world has no voice turn of several units, so RA-16 has no mark to carry. RA-15 needs a V2 MIX playing
+    through the Replay pool.
+  - Plan: one emulator run with such a fixture. Read RA-16 from the node's `hint`, and RA-15 as a `TYPE_ANNOUNCEMENT`
+    from `uiautomator events`. This needs no personal device; it records the accessibility events, not the speech.
+- **Evidence** (outside the repository): `E:QANDEEL_REPORTSS8B-07CP1-Bmob05-emu`, `mob05-fix`, `mob04-emu`, `ra-emu`.
+  The emulator's host microphone was off, and only synthetic audio was recorded.
+
 **CI correction (step 6):** 0196 has ten `voice_private` internals since step 3 (`transient_unavailable_reason_v1`).
 The 0183, 0185 and 0186 verifiers still counted nine, so `verify-api` failed at `e9a155f7`. The count is now ten in
 all three. This corrects their stale count; it does not loosen the census, which still requires the exact number.
@@ -1115,7 +1164,8 @@ all three. This corrects their stale count; it does not loosen the census, which
 | F-2 (RA-03 source) | | ✔ (PO decision) | |
 | F-3 receiver and hosted alert | | ✔ (`QAN-BL-PROD-11`, HOSTED-DEPLOY-01) | |
 | V-24b, V-35b, hosted alert policies | | ✔ (HOSTED-DEPLOY-01) | |
-| `QAN-BL-MOB-04`, `QAN-BL-MOB-05` (outside CP1-B) | | | open, unassigned |
+| `QAN-BL-MOB-04`, `QAN-BL-MOB-05` (older than CP1-B), fixed at the PO's order | ✔ (jest + Android emulator, before / after) | | |
+| `prove-0196-media-service` on Linux (the harness fix) | ✔ (local 15 / 15; CI in PR #385) | | |
 
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);

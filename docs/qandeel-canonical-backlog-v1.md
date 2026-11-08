@@ -238,8 +238,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-NAV-03` | Shared / Public World Replay Surface | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-MOB-03` | Conversation History Order on an Equal Timestamp: Two Exchanges Whose User Turns Share One `createdAt` Are Ordered by Their Random Id, Not by Write Order | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-PROD-11` | Replay Generation Hand-over: the Phone's Content-free `TRANSIENT_HANDOVER_DEGRADED` Has No Receiver, and the Server Cannot Tell a Degraded Switch From an Ordinary End | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-MOB-04` | Voice Note Playback on Android: a Note That Plays to Its End Starts Again From Its Start While Its Control Shows Paused | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
-| `QAN-BL-MOB-05` | Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-MOB-04` | Voice Note Playback on Android: a Note That Plays to Its End Starts Again From Its Start While Its Control Shows Paused | `S8B-07 — Original Audio Replay, Media Rendering & Distribution (CP1-B)` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-MOB-05` | Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts | `S8B-07 — Original Audio Replay, Media Rendering & Distribution (CP1-B)` | `HIGH` | `CLOSED — TOMBSTONE` |
 
 ---
 
@@ -3770,53 +3770,6 @@ Nothing here authorizes implementation (BG-07).
 Admitted by `S8B-07` CP1-B (2026-11-08, Draft PR #385) under BG-06, at the Product Owner's decision on F-3 (2026-11-08).
 Nothing here authorizes implementation (BG-07).
 
-### `QAN-BL-MOB-04` — Voice Note Playback on Android: a Note That Plays to Its End Starts Again From Its Start While Its Control Shows Paused
-
-- **Title / Finding:** at a note's end the playback sets the note to `PAUSED` at position 0 and seeks the player to 0
-  (`onStatus`, `apps/mobile/src/voice-note/voice-note-playback.ts`, since S8B-03 CP2 `faff8e70`). It never pauses the
-  player. On Android, `expo-audio` (`~57.0.4`) starts playing again after that seek. So the note plays again from its
-  start, over and over, while its control shows "play". A tap then calls `play()` on a player that is already playing,
-  so a tap stops it only when it lands while the control shows "pause".
-- **Source:** [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §13, step 6. It was seen on HONOR
-  (2026-11-08, APK r12) in the regression of a new voice note's playback. The note played to its end (5.8 s, no failure),
-  then started again from 0 three times in a row (`fin=true` → `seek to=0` → `playing=true`).
-- **Why not current work:** it predates CP1-B, and CP1-B did not change it. CP1-B's changes to the note's playback are
-  the playback slot, the failure read and the muted release; the end-of-note branch and `expo-audio` are as S8B-03 left
-  them. The Product Owner asked for CP1-B's closure with no new development cycle (2026-11-08).
-- **Owner task:** `UNASSIGNED`.
-- **Severity:** `HIGH` — a note the reader played does not stop by itself, and the control says the opposite of what
-  is heard. No user can hear it today: every voice gate is `DISABLED`.
-- **Reopen condition:** before any Voice Note gate opens; any task that changes the note's playback or `expo-audio`.
-- **Required future properties:** at its end a note stops and rests at its start, and the control shows "play". A tap
-  plays or pauses what is heard. Proven on an Android device and in jest at the end of a note.
-- **Status:** `OPEN — UNASSIGNED`
-
-Admitted by `S8B-07` CP1-B (2026-11-08, Draft PR #385) under BG-06. Nothing here authorizes implementation (BG-07).
-
-### `QAN-BL-MOB-05` — Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts
-
-- **Title / Finding:** in the CP1-B proof app on HONOR (APK r12, 2026-11-08), once a live call starts, the bottom
-  switcher goes and the call rail is drawn at y ≈ 2135 px. Taps on the drawn controls (end, microphone) do nothing, but a
-  tap at y ≈ 2533 px ends the call (`USER_ENDED`). After a call that ends from its notification, the switcher is not
-  drawn again, and no tap or scroll on the drawn screen does anything (polling and the drawn timer go on), until the app
-  is restarted. Android delivers the touches to the app's focused window: no overlay, no proximity lock.
-- **Source:** [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §13, step 6 (the live call during
-  listening). It was seen with and without a listening running. The cause is not established.
-- **Why not current work:** CP1-B changed no layout of the call surface, the call rail, the switcher or their placement.
-  It added only the recording's player beside a finished call's record. The Product Owner asked for CP1-B's closure with
-  no new development cycle (2026-11-08). Whether `main` shows it was not tried (no `main` build on the phone).
-- **Owner task:** `UNASSIGNED`.
-- **Severity:** `HIGH` — a reader cannot end a call with the control they see, and after the call the screen does not
-  answer. The call's notification still ends it. No user can reach it today: every voice gate is `DISABLED`.
-- **Reopen condition:** before any Live Call gate opens; any task that changes the call surface, the switcher or the
-  depth layout; a report of a call that cannot be ended.
-- **Required future properties:** the rail takes touches where it is drawn, and the switcher and the screen come back
-  whole at the call's end. The cause is found (a `main` build on the same phone tells whether CP1-B plays any part).
-  Proven on HONOR and on one more Android device.
-- **Status:** `OPEN — UNASSIGNED`
-
-Admitted by `S8B-07` CP1-B (2026-11-08, Draft PR #385) under BG-06. Nothing here authorizes implementation (BG-07).
-
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4626,6 +4579,65 @@ Admitted by `S8B-05` at its closing change (CP4, 2026-11-03) under BG-08 / BG-06
 Admitted by `S8B-06` CP3 under PO Review R1 (2026-11-04, Draft PR #381) under BG-06, and owned by the Product Owner's
 decision of the same day. Nothing here authorizes implementation (BG-07); `INTEL-04` starts on its own order.
 Tombstoned by `INTEL-04` at its closing change (2026-11-04) under BG-08; its finding, decision and properties are kept above as admitted.
+
+### `QAN-BL-MOB-04` — Voice Note Playback on Android: a Note That Plays to Its End Starts Again From Its Start While Its Control Shows Paused
+
+- **Closing task:** `S8B-07 — Original Audio Replay, Media Rendering & Distribution` (CP1-B, under the Product Owner's order of 2026-11-08 to fix the mobile defects before the merge)
+- **PR / SHA:** `#385` (Draft, not merged) / `0a614db5`; the merge SHA is recorded at merge
+- **Disposition:** fixed in the app (`voice-note-playback.ts`): at its end a note is paused, then moved to its start. Proven in jest and on the Android emulator, before and after.
+
+- **Title / Finding:** at a note's end the playback sets the note to `PAUSED` at position 0 and seeks the player to 0
+  (`onStatus`, `apps/mobile/src/voice-note/voice-note-playback.ts`, since S8B-03 CP2 `faff8e70`). It never pauses the
+  player. On Android, `expo-audio` (`~57.0.4`) starts playing again after that seek. So the note plays again from its
+  start, over and over, while its control shows "play". A tap then calls `play()` on a player that is already playing,
+  so a tap stops it only when it lands while the control shows "pause".
+- **Source:** [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §13, step 6. It was seen on HONOR
+  (2026-11-08, APK r12) in the regression of a new voice note's playback. The note played to its end (5.8 s, no failure),
+  then started again from 0 three times in a row (`fin=true` → `seek to=0` → `playing=true`).
+- **Why not current work:** it predates CP1-B, and CP1-B did not change it. CP1-B's changes to the note's playback are
+  the playback slot, the failure read and the muted release; the end-of-note branch and `expo-audio` are as S8B-03 left
+  them. The Product Owner asked for CP1-B's closure with no new development cycle (2026-11-08).
+- **Owner task:** `S8B-07 — Original Audio Replay, Media Rendering & Distribution` (CP1-B), at the Product Owner's order of 2026-11-08 (admitted `UNASSIGNED`).
+- **Severity:** `HIGH` — a note the reader played does not stop by itself, and the control says the opposite of what
+  is heard. No user can hear it today: every voice gate is `DISABLED`.
+- **Reopen condition:** before any Voice Note gate opens; any task that changes the note's playback or `expo-audio`.
+- **Required future properties:** at its end a note stops and rests at its start, and the control shows "play". A tap
+  plays or pauses what is heard. Proven on an Android device and in jest at the end of a note.
+- **Current truth (S8B-07 CP1-B, 2026-11-08, `0a614db5`):** the end branch now pauses the player before it seeks it to 0. The cause is Media3's (expo-audio 57, `BaseAudioPlayer.kt`): `playWhenReady` survives `STATE_ENDED`, and a seek on an ended player that still wishes to play resumes it. A Media3-modelled jest test fails without the fix (it sounds again) and passes with it; Play restarts from 0, and pause, resume, seek, one note at a time and the playback slot shared with calls and Replay are unchanged (their tests unchanged and green). On the Android emulator (API 36, the same proof world, a 25 s synthetic note): before the fix the trace shows `fin=true → seek to=0 → playing=true` and the platform's PlayerBase log a new AudioTrack `started` at each end (two loops in 58 s); after it, `fin=true → pause → seek to=0 → playing=false`, no `started` for the following 20 s, then Play from 0 and Pause at 3.1 s. Evidence outside the repository (`E:QANDEEL_REPORTSS8B-07CP1-Bmob04-emu`). A real phone was not used (not needed: the emulator runs the same Media3).
+- **Status:** `CLOSED — TOMBSTONE`
+
+Admitted by `S8B-07` CP1-B (2026-11-08, Draft PR #385) under BG-06. Nothing here authorizes implementation (BG-07).
+Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-08); its finding and properties are kept above as admitted.
+
+### `QAN-BL-MOB-05` — Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts
+
+- **Closing task:** `S8B-07 — Original Audio Replay, Media Rendering & Distribution` (CP1-B, under the Product Owner's order of 2026-11-08 to fix the mobile defects before the merge)
+- **PR / SHA:** `#385` (Draft, not merged) / `0a614db5`; the merge SHA is recorded at merge
+- **Disposition:** fixed in the app (`LivingAnalysisMap.tsx`, `DepthComposition.tsx`): the cause is found, it predates CP1-B, and the fix changes no approved contract. Proven in jest and on the Android emulator, before and after; HONOR was not re-run.
+
+- **Title / Finding:** in the CP1-B proof app on HONOR (APK r12, 2026-11-08), once a live call starts, the bottom
+  switcher goes and the call rail is drawn at y ≈ 2135 px. Taps on the drawn controls (end, microphone) do nothing, but a
+  tap at y ≈ 2533 px ends the call (`USER_ENDED`). After a call that ends from its notification, the switcher is not
+  drawn again, and no tap or scroll on the drawn screen does anything (polling and the drawn timer go on), until the app
+  is restarted. Android delivers the touches to the app's focused window: no overlay, no proximity lock.
+- **Source:** [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §13, step 6 (the live call during
+  listening). It was seen with and without a listening running. The cause is not established.
+- **Why not current work:** CP1-B changed no layout of the call surface, the call rail, the switcher or their placement.
+  It added only the recording's player beside a finished call's record. The Product Owner asked for CP1-B's closure with
+  no new development cycle (2026-11-08). Whether `main` shows it was not tried (no `main` build on the phone).
+- **Owner task:** `S8B-07 — Original Audio Replay, Media Rendering & Distribution` (CP1-B), at the Product Owner's order of 2026-11-08 (admitted `UNASSIGNED`).
+- **Severity:** `HIGH` — a reader cannot end a call with the control they see, and after the call the screen does not
+  answer. The call's notification still ends it. No user can reach it today: every voice gate is `DISABLED`.
+- **Reopen condition:** before any Live Call gate opens; any task that changes the call surface, the switcher or the
+  depth layout; a report of a call that cannot be ended.
+- **Required future properties:** the rail takes touches where it is drawn, and the switcher and the screen come back
+  whole at the call's end. The cause is found (a `main` build on the same phone tells whether CP1-B plays any part).
+  Proven on HONOR and on one more Android device.
+- **Current truth (S8B-07 CP1-B, 2026-11-08, `0a614db5`):** the cause is found, and it predates CP1-B (W1A-01's fade, which waits for a drawn Analysis with no timer, and S8B-06 CP3's crossing to the Analysis when a call connects). A Map read whose fetch ended without an answer leaves its key `NOT_FETCHED` (truthful and retryable), and the composition read that as "still being fetched", so it never reported its first state. The depth stayed half-crossed: the Analysis mounted at zero opacity OVER the visible Conversation, and it took every touch. Its own call box draws the rail lower than the Conversation's, so the drawn rail did nothing and a tap ≈ 400 px lower ended the call; after a call ended by the reader (rail or notification) the depth stays the Analysis, so nothing on screen answered until a restart. The trigger on the phone was the proof world's projection fixture (Live Head 10) lagging the real Live Head (11) after the B1a – B1c change (refused as `INCOHERENT_FAMILY`); in production any failed read does the same. CP1-B changed none of this code. The fix: a read that ended unanswered, for that exact viewpoint, is settled, so the measured composition (whose chrome says so) is the Analysis's real first state, with no timer; and an incoming depth takes no touch and is hidden from assistive technology until it is drawn, while Back still returns. S7-04's pinned `personalOpen` line is unchanged; the S7-03 / S7-04 hashes of `LivingAnalysisMap.tsx` are re-anchored with the reason beside them. Three jest tests fail without the fix and pass with it. On the Android emulator (API 36, the same proof world): before, the defect reproduced exactly (the drawn end did nothing, a tap at the hidden rail ended the call, the composer took no touch afterwards); after, the Analysis is visible, the mic and end act where drawn, a call ended from the rail or the notification leaves a usable screen, and the Conversation, the composer (the keyboard opens) and the switcher work at once, with no restart. Evidence outside the repository (`E:QANDEEL_REPORTSS8B-07CP1-Bmob05-emu`, `mob05-fix`). HONOR was not re-run: the emulator reproduces the device's mechanism and geometry, so the phone is not needed for this proof.
+- **Status:** `CLOSED — TOMBSTONE`
+
+Admitted by `S8B-07` CP1-B (2026-11-08, Draft PR #385) under BG-06. Nothing here authorizes implementation (BG-07).
+Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-08); its finding and properties are kept above as admitted.
 
 ---
 
@@ -6188,6 +6200,11 @@ exact Live Focus events and no refusal or loss (record §4.2). No production log
   `08`, `09`.
 - **BG-09:** S8B-07 is not closed. CP1-B's record and the locators carry its state.
 - **Index at S8B-07 CP1-B: 106 items; 52 / 4 / 15 / 35 by status, 61 / 42 / 3 by severity.**
+- **The Product Owner's order of 2026-11-08 (fix API CI and the mobile defects before the merge):** `QAN-BL-MOB-04` and
+  `QAN-BL-MOB-05` are re-owned to S8B-07 CP1-B, fixed in `0a614db5` and tombstoned (BG-08). No item is admitted: the
+  proof world's projection fixture that lagged the real Live Head is a harness fault, outside the repository, and the
+  spoken RA-15 / RA-16 stay a NOT PROVEN line of the record's matrix, not an item.
+- **Index after the order: 106 items; 52 / 4 / 13 / 37 by status, 61 / 42 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
@@ -6307,7 +6324,7 @@ Inherited after T-12 closure reconciliation:
 | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `QAN-BL-VOICE-02`, `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (admitted by S8B-03's closing change, 2026-10-31); `QAN-BL-VOICE-05` (admitted by S8B-04's closing change, 2026-11-02); `QAN-BL-VOICE-08` (admitted by S8B-06's closing change, 2026-11-04) |
 | `GCR-01 — Growth & Capacity Readiness` | `QAN-BL-VOICE-07` (admitted by S8B-05's closing change, 2026-11-03) |
 | `INTEL-04 — Thread Lifecycle Derivation Correction` | `QAN-BL-INTEL-04` (admitted by S8B-06 CP3 under PO Review R1, 2026-11-04; owned by the Product Owner's decision of the same day); *the closing change (2026-11-04, the INTEL-04 Draft PR from `main` at `8e590234`; effective from its merge):* BG-08 reconciled: `QAN-BL-INTEL-04` tombstoned (`0194`, not hosted); admitted `QAN-BL-INTEL-05` (`UNASSIGNED`) |
-| `S8B-07 — Original Audio Replay, Media Rendering & Distribution` | none owned by its own name at kickoff (BG-05, 2026-11-05, from `main` at `e9311ca1`); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); *CP1-A (2026-11-05, a Draft PR from `s8b/s8b-07-cp1a`; effective from its merge):* admitted `QAN-BL-NAV-03` (`UNASSIGNED`, D-01(a)); tombstoned nothing; S8B-07 not closed |
+| `S8B-07 — Original Audio Replay, Media Rendering & Distribution` | none owned by its own name at kickoff (BG-05, 2026-11-05, from `main` at `e9311ca1`); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); *CP1-A (2026-11-05, a Draft PR from `s8b/s8b-07-cp1a`; effective from its merge):* admitted `QAN-BL-NAV-03` (`UNASSIGNED`, D-01(a)); tombstoned nothing; *CP1-B (2026-11-08, Draft PR #385; effective from its merge):* admitted `QAN-BL-MOB-03`, `QAN-BL-PROD-11` (HOSTED-DEPLOY-01), `QAN-BL-MOB-04` and `QAN-BL-MOB-05`; at the Product Owner's order of 2026-11-08, re-owned and tombstoned `QAN-BL-MOB-04` and `QAN-BL-MOB-05` (`0a614db5`); S8B-07 not closed |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
