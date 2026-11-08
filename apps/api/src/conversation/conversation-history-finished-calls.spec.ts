@@ -32,8 +32,11 @@ function turn(overrides: Partial<ConversationTurn> = {}): ConversationTurn {
     updated_at: 'now', completed_at: 'now', ...overrides,
   };
 }
-const row = (id: string, started: string, ended: string, reason = 'USER_ENDED', atMax = false) =>
-  ({ call_id: id, started_at: started, ended_at: ended, end_reason: reason, at_max_length: atMax });
+const row = (id: string, started: string, ended: string, reason = 'USER_ENDED', atMax = false,
+  recording: { recording_status: string | null; available_until: string | null; unavailable_reason: string | null } =
+  { recording_status: 'UNAVAILABLE', available_until: null, unavailable_reason: null }) =>
+  ({ call_id: id, started_at: started, ended_at: ended, end_reason: reason, at_max_length: atMax, ...recording });
+const UNAVAILABLE = { recordingStatus: 'UNAVAILABLE', availableUntil: null, unavailableReason: null };
 
 describe('ConversationService.listTurns — the finished calls of the Session (S8B-06 CP3 R3, 0193)', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -63,7 +66,7 @@ describe('ConversationService.listTurns — the finished calls of the Session (S
     const page = await service.listTurns(USER_ID, TOKEN, SESSION_ID, {});
     expect(page).toEqual({
       exchanges: [], hasOlder: false,
-      calls: [{ callId: 'call-1', startedAt: '2026-11-04T10:00:00.250Z', endedAt: '2026-11-04T10:01:05.750Z', endReason: 'PEER_LOST_AFTER_GRACE', atMaxLength: false }],
+      calls: [{ callId: 'call-1', startedAt: '2026-11-04T10:00:00.250Z', endedAt: '2026-11-04T10:01:05.750Z', endReason: 'PEER_LOST_AFTER_GRACE', atMaxLength: false, ...UNAVAILABLE }],
     });
     // The newest (and only) page: both ends open. The caller's own identity, never one from the query.
     expect(voiceNotes.sessionFinishedCalls).toHaveBeenCalledWith(USER_ID, SESSION_ID, null, null);
@@ -118,6 +121,29 @@ describe('ConversationService.listTurns — the finished calls of the Session (S
     await expect(text.listTurns(USER_ID, TOKEN, SESSION_ID, {})).resolves.toEqual({ exchanges: [], hasOlder: false });
   });
 
+  it('S8B-07 CP1-B (0196 G): the recording availability, as the read states it; anything else fail-closed UNAVAILABLE', async () => {
+    const at = '2026-12-04T10:00:00.000000+00:00';
+    voiceNotes.sessionFinishedCalls.mockResolvedValue([
+      row('ready', '2026-11-04T10:05:00Z', '2026-11-04T10:06:00Z', 'USER_ENDED', false, { recording_status: 'AVAILABLE', available_until: at, unavailable_reason: null }),
+      row('sealing', '2026-11-04T10:03:00Z', '2026-11-04T10:04:00Z', 'USER_ENDED', false, { recording_status: 'PREPARING', available_until: null, unavailable_reason: null }),
+      row('deleted', '2026-11-04T10:01:00Z', '2026-11-04T10:02:00Z', 'USER_ENDED', false, { recording_status: 'UNAVAILABLE', available_until: null, unavailable_reason: 'DELETED' }),
+      row('expired', '2026-11-04T09:58:00Z', '2026-11-04T09:59:00Z', 'USER_ENDED', false, { recording_status: 'UNAVAILABLE', available_until: null, unavailable_reason: 'EXPIRED' }),
+      row('no-deadline', '2026-11-04T09:56:00Z', '2026-11-04T09:57:00Z', 'USER_ENDED', false, { recording_status: 'AVAILABLE', available_until: null, unavailable_reason: null }),
+      row('unknown', '2026-11-04T09:54:00Z', '2026-11-04T09:55:00Z', 'USER_ENDED', false, { recording_status: 'SOMETHING', available_until: at, unavailable_reason: 'GUESSED' }),
+    ]);
+    const page = await service.listTurns(USER_ID, TOKEN, SESSION_ID, {});
+    expect(page.calls?.map((c) => [c.callId, c.recordingStatus, c.availableUntil, c.unavailableReason])).toEqual([
+      ['unknown', 'UNAVAILABLE', null, null],
+      ['no-deadline', 'UNAVAILABLE', null, null],
+      ['expired', 'UNAVAILABLE', null, 'EXPIRED'],
+      ['deleted', 'UNAVAILABLE', null, 'DELETED'],
+      ['sealing', 'PREPARING', null, null],
+      ['ready', 'AVAILABLE', '2026-12-04T10:00:00.000Z', null],
+    ]);
+    // No recording id, key or URL reaches the page.
+    expect(JSON.stringify(page)).not.toMatch(/recording_?id|storage|voice-call\//u);
+  });
+
   it('a Session the caller does not own reads no call at all', async () => {
     repository.findSession.mockResolvedValue(undefined);
     await expect(service.listTurns(USER_ID, TOKEN, SESSION_ID, {})).rejects.toThrow();
@@ -125,12 +151,12 @@ describe('ConversationService.listTurns — the finished calls of the Session (S
   });
 });
 
-describe('VoiceNotesRepository.sessionFinishedCalls — the one 0193 read', () => {
-  it('calls server_read_session_finished_calls_v1 with the person, the Session and the window, and nothing else', async () => {
+describe('VoiceNotesRepository.sessionFinishedCalls — the one finished-call read (0193, forward-extended by 0196 G)', () => {
+  it('calls server_read_session_finished_calls_v2 with the person, the Session and the window, and nothing else', async () => {
     const rpc = jest.fn().mockResolvedValue([row('call-1', 'a', 'b')]);
     const repo = new VoiceNotesRepository({ rpc } as unknown as SupabaseServiceRoleApiService);
     await expect(repo.sessionFinishedCalls('owner-a', SESSION_ID, null, '2026-11-04T10:00:00Z')).resolves.toEqual([row('call-1', 'a', 'b')]);
-    expect(rpc).toHaveBeenCalledWith('server_read_session_finished_calls_v1',
+    expect(rpc).toHaveBeenCalledWith('server_read_session_finished_calls_v2',
       { p_user_id: 'owner-a', p_session_id: SESSION_ID, p_ended_from: null, p_ended_before: '2026-11-04T10:00:00Z' });
   });
 });

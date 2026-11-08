@@ -13,7 +13,8 @@
  * The boundary behaves as the G3 closure froze it: F2's symmetric appearance cross-fade in standard
  * motion, and under Reduced Motion no cross-fade — the same truth with no movement. The outgoing
  * depth stays opaque beneath while the incoming one resolves over it, so no third colour ever shows
- * through the fade. Only the incoming depth is interactive or exposed to assistive technology.
+ * through the fade. Only the incoming depth is interactive or exposed to assistive technology, and only once it is
+ * drawn (QAN-BL-MOB-05): while it waits to be drawn, nothing takes a touch, and Back still returns.
  *
  * Android's system Back is the same act as the Analysis band's «المحادثة» / Conversation control: at
  * the Analysis depth it returns to the Conversation through the same boundary, and it pushes and pops
@@ -95,7 +96,8 @@ import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface, type UnderstandingShareResult } from '../../understanding';
 import { IntroductionsEntry, IntroductionsSurface, ProposalsSurface } from '../../introductions';
 import { ActivityEntry, ActivitySurface, AttentionStrip, CallSafeStrip, type ProductSurface } from '../../activity';
-import { CallLine, useCallSurface } from '../../call';
+import { CallLine, useCallSurface, type CallRecordCompanion } from '../../call';
+import { CallRecordListening, createReplayAudioSurface, useVoicePassageSelection } from '../../original-audio';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
@@ -181,6 +183,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // S7-04 — the Replay player's passage, over the depth the reader came from. Its visibility is the player's own state
   // (one per runtime generation), never a second navigation state here: a new generation's player starts closed.
   const replayPlayer = runtime.replayPlayer;
+  // S8B-07 CP1-B (Sheet B): the player's original-audio surface, for the versions its clock source times.
+  const replayAudioSurface = useMemo(() => createReplayAudioSurface(runtime.replayAudio, replayPlayer), [runtime.replayAudio, replayPlayer]);
   const playerOpen = useSyncExternalStore(replayPlayer.subscribe, () => replayPlayer.getState().open !== null);
   const reduceMotion = useReduceMotion();
   const incoming = useSharedValue(1);
@@ -197,6 +201,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // (found on the W1A-01 proof emulator too). There is no timeout that could start the fade earlier:
   // until the Analysis is drawn, the Conversation stays visible beneath it, and Back still returns.
   const pendingFade = useRef<number | null>(null);
+  // QAN-BL-MOB-05: while the incoming depth is not drawn yet it is mounted at zero opacity OVER the visible one, so it
+  // takes no touch and is hidden from assistive technology until its fade begins: nothing the reader cannot see answers
+  // a tap, and no tap lands on a control drawn somewhere else (found on HONOR: the call rail answered 400 px below).
+  const [awaitingDraw, setAwaitingDraw] = useState(false);
   // The running fade's duration; zero when no fade is running. Read on the UI runtime per frame.
   const fading = useSharedValue(0);
   // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
@@ -220,6 +228,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     const duration = pendingFade.current;
     if (duration === null) return;
     pendingFade.current = null;
+    setAwaitingDraw(false);
     fading.set(duration);
     fadeFrames.setActive(true);
   }, [fadeFrames, fading]);
@@ -236,6 +245,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       if (duration <= 0) {
         // Reduced Motion: a cut. The new depth is simply there.
         pendingFade.current = null;
+        setAwaitingDraw(false);
         incoming.set(1);
         setLeaving(null);
         setDepth(to);
@@ -249,6 +259,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       setLeaving(depth);
       setDepth(to);
       pendingFade.current = duration;
+      setAwaitingDraw(true);
       if (conversationStillMounted) beginFade();
     },
     [beginFade, depth, fading, incoming, leaving, reduceMotion],
@@ -570,7 +581,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const conversationInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + switcherBand }), [edges, switcherBand]);
   const shared = runtime.sharedWorld;
   // S7-02 — the Personal Replay entry: an action on THIS conversation, in the Personal world only, beside the depth control.
-  const replaySelection = useReplaySelection(runtime.replayEntry, runtime.conversation, locale.language, conversationInsets);
+  // S8B-07 CP1-B (B1a – B1c): the same selection; a multi-unit voice turn's one mark carries RA-16, and RA-13 under it.
+  const replaySelection = useVoicePassageSelection(
+    useReplaySelection(runtime.replayEntry, runtime.conversation, locale.language, conversationInsets), runtime.replayEntry, runtime.conversation, locale.language,
+  );
   // S8A-05 CP2 — choosing messages to share is the same selection seam; one selection at a time (the newer one stands).
   const shareSelection = usePublicShareSelection(publicShare, runtime.conversation, locale.language, conversationInsets);
   const sharing = shareSelection !== null;
@@ -583,7 +597,20 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // crossing depths, opening the Analysis or another surface re-reads it and never reopens or ends anything.
   const callOwner = onSignOut === undefined ? null : runtime.call;
   const { exchanges, calls } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
-  const callSlots = useCallSurface(callOwner, exchanges, locale.language, calls);
+  // S8B-07 CP1-B (Sheet A): a finished call's recording player beside its record, in the Personal world only; leaving the
+  // conversation (a depth, a destination, a selection) releases whatever plays and lets its file go.
+  const callListening = onSignOut === undefined ? null : runtime.callListening;
+  const replayEntry = runtime.replayEntry;
+  const callRecordCompanion = useMemo<CallRecordCompanion | null>(() => (callListening === null ? null : (call, record) => (
+    call.recordingStatus === undefined ? null : (
+      <CallRecordListening call={call} listening={callListening} record={record} language={locale.language} onReplayEntry={() => replayEntry.openMenu()} />
+    )
+  )), [callListening, locale.language, replayEntry]);
+  const listeningInFront = surface === 'CONVERSATION' && !replaying && !sharing;
+  useEffect(() => {
+    if (!listeningInFront) callListening?.leaveAll();
+  }, [listeningInFront, callListening]);
+  const callSlots = useCallSurface(callOwner, exchanges, locale.language, calls, callRecordCompanion);
   const callLive = callSlots.live;
   const voiceCompanion = voiceSlots.replyCompanion;
   const callCompanion = callSlots.replyCompanion;
@@ -749,6 +776,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           // S6-01: beneath the Introductions preparation, too. S7-04: and beneath the Replay passage — the depth it was
           // opened from keeps every state it had.
           const personalOpen = personalReachable && !introductionsShown && !playerOpen;
+          // QAN-BL-MOB-05: and never before it is drawn.
+          const open = personalOpen && !(current && awaitingDraw);
           return (
             <Animated.View
               key={which}
@@ -756,9 +785,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
-              pointerEvents={personalOpen ? 'auto' : 'none'}
-              importantForAccessibility={personalOpen ? 'auto' : 'no-hide-descendants'}
-              accessibilityElementsHidden={!personalOpen}
+              pointerEvents={open ? 'auto' : 'none'}
+              importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!open}
             >
               {layer(which, current)}
             </Animated.View>
@@ -853,7 +882,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           S7-04 — the Replay passage, over whichever depth opened it (the Personal world only). The depth beneath stays
           mounted and out of reach; Back, and the passage's own way back, return to it exactly as it was.
         */}
-        {onSignOut !== undefined && area === 'MY_WORLD' ? <ReplayPlayer controller={replayPlayer} language={locale.language} insets={edges} /> : null}
+        {onSignOut !== undefined && area === 'MY_WORLD' ? <ReplayPlayer controller={replayPlayer} language={locale.language} insets={edges} surface={replayAudioSurface} /> : null}
         {/*
           A3-01 — the one ordinary Attention Strip, attached under the non-Analysis upper chrome. Never at the Analysis
           depth: the presentation law never presents ordinary attention there, and this host never mounts it there.

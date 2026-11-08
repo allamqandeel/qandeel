@@ -614,9 +614,14 @@ async function main() {
     assert.equal(c0.retention_expires_at.getTime() - c0.started_at.getTime(), 30 * 86_400_000, 'V09 started_at + 30 days, unmoved by the reconnection');
     assert.deepEqual((await send(tokens.a, 'GET', `/voice/recordings/${call0.recording_id}`)).json.objects.map((o) => [o.track, o.segmentIndex, o.clockStartMs, o.clockEndMs]),
       [['QANDEEL', 0, 0, 1200], ['USER', 0, 0, 1000], ['USER', 1, 1500, 2500]], 'V09 both tracks, in order, on the recording clock');
+    // S8B-07 CP1-B F-1 (narrowed, contract §0.3; re-anchored, declared): the object route serves NOTE only, so a call
+    // track's segment is refused with 404 and the stored bytes are checked in the bucket itself.
     const userOne = await send(tokens.a, 'GET', `/voice/recordings/${call0.recording_id}/objects/USER/1`);
-    assert.deepEqual([userOne.status, userOne.headers['content-type'], userOne.bytes.equals(cu1)], [200, 'audio/ogg', true]);
-    const call0Keys = (await keysOf(call0.recording_id)).map((k) => k.storage_key);
+    assert.equal(userOne.status, 404, 'V09 F-1: a call track is not served by the object route');
+    const call0Objects = await keysOf(call0.recording_id);
+    const userOneKey = call0Objects.find((k) => k.track === 'USER' && k.segment_index === 1).storage_key;
+    assert.equal(readFileSync(fileOf(userOneKey)).equals(cu1), true, 'V09 the stored segment is the written bytes');
+    const call0Keys = call0Objects.map((k) => k.storage_key);
     assert.deepEqual((await send(tokens.a, 'DELETE', `/voice/recordings/${call0.recording_id}`)).json, { outcome: 'DELETED' }, 'V09 the owner deletes the call');
     assert.equal((await send(tokens.a, 'GET', `/voice/recordings/${call0.recording_id}/objects/QANDEEL/0`)).status, 404, 'V09 refused at once');
     await eraser.runOnce();
@@ -653,8 +658,13 @@ async function main() {
     const c2 = await recording(call2.recording_id);
     assert.deepEqual([c2.recording_state, c2.sealed_by], ['STORED', 'RECOVERY'], 'V09 the silent writer\'s recording is sealed RECOVERY');
     assert.equal(c2.retention_expires_at.getTime() - c2.started_at.getTime(), 30 * 86_400_000, 'V09 recovery does not move the expiry');
+    // F-1 narrowed (re-anchored, declared): readable means the readability predicate holds and the bytes are kept; the
+    // object route itself serves NOTE only.
     const callRead = await send(tokens.a, 'GET', `/voice/recordings/${call2.recording_id}/objects/QANDEEL/0`);
-    assert.deepEqual([callRead.status, callRead.headers['content-type'], callRead.bytes.equals(q0)], [200, 'audio/ogg', true], 'V09 and stays readable');
+    assert.equal(callRead.status, 404, 'V09 F-1: a call track is not served by the object route');
+    assert.equal((await rows('SELECT voice_private.recording_readable_v1($1, $2) AS ok', [a, call2.recording_id]))[0].ok, true, 'V09 and stays readable');
+    const q0Key = (await keysOf(call2.recording_id)).find((k) => k.track === 'QANDEEL').storage_key;
+    assert.equal(readFileSync(fileOf(q0Key)).equals(q0), true, 'V09 its bytes are kept');
 
     stage = 'V10 B5 PRIV-W races, late writes and orphans';
     // (a) A withdrawal while the note is uploading.

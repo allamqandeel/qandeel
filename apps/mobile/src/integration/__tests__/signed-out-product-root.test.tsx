@@ -14,7 +14,7 @@
 import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
-import { RESPONSIVE_SURFACE_TEST_ID } from '../../responsive/__fixtures__/composition';
+import { RESPONSIVE_SURFACE_TEST_ID, composeAnalysis } from '../../responsive/__fixtures__/composition';
 import type { ProductRecoveryStorage } from '../../recovery';
 import {
   PRODUCT_SIGN_IN_GATEWAY_TEST_ID,
@@ -170,6 +170,7 @@ describe('T14-B8 — READY composes the world, and the unchanged Living Analysis
       await fireEvent.press(view.getByTestId('qandeel-depth-to-analysis'));
       await settle();
     });
+    await composeAnalysis(view);
     expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBeTruthy();
     expect(view.queryByTestId(PRODUCT_SIGN_IN_GATEWAY_TEST_ID)).toBeNull();
     expect(view.queryByTestId(RUNTIME_STATE_TEST_ID)).toBeNull();

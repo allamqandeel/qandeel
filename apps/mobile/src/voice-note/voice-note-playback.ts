@@ -30,6 +30,8 @@ export interface VoiceNotePlayer {
   pause(): void;
   seekTo(positionMs: number): Promise<void>;
   release(): void;
+  /** S8B-07 CP1-B (§19.2): the played position read now from the player itself, not the last status tick. */
+  currentPositionMs?(): number;
 }
 
 export interface VoiceNotePlayerPort {
@@ -54,6 +56,12 @@ export interface VoiceNotePlaybackOptions {
   readonly foreground: ForegroundSignal;
   readonly setTimer?: (callback: () => void, ms: number) => unknown;
   readonly clearTimer?: (handle: unknown) => void;
+  /**
+   * S8B-07 CP1-B (§7): the phone's one playback slot, keyed `note:<recordingId>`. A note that starts releases a call's or a
+   * Replay's audio, and one that starts after it releases the note (as starting another note does). Absent: the S8B-03
+   * behaviour, unchanged.
+   */
+  readonly owner?: { claim(key: string, release: () => void): { drop(): void } | null };
 }
 
 export interface VoiceNotePlayback {
@@ -79,7 +87,7 @@ export function createVoiceNotePlayback(options: VoiceNotePlaybackOptions): Voic
   const clearTimer = options.clearTimer ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   let state: VoiceNotePlaybackState = { current: null, positions: {} };
   const listeners = new Set<() => void>();
-  let held: { recordingId: string; player: VoiceNotePlayer | null; token: number; loadTimer: unknown; seeking: number } | null = null;
+  let held: { recordingId: string; player: VoiceNotePlayer | null; token: number; loadTimer: unknown; seeking: number; claim: { drop(): void } | null } | null = null;
   let tokens = 0;
   let retired = false;
 
@@ -96,6 +104,7 @@ export function createVoiceNotePlayback(options: VoiceNotePlaybackOptions): Voic
   function release(): void {
     if (held === null) return;
     if (held.loadTimer !== null) clearTimer(held.loadTimer);
+    held.claim?.drop();
     try {
       held.player?.release();
     } catch {
@@ -133,9 +142,12 @@ export function createVoiceNotePlayback(options: VoiceNotePlaybackOptions): Voic
       held.loadTimer = null;
     }
     if (status.finished) {
-      // At the end the note rests at its start again, with its played mark kept.
+      // At the end the note rests at its start again, with its played mark kept, and stays still. The Android player
+      // still wishes to play after its end (Media3 keeps `playWhenReady`), so a seek alone started the note again while
+      // its control showed Play (QAN-BL-MOB-04, HONOR): it is paused before it is moved.
       setPosition(recordingId, 0);
       setPhase(recordingId, 'PAUSED');
+      held.player?.pause();
       void held.player?.seekTo(0).catch(() => undefined);
       return;
     }
@@ -172,7 +184,14 @@ export function createVoiceNotePlayback(options: VoiceNotePlaybackOptions): Voic
       }
       tokens += 1;
       const token = tokens;
-      held = { recordingId, player: null, token, loadTimer: null, seeking: 0 };
+      held = { recordingId, player: null, token, loadTimer: null, seeking: 0, claim: null };
+      held.claim = options.owner?.claim(`note:${recordingId}`, () => {
+        // Another subject started: this note is let go, its position kept.
+        if (held === null || held.token !== token) return;
+        held.claim = null;
+        release();
+        set({ ...state, current: null });
+      }) ?? null;
       setPhase(recordingId, 'LOADING');
       held.loadTimer = setTimer(() => {
         if (held === null || held.token !== token) return;

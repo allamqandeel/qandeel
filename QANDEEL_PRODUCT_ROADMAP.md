@@ -1,6 +1,17 @@
 # QANDEEL — Product Roadmap
 
-> **PRODUCT OWNER DECISION — 2026-11-07 / S8B-07 INFRA-07: Dedicated Replay Infrastructure & Future Credit Accounting. CONTRACT & PROJECT MAP UPDATE ONLY; NOT IMPLEMENTED; NO RESOURCE CREATED.** Full text: the [S8B-07 record §12](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md).
+> **S8B-07 CP1-B — RETAINED CALL LISTENING & ORIGINAL AUDIO REPLAY PLAYBACK — 2026-11-07 (current task; status only, no new task authority):** **`CP1-B — IN PROGRESS`** on `s8b/s8b-07-cp1b` (from `main` at `9eace91d`), under the Product Owner's execution authorization of 2026-11-07 ([S8B-07 record §13](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md)). **Not merged; merge only on «ادمج».** S8B-07 is not closed.
+> - It implements the approved WP0 contract (R5.1) in the Execution Order's steps 0 – 6.
+> - **CA-07B-1 is recorded as FINAL** in the [S8B-01 Controlled Amendment §6](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_S8B-01_VOICE_RUNTIME_CONTROLLED_AMENDMENT_v1.0.md). It binds from CP1-B's merge.
+> - **Not authorized:** any hosted resource, paid AI, gate change, CP2-A / CP2-B, or same-host Replay placement.
+> - **Every voice gate stays `DISABLED`;** the Personal Replay gate has no open state. Not VOICE LAUNCH READY.
+>
+> **POST-MERGE RECONCILIATION — 2026-11-07 (status only; recorded by S8B-07 CP1-B step 0, K-9; no new authority):**
+> - **S8B-07 CP1-A** (Original Audio Source Truth, migration `0195`) is **merged** through [PR #383](https://github.com/allamqandeel/qandeel/pull/383) as `2beaa7c0`.
+> - **S8B-07 INFRA-07 and the CP1-B final contract approvals** (documentation only) are **merged** through [PR #384](https://github.com/allamqandeel/qandeel/pull/384) as `9eace91d`.
+> - The two banners below are their pre-merge snapshots. `0195` is still **not hosted**.
+
+> *(Pre-merge snapshot; merged through PR #384 as `9eace91d`:)* **PRODUCT OWNER DECISION — 2026-11-07 / S8B-07 INFRA-07: Dedicated Replay Infrastructure & Future Credit Accounting. CONTRACT & PROJECT MAP UPDATE ONLY; NOT IMPLEMENTED; NO RESOURCE CREATED.** Full text: the [S8B-07 record §12](docs/e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md).
 >
 > - **(1) Separate compute.** All Replay work runs on a **Replay Media Compute Pool** physically separate from the **Live Voice Compute Pool**. That covers listening to a finished call, audio preparation and mixing, private Replay playback, video rendering and A/V sync, and export / distribution files.
 >   - The Live Voice pool keeps its resources, has absolute priority and hosts no Replay worker.

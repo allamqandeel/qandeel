@@ -14,6 +14,7 @@ import type { ActivityItem } from '../../runtime-entry';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
+import { composeAnalysis } from '../../responsive/__fixtures__/composition';
 
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -115,6 +116,7 @@ describe('A3-01 — the global Activity entry (P3 §3, §6)', () => {
   it('the Analysis never receives the entry, and Activity is not a fourth World destination', async () => {
     const { h, view } = await world({ interruptions: [], present: false, feed: [] });
     await press(view, 'qandeel-depth-to-analysis');
+    await composeAnalysis(view);
     expect(within(view.getByTestId('qandeel-depth-analysis')).queryByTestId('qandeel-activity-entry', { includeHiddenElements: true })).toBeNull();
     view.unmount();
     h.dispose();
@@ -168,6 +170,7 @@ describe('A3-01 — the ordinary Attention Strip and the Analysis law (P3 §7, �
     const state = { interruptions: [] as ReturnType<typeof candidate>[], present: false, feed: [] as ActivityItem[] };
     const { h, view } = await world(state);
     await press(view, 'qandeel-depth-to-analysis');
+    await composeAnalysis(view);
     const a = candidate({}, 3);
     const b = candidate({}, 2);
     const c = candidate({}, 3);
@@ -180,6 +183,8 @@ describe('A3-01 — the ordinary Attention Strip and the Analysis law (P3 §7, �
     state.interruptions = [a, b];
     await press(view, 'qandeel-depth-to-conversation');
     await act(async () => {
+      // The returning Conversation's first layout, as the platform reports it.
+      fireEvent(view.getByTestId('qandeel-depth-conversation', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
       await settle();
     });
     expect(view.getAllByTestId('qandeel-attention-strip')).toHaveLength(1);

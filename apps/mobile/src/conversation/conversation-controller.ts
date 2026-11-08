@@ -40,6 +40,10 @@
  *     once however many requests race for it. After each re-check the history is read again, and a
  *     turn is re-checked at most `ABANDONED_REPLY_RECHECKS` times, so a turn the server still reports
  *     as PENDING afterwards stays truthfully PENDING instead of being polled.
+ *
+ * Besides those, it only READS (a read admits nothing): S8B-07 CP1-B A0 → A1, while a finished call's recording is
+ * reported PREPARING, the newest page is read again every `PREPARING_RECHECK_MS`, at most `PREPARING_RECHECKS` times in
+ * a row, so the record becomes playable once the writer (or recovery) has sealed it. Nothing else re-reads after a call.
  */
 import type {
   ConversationExchangeView,
@@ -160,6 +164,15 @@ export const ABANDONED_REPLY_RECHECK_MS = SUBMISSION_CONFIRMATION_WINDOW_MS + 5_
 export const ABANDONED_REPLY_RECHECKS = 2;
 
 /**
+ * S8B-07 CP1-B (A0 → A1): how often a finished call whose recording is still PREPARING is read again, and how many times
+ * in a row. The writer seals at the call's end; recovery seals a lost writer's recording 60 s after its lease
+ * (VOICE_RECOVERY_GRACE_SECONDS), so 36 × 5 s covers both. Past that the record stays truthfully PREPARING until the
+ * next read.
+ */
+export const PREPARING_RECHECK_MS = 5_000;
+export const PREPARING_RECHECKS = 36;
+
+/**
  * A submission key: unique per logical submission within the Session, never a credential and never
  * a Session identity. It carries no reader data, so it is safe in presentation state.
  */
@@ -215,12 +228,31 @@ export function createConversationController(options: ConversationControllerOpti
   let confirmationTimer: unknown = null;
   /** Committed PENDING turns under re-check, by user-turn id. An entry is never removed, so its count holds. */
   const rechecks = new Map<string, { count: number; timer: unknown; inFlight: boolean }>();
+  /** A0 → A1: the one pending re-read while a call record is PREPARING, and how many ran in a row. */
+  let preparingTimer: unknown = null;
+  let preparingReads = 0;
 
   const live = () => !retired && isCurrent();
+
+  /** A0 → A1: read the newest page again while a shown call record is PREPARING (bounded); a read admits nothing. */
+  function watchPreparing(): void {
+    if (!live() || preparingTimer !== null) return;
+    if (!state.calls.some((call) => call.recordingStatus === 'PREPARING')) {
+      preparingReads = 0;
+      return;
+    }
+    if (preparingReads >= PREPARING_RECHECKS) return;
+    preparingReads += 1;
+    preparingTimer = setTimer(() => {
+      preparingTimer = null;
+      if (live()) void readNewest();
+    }, PREPARING_RECHECK_MS);
+  }
 
   function update(patch: Partial<ConversationPresentationState>): void {
     state = Object.freeze({ ...state, ...patch });
     if (patch.exchanges !== undefined) watchPending();
+    if (patch.calls !== undefined) watchPreparing();
     for (const listener of Array.from(listeners)) listener();
   }
 
@@ -371,6 +403,8 @@ export function createConversationController(options: ConversationControllerOpti
       } else if (state.history !== 'READY') {
         update({ history: 'UNAVAILABLE' });
       }
+      // A read that could not answer still counts: a PREPARING record is asked about again, within the bound.
+      watchPreparing();
     });
     return newestRead;
   }
@@ -440,6 +474,8 @@ export function createConversationController(options: ConversationControllerOpti
         if (entry.timer !== null) clearTimer(entry.timer);
         entry.timer = null;
       }
+      if (preparingTimer !== null) clearTimer(preparingTimer);
+      preparingTimer = null;
       listeners.clear();
     },
   };

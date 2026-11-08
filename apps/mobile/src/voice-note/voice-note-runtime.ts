@@ -121,6 +121,8 @@ export interface VoiceNoteSessionRuntimeOptions {
     getState(): { readonly exchanges: readonly ConversationExchangeView[] };
   };
   readonly newId?: () => string;
+  /** S8B-07 CP1-B (§7): the phone's one playback slot; absent, the S8B-03 behaviour, unchanged. */
+  readonly playbackOwner?: { claim(key: string, release: () => void): { drop(): void } | null };
 }
 
 export function createVoiceNoteSessionRuntime(options: VoiceNoteSessionRuntimeOptions): VoiceNoteSession {
@@ -128,6 +130,7 @@ export function createVoiceNoteSessionRuntime(options: VoiceNoteSessionRuntimeOp
   const newId = options.newId ?? mintVoiceNoteId;
   const playback = createVoiceNotePlayback({
     player: device.player, urlOf: (recordingId) => transport.api.playbackUrl(recordingId), authorization: transport.authorization, foreground,
+    ...(options.playbackOwner === undefined ? {} : { owner: options.playbackOwner }),
   });
   // S8B-04 (CP2): the turn of a note sent here joins the conversation at once (its words arrive with its answer); the
   // answer, once the turn is done, is merged over it by turn id like any server report.

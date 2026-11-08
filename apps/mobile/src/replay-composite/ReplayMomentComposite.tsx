@@ -35,7 +35,7 @@ import type { CanonicalStore, SemanticDepth } from '../state';
 import { commitMoment } from '../temporal-navigation';
 import type { ReplayAnalysisState, ReplayCompositeController } from './composite-controller';
 import { replayCompositeCopy } from './copy';
-import { discloseReplayMoment } from './projection-adapter';
+import { discloseReplayMoment, hasOwnReading } from './projection-adapter';
 import { createReplayViewpointStore } from './viewpoint-store';
 
 export const REPLAY_COMPOSITE_TEST_ID = 'qandeel-replay-composite';
@@ -65,6 +65,26 @@ export interface ReplayMomentCompositeProps {
 export interface ReplayMomentControls {
   readonly instrument: ReactNode;
   readonly note: ReactNode;
+  /**
+   * S8B-07 CP1-B (B12): for a moment the player's clock presents, what stands for its source. Its text is then a DERIVED
+   * transcript, said under its own caption and never as the source; the source surface holds the clock's own line. Null
+   * (and absent): the moment is composed exactly as before.
+   */
+  readonly moment?: (moment: ReplayHistoryMoment) => ReplayMomentPresentation | null;
+  /** S8B-07 CP1-B (B13): the version can no longer play; no reading is shown in its place (no fallback). */
+  readonly withheld?: boolean;
+}
+
+/** S8B-07 CP1-B: a clock-presented moment's parts, each from its owner; this composite only places them. */
+export interface ReplayMomentPresentation {
+  /** The DERIVED caption's label (an approved row). */
+  readonly caption: string;
+  /** Above the moment: the record of a pause shortened or crossed before it. */
+  readonly before: ReactNode;
+  /** Inside the source surface, under the speaker: the moment's own line. */
+  readonly source: ReactNode;
+  /** Under the moment: its recorded gaps, and what the clock says now. */
+  readonly beneath: ReactNode;
 }
 
 export function ReplayMomentComposite({ controller, ordinal, language, insets, initialDepth = 'WORLD', top = null, controls = null }: ReplayMomentCompositeProps) {
@@ -188,7 +208,10 @@ function MomentPanel({ controller, store, version, moment, count, language, cont
   // Android ignores `writingDirection`; the reader's side is set physically, as the Conversation does (bidi.ts).
   const derived = (role: 'metadata' | 'supporting') => ({ ...typeStyle(role), color: palette.tertiary, writingDirection: writing as 'rtl' | 'ltr', textAlign: readerSide(language) });
   const position = <Position text={`${scope(version, entry)} · ${words.position(moment.ordinal, count)}`} style={derived('metadata')} />;
-  const reading = <MomentReading controller={controller} store={store} version={version} moment={moment} language={language} analysis={analysis} drawn={drawn} refusedByAdapter={refusedByAdapter} />;
+  const presented = controls?.moment?.(moment) ?? null;
+  const reading = controls?.withheld === true ? null : (
+    <MomentReading controller={controller} store={store} version={version} moment={moment} language={language} analysis={analysis} drawn={drawn} refusedByAdapter={refusedByAdapter} presented={presented} />
+  );
   const [held, setHeld] = useState<number | null>(null);
   // A different moment is read from its start: the reading returns to its top at once (no motion), never left where the
   // previous moment was scrolled to.
@@ -230,10 +253,11 @@ function MomentPanel({ controller, store, version, moment, count, language, cont
 const scope = (version: ReplayHistoryVersion, entry: ReturnType<typeof replayEntryCopy>) => (version.coverage === 'FULL_SOURCE' ? entry.whole : entry.part);
 
 /** The moment itself, under its position: what was left out before it, its message, and where the reader is. */
-function MomentReading({ controller, store, version, moment, language, analysis, drawn, refusedByAdapter }: {
+function MomentReading({ controller, store, version, moment, language, analysis, drawn, refusedByAdapter, presented }: {
   readonly controller: ReplayCompositeController; readonly store: CanonicalStore; readonly version: ReplayHistoryVersion;
   readonly moment: ReplayHistoryMoment; readonly language: ChromeLanguage;
   readonly analysis: ReplayAnalysisState | null; readonly drawn: boolean; readonly refusedByAdapter: boolean;
+  readonly presented: ReplayMomentPresentation | null;
 }) {
   const palette = usePalette();
   const words = replayCompositeCopy(language);
@@ -241,6 +265,8 @@ function MomentReading({ controller, store, version, moment, language, analysis,
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const derived = (role: 'metadata' | 'supporting') => ({ ...typeStyle(role), color: palette.tertiary, writingDirection: writing as 'rtl' | 'ltr', textAlign: readerSide(language) });
   const viewpoint = store.getState();
+  // An original-audio moment is read by its own sound, with no text (0183 R-1; F-2 adds none): S8B-07 CP1-B F-1.
+  const readable = version.viewing.state === 'VIEWABLE' && hasOwnReading(moment);
 
   return (
     <>
@@ -252,13 +278,16 @@ function MomentReading({ controller, store, version, moment, language, analysis,
         </View>
       ) : null}
 
-      {version.viewing.state === 'NOT_VIEWABLE' || moment.text === null ? (
+      {presented === null ? null : presented.before}
+      {!readable ? (
         <NotViewable version={version} language={language} palette={palette} />
-      ) : (
+      ) : presented !== null ? (
+        <PresentedSource moment={moment} text={moment.text} presented={presented} language={language} palette={palette} />
+      ) : moment.text !== null ? (
         <SourceMessage moment={moment} text={moment.text} language={language} palette={palette} />
-      )}
+      ) : null}
 
-      {version.viewing.state === 'VIEWABLE' && moment.text !== null ? (
+      {readable ? (
         <View style={{ rowGap: 4 }}>
           <Text testID="qandeel-replay-temporal" style={derived('supporting')}>{temporalSentence(language, temporalLineModel(store).temporal)}</Text>
           {drawn ? (
@@ -292,6 +321,36 @@ function SourceMessage({ moment, text, language, palette }: {
       {/* The committed text, byte for byte: no truncation, no line limit, no rewrite, no inserted mark. Its own direction
           (first strong character) is the text's, and it is aligned to its own start. */}
       <Text testID="qandeel-replay-text" style={{ ...typeStyle('body'), color: palette.primary, writingDirection: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }}>{text}</Text>
+    </View>
+  );
+}
+
+/**
+ * S8B-07 CP1-B (B2, B12): a clock-presented moment. The source surface holds who spoke and the clock's own line; the
+ * transcript stands outside it, under its DERIVED caption, in supporting type and the second ink (the C-36 pattern), so
+ * it is never taken for the source.
+ */
+function PresentedSource({ moment, text, presented, language, palette }: {
+  readonly moment: ReplayHistoryMoment; readonly text: string | null; readonly presented: ReplayMomentPresentation;
+  readonly language: ChromeLanguage; readonly palette: ConversationPalette;
+}) {
+  const turns = conversationCopy(language);
+  const speaker = moment.sourceRole === 'USER' ? sharedCopy(language).you : turns.product;
+  const direction = text === null ? readerDirection(language) : paragraphDirection(text, readerDirection(language));
+  return (
+    <View style={{ rowGap: 6 }}>
+      <View testID="qandeel-replay-source" style={{ backgroundColor: palette.field, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
+        <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
+        {presented.source}
+      </View>
+      {/* The DERIVED transcript only when the server gives one: none does today (F-2), and nothing stands in for it. */}
+      {text === null ? null : (
+        <View testID="qandeel-replay-derived" accessible accessibilityLabel={`${presented.caption} ${text}`} style={{ rowGap: 2 }}>
+          <Text testID="qandeel-replay-derived-caption" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{presented.caption}</Text>
+          <Text testID="qandeel-replay-derived-text" style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }}>{text}</Text>
+        </View>
+      )}
+      {presented.beneath}
     </View>
   );
 }

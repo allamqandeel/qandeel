@@ -81,6 +81,11 @@ it.each(['en', 'ar'] as const)('%s: the proof world walks through every captured
   expect(view.getByTestId('qandeel-depth-to-conversation')).toBeTruthy();
   expect(view.getByTestId('qandeel-map-surface')).toBeTruthy();
   await step(view, 'qandeel-depth-to-conversation');
+  // The returning Conversation's first layout, as the platform reports it (until it is drawn it takes no touch).
+  await act(async () => {
+    fireEvent(view.getByTestId('qandeel-depth-conversation', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 412, height: 915 } } });
+    await settle();
+  });
   expect(view.getByTestId('qandeel-conversation-thread')).toBeTruthy();
   expect(runtime.getPhase()).toBe(session);
 

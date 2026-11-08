@@ -10,7 +10,7 @@ import { loadCallPlatform, loadVoiceCallEngine, type CallPlatform, type VoiceCal
 export type { CallOwner, CallOwnerOptions, CallOwnerState, CallRecord, CallStage, CarriedTextOutcome } from './call-owner';
 export { callIdOfKey, createCallOwner, LIVE_CALL_KEY_PREFIX, liveCallKey, noticeOf } from './call-owner';
 export { createCallAwareConversationTransport } from './call-text-transport';
-export type { CallSurfaceSlots } from './CallViews';
+export type { CallRecordCompanion, CallSurfaceSlots } from './CallViews';
 export {
   CALL_ENTRY_TEST_ID, CALL_LINE_TEST_ID, CALL_NOTICE_TEST_ID, CALL_RECORD_TEST_ID, CallEntryControl, CallLine, CallNoticeLine, CallRecordRow,
   callIdOf, callIsLive, callStatusLines, formatCallLength, useCallOwnerState, useCallSurface,

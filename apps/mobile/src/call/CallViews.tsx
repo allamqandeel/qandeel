@@ -16,7 +16,7 @@
  *
  * Every word is a Live Call copy row (`live-call-copy.ts`), every one PROPOSED until the Copy Gate decides.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { AccessibilityInfo, Linking, Text, View } from 'react-native';
 
 import { Control, Glyph, MIN_TARGET, readerDirection, readerSide, typeStyle, usePalette } from '../conversation';
@@ -253,6 +253,12 @@ interface RecordFacts {
 }
 
 const NO_CALLS: readonly ConversationFinishedCallView[] = Object.freeze([]);
+
+/**
+ * S8B-07 CP1-B (Sheet A): what may sit with a finished call's record — its recording's player. It is handed the record
+ * (this module's own, unchanged and never interactive) to draw with or without its length; null: the record alone.
+ */
+export type CallRecordCompanion = (call: ConversationFinishedCallView, record: (showLength: boolean) => ReactElement) => ReactElement | null;
 const instant = (iso: string): number => Date.parse(iso);
 
 /**
@@ -269,6 +275,8 @@ export function useCallSurface(
   language: ChromeLanguage,
   // S8B-06 CP3 R3: the finished calls the history carried, from the server's durable record (oldest to newest by their end).
   calls: readonly ConversationFinishedCallView[] = NO_CALLS,
+  // S8B-07 CP1-B: the recording's player beside a record the server knows (absent: the S8B-06 record alone).
+  companion: CallRecordCompanion | null = null,
 ): CallSurfaceSlots {
   const state = useCallOwnerState(owner);
   const copy = liveCallScreenCopy(language);
@@ -313,8 +321,14 @@ export function useCallSurface(
   }, [placed, record]);
   const recordRow = useCallback((callId: string): ReactElement => {
     const facts = factsOf(callId);
+    const known = placed.server.get(callId);
+    if (companion !== null && known !== undefined) {
+      const record = (showLength: boolean) => <CallRecordRow lengthMs={showLength ? facts.lengthMs : null} stopped={facts.stopped} language={language} />;
+      const drawn = companion(known, record);
+      if (drawn !== null) return <Fragment key={callId}>{drawn}</Fragment>;
+    }
     return <CallRecordRow key={callId} lengthMs={facts.lengthMs} stopped={facts.stopped} language={language} />;
-  }, [factsOf, language]);
+  }, [factsOf, language, placed, companion]);
   const exchangeTrailer = useCallback((exchange: ConversationExchangeView): ReactElement | null => {
     const callId = callIdOf(exchange);
     const own = callId !== null && callId !== currentCallId && lastOfCall.get(callId) === exchange.userTurn.id ? [callId] : [];

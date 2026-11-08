@@ -34,5 +34,7 @@ module.exports = ({ config }) => ({
     supabaseUrl: process.env.QANDEEL_SUPABASE_URL ?? null,
     /** The Supabase PUBLISHABLE key. Never the secret key. */
     supabasePublishableKey: process.env.QANDEEL_SUPABASE_PUBLIC_KEY ?? null,
+    /** S8B-07 CP1-B (INFRA-07): the Replay Media Service's origin, optional; absent, original audio is not fetched. */
+    qandeelReplayMediaBaseUrl: process.env.QANDEEL_REPLAY_MEDIA_BASE_URL ?? null,
   },
 });

@@ -222,6 +222,18 @@ export class ConversationService {
       endedAt: new Date(row.ended_at).toISOString(),
       endReason: row.end_reason,
       atMaxLength: row.at_max_length === true,
+      // S8B-07 CP1-B (0196 G): the recording's availability, fail-closed: anything the read does not state is UNAVAILABLE
+      // with no deadline and no reason.
+      ...((): Pick<ConversationHistoryFinishedCall, 'recordingStatus' | 'availableUntil' | 'unavailableReason'> => {
+        const status = row.recording_status === 'PREPARING' || row.recording_status === 'AVAILABLE' ? row.recording_status : 'UNAVAILABLE';
+        const until = status === 'AVAILABLE' && row.available_until !== null ? new Date(row.available_until) : null;
+        if (status === 'AVAILABLE' && (until === null || Number.isNaN(until.getTime()))) {
+          return { recordingStatus: 'UNAVAILABLE', availableUntil: null, unavailableReason: null };
+        }
+        const reason = status === 'UNAVAILABLE' && (row.unavailable_reason === 'EXPIRED' || row.unavailable_reason === 'DELETED')
+          ? row.unavailable_reason : null;
+        return { recordingStatus: status, availableUntil: until === null ? null : until.toISOString(), unavailableReason: reason };
+      })(),
     })).reverse();
     const exchanges = users.map((userTurn): ConversationHistoryExchange => {
       const reply = replyBySource.get(userTurn.id);

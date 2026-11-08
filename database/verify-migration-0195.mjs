@@ -394,7 +394,10 @@ async function verifyCatalogue(report) {
     const replay = await rows("SELECT 1 FROM replay_private.replay_launch_capability_states WHERE feature_flag_state <> 'DISABLED' OR launch_requirements_state <> 'UNSATISFIED'");
     assert.deepEqual(replay, [], 'no open Personal Replay gate');
     const files = readdirSync(new URL('./migrations/', import.meta.url)).filter((f) => f.endsWith('.sql')).sort();
-    assert.equal(files.at(-1), M0195, '0195 is the last migration');
+    // RE-ANCHORED by S8B-07 CP1-B (was: 0195 is the last migration; the Product Owner's CP1-B execution authorization, a
+    // declared re-anchor): exactly 0196, the transient media authority, follows 0195 and nothing else does (verify-migration-0196).
+    assert.equal(files.at(-2), M0195, '0195 is followed only by 0196');
+    assert.equal(files.at(-1), '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
     const sql = readFileSync(new URL(`./migrations/${M0195}`, import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
     const code = sql.replace(/^\s*--.*$/gmu, '').replace(/\$\$[\s\S]*?\$\$/gu, '$$$$');
     assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);

@@ -6,6 +6,9 @@
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
+    "start:replay-media-worker": "node --max-old-space-size=384 dist/replay-media/media-worker.main.js",
+    "start:replay-media-service": "node dist/replay-media/replay-media-service.main.js",
+    "start:replay-watchdog": "node dist/replay-media/replay-watchdog.main.js",
     "test": "jest --runInBand"
   },
   "dependencies": {
@@ -28,6 +31,7 @@
     "helmet": "^8.3.0",
     "openai": "^6.49.0",
     "opusscript": "0.1.1",
+    "pg": "8.23.0",
     "redis": "6.2.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

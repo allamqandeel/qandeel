@@ -361,9 +361,11 @@ test('CP2 D4: the consent states of the database, the API and the phone are one 
 // S8B-04 CP2 (device finding, 2026-11-02) — expo-audio's `remove()` on Android only forgets the player in its module
 // (`players.remove(player.id)`); the native player keeps playing until garbage collection. A voice let go while speaking
 // (leaving the conversation, the reply's announced end) went on unseen. The port stops and releases it, in this order.
+// S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-5, r7 `2f620428`): the player is muted first, so what is left in a paused
+// player's buffer is never heard when it is released (43 ms on HONOR). The stop-and-release order is unchanged.
 test('CP2: a released player is stopped and released, never left to garbage collection', () => {
   const port = codeOnly(read('apps/mobile/src/voice-note/voice-note-player-port.ts'));
-  assert.match(port, /release: \(\) => \{\s+subscription\.remove\(\);\s+player\.pause\(\);\s+player\.remove\(\);\s+player\.release\(\);\s+\},/u);
+  assert.match(port, /release: \(\) => \{\s+subscription\.remove\(\);\s+player\.volume = 0;\s+player\.pause\(\);\s+player\.remove\(\);\s+player\.release\(\);\s+\},/u);
   const moduleSource = read('node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioModule.kt');
   assert.match(moduleSource, /Function\("remove"\) \{ player: AudioPlayer ->\s+players\.remove\(player\.id\)\s+\}/u,
     'the reason stands: if expo-audio ever stops the player in remove(), revisit this port');

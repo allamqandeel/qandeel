@@ -11,7 +11,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { CALL_ENTRY_TEST_ID, CALL_LINE_TEST_ID, CALL_NOTICE_TEST_ID, CALL_RECORD_TEST_ID, liveCallKey, loadCallDevice, type CallDevice } from '../../call';
 import { historyBody, exchange } from '../../conversation/__fixtures__/conversation';
-import { resize } from '../../responsive/__fixtures__/composition';
+import { composeAnalysis, resize } from '../../responsive/__fixtures__/composition';
 import { FakeCallEngine, FakeCallPlatform } from '../../voice-call/__fixtures__/live-call-fakes';
 import { refuseConnection, socketRecorder, state, type FakeSocket } from '../../voice-call/__fixtures__/live-call-test-kit';
 import { VOICE_CAPABILITY_ROUTE, currentConsentCapability } from '../../voice-note/__fixtures__/voice-capability';
@@ -26,8 +26,10 @@ async function settled(): Promise<void> {
   });
 }
 
+/** The depth's first layout as the platform reports it; the Analysis is then given its room and composes (QAN-BL-MOB-05). */
 async function laidOut(view: RenderResult, which: 'conversation' | 'analysis'): Promise<void> {
-  await fireEvent(view.getByTestId(`qandeel-depth-${which}`), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
+  if (which === 'analysis') await composeAnalysis(view);
+  else await fireEvent(view.getByTestId('qandeel-depth-conversation', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
   await settled();
 }
 

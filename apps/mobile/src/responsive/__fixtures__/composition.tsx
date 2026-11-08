@@ -152,13 +152,24 @@ export function simulatedMapHeight(height: number, options: ResizeOptions = {}):
   return Math.max(MAP_MIN_HEIGHT_POINTS, Math.round(usable / WORLD_SHARE_DENOMINATOR));
 }
 
+/**
+ * The views a layout is fired on. The platform lays a view out whether or not assistive technology may reach it, so a
+ * surface still hidden from it (QAN-BL-MOB-05: an incoming depth not yet drawn) is found when no reachable one is.
+ */
+const laidOutViews = (view: RenderResult, testID: string) => {
+  const reachable = view.queryAllByTestId(testID);
+  return reachable.length > 0 ? reachable : view.queryAllByTestId(testID, { includeHiddenElements: true });
+};
+
 /** Fires the layout the platform would report, on the outer surface and on the Map's own frame. */
 export async function resize(view: RenderResult, width: number, height: number, options: ResizeOptions = {}): Promise<void> {
   const mapHeight = options.mapHeight ?? simulatedMapHeight(height, options);
+  const surfaces = laidOutViews(view, RESPONSIVE_SURFACE_TEST_ID);
+  if (surfaces.length !== 1) throw new Error(`resize: expected one ${RESPONSIVE_SURFACE_TEST_ID}, found ${surfaces.length}`);
   await act(async () => {
-    fireEvent(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height } } });
+    fireEvent(surfaces[0], 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height } } });
   });
-  const frames = view.queryAllByTestId(RESPONSIVE_MAP_FRAME_TEST_ID);
+  const frames = laidOutViews(view, RESPONSIVE_MAP_FRAME_TEST_ID);
   if (frames.length === 0) return;
   await act(async () => {
     fireEvent(frames[0], 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height: mapHeight } } });
@@ -191,3 +202,15 @@ export function temporalControllers(track: Parameters<typeof createPresentationC
 
 export { RESPONSIVE_CHROME_BAND_TEST_ID, RESPONSIVE_MAP_FRAME_TEST_ID, RESPONSIVE_SURFACE_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID };
 export type { ReactNode };
+
+/**
+ * QAN-BL-MOB-05: what the platform does once the door to the Analysis was pressed — the depth's own first layout, then
+ * the room's — so the Analysis composes, fades in, and is the reachable depth. Until then it is mounted, not drawn, and
+ * hidden from touch and assistive technology, so a test that looks inside it must compose it first, as a phone does.
+ */
+export async function composeAnalysis(view: RenderResult, width = 390, height = 844, options: ResizeOptions = { insetTop: 104, insetBottom: 34 }): Promise<void> {
+  await act(async () => {
+    fireEvent(view.getByTestId('qandeel-depth-analysis', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height } } });
+  });
+  await resize(view, width, height, options);
+}

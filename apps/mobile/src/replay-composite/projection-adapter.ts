@@ -14,7 +14,8 @@
  *   - the version's render truth contract is honoured or the version is not rendered at all (an unknown schema, policy
  *     word or medium class is refused — it is never "rendered close enough");
  *   - a moment whose medium is not original text is refused under ORIGINAL_TEXT_ONLY (Stage 7 is text only; nothing is
- *     synthesised);
+ *     synthesised); under ORIGINAL_MEDIA_PRESERVED (S8B-07, V2) a moment is original text or original audio, and a MIXED
+ *     one is refused (0195 never selects it);
  *   - an analysis is used only for its own moment (the same ordinal AND the same TC) and only while that moment's exact
  *     text is viewable: no analysis without its moment;
  *   - every Session Position in it is re-checked to be at or before the moment's TC (the client already refused any that
@@ -47,7 +48,7 @@ import type { HistoricalDisclosure, HistoricalSemanticDepth } from '@qandeel/run
 import type { HistoricalDisclosureEntry } from '../projection';
 import type { ReplayHistoryMoment, ReplayHistoryVersion, ReplayMomentAnalysis } from '../runtime-entry';
 
-/** The one render truth contract this composite can honour (S7-01 §11, I-06B). Anything else is refused whole. */
+/** The text render truth contract (S7-01 §11, I-06B). With V2 below, the only two this composite honours; anything else is refused whole. */
 export const REPLAY_RENDER_CONTRACT_V1 = Object.freeze({
   schema: 'QANDEEL_REPLAY_RENDER_CONTRACT_V1',
   sourceMediumClass: 'ORIGINAL_TEXT_ONLY',
@@ -67,19 +68,54 @@ export const REPLAY_RENDER_CONTRACT_V1 = Object.freeze({
   }),
 });
 
+/**
+ * S8B-07 CP1-B: the original-media contract, the mirror of the API's tuple value for value (0195, D-04; `replay.service.ts`
+ * RENDER_CONTRACTS): the V1 policies except the source text (an audio moment's text is a DERIVED transcript) and the timing
+ * (the original source clock, with the declared reading pace for text).
+ */
+export const REPLAY_RENDER_CONTRACT_V2 = Object.freeze({
+  schema: 'QANDEEL_REPLAY_RENDER_CONTRACT_V2',
+  sourceMediumClass: 'ORIGINAL_MEDIA_PRESERVED',
+  policies: Object.freeze({
+    ...REPLAY_RENDER_CONTRACT_V1.policies,
+    sourceText: 'EXACT_SOURCE_TEXT_AUDIO_TRANSCRIPT_DERIVED',
+    timingIntegrity: 'ORIGINAL_SOURCE_CLOCK_WITH_DECLARED_TEXT_PACING',
+  }),
+});
+
+const CONTRACTS = Object.freeze({ V1: REPLAY_RENDER_CONTRACT_V1, V2: REPLAY_RENDER_CONTRACT_V2 });
+
 const DEPTHS: readonly HistoricalSemanticDepth[] = ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'];
+
+/** Which of the two approved contracts the version carries, exactly, or null (refused whole). */
+export function renderContractOf(version: ReplayHistoryVersion): 'V1' | 'V2' | null {
+  const contract = version.renderContract;
+  for (const name of ['V1', 'V2'] as const) {
+    const approved = CONTRACTS[name];
+    if (contract.schema !== approved.schema || contract.sourceMediumClass !== approved.sourceMediumClass) continue;
+    const keys = Object.keys(approved.policies) as (keyof typeof approved.policies)[];
+    return keys.every((key) => contract.policies[key] === approved.policies[key]) ? name : null;
+  }
+  return null;
+}
 
 /** Whether this composite can render the version under the version's own contract. */
 export function honoursRenderContract(version: ReplayHistoryVersion): boolean {
-  const contract = version.renderContract;
-  if (contract.schema !== REPLAY_RENDER_CONTRACT_V1.schema || contract.sourceMediumClass !== REPLAY_RENDER_CONTRACT_V1.sourceMediumClass) return false;
-  return (Object.keys(REPLAY_RENDER_CONTRACT_V1.policies) as (keyof typeof REPLAY_RENDER_CONTRACT_V1.policies)[])
-    .every((key) => contract.policies[key] === REPLAY_RENDER_CONTRACT_V1.policies[key]);
+  return renderContractOf(version) !== null;
 }
 
-/** Under ORIGINAL_TEXT_ONLY a moment is renderable only in its original text. */
-export function isRenderableMedium(moment: ReplayHistoryMoment): boolean {
-  return moment.originalMedium === 'ORIGINAL_TEXT';
+/** Under ORIGINAL_TEXT_ONLY a moment is renderable only in its original text; under V2, in its original text or audio. */
+export function isRenderableMedium(moment: ReplayHistoryMoment, version?: ReplayHistoryVersion): boolean {
+  if (moment.originalMedium === 'ORIGINAL_TEXT') return true;
+  return version !== undefined && renderContractOf(version) === 'V2' && moment.originalMedium === 'ORIGINAL_AUDIO';
+}
+
+/**
+ * The moment's own reading is here: a text moment's committed text, or an original-audio moment's own sound, which never
+ * carries text (0183 R-1; S8B-07 CP1-B F-1). A text moment without its text has nothing to read.
+ */
+export function hasOwnReading(moment: ReplayHistoryMoment): boolean {
+  return moment.text !== null || moment.originalMedium === 'ORIGINAL_AUDIO';
 }
 
 /** The Replay viewpoint's own key: a Replay version is not the conversation's Session, and never borrows its id. */
@@ -124,9 +160,9 @@ function positionsAtOrBefore(analysis: AvailableAnalysis, tc: number): boolean {
  */
 export function discloseReplayMoment(version: ReplayHistoryVersion, moment: ReplayHistoryMoment, analysis: AvailableAnalysis): ReplayMomentDisclosure {
   if (!honoursRenderContract(version)) return refused('RENDER_CONTRACT_NOT_HONOURED');
-  if (!isRenderableMedium(moment)) return refused('MEDIUM_NOT_RENDERABLE');
+  if (!isRenderableMedium(moment, version)) return refused('MEDIUM_NOT_RENDERABLE');
   if (version.viewing.state !== 'VIEWABLE') return refused('NOT_VIEWABLE');
-  if (moment.text === null) return refused('NO_MOMENT_TEXT');
+  if (!hasOwnReading(moment)) return refused('NO_MOMENT_TEXT');
   if (analysis.ordinal !== moment.ordinal || analysis.tc !== moment.tc) return refused('NOT_THIS_MOMENT');
   if (moment.tc < version.firstTc || moment.tc > version.lastTc) return refused('OUTSIDE_THE_VERSION');
   if (!positionsAtOrBefore(analysis, moment.tc)) return refused('BEYOND_THE_MOMENT');

@@ -225,6 +225,7 @@ implementing task merges. **What no amendment changes:**
 | VA-1, VA-2, VA-3 (call writer), VA-4, VA-8 R-3 / R-7 | S8B-05 |
 | VA-6 (background) | S8B-06 |
 | VA-8 R-2 / R-4 / R-6, VA-9, VA-10 | S8B-07 |
+| CA-07B-1 (§6) | S8B-07 CP1-B |
 
 An implementing task may tighten a text here. It may not widen one without a new controlled change.
 
@@ -310,3 +311,124 @@ request and is not merged, so until that merge nothing here is in force.
   - the `0001` session channel;
   - the Replay and distribution paths;
   - every other amendment.
+
+## 6. CA-07B-1 — Transient processing files: readability and physical deletion (FINAL, 2026-11-07)
+
+**Status:** `FINAL — APPROVED BY THE PRODUCT OWNER (2026-11-07)`. Approved in principle on 2026-11-05 (A-4), and as
+FINAL on 2026-11-07 after the final review of R5.1
+([S8B-07 record](../../../e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §12.5 and §13).
+**It binds from the merge of S8B-07 CP1-B,** which implements it (§2). Until then nothing here is in force.
+
+**What kind of change this is.** It is a controlled amendment of an absolute physical-deletion promise, not a reading of
+it. The old texts promised that processing files are physically gone on completion, at the end of the session and "in
+any case within 1 hour", never outliving the source. No object-store design keeps that during a store outage. The new
+text separates:
+- an **absolute** end of readability, decided by the database;
+- an **asynchronous** physical deletion, with a measured target, and a recorded and retried violation.
+
+Replacing an absolute promise with a conditional one widens the text, so §2's rule requires this amendment.
+
+### 6.1 Text 1 — `docs/voice-runtime-v1.md` §9.1 (the processing-files bullet)
+
+**Old (stays verbatim in place, with a pointer to this section):**
+
+> - It is **not** a private video library. No permanent private video copy is kept (PO decisions 5, 9). Processing files
+>   are deleted on completion, and in any case within 1 hour, never outliving the source.
+
+**New (binding, complete):**
+
+> - It is **not** a private video library. No permanent private video copy is kept (PO decisions 5, 9).
+> - **Processing files (CA-07B-1).** A processing file is transient. The listening file of a retained call and the
+>   playback files of a private Replay are processing files. For each one:
+>   1. **Readability ends with the source.** The source ends at the first of: its expiry at `retention_expires_at`, its
+>      deletion, account erasure, or, for a Replay, the version leaving `CURRENT`. From that instant no new request and
+>      no byte range of the file is served. A response already being sent is cut, under the acceptance conditions of
+>      1 s after a known end and 7 s after an end decided elsewhere, proven before release. Bytes already delivered to
+>      the device cannot be recalled, and none is written to the device's persistent storage.
+>   2. **The end of the session.** When the listening or playback session ends, the file is released and its erasure
+>      becomes due at that instant. A released file is never read or reused again. The end of a session does not end
+>      the right to listen: within the source's retention, a later request makes a new file.
+>   3. **An independent maximum from creation.** A file cannot be read later than 58 minutes after its creation, nor
+>      after its source ends, whichever comes first.
+>      - Under healthy operation, its physical deletion therefore has a **target** within 1 hour of its creation:
+>        58 minutes plus the 120-second target of point 4. This is not a guarantee.
+>      - **A session longer than one file continues without loss of position.** While the source is still readable,
+>        a file of the next generation is prepared from the same plan before the current file stops being readable.
+>        Playback moves to it at the exact position, and the current file is released.
+>      - Every file keeps its own maximum. At most two **generations** of one subject are live at once. A generation
+>        is one file for listening, and one file per run for a multi-run Replay.
+>   4. **Physical deletion.** Physical deletion is asynchronous, never immediate.
+>      - It becomes due at the first of the instants in 1, 2 and 3, or when the file's own processing job fails.
+>      - It is performed by the Replay deletion path: the reaper of the Replay Media Compute Pool, with an independent
+>        Replay watchdog as its backstop. Neither runs on a live-call server.
+>      - It is proven by `DELETE`, then `HEAD 404`, and the proof is recorded.
+>      - **Under healthy operation of the store and of the Replay deletion path, its target is completion within
+>        120 seconds of becoming due.**
+>   5. **Violations.** A deletion not proven within that target is **recorded once as a violation, reported without
+>      content, and retried** until it is proven.
+>      - **No absolute physical guarantee is given while the store is unavailable, or while both the reaper and the
+>        independent watchdog are unavailable.** Independent monitoring alerts on either.
+>      - Readability (1 – 3) is decided by the database, fails closed, does not depend on the store, and is not
+>        weakened by any outage.
+>   6. **Retention.** No processing file, and no operation on one, extends the source recording's retention, not even
+>      by one second.
+>      - `retention_expires_at` is never written.
+>      - Nothing is readable after the source's end.
+>
+>   **Not covered by this amendment:**
+>   - the source recording itself;
+>   - delivery files for `DOWNLOAD` and `SHARE_EXTERNALLY` (VA-9 (a), S8B-07 CP2);
+>   - the final delivered or published video.
+>
+>   Each keeps its own text.
+
+### 6.2 Text 2 — the S8B-01 record §10.3, the listening row
+
+**Old (stays verbatim in place, with a pointer to this section):**
+
+> | **Listening to a retained call** (§8) | a transient, server-mixed AAC-LC M4A of both tracks on the shared clock,
+> delivered by a short-lived authorized read; deleted when the listening session ends and in any case within 1 hour | The
+> device plays one file. Both tracks never leave the store as separate files. It is a processing file under §9.1's rule,
+> never a permanent copy. |
+
+**New (binding, complete):**
+
+> | **Listening to a retained call** (§8) | a transient, server-mixed AAC-LC M4A of both tracks on the shared clock,
+> delivered by a short-lived authorized read.
+> - **Unreadable** from the first of: the end of the listening session, the end of its source, or 58 minutes after its
+>   creation. A response in progress is cut under CA-07B-1's acceptance conditions.
+> - **At the end of the session it is released.** Its erasure becomes due at that instant, and it is never reused.
+> - **Physically deleted asynchronously** (`DELETE`, then `HEAD 404`) by the Replay deletion path:
+>   - with a **target** of 120 s from becoming due under healthy operation, so a **target** within 1 hour of its
+>     creation (not a guarantee);
+>   - a miss is recorded as a violation and retried;
+>   - no absolute physical guarantee while the store, or both the reaper and the independent watchdog, are unavailable.
+> - A session longer than one file continues on a file of the next generation, prepared in advance, at the exact
+>   position (CA-07B-1 point 3).
+> - It never extends the source's retention (CA-07B-1).
+>
+> | The device plays one file. Both tracks never leave the store as separate files. It is a processing file under §9.1's
+> rule **as amended by CA-07B-1**, never a permanent copy. |
+
+### 6.3 Continuation across the 58-minute maximum (point 3)
+
+The continuation rules are part of the approved text (S8B-07 CP1-B WP0 contract §20, R5.1):
+- A session longer than one file continues on a file of the next **generation**, made from the same plan before the
+  current file stops being readable. It plays from the exact position.
+- Every file keeps its own maximum: `expires_at = least(created_at + 58 min, the source's end)`. Nothing writes
+  `retention_expires_at`.
+- At most two live generations of one subject exist at once. The database enforces this through a single write path: no
+  role holds a direct write grant on the artifacts table, and the one generation-inserting function applies the rule
+  and asserts it.
+- Generations are mixed bit-exactly, and a generation whose decoded PCM differs from its predecessor's is never served.
+
+### 6.4 What it does not change
+
+- The source recording's 30-day retention from `started_at`, written once and never changed.
+- The right to listen within retention: the end of a session does not end it.
+- The disclosure wording and CL-08's date, which is the source's `retention_expires_at`.
+- Delivery files for `DOWNLOAD` and `SHARE_EXTERNALLY` (VA-9 (a), S8B-07 CP2), and the final delivered or published
+  video. Each keeps its own text.
+
+**Proof (S8B-07 CP1-B):** V-12, V-14, V-27 (incl. (h)), V-31 (incl. (l) – (t)), V-32, V-35a (incl. (8) – (10)), V-36,
+and HC-1 … HC-5 on the HONOR device.

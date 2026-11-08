@@ -90,7 +90,10 @@ const FROZEN = [
   // S8B-07 CP1-A RE-ANCHOR (2026-11-05, the Product Owner's S-2 option (a)): the version decoder admits exactly the two
   // approved render contracts, V1 as 0102 and V2 as 0195 (D-04), value for value; any other schema, medium or policy is
   // refused whole. The wire, the G-1 summary decoder and the F-2 scope decoder are unchanged; nothing else in the service changed.
-  ['apps/api/src/replay/replay.service.ts', '5ea4073008e1a65ee65fa8657911934ebcc9fcdccfa6819250d25b0275328510'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`, CA-07B-2 record): a mixed V2 version's moments are
+  // readable. The one viewing answer covers the moments that are not original audio; an original-audio moment carries no
+  // text, or the version is refused whole. MIXED, V1 and the wire are unchanged; nothing else in the service changed.
+  ['apps/api/src/replay/replay.service.ts', 'c473807ae960916cd3ebec4c63d78054affa32a1b1f54c8fce1010dbd20964f9'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: the Replay Reading's scope is typed as its class alone).
   ['apps/api/src/replay/replay.types.ts', '165fc747f2274ca198f311227e94547feb663dcda8da9384dee18d088599b76c'],
   ['database/migrations/0169_replay_personal_secure_integration_erasure_v1.sql', '319435d8514b8d4621667d75dbd62efb645ed4beb38e769fcc479066eb52fa2d'],
@@ -99,14 +102,28 @@ const FROZEN = [
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D2: the English of all 14 S7-03 rows APPROVED word for word; no Arabic changed).
   ['apps/mobile/src/replay-composite/copy.ts', '927c24f51f7e1e2189e315235089b10ce7b670b6b87974df1638813d691f1d7b'],
   ['apps/mobile/src/replay-composite/viewpoint-store.ts', '56166095f5578bf4789b2552f6c3e21d54bd064573f99aeb423fedbfe1fb23bb'],
-  ['apps/mobile/src/replay-composite/projection-adapter.ts', '3a3ea0257acd4b139acbf4a5f34416e4c11da35288985d6c07c790db848daf9f'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5; the execution order's "the mobile V2 acceptance (mirror of the API tuple;
+  // the S7-04 pin re-anchored, declared)"): the adapter honours exactly the two approved render contracts, V1 unchanged and
+  // V2 as 0195 (D-04) value for value, and renders an ORIGINAL_AUDIO moment only under V2; MIXED and any other tuple stay
+  // refused whole. The disclosure, the depth law and the viewpoint key are unchanged.
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 third place, r11 `feaad0fb`): `hasOwnReading` is added, and a moment
+  // is disclosed when it has its own reading: its text, or its original audio (an audio moment carries no text). The
+  // two approved render contracts, the depth law and the viewpoint key are unchanged.
+  ['apps/mobile/src/replay-composite/projection-adapter.ts', 'cc4b7a4fddfbd55c8d2f3d603fdac92832b89063a7f478b87bc311587cf31307'],
   // S7-05 RE-ANCHOR (2026-10-20, Product Owner decision D1, F-2 Option B: a Reading's scope is decoded as exactly its class).
-  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'afc05df83bb2de9266cb12775e89ac5963a908072185e35be010321f431cba91'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 6, F-1 `1f82e769`): the moments decoder mirrors the API: the viewing answer
+  // covers the text moments, an original-audio moment carries no text, or the answer is refused whole. The scope decoder
+  // and the wire are unchanged.
+  ['apps/mobile/src/runtime-entry/replay-history-api.ts', 'f899611757e902f04da555d8113ef86aef8079f4ff47ff74a1e5ab470a2ceed8'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '08687f8e87ff34a9c37ea69260041fc55cc3138ea42c272697763586a72407ab'],
   ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '667fb2c56c78781367a43cc42c1e349319f573ad66dde4f1edc56d97bc54ea64'],
+  // S8B-07 CP1-B RE-ANCHOR (2026-11-08, the Product Owner's order on QAN-BL-MOB-05): a Map read whose fetch ENDED without an
+  // answer (a failed read, a payload refused at the trust boundary, no credential) counts as settled, so the composition
+  // reports its measured first state and the depth fades it in; before, the depth stayed half-crossed. The projection, its
+  // cache, the Map, the chrome and every refusal are unchanged; a read still on its way is still not settled.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '20679fd47ad3a0c0ae52ff45ba30f233051f7040e8fbf3fd24bae699c659b0d3'],
 ];
 
 const shipped = () => {
@@ -221,7 +238,9 @@ const DETECTORS = {
     const depth = tsCode(w.depth);
     if (!depth.includes('const reachable = current && !settingsShown && !understandingShown;')) out.push('the depth beneath is kept, not rebuilt');
     if (!depth.includes('const personalOpen = personalReachable && !introductionsShown && !playerOpen;')) out.push('the depth beneath the passage is out of reach');
-    if (!/\{onSignOut !== undefined && area === 'MY_WORLD' \? <ReplayPlayer controller=\{replayPlayer\} language=\{locale\.language\} insets=\{edges\} \/> : null\}/u.test(depth)) out.push('the player is a passage of the Personal world only');
+    // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5): the player may carry this generation's original-audio surface (Sheet B),
+    // and nothing else; it is still a passage of the Personal world only.
+    if (!/\{onSignOut !== undefined && area === 'MY_WORLD' \? <ReplayPlayer controller=\{replayPlayer\} language=\{locale\.language\} insets=\{edges\}(?: surface=\{replayAudioSurface\})? \/> : null\}/u.test(depth)) out.push('the player is a passage of the Personal world only');
     if (!/depth === 'ANALYSIS' \|\| playerOpen \? 'ANALYSIS'/u.test(depth)) out.push('the attention surface counts the passage as the Analysis');
     if (!/const openActivity = useCallback\(\(\) => \{\n\s+replayPlayer\.close\(\);/u.test(depth)) out.push('Activity closes the passage first');
     if ((depth.match(/replayPlayer\.close\(\);/gu) ?? []).length < 3) out.push('Direct Entry, Activity and public links each close the passage');
@@ -249,7 +268,9 @@ const DETECTORS = {
   generationViolations(w) {
     const out = [];
     const runtime = tsCode(w.runtime);
-    if (!/replayPlayer: createReplayPlayerController\(\{\n\s+sessionId: bundle\.sessionId, reads: entry\.replayFor\(bundle\), commands: entry\.replayLifecycleFor\(bundle\), history: entry\.replayHistoryFor\(bundle\), isCurrent,\n\s+\}\),/u.test(runtime)) {
+    // S8B-07 CP1-B RE-ANCHOR (2026-11-08, step 5): the player may also take this generation's original-audio clock source
+    // (Sheet B, the clock-source port), and nothing else; its transports are still that generation's own.
+    if (!/replayPlayer: createReplayPlayerController\(\{\n\s+sessionId: bundle\.sessionId, reads: entry\.replayFor\(bundle\), commands: entry\.replayLifecycleFor\(bundle\), history: entry\.replayHistoryFor\(bundle\), isCurrent,\n(?:\s+momentClock: replayAudio\.clockSource,\n)?\s+\}\),/u.test(runtime)) {
       out.push('one player per generation, on that generation\'s transports');
     }
     if (!/session\.replayPlayer\.retire\(\);\n\s+session\.replayEntry\.retire\(\);/u.test(runtime)) out.push('the player is retired with its generation');

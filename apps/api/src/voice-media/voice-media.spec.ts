@@ -241,6 +241,22 @@ describe('S8B-02 CP2 — reads, deletion and export', () => {
     expect(get).not.toHaveBeenCalled();
   });
 
+  it('S8B-07 CP1-B V-17 (F-1 narrowed): a call\'s USER / QANDEEL track is 404 with no read at all; NOTE is unchanged', async () => {
+    const callKey = `voice-call/${randomUUID()}`;
+    const calls = ['USER', 'QANDEEL'].map((track) => ({
+      track, segment_index: 0, storage_key: callKey, content_type: 'audio/ogg', byte_size: '10', clock_start_ms: '0', clock_end_ms: '1000',
+    }));
+    const readObjects = jest.fn().mockResolvedValue(calls);
+    const h = harness({ readObjects });
+    await h.store.putStream(callKey, 'audio/ogg', Readable.from([Buffer.from('0123456789')]), 10, new AbortController().signal);
+    const get = jest.spyOn(h.store, 'getRange');
+    for (const track of ['USER', 'QANDEEL']) {
+      expect(await statusOf(h.service.openObject(USER, RECORDING, track, '0', undefined, new AbortController().signal))).toBe(404);
+    }
+    expect(get).not.toHaveBeenCalled();
+    expect(readObjects).not.toHaveBeenCalled();
+  });
+
   it('answers 206 for a range, 200 whole, 416 out of bounds, 503 for a live key with no object - never a key', async () => {
     const h = harness({ readObjects: jest.fn().mockResolvedValue([object]) });
     await h.store.putStream(NOTE_KEY, 'audio/mp4', Readable.from([Buffer.from('0123456789')]), 10, new AbortController().signal);

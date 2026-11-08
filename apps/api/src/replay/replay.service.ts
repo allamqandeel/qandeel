@@ -296,9 +296,13 @@ export class ReplayService {
     if (!Array.isArray(rows)) return unavailable();
     if (rows.length === 0) return { outcome: 'UNAVAILABLE' };
     const moments = rows.map(momentOf);
-    // Canonical chronology, and one viewing answer for the whole version: the text of every moment, or of none.
+    // Canonical chronology, and one viewing answer for the whole version: the text of every moment, or of none. An
+    // original-audio moment never carries text (0183 R-1: a transcript is derived, never the source text): it is outside
+    // that answer, and one that carries any is refused whole (S8B-07 CP1-B F-1; a V1 version has none, so V1 is unchanged).
     if (moments.some((moment, index) => index > 0 && moment.tc <= moments[index - 1].tc)) return unavailable();
-    if (new Set(moments.map((moment) => moment.text === null)).size !== 1) return unavailable();
+    if (moments.some((moment) => moment.originalMedium === 'ORIGINAL_AUDIO' && moment.text !== null)) return unavailable();
+    const others = moments.filter((moment) => moment.originalMedium !== 'ORIGINAL_AUDIO');
+    if (new Set(others.map((moment) => moment.text === null)).size > 1) return unavailable();
     return { outcome: 'FOUND', moments };
   }
 

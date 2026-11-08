@@ -12,6 +12,9 @@ import {
   type VoiceByteRange,
 } from './private-audio-object.store';
 import { VoiceMediaRepository, type RecordingObjectRow } from './voice-media.repository';
+import { parseByteRange } from './byte-range';
+
+export { parseByteRange } from './byte-range';
 
 /**
  * S8B-02 (CP2, contract §3.11) — the voice media boundary: a Voice Note's streamed upload, the owner's Range reads of a
@@ -39,6 +42,12 @@ export const VOICE_EXPORT_FILE_NAME = /^qandeel-voice-(?:note-\d{8}T\d{12}Z(?:-\
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const TRACKS = ['NOTE', 'USER', 'QANDEEL'] as const;
 type Track = (typeof TRACKS)[number];
+/**
+ * S8B-07 CP1-B, F-1 narrowed (contract §0.3, D-02.3): the owner object route serves a Voice Note's file only. A call's
+ * tracks never leave the store as separate files (S8B-01 §10.3); a call is heard only through the Replay pool's one
+ * mixed listening file. USER and QANDEEL answer the existing bounded 404 (V-17). Export My Data (PRIV-05) is unchanged.
+ */
+const READABLE_OBJECT_TRACKS: readonly string[] = ['NOTE'];
 
 /** S8B-04 (CP2): a note's bytes are held in memory for the live transcript's duration proof only up to this size. */
 export const LIVE_NOTE_TEE_MAX_BYTES = 8 * 1024 * 1024;
@@ -75,25 +84,6 @@ const instant = (value: unknown): string | null => {
   return Number.isNaN(at) ? null : new Date(at).toISOString();
 };
 const numberOrNull = (value: unknown): number | null => (value === null || value === undefined ? null : Number(value));
-
-/**
- * One `bytes=` range of an object of `size` bytes (RFC 9110 §14.1.2): `a-b`, `a-` or `-n`. No header, a malformed one, or
- * several ranges: null (the whole object, 200). A well-formed range that cannot be satisfied: 'UNSATISFIABLE' (416).
- */
-export function parseByteRange(header: unknown, size: number): VoiceByteRange | null | 'UNSATISFIABLE' {
-  if (typeof header !== 'string') return null;
-  const match = /^bytes=(\d*)-(\d*)$/u.exec(header.trim());
-  if (!match || (match[1] === '' && match[2] === '')) return null;
-  if (match[1] === '') {
-    const suffix = Number(match[2]);
-    if (!Number.isSafeInteger(suffix) || suffix === 0) return 'UNSATISFIABLE';
-    return { start: Math.max(0, size - suffix), end: size - 1 };
-  }
-  const start = Number(match[1]);
-  const end = match[2] === '' ? size - 1 : Math.min(Number(match[2]), size - 1);
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || end < start) return 'UNSATISFIABLE';
-  return { start, end };
-}
 
 @Injectable()
 export class VoiceMediaService {
@@ -288,7 +278,7 @@ export class VoiceMediaService {
   /** One object of one readable recording, whole (200) or one byte range (206). Not readable now: 404. */
   async openObject(userId: string, recordingId: string, track: string, segmentIndex: string, range: unknown, signal: AbortSignal): Promise<OpenedAudio> {
     const index = Number(segmentIndex);
-    if (!UUID.test(recordingId) || !(TRACKS as readonly string[]).includes(track) || !/^\d{1,9}$/u.test(segmentIndex)) throw notFound();
+    if (!UUID.test(recordingId) || !READABLE_OBJECT_TRACKS.includes(track) || !/^\d{1,9}$/u.test(segmentIndex)) throw notFound();
     const object = (await this.objects(userId, recordingId, 'read')).find((o) => o.track === track && Number(o.segment_index) === index);
     if (object === undefined) {
       this.signal('read', 'refused_expected');

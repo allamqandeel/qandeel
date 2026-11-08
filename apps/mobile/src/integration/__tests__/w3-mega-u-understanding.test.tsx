@@ -214,7 +214,7 @@ describe('E2E-D-14 — QANDEEL Understanding, a depth of Personal QANDEEL (P4-C1
     expect(within(view.getByTestId('qandeel-settings')).queryByText(COPY.name)).toBeNull();
     await press(view, 'qandeel-settings-back');
     await press(view, 'qandeel-depth-to-analysis');
-    await fireEvent(view.getByTestId('qandeel-depth-analysis'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
+    await fireEvent(view.getByTestId('qandeel-depth-analysis', { includeHiddenElements: true }), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
     await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
     await act(async () => {
       await settle();

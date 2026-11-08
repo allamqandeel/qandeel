@@ -564,8 +564,11 @@ async function verifyStatic() {
   const migrations = readdirSync('database/migrations').filter((name) => name.endsWith('.sql')).sort();
   // RE-ANCHORED by S8B-07 CP1-A (was: 0194 is the last migration; the Product Owner's CP1-A authorization, a declared
   // re-anchor): exactly 0195, the original-audio source truth, follows 0194 and nothing else does (verify-migration-0195).
-  strict(migrations.at(-2), M0194, '0194 is followed only by 0195');
-  strict(migrations.at(-1), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
+  // RE-ANCHORED by S8B-07 CP1-B (was: 0195 is the last migration; the Product Owner's CP1-B execution authorization, a
+  // declared re-anchor): exactly 0196, the transient media authority, follows 0195 and nothing else does (verify-migration-0196).
+  strict(migrations.at(-3), M0194, '0194 is followed only by 0195');
+  strict(migrations.at(-2), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
+  strict(migrations.at(-1), '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
   const m0194 = readFileSync(`database/migrations/${M0194}`, 'utf8');
   const executable = m0194.replace(/^\s*--.*$/gmu, '');
   ok(!/GRANT /u.test(executable), '0194 grants nothing');

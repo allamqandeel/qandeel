@@ -105,6 +105,24 @@ describe('S7-03 — decoding the real-path Replay wire', () => {
       expect(moments((body) => { body.moments[2].text = null; })).toBe('UNAVAILABLE');
       expect(moments((body) => { body.moments[2].text = ''; })).toBe('UNAVAILABLE');
     });
+    it('a mixed V2 list: text moments their text, original-audio moments none; an audio moment with text is refused (S8B-07 CP1-B F-1)', () => {
+      const mixed = (mutate: (body: Record<string, any>) => void = () => undefined) => {
+        const body = clone(MAIN.moments) as Record<string, any>;
+        body.moments[1].originalMedium = 'ORIGINAL_AUDIO';
+        body.moments[1].text = null;
+        mutate(body);
+        return decodeReplayMoments(body);
+      };
+      const found = mixed();
+      expect(found.kind).toBe('FOUND');
+      if (found.kind === 'FOUND') {
+        expect(found.moments[1]).toMatchObject({ originalMedium: 'ORIGINAL_AUDIO', text: null });
+        expect(found.moments[0].text).toBe((MAIN.moments as any).moments[0].text);
+      }
+      expect(mixed((body) => { body.moments[1].text = 'a transcript'; }).kind).toBe('UNAVAILABLE');
+      expect(mixed((body) => { body.moments[0].text = null; }).kind).toBe('UNAVAILABLE');
+      expect(mixed((body) => { for (const m of body.moments) if (m.originalMedium !== 'ORIGINAL_AUDIO') m.text = null; }).kind).toBe('FOUND');
+    });
     it('a version of another Replay, or a viewable version with a reason', () => {
       expect(decodeReplayVersion(MAIN.version, WIRE.scenes.part.replayId === MAIN.replayId ? '00000000-0000-4000-8000-000000000000' : WIRE.scenes.part.replayId, MAIN.versionId).kind).toBe('UNAVAILABLE');
       const version = clone(MAIN.version) as Record<string, any>;

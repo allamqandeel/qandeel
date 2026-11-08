@@ -21,8 +21,14 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 
 const mockReceived: { insets: Record<string, number> }[] = [];
 jest.mock('../composition/LivingAnalysisMap', () => ({
-  LivingAnalysisMap: (props: { insets: Record<string, number>; top?: { content: unknown; height: number } | null }) => {
+  LivingAnalysisMap: (props: { insets: Record<string, number>; top?: { content: unknown; height: number } | null; onComposed?: () => void }) => {
     const top = props.top ?? null;
+    // Reports its first commit as the real composition does (its ComposedMark), so the depth fades it in.
+    const { onComposed } = props;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- a jest.mock factory may not close over imports
+    require('react').useEffect(() => {
+      onComposed?.();
+    }, [onComposed]);
     mockReceived.push({ insets: top === null ? props.insets : { ...props.insets, top: top.height } });
     return top === null ? null : top.content;
   },
