@@ -3,7 +3,7 @@
  * tests. The server keeps the §20 rules as 0196 states them (a known command returns its set; a new command reuses the
  * newest live generation when it covers the source or has ≥ L left, otherwise makes G + 1 bounded by E; ≤ 2 live
  * generations; a source that ended is NOT_FOUND with the proven reason). The player plays a file's content clock while
- * the server lets it read, and logs every AUDIBLE span (volume > 0 and playing): what was heard, and when. The log is
+ * the server lets it read, and logs every AUDIBLE span (loaded and playing): what was heard, and when. The log is
  * what the tests measure lost, repeated and silent audio by — the functional analogue of HC-1 / HC-2, never their proof
  * (the device's, step 6).
  */
@@ -193,7 +193,6 @@ export interface FakePlayerRecord {
   readonly url: string;
   readonly artifactId: string;
   readonly headers: Record<string, string>;
-  readonly muted: boolean;
   readonly calls: string[];
   released: boolean;
   /** Plays after release (must never be counted). */
@@ -204,19 +203,22 @@ export interface FakePlayerRecord {
 export function createFakePlayerPort(server: FakeTransientServer, options: FakePlayerOptions) {
   const made: FakePlayerRecord[] = [];
   const audible: AudibleSpan[] = [];
+  /** The most players alive (created, not released) at once: one, under CA-07B-2. */
+  const alive = { max: 0 };
+  let loadDelayMs = options.loadDelayMs;
   const port: VoiceNotePlayerPort = {
-    async create(url, headers, onStatus, createOptions) {
+    async create(url, headers, onStatus) {
       const artifactId = url.slice(url.lastIndexOf('/') + 1);
       const record: FakePlayerRecord = {
-        url, artifactId, headers, muted: createOptions?.muted === true, calls: [], released: false, playedAfterRelease: 0,
+        url, artifactId, headers, calls: [], released: false, playedAfterRelease: 0,
       };
       made.push(record);
+      alive.max = Math.max(alive.max, made.filter((m) => !m.released).length);
       const length = (() => {
         const runs = server['options'].runs as readonly number[];
         const index = server.sets.find((s) => s.ids.includes(artifactId))?.ids.indexOf(artifactId) ?? 0;
         return runs[index] ?? 0;
       })();
-      let volume = createOptions?.muted === true ? 0 : 1;
       let loaded = false;
       let playing = false;
       let wantPlay = false;
@@ -231,7 +233,7 @@ export function createFakePlayerPort(server: FakeTransientServer, options: FakeP
         const t = Date.now();
         return Math.min(length, base + Math.max(0, t - Math.max(startedAt, stallUntil)));
       };
-      const isAudible = () => playing && loaded && volume > 0 && !failed && !record.released;
+      const isAudible = () => playing && loaded && !failed && !record.released;
       const closeSpan = () => {
         if (span === null) return;
         const end = position();
@@ -273,7 +275,7 @@ export function createFakePlayerPort(server: FakeTransientServer, options: FakeP
         responseStart = Date.now();
         if (wantPlay) startPlaying();
         emit();
-      }, options.loadDelayMs);
+      }, loadDelayMs);
       const ticker = setInterval(() => {
         if (record.released) return;
         if (playing && loaded) {
@@ -321,13 +323,6 @@ export function createFakePlayerPort(server: FakeTransientServer, options: FakeP
             else openSpan();
           }
         },
-        setVolume: (v) => {
-          record.calls.push(`volume:${v.toFixed(2)}`);
-          const was = isAudible();
-          if (was) closeSpan();
-          volume = v;
-          if (isAudible()) openSpan();
-        },
         currentPositionMs: () => position(),
         release: () => {
           record.calls.push('release');
@@ -340,7 +335,11 @@ export function createFakePlayerPort(server: FakeTransientServer, options: FakeP
       return player;
     },
   };
-  return { port, made, audible };
+  /** A slower (or faster) start for every player created from here on. */
+  const setLoadDelay = (ms: number) => {
+    loadDelayMs = ms;
+  };
+  return { port, made, audible, alive, setLoadDelay };
 }
 
 export interface Continuity {
@@ -350,12 +349,14 @@ export interface Continuity {
   readonly repeatedMs: number;
   /** The largest silence between two audible spans (ms): what the reader HEARS as a gap. */
   readonly largestSilenceMs: number;
+  /** The longest time two spans were heard together (ms): must be 0 (§20.2, CA-07B-2). */
+  readonly overlapMs: number;
   readonly transitions: number;
 }
 
 /** How the audible log follows the content clock: per transition, the content jump and the silence. */
 export function continuityOf(spans: readonly AudibleSpan[]): Continuity {
-  // One player's consecutive pieces (a volume step splits a span) are one span.
+  // One player's consecutive pieces (a stall splits a span) are one span.
   const merged: AudibleSpan[] = [];
   for (const s of [...spans].sort((a, b) => a.wallStart - b.wallStart)) {
     const last = [...merged].reverse().find((m) => m.player === s.player);
@@ -367,6 +368,7 @@ export function continuityOf(spans: readonly AudibleSpan[]): Continuity {
   let lostMs = 0;
   let repeatedMs = 0;
   let largestSilenceMs = 0;
+  let overlapMs = 0;
   for (let i = 1; i < sorted.length; i += 1) {
     const before = sorted[i - 1]!;
     const after = sorted[i]!;
@@ -375,11 +377,12 @@ export function continuityOf(spans: readonly AudibleSpan[]): Continuity {
       jump = after.contentStart - before.contentEnd;
       largestSilenceMs = Math.max(largestSilenceMs, after.wallStart - before.wallEnd);
     } else {
-      // Heard together (the ramp): where the earlier one was at that instant.
+      overlapMs = Math.max(overlapMs, Math.min(before.wallEnd, after.wallEnd) - after.wallStart);
+      // Heard together: where the earlier one was at that instant.
       jump = after.contentStart - (before.contentStart + (after.wallStart - before.wallStart));
     }
     if (jump > 0) lostMs += jump;
     if (jump < 0) repeatedMs = Math.max(repeatedMs, -jump);
   }
-  return { lostMs, repeatedMs, largestSilenceMs, transitions: Math.max(0, sorted.length - 1) };
+  return { lostMs, repeatedMs, largestSilenceMs, overlapMs, transitions: Math.max(0, sorted.length - 1) };
 }

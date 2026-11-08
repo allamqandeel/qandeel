@@ -95,6 +95,43 @@ describe('a mixed V2 Replay played through (V-23, V-29, C-B1, §5.4)', () => {
     expect(w.playing()).toBe(true);
   });
 
+  it('across the access cap (CA-07B-2): the moment and the place hold through the silent switch, then run on from it', async () => {
+    const M = 60_000;
+    // One long run: moment 2 to 55 min, then moment 3 (the turn of 3 and 4) to 70 min; the switch comes near 53 min.
+    const long: PresentationSpan[] = [
+      { kind: 'WINDOW', fromMs: 0, toMs: 55 * M, track: 'USER', momentOrdinal: 2 },
+      { kind: 'WINDOW', fromMs: 55 * M, toMs: 70 * M, track: 'QANDEEL', momentOrdinal: 3 },
+    ];
+    const w = world({ server: { runs: [70 * M, 5_000], spans: [long, RUN1] } });
+    await w.open();
+    w.player.play();
+    await until(() => w.ordinal() === 2);
+    const seen: { phase: string; ordinal: number | null | undefined; positionMs: number; runIndex: number }[] = [];
+    // What the views read, every 50 ms (they redraw on the clock's revision).
+    const sampler = setInterval(() => {
+      const d = w.clock()!.detail();
+      seen.push({ phase: d.engine.phase, ordinal: w.ordinal(), positionMs: d.positionMs, runIndex: d.runIndex });
+    }, 50);
+    await run(60 * M);
+    clearInterval(sampler);
+    expect(w.server.sets.length).toBeGreaterThanOrEqual(2);
+    const inRun = seen.filter((x) => x.runIndex === 0);
+    const silent = inRun.filter((x) => x.phase === 'PREPARING');
+    expect(silent.length).toBeGreaterThanOrEqual(1);
+    // The silence holds one place and moment 2; nothing runs ahead of the file.
+    expect(new Set(silent.map((x) => x.positionMs)).size).toBe(1);
+    expect(silent.every((x) => x.ordinal === 2)).toBe(true);
+    for (let i = 1; i < inRun.length; i += 1) expect(inRun[i]!.positionMs).toBeGreaterThanOrEqual(inRun[i - 1]!.positionMs);
+    // Moment 3 only from its window's start in the FILE, never earlier for the silence.
+    const third = inRun.find((x) => x.ordinal === 3);
+    expect(third).toBeDefined();
+    expect(third!.positionMs).toBeGreaterThanOrEqual(55 * M);
+    expect(inRun.filter((x) => x.positionMs < 55 * M).every((x) => x.ordinal === 2)).toBe(true);
+    // Nothing heard twice or lost across it.
+    const pieces = w.players.audible.filter((p) => w.server.generationOf(p.artifactId) >= 1).sort((a, b) => a.wallStart - b.wallStart);
+    for (let i = 1; i < pieces.length; i += 1) expect(pieces[i]!.wallStart).toBeGreaterThanOrEqual(pieces[i - 1]!.wallEnd);
+  });
+
   it('a Spine jump to an audio moment starts at its window\'s start; a jump to a TEXT moment stops the audio (B2T, V-29)', async () => {
     const w = world();
     await w.open();

@@ -64,6 +64,14 @@ function world(server: FakeServerOptions, player: Partial<FakePlayerOptions> = {
 }
 
 const run = (ms: number) => jest.advanceTimersByTimeAsync(ms);
+/** Steps the fake clock 50 ms at a time until the condition holds (at most 10 min). */
+async function until(_w: unknown, condition: () => boolean): Promise<void> {
+  for (let t = 0; t < 10 * MINUTE; t += 50) {
+    if (condition()) return;
+    await run(50);
+  }
+  throw new Error('condition never held');
+}
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -284,7 +292,7 @@ describe('§19.2 Range continuation (V-35)', () => {
 });
 
 describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
-  it('(8) renews before the cut, hands over to a muted standby aligned in −10 … 0 ms with the ramp, and never ends', async () => {
+  it('(8) renews before the cut, hands over on ONE player (pause, place, release, new file there) and never ends', async () => {
     const w = world({ runs: [60 * MINUTE], sourceEndsInMs: 600 * MINUTE, prepareMs: 30_000 }, { loadDelayMs: 400 });
     w.engine.play(0, 0);
     await run(40_000);
@@ -294,18 +302,38 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     await run(60 * MINUTE);
     expect(w.events).toEqual([]); // the degraded path never ran
     expect(w.notices).toEqual({ waiting: 0, failed: 0, ended: 0 });
-    const standby = w.players.made.filter((m) => m.muted);
-    expect(standby.length).toBeGreaterThanOrEqual(1);
-    for (const m of standby) {
-      const ramp = m.calls.filter((c) => c.startsWith('volume:'));
-      expect(ramp).toEqual(['volume:0.00', 'volume:0.33', 'volume:0.67', 'volume:1.00']);
-    }
+    // CA-07B-2: never two players at once, so never two generations heard together.
+    expect(w.players.alive.max).toBe(1);
     const c = continuityOf(w.players.audible);
+    expect(c.transitions).toBeGreaterThanOrEqual(1);
+    expect(c.overlapMs).toBe(0);
     expect(c.lostMs).toBe(0);
-    expect(c.repeatedMs).toBeLessThanOrEqual(-TRANSIENT_HANDOVER.minOffsetMs);
-    expect(c.largestSilenceMs).toBe(0);
-    // The old file was released after each switch, and never more than two generations lived.
+    expect(c.repeatedMs).toBeLessThanOrEqual(TRANSIENT_HANDOVER.resumeBehindMs);
+    // The silence is the new player's own start (the fake's 400 ms), inside the bound measured on the phone (HC-2′).
+    expect(c.largestSilenceMs).toBeGreaterThan(0);
+    expect(c.largestSilenceMs).toBeLessThanOrEqual(TRANSIENT_HANDOVER.maxSilenceMs);
+    // The old player was paused before it was released, and its file let go after each switch.
+    for (const m of w.players.made.slice(0, -1)) expect(m.calls.slice(-2)).toEqual(['pause', 'release']);
+    expect(w.players.made.every((m) => m.playedAfterRelease === 0)).toBe(true);
     expect(w.server.calls.filter((x) => x.startsWith('DELETE')).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('(8) the place does not move while the switch is silent, and runs on from it once the new file plays', async () => {
+    const w = world({ runs: [60 * MINUTE], sourceEndsInMs: 600 * MINUTE, prepareMs: 1_000 }, { loadDelayMs: 600 });
+    w.engine.play(0, 0);
+    await run(52 * MINUTE);
+    const samples: { phase: string; positionMs: number }[] = [];
+    const stop = w.engine.subscribe(() => samples.push({ phase: w.engine.getState().phase, positionMs: w.engine.getState().positionMs }));
+    await run(2 * MINUTE);
+    stop();
+    const preparing = samples.filter((x) => x.phase === 'PREPARING');
+    expect(preparing.length).toBeGreaterThanOrEqual(1);
+    // One place for the whole silence, and the clock never goes back or jumps ahead of what is heard.
+    expect(new Set(preparing.map((x) => x.positionMs)).size).toBe(1);
+    for (let i = 1; i < samples.length; i += 1) expect(samples[i]!.positionMs).toBeGreaterThanOrEqual(samples[i - 1]!.positionMs);
+    const last = w.players.made[w.players.made.length - 1]!;
+    expect(last.calls).toContain(`seek:${preparing[0]!.positionMs}`);
+    expect(continuityOf(w.players.audible).lostMs).toBe(0);
   });
 
   it('(8) also across runs of a Replay: the next run simply starts on the new set', async () => {
@@ -401,41 +429,53 @@ describe('§20 continuation across the access cap (V-35 (8)–(10))', () => {
     expect(Math.max(...w.players.audible.map((s) => s.wallEnd))).toBeLessThanOrEqual(w.server.sourceEnd);
   });
 
-  it('the degraded path when the standby cannot align in 3 attempts: pause → place → release → new player → seek → play', async () => {
-    // Seeks that stall the standby unpredictably (600 ms, then none) keep it out of −10 … 0 for all 3 checks.
-    const stalls = [600, 0, 600, 0, 600, 0];
-    const w = world({ runs: [60 * MINUTE], sourceEndsInMs: 600 * MINUTE, prepareMs: 1_000 }, { seekStallMs: () => stalls.shift() ?? 0, loadDelayMs: 0 });
+  it('a switch slower than 1 s shows CL-04 (RA-11) and still resumes at the saved place: nothing lost, never two players', async () => {
+    const w = world({ runs: [60 * MINUTE], sourceEndsInMs: 600 * MINUTE, prepareMs: 1_000 }, { loadDelayMs: 0 });
     w.engine.play(0, 0);
-    await run(56 * MINUTE);
-    expect(w.events).toContain('TRANSIENT_HANDOVER_DEGRADED');
-    expect(continuityOf(w.players.audible).lostMs).toBe(0);
+    await run(52 * MINUTE);
+    w.notices.waiting = 0;
+    // From here on every new player takes 1.5 s to start.
+    w.players.setLoadDelay(1_500);
+    await run(3 * MINUTE);
+    expect(w.notices.waiting).toBe(1);
+    expect(w.events).toEqual([]);
+    expect(w.players.alive.max).toBe(1);
+    const c = continuityOf(w.players.audible);
+    expect(c.lostMs).toBe(0);
+    expect(c.overlapMs).toBe(0);
     expect(w.notices.ended).toBe(0);
   });
 
-  it('a pause during the hand-over releases the standby; the resume starts the new file at the saved place', async () => {
+  it('a pause during the switch keeps the saved place; the resume plays the new file from it', async () => {
     const w = world({ runs: [60 * MINUTE], sourceEndsInMs: 600 * MINUTE, prepareMs: 1_000 }, { loadDelayMs: 2_000 });
     w.engine.play(0, 0);
-    await run(53 * MINUTE + 3_500);
-    const standby = w.players.made.find((m) => m.muted);
-    expect(standby).toBeDefined();
-    w.engine.pause();
-    expect(standby!.released).toBe(true);
+    await run(52 * MINUTE);
+    await until(w, () => w.engine.getState().phase === 'PREPARING');
     const at = w.engine.getState().positionMs;
+    w.engine.pause();
+    expect(w.engine.getState()).toMatchObject({ phase: 'PAUSED', positionMs: at });
+    expect(w.players.made.filter((m) => !m.released)).toHaveLength(1);
+    await run(5_000);
+    expect(w.players.audible.every((s) => s.wallEnd <= Date.now() - 5_000 + 1)).toBe(true);
     w.engine.play();
     await run(3_000);
-    const last = w.players.made[w.players.made.length - 1]!;
-    expect(last.muted).toBe(false);
-    expect(last.calls).toContain(`seek:${at}`);
     expect(w.engine.getState().phase).toBe('PLAYING');
+    const c = continuityOf(w.players.audible);
+    expect(c.lostMs).toBe(0);
+    expect(c.overlapMs).toBe(0);
+    expect(w.players.alive.max).toBe(1);
   });
 
-  it('a live call that begins during the hand-over releases both players and both sets', async () => {
+  it('a live call that begins during the switch releases the player and both sets', async () => {
     const w = world({ runs: [60 * MINUTE], sourceEndsInMs: 600 * MINUTE, prepareMs: 1_000 }, { loadDelayMs: 2_000 });
     w.engine.play(0, 0);
-    await run(53 * MINUTE + 3_500);
+    await run(52 * MINUTE);
+    await until(w, () => w.engine.getState().phase === 'PREPARING');
     w.call.set(true);
     expect(w.players.made.every((m) => m.released)).toBe(true);
     expect(w.server.calls.filter((c) => c.startsWith('DELETE')).length).toBe(2);
+    await run(10_000);
+    expect(w.players.made.every((m) => m.playedAfterRelease === 0)).toBe(true);
   });
 
   it('a lost renewal answer is asked again with the SAME command; never a third live generation', async () => {

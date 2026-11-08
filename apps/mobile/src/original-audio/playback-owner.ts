@@ -3,8 +3,8 @@
  * S8B-03 owner), `call:<callId>` (listening to a call's recording) and `replay:<versionId>` (a Replay's original audio).
  * Starting any of them releases the one that holds the slot, so one subject plays at a time.
  *
- *   - The muted standby of a hand-over (§20) is not a second claim: it belongs to the subject that holds the slot, and
- *     that subject's engine releases it with everything else it holds.
+ *   - A hand-over (§20, CA-07B-2) is not a second claim: the subject that holds the slot switches its ONE player to the
+ *     next file, the old one released first.
  *   - The live call outranks all of them (`CallAudioEngine` owns the audio session): while a call is live, a `call:` or
  *     `replay:` claim is refused, and a call that begins releases the `call:` / `replay:` holder at once (V-21, V-34).
  *     A Voice Note's behaviour is the S8B-03 one, unchanged.

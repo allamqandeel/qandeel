@@ -30,22 +30,13 @@ export interface VoiceNotePlayer {
   pause(): void;
   seekTo(positionMs: number): Promise<void>;
   release(): void;
-  /** S8B-07 CP1-B (§20): the player's gain, 0 … 1 (the hand-over's muted standby and its 20 – 40 ms ramp). Notes never use it. */
-  setVolume?(volume: number): void;
   /** S8B-07 CP1-B (§19.2): the played position read now from the player itself, not the last status tick. */
   currentPositionMs?(): number;
 }
 
-/** S8B-07 CP1-B: how a player is created. A Voice Note passes nothing (its S8B-03 behaviour, unchanged). */
-export interface VoiceNotePlayerCreateOptions {
-  /** Created at volume 0 (the §20 standby), before anything can be heard. */
-  readonly muted?: boolean;
-}
-
 export interface VoiceNotePlayerPort {
   /** A player for one URL with the headers the request must carry. It loads on its own and reports through `onStatus`. */
-  create(url: string, headers: Record<string, string>, onStatus: (status: VoiceNotePlayerStatus) => void,
-    options?: VoiceNotePlayerCreateOptions): Promise<VoiceNotePlayer>;
+  create(url: string, headers: Record<string, string>, onStatus: (status: VoiceNotePlayerStatus) => void): Promise<VoiceNotePlayer>;
 }
 
 export type VoiceNotePlaybackPhase = 'LOADING' | 'PLAYING' | 'PAUSED' | 'FAILED';

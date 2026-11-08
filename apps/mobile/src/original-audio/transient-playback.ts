@@ -17,13 +17,14 @@
  *   Renewal (§20)    while playing, below L (5 min) of readability left and the file not covering the source, ONE POST
  *                    with a new command; never while paused; the same set back with less than L left: it covers the
  *                    source, so it is never renewed again and plays to E. On play or resume below L: renewed first.
- *   Hand-over (§20)  G+1 READY while playing: a muted standby of the same subject, seeked to the position + 300 ms and
- *                    started muted; the offset, the median of 5 samples in one tick, accepted in −10 … 0 ms (else
- *                    re-seeked, 3 attempts); a complementary 30 ms volume ramp; the old player paused and released,
- *                    its file released (DELETE). A pause during it releases the standby; ≤ 10 s; released on any other
- *                    start, on leaving and when a live call begins.
- *   Degraded         the standby cannot align in 3, G+1 is not READY when the file ends, or G+1 FAILED: pause → read the
- *                    position → release → the new player → seek → play; `TRANSIENT_HANDOVER_DEGRADED` (content-free).
+ *   Hand-over (§20.2, amended by the PO 2026-11-08: CA-07B-2) ONE player, never two. G+1 READY while playing, and the file
+ *                    stops being readable before the run ends: the old player is paused FIRST and its place read from
+ *                    it paused (minus the device's measured resume allowance); it is released and its file let go
+ *                    (DELETE); the new file's player is created there and started. A short silence (≤ 1 s, measured
+ *                    on the phone's output), no content lost, nothing heard twice beyond HC-1's precision, the two
+ *                    generations never heard together; the position does not move while it is silent.
+ *   Degraded         G+1 not READY when the file stops being readable, or G+1 FAILED: the continuation is asked for
+ *                    and started at the saved place when it is ready; `TRANSIENT_HANDOVER_DEGRADED` (content-free).
  *
  * The position lives in this runtime's memory only. Nothing is written to the device: the player streams (§15.3).
  * Nothing is logged: no URL, header, id or position.
@@ -43,17 +44,14 @@ export const TRANSIENT_STATUS_EVERY_MS = 10_000;
 export const TRANSIENT_WAITING_NOTICE_MS = 1_000;
 /** The POST of a set being prepared is asked again (same command) this often. */
 export const TRANSIENT_POLL_MS = 1_000;
-/** §20 hand-over. */
+/** §20.2 hand-over (CA-07B-2): one player; the silence it may cause is bounded on the phone's output (HC-2′). */
 export const TRANSIENT_HANDOVER = Object.freeze({
-  leadMs: 300,
-  maxStandbyMs: 10_000,
-  samples: 5,
-  minOffsetMs: -10,
-  maxOffsetMs: 0,
-  attempts: 3,
-  rampMs: 30,
-  rampSteps: 3,
-  settleMs: 250,
+  /** HC-2′: the silence between the old file's last heard sample and the new file's first, on the phone's output. */
+  maxSilenceMs: 1_000,
+  /** The switch is made once the file would stop being readable this close to (or before) the run's end. */
+  marginMs: 10_000,
+  /** The new file starts this far before the paused place read from the old player (HONOR, step 6). */
+  resumeBehindMs: 0,
 });
 /** §19.2: at most this many resumes a minute, with this back-off before each. */
 export const TRANSIENT_RESUME = Object.freeze({ perMinute: 3, windowMs: 60_000, backoffMs: Object.freeze([0, 1_000, 2_000]) });
@@ -162,25 +160,9 @@ interface Live {
   seeking: number;
 }
 
-interface Standby {
-  readonly token: number;
-  readonly artifactId: string;
-  player: VoiceNotePlayer | null;
-  leadMs: number;
-  checks: number;
-  aligning: boolean;
-  ramping: boolean;
-  timers: unknown[];
-}
-
 const INITIAL: TransientPlaybackState = Object.freeze({
   phase: 'IDLE', waiting: false, runIndex: 0, positionMs: 0, runs: null, boundaries: [], endedReason: null,
 });
-
-const median = (values: number[]): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)]!;
-};
 
 export function createTransientPlayback(options: TransientPlaybackOptions): TransientPlayback {
   const now = options.now ?? (() => Date.now());
@@ -198,7 +180,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   let held: HeldSet | null = null;
   let next: HeldSet | null = null;
   let current: Live | null = null;
-  let standby: Standby | null = null;
   let renewal: { command: string; retried: boolean; polling: boolean; beforeStart: boolean } | null = null;
   let renewalFailed = false;
   /** The continuation awaited after the file stopped being readable (§20 phone rule 4). */
@@ -273,14 +254,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     }, TRANSIENT_WAITING_NOTICE_MS);
   }
 
-  function releaseStandby(): void {
-    if (standby === null) return;
-    for (const timer of standby.timers) clearTimer(timer);
-    if (standby.ramping) current?.player?.setVolume?.(1);
-    releasePlayer(standby.player);
-    standby = null;
-  }
-
   function releaseCurrent(): void {
     if (current === null) return;
     const live = current;
@@ -304,7 +277,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   /** Everything this subject holds is let go; the position stays in memory. */
   function dropAll(releaseSets: boolean): void {
     epoch += 1;
-    releaseStandby();
     releaseCurrent();
     stopTimers();
     if (releaseSets) {
@@ -339,7 +311,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   function fail(): void {
     const at = { runIndex: state.runIndex, positionMs: current === null ? state.positionMs : readPosition(current) };
     epoch += 1;
-    releaseStandby();
     releaseCurrent();
     stopTimers();
     renewal = null;
@@ -418,7 +389,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
       fail();
       return;
     }
-    releaseStandby();
     releaseCurrent();
     const headers = options.authorization();
     if (headers === null) {
@@ -427,7 +397,9 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     }
     const my = epoch;
     tokens += 1;
-    const live: Live = { token: tokens, artifactId, runIndex, player: null, loaded: false, lastPositionMs: positionMs, seeking: 0 };
+    // A start away from 0 counts as seeking from the outset: a status the new player reports before its seek (its place
+    // 0) never moves the reader's clock back (CA-07B-2: the place does not move while the switch is silent).
+    const live: Live = { token: tokens, artifactId, runIndex, player: null, loaded: false, lastPositionMs: positionMs, seeking: positionMs > 0 ? 1 : 0 };
     current = live;
     if (autoplay) expectAudio(runIndex, positionMs);
     else set({ runIndex, positionMs });
@@ -444,7 +416,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     }
     live.player = created;
     if (positionMs > 0) {
-      live.seeking += 1;
       await created.seekTo(positionMs).catch(() => undefined);
       live.seeking -= 1;
     }
@@ -481,7 +452,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
   }
 
   function runEnded(live: Live): void {
-    releaseStandby();
     releaseCurrent();
     clearWaiting();
     const runIndex = live.runIndex;
@@ -510,7 +480,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     const my = epoch;
     const positionMs = readPosition(live);
     const runIndex = live.runIndex;
-    releaseStandby();
     releaseCurrent();
     expectAudio(runIndex, positionMs);
     for (;;) {
@@ -540,7 +509,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
 
   /** §20 rule 4: a file no longer READY. The new set if it is ready (degraded), else the source authority is asked. */
   async function fileUnreadable(runIndex: number, positionMs: number): Promise<void> {
-    releaseStandby();
     releaseCurrent();
     const gone = held;
     if (next !== null) {
@@ -702,7 +670,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     const at = resumeAt ?? { runIndex: state.runIndex, positionMs: current === null ? state.positionMs : readPosition(current) };
     resumeAt = null;
     if (degraded) options.onEvent?.('TRANSIENT_HANDOVER_DEGRADED');
-    releaseStandby();
     releaseCurrent();
     letGo(held);
     held = next;
@@ -714,137 +681,27 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
 
   /** The hand-over is needed only when the file stops being readable before its run ends (§20 rule 1, last bullet). */
   function maybeHandover(): void {
-    if (next === null || held === null || standby !== null || current === null || current.player === null || !current.loaded) return;
-    if (intent !== 'PLAY' || state.phase !== 'PLAYING') return;
+    if (next === null || held === null || current === null || current.player === null || !current.loaded) return;
+    if (intent !== 'PLAY' || state.phase !== 'PLAYING' || current.seeking > 0) return;
     const length = held.runs[current.runIndex]?.durationMs ?? 0;
     const remaining = length - readPosition(current);
-    if (leftOf(held) > remaining + TRANSIENT_HANDOVER.maxStandbyMs) return;
-    void beginHandover(current, next);
+    if (leftOf(held) > remaining + TRANSIENT_HANDOVER.marginMs) return;
+    switchToNext(current);
   }
 
-  async function beginHandover(live: Live, target: HeldSet): Promise<void> {
-    const artifactId = target.runs[live.runIndex]?.artifactId ?? null;
-    const headers = options.authorization();
-    if (artifactId === null || headers === null) return degrade();
-    const my = epoch;
-    tokens += 1;
-    const mine: Standby = {
-      token: tokens, artifactId, player: null, leadMs: TRANSIENT_HANDOVER.leadMs, checks: 0, aligning: false, ramping: false, timers: [],
-    };
-    standby = mine;
-    mine.timers.push(setTimer(() => {
-      if (standby === mine) degrade();
-    }, TRANSIENT_HANDOVER.maxStandbyMs));
-    let created: VoiceNotePlayer;
-    try {
-      // Once promoted, the same player reports as the subject's player.
-      created = await options.player.create(options.audioUrl(artifactId), headers, (status) => {
-        if (current !== null && current.token === mine.token) onCurrentStatus(current, status);
-        else onStandbyStatus(mine, status);
-      }, { muted: true });
-    } catch {
-      if (my === epoch && standby === mine) degrade();
-      return;
-    }
-    if (my !== epoch || standby !== mine || current !== live) {
-      releasePlayer(created);
-      return;
-    }
-    mine.player = created;
-    created.setVolume?.(0);
-    await created.seekTo(readPosition(live) + mine.leadMs).catch(() => undefined);
-    if (my !== epoch || standby !== mine) return;
-    created.play();
-  }
-
-  function onStandbyStatus(mine: Standby, status: VoiceNotePlayerStatus): void {
-    if (retired || standby !== mine) return;
-    if (status.failed) {
-      degrade();
-      return;
-    }
-    if (status.loaded && status.playing && !mine.aligning && !mine.ramping) {
-      mine.aligning = true;
-      mine.timers.push(setTimer(() => void align(mine), TRANSIENT_HANDOVER.settleMs));
-    }
-  }
-
-  /** The offset, the median of 5 samples in one tick: accepted in −10 … 0 ms, else re-seeked (3 attempts in all). */
-  async function align(mine: Standby): Promise<void> {
-    const live = current;
-    if (standby !== mine || live === null || mine.player === null || live.player === null) return;
-    const samples: number[] = [];
-    for (let i = 0; i < TRANSIENT_HANDOVER.samples; i += 1) {
-      const a = mine.player.currentPositionMs?.();
-      const b = live.player.currentPositionMs?.();
-      if (typeof a !== 'number' || typeof b !== 'number') return degrade();
-      samples.push(a - b);
-    }
-    const offset = median(samples);
-    mine.checks += 1;
-    if (offset >= TRANSIENT_HANDOVER.minOffsetMs && offset <= TRANSIENT_HANDOVER.maxOffsetMs) {
-      switchOver(mine, live);
-      return;
-    }
-    if (mine.checks >= TRANSIENT_HANDOVER.attempts) return degrade();
-    // The start latency the last seek met, aimed 5 ms behind (never ahead: no sample is skipped).
-    mine.leadMs = mine.leadMs - offset - 5;
-    const my = epoch;
-    await mine.player.seekTo(readPosition(live) + mine.leadMs).catch(() => undefined);
-    if (my !== epoch || standby !== mine) return;
-    mine.timers.push(setTimer(() => void align(mine), TRANSIENT_HANDOVER.settleMs));
-  }
-
-  /** A complementary ramp over 30 ms, then the old player paused and released and its file let go. */
-  function switchOver(mine: Standby, live: Live): void {
-    mine.ramping = true;
-    const steps = TRANSIENT_HANDOVER.rampSteps;
-    for (let i = 1; i <= steps; i += 1) {
-      mine.timers.push(setTimer(() => {
-        if (standby !== mine || current !== live) return;
-        live.player?.setVolume?.(1 - i / steps);
-        mine.player?.setVolume?.(i / steps);
-        if (i === steps) finishSwitch(mine, live);
-      }, (TRANSIENT_HANDOVER.rampMs / steps) * i));
-    }
-  }
-
-  function finishSwitch(mine: Standby, live: Live): void {
-    for (const timer of mine.timers) clearTimer(timer);
-    standby = null;
+  /**
+   * §20.2 (CA-07B-2): ONE player. The old one is paused FIRST, so the two generations are never heard together, and its
+   * place is read from it paused (a playing player's reported place runs ahead of, or behind, what is heard: step 6); the
+   * new file starts there, less the device's resume allowance. Then the old player is released and its file let go.
+   */
+  function switchToNext(live: Live): void {
+    if (next === null || current !== live) return;
     try {
       live.player?.pause();
     } catch {
       // Released below in any case.
     }
-    releasePlayer(live.player);
-    letGo(held);
-    held = next;
-    next = null;
-    renewalFailed = false;
-    const promoted: Live = {
-      token: mine.token, artifactId: mine.artifactId, runIndex: live.runIndex, player: mine.player, loaded: true,
-      lastPositionMs: readPosition({ ...live, player: mine.player }), seeking: 0,
-    };
-    current = promoted;
-    // The promoted player now reports as the subject's player.
-    if (held !== null) publishSet(held);
-    armDeadline();
-  }
-
-  /** §20 rule 3: pause → the exact place → release → the new player → seek → play. */
-  function degrade(): void {
-    if (next === null) {
-      releaseStandby();
-      return;
-    }
-    releaseStandby();
-    options.onEvent?.('TRANSIENT_HANDOVER_DEGRADED');
-    const live = current;
-    const at = live === null
-      ? { runIndex: state.runIndex, positionMs: state.positionMs }
-      : { runIndex: live.runIndex, positionMs: readPosition(live) };
-    resumeAt = at;
+    resumeAt = { runIndex: live.runIndex, positionMs: Math.max(0, readPosition(live) - TRANSIENT_HANDOVER.resumeBehindMs) };
     void startNext(false);
   }
 
@@ -904,7 +761,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     pause() {
       if (intent !== 'PLAY' && state.phase !== 'PREPARING' && state.phase !== 'BETWEEN') return;
       intent = 'PAUSE';
-      releaseStandby();
       let positionMs = state.positionMs;
       if (current !== null) {
         positionMs = readPosition(current);
@@ -923,7 +779,6 @@ export function createTransientPlayback(options: TransientPlaybackOptions): Tran
     seek(runIndex, positionMs) {
       if (retired || state.phase === 'ENDED') return;
       const to = Math.max(0, Math.round(positionMs));
-      releaseStandby();
       if (current !== null && current.player !== null && current.runIndex === runIndex) {
         const live = current;
         live.lastPositionMs = to;
