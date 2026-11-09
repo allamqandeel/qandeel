@@ -1,6 +1,22 @@
 # QANDEEL S8B-07 — Original Audio Replay, Media Rendering & Distribution: Implementation Record v1
 
-**Checkpoint:** S8B-07 CP1-B — Retained Call Listening & Original Audio Replay Playback (2026-11-07) — **CP1-B DELIVERED
+**Checkpoint:** S8B-07 CP1-B — **MERGED — PR #385 — `a4b30517` — 2026-11-08** (§13). **S8B-07 is not closed.** S8B-07
+CP2-A WP0 v0.3.1 is **FINAL APPROVED — NOT APPROVED FOR EXECUTION** (2026-11-09, §14): CP2-A and CP2-B are not started,
+and the Technical Spike (R-6) is not authorized. Every voice gate stays `DISABLED`, and the Personal Replay gate has no
+open state. Not VOICE LAUNCH READY.
+
+**Post-merge reconciliation (S8B-07 R-5, 2026-11-09; documentation only; no new authority):**
+- CP1-B merged through PR #385 as `a4b3051790d6ae6fbf99036d2fdce55d87ddcb7b` (2026-11-08; PR head `1a6dcc21`).
+  Migration `0196` is **not hosted**. No hosted resource exists, and no gate was opened.
+- The Product Owner's decision on the accessibility testing scope (2026-11-08, §13) was committed on the CP1-B branch as
+  `9c0fe867`, after `1a6dcc21`, and was **not pushed before PR #385 merged**. R-5 carries it to `main` unchanged; its
+  date stays 2026-11-08.
+- The synthetic MP4 device proof of the CP1-B Execution Order was not run in CP1-B: **NOT PROVEN — TRANSFERRED TO
+  CP2-A V-I** (§13, the matrix addendum).
+- `QAN-BL-MOB-04` and `QAN-BL-MOB-05` stay `CLOSED — TOMBSTONE`; their merge SHA is now recorded.
+- The CP1-B banner below is its pre-merge snapshot, kept as written.
+
+*(Pre-merge snapshot, as written at CP1-B's delivery:)* **Checkpoint:** S8B-07 CP1-B — Retained Call Listening & Original Audio Replay Playback (2026-11-07) — **CP1-B DELIVERED
 — READY FOR PO MERGE REVIEW — NOT CLOSED** (§13, 2026-11-08; Draft PR #385). On `s8b/s8b-07-cp1b` from `main` at `9eace91d`; **not merged; merge only on the Product Owner's
 explicit «ادمج»**. S8B-07 is not closed. Every voice gate stays `DISABLED`, and the Personal Replay gate has no open
 state. Not VOICE LAUNCH READY.
@@ -390,6 +406,9 @@ post-merge wording of the locators) stays with CP1-B step 0, as the approved exe
 
 **Status:** `CP1-B DELIVERED — READY FOR PO MERGE REVIEW — NOT CLOSED` (Draft PR #385). S8B-07 stays open: CP2-A and
 CP2-B are not started and not authorized.
+
+**Status after the merge (S8B-07 R-5, 2026-11-09):** `S8B-07 CP1-B — MERGED — PR #385 — a4b30517 — 2026-11-08`. The
+line above is the pre-merge status, kept as written. S8B-07 stays open; CP2-A and CP2-B are not started (§14).
 
 **Authority:**
 - The Product Owner's execution authorization (2026-11-07), after PR #384 merged as `9eace91d`.
@@ -1154,6 +1173,10 @@ place with a test that fails without it, and re-proven on the device. None chang
   appears, and its reference text is presented before any work.
 - No store listing claims VoiceOver or TalkBack support that has not been proven.
 
+*How it reached `main` (S8B-07 R-5, 2026-11-09):* this decision was committed on the CP1-B branch as `9c0fe867`, after
+`1a6dcc21`, and was not pushed before PR #385 merged as `a4b30517`. R-5 carries it unchanged. The decision's date
+(2026-11-08) and the historical results stay as written above.
+
 **CI correction (step 6):** 0196 has ten `voice_private` internals since step 3 (`transient_unavailable_reason_v1`).
 The 0183, 0185 and 0186 verifiers still counted nine, so `verify-api` failed at `e9a155f7`. The count is now ten in
 all three. This corrects their stale count; it does not loosen the census, which still requires the exact number.
@@ -1182,6 +1205,21 @@ all three. This corrects their stale count; it does not loosen the census, which
 | `QAN-BL-MOB-04`, `QAN-BL-MOB-05` (older than CP1-B), fixed at the PO's order | ✔ (jest + Android emulator, before / after) | | |
 | `prove-0196-media-service` on Linux (the harness fix) | ✔ (local 15 / 15; CI in PR #385) | | |
 
+**Matrix addendum (S8B-07 R-5, 2026-11-09; the matrix above is kept as written):**
+
+| Area | PASS | DEFERRED | NOT PROVEN |
+|---|---|---|---|
+| The synthetic MP4 of the approved S8B-01 profile played on the HONOR handset and on the iOS Simulator (the CP1-B Execution Order, outside the repository) | | | ✔ (**NOT PROVEN — TRANSFERRED TO CP2-A V-I**) |
+| V-24b, V-35b, hosted alert policies | | ✔ (now `QAN-BL-PROD-12`, HOSTED-DEPLOY-01) | |
+
+- **The synthetic MP4 proof.** The CP1-B Execution Order asked for it, and the matrix above has no row for it. It was not
+  run in CP1-B, and it was not recorded as deferred before R-5. It is neither PASS nor FAIL. It moves to CP2-A's device
+  test V-I (WP0 D-DEV-01, §14), beside the proof that the real renderer's output plays on the real HONOR and on the iOS
+  Simulator. It is not run now.
+- **V-24b, V-35b and the hosted alert policies.** §12.3 left them to CP1-B's closing change to admit under BG-08, and
+  CP1-B named them only in `QAN-BL-PROD-11`'s owner line. R-5 admits them as `QAN-BL-PROD-12` and narrows
+  `QAN-BL-PROD-11` to the `TRANSIENT_HANDOVER_DEGRADED` receiver and its alert (§14). The F-3 row above is unchanged.
+
 **Not authorized:**
 - any hosted resource or deployment (`0196` is never applied to a hosted database);
 - paid AI;
@@ -1192,3 +1230,86 @@ all three. This corrects their stale count; it does not loosen the census, which
 
 V-24b, V-35b and the hosted alert policies remain pre-deployment conditions (HOSTED-DEPLOY-01). They need a separate
 authorization for resources and cost.
+
+## 14. CP2-A WP0 — Video Rendering & Historical A/V Synchronization (FINAL APPROVED, 2026-11-09)
+
+**Status:** `S8B-07 CP2-A WP0 v0.3.1 — FINAL APPROVED — NOT APPROVED FOR EXECUTION`. This is a contract approval. CP2-A
+and CP2-B are not started, and nothing in this section authorizes implementation. Recorded by S8B-07 R-5 (the
+post-merge governance reconciliation, documentation only), on the Product Owner's R-5 authorization of 2026-11-09.
+
+**Authority:** the approved contract lives outside the repository and is not copied here:
+`E:\QANDEEL_REPORTS\S8B-07\CP2-A\WP0\S8B-07_CP2-A_WP0_v0.3.1_FINAL.md` (sha256
+`11ac2e9aeac19b29a476c2fd35c219445dbdc3f56fc60b895692ffca60b25bf4`). Beside it in the same folder: the reconciliation of
+v0.1 (R0), the v0.2 draft and the v0.3 text as delivered. That contract binds for CP2-A; this section only states what
+it decided.
+
+**The split:**
+- **CP2-A** renders the Personal Replay video and synchronizes the historical audio with it. It owns the render state and
+  the approved output up to its hand-over.
+- **CP2-B** owns export, delivery and distribution (`DOWNLOAD`, `SHARE_EXTERNALLY`, `PUBLISH_TO_PUBLIC_WORLD`) and the
+  delivery lifecycle.
+
+**The seven Gate 0 decisions, approved at contract level (Product Owner, 2026-11-09):**
+- **D-AUTH-01:** the input is a FINALIZED V2 Replay bound to its I-06C distribution package; `PREVIEW_READY` is refused.
+  The two fail-closed seams (`resolve_replay_analytical_distribution_authority_v1` and
+  `resolve_replay_distribution_prerequisites_v1`) are substituted only inside a temporary PostgreSQL for synthetic
+  tests. Every production path stays fail-closed, and success on a temporary database proves no production readiness.
+  The producer is `QAN-BL-PRIV-06`.
+- **D-TECH-02:** the pinned CI ffmpeg is checked first, then the encoder options are compared. The encoder is chosen at
+  Gate 2, after the Spike; licensing is the Product Owner's decision after their adviser's opinion. No GPL build is
+  assumed, and the pinned version is not changed.
+- **D-DEV-01:** device proof on the real HONOR and the iOS Simulator. The Android emulator only prepares. The synthetic
+  MP4 proof transferred from CP1-B (§13, the matrix addendum) joins V-I.
+- **D-CAP-01:** no derived caption without an approved source. Text moments show their source text only; F-2 stays
+  deferred, and there is no new ASR path.
+- **D-SYNC-01:** every audio and visual mark within 1000 / 30 ms, measured after decoding the MP4 on the presentation
+  timeline (AAC priming and edit lists included). The CA-07B-2 tolerances do not apply to video.
+- **D-PERF-01:** CP2-A runs V-24a-video locally and prepares the real render load. V-24b with that load on two
+  independent environments, V-35b, the pools' physical isolation and the Replay pool's general alerts are
+  `QAN-BL-PROD-12` (HOSTED-DEPLOY-01). This reads P-2 (§12.4: V-24b "re-run with video-render load at CP2-A") as: the
+  load comes from CP2-A, and the hosted run belongs to HOSTED-DEPLOY-01. The approved P-2 and D-06.7 values are
+  unchanged.
+- **D-SCOPE-01:** CP2-A is proven on the Personal Replay only, and its interfaces do not rule out Shared later. No CP3, and
+  `QAN-BL-NAV-03` is not opened.
+
+**The Product Owner's final approvals (2026-11-09):**
+- **R-1:** WP0 v0.3.1 as the final text. APPROVED.
+- **R-2:** the SPIKE-03 method (reference, crop, masks, normalization, theme, metric definitions), fixed before any run.
+  APPROVED.
+- **R-3:** the separate text test SPIKE-03T, with text-block position within 2 px per edge at width 720 and the same
+  line count. APPROVED.
+- **R-4:** the name `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer` for the separate engineering
+  task that owns `QAN-BL-PRIV-06`. APPROVED. The name does not authorize the task.
+
+**The order before full implementation:**
+1. **Gate 1, the Technical Spike (R-6): mandatory, and not authorized.** It needs its own authorization with its named
+   approvals.
+2. **Gate 1.5, the Visual Gate (VG-CP2A): mandatory**, after the Spike and before full implementation. No approved video
+   board exists. The Spike's static frames are a baseline, not a design, and no motion is added without approval.
+3. Gate 2, then the full CP2-A implementation and its device proof.
+
+**Also decided:**
+- **Hosting:** Replay hosting stays with HOSTED-DEPLOY-01 (INFRA-07, §12). No hosted resource is created.
+- **Duration:** no new maximum Replay duration, and the contract proposes none. Any cap needs an explicit Product Owner
+  decision after measurement. Resource limits for a render job are separate from the video's length; exceeding one
+  splits the work and does not refuse it.
+
+**Backlog (R-5; BG-06 / BG-08):**
+- **Admitted:** `QAN-BL-PRIV-06` (`HIGH`, `DEFERRED — OWNED` by `AUTH-SUBJ-01`) under BG-06's fourth route, the Product
+  Owner's explicit designation of 2026-11-09. CP1-A's "not admitted" (§10) and the I-06 closure record's non-admission
+  stand as written; this is a new decision, not a rewrite of either.
+- **Admitted:** `QAN-BL-PROD-12` (`HIGH`, `DEFERRED — OWNED` by HOSTED-DEPLOY-01), the residue §12.3 named.
+- **Narrowed:** `QAN-BL-PROD-11` keeps only the `TRANSIENT_HANDOVER_DEGRADED` receiver and its alert. Its owner, severity
+  and status are unchanged.
+- **Unchanged:** `QAN-BL-VOICE-01`, `QAN-BL-ACCT-03`, `QAN-BL-NAV-03`. S8B-06 is not reopened.
+- **Index after R-5:** 108 items; 54 / 4 / 13 / 37 by status (`DEFERRED — OWNED` / `VALIDATION — OPEN` /
+  `OPEN — UNASSIGNED` / `CLOSED — TOMBSTONE`), 63 / 42 / 3 by severity. WP0 Appendix E.3 expected "52 / 4 / 15 / 37": it
+  inferred the slot order wrongly, taking the third slot for `DEFERRED — OWNED`. The backlog's order puts it first, so the
+  two new items raise the first slot. The approved WP0 text is not edited.
+
+**Not authorized:**
+- R-6, the Technical Spike, and any video, Skia or FFmpeg code;
+- the CP2-A or CP2-B implementation;
+- `AUTH-SUBJ-01` or `HOSTED-DEPLOY-01`;
+- any hosted resource, download, install, paid service or gate change;
+- a merge without the Product Owner's «ادمج».
