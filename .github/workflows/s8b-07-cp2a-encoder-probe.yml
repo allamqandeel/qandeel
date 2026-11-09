@@ -1,0 +1,149 @@
+name: S8B-07 CP2-A encoder probe (measurement only)
+# S8B-07 CP2-A R-6C / E-01 - a MEASUREMENT of the Replay pool's pinned ffmpeg, nothing else. It answers SPIKE-00 (3)
+# and the governing part of the encoding verdict E (WP0 v0.3.1 Appendix C.2 / C.6): `-encoders`, `-buildconf` and
+# `-h encoder=libopenh264` from the pinned BtbN 9.0.2 LGPL file ITSELF, an ffprobe of synthetic encodes against the
+# approved profile, a determinism check, and resources under the pool's thread cap (-threads 1 -filter_threads 1).
+#
+#   trigger      pull_request only, and only for a DRAFT pull request from a branch of this repository; the paths filter
+#                is this file alone, so no other workflow's change runs it and it runs no other workflow
+#   pin          read from api-ci.yml (its single source of truth, pinned by tests/s8b-07-cp1b-media-worker-contract);
+#                each of the three pin lines must appear exactly once there, or nothing is downloaded
+#   download     the pinned asset only, refused unless its sha256 matches (--check --strict) - the api-ci pattern
+#   inputs       lavfi synthetic sources only: no repository code runs, no secret, no database, no network service
+#   outputs      one artifact of text/json files and the synthetic MP4s; nothing is judged here - the verdict is the
+#                spike report's, and a failed encode is recorded, never retried with a changed specification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/s8b-07-cp2a-encoder-probe.yml'
+permissions:
+  contents: read
+concurrency:
+  group: s8b-07-cp2a-encoder-probe-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  probe:
+    name: Pinned BtbN LGPL ffmpeg - identity, profile, determinism, resources
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out api-ci.yml only (the ffmpeg pin's single source of truth)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/api-ci.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Read the pin, download the pinned asset and refuse it unless its sha256 matches
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/s8b07-cp2a-encoder-probe"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+          mkdir -p "$OUT"
+          pin() {
+            local count
+            count=$(grep -cE "^[[:space:]]+$1=" .github/workflows/api-ci.yml || true)
+            [ "$count" = 1 ] || { echo "::error::$1 must appear exactly once in api-ci.yml (found $count)"; exit 1; }
+            grep -E "^[[:space:]]+$1=" .github/workflows/api-ci.yml | sed -E "s/^[[:space:]]+$1=//"
+          }
+          ffmpeg_tag=$(pin ffmpeg_tag)
+          ffmpeg_asset=$(pin ffmpeg_asset)
+          ffmpeg_sha256=$(pin ffmpeg_sha256)
+          printf 'tag=%s\nasset=%s\nsha256=%s\n' "$ffmpeg_tag" "$ffmpeg_asset" "$ffmpeg_sha256" | tee "$OUT/pin.txt"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$ffmpeg_asset" "https://github.com/BtbN/FFmpeg-Builds/releases/download/$ffmpeg_tag/$ffmpeg_asset"
+          echo "$ffmpeg_sha256  $RUNNER_TEMP/$ffmpeg_asset" | sha256sum --check --strict | tee "$OUT/sha256-check.txt"
+          stat -c '%s bytes' "$RUNNER_TEMP/$ffmpeg_asset" | tee -a "$OUT/sha256-check.txt"
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          tar -xJf "$RUNNER_TEMP/$ffmpeg_asset" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+      - name: Binary identity (SPIKE-00 (3)) - recorded, not judged
+        run: |
+          set -euo pipefail
+          ff="$RUNNER_TEMP/ffmpeg/bin/ffmpeg"; fp="$RUNNER_TEMP/ffmpeg/bin/ffprobe"
+          "$ff" -hide_banner -version > "$OUT/ffmpeg-version.txt"
+          "$ff" -hide_banner -L > "$OUT/ffmpeg-license.txt"
+          "$ff" -hide_banner -buildconf > "$OUT/ffmpeg-buildconf.txt"
+          "$ff" -hide_banner -encoders > "$OUT/ffmpeg-encoders.txt"
+          "$ff" -hide_banner -h encoder=libopenh264 > "$OUT/ffmpeg-h-encoder-libopenh264.txt"
+          "$ff" -hide_banner -h encoder=aac > "$OUT/ffmpeg-h-encoder-aac.txt"
+          "$fp" -hide_banner -version > "$OUT/ffprobe-version.txt"
+          sha256sum "$ff" "$fp" | sed "s#$RUNNER_TEMP/##" > "$OUT/binaries-sha256.txt"
+          { uname -a; nproc; lscpu; free -m; } > "$OUT/runner-environment.txt" 2>&1
+      - name: Synthetic encodes at the approved profile (190 s, one thread) - a failed encode is recorded, not retried
+        run: |
+          set -uo pipefail
+          ff="$RUNNER_TEMP/ffmpeg/bin/ffmpeg"
+          encode() { # name, video source, extra video options
+            local name=$1 src=$2; shift 2
+            local start end status
+            start=$(date +%s.%N)
+            "$ff" -hide_banner -nostdin -loglevel info -nostats -benchmark \
+              -f lavfi -i "$src" -f lavfi -i "sine=frequency=500:sample_rate=48000:duration=190" \
+              -map 0:v -map 1:a -threads 1 -filter_threads 1 -fflags +bitexact -flags +bitexact \
+              -c:v libopenh264 -profile:v main "$@" -pix_fmt yuv420p -r 30 -fps_mode cfr \
+              -c:a aac -ar 48000 -ac 1 -b:a 96k -movflags +faststart \
+              "$OUT/$name.mp4" > "$OUT/encode-$name.log" 2>&1
+            status=$?
+            end=$(date +%s.%N)
+            printf '%s exit=%s wall_s=%s\n' "$name" "$status" "$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.3f", b - a }')" | tee -a "$OUT/encodes.txt"
+            return 0
+          }
+          moving="testsrc2=size=720x1280:rate=30:duration=190"
+          static="color=c=0x202020:size=720x1280:rate=30:duration=190"
+          # The approved profile names level 4.0. The generic encoder option takes level_idc (40 = 4.0); whether libopenh264
+          # honours it is part of what is measured.
+          encode moving-level40-a "$moving" -level:v 40
+          encode moving-level40-b "$moving" -level:v 40
+          encode static-level40 "$static" -level:v 40
+          # Recorded beside it, never in its place: the same encode with the encoder's own level choice.
+          encode moving-default-level "$moving"
+          ls -l "$OUT"/*.mp4 >> "$OUT/encodes.txt" 2>&1 || true
+          (cd "$OUT" && sha256sum *.mp4 > mp4-sha256.txt 2>/dev/null || true)
+      - name: ffprobe, frame counts, box order and edit lists - recorded, not judged
+        run: |
+          set -uo pipefail
+          fp="$RUNNER_TEMP/ffmpeg/bin/ffprobe"
+          for f in "$OUT"/*.mp4; do
+            n=$(basename "$f" .mp4)
+            "$fp" -hide_banner -v error -show_streams -show_format -of json "$f" > "$OUT/ffprobe-$n.json" 2>&1
+            "$fp" -hide_banner -v error -count_frames -count_packets -select_streams v:0 \
+              -show_entries stream=nb_read_frames,nb_read_packets,r_frame_rate,avg_frame_rate -of json "$f" > "$OUT/ffprobe-frames-$n.json" 2>&1
+            python3 - "$f" > "$OUT/boxes-$n.json" <<'PY'
+          import json, struct, sys
+          data = open(sys.argv[1], 'rb').read()
+          def boxes(o, e):
+              while o + 8 <= e:
+                  size, kind = struct.unpack('>I4s', data[o:o + 8]); head = 8
+                  if size == 1: size = struct.unpack('>Q', data[o + 8:o + 16])[0]; head = 16
+                  elif size == 0: size = e - o
+                  yield kind.decode('latin1'), o + head, o + size
+                  o += size
+          top = [k for k, _, _ in boxes(0, len(data))]
+          edits = []
+          def walk(o, e):
+              for kind, c, n in boxes(o, e):
+                  if kind in ('moov', 'trak', 'edts'): walk(c, n)
+                  if kind == 'elst':
+                      version = data[c]; count = struct.unpack('>I', data[c + 4:c + 8])[0]; q = c + 8; entries = []
+                      for _ in range(count):
+                          if version == 1: d, m = struct.unpack('>Qq', data[q:q + 16]); q += 16
+                          else: d, m = struct.unpack('>Ii', data[q:q + 8]); q += 8
+                          q += 4; entries.append({'segment_duration': d, 'media_time': m})
+                      edits.append(entries)
+          walk(0, len(data))
+          print(json.dumps({'top_level_boxes': top, 'moov_before_mdat': 'moov' in top and 'mdat' in top and top.index('moov') < top.index('mdat'), 'edit_lists': edits}))
+          PY
+          done
+          (cd "$OUT" && sha256sum * > SHA256SUMS 2>/dev/null || true)
+          {
+            echo '### S8B-07 CP2-A encoder probe (measurement only)'
+            echo '```'; cat "$OUT/pin.txt" "$OUT/sha256-check.txt"; head -3 "$OUT/ffmpeg-version.txt"; cat "$OUT/encodes.txt"; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s8b07-cp2a-encoder-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/s8b07-cp2a-encoder-probe
+          retention-days: 14
+          if-no-files-found: error
