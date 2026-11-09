@@ -240,6 +240,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PROD-11` | Replay Generation Hand-over: the Phone's Content-free `TRANSIENT_HANDOVER_DEGRADED` Has No Receiver, and the Server Cannot Tell a Degraded Switch From an Ordinary End | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-MOB-04` | Voice Note Playback on Android: a Note That Plays to Its End Starts Again From Its Start While Its Control Shows Paused | `S8B-07 — Original Audio Replay, Media Rendering & Distribution (CP1-B)` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-MOB-05` | Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts | `S8B-07 — Original Audio Replay, Media Rendering & Distribution (CP1-B)` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-PRIV-06` | Protected-Human Analytical Subject-Authority Producer for Replay Distribution | `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-12` | Hosted Replay Pool Isolation & Monitoring Proofs | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1972,6 +1974,9 @@ Admitted by MEM-AR-01C under BG-06 in its closing change (CQ-2). Nothing here au
 - **Required future properties (Exit Gate):** PD-01 … PD-09 each pass on physical iOS and Android hardware against the
   production API, with evidence recorded; nothing in the A3-02 law (disclosure, revalidation, per-device evidence,
   no badge, no relay) is relaxed to pass them.
+- **Out of scope (the Product Owner's decision on the accessibility testing scope, 2026-11-08, recorded by S8B-07
+  CP1-B):** PD-09's assistive-technology check (VoiceOver / TalkBack on the education sheet and the device section). It
+  stays NOT PROVEN, not PASS. PD-01 … PD-08 and the rest of PD-09 are unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by A3-02 under BG-06 (the A3-02 Task Contract defers physical-device proof to named pre-release gates; the roadmap
@@ -3532,6 +3537,9 @@ Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06
 - **Reopen condition:** before `PERSONAL_VOICE_NOTE` opens, or when a physical-device validation pass is scheduled.
 - **Required future properties:** each item proven on a physical Android and iOS device with recorded evidence, or
   accepted as a stated limit by the Product Owner.
+- **Accepted as a stated limit (the Product Owner's decision on the accessibility testing scope, 2026-11-08, recorded by
+  S8B-07 CP1-B):** the TalkBack and VoiceOver part. It is not proven and needs no further proof; it stays NOT PROVEN, not
+  PASS. Every other part of this list is unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by `S8B-03` at its closing change (CP2, 2026-10-31) under BG-08 / BG-06. Nothing here authorizes implementation
@@ -3757,8 +3765,11 @@ Nothing here authorizes implementation (BG-07).
   - In CP1-B, HC-5's "zero degraded" is proven per transition from the server's own lifecycle (the old generation
     `RELEASED`, never `EXPIRED`). That proof covers 24 switches and the real 61-minute session on HONOR.
   - CA-07B-2 records the event as a test seam with no mandatory monitoring requirement in CP1-B.
-- **Owner task:** `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`, beside the hosted
-  Replay alert policies, V-24b and V-35b.
+- **Owner task:** `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`. *As first written: "…,
+  beside the hosted Replay alert policies, V-24b and V-35b"; those are `QAN-BL-PROD-12`'s since S8B-07 R-5.*
+- **Scope (narrowed by S8B-07 R-5, 2026-11-09, at the Product Owner's decision):** only the receiver of
+  `TRANSIENT_HANDOVER_DEGRADED` and the alert on it. V-24b, V-35b, the Replay / Live Voice pool isolation proof and the
+  Replay pool's general alerts are `QAN-BL-PROD-12`, not this item. Owner, severity and status unchanged.
 - **Severity:** `MEDIUM` — a degraded switch (a pause up to the renewal, CL-04 after 1 s) would go unseen in production.
   The listening itself stays correct and fail-safe.
 - **Reopen condition:** before the Replay pool is deployed or any Replay gate opens, or if a degraded switch is reported.
@@ -3769,6 +3780,70 @@ Nothing here authorizes implementation (BG-07).
 
 Admitted by `S8B-07` CP1-B (2026-11-08, Draft PR #385) under BG-06, at the Product Owner's decision on F-3 (2026-11-08).
 Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-PRIV-06` — Protected-Human Analytical Subject-Authority Producer for Replay Distribution
+
+- **Title / Finding:** no reviewed producer exists for the SUBJECT half of the analytical-authority requirement of a
+  Replay distribution package. So `resolve_replay_analytical_distribution_authority_v1` answers
+  `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` for a protected human subject in production, and no Replay can be
+  distributed. The seam fails closed by design: this is the missing producer, not a defect of the seam.
+- **Source:** the [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §14; S8B-07 CP2-A WP0 v0.3.1
+  (FINAL APPROVED, 2026-11-09, outside the repository: `E:\QANDEEL_REPORTS\S8B-07\CP2-A\WP0\`), D-AUTH-01 and Appendix
+  E.3; the Product Owner's designation of 2026-11-09 (R-4 names the owner task).
+- **Why deferred:** it is an independent engineering task that is not authorized. CP2-A substitutes the two seams only
+  inside a temporary PostgreSQL for synthetic tests, and that proves nothing about production. Every production path
+  stays fail-closed until this item and the CW2-08 gate close.
+- **Owner task:** `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer`, a separate engineering task
+  that is named and not authorized. It is not merged into the CW2-08 gate. **Stage 9 / CW2-08** is the closure guarantor:
+  no production Replay distribution opens before this item closes. It does not own the producer's implementation.
+- **Severity:** `HIGH` — a wrong producer could distribute analysis about a protected person without the authority it
+  needs.
+- **Reopen condition:** before any production Replay distribution or any distribution gate opening.
+- **Required future properties (closure conditions, from WP0 Appendix E.3; none is dropped):**
+  1. a reviewed canonical contract for the producer;
+  2. an implementation that produces a resolved state for a protected subject;
+  3. proof that `UNRESOLVED` stays unrepresentable inside the package;
+  4. proof on a real, non-temporary database;
+  5. `resolve_replay_distribution_prerequisites_v1` (CW2-08) stays a separate gate that this item does not close;
+  6. the synthetic substitution in CP2-A / CP2-B does not count, and its success does not prove production readiness.
+
+  The producer is additive: it reopens neither `0104` nor I-06, since the seam was designed as additive.
+- **Anti-duplication:** checked against all 106 earlier IDs and every tombstone. The I-06 closure record (§9) and S8B-07
+  CP1-A (2026-11-05) did not admit this producer: then it qualified under none of BG-06's routes. The Product Owner's explicit designation
+  of 2026-11-09 is a new route, recorded as a new decision. Neither earlier record is rewritten. `QAN-BL-ACCT-03`
+  (account erasure of Replay distribution) is a different obligation and is unchanged.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8B-07` R-5 (the post-merge governance reconciliation, 2026-11-09) under BG-06's fourth route, the
+Product Owner's explicit designation (D-AUTH-01, 2026-11-09). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-PROD-12` — Hosted Replay Pool Isolation & Monitoring Proofs
+
+- **Title / Finding:** the Replay Media Compute Pool's separation from the Live Voice Compute Pool, and its monitoring, are
+  not proven on hosted infrastructure. V-24a (local) is not a proof of pool separation (S8B-07 record §13, step 4).
+- **Source:** the [S8B-07 record](e2e/QANDEEL_S8B_07_ORIGINAL_AUDIO_REPLAY_RECORD_v1.md) §12.3 (named as residue for
+  CP1-B's closing change), §12.4 (P-2, P-4, V-35), §13 (the final matrix and its R-5 addendum) and §14 (D-PERF-01);
+  S8B-07 CP2-A WP0 v0.3.1, D-PERF-01 and Appendix E.3; the Product Owner's decision of 2026-11-09.
+- **Why deferred:** each proof needs hosted resources and their cost, which need a separate authorization. CP1-B's
+  closing change named them only in `QAN-BL-PROD-11`'s owner line, and never admitted them.
+- **Owner task:** `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`.
+- **Severity:** `HIGH` — Replay work that reached the Live Voice pool, or a Replay pool failure nobody sees, would cost
+  live calls their speed (INFRA-07-01: Live Voice priority is absolute).
+- **Reopen condition:** before any hosted Replay deployment or any Replay gate opening.
+- **Required future properties:**
+  1. V-24b on two independent environments, under CP2-A's **real video-render load** (CP2-A prepares that load);
+  2. V-35b;
+  3. proof of the physical isolation of the Replay pool from the Live Voice pool;
+  4. the Replay pool's general alerts: uptime, the dead-man heartbeat and the hosted alert policies (INFRA-07, P-4).
+
+  Out of scope: the `TRANSIENT_HANDOVER_DEGRADED` receiver and its alert stay `QAN-BL-PROD-11`'s.
+- **Anti-duplication:** checked against all 107 earlier IDs and every tombstone. No item held these proofs; only
+  `QAN-BL-PROD-11`'s owner line named them, and that line is narrowed in the same change.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S8B-07` R-5 (the post-merge governance reconciliation, 2026-11-09) under BG-06 (explicitly deferred by a
+canonical document: record §12.3, §12.4 P-2), at the Product Owner's decision of 2026-11-09. Nothing here authorizes
+implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -4583,7 +4658,7 @@ Tombstoned by `INTEL-04` at its closing change (2026-11-04) under BG-08; its fin
 ### `QAN-BL-MOB-04` — Voice Note Playback on Android: a Note That Plays to Its End Starts Again From Its Start While Its Control Shows Paused
 
 - **Closing task:** `S8B-07 — Original Audio Replay, Media Rendering & Distribution` (CP1-B, under the Product Owner's order of 2026-11-08 to fix the mobile defects before the merge)
-- **PR / SHA:** `#385` (Draft, not merged) / `0a614db5`; the merge SHA is recorded at merge
+- **PR / SHA:** `#385`, merged as `a4b3051790d6ae6fbf99036d2fdce55d87ddcb7b` (2026-11-08) / `0a614db5`. *As first written: "`#385` (Draft, not merged) / `0a614db5`; the merge SHA is recorded at merge"; the merge SHA recorded by S8B-07 R-5, 2026-11-09.*
 - **Disposition:** fixed in the app (`voice-note-playback.ts`): at its end a note is paused, then moved to its start. Proven in jest and on the Android emulator, before and after.
 
 - **Title / Finding:** at a note's end the playback sets the note to `PAUSED` at position 0 and seeks the player to 0
@@ -4612,7 +4687,7 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 ### `QAN-BL-MOB-05` — Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts
 
 - **Closing task:** `S8B-07 — Original Audio Replay, Media Rendering & Distribution` (CP1-B, under the Product Owner's order of 2026-11-08 to fix the mobile defects before the merge)
-- **PR / SHA:** `#385` (Draft, not merged) / `0a614db5`; the merge SHA is recorded at merge
+- **PR / SHA:** `#385`, merged as `a4b3051790d6ae6fbf99036d2fdce55d87ddcb7b` (2026-11-08) / `0a614db5`. *As first written: "`#385` (Draft, not merged) / `0a614db5`; the merge SHA is recorded at merge"; the merge SHA recorded by S8B-07 R-5, 2026-11-09.*
 - **Disposition:** fixed in the app (`LivingAnalysisMap.tsx`, `DepthComposition.tsx`): the cause is found, it predates CP1-B, and the fix changes no approved contract. Proven in jest and on the Android emulator, before and after; HONOR was not re-run.
 
 - **Title / Finding:** in the CP1-B proof app on HONOR (APK r12, 2026-11-08), once a live call starts, the bottom
@@ -4645,19 +4720,23 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 51 |
+| `DEFERRED — OWNED` | 54 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 12 |
-| `CLOSED — TOMBSTONE` | 35 |
-| **Total** | **102** |
+| `OPEN — UNASSIGNED` | 13 |
+| `CLOSED — TOMBSTONE` | 37 |
+| **Total** | **108** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 59 |
-| `MEDIUM` | 40 |
+| `HIGH` | 63 |
+| `MEDIUM` | 42 |
 | `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
+
+*Count correction (S8B-07 R-5, 2026-11-09):* the two tables above had stayed at S8B-07 CP1-A's 102 items
+(51 / 4 / 12 / 35; 59 / 40 / 3). CP1-B's change and the Product Owner's order of 2026-11-08 left them unchanged, though
+the log below records 106 items. They now show the index after R-5, counted mechanically: 108 items.
 
 T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` was the sole new BG-08
 admission made *at* T-12 closure. `QAN-BL-AUTH-01` is a later BG-08 reconciliation: the residue was
@@ -6205,6 +6284,41 @@ exact Live Focus events and no refusal or loss (record §4.2). No production log
   proof world's projection fixture that lagged the real Live Head is a harness fault, outside the repository, and the
   spoken RA-15 / RA-16 stay a NOT PROVEN line of the record's matrix, not an item.
 - **Index after the order: 106 items; 52 / 4 / 13 / 37 by status, 61 / 42 / 3 by severity.**
+- **The Product Owner's decision on the accessibility testing scope (2026-11-08):** every additional TalkBack and
+  VoiceOver test planned is cancelled, RA-15 / RA-16 included; they block neither CP1-B's merge nor the launch, and are
+  not carried forward as a future task. `QAN-BL-VOICE-04`'s TalkBack / VoiceOver part and `QAN-BL-NOTIF-05`'s PD-09
+  assistive-technology check are accepted as a stated limit; their other parts, owners and statuses are unchanged. The
+  historical results stay NOT PROVEN, not PASS. The subject reopens only on a specific official Apple App Store or
+  Google Play acceptance condition, with its reference text presented first. No item is admitted or tombstoned; the
+  index is unchanged.
+  *How it reached `main` (S8B-07 R-5, 2026-11-09):* the entry above was committed on the CP1-B branch as `9c0fe867`
+  but not pushed before PR #385 merged; R-5 carries it unchanged, with its date.
+
+**S8B-07 R-5 — Post-merge governance reconciliation (2026-11-09; from `main` at `a4b30517`; documentation only; a Draft
+PR, not merged).**
+
+- **The merge:** S8B-07 CP1-B merged through PR #385 as `a4b3051790d6ae6fbf99036d2fdce55d87ddcb7b` (2026-11-08). S8B-07
+  and Stage 8B are not closed. `QAN-BL-MOB-04` and `QAN-BL-MOB-05` stay `CLOSED — TOMBSTONE`; their merge SHA is now
+  recorded.
+- **The contract:** S8B-07 CP2-A WP0 v0.3.1 is `FINAL APPROVED — NOT APPROVED FOR EXECUTION` (2026-11-09; record §14).
+- **Admitted (BG-06), at the Product Owner's decisions of 2026-11-09:**
+  - `QAN-BL-PRIV-06` (`HIGH`, `DEFERRED — OWNED` by `AUTH-SUBJ-01`, a named task not authorized), under BG-06's fourth
+    route, the Product Owner's explicit designation. Stage 9 / CW2-08 guarantees its closure before any production
+    distribution;
+  - `QAN-BL-PROD-12` (`HIGH`, `DEFERRED — OWNED` by HOSTED-DEPLOY-01): V-24b under the real video load, V-35b, pool
+    isolation and the Replay pool's general alerts. §12.3 of the record had left them for CP1-B's closing change to
+    admit, and CP1-B named them only in `QAN-BL-PROD-11`'s owner line.
+- **Narrowed:** `QAN-BL-PROD-11` keeps only the `TRANSIENT_HANDOVER_DEGRADED` receiver and its alert. Owner, severity and
+  status unchanged.
+- **Read and left unchanged:** `QAN-BL-VOICE-01` (worked by S8B-07; its current truth is updated when CP2-A closes),
+  `QAN-BL-ACCT-03` (it reopens at CP2-B and CP3), `QAN-BL-NAV-03` (`UNASSIGNED`, outside CP2-A), and S8B-06's items.
+  `QAN-BL-VOICE-04` and `QAN-BL-NOTIF-05` change only by the accessibility decision above.
+- **Not proven, moved:** the synthetic MP4 device proof of the CP1-B Execution Order was not run:
+  `NOT PROVEN — TRANSFERRED TO CP2-A V-I`. It is a line of the record's matrix, not an item.
+- **Corrected:** the §7 count tables (they had stayed at 102) and the HOSTED-DEPLOY-01 inheritance row, which had not
+  listed `QAN-BL-PROD-11` (§9).
+- **BG-09:** S8B-07 is not closed. The record and the locators carry `CP1-B MERGED` and the WP0 approval.
+- **Index after R-5: 108 items; 54 / 4 / 13 / 37 by status, 63 / 42 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
@@ -6297,7 +6411,7 @@ Inherited after T-12 closure reconciliation:
 | `PUB-REV-01 — Published Topic Revisions & Version-Continuous Public Discussion` | `QAN-BL-PUB-REV-01` (`PRE-LAUNCH BLOCKER`; admitted by S8A-05's closing change at the Product Owner's designation, 2026-10-27; must be done and tested before Stage 9 opens production publishing) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
-| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project); `QAN-BL-PROD-10` (admitted by S6-07's closing change, 2026-10-18: a photo object lost from the store blocks its owner's export bundle) |
+| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project); `QAN-BL-PROD-10` (admitted by S6-07's closing change, 2026-10-18: a photo object lost from the store blocks its owner's export bundle); `QAN-BL-PROD-11` (admitted by S8B-07 CP1-B, 2026-11-08; listed here by S8B-07 R-5; narrowed by R-5 to the `TRANSIENT_HANDOVER_DEGRADED` receiver and its alert); `QAN-BL-PROD-12` (admitted by S8B-07 R-5, 2026-11-09: V-24b under CP2-A's real video load, V-35b, Replay / Live Voice pool isolation and the Replay pool's general alerts) |
 | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
 | `CI-01 — Shared Intelligence Learning Evidence & Baseline` | none — no item names it; admitted `QAN-BL-INTEL-01` (C1-A, Product Owner decision 3), `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (closing change, Product Owner closing decisions 2 and 3); `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02` cited and left unchanged |
 | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` tombstoned after merged PR #326; `QAN-BL-QIR-01` admitted under `QIR-006-R1`; `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`; no deployment or global erasure claim |
@@ -6324,7 +6438,8 @@ Inherited after T-12 closure reconciliation:
 | `S8B-08 — Voice Cost, Privacy & Launch Evidence` | `QAN-BL-VOICE-02`, `QAN-BL-VOICE-03`, `QAN-BL-VOICE-04` (admitted by S8B-03's closing change, 2026-10-31); `QAN-BL-VOICE-05` (admitted by S8B-04's closing change, 2026-11-02); `QAN-BL-VOICE-08` (admitted by S8B-06's closing change, 2026-11-04) |
 | `GCR-01 — Growth & Capacity Readiness` | `QAN-BL-VOICE-07` (admitted by S8B-05's closing change, 2026-11-03) |
 | `INTEL-04 — Thread Lifecycle Derivation Correction` | `QAN-BL-INTEL-04` (admitted by S8B-06 CP3 under PO Review R1, 2026-11-04; owned by the Product Owner's decision of the same day); *the closing change (2026-11-04, the INTEL-04 Draft PR from `main` at `8e590234`; effective from its merge):* BG-08 reconciled: `QAN-BL-INTEL-04` tombstoned (`0194`, not hosted); admitted `QAN-BL-INTEL-05` (`UNASSIGNED`) |
-| `S8B-07 — Original Audio Replay, Media Rendering & Distribution` | none owned by its own name at kickoff (BG-05, 2026-11-05, from `main` at `e9311ca1`); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); *CP1-A (2026-11-05, a Draft PR from `s8b/s8b-07-cp1a`; effective from its merge):* admitted `QAN-BL-NAV-03` (`UNASSIGNED`, D-01(a)); tombstoned nothing; *CP1-B (2026-11-08, Draft PR #385; effective from its merge):* admitted `QAN-BL-MOB-03`, `QAN-BL-PROD-11` (HOSTED-DEPLOY-01), `QAN-BL-MOB-04` and `QAN-BL-MOB-05`; at the Product Owner's order of 2026-11-08, re-owned and tombstoned `QAN-BL-MOB-04` and `QAN-BL-MOB-05` (`0a614db5`); S8B-07 not closed |
+| `S8B-07 — Original Audio Replay, Media Rendering & Distribution` | none owned by its own name at kickoff (BG-05, 2026-11-05, from `main` at `e9311ca1`); it works `QAN-BL-VOICE-01` for Stage 8B (`DEFERRED — OWNED`, `HIGH`; worked, not delivered); *CP1-A (2026-11-05, a Draft PR from `s8b/s8b-07-cp1a`; effective from its merge):* admitted `QAN-BL-NAV-03` (`UNASSIGNED`, D-01(a)); tombstoned nothing; *CP1-B (2026-11-08, Draft PR #385; effective from its merge):* admitted `QAN-BL-MOB-03`, `QAN-BL-PROD-11` (HOSTED-DEPLOY-01), `QAN-BL-MOB-04` and `QAN-BL-MOB-05`; at the Product Owner's order of 2026-11-08, re-owned and tombstoned `QAN-BL-MOB-04` and `QAN-BL-MOB-05` (`0a614db5`); S8B-07 not closed; *CP1-B merged through PR #385 as `a4b30517` (2026-11-08)*; *R-5, the post-merge governance reconciliation (2026-11-09, a Draft PR from `s8b/s8b-07-post-merge-reconciliation`; effective from its merge):* carried the accessibility decision of 2026-11-08 (`9c0fe867`, not pushed before the merge); recorded CP2-A WP0 v0.3.1 `FINAL APPROVED — NOT APPROVED FOR EXECUTION`; admitted `QAN-BL-PRIV-06` (`AUTH-SUBJ-01`) and `QAN-BL-PROD-12` (HOSTED-DEPLOY-01); narrowed `QAN-BL-PROD-11`; tombstoned nothing; S8B-07 not closed |
+| `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer` | `QAN-BL-PRIV-06` (admitted by S8B-07 R-5, 2026-11-09, at the Product Owner's designation; owner name APPROVED by the Product Owner, R-4, 2026-11-09). A named future engineering task, **not authorized**; Stage 9 / CW2-08 guarantees the item's closure before any production Replay distribution and does not own its implementation |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
