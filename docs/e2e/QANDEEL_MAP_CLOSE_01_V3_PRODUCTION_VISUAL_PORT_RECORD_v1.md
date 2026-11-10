@@ -1,6 +1,6 @@
 # QANDEEL — MAP-CLOSE-01 Step 4 / V-3 — Production Visual Port of S3-R2 — Record v1
 
-**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B) IN PROGRESS — NOT READY FOR CLOSURE — NOT MERGED`
+**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PAN PERFORMANCE NOT MET, AWAITS THE PO — NOT READY FOR CLOSURE — NOT MERGED`
 **Task:** MAP-CLOSE-01 Step 4 / V-3, the production visual port of the approved S3-R2 art direction into the existing Personal Living Analysis map.
 **Date:** 2026-11-10. **Baseline:** `main` at `5a21971d` (the merge of PR #390, MAP-CLOSE-01 Step 2). **Branch:** `map/map-close-01-v3-production-port`.
 **Authority:** Product Owner, 2026-11-10, six messages:
@@ -173,9 +173,10 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 - no line drawn;
 - more recorded pictures with the continuity (the deep space and the fine threads).
 
-**Not yet proven:**
-- the three worlds on a device (the stacked Part B's §11 carries the device matrix);
-- the three worlds on a real phone.
+**On the PO's phone (the stacked Part B's §11 carries the evidence).**
+- Function: 36 / 36 PASS (Before, After and a fade variant × four legs × the three worlds).
+- Pan performance: NOT MET. The continuity lowers the Shared and Public fields' presented frames by about a third, and the Personal port halves them against main. Awaits the PO's decision.
+- A two-finger pinch is not proven (Maestro cannot pinch).
 
 **The PR order is unchanged.** This commit is on Part A (#391). Part B (#392) merges it in, and no history is rewritten.
 
@@ -298,7 +299,7 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** none is connected. Every device result in this record is from the Android emulator, and is never claimed as phone proof.
-- **The three worlds on a device and on a real phone (§5B):** required by the PO before V-3 closes.
+- **The three worlds on a real phone (§5B):** run on the PO's phone (Part B §11). Function passes; pan performance is NOT MET and awaits the PO's decision. V-3 does not close on it.
 
 ## 11. Part B — the Analysis screen UI (PO addition, 2026-11-10)
 **The PO's instruction:**
