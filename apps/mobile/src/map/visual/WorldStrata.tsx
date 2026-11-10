@@ -404,8 +404,9 @@ export function FadedLayer({
 /**
  * One tiled stratum. The grid covers the envelope plus one tile, and its origin is the stratum's
  * world offset plus the plane's residual translation at the stratum's rate, wrapped to the tile.
+ * MAP-CLOSE-01 V-3: exported for the Personal Map's deep space (`./WorldContinuity`), unchanged.
  */
-function Stratum({
+export function Stratum({
   motion,
   drift,
   tile,

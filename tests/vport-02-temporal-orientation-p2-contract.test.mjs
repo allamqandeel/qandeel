@@ -177,14 +177,21 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // grammar from it. Both goldens were re-recorded after the structural diff proved every case differs in Skia paint only
   // (host tree and every anchor identical; the increased-contrast cases unchanged). Previous pins: MapCanvas a82f761f,
   // WorldMarks 8b81a4e4.
+  // MAP-CLOSE-01 V-3 C1–C3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10, "V-3: Final Visual Integration — PO
+  // APPROVED"): the Personal owner opts WorldCanvas into the S3-R2 continuity (`continuity`), which draws the deep space,
+  // the place threads at four world sizes and the NEAR paint cap from the new paint module WorldContinuity (pinned here);
+  // WorldStrata only exports Stratum. Both goldens were re-recorded after the structural diff proved the change is Skia
+  // paint only (additions, and the nebula mask's opacity values); the Shared and Public worlds never opt in. Previous
+  // pins: MapCanvas cabef8ef, WorldCanvas e0ddba00, WorldStrata e17cef8d.
   for (const [path, blob] of [
-    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'cabef8ef4dd1c32c14d8c8c5d1dffa38b5ba1d91'],
+    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'e0ddba0057a6506cc5b68454a7a41b8f923bbb5f'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '69b6a18393d408059ae0d6a9e859217263d45a33'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '59de78381404afe2353efeea31ea3eb277450a1c'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'e17cef8d90b4c4c9543d9164091b6e266a388896'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', '6f6b8b94e980b19125ca501191923000a77959de'],
+    ['apps/mobile/src/map/visual/WorldContinuity.tsx', '4c49a09448f866208667caea3f78d54bdd92025a'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],

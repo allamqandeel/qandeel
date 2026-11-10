@@ -1,15 +1,17 @@
 # QANDEEL — MAP-CLOSE-01 Step 4 / V-3 — Production Visual Port of S3-R2 — Record v1
 
-**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A SLICE 1 (NODES AND RELATIONS) DELIVERED ON A DRAFT PR — PART A SLICE 2 AND PART B (ANALYSIS SCREEN UI) NOT STARTED — NOT MERGED`
+**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — READY FOR PO VISUAL & MERGE REVIEW — NOT MERGED`
 **Task:** MAP-CLOSE-01 Step 4 / V-3, the production visual port of the approved S3-R2 art direction into the existing Personal Living Analysis map.
 **Date:** 2026-11-10. **Baseline:** `main` at `5a21971d` (the merge of PR #390, MAP-CLOSE-01 Step 2). **Branch:** `map/map-close-01-v3-production-port`.
-**Authority:** Product Owner, 2026-11-10, two messages:
+**Authority:** Product Owner, 2026-11-10, four messages:
 1. **"PO Final Visual Approval & Step 4 / V-3":** S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION; close Step 3; V-3 is authorized.
 2. **"إضافة محدودة إلى V-3 قبل الإغلاق":** the Analysis screen UI around the map joins V-3's scope, as a separate reviewable part after the drawing is proven (§11).
+3. **"PO Decisions: FAR / MID / NEAR Visual Continuity":** D1 approved (MID and NEAR derive from S3-R2 as the same world, closer); D2 approved conditionally (a governed change of the world's response to distance, for the Personal Map only, separated from the frozen sources); D3 approved (ANALYTICAL is fixed in paint, not geometry); D4 keep (the register is unchanged). A derived reference comes first.
+4. **"V-3: Final Visual Integration — PO APPROVED":** the derived continuity reference is approved for FAR / MID / NEAR / ANALYTICAL; C1, C2 and C3 are authorized inside V-3 (§5A); Part B follows once the map is proven; no new art round.
 
 **Merge rule:** production changes are not merged before the PO's approval.
 
-> **The production map now draws its nodes and relations in the S3-R2 grammar, from real data only. The engine, the placement, the interactions and every meaning underneath it did not move.**
+> **The production map now draws its nodes and relations in the S3-R2 grammar, from real data only. Its world is S3-R2's world at every distance: FAR, MID, NEAR and ANALYTICAL are one world approached. The engine, the camera, the placement, the interactions and every meaning underneath it did not move.**
 
 ---
 
@@ -82,14 +84,62 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 
 **R1 (after the first device comparison):** the first build drew a large white centre inside a pale ring, and the relations read as dim rails. R1 makes the centre smaller and the hot point whiter, draws the ring closer and more saturated, strengthens the bloom, and draws each relation as a single bowed line of light (no dark ground and no wide body under it).
 
+## 5A. C1 / C2 / C3 — one world at every distance (PO, 2026-11-10)
+**The reference.** S3-R2 is one still frame with no camera. The approved derived reference (`QANDEEL_REPORTS/MAP-CLOSE-01/V3/ref`) fixed the rule. It is `web-cam.js`, generated from the pinned `web.js`, and without a camera it is byte-identical to `6bd02896…`. The rule:
+- closer, the SAME material is revealed at a finer scale, so it stays about its FAR size on the glass;
+- a place keeps its colour;
+- nodes and relations keep their size.
+
+**Where it lives.** One new module, `apps/mobile/src/map/visual/WorldContinuity.tsx`.
+- Only the Personal owner opts in: `MapCanvas` passes `continuity` to `WorldCanvas`. It is off by default, and the Shared and Public worlds never pass it.
+- It READS the generated I-08B1 schedule and never edits it. `world-visual.generated.ts`, `world-field.generated.ts` and `useWorldResponse.ts` are unchanged.
+
+**C1: the S3-R2 material.**
+- *What:*
+  - **Deep space** (S3-R2 `amb` + `fill`): soft cool clouds in the world's own deepest cloud hues (its generated hue ladder), faint ridges where those clouds are, and quiet wisps.
+  - **Fine threads** of each place (S3-R2 `fine` / `farweb`): hairline walkers on a flow field, clumped by a density field so dark voids stay. They take the colour the world has at the place's ADDRESS.
+- *How (paint only):*
+  - Two tiles, each painted ONCE per process in the S8B-06 bands (`rasterTile`, which releases the JS thread between bands).
+  - The walk uses one shared periodic flow grid. It costs about 0.1 s of JS, once (measured without a JIT).
+  - Each thread path is built from one string, so it costs one native call.
+
+**C2: continuity.**
+- *What:*
+  - The deep space has one weight at every distance.
+  - I-08B1's fade of the deep clouds is held to 35 % of itself (`ContinuityAtmosphere`).
+  - I-08B1's FAR colour layer keeps 30 % after FAR.
+  - The threads are drawn at FOUR world sizes (FAR, MID, NEAR, ANALYTICAL), one ×8 rung apart. They hand over to one another along the presented distance, on the plane's own frames, with no animation of their own.
+- *How (paint only):*
+  - The threads are world-anchored: the tile's origin is where the world's origin falls, computed from a place's exact address, so they travel and scale with the world.
+  - The deep space sits at the clouds' depth plane.
+
+**C3: ANALYTICAL.**
+- *What:*
+  - Past NEAR, a place's mass keeps its NEAR size on the glass (`NearCap`: a paint scale about the place's own point, exactly 1 at or before NEAR).
+  - The threads take over the close-in texture, so the glass shows the place's material with its voids, not a fog.
+- *How (paint only):*
+  - The camera, placement, hit testing and accessibility are untouched.
+  - The cap is a plain transform with no origin. It is never an anchor.
+
+**Truth (unchanged).**
+- Nothing in C1–C3 is an object, a relation, a group or a membership.
+- The deep space is the same everywhere.
+- A place's threads are the same material at every place, in the colour of the world at its address.
+- No group, topic, name or synthetic membership from the reference was brought into the app.
+
 ## 6. Controlled amendments (named; none silent)
 | Contract | Amendment | Why it is allowed |
 |---|---|---|
 | VPORT-02 world pins (`tests/vport-02-temporal-orientation-p2-contract.test.mjs`) | `MapCanvas` `a82f761f` → `cabef8ef`; `WorldMarks` `8b81a4e4` → the R1 blob; recorded in the test as "MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR" with the previous pins | PO authorization of V-3 (2026-11-10); paint-only by the structural diff |
 | VPORT-01 chroma rule (`tests/vport-01-world-visual-contract.test.mjs`) | **tightened**, not relaxed: the Personal owner reads the chroma in `placeChromaOf` only, by a Home's address or its host Home's, and passes it to a tether and an object only. A mutation that colours a mark by anything else fails the test | makes the V-3 extension explicit |
 | Personal map and screen goldens | re-recorded | paint-only by the structural diff (§7) |
+| **C1–C3:** VPORT-02 world pins | `MapCanvas`, `WorldCanvas` and `WorldStrata` re-anchored; `WorldContinuity.tsx` pinned; recorded in the test as "MAP-CLOSE-01 V-3 C1–C3 — CONTROLLED RE-ANCHOR" with the previous pins | PO "V-3: Final Visual Integration — PO APPROVED" (2026-11-10); paint-only by the structural diff (§7) |
+| **C1–C3:** VPORT-01 | `WorldContinuity.tsx` joins the hand-written visual owner under every rule (no colour literal, no forbidden read, no timer). `worldAddressOf` is read once more, for the continuity places only (count 3 → 4, the line pinned). A new test pins the module's imports, its Personal-only opt-in, the cap as a plain paint transform, and that nothing that decides reads it | makes the amendment explicit and narrow |
+| **C1–C3:** Map runtime census | `visual/WorldContinuity.tsx` added to the authorized file surface | the new paint module is declared, not slipped in |
+| **C1–C3:** `WorldStrata.tsx` | `Stratum` exported, otherwise unchanged | the deep space reuses the one stratum grid |
+| **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
 
-No other frozen file changed. The chroma families (`world-chroma.ts`) and every token are unchanged.
+No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
 
 ## 7. Verification
 _(filled in §7 after the device run.)_
@@ -103,7 +153,7 @@ _(filled in §7 after the device run.)_
 _(filled after the device run.)_
 
 ## 10. Not done yet
-- **Part A Slice 2:** deep-space depth, fine threads inside each place's own mass in its own chroma, quiet fill (S3-R2 `fine`, `fill`, `farweb`), with phone-sized particle counts.
+- **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** none is connected. Every device result in this record is from the Android emulator, and is never claimed as phone proof.
 
