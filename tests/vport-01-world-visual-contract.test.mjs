@@ -268,11 +268,11 @@ test('LA-VIS-01: a place mass is pure paint — one picture per meaning-free var
   }
 });
 
-test('MAP-CLOSE-01 V-3: the S3-R2 continuity (C1 / C2 / C3) is the Personal Map\'s own paint, separated from the frozen world', () => {
+test('MAP-CLOSE-01 V-3: the S3-R2 continuity (C1 / C2 / C3) is one paint for every world, separated from the frozen world', () => {
   // Product Owner, 2026-11-10 ("V-3: Final Visual Integration — PO APPROVED"): C1 (the S3-R2 material), C2 (continuity
-  // across FAR / MID / NEAR) and C3 (ANALYTICAL without fog) are authorized inside V-3, for the Personal Map only, without
-  // editing the frozen I-08B1 sources. The override lives in ONE module, which reads the generated schedule and never
-  // writes it; only the Personal owner opts in; and the generic canvas is exactly what it was without it.
+  // across FAR / MID / NEAR) and C3 (ANALYTICAL without fog) are authorized inside V-3 without editing the frozen I-08B1
+  // sources. The override lives in ONE module, which reads the generated schedule and never writes it; a world's owner
+  // opts in (every world, since the scope correction below); and the generic canvas is exactly what it was without it.
   const continuity = visualCode['WorldContinuity.tsx'];
   const imports = [...continuity.matchAll(/^import [^;]*? from '([^']+)';/gmu)].map((m) => m[1]);
   assert.deepEqual(imports, ['react', '@shopify/react-native-skia', '../../motion', '../camera', '../world', './world-chroma', './world-resolver', './world-visual.generated', './WorldStrata', './useWorldResponse']);
@@ -286,10 +286,25 @@ test('MAP-CLOSE-01 V-3: the S3-R2 continuity (C1 / C2 / C3) is the Personal Map\
   // The frozen sources are read, not edited: the generated modules are still the generator's (the first test), and the
   // I-08B1 response hook is not part of this module.
   assert.equal(continuity.includes('useWorldResponse('), false);
-  // Only the Personal owner opts in; the shared and public worlds never do.
+  // MAP-CLOSE-01 V-3 — CONTROLLED AMENDMENT (Product Owner scope correction, 2026-11-10: the Personal, Shared and Public
+  // worlds share ONE graphic language and ONE renderer, and differ only in their data, meanings and acts). Previously:
+  // only the Personal owner opted in, and the Shared and Public fields were asserted NOT to. Now every world's owner opts
+  // in, through the same generic canvas and beside the same served address it already reads for the place colour, and
+  // nothing else of the Personal world travels: no chroma on a mark (the neutral Public circle, S5-03B D2), no
+  // morphology, no tether, no membership. The behaviour is proven, not only declared: each field's own test paints the
+  // same FAR / MID / NEAR with and without the continuity and finds every target, label, panel and mark identical, and
+  // no line drawn (shared-field.test.tsx, public-field.test.tsx).
   assert.match(personalCanvasOwner, /\n\s*continuity\n/u, 'the Personal owner opts in');
-  for (const file of ['apps/mobile/src/public-world/field/PublicFieldView.tsx', 'apps/mobile/src/shared-world/field/SharedFieldView.tsx']) {
-    assert.equal(/\bcontinuity\b/u.test(stripComments(read(file))), false, `${file} does not opt in`);
+  for (const [file, proof] of [
+    ['apps/mobile/src/public-world/field/PublicFieldView.tsx', 'apps/mobile/src/public-world/field/__tests__/public-field.test.tsx'],
+    ['apps/mobile/src/shared-world/field/SharedFieldView.tsx', 'apps/mobile/src/shared-world/field/__tests__/shared-field.test.tsx'],
+  ]) {
+    const owner = stripComments(read(file));
+    assert.match(owner, /worldAddressOf=\{\(node\) => node\.entry\.address\}\s*continuity\n/u, `${file} opts in, beside its served address`);
+    assert.equal(/chroma=|placeChromaOf|WorldObject|WorldTether|morphologyPath/u.test(owner), false, `${file} takes nothing else of the Personal world`);
+    const test = read(proof);
+    assert.match(test, /the continuity is paint only: every target, label, panel/u, `${proof} proves the continuity is paint only`);
+    assert.match(test, /expect\(state\.outside\)\.toBe\(plain\.outside\);/u);
   }
   assert.match(worldCanvas, /continuity = false,/u, 'off by default');
   // Nothing that decides membership, placement, hit testing or accessibility reads it.
