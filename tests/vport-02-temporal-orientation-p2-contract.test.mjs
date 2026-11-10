@@ -194,15 +194,21 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // unbounded clip, which makes its save real and cuts nothing. Both goldens were re-recorded after the structural diff
   // proved the ONLY change is that clip on every anchor (screen 36 anchors, Personal map 67). Previous pin: WorldMarks
   // 59de7838.
+  // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner scope correction, 2026-11-10: the three worlds share the S3-R2
+  // language): the Shared and Public fields now opt in too (VPORT-01's controlled amendment, proven in each field's own
+  // test). WorldCanvas and WorldContinuity change in their comments only, which said the continuity was Personal's alone;
+  // no code, no element and no prop changes, so both goldens are unchanged. Previous pins: WorldCanvas 69b6a183 (Part A),
+  // WorldContinuity 4c49a094.
+  // Merged into Part B, the same comment-only change moves WorldCanvas from 54cefdf0 (Part B R1) to its current blob.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '54cefdf084f70e5bf2e2785b37f29f2835704e52'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '55e441d706b80ea2c21cb7b4c21c7c395a9caf81'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd28077e514252c6bb59f64d45837fbf87a1e1907'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', '6f6b8b94e980b19125ca501191923000a77959de'],
-    ['apps/mobile/src/map/visual/WorldContinuity.tsx', '4c49a09448f866208667caea3f78d54bdd92025a'],
+    ['apps/mobile/src/map/visual/WorldContinuity.tsx', '632de2b242d943cbe68c8be0305d204dd367874f'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],

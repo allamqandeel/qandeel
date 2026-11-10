@@ -43,11 +43,25 @@ import { PublicWorldApiClient, createManualForegroundSignal, type ForegroundSign
 import { PUBLIC_FIELD_COPY_GATE, publicFieldCopy } from '../field-copy';
 import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
-import { focusField, panField, wholeWorldCamera, zoomField, type PublicFieldCamera } from '../public-field-camera';
+import { PUBLIC_FIELD_DEPTHS, PUBLIC_FIELD_RUNG_SCALE, focusField, panField, wholeWorldCamera, zoomField, type PublicFieldCamera } from '../public-field-camera';
 import { placePublicField } from '../public-field-projection';
 import { createPublicFieldController, type PublicFieldTransport } from '../public-field-controller';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
+// MAP-CLOSE-01 V-3 (Product Owner scope correction, 2026-11-10): the generic canvas, observed. It records the continuity the
+// Public field asks for and, only when a test says so, paints the same field WITHOUT it, so the two can be compared.
+const mockContinuity: { off: boolean; seen: (boolean | undefined)[] } = { off: false, seen: [] };
+jest.mock('../../../map/renderer', () => {
+  const actual = jest.requireActual('../../../map/renderer');
+  const { createElement } = jest.requireActual('react');
+  return {
+    ...actual,
+    WorldCanvas: (props: { continuity?: boolean }) => {
+      mockContinuity.seen.push(props.continuity);
+      return createElement(actual.WorldCanvas, mockContinuity.off ? { ...props, continuity: false } : props);
+    },
+  };
+});
 
 const INSETS = { top: 44, right: 0, bottom: 0, left: 0 };
 const SIZE = { width: 400, height: 800 };
@@ -991,5 +1005,88 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     expect(publicFieldCopy('en').placeReady).toBe('Its place has been set.');
     expect(publicFieldCopy('ar').back).toBe('رجوع');
     expect(publicFieldCopy('en').analysisItem).toBe('QANDEEL analysis');
+  });
+});
+
+describe('MAP-CLOSE-01 V-3 (Product Owner scope correction) — the Public field is the same S3-R2 world as the Personal one', () => {
+  afterEach(() => {
+    mockContinuity.off = false;
+    mockContinuity.seen.length = 0;
+  });
+
+  /** The rendered tree with the world canvas's own paint left out: everything that can be read, touched or decided. */
+  const outsideCanvas = (node: unknown): unknown => {
+    if (node === null || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map(outsideCanvas);
+    const record = node as { props?: Record<string, unknown>; children?: unknown[] | null };
+    if (record.props?.testID === 'qandeel-public-field-canvas') return { canvas: true };
+    return { ...record, children: record.children === null || record.children === undefined ? record.children : record.children.map(outsideCanvas) };
+  };
+
+  /** FAR, MID and NEAR of the same served field, as the reader reaches them: a tap at a place, then the focused panel. */
+  async function walk(off: boolean) {
+    mockContinuity.off = off;
+    const { view, field } = await mountArea('en', [E1, E2, E3]);
+    const states = [];
+    for (const depth of ['FAR', 'MID', 'NEAR'] as const) {
+      // FAR → MID by a tap on the field at a place; MID → NEAR by choosing that place, which focuses it and opens its panel.
+      if (depth === 'MID') {
+        const p = projectToField(field.getState().camera!, SIZE, E1.address)!;
+        await act(async () => { field.tapField(p.x, p.y); });
+        await flush();
+      }
+      if (depth === 'NEAR') {
+        await fireEvent.press(view.getByTestId(`qandeel-public-mark-${E1.id}`));
+        await flush();
+      }
+      expect(field.getState().camera?.depth).toBe(depth);
+      states.push({
+        depth,
+        outside: JSON.stringify(outsideCanvas(view.toJSON())),
+        bodies: [E1, E2, E3].map((e) => bodyOf(view, field, e)),
+        paths: skia(view, 'Path'),
+        circles: skia(view, 'Circle'),
+        lines: skia(view, 'Line').length,
+        pictures: skia(view, 'Picture').length,
+      });
+    }
+    return states;
+  }
+
+  // One render per test (the testing library allows one mounted tree): the field WITH its continuity is walked first, and
+  // the same field without it is compared against it.
+  let withIt: Awaited<ReturnType<typeof walk>> = [];
+
+  it('opts into the continuity at every distance it reaches', async () => {
+    withIt = await walk(false);
+    expect(withIt.map((state) => state.depth)).toEqual(['FAR', 'MID', 'NEAR']);
+    expect(mockContinuity.seen.length).toBeGreaterThan(0);
+    expect(new Set(mockContinuity.seen)).toEqual(new Set([true]));
+  });
+
+  it('the continuity is paint only: every target, label, panel, body and mark is the same without it', async () => {
+    expect(withIt).toHaveLength(3);
+    const without = await walk(true);
+    for (const [index, state] of withIt.entries()) {
+      const plain = without[index];
+      // What the reader touches and reads: the targets, the labels, the panel, the bands — identical.
+      expect(state.outside).toBe(plain.outside);
+      // What the world says about each Experience: its neutral body and its selection marker — identical.
+      expect(state.bodies).toEqual(plain.bodies);
+      expect(state.paths).toEqual(plain.paths);
+      expect(state.circles).toEqual(plain.circles);
+      // No line of any kind: the continuity draws no relation (the only Public line is S5-03C's explicit one).
+      expect(state.lines).toBe(0);
+      // What it adds is the S3-R2 material: recorded pictures (the deep space and the places' fine threads).
+      expect(state.pictures).toBeGreaterThan(plain.pictures);
+    }
+  });
+
+  it('never reaches past NEAR, so the C3 paint cap (which acts only past NEAR) never acts on a Public place', () => {
+    expect(PUBLIC_FIELD_DEPTHS).toEqual(['FAR', 'MID', 'NEAR']);
+    // One frozen ×8 reinforcement per rung (a scale is world units per point): NEAR is exactly two rungs from FAR, the
+    // distance at which the cap is still 1.
+    const ratio = (scale: { numerator: bigint; denominator: bigint }) => Number(scale.numerator) / Number(scale.denominator);
+    expect(ratio(PUBLIC_FIELD_RUNG_SCALE.FAR) / ratio(PUBLIC_FIELD_RUNG_SCALE.NEAR)).toBe(64);
   });
 });

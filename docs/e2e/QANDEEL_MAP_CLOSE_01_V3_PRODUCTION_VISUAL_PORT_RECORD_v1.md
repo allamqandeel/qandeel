@@ -1,13 +1,23 @@
 # QANDEEL — MAP-CLOSE-01 Step 4 / V-3 — Production Visual Port of S3-R2 — Record v1
 
-**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — READY FOR PO VISUAL & MERGE REVIEW — NOT MERGED`
+**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B) IN PROGRESS — NOT READY FOR CLOSURE — NOT MERGED`
 **Task:** MAP-CLOSE-01 Step 4 / V-3, the production visual port of the approved S3-R2 art direction into the existing Personal Living Analysis map.
 **Date:** 2026-11-10. **Baseline:** `main` at `5a21971d` (the merge of PR #390, MAP-CLOSE-01 Step 2). **Branch:** `map/map-close-01-v3-production-port`.
-**Authority:** Product Owner, 2026-11-10, four messages:
+**Authority:** Product Owner, 2026-11-10, six messages:
 1. **"PO Final Visual Approval & Step 4 / V-3":** S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION; close Step 3; V-3 is authorized.
 2. **"إضافة محدودة إلى V-3 قبل الإغلاق":** the Analysis screen UI around the map joins V-3's scope, as a separate reviewable part after the drawing is proven (§11).
 3. **"PO Decisions: FAR / MID / NEAR Visual Continuity":** D1 approved (MID and NEAR derive from S3-R2 as the same world, closer); D2 approved conditionally (a governed change of the world's response to distance, for the Personal Map only, separated from the frozen sources); D3 approved (ANALYTICAL is fixed in paint, not geometry); D4 keep (the register is unchanged). A derived reference comes first.
 4. **"V-3: Final Visual Integration — PO APPROVED":** the derived continuity reference is approved for FAR / MID / NEAR / ANALYTICAL; C1, C2 and C3 are authorized inside V-3 (§5A); Part B follows once the map is proven; no new art round.
+5. **"MAP-CLOSE-01 / V-3 — PO Scope Correction Before Merge":**
+   - the Personal, Shared and Public worlds share one graphic language and one renderer, and differ only in their data, meanings and acts;
+   - S3-R2 (the space materials, nebulae, threads, glow and continuity) and the transparent Analysis screen reach all three worlds, through the existing shared structure;
+   - no Personal morphology, membership or relation reaches another world;
+   - V-3 does not close before the three worlds are proven, including on a real Android phone (§5B).
+
+   This replaces D2's "for the Personal Map only".
+6. **"تحسين أداء التلاشي" (an addition to message 5):** evaluate, inside V-3, bounding the material layer to `envelope.height + 44`.
+   - Implement it only if the measurements show a benefit, with no unacceptable visual difference, no transition defect and no new horizontal seam.
+   - Record the before / after comparison in the closure report (§11 of the stacked Part B).
 
 **Merge rule:** production changes are not merged before the PO's approval.
 
@@ -69,7 +79,7 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 - **Family** is still a shape: each mark's centre is its family's own morphology, smaller and near-white.
 - **The bow of a relation** is presentation only: its side is a fixed function of its two ends, and its ends are exactly the placement's.
 - **Ray angles and lengths** come from the mark's meaning-free presentation angle, like its rotation.
-- **Shared and Public worlds** keep the frozen grammar: only the Personal owner passes a chroma.
+- **Shared and Public marks** keep the frozen grammar: only the Personal owner passes a chroma to a mark (the neutral Public circle, S5-03B D2). Since the scope correction, their WORLD is S3-R2's (§5B).
 - **Increased contrast** keeps F1's full-width relation core and the frozen grammar.
 
 ## 5. What changed
@@ -91,7 +101,7 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 - nodes and relations keep their size.
 
 **Where it lives.** One new module, `apps/mobile/src/map/visual/WorldContinuity.tsx`.
-- Only the Personal owner opts in: `MapCanvas` passes `continuity` to `WorldCanvas`. It is off by default, and the Shared and Public worlds never pass it.
+- A world's owner opts in: `MapCanvas` passes `continuity` to `WorldCanvas`, and since the PO's scope correction so do `SharedFieldView` and `PublicFieldView` (§5B). It is off by default.
 - It READS the generated I-08B1 schedule and never edits it. `world-visual.generated.ts`, `world-field.generated.ts` and `useWorldResponse.ts` are unchanged.
 
 **C1: the S3-R2 material.**
@@ -127,6 +137,48 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 - A place's threads are the same material at every place, in the colour of the world at its address.
 - No group, topic, name or synthetic membership from the reference was brought into the app.
 
+## 5B. The three worlds (PO scope correction, 2026-11-10)
+**The gap, exactly.**
+- The three worlds already paint through ONE renderer: `WorldCanvas`, inside the one world view.
+- They share one camera metric. The Shared field reuses the Public camera: FAR is the Map's default scale, with one frozen ×8 reinforcement per rung.
+- The Shared and Public owners already hand the renderer each place's served address, for the LA-VIS-01 place colour.
+- What was missing was one opt-in prop. Only `MapCanvas` passed `continuity`, and VPORT-01 asserted that the Shared and Public fields did not.
+- The transparent screen is the stacked Part B's.
+
+**The change (the smallest).**
+- `SharedFieldView` and `PublicFieldView` pass `continuity` beside the address they already pass. Nothing else of theirs changes.
+- `WorldCanvas` and `WorldContinuity` change in their comments only, which said the continuity was Personal's alone.
+
+**What stays each world's own.**
+- Data, disclosure, positions, the camera and every act.
+- Hit testing: the targets are views outside the canvas.
+- The marks: the Shared and Public fields keep the neutral circle (S5-03B D2) with no chroma.
+- No Personal morphology, membership, tether or relation travels.
+- The glow they share is the world's colour around each place (LA-VIS-01), which they already had.
+- Their relations: Public draws only S5-03C's explicit relation lines; Shared draws none.
+- Their distances:
+  - the Shared and Public fields stop at NEAR, so C3 (which acts only past NEAR) never acts there;
+  - the threads' four world sizes are read from the presented distance on the same metric, so FAR, MID and NEAR hand over exactly as in the Personal world.
+
+**Contracts.**
+- **VPORT-01 (controlled amendment):**
+  - the "Personal only" rule becomes: every world's owner opts in, beside its served address, and takes nothing else of the Personal world (no chroma on a mark, no morphology, no tether);
+  - the test also requires each field's behavioural proof below.
+- **VPORT-02:** `WorldCanvas` and `WorldContinuity` are re-anchored. Their comments changed only, and both goldens are unchanged.
+- **No other contract conflicts.** S5-03B (neutral circle, no colour of its own, no line of its own), S5-03C and SHARED-VIS-01 pass unchanged.
+
+**The proof is behaviour, not a changed assertion.** Each field's own Jest suite (`shared-field.test.tsx`, `public-field.test.tsx`) walks the same World through FAR, MID and NEAR twice: as shipped, and with the generic canvas forced to paint WITHOUT the continuity. It finds:
+- every target, label, panel and band identical (the whole host tree outside the canvas);
+- every mark body, selection marker and circle identical;
+- no line drawn;
+- more recorded pictures with the continuity (the deep space and the fine threads).
+
+**Not yet proven:**
+- the three worlds on a device (the stacked Part B's §11 carries the device matrix);
+- the three worlds on a real phone.
+
+**The PR order is unchanged.** This commit is on Part A (#391). Part B (#392) merges it in, and no history is rewritten.
+
 ## 6. Controlled amendments (named; none silent)
 | Contract | Amendment | Why it is allowed |
 |---|---|---|
@@ -144,6 +196,8 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Part B:** W3 E2E-D-10 (Analysis under a Light preference) | the return band now asserts `transparent`, and the ground under it, the Analysis surface's, asserts the Dark family | the band stands on the world; the Analysis is still the dark place under a Light preference |
 | **Part B:** VPORT-01 plain-line rule | the substring test `includes('<Line')` became the element test `/<Line\b/u`, because it also matched the scrim's `<LinearGradient` | the rule is unchanged: the renderer draws no plain line of its own |
 | **Part B R2:** VPORT-02 world pin, and both goldens | `WorldMarks` re-anchored ("MAP-CLOSE-01 V-3 Part B R2 — CONTROLLED RE-ANCHOR", with the previous pin): a mark's anchor carries an unbounded clip so that Skia's native recorder really saves for it (§11). Both goldens re-recorded | a renderer defect, found on the emulator and fixed at its source; the structural diff shows that clip on every anchor and nothing else |
+| **Three worlds (§5B):** VPORT-01 | the continuity test's "Shared and Public do not opt in" becomes "every world's owner opts in, beside its served address, and takes nothing else of the Personal world"; it also requires each field's behavioural proof | PO scope correction, 2026-11-10 |
+| **Three worlds (§5B):** VPORT-02 world pins | `WorldCanvas` `69b6a183` → `43c66051` on Part A, and `54cefdf0` → `55e441d7` once merged into Part B; `WorldContinuity` `4c49a094` → `632de2b2` (comments only); recorded in the test with the previous pins | PO scope correction; both goldens unchanged |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
@@ -169,6 +223,15 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 - The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-c123`.
 
 **Found and fixed.** The `world-visual.test.tsx` tether rule had been failing since R1 (§6).
+
+**The three worlds (§5B): repository checks.**
+- `tsc`: clean.
+- `eslint`: no error in the changed files. The warnings are in files this change does not touch.
+- Jest (`src/map`, `src/integration`, `src/living-analysis`, `src/shared-world`, `src/public-world`): 737 / 743.
+  - The 6 failures are the same baseline (`depth`, `w2-account-access`).
+  - Both goldens pass unchanged.
+- Shared and Public suites: 120 / 120, including the four new proof cases.
+- Root contracts that read the world's visual or renderer code, the Shared or Public field, the Living Analysis surface or the locators: 438 / 438.
 
 **Device: the Android emulator, not a phone.**
 - Setup: `sdk_gphone64_x86_64`, Android 16 / API 36, 1080 × 2400 at 420 dpi, software renderer (swiftshader).
@@ -235,6 +298,7 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** none is connected. Every device result in this record is from the Android emulator, and is never claimed as phone proof.
+- **The three worlds on a device and on a real phone (§5B):** required by the PO before V-3 closes.
 
 ## 11. Part B — the Analysis screen UI (PO addition, 2026-11-10)
 **The PO's instruction:**

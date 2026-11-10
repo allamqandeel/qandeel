@@ -120,7 +120,8 @@ export interface WorldCanvasProps<N extends WorldCanvasNode> {
   readonly renderRegister?: (node: N, frame: WorldPaintFrame) => ReactNode;
   /**
    * MAP-CLOSE-01 V-3 (C1 / C2 / C3): the S3-R2 world, continuous across distance (`../visual/WorldContinuity`). Opted
-   * into by the Personal owner only, and only with `worldAddressOf`; omitted, the canvas is exactly what it was.
+   * into by every world's owner, Personal, Shared and Public (Product Owner scope correction, 2026-11-10), and only with
+   * `worldAddressOf`; each world reaches only the distances its own camera does. Omitted, the canvas is exactly what it was.
    */
   readonly continuity?: boolean;
 }
@@ -323,7 +324,7 @@ export function WorldCanvas<N extends WorldCanvasNode>({
           reaches. A cut-and-resolve is a statement about the camera's path, and the register has
           no path (R1-06). The atmosphere strata are world-anchored, so they sit inside the same cut. */}
       <Group opacity={motion.planeOpacity}>
-        {/* OPEN-17: the two tunable channels paint, and only paint. V-3: the Personal world keeps its clouds (C2) over
+        {/* OPEN-17: the two tunable channels paint, and only paint. V-3: a continuous world keeps its clouds (C2) over
             the S3-R2 deep space (C1). */}
         {continuity ? (
           <ContinuityAtmosphere motion={motion} envelope={paint} response={response} drift={world.drift} ambient={style.ambient} emptySpace={style.emptySpace} />
@@ -347,7 +348,7 @@ export function WorldCanvas<N extends WorldCanvasNode>({
             <>
               {/* The world's colour around each place: one per presented place, identical for every place. It
                   follows the surface's presentation culling like everything else on the plane — the renderer
-                  makes no culling decision of its own. V-3 (C3): past NEAR the Personal mass keeps its NEAR size. */}
+                  makes no culling decision of its own. V-3 (C3): past NEAR a place's mass keeps its NEAR size. */}
               {planeNodes
                 .filter((node) => isPlace(node))
                 .map((node) => {
@@ -362,7 +363,7 @@ export function WorldCanvas<N extends WorldCanvasNode>({
                     atmosphere
                   );
                 })}
-              {/* V-3 (C1): the fine threads of the Personal places, in each place's colour, at four world sizes. */}
+              {/* V-3 (C1): the fine threads of the places, in each place's colour, at four world sizes. */}
               {continuity ? <PlaceThreads places={continuityPlaces} radius={world.placeAtmosphere} motion={motion} /> : null}
             </>
           }

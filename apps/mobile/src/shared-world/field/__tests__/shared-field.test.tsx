@@ -22,6 +22,20 @@ import { createSharedFieldController, type SharedFieldTransport } from '../share
 import { SHARED_FIELD_SURFACE_TEST_ID } from '../SharedFieldView';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
+// MAP-CLOSE-01 V-3 (Product Owner scope correction, 2026-11-10): the generic canvas, observed. It records the continuity the
+// Shared field asks for and, only when a test says so, paints the same field WITHOUT it, so the two can be compared.
+const mockContinuity: { off: boolean; seen: (boolean | undefined)[] } = { off: false, seen: [] };
+jest.mock('../../../map/renderer', () => {
+  const actual = jest.requireActual('../../../map/renderer');
+  const { createElement } = jest.requireActual('react');
+  return {
+    ...actual,
+    WorldCanvas: (props: { continuity?: boolean }) => {
+      mockContinuity.seen.push(props.continuity);
+      return createElement(actual.WorldCanvas, mockContinuity.off ? { ...props, continuity: false } : props);
+    },
+  };
+});
 
 const INSETS = { top: 44, right: 0, bottom: 0, left: 0 };
 const SIZE = { width: 400, height: 800 };
@@ -333,6 +347,95 @@ describe('SHARED-VIS-01 — the Product Copy Gate (CLOSED — 6 / 6 APPROVED)', 
     for (const language of ['ar', 'en'] as const) {
       const copy = sharedFieldCopy(language);
       expect(copy.moreDetail).toBe(analysisCopy(language).moreDetail);
+    }
+  });
+});
+
+describe('MAP-CLOSE-01 V-3 (Product Owner scope correction) — the Shared field is the same S3-R2 world as the Personal one', () => {
+  afterEach(() => {
+    mockContinuity.off = false;
+    mockContinuity.seen.length = 0;
+  });
+
+  /** Every Skia stand-in element of one kind in the rendered tree, with its props. */
+  const skia = (view: RenderResult, kind: string): Record<string, unknown>[] => {
+    const found: Record<string, unknown>[] = [];
+    const walkTree = (node: unknown): void => {
+      if (node === null || typeof node !== 'object') return;
+      if (Array.isArray(node)) { node.forEach(walkTree); return; }
+      const record = node as { props?: Record<string, unknown>; children?: unknown[] };
+      if (record.props?.skiaElement === kind) found.push(record.props);
+      for (const child of record.children ?? []) walkTree(child);
+    };
+    walkTree(view.toJSON());
+    return found;
+  };
+  /** The rendered tree with the world canvas's own paint left out: everything that can be read, touched or decided. */
+  const outsideCanvas = (node: unknown): unknown => {
+    if (node === null || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map(outsideCanvas);
+    const record = node as { props?: Record<string, unknown>; children?: unknown[] | null };
+    if (record.props?.testID === 'qandeel-shared-field-canvas') return { canvas: true };
+    return { ...record, children: record.children === null || record.children === undefined ? record.children : record.children.map(outsideCanvas) };
+  };
+
+  /** FAR, MID and NEAR of the same World: the accessible semantic step, then a place focused with its panel. */
+  async function walk(off: boolean) {
+    mockContinuity.off = off;
+    const { view, controller } = await mountArea();
+    await press(view, `qandeel-shared-world-${WORLD_A}`);
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: SIZE.height });
+    await flush();
+    const steps = view.getByTestId(`${SHARED_FIELD_SURFACE_TEST_ID}${WORLD_VIEW_STEP_TEST_ID_SUFFIX}`);
+    const states = [];
+    for (const depth of ['FAR', 'MID', 'NEAR'] as const) {
+      if (depth === 'MID') {
+        await act(async () => { steps.props.onAccessibilityAction({ nativeEvent: { actionName: 'zoom-in' } }); });
+        await flush();
+      }
+      if (depth === 'NEAR') {
+        await act(async () => { controller.field?.focus(A1.id); });
+        await flush();
+      }
+      expect(controller.field?.getState().camera?.depth).toBe(depth);
+      states.push({
+        depth,
+        outside: JSON.stringify(outsideCanvas(view.toJSON())),
+        paths: skia(view, 'Path'),
+        circles: skia(view, 'Circle'),
+        lines: skia(view, 'Line').length,
+        pictures: skia(view, 'Picture').length,
+      });
+    }
+    return states;
+  }
+
+  // One render per test (the testing library allows one mounted tree): the World WITH its continuity is walked first, and
+  // the same World without it is compared against it.
+  let withIt: Awaited<ReturnType<typeof walk>> = [];
+
+  it('opts into the continuity at every distance it reaches', async () => {
+    withIt = await walk(false);
+    expect(withIt.map((state) => state.depth)).toEqual(['FAR', 'MID', 'NEAR']);
+    expect(mockContinuity.seen.length).toBeGreaterThan(0);
+    expect(new Set(mockContinuity.seen)).toEqual(new Set([true]));
+  });
+
+  it('the continuity is paint only: every target, label, panel and mark is the same without it, and no member is drawn', async () => {
+    expect(withIt).toHaveLength(3);
+    const without = await walk(true);
+    for (const [index, state] of withIt.entries()) {
+      const plain = without[index];
+      // What the reader touches and reads: the targets, the labels, the panel, the bands — identical.
+      expect(state.outside).toBe(plain.outside);
+      // What the world says about each place: its neutral mark and its selection — identical.
+      expect(state.paths).toEqual(plain.paths);
+      expect(state.circles).toEqual(plain.circles);
+      // No line of any kind: the Shared field draws no relation, with or without the continuity.
+      expect(state.lines).toBe(0);
+      // What it adds is the S3-R2 material: recorded pictures (the deep space and the places' fine threads).
+      expect(state.pictures).toBeGreaterThan(plain.pictures);
+      expect(state.outside).not.toMatch(/qandeel-shared-members|memberMark/u);
     }
   });
 });

@@ -1,11 +1,13 @@
 /**
- * MAP-CLOSE-01 V-3 — C1 / C2 / C3: the Personal Map's S3-R2 world, CONTINUOUS across distance.
+ * MAP-CLOSE-01 V-3 — C1 / C2 / C3: the S3-R2 world, CONTINUOUS across distance, in every world.
  *
  * Product Owner, 2026-11-10 ("V-3: Final Visual Integration — PO APPROVED", on the approved derived continuity
  * reference): FAR, MID, NEAR and ANALYTICAL are one world approached, never three designs and never one picture
- * enlarged. This module is the Personal Map's own visual override of the I-08B1 distance response, separated from it:
- * the generated schedule and `useWorldResponse` are read, never edited, and only the Personal owner opts in (through
- * `WorldCanvas`'s `continuity`). Shared and Public worlds never reach it.
+ * enlarged. This module is the visual override of the I-08B1 distance response, separated from it: the generated
+ * schedule and `useWorldResponse` are read, never edited, and a world's owner opts in through `WorldCanvas`'s
+ * `continuity`. Product Owner scope correction (2026-11-10): the Personal, Shared and Public worlds share this one
+ * language, each at the distances its own camera reaches (the Shared and Public fields stop at NEAR, so C3 never acts
+ * there); what differs between them is their data, their meanings and their acts, never this paint.
  *
  *   C1 — the S3-R2 material, phone-sized: the neutral DEEP SPACE (S3-R2 `amb` + `fill`: soft cool clouds, faint
  *        ridges, quiet wisps) and the FINE THREADS of each place (S3-R2 `fine` / `farweb`) in the place's chroma. Both
@@ -101,7 +103,7 @@ const DEEP = Object.freeze({
 // ------------------------------------------------------------------------------------- C2: the clouds kept
 
 /**
- * The world-anchored atmosphere of the Personal Map: the S3-R2 deep space beneath, then the canonical strata with the
+ * The world-anchored atmosphere of a continuous world: the S3-R2 deep space beneath, then the canonical strata with the
  * I-08B1 fade of their clouds held back, so depth and colour stay when the reader comes closer.
  */
 export function ContinuityAtmosphere(props: Parameters<typeof WorldAtmosphere>[0]) {
