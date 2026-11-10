@@ -257,7 +257,7 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 | `LivingAnalysisSurface` | `continuousWorld` (opt-in, default off) provides the continuation: `below` is the measured column below the frame; the scrim is the Analysis's own ink. **Off under increased contrast** (F1: no word stands on the world's light) |
 | `LivingAnalysisMap`, `ReplayMomentComposite` | opt in. Shared and Public worlds do not, and are unchanged |
 | `AnalysisReturnBar`, Replay `PlayerBar` | transparent ground (the scrim is under them); solid under increased contrast |
-| Replay message fields | a dark, partly transparent field (`field` at 0.76) with a faint edge; solid under increased contrast |
+| Replay message fields | a dark, partly transparent field (`field` at 0.76) with a faint edge; solid under increased contrast. R3: the edge's 1 pt comes out of the field's padding, so the box keeps its size. On the emulator, the first build's edge had lifted everything above the message by about 2 pt |
 
 **Goldens.** The Personal map golden is unchanged. In the screen golden, 11 of 15 cases changed, and the increased-contrast cases did not. Every View, Text, layout, testID and touch handler is identical in all 15 cases (the host outline, 1010 lines before and after). The Skia layer changes only in these ways:
 - the Canvas is taller and takes no touch (`pointerEvents="none"`);

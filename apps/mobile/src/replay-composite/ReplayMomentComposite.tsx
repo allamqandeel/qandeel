@@ -318,7 +318,7 @@ function SourceMessage({ moment, text, language, palette }: {
   const direction = paragraphDirection(text, readerDirection(language));
   return (
     <View testID="qandeel-replay-source" accessible accessibilityLabel={name} accessibilityLiveRegion="polite"
-      style={{ ...messageGround(palette, increased), borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
+      style={{ ...messageGround(palette, increased), borderRadius: 20, rowGap: 4 }}>
       <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
       {/* The committed text, byte for byte: no truncation, no line limit, no rewrite, no inserted mark. Its own direction
           (first strong character) is the text's, and it is aligned to its own start. */}
@@ -342,7 +342,7 @@ function PresentedSource({ moment, text, presented, language, palette }: {
   const direction = text === null ? readerDirection(language) : paragraphDirection(text, readerDirection(language));
   return (
     <View style={{ rowGap: 6 }}>
-      <View testID="qandeel-replay-source" style={{ ...messageGround(palette, increased), borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
+      <View testID="qandeel-replay-source" style={{ ...messageGround(palette, increased), borderRadius: 20, rowGap: 4 }}>
         <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
         {presented.source}
       </View>
@@ -476,9 +476,18 @@ export function ReplayPreviewLimit({ outcome, language, insets, top = null }: Re
  * edge, so the world reads on behind it and the words stay clear. Under increased contrast it keeps its solid field (F1).
  */
 function messageGround(palette: ConversationPalette, increased: boolean) {
+  // The edge is drawn INSIDE the field's own size: its width comes out of the padding, so the box, and everything laid out
+  // around it, stays exactly where it was.
+  const { padding, alpha, edge, edgeWidth } = MESSAGE_GROUND;
   return increased
-    ? { backgroundColor: palette.field }
-    : { backgroundColor: withAlpha(palette.field, MESSAGE_GROUND.alpha), borderWidth: 1, borderColor: withAlpha(palette.primary, MESSAGE_GROUND.edge) };
+    ? { backgroundColor: palette.field, paddingHorizontal: padding.horizontal, paddingVertical: padding.vertical }
+    : {
+        backgroundColor: withAlpha(palette.field, alpha),
+        borderWidth: edgeWidth,
+        borderColor: withAlpha(palette.primary, edge),
+        paddingHorizontal: padding.horizontal - edgeWidth,
+        paddingVertical: padding.vertical - edgeWidth,
+      };
 }
 
-const MESSAGE_GROUND = Object.freeze({ alpha: 0.76, edge: 0.12 });
+const MESSAGE_GROUND = Object.freeze({ padding: Object.freeze({ horizontal: 18, vertical: 12 }), alpha: 0.76, edge: 0.12, edgeWidth: 1 });
