@@ -362,7 +362,9 @@ test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from
     assert.doesNotMatch(text, /from '\.\.\/\.\.\/state'|from '\.\.\/projection'|from '\.\.\/inspection'|from '\.\.\/accessibility'|CanonicalStore|useSyncExternalStore|dispatch\(|MapScene|InspectionRef|THREAD|READING|EMERGING_FOCUS/u, `${file} reads no Personal truth`);
   }
   // The rebase is still issued from INSIDE the Skia root, as the LAST child of the plane, after the positions.
-  assert.match(worldCanvas, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*\n\s*<\/Group>\s*\n\s*<\/Group>\s*\n\s*<\/WorldTone>/u);
+  // MAP-CLOSE-01 V-3 Part B — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10): the plane is `WorldPlane`, whose children
+  // are last inside the one transformed plane group (pinned by T-10 §13). Previous form: `</Group>` for `</WorldPlane>`.
+  assert.match(worldCanvas, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*\n\s*<\/WorldPlane>\s*\n\s*<\/Group>\s*\n\s*<\/WorldTone>/u);
   // The element keys the arrival registry is keyed by are unchanged.
   assert.ok(worldCanvas.includes('<WorldPlaceAtmosphere key={`atmosphere:${node.key}`}'), 'place atmosphere keys');
   assert.ok(worldCanvas.includes('<DisclosureArrival key={node.key} nodeKey={node.key} plan={arrivalOf(node)}'), 'arrival keys');

@@ -140,6 +140,8 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Part B:** S7-03 and S7-04 criterion-12 pins | `LivingAnalysisSurface.tsx` and `LivingAnalysisMap.tsx` re-anchored, each with a "MAP-CLOSE-01 V-3 Part B RE-ANCHOR" comment and its previous pin | PO addition to V-3 (2026-11-10); the projection, the cache, the frame, the plan, every touch and every refusal unchanged |
 | **Part B:** S5-03B criterion 12 and the surface's own Jest rule | the screen's import list gains the theme (contrast, alpha) and the renderer seam; a new assertion admits ONLY `WorldContinuationContext` from the seam | the screen still holds no world, store, projection, inspection, time or Personal owner |
 | **Part B:** VPORT-02 world pin | `WorldCanvas` re-anchored again, with its previous pin | without a continuation the canvas is exactly what it was: the Personal map golden is unchanged |
+| **Part B:** T-10 §13 and S5-03B criterion 11 (the camera rebase) | the rule "the rebase is the LAST child of the transformed plane" is asserted on `WorldPlane`: its `children` come last inside the one `planeTransform` group (and, in a continuous world, inside the frame clip around that same group), and the rebase is the last of those children | the plane is drawn by one small component so that, without a continuation, the tree stays exactly what it was; the ordering the rule protects is unchanged |
+| **Part B:** W3 E2E-D-10 (Analysis under a Light preference) | the return band now asserts `transparent`, and the ground under it, the Analysis surface's, asserts the Dark family | the band stands on the world; the Analysis is still the dark place under a Light preference |
 | **Part B:** VPORT-01 plain-line rule | the substring test `includes('<Line')` became the element test `/<Line\b/u`, because it also matched the scrim's `<LinearGradient` | the rule is unchanged: the renderer draws no plain line of its own |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
 
@@ -250,7 +252,7 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 
 | Where | Change |
 |---|---|
-| `WorldCanvas` | a `WorldContinuationContext` a surface may provide. With it, the ONE canvas paints its ground, strata and veil `below` points further than the frame, takes no touch of its own (`pointerEvents="none"`), and lays the surface's ink as a scrim over the top inset and over the continuation (fading into the frame). **Without it the canvas is exactly what it was.** Nodes, tethers, the register, the envelope, the camera and hit testing keep the frame |
+| `WorldCanvas` | a `WorldContinuationContext` a surface may provide. With it, the ONE canvas paints its ground, strata and veil `below` points further than the frame, takes no touch of its own (`pointerEvents="none"`), and lays the surface's ink as a scrim over the top inset and over the continuation (fading into the frame). **Without it the canvas is exactly what it was.** Nodes, tethers, the register, the envelope, the camera and hit testing keep the frame: `WorldPlane` clips the plane's objects to it and fades its material out below it |
 | `LivingAnalysisSurface` | `continuousWorld` (opt-in, default off) provides the continuation: `below` is the measured column below the frame; the scrim is the Analysis's own ink. **Off under increased contrast** (F1: no word stands on the world's light) |
 | `LivingAnalysisMap`, `ReplayMomentComposite` | opt in. Shared and Public worlds do not, and are unchanged |
 | `AnalysisReturnBar`, Replay `PlayerBar` | transparent ground (the scrim is under them); solid under increased contrast |
@@ -260,6 +262,14 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 - the Canvas is taller and takes no touch (`pointerEvents="none"`);
 - the ground, the strata tiles and the veil cover the extra area;
 - the scrim adds two gradient rects.
+
+**Found on the emulator and fixed: the plane must not run on.** The first build let the whole plane run on below the frame. In `touch-after`, a place's mark and glow then stood under the Timeline, outside the frame, where no touch reaches it.
+- Before Part B, the canvas ended at the frame. A place the presentation keeps just outside the frame, so a pan can bring it in, was cut off there.
+- Now `WorldPlane` keeps that boundary in a continuous world:
+  - the plane's material (place atmospheres, threads) fades out over the scrim's own 44 pt below the frame's edge (a `dstIn` mask);
+  - its relations and objects keep the frame exactly (a clip);
+  - only the ground, the deep space, the clouds and the veil continue.
+- The structural diff against the first Part B recording: in each of the 11 changed cases, every node is identical apart from the new wrappers (the fade layer, its mask, the frame clip, and the second plane transform).
 
 The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-partb`.
 
