@@ -7,15 +7,19 @@
 - It changes no renderer, data, generated token or frozen contract.
 - It opens no AD-5, V-3, Replay, N4 or CAL-2 work.
 
+**R1 (2026-11-10), after the PO's final review of PR #389:**
+- **Durable archive.** AD-4's originals and its reproduction tools are stored off-device in a private archive (§3.5). AD-4 re-renders byte for byte from the pinned source, which closes G-3 for this toolchain; correcting its render parameters is part of R1.
+- **Publication decision.** Whether Dashboard01, and the comparison board that contains it, may sit in this **public** repository is a decision for the PO (§7).
+
 **Why it exists:** so that no development, test or rebuild of the map falls back by mistake to an older look. Every map reference sits in exactly one of four categories (§1), and work starts under the rule in §2.
 
 **Machine check:** `sha256sum -c` run from the repository root on
-[`visual-source/VISUAL-SOURCE.sha256`](visual-source/VISUAL-SOURCE.sha256) (17 fixed references) and on
+[`visual-source/VISUAL-SOURCE.sha256`](visual-source/VISUAL-SOURCE.sha256) (19 fixed references after R1) and on
 [`visual-source/PRODUCTION-CODE-SNAPSHOT-bd80c755.sha256`](visual-source/PRODUCTION-CODE-SNAPSHOT-bd80c755.sha256).
 - The second file is a snapshot of the production code at `bd80c755`.
 - It **will** drift whenever production code changes. That drift is expected, and it is not a registry failure.
 
-**Comparison board:** [`visual-source/comparison/MAP-CLOSE-01-VISUAL-SOURCE-COMPARISON.png`](visual-source/comparison/MAP-CLOSE-01-VISUAL-SOURCE-COMPARISON.png).
+**Comparison board:** [`visual-source/comparison/MAP-CLOSE-01-VISUAL-SOURCE-COMPARISON.png`](visual-source/comparison/MAP-CLOSE-01-VISUAL-SOURCE-COMPARISON.png). It includes scaled copies of two images whose origin and licence are not recorded: Dashboard01 (panel 2) and the LA-VIS-01 reference (row 4). See §7.
 
 ---
 
@@ -48,6 +52,7 @@
 Hashes are SHA-256. They were recomputed on 2026-11-10 from the files at the paths shown.
 - "Repo" paths are relative to the repository root.
 - "Local" paths are on the PO's machine and are **not in Git.**
+- "Archive" means a durable, off-device private copy (§3.5).
 
 ### 3.1 Category 1: CURRENT PRODUCTION
 | Name | Path | Status | Function | SHA-256 | Use |
@@ -71,26 +76,56 @@ Hashes are SHA-256. They were recomputed on 2026-11-10 from the files at the pat
 ### 3.2 Category 2: TARGET REFERENCE
 | Name | Path | Status | Function | SHA-256 | Use |
 |---|---|---|---|---|---|
-| `Dashboard01` (`Arabic Semantic Galaxy Dashboard01.png`, 958 × 714, 1,347,688 B) | repo `visual-source/target/arabic-semantic-galaxy-dashboard01.png`, a byte-identical copy; local original `C:\Users\MG\Downloads\Arabic Semantic Galaxy Dashboard01.png` | **TARGET REFERENCE**. Supplied by the PO on 2026-11-09; recorded as `NS-CANDIDATE` in the study's V-1 metrics | the visual-quality standard that every new art round is compared with | `5ddaae4c9edae19d3684326bf3da38e77e5eb455e743217844677a3ba64abccb`, equal to the study's record | future design only. **Not a shipped asset.** Its origin and licence are not recorded (§4) |
+| `Dashboard01` (`Arabic Semantic Galaxy Dashboard01.png`, 958 × 714, 1,347,688 B) | repo `visual-source/target/arabic-semantic-galaxy-dashboard01.png`, a byte-identical copy; local original `C:\Users\MG\Downloads\Arabic Semantic Galaxy Dashboard01.png`; archive: private references v1 (§3.5). **Whether the repo copy may stay is the PO's decision (§7)** | **TARGET REFERENCE**. Supplied by the PO on 2026-11-09; recorded as `NS-CANDIDATE` in the study's V-1 metrics | the visual-quality standard that every new art round is compared with | `5ddaae4c9edae19d3684326bf3da38e77e5eb455e743217844677a3ba64abccb`, equal to the study's record | future design only. **Not a shipped asset.** Its origin and licence are not recorded (§4) |
 
 ### 3.3 Category 3: CURRENT ART BASE (AD-4; temporary; not final; not approved)
 | Name | Path | Status | Function | SHA-256 | Use |
 |---|---|---|---|---|---|
 | AD-4 prototype | repo `visual-source/art-base/ad-4/proto/web.js` | `TEMPORARY ART BASE — NOT FINAL — NOT APPROVED` | the drawing code of the base | `2414dd5676ea51163d0435e78f2fe5a43a4a3a3e4460f53006c602fafd6d03ca` | future design |
-| AD-4 hero page | repo `visual-source/art-base/ad-4/proto/hero.html` | same | its render parameters: W 1200, H 894, seed 20261109, 1.5 M particles, 700 k dust, 1,800 walkers | `c7a681443cfad88ec23548a99803259ad53bf4e06c5e27f138709af0576ad311` | future design |
+| AD-4 hero page | repo `visual-source/art-base/ad-4/proto/hero.html` | same | the render page. Its defaults are W 1200, H 894, seed 20261109, 1.5 M particles, 700 k dust and 1,800 walkers, but **AD-4 was rendered with `?p=3000000&wk=2600`** (3 M particles, 2,600 walkers; `AD4_REVIEW.md`). The defaults do **not** reproduce AD-4 (R1 correction) | `c7a681443cfad88ec23548a99803259ad53bf4e06c5e27f138709af0576ad311` | future design |
 | AD-4 fonts | the page expects `proto/fonts/Estedad-Regular.ttf` and `Estedad-Medium.ttf` (OFL). Not duplicated: they are byte-identical to repo `apps/mobile/assets/fonts/estedad/` | same | — | Regular `6fa532c2f732eda9d935…`, Medium `eefaca1209c25cbb9555…` (equal to the app's copies) | future design |
 | AD-4 review and annex | repo `visual-source/art-base/ad-4/AD4_REVIEW.md`, `AD4_PT10_PT13_ANNEX.md` (study copies; their relative paths point into the study folder) | historical text of the round | what AD-4 changed and checked | `e496664b879d4e3a…`, `f24d236e4405d9a4…` (full values in `VISUAL-SOURCE.sha256`) | future design |
 | AD-4 hero, preview | repo `visual-source/art-base/ad-4/AD4-hero.preview-1200.png`, **derived** (scaled to 1200 × 894 from the original) | same | quick look only; not for measurement | `6469c38f895adb84…` | future design |
-| AD-4 hero, original 2400 × 1788 | **local** `E:\QANDEEL_REPORTS\MAP-VISUAL-REFRESH-01\AD4\out\AD4-hero.png` (8.1 MB; not committed) | same | the base frame | `be16f2b70d809f4ca2aed2c2063130ea528e50e93059f6de44108cad59d3c80d` | future design |
-| AD-4 world-only | local `…\AD4\out\AD4-world-only.png` | same | the data-free world. Byte-identical to AD-2's and AD-3's, re-verified | `ad6ff8be7793b753d895e526a8e4ba30e2513877497fbecd550bf98f80c29fb8` | future design |
-| AD-4 board / render results / belonging test | local `…\AD4\board-AD4.png`, `…\AD4\out\AD4-hero.json`, `…\AD4\belong\AD4-annotated.png` | same | review evidence | `37b6ec299cea28a0139fe765de83c349e18352d70e75f7f53284a1a4f111202f`, `b4a41f4bc842a30cb5b08d69cb0d1bbb5c5f751ee70c250f6753f3853176bf03`, `7126d8a238cb8cf53820f71db538ced05f3ffbcc63c48222b82eaa827c368b84` | future design |
+| AD-4 hero, original 2400 × 1788 | **local** `E:\QANDEEL_REPORTS\MAP-VISUAL-REFRESH-01\AD4\out\AD4-hero.png` (8.1 MB; not committed); **archive:** AD-4 archive v1 (§3.5) | same | the base frame. It **re-renders byte for byte** from the pinned source (§3.5) | `be16f2b70d809f4ca2aed2c2063130ea528e50e93059f6de44108cad59d3c80d` | future design |
+| AD-4 world-only | local `…\AD4\out\AD4-world-only.png`; archive: AD-4 archive v1 | same | the data-free world. Byte-identical to AD-2's and AD-3's, and it re-renders byte for byte (`&data=0`) | `ad6ff8be7793b753d895e526a8e4ba30e2513877497fbecd550bf98f80c29fb8` | future design |
+| AD-4 board / render results / belonging test | local `…\AD4\board-AD4.png`, `…\AD4\out\AD4-hero.json`, `…\AD4\belong\AD4-annotated.png`; archive: AD-4 archive v1, with every other file in `belong/`, `crops/` and `out/` | same | review evidence | `37b6ec299cea28a0139fe765de83c349e18352d70e75f7f53284a1a4f111202f`, `b4a41f4bc842a30cb5b08d69cb0d1bbb5c5f751ee70c250f6753f3853176bf03`, `7126d8a238cb8cf53820f71db538ced05f3ffbcc63c48222b82eaa827c368b84` | future design |
 
 All AD-4 data is declared synthetic: names, elements, relations, colours and memberships.
+
+### 3.5 Durable archives (R1)
+There are two private archives. Each is a zip file attached to a **draft** GitHub release of this repository.
+- **Who can see them:** a draft release is visible only to accounts with write access.
+- **Checked on 2026-11-10 without signing in:**
+  - the public release list is empty;
+  - both release pages return 404;
+  - no tag was created.
+- **What they are not:** outside Git history and not published. **They must never be published without a PO decision.**
+- **How to retrieve them:** with write access, `gh release download <tag>`.
+
+| Archive | Draft release tag | zip SHA-256 | Contents | Verified |
+|---|---|---|---|---|
+| **AD-4 archive v1** (`qandeel-map-ad4-art-base-archive-v1.zip`, 118,815,282 B) | `archive-map-close-01-ad4-art-base-v1` | `3e99669fb6833c4613688411fd1fb50883aad2892c365990adff167ad354362b` | 54 files, listed in [`AD4-ARCHIVE-v1.MANIFEST.sha256`](visual-source/art-base/ad-4/AD4-ARCHIVE-v1.MANIFEST.sha256):<br>• AD-4 `proto/` (with fonts and OFL), `out/`, `board-AD4.*`, `belong/`, `crops/`, review and annex;<br>• the `AD3-hero` the board uses;<br>• the study harness `tools/`;<br>• [`REPRODUCE`](visual-source/art-base/ad-4/AD4-ARCHIVE-v1.REPRODUCE.md).<br>**No third-party image.** | downloaded again: the zip hash matches, and the extracted manifest checks 54 / 54 |
+| **Private references v1** (`qandeel-map-private-references-v1.zip`, 3,237,114 B) | `archive-map-close-01-private-references-v1` | `58f9e14795f938664164a2c4f204e99f52eda1d6699088754f7a45f482c90ac1` | Dashboard01 (`5ddaae4c…`), the LA-VIS-01 reference (`de1f18da…`) and a `NOTICE.md`. **Licence unknown: never publish** | downloaded again: the zip hash matches, and the manifest checks 3 / 3 |
+
+The local working copy is `E:\QANDEEL_REPORTS\MAP-CLOSE-01\archive\`. Its originals in the study folder are unchanged.
+
+**AD-4 reproduction (G-3), proven on 2026-11-10:**
+- **Inputs:** the repo-pinned `web.js` and `hero.html`, with the repo's Estedad fonts.
+- **Toolchain:** `tools/shootf.sh`, Chrome 157.0.8103.39 headless with `--disable-gpu`, `sharp` 0.35.5, Node 24.19.0, Windows 11.
+- **Results** (both against the original files):
+
+  | Render | Parameters | Result |
+  |---|---|---|
+  | `AD4-hero.png` | `?p=3000000&wk=2600` | `be16f2b7…`, **byte-identical**; 0 of 4,291,200 pixels differ; the result JSON is equal, timings aside |
+  | `AD4-world-only.png` | `&data=0` | `ad6ff8be…`, **byte-identical** |
+
+- **Not re-run:** the board, crops, belonging and colour-vision images.
+- The proof holds for this toolchain. Step 3 therefore re-runs it as its first check (§5).
 
 ### 3.4 Category 4: HISTORICAL / REJECTED FOR NEW DESIGN
 | Name | Path | Status | SHA-256 |
 |---|---|---|---|
-| LA-VIS-01 reference `Arabic Cosmic Mind Map Interface.png` (2026-10-06; 1,912,779 B) | local `C:\Users\MG\Downloads\` | the reference LA-VIS-01 was built against; **superseded as the target by Dashboard01** | `de1f18dabfefaa76b56bd5e0f8615b3ab30158a7367788400b8e0d742c067b51` |
+| LA-VIS-01 reference `Arabic Cosmic Mind Map Interface.png` (2026-10-06; 1,912,779 B) | local `C:\Users\MG\Downloads\`; archive: private references v1. Its origin and licence are not recorded; it is scaled into the comparison board (§7) | the reference LA-VIS-01 was built against; **superseded as the target by Dashboard01** | `de1f18dabfefaa76b56bd5e0f8615b3ab30158a7367788400b8e0d742c067b51` |
 | VPORT-01 device captures (2026-10-01) | repo `docs/e2e/visual-production/vport-01/*` | production evidence **from before LA-VIS-01**; historical for the look | e.g. FAR `ff541605dd03e6666b3a886c98ea6af3d9c76a98bb389068a640a43f63e31b6c`, MID `431e438f…`, NEAR `8f7b4391…` |
 | R2 hero / board | local `…\MAP-VISUAL-REFRESH-01\R2\out\hero.png`, `R2\board-R2.png` | **visually NOT approved** (PO, 2026-11-09) | `9395f4d89d0efd0507bb547c8a61fee092e778a9ce56a9bda494f2695ba99fe0`, `5ea0a0e82e59b06bcc4594351a408ae696cc4bc0d0c5ddd4bc7682845edf701e` |
 | AD-1 hero / board | local `…\AD1\out\AD1-hero.png`, `AD1\board-AD1.png` | superseded | `e61b3f0da7a511829aa7228d476535c2c11b8bb9bb08adbe082bc43225f0e0d4`, `47fa36f59bfd050d4061372b73a876aac1ae7a3ff43e138caef9a998dc5529ac` |
@@ -106,22 +141,25 @@ All AD-4 data is declared synthetic: names, elements, relations, colours and mem
 ## 4. What is proven, and what is missing
 **Proven on 2026-11-10:**
 - Every SHA-256 above was recomputed from the file.
-- The 17 fixed in-repo references and the 19 snapshot entries pass `sha256sum -c`.
+- The fixed in-repo references (17, and 19 after R1) and the 19 snapshot entries pass `sha256sum -c`.
 - The I-08B1 provenance passes 15 / 15.
 - Dashboard01 matches the hash the study recorded.
 - The AD-4 copies are byte-identical to the study files.
 - AD-4's world-only render is byte-identical to AD-2's and AD-3's.
 - The R-6C captures come from `apps/` code identical to `bd80c755`.
+- **R1:**
+  - AD-4's hero and world-only renders reproduce byte for byte from the pinned source (§3.5).
+  - Both private archives were downloaded again and checked against their hashes and manifests.
 
-**Missing or unconfirmed.** None of these blocks the PO's review of this registry.
+**Missing or unconfirmed.** None of these blocks the PO's review of this registry. G-1 needs a PO decision before merge (§7).
 
 | # | Gap | Effect | Resolve |
 |---|---|---|---|
-| G-1 | Dashboard01's **origin and licence** are not recorded | it is safe as an internal art reference only | the PO confirms the right to use it before any external use |
+| G-1 | Dashboard01's **origin and licence** are not recorded, and this repository is **public**. The same holds for the LA-VIS-01 reference, which is only in the board | a copy in this repo is a publication, not internal use | **PO decision, §7.** Both images are already held privately (§3.5) |
 | G-2 | **No full-screen device capture of the current code** exists after SHARED-VIS-01 (2026-10-09) and S8B-06 F-G (2026-11-04). The R-6C captures show the map inside the Replay preview; the LA-VIS-01 capture predates those two changes | category 1 is identified by its code; its full-screen picture is slightly out of date | capture Personal FAR / MID / NEAR from `main` when a device run is authorized |
-| G-3 | **Reproducing AD-4 from the pinned source was not run.** No re-render was compared with `be16f2b7…` | AD-4's frame is pinned by hash; its rebuild from the source is unproven | the first check of the next step, before any change to AD-4 |
-| G-4 | AD-4's full-resolution hero, board and belonging test are **local only** (8–20 MB each); the repo holds hashes and a preview | losing the local folder would lose the originals | the PO decides whether to keep them in Git (size) or in another archive |
-| G-5 | The study's render harness (`tools/shootf.sh`, `tools/ad4-*.mjs`) is not in the repo. It depends on Chrome and on `sharp` from `E:\s8b07spike` | a rebuild needs the local tools | carried into the next step with G-3 |
+| G-3 | **R1: resolved for this toolchain.** AD-4's hero and world-only renders reproduce byte for byte (§3.5). The board, crops and belonging images were not re-run | the proof holds only for the recorded toolchain | **mandatory first check of Step 3:** re-run the reproduction on the toolchain in use, and stop if it differs |
+| G-4 | **R1: resolved.** AD-4's originals are archived off-device, in private, with a manifest (§3.5) | — | — |
+| G-5 | **R1: mostly resolved.** The harness is in the AD-4 archive. Still external: Chrome and `sharp` 0.35.5, which `shootf.sh` loads from `E:\s8b07spike` | a rebuild on another machine needs those two, at the recorded versions | recorded in `AD4-ARCHIVE-v1.REPRODUCE.md` |
 | G-6 | **No art base is approved as final**; AD-4 is temporary | the next step must produce one | Step 3 (§5) |
 
 ## 5. MAP-CLOSE-01: context
@@ -136,7 +174,7 @@ All AD-4 data is declared synthetic: names, elements, relations, colours and mem
 |---|---|---|
 | Step 1 | close CP-A as planning only | **done**. PR #388 merged as `bd80c755` (2026-11-10) |
 | **Step 2** | **Visual Source of Truth (this registry)** | **current**: Draft PR for PO review |
-| Step 3 (named; not authorized) | finish the art design **from AD-4**, compared with Dashboard01 | after this registry is approved |
+| Step 3 (named; not authorized) | finish the art design **from AD-4**, compared with Dashboard01. **Its first check is mandatory:** reproduce AD-4 from the archive (G-3) | after this registry is approved |
 | later (stated goals; not yet numbered by the PO) | approve the new graphic → implement it through governance → test it → close the map → return to Replay | not started |
 
 **Not opened:** AD-5, V-3, Replay, N4, CAL-2. Topic intelligence (CP-A) remains planning only.
@@ -146,4 +184,36 @@ All AD-4 data is declared synthetic: names, elements, relations, colours and mem
 - `living-analysis/README.md`, `SOURCE-PROVENANCE.*` and `i-08b1/` are untouched.
 - No production authority is retired.
 - No device or CI run, and no AI call.
-- The comparison board was rendered locally, with headless Chrome, from scaled copies of the files above. Its HTML source stays in the local report folder.
+- The comparison board was rendered locally, with headless Chrome, from scaled copies of the files above. Its HTML source stays in the local report folder `E:\QANDEEL_REPORTS\MAP-CLOSE-01\step2-board\`.
+- **R1:**
+  - the AD-4 re-renders are verification only. Nothing in AD-4 changed, and no AD-5 was opened;
+  - the archives are draft releases and are **not published**;
+  - Dashboard01 has **not** been removed and Git history is **not** rewritten, pending the decision in §7.
+
+## 7. Dashboard01 and the public repository: PO decision required (R1)
+**Facts (2026-11-10):**
+- The repository `allamqandeel/qandeel` is **public**.
+- Dashboard01 (`5ddaae4c…`, Git blob `b915d275…`) entered Git **only** in commit `05de5286` of this PR. It is in no other commit and on no other branch.
+- The comparison board in this PR includes scaled copies of Dashboard01 and of the LA-VIS-01 reference.
+- Both images are now held privately (§3.5).
+- **Since PR #389 was pushed, both are already publicly readable** through that commit.
+- Other parts of the repository are not affected. Everything else this PR adds is the project's own work or app captures.
+
+**Option A: keep it public.** Only if the PO can prove the right to publish: a recorded origin, and a licence that permits redistribution.
+- The registry records the source and the licence beside Dashboard01, and the PR stays as it is.
+
+**Option B: private storage** (recommended while the right is unproven):
+- **Repository changes**, in a new commit:
+  - remove `target/arabic-semantic-galaxy-dashboard01.png`;
+  - replace the board with a variant whose panel 2 and the LA-VIS-01 thumbnail are placeholders that show only the name, SHA-256 and private archive;
+  - update the registry and `VISUAL-SOURCE.sha256`.
+- **Where Dashboard01 is pinned afterwards:** by hash and by the private archive path.
+- **What the rule in §2 needs:** step 2 already makes a missing or mismatched file a stop, so access to the private archive becomes a precondition of Step 3.
+- **Effect on `main`:**
+  - a **squash merge**, the method used for PR #388, puts only the final tree into `main`, so neither image ever enters `main`;
+  - **however, `05de5286` stays public** in this branch, in GitHub's PR ref `refs/pull/389/head`, and in any clone or fork already made.
+
+**Removing the exposure that already happened.** This is irreversible; nothing is done without the PO's review.
+- **B-2:** rewrite this branch's history and force-push it. Old SHAs can remain reachable on GitHub until a support purge.
+- **B-3:** close PR #389, reopen it from a clean branch, and ask GitHub Support to purge `05de5286` and its cached views.
+- **Neither can reach** copies other people have already made.

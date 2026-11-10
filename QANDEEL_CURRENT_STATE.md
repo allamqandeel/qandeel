@@ -18,6 +18,11 @@
 >   - Step 3, finishing the art design from AD-4, comes after the PO approves this registry, and is **not authorized**.
 >   - No AD-5, V-3, Replay, N4 or CAL-2 work is opened.
 >   - No renderer, data or frozen-contract change is made.
+> - **R1 (2026-11-10), after the PO's final review of PR #389:**
+>   - AD-4's originals and reproduction tools are archived off-device as private **draft** releases, which are not published, with SHA-256 manifests.
+>   - AD-4 re-renders byte for byte from the pinned source. Step 3 must re-run that check first.
+>   - The repository is public, and Dashboard01's origin and licence are not recorded. Whether Dashboard01 and the comparison board may stay is therefore **a PO decision** (registry §7).
+>   - No history is rewritten.
 
 > **MAP-VISUAL-REFRESH-01 CP-A — PERSONAL MAP TOPICS DOCUMENTATION CONTRACT — 2026-11-09 (current task; status only, documentation only, no new task authority):** a Draft PR on `map/map-visual-refresh-01-cp-a` (from `main` at `06f24a73`, where S8B-07 R-5 is merged through PR #386), under the Product Owner's decision of 2026-11-09 on CAL-1 and the CP-A package. **Not merged; merge only on «ادمج».**
 > - **`MAP-VISUAL-REFRESH-01 CP-A — PLANNING REFERENCE — DIRECTION APPROVED BY THE PO — CLOSED AS PLANNING ONLY (2026-11-10) — NOTHING IMPLEMENTED — AUTHORIZES NO N4, CAL-2 OR CP-B`** ([CP-A contract record](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_PERSONAL_MAP_TOPICS_CONTRACT_RECORD_v1.md)). It proposes the L0 / L1 / L2 separation for the Personal Living Analysis map (shared analytical identity, analytical association, understood topics), the two-path N4 topic-proposal contract (Single-Thread and Multi-Thread), forgetting by provenance class (U / QC / QP), the B1 / B2 Privacy Gates under Trust & Privacy review, and a Replay V2 with verifiable topic-layer redaction. It is a planning reference whose direction is approved, and it authorizes no implementation.

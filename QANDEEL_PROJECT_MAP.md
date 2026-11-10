@@ -18,6 +18,11 @@
 >   - Step 3, finishing the art design from AD-4, comes after the PO approves this registry, and is **not authorized**.
 >   - No AD-5, V-3, Replay, N4 or CAL-2 work is opened.
 >   - No renderer, data or frozen-contract change is made.
+> - **R1 (2026-11-10), after the PO's final review of PR #389:**
+>   - AD-4's originals and reproduction tools are archived off-device as private **draft** releases, which are not published, with SHA-256 manifests.
+>   - AD-4 re-renders byte for byte from the pinned source. Step 3 must re-run that check first.
+>   - The repository is public, and Dashboard01's origin and licence are not recorded. Whether Dashboard01 and the comparison board may stay is therefore **a PO decision** (registry §7).
+>   - No history is rewritten.
 > - **Named future step, not authorized:** MAP-CLOSE-01 Step 3, finishing the art design from AD-4 against Dashboard01, under the registry's rule.
 
 > **MAP-VISUAL-REFRESH-01 CP-A — PERSONAL MAP TOPICS DOCUMENTATION CONTRACT — 2026-11-09 (current task; status only, documentation only, no new task authority):** a Draft PR on `map/map-visual-refresh-01-cp-a` (from `main` at `06f24a73`, where S8B-07 R-5 is merged through PR #386), under the Product Owner's decision of 2026-11-09 on CAL-1 and the CP-A package. **Not merged; merge only on «ادمج».**
