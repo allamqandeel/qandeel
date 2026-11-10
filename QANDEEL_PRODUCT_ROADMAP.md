@@ -1,5 +1,33 @@
 # QANDEEL — Product Roadmap
 
+> **MAP-CLOSE-01 STEP 2 — LIVING ANALYSIS MAP VISUAL SOURCE OF TRUTH — 2026-11-10 (current task; status only, documentation only, no new task authority):** a Draft PR on the clean branch `map/map-close-01-visual-registry-clean`, from `main` at `bd80c755`, where MAP-CLOSE-01 Step 1 is merged through PR #388. It replaces Draft PR #389 under the PO's decision B-3. **Not merged; merge only on «ادمج».**
+> - **`MAP-CLOSE-01 STEP 2 — VISUAL SOURCE REGISTRY — APPROVED IN PRINCIPLE BY THE PO (2026-11-10) — AD-4 NOT FINAL — DOCUMENTATION ONLY`** ([Visual Source Registry](docs/design/canonical-artifacts/living-analysis/VISUAL-SOURCE-REGISTRY.md)). It places every map reference in exactly one of four categories:
+>   - **CURRENT PRODUCTION:** I-08B1 → VPORT-01 → LA-VIS-01 → SHARED-VIS-01 → S8B-06 F-G. It is in force, and it is not the art target.
+>   - **TARGET REFERENCE:** Dashboard01, for visual quality only.
+>   - **CURRENT ART BASE:** AD-4, temporary. It is **not final and not approved**.
+>   - **HISTORICAL / REJECTED FOR NEW DESIGN.**
+>   Each entry is pinned by SHA-256.
+> - **The rule, approved in principle:**
+>   - new MAP-CLOSE-01 work starts from AD-4 and is compared with Dashboard01;
+>   - it never starts from I-08B1 as the art target, nor from an older AD round;
+>   - a missing or hash-mismatched asset stops the work, with no automatic fallback.
+>   I-08B1 / VPORT-01 keep their production authority until a replacement is approved and implemented through governance.
+> - **Rights (B-3):** the repository is public.
+>   - Dashboard01 and the LA-VIS-01 reference, whose origin and licence are not recorded, are **not** in this branch. They are held only in private storage and identified by name and SHA-256.
+>   - The comparison board is the Option B board, without those images.
+>   - No history is rewritten (B-2 is rejected).
+> - **AD-4:**
+>   - its originals and reproduction tools are archived privately, with SHA-256 manifests;
+>   - it re-renders byte for byte from the pinned source;
+>   - Step 3 must re-run that check first.
+> - **MAP-CLOSE-01 steps:**
+>   - Step 1 is done.
+>   - Step 2 (this registry) is current.
+>   - Step 3, finishing the art design from AD-4, comes after the merge and is **not authorized**.
+>   - No AD-5, V-3, Replay, N4 or CAL-2 work is opened.
+>   - No renderer, data or frozen-contract change is made.
+> - This banner records status only. It changes no Product Owner sequencing.
+
 > **MAP-VISUAL-REFRESH-01 CP-A — PERSONAL MAP TOPICS DOCUMENTATION CONTRACT — 2026-11-09 (current task; status only, documentation only, no new task authority):** a Draft PR on `map/map-visual-refresh-01-cp-a` (from `main` at `06f24a73`, where S8B-07 R-5 is merged through PR #386), under the Product Owner's decision of 2026-11-09 on CAL-1 and the CP-A package. **Not merged; merge only on «ادمج».**
 > - **`MAP-VISUAL-REFRESH-01 CP-A — PLANNING REFERENCE — DIRECTION APPROVED BY THE PO — CLOSED AS PLANNING ONLY (2026-11-10) — NOTHING IMPLEMENTED — AUTHORIZES NO N4, CAL-2 OR CP-B`** ([CP-A contract record](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_PERSONAL_MAP_TOPICS_CONTRACT_RECORD_v1.md)). It proposes the L0 / L1 / L2 separation for the Personal Living Analysis map (shared analytical identity, analytical association, understood topics), the two-path N4 topic-proposal contract (Single-Thread and Multi-Thread), forgetting by provenance class (U / QC / QP), the B1 / B2 Privacy Gates under Trust & Privacy review, and a Replay V2 with verifiable topic-layer redaction. It is a planning reference whose direction is approved, and it authorizes no implementation.
 > - **Controlled Amendment drafts CA-1..CA-8** ([drafts](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_CONTROLLED_AMENDMENT_DRAFTS_v1.md)) are `PROPOSED — NOT APPROVED — NOT EFFECTIVE`. No frozen or normative document is edited; Replay V1 and the four-effect ceiling (QIR-005) are unchanged.
