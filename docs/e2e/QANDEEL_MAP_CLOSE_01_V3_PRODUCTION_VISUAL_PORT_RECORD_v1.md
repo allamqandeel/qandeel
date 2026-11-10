@@ -286,7 +286,84 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 
 The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-partb`.
 
-**Cost:** one canvas, as before. Only the ground, the strata tiles and the veil grow to the extra area; nodes, relations and place atmospheres do not, and nothing is drawn twice. Measured in §9.
+**Cost:** one canvas, as before. Only the ground, the strata tiles and the veil grow to the extra area; nodes, relations and place atmospheres do not, and nothing is drawn twice. Measured below.
+
+### Part B: repository checks (at R3)
+- `tsc` and `eslint` are clean.
+- Mobile Jest 3471 / 3477. The 6 failures, in `depth` and `w2-account-access`, are the same as on `main` `5a21971d`.
+- Root contracts: 546 / 546, every contract that reads the map, the renderer, the Replay, the record or the locators, including `test:task-closure-governance-contract`.
+
+### Part B on the emulator (validation only; not phone proof)
+**Setup:** Android emulator, API 36, swiftshader (CPU raster), 1080 × 2400, 420 dpi.
+- **Before** = Part A (`v3-c123-c`). **After** = Part B at R3.
+- Same proof world and same steps on both sides.
+- Text at 100 % and the device density on every leg.
+- The other proof packages stay disabled, so a deep link has one target.
+
+The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/device/partb` and `boards/partb`.
+
+| What | Result |
+|---|---|
+| Real touch: pan inside the frame, the return control on the support, a Timeline point, a scroll of the support, the top band's way back to the Conversation | 4 / 4 PASS After (ar, en, increased contrast, Reduce Motion), every step asserted; the same 4 / 4 Before |
+| Replay: the Analysis, then the Replay player at a real moment | 2 / 2 PASS After (ar, increased contrast); 2 / 2 Before. After R3 the player line, caption and message stand exactly where they stood Before |
+| The full VPORT-01 matrix (FAR, MID, NEAR, ANALYTICAL; ar, en, increased contrast, Reduce Motion, narrow, landscape, both travels) | 8 / 8 PASS After; all 32 captures show the map |
+| Increased contrast | identical to Before: the frame ends the world and the bands are solid |
+| The mark under the Timeline (R1, R2) | gone at R2: nothing of the plane stands below the frame |
+
+**Found on the emulator and voided:** the first After matrix (R2) also reported 8 / 8 PASS. The emulator restart had enabled the other proof packages again, though, so from MID on its deep links opened Android's app chooser, and the captures show the chooser, not the map. Those results are void and kept as such (`device/partb-r2-matrix-void-chooser`). The flows' own assertions did not catch it.
+
+**Inside the frame** (ar-standard, the same state, mean luminance per 100 px band):
+- the frame's top is about 14 % darker: the scrim fades into the frame below the now-transparent top band;
+- the frame's lower part is about 5–7 % brighter: the vignette now spans the whole screen, not only the frame;
+- the middle is unchanged.
+
+**Text over the world** (`contrast.mjs`, an approximation: the text's brightest pixels against the 99th percentile of the background, in WCAG terms):
+
+| Where | Before worst / median | After worst / median |
+|---|---|---|
+| Analysis top band | 12.9 / 12.9 | 11.0 / 12.0 |
+| Analysis support at rest | 8.4 / 8.4 | 6.4 / 8.1 |
+| Analysis support with the return options (en) | 4.2 / 12.9 | 4.1 / 12.5 |
+| Replay message | 11.2 / 12.1 | 9.4 / 12.2 |
+| Replay caption line (secondary ink) | 3.3 / 5.4 | 3.2 / 5.2 |
+
+The two lowest rows were low Before too. Their worst background pixel is a control (the Timeline's or the player's marks), not the world.
+
+**Frames** (`dumpsys gfxinfo`, the whole leg, against the Part A matrix rerun on the SAME emulator boot, `matrix-before-sameboot`):
+
+| Leg | Before p50 / p90 / p95 | After p50 / p90 / p95 |
+|---|---|---|
+| ar-standard | 77 / 1500 / 2200 ms | 85 / 2150 / 3200 ms |
+| en-standard | 73 / 1450 / 2250 ms | 77 / 2200 / 3300 ms |
+| travel-standard | 150 / 2250 / 2700 ms | 121 / 2350 / 3350 ms |
+| ar-increased (no continuation) | 69 / 1350 / 1450 ms | 65 / 1350 / 1450 ms |
+| ar-reduced | 65 / 750 / 750 ms | 65 / 1050 / 1100 ms |
+| travel-reduced | 61 / 750 / 800 ms | 69 / 1000 / 1100 ms |
+| ar-narrow | 65 / 900 / 1200 ms | 69 / 1050 / 1200 ms |
+| ar-landscape | 81 / 1700 / 1800 ms | 81 / 2050 / 2300 ms |
+
+**Reading:**
+- The median frame is unchanged.
+- The tail is longer wherever the world continues: on this CPU rasteriser the canvas covers about 1.76 × the frame's area, and the plane's material is composited through one fade layer.
+- Under increased contrast, where the world does not continue, nothing changed: that is the control.
+- A first comparison against the Part A matrix of an earlier emulator boot was not comparable (different frame counts) and is not used.
+- Whether the longer tail exists on a phone's GPU is **not proven**.
+
+**Memory** (`dumpsys meminfo`, KB PSS, the same boot, alternating A, B, A, B; the Analysis open 60 s, then one travel FAR → ANALYTICAL → FAR):
+
+| Build | At rest: native / total | After the travel: native / total |
+|---|---|---|
+| Part A, run 1 | 101927 / 230394 | 106562 / 235896 |
+| Part B, run 1 | 100966 / 232792 | 105622 / 235456 |
+| Part A, run 2 | 101778 / 231442 | 106326 / 247135 |
+| Part B, run 2 | 101534 / 230261 | 104514 / 244064 |
+
+Part B is within the run-to-run noise of Part A: the larger canvas adds no retained memory (the tiles are the same tiles).
+
+**Not proven for Part B:**
+- a physical phone;
+- the phone frame tail;
+- the empty map on a device (Jest golden only).
 
 ## 12. Backlog
 _(reconciled at V-3's closure.)_
