@@ -143,6 +143,7 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Part B:** T-10 §13 and S5-03B criterion 11 (the camera rebase) | the rule "the rebase is the LAST child of the transformed plane" is asserted on `WorldPlane`: its `children` come last inside the one `planeTransform` group (and, in a continuous world, inside the frame clip around that same group), and the rebase is the last of those children | the plane is drawn by one small component so that, without a continuation, the tree stays exactly what it was; the ordering the rule protects is unchanged |
 | **Part B:** W3 E2E-D-10 (Analysis under a Light preference) | the return band now asserts `transparent`, and the ground under it, the Analysis surface's, asserts the Dark family | the band stands on the world; the Analysis is still the dark place under a Light preference |
 | **Part B:** VPORT-01 plain-line rule | the substring test `includes('<Line')` became the element test `/<Line\b/u`, because it also matched the scrim's `<LinearGradient` | the rule is unchanged: the renderer draws no plain line of its own |
+| **Part B R2:** VPORT-02 world pin, and both goldens | `WorldMarks` re-anchored ("MAP-CLOSE-01 V-3 Part B R2 — CONTROLLED RE-ANCHOR", with the previous pin): a mark's anchor carries an unbounded clip so that Skia's native recorder really saves for it (§11). Both goldens re-recorded | a renderer defect, found on the emulator and fixed at its source; the structural diff shows that clip on every anchor and nothing else |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
@@ -270,6 +271,18 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
   - its relations and objects keep the frame exactly (a clip);
   - only the ground, the deep space, the clouds and the veil continue.
 - The structural diff against the first Part B recording: in each of the 11 changed cases, every node is identical apart from the new wrappers (the fade layer, its mask, the frame clip, and the second plane transform).
+
+**Found on the emulator and fixed at its source (R2): a mark popped a save that was not its own.** The R1 build still showed one place's mark under the Timeline, although its glow now faded.
+- **How it was found:** a diagnostic build, never committed, moved the frame clip to half the frame's height and drew a line at each edge. The two places drawn first lost their marks below the line. The three drawn after them kept theirs, so the clip held for some objects and not others.
+- **The cause** is in Skia 2.6.2:
+  - a mark's anchor (`MarkBody`) is a group carrying only an origin;
+  - the JS recorder issues a save and a restore for it;
+  - the native recorder saves only for a transform, matrix, clip or layer, but restores anyway.
+- **The effect:** each mark popped one save belonging to its enclosing groups (its object transform, then the plane transform, then the frame clip). At rest every one of those transforms is the identity, so nothing showed before Part B. The frame clip was the first of them whose loss can be seen.
+- **The fix:** the anchor carries an unbounded clip (`ANCHOR_SAVE`). Its save becomes real, and it cuts nothing. The anchor is still the one group with an origin and no transform, so every reader of the paint finds it unchanged.
+- **Goldens:** both re-recorded. The structural diff shows exactly one change: that clip on every anchor (36 in the screen golden, 67 in the Personal map golden). The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-anchor`.
+- **Reach:** the Shared and Public worlds draw the same anchor, so they get the same correction. Their tests pass unchanged.
+- **Not proven:** that, before this fix, later marks lost the plane's transform during a camera travel on any map. The mechanism implies it, but it was neither observed nor measured here.
 
 The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-partb`.
 

@@ -188,13 +188,19 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // touch, and lays the surface's ink as a scrim; the plane does not run on (its material fades below the frame, its
   // objects keep the frame by a clip). Without it the canvas is exactly what it was (the Personal map golden is
   // unchanged; the screen golden's host tree is identical). Previous pin: WorldCanvas 69b6a183.
+  // MAP-CLOSE-01 V-3 Part B R2 — CONTROLLED RE-ANCHOR (a renderer defect found on the emulator, fixed at its source): a
+  // mark's anchor carried only an origin, for which Skia 2.6.2's native recorder skips the save but still restores, so
+  // each mark popped a save that was not its own (the enclosing object, plane and frame groups). The anchor now carries an
+  // unbounded clip, which makes its save real and cuts nothing. Both goldens were re-recorded after the structural diff
+  // proved the ONLY change is that clip on every anchor (screen 36 anchors, Personal map 67). Previous pin: WorldMarks
+  // 59de7838.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '54cefdf084f70e5bf2e2785b37f29f2835704e52'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', '59de78381404afe2353efeea31ea3eb277450a1c'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd28077e514252c6bb59f64d45837fbf87a1e1907'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', '6f6b8b94e980b19125ca501191923000a77959de'],
     ['apps/mobile/src/map/visual/WorldContinuity.tsx', '4c49a09448f866208667caea3f78d54bdd92025a'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
