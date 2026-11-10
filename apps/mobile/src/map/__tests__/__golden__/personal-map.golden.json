@@ -3693,7 +3693,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 249.0888671875,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 304.0205078125,
@@ -8919,7 +8919,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -17063,7 +17063,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -22930,7 +22930,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -28875,7 +28875,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -34742,7 +34742,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -42778,7 +42778,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -48710,7 +48710,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -54330,7 +54330,7 @@
                    "color": "rgba(134,223,208,1)",
                    "height": 1692.5703125,
                    "opacity": {
-                    "$animated": 0.9
+                    "$animated": 0.8
                    },
                    "skiaElement": "Rect",
                    "width": 2083.1953125,
@@ -64373,7 +64373,7 @@
                "color": "rgba(134,223,208,1)",
                "height": 1692.5703125,
                "opacity": {
-                "$animated": 0.45
+                "$animated": 0.4
                },
                "skiaElement": "Rect",
                "width": 2083.1953125,
@@ -64424,7 +64424,7 @@
                "color": "rgba(134,223,208,1)",
                "height": 1692.5703125,
                "opacity": {
-                "$animated": 0.45
+                "$animated": 0.4
                },
                "skiaElement": "Rect",
                "width": 2083.1953125,
