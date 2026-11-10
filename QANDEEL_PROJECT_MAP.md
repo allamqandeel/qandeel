@@ -2,10 +2,11 @@
 
 > **MAP-CLOSE-01 STEP 4 / V-3 — PRODUCTION VISUAL PORT OF S3-R2 — 2026-11-10 (current task; status only, no new task authority):** a Draft PR on `map/map-close-01-v3-production-port`, from `main` at `5a21971d`, where MAP-CLOSE-01 Step 2 is merged through PR #390. **Not merged; production changes merge only on the PO's approval («ادمج»).**
 > - **`MAP-CLOSE-01 STEP 3 — CLOSED / FROZEN (2026-11-10)`:** the PO approved S3-R2 (`core` + `fine` + `fill`) as the FINAL APPROVED VISUAL ART DIRECTION, with no S3-R3. AD-4 and S3-R1 are historical. S3-R2 is pinned by SHA-256 in the [Visual Source Registry](docs/design/canonical-artifacts/living-analysis/VISUAL-SOURCE-REGISTRY.md) (§3.3, rule §2.6: no fallback to I-08B1, AD-4, S3-R1 or Dashboard01).
-> - **`MAP-CLOSE-01 STEP 4 / V-3 — AUTHORIZED BY THE PO (2026-11-10) — PART A SLICE 1 DELIVERED — NOT MERGED`** ([V-3 record](docs/e2e/QANDEEL_MAP_CLOSE_01_V3_PRODUCTION_VISUAL_PORT_RECORD_v1.md)):
+> - **`MAP-CLOSE-01 STEP 4 / V-3 — AUTHORIZED BY THE PO (2026-11-10) — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED — READY FOR PO VISUAL & MERGE REVIEW — NOT MERGED`** ([V-3 record](docs/e2e/QANDEEL_MAP_CLOSE_01_V3_PRODUCTION_VISUAL_PORT_RECORD_v1.md)):
 >   - the Personal map draws its nodes and its hosting relations in the S3-R2 grammar, from real data only, on the current engine;
+>   - C1 / C2 / C3 (PO, "V-3: Final Visual Integration — PO APPROVED"): the S3-R2 deep space and each place's fine threads at FAR, MID, NEAR and ANALYTICAL as one world, and no fog at ANALYTICAL; paint only, Personal map only (a new paint module, `WorldContinuity.tsx`);
 >   - placement, hit testing, camera, membership and accessibility are unchanged (paint-only by the goldens' structural diff);
->   - two named controlled amendments: the VPORT-02 world pins are re-anchored, and the VPORT-01 chroma rule is tightened;
+>   - named controlled amendments only (VPORT-02 world pins, VPORT-01 rules, the map runtime census), each listed in the record;
 >   - groups, topic labels, inter-node relations and transition threads need L2 data and are **not** drawn;
 >   - Part B (the Analysis screen UI around the map, PO addition of 2026-11-10) is a separate, stacked Draft PR.
 > - **Not opened:** N4, CAL-2, Replay work, any change to Qandeel's intelligence or to data facts.
