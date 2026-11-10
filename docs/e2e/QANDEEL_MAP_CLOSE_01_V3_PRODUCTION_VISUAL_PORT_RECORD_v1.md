@@ -199,6 +199,7 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Part B R2:** VPORT-02 world pin, and both goldens | `WorldMarks` re-anchored ("MAP-CLOSE-01 V-3 Part B R2 — CONTROLLED RE-ANCHOR", with the previous pin): a mark's anchor carries an unbounded clip so that Skia's native recorder really saves for it (§11). Both goldens re-recorded | a renderer defect, found on the emulator and fixed at its source; the structural diff shows that clip on every anchor and nothing else |
 | **Three worlds (§5B):** VPORT-01 | the continuity test's "Shared and Public do not opt in" becomes "every world's owner opts in, beside its served address, and takes nothing else of the Personal world"; it also requires each field's behavioural proof | PO scope correction, 2026-11-10 |
 | **Three worlds (§5B):** VPORT-02 world pins | `WorldCanvas` `69b6a183` → `43c66051` on Part A, and `54cefdf0` → `55e441d7` once merged into Part B; `WorldContinuity` `4c49a094` → `632de2b2` (comments only); recorded in the test with the previous pins | PO scope correction; both goldens unchanged |
+| **Pan/Zoom performance slice (2026-11-11):** VPORT-02 world pin | `WorldStrata` `6f6b8b94` → `77ea34d7`: `FadedLayer` bounds its layer with an outer clip (the content's bounds plus 32). Recorded in the test with the previous pin | the PO's performance slice; both goldens re-recorded, and removing the added clip wrappers (607 in the map golden, 568 in the screen golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest; the rest are within 2 / 255 |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
@@ -294,6 +295,40 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 - The totals are within the run-to-run spread.
 
 **During an active call.** This was not measured on a device. The protection is the S8B-06 banding, unchanged.
+
+### Pan performance on the PO's phone: diagnosis (2026-11-11)
+Measured on the PO's phone (HONOR ALI-NX1, Snapdragon 6 Gen 1) with the proof package only. Frames are those SurfaceFlinger presented during six pans, two rounds per variant. The variants came from a measurement build that is never committed; a deep link turned paint parts off one at a time.
+
+**Where the time goes (Personal, fps while panning).**
+
+| Variant | fps |
+|---|---|
+| everything drawn | 5.3–5.4 |
+| WorldTone off | 14.4–18.9 |
+| WorldTone as one plain colour-filter layer (not the curve; cost only) | 15.2 |
+| WorldTone clipped to the canvas | 5.3 |
+| ground, strata, deep space, masses, threads, veil or material off, one at a time | 3.1–5.9 (no single part) |
+| objects and connections off | 9.1 |
+| the whole map off | 55.4 |
+
+**The cause: the tone runs once per draw.** RN Skia 2.6.2 sets a Group's `<RuntimeShader>` on the paint its children inherit, not on a layer, so the tone curve opens an image-filter layer for every draw under it. The curve is meant to apply once, to the composite (`WorldTone`'s own comment; I-08B1 `renderComposite`).
+
+**One fix adopted here, pixel-preserving.** `FadedLayer` bounds its layer (§6). Presented fps while panning (Before = Part B head; three rounds of six pans):
+
+| World | Before | With the bound |
+|---|---|---|
+| Personal | 3.3 | 4.5 |
+| Shared | 5.0 | 5.2 |
+| Public | 5.9 | 16.7 |
+
+**One fix NOT adopted: it changes the picture and awaits the PO.** With the tone applied once to the composite, as one layer:
+- Personal goes from 5.3 to 33.1 fps (p50 100 → 33 ms);
+- Shared goes from 3.9 to 26.7 fps;
+- Public goes from 16.5 to 28.8 fps.
+
+The world is darker, though. At rest in Personal, mean luma in the map goes from 50.7 to 37.0, and the mean per-pixel change is 17 / 255, against 0 between repeat captures. That is an S3-R2 appearance change, so it is not made without the PO.
+
+The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exactly for transparent draws: there is no runtime colour filter, and soft light, the only blend that squares the destination, divides by its alpha. **Pan performance therefore remains NOT MET.**
 
 ## 10. Not done yet
 - **Part A Slice 2:** delivered as C1 (§5A).

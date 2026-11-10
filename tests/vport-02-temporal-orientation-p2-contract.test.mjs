@@ -200,6 +200,11 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // no code, no element and no prop changes, so both goldens are unchanged. Previous pins: WorldCanvas 69b6a183 (Part A),
   // WorldContinuity 4c49a094.
   // Merged into Part B, the same comment-only change moves WorldCanvas from 54cefdf0 (Part B R1) to its current blob.
+  // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner's Pan/Zoom performance slice, 2026-11-11): FadedLayer bounds its
+  // layer with an outer clip (the content's bounds plus 32), so Skia no longer opens a canvas-sized layer for every faded tile
+  // and mass level. Both goldens were re-recorded; removing the added clip wrappers (607 in the map golden, 568 in the screen
+  // golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest and the
+  // rest are within 2 / 255. Previous pin: WorldStrata 6f6b8b94.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
@@ -207,7 +212,7 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '55e441d706b80ea2c21cb7b4c21c7c395a9caf81'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd28077e514252c6bb59f64d45837fbf87a1e1907'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', '6f6b8b94e980b19125ca501191923000a77959de'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', '77ea34d7a3594f12a33c3ddf2826bcfcc9486d45'],
     ['apps/mobile/src/map/visual/WorldContinuity.tsx', '632de2b242d943cbe68c8be0305d204dd367874f'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
