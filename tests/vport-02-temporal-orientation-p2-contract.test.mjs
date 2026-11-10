@@ -171,13 +171,19 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // single 3.3 s pass closed live calls. The pixels are the same (every step is per pixel, painted on one surface under a
   // non-anti-aliased clip); the nebula draws nothing until it is painted. Both goldens unchanged. Previous pin: WorldStrata
   // 366f7d15.
+  // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10: S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION
+  // and Step 4 / V-3 Production Visual Port is authorized): the Personal owner hands each mark and tether the world's
+  // chroma at its PLACE (its own Home's canonical address, or its hosting Home's), and WorldMarks draws the S3-R2 node
+  // grammar from it. Both goldens were re-recorded after the structural diff proved every case differs in Skia paint only
+  // (host tree and every anchor identical; the increased-contrast cases unchanged). Previous pins: MapCanvas a82f761f,
+  // WorldMarks 8b81a4e4.
   for (const [path, blob] of [
-    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
+    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'cabef8ef4dd1c32c14d8c8c5d1dffa38b5ba1d91'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'e0ddba0057a6506cc5b68454a7a41b8f923bbb5f'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', '8b81a4e4c6fb002e3e9c5088a316d5844723638b'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', '59de78381404afe2353efeea31ea3eb277450a1c'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', 'e17cef8d90b4c4c9543d9164091b6e266a388896'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],

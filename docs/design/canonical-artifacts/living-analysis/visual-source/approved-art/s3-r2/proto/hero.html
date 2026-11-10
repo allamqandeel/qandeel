@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ar"><head><meta charset="utf-8"><title>S3-R2 hero (on S3-R1)</title>
+<style>
+@font-face { font-family: Estedad; src: url(fonts/Estedad-Regular.ttf); font-weight: 400; }
+@font-face { font-family: Estedad; src: url(fonts/Estedad-Medium.ttf); font-weight: 500; }
+html,body{margin:0;background:#000}canvas{display:block;position:absolute;left:0;top:0}</style>
+<script src="web.js"></script></head>
+<body><canvas id="c"></canvas><pre id="results" style="display:none"></pre>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  await document.fonts.load('500 26px Estedad'); await document.fonts.load('400 13px Estedad');
+  const t0 = performance.now();
+  const r = WEB.render(document.getElementById('c'), { W: 1200, H: 894, dpr: window.devicePixelRatio || 1, seed: +(q.get('seed') || 20261109), particles: +(q.get('p') || 1500000), dust: +(q.get('dust') || 700000), walkers: +(q.get('wk') || 1800), titleSize: 25, subSize: 13, data: q.get('data') !== '0', names: q.get('names') !== '0', s3: (q.get('s3') || '').split(',').filter(Boolean) });
+  r.totalMs = Math.round(performance.now() - t0); r.fontOk = document.fonts.check('500 26px Estedad');
+  document.getElementById('results').textContent = JSON.stringify(r); document.title = 'DONE';
+})();
+</script></body></html>

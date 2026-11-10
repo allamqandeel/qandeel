@@ -233,6 +233,12 @@ test('LA-VIS-01: the one declared chroma palette is exactly the six authorized f
   assert.match(worldCanvas, /chroma=\{chromaAt\(worldAddressOf\?\.\(node\)\)\}/u);
   assert.equal((worldCanvas.match(/worldAddressOf/gu) ?? []).length, 3, 'declared, destructured, read once');
   assert.match(personalCanvasOwner, /worldAddressOf=\{\(node\) => \(node\.locus\?\.kind === 'THREAD_HOME' \? node\.locus\.address : undefined\)\}/u);
+  // MAP-CLOSE-01 V-3 (Product Owner, 2026-11-10: S3-R2 final, V-3 authorized): the Personal owner also hands each mark and
+  // tether the chroma at its PLACE — a Home's own canonical address, or the address of the Home that hosts it — through ONE
+  // helper, and nothing else: no group, topic, rank, proximity or membership is read to colour anything.
+  assert.match(personalCanvasOwner, /function placeChromaOf\(node: PlacedNode, placement: PlacedScene\) \{\s+const home = node\.locus\?\.kind === 'THREAD_HOME' \? node : hostOf\(node, placement\);\s+return home\?\.locus\?\.kind === 'THREAD_HOME' \? worldChroma\(home\.locus\.address\) : undefined;\s+\}/u);
+  assert.equal((personalCanvasOwner.match(/worldChroma\(/gu) ?? []).length, 1, 'the chroma is read in placeChromaOf only');
+  assert.deepEqual([...personalCanvasOwner.matchAll(/chroma=\{([^}]*)\}/gu)].map((m) => m[1]), ['placeChromaOf(host, placed)', 'placeChromaOf(node, placed)'], 'a tether and an object, nothing else');
   // Nothing that decides membership, placement, hit testing or accessibility reads it.
   for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
     assert.equal(read(file).includes('world-chroma'), false, `${file} must not read the chroma field`);
