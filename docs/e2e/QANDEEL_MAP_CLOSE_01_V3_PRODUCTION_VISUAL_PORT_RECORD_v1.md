@@ -251,7 +251,7 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 
 **Not proven.**
 - **The empty map on a device:** the proof root has no empty-world entry. The empty world is covered only by the Jest golden case `surface:empty-world`.
-- **A physical phone:** none is connected.
+- **A physical phone:** none was connected at this run (the three worlds were later run on the PO's phone, §11).
 - **Accessibility with a screen reader:** not in scope (PO, 2026-11-08).
 
 ## 8. Step 3's closure (recorded here and in the registry)
@@ -298,7 +298,7 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 ## 10. Not done yet
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
-- **A physical phone:** none is connected. Every device result in this record is from the Android emulator, and is never claimed as phone proof.
+- **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.
 - **The three worlds on a real phone (§5B):** run on the PO's phone (Part B §11). Function passes; pan performance is NOT MET and awaits the PO's decision. V-3 does not close on it.
 
 ## 11. Part B — the Analysis screen UI (PO addition, 2026-11-10)
@@ -450,7 +450,88 @@ Part B is within the run-to-run noise of Part A: the larger canvas adds no retai
 - Shared and Public suites: 232 / 232.
 - Root contracts that read the map, the renderer, the Living Analysis surface, the Replay, the Shared or Public field, or the locators: 488 / 488.
 
-**Not yet proven:** the three worlds on the emulator and on a real phone (below, when run).
+**On a device:** the three worlds were run on the PO's real phone (below), not on the emulator. The emulator shut itself down during the first attempt and was not used again.
+
+### The three worlds on a real Android phone (PO scope correction and the fade addition, 2026-11-10)
+**Device and method (validation only).**
+- The PO's phone (HONOR, Android, 1200 × 2652). The Product app on it is never installed, launched, linked to or measured.
+- Every APK is the S4-01 proof root (synthetic fixtures), built for the phone as a SEPARATE package (`com.qandeel.mobile.v3proof`, label "QANDEEL V3 Proof", arm64-v8a). The Product entry was restored after each build.
+- Deep links go to that package alone (`am start -a VIEW -d … <package>`), because the Product app also answers `qandeel://`.
+- Leg settings were switched only for their leg, with the PO's approval, and restored to the recorded originals: increased contrast = High contrast text; reduced motion = the three animation scales at 0. Read back after the runs, the originals were all in place.
+- APKs: **main** = `5a21971d`; **Before** = `02b46ad3` (Part B before the scope correction: Shared and Public without the continuity, with solid bands); **After** = `da608237` (this branch); **Fade** = `da608237` plus the bounded material layer (measurement only, never committed).
+
+**Function: 36 / 36 PASS.** Three APKs (Before, After, Fade) × four legs (Arabic, English, Arabic increased contrast, Arabic reduced motion) × three worlds. Every step asserts what it reached:
+- **Personal Analysis:** FAR, a hand pan, the return control, a Timeline point, the support scroll, back to the Conversation.
+- **Shared World:** FAR, a hand pan, MID by a tap on a place, NEAR by choosing a place (its panel), Back to MID, the World's conversation.
+- **Public World:** FAR, a hand pan, MID by a tap, NEAR by choosing an Experience (its panel), Back to MID.
+
+**What the captures show.**
+- After brings the S3-R2 world (deep space, the fine threads, the glow) into the Shared and Public fields at FAR, MID and NEAR, and their top bands stand on it.
+- Under increased contrast the bands keep their solid ground and the canvas ends at the frame.
+- The targets, labels, panels and acts are the same as Before.
+
+**Text over the world.** This is an approximation: for a band, it compares the brightest 0.5 % of pixels against the background's median and 99th percentile.
+
+| Measured band | Before | After |
+|---|---|---|
+| Header and panel text | identical | identical |
+| Place label at NEAR (Shared), median | 12.3:1 | 9.3:1 |
+| Place label at NEAR (Shared), worst case | 2.6:1 | 2.4:1 |
+
+- The median drops because the glow lifts the ground under the label.
+- The worst case is a bright thread crossing the text, and it is the same in Before.
+- At MID in both fields, the threads cross the place labels. This is an observation for the PO's visual review, not changed here.
+
+**Cold Start** (`am start -W`, six runs each, TotalTime):
+
+| APK | Range | Median |
+|---|---|---|
+| Before | 274–304 ms | 298.5 ms |
+| After | 266–319 ms | 291.5 ms |
+| Fade | 254–313 ms | 294.5 ms |
+
+All three are within the spread.
+
+**Pan performance.**
+
+*Method.*
+- `gfxinfo` sees only the host window's own work. The Skia canvas composes into that window, so the honest per-frame measure is SurfaceFlinger's present times on the window layer.
+- Each APK, each world: three rounds of six hand-like pans (`input swipe`, 700 ms each), in the same state for every APK.
+- "fps" counts the presented frames over the pan time. Gaps over 1.5 s, between swipes, are dropped.
+
+*Frames presented (three rounds):*
+
+| APK | Personal Analysis | Shared field (FAR) | Public field (FAR) |
+|---|---|---|---|
+| main `5a21971d` | 112 frames · 6.6 fps · p50 83 ms | 126 · 7.6 fps · p50 100 ms | 141 · 9.1 fps · p50 67 ms |
+| Before `02b46ad3` | 51 · 2.6 fps · p50 333 ms | 130 · 7.3 fps · p50 67 ms | 129 · 8.0 fps · p50 83 ms |
+| After `da608237` | 52 · 3.3 fps · p50 250 ms | 78 · 5.0 fps · p50 133 ms | 89 · 5.9 fps · p50 100 ms |
+| Fade | 52 · 2.8 fps · p50 283 ms | 79 · 4.6 fps · p50 133 ms | 80 · 5.4 fps · p50 133 ms |
+
+*What it shows.*
+- **Not met.** Panning is not smooth on this phone in any APK, main included.
+- **A regression.** The S3-R2 port roughly halves the Personal Analysis's presented frames against main (Part A, already in Before). The scope correction lowers the Shared and Public fields by about a third against Before.
+- **Not adopted here.** Optimising the paint was not authorised under "no redesign, no engine rebuild". This regression is the PO's decision, and V-3 does not close on it (§10).
+- **Window frames.** `gfxinfo` (whole walks, every leg) agrees in direction. The Shared and Public window frames were already slow in Before (p50 150–250 ms), and After adds about 50–150 ms at p90 in both. Memory (PSS, Graphics) is within the run-to-run spread.
+
+**The fade's bound (PO addition): measured, not adopted.**
+- **Bounding.** The material's offscreen layer, inside an outer clip of `envelope.height + 44`, was bounded in a separate APK. Skia saves a group's layer before its own clip, so the bound needs the group around it.
+- **Visual check: nothing changed.** Same-step captures against After differ in at most 0.01 % of the pixels below the status bar, by at most 6 levels.
+  - The per-row seam check finds no new horizontal edge: 0.00 at the frame's foot in the Personal Analysis.
+  - The MID captures differ as much as two runs of the same APK do, because the hand pan is not pixel-repeatable.
+- **Performance: no benefit.** Frames presented while panning (table above) and every `gfxinfo` and memory figure are within the spread of After.
+- **Not adopted.** The PO's condition for implementing it, a measured benefit, is not met. The code stays as it is.
+
+**Not proven.**
+- A two-finger pinch: Maestro cannot pinch. The zoom is proven by the tap and by choosing a place, and the accessible step is proven in Jest.
+- Pan performance at an acceptable level, in any of the three worlds.
+- Any screen reader proof (PO, 2026-11-08: none).
+
+**Evidence (reports folder, outside the repository).**
+- `device/three-worlds/phone/{before,after,fade}`: captures, Maestro logs, gfxinfo, meminfo, Cold Start.
+- `device/three-worlds/phone/pan/{main,before,after,fade}`: SurfaceFlinger latency dumps.
+- `boards/three-worlds/phone/*.png`: per leg, plus Before / After / Fade.
+- `scripts/run-phone.sh`, `pan-bench.sh`, `pan-summary.mjs`, `phone-pixcmp.mjs`, `contrast.mjs`, `build-phone-apk.sh`.
 
 ## 12. Backlog
 _(reconciled at V-3's closure.)_
