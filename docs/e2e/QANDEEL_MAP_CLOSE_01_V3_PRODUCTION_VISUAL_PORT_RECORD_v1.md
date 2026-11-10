@@ -146,7 +146,46 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
 
 ## 7. Verification
-_(filled in §7 after the device run.)_
+**Static and unit.**
+- `tsc` and `eslint` are clean.
+- Jest (`apps/mobile`): `src/map`, `src/shared-world`, `src/public-world`, `src/integration`, `src/living-analysis`, `src/replay-composite` and `src/replay-player` give 832 / 838.
+- The 6 failures are in `depth.test.tsx` and `w2-account-access.test.tsx`. They fail identically on `main` `5a21971d`, so they are baseline and not caused by V-3.
+
+**Contracts.** All pass:
+- VPORT-01 12 / 12, VPORT-02 9 / 9, Map runtime 15 / 15;
+- T-10 31, T-11 27, S5-03B 13, S5-03C 8, SHARED-VIS-01 8;
+- S7-02 19, S7-03 31, S7-04 63;
+- task-closure governance 24;
+- every contract that reads the Map's visual or renderer code, and every one that reads the locators.
+
+**Goldens: structural diff, not trust.**
+- Both goldens were re-recorded. Each was compared with the R1 recording as a one-line-per-node outline (`git diff --no-index`).
+- Personal map: the differences are only additions (the deep stratum, the four thread layers, the `NearCap` wrappers) and the nebula mask's opacity values (C2).
+- Screen golden: identical once the C1–C3 additions are removed.
+- A second commit re-records both goldens at the final tuning. The first recording predated the last tuning round and failed 22 cases. Every difference is one of two animated paint weights: thread weight 0.9 → 0.8 and deep-cloud alpha 0.45 → 0.4.
+- The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-c123`.
+
+**Found and fixed.** The `world-visual.test.tsx` tether rule had been failing since R1 (§6).
+
+**Device: the Android emulator, not a phone.**
+- Setup: `sdk_gphone64_x86_64`, Android 16 / API 36, 1080 × 2400 at 420 dpi, software renderer (swiftshader).
+- APK `v3-c123-c` (`ffca9014…`): the VPORT-01 proof root over the production integration runtime. Its sources are this branch's code.
+- The matrix had 8 legs: `ar-standard`, `en-standard`, `travel-standard`, `ar-increased`, `ar-reduced` (Reduce Motion), `travel-reduced`, `ar-narrow` (360 dp) and `ar-landscape`. **All 8 PASS.**
+- Each leg covers FAR, MID, NEAR, NEAR with a selection, and ANALYTICAL with the register, from the same proof world and camera steps.
+- Two legs were rerun, and their invalid captures are archived, not counted:
+  - `ar-standard`: a stray pointer event on the emulator's window during the ANALYTICAL step;
+  - `ar-landscape`: the flow forced portrait. It now has its own landscape flow.
+- Before / After boards (derived reference | `main` | R1 | C1–C3, at FAR / MID / NEAR / ANALYTICAL) are in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/boards/c123` (`ar-standard`, `ar-increased`, `ar-reduced`, `ar-landscape`).
+
+**What the device shows (a reading, not a test).**
+- FAR, MID, NEAR and ANALYTICAL read as one world: the deep space, the place threads in each place's colour, and the nodes and relations unchanged.
+- ANALYTICAL shows the place's material with its voids. R1 and `main` showed a fog there.
+- The Timeline, the controls and the register are in place in every leg.
+
+**Not proven.**
+- **The empty map on a device:** the proof root has no empty-world entry. The empty world is covered only by the Jest golden case `surface:empty-world`.
+- **A physical phone:** none is connected.
+- **Accessibility with a screen reader:** not in scope (PO, 2026-11-08).
 
 ## 8. Step 3's closure (recorded here and in the registry)
 - S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION; no S3-R3; AD-4 and S3-R1 are historical.
@@ -154,7 +193,40 @@ _(filled in §7 after the device run.)_
 - The S3-R2 archive v1 is a private draft release (`archive-map-close-01-s3-r2-final-art-v1`), with no third-party image.
 
 ## 9. Performance and the active call
-_(filled after the device run.)_
+**One-time JS cost.**
+- The two tiles (threads, deep space) are painted once per process, in the S8B-06 bands (`rasterTile`), which release the JS thread between bands. This is the same mechanism as the nebula, the constraint that keeps live calls alive.
+- Generating the threads costs about 0.12 s of JS, and the wisps about 0.03 s. Both were measured on the development machine without a JIT (`node --jitless`). They are not phone numbers.
+
+**First paint on the emulator.**
+- The tiles appear 35–60 s after the Analysis opens. This was measured on build `v3-c123-b`, which has the same painting path.
+- Until then the world draws without the threads and the deep space, and nothing else waits on them.
+- The emulator rasterises on the CPU (swiftshader), so this is not a phone number. **Phone first-paint time is NOT PROVEN.**
+
+**Frames on the emulator (`dumpsys gfxinfo`, whole leg; same flow, same proof world).** The software renderer makes about 85 % of frames "janky" on every build, `main` included. These numbers compare builds; they do not judge smoothness.
+
+| Leg | `main`: frames / p50 / p90 (ms) | R1: frames / p50 / p90 (ms) | C1–C3: frames / p50 / p90 (ms) |
+|---|---|---|---|
+| ar-standard | 66 / 97 / 1800 | 71 / 81 / 2000 | 72 / 89 / 1800 |
+| ar-landscape | — | 69 / 93 / 2100 | 71 / 109 / 2100 |
+| travel-standard | 77 / 300 / 2600 | 88–91 / 150–400 / 2400–2500 | 97 / 150 / 3450 |
+| ar-increased | 71 / 113 / 2050 | 68 / 101 / 1950 | 73 / 93 / 2250 |
+| travel-reduced | — | 45 / 81 / 1000 | 49 / 89 / 1250 |
+
+- The travel tail is longer with C1–C3: p90 3450 ms against 2400–2600 ms.
+- On the emulator, the four thread layers and the deep space cost frame time while the world travels. Whether that matters on a phone's GPU is **NOT PROVEN**.
+
+**Memory on the emulator (`dumpsys meminfo`, one sample each).** The Analysis was open for 60 s, then travelled FAR → ANALYTICAL → FAR. Values are PSS in MB.
+
+| Build | Total at rest | Native at rest | Total after travel | Native after travel |
+|---|---|---|---|---|
+| `main` | 230.4 | 96.0 | 249.6 | 102.8 |
+| R1 | 234.8 | 97.2 | 232.9 | 102.7 |
+| C1–C3 | 231.8 | 100.9 | 248.3 | 104.3 |
+
+- Graphics memory reads 0 on swiftshader, so the tiles live in the native heap. C1–C3 is about 3.7 MB above R1 at rest and about 1.6 MB after travel. That is the size of the two tiles.
+- The totals are within the run-to-run spread.
+
+**During an active call.** This was not measured on a device. The protection is the S8B-06 banding, unchanged.
 
 ## 10. Not done yet
 - **Part A Slice 2:** delivered as C1 (§5A).
