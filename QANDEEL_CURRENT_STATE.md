@@ -5,6 +5,14 @@
 > - **Controlled Amendment drafts CA-1..CA-8** ([drafts](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_CONTROLLED_AMENDMENT_DRAFTS_v1.md)) are `PROPOSED — NOT APPROVED — NOT EFFECTIVE`. No frozen or normative document is edited; Replay V1 and the four-effect ceiling (QIR-005) are unchanged.
 > - **CAL-1** ([results](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CAL_1_SYNTHETIC_RESULTS_v1.md)) is synthetic and was run once against a preregistration. Its hard gates pass; **Q1 (association precision 0.699 against ≥ 0.75) FAILS and is kept as recorded.** K / S are not approved. It proves nothing about N4.
 > - **CAL-2** ([run plan](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CAL_2_RUN_PLAN_v1.md)): `PLAN READY FOR PO RUN AUTHORIZATION — NOT AUTHORIZED — NO PAID CALL MADE`, with a hard cap of USD 6.00.
+> - **R1 (2026-11-10), after the PO review of this Draft PR:**
+>   - in N4, overlapping topics may either extend an existing topic or form an independent one;
+>   - the event spine is content-free, and derived text is deleted from separate content rows;
+>   - Replay V2 uses salted item digests, `DESIGNED — NOT PROVEN` (proofs RV2-P1..P7 at CP-C);
+>   - N4 against live calls is split into admitting new work, work in flight, and provider capacity. Only a real-call test (RT) can claim isolation;
+>   - CAL-2 gains preconditions and an INCOMPLETE rule.
+>
+>   Merging is not approved.
 > - **Backlog:** no change. The index stays at 108 items.
 > - **Not authorized:** CP-B or any production CP, migrations, product code, changes to frozen contracts, paid AI, the CAL-2 run, V-3, Replay video work.
 

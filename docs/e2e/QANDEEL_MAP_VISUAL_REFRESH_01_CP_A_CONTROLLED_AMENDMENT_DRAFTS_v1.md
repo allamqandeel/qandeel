@@ -2,6 +2,7 @@
 
 **Status:** `PROPOSED — DRAFT CONTROLLED AMENDMENTS — NOT APPROVED — NOT EFFECTIVE — NOTHING IMPLEMENTED`
 **Parent:** [CP-A contract record](QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_PERSONAL_MAP_TOPICS_CONTRACT_RECORD_v1.md) §11.
+**Revision:** **R1 (2026-11-10)**, after the PO review of Draft PR #388. It revises CA-5, CA-6, CA-7 and CA-8. Every draft is still not approved and not effective.
 
 **Rule:** **no frozen or normative document is edited by this PR.**
 - Each draft states the clause it would change, the proposed wording, and the earliest CP at which it may take effect.
@@ -69,11 +70,18 @@
   - the L1 rule version;
   - the L2 ledger state;
   - the evidence state.
-- **The topic layer is pinned as an itemized digest,** keyed per user, with the key destroyed on account erasure.
-- **Redaction records** (append-only, content-free) tombstone the items affected by forgetting.
+- **The topic layer is pinned as a salted itemized digest.**
+  - Each item's digest is H(salt ‖ item), with a fresh random salt held in a deletable row.
+  - A layer digest covers the ordered list of item digests.
+  - *R1:* this replaces the per-user keyed digest.
+- **On forgetting:**
+  - the affected items' salts are deleted, with their content;
+  - an append-only, content-free **redaction record** names the slot.
+
+  The pinned list still verifies, but a redacted item can no longer be matched against any guess.
 - **At read time,** a moment is served only if:
-  - present items match their pins;
-  - tombstoned slots are absent;
+  - every non-redacted item matches its pin;
+  - every redacted slot is absent;
   - no unpinned item appears.
 
   Otherwise **only the topic layer** is unavailable.
@@ -81,7 +89,9 @@
 - Activation is anchored at the activation `world_version`.
 - The Replay Media Pool stays isolated from the Live Voice Pool.
 
-**Earliest effect:** CP-C.
+**Status of the mechanism:** `DESIGNED — NOT PROVEN`. This amendment cannot take effect until the proof obligations RV2-P1..P7 (contract record §9) pass at CP-C.
+
+**Earliest effect:** CP-C, after RV2-P1..P7.
 
 ## CA-6: Erasure and export coverage
 **Current:**
@@ -89,7 +99,14 @@
 - export: `QAN-BL-PRIV-05`, owned by PRIV-EXPORT-01.
 
 **Proposed:**
-- Erasure covers the topics, topic events, vetoes, rejection keys, redaction records and the per-user digest key.
+- Erasure covers:
+  - the topics and the event spine;
+  - the content rows;
+  - vetoes;
+  - rejection keys and the per-user HMAC key;
+  - Replay V2 salts and redaction records.
+
+  This follows contract record §5 and §7, as revised in R1.
 - Export includes the user's topics and their provenance class, **never** purged text.
 - `QAN-BL-PRIV-05` keeps its owner. This only adds the new tables to its scope when they exist.
 
@@ -100,15 +117,18 @@
 - The feature families form a closed enum.
 - The permit kinds are CALL_ANALYSIS, TEXT_SEMANTIC_ANALYSIS and POST_RESPONSE_INTELLIGENCE.
 
-**Proposed:**
-- A new family, `TOPIC_PROPOSAL`.
-- A new permit kind for N4:
-  - lowest priority, with `respectCriticalWindow: true`;
+**Proposed** (R1, contract record §6.9):
+- A new family, `TOPIC_PROPOSAL`. Its accounting rows hold no content and no evidence fingerprint.
+- **N4's own pool,** outside the 0191 permit pool:
+  - `N4_GLOBAL_CONCURRENCY` slots, counted across instances;
   - per-user concurrency 1;
-  - never drawing on live-call capacity;
-  - paused by the live-pressure gate (contract record §6.9).
+  - lowest priority, with `respectCriticalWindow: true`;
+  - it never draws on the 0191 pool, the Live Voice Pool or any call resource, and none of them waits on it.
+- **Admitting new work:** the gate is checked at admission and again just before the request is sent.
+- **Work in flight:** a hard timeout per request; an abort when the user's own call starts.
+- **Provider capacity:** with the shared key, a send is allowed only below `PROVIDER_CAPACITY − LIVE_RESERVE`; or N4 uses a separate key (D-B7).
 
-**Earliest effect:** CP-E. It is conditional on D-B3.
+**Earliest effect:** CP-E. It is conditional on the final D-B3 and on D-B7. Activation also needs RT (contract record §6.9).
 
 ## CA-8: QIR-005 four-effect ceiling (`docs/post-response-intelligence-scheduler-provider-budget-v1.md`, ACTIVE / NORMATIVE; v2 by the S8A-03 CP2 amendment)
 **Current:** at most four provider-backed post-response effects per completed turn, the Founder's ceiling.
@@ -117,9 +137,13 @@
 - (i) a cross-reference note saying that world-level N4 work is outside the per-turn ceiling and has its own caps; or
 - (ii) an amended policy that counts N4.
 
-Under option (iii), nothing is issued. **This draft does not presume the answer.**
+Under option (iii), nothing is issued.
 
-**Earliest effect:** with D-B3.
+**R1, recording the PO's initial direction (2026-11-10): option (i). It is not final.** The draft wording for (i), for the PO's final approval:
+
+> The four-effect ceiling applies to provider-backed post-response effects per completed turn. World-level tasks that run outside a turn, such as N4 topic proposal, are not among the four. Each such task is governed by its own approved contract, with explicit financial caps (per user and global, in calls and in USD) and operational caps (its own concurrency pool, the live-call gate, timeouts). None is activated without the Product Owner's approval.
+
+**Earliest effect:** only after the PO's final approval and its issue as a Controlled Amendment. Until then the frozen policy governs, unchanged.
 
 ## Not amended
 - 0066 / 0068: N2 is deferred and N3 is not adopted.

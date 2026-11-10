@@ -2,11 +2,13 @@
 
 **Status:** `MAP-VISUAL-REFRESH-01 CP-A — DOCUMENTATION CONTRACT — DRAFT FOR PO REVIEW — NOT APPROVED — NOTHING IMPLEMENTED`
 **Task:** MAP-VISUAL-REFRESH-01, the Personal Living Analysis map's art direction and information architecture. CP-A is its documentation contract checkpoint.
-**Authority:** Product Owner decisions of 2026-11-09:
+**Revision:** **R1 (2026-11-10)**, which applies the Product Owner's review of Draft PR #388. It corrects §5, §6.1, §6.6, §6.8–6.11, §7, §9, §10 and §14. It is still not approved.
+**Authority:** Product Owner decisions of 2026-11-09 and 2026-11-10:
 - the IA-GATE review;
 - Annex 1;
 - Annex 2;
-- the decision on CAL-1 and the CP-A package, which authorizes this documentation-only Draft PR.
+- the decision on CAL-1 and the CP-A package, which authorizes this documentation-only Draft PR;
+- the review of Draft PR #388 (2026-11-10). It asks for the R1 corrections and **does not approve merging.**
 
 **Baseline:** `main` at `06f24a73`. **Branch:** `map/map-visual-refresh-01-cp-a`.
 
@@ -91,6 +93,13 @@ None of it is product code.
     - a decision point (**DP-1**) follows CAL-2 and precedes any data or interface layer that depends on topic quality;
     - Replay historical compatibility is designed in from the start;
     - video work is not resumed.
+13. **The review of Draft PR #388 (2026-11-10)** accepts the general engineering direction. It confirms the PR is documentation only, and it does **not** approve merging. R1 corrects four points:
+    - overlapping topics in N4 (§6.1, §6.6);
+    - forgetting against the event history, and what Replay V2 must prove (§5, §7, §9);
+    - N4 against live calls (§6.9);
+    - the CAL-2 preconditions (CAL-2 plan §9).
+
+    The PO's **initial** direction on the four-effect ceiling is recorded in §6.10. It is not final and activates nothing.
 
 ## 3. Layers
 | Layer | Name | Nature | Source | Semantic claim |
@@ -115,21 +124,37 @@ None of it is product code.
 
 ## 5. L2: the topic ledger and its presentation
 - **Entities:**
-  - `personal_topics`: user-scoped, with a stable id and `state` ∈ {PROPOSED, CONFIRMED, WITHDRAWN, REJECTED, DISSOLVED_BY_USER};
-  - an append-only `personal_topic_events`, anchored by `(session_id, session_position, same_sp_event_sequence)`, or by `world_version` for acts outside a Session.
+  - `personal_topics`: user-scoped, with a stable id and `state` ∈ {PROPOSED, CONFIRMED, WITHDRAWN, REJECTED, DISSOLVED_BY_USER}.
+  - **The event spine `personal_topic_events`: append-only and content-free.**
+    - A row holds only:
+      - ids (topic, member Thread, content reference);
+      - the event kind;
+      - the actor (USER or QANDEEL);
+      - the provenance class;
+      - a reason class where relevant;
+      - the anchor: `(session_id, session_position, same_sp_event_sequence)`, or `world_version` for acts outside a Session.
+    - **It never holds** a name, a normalized name, a hash of a name, a citation, a Reading id or a model output.
+  - **Content rows: separate and deletable.**
+    - `personal_topic_content`: a name text and its normalized form, per topic version.
+    - `personal_topic_citations`: a content row → its cited Reading ids.
+    - `personal_topic_rejection_keys` (§6.6).
+
+    The spine refers to content rows by id only.
+  - **N4's raw model output is never stored.** On receipt it is validated (§6.5). A valid output is split into content and citation rows, and the raw output is discarded.
+- **"Append-only" applies to the spine only.** Purging content is a **hard delete** of content rows, recorded by appending a content-free `CONTENT_PURGED` spine event. The spine is never rewritten (§7).
 - **Isolation:** user isolation and default deny, with no direct grant; reads go through the definer projection only (the 0072 pattern).
 - **The final schema is designed only after DP-1.** The table names here are contract names, not migrations.
 - **Every membership and every name carries a provenance class:** **U** (user-independent), **QC** (Qandeel-inferred, user-confirmed) or **QP** (Qandeel-inferred, unconfirmed). See §7.
 
 **Events:**
-- `TOPIC_PROPOSED` (path A/B, members, name, citations, model and prompt version, evidence fingerprint);
+- `TOPIC_PROPOSED`: path A/B, the relation to existing topics (§6.1), member ids, and model and prompt version. The name and citations are by content reference;
 - `MEMBER_PROPOSED`, `RENAME_PROPOSED`;
 - `PROPOSAL_ACCEPTED`;
-- `PROPOSAL_REJECTED` (stores a content-free rejection key, §6.6);
+- `PROPOSAL_REJECTED`: refers to a rejection key by id (§6.6);
 - `TOPIC_CREATED_BY_USER`, `NAMED_BY_USER`, `RENAMED_BY_USER`;
 - `MEMBER_ATTACHED_BY_USER`, `MEMBER_DETACHED_BY_USER` (sticky);
 - `MERGED_BY_USER`, `SPLIT_BY_USER`, `DISSOLVED_BY_USER`;
-- `BASIS_WITHDRAWN` (§7).
+- `BASIS_WITHDRAWN`, `CONTENT_PURGED` (§7).
 
 **Invariants:**
 - No silent membership change, merge or split of a CONFIRMED topic. New evidence produces proposals only.
@@ -157,10 +182,24 @@ None of it is product code.
 | Output | `PROPOSE` a topic with members = {that Thread}, or `ABSTAIN` | `PROPOSE` a topic with members ⊆ the package (≥ 2), **or** propose extending an existing topic (`MEMBER_PROPOSED`), or `ABSTAIN` |
 | What it is not | **not** "name every Thread". N4 must show an understood topic or abstain | **not** "associated = same topic". Counted association is an invitation to judge, never the judgement |
 
-**Interaction between the paths:**
-- **A then B:** if a Single-Thread topic {T} exists (any state) and path B finds {T, U, …}, the output must be an **extension proposal** of the existing topic (`MEMBER_PROPOSED`, plus an optional `RENAME_PROPOSED`), not a second topic. A CONFIRMED topic is never changed silently.
-- **B then A:** a Thread already inside a topic is offered to path A only for a distinct topic, which N4 must justify against the existing one (§6.6).
-- **Overlap:** a Thread may belong to more than one topic. Each membership needs its own citations.
+**Interaction between the paths, and overlapping topics (R1):**
+- **A Thread may belong to more than one topic.** Each membership carries its own citations. **No proposal ever removes a Thread from another topic.**
+- **Sharing a Thread decides nothing.** Neither path is forced into an extension because a Thread is shared. Neither path creates a second topic for the same subject.
+- **When the input contains a Thread already in an existing topic** (any state except REJECTED or DISSOLVED_BY_USER), N4 must state its relation to that topic in an explicit `relation` field:
+  - **`EXTENDS(topicId)`.** The cited evidence shows that the new Threads are about **the same subject**. The output is an extension proposal: `MEMBER_PROPOSED`, plus an optional `RENAME_PROPOSED`. A CONFIRMED topic changes only if the user accepts.
+  - **`DISTINCT_FROM(topicIds)`.** The cited evidence shows **a different subject** that the shared Thread also belongs to. The output is a new, independent topic proposal. The existing topic is untouched, and the shared Thread keeps its existing membership.
+  - **`SAME_AS(topicId)`.** A true duplicate (§6.6). Nothing is proposed.
+- **Server checks.** They are deterministic and constrain the model's choice without replacing it:
+  - **`EXTENDS`:** every new member cites ≥ 1 current Reading that binds it to a member of the existing topic.
+  - **`DISTINCT_FROM`:** all three must hold:
+    - the proposal is not a true duplicate (§6.6);
+    - its normalized name differs from the existing topic's name;
+    - it cites ≥ `DISTINCT_MIN_NEW_CITATIONS` (TBD) current Readings that are **not** in the existing topic's cited basis.
+
+    A `DISTINCT_FROM` whose citations are only the existing topic's basis fails validation.
+  - **The semantic choice between `EXTENDS` and `DISTINCT_FROM` is the model's**, and the server cannot verify it. It is measured in CAL-2, through the overlap units in plan §5.1. **It is never claimed from structure alone.**
+- **Path A on a Thread that is already a member** is allowed only as `DISTINCT_FROM`, under the same checks.
+- **Production rules do not change.** None exists yet. This is the contract that the N4 CP (CP-E) must implement.
 
 ### 6.2 When a proposal is requested (eligibility)
 - **Path A:** the Thread has ≥ `A_MIN_READINGS` current Readings bound to it, over ≥ `A_MIN_SESSIONS` Sessions (values TBD after CAL-2).
@@ -177,7 +216,7 @@ None of it is product code.
 - **Allowed input:**
   - (a) the `statement` of current Readings: those bound to the Thread (A), or those binding ≥ 2 package members (B), plus each member's own bound Readings, up to a size cap;
   - (b) each member's grounding `anchor_text` (the user's own words, 0066), **as model input only**. Displaying it is N2, which is deferred;
-  - (c) names and member ids of the user's existing topics in every state, including rejected ones, used for duplicate avoidance only.
+  - (c) names and member ids of the user's existing topics (PROPOSED and CONFIRMED), for duplicate avoidance only. **Rejected names are never sent:** their text is deleted at rejection (§6.6). They are matched only by the server, using the keyed hash.
 - **Forbidden input:**
   - withheld or forgotten items;
   - Memory content;
@@ -209,20 +248,32 @@ None of it is product code.
   - Arabic script;
   - length within `NAME_MAX` (TBD, short);
   - no rule-set violation (closed, versioned list maintained through the Copy and conduct review);
-  - not equal, after normalization, to an existing or rejected topic name (§6.6).
+  - not equal, after normalization, to an existing topic name, nor (by keyed hash) to a rejected one (§6.6).
 - **Re-validation:** when evidence is withdrawn, an existing proposal or QC topic is re-checked against §6.3–6.5 without a model call. If it fails, §7 applies.
 
 ### 6.6 Duplicates, even when evidence fingerprints differ
-A proposal is a **duplicate** if any of the following holds:
-- (a) **Member overlap:** its member set overlaps an existing topic (PROPOSED or CONFIRMED) at ≥ `DUP_OVERLAP` (TBD). It is then converted into an extension or rename proposal of that topic, or dropped.
+A proposal is a **true duplicate** if any of the following holds:
+- (a) **Same membership:** its member set equals, or is contained in, the member set of an existing PROPOSED or CONFIRMED topic, and it does not pass the `DISTINCT_FROM` checks (§6.1).
+  - **Partial overlap, such as one shared Thread, is not a duplicate.**
+  - A high overlap (≥ `DUP_OVERLAP`, TBD) declared as neither `EXTENDS` nor `DISTINCT_FROM` is **suppressed as unresolved**. It is never converted silently.
 - (b) **Normalized name equality:** it equals an existing or rejected name after deterministic Arabic normalization (diacritics, alef and yaa forms, taa marbuta, tatweel, the definite article, whitespace). No semantic matching is claimed.
-- (c) **Model declaration:** N4 sees the existing topic names (c-input above) and must answer `sameAsTopicId`. The server accepts that answer only if (a) or (b) also holds, or uses it to suppress the proposal.
+- (c) **Model declaration:** N4 sees the existing topic names (c-input above) and may answer `SAME_AS(topicId)`. The server uses that answer only to suppress.
+
+A true duplicate is suppressed (`DUPLICATE_OF_EXISTING`). **Nothing is ever merged automatically.**
 
 **Rejection memory:**
-- A `PROPOSAL_REJECTED` event stores the content-free key (member ids, normalized-name hash, evidence fingerprint).
+- A `PROPOSAL_REJECTED` spine event refers to a **rejection key** row. The row holds:
+  - member ids;
+  - the evidence fingerprint, computed over Reading ids and versions only;
+  - a **keyed** hash of the normalized name: an HMAC under a per-user key, which is destroyed on account erasure.
+- **At rejection, the rejected name text is hard-deleted** (`CONTENT_PURGED`, reason `REJECTED_BY_USER`). The keyed hash is still a derivative, so it lives only as long as its evidence.
 - **The same proposal is never re-proposed on the same evidence.**
-- A re-proposal of a rejected topic is allowed only when ≥ `REPROPOSE_NEW_EVIDENCE` (TBD) **new** current Readings are cited that were absent from the rejected fingerprint, and after `REPROPOSE_COOLDOWN` (TBD).
-- When the rejected evidence is forgotten, its key is purged with it (§7).
+- A re-proposal of a rejected topic needs both:
+  - ≥ `REPROPOSE_NEW_EVIDENCE` (TBD) **new** current Readings cited that were absent from the rejected fingerprint;
+  - the passing of `REPROPOSE_COOLDOWN` (TBD).
+- **When rejected evidence is forgotten:**
+  - the key is recomputed over the remaining current evidence ids, so the rejection still covers what remains;
+  - when none of its evidence remains, the key is deleted, name hash included (§7).
 
 ### 6.7 Caps (values TBD by the PO; none is measured)
 - Per user: ≤ `N4_PER_USER_DAY` calls per day and ≤ `N4_PER_USER_WEEK` per week; at most 1 in flight.
@@ -232,22 +283,51 @@ A proposal is a **duplicate** if any of the following holds:
 ### 6.8 Accounting and model cost
 - Every call goes through the accounted provider clients.
 - It uses a **new ai-usage feature family** (`TOPIC_PROPOSAL`). The family enum is closed, so this needs a migration in a later CP.
-- Attribution: user, world, path (A/B), trigger fingerprint, and model and prompt version.
+- Attribution: user, world, path (A/B), and model and prompt version. The accounting row holds no evidence fingerprint and no content.
 - **The model is chosen in the N4 contract CP, after CAL-2.** Cost per call comes from the repository's pricing table. It is **not estimated here.**
 
-### 6.9 Priority, isolation and back-off under Live Voice pressure
-- **Priority:** N4 is the lowest-priority intelligence work.
-- **Isolation:**
-  - its own queue, worker and permit kind, with `respectCriticalWindow: true`;
-  - it never takes CALL_ANALYSIS, TEXT_SEMANTIC_ANALYSIS or Live Voice resources;
-  - it never runs during the user's active call;
-  - it is never on the reply, First Audio or text-delivery path.
-- **Back-off even though provider quota is shared.** N4 runs only while **all** of the following hold:
-  - live call concurrency system-wide is below `N4_LIVE_CALL_CEILING`;
-  - there has been no provider rate-limit (429) or timeout signal on live paths within `N4_PRESSURE_WINDOW`;
-  - provider request headroom stays above `N4_RESERVE` for live traffic.
+### 6.9 Live calls: admitting new work, work in flight, and provider capacity (R1)
+**Facts on `main` at `06f24a73`:**
+- The live call's REALTIME reply, which precedes First Audio, uses DeepSeek through its own router (`live-call-model-router.ts`): first token 2,000 ms, 5,000 ms, `max_tokens` 160.
+- The repository configures one `DEEPSEEK_API_KEY`, so live replies and background work **share one provider account** unless a separate key is configured.
+- The background permit pool (0191: B_total 16, B_min 2, k 2, two per person) has three kinds: CALL_ANALYSIS, TEXT_SEMANTIC_ANALYSIS and POST_RESPONSE_INTELLIGENCE.
+- **The repository has no DeepSeek rate limiter and no provider-capacity reservation.**
 
-  Any breach pauses N4 at once, with exponential resume. In-flight N4 calls are not cancelled mid-call; no new ones start. Values are TBD; the mechanism is mandatory.
+**The earlier wording conflicted.** It said both "never runs during the user's active call" and "in-flight N4 calls are not cancelled". Three separate controls replace it.
+
+**N4 priority is unchanged:** it is the lowest-priority intelligence work, and it is never on the reply, First Audio or text-delivery path.
+
+| Control | Rule | What it guarantees | What it does not |
+|---|---|---|---|
+| **1. Admitting new work** | An N4 job is admitted, and its single provider request sent, only while the gate is open (see below). The gate is checked at admission **and again immediately before the request is sent.** A closed gate defers the job, without queueing it for a later burst. | **no N4 request starts** under pressure | anything about requests already in flight |
+| **2. Work in flight** | Every N4 request carries a hard timeout `N4_MAX_INFLIGHT_MS` and a small `max_tokens`. When the **user's own** call starts, their in-flight N4 request is aborted client-side and its result discarded; the attempt is still accounted. Under pressure from **other users'** calls, in-flight requests end within `N4_MAX_INFLIGHT_MS`, and none starts. | a **bounded** overlap: at most `N4_GLOBAL_CONCURRENCY` requests, each for at most `N4_MAX_INFLIGHT_MS` | that the provider stops computing or billing an aborted request |
+| **3. Provider capacity** | N4 has its **own pool** of `N4_GLOBAL_CONCURRENCY` slots (proposed default 1), counted across all API instances. It never draws from the 0191 pool, the Live Voice Pool or any call resource, and none of those ever waits on it. **With the shared key,** N4 may send only while the in-flight provider requests of all classes number fewer than `PROVIDER_CAPACITY − LIVE_RESERVE`. **With a separate N4 key,** the provider-account quota is isolated too (D-B7). | N4 never takes capacity reserved for calls in progress, **as counted by Qandeel** | provider-side isolation under a shared key. A shared account can still be throttled as a whole |
+
+**The gate (control 1) is open only while all of the following hold:**
+- the user has no active call;
+- live calls system-wide number fewer than `N4_LIVE_CALL_CEILING`;
+- no 429, 5xx or timeout on live paths within `N4_PRESSURE_WINDOW`;
+- control 3 has a free N4 slot.
+
+When any condition breaks, the gate closes at once and reopens after an exponential back-off.
+
+**Values.** All are TBD, and the mechanism is mandatory. Neither `PROVIDER_CAPACITY` nor `LIVE_RESERVE` is known in the repository; both must be measured.
+
+**Two different tests prove this. Neither substitutes for the other.**
+- **ST, the synthetic scheduling test.** It uses no provider and costs nothing. It covers:
+  - the gate and its re-check before sending;
+  - the cross-instance N4 slot count;
+  - the abort on the user's own call;
+  - the timeouts;
+  - that N4 holds no permit from any other pool.
+
+  **It proves the scheduling logic only**, and nothing about provider behaviour or First Audio.
+- **RT, the real-call performance test.** It uses real providers and synthetic users, in a local or test environment, under its own authorization and cost cap.
+  - It measures First Audio p50 / p95, plus live-reply errors and timeouts, under two conditions: N4 off, and N4 at its maximum admitted load on the same key. Both run at `N4_LIVE_CALL_CEILING` concurrent calls.
+  - **Pass:**
+    - the First Audio difference is within a PO-set `ΔFA`;
+    - live-path 429s, 5xx and timeouts do not increase.
+  - **Isolation is claimed only from RT.** RT is a precondition of N4 activation, at the exit of CP-E. **It is not part of CAL-2.**
 
 ### 6.10 Relation to the four-effect ceiling
 - The Founder's ceiling ("أربعة مؤثرات مزود كحد أقصى"; `post-response-provider-budget.ts`, `POST_RESPONSE_PROVIDER_EFFECTS_V2`) caps provider-backed **post-response effects per completed turn**.
@@ -257,6 +337,9 @@ A proposal is a **duplicate** if any of the following holds:
   - (ii) N4 counts against an amended policy;
   - (iii) N4 is not activated.
 - Any budget or effects-policy expansion is a separate, versioned decision.
+- **The PO's initial direction (2026-11-10) is option (i).** N4 is a separate world-level task with explicit financial and operational caps (§6.7, §6.9). It is **not** one of the four per-turn effects.
+  - **This is not final.** It takes effect only after the PO's final approval, documented through governance (CA-8 option (i), issued as a Controlled Amendment).
+  - Even then, it activates nothing alone: §6.11 and RT still apply.
 
 ### 6.11 Evaluation method (fixed here, before any database design is finalized)
 - N4 is evaluated in **CAL-2** (its own plan; paid; separately authorized).
@@ -266,13 +349,17 @@ A proposal is a **duplicate** if any of the following holds:
   - 0 unsupported personal inferences (diagnosis, motive, trait);
   - 100% citation validity (validator);
   - 0 re-proposals of rejected topics on the same evidence;
-  - 0 runs during a live call, and 0 First Audio impact in the concurrency test.
+  - 0 N4 requests admitted while the gate is closed (ST, §6.9);
+  - 0 memberships removed by a `DISTINCT_FROM` proposal, and 0 true duplicates admitted (§6.1, §6.6);
+  - before activation, **RT** passes (§6.9). A scheduling test alone never meets this gate.
 - **Thresholds,** preregistered by the PO before the run:
   - proposal precision (correct members and an acceptable Arabic name);
   - topic coverage;
   - abstention correctness on should-abstain cases;
   - duplicate detection;
+  - on overlap units, the choice between `EXTENDS` and `DISTINCT_FROM`;
   - name acceptability (independent rubric).
+- The proposed numeric values, the reviewers and the INCOMPLETE rule are in CAL-2 plan §9.
 - CAL-1 results do **not** count as N4 evidence.
 
 ## 7. Forgetting and correction (consumes existing Memory signals; does not change Memory policy)
@@ -295,11 +382,42 @@ A proposal is a **duplicate** if any of the following holds:
 | QC | deterministic re-validation (§6.5); kept only if it still validates | `BASIS_WITHDRAWN`: the confirmed status ends, **the derived name text is purged** (removed, not hidden), and the membership ends. The topic shell remains only if other members keep an independent basis |
 | QP | re-validation, or withdrawal | withdrawn; text purged |
 
+**How deletion fits an append-only history (R1).**
+- The spine (§5) is append-only and content-free; content rows are deletable.
+- Forgetting **never rewrites the spine.** It hard-deletes the affected content rows and appends `CONTENT_PURGED`, which carries the content reference id and a reason class: `MEMORY_FORGOTTEN`, `READING_WITHHELD`, `READING_WITHDRAWN`, `REJECTED_BY_USER` or `USER_DELETED`.
+- The forgotten Reading's id is never written into the spine.
+- **What stays:**
+  - that a topic existed;
+  - its state transitions;
+  - member Thread ids;
+  - provenance classes;
+  - anchors.
+
+  That is enough for the history and for Replay ordering. **What goes:**
+
+| Derived item | Deleted when |
+|---|---|
+| a QC or QP name text, with its normalized form | its only basis is withdrawn; or the proposal is rejected |
+| citation rows | the cited Reading is forgotten, withheld or withdrawn |
+| N4 raw model output | never stored; discarded after validation (§5) |
+| a rejection key's evidence fingerprint | recomputed over the remaining evidence when part of it is forgotten (§6.6) |
+| a rejection key, with its keyed name hash | none of its evidence remains, or the account is erased |
+| Replay V2 item salts of the affected items | the item's content is purged (§9) |
+| accounting rows (`ai_provider_calls`) | **kept.** They hold no content and no evidence fingerprint (§6.8) |
+
 **Further rules:**
-- **No sensitive derivative survives its basis.** Purged text, rejection keys tied to forgotten evidence, and model outputs citing only forgotten evidence are deleted.
-- The ledger keeps **content-free** tombstones only: ids, event kind and anchor.
+- **No sensitive derivative survives its basis.**
 - **No prompt may show a purged name** (for example, "keep this name?"). If the user wants the topic again, they create it in their own words, as class U.
-- **Account erasure (0130) and export (PRIV-05)** must cover topics, events, vetoes and rejection keys.
+- **Account erasure (0130) and export (PRIV-05)** must cover:
+  - the topics and the spine;
+  - content rows;
+  - vetoes;
+  - rejection keys and the per-user HMAC key;
+  - Replay V2 salts and redaction records.
+
+**Limits recorded for Trust & Privacy (B1):**
+- Database backups, and the provider's own retention of request data, lie outside this deletion. Their retention must be reviewed.
+- The spine keeps the opaque Thread ids of QC and QP memberships. Whether those ids must also leave the spine on forgetting is open (D-B8).
 
 ## 8. Disclosure and the Privacy Gate
 - **Owner:** **Trust & Privacy** reviews the B1 and B2 gates; **final approval stays with the PO.**
@@ -321,18 +439,44 @@ A proposal is a **duplicate** if any of the following holds:
   - the N4 proposal records, which are stored and therefore pinned by storage;
   - the evidence state at TC;
   - activation anchoring at the activation `world_version`, so no earlier Replay ever shows topics.
-- **Limited redaction of the affected topic layer** (the PO's preference), made verifiable:
-  1. **At pin time,** the V2 topic layer is pinned as an **itemized digest**: an ordered list of per-item digests, one per topic, membership and name item, plus a layer digest over that list.
-     - Item digests are **keyed per user**, with a key destroyed on account erasure, so a short name cannot be recovered by guessing.
-     - The rest of V2, and V1, keep their own whole-layer digests.
-  2. **On forgetting,** an append-only, content-free **redaction record** replaces the affected item digests with tombstones. It records the item slot, the reason class and the anchor.
-  3. **At read time,** the topic layer is re-derived. The moment is served only if:
-     - every present item matches its pinned item digest;
-     - every tombstoned slot is absent;
+- **Limited redaction of the affected topic layer** (the PO's preference).
+- **Status: `DESIGNED — NOT PROVEN`.** Writing the design down proves nothing. The proof obligations RV2-P1..P7 below must pass at CP-C, before the B1 gate.
+  1. **At pin time:**
+     - every topic-layer item (topic, membership, name) gets a fresh random 256-bit **salt**, held in a deletable salt row;
+     - the item digest is H(salt ‖ canonical item);
+     - the point pins the ordered list of item digests, plus a layer digest over that list;
+     - the rest of V2, and V1, keep their own whole-layer digests.
+  2. **On forgetting:**
+     - the affected items' **salts are deleted at every pinned point**, together with their content rows (§7);
+     - an append-only, content-free **redaction record** names the slot, the reason class and the anchor.
+
+     The item digest stays in the pinned list, so the layer digest still verifies. **Without its salt, though, the digest can no longer be matched against any candidate name.**
+
+     *R1 change:* this replaces the per-user keyed digest. Anyone holding a per-user key could still test guesses of a short name.
+  3. **At read time:**
+     - verify the layer digest over the pinned list;
+     - re-derive the topic layer from the spine and the surviving content rows;
+     - remove the slots that redaction records name.
+
+     The moment is served only if:
+     - every non-redacted slot matches its pinned digest under its salt;
+     - every redacted slot is absent;
      - **no item appears that was not pinned.**
 
-     Any other mismatch makes **only the topic layer** of that moment unavailable. The rest of V2, and V1, are unaffected.
-  4. **Result:** forgotten data never reappears, nothing future enters the past, and the historical check stays exact. The design is subject to the B1 Privacy Gate and a Replay contract amendment (Annex).
+     Any other result makes **only the topic layer** of that moment unavailable. The rest of V2, and V1, are unaffected.
+- **Proof obligations** (CP-C; local PostgreSQL; synthetic fixtures; **none run by this record**):
+
+| Id | Obligation | Pass |
+|---|---|---|
+| RV2-P1 | V1 unchanged | V1 projection bytes and every V1 digest are identical before and after V2 is installed, and before and after the fixture's forgetting events; no diff to 0102, 0169 or V1's files |
+| RV2-P2 | re-reading the past after forgetting | a moment pinned before forgetting is served, with the forgotten item absent and every other item verified |
+| RV2-P3 | no leak | after forgetting, the purged name and its normalized variants occur 0 times in the API response, the server logs, and a full database dump (spine, redaction records, accounting included) |
+| RV2-P4 | no recovery by guessing | for a redacted slot, a test dictionary that contains the true name matches no stored value, because the salt is absent from every table |
+| RV2-P5 | tampering | an altered item, an unpinned item or an altered pinned list each makes only the topic layer unavailable; the rest of V2, and V1, are served |
+| RV2-P6 | nothing future in the past | a topic created after TC never appears at TC; moments before activation show no topic layer |
+| RV2-P7 | erasure | after account erasure, no salt, content row, rejection key or spine row of the user remains |
+
+- **The design remains subject to** the B1 Privacy Gate and a Replay contract amendment (CA-5). **Backups keep salts until their retention expires;** that goes to Trust & Privacy at B1 (§7).
 - **The Replay Media Pool stays isolated from the Live Voice Pool.** V2 rendering uses replay media resources only.
 - **Video work is not resumed by this record.**
 
@@ -340,14 +484,14 @@ A proposal is a **duplicate** if any of the following holds:
 | # | Step | Kind | Depends on | Authorized now? |
 |---|---|---|---|---|
 | 1 | **CP-A** (this record + amendment drafts + CAL-2 plan) | documentation | — | **yes (Draft PR)** |
-| 2 | **CAL-2** stage 2a (pipeline) + stage 2b (N4 prototype, both paths) | paid synthetic evaluation, non-production harness | CP-A approval; a separate run authorization; labels frozen after independent review | **no** |
+| 2 | **CAL-2** stage 2a (pipeline) + stage 2b (N4 prototype, both paths) | paid synthetic evaluation, non-production harness | CP-A approval; a separate run authorization; **every precondition in plan §9 evidenced** (spend-guard proof, run-day price review, numeric thresholds, named reviewers and label sign-off) | **no** |
 | 3 | **DP-1: decision point after CAL-2** | PO decision | CAL-2 results | — |
 | 4 | Ceiling-policy decision for N4 (§6.10) | PO decision | may be taken at DP-1 | — |
 | 5 | **CP-B**: final data design (L1 pure module, L2 ledger, vetoes, forget cascade, erasure and export) | migration + API | DP-1 | **no** |
-| 6 | **CP-C**: Replay V2 projection, itemized topic-layer digest and redaction verification (no UI) | DB + API | CP-B | **no** |
+| 6 | **CP-C**: Replay V2 projection, salted itemized topic-layer digest and redaction verification (no UI); **RV2-P1..P7 must pass** (§9) | DB + API | CP-B | **no** |
 | 7 | Privacy Gate **B1** (Trust & Privacy review, PO approval) | gate | CP-C design | **no** |
 | 8 | **CP-D**: B1 interface (topics including PROPOSED, corrections, Copy Gate, PT-03 mark) | mobile | CP-C, B1 gate | **no** |
-| 9 | **CP-E**: the N4 lane (contract CP, accounting migration, worker and permit, validation, back-off) | API + DB | DP-1, step 4, CAL-2 hard gates passed | **no** |
+| 9 | **CP-E**: the N4 lane (contract CP, accounting migration, worker, own pool and gate, validation, back-off); ST inside CP-E; **RT before any activation** (§6.9) | API + DB | DP-1; step 4 approved and documented; CAL-2 hard gates passed | **no** |
 | 10 | Privacy Gate **B2** + the density proof (`QAN-BL-VIS-01`) | gate + proof | CP-D | **no** |
 | 11 | **CP-F**: B2 (appearance topology at WORLD) | API + mobile | step 10 | **no** |
 | 12 | Visual integration of the art direction (AD-4 base), i.e. V-3 | design + mobile | CP-D at the earliest | **no** |
@@ -400,13 +544,16 @@ Full results are in [the CAL-1 record](QANDEEL_MAP_VISUAL_REFRESH_01_CAL_1_SYNTH
 | ID | Decision |
 |---|---|
 | D-B1 | **Approve this CP-A contract** (with or without edits), including the N4 two-path contract (§6) and the forgetting policy (§7) |
-| D-B2 | **Authorize the CAL-2 run:** the plan version, the USD 6.00 hard cap, the designated independent label reviewer(s) and raters, and the preregistered thresholds |
-| D-B3 | **The four-effect ceiling policy for N4** (§6.10): (i) outside its scope with N4's own caps, (ii) counted under an amended policy, or (iii) N4 not activated |
+| D-B2 | **Authorize the CAL-2 run.** This covers: the plan version; the USD 6.00 hard cap; and every precondition in plan §9 (the spend-guard proof, the run-day price review, the numeric thresholds, the named independent label reviewers and raters, and their sign-off method) |
+| D-B3 | **The four-effect ceiling policy for N4** (§6.10). The PO's **initial** direction is option (i), N4 as a separate world-level task with its own caps. Final approval, and its documentation as CA-8 (i), are still required |
 | D-B4 | **The values at DP-1:** K/S (or kept open), N4 eligibility, duplicate and cap values, from the CAL-2 results |
 | D-B5 | **The CP-B scope at DP-1:** a full ledger with N4-dependent fields, or user-made topics first |
 | D-B6 | **The approval route for each draft Controlled Amendment (CA-1..CA-8),** and when each takes effect (no earlier than the CP that needs it) |
+| D-B7 | **N4 provider-capacity isolation** (§6.9): a separate DeepSeek key for N4, or the shared key with measured `PROVIDER_CAPACITY` / `LIVE_RESERVE`; plus the RT pass value `ΔFA` |
+| D-B8 | **Trust & Privacy items raised by R1** (§7, §9): backup and provider-side retention against deletion; and whether the Thread ids of QC / QP memberships leave the spine on forgetting |
 
 ## 15. Not done in CP-A
 - No migration, product code, frozen-contract edit, AI call, CAL-2 run or CP-B.
 - No backlog change; no V-3; no Replay video work.
+- R1 only documents the spend-guard proof, ST, RT and RV2-P1..P7. **None of them was run, and none is claimed.**
 - The working checkout on `s8a/s8a-04-cp3` and its local changes were not touched. This record was prepared in a clean worktree from `main`.
