@@ -22,7 +22,7 @@
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 
-import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, type ConversationPalette } from '../../conversation';
+import { Control, Glyph, MIN_TARGET, typeStyle, useIncreasedContrast, usePalette, type ConversationPalette } from '../../conversation';
 import { LivingAnalysisSurface } from '../../living-analysis';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
@@ -70,6 +70,9 @@ export function SharedLivingAnalysis({ controller, language, insets, title, onBa
         )}
         timeline={null}
         chrome={(composition) => <FieldChrome controller={controller} state={state} copy={copy} language={language} bottomInset={composition.bottomInset} />}
+        // MAP-CLOSE-01 V-3 (Product Owner scope correction, 2026-11-10): the Shared World stands on the same continuous
+        // world as the Personal Analysis, behind its own bands; off under increased contrast, as everywhere.
+        continuousWorld
       />
     </View>
   );
@@ -81,10 +84,13 @@ function SharedBand({ insets, onHeight, copy, language, title, onBack, onConvers
   readonly language: ChromeLanguage; readonly title: string; readonly onBack: () => void; readonly onConversation: () => void; readonly onManage: () => void;
 }) {
   const palette = usePalette();
+  // MAP-CLOSE-01 V-3: the band stands on the world, which runs on behind it under the Analysis's own scrim; under increased
+  // contrast it keeps its solid ground (F1), exactly as before.
+  const increased = useIncreasedContrast();
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   return (
     <View testID={SHARED_BAND_TEST_ID} onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
-      style={{ backgroundColor: palette.world, paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: 6 }}>
+      style={{ backgroundColor: increased ? palette.world : 'transparent', paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: 6 }}>
       <View style={{ paddingHorizontal: 10, minHeight: 48, flexDirection: 'row', alignItems: 'center', columnGap: 2 }}>
         <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-shared-back"
           style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}>

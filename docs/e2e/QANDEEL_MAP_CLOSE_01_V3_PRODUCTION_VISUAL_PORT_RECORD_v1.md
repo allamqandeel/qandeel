@@ -319,8 +319,8 @@ No other frozen file changed. The chroma families (`world-chroma.ts`), every tok
 |---|---|
 | `WorldCanvas` | a `WorldContinuationContext` a surface may provide. With it, the ONE canvas paints its ground, strata and veil `below` points further than the frame, takes no touch of its own (`pointerEvents="none"`), and lays the surface's ink as a scrim over the top inset and over the continuation (fading into the frame). **Without it the canvas is exactly what it was.** Nodes, tethers, the register, the envelope, the camera and hit testing keep the frame: `WorldPlane` clips the plane's objects to it and fades its material out below it |
 | `LivingAnalysisSurface` | `continuousWorld` (opt-in, default off) provides the continuation: `below` is the measured column below the frame; the scrim is the Analysis's own ink. **Off under increased contrast** (F1: no word stands on the world's light) |
-| `LivingAnalysisMap`, `ReplayMomentComposite` | opt in. Shared and Public worlds do not, and are unchanged |
-| `AnalysisReturnBar`, Replay `PlayerBar` | transparent ground (the scrim is under them); solid under increased contrast |
+| `LivingAnalysisMap`, `ReplayMomentComposite` | opt in. Since the PO's scope correction, `SharedLivingAnalysis` and `PublicLivingAnalysis` opt in too (below, "the three worlds") |
+| `AnalysisReturnBar`, Replay `PlayerBar`, and (three worlds) the Shared and Public top bands | transparent ground (the scrim is under them); solid under increased contrast |
 | Replay message fields | a dark, partly transparent field (`field` at 0.76) with a faint edge; solid under increased contrast. R3: the edge's 1 pt comes out of the field's padding, so the box keeps its size. On the emulator, the first build's edge had lifted everything above the message by about 2 pt |
 
 **Goldens.** The Personal map golden is unchanged. In the screen golden, 11 of 15 cases changed, and the increased-contrast cases did not. Every View, Text, layout, testID and touch handler is identical in all 15 cases (the host outline, 1010 lines before and after). The Skia layer changes only in these ways:
@@ -428,6 +428,28 @@ Part B is within the run-to-run noise of Part A: the larger canvas adds no retai
 - a physical phone;
 - the phone frame tail;
 - the empty map on a device (Jest golden only).
+
+### Part B: the three worlds (PO scope correction, 2026-11-10)
+**The gap.** The Shared and Public screens are the same `LivingAnalysisSurface` as the Personal one, but they did not pass `continuousWorld`, and their top bands (`SharedBand`, `PublicBand`) painted a solid `palette.world`. Their world (the S3-R2 continuity) is Part A's §5B, merged into this branch.
+
+**The change (UI only).**
+- `SharedLivingAnalysis` and `PublicLivingAnalysis` pass `continuousWorld`. Off under increased contrast, as everywhere.
+- Their top bands are transparent; solid under increased contrast (F1), exactly as the return band.
+- Their panels, search field, search results and section list keep their own `palette.field` ground. They are fields the reader reads, not bands.
+- Nothing else moves: the frame, the envelope, the plan, the targets, the labels, the camera, the controllers and every act.
+
+**Controlled re-anchor.** `public-field.test.tsx` "is the Analysis place: dark under a light reader preference": the band now asserts `transparent`, and the ground under it (the Analysis surface's) asserts the Dark family. This is the same re-anchor as W3 E2E-D-10.
+
+**Proof (Jest), in each world's own suite.**
+- Standard contrast: the band is transparent, and the ONE canvas runs on to the screen's height behind the support band and takes no touch there (`pointerEvents="none"`).
+- Increased contrast: the canvas ends at the frame and takes touch as before, and the band keeps its solid ground.
+
+**Repository checks.**
+- `tsc` is clean. `eslint` shows no errors; its warnings are in files this change does not touch.
+- Shared and Public suites: 232 / 232.
+- Root contracts that read the map, the renderer, the Living Analysis surface, the Replay, the Shared or Public field, or the locators: 488 / 488.
+
+**Not yet proven:** the three worlds on the emulator and on a real phone (below, when run).
 
 ## 12. Backlog
 _(reconciled at V-3's closure.)_

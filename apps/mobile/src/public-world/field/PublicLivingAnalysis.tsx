@@ -34,7 +34,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, Keyboard, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
-import { Control, typeStyle, usePalette, type ConversationPalette } from '../../conversation';
+import { Control, typeStyle, useIncreasedContrast, usePalette, type ConversationPalette } from '../../conversation';
 import { LivingAnalysisSurface } from '../../living-analysis';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
@@ -106,6 +106,9 @@ export function PublicLivingAnalysis({ controller, language, insets, heading }: 
         world={(envelope) => <PublicFieldView controller={controller} state={state} envelope={envelope} copy={copy} language={language} />}
         timeline={null}
         chrome={(composition) => <FieldChrome controller={controller} state={state} copy={copy} language={language} bottomInset={composition.bottomInset} />}
+        // MAP-CLOSE-01 V-3 (Product Owner scope correction, 2026-11-10): the Public World stands on the same continuous
+        // world as the Personal Analysis, behind its own bands; off under increased contrast, as everywhere.
+        continuousWorld
       />
     </View>
   );
@@ -116,9 +119,12 @@ function PublicBand({ insets, onHeight, heading, children }: {
   readonly insets: PublicLivingAnalysisProps['insets']; readonly onHeight: (height: number) => void; readonly heading: ReactNode; readonly children: ReactNode;
 }) {
   const palette = usePalette();
+  // MAP-CLOSE-01 V-3: the band stands on the world, which runs on behind it under the Analysis's own scrim; under increased
+  // contrast it keeps its solid ground (F1), exactly as before.
+  const increased = useIncreasedContrast();
   return (
     <View testID={PUBLIC_BAND_TEST_ID} onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
-      style={{ backgroundColor: palette.world, paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: 6, rowGap: 4 }}>
+      style={{ backgroundColor: increased ? palette.world : 'transparent', paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: 6, rowGap: 4 }}>
       {heading}
       {children}
     </View>

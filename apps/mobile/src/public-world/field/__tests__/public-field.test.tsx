@@ -11,7 +11,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { AccessibilityInfo, BackHandler, StyleSheet } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
@@ -798,7 +798,11 @@ describe('S5-03B R2 — Public is analysed on the ONE Living Analysis surface', 
     const view = await render(<AppearanceProvider authority={authority}><PublicWorldArea controller={controller} language="en" insets={INSETS} /></AppearanceProvider>);
     for (let n = 0; n < 4; n += 1) await flush();
     const dark = CANONICAL_VISUAL.palettes.DARK.standard.world;
-    expect(view.getByTestId(PUBLIC_BAND_TEST_ID).props.style).toMatchObject({ backgroundColor: dark });
+    // MAP-CLOSE-01 V-3 — RE-ANCHOR (Product Owner scope correction, 2026-11-10): the band stands on the continuous world, so it
+    // paints no ground of its own; the ground under it is the Analysis surface's, which is the Dark family under a Light
+    // preference. Previously: the band itself asserted the Dark ground.
+    expect(view.getByTestId(PUBLIC_BAND_TEST_ID).props.style).toMatchObject({ backgroundColor: 'transparent' });
+    expect(StyleSheet.flatten(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID).props.style)).toMatchObject({ backgroundColor: dark });
     expect(CANONICAL_VISUAL.palettes.LIGHT.standard.world).not.toBe(dark);
   });
 
@@ -1088,5 +1092,39 @@ describe('MAP-CLOSE-01 V-3 (Product Owner scope correction) — the Public field
     // distance at which the cap is still 1.
     const ratio = (scale: { numerator: bigint; denominator: bigint }) => Number(scale.numerator) / Number(scale.denominator);
     expect(ratio(PUBLIC_FIELD_RUNG_SCALE.FAR) / ratio(PUBLIC_FIELD_RUNG_SCALE.NEAR)).toBe(64);
+  });
+});
+
+describe('MAP-CLOSE-01 V-3 (Product Owner scope correction) — the Public screen stands on the continuous world', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  /** The platform's increased-contrast setting, as the theme reads it on either platform. */
+  const contrast = (increased: boolean) => {
+    jest.spyOn(AccessibilityInfo, 'isHighTextContrastEnabled').mockResolvedValue(increased);
+    jest.spyOn(AccessibilityInfo, 'isDarkerSystemColorsEnabled').mockResolvedValue(increased);
+  };
+  /** The frame is shorter than the screen: the support band holds the rest of the column. */
+  const FRAME = 500;
+
+  it('the band is transparent, and the ONE canvas runs on behind the support band and takes no touch there', async () => {
+    contrast(false);
+    const { view } = await mountArea('en', [E1, E2, E3]);
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: FRAME });
+    await flush();
+    const canvasView = view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true });
+    expect(canvasView.props.style).toMatchObject({ height: SIZE.height });
+    expect(canvasView.props.pointerEvents).toBe('none');
+    expect(StyleSheet.flatten(view.getByTestId(PUBLIC_BAND_TEST_ID).props.style)).toMatchObject({ backgroundColor: 'transparent' });
+  });
+
+  it('under increased contrast the frame ends the world and the band keeps its solid ground (F1)', async () => {
+    contrast(true);
+    const { view } = await mountArea('en', [E1, E2, E3]);
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: FRAME });
+    await flush();
+    const canvasView = view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true });
+    expect(canvasView.props.style).toMatchObject({ height: FRAME });
+    expect(canvasView.props.pointerEvents).toBeUndefined();
+    expect(StyleSheet.flatten(view.getByTestId(PUBLIC_BAND_TEST_ID).props.style).backgroundColor).not.toBe('transparent');
   });
 });

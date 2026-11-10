@@ -5,7 +5,7 @@
  * honest empty World), the conversation entry and Back (D7), and the SHARED-VIS-01 Product Copy Gate census.
  */
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { AccessibilityInfo, BackHandler, StyleSheet } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
@@ -437,5 +437,41 @@ describe('MAP-CLOSE-01 V-3 (Product Owner scope correction) — the Shared field
       expect(state.pictures).toBeGreaterThan(plain.pictures);
       expect(state.outside).not.toMatch(/qandeel-shared-members|memberMark/u);
     }
+  });
+});
+
+describe('MAP-CLOSE-01 V-3 (Product Owner scope correction) — the Shared screen stands on the continuous world', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  /** The platform's increased-contrast setting, as the theme reads it on either platform. */
+  const contrast = (increased: boolean) => {
+    jest.spyOn(AccessibilityInfo, 'isHighTextContrastEnabled').mockResolvedValue(increased);
+    jest.spyOn(AccessibilityInfo, 'isDarkerSystemColorsEnabled').mockResolvedValue(increased);
+  };
+  /** The frame is shorter than the screen: the support band holds the rest of the column. */
+  const FRAME = 500;
+
+  it('the band is transparent, and the ONE canvas runs on behind the support band and takes no touch there', async () => {
+    contrast(false);
+    const { view } = await mountArea();
+    await press(view, `qandeel-shared-world-${WORLD_A}`);
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: FRAME });
+    await flush();
+    const canvasView = view.getByTestId('qandeel-shared-field-canvas', { includeHiddenElements: true });
+    expect(canvasView.props.style).toMatchObject({ height: SIZE.height });
+    expect(canvasView.props.pointerEvents).toBe('none');
+    expect(StyleSheet.flatten(view.getByTestId('qandeel-shared-band').props.style)).toMatchObject({ backgroundColor: 'transparent' });
+  });
+
+  it('under increased contrast the frame ends the world and the band keeps its solid ground (F1)', async () => {
+    contrast(true);
+    const { view } = await mountArea();
+    await press(view, `qandeel-shared-world-${WORLD_A}`);
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: FRAME });
+    await flush();
+    const canvasView = view.getByTestId('qandeel-shared-field-canvas', { includeHiddenElements: true });
+    expect(canvasView.props.style).toMatchObject({ height: FRAME });
+    expect(canvasView.props.pointerEvents).toBeUndefined();
+    expect(StyleSheet.flatten(view.getByTestId('qandeel-shared-band').props.style).backgroundColor).not.toBe('transparent');
   });
 });
