@@ -3,6 +3,7 @@
 **Status:** `PROPOSED — DRAFT CONTROLLED AMENDMENTS — NOT APPROVED — NOT EFFECTIVE — NOTHING IMPLEMENTED`
 **Parent:** [CP-A contract record](QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_PERSONAL_MAP_TOPICS_CONTRACT_RECORD_v1.md) §11.
 **Revision:** **R1 (2026-11-10)**, after the PO review of Draft PR #388. It revises CA-5, CA-6, CA-7 and CA-8. Every draft is still not approved and not effective.
+**CP-A's closure as planning only (2026-11-10)** changes none of this. Each draft stays `NOT EFFECTIVE` until its own approval (D-B6), at the earliest effect stated for it.
 
 **Rule:** **no frozen or normative document is edited by this PR.**
 - Each draft states the clause it would change, the proposed wording, and the earliest CP at which it may take effect.

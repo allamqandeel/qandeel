@@ -1,7 +1,7 @@
 # QANDEEL — Current State
 
 > **MAP-VISUAL-REFRESH-01 CP-A — PERSONAL MAP TOPICS DOCUMENTATION CONTRACT — 2026-11-09 (current task; status only, documentation only, no new task authority):** a Draft PR on `map/map-visual-refresh-01-cp-a` (from `main` at `06f24a73`, where S8B-07 R-5 is merged through PR #386), under the Product Owner's decision of 2026-11-09 on CAL-1 and the CP-A package. **Not merged; merge only on «ادمج».**
-> - **`MAP-VISUAL-REFRESH-01 CP-A — DOCUMENTATION CONTRACT — DRAFT FOR PO REVIEW — NOT APPROVED — NOTHING IMPLEMENTED`** ([CP-A contract record](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_PERSONAL_MAP_TOPICS_CONTRACT_RECORD_v1.md)). It proposes the L0 / L1 / L2 separation for the Personal Living Analysis map (shared analytical identity, analytical association, understood topics), the two-path N4 topic-proposal contract (Single-Thread and Multi-Thread), forgetting by provenance class (U / QC / QP), the B1 / B2 Privacy Gates under Trust & Privacy review, and a Replay V2 with verifiable topic-layer redaction. It binds nothing until approved.
+> - **`MAP-VISUAL-REFRESH-01 CP-A — PLANNING REFERENCE — DIRECTION APPROVED BY THE PO — CLOSED AS PLANNING ONLY (2026-11-10) — NOTHING IMPLEMENTED — AUTHORIZES NO N4, CAL-2 OR CP-B`** ([CP-A contract record](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_PERSONAL_MAP_TOPICS_CONTRACT_RECORD_v1.md)). It proposes the L0 / L1 / L2 separation for the Personal Living Analysis map (shared analytical identity, analytical association, understood topics), the two-path N4 topic-proposal contract (Single-Thread and Multi-Thread), forgetting by provenance class (U / QC / QP), the B1 / B2 Privacy Gates under Trust & Privacy review, and a Replay V2 with verifiable topic-layer redaction. It is a planning reference whose direction is approved, and it authorizes no implementation.
 > - **Controlled Amendment drafts CA-1..CA-8** ([drafts](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CP_A_CONTROLLED_AMENDMENT_DRAFTS_v1.md)) are `PROPOSED — NOT APPROVED — NOT EFFECTIVE`. No frozen or normative document is edited; Replay V1 and the four-effect ceiling (QIR-005) are unchanged.
 > - **CAL-1** ([results](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CAL_1_SYNTHETIC_RESULTS_v1.md)) is synthetic and was run once against a preregistration. Its hard gates pass; **Q1 (association precision 0.699 against ≥ 0.75) FAILS and is kept as recorded.** K / S are not approved. It proves nothing about N4.
 > - **CAL-2** ([run plan](docs/e2e/QANDEEL_MAP_VISUAL_REFRESH_01_CAL_2_RUN_PLAN_v1.md)): `PLAN READY FOR PO RUN AUTHORIZATION — NOT AUTHORIZED — NO PAID CALL MADE`, with a hard cap of USD 6.00.
@@ -11,8 +11,12 @@
 >   - Replay V2 uses salted item digests, `DESIGNED — NOT PROVEN` (proofs RV2-P1..P7 at CP-C);
 >   - N4 against live calls is split into admitting new work, work in flight, and provider capacity. Only a real-call test (RT) can claim isolation;
 >   - CAL-2 gains preconditions and an INCOMPLETE rule.
->
->   Merging is not approved.
+> - **MAP-CLOSE-01 Step 1 (2026-11-10):**
+>   - CP-A is closed as planning only;
+>   - topic-intelligence work does not continue now;
+>   - the deferred decisions D-B2..D-B8 gate later steps, not this closure (record §14), and stay owned by MAP-VISUAL-REFRESH-01 (record §13);
+>   - **ready for the PO's merge decision; merge only on «ادمج».**
+>   - **Next, after merge (not started):** MAP-CLOSE-01 Step 2, the Visual Source of Truth.
 > - **Backlog:** no change. The index stays at 108 items.
 > - **Not authorized:** CP-B or any production CP, migrations, product code, changes to frozen contracts, paid AI, the CAL-2 run, V-3, Replay video work.
 

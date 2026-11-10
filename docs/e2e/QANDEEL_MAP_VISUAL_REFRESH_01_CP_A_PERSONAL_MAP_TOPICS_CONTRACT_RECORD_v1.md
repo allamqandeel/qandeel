@@ -1,14 +1,16 @@
 # QANDEEL MAP-VISUAL-REFRESH-01 — CP-A: Personal Map Topics (L0 / L1 / L2, N4, Replay V2): Contract Record v1
 
-**Status:** `MAP-VISUAL-REFRESH-01 CP-A — DOCUMENTATION CONTRACT — DRAFT FOR PO REVIEW — NOT APPROVED — NOTHING IMPLEMENTED`
+**Status:** `MAP-VISUAL-REFRESH-01 CP-A — PLANNING REFERENCE — DIRECTION APPROVED BY THE PO — CLOSED AS PLANNING ONLY (2026-11-10) — NOTHING IMPLEMENTED — AUTHORIZES NO N4, CAL-2 OR CP-B`
 **Task:** MAP-VISUAL-REFRESH-01, the Personal Living Analysis map's art direction and information architecture. CP-A is its documentation contract checkpoint.
-**Revision:** **R1 (2026-11-10)**, which applies the Product Owner's review of Draft PR #388. It corrects §5, §6.1, §6.6, §6.8–6.11, §7, §9, §10 and §14. It is still not approved.
+**Revision:** **R1 (2026-11-10)** applies the Product Owner's review of Draft PR #388, correcting §5, §6.1, §6.6, §6.8–6.11, §7, §9, §10 and §14.
+**Planning closure (2026-11-10, MAP-CLOSE-01 Step 1)** updates §1, §2 (item 14), §10 (row 1), §13 and §14. It changes no contract content.
 **Authority:** Product Owner decisions of 2026-11-09 and 2026-11-10:
 - the IA-GATE review;
 - Annex 1;
 - Annex 2;
 - the decision on CAL-1 and the CP-A package, which authorizes this documentation-only Draft PR;
-- the review of Draft PR #388 (2026-11-10). It asks for the R1 corrections and **does not approve merging.**
+- the review of Draft PR #388 (2026-11-10). It asks for the R1 corrections and **does not approve merging**;
+- MAP-CLOSE-01 Step 1 (2026-11-10). It closes CP-A as a planning reference whose direction is approved, and **it authorizes no implementation.**
 
 **Baseline:** `main` at `06f24a73`. **Branch:** `map/map-visual-refresh-01-cp-a`.
 
@@ -29,7 +31,10 @@
 ---
 
 ## 1. Scope and authority
-- **This record proposes an implementation contract.** Once the Product Owner approves it, it governs the later CPs listed in §10. Until then it **binds nothing.**
+- **This record is a planning reference whose direction the Product Owner approved on 2026-11-10.** It is closed as planning only.
+  - **It authorizes no implementation**: no N4, CAL-2 run, CP-B or later CP.
+  - Each later CP in §10 needs its own authorization.
+  - A clause here binds a CP only when that CP's authorization adopts it, together with the §14 decisions the CP needs.
 - It changes no Product or runtime semantics in force. In particular, it does **not** edit:
   - `docs/historical-projection-v1.md` (D-12 / D-13);
   - the VPORT-01 record;
@@ -100,6 +105,11 @@ None of it is product code.
     - the CAL-2 preconditions (CAL-2 plan §9).
 
     The PO's **initial** direction on the four-effect ceiling is recorded in §6.10. It is not final and activates nothing.
+14. **MAP-CLOSE-01 Step 1 (2026-11-10)** closes CP-A **as planning only.**
+    - The direction is approved and this record is kept as the planning reference.
+    - Topic-intelligence work does not continue now: no N4, no CAL-2 run, no CP-B.
+    - The Controlled Amendment drafts stay `NOT EFFECTIVE`, and CAL-1 and the CAL-2 plan are kept unchanged.
+    - The decisions deferred in §14 gate later steps, **not this closure.**
 
 ## 3. Layers
 | Layer | Name | Nature | Source | Semantic claim |
@@ -483,7 +493,7 @@ When any condition breaks, the gate closes at once and reopens after an exponent
 ## 10. Order of work, dependencies, and the decision point DP-1
 | # | Step | Kind | Depends on | Authorized now? |
 |---|---|---|---|---|
-| 1 | **CP-A** (this record + amendment drafts + CAL-2 plan) | documentation | — | **yes (Draft PR)** |
+| 1 | **CP-A** (this record + amendment drafts + CAL-2 plan) | documentation | — | **closed as planning only (2026-11-10)** |
 | 2 | **CAL-2** stage 2a (pipeline) + stage 2b (N4 prototype, both paths) | paid synthetic evaluation, non-production harness | CP-A approval; a separate run authorization; **every precondition in plan §9 evidenced** (spend-guard proof, run-day price review, numeric thresholds, named reviewers and label sign-off) | **no** |
 | 3 | **DP-1: decision point after CAL-2** | PO decision | CAL-2 results | — |
 | 4 | Ceiling-policy decision for N4 (§6.10) | PO decision | may be taken at DP-1 | — |
@@ -538,19 +548,29 @@ Full results are in [the CAL-1 record](QANDEEL_MAP_VISUAL_REFRESH_01_CAL_1_SYNTH
 - `QAN-BL-ACCT-03` and `QAN-BL-PRIV-06` (Replay distribution) apply to any distributed V2 video.
 - `QAN-BL-NAV-01` (cross-Session timeline) is untouched.
 
-**Admission at closure.** Any residue that this task's later CPs leave behind must be admitted under BG-06 / BG-08 at the CP that creates it; it cannot survive only in this record.
+**Deferred work and BG-08.** CP-A's planning closure is a checkpoint, not the closure of MAP-VISUAL-REFRESH-01, so BG-08 reconciliation does not run now.
+- The deferred work **stays owned by MAP-VISUAL-REFRESH-01**:
+  - CAL-2 and DP-1;
+  - CP-B..CP-F;
+  - ST and RT;
+  - RV2-P1..P7;
+  - the decisions D-B2..D-B8 (§14).
+- **If that task, or MAP-CLOSE-01, closes without delivering this work, the closing change must admit every qualifying item under BG-06 / BG-08.** None of it may survive only in this record.
+- Any residue a later CP leaves behind is admitted at the CP that creates it.
 
-## 14. Real decisions remaining before CP-B
-| ID | Decision |
-|---|---|
-| D-B1 | **Approve this CP-A contract** (with or without edits), including the N4 two-path contract (§6) and the forgetting policy (§7) |
-| D-B2 | **Authorize the CAL-2 run.** This covers: the plan version; the USD 6.00 hard cap; and every precondition in plan §9 (the spend-guard proof, the run-day price review, the numeric thresholds, the named independent label reviewers and raters, and their sign-off method) |
-| D-B3 | **The four-effect ceiling policy for N4** (§6.10). The PO's **initial** direction is option (i), N4 as a separate world-level task with its own caps. Final approval, and its documentation as CA-8 (i), are still required |
-| D-B4 | **The values at DP-1:** K/S (or kept open), N4 eligibility, duplicate and cap values, from the CAL-2 results |
-| D-B5 | **The CP-B scope at DP-1:** a full ledger with N4-dependent fields, or user-made topics first |
-| D-B6 | **The approval route for each draft Controlled Amendment (CA-1..CA-8),** and when each takes effect (no earlier than the CP that needs it) |
-| D-B7 | **N4 provider-capacity isolation** (§6.9): a separate DeepSeek key for N4, or the shared key with measured `PROVIDER_CAPACITY` / `LIVE_RESERVE`; plus the RT pass value `ΔFA` |
-| D-B8 | **Trust & Privacy items raised by R1** (§7, §9): backup and provider-side retention against deletion; and whether the Thread ids of QC / QP memberships leave the spine on forgetting |
+## 14. Decisions: D-B1 resolved; the rest deferred to the steps they gate
+**None of D-B2..D-B8 blocks CP-A's closure as planning.** Each is needed only before the step it gates.
+
+| ID | Decision | State | Needed before |
+|---|---|---|---|
+| D-B1 | **Approve this CP-A contract** (with or without edits), including the N4 two-path contract (§6) and the forgetting policy (§7) | **RESOLVED (2026-11-10):** direction approved; closed as a planning reference (MAP-CLOSE-01 Step 1). Each clause is adopted for implementation by the CP that implements it | — |
+| D-B2 | **Authorize the CAL-2 run.** This covers: the plan version; the USD 6.00 hard cap; and every precondition in plan §9 (the spend-guard proof, the run-day price review, the numeric thresholds, the named independent label reviewers and raters, and their sign-off method) | deferred | any paid CAL-2 call |
+| D-B3 | **The four-effect ceiling policy for N4** (§6.10). The PO's **initial** direction is option (i), N4 as a separate world-level task with its own caps. Final approval, and its documentation as CA-8 (i), are still required | deferred (initial direction recorded) | CP-E, and any N4 activation |
+| D-B4 | **The values at DP-1:** K/S (or kept open), N4 eligibility, duplicate and cap values, from the CAL-2 results | deferred | DP-1 |
+| D-B5 | **The CP-B scope at DP-1:** a full ledger with N4-dependent fields, or user-made topics first | deferred | CP-B |
+| D-B6 | **The approval route for each draft Controlled Amendment (CA-1..CA-8),** and when each takes effect (no earlier than the CP that needs it) | deferred | the CP that needs each amendment |
+| D-B7 | **N4 provider-capacity isolation** (§6.9): a separate DeepSeek key for N4, or the shared key with measured `PROVIDER_CAPACITY` / `LIVE_RESERVE`; plus the RT pass value `ΔFA` | deferred | CP-E's RT, and any N4 activation |
+| D-B8 | **Trust & Privacy items raised by R1** (§7, §9): backup and provider-side retention against deletion; and whether the Thread ids of QC / QP memberships leave the spine on forgetting | deferred | the B1 gate |
 
 ## 15. Not done in CP-A
 - No migration, product code, frozen-contract edit, AI call, CAL-2 run or CP-B.
