@@ -401,7 +401,11 @@ test('12 — R1: ONE Living Analysis SCREEN (not only one renderer); the Persona
   assert.match(screen, /support=\{timeline === null \? 'CHROME_ONLY' : 'TIMELINE_AND_CHROME'\}/u, 'no temporal track is a capability, never an empty instrument');
   assert.match(screen, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis ground');
   const specifiers = [...screen.matchAll(/from '([^']+)'/gu)].map((match) => match[1]);
-  assert.deepEqual(specifiers, ['react', 'react-native', '../analysis-visual', '../appearance', '../map/camera', '../responsive'], 'the screen imports no world');
+  // MAP-CLOSE-01 V-3 Part B RE-ANCHOR (Product Owner, 2026-11-10): the surface may provide the world's continuation. It reads
+  // the platform's contrast and the ink's alpha from the theme `../analysis-visual` already reads, and from the generic renderer
+  // seam ONLY the continuation context, so it still holds nothing of any world. Previous list: without those two.
+  assert.deepEqual(specifiers, ['react', 'react-native', '../analysis-visual', '../conversation/visual/theme', '../appearance', '../map/camera', '../map/renderer', '../responsive'], 'the screen imports no world');
+  assert.match(screen, /^import \{ WorldContinuationContext, type WorldContinuation \} from '\.\.\/map\/renderer';$/mu,'only the continuation context from the renderer seam');
   // The world view is the surface's too: one presentation camera, one drag, one semantic step, for every world.
   const worldView = code(`${MOBILE}/map/renderer/WorldViewSurface.tsx`);
   for (const seam of ['useWorldMotion<C>(envelope)', 'useAuthorityGeneration(owner)', 'useWorldPanGesture<O>(', 'useWorldSemanticStepGesture<O>(', 'Gesture.Simultaneous(panGesture, zoomGesture)', 'useWorldFrame<C, N>(']) {

@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { ScrollView, Text, View, useWindowDimensions, type LayoutChangeEvent, type TextStyle } from 'react-native';
 
-import { Control, conversationCopy, paragraphDirection, readerDirection, readerSide, typeStyle, usePalette, type ConversationPalette } from '../conversation';
+import { Control, conversationCopy, paragraphDirection, readerDirection, readerSide, typeStyle, useIncreasedContrast, usePalette, withAlpha, type ConversationPalette } from '../conversation';
 import { LivingAnalysisSurface } from '../living-analysis';
 import type { LivingAnalysisTopBand } from '../living-analysis';
 import { MapSurface, mapInspectionContext, mapProjectionRequest } from '../map';
@@ -180,6 +180,7 @@ function ReadyComposite({ controller, version, moments, ordinal, language, inset
         fontScale={fontScale}
         envelope={envelope}
         top={top}
+        continuousWorld
         world={(frame) => (context === null || !context.ok ? null : <MapSurface store={store} context={context.context} envelope={frame} language={language} />)}
         timeline={null}
         chrome={(composition) => (
@@ -310,13 +311,14 @@ function Position({ text, style }: { readonly text: string; readonly style: Text
 function SourceMessage({ moment, text, language, palette }: {
   readonly moment: ReplayHistoryMoment; readonly text: string; readonly language: ChromeLanguage; readonly palette: ConversationPalette;
 }) {
+  const increased = useIncreasedContrast();
   const turns = conversationCopy(language);
   const speaker = moment.sourceRole === 'USER' ? sharedCopy(language).you : turns.product;
   const name = moment.sourceRole === 'USER' ? turns.userTurnName(text) : turns.replyTurnName(text);
   const direction = paragraphDirection(text, readerDirection(language));
   return (
     <View testID="qandeel-replay-source" accessible accessibilityLabel={name} accessibilityLiveRegion="polite"
-      style={{ backgroundColor: palette.field, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
+      style={{ ...messageGround(palette, increased), borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
       <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
       {/* The committed text, byte for byte: no truncation, no line limit, no rewrite, no inserted mark. Its own direction
           (first strong character) is the text's, and it is aligned to its own start. */}
@@ -334,12 +336,13 @@ function PresentedSource({ moment, text, presented, language, palette }: {
   readonly moment: ReplayHistoryMoment; readonly text: string | null; readonly presented: ReplayMomentPresentation;
   readonly language: ChromeLanguage; readonly palette: ConversationPalette;
 }) {
+  const increased = useIncreasedContrast();
   const turns = conversationCopy(language);
   const speaker = moment.sourceRole === 'USER' ? sharedCopy(language).you : turns.product;
   const direction = text === null ? readerDirection(language) : paragraphDirection(text, readerDirection(language));
   return (
     <View style={{ rowGap: 6 }}>
-      <View testID="qandeel-replay-source" style={{ backgroundColor: palette.field, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
+      <View testID="qandeel-replay-source" style={{ ...messageGround(palette, increased), borderRadius: 20, paddingHorizontal: 18, paddingVertical: 12, rowGap: 4 }}>
         <Text testID="qandeel-replay-speaker" style={{ ...typeStyle('metadata'), color: palette.secondary, writingDirection: readerDirection(language), textAlign: readerSide(language) }}>{speaker}</Text>
         {presented.source}
       </View>
@@ -467,3 +470,15 @@ export function ReplayPreviewLimit({ outcome, language, insets, top = null }: Re
     </View>
   );
 }
+
+/**
+ * MAP-CLOSE-01 V-3 Part B: a message stands on the world's continuous ground as a dark, partly transparent field with a faint
+ * edge, so the world reads on behind it and the words stay clear. Under increased contrast it keeps its solid field (F1).
+ */
+function messageGround(palette: ConversationPalette, increased: boolean) {
+  return increased
+    ? { backgroundColor: palette.field }
+    : { backgroundColor: withAlpha(palette.field, MESSAGE_GROUND.alpha), borderWidth: 1, borderColor: withAlpha(palette.primary, MESSAGE_GROUND.edge) };
+}
+
+const MESSAGE_GROUND = Object.freeze({ alpha: 0.76, edge: 0.12 });

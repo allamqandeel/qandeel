@@ -197,7 +197,13 @@ describe('S5-03B R1 — the surface holds nothing of any world', () => {
   it('imports no store, projection, inspection, time or Personal owner', () => {
     const text = readFileSync(join(__dirname, '..', 'LivingAnalysisSurface.tsx'), 'utf8');
     const specifiers = [...text.matchAll(/from '([^']+)'/gu)].map((match) => match[1]);
-    expect(specifiers).toEqual(['react', 'react-native', '../analysis-visual', '../appearance', '../map/camera', '../responsive']);
+    // MAP-CLOSE-01 V-3 Part B — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10): the surface may provide the world's
+    // continuation (`continuousWorld`). It reads the platform's contrast and the ink's alpha from the same theme
+    // `../analysis-visual` already reads, and from the generic renderer seam ONLY the continuation context: no world,
+    // store, projection, inspection, time or Personal owner. Previous list: without the theme and the renderer seam.
+    expect(specifiers).toEqual(['react', 'react-native', '../analysis-visual', '../conversation/visual/theme', '../appearance', '../map/camera', '../map/renderer', '../responsive']);
+    expect(text).toMatch(/^import \{ WorldContinuationContext, type WorldContinuation \} from '\.\.\/map\/renderer';$/mu);
+    expect(text).toMatch(/^import \{ useIncreasedContrast, withAlpha \} from '\.\.\/conversation\/visual\/theme';$/mu);
     expect(text).not.toMatch(/CanonicalStore|useSyncExternalStore|dispatch/u);
   });
 });

@@ -25,7 +25,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, BackHandler, StyleSheet, Text, View, findNodeHandle, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 
-import { Control, Glyph, MIN_TARGET, conversationCopy, readerDirection, readerSide, typeStyle, usePalette } from '../conversation';
+import { Control, Glyph, MIN_TARGET, conversationCopy, readerDirection, readerSide, typeStyle, useIncreasedContrast, usePalette } from '../conversation';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../living-analysis';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { ReplayMomentComposite, ReplayPreviewLimit, replayCompositeCopy, type ReplayCompositeController, type ReplayMomentControls } from '../replay-composite';
@@ -219,6 +219,9 @@ function PlayerBar({ view, controller, language, insets, onHeight }: {
   readonly insets: Edges; readonly onHeight: (height: number) => void;
 }) {
   const palette = usePalette();
+  // MAP-CLOSE-01 V-3 Part B: the bar stands on the world's continuous ground, under the Analysis's own scrim; under
+  // increased contrast it keeps its solid ground (F1), exactly as before.
+  const increased = useIncreasedContrast();
   const turns = conversationCopy(language);
   const direction = readerDirection(language);
   const start = readerSide(language);
@@ -239,7 +242,7 @@ function PlayerBar({ view, controller, language, insets, onHeight }: {
     <View
       testID="qandeel-replay-player-bar"
       onLayout={(event: LayoutChangeEvent) => onHeight(event.nativeEvent.layout.height)}
-      style={{ backgroundColor: palette.world, paddingTop: insets.top, paddingLeft: insets.left + 10, paddingRight: insets.right + 10, minHeight: insets.top + BAR_MIN_HEIGHT }}
+      style={{ backgroundColor: increased ? palette.world : 'transparent', paddingTop: insets.top, paddingLeft: insets.left + 10, paddingRight: insets.right + 10, minHeight: insets.top + BAR_MIN_HEIGHT }}
     >
       <View style={{ direction: 'ltr', flexDirection: start === 'right' ? 'row-reverse' : 'row', alignItems: 'center', minHeight: BAR_MIN_HEIGHT, columnGap: 8 }}>
         <Control

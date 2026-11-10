@@ -15,7 +15,7 @@ import { conversationCopy } from './copy';
 import { Control } from './visual/Control';
 import { useConversationTypeface } from './visual/fonts';
 import { Glyph } from './visual/Glyph';
-import { typeStyle, usePalette } from './visual/theme';
+import { typeStyle, useIncreasedContrast, usePalette } from './visual/theme';
 
 export interface AnalysisReturnBarProps {
   readonly language: ChromeLanguage;
@@ -39,6 +39,9 @@ export const ANALYSIS_RETURN_BAR_MIN_HEIGHT = 48;
 export function AnalysisReturnBar({ language, insets, onReturnToConversation, onHeight, focusControl = false, end = null, nameSuffix = null }: AnalysisReturnBarProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
+  // MAP-CLOSE-01 V-3 Part B: the band stands on the world, which runs on behind it under the Analysis's own scrim; under
+  // increased contrast it keeps its solid ground (F1), exactly as before.
+  const increased = useIncreasedContrast();
   const copy = conversationCopy(language);
   const direction = readerDirection(language);
   const start = readerSide(language);
@@ -55,7 +58,7 @@ export function AnalysisReturnBar({ language, insets, onReturnToConversation, on
       testID="qandeel-analysis-return-bar"
       onLayout={(event: LayoutChangeEvent) => onHeight(event.nativeEvent.layout.height)}
       style={{
-        backgroundColor: palette.world,
+        backgroundColor: increased ? palette.world : 'transparent',
         direction: 'ltr',
         paddingTop: insets.top,
         paddingLeft: insets.left + 10,

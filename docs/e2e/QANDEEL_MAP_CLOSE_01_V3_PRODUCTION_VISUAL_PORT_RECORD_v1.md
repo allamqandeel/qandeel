@@ -137,6 +137,10 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **C1–C3:** VPORT-01 | `WorldContinuity.tsx` joins the hand-written visual owner under every rule (no colour literal, no forbidden read, no timer). `worldAddressOf` is read once more, for the continuity places only (count 3 → 4, the line pinned). A new test pins the module's imports, its Personal-only opt-in, the cap as a plain paint transform, and that nothing that decides reads it | makes the amendment explicit and narrow |
 | **C1–C3:** Map runtime census | `visual/WorldContinuity.tsx` added to the authorized file surface | the new paint module is declared, not slipped in |
 | **C1–C3:** `WorldStrata.tsx` | `Stratum` exported, otherwise unchanged | the deep space reuses the one stratum grid |
+| **Part B:** S7-03 and S7-04 criterion-12 pins | `LivingAnalysisSurface.tsx` and `LivingAnalysisMap.tsx` re-anchored, each with a "MAP-CLOSE-01 V-3 Part B RE-ANCHOR" comment and its previous pin | PO addition to V-3 (2026-11-10); the projection, the cache, the frame, the plan, every touch and every refusal unchanged |
+| **Part B:** S5-03B criterion 12 and the surface's own Jest rule | the screen's import list gains the theme (contrast, alpha) and the renderer seam; a new assertion admits ONLY `WorldContinuationContext` from the seam | the screen still holds no world, store, projection, inspection, time or Personal owner |
+| **Part B:** VPORT-02 world pin | `WorldCanvas` re-anchored again, with its previous pin | without a continuation the canvas is exactly what it was: the Personal map golden is unchanged |
+| **Part B:** VPORT-01 plain-line rule | the substring test `includes('<Line')` became the element test `/<Line\b/u`, because it also matched the scrim's `<LinearGradient` | the rule is unchanged: the renderer draws no plain line of its own |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
@@ -157,8 +161,37 @@ _(filled after the device run.)_
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** none is connected. Every device result in this record is from the Android emulator, and is never claimed as phone proof.
 
-## 11. Part B — the Analysis screen UI (PO addition, 2026-11-10; not started)
-_(design note filled when Part B starts, after the drawing is proven.)_
+## 11. Part B — the Analysis screen UI (PO addition, 2026-11-10)
+**The PO's instruction:**
+- the map extends as a continuous background behind the messages and controls, instead of ending at a hard horizontal edge;
+- solid grey and black backgrounds become partly transparent dark layers, with local darkening where needed;
+- text, playback and navigation controls and the Timeline stay clear and easy to use;
+- the same map drawing surface is reused: no second engine, no doubled rendering;
+- UI only: no change to Replay, recording, video or export logic; no frozen contract changed without governance;
+- a separate, reviewable part of V-3, after the drawing is proven; not merged without the PO's approval.
+
+**Reference:** the PO's reference image (a Replay screen over the S3-R2 art). Its topic names, groups and memberships are synthetic study data and are **not** carried into the app (§2).
+
+**What the code already gave:** the map frame starts at the top of the screen. Its envelope's `insetTop` is the top band's measured height, so the placement already keeps everything the reader must see out from under the band. The band hid the world only because it painted a solid ground.
+
+**The change (one surface, one canvas):**
+
+| Where | Change |
+|---|---|
+| `WorldCanvas` | a `WorldContinuationContext` a surface may provide. With it, the ONE canvas paints its ground, strata and veil `below` points further than the frame, takes no touch of its own (`pointerEvents="none"`), and lays the surface's ink as a scrim over the top inset and over the continuation (fading into the frame). **Without it the canvas is exactly what it was.** Nodes, tethers, the register, the envelope, the camera and hit testing keep the frame |
+| `LivingAnalysisSurface` | `continuousWorld` (opt-in, default off) provides the continuation: `below` is the measured column below the frame; the scrim is the Analysis's own ink. **Off under increased contrast** (F1: no word stands on the world's light) |
+| `LivingAnalysisMap`, `ReplayMomentComposite` | opt in. Shared and Public worlds do not, and are unchanged |
+| `AnalysisReturnBar`, Replay `PlayerBar` | transparent ground (the scrim is under them); solid under increased contrast |
+| Replay message fields | a dark, partly transparent field (`field` at 0.76) with a faint edge; solid under increased contrast |
+
+**Goldens.** The Personal map golden is unchanged. In the screen golden, 11 of 15 cases changed, and the increased-contrast cases did not. Every View, Text, layout, testID and touch handler is identical in all 15 cases (the host outline, 1010 lines before and after). The Skia layer changes only in these ways:
+- the Canvas is taller and takes no touch (`pointerEvents="none"`);
+- the ground, the strata tiles and the veil cover the extra area;
+- the scrim adds two gradient rects.
+
+The evidence is in `QANDEEL_REPORTS/MAP-CLOSE-01/V3/golden-partb`.
+
+**Cost:** one canvas, as before. Only the ground, the strata tiles and the veil grow to the extra area; nodes, relations and place atmospheres do not, and nothing is drawn twice. Measured in §9.
 
 ## 12. Backlog
 _(reconciled at V-3's closure.)_

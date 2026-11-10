@@ -62,9 +62,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 383,
+            "height": 844,
             "width": 390
            },
            "testID": "qandeel-map-canvas"
@@ -92,7 +93,7 @@
              {
               "type": "View",
               "props": {
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -109,7 +110,7 @@
                  ],
                  "end": {
                   "x": 136.5,
-                  "y": 383
+                  "y": 844
                  },
                  "positions": [
                   0,
@@ -130,7 +131,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -142,7 +143,7 @@
                 "props": {
                  "c": {
                   "x": 109.20000000000002,
-                  "y": 114.89999999999999
+                  "y": 253.2
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -154,7 +155,7 @@
                   0.45,
                   1
                  ],
-                 "r": 338.90189081797695,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -165,7 +166,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -177,7 +178,7 @@
                 "props": {
                  "c": {
                   "x": 304.2,
-                  "y": 237.46
+                  "y": 523.28
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -189,7 +190,7 @@
                   0.45,
                   1
                  ],
-                 "r": 317.0372527006881,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -200,7 +201,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -212,7 +213,7 @@
                 "props": {
                  "c": {
                   "x": 179.4,
-                  "y": 352.36
+                  "y": 776.48
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -224,7 +225,7 @@
                   0.45,
                   1
                  ],
-                 "r": 273.30797646611046,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -235,7 +236,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 383,
+               "height": 844,
                "opacity": {
                 "$animated": 0
                },
@@ -382,6 +383,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -435,6 +485,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -1663,6 +1762,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -1725,6 +1882,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -5375,7 +5590,7 @@
            {
             "type": "View",
             "props": {
-             "height": 383,
+             "height": 844,
              "opacity": {
               "$animated": 1
              },
@@ -5390,7 +5605,7 @@
               "props": {
                "c": {
                 "x": 195,
-                "y": 191.5
+                "y": 422
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -5400,11 +5615,11 @@
                ],
                "positions": [
                 0,
-                0.3503373785063048,
-                0.7531282038323959,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 327.96957175933255,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -5415,7 +5630,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 383,
+             "height": 844,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 390,
@@ -5430,6 +5645,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 505,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 339
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 844
+               },
+               "positions": [
+                0,
+                0.08712871287128712,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 339
+               }
               },
               "children": []
              }
@@ -7001,9 +7290,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 383,
+            "height": 844,
             "width": 390
            },
            "testID": "qandeel-map-canvas"
@@ -7031,7 +7321,7 @@
              {
               "type": "View",
               "props": {
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -7048,7 +7338,7 @@
                  ],
                  "end": {
                   "x": 136.5,
-                  "y": 383
+                  "y": 844
                  },
                  "positions": [
                   0,
@@ -7069,7 +7359,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -7081,7 +7371,7 @@
                 "props": {
                  "c": {
                   "x": 109.20000000000002,
-                  "y": 114.89999999999999
+                  "y": 253.2
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -7093,7 +7383,7 @@
                   0.45,
                   1
                  ],
-                 "r": 338.90189081797695,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -7104,7 +7394,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -7116,7 +7406,7 @@
                 "props": {
                  "c": {
                   "x": 304.2,
-                  "y": 237.46
+                  "y": 523.28
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -7128,7 +7418,7 @@
                   0.45,
                   1
                  ],
-                 "r": 317.0372527006881,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -7139,7 +7429,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -7151,7 +7441,7 @@
                 "props": {
                  "c": {
                   "x": 179.4,
-                  "y": 352.36
+                  "y": 776.48
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -7163,7 +7453,7 @@
                   0.45,
                   1
                  ],
-                 "r": 273.30797646611046,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -7174,7 +7464,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 383,
+               "height": 844,
                "opacity": {
                 "$animated": 0
                },
@@ -7321,6 +7611,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -7374,6 +7713,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -8602,6 +8990,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -8664,6 +9110,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -12314,7 +12818,7 @@
            {
             "type": "View",
             "props": {
-             "height": 383,
+             "height": 844,
              "opacity": {
               "$animated": 1
              },
@@ -12329,7 +12833,7 @@
               "props": {
                "c": {
                 "x": 195,
-                "y": 191.5
+                "y": 422
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -12339,11 +12843,11 @@
                ],
                "positions": [
                 0,
-                0.3503373785063048,
-                0.7531282038323959,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 327.96957175933255,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -12354,7 +12858,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 383,
+             "height": 844,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 390,
@@ -12369,6 +12873,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 505,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 339
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 844
+               },
+               "positions": [
+                0,
+                0.08712871287128712,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 339
+               }
               },
               "children": []
              }
@@ -13940,9 +14518,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 371,
+            "height": 820,
             "width": 1180
            },
            "testID": "qandeel-map-canvas"
@@ -13970,7 +14549,7 @@
              {
               "type": "View",
               "props": {
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -13987,7 +14566,7 @@
                  ],
                  "end": {
                   "x": 413,
-                  "y": 371
+                  "y": 820
                  },
                  "positions": [
                   0,
@@ -14008,7 +14587,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -14020,7 +14599,7 @@
                 "props": {
                  "c": {
                   "x": 330.40000000000003,
-                  "y": 111.3
+                  "y": 246
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -14032,7 +14611,7 @@
                   0.45,
                   1
                  ],
-                 "r": 766.9079217220278,
+                 "r": 890.9035413556285,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -14043,7 +14622,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -14055,7 +14634,7 @@
                 "props": {
                  "c": {
                   "x": 920.4,
-                  "y": 230.02
+                  "y": 508.4
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -14067,7 +14646,7 @@
                   0.45,
                   1
                  ],
-                 "r": 717.4299912883486,
+                 "r": 833.425893526233,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -14078,7 +14657,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -14090,7 +14669,7 @@
                 "props": {
                  "c": {
                   "x": 542.8000000000001,
-                  "y": 341.32
+                  "y": 754.4
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -14102,7 +14681,7 @@
                   0.45,
                   1
                  ],
-                 "r": 618.4741304209902,
+                 "r": 718.4705978674423,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -14113,7 +14692,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 371,
+               "height": 820,
                "opacity": {
                 "$animated": 0
                },
@@ -14260,6 +14839,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -14313,6 +14941,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -14456,6 +15133,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 1024
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 1536
                       },
                       {
@@ -14509,6 +15235,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 1536
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -15979,6 +16754,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -16095,6 +16928,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 1536
                         },
                         {
@@ -16157,6 +17048,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 1536
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -19807,7 +20756,7 @@
            {
             "type": "View",
             "props": {
-             "height": 371,
+             "height": 820,
              "opacity": {
               "$animated": 1
              },
@@ -19822,7 +20771,7 @@
               "props": {
                "c": {
                 "x": 590,
-                "y": 185.5
+                "y": 410
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -19832,11 +20781,11 @@
                ],
                "positions": [
                 0,
-                0.1499658521478754,
-                0.6769870238161927,
+                0.28532830794813185,
+                0.7284247570202901,
                 1
                ],
-               "r": 742.1689565051881,
+               "r": 862.1647174409308,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -19847,7 +20796,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 371,
+             "height": 820,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 1180,
@@ -19862,6 +20811,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 1180,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 493,
+             "skiaElement": "Rect",
+             "width": 1180,
+             "x": 0,
+             "y": 327
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 820
+               },
+               "positions": [
+                0,
+                0.08924949290060852,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 327
+               }
               },
               "children": []
              }
@@ -21433,9 +22456,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 371,
+            "height": 820,
             "width": 1180
            },
            "testID": "qandeel-map-canvas"
@@ -21463,7 +22487,7 @@
              {
               "type": "View",
               "props": {
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -21480,7 +22504,7 @@
                  ],
                  "end": {
                   "x": 413,
-                  "y": 371
+                  "y": 820
                  },
                  "positions": [
                   0,
@@ -21501,7 +22525,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -21513,7 +22537,7 @@
                 "props": {
                  "c": {
                   "x": 330.40000000000003,
-                  "y": 111.3
+                  "y": 246
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -21525,7 +22549,7 @@
                   0.45,
                   1
                  ],
-                 "r": 766.9079217220278,
+                 "r": 890.9035413556285,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -21536,7 +22560,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -21548,7 +22572,7 @@
                 "props": {
                  "c": {
                   "x": 920.4,
-                  "y": 230.02
+                  "y": 508.4
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -21560,7 +22584,7 @@
                   0.45,
                   1
                  ],
-                 "r": 717.4299912883486,
+                 "r": 833.425893526233,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -21571,7 +22595,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 371,
+               "height": 820,
                "skiaElement": "Rect",
                "width": 1180,
                "x": 0,
@@ -21583,7 +22607,7 @@
                 "props": {
                  "c": {
                   "x": 542.8000000000001,
-                  "y": 341.32
+                  "y": 754.4
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -21595,7 +22619,7 @@
                   0.45,
                   1
                  ],
-                 "r": 618.4741304209902,
+                 "r": 718.4705978674423,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -21606,7 +22630,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 371,
+               "height": 820,
                "opacity": {
                 "$animated": 0
                },
@@ -21753,6 +22777,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -21806,6 +22879,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -21949,6 +23071,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 1024
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 1536
                       },
                       {
@@ -22002,6 +23173,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 1536
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -23472,6 +24692,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -23588,6 +24866,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 1536
                         },
                         {
@@ -23650,6 +24986,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 1536
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -27300,7 +28694,7 @@
            {
             "type": "View",
             "props": {
-             "height": 371,
+             "height": 820,
              "opacity": {
               "$animated": 1
              },
@@ -27315,7 +28709,7 @@
               "props": {
                "c": {
                 "x": 590,
-                "y": 185.5
+                "y": 410
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -27325,11 +28719,11 @@
                ],
                "positions": [
                 0,
-                0.1499658521478754,
-                0.6769870238161927,
+                0.28532830794813185,
+                0.7284247570202901,
                 1
                ],
-               "r": 742.1689565051881,
+               "r": 862.1647174409308,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -27340,7 +28734,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 371,
+             "height": 820,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 1180,
@@ -27355,6 +28749,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 1180,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 493,
+             "skiaElement": "Rect",
+             "width": 1180,
+             "x": 0,
+             "y": 327
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 820
+               },
+               "positions": [
+                0,
+                0.08924949290060852,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 327
+               }
               },
               "children": []
              }
@@ -28926,9 +30394,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 160,
+            "height": 390,
             "width": 844
            },
            "testID": "qandeel-map-canvas"
@@ -28956,7 +30425,7 @@
              {
               "type": "View",
               "props": {
-               "height": 160,
+               "height": 390,
                "skiaElement": "Rect",
                "width": 844,
                "x": 0,
@@ -28973,7 +30442,7 @@
                  ],
                  "end": {
                   "x": 295.4,
-                  "y": 160
+                  "y": 390
                  },
                  "positions": [
                   0,
@@ -28994,7 +30463,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 160,
+               "height": 390,
                "skiaElement": "Rect",
                "width": 844,
                "x": 0,
@@ -29006,7 +30475,7 @@
                 "props": {
                  "c": {
                   "x": 236.32000000000002,
-                  "y": 48
+                  "y": 117
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -29018,7 +30487,7 @@
                   0.45,
                   1
                  ],
-                 "r": 532.5998482913791,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -29029,7 +30498,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 160,
+               "height": 390,
                "skiaElement": "Rect",
                "width": 844,
                "x": 0,
@@ -29041,7 +30510,7 @@
                 "props": {
                  "c": {
                   "x": 658.32,
-                  "y": 99.2
+                  "y": 241.8
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -29053,7 +30522,7 @@
                   0.45,
                   1
                  ],
-                 "r": 498.2385677564514,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -29064,7 +30533,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 160,
+               "height": 390,
                "skiaElement": "Rect",
                "width": 844,
                "x": 0,
@@ -29076,7 +30545,7 @@
                 "props": {
                  "c": {
                   "x": 388.24,
-                  "y": 147.20000000000002
+                  "y": 358.8
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -29088,7 +30557,7 @@
                   0.45,
                   1
                  ],
-                 "r": 429.5160066865961,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -29099,7 +30568,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 160,
+               "height": 390,
                "opacity": {
                 "$animated": 0
                },
@@ -34453,7 +35922,7 @@
            {
             "type": "View",
             "props": {
-             "height": 160,
+             "height": 390,
              "opacity": {
               "$animated": 1
              },
@@ -34468,7 +35937,7 @@
               "props": {
                "c": {
                 "x": 422,
-                "y": 80
+                "y": 195
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -34478,11 +35947,11 @@
                ],
                "positions": [
                 0,
-                0.09312807759731921,
-                0.6553886694869813,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 515.4192080239153,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -34493,7 +35962,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 160,
+             "height": 390,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 844,
@@ -34508,6 +35977,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 844,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 274,
+             "skiaElement": "Rect",
+             "width": 844,
+             "x": 0,
+             "y": 116
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 390
+               },
+               "positions": [
+                0,
+                0.16058394160583941,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 116
+               }
               },
               "children": []
              }
@@ -36080,9 +37623,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 245,
+            "height": 568,
             "width": 320
            },
            "testID": "qandeel-map-canvas"
@@ -36110,7 +37654,7 @@
              {
               "type": "View",
               "props": {
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -36127,7 +37671,7 @@
                  ],
                  "end": {
                   "x": 112,
-                  "y": 245
+                  "y": 568
                  },
                  "positions": [
                   0,
@@ -36148,7 +37692,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -36160,7 +37704,7 @@
                 "props": {
                  "c": {
                   "x": 89.60000000000001,
-                  "y": 73.5
+                  "y": 170.4
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -36172,7 +37716,7 @@
                   0.45,
                   1
                  ],
-                 "r": 249.87230738919428,
+                 "r": 404.201961400486,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -36183,7 +37727,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -36195,7 +37739,7 @@
                 "props": {
                  "c": {
                   "x": 249.60000000000002,
-                  "y": 151.9
+                  "y": 352.16
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -36207,7 +37751,7 @@
                   0.45,
                   1
                  ],
-                 "r": 233.75151336408496,
+                 "r": 378.12441550368044,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -36218,7 +37762,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -36230,7 +37774,7 @@
                 "props": {
                  "c": {
                   "x": 147.20000000000002,
-                  "y": 225.4
+                  "y": 522.5600000000001
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -36242,7 +37786,7 @@
                   0.45,
                   1
                  ],
-                 "r": 201.50992531386635,
+                 "r": 325.9693237100694,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -36253,7 +37797,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 245,
+               "height": 568,
                "opacity": {
                 "$animated": 0
                },
@@ -36400,6 +37944,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -36453,6 +38046,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -41393,7 +43035,7 @@
            {
             "type": "View",
             "props": {
-             "height": 245,
+             "height": 568,
              "opacity": {
               "$animated": 1
              },
@@ -41408,7 +43050,7 @@
               "props": {
                "c": {
                 "x": 160,
-                "y": 122.5
+                "y": 284
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -41418,11 +43060,11 @@
                ],
                "positions": [
                 0,
-                0.3039552513584563,
-                0.7355029955162135,
+                0.24542186697038804,
+                0.7132603094487475,
                 1
                ],
-               "r": 241.81191037663962,
+               "r": 391.16318845208326,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -41433,7 +43075,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 245,
+             "height": 568,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 320,
@@ -41448,6 +43090,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 320,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 367,
+             "skiaElement": "Rect",
+             "width": 320,
+             "x": 0,
+             "y": 201
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 568
+               },
+               "positions": [
+                0,
+                0.11989100817438691,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 201
+               }
               },
               "children": []
              }
@@ -43019,9 +44735,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 245,
+            "height": 568,
             "width": 320
            },
            "testID": "qandeel-map-canvas"
@@ -43049,7 +44766,7 @@
              {
               "type": "View",
               "props": {
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -43066,7 +44783,7 @@
                  ],
                  "end": {
                   "x": 112,
-                  "y": 245
+                  "y": 568
                  },
                  "positions": [
                   0,
@@ -43087,7 +44804,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -43099,7 +44816,7 @@
                 "props": {
                  "c": {
                   "x": 89.60000000000001,
-                  "y": 73.5
+                  "y": 170.4
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -43111,7 +44828,7 @@
                   0.45,
                   1
                  ],
-                 "r": 249.87230738919428,
+                 "r": 404.201961400486,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -43122,7 +44839,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -43134,7 +44851,7 @@
                 "props": {
                  "c": {
                   "x": 249.60000000000002,
-                  "y": 151.9
+                  "y": 352.16
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -43146,7 +44863,7 @@
                   0.45,
                   1
                  ],
-                 "r": 233.75151336408496,
+                 "r": 378.12441550368044,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -43157,7 +44874,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 245,
+               "height": 568,
                "skiaElement": "Rect",
                "width": 320,
                "x": 0,
@@ -43169,7 +44886,7 @@
                 "props": {
                  "c": {
                   "x": 147.20000000000002,
-                  "y": 225.4
+                  "y": 522.5600000000001
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -43181,7 +44898,7 @@
                   0.45,
                   1
                  ],
-                 "r": 201.50992531386635,
+                 "r": 325.9693237100694,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -43192,7 +44909,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 245,
+               "height": 568,
                "opacity": {
                 "$animated": 0
                },
@@ -43339,6 +45056,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -43392,6 +45158,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -48332,7 +50147,7 @@
            {
             "type": "View",
             "props": {
-             "height": 245,
+             "height": 568,
              "opacity": {
               "$animated": 1
              },
@@ -48347,7 +50162,7 @@
               "props": {
                "c": {
                 "x": 160,
-                "y": 122.5
+                "y": 284
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -48357,11 +50172,11 @@
                ],
                "positions": [
                 0,
-                0.3039552513584563,
-                0.7355029955162135,
+                0.24542186697038804,
+                0.7132603094487475,
                 1
                ],
-               "r": 241.81191037663962,
+               "r": 391.16318845208326,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -48372,7 +50187,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 245,
+             "height": 568,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 320,
@@ -48387,6 +50202,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 320,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 367,
+             "skiaElement": "Rect",
+             "width": 320,
+             "x": 0,
+             "y": 201
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 568
+               },
+               "positions": [
+                0,
+                0.11989100817438691,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 201
+               }
               },
               "children": []
              }
@@ -49958,9 +51847,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 383,
+            "height": 844,
             "width": 390
            },
            "testID": "qandeel-map-canvas"
@@ -49988,7 +51878,7 @@
              {
               "type": "View",
               "props": {
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -50005,7 +51895,7 @@
                  ],
                  "end": {
                   "x": 136.5,
-                  "y": 383
+                  "y": 844
                  },
                  "positions": [
                   0,
@@ -50026,7 +51916,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -50038,7 +51928,7 @@
                 "props": {
                  "c": {
                   "x": 109.20000000000002,
-                  "y": 114.89999999999999
+                  "y": 253.2
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -50050,7 +51940,7 @@
                   0.45,
                   1
                  ],
-                 "r": 338.90189081797695,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -50061,7 +51951,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -50073,7 +51963,7 @@
                 "props": {
                  "c": {
                   "x": 304.2,
-                  "y": 237.46
+                  "y": 523.28
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -50085,7 +51975,7 @@
                   0.45,
                   1
                  ],
-                 "r": 317.0372527006881,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -50096,7 +51986,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -50108,7 +51998,7 @@
                 "props": {
                  "c": {
                   "x": 179.4,
-                  "y": 352.36
+                  "y": 776.48
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -50120,7 +52010,7 @@
                   0.45,
                   1
                  ],
-                 "r": 273.30797646611046,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -50131,7 +52021,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 383,
+               "height": 844,
                "opacity": {
                 "$animated": 0
                },
@@ -50278,6 +52168,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -50331,6 +52270,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -51559,6 +53547,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -51621,6 +53667,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -55271,7 +57375,7 @@
            {
             "type": "View",
             "props": {
-             "height": 383,
+             "height": 844,
              "opacity": {
               "$animated": 1
              },
@@ -55286,7 +57390,7 @@
               "props": {
                "c": {
                 "x": 195,
-                "y": 191.5
+                "y": 422
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -55296,11 +57400,11 @@
                ],
                "positions": [
                 0,
-                0.3503373785063048,
-                0.7531282038323959,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 327.96957175933255,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -55311,7 +57415,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 383,
+             "height": 844,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 390,
@@ -55326,6 +57430,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 505,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 339
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 844
+               },
+               "positions": [
+                0,
+                0.08712871287128712,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 339
+               }
               },
               "children": []
              }
@@ -57083,9 +59261,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 383,
+            "height": 844,
             "width": 390
            },
            "testID": "qandeel-map-canvas"
@@ -57113,7 +59292,7 @@
              {
               "type": "View",
               "props": {
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -57130,7 +59309,7 @@
                  ],
                  "end": {
                   "x": 136.5,
-                  "y": 383
+                  "y": 844
                  },
                  "positions": [
                   0,
@@ -57151,7 +59330,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -57163,7 +59342,7 @@
                 "props": {
                  "c": {
                   "x": 109.20000000000002,
-                  "y": 114.89999999999999
+                  "y": 253.2
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -57175,7 +59354,7 @@
                   0.45,
                   1
                  ],
-                 "r": 338.90189081797695,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -57186,7 +59365,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -57198,7 +59377,7 @@
                 "props": {
                  "c": {
                   "x": 304.2,
-                  "y": 237.46
+                  "y": 523.28
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -57210,7 +59389,7 @@
                   0.45,
                   1
                  ],
-                 "r": 317.0372527006881,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -57221,7 +59400,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -57233,7 +59412,7 @@
                 "props": {
                  "c": {
                   "x": 179.4,
-                  "y": 352.36
+                  "y": 776.48
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -57245,7 +59424,7 @@
                   0.45,
                   1
                  ],
-                 "r": 273.30797646611046,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -57256,7 +59435,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 383,
+               "height": 844,
                "opacity": {
                 "$animated": 0
                },
@@ -57403,6 +59582,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -57456,6 +59684,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -58684,6 +60961,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -58746,6 +61081,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -62396,7 +64789,7 @@
            {
             "type": "View",
             "props": {
-             "height": 383,
+             "height": 844,
              "opacity": {
               "$animated": 1
              },
@@ -62411,7 +64804,7 @@
               "props": {
                "c": {
                 "x": 195,
-                "y": 191.5
+                "y": 422
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -62421,11 +64814,11 @@
                ],
                "positions": [
                 0,
-                0.3503373785063048,
-                0.7531282038323959,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 327.96957175933255,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -62436,7 +64829,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 383,
+             "height": 844,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 390,
@@ -62451,6 +64844,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 505,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 339
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 844
+               },
+               "positions": [
+                0,
+                0.08712871287128712,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 339
+               }
               },
               "children": []
              }
@@ -64186,9 +66653,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 383,
+            "height": 844,
             "width": 390
            },
            "testID": "qandeel-map-canvas"
@@ -64216,7 +66684,7 @@
              {
               "type": "View",
               "props": {
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -64233,7 +66701,7 @@
                  ],
                  "end": {
                   "x": 136.5,
-                  "y": 383
+                  "y": 844
                  },
                  "positions": [
                   0,
@@ -64254,7 +66722,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -64266,7 +66734,7 @@
                 "props": {
                  "c": {
                   "x": 109.20000000000002,
-                  "y": 114.89999999999999
+                  "y": 253.2
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -64278,7 +66746,7 @@
                   0.45,
                   1
                  ],
-                 "r": 338.90189081797695,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -64289,7 +66757,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -64301,7 +66769,7 @@
                 "props": {
                  "c": {
                   "x": 304.2,
-                  "y": 237.46
+                  "y": 523.28
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -64313,7 +66781,7 @@
                   0.45,
                   1
                  ],
-                 "r": 317.0372527006881,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -64324,7 +66792,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -64336,7 +66804,7 @@
                 "props": {
                  "c": {
                   "x": 179.4,
-                  "y": 352.36
+                  "y": 776.48
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -64348,7 +66816,7 @@
                   0.45,
                   1
                  ],
-                 "r": 273.30797646611046,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -64359,7 +66827,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 383,
+               "height": 844,
                "opacity": {
                 "$animated": 0
                },
@@ -64506,6 +66974,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -64559,6 +67076,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -65787,6 +68353,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -65849,6 +68473,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -69499,7 +72181,7 @@
            {
             "type": "View",
             "props": {
-             "height": 383,
+             "height": 844,
              "opacity": {
               "$animated": 1
              },
@@ -69514,7 +72196,7 @@
               "props": {
                "c": {
                 "x": 195,
-                "y": 191.5
+                "y": 422
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -69524,11 +72206,11 @@
                ],
                "positions": [
                 0,
-                0.3503373785063048,
-                0.7531282038323959,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 327.96957175933255,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -69539,7 +72221,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 383,
+             "height": 844,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 390,
@@ -69554,6 +72236,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 505,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 339
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 844
+               },
+               "positions": [
+                0,
+                0.08712871287128712,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 339
+               }
               },
               "children": []
              }
@@ -71196,9 +73952,10 @@
          {
           "type": "View",
           "props": {
+           "pointerEvents": "none",
            "skiaElement": "Canvas",
            "style": {
-            "height": 383,
+            "height": 844,
             "width": 390
            },
            "testID": "qandeel-map-canvas"
@@ -71226,7 +73983,7 @@
              {
               "type": "View",
               "props": {
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -71243,7 +74000,7 @@
                  ],
                  "end": {
                   "x": 136.5,
-                  "y": 383
+                  "y": 844
                  },
                  "positions": [
                   0,
@@ -71264,7 +74021,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -71276,7 +74033,7 @@
                 "props": {
                  "c": {
                   "x": 109.20000000000002,
-                  "y": 114.89999999999999
+                  "y": 253.2
                  },
                  "colors": [
                   "rgba(21,20,41,0.4)",
@@ -71288,7 +74045,7 @@
                   0.45,
                   1
                  ],
-                 "r": 338.90189081797695,
+                 "r": 576.4453125839432,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -71299,7 +74056,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -71311,7 +74068,7 @@
                 "props": {
                  "c": {
                   "x": 304.2,
-                  "y": 237.46
+                  "y": 523.28
                  },
                  "colors": [
                   "rgba(17,27,34,0.32)",
@@ -71323,7 +74080,7 @@
                   0.45,
                   1
                  ],
-                 "r": 317.0372527006881,
+                 "r": 539.2552924172371,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -71334,7 +74091,7 @@
               "type": "View",
               "props": {
                "blendMode": "screen",
-               "height": 383,
+               "height": 844,
                "skiaElement": "Rect",
                "width": 390,
                "x": 0,
@@ -71346,7 +74103,7 @@
                 "props": {
                  "c": {
                   "x": 179.4,
-                  "y": 352.36
+                  "y": 776.48
                  },
                  "colors": [
                   "rgba(15,31,30,0.26)",
@@ -71358,7 +74115,7 @@
                   0.45,
                   1
                  ],
-                 "r": 273.30797646611046,
+                 "r": 464.87525208382516,
                  "skiaElement": "RadialGradient"
                 },
                 "children": []
@@ -71369,7 +74126,7 @@
               "type": "View",
               "props": {
                "color": "rgba(4,15,24,1)",
-               "height": 383,
+               "height": 844,
                "opacity": {
                 "$animated": 0
                },
@@ -71516,6 +74273,55 @@
                      "skiaElement": "Group",
                      "transform": [
                       {
+                       "translateX": 0
+                      },
+                      {
+                       "translateY": 1024
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
                        "translateX": 512
                       },
                       {
@@ -71569,6 +74375,55 @@
                       },
                       {
                        "translateY": 512
+                      }
+                     ]
+                    },
+                    "children": [
+                     {
+                      "type": "View",
+                      "props": {
+                       "layer": true,
+                       "skiaElement": "Group"
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "picture": {
+                          "__standIn": "SkPicture"
+                         },
+                         "skiaElement": "Picture"
+                        },
+                        "children": []
+                       },
+                       {
+                        "type": "View",
+                        "props": {
+                         "blendMode": "dstIn",
+                         "color": "rgba(134,223,208,1)",
+                         "height": 520,
+                         "opacity": 1,
+                         "skiaElement": "Rect",
+                         "width": 520,
+                         "x": -4,
+                         "y": -4
+                        },
+                        "children": []
+                       }
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "skiaElement": "Group",
+                     "transform": [
+                      {
+                       "translateX": 512
+                      },
+                      {
+                       "translateY": 1024
                       }
                      ]
                     },
@@ -72797,6 +75652,64 @@
                        "skiaElement": "Group",
                        "transform": [
                         {
+                         "translateX": 0
+                        },
+                        {
+                         "translateY": 1536
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
                          "translateX": 768
                         },
                         {
@@ -72859,6 +75772,64 @@
                         },
                         {
                          "translateY": 768
+                        }
+                       ]
+                      },
+                      "children": [
+                       {
+                        "type": "View",
+                        "props": {
+                         "opacity": 0.4761904761904762,
+                         "skiaElement": "Group"
+                        },
+                        "children": [
+                         {
+                          "type": "View",
+                          "props": {
+                           "layer": true,
+                           "skiaElement": "Group"
+                          },
+                          "children": [
+                           {
+                            "type": "View",
+                            "props": {
+                             "picture": {
+                              "__standIn": "SkPicture"
+                             },
+                             "skiaElement": "Picture"
+                            },
+                            "children": []
+                           },
+                           {
+                            "type": "View",
+                            "props": {
+                             "blendMode": "dstIn",
+                             "color": "rgba(134,223,208,1)",
+                             "height": 776,
+                             "opacity": 1,
+                             "skiaElement": "Rect",
+                             "width": 776,
+                             "x": -4,
+                             "y": -4
+                            },
+                            "children": []
+                           }
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "type": "View",
+                      "props": {
+                       "skiaElement": "Group",
+                       "transform": [
+                        {
+                         "translateX": 768
+                        },
+                        {
+                         "translateY": 1536
                         }
                        ]
                       },
@@ -76444,7 +79415,7 @@
            {
             "type": "View",
             "props": {
-             "height": 383,
+             "height": 844,
              "opacity": {
               "$animated": 1
              },
@@ -76459,7 +79430,7 @@
               "props": {
                "c": {
                 "x": 195,
-                "y": 191.5
+                "y": 422
                },
                "colors": [
                 "rgba(1,2,5,0)",
@@ -76469,11 +79440,11 @@
                ],
                "positions": [
                 0,
-                0.3503373785063048,
-                0.7531282038323959,
+                0.2097336856779355,
+                0.6996988005576155,
                 1
                ],
-               "r": 327.96957175933255,
+               "r": 557.8503025005901,
                "skiaElement": "RadialGradient"
               },
               "children": []
@@ -76484,7 +79455,7 @@
             "type": "View",
             "props": {
              "blendMode": "softLight",
-             "height": 383,
+             "height": 844,
              "opacity": 0.048,
              "skiaElement": "Rect",
              "width": 390,
@@ -76499,6 +79470,80 @@
                "freqY": 0.9,
                "octaves": 1,
                "skiaElement": "FractalNoise"
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 88,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 0
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0.78)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 88
+               },
+               "positions": [
+                0,
+                0.5,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 0
+               }
+              },
+              "children": []
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "height": 505,
+             "skiaElement": "Rect",
+             "width": 390,
+             "x": 0,
+             "y": 339
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "colors": [
+                "rgba(16,16,16,0)",
+                "rgba(16,16,16,0.5)",
+                "rgba(16,16,16,0.88)"
+               ],
+               "end": {
+                "x": 0,
+                "y": 844
+               },
+               "positions": [
+                0,
+                0.08712871287128712,
+                1
+               ],
+               "skiaElement": "LinearGradient",
+               "start": {
+                "x": 0,
+                "y": 339
+               }
               },
               "children": []
              }

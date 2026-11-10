@@ -214,6 +214,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       top={top}
+      continuousWorld
       world={(envelope) =>
         // The Map is drawn only from T-04's own context; none is invented when it refuses.
         mapContext === null || !mapContext.ok ? null : (

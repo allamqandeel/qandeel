@@ -183,11 +183,15 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // WorldStrata only exports Stratum. Both goldens were re-recorded after the structural diff proved the change is Skia
   // paint only (additions, and the nebula mask's opacity values); the Shared and Public worlds never opt in. Previous
   // pins: MapCanvas cabef8ef, WorldCanvas e0ddba00, WorldStrata e17cef8d.
+  // MAP-CLOSE-01 V-3 Part B — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10, the Analysis screen UI): WorldCanvas reads an
+  // optional WorldContinuationContext; with it, the ONE canvas paints its ground, strata and veil below the frame, takes no
+  // touch, and lays the surface's ink as a scrim. Without it the canvas is exactly what it was (the Personal map golden is
+  // unchanged; the screen golden's host tree is identical). Previous pin: WorldCanvas 69b6a183.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '69b6a18393d408059ae0d6a9e859217263d45a33'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '1c07a412dcbc69473b7d4fce5288748437d49c3e'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '59de78381404afe2353efeea31ea3eb277450a1c'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', '6f6b8b94e980b19125ca501191923000a77959de'],

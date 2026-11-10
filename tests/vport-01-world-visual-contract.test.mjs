@@ -81,7 +81,9 @@ test('the neutral placeholder world is gone, and no palette fork replaced it', (
   assert.equal(/'#[0-9a-fA-F]{3,8}'/u.test(canvas), false, 'the renderer has no hex literal');
   // Plain circles are no longer the world: every object is its canonical morphology through the visual owner.
   assert.equal(canvas.includes('<Circle'), false, 'the renderer draws no plain circle of its own');
-  assert.equal(canvas.includes('<Line'), false, 'the renderer draws no plain line of its own');
+  // MAP-CLOSE-01 V-3 Part B: matched as the `<Line` ELEMENT, so the continuation scrim's `<LinearGradient` is not read as a line
+  // (the substring test matched both). The rule is unchanged: the renderer draws no plain line of its own.
+  assert.equal(/<Line\b/u.test(canvas), false, 'the renderer draws no plain line of its own');
   // The canonical tone curve, exactly (renderComposite: out = (1-a)*w + a*w*w), and its a from P.toneA.
   assert.ok(visual['WorldStrata.tsx'].includes('return half4(c.rgb * (1.0 - a) + c.rgb * c.rgb * a, c.a);'), 'the tone curve is the canonical one');
   assert.match(visual['world-visual.generated.ts'], /"tone": \{\s*"a": 0\.46\s*\}/u);
