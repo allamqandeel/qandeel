@@ -253,7 +253,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
             onMapOutcome={observeMapOutcome}
             onReturnOutcome={observeReturnOutcome}
             bottomInset={composition.bottomInset}
-            returnArrangement={composition.arrangement}
+            returnArrangement={details ? composition.arrangement : composition.labelArrangement}
             // VPORT-02: the frozen production composition — the temporal line is said once, beside the Timeline;
             // Return Live has one home, the Timeline's Live edge (G3 amendment §2; P2 §7).
             temporalLine="WITH_TIMELINE"

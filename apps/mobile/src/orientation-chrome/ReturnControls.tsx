@@ -182,10 +182,14 @@ export function ReturnControls({
   // Nothing meaningful to offer is a legitimate answer, and an empty group is not a surface.
   if (orientation.offered.length === 0) return null;
 
+  // MAP-CLOSE-01 V-3 (PO review, 2026-11-11): an Arabic reader reads a row from the right. The app lays every row out
+  // from the left, so the paired group is reflected AS LAYOUT and each act reflects back: the first act stands on the
+  // right, the rows still wrap in the frozen order, and no word, act or target changes.
+  const reflected = arrangement === 'PAIRED' && language === 'ar';
   return (
     <View
       testID={RETURN_CONTROLS_TEST_ID}
-      style={arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
+      style={reflected ? [styles.pairedGroup, styles.reflected] : arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
       // The group itself claims no touch: only the buttons inside it are targets, so every press
       // that misses a control reaches the world beneath rather than being swallowed here.
       //
@@ -203,6 +207,7 @@ export function ReturnControls({
           opportunity={candidate}
           onPress={run}
           paired={arrangement === 'PAIRED'}
+          reflected={reflected}
           ink={ink}
           compact={presentation === 'COMPACT'}
           hintShown={presentation === 'PLAIN' || hintsShown || candidate.id === 'GO_LIVE_AND_LOCATE'}
@@ -218,6 +223,8 @@ interface ReturnControlProps {
   readonly onPress: (id: ReturnOpportunityId) => void;
   /** Whether this control shares its row. Layout only: the act, its words and its target are the same. */
   readonly paired: boolean;
+  /** Whether the group is reflected for an Arabic reader, so this act reflects back (its words never mirror). */
+  readonly reflected: boolean;
   readonly ink: AnalysisInk;
   /** MAP-CLOSE-01 V-3: the act in a quiet ground of its own (see `presentation`). */
   readonly compact: boolean;
@@ -239,7 +246,7 @@ interface ReturnControlProps {
  * The pressed state is a static opacity swap, not an animation: no duration, no easing and no
  * animation driver. Motion is T-10's.
  */
-function ReturnControl({ language, opportunity, onPress, paired, ink, compact, hintShown }: ReturnControlProps) {
+function ReturnControl({ language, opportunity, onPress, paired, reflected, ink, compact, hintShown }: ReturnControlProps) {
   const words = returnActWords(language, opportunity.id);
   const type = useAnalysisType();
   // MAP-CLOSE-01 V-3 (PO addendum): the words start on the reader's side — right in Arabic, left in English. A physical
@@ -252,7 +259,8 @@ function ReturnControl({ language, opportunity, onPress, paired, ink, compact, h
       // words, never a fade of the words themselves. Still static: no duration, no easing, no driver.
       style={({ pressed }) => [
         styles.control,
-        paired ? styles.pairedControl : null,
+        paired ? (compact ? styles.pairedLabelControl : styles.pairedControl) : null,
+        reflected ? styles.reflected : null,
         // A quiet ground over the continuous world: the world's own ink, half present, and a hairline edge. No blur.
         compact ? [styles.compactControl, { backgroundColor: withAlpha(ink.world, 0.56), borderColor: withAlpha(ink.primary, 0.14) }] : null,
         pressed ? { backgroundColor: withAlpha(ink.pressedInk, ink.pressedPresence) } : null,
@@ -295,6 +303,10 @@ const styles = StyleSheet.create({
   // ceiling, so the control still grows downwards to contain the longest Arabic wording at the
   // largest text size.
   pairedControl: { flexBasis: '48%', flexGrow: 1 },
+  // MAP-CLOSE-01 V-3: two labels share the row in equal halves; a label longer than its half wraps inside it.
+  pairedLabelControl: { flexBasis: '40%', flexGrow: 1 },
+  // MAP-CLOSE-01 V-3: one reflection of the paired row for an Arabic reader, and the same one undoing it on each act.
+  reflected: { transform: [{ scaleX: -1 }] },
   // MAP-CLOSE-01 V-3: the act's own quiet ground. The same 44-point floor, an inner measure on both sides, a hairline.
   compactControl: { paddingHorizontal: 14, borderWidth: StyleSheet.hairlineWidth },
   label: { fontSize: 15, lineHeight: 24, fontWeight: '600' },

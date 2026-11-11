@@ -265,9 +265,15 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
 
   return (
     <View testID={TEMPORAL_TARGET_LAYER_TEST_ID} style={styles.layer}>
+      {/* MAP-CLOSE-01 V-3 — CONTROLLED AMENDMENT to G3 §2.5 (PO, 2026-11-11, "Line above the Track"): the Live words
+          are the line directly above the Track, on the reader's side (right in Arabic, left in English), instead of
+          inside T-05's outboard slot. They are still the act's one accessible route and the same act as the terminal
+          at the Live end; the slot stays outboard, beside the strip, so no Moment is ever under the Live act, and the
+          Track no longer gives its width to the words. */}
+      <View style={[styles.liveLine, { alignItems: (language === 'ar') !== rtl ? 'flex-end' : 'flex-start' }]}>{liveEdge}</View>
       {/* VPORT-02: the strip is composed directly under the Track (T-05's seam), so the Track, its strip and the
           position rail are the one 136-point instrument T-11 allocates, and the navigators follow below it. */}
-      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} temporalSurface={strip} language={language} navigatorTools={tools} />
+      <TimelinePresentation controller={presentation} outboardLivePresentation={LIVE_COLUMN} temporalSurface={strip} language={language} navigatorTools={tools} />
 
       <TemporalNavigator
         store={store}
@@ -283,8 +289,15 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
   );
 }
 
+/**
+ * MAP-CLOSE-01 V-3 (G3 §2.5 amendment) — T-05's outboard slot keeps its place beside the strip and its floor, so the
+ * discontinuity still separates the Live end from Moment-targeting space; it now holds no words of its own.
+ */
+const LIVE_COLUMN = <View pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" />;
+
 const styles = StyleSheet.create({
   layer: { flexDirection: 'column' },
+  liveLine: { paddingHorizontal: 16 },
   // `alignSelf: 'flex-start'` is the row's START edge: left in LTR, right in RTL — the same edge
   // T-05's Timeline is flush against. A marker for a Moment outside the presentation window has no
   // physical place inside the strip, and is clipped rather than painted over the outboard slot.
@@ -302,5 +315,5 @@ const styles = StyleSheet.create({
   marker: { position: 'absolute', top: MARKER_INSET, start: 0, width: 0, height: MARKER_HEIGHT },
   aperture: { position: 'absolute', top: -MARKER_INSET, start: -17 },
   // MAP-CLOSE-01 V-3: the Live words keep 16 points from the screen's edge, like every other line of the Analysis.
-  liveEdge: { minHeight: 44, justifyContent: 'center', paddingEnd: 16 },
+  liveEdge: { minHeight: 44, justifyContent: 'center' },
 });

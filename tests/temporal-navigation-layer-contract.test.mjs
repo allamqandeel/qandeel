@@ -976,7 +976,11 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
     // window, measurement or authority moved; the permanent claims below still hold and are still asserted.
     // MAP-CLOSE-01 V-3 Part B — PO ADDENDUM RE-ANCHOR (2026-11-11): one pass-through (`navigatorTools`) to the navigator.
     // No step, key, window, measurement or authority moved. Previous pin a1938372.
-    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '0922b31fc1cfea0b4f8869961a423cdf1d30226b'],
+    // MAP-CLOSE-01 V-3 — PO REVIEW RE-ANCHOR (2026-11-11; P2 C K20, T-06's one mirror rule): the instrument (Track, strip,
+    // rail) keeps 16 points from each edge, and for an Arabic reader on a layout that never runs right to left it is
+    // reflected AS LAYOUT, its numerals reflecting back, so SP1 stands at the start edge (right). The step, key, window,
+    // offset, position scale and every authority are unchanged. Previous pin 0922b31f.
+    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '8afe27a7528a02137ed3948051fab8c5e0860c16'],
     ['apps/mobile/src/timeline/testing/fixtures.ts', 'f59c962d13e6af81088e69168c0c00f307acbf8e'],
     ['apps/mobile/src/timeline/__tests__/controller.test.ts', '8453bae72e867c13788384a81f3eaca17cde2ada'],
     // T-12 §17 and W1A-01: the same corrections' own assertions, re-anchored beside them.

@@ -36,6 +36,22 @@ const MomentStep = memo(function MomentStep({ target, language, numeral }: { tar
  */
 export const OUTBOARD_LIVE_EXTENT = 64;
 const DISCONTINUITY_EXTENT = 16;
+/**
+ * MAP-CLOSE-01 V-3 (PO review, 2026-11-11) — the instrument's inset from the screen's edges: the Track, its strip and
+ * the position rail keep 16 points from each edge, like every other line of the Analysis, so the spine's start and the
+ * Live end are seen to begin and end rather than run into the glass. The step, the window, the offset and the position
+ * scale are untouched: the Track measures its own viewport inside the inset exactly as before.
+ */
+const INSTRUMENT_INSET = 16;
+/**
+ * MAP-CLOSE-01 V-3 (PO review, P2 C K20; T-06's one mirror rule) — the instrument for an Arabic reader on a platform
+ * that lays out left to right. The app never enables right-to-left layout (the reading side comes from the Product
+ * language), so the RTL layout every rule below was written for never happened, and the Arabic Track ran from the
+ * left. Mirroring the instrument AS LAYOUT — one reflection of the frame the Track, the strip and the rail share —
+ * gives exactly that RTL layout: SP1 at the start edge (right), Live at the end (left). Every coordinate inside stays
+ * logical, so no offset, window, hit test or geometry rule changes. The words never mirror: each text counter-reflects.
+ */
+const MIRROR = [{ scaleX: -1 }] as const;
 
 /** Composition seam only: a parent supplies disclosed input via the controller.
  * The optional outboard slot is supplied by the later temporal composition. T-05
@@ -61,7 +77,8 @@ export function TimelinePresentation({ controller, outboardLivePresentation, tem
   const type = useAnalysisType();
   const metadata = type('metadata');
   // Centred in its own step by the line box alone, so the step keeps its exact invariant extent and style.
-  const numeral = useMemo<TextStyle>(() => ({ ...metadata, color: ink.tertiary, textAlign: 'center', lineHeight: TIMELINE_STEP }), [metadata, ink.tertiary]);
+  const mirrored = language === 'ar' && !I18nManager.isRTL;
+  const numeral = useMemo<TextStyle>(() => ({ ...metadata, color: ink.tertiary, textAlign: 'center', lineHeight: TIMELINE_STEP, transform: mirrored ? MIRROR : undefined }), [metadata, ink.tertiary, mirrored]);
   const renderItem = useCallback(({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} language={language} numeral={numeral} />, [language, numeral]);
   const list = useRef<FlatList<DisclosedMomentTarget>>(null);
   const railWidth = useRef(0);
@@ -79,6 +96,7 @@ export function TimelinePresentation({ controller, outboardLivePresentation, tem
     }
   };
   return <View>
+    <View testID="timeline-instrument" style={{ paddingHorizontal: INSTRUMENT_INSET, transform: mirrored ? MIRROR : undefined }}>
     {/* `minHeight` rather than `height`: the row was clipping the Live label in BOTH axes, and a
         taller wrapped label needs the row to grow with it. The Track itself keeps its exact
         `TIMELINE_STEP` below, so the invariant step, the window offset and the position scale are
@@ -125,6 +143,7 @@ export function TimelinePresentation({ controller, outboardLivePresentation, tem
       onResponderGrant={({ nativeEvent }) => railMove(nativeEvent.locationX)}
       onResponderMove={({ nativeEvent }) => railMove(nativeEvent.locationX)}>
       <View pointerEvents="none" style={{ position: 'absolute', left: `${(I18nManager.isRTL ? 1 - state.position : state.position) * 100}%`, height: 44, borderLeftWidth: 2, borderColor: ink.restInk }} />
+    </View>
     </View>
     <PresentationNavigator key={`navigator:${state.track.sessionId}`} controller={controller} language={language} tools={navigatorTools} />
   </View>;

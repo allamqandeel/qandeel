@@ -92,6 +92,14 @@ export const PAIRED_MIN_CELL_POINTS = 232;
 export const BAND_HYSTERESIS_POINTS = 8;
 /** The platform minimum between two touch targets. */
 export const PAIRED_COLUMN_GAP_POINTS = 8;
+/**
+ * MAP-CLOSE-01 V-3 (PO review, 2026-11-11) — the readable floor for one cell when the acts show their LABELS only (the
+ * compact chrome, hints on request): 16 characters at the label's 15 points, ≈ 7.5 points each, is 120, and the cell's
+ * own 14-point measure on both sides makes 148 — `152` on the 8-point rhythm. It is scaled by the reader's text size,
+ * so a larger text or a narrower window returns the acts to one column; a longer label wraps inside its cell (two
+ * lines at most at the ordinary size), never clips.
+ */
+export const PAIRED_LABEL_CELL_POINTS = 152;
 /** T-08's own horizontal padding. The band frames the chrome; it never reaches inside it. */
 export const CHROME_OWN_HORIZONTAL_PADDING = 16;
 /** Breathing room an expansive window earns. Air around the same words, never a second Product. */
@@ -132,6 +140,8 @@ export function bandFor(usable: number, previous: PresentationBand | null = null
 /** How the chrome band frames T-08's chrome. Every number is a layout quantity; none is a Product one. */
 export interface ChromeComposition {
   readonly arrangement: ChromeArrangement;
+  /** MAP-CLOSE-01 V-3: the arrangement for acts that show their labels only (see `PAIRED_LABEL_CELL_POINTS`). */
+  readonly labelArrangement: ChromeArrangement;
   /** The band's content width, after its own padding and the reading clamp. */
   readonly measurePoints: number;
   /** The band's padding OUTSIDE the chrome. T-08's own 16 points are untouched. */
@@ -340,6 +350,7 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
   // as one ordered list rather than as an invented grouping — so width alone never pairs them.
   const cell = (measurePoints - 2 * CHROME_OWN_HORIZONTAL_PADDING - PAIRED_COLUMN_GAP_POINTS) / 2;
   const arrangement: ChromeArrangement = shortHeight && band === 'EXPANSIVE' && cell >= PAIRED_MIN_CELL_POINTS ? 'PAIRED' : 'STACKED';
+  const labelArrangement: ChromeArrangement = arrangement === 'PAIRED' || cell >= PAIRED_LABEL_CELL_POINTS * surface.fontScale ? 'PAIRED' : 'STACKED';
 
   const gapPoints = shortHeight ? SHORT_BAND_GAP_POINTS : BAND_GAP_POINTS;
 
@@ -443,6 +454,7 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
     }),
     chrome: Object.freeze({
       arrangement,
+      labelArrangement,
       measurePoints,
       paddingHorizontal,
       gapPoints: chromeGapPoints,

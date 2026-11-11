@@ -98,7 +98,9 @@ const FROZEN = [
 // MAP-CLOSE-01 V-3 Part B RE-ANCHOR (2026-11-10, the Product Owner's addition to V-3: the Analysis screen UI, the world as
   // one continuous ground): the Personal Analysis opts in to `continuousWorld`, one attribute; the projection, its cache, the
   // Map, the chrome and every refusal are unchanged. Previous pin 20679fd4.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '8185f212c6f78aacbb8ebf7b88d2c6db27c889a44db5bcc75374e28bfae18757'],
+  // MAP-CLOSE-01 V-3 — PO REVIEW RE-ANCHOR (2026-11-11): with the details hidden, the return acts take the arrangement
+  // for labels only (side by side where the labels fit). Previous pin 8185f212.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '90fe85806f0b3a4dc2ef0d9805cae8f6ca59f82fdf0440e23158f6009c2f15e9'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],

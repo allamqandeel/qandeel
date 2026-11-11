@@ -142,7 +142,8 @@ describe('T11 — the plan over the supported envelope', () => {
       // The plan asserts no vertical CEILING for the chrome. It cannot know the temporal surface's
       // height or the chrome's, because both depend on words that have not been laid out yet — so
       // the vertical arithmetic belongs to the layout engine and the plan says nothing about it.
-      expect(Object.keys(plan.chrome).sort()).toEqual(['arrangement', 'bottomInset', 'gapPoints', 'measurePoints', 'paddingHorizontal']);
+      // MAP-CLOSE-01 V-3 (PO review, 2026-11-11): `labelArrangement` — the arrangement for acts that show their labels only.
+      expect(Object.keys(plan.chrome).sort()).toEqual(['arrangement', 'bottomInset', 'gapPoints', 'labelArrangement', 'measurePoints', 'paddingHorizontal']);
     }
   });
 
@@ -406,5 +407,18 @@ describe('T12 — the support band is allocated, never inferred', () => {
     const tall = recompositionPlan(presentationSurface({ width: 390, height: 844 }) as never);
     expect(tall.support.chromePoints).toBeGreaterThan(CHROME_FLOOR_POINTS);
     expect(tall.support.timelinePoints).toBeGreaterThan(TIMELINE_ROW_POINTS);
+  });
+});
+
+describe('MAP-CLOSE-01 V-3 — the compact acts pair by their LABELS (PO review, 2026-11-11)', () => {
+  it('pairs two labels on an ordinary phone, and returns to one column at a larger text size or a narrower window', () => {
+    // 1200 px at density 3.25 is 369 points: two cells of ≈ 164, over the 152-point label floor.
+    expect(planOf(369, 816).chrome.labelArrangement).toBe('PAIRED');
+    expect(planOf(390, 844).chrome.labelArrangement).toBe('PAIRED');
+    expect(planOf(369, 816, { fontScale: 1.15 }).chrome.labelArrangement).toBe('STACKED');
+    expect(planOf(390, 844, { fontScale: 1.3 }).chrome.labelArrangement).toBe('STACKED');
+    expect(planOf(320, 568).chrome.labelArrangement).toBe('STACKED');
+    // The hint-led arrangement is unchanged by it.
+    expect(planOf(390, 844).chrome.arrangement).toBe('STACKED');
   });
 });
