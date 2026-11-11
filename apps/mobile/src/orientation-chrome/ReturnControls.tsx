@@ -211,6 +211,9 @@ export function ReturnControls({
           ink={ink}
           compact={presentation === 'COMPACT'}
           hintShown={presentation === 'PLAIN' || hintsShown || candidate.id === 'GO_LIVE_AND_LOCATE'}
+          // MAP-CLOSE-01 V-3 (PO review): labels pair; the composite's always-shown promise does not fit half a row,
+          // so with the details hidden it takes a row of its own (the order and every word unchanged).
+          ownRow={arrangement === 'PAIRED' && presentation === 'COMPACT' && !hintsShown && candidate.id === 'GO_LIVE_AND_LOCATE'}
         />
       ))}
     </View>
@@ -228,6 +231,8 @@ interface ReturnControlProps {
   readonly ink: AnalysisInk;
   /** MAP-CLOSE-01 V-3: the act in a quiet ground of its own (see `presentation`). */
   readonly compact: boolean;
+  /** Whether this act takes a whole row of a paired group (the composite's promise beside a label-only pair). */
+  readonly ownRow: boolean;
   /** Whether the hint is shown as well as spoken. It is always spoken. */
   readonly hintShown: boolean;
 }
@@ -246,7 +251,7 @@ interface ReturnControlProps {
  * The pressed state is a static opacity swap, not an animation: no duration, no easing and no
  * animation driver. Motion is T-10's.
  */
-function ReturnControl({ language, opportunity, onPress, paired, reflected, ink, compact, hintShown }: ReturnControlProps) {
+function ReturnControl({ language, opportunity, onPress, paired, reflected, ink, compact, hintShown, ownRow }: ReturnControlProps) {
   const words = returnActWords(language, opportunity.id);
   const type = useAnalysisType();
   // MAP-CLOSE-01 V-3 (PO addendum): the words start on the reader's side — right in Arabic, left in English. A physical
@@ -260,6 +265,7 @@ function ReturnControl({ language, opportunity, onPress, paired, reflected, ink,
       style={({ pressed }) => [
         styles.control,
         paired ? (compact ? styles.pairedLabelControl : styles.pairedControl) : null,
+        ownRow ? styles.ownRow : null,
         reflected ? styles.reflected : null,
         // A quiet ground over the continuous world: the world's own ink, half present, and a hairline edge. No blur.
         compact ? [styles.compactControl, { backgroundColor: withAlpha(ink.world, 0.56), borderColor: withAlpha(ink.primary, 0.14) }] : null,
@@ -305,6 +311,8 @@ const styles = StyleSheet.create({
   pairedControl: { flexBasis: '48%', flexGrow: 1 },
   // MAP-CLOSE-01 V-3: two labels share the row in equal halves; a label longer than its half wraps inside it.
   pairedLabelControl: { flexBasis: '40%', flexGrow: 1 },
+  // MAP-CLOSE-01 V-3 (PO review): a whole row, so the act before it takes the line above alone.
+  ownRow: { flexBasis: '100%' },
   // MAP-CLOSE-01 V-3: one reflection of the paired row for an Arabic reader, and the same one undoing it on each act.
   reflected: { transform: [{ scaleX: -1 }] },
   // MAP-CLOSE-01 V-3: the act's own quiet ground. The same 44-point floor, an inner measure on both sides, a hairline.

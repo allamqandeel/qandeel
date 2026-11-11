@@ -65125,6 +65125,7 @@
                      "flexGrow": 1
                     },
                     null,
+                    null,
                     [
                      {
                       "borderWidth": 0.5,
@@ -65204,6 +65205,7 @@
                      "flexBasis": "40%",
                      "flexGrow": 1
                     },
+                    null,
                     null,
                     [
                      {
@@ -72977,9 +72979,15 @@
                    },
                    "accessible": true,
                    "onAccessibilityAction": "[fn]",
-                   "style": {
-                    "flexDirection": "column"
-                   },
+                   "style": [
+                    {
+                     "flexDirection": "column"
+                    },
+                    {
+                     "height": 1,
+                     "overflow": "hidden"
+                    }
+                   ],
                    "testID": "qandeel-temporal-summary"
                   },
                   "children": [
@@ -81215,6 +81223,7 @@
                      "flexGrow": 1
                     },
                     null,
+                    null,
                     [
                      {
                       "borderWidth": 0.5,
@@ -81293,6 +81302,9 @@
                     {
                      "flexBasis": "40%",
                      "flexGrow": 1
+                    },
+                    {
+                     "flexBasis": "100%"
                     },
                     null,
                     [
@@ -89329,6 +89341,7 @@
                      "flexGrow": 1
                     },
                     null,
+                    null,
                     [
                      {
                       "borderWidth": 0.5,
@@ -90761,6 +90774,7 @@
                      "flexGrow": 1
                     },
                     null,
+                    null,
                     [
                      {
                       "borderWidth": 0.5,
@@ -90840,6 +90854,7 @@
                      "flexBasis": "40%",
                      "flexGrow": 1
                     },
+                    null,
                     null,
                     [
                      {

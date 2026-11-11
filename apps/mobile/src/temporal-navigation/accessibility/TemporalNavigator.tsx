@@ -156,10 +156,11 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
           Nothing interactive lives inside it, so making it ONE element suppresses nothing. */}
       <View
         testID={TEMPORAL_SUMMARY_TEST_ID}
-        // MAP-CLOSE-01 V-3 (PO addendum): with the details hidden and no temporary look, the summary's words are already on
-        // screen (the Live words, or the temporal orientation line), so the element stays — the same label, value and named
+        // MAP-CLOSE-01 V-3 (PO addendum; PO review 2026-11-11, no duplicated words): with the details hidden, the summary's
+        // words are already on screen — the stance in the Live words or the temporal orientation line, and a temporary look
+        // in that line's preview sentence (P2 C board 07, state 4) — so the element stays — the same label, value and named
         // acts for a screen reader — and only its duplicate words leave the screen, as a one-point, clipped line.
-        style={routes || model.previewLabel !== null ? styles.summary : [styles.summary, styles.summaryQuiet]}
+        style={routes ? styles.summary : [styles.summary, styles.summaryQuiet]}
         accessible
         accessibilityRole="text"
         accessibilityLabel={model.surfaceLabel}
