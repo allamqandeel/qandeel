@@ -295,9 +295,26 @@ export interface RecompositionOptions {
    * A world with no temporal track has nothing to put in the band but its chrome, and an empty chrome must not hold half
    * the screen. Measured, the band is exactly what the chrome says — capped at the room computed for every world, so the
    * world never falls under its half — and the world grows into the rest. Unmeasured (`null` / absent), the band keeps
-   * that room, which is the S5-03B R1 composition. Ignored under `TIMELINE_AND_CHROME`: Personal is unchanged.
+   * that room, which is the S5-03B R1 composition.
+   *
+   * MAP-CLOSE-01 V-3 (PO addendum, screen space): under `TIMELINE_AND_CHROME` it is read too, together with
+   * `timelineContentPoints` — see there. Under `TIMELINE_AND_CHROME` it includes the temporal line the chrome yields.
    */
   readonly chromeContentPoints?: number | null;
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum, screen space) — the Timeline row's MEASURED natural height (its instrument and
+   * routes, without the temporal line), read only under `TIMELINE_AND_CHROME` on a stacked, non-short surface.
+   *
+   * The same rule SHARED-VIS-01 gave a world with no track, applied to Personal's band: with BOTH regions measured, each
+   * is what its content needs, the band is never more than the room computed above (now its CAP), and the world grows
+   * into the rest. The Timeline keeps its instrument floor (`TIMELINE_ROW_POINTS`); the chrome, measured, needs no floor
+   * but the bottom safe area, exactly as under `CHROME_ONLY`. Over the cap, the chrome keeps what it needs up to its own
+   * share and whatever the Timeline leaves, and the Timeline takes the rest — so details asked for on the Timeline can
+   * use room the chrome does not need — and whatever does not fit stays reachable in each region's scroller. Unmeasured
+   * (either `null` / absent), the band keeps that room exactly, which is the composition as it was. A short surface is
+   * untouched: there the band is already at its floors.
+   */
+  readonly timelineContentPoints?: number | null;
 }
 
 /**
@@ -379,6 +396,20 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
   // empty chrome keeps no gap, so the world reaches the band. The world's ceiling below follows from the same numbers,
   // so it can never fall under the half every world is given.
   let chromeGapPoints = gapPoints;
+  const whole = (measured: number | null | undefined): number | null =>
+    measured === undefined || measured === null || !Number.isFinite(measured) ? null : Math.max(0, Math.ceil(measured));
+  if (options.support !== 'CHROME_ONLY' && !shortHeight && support.arrangement === 'STACKED') {
+    const timelineContent = whole(options.timelineContentPoints);
+    const chromeContent = whole(options.chromeContentPoints);
+    if (timelineContent !== null && chromeContent !== null) {
+      const room = support.timelinePoints + support.chromePoints;
+      const timelineNeed = Math.max(TIMELINE_ROW_POINTS, timelineContent);
+      const chromeNeed = Math.max(surface.insetBottom, chromeContent);
+      const chromePoints = Math.min(chromeNeed, Math.max(support.chromePoints, room - timelineNeed));
+      const timelinePoints = Math.max(Math.min(TIMELINE_ROW_POINTS, room), Math.min(timelineNeed, room - chromePoints));
+      support = { ...support, bandPoints: timelinePoints + chromePoints + support.gapPoints, timelinePoints, chromePoints };
+    }
+  }
   if (options.support === 'CHROME_ONLY') {
     const cap = support.bandPoints;
     const measured = options.chromeContentPoints;

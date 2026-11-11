@@ -269,8 +269,10 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
   assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
   assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
-  // SHARED-VIS-01 controlled re-anchor: the band also reports its content height, but only for a world with no track.
-  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{chromeOnly \? onChromeContent : undefined\}>/u, 'OrientationChrome yields the line\'s room');
+  // SHARED-VIS-01 controlled re-anchor: the band also reports its content height. MAP-CLOSE-01 V-3 Part B — PO ADDENDUM
+  // RE-ANCHOR (2026-11-11): every world's band reports it (Personal's band is sized to its measured regions); the line's
+  // room still comes out of the chrome's share, never out of the world's.
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{onChromeContent\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

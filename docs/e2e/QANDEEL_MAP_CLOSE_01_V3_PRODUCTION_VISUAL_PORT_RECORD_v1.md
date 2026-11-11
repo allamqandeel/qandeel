@@ -1,6 +1,6 @@
 # QANDEEL — MAP-CLOSE-01 Step 4 / V-3 — Production Visual Port of S3-R2 — Record v1
 
-**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PAN PERFORMANCE NOT MET, AWAITS THE PO — NOT READY FOR CLOSURE — NOT MERGED`
+**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PO ADDENDUM (PREMIUM COMPACT UI, RTL / LTR, SCREEN SPACE) DELIVERED ON PART B — PAN PERFORMANCE NOT MET, AWAITS THE PO — NOT READY FOR CLOSURE — NOT MERGED`
 **Task:** MAP-CLOSE-01 Step 4 / V-3, the production visual port of the approved S3-R2 art direction into the existing Personal Living Analysis map.
 **Date:** 2026-11-10. **Baseline:** `main` at `5a21971d` (the merge of PR #390, MAP-CLOSE-01 Step 2). **Branch:** `map/map-close-01-v3-production-port`.
 **Authority:** Product Owner, 2026-11-10, six messages:
@@ -335,6 +335,10 @@ The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exa
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.
 - **The three worlds on a real phone (§5B):** run on the PO's phone (Part B §11). Function passes; pan performance is NOT MET and awaits the PO's decision. V-3 does not close on it.
+- **The PO addendum (Part B §11), awaiting the PO:**
+  - the composite tone (§9);
+  - the Copy Gate (4 PROPOSED);
+  - permission to switch the phone's font scale, contrast and motion for this addendum's legs.
 
 ## 11. Part B — the Analysis screen UI (PO addition, 2026-11-10)
 **The PO's instruction:**
@@ -567,6 +571,124 @@ All three are within the spread.
 - `device/three-worlds/phone/pan/{main,before,after,fade}`: SurfaceFlinger latency dumps.
 - `boards/three-worlds/phone/*.png`: per leg, plus Before / After / Fade.
 - `scripts/run-phone.sh`, `pan-bench.sh`, `pan-summary.mjs`, `phone-pixcmp.mjs`, `contrast.mjs`, `build-phone-apk.sh`.
+
+### Part B: Premium Compact UI, RTL / LTR and screen space (PO addendum, 2026-11-11)
+**The PO's instruction (within the performance slice):**
+- the map first;
+- Arabic on the right and English on the left;
+- no persistent explanatory paragraphs: actions read from their labels and states, and the guidance moves to a contextual path;
+- semi-transparent dark glass without heavy blur;
+- the existing tokens and components, and no new design system;
+- each world keeps its own tools; no Timeline in Shared or Public; Replay logic untouched;
+- Before / After space measurements;
+- no performance regression.
+
+**Skills actually used.** None of the named Design / UI skills is installed in this session, and none was installed. The work uses only the app's own sources:
+- the Analysis ink and type (`useAnalysisInk`, `useAnalysisType`) and `withAlpha`;
+- the 44-point target floor;
+- the app's own direction rule: the physical reading side comes from the Product language, never from the platform layout direction. This is the `readerSide` pattern in `conversation/bidi.ts`, already used by ConversationSurface, ReplayMomentComposite and AnalysisReturnBar. The app never enables RTL layout, and Android ignores `writingDirection`.
+
+**One visual direction: the reference's compact glass.**
+- the world takes the room the support band does not need;
+- one status row: the spatial sentence on the reader's side, and one "details" pill at the other end;
+- the return acts as compact glass rows: the world ink at 0.56 with a hairline of the primary ink at 0.14, and no blur;
+- the Timeline instrument unchanged.
+
+**What changed (Personal Analysis).**
+
+| Component | Change |
+|---|---|
+| `OrientationChrome` | optional `details` (shown, onToggle). With it, the chrome is COMPACT: a status row (the sentence plus a pill that shows or hides the details, `accessibilityRole="button"`, `accessibilityState.expanded`, min 44 pt). Without it, T-08's chrome is exactly as it was (Shared, Public and Replay pass none). Every sentence is aligned to the reader's side |
+| `ReturnControls` | `presentation` PLAIN (default, unchanged) or COMPACT: the label only, on a glass ground. The hint stays the act's `accessibilityHint` and is shown with the details. The composite act's conditional promise (`GO_LIVE_AND_LOCATE`) is always shown. The acts, their order, their words and their availability are unchanged |
+| `TemporalOrientationLine`, `InspectionOrientation`, `TemporalNavigator`, `PresentationNavigator` | `textAlign` by the reader's language, and 16 pt from the screen's edge |
+| `TemporalTargetLayer` / `TemporalNavigator` | `tools` / `routes`: the exact-entry field and the step and rejoin buttons are details on request. The summary element (the temporal statement and every named act) always stays; with the details hidden and no temporary look, its duplicate words leave the screen (a one-point clipped line). Commit and cancel are always shown while a temporary look exists |
+| `PresentationNavigator` / `TimelinePresentation` | `tools`: the typed command field, its helper and its act are details on request. The position element (the window's accessible route) always stays |
+| `LivingAnalysisMap` | holds the one switch (starts hidden, not remembered) |
+| `responsive/plan.ts`, `ResponsiveTimelineRow`, `LivingAnalysisSurface` | the Personal band is sized to what its Timeline and chrome measure, by SHARED-VIS-01's rule. The cap is the room the band had, so the world never gets less than before. The Timeline keeps its 136-point instrument floor. Over the cap, the chrome keeps up to its share and the Timeline takes the rest, and whatever does not fit stays in each region's scroller. Shared, Public and Replay (`CHROME_ONLY`) are unchanged |
+| `product-copy.ts` | four words (Copy Gate below) |
+
+**Not changed:**
+- the Timeline's Track, strip, rail, steps, keys, window, Live edge and every temporal act;
+- camera geometry, data coordinates and zoom;
+- the Shared and Public tools;
+- Replay recording, playback and export.
+
+**Copy Gate: 4 PROPOSED, not approved.**
+
+| Key | Arabic | English |
+|---|---|---|
+| `details.SHOW` | عرض التفاصيل | Show details |
+| `details.HIDE` | إخفاء التفاصيل | Hide details |
+
+**Controlled amendments (named).**
+
+| Contract | Amendment |
+|---|---|
+| S7-03 / S7-04 criterion 12 | `LivingAnalysisSurface` and `LivingAnalysisMap` re-pinned ("PO ADDENDUM RE-ANCHOR", previous pins e623c27a / 17c56308) |
+| SHARED-VIS-01 5b | Personal is measured too, by the same rule; a world with no track is still measured alone and as before |
+| VPORT-02 G3 composition | the chrome band reports its content in every world; the line's room still comes from the chrome, never from the world |
+| T-05 byte identity | `PresentationNavigator` (2d3cc7e7 →) and `TimelinePresentation` (a1938372 →) re-pinned; the permanent claims (no store authority, the strip directly under the Track, the imports) still pass unchanged |
+| Living Analysis surface test | "a world with a temporal track never measures its chrome" becomes the measured-band rule (one region measured moves nothing; floors; cap) |
+| Screen golden | re-recorded. The changes: the details pill and the Timeline content wrapper are added; the exact-entry field, the step and rejoin buttons and the typed command field leave the default tree (present again with the details); the summary element is in every case; `previewing` keeps commit and cancel |
+
+**On the PO's phone (validation only).**
+- **Device:** HONOR, 1200 × 2652, density 3.25.
+- **Package:** the proof package `com.qandeel.mobile.v3proof` only.
+- **APKs:**
+  - Before = `da608237`, Part B before this addendum;
+  - After = `2f959af7` plus this UI, `v3proof-ui4`.
+- **Method:** a uiautomator dump of each state gives the map frame and the support band; px / 3.25 = pt.
+
+| Personal Analysis (Arabic and English alike) | Before | After |
+|---|---|---|
+| Map frame at rest | 1469 px (452 pt) | **1843 px (567 pt), +374 px, +25 %** |
+| Support band at rest | 1144 px | 770 px |
+| Persistent explanatory paragraphs | 2 (the command key list; the return acts' two explanations after a pan) | **0** (shown with the details) |
+| Map frame after a pan (two return acts shown) | 1469 px | 1492 px; the acts as labels on glass |
+| Details shown | — | the band at its cap (1144 px, the room it had), and everything it holds scrolls |
+
+**Alignment and layout.**
+- Every line of the Analysis chrome starts on the reader's side: Arabic on the right, English on the left, 16 pt from the edge.
+- Mixed Arabic and digits ("0% من نطاق العرض") read in order.
+- Nothing overlaps or is clipped in any capture.
+- The status row puts the sentence on the reader's side and the pill at the other end.
+
+**The other worlds.**
+- The Shared and Public screens pass no `details` and are unchanged by this addendum. Their Before and After captures, in Arabic and English, are pixel-identical below the status bar (0.00 %).
+- The Arabic Public capture was taken again once, because the first run's flow stayed on the Conversation; that miss is kept as `ar-public-flowmiss`.
+- Replay is untouched.
+
+**Pan (presented fps, SurfaceFlinger, same session, three rounds of six pans).** Before = `da608237`; Bound = Part A's layer bound alone; After = this UI on top.
+
+| World | Before | Bound | After |
+|---|---|---|---|
+| Personal | 3.6 | 4.4 | 4.0 |
+| Shared | 4.1 | 17.1 | 9.8 |
+| Public | 5.4 | 16.6 | 18.5 |
+
+- The UI adds no paint to the map. Its only cost is a few compact `View`s.
+- Shared varies from run to run: one earlier run of the same UI gave 15.0.
+- **Pan performance remains NOT MET in Personal.** Its cause is the tone per draw (§9), and the fix awaits the PO.
+
+**Evidence:** `device/ui/{before,after4}` (captures and dumps), `boards/…` and `device/ui/board-*.png`, and `device/three-worlds/phone/pan/{beforeb,p1b,ui4}`.
+
+**Part B checks (on the final tree of this change).**
+- **Contracts, all pass:**
+  - S7-03 31, S7-04 63, SHARED-VIS-01 8;
+  - VPORT-02 9, VPORT-01 12;
+  - temporal navigation 29, T-11 responsive 27, inspection orientation 26;
+  - S5-03B 13, S7-02 19, map runtime 15;
+  - task-closure governance 24.
+- **Mobile Jest:** 3480 / 3486. The 6 failures (`depth`, `w2-account-access`) are the locale baseline that fails on `main` too.
+- **Types and lint:** `tsc` is clean, and `eslint` on the changed files is clean.
+- **Not run locally:** `forward-safety` runs in CI only (it hangs locally).
+
+**Tested only in Jest goldens, not on the phone:**
+- large text (`large-text-200`, `ar-large-text-200`);
+- short landscape;
+- increased contrast.
+
+The phone's font scale, contrast and motion settings were not changed for this addendum: that needs the PO's permission for this run. A narrow phone and the keyboard over the exact-entry field are **NOT PROVEN** on a device.
 
 ## 12. Backlog
 _(reconciled at V-3's closure.)_

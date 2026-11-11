@@ -126,9 +126,16 @@ export interface TemporalTargetLayerProps {
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
   /** The reader's Product language for every word of this layer and its Timeline (W1A-01). */
   readonly language?: AnalysisLanguage;
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum): the exact routes are details on request. Hidden, the Track, its strip, the Live
+   * words and terminal, the position element and the temporal summary (the accessible statement with its named acts)
+   * stay; the typed routes and the step and rejoin buttons return with the details, and a temporary look is never
+   * hidden — while one exists, its two acts are shown. Absent, everything is shown, exactly as before.
+   */
+  readonly tools?: boolean;
 }
 
-export function TemporalTargetLayer({ store, preview, presentation, enabled = true, onOutcome, language = 'en' }: TemporalTargetLayerProps) {
+export function TemporalTargetLayer({ store, preview, presentation, enabled = true, onOutcome, language = 'en', tools = true }: TemporalTargetLayerProps) {
   const ink = useAnalysisInk();
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
@@ -260,7 +267,7 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
     <View testID={TEMPORAL_TARGET_LAYER_TEST_ID} style={styles.layer}>
       {/* VPORT-02: the strip is composed directly under the Track (T-05's seam), so the Track, its strip and the
           position rail are the one 136-point instrument T-11 allocates, and the navigators follow below it. */}
-      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} temporalSurface={strip} language={language} />
+      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} temporalSurface={strip} language={language} navigatorTools={tools} />
 
       <TemporalNavigator
         store={store}
@@ -270,6 +277,7 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
         onCommitted={motion.acknowledgeCommit}
         onCancelled={motion.acknowledgeCancel}
         language={language}
+        routes={tools}
       />
     </View>
   );
@@ -293,5 +301,6 @@ const styles = StyleSheet.create({
   // exact in both directions because the drawing is symmetric about the anchor: a mirror places the same pixels.
   marker: { position: 'absolute', top: MARKER_INSET, start: 0, width: 0, height: MARKER_HEIGHT },
   aperture: { position: 'absolute', top: -MARKER_INSET, start: -17 },
-  liveEdge: { minHeight: 44, justifyContent: 'center' },
+  // MAP-CLOSE-01 V-3: the Live words keep 16 points from the screen's edge, like every other line of the Analysis.
+  liveEdge: { minHeight: 44, justifyContent: 'center', paddingEnd: 16 },
 });

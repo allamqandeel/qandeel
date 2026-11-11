@@ -40,7 +40,7 @@ const DISCONTINUITY_EXTENT = 16;
 /** Composition seam only: a parent supplies disclosed input via the controller.
  * The optional outboard slot is supplied by the later temporal composition. T-05
  * never manufactures a Live target, its activation, or a committed-mode indicator. */
-export function TimelinePresentation({ controller, outboardLivePresentation, temporalSurface, language = 'en' }: {
+export function TimelinePresentation({ controller, outboardLivePresentation, temporalSurface, language = 'en', navigatorTools = true }: {
   controller: PresentationController;
   outboardLivePresentation?: ReactNode;
   /**
@@ -52,6 +52,8 @@ export function TimelinePresentation({ controller, outboardLivePresentation, tem
   temporalSurface?: ReactNode;
   /** The reader's Product language for every word here (W1A-01). */
   language?: AnalysisLanguage;
+  /** MAP-CLOSE-01 V-3: passed to the navigator — whether its typed command route is shown (details on request). */
+  navigatorTools?: boolean;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   // VPORT-02: the Analysis ink and type (`QAN` dark-on-dark correction). Presentation only; read once per surface.
@@ -124,6 +126,6 @@ export function TimelinePresentation({ controller, outboardLivePresentation, tem
       onResponderMove={({ nativeEvent }) => railMove(nativeEvent.locationX)}>
       <View pointerEvents="none" style={{ position: 'absolute', left: `${(I18nManager.isRTL ? 1 - state.position : state.position) * 100}%`, height: 44, borderLeftWidth: 2, borderColor: ink.restInk }} />
     </View>
-    <PresentationNavigator key={`navigator:${state.track.sessionId}`} controller={controller} language={language} />
+    <PresentationNavigator key={`navigator:${state.track.sessionId}`} controller={controller} language={language} tools={navigatorTools} />
   </View>;
 }

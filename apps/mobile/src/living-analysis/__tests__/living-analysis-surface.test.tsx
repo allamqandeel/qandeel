@@ -168,11 +168,31 @@ describe('S5-03B R1 — the Living Analysis surface', () => {
     expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(844 - cap - gap);
   });
 
-  it('SHARED-VIS-01 — a world with a temporal track never measures its chrome: Personal is composed exactly as before', async () => {
+  it('MAP-CLOSE-01 V-3 — with a temporal track, the band follows BOTH regions once both are measured, never under their floors', async () => {
     const view = await composed(surface());
-    // Nothing is measured, so nothing the chrome says can move the band (the plan ignores a measurement here as well).
-    expect(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID).props.onLayout).toBeUndefined();
-    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).marginTop).toBeGreaterThan(0);
+    const cap = styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height as number;
+    const gap = styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).marginTop as number;
+    const world = styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight;
+    expect(gap).toBeGreaterThan(0);
+    // One region measured is not enough: the band keeps the room it had, exactly as before this amendment.
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(120)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(cap);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(world);
+    // Both measured, both small: the Timeline keeps its instrument floor (136), the chrome is what it measures, and the
+    // world takes the rest.
+    await act(async () => { fireEvent(view.getByTestId('qandeel-responsive-timeline-content'), 'layout', layout(90)); });
+    const compact = 136 + 120 + gap;
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(compact);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(844 - compact - gap);
+    // The Timeline's details shown: it uses the room the chrome does not need, and the band stops at its cap.
+    await act(async () => { fireEvent(view.getByTestId('qandeel-responsive-timeline-content'), 'layout', layout(2000)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(cap);
+    expect(styleOf(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).height).toBe(120);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(world);
+    // Both over the room: the chrome keeps its own share, the Timeline the rest; nothing goes under the world's half.
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(2000)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(cap);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(world);
   });
 
   it('SHARED-VIS-01 D2 — the panel closing gives its room back at once: the world view keeps any running travel', async () => {

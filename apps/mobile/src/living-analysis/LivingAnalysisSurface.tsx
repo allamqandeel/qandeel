@@ -102,6 +102,12 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
     const points = Math.ceil(Math.max(0, height));
     setChromeContent((current) => (current === points ? current : points));
   }, []);
+  // MAP-CLOSE-01 V-3 (PO addendum, screen space): Personal's band is sized to what its two regions hold, by the same
+  // rule as a world with no track — each region measured, each capped by the room it had, the world given the rest.
+  const [timelineContent, setTimelineContent] = useState<number | null>(null);
+  const onTimelineContent = useCallback((points: number) => {
+    setTimelineContent((current) => (current === points ? current : points));
+  }, []);
   const chromeOnly = timeline === null;
   const topHeight = top === null ? null : top.height;
   const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
@@ -118,7 +124,9 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       support={timeline === null ? 'CHROME_ONLY' : 'TIMELINE_AND_CHROME'}
-      chromeContentPoints={chromeOnly ? chromeContent : null}
+      // Under TIMELINE_AND_CHROME the chrome's room includes the temporal line it yields to the Timeline row.
+      chromeContentPoints={chromeOnly ? chromeContent : chromeContent === null ? null : chromeContent + lineHeight}
+      timelineContentPoints={chromeOnly ? null : timelineContent}
       style={{ backgroundColor: ink.world }}
     >
       {(plan) => {
@@ -161,12 +169,13 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                   line={timeline.line}
                   onLineHeight={setLineHeight}
                   linePoints={linePoints}
+                  onContentHeight={onTimelineContent}
                 >
                   {timeline.layer}
                 </ResponsiveTimelineRow>
               )}
 
-              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined}>
+              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={onChromeContent}>
                 {chrome(plan.chrome)}
               </ResponsiveChromeBand>
             </ResponsiveSupportBand>

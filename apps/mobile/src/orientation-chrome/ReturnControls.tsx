@@ -103,6 +103,15 @@ export interface ReturnControlsProps {
    * `STACKED` is the default because it is the only arrangement that is always truthful.
    */
   readonly arrangement?: 'STACKED' | 'PAIRED';
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum, 2026-11-10): how each act is presented. `PLAIN` is T-08's control as it was.
+   * `COMPACT` stands each act in a quiet ground of its own over the continuous world, and says its hint on request:
+   * the label carries the act, the hint is still spoken (`accessibilityHint`) and shown when the reader asks for the
+   * details. The composite's hint is ALWAYS shown, because the conditional half of its promise lives there.
+   */
+  readonly presentation?: 'PLAIN' | 'COMPACT';
+  /** With `COMPACT`: whether the reader asked for the details, so every hint is shown. */
+  readonly hintsShown?: boolean;
 }
 
 export function ReturnControls({
@@ -114,6 +123,8 @@ export function ReturnControls({
   liveContext,
   onOutcome,
   arrangement = 'STACKED',
+  presentation = 'PLAIN',
+  hintsShown = false,
 }: ReturnControlsProps) {
   const run = useCallback(
     (id: ReturnOpportunityId) => {
@@ -186,7 +197,16 @@ export function ReturnControls({
       accessibilityRole="none"
     >
       {orientation.offered.map((candidate) => (
-        <ReturnControl key={candidate.id} language={language} opportunity={candidate} onPress={run} paired={arrangement === 'PAIRED'} ink={ink} />
+        <ReturnControl
+          key={candidate.id}
+          language={language}
+          opportunity={candidate}
+          onPress={run}
+          paired={arrangement === 'PAIRED'}
+          ink={ink}
+          compact={presentation === 'COMPACT'}
+          hintShown={presentation === 'PLAIN' || hintsShown || candidate.id === 'GO_LIVE_AND_LOCATE'}
+        />
       ))}
     </View>
   );
@@ -199,6 +219,10 @@ interface ReturnControlProps {
   /** Whether this control shares its row. Layout only: the act, its words and its target are the same. */
   readonly paired: boolean;
   readonly ink: AnalysisInk;
+  /** MAP-CLOSE-01 V-3: the act in a quiet ground of its own (see `presentation`). */
+  readonly compact: boolean;
+  /** Whether the hint is shown as well as spoken. It is always spoken. */
+  readonly hintShown: boolean;
 }
 
 /**
@@ -215,15 +239,24 @@ interface ReturnControlProps {
  * The pressed state is a static opacity swap, not an animation: no duration, no easing and no
  * animation driver. Motion is T-10's.
  */
-function ReturnControl({ language, opportunity, onPress, paired, ink }: ReturnControlProps) {
+function ReturnControl({ language, opportunity, onPress, paired, ink, compact, hintShown }: ReturnControlProps) {
   const words = returnActWords(language, opportunity.id);
   const type = useAnalysisType();
+  // MAP-CLOSE-01 V-3 (PO addendum): the words start on the reader's side — right in Arabic, left in English. A physical
+  // side read from the Product language, never from the platform's layout direction (which the app does not mirror).
+  const side = { textAlign: language === 'ar' ? 'right' : 'left' } as const;
   return (
     <Pressable
       testID={`${RETURN_CONTROLS_TEST_ID}:${opportunity.id}`}
       // VPORT-02: PRESSED belongs to the ground (E1R; P2 F-P2-06) — the pressed ink at its token presence under the
       // words, never a fade of the words themselves. Still static: no duration, no easing, no driver.
-      style={({ pressed }) => [styles.control, paired ? styles.pairedControl : null, pressed ? { backgroundColor: withAlpha(ink.pressedInk, ink.pressedPresence) } : null]}
+      style={({ pressed }) => [
+        styles.control,
+        paired ? styles.pairedControl : null,
+        // A quiet ground over the continuous world: the world's own ink, half present, and a hairline edge. No blur.
+        compact ? [styles.compactControl, { backgroundColor: withAlpha(ink.world, 0.56), borderColor: withAlpha(ink.primary, 0.14) }] : null,
+        pressed ? { backgroundColor: withAlpha(ink.pressedInk, ink.pressedPresence) } : null,
+      ]}
       // Horizontal only. The controls are stacked, so a vertical slop would make adjacent hit areas
       // overlap and turn a near-miss into the wrong act; the 44pt minimum already covers the
       // vertical axis, and the group's own gap keeps the targets apart. Symmetric, so it is the
@@ -234,8 +267,8 @@ function ReturnControl({ language, opportunity, onPress, paired, ink }: ReturnCo
       accessibilityHint={words.hint}
       onPress={() => onPress(opportunity.id)}
     >
-      <Text style={[styles.label, type('action'), { color: ink.primary }]}>{words.label}</Text>
-      <Text style={[styles.hint, type('metadata'), { color: ink.secondary }]}>{words.hint}</Text>
+      <Text style={[styles.label, type('action'), { color: ink.primary }, side]}>{words.label}</Text>
+      {hintShown ? <Text style={[styles.hint, type('metadata'), { color: ink.secondary }, side]}>{words.hint}</Text> : null}
     </Pressable>
   );
 }
@@ -262,6 +295,8 @@ const styles = StyleSheet.create({
   // ceiling, so the control still grows downwards to contain the longest Arabic wording at the
   // largest text size.
   pairedControl: { flexBasis: '48%', flexGrow: 1 },
+  // MAP-CLOSE-01 V-3: the act's own quiet ground. The same 44-point floor, an inner measure on both sides, a hairline.
+  compactControl: { paddingHorizontal: 14, borderWidth: StyleSheet.hairlineWidth },
   label: { fontSize: 15, lineHeight: 24, fontWeight: '600' },
   hint: { fontSize: 13, lineHeight: 21 },
 });

@@ -119,7 +119,11 @@ const FROZEN = [
 // MAP-CLOSE-01 V-3 Part B RE-ANCHOR (2026-11-10, the Product Owner's addition to V-3: the Analysis screen UI, the world as
   // one continuous ground): the surface may provide the world's continuation (`continuousWorld`, opt-in, off under increased
   // contrast). The frame, the envelope, the plan, every touch and every refusal are unchanged. Previous pin 08687f8e.
-  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', 'e623c27a5f99bfdc5cc945c982214c79ca3141e5bae6aa0100975196d098530e'],
+  // MAP-CLOSE-01 V-3 Part B — PO ADDENDUM RE-ANCHOR (2026-11-11, "Premium UI/UX, RTL/LTR & Screen Space Optimization"):
+  // the Personal band is sized to what its Timeline and chrome measure (capped at the room it had, so the world never gets
+  // less), and the Personal Analysis holds the one "details on request" switch. The projection, its cache, the Map, every
+  // act, word, route and refusal are unchanged. Previous pins: LivingAnalysisSurface e623c27a, LivingAnalysisMap 17c56308.
+  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '3916f2b15149963538fc74abe575cb2ef899e0c4c98f2dca5297d01f84d13667'],
   ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   // S8B-07 CP1-B RE-ANCHOR (2026-11-08, the Product Owner's order on QAN-BL-MOB-05): a Map read whose fetch ENDED without an
@@ -129,7 +133,7 @@ const FROZEN = [
 // MAP-CLOSE-01 V-3 Part B RE-ANCHOR (2026-11-10, the Product Owner's addition to V-3: the Analysis screen UI, the world as
   // one continuous ground): the Personal Analysis opts in to `continuousWorld`, one attribute; the projection, its cache, the
   // Map, the chrome and every refusal are unchanged. Previous pin 20679fd4.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '17c5630837e804a83e52f8c8a3bb3386eb47a5d76519df209454e7211514bf7c'],
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '8185f212c6f78aacbb8ebf7b88d2c6db27c889a44db5bcc75374e28bfae18757'],
 ];
 
 const shipped = () => {
