@@ -186,10 +186,29 @@ export function ReturnControls({
   // from the left, so the paired group is reflected AS LAYOUT and each act reflects back: the first act stands on the
   // right, the rows still wrap in the frozen order, and no word, act or target changes.
   const reflected = arrangement === 'PAIRED' && language === 'ar';
+  // MAP-CLOSE-01 V-3 (PO review R3): label-only acts pair in explicit lines of two, in the frozen order, and each takes an
+  // equal half (a zero basis that grows, no percentage: a percentage basis in a wrapping row fell back to the label's own width on
+  // the phone, run to run). The composite act, whose conditional promise is always shown, takes a line of its own.
+  const labelPairs = arrangement === 'PAIRED' && presentation === 'COMPACT' && !hintsShown;
+  const lines = labelPairs ? labelLines(orientation.offered) : null;
+  const control = (candidate: ReturnOpportunity, inLine: boolean) => (
+    <ReturnControl
+      key={candidate.id}
+      language={language}
+      opportunity={candidate}
+      onPress={run}
+      paired={arrangement === 'PAIRED'}
+      inLine={inLine}
+      reflected={reflected}
+      ink={ink}
+      compact={presentation === 'COMPACT'}
+      hintShown={presentation === 'PLAIN' || hintsShown || candidate.id === 'GO_LIVE_AND_LOCATE'}
+    />
+  );
   return (
     <View
       testID={RETURN_CONTROLS_TEST_ID}
-      style={reflected ? [styles.pairedGroup, styles.reflected] : arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
+      style={lines !== null ? styles.group : reflected ? [styles.pairedGroup, styles.reflected] : arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
       // The group itself claims no touch: only the buttons inside it are targets, so every press
       // that misses a control reaches the world beneath rather than being swallowed here.
       //
@@ -200,24 +219,28 @@ export function ReturnControls({
       pointerEvents="box-none"
       accessibilityRole="none"
     >
-      {orientation.offered.map((candidate) => (
-        <ReturnControl
-          key={candidate.id}
-          language={language}
-          opportunity={candidate}
-          onPress={run}
-          paired={arrangement === 'PAIRED'}
-          reflected={reflected}
-          ink={ink}
-          compact={presentation === 'COMPACT'}
-          hintShown={presentation === 'PLAIN' || hintsShown || candidate.id === 'GO_LIVE_AND_LOCATE'}
-          // MAP-CLOSE-01 V-3 (PO review): labels pair; the composite's always-shown promise does not fit half a row,
-          // so with the details hidden it takes a row of its own (the order and every word unchanged).
-          ownRow={arrangement === 'PAIRED' && presentation === 'COMPACT' && !hintsShown && candidate.id === 'GO_LIVE_AND_LOCATE'}
-        />
-      ))}
+      {lines !== null
+        ? lines.map((line) => (
+            // A line is layout only, silent and transparent to touch, like the group.
+            <View key={line[0].id} style={reflected ? [styles.line, styles.reflected] : styles.line} pointerEvents="box-none" accessibilityRole="none">
+              {line.map((candidate) => control(candidate, true))}
+            </View>
+          ))
+        : orientation.offered.map((candidate) => control(candidate, false))}
     </View>
   );
+}
+
+/** MAP-CLOSE-01 V-3: the offered acts in their frozen order, two to a line; the composite act alone on its line. */
+function labelLines(offered: readonly ReturnOpportunity[]): ReturnOpportunity[][] {
+  const lines: ReturnOpportunity[][] = [];
+  for (const candidate of offered) {
+    const last = lines[lines.length - 1];
+    const joins = candidate.id !== 'GO_LIVE_AND_LOCATE' && last !== undefined && last.length === 1 && last[0].id !== 'GO_LIVE_AND_LOCATE';
+    if (joins) last.push(candidate);
+    else lines.push([candidate]);
+  }
+  return lines;
 }
 
 interface ReturnControlProps {
@@ -231,8 +254,8 @@ interface ReturnControlProps {
   readonly ink: AnalysisInk;
   /** MAP-CLOSE-01 V-3: the act in a quiet ground of its own (see `presentation`). */
   readonly compact: boolean;
-  /** Whether this act takes a whole row of a paired group (the composite's promise beside a label-only pair). */
-  readonly ownRow: boolean;
+  /** Whether this act is one of an explicit line of label-only acts, where it takes an equal share. */
+  readonly inLine: boolean;
   /** Whether the hint is shown as well as spoken. It is always spoken. */
   readonly hintShown: boolean;
 }
@@ -251,7 +274,7 @@ interface ReturnControlProps {
  * The pressed state is a static opacity swap, not an animation: no duration, no easing and no
  * animation driver. Motion is T-10's.
  */
-function ReturnControl({ language, opportunity, onPress, paired, reflected, ink, compact, hintShown, ownRow }: ReturnControlProps) {
+function ReturnControl({ language, opportunity, onPress, paired, reflected, ink, compact, hintShown, inLine }: ReturnControlProps) {
   const words = returnActWords(language, opportunity.id);
   const type = useAnalysisType();
   // MAP-CLOSE-01 V-3 (PO addendum): the words start on the reader's side — right in Arabic, left in English. A physical
@@ -264,8 +287,7 @@ function ReturnControl({ language, opportunity, onPress, paired, reflected, ink,
       // words, never a fade of the words themselves. Still static: no duration, no easing, no driver.
       style={({ pressed }) => [
         styles.control,
-        paired ? (compact ? styles.pairedLabelControl : styles.pairedControl) : null,
-        ownRow ? styles.ownRow : null,
+        inLine ? styles.lineCell : paired ? (compact ? styles.pairedLabelControl : styles.pairedControl) : null,
         reflected ? styles.reflected : null,
         // A quiet ground over the continuous world: the world's own ink, half present, and a hairline edge. No blur.
         compact ? [styles.compactControl, { backgroundColor: withAlpha(ink.world, 0.56), borderColor: withAlpha(ink.primary, 0.14) }] : null,
@@ -311,8 +333,9 @@ const styles = StyleSheet.create({
   pairedControl: { flexBasis: '48%', flexGrow: 1 },
   // MAP-CLOSE-01 V-3: two labels share the row in equal halves; a label longer than its half wraps inside it.
   pairedLabelControl: { flexBasis: '40%', flexGrow: 1 },
-  // MAP-CLOSE-01 V-3 (PO review): a whole row, so the act before it takes the line above alone.
-  ownRow: { flexBasis: '100%' },
+  // MAP-CLOSE-01 V-3 (PO review R3): an explicit line of label-only acts, and each act's equal share of it.
+  line: { flexDirection: 'row', columnGap: 8 },
+  lineCell: { flexGrow: 1, flexBasis: 0 },
   // MAP-CLOSE-01 V-3: one reflection of the paired row for an Arabic reader, and the same one undoing it on each act.
   reflected: { transform: [{ scaleX: -1 }] },
   // MAP-CLOSE-01 V-3: the act's own quiet ground. The same 44-point floor, an inner measure on both sides, a hairline.

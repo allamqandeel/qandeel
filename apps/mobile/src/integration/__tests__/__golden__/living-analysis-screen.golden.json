@@ -65081,9 +65081,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "columnGap": 8,
-                  "flexDirection": "row",
-                  "flexWrap": "wrap",
+                  "flexDirection": "column",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -65092,161 +65090,172 @@
                  {
                   "type": "View",
                   "props": {
-                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    null,
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:BACK_ONE_STEP"
-                  },
-                  "children": [
-                   {
-                    "type": "Text",
-                    "props": {
-                     "style": [
-                      {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
-                      },
-                      {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
-                      },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
-                    },
-                    "children": [
-                     "Back one step"
-                    ]
+                   "accessibilityRole": "none",
+                   "pointerEvents": "box-none",
+                   "style": {
+                    "columnGap": 8,
+                    "flexDirection": "row"
                    }
-                  ]
-                 },
-                 {
-                  "type": "View",
-                  "props": {
-                   "accessibilityHint": "Returns to the world viewpoint at the same moment you are reading.",
-                   "accessibilityLabel": "Return to the whole world",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    null,
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:RETURN_WORLD"
                   },
                   "children": [
                    {
-                    "type": "Text",
+                    "type": "View",
                     "props": {
+                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                     "accessibilityLabel": "Back one step",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
                      "style": [
                       {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
                       },
                       {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
+                       "flexBasis": 0,
+                       "flexGrow": 1
                       },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:BACK_ONE_STEP"
                     },
                     "children": [
-                     "Return to the whole world"
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "accessibilityHint": "Returns to the world viewpoint at the same moment you are reading.",
+                     "accessibilityLabel": "Return to the whole world",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
+                     "style": [
+                      {
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
+                      },
+                      {
+                       "flexBasis": 0,
+                       "flexGrow": 1
+                      },
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:RETURN_WORLD"
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
+                      },
+                      "children": [
+                       "Return to the whole world"
+                      ]
+                     }
                     ]
                    }
                   ]
@@ -81179,9 +81188,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "columnGap": 8,
-                  "flexDirection": "row",
-                  "flexWrap": "wrap",
+                  "flexDirection": "column",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -81190,80 +81197,92 @@
                  {
                   "type": "View",
                   "props": {
-                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    null,
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:BACK_ONE_STEP"
+                   "accessibilityRole": "none",
+                   "pointerEvents": "box-none",
+                   "style": {
+                    "columnGap": 8,
+                    "flexDirection": "row"
+                   }
                   },
                   "children": [
                    {
-                    "type": "Text",
+                    "type": "View",
                     "props": {
+                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                     "accessibilityLabel": "Back one step",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
                      "style": [
                       {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
                       },
                       {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
+                       "flexBasis": 0,
+                       "flexGrow": 1
                       },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:BACK_ONE_STEP"
                     },
                     "children": [
-                     "Back one step"
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
                     ]
                    }
                   ]
@@ -81271,108 +81290,118 @@
                  {
                   "type": "View",
                   "props": {
-                   "accessibilityHint": "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step.",
-                   "accessibilityLabel": "Rejoin the conversation and move there",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    {
-                     "flexBasis": "100%"
-                    },
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:GO_LIVE_AND_LOCATE"
+                   "accessibilityRole": "none",
+                   "pointerEvents": "box-none",
+                   "style": {
+                    "columnGap": 8,
+                    "flexDirection": "row"
+                   }
                   },
                   "children": [
                    {
-                    "type": "Text",
+                    "type": "View",
                     "props": {
+                     "accessibilityHint": "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step.",
+                     "accessibilityLabel": "Rejoin the conversation and move there",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
                      "style": [
                       {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
                       },
                       {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
+                       "flexBasis": 0,
+                       "flexGrow": 1
                       },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:GO_LIVE_AND_LOCATE"
                     },
                     "children": [
-                     "Rejoin the conversation and move there"
-                    ]
-                   },
-                   {
-                    "type": "Text",
-                    "props": {
-                     "style": [
-                      {
-                       "fontSize": 13,
-                       "lineHeight": 21
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
                       },
-                      {
-                       "fontFamily": "Estedad-Regular",
-                       "fontSize": 12,
-                       "includeFontPadding": false,
-                       "lineHeight": 20
+                      "children": [
+                       "Rejoin the conversation and move there"
+                      ]
+                     },
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 13,
+                         "lineHeight": 21
+                        },
+                        {
+                         "fontFamily": "Estedad-Regular",
+                         "fontSize": 12,
+                         "includeFontPadding": false,
+                         "lineHeight": 20
+                        },
+                        {
+                         "color": "#afaca3"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
                       },
-                      {
-                       "color": "#afaca3"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
-                    },
-                    "children": [
-                     "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step."
+                      "children": [
+                       "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step."
+                      ]
+                     }
                     ]
                    }
                   ]
@@ -89297,9 +89326,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "columnGap": 8,
-                  "flexDirection": "row",
-                  "flexWrap": "wrap",
+                  "flexDirection": "column",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -89308,80 +89335,92 @@
                  {
                   "type": "View",
                   "props": {
-                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    null,
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:BACK_ONE_STEP"
+                   "accessibilityRole": "none",
+                   "pointerEvents": "box-none",
+                   "style": {
+                    "columnGap": 8,
+                    "flexDirection": "row"
+                   }
                   },
                   "children": [
                    {
-                    "type": "Text",
+                    "type": "View",
                     "props": {
+                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                     "accessibilityLabel": "Back one step",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
                      "style": [
                       {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
                       },
                       {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
+                       "flexBasis": 0,
+                       "flexGrow": 1
                       },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:BACK_ONE_STEP"
                     },
                     "children": [
-                     "Back one step"
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
                     ]
                    }
                   ]
@@ -90730,9 +90769,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "columnGap": 8,
-                  "flexDirection": "row",
-                  "flexWrap": "wrap",
+                  "flexDirection": "column",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -90741,161 +90778,172 @@
                  {
                   "type": "View",
                   "props": {
-                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    null,
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:BACK_ONE_STEP"
-                  },
-                  "children": [
-                   {
-                    "type": "Text",
-                    "props": {
-                     "style": [
-                      {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
-                      },
-                      {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
-                      },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
-                    },
-                    "children": [
-                     "Back one step"
-                    ]
+                   "accessibilityRole": "none",
+                   "pointerEvents": "box-none",
+                   "style": {
+                    "columnGap": 8,
+                    "flexDirection": "row"
                    }
-                  ]
-                 },
-                 {
-                  "type": "View",
-                  "props": {
-                   "accessibilityHint": "Returns to the world viewpoint at the same moment you are reading.",
-                   "accessibilityLabel": "Return to the whole world",
-                   "accessibilityRole": "button",
-                   "accessibilityState": {},
-                   "accessibilityValue": {},
-                   "accessible": true,
-                   "collapsable": false,
-                   "focusable": true,
-                   "hitSlop": {
-                    "left": 8,
-                    "right": 8
-                   },
-                   "onBlur": "[fn]",
-                   "onClick": "[fn]",
-                   "onFocus": "[fn]",
-                   "onResponderGrant": "[fn]",
-                   "onResponderMove": "[fn]",
-                   "onResponderRelease": "[fn]",
-                   "onResponderTerminate": "[fn]",
-                   "onResponderTerminationRequest": "[fn]",
-                   "onStartShouldSetResponder": "[fn]",
-                   "style": [
-                    {
-                     "borderRadius": 12,
-                     "justifyContent": "center",
-                     "minHeight": 44,
-                     "paddingVertical": 8
-                    },
-                    {
-                     "flexBasis": "40%",
-                     "flexGrow": 1
-                    },
-                    null,
-                    null,
-                    [
-                     {
-                      "borderWidth": 0.5,
-                      "paddingHorizontal": 14
-                     },
-                     {
-                      "backgroundColor": "rgba(16,16,16,0.56)",
-                      "borderColor": "rgba(216,213,202,0.14)"
-                     }
-                    ],
-                    null
-                   ],
-                   "testID": "qandeel-return-controls:RETURN_WORLD"
                   },
                   "children": [
                    {
-                    "type": "Text",
+                    "type": "View",
                     "props": {
+                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                     "accessibilityLabel": "Back one step",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
                      "style": [
                       {
-                       "fontSize": 15,
-                       "fontWeight": "600",
-                       "lineHeight": 24
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
                       },
                       {
-                       "fontFamily": "Estedad-Medium",
-                       "fontSize": 14,
-                       "includeFontPadding": false,
-                       "lineHeight": 23
+                       "flexBasis": 0,
+                       "flexGrow": 1
                       },
-                      {
-                       "color": "#d8d5ca"
-                      },
-                      {
-                       "textAlign": "left"
-                      }
-                     ]
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:BACK_ONE_STEP"
                     },
                     "children": [
-                     "Return to the whole world"
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "type": "View",
+                    "props": {
+                     "accessibilityHint": "Returns to the world viewpoint at the same moment you are reading.",
+                     "accessibilityLabel": "Return to the whole world",
+                     "accessibilityRole": "button",
+                     "accessibilityState": {},
+                     "accessibilityValue": {},
+                     "accessible": true,
+                     "collapsable": false,
+                     "focusable": true,
+                     "hitSlop": {
+                      "left": 8,
+                      "right": 8
+                     },
+                     "onBlur": "[fn]",
+                     "onClick": "[fn]",
+                     "onFocus": "[fn]",
+                     "onResponderGrant": "[fn]",
+                     "onResponderMove": "[fn]",
+                     "onResponderRelease": "[fn]",
+                     "onResponderTerminate": "[fn]",
+                     "onResponderTerminationRequest": "[fn]",
+                     "onStartShouldSetResponder": "[fn]",
+                     "style": [
+                      {
+                       "borderRadius": 12,
+                       "justifyContent": "center",
+                       "minHeight": 44,
+                       "paddingVertical": 8
+                      },
+                      {
+                       "flexBasis": 0,
+                       "flexGrow": 1
+                      },
+                      null,
+                      [
+                       {
+                        "borderWidth": 0.5,
+                        "paddingHorizontal": 14
+                       },
+                       {
+                        "backgroundColor": "rgba(16,16,16,0.56)",
+                        "borderColor": "rgba(216,213,202,0.14)"
+                       }
+                      ],
+                      null
+                     ],
+                     "testID": "qandeel-return-controls:RETURN_WORLD"
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": [
+                        {
+                         "fontSize": 15,
+                         "fontWeight": "600",
+                         "lineHeight": 24
+                        },
+                        {
+                         "fontFamily": "Estedad-Medium",
+                         "fontSize": 14,
+                         "includeFontPadding": false,
+                         "lineHeight": 23
+                        },
+                        {
+                         "color": "#d8d5ca"
+                        },
+                        {
+                         "textAlign": "left"
+                        }
+                       ]
+                      },
+                      "children": [
+                       "Return to the whole world"
+                      ]
+                     }
                     ]
                    }
                   ]
