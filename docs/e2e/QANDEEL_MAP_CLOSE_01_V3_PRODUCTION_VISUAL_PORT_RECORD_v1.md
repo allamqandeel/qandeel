@@ -1,6 +1,6 @@
 # QANDEEL — MAP-CLOSE-01 Step 4 / V-3 — Production Visual Port of S3-R2 — Record v1
 
-**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PO ADDENDUM (PREMIUM COMPACT UI, RTL / LTR, SCREEN SPACE) DELIVERED ON PART B — PAN PERFORMANCE NOT MET, AWAITS THE PO — NOT READY FOR CLOSURE — NOT MERGED`
+**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PO ADDENDUM (PREMIUM COMPACT UI, RTL / LTR, SCREEN SPACE) DELIVERED ON PART B — PO REVIEW CORRECTIONS (TIMELINE IN P2 C'S DIRECTION, RTL / LTR, COMPACT ACTS, CI) DELIVERED ON PART B, UNDER PO REVIEW — PAN PERFORMANCE NOT MET, AWAITS THE PO — NOT READY FOR CLOSURE — NOT MERGED`
 **Task:** MAP-CLOSE-01 Step 4 / V-3, the production visual port of the approved S3-R2 art direction into the existing Personal Living Analysis map.
 **Date:** 2026-11-10. **Baseline:** `main` at `5a21971d` (the merge of PR #390, MAP-CLOSE-01 Step 2). **Branch:** `map/map-close-01-v3-production-port`.
 **Authority:** Product Owner, 2026-11-10, six messages:
@@ -330,11 +330,17 @@ The world is darker, though. At rest in Personal, mean luma in the map goes from
 
 The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exactly for transparent draws: there is no runtime colour filter, and soft light, the only blend that squares the destination, divides by its alpha. **Pan performance therefore remains NOT MET.**
 
+**PO review (2026-11-11): candidates C, D and E, measured, none adopted.** See Part B §11, "PO review corrections". The composite layer is rasterized below screen resolution, which is why B is soft and fast. A fitted pass (C) restores luminance and colour but not the threads. The canonical curve as a per-draw colour filter (D) keeps A's look within 1.3 levels and reaches about 15 fps (Personal, Shared). Pan remains NOT MET.
+
 ## 10. Not done yet
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.
 - **The three worlds on a real phone (§5B):** run on the PO's phone (Part B §11). Function passes; pan performance is NOT MET and awaits the PO's decision. V-3 does not close on it.
+- **The PO review (Part B §11, 2026-11-11), awaiting the PO:**
+  - the Timeline, acts and space corrections, with the controlled amendment to G3 §2.5;
+  - WorldTone candidate D (or none);
+  - the deferred Unified Timeline direction, first as one report and one visual concept.
 - **The PO addendum (Part B §11), awaiting the PO:**
   - the composite tone (§9);
   - the Copy Gate (4 PROPOSED);
@@ -689,6 +695,143 @@ All three are within the spread.
 - increased contrast.
 
 The phone's font scale, contrast and motion settings were not changed for this addendum: that needs the PO's permission for this run. A narrow phone and the keyboard over the exact-entry field are **NOT PROVEN** on a device.
+
+### Part B: PO review corrections — Timeline, RTL / LTR, compact acts, WorldTone and CI (2026-11-11)
+**The PO's review** ("MAP-CLOSE-01 / V-3 PO Review — Timeline, RTL/LTR, Premium UI, WorldTone Performance & CI Corrections"):
+- the Timeline matches P2 C "Parting" (board 07, the spine and aperture proof, the closure's §7) without being rebuilt, and its frozen temporal geometry is unchanged;
+- Arabic starts on the right and English on the left, for the Timeline and for every line and container;
+- the return acts sit side by side when there is room, with ≥ 44-point targets and a fallback for large text or a narrow screen;
+- map space is measured at rest and after a pan;
+- pan smoothness is reported as frame pacing, not as an average;
+- a WorldTone candidate C must restore A's luminance, glow, local contrast, colour and fine threads;
+- CI #391 is treated as infrastructure, and #392 gets the narrowest fix.
+
+The PO then chose the Live words' placement: "Line above the Track". Arabic sits on the right and English on the left. The PO's conditions: no unnecessary height, no duplicated words, the line kept functionally tied to the Live Edge, no Moment covered, the amendment to G3 §2.5 recorded, and the result tested on the phone before it is accepted.
+
+**Skills.** None of the named skills is installed in this session (`designing-arabic-frontends`, `apple-design`, `animate-expo`, `fixing-accessibility`), and none was installed. A listing of the available skills returned none of them. The rules applied are P2's own and the app's own (`readerSide`, the 44-point floor, the Analysis tokens).
+
+**The Timeline (P2 C).**
+- **Cause of the "wrong start".** The app never enables a right-to-left layout (`I18nManager.isRTL` is false), and T-05 / T-06 mirror only through it. So the Arabic Timeline ran from the left, and the Live end stood on the right. P2 K20: SP1 stands at the START edge, which is the right for an Arabic reader, and the Live terminal at the END.
+- **The fix (T-06's one mirror rule, applied as layout).** For an Arabic reader on a layout that never runs right to left, `TimelinePresentation` reflects its instrument (Track, strip, rail) as layout, and each numeral reflects back. Every coordinate stays logical, and touch follows the transform. The step (48 pt), key, window, offset, position scale, the 44-point band, the 1:1 aperture motion, the Reduced Motion rules, and F-P2-01 / F-P2-02 are unchanged.
+- **The cut end.** The instrument now keeps 16 points from each screen edge, so the spine's start reads as a start rather than a crop. The T-05 discontinuity mark (three points at the end edge) remains the extension indicator when the newest Moment is outside the window (spec §2).
+- **The Live words: CONTROLLED AMENDMENT to G3 §2.5 (PO choice, 2026-11-11).** The Live words leave the outboard slot at the Track's end, where they took about half the width (550 px). They now stand on one line above the Track, on the reader's side.
+  - The line IS the Live Edge target. The same `LiveEdgeTarget` element keeps its label, its act (Return Live / FOLLOW_LIVE), its 44-point height and its words. Only its container changed.
+  - The outboard slot keeps its frozen width (T-12) for the Live terminal, and is silent to touch and to a screen reader.
+  - The line never covers a Moment. On the phone it is 1603–1746 px, and the Moments start at 1746.
+  - Its cost is exactly the 44-point target floor (143 px). In return, the window shows 5.4 Moments instead of 4.
+- **Duplicated words.** During a temporary look, the navigator's summary repeated what the Live words and the temporal line already said. With the details hidden, it is now always the one-point clipped line, as P2 board 07 state 4 shows one preview sentence. Its label, value and named acts stay for a screen reader.
+
+**The return acts.**
+- T-11's PAIRED arrangement needs a 232-point cell, which the phone only reaches in short landscape.
+- A new label-only arrangement (`labelArrangement`, `PAIRED_LABEL_CELL_POINTS = 152 × fontScale`) pairs the acts when their labels fit. It is used only while the details are hidden; with the details, the full T-11 arrangement applies.
+- On the phone (369 pt) the acts pair, in two equal halves of 535 px (ui7). At font scale 1.15 they stack, and so do they on a 320-point screen (plan tests).
+- The label-only acts stand in explicit lines of two, in the frozen order, and each grows from a zero basis. There is no percentage and no width read. A percentage basis fell back to each label's own width on the phone, run to run, giving 445 / 625 px.
+- The composite act (`GO_LIVE_AND_LOCATE`) always shows its conditional promise, so it takes a line of its own.
+- An Arabic line is reflected as layout and each act reflects back: the first act stands on the right. There is no `row-reverse`, the order is unchanged, and so are the acts, their words and their availability.
+
+**Controlled amendments (named).**
+
+| Contract | Amendment |
+|---|---|
+| G3 §2.5 (Live words in the outboard slot) | the Live words on a line above the Track, on the reader's side (PO choice); the outboard slot keeps its frozen width for the terminal |
+| T-05 / T-06 mirror | the instrument is reflected as layout for an Arabic reader when the platform layout is not right to left; T-05's `TimelinePresentation` blob re-pinned (previous 0922b31f), with the named re-anchor in the temporal-navigation contract |
+| T-11 | `labelArrangement` beside `arrangement`; PAIRED's own 232-point rule is unchanged |
+| S7-03 / S7-04 criterion 12 | `LivingAnalysisMap` re-pinned ("PO REVIEW RE-ANCHOR", previous 8185f212) |
+| Screen golden | re-recorded three times (R1, R2, R3). In all 15 cases, every text, testID, label and hint is identical. The only new element is `timeline-instrument` (R1) and a silent line wrapper where acts pair (R3) |
+
+**On the PO's phone (validation only; HONOR, 1200 × 2652, density 3.25; the proof package only).**
+APKs:
+- ui5 = `27b22a45`;
+- ui6 = `73cdf099` (R2);
+- ui7 = `75731146` (R3).
+
+Function is proven in both languages by `ui-proof7.sh` on ui6 and ui7. Every step asserts the state's own words in the dump:
+
+| Step | Arabic | English |
+|---|---|---|
+| FOLLOW_LIVE | «متابعة المحادثة مفعّلة الآن» above the Track, right; SP1 at the right edge, the terminal ENGAGED at the left | the same, left; SP1 at the left edge, the terminal at the right |
+| held scrub (finger down) | «نظرة مؤقتة على اللحظة 3، ولم يتغير موضعك.», the lighter parting with the 12-point notch, «الانتقال إلى اللحظة 3»; no duplicated line | "A temporary look at moment 3. Your position has not changed." |
+| release | PINNED at 3: «أنت عند اللحظة 3…», the committed parting with its mark, the terminal AVAILABLE, «العودة لمتابعة المحادثة» above the Track | "Reading at moment 3…", "Rejoin the conversation" |
+| Preview (navigator, next Moment) | «نظرة مؤقتة على اللحظة 4…», «الانتقال إلى اللحظة 4», «إلغاء النظرة المؤقتة» | "A temporary look at moment 4…", "Go to moment 4", "Cancel the temporary look" |
+| Cancel | back to «أنت عند اللحظة 3» (nothing committed) | "Reading at moment 3" |
+| Preview → Commit | «أنت عند اللحظة 4…» | "Reading at moment 4…" |
+| Return Live (the line above the Track) | «متابعة المحادثة مفعّلة الآن» | "Following the conversation" |
+
+**Space (map frame, px; px / 3.25 = pt).**
+
+| Personal Analysis | Before (`da608237`) | ui4 (addendum) | ui7 (PO review) |
+|---|---|---|---|
+| At rest, FOLLOW_LIVE | 1469 | 1843 | 1700 (+231 px, +16 % on Before) |
+| After a pan (two acts) | 1469 | 1492 | 1518 Arabic; 1469 English, where «Return to the whole world» wraps in its half and the band reaches its cap |
+| PINNED (T-08 line, Live words, two acts) | — | — | 1469 (the band at its cap; the rest scrolls) |
+
+The Live line costs 143 px at rest against ui4. That is the 44-point floor of the Live target, and nothing else: the line sits directly on the instrument. In return, the Track has the whole width (5.4 Moments visible, against 4).
+
+**The other worlds.** Shared and Public, Arabic and English, are pixel-identical to ui4 below the status bar (0.00 %) in ui5, ui6 and ui7. Replay is untouched.
+
+**WorldTone: A / B / C (and D, E), measured, NOT adopted.**
+- **Method.** A measurement build only (never committed): a deep link switches the tone. Stills are taken in the SAME state (no pan before them; a repeat A is identical), on the map's crop.
+- **Candidates:**
+  - A = current (the curve per draw);
+  - B = the curve once over the composite;
+  - C = one composite pass with a fitted 3 × 3 matrix plus per-channel quadratic and cubic terms (15 coefficients; the residual of the fit is 1.2–1.7 levels);
+  - D = the canonical curve as a COLOUR filter per draw: `lerp(0.6, identity, sRGB→linear)`. The built-in filters approximate `0.54c + 0.46c²` within 1.74 levels;
+  - E = the same colour filter once over the composite.
+
+| Personal, at rest | A | B | C | D | E |
+|---|---|---|---|---|---|
+| mean luma | 0.2092 | 0.1503 | 0.2095 | 0.2092 | 0.1559 |
+| mean |Δ| from A (levels / 255) | 0 | 15.39 | 2.09 | 1.29 | 14.03 |
+| local contrast σ | 0.0130 | 0.0076 | 0.0082 | 0.0131 | 0.0106 |
+| colourfulness | 35.4 | 31.9 | 35.2 | 37.8 | 31.5 |
+| fine-thread energy | 0.0543 | 0.0288 | 0.0315 | 0.0545 | 0.0441 |
+| glow ≥ 0.6 | 0.27 % | 0.36 % | 0.35 % | 0.58 % | 0.37 % |
+
+- **C restores luminance and colour but not the fine threads or local contrast** (−37 %, −42 %). A pixel curve cannot restore them: the composite layer is rasterized at a lower resolution than the screen (B and C are visibly soft in the zoom). This is also most of why B and C are fast. C therefore fails the PO's criterion.
+- **D keeps A's look** (threads, contrast and luma). Its colourfulness is +7 %, and its glow covers 0.58 % against 0.27 %: transparent glows are toned by alpha rather than alpha² (the premultiplied difference recorded in §9).
+
+**Pan pacing (presented frames while dragging; three rounds, each a continuous 1.5-s drag there and back; SurfaceFlinger).**
+
+| World | A fps (p50 / p99 ms; > 33 ms) | B | C | D | E |
+|---|---|---|---|---|---|
+| Personal | 5.3–6.1 (117 / 733; 78–80 %) | 28.9 (33 / 117; 8 %) | 29.4 (33 / 117; 9 %) | 15.1–15.6 (50 / 200–250; 79–85 %) | 17.1 |
+| Shared | 4.5 (233 / 782; 77–87 %) | 31.2 (33 / 83; 10 %) | 30.5 (33 / 100; 12 %) | 15.6–15.9 (50 / 200–216; 84–85 %) | 17.1 |
+| Public | 15.1–26.1 (noisy) | 29.3 | 30.1 | 25.7–26.1 (33 / 133–167; 12–19 %) | 26.2 |
+
+- **Reading.** No candidate both keeps A's picture and reaches 30 fps:
+  - D removes the tone's whole cost (Personal ×2.7, Shared ×3.5) but stays near 15 fps. The rest of the cost is the full-resolution map itself.
+  - B and C reach ~30 fps only by drawing the world at a lower resolution.
+- **Pan performance therefore remains NOT MET.** D is the candidate that changes the picture least, and it is presented for the PO's decision, not adopted. Production S3-R2 is unchanged.
+- **Live calls.** Live calls keep absolute priority through the S8B-06 banding, which is unchanged. Pan during a live call was not measured on the phone.
+- **Zoom / semantic zoom per world.** This was not re-measured in this review. Zoom levels and FAR / MID / NEAR / ANALYTICAL are unchanged by it.
+
+**CI.**
+- **#391:** the iOS boot smoke failed in CoreSimulator's data migration before the app was installed. That is infrastructure, so only that job was re-run, and it passed. The head is fully green.
+- **#392:** the forward-safety tests 5, 15 and 24 ("mutation matched nothing"). Their three chrome mutations anchored on the exact `react-native` import text, which Part B changed. They now anchor on the import's shape (`RN_IMPORT`), and each mutation is unchanged. Test 24 still refuses a chrome that reads the display.
+
+**Copy Gate:** still 4 PROPOSED, not approved (عرض التفاصيل / إخفاء التفاصيل / Show details / Hide details).
+
+**Accessibility settings on the phone: NOT PROVEN.**
+- The PO's permission to change the phone's font scale, contrast, motion or display size was asked for and not given. Those settings were not touched.
+- Large text, increased contrast and short landscape are covered by the screen golden and the plan tests only.
+- No TalkBack / VoiceOver work (PO decision, 2026-11-08).
+
+**Checks (on `75731146`).**
+- **Contracts, all pass:**
+  - S7-03 31, S7-04 63, SHARED-VIS-01 8;
+  - VPORT-02 9, VPORT-01 12;
+  - temporal navigation 29, T-11 27, T-12 32, T-12P 23, T-10 31;
+  - inspection orientation 26, S7-02 19, S5-03B viewer 13, map runtime 15;
+  - task-closure governance 24.
+- **Mobile Jest:** 3481 / 3487. The 6 failures (`depth`, `w2-account-access`) are the locale baseline that fails on `main` too.
+- **Types and lint:** `tsc` and `eslint` are clean.
+
+**Evidence (reports folder, outside the repository):**
+- `device/ui/after5`, `after6`, `after7b` and `after7c`, with `board-ui6-*-timeline.png`;
+- `perf/tone5` and `perf/tone6` (stills, `board-ABCD.png`, latency dumps);
+- the scripts `ui-proof7.sh`, `grip.cjs`, `tone-bench.sh`, `pacing-summary.mjs`, `tone-metrics.mjs` and `fit-tone.mjs`.
+
+**Deferred by the PO (2026-11-11), not started.** "PO UX Correction — Unified Timeline, Navigation Simplicity & Screen Space" (a full-range timeline, no percentage line, no separate rail). It comes after this performance slice, and first as one report with one visual concept and the controlled amendments it needs.
 
 ## 12. Backlog
 _(reconciled at V-3's closure.)_
