@@ -100,6 +100,12 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   // QAN-BL-MOB-05: a fetch that ENDED without an answer (a failed read, a payload refused at the trust boundary, no
   // credential) leaves its key NOT_FETCHED, retryable and truthful, but it is not still being fetched. It is remembered
   // here, for that exact viewpoint, so the composition below can tell "settled with nothing to draw" from "on its way".
+  // MAP-CLOSE-01 V-3 (PO addendum, Premium Compact UI): the details on request — every return act's explanation and the
+  // Timeline's exact routes — are hidden until the reader asks. One switch for both, held here because it spans the
+  // chrome and the Timeline. Presentation only: no act, word or route is removed, and the screen reader still hears each
+  // act's hint. It starts hidden and is not remembered across Sessions.
+  const [details, setDetails] = useState(false);
+  const toggleDetails = useCallback(() => setDetails((shown) => !shown), []);
   const [unanswered, setUnanswered] = useState<{ readonly sessionId: string; readonly tc: number; readonly depth: string } | null>(null);
   useEffect(() => {
     if (request === null) return;
@@ -214,6 +220,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       top={top}
+      continuousWorld
       world={(envelope) =>
         // The Map is drawn only from T-04's own context; none is invented when it refuses.
         mapContext === null || !mapContext.ok ? null : (
@@ -232,7 +239,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
       }
       timeline={{
         line: <TemporalOrientationLine store={store} language={locale.language} preview={preview} />,
-        layer: <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />,
+        layer: <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} tools={details} />,
       }}
       chrome={(composition) =>
         chrome === null ? null : (
@@ -246,11 +253,12 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
             onMapOutcome={observeMapOutcome}
             onReturnOutcome={observeReturnOutcome}
             bottomInset={composition.bottomInset}
-            returnArrangement={composition.arrangement}
+            returnArrangement={details ? composition.arrangement : composition.labelArrangement}
             // VPORT-02: the frozen production composition — the temporal line is said once, beside the Timeline;
             // Return Live has one home, the Timeline's Live edge (G3 amendment §2; P2 §7).
             temporalLine="WITH_TIMELINE"
             returnLiveHome="LIVE_EDGE"
+            details={{ shown: details, onToggle: toggleDetails }}
           />
         )
       }

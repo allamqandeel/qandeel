@@ -114,7 +114,10 @@ test('5b — the Product Owner\'s visual correction lands ONCE, in the common st
   assert.match(plan, /readonly chromeContentPoints\?: number \| null;/u);
   assert.match(plan, /const bandPoints = content === null \? cap : Math\.min\(cap, Math\.max\(content, surface\.insetBottom\)\);/u, 'capped at the room every world has');
   const surface = code('apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx');
-  assert.match(surface, /chromeContentPoints=\{chromeOnly \? chromeContent : null\}/u, 'only a world with no temporal track is measured');
+  // MAP-CLOSE-01 V-3 Part B — PO ADDENDUM RE-ANCHOR (2026-11-11): Personal is measured too, by the same rule (its chrome with
+  // the line it yields, and its Timeline row); a world with no track is still measured alone and exactly as before.
+  assert.match(surface, /chromeContentPoints=\{chromeOnly \? chromeContent : chromeContent === null \? null : chromeContent \+ lineHeight\}/u, 'a world with no track is measured as before');
+  assert.match(surface, /timelineContentPoints=\{chromeOnly \? null : timelineContent\}/u, 'only a world with a track measures its Timeline');
   // The label layout is Public's, consumed by Shared: one rule, both worlds, never a Shared copy of it.
   assert.match(code('apps/mobile/src/public-world/field/PublicFieldView.tsx'), /const LABEL_MAX_LINES = 2 as const;/u);
   for (const view of ['apps/mobile/src/public-world/field/PublicFieldView.tsx', `${FIELD}/SharedFieldView.tsx`]) {

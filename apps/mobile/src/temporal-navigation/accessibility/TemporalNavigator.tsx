@@ -80,9 +80,15 @@ export interface TemporalNavigatorProps {
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
   /** The reader's Product language for every word here (W1A-01). */
   readonly language?: AnalysisLanguage;
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum): whether the exact-entry field and the step and rejoin buttons are shown (details on
+   * request). The summary element — the temporal statement and every named act — is always present, and so are commit
+   * and cancel while a temporary look exists. Absent, everything is shown, exactly as before.
+   */
+  readonly routes?: boolean;
 }
 
-export function TemporalNavigator({ store, preview, track, onCommitted, onCancelled, onOutcome, language = 'en' }: TemporalNavigatorProps) {
+export function TemporalNavigator({ store, preview, track, onCommitted, onCancelled, onOutcome, language = 'en', routes = true }: TemporalNavigatorProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const [entry, setEntry] = useState('');
@@ -94,6 +100,8 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
 
   const targeting = useMemo(() => temporalTargeting(state, track), [state, track]);
   const model = useMemo(() => temporalAccessibilityModel(targeting, previewState, language), [targeting, previewState, language]);
+  // MAP-CLOSE-01 V-3: every line starts on the reader's side, a physical side read from the Product language.
+  const side = { textAlign: language === 'ar' ? 'right' : 'left' } as const;
 
   // The act runs first and the observers are notified afterwards: an optional call would not
   // evaluate its argument when no observer is attached, which would silently disable the route.
@@ -148,7 +156,11 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
           Nothing interactive lives inside it, so making it ONE element suppresses nothing. */}
       <View
         testID={TEMPORAL_SUMMARY_TEST_ID}
-        style={styles.summary}
+        // MAP-CLOSE-01 V-3 (PO addendum; PO review 2026-11-11, no duplicated words): with the details hidden, the summary's
+        // words are already on screen — the stance in the Live words or the temporal orientation line, and a temporary look
+        // in that line's preview sentence (P2 C board 07, state 4) — so the element stays — the same label, value and named
+        // acts for a screen reader — and only its duplicate words leave the screen, as a one-point, clipped line.
+        style={routes ? styles.summary : [styles.summary, styles.summaryQuiet]}
         accessible
         accessibilityRole="text"
         accessibilityLabel={model.surfaceLabel}
@@ -157,13 +169,13 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         accessibilityActions={model.actions.map((action) => ({ name: action.name, label: action.label }))}
         onAccessibilityAction={(event: AccessibilityActionEvent) => runAction(event.nativeEvent.actionName)}
       >
-        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`} style={[type('metadata'), { color: ink.secondary }]}>{model.stanceLabel}</Text>
-        {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`} style={[type('metadata'), { color: ink.secondary }]}>{model.previewLabel}</Text>}
+        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`} style={[type('metadata'), { color: ink.secondary }, side]}>{model.stanceLabel}</Text>
+        {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`} style={[type('metadata'), { color: ink.secondary }, side]}>{model.previewLabel}</Text>}
       </View>
 
-      <TextInput
+      {routes && <TextInput
         testID={TEMPORAL_EXACT_ENTRY_TEST_ID}
-        style={[styles.entry, type('supporting'), { color: ink.primary, borderBottomWidth: 1, borderColor: ink.tertiary }]}
+        style={[styles.entry, type('supporting'), { color: ink.primary, borderBottomWidth: 1, borderColor: ink.tertiary }, side]}
         selectionColor={ink.primary}
         accessibilityLabel={copy.momentNumber}
         accessibilityLanguage={language}
@@ -176,8 +188,8 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         autoCapitalize="none"
         autoCorrect={false}
         maxLength={9}
-      />
-      {entryRefused && <Text accessibilityRole="alert" accessibilityLanguage={language} style={[type('metadata'), { color: ink.error }]}>{copy.momentUnavailable}</Text>}
+      />}
+      {routes && entryRefused && <Text accessibilityRole="alert" accessibilityLanguage={language} style={[type('metadata'), { color: ink.error }, side]}>{copy.momentUnavailable}</Text>}
 
       {/* Commit and cancel act on a temporary look, and their approved words name it («الانتقال إلى
           اللحظة {n}»). With no temporary look there is nothing to name and nothing they could do, so
@@ -194,7 +206,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
             disabled={!model.commitAvailable}
             onPress={() => runAction('commit-previewed-moment')}
           >
-            <Text style={[type('action'), { color: ink.primary }]}>{copy.goToMoment(previewState.ptc)}</Text>
+            <Text style={[type('action'), { color: ink.primary }, side]}>{copy.goToMoment(previewState.ptc)}</Text>
           </Pressable>
 
           <Pressable
@@ -207,12 +219,12 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
             disabled={!model.cancelAvailable}
             onPress={() => runAction('cancel-preview')}
           >
-            <Text style={[type('action'), { color: ink.primary }]}>{copy.cancelTemporaryLook}</Text>
+            <Text style={[type('action'), { color: ink.primary }, side]}>{copy.cancelTemporaryLook}</Text>
           </Pressable>
         </>
       )}
 
-      <Pressable
+      {routes && <Pressable
         testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:forward`}
         style={styles.control}
         accessibilityRole="button"
@@ -222,12 +234,12 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         disabled={!model.forwardAvailable}
         onPress={() => runAction('preview-later-moment')}
       >
-        <Text style={[type('action'), { color: ink.primary }]}>{copy.previewNextMoment}</Text>
-      </Pressable>
+        <Text style={[type('action'), { color: ink.primary }, side]}>{copy.previewNextMoment}</Text>
+      </Pressable>}
 
       {/* The current-edge target is its own control, never the last Moment of the Track: they are
           different Product facts and only this one produces FOLLOW_LIVE. */}
-      <Pressable
+      {routes && <Pressable
         testID={TEMPORAL_LIVE_TEST_ID}
         style={styles.control}
         accessibilityRole="button"
@@ -237,15 +249,16 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         disabled={!model.liveAvailable}
         onPress={() => runAction('commit-live-edge')}
       >
-        <Text style={[type('action'), { color: ink.primary }]}>{copy.rejoinConversation}</Text>
-      </Pressable>
+        <Text style={[type('action'), { color: ink.primary }, side]}>{copy.rejoinConversation}</Text>
+      </Pressable>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  surface: { flexDirection: 'column' },
+  surface: { flexDirection: 'column', paddingHorizontal: 16 },
   summary: { flexDirection: 'column' },
+  summaryQuiet: { height: 1, overflow: 'hidden' },
   entry: { minHeight: 44 },
   control: { minHeight: 44, justifyContent: 'center' },
 });

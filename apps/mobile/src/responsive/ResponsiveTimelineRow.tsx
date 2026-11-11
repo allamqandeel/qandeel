@@ -41,6 +41,8 @@ export const RESPONSIVE_TIMELINE_ROW_TEST_ID = 'qandeel-responsive-timeline-row'
 /** The rate at which the instrument yields, relative to the orientation beside it. */
 export const TIMELINE_ROW_SHRINK = 2;
 export const RESPONSIVE_TIMELINE_LINE_TEST_ID = 'qandeel-responsive-timeline-line';
+/** MAP-CLOSE-01 V-3: the wrapper the row's content height is measured on. */
+export const RESPONSIVE_TIMELINE_CONTENT_TEST_ID = 'qandeel-responsive-timeline-content';
 
 export interface ResponsiveTimelineRowProps {
   /** The width the row is composed in — the whole available width, never the reading measure. */
@@ -71,6 +73,12 @@ export interface ResponsiveTimelineRowProps {
    * the composition (amendment §3 rule 3: OrientationChrome yields first). Never taken from the world.
    */
   readonly linePoints?: number;
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum, screen space): reports the row's content height — the instrument and its routes,
+   * without the line — measured on a wrapper that takes its natural height inside the scroller, so the plan can size
+   * the row to what it holds.
+   */
+  readonly onContentHeight?: (points: number) => void;
 }
 
 export function ResponsiveTimelineRow({
@@ -82,6 +90,7 @@ export function ResponsiveTimelineRow({
   line,
   onLineHeight,
   linePoints = 0,
+  onContentHeight,
 }: ResponsiveTimelineRowProps) {
   return (
     <View
@@ -118,7 +127,13 @@ export function ResponsiveTimelineRow({
         alwaysBounceVertical={false}
         accessibilityRole="none"
       >
-        {children}
+        <View
+          testID={RESPONSIVE_TIMELINE_CONTENT_TEST_ID}
+          pointerEvents="box-none"
+          onLayout={(event: LayoutChangeEvent) => onContentHeight?.(Math.ceil(event.nativeEvent.layout.height))}
+        >
+          {children}
+        </View>
       </ScrollView>
     </View>
   );

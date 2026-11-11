@@ -286,7 +286,10 @@ describe('E2E-D-10 — Dark / Light / System, painted from the canonical familie
     expect(conversationGround(view)).toBe(LIGHT.world);
 
     await openAnalysis(view);
-    expect(style(view.getByTestId('qandeel-analysis-return-bar')).backgroundColor).toBe(DARK.world);
+    // MAP-CLOSE-01 V-3 Part B — RE-ANCHOR (Product Owner, 2026-11-10): the band stands on the world, so it paints no ground
+    // of its own; the ground under it is the Analysis surface's, which is the Dark family under a Light preference.
+    expect(style(view.getByTestId('qandeel-analysis-return-bar')).backgroundColor).toBe('transparent');
+    expect(style(view.getByTestId('qandeel-responsive-surface')).backgroundColor).toBe(DARK.world);
     expect(statusBars(view).at(-1)).toBe('light');
     // Non-vacuity: the preference really is Light while the Analysis paints Dark.
     expect(h.runtime.appearance.getState().effective).toBe('LIGHT');

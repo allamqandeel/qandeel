@@ -183,11 +183,23 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // WorldStrata only exports Stratum. Both goldens were re-recorded after the structural diff proved the change is Skia
   // paint only (additions, and the nebula mask's opacity values); the Shared and Public worlds never opt in. Previous
   // pins: MapCanvas cabef8ef, WorldCanvas e0ddba00, WorldStrata e17cef8d.
+  // MAP-CLOSE-01 V-3 Part B — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10, the Analysis screen UI): WorldCanvas reads an
+  // optional WorldContinuationContext; with it, the ONE canvas paints its ground, strata and veil below the frame, takes no
+  // touch, and lays the surface's ink as a scrim; the plane does not run on (its material fades below the frame, its
+  // objects keep the frame by a clip). Without it the canvas is exactly what it was (the Personal map golden is
+  // unchanged; the screen golden's host tree is identical). Previous pin: WorldCanvas 69b6a183.
+  // MAP-CLOSE-01 V-3 Part B R2 — CONTROLLED RE-ANCHOR (a renderer defect found on the emulator, fixed at its source): a
+  // mark's anchor carried only an origin, for which Skia 2.6.2's native recorder skips the save but still restores, so
+  // each mark popped a save that was not its own (the enclosing object, plane and frame groups). The anchor now carries an
+  // unbounded clip, which makes its save real and cuts nothing. Both goldens were re-recorded after the structural diff
+  // proved the ONLY change is that clip on every anchor (screen 36 anchors, Personal map 67). Previous pin: WorldMarks
+  // 59de7838.
   // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner scope correction, 2026-11-10: the three worlds share the S3-R2
   // language): the Shared and Public fields now opt in too (VPORT-01's controlled amendment, proven in each field's own
   // test). WorldCanvas and WorldContinuity change in their comments only, which said the continuity was Personal's alone;
-  // no code, no element and no prop changes, so both goldens are unchanged. Previous pins: WorldCanvas 69b6a183,
+  // no code, no element and no prop changes, so both goldens are unchanged. Previous pins: WorldCanvas 69b6a183 (Part A),
   // WorldContinuity 4c49a094.
+  // Merged into Part B, the same comment-only change moves WorldCanvas from 54cefdf0 (Part B R1) to its current blob.
   // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner's Pan/Zoom performance slice, 2026-11-11): FadedLayer bounds its
   // layer with an outer clip (the content's bounds plus 32), so Skia no longer opens a canvas-sized layer for every faded tile
   // and mass level. Both goldens were re-recorded; removing the added clip wrappers (607 in the map golden, 568 in the screen
@@ -197,9 +209,9 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '43c66051676f0ddb6fa4f10af6dcffdcda9263da'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '55e441d706b80ea2c21cb7b4c21c7c395a9caf81'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', '59de78381404afe2353efeea31ea3eb277450a1c'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd28077e514252c6bb59f64d45837fbf87a1e1907'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', '77ea34d7a3594f12a33c3ddf2826bcfcc9486d45'],
     ['apps/mobile/src/map/visual/WorldContinuity.tsx', '632de2b242d943cbe68c8be0305d204dd367874f'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
@@ -257,8 +269,10 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
   assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
   assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
-  // SHARED-VIS-01 controlled re-anchor: the band also reports its content height, but only for a world with no track.
-  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{chromeOnly \? onChromeContent : undefined\}>/u, 'OrientationChrome yields the line\'s room');
+  // SHARED-VIS-01 controlled re-anchor: the band also reports its content height. MAP-CLOSE-01 V-3 Part B — PO ADDENDUM
+  // RE-ANCHOR (2026-11-11): every world's band reports it (Personal's band is sized to its measured regions); the line's
+  // room still comes out of the chrome's share, never out of the world's.
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{onChromeContent\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

@@ -307,6 +307,11 @@ test('a future authorized migration breaks no T-03C, T-03D or Thread-layer contr
     'a later migration named for a semantic placement is not Home / Thread substrate', HOME_BOUNDARY_TEST);
 }));
 
+// MAP-CLOSE-01 V-3 Part B re-anchor (PO addendum, 2026-11-11): the chrome's react-native import gained `Pressable` (the
+// details pill), so the three chrome mutations below are anchored on that import's SHAPE rather than on its exact names.
+// Each mutation is unchanged: it still adds the same import or the same name, and `patch` still proves it happened.
+const RN_IMPORT = /^import \{ ([^}]+) \} from 'react-native';$/mu;
+
 const CHROME_MUTATIONS = ['apps/mobile/src/orientation-chrome/motion.ts', 'apps/mobile/src/orientation-chrome/OrientationChrome.tsx',
   'apps/mobile/src/orientation-chrome/ReturnControls.tsx', 'apps/mobile/src/shell/FoundationShell.tsx', 'apps/mobile/package.json'];
 
@@ -318,8 +323,7 @@ test('authorized T-10 motion, T-11 responsive work and T-12 shell integration br
     "import { withTiming } from 'react-native-reanimated';\n\n" +
     'export const presence = (to: number) => withTiming(to, { duration: 160 });\n');
   patch(`${chrome}/OrientationChrome.tsx`,
-    (text) => text.replace("import { StyleSheet, Text, View } from 'react-native';",
-      "import { StyleSheet, Text, View } from 'react-native';\nimport Animated, { useSharedValue } from 'react-native-reanimated';"),
+    (text) => text.replace(RN_IMPORT, (line) => `${line}\nimport Animated, { useSharedValue } from 'react-native-reanimated';`),
     'react-native-reanimated');
   // T-11 re-anchor: responsive work in the components is authorized, and this is the SHAPE it took.
   //
@@ -452,8 +456,7 @@ function applyEveryAuthorizedChange() {
     "import { withTiming } from 'react-native-reanimated';\n\n" +
     'export const presence = (to: number) => withTiming(to, { duration: 160 });\n');
   patch('apps/mobile/src/orientation-chrome/OrientationChrome.tsx',
-    (text) => text.replace("import { StyleSheet, Text, View } from 'react-native';",
-      "import { StyleSheet, Text, View } from 'react-native';\nimport Animated, { useSharedValue } from 'react-native-reanimated';"),
+    (text) => text.replace(RN_IMPORT, (line) => `${line}\nimport Animated, { useSharedValue } from 'react-native-reanimated';`),
     'react-native-reanimated');
   // T-11 re-anchor, matching the scenario above: responsive work in the components is authorized,
   // and the shape it took is a presentation arrangement rather than a window measurement. Reading
@@ -609,7 +612,7 @@ test('a Product surface that takes the DISPLAY as its responsive authority is re
   // display: it is composed inside something, and answering "how big is the screen" confidently is
   // how one Product becomes two.
   patch(CHROME_COMPONENT,
-    (text) => text.replace("import { StyleSheet, Text, View } from 'react-native';", "import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';"),
+    (text) => text.replace(RN_IMPORT, (line, names) => line.replace(names, `${names}, useWindowDimensions`)),
     'useWindowDimensions');
   assertRefused('t11-responsive-contract', 'the measured container is the only responsive authority');
 }));

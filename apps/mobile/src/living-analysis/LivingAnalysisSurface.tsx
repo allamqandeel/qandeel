@@ -24,13 +24,20 @@
  *
  * It holds no store, no projection, no camera, no time and no words of its own. Nothing here animates: motion is the
  * world view's, entirely.
+ *
+ * MAP-CLOSE-01 V-3 Part B (Product Owner, 2026-11-10): a world that asks for it (`continuousWorld`) is one continuous
+ * ground behind the whole screen. The frame, its envelope, the plan and every touch are unchanged; the world's own canvas
+ * paints on below the frame, behind the support band, and lays the surface's own ink over the top band and the support as
+ * a dark, partly transparent scrim, so the words and controls stay clear where a solid band used to end the world.
  */
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useAnalysisInk } from '../analysis-visual';
+import { useIncreasedContrast, withAlpha } from '../conversation/visual/theme';
 import { AnalysisAppearanceScope } from '../appearance';
 import { viewportEnvelope, type ViewportEnvelope } from '../map/camera';
+import { WorldContinuationContext, type WorldContinuation } from '../map/renderer';
 import {
   ResponsiveChromeBand,
   ResponsiveMapFrame,
@@ -68,6 +75,8 @@ export interface LivingAnalysisSurfaceProps {
   readonly chrome: (composition: ChromeComposition) => ReactNode;
   /** Mounted after the support band (a composition observer); never part of the layout. */
   readonly after?: ReactNode;
+  /** V-3 Part B: the world runs on as one continuous ground behind the bands (default: no; the frame ends the world). */
+  readonly continuousWorld?: boolean;
 }
 
 export function LivingAnalysisSurface(props: LivingAnalysisSurfaceProps) {
@@ -78,7 +87,7 @@ export function LivingAnalysisSurface(props: LivingAnalysisSurfaceProps) {
   );
 }
 
-function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelope, top = null, world, timeline, chrome, after = null }: LivingAnalysisSurfaceProps) {
+function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelope, top = null, world, timeline, chrome, after = null, continuousWorld = false }: LivingAnalysisSurfaceProps) {
   // VPORT-02: the Analysis's own ground, under the world and the support alike. The Analysis is one dark place under
   // every appearance preference (G3 Decision A); the support band painted nothing and showed the window behind it.
   const ink = useAnalysisInk();
@@ -93,9 +102,19 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
     const points = Math.ceil(Math.max(0, height));
     setChromeContent((current) => (current === points ? current : points));
   }, []);
+  // MAP-CLOSE-01 V-3 (PO addendum, screen space): Personal's band is sized to what its two regions hold, by the same
+  // rule as a world with no track — each region measured, each capped by the room it had, the world given the rest.
+  const [timelineContent, setTimelineContent] = useState<number | null>(null);
+  const onTimelineContent = useCallback((points: number) => {
+    setTimelineContent((current) => (current === points ? current : points));
+  }, []);
   const chromeOnly = timeline === null;
   const topHeight = top === null ? null : top.height;
   const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
+  const scrim = useCallback((alpha: number) => withAlpha(ink.world, alpha), [ink.world]);
+  // Under increased contrast the frame still ends the world (F1): no word stands on the world's light.
+  const increased = useIncreasedContrast();
+  const continuous = continuousWorld && !increased;
 
   const surface = (
     // T-11's own surface identity is kept: the responsive container belongs to that owner, and
@@ -105,7 +124,9 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       support={timeline === null ? 'CHROME_ONLY' : 'TIMELINE_AND_CHROME'}
-      chromeContentPoints={chromeOnly ? chromeContent : null}
+      // Under TIMELINE_AND_CHROME the chrome's room includes the temporal line it yields to the Timeline row.
+      chromeContentPoints={chromeOnly ? chromeContent : chromeContent === null ? null : chromeContent + lineHeight}
+      timelineContentPoints={chromeOnly ? null : timelineContent}
       style={{ backgroundColor: ink.world }}
     >
       {(plan) => {
@@ -124,7 +145,12 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                 });
                 // A surface that cannot be composed renders nothing rather than a guess. T-11 refuses
                 // the same rects T-04's validator refuses, so this is null only when there is no rect.
-                return envelope === null ? null : world(envelope);
+                if (envelope === null) return null;
+                if (!continuous) return world(envelope);
+                // The frame stands at the top of the measured column, so whatever of the column lies below it is the
+                // support's: that is how far the world runs on.
+                const continuation: WorldContinuation = { below: Math.max(0, plan.surface.height - rect.height), scrim };
+                return <WorldContinuationContext.Provider value={continuation}>{world(envelope)}</WorldContinuationContext.Provider>;
               }}
             </ResponsiveMapFrame>
 
@@ -143,12 +169,13 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                   line={timeline.line}
                   onLineHeight={setLineHeight}
                   linePoints={linePoints}
+                  onContentHeight={onTimelineContent}
                 >
                   {timeline.layer}
                 </ResponsiveTimelineRow>
               )}
 
-              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined}>
+              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={onChromeContent}>
                 {chrome(plan.chrome)}
               </ResponsiveChromeBand>
             </ResponsiveSupportBand>

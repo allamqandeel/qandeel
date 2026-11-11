@@ -130,6 +130,11 @@ interface LanguagePack {
   readonly inspectionLabel: string;
   /** The neutral name of the return group. It names the controls, never a place or a state. */
   readonly returnControlsLabel: string;
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum, 2026-11-10; Copy Gate PROPOSED): the one control that shows the details on request —
+   * every act's full promise and the exact temporal routes — and hides them again. It names the details, never a state.
+   */
+  readonly details: Readonly<Record<'SHOW' | 'HIDE', string>>;
   readonly contextChoiceTitle: string;
   /** Says explicitly that the order carries no preference. */
   readonly contextOrderingNote: string;
@@ -226,6 +231,7 @@ const EN: LanguagePack = Object.freeze<LanguagePack>({
   chromeLabel: 'Where you are',
   inspectionLabel: 'What you are inspecting',
   returnControlsLabel: 'Ways back',
+  details: Object.freeze({ SHOW: 'Show details', HIDE: 'Hide details' }),
   contextChoiceTitle: 'This appears in more than one place',
   contextOrderingNote: 'Listed in the order the map discloses them. The order is not a ranking.',
   inspection: (render) => {
@@ -364,6 +370,7 @@ const AR: LanguagePack = Object.freeze<LanguagePack>({
   chromeLabel: 'موضعك',
   inspectionLabel: 'قيد المعاينة',
   returnControlsLabel: 'طرق العودة',
+  details: Object.freeze({ SHOW: 'عرض التفاصيل', HIDE: 'إخفاء التفاصيل' }),
   contextChoiceTitle: 'يظهر هذا في أكثر من سياق',
   // «مرتبة بالترتيب» stutters on ر-ت-ب; two distinct roots say it once and deny the ranking.
   contextOrderingNote: 'معروضة كما تكشفها الخريطة، لا حسب أفضلية.',
@@ -507,6 +514,9 @@ export const orientationChromeLabel = (language: ChromeLanguage): string => pack
 export const inspectionOrientationLabel = (language: ChromeLanguage): string => pack(language).inspectionLabel;
 
 export const returnControlsLabel = (language: ChromeLanguage): string => pack(language).returnControlsLabel;
+
+/** MAP-CLOSE-01 V-3: the details control's words — to show the details when they are hidden, to hide them when shown. */
+export const detailsToggleWords = (language: ChromeLanguage, shown: boolean): string => pack(language).details[shown ? 'HIDE' : 'SHOW'];
 
 /**
  * The words for one return act.

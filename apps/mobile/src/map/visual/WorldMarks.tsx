@@ -86,13 +86,17 @@ function MarkBody({ x, y, r, path, stroked, ink, scale = 1, opacity = 1 }: { x: 
   // The mark's ANCHOR: a group carrying only its origin, so what a reader of the paint can locate is
   // the object's own placed point, never a centre reconstructed from a drawn outline. LA-VIS-01: the body may be
   // PAINTED smaller about that anchor, inside it; the anchor itself, its placement, mark radius and hit radius are unchanged.
+  // MAP-CLOSE-01 V-3 Part B (found on the emulator): Skia 2.6.2 records a save and a restore for a group with an origin,
+  // but its native recorder saves only for a transform, matrix, clip or layer, and restores anyway. An origin-only anchor
+  // therefore popped a save that was not its own: the enclosing object, plane and frame groups. The unbounded clip
+  // makes the save real. It cuts nothing, and the anchor is still the one group with an origin and no transform.
   const body = stroked ? (
     <Path path={path} style="stroke" strokeWidth={Math.max(1, r * 0.42)} strokeCap="round" color={ink} />
   ) : (
     <Path path={path} color={ink} />
   );
   return (
-    <Group origin={vec(x, y)}>
+    <Group origin={vec(x, y)} clip={ANCHOR_SAVE}>
       {scale === 1 && opacity === 1 ? (
         body
       ) : (
@@ -103,6 +107,9 @@ function MarkBody({ x, y, r, path, stroked, ink, scale = 1, opacity = 1 }: { x: 
     </Group>
   );
 }
+
+/** The anchor's clip: unbounded, so it cuts nothing and only makes the anchor's save a real one (see MarkBody). */
+const ANCHOR_SAVE = Object.freeze({ x: -1e7, y: -1e7, width: 2e7, height: 2e7 });
 
 /** The mark itself: the family's canonical morphology, filled, or stroked for the open slot. */
 function Mark({

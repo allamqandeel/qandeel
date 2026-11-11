@@ -205,9 +205,13 @@ describe('T11 — the same truthful answer at every supported size', () => {
     // Two across, in the READING direction, at the platform minimum spacing — and still a column of
     // rows, never a panel beside the world.
     const group = world.view.getByTestId(RETURN_CONTROLS_TEST_ID);
-    expect(group.props.style).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8 });
+    // MAP-CLOSE-01 V-3 RE-ANCHOR (PO review, 2026-11-11): the app never lays out right to left, so "React Native reverses
+    // the row" never happened and the Arabic pair read from the left. The paired row is now reflected AS LAYOUT for an
+    // Arabic reader and each act reflects back, so the first act stands on the right; the row, its wrap and gaps are T-11's.
+    expect(flattenStyle(group.props.style)).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8, transform: [{ scaleX: -1 }] });
     for (const control of subtree(world.view, RETURN_CONTROLS_TEST_ID).filter(isPressTarget)) {
       const style = flattenStyle(((control.props ?? {}) as Record<string, unknown>).style);
+      expect(style.transform).toEqual([{ scaleX: -1 }]);
       expect(style.minHeight).toBe(44);
       expect(style.flexBasis).toBe('48%');
       expect(style.width).toBeUndefined();

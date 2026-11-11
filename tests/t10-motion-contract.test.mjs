@@ -335,9 +335,18 @@ test('§13 — the rebase is issued from inside the Skia root, after the positio
   assert.equal((mapText.match(/applyCanonicalChange\(/gu) ?? []).length, 1);
   // It is a CHILD of the transformed plane, and the LAST one: siblings run their layout effects in
   // order, so the residual lands in the same inner commit as the node positions it preserves.
-  const plane = canvas.slice(canvas.indexOf('<Group transform={motion.planeTransform}'), canvas.indexOf('</Group>', canvas.indexOf('<PresentationCameraRebase')));
-  assert.ok(plane.length > 0, 'the plane group contains the rebase');
-  assert.match(plane, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*$/u);
+  // MAP-CLOSE-01 V-3 Part B — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10, the Analysis screen UI): the plane is drawn
+  // by `WorldPlane`, which puts its `children` LAST inside the one transformed plane group (after the material), and in a
+  // continuous world inside a frame clip around that same transformed group. The rebase is the last of those children, so
+  // the rule is unchanged: a child of the transformed plane, and the last one. Previous form: the rebase was followed
+  // directly by the plane's `</Group>` in WorldCanvas's own JSX.
+  const plane = canvas.slice(canvas.indexOf('<WorldPlane\n'), canvas.indexOf('</WorldPlane>') + '</WorldPlane>'.length);
+  assert.ok(plane.length > 0, 'the plane contains the rebase');
+  assert.match(plane, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*<\/WorldPlane>$/u);
+  const planeOwner = canvas.slice(canvas.indexOf('function WorldPlane('), canvas.indexOf('\n}\n', canvas.indexOf('function WorldPlane(')));
+  assert.match(planeOwner, /const plane = \(content: ReactNode\) => \(\s*<Group transform=\{motion\.planeTransform\} origin=\{vec\(center\.x, center\.y\)\}>\s*\{content\}\s*<\/Group>\s*\);/u, 'one transformed plane group');
+  assert.match(planeOwner, /return plane\(\s*<>\s*\{material\}\s*\{children\}\s*<\/>,?\s*\);/u, 'children last inside the plane');
+  assert.match(planeOwner, /<Group clip=\{\{ x: 0, y: 0, width: envelope\.width, height: envelope\.height \}\}>\{plane\(children\)\}<\/Group>/u, 'and inside the plane in a continuous world');
   assert.match(canvas, /useLayoutEffect\(/u, 'the rebase is issued in a layout effect, not a passive one');
   // And it drops the residual outright when the surface stops painting this world.
   // SHARED-VIS-01 — CONTROLLED AMENDMENT (Product Owner, 2026-10-09): on unmount ONLY. It was keyed on the binding,

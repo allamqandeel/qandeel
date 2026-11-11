@@ -23,8 +23,8 @@
  * The screen-space register sits OUTSIDE the plane entirely. It does not translate with the camera, does not
  * scale with it, and does not dim when it moves (R1-06).
  */
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
-import { Canvas, Group, vec } from '@shopify/react-native-skia';
+import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Canvas, Group, LinearGradient, Rect, vec } from '@shopify/react-native-skia';
 
 import {
   DisclosureArrival,
@@ -174,6 +174,89 @@ function PresentationCameraRebase({
   return null;
 }
 
+/**
+ * MAP-CLOSE-01 V-3 Part B (Product Owner, 2026-11-10: the Analysis screen UI joins V-3): the world as a continuous ground
+ * behind the screen's own bands. A surface that provides this lets the canvas paint `below` points further than its frame,
+ * and draws a dark, partly transparent scrim of its own ink where the bands' words stand. The scrim is the surface's ink
+ * (`scrim(alpha)`), never a colour of this file; it covers only the top inset and the continuation, and says nothing.
+ */
+export interface WorldContinuation {
+  /** How far the world's ground runs on below the frame, in points. */
+  readonly below: number;
+  /** The surface's own ink at an alpha. */
+  readonly scrim: (alpha: number) => string;
+}
+
+export const WorldContinuationContext = createContext<WorldContinuation | null>(null);
+
+/** The scrim's shares: its fade into the frame (points) and its weight at the frame's edge and at the screen's edges. */
+const CONTINUATION_SCRIM = Object.freeze({ fade: 44, edge: 0.5, top: 0.78, bottom: 0.88 });
+
+function WorldContinuationScrim({ envelope, continuation }: { readonly envelope: ViewportEnvelope; readonly continuation: WorldContinuation }) {
+  const { fade, edge, top, bottom } = CONTINUATION_SCRIM;
+  const ink = continuation.scrim;
+  const band = envelope.insetTop;
+  const end = envelope.height + continuation.below;
+  const from = Math.max(0, envelope.height - fade);
+  return (
+    <>
+      {band > 0 ? (
+        <Rect x={0} y={0} width={envelope.width} height={band + fade}>
+          <LinearGradient start={vec(0, 0)} end={vec(0, band + fade)} colors={[ink(top), ink(edge), ink(0)]} positions={[0, band / (band + fade), 1]} />
+        </Rect>
+      ) : null}
+      {continuation.below > 0 ? (
+        <Rect x={0} y={from} width={envelope.width} height={end - from}>
+          <LinearGradient start={vec(0, from)} end={vec(0, end)} colors={[ink(0), ink(edge), ink(bottom)]} positions={[0, (envelope.height - from) / (end - from), 1]} />
+        </Rect>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The world plane: its material (place atmospheres, threads) and its objects (relations, marks), under the camera's one
+ * plane transform. MAP-CLOSE-01 V-3 Part B: with a continuation the canvas runs on below the frame, but the plane does
+ * not. Its material fades out over the scrim's own fade below the frame's edge, and its objects keep the frame exactly
+ * (a hard clip: nothing that can be touched, or read as a thing, stands under the support). Without a continuation this
+ * is the one plane group it always was.
+ */
+function WorldPlane({ continuation, envelope, paint, motion, center, material, children }: {
+  readonly continuation: WorldContinuation | null;
+  readonly envelope: ViewportEnvelope;
+  readonly paint: ViewportEnvelope;
+  readonly motion: PresentationCameraBinding;
+  readonly center: { readonly x: number; readonly y: number };
+  readonly material: ReactNode;
+  readonly children: ReactNode;
+}) {
+  const plane = (content: ReactNode) => (
+    <Group transform={motion.planeTransform} origin={vec(center.x, center.y)}>
+      {content}
+    </Group>
+  );
+  if (continuation === null) {
+    return plane(
+      <>
+        {material}
+        {children}
+      </>,
+    );
+  }
+  const { fade } = CONTINUATION_SCRIM;
+  return (
+    <>
+      <Group layer>
+        {plane(material)}
+        <Rect x={0} y={0} width={paint.width} height={paint.height} blendMode="dstIn">
+          <LinearGradient start={vec(0, envelope.height)} end={vec(0, envelope.height + fade)} colors={[continuation.scrim(1), continuation.scrim(0)]} />
+        </Rect>
+      </Group>
+      <Group clip={{ x: 0, y: 0, width: envelope.width, height: envelope.height }}>{plane(children)}</Group>
+    </>
+  );
+}
+
 /** The world-space chroma at an address, or none (the canonical hue). */
 const chromaAt = (address: CanonicalWorldAddress | undefined) => (address === undefined ? undefined : worldChroma(address));
 
@@ -220,17 +303,23 @@ export function WorldCanvas<N extends WorldCanvasNode>({
     });
   };
 
+  // MAP-CLOSE-01 V-3 Part B: a surface that asks for a continuous world lets the world's ground, strata and veil run on
+  // below the frame, behind the support. Nothing else moves: the envelope, the plane, every object and every touch keep the
+  // frame (the canvas takes no touch of its own there). Without a continuation the canvas is exactly what it was.
+  const continuation = useContext(WorldContinuationContext);
+  const paint = continuation === null ? envelope : { ...envelope, height: envelope.height + continuation.below };
+
   const planeNodes = presented.filter((node) => node.region === 'WORLD_PLANE');
   const registerNodes = presented.filter((node) => node.region === 'UNGEOGRAPHIC_REGISTER');
   // MAP-CLOSE-01 V-3: the places whose threads the continuous world draws — each with its address and the chroma there.
   const continuityPlaces = continuity ? planeNodes.filter((node) => isPlace(node)).flatMap((node) => continuityPlaceOf(node, worldAddressOf?.(node))) : [];
 
   return (
-    <Canvas testID={testID} style={{ width: envelope.width, height: envelope.height }}>
+    <Canvas testID={testID} style={{ width: paint.width, height: paint.height }} pointerEvents={continuation === null ? undefined : 'none'}>
       {/* The canonical tone curve over the whole world (I-08B1 renderComposite); the veil and the
           screen-space register sit above it, as the canonical vignette, grain and type do. */}
       <WorldTone>
-      <WorldGround envelope={envelope} response={response} />
+      <WorldGround envelope={paint} response={response} />
       {/* The world plane: it travels with the camera, and it is the ONLY thing camera opacity
           reaches. A cut-and-resolve is a statement about the camera's path, and the register has
           no path (R1-06). The atmosphere strata are world-anchored, so they sit inside the same cut. */}
@@ -238,37 +327,47 @@ export function WorldCanvas<N extends WorldCanvasNode>({
         {/* OPEN-17: the two tunable channels paint, and only paint. V-3: a continuous world keeps its clouds (C2) over
             the S3-R2 deep space (C1). */}
         {continuity ? (
-          <ContinuityAtmosphere motion={motion} envelope={envelope} response={response} drift={world.drift} ambient={style.ambient} emptySpace={style.emptySpace} />
+          <ContinuityAtmosphere motion={motion} envelope={paint} response={response} drift={world.drift} ambient={style.ambient} emptySpace={style.emptySpace} />
         ) : (
           <WorldAtmosphere
             motion={motion}
-            envelope={envelope}
+            envelope={paint}
             response={response}
             drift={world.drift}
             ambient={style.ambient}
             emptySpace={style.emptySpace}
           />
         )}
-        <Group transform={motion.planeTransform} origin={vec(center.x, center.y)}>
-          {/* The world's colour around each place: one per presented place, identical for every place. It
-              follows the surface's presentation culling like everything else on the plane — the renderer
-              makes no culling decision of its own. V-3 (C3): past NEAR a place's mass keeps its NEAR size. */}
-          {planeNodes
-            .filter((node) => isPlace(node))
-            .map((node) => {
-              const atmosphere = (
-                <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} seed={node.key} chroma={chromaAt(worldAddressOf?.(node))} />
-              );
-              return continuity ? (
-                <NearCap key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} motion={motion}>
-                  {atmosphere}
-                </NearCap>
-              ) : (
-                atmosphere
-              );
-            })}
-          {/* V-3 (C1): the fine threads of the places, in each place's colour, at four world sizes. */}
-          {continuity ? <PlaceThreads places={continuityPlaces} radius={world.placeAtmosphere} motion={motion} /> : null}
+        <WorldPlane
+          continuation={continuation}
+          envelope={envelope}
+          paint={paint}
+          motion={motion}
+          center={center}
+          material={
+            <>
+              {/* The world's colour around each place: one per presented place, identical for every place. It
+                  follows the surface's presentation culling like everything else on the plane — the renderer
+                  makes no culling decision of its own. V-3 (C3): past NEAR a place's mass keeps its NEAR size. */}
+              {planeNodes
+                .filter((node) => isPlace(node))
+                .map((node) => {
+                  const atmosphere = (
+                    <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} seed={node.key} chroma={chromaAt(worldAddressOf?.(node))} />
+                  );
+                  return continuity ? (
+                    <NearCap key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} motion={motion}>
+                      {atmosphere}
+                    </NearCap>
+                  ) : (
+                    atmosphere
+                  );
+                })}
+              {/* V-3 (C1): the fine threads of the places, in each place's colour, at four world sizes. */}
+              {continuity ? <PlaceThreads places={continuityPlaces} radius={world.placeAtmosphere} motion={motion} /> : null}
+            </>
+          }
+        >
           {renderConnections?.(planeNodes, frame)}
           {planeNodes.map((node) => (
             // Two nested corrections, and the order matters. The arrival is OUTSIDE, so its
@@ -284,10 +383,11 @@ export function WorldCanvas<N extends WorldCanvasNode>({
             </DisclosureArrival>
           ))}
           <PresentationCameraRebase motion={motion} cameraCommit={cameraCommit} />
-        </Group>
+        </WorldPlane>
       </Group>
       </WorldTone>
-      <WorldVeil envelope={envelope} response={response} />
+      <WorldVeil envelope={paint} response={response} />
+      {continuation === null ? null : <WorldContinuationScrim envelope={envelope} continuation={continuation} />}
       {/* Screen space. It does not translate, scale or dim with the camera; it changes only when
           its own membership does, and then by its own local arrival. */}
       {registerNodes.map((node) => (

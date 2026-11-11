@@ -49,16 +49,17 @@
  * that holds no store and can write nothing.
  */
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAnalysisInk, useAnalysisType } from '../analysis-visual';
+import { withAlpha } from '../conversation/visual/theme';
 import type { MapActionOutcome, MapProjectionRequest } from '../map';
 import type { ReturnMapContext, ReturnOutcome, ReturnSurface } from '../return-navigation';
 import type { TemporalPreview } from '../temporal-navigation';
 import { exactReturnTargetFor, type ExactReturnOrigin } from './exact-return-origin';
 import { InspectionOrientation } from './InspectionOrientation';
 import { orientationModel, type ChromeProjection } from './model';
-import { liveSentence, previewSentence, spatialSentence, temporalSentence } from './product-copy';
+import { detailsToggleWords, liveSentence, previewSentence, spatialSentence, temporalSentence } from './product-copy';
 import { ReturnControls } from './ReturnControls';
 import type { ChromeLanguage, OrientationModel, ReturnOpportunityId, TemporalPreviewSource } from './types';
 
@@ -138,6 +139,14 @@ export interface OrientationChromeProps {
    * is shown. `CHROME` (the default) is T-08's original presentation, for this surface standing alone.
    */
   readonly returnLiveHome?: 'CHROME' | 'LIVE_EDGE';
+  /**
+   * MAP-CLOSE-01 V-3 (PO addendum, 2026-11-10): the details on request. Present, the chrome is COMPACT: the orientation
+   * sentence and one control to show or hide the details share a row, and each return act shows its label only (its
+   * hint is still spoken, and shown with the details; the composite's conditional promise is always shown). The owner
+   * holds whether the details are shown, because the same request also shows the Timeline's exact routes. Absent,
+   * this is T-08's chrome exactly as it was.
+   */
+  readonly details?: { readonly shown: boolean; readonly onToggle: () => void } | null;
 }
 
 /**
@@ -172,12 +181,16 @@ export function OrientationChrome({
   returnArrangement = 'STACKED',
   temporalLine = 'IN_CHROME',
   returnLiveHome = 'CHROME',
+  details = null,
 }: OrientationChromeProps) {
   // VPORT-02: the Analysis ink and type. The chrome painted none before, so its words were the platform's default
   // black on whatever lay behind them — the dark-on-dark defect of the VPORT-01 narrow and landscape proof legs.
   const ink = useAnalysisInk();
   const type = useAnalysisType();
-  const line = [type('metadata'), { color: ink.secondary }];
+  // MAP-CLOSE-01 V-3 (PO addendum): every sentence starts on the reader's side — right in Arabic, left in English. A
+  // physical side read from the Product language, never from the platform's layout direction.
+  const side: 'right' | 'left' = language === 'ar' ? 'right' : 'left';
+  const line = [type('metadata'), { color: ink.secondary, textAlign: side }];
   // The kernel's own subscription seam. This is the rerender trigger AND the guarantee that a
   // replaced store is resubscribed to rather than remembered.
   useSyncExternalStore(surface.store.subscribe, surface.store.getState);
@@ -244,8 +257,11 @@ export function OrientationChrome({
       // for the integration task rather than being applied here as a route that does not exist.
       accessibilityRole="none"
     >
+      {/* MAP-CLOSE-01 V-3: with the details on request, the sentence and the one details control share a row, the
+          sentence on the reader's side and the control at the row's other end. */}
+      <View style={details === null ? null : [styles.statusRow, { flexDirection: side === 'right' ? 'row-reverse' : 'row' }]} pointerEvents="box-none">
       {/* Orientation is read, never pressed. It takes no touch at all. */}
-      <View style={styles.orientation} pointerEvents="none">
+      <View style={[styles.orientation, details === null ? null : styles.orientationInRow]} pointerEvents="none">
         {lineHere ? (
           <Text testID={`${ORIENTATION_CHROME_TEST_ID}:temporal`} style={[styles.line, line]}>
             {temporalSentence(language, model.temporal)}
@@ -264,6 +280,22 @@ export function OrientationChrome({
             {live}
           </Text>
         )}
+      </View>
+      {details === null ? null : (
+        <Pressable
+          testID={`${ORIENTATION_CHROME_TEST_ID}:details`}
+          style={({ pressed }) => [
+            styles.details,
+            { backgroundColor: withAlpha(pressed ? ink.pressedInk : ink.world, pressed ? ink.pressedPresence : 0.56), borderColor: withAlpha(ink.primary, 0.14) },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={detailsToggleWords(language, details.shown)}
+          accessibilityState={{ expanded: details.shown }}
+          onPress={details.onToggle}
+        >
+          <Text style={[styles.detailsWords, type('metadata'), { color: ink.primary }]}>{detailsToggleWords(language, details.shown)}</Text>
+        </Pressable>
+      )}
       </View>
 
       <InspectionOrientation
@@ -284,6 +316,8 @@ export function OrientationChrome({
         liveContext={liveContext}
         onOutcome={handleReturn}
         arrangement={returnArrangement}
+        presentation={details === null ? 'PLAIN' : 'COMPACT'}
+        hintsShown={details !== null && details.shown}
       />
     </View>
   );
@@ -298,4 +332,10 @@ const styles = StyleSheet.create({
   // than a section break. It is the tightest value on the scale, not an off-scale one.
   orientation: { flexDirection: 'column', rowGap: 4 },
   line: { fontSize: 13, lineHeight: 21 },
+  // MAP-CLOSE-01 V-3: the sentence and the details control on one row, centred on each other, 12 apart.
+  statusRow: { alignItems: 'center', columnGap: 12 },
+  orientationInRow: { flexShrink: 1, flexGrow: 1 },
+  // A pill with the 44-point floor, its words on one line where they fit and wrapping where they do not.
+  details: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, flexShrink: 0 },
+  detailsWords: { lineHeight: 20 },
 });

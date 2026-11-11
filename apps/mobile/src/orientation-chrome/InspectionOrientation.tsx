@@ -69,6 +69,8 @@ export function InspectionOrientation({ store, language, inspection, context, ma
   // VPORT-02: the Analysis ink and type; the region's words, order and routes are unchanged.
   const ink = useAnalysisInk();
   const type = useAnalysisType();
+  // MAP-CLOSE-01 V-3: every sentence starts on the reader's side, a physical side read from the Product language.
+  const side = { textAlign: language === 'ar' ? 'right' : 'left' } as const;
 
   const choose = useCallback(
     (ordinal: number) => {
@@ -112,12 +114,12 @@ export function InspectionOrientation({ store, language, inspection, context, ma
     >
       {/* Text only. It is read and heard, never pressed, so it intercepts nothing. */}
       <View pointerEvents="none">
-        <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:statement`} style={[styles.statement, type('supporting'), { color: ink.primary }]}>
+        <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:statement`} style={[styles.statement, type('supporting'), { color: ink.primary }, side]}>
           {inspectionSentence(language, render)}
         </Text>
 
         {path === null ? null : (
-          <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:lineage`} style={[styles.lineage, type('metadata'), { color: ink.secondary }]}>
+          <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:lineage`} style={[styles.lineage, type('metadata'), { color: ink.secondary }, side]}>
             {path}
           </Text>
         )}
@@ -136,10 +138,10 @@ export function InspectionOrientation({ store, language, inspection, context, ma
             seen and heard, which is what a sentence explaining the chooser is for.
           */}
           <View pointerEvents="none">
-            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:title`} style={[styles.choiceTitle, type('supporting'), { color: ink.primary }]}>
+            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:title`} style={[styles.choiceTitle, type('supporting'), { color: ink.primary }, side]}>
               {contextChoiceTitle(language)}
             </Text>
-            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:ordering`} style={[styles.ordering, type('metadata'), { color: ink.tertiary }]}>
+            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:ordering`} style={[styles.ordering, type('metadata'), { color: ink.tertiary }, side]}>
               {contextOrderingNote(language)}
             </Text>
           </View>
@@ -157,7 +159,7 @@ export function InspectionOrientation({ store, language, inspection, context, ma
               accessibilityState={{ selected: option.current }}
               onPress={() => choose(option.ordinal)}
             >
-              <Text style={[styles.optionLabel, type('action'), { color: option.current ? ink.selectedInk : ink.primary }]}>{contextChoiceLabel(language, option.current, option.boundAtMoment)}</Text>
+              <Text style={[styles.optionLabel, type('action'), { color: option.current ? ink.selectedInk : ink.primary }, side]}>{contextChoiceLabel(language, option.current, option.boundAtMoment)}</Text>
             </Pressable>
           ))}
         </View>

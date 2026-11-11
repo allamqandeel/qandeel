@@ -59,8 +59,9 @@ export function TemporalOrientationLine({ store, language, preview }: TemporalOr
   const words = temporalOrientationLine(store, language, previewSnapshot);
   if (words === null) return null;
   return (
-    <View testID={TEMPORAL_ORIENTATION_LINE_TEST_ID} pointerEvents="none" style={{ paddingBottom: 4 }}>
-      <Text style={[type('supporting'), { color: ink.primary }]}>{words}</Text>
+    <View testID={TEMPORAL_ORIENTATION_LINE_TEST_ID} pointerEvents="none" style={{ paddingBottom: 4, paddingHorizontal: 16 }}>
+      {/* MAP-CLOSE-01 V-3: on the reader's side, 16 points from the edge like the chrome below it. */}
+      <Text style={[type('supporting'), { color: ink.primary, textAlign: language === 'ar' ? 'right' : 'left' }]}>{words}</Text>
     </View>
   );
 }
