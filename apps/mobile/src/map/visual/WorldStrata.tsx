@@ -347,6 +347,14 @@ function bloomOf(bucket: Bucket): Bucket {
 /** A fully opaque ink, used only as a coverage mask: dstIn reads its alpha alone, so its (generated) colour never reaches the glass. */
 const MASK_INK = hsla(WORLD_VISUAL.worldHue, WORLD_VISUAL.mark.haloSat, WORLD_VISUAL.mark.haloLight, 1);
 const MASK_PAD = 4;
+/**
+ * MAP-CLOSE-01 V-3 (performance, PO-approved Pan/Zoom slice): the layer's own bound. Skia sizes an unbounded layer by the
+ * clip in force, so every faded tile and every mass level opened a layer the size of the whole canvas. The bound is the
+ * content's bounds plus more than any content reaches past them (a star's bloom ≤ 8, a dust speck ≤ 19). Measured on the
+ * PO's phone at rest in the three worlds: 99.79–99.94 % of pixels identical, the rest within 2 / 255 (rounding at the
+ * layer's edge); presented frames while panning rose most in Public (5.9 → 16.7 fps).
+ */
+const LAYER_PAD = 32;
 
 /**
  * LA-VIS-01 — a picture at a weight. A picture is replayed WITHOUT the group's paint, so a group's opacity never reaches
@@ -391,10 +399,12 @@ export function FadedLayer({
   readonly children: React.ReactNode;
 }) {
   return (
-    <Group layer>
-      {children}
-      {/* Padded past the bounds, so the mask's anti-aliased edge never dims the content's own edge (no seam between tiles). */}
-      <Rect x={x - MASK_PAD} y={y - MASK_PAD} width={width + MASK_PAD * 2} height={height + MASK_PAD * 2} color={MASK_INK} opacity={opacity} blendMode="dstIn" />
+    <Group clip={{ x: x - LAYER_PAD, y: y - LAYER_PAD, width: width + LAYER_PAD * 2, height: height + LAYER_PAD * 2 }}>
+      <Group layer>
+        {children}
+        {/* Padded past the bounds, so the mask's anti-aliased edge never dims the content's own edge (no seam between tiles). */}
+        <Rect x={x - MASK_PAD} y={y - MASK_PAD} width={width + MASK_PAD * 2} height={height + MASK_PAD * 2} color={MASK_INK} opacity={opacity} blendMode="dstIn" />
+      </Group>
     </Group>
   );
 }
@@ -404,8 +414,9 @@ export function FadedLayer({
 /**
  * One tiled stratum. The grid covers the envelope plus one tile, and its origin is the stratum's
  * world offset plus the plane's residual translation at the stratum's rate, wrapped to the tile.
+ * MAP-CLOSE-01 V-3: exported for the Personal Map's deep space (`./WorldContinuity`), unchanged.
  */
-function Stratum({
+export function Stratum({
   motion,
   drift,
   tile,

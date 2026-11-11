@@ -203,10 +203,17 @@ describe('the world expresses only what the Map holds', () => {
   it('the only relation drawn is the hosting relation: one tether per contextual appearance, ending on its Home', async () => {
     const { placed, element } = paint();
     const rendered = await render(element);
-    const paths = elements(rendered.toJSON(), 'Path').map((p) => p.path as string).filter((d) => /^M [-0-9.]+ [-0-9.]+ L [-0-9.]+ [-0-9.]+$/u.test(d));
+    // MAP-CLOSE-01 V-3 (CONTROLLED RE-ANCHOR, PO-authorized S3-R2 port): a Personal tether is drawn as S3-R2's line of
+    // light with a gentle bow (`M a Q c b`) — a presentation curve whose two ENDS are still exactly the Home and the
+    // appearance. The bow's control point is dropped here; the ends are what this rule has always asserted.
+    const paths = elements(rendered.toJSON(), 'Path')
+      .map((p) => p.path as string)
+      .map((d) => /^(M [-0-9.e]+ [-0-9.e]+) (?:L|Q [-0-9.e]+ [-0-9.e]+) ([-0-9.e]+ [-0-9.e]+)$/u.exec(d))
+      .filter((m): m is RegExpExecArray => m !== null)
+      .map((m) => `${m[1]} L ${m[2]}`);
     const appearances = placed.visibleNodes.filter((node) => node.locus?.kind === 'CONTEXTUAL_APPEARANCE');
     const home = placed.nodes.find((node) => node.locus?.kind === 'THREAD_HOME' && node.id === 'thread-a')!;
-    // Three strokes per tether (ground, body, core), all on the same line.
+    // Every stroke of a tether lies between the same two ends.
     const lines = [...new Set(paths)];
     expect(lines).toHaveLength(appearances.length);
     for (const node of appearances) expect(lines).toContain(`M ${home.x} ${home.y} L ${node.x} ${node.y}`);

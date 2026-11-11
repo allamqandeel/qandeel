@@ -171,14 +171,37 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // single 3.3 s pass closed live calls. The pixels are the same (every step is per pixel, painted on one surface under a
   // non-anti-aliased clip); the nebula draws nothing until it is painted. Both goldens unchanged. Previous pin: WorldStrata
   // 366f7d15.
+  // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10: S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION
+  // and Step 4 / V-3 Production Visual Port is authorized): the Personal owner hands each mark and tether the world's
+  // chroma at its PLACE (its own Home's canonical address, or its hosting Home's), and WorldMarks draws the S3-R2 node
+  // grammar from it. Both goldens were re-recorded after the structural diff proved every case differs in Skia paint only
+  // (host tree and every anchor identical; the increased-contrast cases unchanged). Previous pins: MapCanvas a82f761f,
+  // WorldMarks 8b81a4e4.
+  // MAP-CLOSE-01 V-3 C1–C3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10, "V-3: Final Visual Integration — PO
+  // APPROVED"): the Personal owner opts WorldCanvas into the S3-R2 continuity (`continuity`), which draws the deep space,
+  // the place threads at four world sizes and the NEAR paint cap from the new paint module WorldContinuity (pinned here);
+  // WorldStrata only exports Stratum. Both goldens were re-recorded after the structural diff proved the change is Skia
+  // paint only (additions, and the nebula mask's opacity values); the Shared and Public worlds never opt in. Previous
+  // pins: MapCanvas cabef8ef, WorldCanvas e0ddba00, WorldStrata e17cef8d.
+  // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner scope correction, 2026-11-10: the three worlds share the S3-R2
+  // language): the Shared and Public fields now opt in too (VPORT-01's controlled amendment, proven in each field's own
+  // test). WorldCanvas and WorldContinuity change in their comments only, which said the continuity was Personal's alone;
+  // no code, no element and no prop changes, so both goldens are unchanged. Previous pins: WorldCanvas 69b6a183,
+  // WorldContinuity 4c49a094.
+  // MAP-CLOSE-01 V-3 — CONTROLLED RE-ANCHOR (Product Owner's Pan/Zoom performance slice, 2026-11-11): FadedLayer bounds its
+  // layer with an outer clip (the content's bounds plus 32), so Skia no longer opens a canvas-sized layer for every faded tile
+  // and mass level. Both goldens were re-recorded; removing the added clip wrappers (607 in the map golden, 568 in the screen
+  // golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest and the
+  // rest are within 2 / 255. Previous pin: WorldStrata 6f6b8b94.
   for (const [path, blob] of [
-    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
+    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'e0ddba0057a6506cc5b68454a7a41b8f923bbb5f'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '43c66051676f0ddb6fa4f10af6dcffdcda9263da'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', '8b81a4e4c6fb002e3e9c5088a316d5844723638b'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'e17cef8d90b4c4c9543d9164091b6e266a388896'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', '59de78381404afe2353efeea31ea3eb277450a1c'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', '77ea34d7a3594f12a33c3ddf2826bcfcc9486d45'],
+    ['apps/mobile/src/map/visual/WorldContinuity.tsx', '632de2b242d943cbe68c8be0305d204dd367874f'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],

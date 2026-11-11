@@ -20,6 +20,13 @@
  *
  * Nothing here varies per object except what the object IS (family, placement) and whether it is the
  * one being inspected. Every light, size and alpha is constant per tier.
+ *
+ * MAP-CLOSE-01 V-3 (Product Owner, 2026-11-10: S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION): when its owner hands a
+ * mark or a tether the world's chroma at its place (`chroma`), and the reader keeps standard contrast, it is drawn in the
+ * approved S3-R2 node grammar — a soft light in the place's own colour, fine rays, a thin ring and a clear centre in the
+ * family's own morphology, with no white disc. The chroma is the place's address and nothing else (`./world-chroma`), so
+ * the colour still says where, never what; every size and alpha is still constant per tier. Without a chroma, and at
+ * increased contrast (F1), the frozen VPORT-01 / LA-VIS-01 grammar below is drawn unchanged.
  */
 import { BlurMask, Circle, Group, LinearGradient, Path, Picture, RadialGradient, vec } from '@shopify/react-native-skia';
 import { useReadingOf, type DerivedValue } from '../../motion';
@@ -137,6 +144,8 @@ export interface WorldObjectProps {
   readonly response: WorldResponse;
   readonly contrast: WorldContrast;
   readonly selected: boolean;
+  /** V-3: the world's chroma at this object's place (its Home), handed by the owner; omitted, the frozen grammar. */
+  readonly chroma?: ChromaFamily;
 }
 
 /** A light around a body: one canonical falloff, one tier weight. */
@@ -176,10 +185,12 @@ export interface WorldMarkProps {
   readonly response: WorldResponse;
   readonly contrast: WorldContrast;
   readonly selected: boolean;
+  /** V-3: the world's chroma at the mark's place; omitted (or at increased contrast), the frozen grammar. */
+  readonly chroma?: ChromaFamily;
 }
 
 /** One placed locus of the Personal world: its family's morphology, in the world's material. */
-export function WorldObject({ family, nodeKey, x, y, placement, S, response, contrast, selected }: WorldObjectProps) {
+export function WorldObject({ family, nodeKey, x, y, placement, S, response, contrast, selected, chroma }: WorldObjectProps) {
   const r = MARK_RADIUS_POINTS[placement];
   const rotation = presentationRotation(nodeKey);
   const shape: WorldMarkShape = {
@@ -199,12 +210,16 @@ export function WorldObject({ family, nodeKey, x, y, placement, S, response, con
       response={response}
       contrast={contrast}
       selected={selected}
+      chroma={chroma}
     />
   );
 }
 
 /** One mark in the world's material, in any shape: constant per tier, nothing about it varies per object. */
-export function WorldMark({ x, y, r, tier, markerRadius: marker, shape, S, response, contrast, selected }: WorldMarkProps) {
+export function WorldMark({ x, y, r, tier, markerRadius: marker, shape, S, response, contrast, selected, chroma }: WorldMarkProps) {
+  if (chroma !== undefined && contrast === 'standard') {
+    return <ChromaticMark x={x} y={y} r={r} tier={tier} marker={marker} shape={shape} S={S} response={response} selected={selected} chroma={chroma} />;
+  }
   const m = V.mark[tier];
   const material = markMaterial(tier, S, contrast === 'increased');
   const palette = worldPalette(contrast);
@@ -254,6 +269,174 @@ export function WorldMark({ x, y, r, tier, markerRadius: marker, shape, S, respo
       {selected ? <SelectedMarker x={x} y={y} r={marker} contrast={contrast} /> : null}
     </>
   );
+}
+
+/**
+ * MAP-CLOSE-01 V-3 — the approved S3-R2 node grammar, in the colour of the mark's place:
+ *
+ *   light   the energy sits in a soft, wide glow of the place's own colour, not at the centre: the centre stays the
+ *           brightest point without becoming a white disc (S3-R2 `core`, `bloom`);
+ *   rays    a few fine rays (9 on a place, 4 on a minor body), fading outward; their angles and lengths come from the
+ *           mark's meaning-free presentation angle, like its rotation, and say nothing;
+ *   ring    a thin ring around the body, in a lighter tone of the same colour. The SELECTED marker replaces it, in the
+ *           frozen selected ink and thickness, so selection is still a shape and never a colour alone;
+ *   centre  the family's own morphology, small and near-white: the clear centre of the star still says what it is.
+ *
+ * Constant per tier, as the frozen grammar: nothing varies per object but its place's colour and its presentation angle.
+ * No animation, no time, no measure. Its NEAR limb and luminous interior are the frozen ones, worn in the same colour.
+ */
+function ChromaticMark({
+  x,
+  y,
+  r,
+  tier,
+  marker,
+  shape,
+  S,
+  response,
+  selected,
+  chroma,
+}: {
+  x: number;
+  y: number;
+  r: number;
+  tier: WorldTier;
+  marker: number;
+  shape: WorldMarkShape;
+  S: WorldSchedule;
+  response: WorldResponse;
+  selected: boolean;
+  chroma: ChromaFamily;
+}) {
+  const m = V.mark[tier];
+  const c = CHROMATIC[tier];
+  const material = markMaterial(tier, S, false);
+  const palette = worldPalette('standard');
+  const hue = chroma.hue;
+  const sat = chroma.saturation * CHROMATIC.glowSat;
+  const tone = (lift: number) => Math.min(CHROMATIC.maxLight, chroma.lightness + lift);
+  const lx = Math.cos(shape.limbAngle);
+  const ly = Math.sin(shape.limbAngle);
+  const reach = r * c.rayMax;
+  return (
+    <>
+      {tier === 'major' ? (
+        <Group opacity={response.groundMajor}>
+          <Group opacity={BLOOM.clearing}>
+            <Circle cx={x} cy={y} r={r * V.material.objGnd.r}>
+              <RadialGradient c={vec(x, y)} r={r * V.material.objGnd.r} colors={SHADE_GRADIENT.colors} positions={SHADE_GRADIENT.positions} />
+            </Circle>
+          </Group>
+        </Group>
+      ) : null}
+      {/* The light, in the place's own colour: the medium's halo and wide atmosphere, then the tier's soft pool. */}
+      <Light x={x} y={y} r={r * m.halo} profile="wide" hue={hue} saturation={sat} lightness={tone(CHROMATIC.lift.halo)} opacity={tier === 'major' ? response.haloMajor : response.haloMinor} />
+      <Light x={x} y={y} r={r * m.haloWide} profile="soft" hue={hue} saturation={sat} lightness={tone(CHROMATIC.lift.halo)} opacity={tier === 'major' ? response.haloWideMajor : response.haloWideMinor} />
+      <Light x={x} y={y} r={r * c.wide} profile="soft" hue={hue} saturation={sat} lightness={tone(CHROMATIC.lift.wide)} opacity={c.wideAlpha} />
+      <Light x={x} y={y} r={r * c.bloom} profile="point" hue={hue} saturation={sat} lightness={tone(CHROMATIC.lift.bloom)} opacity={c.bloomAlpha} />
+      <Light x={x} y={y} r={r * c.hot} profile="point" hue={hue} saturation={chroma.saturation * CHROMATIC.hotSat} lightness={tone(CHROMATIC.lift.hot)} opacity={c.hotAlpha} />
+      {/* The rays: one path, fading outward from the centre. */}
+      <Path path={rayPath(x, y, r, shape.limbAngle, c)} style="stroke" strokeWidth={CHROMATIC.rayWidth} strokeCap="round">
+        <RadialGradient
+          c={vec(x, y)}
+          r={reach}
+          colors={[hsla(hue, sat, tone(CHROMATIC.lift.ray), CHROMATIC.rayAlpha), hsla(hue, sat, tone(CHROMATIC.lift.bloom), CHROMATIC.rayAlpha * 0.35), hsla(hue, sat, tone(CHROMATIC.lift.bloom), 0)]}
+          positions={[0, 0.45, 1]}
+        />
+      </Path>
+      {selected ? null : <LitRim x={x} y={y} radius={r * c.ring} width={c.ringWidth} colour={(a) => hsla(hue, sat, tone(CHROMATIC.lift.ring), a)} />}
+      <MarkBody x={x} y={y} r={r} path={shape.path} stroked={shape.stroked} ink={selected ? palette.selectedInk : hsla(hue, CHROMATIC.centreSat, CHROMATIC.centreLight, CHROMATIC.centreAlpha)} scale={selected ? 1 : c.body} />
+      <Light x={x} y={y} r={r * c.white} profile="point" hue={hue} lightness={BLOOM.whiteLight} saturation={BLOOM.whiteSat} opacity={c.whiteAlpha} />
+      <Group opacity={response.near} transform={selected ? undefined : paintedAbout(x, y, c.body)}>
+        <Path path={shape.path} style="stroke" strokeWidth={r * V.mark.limbWidth}>
+          <LinearGradient
+            start={vec(x + lx * r * 1.15, y + ly * r * 1.15)}
+            end={vec(x - lx * r * 1.15, y - ly * r * 1.15)}
+            colors={[
+              hsla(hue, Math.min(100, sat * 1.12), tone(CHROMATIC.lift.ring), material.alpha * V.mark.limbShare),
+              hsla(hue, sat, tone(CHROMATIC.lift.bloom), material.alpha * V.mark.limbShare * 0.3),
+              hsla(hue, sat, tone(CHROMATIC.lift.bloom), 0),
+            ]}
+            positions={[0, 0.38, 1]}
+          />
+        </Path>
+        <Light x={x} y={y} r={r * m.core} profile="core" hue={hue} lightness={tone(CHROMATIC.lift.ring)} opacity={material.alpha * m.coreAlpha} />
+      </Group>
+      {selected ? <SelectedMarker x={x} y={y} r={marker} contrast="standard" /> : null}
+    </>
+  );
+}
+
+/**
+ * The ring of S3-R2 as LIGHT, not as a drawn outline: a filled disc whose radial gradient is lit only in a thin band at
+ * the ring's radius. The one stroked outline a mark may carry stays the SELECTED marker, so the selected state remains a
+ * shape of its own and is never confused with a resting mark.
+ */
+function LitRim({ x, y, radius, width, colour }: { x: number; y: number; radius: number; width: number; colour: (alpha: number) => string }) {
+  const outer = radius + width;
+  const at = (d: number) => Math.min(1, Math.max(0, d / outer));
+  return (
+    <Circle cx={x} cy={y} r={outer}>
+      <RadialGradient c={vec(x, y)} r={outer} colors={[colour(0), colour(0), colour(CHROMATIC.ringAlpha), colour(0)]} positions={[0, at(radius - width), at(radius), 1]} />
+    </Circle>
+  );
+}
+
+/** The rays of one mark as one path: count and lengths per tier, angles from its meaning-free presentation angle. */
+function rayPath(x: number, y: number, r: number, angle: number, c: (typeof CHROMATIC)['major' | 'minor']): string {
+  const parts: string[] = [];
+  for (let i = 0; i < c.rays; i += 1) {
+    // A fixed, irregular spread: the golden angle, nudged by a hash of the mark's angle — stable, and meaning-free.
+    const u = fract(Math.sin((angle + 1.37) * (i + 1) * 12.9898) * 43758.5453);
+    const a = angle + i * 2.39996 + (u - 0.5) * 0.9;
+    const length = r * (c.rayMin + (c.rayMax - c.rayMin) * fract(u * 7.31 + i * 0.618));
+    parts.push(`M ${x} ${y} L ${x + Math.cos(a) * length} ${y + Math.sin(a) * length}`);
+  }
+  return parts.join(' ');
+}
+
+const fract = (value: number) => value - Math.floor(value);
+
+/**
+ * V-3 — the S3-R2 node grammar's shares per tier (multiples of the mark radius, and weights) and its tone lifts above the
+ * place's own lightness (percent). Sizes, weights and lifts only: every hue and saturation is the place's chroma.
+ */
+const CHROMATIC = Object.freeze({
+  // R1 (device comparison with S3-R2, 2026-11-10): a smaller centre, a whiter hot point, a closer and more saturated
+  // ring, and a stronger, more concentrated bloom — the node reads as a light, not as a body inside a ring.
+  major: { wide: 8.5, wideAlpha: 0.32, bloom: 3.0, bloomAlpha: 0.85, hot: 1.25, hotAlpha: 0.9, rays: 9, rayMin: 1.25, rayMax: 3.6, ring: 1.12, ringWidth: 1.6, body: 0.45, white: 0.5, whiteAlpha: 0.95 },
+  minor: { wide: 4.2, wideAlpha: 0.16, bloom: 1.8, bloomAlpha: 0.55, hot: 0.8, hotAlpha: 0.6, rays: 4, rayMin: 1.2, rayMax: 2.2, ring: 1.15, ringWidth: 1.1, body: 0.42, white: 0.36, whiteAlpha: 0.8 },
+  lift: { halo: 0, wide: 6, bloom: 14, hot: 26, ray: 30, ring: 20 },
+  maxLight: 90,
+  glowSat: 0.95,
+  hotSat: 0.85,
+  rayWidth: 0.55,
+  rayAlpha: 0.6,
+  ringAlpha: 1,
+  centreSat: 35,
+  centreLight: 95,
+  centreAlpha: 0.97,
+  /** The relation's glow: its weight, and the share of its span over which it rises from and falls to nothing. */
+  tetherGlowAlpha: 0.7,
+  tetherGlowRise: 0.22,
+  tetherCoreLift: 30,
+  /** The relation's gentle bow, as a share of its span. Presentation only: its two ends are exactly the placement's. */
+  tetherBow: 0.1,
+  /** The least weight the relation's core is drawn with: it is the clearest line, never fainter than the world. */
+  tetherCoreFloor: 0.75,
+});
+
+/**
+ * One relation as a quadratic bow between its two ends: the control point sits off the span's midpoint by `share` of its
+ * length, on a side fixed by the two ends alone. A presentation curve only — it carries no direction, rank or meaning.
+ */
+function bowedPath(x1: number, y1: number, x2: number, y2: number, share: number): string {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const side = fract(Math.sin(x1 * 12.9898 + y1 * 78.233 + x2 * 37.719 + y2 * 4.581) * 43758.5453) < 0.5 ? -1 : 1;
+  const cx = (x1 + x2) / 2 - dy * share * side;
+  const cy = (y1 + y2) / 2 + dx * share * side;
+  return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
 }
 
 /**
@@ -455,6 +638,8 @@ export interface WorldTetherProps {
   readonly contrast: WorldContrast;
   /** The counter-scale, so the stroke stays the same number of points on the glass at every rung. */
   readonly strokeScale: DerivedValue<number>;
+  /** V-3: the world's chroma at the hosting place; omitted (or at increased contrast), the frozen grammar. */
+  readonly chroma?: ChromaFamily;
 }
 
 /**
@@ -463,7 +648,7 @@ export interface WorldTetherProps {
  * because the T-10 arrival travels along the straight line between the same two points, and the
  * renderer may not show a path the arrival does not take.
  */
-export function WorldTether({ fromX, fromY, toX, toY, S, response, contrast, strokeScale }: WorldTetherProps) {
+export function WorldTether({ fromX, fromY, toX, toY, S, response, contrast, strokeScale, chroma }: WorldTetherProps) {
   const rel = V.relation;
   const width = V.material.rel.w * S.relBead * S.relW * rel.widthScale;
   const alpha = V.material.rel.a * S.rel;
@@ -495,6 +680,29 @@ export function WorldTether({ fromX, fromY, toX, toY, S, response, contrast, str
     return width * TETHER.glow * k;
   });
   const palette = worldPalette(contrast);
+  if (chroma !== undefined && !increased) {
+    // V-3 (S3-R2 `edgeglow`): the same straight span, its glow and core in the hosting place's own colour. The glow rises
+    // from nothing at both ends, so relations converging on a place never whiten it; the core stays the clearest line.
+    const g = CHROMATIC.tetherGlowRise;
+    const glowColour = (a: number) => hsla(chroma.hue, chroma.saturation * CHROMATIC.glowSat, Math.min(CHROMATIC.maxLight, chroma.lightness + CHROMATIC.lift.wide), a);
+    const coreColour = (a: number) => hsla(chroma.hue, chroma.saturation * CHROMATIC.hotSat, Math.min(CHROMATIC.maxLight, chroma.lightness + CHROMATIC.tetherCoreLift), a);
+    const glowAlpha = Math.min(1, alpha * CHROMATIC.tetherGlowAlpha);
+    // R1: a line of light, as in S3-R2 — no dark ground and no wide body under it (together they read as a rail), and a
+    // gentle bow whose side is a fixed function of the two ends. The ends are exactly the placement's; nothing is moved.
+    const bowed = bowedPath(fromX, fromY, toX, toY, CHROMATIC.tetherBow);
+    const coreAlpha = (a: number) => Math.min(1, Math.max(CHROMATIC.tetherCoreFloor, a));
+    return (
+      <>
+        <Path path={bowed} style="stroke" strokeWidth={glowWidth} strokeCap="round" blendMode="screen">
+          <LinearGradient start={p1} end={p2} colors={[glowColour(0), glowColour(glowAlpha), glowColour(glowAlpha), glowColour(0)]} positions={[0, g, 1 - g, 1]} />
+          <BlurMask blur={TETHER.blur} style="normal" />
+        </Path>
+        <Path path={bowed} style="stroke" strokeWidth={coreWidth} strokeCap="round">
+          <LinearGradient start={p1} end={p2} colors={[coreColour(coreAlpha(alpha * eA)), coreColour(coreAlpha(alpha * mA)), coreColour(coreAlpha(alpha * eA))]} positions={[0, 0.5, 1]} />
+        </Path>
+      </>
+    );
+  }
   // F1, increased contrast: the analytical relation moves up one rung and draws at full opacity. The
   // atmosphere does not move, so the ratio between them widens — "high contrast is not high importance".
   const core = increased

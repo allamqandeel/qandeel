@@ -59,6 +59,9 @@ const PRODUCTION_FILES = [
   // VPORT-01: the final world's EXPRESSION — material, morphology, distance response and the two
   // generated modules it reads. Paint only: none of these files is an input to scene membership,
   // placement, hit testing, accessibility or any act (asserted by the VPORT-01 contract).
+  // MAP-CLOSE-01 V-3 (Product Owner, 2026-11-10, C1 / C2 / C3 authorized): the Personal Map's S3-R2 world, continuous
+  // across distance, separated from the frozen I-08B1 response it reads. Paint only, pinned by VPORT-01 and VPORT-02.
+  'visual/WorldContinuity.tsx',
   'visual/WorldMarks.tsx',
   'visual/WorldStrata.tsx',
   'visual/index.ts',

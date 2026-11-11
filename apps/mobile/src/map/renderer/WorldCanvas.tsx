@@ -37,6 +37,7 @@ import { envelopeCenter, type CanonicalCameraTransition, type ViewportEnvelope }
 import { useWorldResponse, type WorldResponse } from '../visual/useWorldResponse';
 import { WorldPlaceAtmosphere } from '../visual/WorldMarks';
 import { WorldAtmosphere, WorldGround, WorldTone, WorldVeil, type WorldStrataDrift } from '../visual/WorldStrata';
+import { ContinuityAtmosphere, NearCap, PlaceThreads, type ContinuityPlace } from '../visual/WorldContinuity';
 import type { WorldSchedule } from '../visual/world-visual.generated';
 import { scheduleAt } from '../visual/world-resolver';
 import { worldChroma } from '../visual/world-chroma';
@@ -117,6 +118,12 @@ export interface WorldCanvasProps<N extends WorldCanvasNode> {
   readonly renderObject: (node: N, frame: WorldPaintFrame) => ReactNode;
   /** One screen-space register entry, already inside its arrival. */
   readonly renderRegister?: (node: N, frame: WorldPaintFrame) => ReactNode;
+  /**
+   * MAP-CLOSE-01 V-3 (C1 / C2 / C3): the S3-R2 world, continuous across distance (`../visual/WorldContinuity`). Opted
+   * into by every world's owner, Personal, Shared and Public (Product Owner scope correction, 2026-11-10), and only with
+   * `worldAddressOf`; each world reaches only the distances its own camera does. Omitted, the canvas is exactly what it was.
+   */
+  readonly continuity?: boolean;
 }
 
 /**
@@ -170,6 +177,11 @@ function PresentationCameraRebase({
 /** The world-space chroma at an address, or none (the canonical hue). */
 const chromaAt = (address: CanonicalWorldAddress | undefined) => (address === undefined ? undefined : worldChroma(address));
 
+/** V-3: a place of the continuous world — only one with a canonical address, so its colour is the world's at it. */
+function continuityPlaceOf(node: WorldCanvasNode, address: CanonicalWorldAddress | undefined): ContinuityPlace[] {
+  return address === undefined ? [] : [{ key: node.key, x: node.x, y: node.y, address, chroma: worldChroma(address) }];
+}
+
 export function WorldCanvas<N extends WorldCanvasNode>({
   testID,
   envelope,
@@ -186,6 +198,7 @@ export function WorldCanvas<N extends WorldCanvasNode>({
   renderConnections,
   renderObject,
   renderRegister,
+  continuity = false,
 }: WorldCanvasProps<N>) {
   const center = envelopeCenter(envelope);
   // The canonical material of this distance, read once per render; the light around the world reads
@@ -209,6 +222,8 @@ export function WorldCanvas<N extends WorldCanvasNode>({
 
   const planeNodes = presented.filter((node) => node.region === 'WORLD_PLANE');
   const registerNodes = presented.filter((node) => node.region === 'UNGEOGRAPHIC_REGISTER');
+  // MAP-CLOSE-01 V-3: the places whose threads the continuous world draws — each with its address and the chroma there.
+  const continuityPlaces = continuity ? planeNodes.filter((node) => isPlace(node)).flatMap((node) => continuityPlaceOf(node, worldAddressOf?.(node))) : [];
 
   return (
     <Canvas testID={testID} style={{ width: envelope.width, height: envelope.height }}>
@@ -220,24 +235,40 @@ export function WorldCanvas<N extends WorldCanvasNode>({
           reaches. A cut-and-resolve is a statement about the camera's path, and the register has
           no path (R1-06). The atmosphere strata are world-anchored, so they sit inside the same cut. */}
       <Group opacity={motion.planeOpacity}>
-        {/* OPEN-17: the two tunable channels paint, and only paint. */}
-        <WorldAtmosphere
-          motion={motion}
-          envelope={envelope}
-          response={response}
-          drift={world.drift}
-          ambient={style.ambient}
-          emptySpace={style.emptySpace}
-        />
+        {/* OPEN-17: the two tunable channels paint, and only paint. V-3: a continuous world keeps its clouds (C2) over
+            the S3-R2 deep space (C1). */}
+        {continuity ? (
+          <ContinuityAtmosphere motion={motion} envelope={envelope} response={response} drift={world.drift} ambient={style.ambient} emptySpace={style.emptySpace} />
+        ) : (
+          <WorldAtmosphere
+            motion={motion}
+            envelope={envelope}
+            response={response}
+            drift={world.drift}
+            ambient={style.ambient}
+            emptySpace={style.emptySpace}
+          />
+        )}
         <Group transform={motion.planeTransform} origin={vec(center.x, center.y)}>
           {/* The world's colour around each place: one per presented place, identical for every place. It
               follows the surface's presentation culling like everything else on the plane — the renderer
-              makes no culling decision of its own. */}
+              makes no culling decision of its own. V-3 (C3): past NEAR a place's mass keeps its NEAR size. */}
           {planeNodes
             .filter((node) => isPlace(node))
-            .map((node) => (
-              <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} seed={node.key} chroma={chromaAt(worldAddressOf?.(node))} />
-            ))}
+            .map((node) => {
+              const atmosphere = (
+                <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} seed={node.key} chroma={chromaAt(worldAddressOf?.(node))} />
+              );
+              return continuity ? (
+                <NearCap key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} motion={motion}>
+                  {atmosphere}
+                </NearCap>
+              ) : (
+                atmosphere
+              );
+            })}
+          {/* V-3 (C1): the fine threads of the places, in each place's colour, at four world sizes. */}
+          {continuity ? <PlaceThreads places={continuityPlaces} radius={world.placeAtmosphere} motion={motion} /> : null}
           {renderConnections?.(planeNodes, frame)}
           {planeNodes.map((node) => (
             // Two nested corrections, and the order matters. The arrival is OUTSIDE, so its

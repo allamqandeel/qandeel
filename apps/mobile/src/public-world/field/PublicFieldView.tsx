@@ -140,6 +140,9 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
               isPlace={() => true}
               // LA-VIS-01: the place's own served address, read only to colour the world around it (presentation).
               worldAddressOf={(node) => node.entry.address}
+              // MAP-CLOSE-01 V-3 (Product Owner scope correction, 2026-11-10): the Public world is the same S3-R2 world as the
+              // Personal one, continuous from FAR to NEAR (its camera's own distances); its data, meanings and acts stay its own.
+              continuity
               // A Public Experience is hosted by nothing: nothing travels from anywhere.
               hostOf={() => undefined}
               // S5-03C: the only thing that joins two places is an explicit relation the server served (NEAR, selected).

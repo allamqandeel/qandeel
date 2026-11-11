@@ -39,6 +39,11 @@
  * This file remains the Personal owner of the Map's paint: it alone knows that a Thread's Home is a place, that
  * a contextual Reading is hosted by that Home and tethered to it, and how each family is drawn. The golden
  * equivalence suite (`__tests__/golden-equivalence.test.tsx`) proves the Personal Map paints exactly what it did.
+ *
+ * MAP-CLOSE-01 V-3 (Product Owner, 2026-11-10: S3-R2 is the FINAL APPROVED VISUAL ART DIRECTION): the Personal owner hands
+ * each mark and each tether the world's chroma at its PLACE, so they are drawn in the approved S3-R2 node grammar. A Home's
+ * place is its own canonical address; a contextual appearance's place is the Home that hosts it — the very hosting
+ * relation the tether already draws. Where it is, never what it is: no group, no topic, no rank is read or implied.
  */
 import {
   DEFAULT_WORLD_PRESENTATION,
@@ -53,6 +58,7 @@ import type { ViewportEnvelope } from '../camera';
 import type { PlacedNode, PlacedScene } from './map-geometry';
 import { DEFAULT_RENDER_STYLE, type RenderStyle } from './render-style';
 import { WorldCanvas, type CanonicalCameraCommit } from './WorldCanvas';
+import { worldChroma } from '../visual/world-chroma';
 
 export type { CanonicalCameraCommit } from './WorldCanvas';
 
@@ -84,6 +90,12 @@ export interface MapCanvasProps {
    * an input to placement, hit testing, membership or accessibility.
    */
   readonly world?: WorldPresentation;
+}
+
+/** V-3: the world's chroma at a node's place — its own Home's address, or its hosting Home's — or `undefined`. */
+function placeChromaOf(node: PlacedNode, placement: PlacedScene) {
+  const home = node.locus?.kind === 'THREAD_HOME' ? node : hostOf(node, placement);
+  return home?.locus?.kind === 'THREAD_HOME' ? worldChroma(home.locus.address) : undefined;
 }
 
 /** The Home that hosts a contextual appearance, in THIS placement, or `undefined`. */
@@ -121,6 +133,8 @@ export function MapCanvas({
       isPlace={(node) => node.locus?.kind === 'THREAD_HOME'}
       // LA-VIS-01: a Home's own canonical address, read only to colour the world around it (presentation).
       worldAddressOf={(node) => (node.locus?.kind === 'THREAD_HOME' ? node.locus.address : undefined)}
+      // MAP-CLOSE-01 V-3 (C1 / C2 / C3): the Personal world is the S3-R2 world, continuous from FAR to ANALYTICAL.
+      continuity
       // A contextual appearance arrives out from the Home that hosts it — the very tether drawn beside it.
       hostOf={(node) => hostOf(node, placed)}
       renderConnections={(planeNodes, { S, response }) =>
@@ -142,6 +156,7 @@ export function MapCanvas({
                 response={response}
                 contrast={world.contrast}
                 strokeScale={motion.objectScale}
+                chroma={placeChromaOf(host, placed)}
               />
             );
           })
@@ -157,6 +172,7 @@ export function MapCanvas({
           response={response}
           contrast={world.contrast}
           selected={isSelectedNode(world.selection, node)}
+          chroma={placeChromaOf(node, placed)}
         />
       )}
       renderRegister={(node, { S }) => (

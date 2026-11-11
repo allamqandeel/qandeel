@@ -27,7 +27,8 @@ const VISUAL_DIR = 'apps/mobile/src/map/visual';
 const GENERATED = ['world-visual.generated.ts', 'world-field.generated.ts'];
 // LA-VIS-01 (controlled re-anchor): the declared presentation palette joins the hand-written owner, under every rule below.
 // LA-VIS-01 (final closure re-anchor): the mass material `world-mass.ts` joins it too, under every rule below.
-const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts', 'world-chroma.ts', 'world-mass.ts'];
+// MAP-CLOSE-01 V-3 (C1 / C2 / C3, Product Owner 2026-11-10): the Personal continuity `WorldContinuity.tsx` joins it, under every rule below.
+const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts', 'world-chroma.ts', 'world-mass.ts', 'WorldContinuity.tsx'];
 
 const visual = Object.fromEntries([...GENERATED, ...HAND_WRITTEN].map((file) => [file, read(`${VISUAL_DIR}/${file}`)]));
 const visualCode = Object.fromEntries(HAND_WRITTEN.map((file) => [file, stripComments(visual[file])]));
@@ -231,8 +232,17 @@ test('LA-VIS-01: the one declared chroma palette is exactly the six authorized f
   }
   // It is worn only by the world around a place: the generic canvas reads the owner's address for that, and only that.
   assert.match(worldCanvas, /chroma=\{chromaAt\(worldAddressOf\?\.\(node\)\)\}/u);
-  assert.equal((worldCanvas.match(/worldAddressOf/gu) ?? []).length, 3, 'declared, destructured, read once');
+  // MAP-CLOSE-01 V-3 (C1, controlled re-anchor): read once more, for the Personal continuity's places only (the threads
+  // are worn in the colour of the world at a place's ADDRESS, and anchored to the world there). Still nothing else.
+  assert.equal((worldCanvas.match(/worldAddressOf/gu) ?? []).length, 4, 'declared, destructured, read for the colour and for the continuity places');
+  assert.match(worldCanvas, /const continuityPlaces = continuity \? planeNodes\.filter\(\(node\) => isPlace\(node\)\)\.flatMap\(\(node\) => continuityPlaceOf\(node, worldAddressOf\?\.\(node\)\)\) : \[\];/u);
   assert.match(personalCanvasOwner, /worldAddressOf=\{\(node\) => \(node\.locus\?\.kind === 'THREAD_HOME' \? node\.locus\.address : undefined\)\}/u);
+  // MAP-CLOSE-01 V-3 (Product Owner, 2026-11-10: S3-R2 final, V-3 authorized): the Personal owner also hands each mark and
+  // tether the chroma at its PLACE — a Home's own canonical address, or the address of the Home that hosts it — through ONE
+  // helper, and nothing else: no group, topic, rank, proximity or membership is read to colour anything.
+  assert.match(personalCanvasOwner, /function placeChromaOf\(node: PlacedNode, placement: PlacedScene\) \{\s+const home = node\.locus\?\.kind === 'THREAD_HOME' \? node : hostOf\(node, placement\);\s+return home\?\.locus\?\.kind === 'THREAD_HOME' \? worldChroma\(home\.locus\.address\) : undefined;\s+\}/u);
+  assert.equal((personalCanvasOwner.match(/worldChroma\(/gu) ?? []).length, 1, 'the chroma is read in placeChromaOf only');
+  assert.deepEqual([...personalCanvasOwner.matchAll(/chroma=\{([^}]*)\}/gu)].map((m) => m[1]), ['placeChromaOf(host, placed)', 'placeChromaOf(node, placed)'], 'a tether and an object, nothing else');
   // Nothing that decides membership, placement, hit testing or accessibility reads it.
   for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
     assert.equal(read(file).includes('world-chroma'), false, `${file} must not read the chroma field`);
@@ -255,5 +265,50 @@ test('LA-VIS-01: a place mass is pure paint — one picture per meaning-free var
   assert.deepEqual(readers, ['WorldMarks.tsx']);
   for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
     assert.equal(read(file).includes('world-mass'), false, `${file} must not read the mass material`);
+  }
+});
+
+test('MAP-CLOSE-01 V-3: the S3-R2 continuity (C1 / C2 / C3) is one paint for every world, separated from the frozen world', () => {
+  // Product Owner, 2026-11-10 ("V-3: Final Visual Integration — PO APPROVED"): C1 (the S3-R2 material), C2 (continuity
+  // across FAR / MID / NEAR) and C3 (ANALYTICAL without fog) are authorized inside V-3 without editing the frozen I-08B1
+  // sources. The override lives in ONE module, which reads the generated schedule and never writes it; a world's owner
+  // opts in (every world, since the scope correction below); and the generic canvas is exactly what it was without it.
+  const continuity = visualCode['WorldContinuity.tsx'];
+  const imports = [...continuity.matchAll(/^import [^;]*? from '([^']+)';/gmu)].map((m) => m[1]);
+  assert.deepEqual(imports, ['react', '@shopify/react-native-skia', '../../motion', '../camera', '../world', './world-chroma', './world-resolver', './world-visual.generated', './WorldStrata', './useWorldResponse']);
+  assert.match(continuity, /import \{ DEFAULT_MAP_SCALE \} from '\.\.\/camera';/u, 'of the camera it reads only the default distance, its yardstick');
+  for (const forbidden of ["'../../state", "'../projection", "'../inspection", "'../accessibility", 'Date', 'Math.random', 'onPress', 'accessib', 'hitSlop', 'pointerEvents']) {
+    assert.equal(continuity.includes(forbidden), false, `the continuity must not read ${forbidden}`);
+  }
+  // C3 is a paint scale about the place's own point, never an origin (an anchor) and never a move.
+  assert.match(continuity, /return \[\{ translateX: x \}, \{ translateY: y \}, \{ scale: cap \}, \{ translateX: -x \}, \{ translateY: -y \}\];/u);
+  assert.equal(/origin=/u.test(continuity), false, 'the continuity carries no anchor of its own');
+  // The frozen sources are read, not edited: the generated modules are still the generator's (the first test), and the
+  // I-08B1 response hook is not part of this module.
+  assert.equal(continuity.includes('useWorldResponse('), false);
+  // MAP-CLOSE-01 V-3 — CONTROLLED AMENDMENT (Product Owner scope correction, 2026-11-10: the Personal, Shared and Public
+  // worlds share ONE graphic language and ONE renderer, and differ only in their data, meanings and acts). Previously:
+  // only the Personal owner opted in, and the Shared and Public fields were asserted NOT to. Now every world's owner opts
+  // in, through the same generic canvas and beside the same served address it already reads for the place colour, and
+  // nothing else of the Personal world travels: no chroma on a mark (the neutral Public circle, S5-03B D2), no
+  // morphology, no tether, no membership. The behaviour is proven, not only declared: each field's own test paints the
+  // same FAR / MID / NEAR with and without the continuity and finds every target, label, panel and mark identical, and
+  // no line drawn (shared-field.test.tsx, public-field.test.tsx).
+  assert.match(personalCanvasOwner, /\n\s*continuity\n/u, 'the Personal owner opts in');
+  for (const [file, proof] of [
+    ['apps/mobile/src/public-world/field/PublicFieldView.tsx', 'apps/mobile/src/public-world/field/__tests__/public-field.test.tsx'],
+    ['apps/mobile/src/shared-world/field/SharedFieldView.tsx', 'apps/mobile/src/shared-world/field/__tests__/shared-field.test.tsx'],
+  ]) {
+    const owner = stripComments(read(file));
+    assert.match(owner, /worldAddressOf=\{\(node\) => node\.entry\.address\}\s*continuity\n/u, `${file} opts in, beside its served address`);
+    assert.equal(/chroma=|placeChromaOf|WorldObject|WorldTether|morphologyPath/u.test(owner), false, `${file} takes nothing else of the Personal world`);
+    const test = read(proof);
+    assert.match(test, /the continuity is paint only: every target, label, panel/u, `${proof} proves the continuity is paint only`);
+    assert.match(test, /expect\(state\.outside\)\.toBe\(plain\.outside\);/u);
+  }
+  assert.match(worldCanvas, /continuity = false,/u, 'off by default');
+  // Nothing that decides membership, placement, hit testing or accessibility reads it.
+  for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
+    assert.equal(read(file).includes('WorldContinuity'), false, `${file} must not read the continuity`);
   }
 });

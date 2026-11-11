@@ -1,0 +1,93 @@
+--- S3-R1/proto/web.js	2026-11-10 08:35:13.685194600 +0200
++++ S3-R2/proto/web.js	2026-11-10 09:12:11.812613300 +0200
+@@ -1,3 +1,4 @@
++// MAP-CLOSE-01 STEP 3 S3-R2 — on the APPROVED S3-R1 (new flags core/fine/fill; without them = S3-R1 exactly). REVIEW ONLY.
+ // MAP-CLOSE-01 STEP 3 S3-R1 — gradual art refinement ON TOP OF AD-4 (flags in opts.s3; none set = AD-4 exactly). REVIEW ONLY.
+ // MAP-VISUAL-REFRESH-01 AD-3 — VISUAL GROUPING on top of AD-2 (PO AD-2 review): same style, same data, same coordinates.
+ // A group-cohesion field is built from the DECLARED SYNTHETIC membership of each element (data mode only): the group's
+@@ -413,6 +414,20 @@
+         if (rf() > A.k * (1 - 0.85 * m) * 1.3) continue; if (inQuiet(x, y) || nearNode(x, y, 16)) continue;
+         wu = h2(i, 19, 507); walk(x, y, [rf() - 0.5, rf() - 0.5], 40 + Math.floor(rf() * 120), (0.1 + 0.22 * rf() ** 2) * (0.5 + 0.8 * A.k), 1, false); farN += 1; }
+       T.farWalkers = farN; }
++    const thread = (rq, x, y, dir, steps, k, colAt, gap) => { let vx = dir[0], vy = dir[1]; { const L0 = Math.hypot(vx, vy) || 1; vx /= L0; vy /= L0; } let turn = 0, pts = 0;
++      for (let st = 0; st < steps; st += 1) { const pvx = vx, pvy = vy; let [ax, ay] = webAxis(x, y); if (ax * vx + ay * vy < 0) { ax = -ax; ay = -ay; }
++        vx = vx * 0.9 + ax * 0.1 + (rq() - 0.5) * 0.08; vy = vy * 0.9 + ay * 0.1 + (rq() - 0.5) * 0.08; const L = Math.hypot(vx, vy) || 1; vx /= L; vy /= L;
++        turn += Math.atan2(pvx * vy - pvy * vx, pvx * vx + pvy * vy); if (Math.abs(turn) > 3.2) break;
++        x += vx * 0.5; y += vy * 0.5; if (x < 0 || y < 0 || x > W || y > H || inQuiet(x, y) || nearNode(x, y, gap)) break;
++        const fade = Math.sin(Math.PI * (st + 1) / (steps + 1)), c = colAt(x, y); dep(x, y, c[0], k * fade * c[1]); pts += 1; }
++      return pts; };
++    // S3-R2 FILL (1/2): soft, faint wisps in the visually quiet deep space (ambient colour only, before the glow so they stay
++    // soft; never a star, a knot or a bright point)
++    if (S3.has('fill')) { const rz = rng(opts.seed + 909); let wN = 0, wP = 0;
++      for (let i = 0; i < 60000 && wN < 750; i += 1) { const x = rz() * W, y = rz() * H, m = Math.min(1, membership(regions, x, y)), A = ambient(x, y);
++        if (rz() > (1 - m) ** 2 * (0.2 + 0.8 * A.k)) continue; if (inQuiet(x, y) || nearNode(x, y, 30)) continue;
++        wP += thread(rz, x, y, [rz() - 0.5, rz() - 0.5], 90 + Math.floor(rz() * 200), (0.06 + 0.1 * rz() ** 2), (px, py) => { const a = ambient(px, py), mm = Math.min(1, membership(regions, px, py)); return [mix(a.c, [0.5, 0.6, 1], 0.35), (0.5 + 0.7 * a.k) * (1 - 0.8 * mm) * quietK(px, py)]; }, 30); wN += 1; }
++      T.fillWisps = wN; T.fillWispPts = wP; }
+     T.mainBranches = mains;
+     T.walkers = performance.now() - t; T.walkerCount = walkers;
+     // AD-4 BELONGING VEINS (data mode): along each INTERNAL relation a few fine fibres of the group's own colour braid around
+@@ -445,9 +460,9 @@
+     for (let i = 0, made = 0; i < 20000 && made < 520; i += 1) { const x = rs() * W, y = rs() * H, m = Math.min(1, membership(regions, x, y)); if (rs() > 0.06 + 0.94 * m * web(x, y) * 3) continue; if (inQuiet(x, y) || nearNode(x, y, 16)) continue; const lit = litAt(x, y), c = mix(mix(colourAt(regions, x, y, h2(i, 13, 503)), WHITE, 0.45 + 0.3 * rs()), WARM, 0.3 * Math.min(1, lit)); splat(x, y, c, (0.3 + 1.1 * rs() ** 2) * (0.45 + 0.8 * lit) * sepAt(x, y), 0.8 + rs() * 1.3); if (rs() < 0.07) glints.push({ x, y, c, L: 5 + rs() * 10 }); made += 1; }
+     // AD-2: the world lights' own small cores (DECORATION: soft, no ring, no disc edge) — strong ones also get a faint glint
+     for (const l of lights) if (l.world && l.I > 0.12) { splat(l.x, l.y, mix(l.c, WHITE, 0.55), 1.2 + 3.2 * l.I, 1.1 + 1.6 * Math.min(1, l.r / 40)); if (l.I > 0.6) glints.push({ x: l.x, y: l.y, c: mix(l.c, WHITE, 0.5), L: 8 + 10 * l.I }); }
+-    for (const n of graph.nodes) { const L = lights.find((q) => q.x === n.x && q.y === n.y); if (n.tier === 'hub') splat(n.x, n.y, mix(L.c, WHITE, 0.6), 1.6 * L.I, 4.5); else splat(n.x, n.y, mix(L.c, WHITE, 0.5), 0.5 * L.I, 2.2); }
++    for (const n of graph.nodes) { const L = lights.find((q) => q.x === n.x && q.y === n.y); const CR = S3.has('core'), sat = nodeColOf(n); if (n.tier === 'hub') splat(n.x, n.y, CR ? mix(sat, WHITE, 0.25) : mix(L.c, WHITE, 0.6), (CR ? 0.8 : 1.6) * L.I, 4.5); else splat(n.x, n.y, CR ? mix(sat, WHITE, 0.3) : mix(L.c, WHITE, 0.5), (CR ? 0.38 : 0.5) * L.I, 2.2); }
+     // S3-R1 bloom v3: the node's light is put into the RASTER before the filmic tone map (a vector halo on top clipped to a white disc)
+-    if (S3.has('bloom')) for (const n of graph.nodes) { const L = lights.find((q) => !q.pool && q.x === n.x && q.y === n.y), hub = n.tier === 'hub'; splat(n.x, n.y, L.c, hub ? 0.04 * L.I : 0.035 * L.I, hub ? 30 : 11); if (hub) splat(n.x, n.y, mix(L.c, WARM, 0.3), 0.022 * L.I, 72); }
++    if (S3.has('bloom')) for (const n of graph.nodes) { const L = lights.find((q) => !q.pool && q.x === n.x && q.y === n.y), hub = n.tier === 'hub'; if (S3.has('core')) { const sc = nodeColOf(n); splat(n.x, n.y, sc, hub ? 0.026 * L.I : 0.024 * L.I, hub ? 22 : 9); splat(n.x, n.y, sc, hub ? 0.046 * L.I : 0.018 * L.I, hub ? 46 : 18); if (hub) splat(n.x, n.y, mix(sc, WARM, 0.15), 0.018 * L.I, 86); } else { splat(n.x, n.y, L.c, hub ? 0.04 * L.I : 0.035 * L.I, hub ? 30 : 11); if (hub) splat(n.x, n.y, mix(L.c, WARM, 0.3), 0.022 * L.I, 72); } }
+     // AD-2: relations put their light into the SAME buffer (so the derived glow binds them into the world); the crisp
+     // vector core drawn later keeps them readable and distinct from decoration
+     if (opts.data) for (const e of graph.edges) {
+@@ -469,6 +484,15 @@
+       if (rd() > 0.18 + 0.5 * cl + 0.5 * m) continue; if (rd() > quietK(x, y)) continue;
+       dep(x, y, mix([0.5, 0.58, 1], colourAt(regions, x, y, h2(i, 17, 504)), 0.3 + 0.6 * m), (0.05 + 0.15 * rd() ** 2) * (0.7 + 0.6 * litAt(x, y)) * (1 + 0.5 * m) * (0.45 + 0.55 * sepAt(x, y))); dust += 1;
+     }
++    if (S3.has('fine')) { const rq = rng(opts.seed + 808); let fineN = 0, finePts = 0;
++      for (let i = 0; i < 120000 && fineN < 2600; i += 1) {
++        const x = rq() * W, y = rq() * H, m = Math.min(1, membership(regions, x, y)), f = web(x, y);
++        let tr = 0; if (regions.GF) { regions.GF.at(x, y); let g1 = 0, g2 = 0; for (let k = 0; k < regions.length; k += 1) { const gv = GV[k]; if (gv > g1) { g2 = g1; g1 = gv; } else if (gv > g2) g2 = gv; } tr = sstep(0.05, 0.3, g2); }
++        if (rq() > (0.1 + 0.9 * m) * (0.4 + 0.6 * Math.min(1, f * 4)) * (0.75 + 0.5 * tr)) continue;
++        const uu = h2(i, 23, 509);
++        finePts += thread(rq, x, y, [rq() - 0.5, rq() - 0.5], 70 + Math.floor(rq() * 200), (0.18 + 0.28 * rq() ** 2) * (0.45 + 0.55 * m), (px, py) => { const lit = Math.min(1, litAt(px, py)); return [mix(mix(colourAt(regions, px, py, uu), WHITE, 0.12), warmAt(px, py), 0.2 * lit), (0.5 + 0.7 * lit) * sepAt(px, py) ** 0.4 * quietK(px, py)]; }, 13);
++        fineN += 1; }
++      T.fineWalkers = fineN; T.finePts = finePts; }
+     T.dust = dust;
+     T.glow = performance.now() - t;
+ 
+@@ -482,7 +506,8 @@
+           const cx = x / DPR, cy = y / DPR, m = Math.min(1, membership(regions, cx, cy)), pocket = fbm(cx / 70, cy / 70, 41, 3), c = colourAt(regions, cx, cy);
+           const grain = fbm(cx / 9, cy / 9, 47, 2), k = 0.045 * m ** 2.1 * (0.35 + 1.1 * Math.max(0, pocket - 0.4)) * (0.6 + 0.8 * grain) * sepAt(cx, cy);
+           body[0] = 0.006 + c[0] * k; body[1] = 0.008 + c[1] * k; body[2] = 0.02 + c[2] * k;
+-          if (S3.has('amb')) { const A = ambient(cx, cy), q = quietK(cx, cy), ka = (0.11 * A.k + 0.1 * A.ridge) * (1 - 0.6 * m) * (0.55 + 0.45 * q); body[0] += 0.004 + A.c[0] * ka; body[1] += 0.005 + A.c[1] * ka; body[2] += 0.012 + A.c[2] * ka; }
++          if (S3.has('amb')) { const A = ambient(cx, cy), q = quietK(cx, cy), ka = (0.11 * A.k + 0.1 * A.ridge) * (1 - 0.6 * m) * (0.55 + 0.45 * q); body[0] += 0.004 + A.c[0] * ka; body[1] += 0.005 + A.c[1] * ka; body[2] += 0.012 + A.c[2] * ka;
++            if (S3.has('fill')) { const v1 = fbm(cx / 70 + 13, cy / 70 - 7, 95, 4), v2 = fbm(cx / 240 - 5, cy / 240 + 3, 96, 2), quietness = Math.max(0, 1 - 1.3 * m) * q, kf = 0.11 * quietness * (0.35 + 0.65 * A.k) * sstep(0.4, 0.75, v1), tint = mix([0.06, 0.15, 0.26], [0.2, 0.07, 0.24], sstep(0.35, 0.65, v2)); body[0] += tint[0] * kf; body[1] += tint[1] * kf; body[2] += tint[2] * kf; } }
+         }
+         for (let ch = 0; ch < 3; ch += 1) {
+           // + the bounded warm halo of each light source (local, not a global glow layer)
+@@ -513,7 +538,7 @@
+         const c = nodeCol(n), hub = n.tier === 'hub', halo = (rad, a, cc) => { const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, rad); g.addColorStop(0, css(cc, a)); g.addColorStop(0.25, css(cc, a * 0.4)); g.addColorStop(1, css(cc, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, rad, 0, Math.PI * 2); ctx.fill(); };
+         ctx.globalCompositeOperation = 'lighter';
+         // AD-2: the wide cool halo is gone (the warm, bounded light halo comes from the raster); only a tight inner bloom remains
+-                halo(hub ? 15 : 7, 1, mix(c, WHITE, 0.6)); if (!hub) halo(12, 0.35, c);
++                if (S3.has('core')) { halo(hub ? 15 : 7, hub ? 0.6 : 0.75, mix(c, WHITE, 0.3)); if (!hub) halo(12, 0.35, c); } else { halo(hub ? 15 : 7, 1, mix(c, WHITE, 0.6)); if (!hub) halo(12, 0.35, c); }
+         const rr = rng(Math.round(n.x * 13 + n.y)); for (let i = 0; i < (hub ? 9 : 4); i += 1) { const a = rr() * Math.PI * 2, L = hub ? 10 + rr() * 20 : 4 + rr() * 6, g = ctx.createLinearGradient(n.x, n.y, n.x + Math.cos(a) * L, n.y + Math.sin(a) * L); g.addColorStop(0, css(mix(c, WHITE, 0.5), 0.6)); g.addColorStop(1, css(c, 0)); ctx.strokeStyle = g; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.x + Math.cos(a) * L, n.y + Math.sin(a) * L); ctx.stroke(); }
+         ctx.globalCompositeOperation = 'source-over';
+         if (n.R2) { // AD-4: a declared DUAL belonging drawn as such — the half of the ring facing each group's hub takes that group's colour
+@@ -537,7 +562,7 @@
+         gr.addColorStop(0.12, css(mix(lf.col, WHITE, 0.35), 0.97)); gr.addColorStop(0.88, css(mix(rt.col, WHITE, 0.35), 0.97)); fsty = gr; }
+       ctx.fillStyle = fsty; for (const [tx, ty] of rows) ctx.fillText(tx, l.x, ty); ctx.shadowBlur = 0;
+     }
+-    if (opts.watermark !== false) { ctx.font = `400 10px ${FONT}`; ctx.direction = 'rtl'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillText('SYNTHETIC · بيانات وأسماء وألوان تجريبية معلنة' + (S3.size ? ' · S3-R1 (' + [...S3].join('+') + ')' : ''), 10, H - 9); }
++    if (opts.watermark !== false) { ctx.font = `400 10px ${FONT}`; ctx.direction = 'rtl'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillText('SYNTHETIC · بيانات وأسماء وألوان تجريبية معلنة' + (S3.size ? (S3.has('core') || S3.has('fine') || S3.has('fill') ? ' · S3-R2 (' : ' · S3-R1 (') + [...S3].join('+') + ')' : ''), 10, H - 9); }
+     return { titleShift, timings: Object.fromEntries(Object.entries(T).map(([a, b]) => [a, Math.round(b)])), nodes: graph.nodes.length, edges: graph.edges.length, labels: lay.labels.length, labelsMoved: lay.report.moved, labelsCollided: lay.report.collided, labelAudit: lay.report.audit, twoLine: lay.labels.filter((l) => l.lines).map((l) => l.text), nodeGroups: graph.nodes.map((n) => [n.label || n.R.title, n.x, n.y, n.R.i, n.R2 ? n.R2.i : -1, n.tier]), groupCols: regions.filter((R) => !R.latent).map((R) => [R.i, R.title, R.col]), edgeClass: graph.edges.map((e) => isInternal(e) ? 'in' : 'cross'), regions: regions.length, lights: { world: lights.filter((l) => l.world).length, node: lights.filter((l) => !l.world && !l.lit).length, innerLit: lights.filter((l) => l.lit).length, worldR: lights.filter((l) => l.world).map((l) => Math.round(l.r)), worldI: lights.filter((l) => l.world).map((l) => +l.I.toFixed(2)) }, nodeXY: graph.nodes.map((n) => [n.label || n.R.title, Math.round(n.x * 10) / 10, Math.round(n.y * 10) / 10]) };
+   }
+   G.WEB = { render };
+--- S3-R1/proto/hero.html	2026-11-10 08:27:19.201725100 +0200
++++ S3-R2/proto/hero.html	2026-11-10 09:12:11.812613300 +0200
+@@ -1,5 +1,5 @@
+ <!doctype html>
+-<html lang="ar"><head><meta charset="utf-8"><title>S3-R1 hero (on AD-4)</title>
++<html lang="ar"><head><meta charset="utf-8"><title>S3-R2 hero (on S3-R1)</title>
+ <style>
+ @font-face { font-family: Estedad; src: url(fonts/Estedad-Regular.ttf); font-weight: 400; }
+ @font-face { font-family: Estedad; src: url(fonts/Estedad-Medium.ttf); font-weight: 500; }
