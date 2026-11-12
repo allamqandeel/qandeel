@@ -21,6 +21,8 @@
 
 **Merge rule:** production changes are not merged before the PO's approval.
 
+**MAP-PERF-01 (PO "FINAL PRIORITY RESET", 2026-11-12):** `CANDIDATE F PORTED TO PRODUCTION ON DRAFT PR #393 — CI GREEN — OPEN: FAST, PAN ACCEPTABLE IN PERSONAL ONLY — ZOOM NOT MET — NATIVE MEMORY GROWTH OPEN — AWAITS THE PO'S MANUAL TEST AND DECISIONS — NOT MERGED` (§9, "MAP-PERF-01").
+
 > **The production map now draws its nodes and relations in the S3-R2 grammar, from real data only. Its world is S3-R2's world at every distance: FAR, MID, NEAR and ANALYTICAL are one world approached. The engine, the camera, the placement, the interactions and every meaning underneath it did not move.**
 
 ---
@@ -201,6 +203,10 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Three worlds (§5B):** VPORT-02 world pins | `WorldCanvas` `69b6a183` → `43c66051` on Part A, and `54cefdf0` → `55e441d7` once merged into Part B; `WorldContinuity` `4c49a094` → `632de2b2` (comments only); recorded in the test with the previous pins | PO scope correction; both goldens unchanged |
 | **Pan/Zoom performance slice (2026-11-11):** VPORT-02 world pin | `WorldStrata` `6f6b8b94` → `77ea34d7`: `FadedLayer` bounds its layer with an outer clip (the content's bounds plus 32). Recorded in the test with the previous pin | the PO's performance slice; both goldens re-recorded, and removing the added clip wrappers (607 in the map golden, 568 in the screen golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest; the rest are within 2 / 255 |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
+| **MAP-PERF-01 (candidate F, 2026-11-12):** VPORT-02 world pins | `WorldCanvas` `55e441d7` → `ea8cda2e`, `WorldMarks` `d28077e5` → `6db704a8`, `WorldStrata` `77ea34d7` → `1d916a00`, `world-mass` `0bfb6e92` → `4c391bbc`; recorded in the test as "MAP-PERF-01 CONTROLLED RE-ANCHOR" with the previous pins | PO "FINAL PRIORITY RESET" (2026-11-12): port candidate F with every layer kept; both goldens re-recorded, structural diff PAINT-ONLY |
+| **MAP-PERF-01:** `world-visual.test.tsx`, `public-field.test.tsx` | the tone is counted per draw (one `RuntimeShader` per world plane and Home, five ground `Shader`s with the one tone source, uniforms `{ a, alpha: 1 }`), each with its previous form | candidate F tones each draw instead of the composite |
+| **MAP-PERF-01:** S5-03B, T-10, VPORT-01, Map runtime census | the plane's objects are wrapped by `WorldTone` (`const objects = <WorldTone>{children}</WorldTone>`) and the outer tone around the world is gone; the mass imports `./prepared-raster`; `visual/prepared-raster.ts` joins the authorized surface | the same orderings and rules, asserted on the new shape |
+| **MAP-PERF-01:** M04-15 firewall, T-12 §28.19 | the Map adds no dependency: it declares a store port (`installPreparedRasterStore`); the file store lives in `src/map-prepared-store` (expo-file-system, versioned folder `map-prepared-v1`, at most 200 files / 48 MB, oldest out first) and the Product root only installs it | no rule relaxed: the Map stays dependency-free and the integration owner persists nothing |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
 
@@ -332,7 +338,40 @@ The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exa
 
 **PO review (2026-11-11): candidates C, D and E, measured, none adopted.** See Part B §11, "PO review corrections". The composite layer is rasterized below screen resolution, which is why B is soft and fast. A fitted pass (C) restores luminance and colour but not the threads. The canonical curve as a per-draw colour filter (D) keeps A's look within 1.3 levels and reaches about 15 fps (Personal, Shared). Pan remains NOT MET.
 
+### MAP-PERF-01: candidate F in production (PO "FINAL PRIORITY RESET", 2026-11-12)
+**Authority:** the PO's "FINAL PRIORITY RESET — Pragmatic Performance & Fast Closure" and its addendum "Zoom Smoothness Is Mandatory" (2026-11-12). About 20–25 fps is practical; 30 fps is not required. The PO's manual test on the HONOR decides acceptance. First install (8–11 s) is a separate launch blocker, handled later. MAP-PERF closes only on three experiences: fast open, acceptable pan, acceptable zoom.
+
+**What changed (Draft PR #393, `map/map-perf-01-production`, `121b0ec1` + `98d9408a`, base Part B).**
+- The tone is applied per draw: the ground in one toned rect, the objects inside `WorldTone`, the wash toned by itself. The outer tone around the world is gone.
+- Every mark, tether and wash is bounded by a clip of its own reach (`drawClip`).
+- A prepared tile is drawn back as its image through one rect at its weight, with no layer. A single-copy mass is drawn as its image.
+- The grain is an image at a constant share of 3 (T-11: no pixel-ratio read).
+- Tiles and masses are kept as lossless PNGs between launches, named by their serialized drawing (tiles) or recipe plus a fingerprint of the drawing (masses), so a changed drawing never reads an old image.
+- Every layer, colour and material is kept; nothing in placement, hit testing, the camera, membership or accessibility moved.
+
+**Repository checks.** `tsc` and lint clean. Jest 3469 pass; the only failures are the baseline locale tests (`depth.test.tsx`, `w2-account-access.test.tsx`, verified on the base by stash) and the re-recorded goldens (PAINT-ONLY). Root contracts touching mobile 1227 / 1227. CI on #393: 10 pass, 0 fail.
+
+**On the PO's phone (HONOR ALI-NX1; the proof package `com.qandeel.mobile.v3proof` only; production APK `v3proof-prod-98d9408a.apk`, sha-256 `68a24be0…`).**
+
+| Experience | Personal | Shared | Public |
+|---|---|---|---|
+| Open, prepared images present (mount → every raster shown, p50) | 1.2 s | 1.2 s | 1.9–2.1 s |
+| First open after install (no prepared image yet) | 10.0 s | — | — |
+| Pan, fps while moving (warm; before F: 3.0 / 2.7 / 1.9) | 21.4–22.6 | 11.0–14.0 | 7.1–8.6 (first swipe) |
+
+- **The light experiment (soft lights toned by their own paint).** Measured as a separate mode of a measurement build: Personal +2.5 fps, Shared +0.4, Public −1.1, and inexact where an ancestor's opacity is below 1. **Not adopted.**
+- **Zoom (real two-finger pinch).** The HONOR's SELinux refuses kernel-level injection (`sendevent`), so two pointers are injected through the system input manager (`app_process`, nothing installed, no setting changed). An automated step is not taken as proof of a pinch.
+  - **Personal:** the pinch steps IN and OUT. No frame moves under the fingers (by design: a pinch asks for one semantic step on release). After release: IN shows 5 frames in 300–333 ms with one 233–283 ms frame, so it reads as a jump; OUT shows 24 frames in 870–915 ms.
+  - **The cause, measured on every step in the three worlds:** one or two chrome frames at about 100 ms, then 166–366 ms with no map frame while the new level is drawn for the first time, while the camera's 260–380 ms transition clock is already running.
+  - **Shared and Public:** in the production build the pinch changes nothing (0 frames, 0.0 % of pixels). With diagnostic marks in the gesture path, the same pinch is recognised, passes the authority check, the field steps FAR → MID (`APPLIED`) and the picture changes (Shared 40 %, Public 67 %). The defect is timing-dependent; it is already present on `d57ea51c`, before candidate F.
+  - At MID the Shared test world shows empty space (9 places placed, 0 presented): the step keeps the camera's anchor, and the test places lie away from the World's origin (the known test-data problem).
+- **Memory.** Graphics stays at 112–128 MB. Native heap: `d57ea51c` rises from 113 to about 123 MB and is flat from the fifth Analysis open to the fifteenth. With F it rises from 127 to 166 MB over 30 opens (about 1.3 MB per open, no plateau). Switching the grain image, the tile image shader or the single-copy mass image back, one at a time, does not remove the growth over eight opens. **The cause is not found.**
+
+**Zoom NOT MET, and native memory growth open.** Both await the PO. Neither is fixed here: the zoom fix changes when the camera transition starts, and the addendum asks for its reason and the smallest alternative first.
+
+
 ## 10. Not done yet
+- **MAP-PERF-01 (2026-11-12), awaiting the PO:** the PO's manual test of the production build in the three worlds; the zoom start (record §9, "MAP-PERF-01"); the Shared / Public pinch defect; the native memory growth with candidate F; first install (separate launch blocker).
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.
