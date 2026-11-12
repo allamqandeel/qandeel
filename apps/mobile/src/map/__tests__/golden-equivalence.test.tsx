@@ -19,6 +19,12 @@
  * refactor): the golden was regenerated ONCE because the paint itself was intentionally changed. Before it was rewritten,
  * a structural diff of the old and new golden proved that every case differs in Skia paint ONLY — the host tree (views,
  * testIDs, handlers, accessibility) and every mark anchor (origin, order, count) are identical in every case.
+ *
+ * MAP-PERF-01 — CONTROLLED RE-ANCHOR (2026-11-12, Product Owner "PO FINAL PRIORITY RESET": candidate F ported to
+ * production, graphics kept): regenerated ONCE because the paint STRUCTURE changed (the tone carried by each draw it
+ * reaches instead of one group over the world; draws bounded by clips of their own extent; a raster drawn back by a rect).
+ * The structural diff before rewriting proved, in all 15 cases, the host tree and every mark anchor identical, with only
+ * Skia elements added (Group, RuntimeShader, Shader, ColorShader). The pixels are proved on the phone, not here.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { ReactElement } from 'react';

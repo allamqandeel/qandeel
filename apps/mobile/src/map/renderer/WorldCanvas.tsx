@@ -235,11 +235,15 @@ function WorldPlane({ continuation, envelope, paint, motion, center, material, c
       {content}
     </Group>
   );
+  // MAP-PERF-01 (candidate F): the world's tone reaches the objects' draws (it is an image filter on each vector draw),
+  // and only them: the material is rasters and layers, which it never reached, and its one vector draw, a place's wash,
+  // carries the tone itself (`WorldPlaceAtmosphere`).
+  const objects = <WorldTone>{children}</WorldTone>;
   if (continuation === null) {
     return plane(
       <>
         {material}
-        {children}
+        {objects}
       </>,
     );
   }
@@ -252,7 +256,7 @@ function WorldPlane({ continuation, envelope, paint, motion, center, material, c
           <LinearGradient start={vec(0, envelope.height)} end={vec(0, envelope.height + fade)} colors={[continuation.scrim(1), continuation.scrim(0)]} />
         </Rect>
       </Group>
-      <Group clip={{ x: 0, y: 0, width: envelope.width, height: envelope.height }}>{plane(children)}</Group>
+      <Group clip={{ x: 0, y: 0, width: envelope.width, height: envelope.height }}>{plane(objects)}</Group>
     </>
   );
 }
@@ -316,9 +320,11 @@ export function WorldCanvas<N extends WorldCanvasNode>({
 
   return (
     <Canvas testID={testID} style={{ width: paint.width, height: paint.height }} pointerEvents={continuation === null ? undefined : 'none'}>
-      {/* The canonical tone curve over the whole world (I-08B1 renderComposite); the veil and the
-          screen-space register sit above it, as the canonical vignette, grain and type do. */}
-      <WorldTone>
+      {/* The canonical tone curve (I-08B1 renderComposite) on the world, below the veil and the screen-space register, as
+          the canonical vignette, grain and type sit above it. MAP-PERF-01 (candidate F, Product Owner 2026-11-12): the
+          tone is carried by each draw it reaches — the ground's own paint (`WorldGround`), the objects (`WorldPlane`)
+          and a place's wash — instead of one group over the whole world. The strata are rasters and layers, which the
+          tone, an image filter on each vector draw, never reached; they are drawn as before. */}
       <WorldGround envelope={paint} response={response} />
       {/* The world plane: it travels with the camera, and it is the ONLY thing camera opacity
           reaches. A cut-and-resolve is a statement about the camera's path, and the register has
@@ -385,7 +391,6 @@ export function WorldCanvas<N extends WorldCanvasNode>({
           <PresentationCameraRebase motion={motion} cameraCommit={cameraCommit} />
         </WorldPlane>
       </Group>
-      </WorldTone>
       <WorldVeil envelope={paint} response={response} />
       {continuation === null ? null : <WorldContinuationScrim envelope={envelope} continuation={continuation} />}
       {/* Screen space. It does not translate, scale or dim with the camera; it changes only when

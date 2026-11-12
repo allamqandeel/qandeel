@@ -179,6 +179,11 @@ jest.mock('@shopify/react-native-skia', () => {
     BlurMask: element('BlurMask'),
     FractalNoise: element('FractalNoise'),
     RuntimeShader: element('RuntimeShader'),
+    // MAP-PERF-01 — the ground's toned draws, a raster drawn back by a rect, a single-copy mass and the grain image.
+    Shader: element('Shader'),
+    ImageShader: element('ImageShader'),
+    ColorShader: element('ColorShader'),
+    Image: element('Image'),
     createPicture: () => picture,
     Skia: {
       XYWHRect: (x, y, width, height) => ({ x, y, width, height }),
@@ -192,6 +197,8 @@ jest.mock('@shopify/react-native-skia', () => {
     StrokeCap: { Butt: 0, Round: 1, Square: 2 },
     BlurStyle: { Normal: 0, Solid: 1, Outer: 2, Inner: 3 },
     TileMode: { Clamp: 0, Repeat: 1, Mirror: 2, Decal: 3 },
+    FilterMode: { Nearest: 0, Linear: 1 },
+    MipmapMode: { None: 0, Nearest: 1, Linear: 2 },
     vec: (x, y) => ({ x, y }),
   };
 });

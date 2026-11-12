@@ -16,8 +16,11 @@ import {
   BlendMode,
   BlurStyle,
   ClipOp,
+  ColorShader,
   FilterMode,
   FractalNoise,
+  Image,
+  ImageShader,
   MipmapMode,
   Group,
   LinearGradient,
@@ -26,20 +29,23 @@ import {
   RadialGradient,
   Rect,
   RuntimeShader,
+  Shader,
   Skia,
   StrokeCap,
   TileMode,
   createPicture,
   vec,
   type SkCanvas,
+  type SkImage,
   type SkPicture,
 } from '@shopify/react-native-skia';
-import { usePresentationReading, type DerivedValue, type PresentationCameraBinding } from '../../motion';
+import { usePresentationReading, useReadingOf, type DerivedValue, type PresentationCameraBinding } from '../../motion';
 import type { ViewportEnvelope } from '../camera';
 import { WORLD_DUST, WORLD_NEBULA, WORLD_STARS } from './world-field.generated';
 import { WORLD_VISUAL } from './world-visual.generated';
 import { hsla, rgbaOf, type StratumDrift } from './world-resolver';
 import type { WorldResponse } from './useWorldResponse';
+import { drawingName, loadPrepared, rasterBehind, rememberRaster, savePrepared } from './prepared-raster';
 
 // ------------------------------------------------------------------------------------- pictures
 
@@ -292,6 +298,10 @@ const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
  * Every band is the same drawing on the same surface, clipped (without anti-aliasing) to its own rows, and every step
  * of the drawing is per pixel (gradients, a layer, a noise mask, a noise light; no blur), so the image is the one a
  * single pass paints. It is snapshotted and drawn back exactly as before.
+ *
+ * MAP-PERF-01: an image painted once is kept between launches (`./prepared-raster`, named by the serialized drawing and
+ * its sizes) and read back instead of painted, and the picture that draws it back is marked with its image, so a
+ * weighted draw samples the image directly (`FadedPicture`) instead of opening a layer for it.
  */
 export async function rasterTile(
   size: number,
@@ -302,6 +312,16 @@ export async function rasterTile(
 ): Promise<SkPicture> {
   const bounds = Skia.XYWHRect(0, 0, size, size);
   const pixels = Math.round((size + 2 * margin) * share);
+  const drawnBack = (image: SkImage) => {
+    const picture = createPicture((target) => {
+      target.drawImageRectOptions(image, Skia.XYWHRect(margin * share, margin * share, size * share, size * share), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
+    }, bounds);
+    rememberRaster(picture, { image, margin, share });
+    return picture;
+  };
+  const name = drawingName('tile', createPicture(draw, Skia.XYWHRect(-margin, -margin, size + 2 * margin, size + 2 * margin)), size, margin, share, pixels);
+  const prepared = loadPrepared(name);
+  if (prepared !== null) return drawnBack(prepared);
   const surface = Skia.Surface.Make(pixels, pixels) ?? Skia.Surface.MakeOffscreen(pixels, pixels);
   if (surface === null) return createPicture((target) => draw(target), bounds);
   const canvas = surface.getCanvas();
@@ -318,9 +338,8 @@ export async function rasterTile(
   surface.flush();
   const snapshot = surface.makeImageSnapshot();
   const image = snapshot.makeNonTextureImage?.() ?? snapshot;
-  return createPicture((target) => {
-    target.drawImageRectOptions(image, Skia.XYWHRect(margin * share, margin * share, size * share, size * share), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
-  }, bounds);
+  savePrepared(name, image);
+  return drawnBack(image);
 }
 
 /** A star bright enough to carry its own bloom. */
@@ -375,6 +394,17 @@ export function FadedPicture({
   readonly width: number;
   readonly height: number;
 }) {
+  // MAP-PERF-01 (candidate F): a picture that only draws a raster back is drawn as that raster, sampled by one rect at
+  // the weight: the same pixels at the same weight, without a layer per tile per frame.
+  const raster = rasterBehind(picture);
+  if (raster !== undefined) {
+    const m = raster.margin;
+    return (
+      <Rect x={x} y={y} width={width} height={height} antiAlias={false} opacity={opacity}>
+        <ImageShader image={raster.image} fit="fill" rect={{ x: x - m, y: y - m, width: width + 2 * m, height: height + 2 * m }} sampling={{ filter: FilterMode.Linear, mipmap: MipmapMode.None }} />
+      </Rect>
+    );
+  }
   return (
     <FadedLayer opacity={opacity} x={x} y={y} width={width} height={height}>
       <Picture picture={picture} />
@@ -489,17 +519,26 @@ export function ladderHue(rung: number): number {
   return ladder[Math.min(ladder.length - 1, Math.max(0, Math.round(rung * (ladder.length - 1))))];
 }
 
-/** The ground and the floor: screen space, never moved by the camera. */
+/**
+ * The ground and the floor: screen space, never moved by the camera.
+ *
+ * MAP-PERF-01 (candidate F): each of the ground's draws carries the canonical tone curve on its own paint
+ * (`TonedRect`): exactly what the world's tone did to it, one draw at a time, without a layer the size of the glass.
+ */
 export function WorldGround({ envelope, response }: { readonly envelope: ViewportEnvelope; readonly response: WorldResponse }) {
   const [a, b, c] = WORLD_VISUAL.material.ground;
   const d = WORLD_VISUAL.groundDirection;
   const diagonal = Math.hypot(envelope.width, envelope.height);
   const sat = WORLD_VISUAL.material.neb.sat;
+  const floor = useReadingOf(response.floor, (alpha): { a: number; alpha: number } => {
+    'worklet';
+    return { a: WORLD_VISUAL.tone.a, alpha };
+  });
   return (
     <>
-      <Rect x={0} y={0} width={envelope.width} height={envelope.height}>
+      <TonedRect envelope={envelope}>
         <LinearGradient start={vec(0, 0)} end={vec(envelope.width * d.x, envelope.height * d.y)} colors={[a, b, c]} positions={[0, 0.5, 1]} />
-      </Rect>
+      </TonedRect>
       {/* LA-VIS-01: the deep ground — blue-black depth below the clouds, never an empty black. */}
       {DEEP_GROUND.map((glow, index) => {
         const cx = envelope.width * glow.x;
@@ -507,18 +546,48 @@ export function WorldGround({ envelope, response }: { readonly envelope: Viewpor
         const r = diagonal * glow.r;
         const hue = ladderHue(glow.rung);
         return (
-          <Rect key={`deep:${index}`} x={0} y={0} width={envelope.width} height={envelope.height} blendMode="screen">
+          <TonedRect key={`deep:${index}`} envelope={envelope} blendMode="screen">
             <RadialGradient
               c={vec(cx, cy)}
               r={r}
               colors={[hsla(hue, sat, glow.light, glow.alpha), hsla(hue, sat, glow.light * 0.8, glow.alpha * 0.45), hsla(hue, sat, glow.light * 0.6, 0)]}
               positions={[0, 0.45, 1]}
             />
-          </Rect>
+          </TonedRect>
         );
       })}
-      <Rect x={0} y={0} width={envelope.width} height={envelope.height} color={rgbaOf(WORLD_VISUAL.floor.rgb, 1)} opacity={response.floor} />
+      <TonedRect envelope={envelope} uniforms={floor}>
+        <ColorShader color={rgbaOf(WORLD_VISUAL.floor.rgb, 1)} />
+      </TonedRect>
     </>
+  );
+}
+
+const TONED = Object.freeze({ a: WORLD_VISUAL.tone.a, alpha: 1 });
+
+/**
+ * One screen-space draw toned by its own paint: the tone curve applied to the draw's colour at its weight
+ * (`tone(alpha · source)`), which is what the world's tone, an image filter on each draw, made of it.
+ */
+function TonedRect({
+  envelope,
+  blendMode,
+  uniforms = TONED,
+  children,
+}: {
+  readonly envelope: ViewportEnvelope;
+  readonly blendMode?: 'screen';
+  readonly uniforms?: DerivedValue<{ a: number; alpha: number }> | { readonly a: number; readonly alpha: number };
+  readonly children: React.ReactNode;
+}) {
+  const effect = worldTone();
+  if (effect === null) return null;
+  return (
+    <Rect x={0} y={0} width={envelope.width} height={envelope.height} blendMode={blendMode}>
+      <Shader source={effect} uniforms={uniforms}>
+        {children}
+      </Shader>
+    </Rect>
   );
 }
 
@@ -587,8 +656,9 @@ export function WorldAtmosphere({
 const TONE_SKSL = `
 uniform shader image;
 uniform float a;
+uniform float alpha;
 half4 main(float2 xy) {
-  half4 c = image.eval(xy);
+  half4 c = image.eval(xy) * half(alpha);
   return half4(c.rgb * (1.0 - a) + c.rgb * c.rgb * a, c.a);
 }`;
 
@@ -609,10 +679,38 @@ export function WorldTone({ children }: { readonly children: React.ReactNode }) 
   if (effect === null) return <>{children}</>;
   return (
     <Group>
-      <RuntimeShader source={effect} uniforms={{ a: WORLD_VISUAL.tone.a }} />
+      <RuntimeShader source={effect} uniforms={TONED} />
       {children}
     </Group>
   );
+}
+
+/**
+ * MAP-PERF-01 (candidate F): the grain is the same noise every frame (one seed, screen space), so it is painted once per
+ * glass size into an image at a fixed share — a constant, like every raster share here, never the display's pixel ratio
+ * (T-11) — and drawn back with the same blend and weight. One size is kept: a new glass size replaces it.
+ */
+const GRAIN = Object.freeze({ raster: 3 });
+let grain: { readonly width: number; readonly height: number; readonly image: SkImage | null } | null = null;
+
+function grainImage(width: number, height: number): SkImage | null {
+  if (grain !== null && grain.width === width && grain.height === height) return grain.image;
+  const pw = Math.round(width * GRAIN.raster);
+  const ph = Math.round(height * GRAIN.raster);
+  const surface = pw > 0 && ph > 0 ? (Skia.Surface.MakeOffscreen(pw, ph) ?? Skia.Surface.Make(pw, ph)) : null;
+  let image: SkImage | null = null;
+  if (surface !== null) {
+    const canvas = surface.getCanvas();
+    canvas.scale(pw / width, ph / height);
+    const paint = Skia.Paint();
+    paint.setShader(Skia.Shader.MakeFractalNoise(0.9, 0.9, 1, 0, 0, 0));
+    canvas.drawRect(Skia.XYWHRect(0, 0, width, height), paint);
+    surface.flush();
+    const snapshot = surface.makeImageSnapshot();
+    image = snapshot.makeNonTextureImage?.() ?? snapshot;
+  }
+  grain = { width, height, image };
+  return image;
 }
 
 /** The veil over the world: the canonical vignette and grain. Screen space; it encodes nothing. */
@@ -625,6 +723,7 @@ export function WorldVeil({ envelope, response }: { readonly envelope: ViewportE
   const inner = Math.min(envelope.width, envelope.height) * v.inner;
   const start = Math.min(0.99, inner / outer);
   const mid = start + (1 - start) * v.midStop;
+  const image = grainImage(envelope.width, envelope.height);
   return (
     <>
       <Rect x={0} y={0} width={envelope.width} height={envelope.height} opacity={response.vignette}>
@@ -635,9 +734,13 @@ export function WorldVeil({ envelope, response }: { readonly envelope: ViewportE
           positions={[0, start, mid, 1]}
         />
       </Rect>
-      <Rect x={0} y={0} width={envelope.width} height={envelope.height} opacity={WORLD_VISUAL.material.grain} blendMode="softLight">
-        <FractalNoise freqX={0.9} freqY={0.9} octaves={1} />
-      </Rect>
+      {image === null ? (
+        <Rect x={0} y={0} width={envelope.width} height={envelope.height} opacity={WORLD_VISUAL.material.grain} blendMode="softLight">
+          <FractalNoise freqX={0.9} freqY={0.9} octaves={1} />
+        </Rect>
+      ) : (
+        <Image image={image} x={0} y={0} width={envelope.width} height={envelope.height} fit="fill" opacity={WORLD_VISUAL.material.grain} blendMode="softLight" />
+      )}
     </>
   );
 }
