@@ -106,7 +106,10 @@ export function useWorldSemanticStepGesture<O extends WorldGestureOutcome>(optio
       if (generation !== authority.current()) return;
       const direction = semanticZoomDirectionFor(scale);
       if (direction === null) return;
-      onSettled?.(step(direction));
+      // The act runs first and the observer is notified afterwards: an optional call does not evaluate its argument
+      // when no observer is attached (Shared and Public attach none), and the step would silently never run.
+      const outcome = step(direction);
+      onSettled?.(outcome);
     },
     [authority, onSettled, step],
   );

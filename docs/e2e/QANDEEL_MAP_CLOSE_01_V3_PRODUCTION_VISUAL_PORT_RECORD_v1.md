@@ -23,6 +23,8 @@
 
 **MAP-PERF-01 (PO "FINAL PRIORITY RESET", 2026-11-12):** `CANDIDATE F PORTED TO PRODUCTION ON DRAFT PR #393 — CI GREEN — OPEN: FAST, PAN ACCEPTABLE IN PERSONAL ONLY — ZOOM NOT MET — NATIVE MEMORY GROWTH OPEN — AWAITS THE PO'S MANUAL TEST AND DECISIONS — NOT MERGED` (§9, "MAP-PERF-01").
 
+**MAP-PERF-01, Targeted Blocker Resolution (PO decision, 2026-11-12):** `SHARED / PUBLIC PINCH FIXED (CAUSE FOUND, REGRESSION TEST, PROVEN ON THE PHONE) — PERSONAL FIRST-STEP JUMP: CAUSE FOUND, PROOF REJECTED, SMALLEST ALTERNATIVE AWAITS THE PO — NATIVE MEMORY GROWTH: NOT A GC LAG, CAUSE NOT FOUND, MERGE BLOCKED — NOT MERGED` (§9, "MAP-PERF-01: Targeted Blocker Resolution").
+
 > **The production map now draws its nodes and relations in the S3-R2 grammar, from real data only. Its world is S3-R2's world at every distance: FAR, MID, NEAR and ANALYTICAL are one world approached. The engine, the camera, the placement, the interactions and every meaning underneath it did not move.**
 
 ---
@@ -369,9 +371,31 @@ The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exa
 
 **Zoom NOT MET, and native memory growth open.** Both await the PO. Neither is fixed here: the zoom fix changes when the camera transition starts, and the addendum asks for its reason and the smallest alternative first.
 
+### MAP-PERF-01: Targeted Blocker Resolution (PO decision, 2026-11-12)
+**Authority:** the PO's "Targeted Blocker Resolution, No New Optimization Cycle" (2026-11-12): candidate F kept; memory growth a fix priority before merge (limited diagnosis); an isolated proof of starting the camera clock with the new level's first frame; a limited diagnosis of the Shared / Public pinch with a specific cause and a regression test that relies on no logging or delay; no new pan optimization; first install kept apart. Measured on the PO's HONOR, `com.qandeel.mobile.v3proof` only, no phone setting changed.
+
+**Shared / Public pinch: fixed.**
+- **Cause:** `useWorldSemanticStepGesture` committed with `onSettled?.(step(direction))`. An optional call does not evaluate its argument when the callee is absent. The Shared and Public fields attach no observer, so the finished pinch reached the commit, with the right authority and direction, and the step never ran. Personal attaches one, so it worked. It is deterministic, not a timing race: every diagnostic build that "fixed" it had rewritten that line to read the outcome first; the build with the responder counter alone still failed.
+- **Fix:** the act runs first and the observer is notified afterwards (`const outcome = step(direction); onSettled?.(outcome);`), the rule `MapSurface` and `ReturnControls` already state.
+- **Regression test:** `semantic-zoom-activation.test.tsx` fires the pinch through the real detector (`fireGestureHandler`), with and without an observer, and asserts one step IN and one step OUT. It fails on the previous code (the case without an observer) and passes with the fix. No logging and no delay.
+- **On the phone (production build, no instrumentation):** before the fix, 0.0 % of pixels and an identical accessibility tree after the pinch (6 of 6). After: IN changes Public by 66.6 % and Shared by 40.3 % (4 of 4); IN then OUT returns to FAR (Shared identical, Public 3.4 %). Personal unchanged (IN / OUT 19.6 % each way).
+- **Separate, not fixed here:** at MID the Shared test World shows empty space (9 places placed, 0 presented), because the step keeps the camera's anchor and the test places lie away from the origin. A test-data problem.
+
+**Personal zoom: the proof is rejected; the cause of the jump is found.**
+- **The proof** (in a measurement build only: the travel's springs start two UI frames after the request, same durations): no clear improvement. First IN 5–6 frames either way; on a cached travel the longest interval is 200–283 ms with it and 166–300 ms without. Not ported.
+- **The cause:** the first step to a depth whose projection is not yet in the cache. The store's depth changes at once, the projection for the new depth is fetched in an effect, and until it arrives the Personal world renders nothing (`LivingAnalysisMap`: no context, no Map). The Map is unmounted and mounted again: the canvas and its surface are rebuilt and the camera's travel is lost. Measured in one process (IN, OUT, IN, OUT): the first IN remounts the canvas and shows 5 frames in about 330 ms; the second IN, cached, does not remount and travels 27–29 frames in about 1.2 s. Intervals of 183–300 ms remain inside every travel.
+- **Smallest alternative, awaiting the PO (not implemented):** ask for the adjacent depths' projections in the background (the same `ensure` the composition already calls), so a step finds its scene in the cache. Nothing is drawn from a context that is not this tuple's; the cost is extra projection reads.
+
+**Native memory: not a GC lag; the cause is not found.**
+- A forced collection on both JS runtimes (`gc()` present) at every fifth open, back in the Conversation, frees 2.6–3.4 MB. Native heap after GC: 134.9, 141.1, 146.1 and 150.5 MB after 5, 10, 15 and 20 opens (about 1.0 MB per open, still rising). `d57ea51c` is flat at about 123 MB from the fifth open.
+- With the three image paths of F switched back together (grain, tile shader, single-copy mass): 118.6, 123.3, 126.9 and 130.0 MB. Lower, and still rising (about 0.76 MB per open). So the images are part of it, not all of it.
+- The prepared-raster caches are bounded (nebula and continuity tiles per process, masses in an LRU of 48, a WeakMap keyed by picture). No fix is made. Per the PO, a build whose memory grows without a known bound is not merged.
+
+
 
 ## 10. Not done yet
 - **MAP-PERF-01 (2026-11-12), awaiting the PO:** the PO's manual test of the production build in the three worlds; the zoom start (record §9, "MAP-PERF-01"); the Shared / Public pinch defect; the native memory growth with candidate F; first install (separate launch blocker).
+- **MAP-PERF-01 Targeted Blocker Resolution (2026-11-12), awaiting the PO:** the native memory growth (cause not found, merge blocked); the Personal first-step jump (prefetch of adjacent depths, not implemented); the PO's manual test of the fixed pinch in Shared and Public; the Shared test-data placement; first install.
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.
