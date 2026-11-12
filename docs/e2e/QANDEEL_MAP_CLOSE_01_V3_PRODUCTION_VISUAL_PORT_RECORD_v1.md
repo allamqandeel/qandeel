@@ -387,7 +387,7 @@ The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exa
 - **Smallest alternative, awaiting the PO (not implemented):** ask for the adjacent depths' projections in the background (the same `ensure` the composition already calls), so a step finds its scene in the cache. Nothing is drawn from a context that is not this tuple's; the cost is extra projection reads.
 
 **Native memory: not a GC lag; the cause is not found.**
-- A forced collection on both JS runtimes (`gc()` present) at every fifth open, back in the Conversation, frees 2.6–3.4 MB. Native heap after GC: 134.9, 141.1, 146.1 and 150.5 MB after 5, 10, 15 and 20 opens (about 1.0 MB per open, still rising). `d57ea51c` is flat at about 123 MB from the fifth open.
+- A forced collection (`gc()` present on the JS runtime; the UI runtime is asked to collect too, unconfirmed there) at every fifth open, back in the Conversation, frees 2.6–3.4 MB. Native heap after GC: 134.9, 141.1, 146.1 and 150.5 MB after 5, 10, 15 and 20 opens (about 1.0 MB per open, still rising). `d57ea51c` is flat at about 123 MB from the fifth open.
 - With the three image paths of F switched back together (grain, tile shader, single-copy mass): 118.6, 123.3, 126.9 and 130.0 MB. Lower, and still rising (about 0.76 MB per open). So the images are part of it, not all of it.
 - The prepared-raster caches are bounded (nebula and continuity tiles per process, masses in an LRU of 48, a WeakMap keyed by picture). No fix is made. Per the PO, a build whose memory grows without a known bound is not merged.
 
