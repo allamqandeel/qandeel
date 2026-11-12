@@ -345,8 +345,12 @@ test('§13 — the rebase is issued from inside the Skia root, after the positio
   assert.match(plane, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*<\/WorldPlane>$/u);
   const planeOwner = canvas.slice(canvas.indexOf('function WorldPlane('), canvas.indexOf('\n}\n', canvas.indexOf('function WorldPlane(')));
   assert.match(planeOwner, /const plane = \(content: ReactNode\) => \(\s*<Group transform=\{motion\.planeTransform\} origin=\{vec\(center\.x, center\.y\)\}>\s*\{content\}\s*<\/Group>\s*\);/u, 'one transformed plane group');
-  assert.match(planeOwner, /return plane\(\s*<>\s*\{material\}\s*\{children\}\s*<\/>,?\s*\);/u, 'children last inside the plane');
-  assert.match(planeOwner, /<Group clip=\{\{ x: 0, y: 0, width: envelope\.width, height: envelope\.height \}\}>\{plane\(children\)\}<\/Group>/u, 'and inside the plane in a continuous world');
+  // MAP-PERF-01 — CONTROLLED RE-ANCHOR (Product Owner "PO FINAL PRIORITY RESET", 2026-11-12 (candidate F ported to production, graphics kept)): the children are the objects, toned as one group
+  // (`const objects = <WorldTone>{children}</WorldTone>`), still LAST inside the one transformed plane group; the rebase is
+  // still their last child, so the rule is unchanged. Previous form: `{material}{children}` and `plane(children)`.
+  assert.match(planeOwner, /const objects = <WorldTone>\{children\}<\/WorldTone>;/u, 'the objects are the children, toned');
+  assert.match(planeOwner, /return plane\(\s*<>\s*\{material\}\s*\{objects\}\s*<\/>,?\s*\);/u, 'children last inside the plane');
+  assert.match(planeOwner, /<Group clip=\{\{ x: 0, y: 0, width: envelope\.width, height: envelope\.height \}\}>\{plane\(objects\)\}<\/Group>/u, 'and inside the plane in a continuous world');
   assert.match(canvas, /useLayoutEffect\(/u, 'the rebase is issued in a layout effect, not a passive one');
   // And it drops the residual outright when the surface stops painting this world.
   // SHARED-VIS-01 — CONTROLLED AMENDMENT (Product Owner, 2026-10-09): on unmount ONLY. It was keyed on the binding,

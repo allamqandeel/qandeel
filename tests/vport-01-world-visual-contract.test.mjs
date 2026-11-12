@@ -257,7 +257,10 @@ test('LA-VIS-01: a place mass is pure paint — one picture per meaning-free var
   // projection, scene or time.
   const mass = visualCode['world-mass.ts'];
   const imports = [...mass.matchAll(/^import [^;]*? from '([^']+)';/gmu)].map((m) => m[1]);
-  assert.deepEqual(imports, ['@shopify/react-native-skia', './world-chroma', './world-resolver']);
+  // MAP-PERF-01 — CONTROLLED AMENDMENT (Product Owner "PO FINAL PRIORITY RESET", 2026-11-12 (candidate F ported to production, graphics kept)): a painted mass is kept between launches through
+  // `./prepared-raster` (named by its recipe and the drawing's fingerprint; no place, key or user fact). Previous list:
+  // Skia, './world-chroma', './world-resolver'.
+  assert.deepEqual(imports, ['@shopify/react-native-skia', './prepared-raster', './world-chroma', './world-resolver']);
   assert.match(mass, /export function massPicture\(seed: string, chroma: ChromaFamily\): SkPicture/u);
   for (const forbidden of ['camera', 'envelope', 'Date', 'Math.random', 'useState', "'../../state", "'../projection", "'../camera"]) {
     assert.equal(mass.includes(forbidden), false, `the mass material must not read ${forbidden}`);

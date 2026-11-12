@@ -3,7 +3,7 @@
  *
  * The Map paints its world rasters once (the nebula, deep-space and thread tiles, the place masses) and keeps each one,
  * as a lossless PNG named by the content of its drawing, so the next launch reads it back instead of painting it again.
- * This module owns where that is: one folder in the app's CACHE directory (the system may clear it at any time; nothing
+ * This module owns where that is (the integration owner only installs it; it persists nothing itself, T-12 §28.19): one folder in the app's CACHE directory (the system may clear it at any time; nothing
  * is lost but time), versioned and bounded.
  *
  *   version — a folder per VERSION; a launch removes every other version's folder, so a change of rasterizer or encoding
@@ -15,7 +15,7 @@
  */
 import { Directory, File, Paths } from 'expo-file-system';
 
-import { installPreparedRasterStore, type PreparedRasterStore } from '../../map';
+import { installPreparedRasterStore, type PreparedRasterStore } from '../map';
 
 const VERSION = 1;
 const PREFIX = 'map-prepared-v';

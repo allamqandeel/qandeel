@@ -364,7 +364,11 @@ test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from
   // The rebase is still issued from INSIDE the Skia root, as the LAST child of the plane, after the positions.
   // MAP-CLOSE-01 V-3 Part B — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-10): the plane is `WorldPlane`, whose children
   // are last inside the one transformed plane group (pinned by T-10 §13). Previous form: `</Group>` for `</WorldPlane>`.
-  assert.match(worldCanvas, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*\n\s*<\/WorldPlane>\s*\n\s*<\/Group>\s*\n\s*<\/WorldTone>/u);
+  // MAP-PERF-01 — CONTROLLED RE-ANCHOR (Product Owner "PO FINAL PRIORITY RESET", 2026-11-12 (candidate F ported to production, graphics kept)): the tone no longer wraps the whole world; it is carried by each draw it
+  // reaches (the objects inside `WorldPlane`, the ground's own paints, a place's wash), and the veil follows the world's
+  // group directly. The rebase rule is unchanged. Previous form: `</Group>` followed by `</WorldTone>`.
+  assert.match(worldCanvas, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*\n\s*<\/WorldPlane>\s*\n\s*<\/Group>\s*\n\s*<WorldVeil /u);
+  assert.doesNotMatch(worldCanvas, /<\/WorldTone>\s*\n\s*<WorldVeil/u, 'no tone over the whole world');
   // The element keys the arrival registry is keyed by are unchanged.
   assert.ok(worldCanvas.includes('<WorldPlaceAtmosphere key={`atmosphere:${node.key}`}'), 'place atmosphere keys');
   assert.ok(worldCanvas.includes('<DisclosureArrival key={node.key} nodeKey={node.key} plan={arrivalOf(node)}'), 'arrival keys');
