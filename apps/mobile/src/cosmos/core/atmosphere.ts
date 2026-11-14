@@ -177,7 +177,10 @@ export function bakeFibre(variant: number, size: number): Uint8ClampedArray {
     const lobe = 0.5 + 0.5 * Math.sin(ang * (2 + variant) + sx * 9 + variant * 1.7);
     const rim = 0.34 + lobe * 0.5 + (fbm(x * 0.5 + 5, y * 0.5 + 2, P, seed + 41, 3) - 0.5) * 0.7;
     const fall = smooth(rim + 0.42, rim * 0.12, d) * smooth(1, 0.7, d);
-    const a = (hair * 1.25 + fine * 0.55 + smooth(0.4, 0.85, body) * 0.14 + Math.exp(-d * d * 9) * 0.12) * fall;
+    // A clear eye at the heart: no strand crosses the place where an entity's own light sits, so a fibre can never be
+    // read as a mark on, or a line through, the entity (the 'bright streak' found at the Visual Gate).
+    const eye = smooth(0.05, 0.24, d);
+    const a = ((hair * 1.25 + fine * 0.55) * eye + smooth(0.4, 0.85, body) * 0.14 + Math.exp(-d * d * 9) * 0.12) * fall;
     out[o + 3] = Math.min(255, a * 255);
   }
   return out;
