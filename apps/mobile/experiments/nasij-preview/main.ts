@@ -236,6 +236,7 @@ function weaveTile(p: NasijPalette): CanvasPattern {
       const horizontal = (i + j) % 2 === 0; const x = i * h; const y = j * h;
       const g = horizontal ? t.createLinearGradient(0, y, 0, y + h) : t.createLinearGradient(x, 0, x + h, 0);
       g.addColorStop(0, p.weave); g.addColorStop(0.16, 'rgba(0,0,0,0)'); g.addColorStop(0.5, S.night ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.4)'); g.addColorStop(0.84, 'rgba(0,0,0,0)'); g.addColorStop(1, p.weave);
+      if (i + j === 0) { t.globalAlpha = 1; t.fillStyle = p.colors.ground; t.fillRect(0, 0, TILE_PX, TILE_PX); }
       t.globalAlpha = 0.3; t.fillStyle = g; t.fillRect(x, y, h, h);
     }
     pattern = ctx.createPattern(c, 'repeat') as CanvasPattern; tiles.set(p, pattern);
@@ -243,23 +244,22 @@ function weaveTile(p: NasijPalette): CanvasPattern {
   return pattern;
 }
 
-let lastOps = 0;
+let lastOps = 0; let lanternY = -1; let hudTick = 0;
+const lantern = document.getElementById('lantern') as HTMLElement;
 function draw(): void {
-  const p = pal(); const v = view(); const cam = S.camera; let ops = 1;
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = p.colors.ground; ctx.fillRect(0, 0, W, H);
-  // The weave: one tiled fill per octave (the mobile host uses the same tile as an image shader).
-  const tile = weaveTile(p);
-  for (const o of weaveOctaves(cam.scale)) {
+  const p = pal(); const v = view(); const cam = S.camera; let ops = 1; // the lantern overlay counts as one
+  // FILL-RATE BUDGET (measured: frame cost follows full-screen passes, not entity count). At rest and while panning the
+  // cloth is ONE opaque full-screen pass: the weave tile carries the ground colour. A second pass exists only while a
+  // rung transition cross-fades two weave gauges. The lantern is a static overlay the compositor owns (see shell.html).
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const tile = weaveTile(p); const octaves = weaveOctaves(cam.scale);
+  if (octaves.length === 0 || octaves[0].alpha < 0.999) { ctx.globalAlpha = 1; ctx.fillStyle = p.colors.ground; ctx.fillRect(0, 0, W, H); ops += 1; }
+  for (const o of octaves) {
     const k = (o.spacing * cam.scale) / TILE_PX;
     tile.setTransform(new DOMMatrix([k, 0, 0, k, v.focusX - cam.cx * cam.scale, v.focusY - cam.cy * cam.scale]));
     ctx.globalAlpha = o.alpha; ctx.fillStyle = tile; ctx.fillRect(0, 0, W, H); ops += 1;
   }
-  // The lantern: one gradient.
-  const g = ctx.createRadialGradient(v.focusX, v.focusY, 0, v.focusX, v.focusY, Math.hypot(W, H) * 0.62);
-  g.addColorStop(0, p.lanternWarm); g.addColorStop(0.38, 'rgba(0,0,0,0)');
-  const shade = p.lanternShade.replace(/[\d.]+\)$/u, '');
-  [0.55, 0.7, 0.85, 1].forEach((t, i) => g.addColorStop(t, `${shade}${([0.03, 0.09, 0.17, 0.26][i] * (S.night ? 1.9 : 1)).toFixed(3)})`));
-  ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ops += 1;
+  if (lanternY !== v.focusY) { lanternY = v.focusY; lantern.style.setProperty('--fy', `${v.focusY}px`); }
 
   const list = S.list;
   if (list) {
@@ -304,7 +304,7 @@ function tick(now: number): void {
     const step1 = approach(S.camera, S.target, dt); S.camera = step1.camera; rest = step1.atRest;
     const dy = S.focusYTarget - S.focusY; if (Math.abs(dy) > 0.3) { S.focusY += dy * (1 - Math.pow(0.5, (dt * 1000) / 90)); rest = false; } else S.focusY = S.focusYTarget;
   } else rest = false;
-  draw(); hud();
+  draw(); if ((hudTick += 1) % 12 === 0) hud();
   if (S.moving !== !rest) { S.moving = !rest; if (rest) ui(); }
   raf = rest ? 0 : requestAnimationFrame(tick);
 }
@@ -424,7 +424,7 @@ document.addEventListener('click', (e) => {
   else if (d.act === 'nearest') goTo({ cx: Number(d.x), cy: Number(d.y), scale: rungScale(Math.max(1, S.rung)) }, Math.max(1, S.rung));
   else if (t.id === 'back') { if (S.rung > 0) back(); else goTo({ cx: 0, cy: 0, scale: 1 }, 0); }
   else if (t.id === 'lang') { S.lang = S.lang === 'ar' ? 'en' : 'ar'; enter(S.world); }
-  else if (t.id === 'night') { S.night = !S.night; wake(); ui(); }
+  else if (t.id === 'night') { S.night = !S.night; document.body.classList.toggle('night', S.night); wake(); ui(); }
   else if (t.id === 'labtoggle') { document.body.classList.toggle('lab'); }
   else if (t.id === 'dense') { S.dense = !S.dense; t.setAttribute('aria-pressed', String(S.dense)); enter('PUBLIC'); }
 });

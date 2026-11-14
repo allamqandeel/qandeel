@@ -78,14 +78,14 @@ export function zoomAbout(camera: NasijCamera, view: NasijView, sx: number, sy: 
  * where a linear-scale spring looks like a snap at one end. `dt` in seconds; returns the next camera and whether it is
  * at rest. Frame-rate independent.
  */
-export function approach(camera: NasijCamera, target: NasijCamera, dt: number, halfLifeMs = 90): { camera: NasijCamera; atRest: boolean } {
+export function approach(camera: NasijCamera, target: NasijCamera, dt: number, halfLifeMs = 75): { camera: NasijCamera; atRest: boolean } {
   const k = 1 - Math.pow(0.5, (dt * 1000) / halfLifeMs);
   const ls = Math.log(camera.scale) + (Math.log(target.scale) - Math.log(camera.scale)) * k;
   const scale = Math.exp(ls);
   // Move the centre in SCREEN terms of the current scale so pan and zoom arrive together.
   const cx = camera.cx + (target.cx - camera.cx) * k;
   const cy = camera.cy + (target.cy - camera.cy) * k;
-  const atRest = Math.abs(Math.log(target.scale) - ls) < 0.002 && Math.abs(target.cx - cx) * scale < 0.25 && Math.abs(target.cy - cy) * scale < 0.25;
+  const atRest = Math.abs(Math.log(target.scale) - ls) < 0.01 && Math.abs(target.cx - cx) * scale < 0.5 && Math.abs(target.cy - cy) * scale < 0.5;
   return atRest ? { camera: target, atRest } : { camera: { cx, cy, scale }, atRest };
 }
 
