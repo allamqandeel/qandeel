@@ -15,10 +15,15 @@
 import { act, render } from '@testing-library/react-native';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { View } from 'react-native';
+import { GestureDetector, State } from 'react-native-gesture-handler';
+import { fireGestureHandler } from 'react-native-gesture-handler/jest-utils';
 
+import { useAuthorityGeneration } from '../../motion';
 import { sessionPosition } from '../../state';
 import { chromeStore, contextAt, TWO_CONTEXT_WORLD } from '../../orientation-chrome/__fixtures__/chrome';
-import { SEMANTIC_ZOOM_GESTURE_THRESHOLD, semanticZoomDirectionFor } from '../camera';
+import { SEMANTIC_ZOOM_GESTURE_THRESHOLD, semanticZoomDirectionFor, useWorldSemanticStepGesture } from '../camera';
+import type { MapActionOutcome } from '../outcome';
 import { MAP_ACCESSIBILITY_TEST_ID } from '../accessibility';
 import { viewportEnvelope } from '../camera';
 import { mapInspectionContext, mapProjectionRequest } from '../index';
@@ -98,5 +103,50 @@ describe('T12 — the reader can reach Semantic Zoom from the mounted Map', () =
     expect(zoomSource).not.toMatch(/\.onUpdate\(/u);
     // A cancelled or failed gesture writes nothing.
     expect(zoomSource).toMatch(/if \(!success\) return;/u);
+  });
+
+  // MAP-PERF-01: the Shared and Public fields attach no observer, and their pinch reached the step's commit and stopped
+  // there (`onSettled?.(step(direction))` never evaluates `step` when `onSettled` is absent). The pinch is fired through
+  // the real detector, with and without an observer, and the step must run once either way.
+  it.each([
+    ['without an observer (Shared, Public)', false],
+    ['with an observer (Personal)', true],
+  ])('a finished pinch runs its one step %s', async (_name, observed) => {
+    const steps: string[] = [];
+    const settled: string[] = [];
+    let gesture: ReturnType<typeof useWorldSemanticStepGesture>['gesture'] | null = null;
+    function Plane() {
+      const authority = useAuthorityGeneration('owner');
+      const binding = useWorldSemanticStepGesture<MapActionOutcome>({
+        enabled: true,
+        authority,
+        step: (direction) => {
+          steps.push(direction);
+          return { outcome: 'APPLIED' } as MapActionOutcome;
+        },
+        onSettled: observed ? (outcome) => settled.push(outcome.outcome) : undefined,
+      });
+      gesture = binding.gesture;
+      return (
+        <GestureDetector gesture={binding.gesture}>
+          <View />
+        </GestureDetector>
+      );
+    }
+    const view = await render(<Plane />);
+    if (gesture === null) throw new Error('the plane attached no pinch');
+    const pinch = gesture;
+    await act(async () => {
+      fireGestureHandler(pinch, [{ state: State.BEGAN, scale: 1 }, { state: State.ACTIVE, scale: 2 }, { state: State.END, scale: 2 }]);
+    });
+    expect(steps).toEqual(['IN']);
+    expect(settled).toEqual(observed ? ['APPLIED'] : []);
+    await act(async () => {
+      fireGestureHandler(pinch, [{ state: State.BEGAN, scale: 1 }, { state: State.ACTIVE, scale: 0.4 }, { state: State.END, scale: 0.4 }]);
+    });
+    expect(steps).toEqual(['IN', 'OUT']);
+    await act(async () => {
+      view.unmount();
+    });
   });
 });

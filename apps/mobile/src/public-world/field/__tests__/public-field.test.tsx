@@ -600,7 +600,10 @@ describe('S5-03B — the Public field surface', () => {
     // The generic world canvas the Personal Map paints through — never a second world style: the tone curve, the
     // recorded atmosphere strata and the veil's grain.
     expect(view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true })).toBeTruthy();
-    expect(skia(view, 'RuntimeShader')).toHaveLength(1);
+    // MAP-PERF-01 (CONTROLLED RE-ANCHOR, PO-approved candidate F): the one tone curve is carried by the draws it reaches —
+    // once over the objects and once on each served place's wash (three here) — and by the ground's own paints.
+    expect(skia(view, 'RuntimeShader')).toHaveLength(1 + 3);
+    expect(skia(view, 'Shader')).toHaveLength(5);
     expect(skia(view, 'Picture').length).toBeGreaterThan(0);
     // LA-VIS-01 (controlled re-anchor of the paint structure): the veil's grain once, and each place's mass carries the
     // same texture passes as every other place (no category, no weight).

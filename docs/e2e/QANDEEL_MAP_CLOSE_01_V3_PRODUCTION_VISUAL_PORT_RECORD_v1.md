@@ -21,6 +21,12 @@
 
 **Merge rule:** production changes are not merged before the PO's approval.
 
+**MAP-PERF-01 (PO "FINAL PRIORITY RESET", 2026-11-12):** `CANDIDATE F PORTED TO PRODUCTION ON DRAFT PR #393 — CI GREEN — OPEN: FAST, PAN ACCEPTABLE IN PERSONAL ONLY — ZOOM NOT MET — NATIVE MEMORY GROWTH OPEN — AWAITS THE PO'S MANUAL TEST AND DECISIONS — NOT MERGED` (§9, "MAP-PERF-01").
+
+**MAP-PERF-01, Targeted Blocker Resolution (PO decision, 2026-11-12):** `SHARED / PUBLIC PINCH FIXED (CAUSE FOUND, REGRESSION TEST, PROVEN ON THE PHONE) — PERSONAL FIRST-STEP JUMP: CAUSE FOUND, PROOF REJECTED, SMALLEST ALTERNATIVE AWAITS THE PO — NATIVE MEMORY GROWTH: NOT A GC LAG, CAUSE NOT FOUND, MERGE BLOCKED — NOT MERGED` (§9, "MAP-PERF-01: Targeted Blocker Resolution").
+
+**MAP-PERF-01, Zoom prefetch and the final memory test (PO decisions, 2026-11-12 and 2026-11-14):** `ZOOM PREFETCH IN PRODUCTION (PO-APPROVED): THE FIRST ZOOM IN TRAVELS, NO MAP REMOUNT, REGRESSION TESTS — NATIVE MEMORY: GROWTH CONTINUES OVER 60 OPENS, NO PLATEAU, CAUSE NOT FOUND — MERGE BLOCKED — NOT MERGED` (§9, "MAP-PERF-01: Zoom prefetch and the final memory test").
+
 > **The production map now draws its nodes and relations in the S3-R2 grammar, from real data only. Its world is S3-R2's world at every distance: FAR, MID, NEAR and ANALYTICAL are one world approached. The engine, the camera, the placement, the interactions and every meaning underneath it did not move.**
 
 ---
@@ -201,6 +207,11 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Three worlds (§5B):** VPORT-02 world pins | `WorldCanvas` `69b6a183` → `43c66051` on Part A, and `54cefdf0` → `55e441d7` once merged into Part B; `WorldContinuity` `4c49a094` → `632de2b2` (comments only); recorded in the test with the previous pins | PO scope correction; both goldens unchanged |
 | **Pan/Zoom performance slice (2026-11-11):** VPORT-02 world pin | `WorldStrata` `6f6b8b94` → `77ea34d7`: `FadedLayer` bounds its layer with an outer clip (the content's bounds plus 32). Recorded in the test with the previous pin | the PO's performance slice; both goldens re-recorded, and removing the added clip wrappers (607 in the map golden, 568 in the screen golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest; the rest are within 2 / 255 |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
+| **MAP-PERF-01 (candidate F, 2026-11-12):** VPORT-02 world pins | `WorldCanvas` `55e441d7` → `ea8cda2e`, `WorldMarks` `d28077e5` → `6db704a8`, `WorldStrata` `77ea34d7` → `1d916a00`, `world-mass` `0bfb6e92` → `4c391bbc`; recorded in the test as "MAP-PERF-01 CONTROLLED RE-ANCHOR" with the previous pins | PO "FINAL PRIORITY RESET" (2026-11-12): port candidate F with every layer kept; both goldens re-recorded, structural diff PAINT-ONLY |
+| **MAP-PERF-01:** `world-visual.test.tsx`, `public-field.test.tsx` | the tone is counted per draw (one `RuntimeShader` per world plane and Home, five ground `Shader`s with the one tone source, uniforms `{ a, alpha: 1 }`), each with its previous form | candidate F tones each draw instead of the composite |
+| **MAP-PERF-01:** S5-03B, T-10, VPORT-01, Map runtime census | the plane's objects are wrapped by `WorldTone` (`const objects = <WorldTone>{children}</WorldTone>`) and the outer tone around the world is gone; the mass imports `./prepared-raster`; `visual/prepared-raster.ts` joins the authorized surface | the same orderings and rules, asserted on the new shape |
+| **MAP-PERF-01:** M04-15 firewall, T-12 §28.19 | the Map adds no dependency: it declares a store port (`installPreparedRasterStore`); the file store lives in `src/map-prepared-store` (expo-file-system, versioned folder `map-prepared-v1`, at most 200 files / 48 MB, oldest out first) and the Product root only installs it | no rule relaxed: the Map stays dependency-free and the integration owner persists nothing |
+| **MAP-PERF-01 Zoom prefetch (2026-11-14):** S7-03 criterion 12, S7-04 frozen pins | `LivingAnalysisMap` `90fe8580` → `e45abece`; recorded in both tests as "MAP-PERF-01 RE-ANCHOR" with the previous pin | the PO's approval of the Zoom prefetch (2026-11-14): the adjacent rungs through the same `ensure`; the projection, its cache, the Map, the chrome, every act and every refusal unchanged |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
 
@@ -332,7 +343,91 @@ The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exa
 
 **PO review (2026-11-11): candidates C, D and E, measured, none adopted.** See Part B §11, "PO review corrections". The composite layer is rasterized below screen resolution, which is why B is soft and fast. A fitted pass (C) restores luminance and colour but not the threads. The canonical curve as a per-draw colour filter (D) keeps A's look within 1.3 levels and reaches about 15 fps (Personal, Shared). Pan remains NOT MET.
 
+### MAP-PERF-01: candidate F in production (PO "FINAL PRIORITY RESET", 2026-11-12)
+**Authority:** the PO's "FINAL PRIORITY RESET — Pragmatic Performance & Fast Closure" and its addendum "Zoom Smoothness Is Mandatory" (2026-11-12). About 20–25 fps is practical; 30 fps is not required. The PO's manual test on the HONOR decides acceptance. First install (8–11 s) is a separate launch blocker, handled later. MAP-PERF closes only on three experiences: fast open, acceptable pan, acceptable zoom.
+
+**What changed (Draft PR #393, `map/map-perf-01-production`, `121b0ec1` + `98d9408a`, base Part B).**
+- The tone is applied per draw: the ground in one toned rect, the objects inside `WorldTone`, the wash toned by itself. The outer tone around the world is gone.
+- Every mark, tether and wash is bounded by a clip of its own reach (`drawClip`).
+- A prepared tile is drawn back as its image through one rect at its weight, with no layer. A single-copy mass is drawn as its image.
+- The grain is an image at a constant share of 3 (T-11: no pixel-ratio read).
+- Tiles and masses are kept as lossless PNGs between launches, named by their serialized drawing (tiles) or recipe plus a fingerprint of the drawing (masses), so a changed drawing never reads an old image.
+- Every layer, colour and material is kept; nothing in placement, hit testing, the camera, membership or accessibility moved.
+
+**Repository checks.** `tsc` and lint clean. Jest 3469 pass; the only failures are the baseline locale tests (`depth.test.tsx`, `w2-account-access.test.tsx`, verified on the base by stash) and the re-recorded goldens (PAINT-ONLY). Root contracts touching mobile 1227 / 1227. CI on #393: 10 pass, 0 fail.
+
+**On the PO's phone (HONOR ALI-NX1; the proof package `com.qandeel.mobile.v3proof` only; production APK `v3proof-prod-98d9408a.apk`, sha-256 `68a24be0…`).**
+
+| Experience | Personal | Shared | Public |
+|---|---|---|---|
+| Open, prepared images present (mount → every raster shown, p50) | 1.2 s | 1.2 s | 1.9–2.1 s |
+| First open after install (no prepared image yet) | 10.0 s | — | — |
+| Pan, fps while moving (warm; before F: 3.0 / 2.7 / 1.9) | 21.4–22.6 | 11.0–14.0 | 7.1–8.6 (first swipe) |
+
+- **The light experiment (soft lights toned by their own paint).** Measured as a separate mode of a measurement build: Personal +2.5 fps, Shared +0.4, Public −1.1, and inexact where an ancestor's opacity is below 1. **Not adopted.**
+- **Zoom (real two-finger pinch).** The HONOR's SELinux refuses kernel-level injection (`sendevent`), so two pointers are injected through the system input manager (`app_process`, nothing installed, no setting changed). An automated step is not taken as proof of a pinch.
+  - **Personal:** the pinch steps IN and OUT. No frame moves under the fingers (by design: a pinch asks for one semantic step on release). After release: IN shows 5 frames in 300–333 ms with one 233–283 ms frame, so it reads as a jump; OUT shows 24 frames in 870–915 ms.
+  - **The cause, measured on every step in the three worlds:** one or two chrome frames at about 100 ms, then 166–366 ms with no map frame while the new level is drawn for the first time, while the camera's 260–380 ms transition clock is already running.
+  - **Shared and Public:** in the production build the pinch changes nothing (0 frames, 0.0 % of pixels). With diagnostic marks in the gesture path, the same pinch is recognised, passes the authority check, the field steps FAR → MID (`APPLIED`) and the picture changes (Shared 40 %, Public 67 %). The defect is timing-dependent; it is already present on `d57ea51c`, before candidate F.
+  - At MID the Shared test world shows empty space (9 places placed, 0 presented): the step keeps the camera's anchor, and the test places lie away from the World's origin (the known test-data problem).
+- **Memory.** Graphics stays at 112–128 MB. Native heap: `d57ea51c` rises from 113 to about 123 MB and is flat from the fifth Analysis open to the fifteenth. With F it rises from 127 to 166 MB over 30 opens (about 1.3 MB per open, no plateau). Switching the grain image, the tile image shader or the single-copy mass image back, one at a time, does not remove the growth over eight opens. **The cause is not found.**
+
+**Zoom NOT MET, and native memory growth open.** Both await the PO. Neither is fixed here: the zoom fix changes when the camera transition starts, and the addendum asks for its reason and the smallest alternative first.
+
+### MAP-PERF-01: Targeted Blocker Resolution (PO decision, 2026-11-12)
+**Authority:** the PO's "Targeted Blocker Resolution, No New Optimization Cycle" (2026-11-12): candidate F kept; memory growth a fix priority before merge (limited diagnosis); an isolated proof of starting the camera clock with the new level's first frame; a limited diagnosis of the Shared / Public pinch with a specific cause and a regression test that relies on no logging or delay; no new pan optimization; first install kept apart. Measured on the PO's HONOR, `com.qandeel.mobile.v3proof` only, no phone setting changed.
+
+**Shared / Public pinch: fixed.**
+- **Cause:** `useWorldSemanticStepGesture` committed with `onSettled?.(step(direction))`. An optional call does not evaluate its argument when the callee is absent. The Shared and Public fields attach no observer, so the finished pinch reached the commit, with the right authority and direction, and the step never ran. Personal attaches one, so it worked. It is deterministic, not a timing race: every diagnostic build that "fixed" it had rewritten that line to read the outcome first; the build with the responder counter alone still failed.
+- **Fix:** the act runs first and the observer is notified afterwards (`const outcome = step(direction); onSettled?.(outcome);`), the rule `MapSurface` and `ReturnControls` already state.
+- **Regression test:** `semantic-zoom-activation.test.tsx` fires the pinch through the real detector (`fireGestureHandler`), with and without an observer, and asserts one step IN and one step OUT. It fails on the previous code (the case without an observer) and passes with the fix. No logging and no delay.
+- **On the phone (production build, no instrumentation):** before the fix, 0.0 % of pixels and an identical accessibility tree after the pinch (6 of 6). After: IN changes Public by 66.6 % and Shared by 40.3 % (4 of 4); IN then OUT returns to FAR (Shared identical, Public 3.4 %). Personal unchanged (IN / OUT 19.6 % each way).
+- **Separate, not fixed here:** at MID the Shared test World shows empty space (9 places placed, 0 presented), because the step keeps the camera's anchor and the test places lie away from the origin. A test-data problem.
+
+**Personal zoom: the proof is rejected; the cause of the jump is found.**
+- **The proof** (in a measurement build only: the travel's springs start two UI frames after the request, same durations): no clear improvement. First IN 5–6 frames either way; on a cached travel the longest interval is 200–283 ms with it and 166–300 ms without. Not ported.
+- **The cause:** the first step to a depth whose projection is not yet in the cache. The store's depth changes at once, the projection for the new depth is fetched in an effect, and until it arrives the Personal world renders nothing (`LivingAnalysisMap`: no context, no Map). The Map is unmounted and mounted again: the canvas and its surface are rebuilt and the camera's travel is lost. Measured in one process (IN, OUT, IN, OUT): the first IN remounts the canvas and shows 5 frames in about 330 ms; the second IN, cached, does not remount and travels 27–29 frames in about 1.2 s. Intervals of 183–300 ms remain inside every travel.
+- **Smallest alternative, awaiting the PO (not implemented):** ask for the adjacent depths' projections in the background (the same `ensure` the composition already calls), so a step finds its scene in the cache. Nothing is drawn from a context that is not this tuple's; the cost is extra projection reads.
+
+**Native memory: not a GC lag; the cause is not found.**
+- A forced collection (`gc()` present on the JS runtime; the UI runtime is asked to collect too, unconfirmed there) at every fifth open, back in the Conversation, frees 2.6–3.4 MB. Native heap after GC: 134.9, 141.1, 146.1 and 150.5 MB after 5, 10, 15 and 20 opens (about 1.0 MB per open, still rising). `d57ea51c` is flat at about 123 MB from the fifth open.
+- With the three image paths of F switched back together (grain, tile shader, single-copy mass): 118.6, 123.3, 126.9 and 130.0 MB. Lower, and still rising (about 0.76 MB per open). So the images are part of it, not all of it.
+- The prepared-raster caches are bounded (nebula and continuity tiles per process, masses in an LRU of 48, a WeakMap keyed by picture). No fix is made. Per the PO, a build whose memory grows without a known bound is not merged.
+
+### MAP-PERF-01: Zoom prefetch and the final memory test (PO decisions, 2026-11-12 and 2026-11-14)
+**Authority:** the PO's "Final Targeted Zoom & Memory Checks" (2026-11-12: a prefetch proof, one isolated per-draw tone memory test, Mobile CI) and "Approve Zoom Prefetch & One Final Bounded Memory Test" (2026-11-14: the prefetch approved for production under conditions; one 60-open memory test with a stop rule; no new diagnosis). Measured on the PO's HONOR, `com.qandeel.mobile.v3proof` only, no phone setting changed, no AI call.
+
+**Final checks (2026-11-12).**
+- **Prefetch proof** (measurement build only): first IN 20–21 frames over 833–1082 ms and no canvas remount (without it: 5 frames in 316 ms and a remount). One extra read per Analysis open (WORLD → THREAD); every later step found its rung held. No visible native cost.
+- **Per-draw tone memory test** (the composite tone of before F, 20 opens): native heap after GC 133.1, 136.1, 135.9 and 140.6 MB after 5, 10, 15 and 20 opens (about 0.5 MB per open against F's 1.0, within the noise). Not adopted. The Hermes heap is flat on both runtimes (`gc()` present on both), the JS-owned native memory is constant at 45.26 MB, and Graphics and Java are flat: the growth is native memory that JS does not own.
+- **CI on `f0c432f2`:** green after re-running only the failed jobs. API: the PostgreSQL apt key download from www.postgresql.org failed twice on the runner. Mobile: the iOS producer's 15-minute timeout, once. No code or workflow change.
+
+**Zoom prefetch: in production.**
+- **Change:** once the current rung is held, `LivingAnalysisMap` asks the same one cache, through the same `ensure`, for its two adjacent rungs (`adjacentDepth` IN and OUT), one after the other, after the commit, and nothing while the live call is not idle. A held or in-flight rung is not read again, and the server answers each read as it answers the step's own. No change to the canonical state, the camera, the durations or the drawing, and no timer (T-12's "no cadence" holds).
+- **Tests:** `map-zoom-prefetch.test.tsx`. The first Zoom IN keeps the same Map and plane instances; on the previous code the Map is mounted again and the test fails. Over IN, IN, OUT, OUT, IN every rung is read once (World, Thread, Session, Analytical Object). Nothing is read during an active call, and the neighbours are read once it is idle. The S7-03 and S7-04 pins are re-anchored (§6).
+- **On the phone** (production build, no instrumentation; IN, OUT, IN, OUT in one process): first IN 19 frames over 833 ms (before: 5 frames in 316 ms); the other three 23–24 frames. IN and OUT each change 19.6 % of the picture. A pause of up to 150–267 ms remains inside the travels, as before; it is left to the PO's manual test and not closed here.
+
+**Native memory: the final 60-open test, growth continues.**
+- **Method:** the existing measurement build at mode 0 (F as shipped, without the prefetch; no rebuild, per the PO). Each open: enter, four pans, a pinch IN and OUT, back. At every tenth open, back in the Conversation, three reads: as is; after two forced GCs on both runtimes; then after Home and `send-trim-memory COMPLETE`. MB = kB / 1000, as before.
+
+| after open | native after GC | native after trim | Graphics after trim | Java after GC | JS heap allocated after GC (JS / UI) | JS-owned native |
+|---|---|---|---|---|---|---|
+| 10 | 144.6 | 143.6 | 33.5 | 7.2 | 7.72 / 0.65 | 45.26 |
+| 20 | 152.5 | 151.5 | 35.0 | 7.2 | 7.78 / 0.65 | 45.26 |
+| 30 | 160.1 | 159.0 | 35.1 | 7.2 | 7.82 / 0.65 | 45.26 |
+| 40 | 167.7 | 166.5 | 35.6 | 7.2 | 7.77 / 0.65 | 45.44 |
+| 50 | 174.2 | 172.5 | 36.6 | 7.2 | 7.79 / 0.65 | 45.48 |
+| 60 | 180.9 | 179.4 | 38.0 | 7.2 | 7.81 / 0.65 | 45.52 |
+
+- **Result:** native heap after GC rises 7.9, 7.6, 7.6, 6.5 and 6.7 MB per ten opens: about 0.66 MB per open over the last twenty opens against 0.78 over the first, and +36.3 MB from open 10 to open 60. There is no plateau. Neither the forced GC nor the memory pressure frees it (at most 1.7 MB). The JS heaps, Java and Unknown are flat. Graphics is mostly freed by the pressure (about 93 → 35 MB) and keeps +4.5 MB. It reproduces the 20-open runs (141.1 and 150.5 MB after 10 and 20 opens). `d57ea51c` is flat at about 123 MB from the fifth open.
+- **The blocker:** native memory that JS does not own grows about 0.7 MB per Analysis open with candidate F, linearly through 60 opens; it is released neither by a GC nor by the system's memory pressure. The images explain part of it (0.76 MB per open with the three image paths switched back), the per-draw tone does not, and the cause is not found. Risk: about 70 MB per 100 opens in one process, kept until the process ends. A short session is not affected; a long session raises the chance the system kills the app in the background. Per the PO, this build is not merged while the growth is unexplained. No diagnosis was started after the test.
+
+
+
 ## 10. Not done yet
+- **MAP-PERF-01 (2026-11-12), awaiting the PO:** the PO's manual test of the production build in the three worlds; the zoom start (record §9, "MAP-PERF-01"); the Shared / Public pinch defect; the native memory growth with candidate F; first install (separate launch blocker).
+- **MAP-PERF-01 Targeted Blocker Resolution (2026-11-12), awaiting the PO:** the native memory growth (cause not found, merge blocked); the Personal first-step jump (prefetch of adjacent depths, not implemented); the PO's manual test of the fixed pinch in Shared and Public; the Shared test-data placement; first install.
+- **MAP-PERF-01 Zoom prefetch and the final memory test (2026-11-14), awaiting the PO:** the native memory growth (continues over 60 opens, no plateau, cause not found, merge blocked); the PO's manual test of the production build (open speed, pan, Zoom IN / OUT, in Personal, Shared and Public), including the pause inside the travels; the Shared test-data placement; first install.
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.

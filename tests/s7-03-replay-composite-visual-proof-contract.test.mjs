@@ -100,7 +100,11 @@ const FROZEN = [
   // Map, the chrome and every refusal are unchanged. Previous pin 20679fd4.
   // MAP-CLOSE-01 V-3 — PO REVIEW RE-ANCHOR (2026-11-11): with the details hidden, the return acts take the arrangement
   // for labels only (side by side where the labels fit). Previous pin 8185f212.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '90fe85806f0b3a4dc2ef0d9805cae8f6ca59f82fdf0440e23158f6009c2f15e9'],
+  // MAP-PERF-01 RE-ANCHOR (2026-11-14, the Product Owner's approval of the Zoom prefetch): once the current rung is held,
+  // the Personal Analysis asks the same one cache, through the same `ensure`, for its two adjacent rungs, one after the
+  // other and none during a live call, so the first Zoom IN no longer unmounts the Map. The projection, its cache, the Map,
+  // the chrome, every act and every refusal are unchanged. Previous pin 90fe8580.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'e45abecef615f71355a46429d8faaaf70787075fb2e49431539325a28f319bc7'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],

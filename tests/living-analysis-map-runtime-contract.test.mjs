@@ -65,6 +65,10 @@ const PRODUCTION_FILES = [
   'visual/WorldMarks.tsx',
   'visual/WorldStrata.tsx',
   'visual/index.ts',
+  // MAP-PERF-01 (Product Owner "PO FINAL PRIORITY RESET", 2026-11-12 (candidate F ported to production, graphics kept)): the prepared rasters — content-named PNG bytes the world's painted
+  // rasters are kept as between launches, through a store the app's composition installs (the Map reads and writes no
+  // file and adds no dependency, M04-15). Paint only.
+  'visual/prepared-raster.ts',
   'visual/useWorldResponse.ts',
   // LA-VIS-01 (Product Owner authorization, 2026-10-07): the one declared PRESENTATION palette and its world-space field.
   // Paint only, pinned by VPORT-01 and VPORT-02; it reads a world address and nothing else.

@@ -28,16 +28,17 @@
  * the colour still says where, never what; every size and alpha is still constant per tier. Without a chroma, and at
  * increased contrast (F1), the frozen VPORT-01 / LA-VIS-01 grammar below is drawn unchanged.
  */
-import { BlurMask, Circle, Group, LinearGradient, Path, Picture, RadialGradient, vec } from '@shopify/react-native-skia';
+import { BlurMask, Circle, FilterMode, Group, Image, LinearGradient, MipmapMode, Path, Picture, RadialGradient, vec } from '@shopify/react-native-skia';
 import { useReadingOf, type DerivedValue } from '../../motion';
 
 import type { MapObjectFamily } from '../projection';
 import { APPEARANCE_RADIUS_POINTS, HOME_RADIUS_POINTS, REGISTER_RADIUS_POINTS } from '../renderer/map-geometry';
 import type { WorldResponse } from './useWorldResponse';
 import { WORLD_VISUAL } from './world-visual.generated';
-import { FadedLayer, ladderHue } from './WorldStrata';
+import { FadedLayer, WorldTone, ladderHue } from './WorldStrata';
 import type { ChromaFamily } from './world-chroma';
 import { MASS_EXTENT, MASS_UNIT, massPicture } from './world-mass';
+import { rasterBehind } from './prepared-raster';
 import {
   MARK_RADIUS_POINTS,
   SHADE_GRADIENT,
@@ -155,15 +156,28 @@ export interface WorldObjectProps {
   readonly chroma?: ChromaFamily;
 }
 
+/**
+ * MAP-PERF-01 (candidate F): a draw bounded by a clip of its own extent. The world's tone is an image filter on each of a
+ * mark's draws, and Skia sizes the filter's layer by the clip in force: unbounded, every soft light, ray and body opened
+ * a layer the size of the glass on every frame. The clip contains the whole draw, so nothing of it is cut (measured on
+ * the Product Owner's phone, 2026-11-11: pixel-identical); only the layer behind it is the draw's own size.
+ */
+function bound(x: number, y: number, reach: number, draw: React.ReactNode) {
+  return <Group clip={{ x: x - reach, y: y - reach, width: 2 * reach, height: 2 * reach }}>{draw}</Group>;
+}
+
 /** A light around a body: one canonical falloff, one tier weight. */
 function Light({ x, y, r, profile, hue, lightness, opacity, saturation }: { x: number; y: number; r: number; profile: 'wide' | 'soft' | 'core' | 'point'; hue: number; lightness: number; opacity: DerivedValue<number> | number; saturation?: number }) {
   const f = falloff(profile, hue, saturation ?? (profile === 'core' ? V.mark.haloSat * V.mark.coreSatShare : V.mark.haloSat), lightness);
-  return (
+  return bound(
+    x,
+    y,
+    r + 2,
     <Group opacity={opacity}>
       <Circle cx={x} cy={y} r={r}>
         <RadialGradient c={vec(x, y)} r={r} colors={f.colors} positions={f.positions} />
       </Circle>
-    </Group>
+    </Group>,
   );
 }
 
@@ -239,9 +253,14 @@ export function WorldMark({ x, y, r, tier, markerRadius: marker, shape, S, respo
       {tier === 'major' ? (
         <Group opacity={response.groundMajor}>
           <Group opacity={BLOOM.clearing}>
-            <Circle cx={x} cy={y} r={r * V.material.objGnd.r}>
-              <RadialGradient c={vec(x, y)} r={r * V.material.objGnd.r} colors={SHADE_GRADIENT.colors} positions={SHADE_GRADIENT.positions} />
-            </Circle>
+            {bound(
+              x,
+              y,
+              r * V.material.objGnd.r + 2,
+              <Circle cx={x} cy={y} r={r * V.material.objGnd.r}>
+                <RadialGradient c={vec(x, y)} r={r * V.material.objGnd.r} colors={SHADE_GRADIENT.colors} positions={SHADE_GRADIENT.positions} />
+              </Circle>,
+            )}
           </Group>
         </Group>
       ) : null}
@@ -330,9 +349,14 @@ function ChromaticMark({
       {tier === 'major' ? (
         <Group opacity={response.groundMajor}>
           <Group opacity={BLOOM.clearing}>
-            <Circle cx={x} cy={y} r={r * V.material.objGnd.r}>
-              <RadialGradient c={vec(x, y)} r={r * V.material.objGnd.r} colors={SHADE_GRADIENT.colors} positions={SHADE_GRADIENT.positions} />
-            </Circle>
+            {bound(
+              x,
+              y,
+              r * V.material.objGnd.r + 2,
+              <Circle cx={x} cy={y} r={r * V.material.objGnd.r}>
+                <RadialGradient c={vec(x, y)} r={r * V.material.objGnd.r} colors={SHADE_GRADIENT.colors} positions={SHADE_GRADIENT.positions} />
+              </Circle>,
+            )}
           </Group>
         </Group>
       ) : null}
@@ -343,18 +367,27 @@ function ChromaticMark({
       <Light x={x} y={y} r={r * c.bloom} profile="point" hue={hue} saturation={sat} lightness={tone(CHROMATIC.lift.bloom)} opacity={c.bloomAlpha} />
       <Light x={x} y={y} r={r * c.hot} profile="point" hue={hue} saturation={chroma.saturation * CHROMATIC.hotSat} lightness={tone(CHROMATIC.lift.hot)} opacity={c.hotAlpha} />
       {/* The rays: one path, fading outward from the centre. */}
-      <Path path={rayPath(x, y, r, shape.limbAngle, c)} style="stroke" strokeWidth={CHROMATIC.rayWidth} strokeCap="round">
-        <RadialGradient
-          c={vec(x, y)}
-          r={reach}
-          colors={[hsla(hue, sat, tone(CHROMATIC.lift.ray), CHROMATIC.rayAlpha), hsla(hue, sat, tone(CHROMATIC.lift.bloom), CHROMATIC.rayAlpha * 0.35), hsla(hue, sat, tone(CHROMATIC.lift.bloom), 0)]}
-          positions={[0, 0.45, 1]}
-        />
-      </Path>
+      {bound(
+        x,
+        y,
+        reach + CHROMATIC.rayWidth + 2,
+        <Path path={rayPath(x, y, r, shape.limbAngle, c)} style="stroke" strokeWidth={CHROMATIC.rayWidth} strokeCap="round">
+          <RadialGradient
+            c={vec(x, y)}
+            r={reach}
+            colors={[hsla(hue, sat, tone(CHROMATIC.lift.ray), CHROMATIC.rayAlpha), hsla(hue, sat, tone(CHROMATIC.lift.bloom), CHROMATIC.rayAlpha * 0.35), hsla(hue, sat, tone(CHROMATIC.lift.bloom), 0)]}
+            positions={[0, 0.45, 1]}
+          />
+        </Path>,
+      )}
       {selected ? null : <LitRim x={x} y={y} radius={r * c.ring} width={c.ringWidth} colour={(a) => hsla(hue, sat, tone(CHROMATIC.lift.ring), a)} />}
-      <MarkBody x={x} y={y} r={r} path={shape.path} stroked={shape.stroked} ink={selected ? palette.selectedInk : hsla(hue, CHROMATIC.centreSat, CHROMATIC.centreLight, CHROMATIC.centreAlpha)} scale={selected ? 1 : c.body} />
+      {bound(x, y, r * 3 + 4, <MarkBody x={x} y={y} r={r} path={shape.path} stroked={shape.stroked} ink={selected ? palette.selectedInk : hsla(hue, CHROMATIC.centreSat, CHROMATIC.centreLight, CHROMATIC.centreAlpha)} scale={selected ? 1 : c.body} />)}
       <Light x={x} y={y} r={r * c.white} profile="point" hue={hue} lightness={BLOOM.whiteLight} saturation={BLOOM.whiteSat} opacity={c.whiteAlpha} />
-      <Group opacity={response.near} transform={selected ? undefined : paintedAbout(x, y, c.body)}>
+      {bound(
+        x,
+        y,
+        r * 3 + 4,
+        <Group opacity={response.near} transform={selected ? undefined : paintedAbout(x, y, c.body)}>
         <Path path={shape.path} style="stroke" strokeWidth={r * V.mark.limbWidth}>
           <LinearGradient
             start={vec(x + lx * r * 1.15, y + ly * r * 1.15)}
@@ -368,7 +401,8 @@ function ChromaticMark({
           />
         </Path>
         <Light x={x} y={y} r={r * m.core} profile="core" hue={hue} lightness={tone(CHROMATIC.lift.ring)} opacity={material.alpha * m.coreAlpha} />
-      </Group>
+        </Group>,
+      )}
       {selected ? <SelectedMarker x={x} y={y} r={marker} contrast="standard" /> : null}
     </>
   );
@@ -382,10 +416,13 @@ function ChromaticMark({
 function LitRim({ x, y, radius, width, colour }: { x: number; y: number; radius: number; width: number; colour: (alpha: number) => string }) {
   const outer = radius + width;
   const at = (d: number) => Math.min(1, Math.max(0, d / outer));
-  return (
+  return bound(
+    x,
+    y,
+    outer + 2,
     <Circle cx={x} cy={y} r={outer}>
       <RadialGradient c={vec(x, y)} r={outer} colors={[colour(0), colour(0), colour(CHROMATIC.ringAlpha), colour(0)]} positions={[0, at(radius - width), at(radius), 1]} />
-    </Circle>
+    </Circle>,
   );
 }
 
@@ -497,6 +534,11 @@ export function WorldPlaceAtmosphere({
       return w > 0 ? MASS_OPEN : MASS_CLOSED;
     }),
   );
+  // MAP-PERF-01 (candidate F): the wash is closed (an empty clip) where its weight is zero, like a mass size.
+  const washClip = useReadingOf(response.approach, (A) => {
+    'worklet';
+    return A > MASS.washFrom ? MASS_OPEN : MASS_CLOSED;
+  });
   const washShare = useReadingOf(response.approach, (A) => {
     'worklet';
     const t = Math.min(1, Math.max(0, (A - MASS.washFrom) / (MASS.washTo - MASS.washFrom)));
@@ -509,26 +551,48 @@ export function WorldPlaceAtmosphere({
   const tone = massTone(chroma, s0, l0, s1, l1);
   const family: ChromaFamily = chroma ?? { hue: V.worldHue, saturation: s0, lightness: l0 + MASS.canonicalLift };
   const picture = massPicture(seed, family);
+  const raster = rasterBehind(picture);
+  const half = MASS_EXTENT * MASS_UNIT;
   return (
     <Group opacity={response.placeAtmosphere}>
       {/* LA-VIS-01 — a semantic MASS rather than a disc: an irregular, volumetric body with its own internal material
           (./world-mass). Every place carries the same material in the same amounts; its shape variant alone is chosen by
           its key, and its colour by the world at its address, so nothing about it is said by it. Light accumulates where
           places are many: the territories the eye reads are the real density of real places, and nothing else. */}
-      <Group opacity={washShare}>
-        {/* Close in, a calm wash of the place's colour: the world never falls back to bare space. */}
-        <Circle cx={x} cy={y} r={radius * MASS.wash} blendMode="screen">
-          <RadialGradient
-            c={vec(x, y)}
-            r={radius * MASS.wash}
-            colors={[hsla(tone.heartHue, tone.sat, tone.light, MASS.washAlpha), hsla(tone.hazeHue ?? tone.heartHue, tone.sat, tone.light - 4, MASS.washAlpha * 0.5), hsla(tone.hazeHue ?? tone.heartHue, tone.sat, tone.light - 8, 0)]}
-            positions={[0, 0.55, 1]}
-          />
-        </Circle>
+      <Group opacity={washShare} clip={washClip}>
+        {/* Close in, a calm wash of the place's colour: the world never falls back to bare space. MAP-PERF-01: the wash is
+            the one vector draw of the material, and it keeps the world's tone, on itself, in its own bounds. */}
+        <WorldTone>
+          {bound(
+            x,
+            y,
+            radius * MASS.wash + 2,
+            <Circle cx={x} cy={y} r={radius * MASS.wash} blendMode="screen">
+              <RadialGradient
+                c={vec(x, y)}
+                r={radius * MASS.wash}
+                colors={[hsla(tone.heartHue, tone.sat, tone.light, MASS.washAlpha), hsla(tone.hazeHue ?? tone.heartHue, tone.sat, tone.light - 4, MASS.washAlpha * 0.5), hsla(tone.hazeHue ?? tone.heartHue, tone.sat, tone.light - 8, 0)]}
+                positions={[0, 0.55, 1]}
+              />
+            </Circle>,
+          )}
+        </WorldTone>
       </Group>
       {MASS.levels.map((level, depth) => {
         // The bounds every copy of this level can reach: the mask covers them, and nothing else.
         const cover = radius * (level.reach[1] + level.size * 1.3 * MASS_EXTENT);
+        // MAP-PERF-01 (candidate F): a size of ONE copy is that copy's raster at the size's weight, with no layer (the
+        // same pixels at the same weight; a layer is needed only where copies overlap).
+        if (level.copies === 1 && raster !== undefined) {
+          const copy = massCopies(seed, depth, level)[0];
+          return (
+            <Group key={depth} clip={clips[depth]}>
+              <Group transform={[{ translateX: x + copy.dx * radius }, { translateY: y + copy.dy * radius }, { rotate: copy.rotate }, { scale: (radius * copy.size) / MASS_UNIT }]}>
+                <Image image={raster.image} x={-half} y={-half} width={half * 2} height={half * 2} fit="fill" opacity={weights[depth]} sampling={{ filter: FilterMode.Linear, mipmap: MipmapMode.None }} />
+              </Group>
+            </Group>
+          );
+        }
         return (
           <Group key={depth} clip={clips[depth]}>
             <FadedLayer opacity={weights[depth]} x={x - cover} y={y - cover} width={cover * 2} height={cover * 2}>
@@ -655,7 +719,25 @@ export interface WorldTetherProps {
  * because the T-10 arrival travels along the straight line between the same two points, and the
  * renderer may not show a path the arrival does not take.
  */
-export function WorldTether({ fromX, fromY, toX, toY, S, response, contrast, strokeScale, chroma }: WorldTetherProps) {
+export function WorldTether(props: WorldTetherProps) {
+  // MAP-PERF-01 (candidate F): the tether's draws bounded by a clip of their own extent (see `bound`): the span, its bow,
+  // its widest stroke at the present counter-scale and its blur. Nothing of it is cut; only the tone's layer is its size.
+  const { fromX, fromY, toX, toY, S, strokeScale } = props;
+  const widest = V.material.rel.w * S.relBead * S.relW * V.relation.widthScale * Math.max(GROUND_WIDTH, BODY_WIDTH, 1, TETHER.glow);
+  const bow = CHROMATIC.tetherBow * Math.hypot(toX - fromX, toY - fromY);
+  const clip = useReadingOf(strokeScale, (k) => {
+    'worklet';
+    const pad = (widest * k) / 2 + TETHER.blur * 3 + bow + 2;
+    return { x: Math.min(fromX, toX) - pad, y: Math.min(fromY, toY) - pad, width: Math.abs(toX - fromX) + 2 * pad, height: Math.abs(toY - fromY) + 2 * pad };
+  });
+  return (
+    <Group clip={clip}>
+      <TetherDraws {...props} />
+    </Group>
+  );
+}
+
+function TetherDraws({ fromX, fromY, toX, toY, S, response, contrast, strokeScale, chroma }: WorldTetherProps) {
   const rel = V.relation;
   const width = V.material.rel.w * S.relBead * S.relW * rel.widthScale;
   const alpha = V.material.rel.a * S.rel;

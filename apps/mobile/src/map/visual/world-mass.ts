@@ -18,6 +18,7 @@
  */
 import { BlendMode, BlurStyle, FilterMode, MipmapMode, PaintStyle, Skia, StrokeCap, TileMode, createPicture, vec, type SkCanvas, type SkPicture } from '@shopify/react-native-skia';
 
+import { drawingName, loadPrepared, recipeName, rememberRaster, savePrepared } from './prepared-raster';
 import type { ChromaFamily } from './world-chroma';
 import { hsla, presentationRotation } from './world-resolver';
 
@@ -84,22 +85,47 @@ export function massPicture(seed: string, chroma: ChromaFamily): SkPicture {
   return picture;
 }
 
+/**
+ * MAP-PERF-01: the fingerprint of the mass drawing itself (one reference mass, serialized), so a prepared mass is named by
+ * its recipe AND the code that paints it: a changed drawing never reads an old image. Null where nothing serializes.
+ */
+let fingerprint: string | null | undefined;
+function massFingerprint(): string | null {
+  if (fingerprint === undefined) {
+    const half = MASS_EXTENT * MASS_UNIT;
+    const reference: ChromaFamily = { hue: 200, saturation: 60, lightness: 52 };
+    fingerprint = drawingName('massdraw', createPicture((canvas) => paintMass(canvas, 0, reference), Skia.XYWHRect(-half, -half, half * 2, half * 2)), M.pixels, M.variants);
+  }
+  return fingerprint;
+}
+
 function recordMass(variant: number, tone: ChromaFamily): SkPicture {
   const half = MASS_EXTENT * MASS_UNIT;
   const bounds = Skia.XYWHRect(-half, -half, half * 2, half * 2);
-  return createPicture((target) => {
-    const share = M.pixels / (half * 2);
+  const share = M.pixels / (half * 2);
+  // MAP-PERF-01: a mass painted once is kept between launches (`./prepared-raster`) and read back instead of painted.
+  const print = massFingerprint();
+  const name = print === null ? null : recipeName('mass', print, `${variant}|${tone.hue}|${tone.saturation}|${tone.lightness}|${M.pixels}`);
+  let image = loadPrepared(name);
+  if (image === null) {
     const surface = Skia.Surface.Make(M.pixels, M.pixels) ?? Skia.Surface.MakeOffscreen(M.pixels, M.pixels);
-    if (surface === null) return;
+    if (surface === null) return createPicture(() => undefined, bounds);
     const canvas = surface.getCanvas();
     canvas.scale(share, share);
     canvas.translate(half, half);
     paintMass(canvas, variant, tone);
     surface.flush();
     const snapshot = surface.makeImageSnapshot();
-    const image = snapshot.makeNonTextureImage?.() ?? snapshot;
-    target.drawImageRectOptions(image, Skia.XYWHRect(0, 0, M.pixels, M.pixels), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
+    image = snapshot.makeNonTextureImage?.() ?? snapshot;
+    savePrepared(name, image);
+  }
+  const raster = image;
+  const picture = createPicture((target) => {
+    target.drawImageRectOptions(raster, Skia.XYWHRect(0, 0, M.pixels, M.pixels), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
   }, bounds);
+  // The picture only draws its image back: a single copy is drawn as that image, at its weight, with no layer.
+  rememberRaster(picture, { image: raster, margin: 0, share });
+  return picture;
 }
 
 const colour = (hue: number, sat: number, light: number, alpha: number) => Skia.Color(hsla(hue, sat, light, alpha));
