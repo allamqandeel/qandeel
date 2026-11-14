@@ -85,3 +85,17 @@ COSMOS_PROOF=1 node apps/mobile/scripts/select-cosmos-proof-entry.mjs --restore
 ```
 
 The `main` switch and the generated `android/` are never committed.
+
+## Build status (2026-11-14, the authoring container)
+
+**No APK was produced here.** The recipe above ran through the selector, `expo prebuild` and the edits to the generated
+project; `./gradlew :app:assembleRelease` then stopped while resolving the React Native Gradle plugin's own classpath
+(`Error resolving plugin [id: 'com.facebook.react.settings']` → `:gradle-plugin` → `Could not find
+org.jetbrains.kotlin:…:2.1.20`), because Maven Central rate-limited the container's egress (HTTP 429, then 404 with
+`retry-after: 8319`). Nothing in this repository is the cause, and no source was compiled, so the build says nothing
+yet about the code. Two facts for whoever builds it next:
+
+- The React Native Gradle plugin asks for a **Java 17 toolchain**. With only JDK 21 installed Gradle tries to download
+  one; give it a JDK 17 (`org.gradle.java.installations.paths=…` or `JAVA_HOME`), as Mobile CI does.
+- A cold Gradle cache needs well over a thousand requests to Maven Central; through a shared egress, use a warm cache
+  or an approved mirror.
