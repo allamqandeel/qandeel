@@ -13,6 +13,11 @@
  * refactor): the golden was regenerated ONCE because the paint itself was intentionally changed. Before it was rewritten,
  * a structural diff of the old and new golden proved that every case differs in Skia paint ONLY — the host tree (views,
  * testIDs, handlers, accessibility) and every mark anchor (origin, order, count) are identical in every case.
+ *
+ * MAP-PERF-01 — CONTROLLED RE-ANCHOR (2026-11-12, Product Owner "PO FINAL PRIORITY RESET": candidate F ported to
+ * production, graphics kept): regenerated ONCE for the same paint-structure change as the Personal Map golden. The
+ * structural diff before rewriting proved, in all 13 cases, the host tree and every mark anchor identical, with only Skia
+ * elements added (Group, RuntimeShader, Shader, ColorShader).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

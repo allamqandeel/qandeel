@@ -58,6 +58,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
+import { installMapPreparedRasters } from '../../map-prepared-store';
 
 import { AccountEntry, SessionVerificationRecovery, type LoginIdAvailability } from '../../account';
 import { AppearanceProvider } from '../../appearance';
@@ -112,6 +113,9 @@ function RuntimeState({ phase }: { readonly phase: IntegrationPhase['kind'] }) {
     </View>
   );
 }
+
+// MAP-PERF-01: the Map keeps its painted world rasters between launches, in the store this composition owns.
+installMapPreparedRasters();
 
 export function ProductRoot() {
   // ONE runtime for the life of this mount. Built lazily so a re-render never constructs a second

@@ -175,7 +175,12 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                 </ResponsiveTimelineRow>
               )}
 
-              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={onChromeContent}>
+              {/*
+                MAP-CLOSE-01 CA-O2 (Product Owner, approved with conditions, 2026-11-14): a world with time (Personal) ends
+                its chrome with the return acts, so its band keeps that end in view when the words overflow and Back stays
+                under the finger. A world without time (Shared, Public) opens a place's panel at its start, as before.
+              */}
+              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={onChromeContent} anchorEnd={timeline !== null}>
                 {chrome(plan.chrome)}
               </ResponsiveChromeBand>
             </ResponsiveSupportBand>

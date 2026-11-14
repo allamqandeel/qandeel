@@ -600,7 +600,10 @@ describe('S5-03B — the Public field surface', () => {
     // The generic world canvas the Personal Map paints through — never a second world style: the tone curve, the
     // recorded atmosphere strata and the veil's grain.
     expect(view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true })).toBeTruthy();
-    expect(skia(view, 'RuntimeShader')).toHaveLength(1);
+    // MAP-PERF-01 (CONTROLLED RE-ANCHOR, PO-approved candidate F): the one tone curve is carried by the draws it reaches —
+    // once over the objects and once on each served place's wash (three here) — and by the ground's own paints.
+    expect(skia(view, 'RuntimeShader')).toHaveLength(1 + 3);
+    expect(skia(view, 'Shader')).toHaveLength(5);
     expect(skia(view, 'Picture').length).toBeGreaterThan(0);
     // LA-VIS-01 (controlled re-anchor of the paint structure): the veil's grain once, and each place's mass carries the
     // same texture passes as every other place (no category, no weight).
@@ -645,6 +648,13 @@ describe('S5-03B — the Public field surface', () => {
     // MID: the meaning in one line, as Public chrome beside the place (never painted into the world).
     expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.children).toBe('meaning 1');
     expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.numberOfLines).toBe(1);
+    // MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): 12 points (the size the label layout collides at),
+    // weight 600 in the primary ink, a thin rim of the world's ground hugging the glyphs — no capsule, no background,
+    // no dimming.
+    const letters = StyleSheet.flatten(view.getByTestId(`qandeel-public-label-${E1.id}`).props.style);
+    const dark = CANONICAL_VISUAL.palettes.DARK.standard;
+    expect(letters).toMatchObject({ fontSize: 12, lineHeight: 20, fontWeight: '600', color: dark.primary, textShadowColor: dark.world, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 3 });
+    for (const key of ['backgroundColor', 'borderRadius', 'borderWidth', 'opacity', 'padding', 'paddingHorizontal']) expect(letters).not.toHaveProperty(key);
     // MID: a place each, at the major tier, in the canonical mark material.
     expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6 });
     expect(bodyOf(view, field, E1).marker).toBeUndefined();

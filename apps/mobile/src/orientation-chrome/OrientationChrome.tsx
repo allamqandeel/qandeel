@@ -51,7 +51,7 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useAnalysisInk, useAnalysisType } from '../analysis-visual';
+import { useAnalysisInk, useAnalysisType, worldTextRim } from '../analysis-visual';
 import { withAlpha } from '../conversation/visual/theme';
 import type { MapActionOutcome, MapProjectionRequest } from '../map';
 import type { ReturnMapContext, ReturnOutcome, ReturnSurface } from '../return-navigation';
@@ -186,6 +186,9 @@ export function OrientationChrome({
   // VPORT-02: the Analysis ink and type. The chrome painted none before, so its words were the platform's default
   // black on whatever lay behind them — the dark-on-dark defect of the VPORT-01 narrow and landscape proof legs.
   const ink = useAnalysisInk();
+  // MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): the orientation lines stand over the world, so they
+  // take the thin rim of its ground every word over the world has. The acts keep their own targets and paint.
+  const rim = worldTextRim(ink.world);
   const type = useAnalysisType();
   // MAP-CLOSE-01 V-3 (PO addendum): every sentence starts on the reader's side — right in Arabic, left in English. A
   // physical side read from the Product language, never from the platform's layout direction.
@@ -263,20 +266,20 @@ export function OrientationChrome({
       {/* Orientation is read, never pressed. It takes no touch at all. */}
       <View style={[styles.orientation, details === null ? null : styles.orientationInRow]} pointerEvents="none">
         {lineHere ? (
-          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:temporal`} style={[styles.line, line]}>
+          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:temporal`} style={[styles.line, line, rim]}>
             {temporalSentence(language, model.temporal)}
           </Text>
         ) : null}
         {previewing === null ? null : (
-          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:preview`} style={[styles.line, line]}>
+          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:preview`} style={[styles.line, line, rim]}>
             {previewing}
           </Text>
         )}
-        <Text testID={`${ORIENTATION_CHROME_TEST_ID}:spatial`} style={[styles.line, line]}>
+        <Text testID={`${ORIENTATION_CHROME_TEST_ID}:spatial`} style={[styles.line, line, rim]}>
           {spatialSentence(language, model.spatial)}
         </Text>
         {live === null ? null : (
-          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:live`} style={[styles.line, line]}>
+          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:live`} style={[styles.line, line, rim]}>
             {live}
           </Text>
         )}

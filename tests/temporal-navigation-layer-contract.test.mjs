@@ -980,7 +980,10 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
     // rail) keeps 16 points from each edge, and for an Arabic reader on a layout that never runs right to left it is
     // reflected AS LAYOUT, its numerals reflecting back, so SP1 stands at the start edge (right). The step, key, window,
     // offset, position scale and every authority are unchanged. Previous pin 0922b31f.
-    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '8afe27a7528a02137ed3948051fab8c5e0860c16'],
+    // MAP-CLOSE-01 Treatment A RE-ANCHOR (Product Owner, APPROVED 2026-11-14, "Zoom, Stable Layout, Unified Labels"): the
+    // numerals stand over the world, so they carry the one approved rim (a text shadow of the Analysis ground, radius 3,
+    // no offset). Their size, colour, step, key, window and every authority are unchanged. Previous pin 8afe27a7.
+    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '8258894babcf18b0dc4a1d28232187663d65bc25'],
     ['apps/mobile/src/timeline/testing/fixtures.ts', 'f59c962d13e6af81088e69168c0c00f307acbf8e'],
     ['apps/mobile/src/timeline/__tests__/controller.test.ts', '8453bae72e867c13788384a81f3eaca17cde2ada'],
     // T-12 §17 and W1A-01: the same corrections' own assertions, re-anchored beside them.

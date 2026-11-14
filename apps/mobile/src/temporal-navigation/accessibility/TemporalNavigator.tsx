@@ -44,7 +44,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent } from 'react-native';
 
 import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
-import { useAnalysisInk, useAnalysisType } from '../../analysis-visual';
+import { useAnalysisInk, useAnalysisType, worldTextRim } from '../../analysis-visual';
 import type { CanonicalStore } from '../../state';
 import type { DisclosedTrack } from '../../timeline';
 import type { TemporalOutcome } from '../outcome';
@@ -169,7 +169,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         accessibilityActions={model.actions.map((action) => ({ name: action.name, label: action.label }))}
         onAccessibilityAction={(event: AccessibilityActionEvent) => runAction(event.nativeEvent.actionName)}
       >
-        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`} style={[type('metadata'), { color: ink.secondary }, side]}>{model.stanceLabel}</Text>
+        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`} style={[type('metadata'), { color: ink.secondary }, side, worldTextRim(ink.world)]}>{model.stanceLabel}</Text>
         {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`} style={[type('metadata'), { color: ink.secondary }, side]}>{model.previewLabel}</Text>}
       </View>
 

@@ -66,3 +66,35 @@ const fallbackType = (role: TypeRole): AnalysisTypeStyle => CACHE.fallback[role]
 export function useAnalysisType(): (role: TypeRole) => AnalysisTypeStyle {
   return useConversationTypeface() ? readyType : fallbackType;
 }
+
+/**
+ * MAP-CLOSE-01 — Treatment A (Product Owner, APPROVED 2026-11-14, "Zoom, Stable Layout, Unified Labels"): ONE policy for
+ * every word that stands on the world, in the three worlds. A thin dark rim hugging the glyphs — a text shadow in the
+ * world's own ground colour, at full strength, radius 3, no offset — and nothing else: no capsule, no background, no
+ * dimming, no drawing layer, no change to S3-R2's graphics. It sets no size, position, line count or touch target, so
+ * nothing it touches moves. Proven on the PO's phone (Arabic and English, over the brightest fibres and the dark ground).
+ */
+export const WORLD_TEXT_RIM_RADIUS = 3;
+
+export interface WorldTextRim {
+  readonly textShadowColor: string;
+  readonly textShadowOffset: { readonly width: 0; readonly height: 0 };
+  readonly textShadowRadius: number;
+}
+
+const RIMS = new Map<string, WorldTextRim>();
+/** The rim for words over a ground of this colour; one frozen object per ground, so a list's styles never churn. */
+export function worldTextRim(ground: string): WorldTextRim {
+  let rim = RIMS.get(ground);
+  if (rim === undefined) {
+    rim = Object.freeze({ textShadowColor: ground, textShadowOffset: Object.freeze({ width: 0, height: 0 } as const), textShadowRadius: WORLD_TEXT_RIM_RADIUS });
+    RIMS.set(ground, rim);
+  }
+  return rim;
+}
+
+/**
+ * Treatment A's letters for the small on-world labels (Shared and Public): weight 600 in the primary ink, at the label's
+ * own 12 points. The size stays: the label layout measures and collides at it, and 13 points dropped a Public label.
+ */
+export const WORLD_LABEL_WEIGHT = '600';

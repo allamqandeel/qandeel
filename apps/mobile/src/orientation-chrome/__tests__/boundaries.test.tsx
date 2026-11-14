@@ -8,7 +8,7 @@
 import { act, render } from '@testing-library/react-native';
 
 import { sessionPosition, type CanonicalStore } from '../../state';
-import { analysisInk } from '../../analysis-visual';
+import { analysisInk, worldTextRim } from '../../analysis-visual';
 import { withAlpha } from '../../conversation/visual/theme';
 import { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from '../OrientationChrome';
 import { orientationModel } from '../model';
@@ -74,8 +74,16 @@ describe('OC08-L — the world is not replaced', () => {
     const store = reader();
     const view = await renderChrome(store);
     const serialized = JSON.stringify(view.toJSON());
+    // MAP-CLOSE-01 Treatment A CONTROLLED RE-ANCHOR (Product Owner, APPROVED 2026-11-14, "Zoom, Stable Layout, Unified
+    // Labels"): the orientation lines stand over the world, so they carry the one approved rim — a text shadow in the
+    // Analysis ground's own dark colour, radius 3, no offset, hugging the glyphs. It is legibility, not a glow: it is
+    // dark, it carries no meaning, and it is the same on every line. That exact rim, and nothing else, is set aside;
+    // every glow, shadow and elevation, and any other text shadow, is still refused.
+    const rim = JSON.stringify(worldTextRim(analysisInk(false).world)).slice(1, -1);
+    expect(serialized).toContain(rim);
+    const undecorated = serialized.split(rim).join('');
     for (const decoration of ['shadowColor', 'shadowRadius', 'shadowOpacity', 'elevation', 'textShadow', 'glow']) {
-      expect(serialized).not.toContain(decoration);
+      expect(undecorated).not.toContain(decoration);
     }
     // Colour is never an indicator. VPORT-02 re-anchor: "the chrome paints none" was the dark-on-dark defect itself —
     // with no ink, its words were the platform's default black on the dark Analysis. The permanent claim is kept and

@@ -28,7 +28,7 @@
  * longer serves: from the field, the search results, the focused panel and its nearby context. A read that cannot be
  * made fails closed: the field becomes the one honest unavailable state and holds nothing.
  */
-import { envelopeCenter, projectAddress, visibleFootprint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
+import { envelopeCenter, projectAddress, unprojectPoint, visibleFootprint, type ScreenPoint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
 import type { CanonicalWorldAddress } from '../../map/world';
 import type {
   ForegroundSignal, PublicAuthoringAnswer, PublicFieldContentPage, PublicFieldContentRead, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel,
@@ -105,7 +105,7 @@ export interface PublicFieldController {
    * accessible route): IN is FAR → MID → NEAR (NEAR focuses the place nearest the centre of the glass); OUT is NEAR →
    * MID (focus released) → FAR.
    */
-  step(direction: SemanticZoomDirection): PublicFieldOutcome;
+  step(direction: SemanticZoomDirection, focal?: ScreenPoint | null): PublicFieldOutcome;
   /** Ask the server again for everything on display (the glass, the open search, the focused panel). */
   revalidate(): void;
   /** A tap on the field at a screen point: at FAR it discloses that place at MID. */
@@ -394,7 +394,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
       setCamera(moved.camera);
       return APPLIED;
     },
-    step(direction) {
+    step(direction, focal = null) {
       const camera = state.camera;
       if (!camera || state.status !== 'READY' || envelope === null) return NOT_READY;
       if (direction === 'IN' && camera.depth === 'MID') {
@@ -402,12 +402,13 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
         const glass = envelope;
         const footprint = visibleFootprint(camera, glass);
         const shown = state.entries.filter((entry) => within(footprint, entry.address) && projectAddress(camera, glass, entry.address) !== null);
-        const nearest = nearestTo(camera.anchor, shown);
+        // MAP-CLOSE-01 CA-Z1: the place nearest the pinch's fingers (the centre of the glass when there are none).
+        const nearest = nearestTo((focal === null ? null : unprojectPoint(camera, glass, focal)) ?? camera.anchor, shown);
         if (nearest === null) return { outcome: 'AT_BOUNDARY' };
         focusOn(nearest);
         return APPLIED;
       }
-      const moved = zoomField(camera, direction);
+      const moved = zoomField(camera, direction, null, focal === null ? null : { envelope, point: focal });
       if (moved.outcome !== 'MOVED') return { outcome: moved.outcome };
       if (camera.depth === 'NEAR') releaseFocus();
       setCamera(moved.camera);

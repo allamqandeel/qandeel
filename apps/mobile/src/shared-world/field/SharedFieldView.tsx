@@ -21,8 +21,9 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { WORLD_LABEL_WEIGHT, worldTextRim } from '../../analysis-visual';
 import { typeStyle, usePalette } from '../../conversation';
-import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
+import type { ScreenPoint, SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { PublicExperienceMark } from '../../public-world/field/PublicExperienceMark';
@@ -60,7 +61,7 @@ export function SharedFieldView({ controller, state, envelope, copy, language }:
     [camera, envelope, focusId, state.entries],
   );
   const pan = useCallback((translationX: number, translationY: number) => controller.pan(translationX, translationY), [controller]);
-  const step = useCallback((direction: SemanticZoomDirection) => controller.step(direction), [controller]);
+  const step = useCallback((direction: SemanticZoomDirection, focal?: ScreenPoint | null) => controller.step(direction, focal), [controller]);
   // A place coming onto the glass because the glass moved is navigation, never meaning becoming known: no arrival plays.
   const noCause = useCallback(() => null, []);
   const view = useWorldView<SharedFieldCamera, SharedWorldNode, SharedFieldOutcome>({
@@ -163,7 +164,11 @@ export function SharedFieldView({ controller, state, envelope, copy, language }:
                   // Two lines need a definite width: under a maxWidth alone, Android measures the one-line height and
                   // clips the second line (seen on the SHARED-VIS-01 device pass).
                   ...(label.lines === 2 ? { width: label.width } : { maxWidth: label.width }),
-                  color: node.selected ? palette.primary : palette.secondary,
+                  // MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): the label's own 12 points, weight 600 in the
+                  // primary ink, with a thin rim of the world's ground hugging the glyphs. No capsule, no background, no dimming.
+                  fontWeight: WORLD_LABEL_WEIGHT,
+                  color: palette.primary,
+                  ...worldTextRim(palette.world),
                   writingDirection: language === 'ar' ? 'rtl' : 'ltr',
                   textAlign: label.side === 'RIGHT' ? 'left' : 'right',
                 }}

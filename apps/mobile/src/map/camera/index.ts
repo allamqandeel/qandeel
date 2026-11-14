@@ -21,6 +21,7 @@ export {
   cameraTransition,
   envelopeAspectRatio,
   envelopeCenter,
+  envelopeEquals,
   exactPoints,
   footprintEquals,
   isWithinFootprint,
@@ -28,6 +29,7 @@ export {
   projectAddress,
   safeAreaHeight,
   safeAreaWidth,
+  steadyEnvelope,
   unprojectPoint,
   viewportEnvelope,
   visibleFootprint,
@@ -43,13 +45,15 @@ export {
   panFromTranslation,
 } from './pan';
 
-export type { SemanticZoomDirection, SemanticZoomResolution } from './zoom';
+export type { SemanticZoomDirection, SemanticZoomFocal, SemanticZoomResolution } from './zoom';
+export { useSteadyEnvelope, type SteadyEnvelopeCamera } from './useSteadyEnvelope';
 export {
   SEMANTIC_ZOOM_DIRECTIONS,
   SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR,
   SEMANTIC_ZOOM_REINFORCEMENT_NUMERATOR,
   adjacentDepth,
   depthIndex,
+  focalAnchor,
   reinforcedScale,
   semanticZoom,
 } from './zoom';

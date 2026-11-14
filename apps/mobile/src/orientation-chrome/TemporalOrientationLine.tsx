@@ -20,7 +20,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
 
-import { useAnalysisInk, useAnalysisType } from '../analysis-visual';
+import { useAnalysisInk, useAnalysisType, worldTextRim } from '../analysis-visual';
 import type { CanonicalStore } from '../state';
 import type { TemporalPreview } from '../temporal-navigation';
 import { temporalLineModel } from './model';
@@ -61,7 +61,8 @@ export function TemporalOrientationLine({ store, language, preview }: TemporalOr
   return (
     <View testID={TEMPORAL_ORIENTATION_LINE_TEST_ID} pointerEvents="none" style={{ paddingBottom: 4, paddingHorizontal: 16 }}>
       {/* MAP-CLOSE-01 V-3: on the reader's side, 16 points from the edge like the chrome below it. */}
-      <Text style={[type('supporting'), { color: ink.primary, textAlign: language === 'ar' ? 'right' : 'left' }]}>{words}</Text>
+      {/* MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): the thin rim every word over the world has. */}
+      <Text style={[type('supporting'), { color: ink.primary, textAlign: language === 'ar' ? 'right' : 'left' }, worldTextRim(ink.world)]}>{words}</Text>
     </View>
   );
 }

@@ -205,17 +205,26 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // and mass level. Both goldens were re-recorded; removing the added clip wrappers (607 in the map golden, 568 in the screen
   // golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest and the
   // rest are within 2 / 255. Previous pin: WorldStrata 6f6b8b94.
+  // MAP-PERF-01 — CONTROLLED RE-ANCHOR (Product Owner "PO FINAL PRIORITY RESET", 2026-11-12: candidate F ported to
+  // production, graphics kept): the tone carried by each draw it reaches, draws bounded by clips of their own extent, rasters
+  // drawn back without a layer, prepared rasters kept between launches. Both goldens re-recorded (structural diff: host tree
+  // and mark anchors identical, Skia elements only). Previous pins: WorldCanvas 55e441d7, WorldMarks d28077e5, WorldStrata
+  // 77ea34d7, world-mass 0bfb6e92.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
-    ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
-    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '55e441d706b80ea2c21cb7b4c21c7c395a9caf81'],
+    // MAP-CLOSE-01 CA-Z1 / CA-O1 RE-ANCHOR (Product Owner, 2026-11-14, "Zoom Orientation, Label Legibility & Memory Risk"):
+    // a pinch's step carries where the fingers were (CA-Z1), and MapSurface holds its anchor once the reader has acted
+    // (CA-O1); no element, paint or prop of the world changes, so both goldens are unchanged. Previous pins: MapSurface
+    // 680b2a42, WorldViewSurface aff512d9.
+    ['apps/mobile/src/map/renderer/MapSurface.tsx', '852ac1e21c4b3b192eaee97aaee10fba334ee59f'],
+    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'dbeb313005977109aa0763b4ef281bcb6a13c029'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'ea8cda2eecd9b1e04b04b70682ac61c445a0d307'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd28077e514252c6bb59f64d45837fbf87a1e1907'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', '77ea34d7a3594f12a33c3ddf2826bcfcc9486d45'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', '6db704a8d355ad1fc3bd6370e618d7530004cead'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', '1d916a00dc0561ebfeabd84caf96e36f2514b890'],
     ['apps/mobile/src/map/visual/WorldContinuity.tsx', '632de2b242d943cbe68c8be0305d204dd367874f'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
-    ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
+    ['apps/mobile/src/map/visual/world-mass.ts', '4c391bbc524e43e69ccc1a1f50df31db2a271efe'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
     ['apps/mobile/src/map/visual/useWorldResponse.ts', '2640e891cfeff3645d9f155f9e888b41d58f3748'],
     ['apps/mobile/src/map/visual/world-field.generated.ts', '1eab16b0c6ec722eacf96c7179c0034bdd10c7af'],
@@ -272,7 +281,10 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   // SHARED-VIS-01 controlled re-anchor: the band also reports its content height. MAP-CLOSE-01 V-3 Part B — PO ADDENDUM
   // RE-ANCHOR (2026-11-11): every world's band reports it (Personal's band is sized to its measured regions); the line's
   // room still comes out of the chrome's share, never out of the world's.
-  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{onChromeContent\}>/u, 'OrientationChrome yields the line\'s room');
+  // MAP-CLOSE-01 CA-O2 CONTROLLED RE-ANCHOR (Product Owner, approved with conditions, 2026-11-14): the band also keeps its
+  // end in view for a world with time (Personal), so Back stays under the finger; the line's room is unchanged. Previous
+  // form: the same element ending at `onContentHeight={onChromeContent}>`.
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{onChromeContent\} anchorEnd=\{timeline !== null\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

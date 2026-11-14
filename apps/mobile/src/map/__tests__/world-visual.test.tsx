@@ -185,9 +185,18 @@ describe('the world expresses only what the Map holds', () => {
     const { placed, element } = paint(world);
     const rendered = await render(element);
     const json = rendered.toJSON();
-    expect(elements(json, 'RuntimeShader')).toHaveLength(1);
-    expect(elements(json, 'RuntimeShader')[0].uniforms).toEqual({ a: WORLD_VISUAL.tone.a });
     const homes = placed.visibleNodes.filter((node) => node.locus?.kind === 'THREAD_HOME');
+    // MAP-PERF-01 (CONTROLLED RE-ANCHOR, PO-approved candidate F, 2026-11-12): the canonical tone curve is carried by the
+    // draws it reaches instead of one group over the whole world — once over the objects, once on each place's wash, and
+    // on the ground's own paints — always the same curve at the canonical `a` (a weight of 1 under an image filter).
+    const tone = { a: WORLD_VISUAL.tone.a, alpha: 1 };
+    expect(elements(json, 'RuntimeShader')).toHaveLength(1 + homes.length);
+    for (const filter of elements(json, 'RuntimeShader')) expect(filter.uniforms).toEqual(tone);
+    const ground = elements(json, 'Shader');
+    expect(ground).toHaveLength(5);
+    expect(ground.slice(0, 4).map((shader) => shader.uniforms)).toEqual([tone, tone, tone, tone]);
+    expect(new Set(ground.map((shader) => shader.source)).size).toBe(1);
+    expect(ground[0].source).toBe(elements(json, 'RuntimeShader')[0].source);
     // LA-VIS-01 (closure re-anchor of the paint structure): a place's mass is a recorded picture, and its one plain-paint
     // body is the calm wash about the place, at the same share of the place-atmosphere radius for every Home.
     const atmospheres = elements(json, 'Circle').filter((c) => c.blendMode === 'screen');

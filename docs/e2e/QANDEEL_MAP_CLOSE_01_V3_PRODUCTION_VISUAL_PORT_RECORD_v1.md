@@ -1,6 +1,6 @@
 # QANDEEL — MAP-CLOSE-01 Step 4 / V-3 — Production Visual Port of S3-R2 — Record v1
 
-**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PO ADDENDUM (PREMIUM COMPACT UI, RTL / LTR, SCREEN SPACE) DELIVERED ON PART B — PO REVIEW CORRECTIONS (TIMELINE IN P2 C'S DIRECTION, RTL / LTR, COMPACT ACTS, CI) DELIVERED ON PART B, UNDER PO REVIEW — PAN PERFORMANCE NOT MET, AWAITS THE PO — NOT READY FOR CLOSURE — NOT MERGED`
+**Status:** `MAP-CLOSE-01 STEP 4 / V-3 — PART A (SLICE 1 + C1 / C2 / C3) DELIVERED ON A DRAFT PR — PART B (ANALYSIS SCREEN UI) ON A STACKED DRAFT PR — PO SCOPE CORRECTION (THE THREE WORLDS, §5B): PHONE PROOF RUN — FUNCTION 36 / 36 PASS — PO ADDENDUM (PREMIUM COMPACT UI, RTL / LTR, SCREEN SPACE) DELIVERED ON PART B — PO REVIEW CORRECTIONS (TIMELINE IN P2 C'S DIRECTION, RTL / LTR, COMPACT ACTS, CI) DELIVERED ON PART B, UNDER PO REVIEW — PAN PERFORMANCE NOT MET, AWAITS THE PO — ZOOM ORIENTATION (CA-Z1, CA-O1 PERSONAL), CA-O2 AND LABEL TREATMENT A APPROVED AND DELIVERED ON PART B — O-1 B (SHARED / PUBLIC PANEL ROOM) PROOF NOT MET, NOT PORTED — Z-2 COPY GATE PROPOSED — NOT READY FOR CLOSURE — NOT MERGED`
 **Task:** MAP-CLOSE-01 Step 4 / V-3, the production visual port of the approved S3-R2 art direction into the existing Personal Living Analysis map.
 **Date:** 2026-11-10. **Baseline:** `main` at `5a21971d` (the merge of PR #390, MAP-CLOSE-01 Step 2). **Branch:** `map/map-close-01-v3-production-port`.
 **Authority:** Product Owner, 2026-11-10, six messages:
@@ -20,6 +20,12 @@
    - Record the before / after comparison in the closure report (§11 of the stacked Part B).
 
 **Merge rule:** production changes are not merged before the PO's approval.
+
+**MAP-PERF-01 (PO "FINAL PRIORITY RESET", 2026-11-12):** `CANDIDATE F PORTED TO PRODUCTION ON DRAFT PR #393 — CI GREEN — OPEN: FAST, PAN ACCEPTABLE IN PERSONAL ONLY — ZOOM NOT MET — NATIVE MEMORY GROWTH OPEN — AWAITS THE PO'S MANUAL TEST AND DECISIONS — NOT MERGED` (§9, "MAP-PERF-01").
+
+**MAP-PERF-01, Targeted Blocker Resolution (PO decision, 2026-11-12):** `SHARED / PUBLIC PINCH FIXED (CAUSE FOUND, REGRESSION TEST, PROVEN ON THE PHONE) — PERSONAL FIRST-STEP JUMP: CAUSE FOUND, PROOF REJECTED, SMALLEST ALTERNATIVE AWAITS THE PO — NATIVE MEMORY GROWTH: NOT A GC LAG, CAUSE NOT FOUND, MERGE BLOCKED — NOT MERGED` (§9, "MAP-PERF-01: Targeted Blocker Resolution").
+
+**MAP-PERF-01, Zoom prefetch and the final memory test (PO decisions, 2026-11-12 and 2026-11-14):** `ZOOM PREFETCH IN PRODUCTION (PO-APPROVED): THE FIRST ZOOM IN TRAVELS, NO MAP REMOUNT, REGRESSION TESTS — NATIVE MEMORY: GROWTH CONTINUES OVER 60 OPENS, NO PLATEAU, CAUSE NOT FOUND — MERGE BLOCKED — NOT MERGED` (§9, "MAP-PERF-01: Zoom prefetch and the final memory test").
 
 > **The production map now draws its nodes and relations in the S3-R2 grammar, from real data only. Its world is S3-R2's world at every distance: FAR, MID, NEAR and ANALYTICAL are one world approached. The engine, the camera, the placement, the interactions and every meaning underneath it did not move.**
 
@@ -201,6 +207,20 @@ The L2 elements wait for the governed L2 / N4 contract (CP-A record, planning on
 | **Three worlds (§5B):** VPORT-02 world pins | `WorldCanvas` `69b6a183` → `43c66051` on Part A, and `54cefdf0` → `55e441d7` once merged into Part B; `WorldContinuity` `4c49a094` → `632de2b2` (comments only); recorded in the test with the previous pins | PO scope correction; both goldens unchanged |
 | **Pan/Zoom performance slice (2026-11-11):** VPORT-02 world pin | `WorldStrata` `6f6b8b94` → `77ea34d7`: `FadedLayer` bounds its layer with an outer clip (the content's bounds plus 32). Recorded in the test with the previous pin | the PO's performance slice; both goldens re-recorded, and removing the added clip wrappers (607 in the map golden, 568 in the screen golden) gives the previous goldens exactly. On the PO's phone, 99.79–99.94 % of pixels are identical at rest; the rest are within 2 / 255 |
 | **R1 test re-anchor:** `world-visual.test.tsx` | the tether rule accepts S3-R2's bowed line (`M a Q c b`) and still asserts its two ends exactly (the Home and the appearance) | Slice 1 drew the bow, but the rule still asserted a straight `L`; it had been failing since R1 and was found here |
+| **MAP-PERF-01 (candidate F, 2026-11-12):** VPORT-02 world pins | `WorldCanvas` `55e441d7` → `ea8cda2e`, `WorldMarks` `d28077e5` → `6db704a8`, `WorldStrata` `77ea34d7` → `1d916a00`, `world-mass` `0bfb6e92` → `4c391bbc`; recorded in the test as "MAP-PERF-01 CONTROLLED RE-ANCHOR" with the previous pins | PO "FINAL PRIORITY RESET" (2026-11-12): port candidate F with every layer kept; both goldens re-recorded, structural diff PAINT-ONLY |
+| **MAP-PERF-01:** `world-visual.test.tsx`, `public-field.test.tsx` | the tone is counted per draw (one `RuntimeShader` per world plane and Home, five ground `Shader`s with the one tone source, uniforms `{ a, alpha: 1 }`), each with its previous form | candidate F tones each draw instead of the composite |
+| **MAP-PERF-01:** S5-03B, T-10, VPORT-01, Map runtime census | the plane's objects are wrapped by `WorldTone` (`const objects = <WorldTone>{children}</WorldTone>`) and the outer tone around the world is gone; the mass imports `./prepared-raster`; `visual/prepared-raster.ts` joins the authorized surface | the same orderings and rules, asserted on the new shape |
+| **MAP-PERF-01:** M04-15 firewall, T-12 §28.19 | the Map adds no dependency: it declares a store port (`installPreparedRasterStore`); the file store lives in `src/map-prepared-store` (expo-file-system, versioned folder `map-prepared-v1`, at most 200 files / 48 MB, oldest out first) and the Product root only installs it | no rule relaxed: the Map stays dependency-free and the integration owner persists nothing |
+| **MAP-PERF-01 Zoom prefetch (2026-11-14):** S7-03 criterion 12, S7-04 frozen pins | `LivingAnalysisMap` `90fe8580` → `e45abece`; recorded in both tests as "MAP-PERF-01 RE-ANCHOR" with the previous pin | the PO's approval of the Zoom prefetch (2026-11-14): the adjacent rungs through the same `ensure`; the projection, its cache, the Map, the chrome, every act and every refusal unchanged |
+| **CA-Z1 / CA-O1 (PO, 2026-11-14):** S7-03 criterion 12, S7-04 frozen pins, VPORT-02 world pins | `MapSurface` (S7-03, S7-04, VPORT-02) and `WorldViewSurface` (S7-03, VPORT-02) re-anchored; recorded in each test as "MAP-CLOSE-01 CA-Z1 / CA-O1 RE-ANCHOR" with the previous pins | a pinch's step carries the fingers' point at its start (CA-Z1), and MapSurface holds its anchor once the reader has acted (CA-O1, presentation only); the projection, its cache, the Map, every act, word, route and refusal unchanged; both goldens unchanged |
+| **CA-Z1:** S5-03B criterion (the Public controller's step) | `step(direction)` → `step(direction, focal?: ScreenPoint \| null)`, recorded with the previous form | the accessible step passes no point and stays the centre's |
+| **CA-O1:** Map runtime census | `camera/useSteadyEnvelope.ts` joins the authorized surface | the new presentation hook is declared, not slipped in |
+| **CA-O2 (PO, approved with conditions, 2026-11-14):** S7-03 criterion 12, S7-04 frozen pins | `LivingAnalysisSurface` `3916f2b1` → `213f3261`; recorded in both tests as "MAP-CLOSE-01 CA-O2 RE-ANCHOR" with the previous pin | the surface passes `anchorEnd` to the chrome band for a world with time (Personal); Shared, Public and Replay unchanged |
+| **CA-O2:** VPORT-02 G3 composition | the band element also carries `anchorEnd={timeline !== null}`, recorded as "MAP-CLOSE-01 CA-O2 CONTROLLED RE-ANCHOR" with the previous form | the line's room still comes out of the chrome's share, never out of the world's |
+| **CA-O2:** screen golden | `ReturnControls` lines `column` → `column-reverse` (4), the Personal band's scroller gains its two size handlers | layout only: the acts, their order in reading and in every accessible route, their words and availability are unchanged |
+| **Treatment A (PO, approved, 2026-11-14):** T-08 L108 ("never a decorative glow") | the one approved rim (a text shadow of the Analysis ground, radius 3, no offset) is set aside before the check, which still refuses every glow, shadow, elevation and any other text shadow; recorded as "MAP-CLOSE-01 Treatment A CONTROLLED RE-ANCHOR" | the rim is dark, carries no meaning and is the same on every line |
+| **Treatment A:** T-05 byte identity | `TimelinePresentation` `8afe27a7` → `8258894b`, recorded as "MAP-CLOSE-01 Treatment A RE-ANCHOR" with the previous pin | the numerals carry the rim; size, colour, step, key, window and every authority unchanged |
+| **Treatment A:** screen golden; `public-field.test.tsx` | the rim joins the Personal band texts (103 styles); the Public label is asserted at 12 / 20, weight 600, primary ink, the rim, and no background, radius, border, padding or opacity | the label layout's size is unchanged, so no label moves or drops |
 
 No other frozen file changed. The chroma families (`world-chroma.ts`), every token, both generated modules and `useWorldResponse.ts` are unchanged.
 
@@ -332,7 +352,157 @@ The colour filters RN Skia 2.6.2 offers cannot reproduce the per-draw result exa
 
 **PO review (2026-11-11): candidates C, D and E, measured, none adopted.** See Part B §11, "PO review corrections". The composite layer is rasterized below screen resolution, which is why B is soft and fast. A fitted pass (C) restores luminance and colour but not the threads. The canonical curve as a per-draw colour filter (D) keeps A's look within 1.3 levels and reaches about 15 fps (Personal, Shared). Pan remains NOT MET.
 
+### MAP-PERF-01: candidate F in production (PO "FINAL PRIORITY RESET", 2026-11-12)
+**Authority:** the PO's "FINAL PRIORITY RESET — Pragmatic Performance & Fast Closure" and its addendum "Zoom Smoothness Is Mandatory" (2026-11-12). About 20–25 fps is practical; 30 fps is not required. The PO's manual test on the HONOR decides acceptance. First install (8–11 s) is a separate launch blocker, handled later. MAP-PERF closes only on three experiences: fast open, acceptable pan, acceptable zoom.
+
+**What changed (Draft PR #393, `map/map-perf-01-production`, `121b0ec1` + `98d9408a`, base Part B).**
+- The tone is applied per draw: the ground in one toned rect, the objects inside `WorldTone`, the wash toned by itself. The outer tone around the world is gone.
+- Every mark, tether and wash is bounded by a clip of its own reach (`drawClip`).
+- A prepared tile is drawn back as its image through one rect at its weight, with no layer. A single-copy mass is drawn as its image.
+- The grain is an image at a constant share of 3 (T-11: no pixel-ratio read).
+- Tiles and masses are kept as lossless PNGs between launches, named by their serialized drawing (tiles) or recipe plus a fingerprint of the drawing (masses), so a changed drawing never reads an old image.
+- Every layer, colour and material is kept; nothing in placement, hit testing, the camera, membership or accessibility moved.
+
+**Repository checks.** `tsc` and lint clean. Jest 3469 pass; the only failures are the baseline locale tests (`depth.test.tsx`, `w2-account-access.test.tsx`, verified on the base by stash) and the re-recorded goldens (PAINT-ONLY). Root contracts touching mobile 1227 / 1227. CI on #393: 10 pass, 0 fail.
+
+**On the PO's phone (HONOR ALI-NX1; the proof package `com.qandeel.mobile.v3proof` only; production APK `v3proof-prod-98d9408a.apk`, sha-256 `68a24be0…`).**
+
+| Experience | Personal | Shared | Public |
+|---|---|---|---|
+| Open, prepared images present (mount → every raster shown, p50) | 1.2 s | 1.2 s | 1.9–2.1 s |
+| First open after install (no prepared image yet) | 10.0 s | — | — |
+| Pan, fps while moving (warm; before F: 3.0 / 2.7 / 1.9) | 21.4–22.6 | 11.0–14.0 | 7.1–8.6 (first swipe) |
+
+- **The light experiment (soft lights toned by their own paint).** Measured as a separate mode of a measurement build: Personal +2.5 fps, Shared +0.4, Public −1.1, and inexact where an ancestor's opacity is below 1. **Not adopted.**
+- **Zoom (real two-finger pinch).** The HONOR's SELinux refuses kernel-level injection (`sendevent`), so two pointers are injected through the system input manager (`app_process`, nothing installed, no setting changed). An automated step is not taken as proof of a pinch.
+  - **Personal:** the pinch steps IN and OUT. No frame moves under the fingers (by design: a pinch asks for one semantic step on release). After release: IN shows 5 frames in 300–333 ms with one 233–283 ms frame, so it reads as a jump; OUT shows 24 frames in 870–915 ms.
+  - **The cause, measured on every step in the three worlds:** one or two chrome frames at about 100 ms, then 166–366 ms with no map frame while the new level is drawn for the first time, while the camera's 260–380 ms transition clock is already running.
+  - **Shared and Public:** in the production build the pinch changes nothing (0 frames, 0.0 % of pixels). With diagnostic marks in the gesture path, the same pinch is recognised, passes the authority check, the field steps FAR → MID (`APPLIED`) and the picture changes (Shared 40 %, Public 67 %). The defect is timing-dependent; it is already present on `d57ea51c`, before candidate F.
+  - At MID the Shared test world shows empty space (9 places placed, 0 presented): the step keeps the camera's anchor, and the test places lie away from the World's origin (the known test-data problem).
+- **Memory.** Graphics stays at 112–128 MB. Native heap: `d57ea51c` rises from 113 to about 123 MB and is flat from the fifth Analysis open to the fifteenth. With F it rises from 127 to 166 MB over 30 opens (about 1.3 MB per open, no plateau). Switching the grain image, the tile image shader or the single-copy mass image back, one at a time, does not remove the growth over eight opens. **The cause is not found.**
+
+**Zoom NOT MET, and native memory growth open.** Both await the PO. Neither is fixed here: the zoom fix changes when the camera transition starts, and the addendum asks for its reason and the smallest alternative first.
+
+### MAP-PERF-01: Targeted Blocker Resolution (PO decision, 2026-11-12)
+**Authority:** the PO's "Targeted Blocker Resolution, No New Optimization Cycle" (2026-11-12): candidate F kept; memory growth a fix priority before merge (limited diagnosis); an isolated proof of starting the camera clock with the new level's first frame; a limited diagnosis of the Shared / Public pinch with a specific cause and a regression test that relies on no logging or delay; no new pan optimization; first install kept apart. Measured on the PO's HONOR, `com.qandeel.mobile.v3proof` only, no phone setting changed.
+
+**Shared / Public pinch: fixed.**
+- **Cause:** `useWorldSemanticStepGesture` committed with `onSettled?.(step(direction))`. An optional call does not evaluate its argument when the callee is absent. The Shared and Public fields attach no observer, so the finished pinch reached the commit, with the right authority and direction, and the step never ran. Personal attaches one, so it worked. It is deterministic, not a timing race: every diagnostic build that "fixed" it had rewritten that line to read the outcome first; the build with the responder counter alone still failed.
+- **Fix:** the act runs first and the observer is notified afterwards (`const outcome = step(direction); onSettled?.(outcome);`), the rule `MapSurface` and `ReturnControls` already state.
+- **Regression test:** `semantic-zoom-activation.test.tsx` fires the pinch through the real detector (`fireGestureHandler`), with and without an observer, and asserts one step IN and one step OUT. It fails on the previous code (the case without an observer) and passes with the fix. No logging and no delay.
+- **On the phone (production build, no instrumentation):** before the fix, 0.0 % of pixels and an identical accessibility tree after the pinch (6 of 6). After: IN changes Public by 66.6 % and Shared by 40.3 % (4 of 4); IN then OUT returns to FAR (Shared identical, Public 3.4 %). Personal unchanged (IN / OUT 19.6 % each way).
+- **Separate, not fixed here:** at MID the Shared test World shows empty space (9 places placed, 0 presented), because the step keeps the camera's anchor and the test places lie away from the origin. A test-data problem.
+
+**Personal zoom: the proof is rejected; the cause of the jump is found.**
+- **The proof** (in a measurement build only: the travel's springs start two UI frames after the request, same durations): no clear improvement. First IN 5–6 frames either way; on a cached travel the longest interval is 200–283 ms with it and 166–300 ms without. Not ported.
+- **The cause:** the first step to a depth whose projection is not yet in the cache. The store's depth changes at once, the projection for the new depth is fetched in an effect, and until it arrives the Personal world renders nothing (`LivingAnalysisMap`: no context, no Map). The Map is unmounted and mounted again: the canvas and its surface are rebuilt and the camera's travel is lost. Measured in one process (IN, OUT, IN, OUT): the first IN remounts the canvas and shows 5 frames in about 330 ms; the second IN, cached, does not remount and travels 27–29 frames in about 1.2 s. Intervals of 183–300 ms remain inside every travel.
+- **Smallest alternative, awaiting the PO (not implemented):** ask for the adjacent depths' projections in the background (the same `ensure` the composition already calls), so a step finds its scene in the cache. Nothing is drawn from a context that is not this tuple's; the cost is extra projection reads.
+
+**Native memory: not a GC lag; the cause is not found.**
+- A forced collection (`gc()` present on the JS runtime; the UI runtime is asked to collect too, unconfirmed there) at every fifth open, back in the Conversation, frees 2.6–3.4 MB. Native heap after GC: 134.9, 141.1, 146.1 and 150.5 MB after 5, 10, 15 and 20 opens (about 1.0 MB per open, still rising). `d57ea51c` is flat at about 123 MB from the fifth open.
+- With the three image paths of F switched back together (grain, tile shader, single-copy mass): 118.6, 123.3, 126.9 and 130.0 MB. Lower, and still rising (about 0.76 MB per open). So the images are part of it, not all of it.
+- The prepared-raster caches are bounded (nebula and continuity tiles per process, masses in an LRU of 48, a WeakMap keyed by picture). No fix is made. Per the PO, a build whose memory grows without a known bound is not merged.
+
+### MAP-PERF-01: Zoom prefetch and the final memory test (PO decisions, 2026-11-12 and 2026-11-14)
+**Authority:** the PO's "Final Targeted Zoom & Memory Checks" (2026-11-12: a prefetch proof, one isolated per-draw tone memory test, Mobile CI) and "Approve Zoom Prefetch & One Final Bounded Memory Test" (2026-11-14: the prefetch approved for production under conditions; one 60-open memory test with a stop rule; no new diagnosis). Measured on the PO's HONOR, `com.qandeel.mobile.v3proof` only, no phone setting changed, no AI call.
+
+**Final checks (2026-11-12).**
+- **Prefetch proof** (measurement build only): first IN 20–21 frames over 833–1082 ms and no canvas remount (without it: 5 frames in 316 ms and a remount). One extra read per Analysis open (WORLD → THREAD); every later step found its rung held. No visible native cost.
+- **Per-draw tone memory test** (the composite tone of before F, 20 opens): native heap after GC 133.1, 136.1, 135.9 and 140.6 MB after 5, 10, 15 and 20 opens (about 0.5 MB per open against F's 1.0, within the noise). Not adopted. The Hermes heap is flat on both runtimes (`gc()` present on both), the JS-owned native memory is constant at 45.26 MB, and Graphics and Java are flat: the growth is native memory that JS does not own.
+- **CI on `f0c432f2`:** green after re-running only the failed jobs. API: the PostgreSQL apt key download from www.postgresql.org failed twice on the runner. Mobile: the iOS producer's 15-minute timeout, once. No code or workflow change.
+
+**Zoom prefetch: in production.**
+- **Change:** once the current rung is held, `LivingAnalysisMap` asks the same one cache, through the same `ensure`, for its two adjacent rungs (`adjacentDepth` IN and OUT), one after the other, after the commit, and nothing while the live call is not idle. A held or in-flight rung is not read again, and the server answers each read as it answers the step's own. No change to the canonical state, the camera, the durations or the drawing, and no timer (T-12's "no cadence" holds).
+- **Tests:** `map-zoom-prefetch.test.tsx`. The first Zoom IN keeps the same Map and plane instances; on the previous code the Map is mounted again and the test fails. Over IN, IN, OUT, OUT, IN every rung is read once (World, Thread, Session, Analytical Object). Nothing is read during an active call, and the neighbours are read once it is idle. The S7-03 and S7-04 pins are re-anchored (§6).
+- **On the phone** (production build, no instrumentation; IN, OUT, IN, OUT in one process): first IN 19 frames over 833 ms (before: 5 frames in 316 ms); the other three 23–24 frames. IN and OUT each change 19.6 % of the picture. A pause of up to 150–267 ms remains inside the travels, as before; it is left to the PO's manual test and not closed here.
+
+**Native memory: the final 60-open test, growth continues.**
+- **Method:** the existing measurement build at mode 0 (F as shipped, without the prefetch; no rebuild, per the PO). Each open: enter, four pans, a pinch IN and OUT, back. At every tenth open, back in the Conversation, three reads: as is; after two forced GCs on both runtimes; then after Home and `send-trim-memory COMPLETE`. MB = kB / 1000, as before.
+
+| after open | native after GC | native after trim | Graphics after trim | Java after GC | JS heap allocated after GC (JS / UI) | JS-owned native |
+|---|---|---|---|---|---|---|
+| 10 | 144.6 | 143.6 | 33.5 | 7.2 | 7.72 / 0.65 | 45.26 |
+| 20 | 152.5 | 151.5 | 35.0 | 7.2 | 7.78 / 0.65 | 45.26 |
+| 30 | 160.1 | 159.0 | 35.1 | 7.2 | 7.82 / 0.65 | 45.26 |
+| 40 | 167.7 | 166.5 | 35.6 | 7.2 | 7.77 / 0.65 | 45.44 |
+| 50 | 174.2 | 172.5 | 36.6 | 7.2 | 7.79 / 0.65 | 45.48 |
+| 60 | 180.9 | 179.4 | 38.0 | 7.2 | 7.81 / 0.65 | 45.52 |
+
+- **Result:** native heap after GC rises 7.9, 7.6, 7.6, 6.5 and 6.7 MB per ten opens: about 0.66 MB per open over the last twenty opens against 0.78 over the first, and +36.3 MB from open 10 to open 60. There is no plateau. Neither the forced GC nor the memory pressure frees it (at most 1.7 MB). The JS heaps, Java and Unknown are flat. Graphics is mostly freed by the pressure (about 93 → 35 MB) and keeps +4.5 MB. It reproduces the 20-open runs (141.1 and 150.5 MB after 10 and 20 opens). `d57ea51c` is flat at about 123 MB from the fifth open.
+- **The blocker:** native memory that JS does not own grows about 0.7 MB per Analysis open with candidate F, linearly through 60 opens; it is released neither by a GC nor by the system's memory pressure. The images explain part of it (0.76 MB per open with the three image paths switched back), the per-draw tone does not, and the cause is not found. Risk: about 70 MB per 100 opens in one process, kept until the process ends. A short session is not affected; a long session raises the chance the system kills the app in the background. Per the PO, this build is not merged while the growth is unexplained. No diagnosis was started after the test.
+
+
+
+### MAP-CLOSE-01 V-3: zoom orientation, stable layout and unified labels (PO decisions, 2026-11-14)
+**Authority:** the PO's "Zoom Orientation, Label Legibility & Memory Risk" with its addendum "Unified Text Readability Across All Three Worlds", then the PO's decisions "Zoom, Stable Layout, Unified Labels" (both 2026-11-14). Measured on the PO's HONOR, `com.qandeel.mobile.v3proof` only, no phone setting changed (font scale read 1.0 throughout), no AI call. Proof builds come from the never-committed worktree `E:\maplabel`; evidence in `QANDEEL_REPORTS/MAP-CLOSE-01/V3` (`label-proof*`, `o1o2-r2`, `o2-r4`, `o1b-r5`, `o1b-r7`, `patches`).
+
+**CA-Z1, one Semantic Zoom act that keeps the point under the fingers: APPROVED, on Part B.**
+- **Rule:** a pinch's step carries the fingers' point at the pinch's START (Android's end event reports the last finger). The new anchor is computed exactly in BigInt: `A' = A + wd(old, dx) − wd(new, dx)` (y mirrored). The ZOOM_SEMANTIC intent already carried an anchor (EX02-03), so no new act and no hidden PAN. The rungs (5 Personal, 3 Shared / Public), the camera, history and Back are unchanged. A step without fingers (accessible step, buttons) stays on the camera centre. Zoom OUT keeps the point under the fingers too, up to FAR; returning to the whole world from the origin stays the existing explicit act. Shared / Public MID → NEAR focuses the place nearest the fingers.
+- **On the phone (proof build):** Personal WORLD → THREAD, the Home under the fingers (306.6, 305.5) stays at (307.3, 305.2). THREAD → SESSION (×8), a Home 31 pt from the fingers lands at 89.4 (expected 90). Shared FAR → MID, the place under the fingers (101.5, 376.3) stays at (101.2, 382.4).
+- **Tests:** `semantic-zoom-focal.test.ts` (7), a pinch-start test in `semantic-zoom-activation.test.tsx`.
+
+**O-1, the world's position when the room changes.**
+- **CA-O1, Personal: APPROVED, on Part B.** `useSteadyEnvelope` (in `MapSurface` only) holds the anchor's y when only the bottom of the glass changes, after the reader's first act; the opening composition is unchanged. Presentation only: no camera moves, nothing is recorded. When the return acts appear, the glass goes from 523 to 467 and the world stays (anchor y 305.5, the Home at 305.2). Tests: `steady-envelope.test.ts` (5), `steady-envelope-hook.test.tsx`. The Shared and Public fields do not take this rule.
+- **Shared and Public panel: the PO chose B** (reserve the panel's room from the start of the move to NEAR), behind a limited proof. Without B, NEAR centres the place on the full glass and the panel arrives later (the delay is measure → plan → frame, not data: the chrome measured +167 ms, the glass +496 ms; the data was served at +24 ms), so the place moves twice. The proof build reserves the band's cap in the same render as NEAR (the chrome reports no measured height while a place is focused; the panel fills that room).
+- **B's proof, against the PO's five conditions:**
+
+  | Condition | Normal panel | Panel delayed 2 s | Panel unavailable |
+  |---|---|---|---|
+  | one visual move, no second jump | MET (the glass in +28 ms; one travel, the panel full size at once) | MET (glass +137 ms; the room never changes) | MET |
+  | no large, annoying gap while waiting | MET (no wait) | **NOT MET:** for 2 s the reserved panel is an empty dark box (about 40 % of the screen) holding only «رجوع» | **NOT MET:** after the wait the box keeps its full height around one line («تعذّر عرض هذا العالم المشترك الآن.»), a large empty panel that stays |
+  | the selected place stays visible | MET | MET | MET |
+  | delayed / unavailable data handled correctly | — | the panel fills in place, no move | the existing words, Back reachable, no move; but see the gap |
+  | no change to the Canonical Camera or the disclosure policy | MET (layout only) | MET | MET |
+
+- **Decision taken under the PO's rule ("do not port it if the proof does not succeed"): B is NOT ported.** Public was not run separately: Shared already failed a condition that the shared layout would fail in the same way. The production Shared / Public NEAR is unchanged (the place still moves twice when the panel arrives). Options for the PO: (b′) B, with the reserved room released to the panel's measured height once the answer is not a served place (one more move, only on failure), and a quiet busy sign (no words) while waiting; (a) NEAR keeps the place where the fingers put it and the panel holds it when it is still visible (a change to S5-03B's NEAR framing); (c) accept the jump.
+
+**CA-O2, the return pair stays under the finger: APPROVED WITH CONDITIONS, on Part B.**
+- **What it is:** `ReturnControls` stacks its lines up from the bottom (`column-reverse`), so an act that appears (Go Live + Locate, once Back has pinned the time) is added ABOVE the acts already there; and the Personal chrome band (`ResponsiveChromeBand` `anchorEnd`, passed by `LivingAnalysisSurface` for a world with time) keeps the END of its words in view when they overflow: `scrollToEnd({ animated: false })` and a flash of the scroll indicator on every change of the words' size or of the band. Shared and Public panels open at their start, as before.
+- **The PO's conditions, how they are held:** nothing is hidden or removed: «المعروض الآن» and «عرض التفاصيل» stay inside the band's scroller, reachable by scrolling and by every accessible route, and the indicator says there is more; no essential act leaves the tree; no new overlap (the order in reading and in every accessible route is unchanged).
+- **Regressions:** `return-lines-stable.test.tsx` (the same press point steps SESSION → THREAD → WORLD); `responsive-chrome-anchor-end.test.tsx` (the end kept at text sizes 1, 1.3 and 2 with every word and all three acts still present; a band without it opens at its start).
+
+**Treatment A, one policy for every word on the world: APPROVED, on Part B.**
+- **Shared and Public labels:** 12 pt (the size the label layout collides at; 13 pt dropped a Public label), weight 600, the primary ink, a thin rim of the world's ground hugging the glyphs (a text shadow, radius 3, no offset). No capsule, background, dimming or new draw layer; S3-R2 unchanged.
+- **Personal:** no names on the world (N4 is not authorized). The words that stand over the world take the same rim: the temporal orientation line, OrientationChrome's lines, the timeline numerals and the navigator's stance.
+- **Code:** one helper, `analysis-visual` `worldTextRim(ground)` and `WORLD_LABEL_WEIGHT`, used in seven places.
+- **Not used:** 13 pt; treatment B.
+
+**Z-2, the depth indicator: direction approved, NOT in production.** The proof build's five or three dots and the level's name (12 / 600 with the rim, at the glass top) showed every level. The Personal names are approved copy (`AR.depth` / `EN.depth`). No production text is added before the Copy Gate below is approved; the name must follow every step and never stay Arabic in the English UI.
+
+**Copy Gate (Z-2 level names, Shared and Public): 6 PROPOSED, not approved.**
+
+| World | Level | Arabic | English |
+|---|---|---|---|
+| Shared | FAR | العالم كله | The whole world |
+| Shared | MID | الأماكن | Places |
+| Shared | NEAR | مكان واحد | One place |
+| Public | FAR | العالم كله | The whole world |
+| Public | MID | التجارب | Experiences |
+| Public | NEAR | تجربة واحدة | One experience |
+
+Notes for the PO: the proof build showed «الأماكن» / «مكان واحد» in Public too; the Public field's own approved copy calls its entries experiences («تجربة»), hence the Public rows. FAR reuses the approved Personal «العالم كله» / "the whole world". In the indicator, the English names start with a capital letter; the Personal English names (`EN.depth`, approved in lower case for use inside sentences) would need the same.
+
+**Native memory with candidate F: a documented risk (PO, 2026-11-14), unchanged.**
+- **What was measured:** over 60 Analysis opens, native heap after GC 144.6 → 180.9 MB (about 0.7 MB per open, no plateau), released neither by a GC nor by the system's memory pressure. The JS heaps, Java and the JS-owned native memory are flat.
+- **What heapprofd proved:** candidate F's drawing is not the retainer. The growth per open is small and spread out: Ganesh op arena about 2.2 MB and TextureView / SurfaceTexture about 1.8 MB per open in the allocations, mostly freed again.
+- **What it did not prove:** the cause of the retained 0.7 MB per open. There may be no ceiling.
+- **Decision:** F is kept; the growth is a documented risk with no proven ceiling; no new long memory experiment. The launch-readiness review on mid-range devices stays recorded and open. This does not allow a merge.
+
+**Verification (worktree `E:\mapperfp`):** `tsc` clean; the full Mobile Jest 281 suites: every failure is the machine-locale baseline (`depth`, `w2-account-access`, the UI rendered in Arabic), the CA-O2 and Treatment A suites and the re-recorded screen golden pass; the S7-02, S7-03, S7-04, SHARED-VIS-01, VPORT-01, VPORT-02, S5-03B, S5-03C, T-11, T-12, temporal-navigation-layer, inspection-orientation-return-chrome and Map runtime contract tests pass; `forward-safety` runs in CI only (it hangs locally).
+
+**The production build on the phone (head `9edb41fd` + `5470b24d`, 2026-11-14, limited check as the PO asked).** APK `apk/v3proof-prod-5470b24d.apk` on `com.qandeel.mobile.v3proof` only; font scale 1.0, no phone setting changed; the proof app's own language set to `en-US` for the English shots and restored to `ar-EG`; evidence `QANDEEL_REPORTS/MAP-CLOSE-01/V3/prod-5470b24d(-en)`.
+- **CA-O2, Back at one point (884, 2540 px), read from the UI tree before each press:** SESSION → THREAD → WORLD (`«المعروض الآن: المحادثة / الخيوط / العالم كله»`); «الرجوع خطوة واحدة» under the point both times, at the same bounds. A third press at WORLD (no Back offered, by contract) reaches «العودة إلى المحادثة والانتقال إلى موضعها», as recorded above. No overlap. After the first Back the status row is above the visible part of the band; a swipe inside the band brings «المعروض الآن: الخيوط.» and «عرض التفاصيل» into view (y 2233–2298 px): reachable, as the condition requires.
+- **Treatment A:** Shared MID, Arabic and English («خلاف يبدأ كلما فُتح الموضوع», «الخوف من قرار متسرّع»; "A fight starts whenever it is opened", "Fear of a hasty decision") and Public MID («أقارن نفسي بالآخرين دائمًا») read clearly over the brightest fibres; no clipping, no collision, two-line English label intact.
+- **Pan (one round, the earlier method):** Personal 20.8, Shared 12.5, Public 7.2 fps (F production: 21–23 / 11–14 / 7–9). No meaningful regression.
+- **Zoom (real two-finger pinch):** Personal IN first frame 150–160 ms, 27–28 frames over about 1.4 s; OUT 90–97 ms, 29–30 frames; Shared IN 149 ms, 18 frames; Public IN 214 ms, 29 frames. No regression in the first response.
+- **Memory (10 Analysis opens, production build, no forced GC):** native 127.5 → 139.7 MB, PSS 332 → 353 MB (the F production build's same 10 cycles: native 130.6 → 150.5, PSS 348 → 371). No regression; the documented risk is unchanged. A first attempt was aborted (the PO used the phone) and is kept apart as `mem-aborted-phone-in-use`.
+- **Found, not caused by this change:** a pinch IN over an empty region of the Public field lands on MID there (CA-Z1) and the field says «لا يوجد شيء في العالم العام بعد.», because the field's entries become the server's answer for the visible rectangle at every rung and the empty message reads that. The same holds after a pan to an empty region (existing behaviour, S5-03B); the Shared field has the same condition. Not changed here: it needs the PO's direction, and any new words go through the Copy Gate.
+
 ## 10. Not done yet
+- **MAP-PERF-01 (2026-11-12), awaiting the PO:** the PO's manual test of the production build in the three worlds; the zoom start (record §9, "MAP-PERF-01"); the Shared / Public pinch defect; the native memory growth with candidate F; first install (separate launch blocker).
+- **MAP-PERF-01 Targeted Blocker Resolution (2026-11-12), awaiting the PO:** the native memory growth (cause not found, merge blocked); the Personal first-step jump (prefetch of adjacent depths, not implemented); the PO's manual test of the fixed pinch in Shared and Public; the Shared test-data placement; first install.
+- **MAP-PERF-01 Zoom prefetch and the final memory test (2026-11-14), awaiting the PO:** the native memory growth (continues over 60 opens, no plateau, cause not found, merge blocked); the PO's manual test of the production build (open speed, pan, Zoom IN / OUT, in Personal, Shared and Public), including the pause inside the travels; the Shared test-data placement; first install.
+- **Zoom, stable layout and labels (PO decisions, 2026-11-14), open before merge:** the Shared / Public panel jump (O-1: Option B's proof NOT MET, not ported; the PO's next direction needed, §9); the Z-2 depth indicator (Copy Gate 6 PROPOSED; no production text until approved); the native memory risk (accepted for now, the launch-readiness review on mid-range devices stays open); the empty-region message in the Public and Shared fields («لا يوجد شيء في العالم العام بعد.» where the world is not empty, §9). CA-Z1, CA-O1 (Personal), CA-O2 and Treatment A are on Part B, checked on the phone in the production build.
 - **Part A Slice 2:** delivered as C1 (§5A).
 - **Part B:** the Analysis screen UI (§11).
 - **A physical phone:** every device result before the scope correction is from the Android emulator and is never claimed as phone proof. The three worlds were run on the PO's phone (§11): function passes; pan performance is NOT MET and awaits the PO.

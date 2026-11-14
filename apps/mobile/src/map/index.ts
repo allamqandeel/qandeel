@@ -28,5 +28,8 @@ export * from './camera';
 export * from './inspection';
 export * from './accessibility';
 export * from './renderer';
+// MAP-PERF-01: the store the app's composition hands the Map for its prepared rasters.
+export type { PreparedRasterStore } from './visual/prepared-raster';
+export { installPreparedRasterStore } from './visual/prepared-raster';
 export type { MapActionOutcome, MapActionRejectionCode } from './outcome';
 export { dispatchAuthorizedMapAction, dispatchKernelAction } from './outcome';
