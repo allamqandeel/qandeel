@@ -204,6 +204,8 @@ function step(dir: 'IN' | 'OUT', sx: number | null, sy: number | null): void {
 }
 
 function back(): void {
+  // Personal inspection writes no camera, so closing it releases the inspection and moves nothing.
+  if (S.world === 'PERSONAL' && S.focusId !== null) { S.focusId = null; recompile(); ui(); return; }
   if (S.rung > 0) step('OUT', null, null); else if (S.focusId !== null) { S.focusId = null; recompile(); ui(); }
 }
 
