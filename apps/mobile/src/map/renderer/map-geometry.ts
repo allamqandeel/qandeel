@@ -20,6 +20,7 @@
  * whole entitled set regardless.
  */
 import {
+  envelopeCenter,
   isWithinFootprint,
   projectAddress,
   safeAreaHeight,
@@ -172,7 +173,8 @@ export function placeScene(scene: MapScene, camera: MapCamera, envelope: Viewpor
     nodes: Object.freeze(nodes),
     visibleNodes: Object.freeze(nodes.filter((node) => node.visible)),
     footprint,
-    center: { x: envelope.insetLeft + safeAreaWidth(envelope) / 2, y: envelope.insetTop + safeAreaHeight(envelope) / 2 },
+    // CA-O1: the anchor's own screen point (the safe area's centre unless a held anchor says otherwise).
+    center: envelopeCenter(envelope),
   });
 }
 

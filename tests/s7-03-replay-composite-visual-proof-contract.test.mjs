@@ -85,9 +85,19 @@ const FROZEN = [
   // the Personal band is sized to what its Timeline and chrome measure (capped at the room it had, so the world never gets
   // less), and the Personal Analysis holds the one "details on request" switch. The projection, its cache, the Map, every
   // act, word, route and refusal are unchanged. Previous pins: LivingAnalysisSurface e623c27a, LivingAnalysisMap 17c56308.
-  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '3916f2b15149963538fc74abe575cb2ef899e0c4c98f2dca5297d01f84d13667'],
-  ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
-  ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'f5ccf7583514109bb17b043510e215f922d1bd344a581e7f27244a1d7314cad7'],
+  // MAP-CLOSE-01 CA-O2 RE-ANCHOR (Product Owner, 2026-11-14, "Zoom, Stable Layout, Unified Labels"): the Personal chrome
+  // band keeps the end of its words in view when they overflow, so Back stays under the finger (CA-O2, approved with
+  // conditions: LivingAnalysisSurface passes anchorEnd for a world with time; nothing hidden, every word still reachable by
+  // scrolling and by every accessible route). Shared, Public and Replay's chrome, the projection, the Map, every act, word,
+  // route and refusal are unchanged. Previous pin: LivingAnalysisSurface 3916f2b1.
+  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '213f326115a2e0c039d24cfb1dfab46cea4f7b56014b7b05c9f66e2fbf580282'],
+  // MAP-CLOSE-01 CA-Z1 / CA-O1 RE-ANCHOR (Product Owner, 2026-11-14, "Zoom Orientation, Label Legibility & Memory Risk"): a
+  // pinch's step carries where the fingers were (CA-Z1: MapSurface passes them with its envelope to the same ZOOM_SEMANTIC;
+  // the world view's step type gains the optional point), and, once the reader has acted, MapSurface holds its anchor when
+  // only the band below the world changes (CA-O1, useSteadyEnvelope, presentation only). The projection, its cache, the
+  // Map, every act, word, route and refusal are unchanged. Previous pins: MapSurface 5f5d7551, WorldViewSurface f5ccf758.
+  ['apps/mobile/src/map/renderer/MapSurface.tsx', 'fb623eea019299f6756ab0a3e192e9f035f1e757b58884101d319511f274adea'],
+  ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'acf84151abbf02663b569fe2105f8dd85c40062f21f5e9d78b075ab9e6e3c645'],
   ['apps/mobile/src/map/projection/map-scene.ts', '8ef371bdcbaacde1456e98ed58592ab71c3521fe835a097e5b418fd66e67211e'],
   ['apps/mobile/src/map/inspection/map-actions.ts', 'd2291a0399ab7389b014dc9daed32e59996311c1f01a52e7b1ba573451814957'],
   ['apps/mobile/src/map/inspection/entitlement.ts', '3c916840363d088ebe34cf12d501dc5717d25adfb261c3b493a72e165fb0f243'],

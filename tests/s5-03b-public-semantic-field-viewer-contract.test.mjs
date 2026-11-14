@@ -470,7 +470,9 @@ test('13 — R2: Public is a consumer of the ONE Living Analysis surface — no 
   }
   // The acts the shared drag and step become are the Public controller's own, along the Public ladder.
   const controller = code(`${FIELD}/public-field-controller.ts`);
-  assert.match(controller, /step\(direction: SemanticZoomDirection\): PublicFieldOutcome;/u);
+  // MAP-CLOSE-01 CA-Z1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-14): the step a pinch asks for carries where its fingers were;
+  // the accessible step passes none and stays the centre's. Previous form: `step(direction: SemanticZoomDirection): PublicFieldOutcome;`.
+  assert.match(controller, /step\(direction: SemanticZoomDirection, focal\?: ScreenPoint \| null\): PublicFieldOutcome;/u);
   assert.match(controller, /pan\(translationX: number, translationY: number\): PublicFieldOutcome;/u);
   assert.doesNotMatch(controller, /closer\(|farther\(|wholeWorld\(/u);
   // D3: no visible + / − / ○; the non-gesture semantic step is the generic surface's accessible route.

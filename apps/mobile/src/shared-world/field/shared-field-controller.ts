@@ -21,7 +21,7 @@
  * Back is local: it releases the focused place (back to MID) before anything else, and at the field's own root it does
  * nothing, so the Shared area decides (I-08A4 §4).
  */
-import { envelopeCenter, projectAddress, visibleFootprint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
+import { envelopeCenter, projectAddress, unprojectPoint, visibleFootprint, type ScreenPoint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
 import type { ForegroundSignal, SharedFieldEntry, SharedFieldPlace, SharedFieldResult, SharedPlaceResult } from '../../runtime-entry';
 import { focusField, nearestTo, panField, wholeWorldCamera, zoomField, type SharedFieldCamera } from './shared-field-camera';
 
@@ -65,7 +65,7 @@ export interface SharedFieldController {
   /** One completed drag (the shared world view's ONE drag). */
   pan(translationX: number, translationY: number): SharedFieldOutcome;
   /** One Semantic Zoom step: IN is FAR → MID → NEAR (NEAR focuses the place nearest the centre); OUT releases focus. */
-  step(direction: SemanticZoomDirection): SharedFieldOutcome;
+  step(direction: SemanticZoomDirection, focal?: ScreenPoint | null): SharedFieldOutcome;
   /** A tap on the field at FAR: discloses that part of the World at MID. */
   tapField(x: number, y: number): void;
   /** Focus one place the field showed: the camera lands on it at NEAR and its panel is read. */
@@ -230,7 +230,7 @@ export function createSharedFieldController({ transport, isCurrent, foreground, 
       publish({ camera: moved.camera });
       return APPLIED;
     },
-    step(direction) {
+    step(direction, focal = null) {
       const camera = state.camera;
       if (!camera || state.status !== 'READY' || envelope === null) return NOT_READY;
       if (direction === 'IN' && camera.depth === 'MID') {
@@ -239,12 +239,13 @@ export function createSharedFieldController({ transport, isCurrent, foreground, 
         const footprint = visibleFootprint(camera, glass);
         const shown = state.entries.filter((entry) => entry.address.x >= footprint.minX && entry.address.x <= footprint.maxX
           && entry.address.y >= footprint.minY && entry.address.y <= footprint.maxY && projectAddress(camera, glass, entry.address) !== null);
-        const nearest = nearestTo(camera.anchor, shown);
+        // MAP-CLOSE-01 CA-Z1: the place nearest the pinch's fingers (the centre of the glass when there are none).
+        const nearest = nearestTo((focal === null ? null : unprojectPoint(camera, glass, focal)) ?? camera.anchor, shown);
         if (nearest === null) return { outcome: 'AT_BOUNDARY' };
         focusOn(nearest);
         return APPLIED;
       }
-      const moved = zoomField(camera, direction);
+      const moved = zoomField(camera, direction, null, focal === null ? null : { envelope, point: focal });
       if (moved.outcome !== 'MOVED') return { outcome: moved.outcome };
       if (camera.depth === 'NEAR') releaseFocus();
       publish({ camera: moved.camera });

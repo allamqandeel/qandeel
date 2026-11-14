@@ -22,8 +22,9 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { WORLD_LABEL_WEIGHT, worldTextRim } from '../../analysis-visual';
 import { typeStyle, usePalette } from '../../conversation';
-import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
+import type { ScreenPoint, SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { publicEntryLabel } from '../../runtime-entry';
@@ -67,7 +68,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   );
   // The Public field's two camera acts, in ITS controller: one completed drag is one Public pan, one step is one rung.
   const pan = useCallback((translationX: number, translationY: number) => controller.pan(translationX, translationY), [controller]);
-  const step = useCallback((direction: SemanticZoomDirection) => controller.step(direction), [controller]);
+  const step = useCallback((direction: SemanticZoomDirection, focal?: ScreenPoint | null) => controller.step(direction, focal), [controller]);
   // A served Experience coming onto the glass because the glass moved is navigation, never meaning becoming known: the
   // Public field keeps no disclosure record, so nothing in it ever plays an arrival.
   const noCause = useCallback(() => null, []);
@@ -190,7 +191,11 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                   // Two lines need a definite width: under a maxWidth alone, Android measures the one-line height and
                   // clips the second line (seen on the SHARED-VIS-01 device pass).
                   ...(label.lines === 2 ? { width: label.width } : { maxWidth: label.width }),
-                  color: node.selected ? palette.primary : palette.secondary,
+                  // MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): the label's own 12 points, weight 600 in the
+                  // primary ink, with a thin rim of the world's ground hugging the glyphs. No capsule, no background, no dimming.
+                  fontWeight: WORLD_LABEL_WEIGHT,
+                  color: palette.primary,
+                  ...worldTextRim(palette.world),
                   writingDirection: language === 'ar' ? 'rtl' : 'ltr',
                   textAlign: label.side === 'RIGHT' ? 'left' : 'right',
                 }}

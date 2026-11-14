@@ -37,6 +37,12 @@ export interface ViewportEnvelope {
   readonly insetRight: number;
   readonly insetBottom: number;
   readonly insetLeft: number;
+  /**
+   * MAP-CLOSE-01 CA-O1 (Product Owner, 2026-11-14): the screen `y` the camera anchor is drawn at when it is NOT the centre
+   * of the safe area — a support band below the world grew or shrank and the anchor was held where it was (see
+   * `steadyEnvelope`). Class D, like every other field here. Absent, the anchor is the safe area's centre.
+   */
+  readonly anchorY?: number;
 }
 
 export interface ScreenPoint {
@@ -85,12 +91,41 @@ export function envelopeAspectRatio(envelope: ViewportEnvelope): number {
   return safeAreaWidth(envelope) / safeAreaHeight(envelope);
 }
 
-/** The screen point the camera anchor is drawn at: the centre of the safe area. */
+/** The screen point the camera anchor is drawn at: the centre of the safe area, or the held `anchorY` (CA-O1). */
 export function envelopeCenter(envelope: ViewportEnvelope): ScreenPoint {
   return {
     x: envelope.insetLeft + safeAreaWidth(envelope) / 2,
-    y: envelope.insetTop + safeAreaHeight(envelope) / 2,
+    y: envelope.anchorY ?? envelope.insetTop + safeAreaHeight(envelope) / 2,
   };
+}
+
+/**
+ * MAP-CLOSE-01 CA-O1 (Product Owner, 2026-11-14): the world stays where it is on the glass when only the room below it
+ * changes. The Analysis screen's support band (its acts, a focused place's panel) grows and shrinks with what it holds,
+ * and the glass with it; with the anchor at the glass's centre, every such change moved the whole world on screen (on the
+ * PO's phone about 28 points when the return acts appeared, 160–175 points when a place's panel opened or closed).
+ *
+ * So, once the reader has acted (`useSteadyEnvelope`), the anchor's screen `y` is HELD across a change of the glass's
+ * bottom edge, for as long as it still lies in the middle half of the new glass; outside it (the band took most of the glass), or when anything else changed (width, top,
+ * sides: a rotation, another top band), the anchor is the new glass's centre again. Presentation only: no canonical
+ * camera moves, nothing is dispatched and nothing is recorded. A resize "recomputes the visible footprint and nothing
+ * else" (§5): what the band uncovers or covers is world that was already there.
+ */
+export function steadyEnvelope(previous: ViewportEnvelope | null, next: ViewportEnvelope): ViewportEnvelope {
+  const plain = next.anchorY === undefined ? next : viewportEnvelope(next.width, next.height, { top: next.insetTop, right: next.insetRight, bottom: next.insetBottom, left: next.insetLeft }) ?? next;
+  if (previous === null) return plain;
+  if (previous.width !== next.width || previous.insetTop !== next.insetTop || previous.insetLeft !== next.insetLeft || previous.insetRight !== next.insetRight) return plain;
+  const held = envelopeCenter(previous).y;
+  const quarter = safeAreaHeight(next) / 4;
+  const natural = envelopeCenter(plain).y;
+  if (held === natural || held < next.insetTop + quarter || held > next.insetTop + 3 * quarter) return plain;
+  return Object.freeze({ ...plain, anchorY: held });
+}
+
+/** Whether two envelopes describe the same glass and the same anchor. */
+export function envelopeEquals(a: ViewportEnvelope, b: ViewportEnvelope): boolean {
+  return a.width === b.width && a.height === b.height && a.insetTop === b.insetTop && a.insetRight === b.insetRight
+    && a.insetBottom === b.insetBottom && a.insetLeft === b.insetLeft && a.anchorY === b.anchorY;
 }
 
 /** Captures a float quantity of points exactly, at the sub-point resolution. */
@@ -142,12 +177,16 @@ export function unprojectPoint(camera: ViewAnchorScale, envelope: ViewportEnvelo
  */
 export function visibleFootprint(camera: ViewAnchorScale, envelope: ViewportEnvelope): WorldFootprint {
   const halfWidth = worldDeltaForPoints(camera, safeAreaWidth(envelope) / 2);
-  const halfHeight = worldDeltaForPoints(camera, safeAreaHeight(envelope) / 2);
+  // CA-O1: a held anchor divides the glass unevenly; without one both halves are exactly the half height, as before.
+  const height = safeAreaHeight(envelope);
+  const above = envelope.anchorY === undefined ? height / 2 : envelope.anchorY - envelope.insetTop;
+  const up = worldDeltaForPoints(camera, above);
+  const down = worldDeltaForPoints(camera, height - above);
   return Object.freeze({
     minX: clampBigInt(camera.anchor.x - halfWidth, OSDAP_MIN_COORD, OSDAP_MAX_COORD),
     maxX: clampBigInt(camera.anchor.x + halfWidth, OSDAP_MIN_COORD, OSDAP_MAX_COORD),
-    minY: clampBigInt(camera.anchor.y - halfHeight, OSDAP_MIN_COORD, OSDAP_MAX_COORD),
-    maxY: clampBigInt(camera.anchor.y + halfHeight, OSDAP_MIN_COORD, OSDAP_MAX_COORD),
+    minY: clampBigInt(camera.anchor.y - down, OSDAP_MIN_COORD, OSDAP_MAX_COORD),
+    maxY: clampBigInt(camera.anchor.y + up, OSDAP_MIN_COORD, OSDAP_MAX_COORD),
   });
 }
 

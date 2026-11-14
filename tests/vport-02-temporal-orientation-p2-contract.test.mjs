@@ -212,8 +212,12 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // 77ea34d7, world-mass 0bfb6e92.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'ab2439642cfe20e3fddb5e64e2c5672be10a5a2e'],
-    ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
-    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
+    // MAP-CLOSE-01 CA-Z1 / CA-O1 RE-ANCHOR (Product Owner, 2026-11-14, "Zoom Orientation, Label Legibility & Memory Risk"):
+    // a pinch's step carries where the fingers were (CA-Z1), and MapSurface holds its anchor once the reader has acted
+    // (CA-O1); no element, paint or prop of the world changes, so both goldens are unchanged. Previous pins: MapSurface
+    // 680b2a42, WorldViewSurface aff512d9.
+    ['apps/mobile/src/map/renderer/MapSurface.tsx', '852ac1e21c4b3b192eaee97aaee10fba334ee59f'],
+    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'dbeb313005977109aa0763b4ef281bcb6a13c029'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'ea8cda2eecd9b1e04b04b70682ac61c445a0d307'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '6db704a8d355ad1fc3bd6370e618d7530004cead'],
@@ -277,7 +281,10 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   // SHARED-VIS-01 controlled re-anchor: the band also reports its content height. MAP-CLOSE-01 V-3 Part B — PO ADDENDUM
   // RE-ANCHOR (2026-11-11): every world's band reports it (Personal's band is sized to its measured regions); the line's
   // room still comes out of the chrome's share, never out of the world's.
-  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{onChromeContent\}>/u, 'OrientationChrome yields the line\'s room');
+  // MAP-CLOSE-01 CA-O2 CONTROLLED RE-ANCHOR (Product Owner, approved with conditions, 2026-11-14): the band also keeps its
+  // end in view for a world with time (Personal), so Back stays under the finger; the line's room is unchanged. Previous
+  // form: the same element ending at `onContentHeight={onChromeContent}>`.
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{onChromeContent\} anchorEnd=\{timeline !== null\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

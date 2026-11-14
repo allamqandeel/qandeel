@@ -208,7 +208,7 @@ export function ReturnControls({
   return (
     <View
       testID={RETURN_CONTROLS_TEST_ID}
-      style={lines !== null ? styles.group : reflected ? [styles.pairedGroup, styles.reflected] : arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
+      style={lines !== null ? styles.lines : reflected ? [styles.pairedGroup, styles.reflected] : arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
       // The group itself claims no touch: only the buttons inside it are targets, so every press
       // that misses a control reaches the world beneath rather than being swallowed here.
       //
@@ -334,6 +334,12 @@ const styles = StyleSheet.create({
   // MAP-CLOSE-01 V-3: two labels share the row in equal halves; a label longer than its half wraps inside it.
   pairedLabelControl: { flexBasis: '40%', flexGrow: 1 },
   // MAP-CLOSE-01 V-3 (PO review R3): an explicit line of label-only acts, and each act's equal share of it.
+  // MAP-CLOSE-01 CA-O2 (Product Owner, approved with conditions, 2026-11-14): the lines stack UP from the bottom, the first
+  // one lowest, so an act that appears (Go Live + Locate, once Back has pinned the time) is added ABOVE the acts already
+  // there. With the Personal chrome band showing the END of its words when they overflow (ResponsiveChromeBand's
+  // `anchorEnd`), Back stays under the finger when pressed twice in the same place. Layout only: the children, and with
+  // them the reading order, are still in the frozen order.
+  lines: { flexDirection: 'column-reverse', rowGap: 8 },
   line: { flexDirection: 'row', columnGap: 8 },
   lineCell: { flexGrow: 1, flexBasis: 0 },
   // MAP-CLOSE-01 V-3: one reflection of the paired row for an Arabic reader, and the same one undoing it on each act.

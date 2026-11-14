@@ -1,7 +1,7 @@
 import { memo, type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { FlatList, I18nManager, Text, View, type TextStyle } from 'react-native';
 import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
-import { useAnalysisInk, useAnalysisType, type AnalysisInk } from '../../analysis-visual';
+import { useAnalysisInk, useAnalysisType, worldTextRim, type AnalysisInk } from '../../analysis-visual';
 import { PresentationNavigator } from '../accessibility/PresentationNavigator';
 import { type DisclosedMomentTarget, itemLayout, targetKey, TIMELINE_STEP } from '../model/disclosedTrack';
 import type { PresentationController } from '../window/controller';
@@ -78,7 +78,8 @@ export function TimelinePresentation({ controller, outboardLivePresentation, tem
   const metadata = type('metadata');
   // Centred in its own step by the line box alone, so the step keeps its exact invariant extent and style.
   const mirrored = language === 'ar' && !I18nManager.isRTL;
-  const numeral = useMemo<TextStyle>(() => ({ ...metadata, color: ink.tertiary, textAlign: 'center', lineHeight: TIMELINE_STEP, transform: mirrored ? MIRROR : undefined }), [metadata, ink.tertiary, mirrored]);
+  // MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): the numerals stand over the world and take its rim.
+  const numeral = useMemo<TextStyle>(() => ({ ...metadata, ...worldTextRim(ink.world), color: ink.tertiary, textAlign: 'center', lineHeight: TIMELINE_STEP, transform: mirrored ? MIRROR : undefined }), [metadata, ink.world, ink.tertiary, mirrored]);
   const renderItem = useCallback(({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} language={language} numeral={numeral} />, [language, numeral]);
   const list = useRef<FlatList<DisclosedMomentTarget>>(null);
   const railWidth = useRef(0);

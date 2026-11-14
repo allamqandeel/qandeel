@@ -40,14 +40,15 @@
  * it to `zoomSemanticStep` over its frozen lineage through `useMapSemanticZoomGesture`, unchanged in name, signature
  * and behaviour.
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
 
-import { handoffToProduct, type AuthorityGeneration } from '../../motion';
+import { createBox, handoffToProduct, type AuthorityGeneration } from '../../motion';
 import type { CanonicalStore } from '../../state';
 import type { MapActionOutcome } from '../outcome';
 import type { WorldGestureOutcome } from './useMapPanGesture';
 import { zoomSemanticStep } from './map-camera-actions';
+import type { ScreenPoint } from './viewport';
 import { SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR, SEMANTIC_ZOOM_REINFORCEMENT_NUMERATOR, type SemanticZoomDirection } from './zoom';
 
 /**
@@ -72,8 +73,11 @@ export interface WorldSemanticStepGestureOptions<O extends WorldGestureOutcome> 
   readonly enabled: boolean;
   /** The same generation stamp the pan uses, so a replaced authority cannot be written by a stale end. */
   readonly authority: AuthorityGeneration;
-  /** The ONE step a finished pinch asked for, along the world's own ladder, on the Product runtime. */
-  readonly step: (direction: SemanticZoomDirection) => O;
+  /**
+   * The ONE step a finished pinch asked for, along the world's own ladder, on the Product runtime. MAP-CLOSE-01 CA-Z1: with
+   * where the fingers were when the pinch was recognised, in the plane's points (the world glass's own frame).
+   */
+  readonly step: (direction: SemanticZoomDirection, focal?: ScreenPoint | null) => O;
   readonly onSettled?: (outcome: O) => void;
 }
 
@@ -97,6 +101,16 @@ export function useMapSemanticZoomGesture(store: CanonicalStore, options: MapSem
 
 export function useWorldSemanticStepGesture<O extends WorldGestureOutcome>(options: WorldSemanticStepGestureOptions<O>): MapSemanticZoomGestureBinding {
   const { enabled, authority, step, onSettled } = options;
+  // MAP-CLOSE-01 CA-Z1: where both fingers were when the pinch was recognised. At its end one finger may already be up, and
+  // the recogniser then reports that finger alone as the focal point (measured on the phone: about 60 points off). A box
+  // rather than a ref, for the reason the pan gives: it crosses into gesture callbacks.
+  const [start] = useState(() => createBox<ScreenPoint | null>(null));
+  const began = useCallback(
+    (x: number, y: number) => {
+      start.set(Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null);
+    },
+    [start],
+  );
 
   // The ONE crossing into Product truth, on the JS runtime, from a finished gesture.
   const commit = useCallback(
@@ -108,10 +122,12 @@ export function useWorldSemanticStepGesture<O extends WorldGestureOutcome>(optio
       if (direction === null) return;
       // The act runs first and the observer is notified afterwards: an optional call does not evaluate its argument
       // when no observer is attached (Shared and Public attach none), and the step would silently never run.
-      const outcome = step(direction);
+      const focal = start.get();
+      start.set(null);
+      const outcome = step(direction, focal);
       onSettled?.(outcome);
     },
-    [authority, onSettled, step],
+    [authority, onSettled, start, step],
   );
 
   const gesture = useMemo(
@@ -121,6 +137,10 @@ export function useWorldSemanticStepGesture<O extends WorldGestureOutcome>(optio
         .onBegin(() => {
           authority.capture();
         })
+        // CA-Z1: handed to the Product runtime in order, so the end's commit reads the point its own start recorded.
+        .onStart((event) => {
+          handoffToProduct(began, event.focalX, event.focalY);
+        })
         // Deliberately no `onChange`/`onUpdate`. The plane does not magnify under the fingers,
         // because Semantic Zoom is a change of what is disclosed rather than of how large it is
         // drawn, and a per-frame canonical write is exactly what this layer must never do.
@@ -128,7 +148,7 @@ export function useWorldSemanticStepGesture<O extends WorldGestureOutcome>(optio
           if (!success) return;
           handoffToProduct(commit, event.scale, authority.captured.get());
         }),
-    [authority, commit, enabled],
+    [authority, began, commit, enabled],
   );
 
   return { gesture };

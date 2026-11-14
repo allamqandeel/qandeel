@@ -123,8 +123,18 @@ const FROZEN = [
   // the Personal band is sized to what its Timeline and chrome measure (capped at the room it had, so the world never gets
   // less), and the Personal Analysis holds the one "details on request" switch. The projection, its cache, the Map, every
   // act, word, route and refusal are unchanged. Previous pins: LivingAnalysisSurface e623c27a, LivingAnalysisMap 17c56308.
-  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '3916f2b15149963538fc74abe575cb2ef899e0c4c98f2dca5297d01f84d13667'],
-  ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
+  // MAP-CLOSE-01 CA-O2 RE-ANCHOR (Product Owner, 2026-11-14, "Zoom, Stable Layout, Unified Labels"): the Personal chrome
+  // band keeps the end of its words in view when they overflow, so Back stays under the finger (CA-O2, approved with
+  // conditions: LivingAnalysisSurface passes anchorEnd for a world with time; nothing hidden, every word still reachable by
+  // scrolling and by every accessible route). Shared, Public and Replay's chrome, the projection, the Map, every act, word,
+  // route and refusal are unchanged. Previous pin: LivingAnalysisSurface 3916f2b1.
+  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '213f326115a2e0c039d24cfb1dfab46cea4f7b56014b7b05c9f66e2fbf580282'],
+  // MAP-CLOSE-01 CA-Z1 / CA-O1 RE-ANCHOR (Product Owner, 2026-11-14, "Zoom Orientation, Label Legibility & Memory Risk"): a
+  // pinch's step carries where the fingers were (CA-Z1: MapSurface passes them with its envelope to the same ZOOM_SEMANTIC;
+  // the world view's step type gains the optional point), and, once the reader has acted, MapSurface holds its anchor when
+  // only the band below the world changes (CA-O1, useSteadyEnvelope, presentation only). The projection, its cache, the
+  // Map, every act, word, route and refusal are unchanged. Previous pins: MapSurface 5f5d7551.
+  ['apps/mobile/src/map/renderer/MapSurface.tsx', 'fb623eea019299f6756ab0a3e192e9f035f1e757b58884101d319511f274adea'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   // S8B-07 CP1-B RE-ANCHOR (2026-11-08, the Product Owner's order on QAN-BL-MOB-05): a Map read whose fetch ENDED without an
   // answer (a failed read, a payload refused at the trust boundary, no credential) counts as settled, so the composition

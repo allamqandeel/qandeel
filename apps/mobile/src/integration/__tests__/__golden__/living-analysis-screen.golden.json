@@ -7615,7 +7615,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -7661,7 +7667,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -7707,7 +7719,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -7753,7 +7771,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -7799,7 +7823,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -7845,7 +7875,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -8411,6 +8447,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -8462,6 +8506,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -8559,7 +8605,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -16269,6 +16323,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -16320,6 +16380,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -16371,6 +16437,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -16422,6 +16494,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -16473,6 +16551,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -16524,6 +16608,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -17094,6 +17184,14 @@
                       },
                       {
                        "textAlign": "right"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -17145,6 +17243,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -17242,7 +17342,15 @@
                         "color": "#afaca3",
                         "textAlign": "right"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -25866,7 +25974,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -25912,7 +26026,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -25958,7 +26078,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -26004,7 +26130,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -26050,7 +26182,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -26096,7 +26234,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -26662,6 +26806,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -26713,6 +26865,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -26810,7 +26964,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -35440,6 +35602,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -35491,6 +35659,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -35542,6 +35716,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -35593,6 +35773,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -35644,6 +35830,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -35695,6 +35887,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -36265,6 +36463,14 @@
                       },
                       {
                        "textAlign": "right"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -36316,6 +36522,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -36413,7 +36621,15 @@
                         "color": "#afaca3",
                         "textAlign": "right"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -44117,7 +44333,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -44163,7 +44385,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -44209,7 +44437,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -44255,7 +44489,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -44301,7 +44541,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -44347,7 +44593,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -44913,6 +45165,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -44965,6 +45225,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -45062,7 +45324,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -52622,7 +52892,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -52668,7 +52944,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -52714,7 +52996,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -52760,7 +53048,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -52806,7 +53100,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -52852,7 +53152,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -53418,6 +53724,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -53469,6 +53783,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -53566,7 +53882,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -61132,6 +61456,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -61183,6 +61513,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -61234,6 +61570,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -61285,6 +61627,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -61336,6 +61684,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -61387,6 +61741,12 @@
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
                                 "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3,
                                 "transform": [
                                  {
                                   "scaleX": -1
@@ -61957,6 +62317,14 @@
                       },
                       {
                        "textAlign": "right"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -62008,6 +62376,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -62105,7 +62475,15 @@
                         "color": "#afaca3",
                         "textAlign": "right"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -69809,7 +70187,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -69855,7 +70239,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -69901,7 +70291,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -69947,7 +70343,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -69993,7 +70395,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -70039,7 +70447,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -70605,6 +71019,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -70656,6 +71078,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -70753,7 +71177,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -70833,7 +71265,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "flexDirection": "column",
+                  "flexDirection": "column-reverse",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -78451,6 +78883,14 @@
               {
                "color": "#d8d5ca",
                "textAlign": "left"
+              },
+              {
+               "textShadowColor": "#101010",
+               "textShadowOffset": {
+                "height": 0,
+                "width": 0
+               },
+               "textShadowRadius": 3
               }
              ]
             },
@@ -78678,7 +79118,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -78724,7 +79170,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -78770,7 +79222,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -78816,7 +79274,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -78862,7 +79326,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -78908,7 +79378,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -79486,6 +79962,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -79666,6 +80150,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -79763,7 +80249,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -87274,6 +87768,14 @@
               {
                "color": "#d8d5ca",
                "textAlign": "left"
+              },
+              {
+               "textShadowColor": "#101010",
+               "textShadowOffset": {
+                "height": 0,
+                "width": 0
+               },
+               "textShadowRadius": 3
               }
              ]
             },
@@ -87492,7 +87994,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -87538,7 +88046,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -87584,7 +88098,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -88150,6 +88670,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -88201,6 +88729,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -88298,7 +88828,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -88378,7 +88916,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "flexDirection": "column",
+                  "flexDirection": "column-reverse",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -96149,7 +96687,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -96195,7 +96739,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -96241,7 +96791,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -96287,7 +96843,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -96333,7 +96895,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -96379,7 +96947,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -96945,6 +97519,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -96996,6 +97578,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -97093,7 +97677,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -97221,7 +97813,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "flexDirection": "column",
+                  "flexDirection": "column-reverse",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -97640,7 +98232,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -97686,7 +98284,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -97732,7 +98336,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -97778,7 +98388,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -97824,7 +98440,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -97870,7 +98492,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -98436,6 +99064,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -98487,6 +99123,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -98584,7 +99222,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },
@@ -98664,7 +99310,7 @@
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
                  "style": {
-                  "flexDirection": "column",
+                  "flexDirection": "column-reverse",
                   "rowGap": 8
                  },
                  "testID": "qandeel-return-controls"
@@ -105675,7 +106321,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -105721,7 +106373,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -105767,7 +106425,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -105813,7 +106477,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -105859,7 +106529,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -105905,7 +106581,13 @@
                                 "fontSize": 12,
                                 "includeFontPadding": false,
                                 "lineHeight": 48,
-                                "textAlign": "center"
+                                "textAlign": "center",
+                                "textShadowColor": "#101010",
+                                "textShadowOffset": {
+                                 "height": 0,
+                                 "width": 0
+                                },
+                                "textShadowRadius": 3
                                }
                               },
                               "children": [
@@ -106471,6 +107153,14 @@
                       },
                       {
                        "textAlign": "left"
+                      },
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
                       }
                      ],
                      "testID": "qandeel-temporal-navigator:stance"
@@ -106522,6 +107212,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -106619,7 +107311,15 @@
                         "color": "#afaca3",
                         "textAlign": "left"
                        }
-                      ]
+                      ],
+                      {
+                       "textShadowColor": "#101010",
+                       "textShadowOffset": {
+                        "height": 0,
+                        "width": 0
+                       },
+                       "textShadowRadius": 3
+                      }
                      ],
                      "testID": "qandeel-orientation-chrome:spatial"
                     },

@@ -149,4 +149,42 @@ describe('T12 — the reader can reach Semantic Zoom from the mounted Map', () =
       view.unmount();
     });
   });
+
+  // MAP-CLOSE-01 CA-Z1: the step is given where the fingers were when the pinch was RECOGNISED. At its end Android reports
+  // the last finger still down (measured on the phone about 60 points off), so the end's focal point is never used.
+  it('a finished pinch hands its step the fingers at the start, not the last finger at the end', async () => {
+    const focals: unknown[] = [];
+    let gesture: ReturnType<typeof useWorldSemanticStepGesture>['gesture'] | null = null;
+    function Plane() {
+      const authority = useAuthorityGeneration('owner');
+      const binding = useWorldSemanticStepGesture<MapActionOutcome>({
+        enabled: true,
+        authority,
+        step: (_direction, focal) => {
+          focals.push(focal);
+          return { outcome: 'APPLIED' } as MapActionOutcome;
+        },
+      });
+      gesture = binding.gesture;
+      return (
+        <GestureDetector gesture={binding.gesture}>
+          <View />
+        </GestureDetector>
+      );
+    }
+    const view = await render(<Plane />);
+    if (gesture === null) throw new Error('the plane attached no pinch');
+    const pinch = gesture;
+    await act(async () => {
+      fireGestureHandler(pinch, [
+        { state: State.BEGAN, scale: 1, focalX: 120, focalY: 300 },
+        { state: State.ACTIVE, scale: 2, focalX: 120, focalY: 300 },
+        { state: State.END, scale: 2, focalX: 120, focalY: 240 },
+      ]);
+    });
+    expect(focals).toEqual([{ x: 120, y: 300 }]);
+    await act(async () => {
+      view.unmount();
+    });
+  });
 });

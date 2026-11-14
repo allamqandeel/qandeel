@@ -648,6 +648,13 @@ describe('S5-03B — the Public field surface', () => {
     // MID: the meaning in one line, as Public chrome beside the place (never painted into the world).
     expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.children).toBe('meaning 1');
     expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.numberOfLines).toBe(1);
+    // MAP-CLOSE-01 Treatment A (Product Owner, APPROVED 2026-11-14): 12 points (the size the label layout collides at),
+    // weight 600 in the primary ink, a thin rim of the world's ground hugging the glyphs — no capsule, no background,
+    // no dimming.
+    const letters = StyleSheet.flatten(view.getByTestId(`qandeel-public-label-${E1.id}`).props.style);
+    const dark = CANONICAL_VISUAL.palettes.DARK.standard;
+    expect(letters).toMatchObject({ fontSize: 12, lineHeight: 20, fontWeight: '600', color: dark.primary, textShadowColor: dark.world, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 3 });
+    for (const key of ['backgroundColor', 'borderRadius', 'borderWidth', 'opacity', 'padding', 'paddingHorizontal']) expect(letters).not.toHaveProperty(key);
     // MID: a place each, at the major tier, in the canonical mark material.
     expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6 });
     expect(bodyOf(view, field, E1).marker).toBeUndefined();

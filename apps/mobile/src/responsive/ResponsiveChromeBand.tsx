@@ -44,7 +44,7 @@
  * Nothing in this file animates. A band that changed shape with a transition would make a window
  * resize read as navigation, and a window is not a destination.
  */
-import type { ReactNode } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { CHROME_FLOOR_POINTS, type ChromeComposition, type SupportComposition } from './plan';
@@ -77,9 +77,24 @@ export interface ResponsiveChromeBandProps {
    * is measured and the band is unchanged.
    */
   readonly onContentHeight?: (height: number) => void;
+  /**
+   * MAP-CLOSE-01 CA-O2 (Product Owner, approved with conditions, 2026-11-14) — when the words exceed the band, show their
+   * END rather than their start. The Personal chrome ends with its return acts, which stack up from the bottom (T-08's
+   * `ReturnControls`): kept in view at the band's end, Back stays under the finger when an act appears above it. Nothing
+   * is removed or hidden from a route: what no longer fits is ABOVE, reachable by scrolling and by every accessible
+   * route, and the scroller's indicator is flashed so that the reader sees there is more. Absent, the band shows its
+   * start exactly as before (a focused place's panel opens at its title).
+   */
+  readonly anchorEnd?: boolean;
 }
 
-export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID, yieldPoints = 0, onContentHeight }: ResponsiveChromeBandProps) {
+export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID, yieldPoints = 0, onContentHeight, anchorEnd = false }: ResponsiveChromeBandProps) {
+  const scroller = useRef<ScrollView>(null);
+  // Called when the words or the band change size: no timer, no animation (a band that slid would read as navigation).
+  const keepEnd = useCallback(() => {
+    scroller.current?.scrollToEnd({ animated: false });
+    scroller.current?.flashScrollIndicators();
+  }, []);
   const across = support.arrangement === 'SIDE_BY_SIDE';
   // The line is paid for out of this band's allocation and nothing else; never more than the band holds.
   const yielded = across ? 0 : Math.min(Math.max(0, yieldPoints), support.chromePoints);
@@ -106,6 +121,9 @@ export function ResponsiveChromeBand({ chrome, support, children, testID = RESPO
       pointerEvents="box-none"
     >
       <ScrollView
+        ref={scroller}
+        onContentSizeChange={anchorEnd ? keepEnd : undefined}
+        onLayout={anchorEnd ? keepEnd : undefined}
         style={styles.scroller}
         contentContainerStyle={styles.content}
         // No bounce when there is NOTHING to reach: a surface that springs back implies content

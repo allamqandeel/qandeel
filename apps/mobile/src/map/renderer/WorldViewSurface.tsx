@@ -32,6 +32,7 @@ import { useIncreasedContrast } from '../../conversation/visual/theme';
 import {
   useWorldPanGesture,
   useWorldSemanticStepGesture,
+  type ScreenPoint,
   type SemanticZoomDirection,
   type ViewportEnvelope,
   type WorldGestureOutcome,
@@ -61,7 +62,7 @@ export interface WorldViewInput<C extends WorldViewCamera, N extends WorldSurfac
   /** The ONE act a completed drag becomes. */
   readonly pan: (translationX: number, translationY: number) => O;
   /** The ONE step a finished pinch asks for, along the world's own ladder. */
-  readonly step: (direction: SemanticZoomDirection) => O;
+  readonly step: (direction: SemanticZoomDirection, focal?: ScreenPoint | null) => O;
   readonly onSettled?: (outcome: O) => void;
 }
 
