@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Nasij Living World</title>
+<style>
+  :root { --card: #F7F1E4; --text: #2B2620; --quiet: #6E6353; --accent: #B4432F; --ground: #EDE5D4; --line: #C9BCA3; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ground); color: var(--text); overflow: hidden; overscroll-behavior: none;
+    font-family: Georgia, "Iowan Old Style", "Noto Naskh Arabic", "Geeza Pro", serif; }
+  #stage { position: fixed; inset: 0; max-width: 560px; margin: 0 auto; box-shadow: 0 0 0 1px var(--line); }
+  #cloth { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; cursor: grab; }
+  #cloth:active { cursor: grabbing; }
+  button, select { font: inherit; color: inherit; }
+  button { background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #top { position: absolute; inset: 0 0 auto 0; padding: 12px 16px 0; display: grid; gap: 8px; pointer-events: none; }
+  #top > * { pointer-events: auto; }
+  #tabs { display: flex; gap: 2px; background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); border-radius: 999px; padding: 3px; justify-self: center; }
+  #tabs button { min-height: 38px; padding: 0 18px; border-radius: 999px; font-size: 15px; letter-spacing: .01em; color: var(--quiet); }
+  #tabs button[aria-selected="true"] { background: var(--text); color: var(--ground); }
+  #row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #back { min-height: 44px; padding: 0 14px; border-radius: 999px; background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line); font-size: 14px; }
+  #back:disabled { opacity: 0; pointer-events: none; }
+  #fixture { font: 11px/1.2 ui-sans-serif, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--quiet); text-align: end; }
+
+  /* The depth rail: the rungs as beads on a thread, the current one dyed. */
+  #rail { position: absolute; inset-inline-end: 10px; top: 50%; transform: translateY(-50%); display: grid; gap: 0; }
+  #rail::before { content: ""; position: absolute; inset-inline-end: 10px; top: 22px; bottom: 22px; width: 1px; background: var(--line); }
+  .bead { position: relative; min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .bead i { width: 9px; height: 9px; transform: rotate(45deg); background: var(--ground); border: 1.5px solid var(--quiet); margin-inline-end: 6px; }
+  .bead.past i { background: var(--quiet); }
+  .bead.on i { width: 13px; height: 13px; background: var(--accent); border-color: var(--accent); margin-inline-end: 4px; }
+  .bead span { font-size: 12px; color: var(--quiet); background: color-mix(in srgb, var(--ground) 80%, transparent); padding: 1px 6px; border-radius: 6px; opacity: 0; transition: opacity .2s; }
+  .bead.on span, #rail:hover .bead span { opacity: 1; color: var(--text); }
+  .bead:disabled { cursor: default; }
+
+  .absence { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); max-width: 78%; text-align: center; font-size: 16px; line-height: 1.5;
+    background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+  .absence[hidden] { display: none; }
+  .absence button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; color: var(--accent); font-weight: 600; }
+  .arrow { display: inline-block; font-style: normal; }
+  .pulse { display: inline-block; width: 8px; height: 8px; margin-inline-end: 8px; transform: rotate(45deg); background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+
+  /* The lantern card: overlays the cloth at a fixed peek height; never resizes the world. */
+  #card { position: absolute; inset: auto 10px 10px 10px; height: 146px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 12px 16px;
+    transform: translateY(calc(100% + 16px)); transition: transform .26s cubic-bezier(.2,.8,.2,1); overflow: hidden; box-shadow: 0 8px 28px rgba(43, 38, 32, .16); }
+  #card.open { transform: none; }
+  #card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  #card header b { font-size: 17px; line-height: 1.3; font-weight: 600; }
+  #card header button { min-width: 44px; min-height: 44px; margin: -10px -12px 0 0; font-size: 22px; color: var(--quiet); }
+  [dir="rtl"] #card header button { margin: -10px 0 0 -12px; }
+  #card p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; }
+  #card .meta, #card .quiet { color: var(--quiet); font-size: 13px; }
+  #card .body { max-height: 92px; overflow: auto; }
+  #card .body button { min-height: 44px; color: var(--accent); font-weight: 600; }
+  .sk { height: 11px; border-radius: 6px; margin-top: 10px; background: var(--line); opacity: .55; animation: pulse 1.1s ease-in-out infinite; }
+  .sk.s { width: 62%; }
+
+  #selvedge { position: absolute; inset: auto 16px 14px 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: var(--quiet); }
+  #selvedge[hidden] { display: none; }
+  #card.open ~ #selvedge { display: none; }
+  .ticks { display: flex; flex: 1 1 100%; }
+  .ticks button { flex: 1; height: 44px; position: relative; }
+  .ticks button::after { content: ""; position: absolute; left: 1px; right: 1px; top: 19px; height: 6px; border-radius: 1px; border: 1px dashed var(--line); }
+  .ticks button.woven::after { border: 0; background: var(--text); }
+  .ticks button.at::after { background: var(--accent); top: 15px; height: 14px; }
+  #selvedge > button { min-height: 44px; padding: 0 10px; color: var(--accent); font-weight: 600; margin-inline-start: auto; }
+  .fringe::before { content: "⌇ "; }
+
+  #hint { position: absolute; inset: auto 0 172px 0; text-align: center; font-size: 12px; color: var(--quiet); pointer-events: none; opacity: .0; }
+  #lab { position: absolute; inset: auto auto 0 0; display: none; }
+  /* The lab: measurement and fault controls, out of the way until asked for. */
+  #labtoggle { position: fixed; inset: 10px auto auto 10px; z-index: 4; min-width: 44px; min-height: 44px; font: 11px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--quiet); }
+  #lab { position: fixed; inset: 52px auto auto 10px; z-index: 4; display: none; gap: 6px; flex-direction: column; align-items: flex-start; font: 11px/1 ui-sans-serif, system-ui, sans-serif; }
+  body.lab #lab { display: flex; }
+  #lab > button, #lab > select { min-height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); }
+  #lab button[aria-pressed="true"] { background: var(--text); color: var(--ground); }
+  #hud { font: 11px/1.4 ui-monospace, Menlo, monospace; color: var(--text); background: var(--card); border: 1px solid var(--line); padding: 6px 8px; border-radius: 8px; max-width: 250px; }
+  @media (max-width: 760px) { #stage { box-shadow: none; } #top { padding-top: 50px; } }
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  @media (prefers-reduced-motion: reduce) { #card { transition: none; } .pulse, .sk { animation: none; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cloth" role="img" aria-label="Living Analysis cloth"></canvas>
+  <div id="top">
+    <div id="tabs" role="tablist"></div>
+    <div id="row"><button id="back"></button><span id="fixture"></span></div>
+  </div>
+  <nav id="rail" aria-label="Depth"></nav>
+  <div id="absence" class="absence" role="status" aria-live="polite" hidden></div>
+  <section id="card" aria-live="polite"></section>
+  <div id="selvedge" hidden></div>
+  <div id="hint"></div>
+  <ul id="sr" class="vh" aria-label="Entities at this depth"></ul>
+</div>
+<button id="labtoggle" aria-controls="lab">Lab</button>
+<div id="lab">
+  <div id="hud" aria-hidden="true">move the cloth to measure</div>
+  <button id="lang">AR / EN</button>
+  <button id="night">Night cloth</button>
+  <button id="dense" aria-pressed="false">Public ×400 stress</button>
+  <select id="fault" aria-label="Simulated authority condition">
+    <option value="NONE">Authority: normal</option>
+    <option value="SLOW">Slow details (2 s)</option>
+    <option value="FAIL">Reads fail</option>
+    <option value="REFUSED">Refused</option>
+    <option value="EMPTY_WORLD">World empty</option>
+  </select>
+</div>
+<script>/*BUNDLE*/</script>
+</body>
+</html>
