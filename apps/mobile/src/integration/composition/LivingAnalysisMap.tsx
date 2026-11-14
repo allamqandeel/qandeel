@@ -41,7 +41,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
-import { MapSurface, mapInspectionContext, mapProjectionRequest, type MapActionOutcome } from '../../map';
+import { MapSurface, adjacentDepth, mapInspectionContext, mapProjectionRequest, type MapActionOutcome } from '../../map';
 import { OrientationChrome, TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
 import { returnMapContext } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
@@ -121,6 +121,30 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
 
   const entry = request === null ? null : bundle.projection.lookup(request.sessionId, request.tc, request.depth);
   const trackEntry = trackRequest === null ? null : bundle.projection.lookup(trackRequest.sessionId, trackRequest.tc, trackRequest.depth);
+
+  // MAP-PERF-01 (PO, 2026-11-14): the adjacent rungs are asked for once the current one is held, so a semantic step
+  // finds its scene already here. A step to a rung still being fetched leaves the Map without a context, and the Map is
+  // unmounted and mounted again: the camera's travel is lost and the first Zoom IN jumps. The same one cache and the
+  // same `ensure` as the viewpoint itself, so a held or in-flight rung is not read again and nothing the reader is not
+  // entitled to is asked for. At most the two neighbours, one after the other, after the current commit; none while a
+  // live call is up, so the call's network is not shared with a read the reader has not asked for. (The one read of the
+  // call is that: whether it is idle. Nothing drawn depends on it.)
+  const callIdle = useSyncExternalStore(runtime.call.subscribe, () => runtime.call.getState().stage === 'IDLE');
+  const held = entry !== null && entry.status !== 'NOT_FETCHED';
+  useEffect(() => {
+    if (request === null || !held || !callIdle) return;
+    let cancelled = false;
+    const depths = (['IN', 'OUT'] as const).map((direction) => adjacentDepth(request.depth, direction)).filter((depth) => depth !== null);
+    void (async () => {
+      for (const depth of depths) {
+        if (cancelled) return;
+        await projection.ensure({ sessionId: request.sessionId, tc: request.tc, depth });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projection, request, held, callIdle]);
 
   // T-05 owns the Track and this hands it one. `replaceDisclosed` preserves geometry within a Session
   // and resets it across one, which is T-05's rule; a null derivation leaves the Track standing,
