@@ -132,6 +132,36 @@ at empty world. Responsive change does not mean "fit all content".
 An undecodable camera is refused rather than repaired with a default: a silently repaired camera is
 a camera that moved without a user act.
 
+**Controlled amendment CA-O1 (MAP-CLOSE-01, Product Owner, APPROVED 2026-11-14 for the Personal map): the anchor's
+screen point is held across a change of the room below the world.** The anchor is drawn at the centre of the safe area,
+except that on the Personal map (`MapSurface`), once the reader has acted on the world (its camera changed; until then
+the screen is still composing its glass, and the opening composition is exactly what it was), when ONLY the bottom edge
+of the glass moves (the Analysis screen's support band grows or shrinks with what it holds: its return acts), the anchor
+keeps the screen `y` it had, for as long as that point still lies in the middle half of the new glass. The Shared and
+Public fields do not take this rule. Outside it, or when anything else changes (width, top, sides), the anchor is the new glass's centre
+again. This is presentation only (Class D, `ViewportEnvelope.anchorY`, `steadyEnvelope`, `useSteadyEnvelope`): no canonical camera moves,
+nothing is dispatched or recorded, and the footprint is still exactly the glass. It is this section's own rule made
+true on screen: a resize recomputes what is visible and nothing else, so the world no longer jumps when the band below
+it changes.
+
+**Controlled amendment CA-O2 (MAP-CLOSE-01, Product Owner, APPROVED WITH CONDITIONS 2026-11-14): the return acts stay
+under the finger.** On the Personal Analysis the return acts stack up from the bottom (`ReturnControls`, `column-reverse`),
+so an act that appears is added ABOVE the acts already there, and the chrome band keeps the END of its words in view when
+they overflow (`ResponsiveChromeBand` `anchorEnd`, passed by `LivingAnalysisSurface` for a world with time:
+`scrollToEnd` without animation, and the scroll indicator flashed, on every change of the words' size or of the band).
+Two presses at the same point step back twice. The conditions: nothing is hidden or removed — the words that no longer
+fit («المعروض الآن», «عرض التفاصيل») stay in the band's scroller, reachable by scrolling and by every accessible route —
+and no essential act is hidden or overlapped. The acts, their order in reading, their words and availability are
+unchanged; the Shared and Public panels open at their start, as before.
+
+**Controlled amendment, Treatment A (MAP-CLOSE-01, Product Owner, APPROVED 2026-11-14): one policy for the words on the
+world.** Every word that stands on the world, in the three worlds, carries one thin rim of the world's ground hugging its
+glyphs (`analysis-visual` `worldTextRim`: a text shadow in the ground's colour, radius 3, no offset). The Shared and
+Public labels also take weight 600 in the primary ink, at their own 12 points: the label layout measures and collides at
+that size, so no label moves or drops. No capsule, background, dimming or draw layer; the world's art (S3-R2) is
+unchanged. The Personal map draws no names (N4 is not authorized); its words over the world are the band's, and they take
+the rim.
+
 ## 6. Pan
 
 T-02 owns the `PAN` transition; T-04 owns the mapping from an input to an authorized world-anchor
@@ -155,7 +185,19 @@ point per rung, exact) travels with the depth change, but no reader may derive a
 magnitude, and the scale is clamped into a representable band without ever changing the rung.
 
 At the `WORLD` floor and the `SOURCE_PROVENANCE` ceiling nothing is dispatched: a boundary is the
-absence of an act, not a no-op act. Depth is not a route stack — there is no screen to push and no
+absence of an act, not a no-op act.
+
+**Controlled amendment CA-Z1 (MAP-CLOSE-01, Product Owner, APPROVED 2026-11-14): a pinch steps toward its fingers.** A step asked
+for by a pinch carries, in the SAME `ZOOM_SEMANTIC` act, the anchor that keeps the world point under the fingers under
+them. The point is where both fingers were when the pinch was RECOGNISED, in the world glass's points: at its end
+Android reports the last finger still down. `ZOOM_SEMANTIC`'s frozen authority already includes `MC.anchor`
+(EX02-03), so this is still one act, one RH checkpoint, no PAN and no second act; Back restores the whole captured
+camera, and IN then OUT at the same point returns the same camera exactly. A step without fingers (the named control,
+the accessible actions) keeps the anchor, as before. The rungs, the bounds, the reinforcement and "depth is the only
+semantic authority" are unchanged. The Shared and Public fields take the same rule on their own ladder (S5-03B: FAR ↔
+MID and NEAR → MID keep the point under the fingers; MID → NEAR focuses the place nearest the fingers, or nearest the
+centre without them). Zoom OUT keeps the point under the fingers up to FAR; the whole World from its origin stays a
+separate, explicit act where one exists (PO decision Z-1c). Depth is not a route stack — there is no screen to push and no
 router history to read — and on a narrow viewport the consequence is reduced simultaneity, never a
 different world, Home or object.
 
