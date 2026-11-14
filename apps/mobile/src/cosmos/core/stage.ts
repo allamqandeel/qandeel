@@ -134,7 +134,10 @@ function buildLayer(input: SceneInput, rung: number): StageLayer {
       const x = e.x + Math.cos(o.angle) * o.radius * k; const y = e.y + Math.sin(o.angle) * o.radius * k;
       // The one relation the Personal world may draw: this Thread hosts this Reading.
       strand(e.dye, e.x, e.y, x, y, ((e.ordinal ?? 0) % 2 === 0 ? 0.2 : -0.2));
-      if (e.solid === false) { put(x, y, 26, SPRITE.HALO, e.dye, 0.5); arc(line(e.dye, 1, 1.2), x, y, 4 * k, 0, TAU); } else node(x, y, 9.5, e.dye);
+      // Entity-type and state, by material alone: a current Reading is a lit body; one that is no longer current is an
+      // open ring. Both facts are on the wire; nothing here is a score.
+      if (e.solid === false) { put(x, y, 30, SPRITE.HALO, e.dye, 0.45); arc(line(e.dye, 1, 1.3), x, y, 5 * k, 0, TAU); }
+      else { put(x, y, 96, SPRITE.FIBRE_A + ((e.ordinal ?? 0) % 3), e.dye, 0.55, (e.ordinal ?? 0) * 1.9); node(x, y, 10.5, e.dye); }
       if (selected) arc(line(TINT.GOLD, 0.9, 0.9), x, y, 12 * k, 0, TAU);
       hits.push({ id: e.id, x, y, r: 22 });
       if (e.label !== null) labels.push({ id: e.id, text: e.label, x: x + Math.cos(o.angle) * 10 * k, y: y + (Math.sin(o.angle) > 0 ? 9 : -24) * k, emphasis: selected, major: false, tint: e.dye });
@@ -152,10 +155,9 @@ function buildLayer(input: SceneInput, rung: number): StageLayer {
     const receded = input.receded?.has(e.id) === true;
     if (field && rung === 0) {
       // FAR: mass. Each real entry lends a little fibre and light; together they are the region's nebula.
-      if (!receded) nebula(e.id, e.x, e.y, 330, e.dye, 0.3);
+      if (!receded) { const turn = turnOf(e.id); put(e.x + Math.cos(turn) * 16 * k, e.y + Math.sin(turn) * 16 * k, 250, SPRITE.FIBRE_A + (Math.floor(turn * 3) % 3), e.dye, 0.34, turn); }
       put(e.x, e.y, receded ? 7 : 22, SPRITE.HALO, receded ? TINT.PALE : e.dye, receded ? 0.3 : 0.8);
       put(e.x, e.y, receded ? 5 : 7, SPRITE.CORE, receded ? TINT.PALE : e.dye, receded ? 0.4 : 1);
-      if (e.label !== null && !receded) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 8 * k, emphasis: false, major: false, tint: e.dye });
       continue;
     }
     const near = rung === last && focus !== null;
@@ -174,10 +176,13 @@ function buildLayer(input: SceneInput, rung: number): StageLayer {
       if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 96 * k, emphasis: true, major: true, tint: -1 });
       continue;
     }
-    nebula(e.id, e.x, e.y, 300, e.dye, 0.75);
+    // MID: each place is its own body. Kept compact, with a bright rim of halo, so neighbours stay separate lights
+    // instead of pooling into one mass; the label takes the body's own hue so text and light read as one thing.
+    nebula(e.id, e.x, e.y, 200, e.dye, 0.85);
+    put(e.x, e.y, 70, SPRITE.HALO, e.dye, 0.45);
     node(e.x, e.y, 12, e.dye);
     hits.push({ id: e.id, x: e.x, y: e.y, r: 24 });
-    if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 16 * k, emphasis: false, major: false, tint: -1 });
+    if (e.label !== null) labels.push({ id: e.id, text: e.label, x: e.x, y: e.y + 16 * k, emphasis: false, major: false, tint: e.dye });
   }
   return { rung, sprites, lines: [...lineSets.values()].filter((l) => l.data.length > 0), labels, hits };
 }

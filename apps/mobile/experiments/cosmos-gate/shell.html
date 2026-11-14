@@ -18,8 +18,9 @@
   #sky:active { cursor: grabbing; }
   /* The lens: the edges fall away, so the eye rests where the light is. Static; the compositor owns it. */
   #lens { position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse 85% 62% at 50% 46%, rgba(5,6,15,0) 42%, rgba(5,6,15,.34) 74%, rgba(5,6,15,.78) 100%),
-      linear-gradient(180deg, rgba(5,6,15,.62) 0, rgba(5,6,15,0) 17%, rgba(5,6,15,0) 76%, rgba(5,6,15,.6) 100%); }
+    background: radial-gradient(ellipse 78% 60% at 50% 47%, rgba(5,6,15,0) 40%, rgba(5,6,15,.4) 72%, rgba(5,6,15,.86) 100%),
+      linear-gradient(90deg, rgba(5,6,15,.82) 0, rgba(5,6,15,0) 15%, rgba(5,6,15,0) 85%, rgba(5,6,15,.82) 100%),
+      linear-gradient(180deg, rgba(5,6,15,.66) 0, rgba(5,6,15,0) 17%, rgba(5,6,15,0) 76%, rgba(5,6,15,.62) 100%); }
   button, select { font: inherit; color: inherit; }
   button { background: none; border: 0; padding: 0; cursor: pointer; }
   button:focus-visible, select:focus-visible { outline: 1.5px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
@@ -118,7 +119,7 @@
 <div id="lab">
   <div id="hud" aria-hidden="true">move the world to measure</div>
   <button id="lang">AR / EN</button>
-  <button id="names" aria-pressed="true">Personal names (concept, needs N4)</button>
+  <button id="names" aria-pressed="false">Future concept (not authorised): Personal names</button>
   <button id="dense" aria-pressed="false">Public ×400 stress</button>
   <select id="fault" aria-label="Simulated authority condition">
     <option value="NONE">Authority: normal</option>

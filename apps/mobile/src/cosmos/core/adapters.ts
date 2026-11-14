@@ -10,7 +10,7 @@
 import type { MapScene } from '../../map/projection/map-scene';
 import type { PublicFieldEntry, PublicTopicSection } from '../../runtime-entry/public-field-api';
 import type { SharedFieldEntry } from '../../runtime-entry/shared-field-api';
-import { compileStage, dyeOfId, type Dye, type Entity, type SceneInput, type Stage, type StageLayer, type Tie } from './stage';
+import { compileStage, dyeOfId, type Entity, type SceneInput, type Stage, type StageLayer, type Tie } from './stage';
 
 /** Canonical world units per point at the first rung (the Map's frozen default scale). */
 export const FAR_UNITS_PER_POINT = 8192;
@@ -26,14 +26,9 @@ export const fromFar = (origin: SceneOrigin, x: number, y: number): Address => (
   y: origin.y - BigInt(Math.round(y * FAR_UNITS_PER_POINT)),
 });
 
-const PUBLIC_SECTION_ORDER: readonly PublicTopicSection[] = ['love', 'marriage', 'family', 'parenting', 'people', 'work_money', 'study_future',
-  'inner_self', 'health_body', 'loss_crisis', 'faith_meaning', 'life_changes', 'open'];
-
-/** A Public entry's dye comes from its authoritative section and nothing else; an entry with none is indigo. */
-export function publicDye(section: PublicTopicSection | undefined): Dye {
-  if (section === undefined) return 0;
-  return (PUBLIC_SECTION_ORDER.indexOf(section) % 8) as Dye;
-}
+// PO decision (2026-11-14): a Public Experience's dye comes from its OWN identity. It is not a category, a section, a
+// rank or a popularity signal, and neighbours sharing or differing in hue means nothing. A section is shown only the
+// way the existing contract shows it: as the reader's chosen filter, which recedes everything outside it.
 
 export interface PublicSceneFacts {
   readonly entries: ReadonlyArray<PublicFieldEntry>;
@@ -48,7 +43,7 @@ export interface PublicSceneFacts {
 
 export function publicScene(facts: PublicSceneFacts, origin: SceneOrigin): SceneInput {
   const entities: Entity[] = facts.entries.map((e) => ({
-    id: e.id, kind: 'EXPERIENCE', x: toFarX(origin, e.address), y: toFarY(origin, e.address), dye: publicDye(e.section),
+    id: e.id, kind: 'EXPERIENCE', x: toFarX(origin, e.address), y: toFarY(origin, e.address), dye: dyeOfId(e.id),
     label: e.title ?? e.meaning, fromRung: 0, region: e.region,
   }));
   const receded = facts.section === null ? undefined : new Set(facts.entries.filter((e) => e.section !== facts.section).map((e) => e.id));

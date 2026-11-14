@@ -13,7 +13,7 @@ import { absenceOf, type NasijAbsence } from '../../src/cosmos/core/absence';
 import { FAR_UNITS_PER_POINT, PERSONAL_DEPTHS, personalDrawList, personalScene, publicScene, sharedScene } from '../../src/cosmos/core/adapters';
 import { approach, depthOf, layerOpacities, matrixOf, project, stepFor, unproject, zoomAbout, clampScale, type NasijCamera, type NasijView } from '../../src/cosmos/core/camera';
 import { ATMOSPHERES, bakeFibre, bakePlate, bakeSprite, plateStars, TINTS, type PlateKind } from '../../src/cosmos/core/atmosphere';
-import { compileStage, drawOpsAtRest, rungScale, SPRITE_STRIDE, TINT, type Hairlines, type Stage, type StageLabel, type WorldKind } from '../../src/cosmos/core/stage';
+import { compileStage, drawOpsAtRest, rungScale, SPRITE_STRIDE, TINT, type Hairlines, type Stage, type WorldKind } from '../../src/cosmos/core/stage';
 
 type Lang = 'ar' | 'en';
 const ORIGIN = { x: 0n, y: 0n };
@@ -61,16 +61,11 @@ function publicRead(rect: string, dense: boolean, fault: Fault): Entry[] {
     const p = new Map(rect.split('&').map((s) => s.split('=') as [string, string])); const g = (k: string) => BigInt(p.get(k) as string);
     return DENSE.filter((e) => e.address.x >= g('minX') && e.address.x <= g('maxX') && e.address.y >= g('minY') && e.address.y <= g('maxY')).slice(0, 400);
   }
-  return (fixtureField(rect)?.experiences ?? []).slice(0, 400).map((e) => ({ id: e.id, address: addr(e.x, e.y), meaning: e.meaning, region: e.region, section: sectionOf(e.region) as never }));
+  return (fixtureField(rect)?.experiences ?? []).slice(0, 400).map((e) => ({ id: e.id, address: addr(e.x, e.y), meaning: e.meaning, region: e.region }));
 }
 
-// The Public fixture carries no `section`. For the gate each fixture region is given one real section key, in order of
-// first appearance. SYNTHETIC: a real entry's section comes from the server, and sections need not be regions.
-const SECTION_KEYS = ['people', 'work_money', 'family', 'loss_crisis', 'inner_self', 'life_changes', 'love', 'faith_meaning'];
-const SECTION_NAMES: Record<string, { ar: string; en: string }> = { people: { ar: 'العلاقات', en: 'Relationships' }, work_money: { ar: 'العمل', en: 'Work' }, family: { ar: 'الأسرة', en: 'Family' }, loss_crisis: { ar: 'الخوف', en: 'Fear' }, inner_self: { ar: 'الذات', en: 'Inner self' }, life_changes: { ar: 'القرارات', en: 'Decisions' }, love: { ar: 'الحب', en: 'Love' }, faith_meaning: { ar: 'المعنى', en: 'Meaning' } };
-const regionSection = new Map<string, string>();
-const sectionOf = (region: string): string => { if (!regionSection.has(region)) regionSection.set(region, SECTION_KEYS[regionSection.size % SECTION_KEYS.length]); return regionSection.get(region) as string; };
-// CONCEPT ONLY: names for the Personal world. The Personal map may draw no names today (N4 is not authorised).
+// FUTURE-CONCEPT REFERENCE ONLY, off by default and labelled on screen when on: names for the Personal world.
+// The Personal map draws no names (N4 is not authorised, and the PO has declined to authorise it for this work).
 const THREAD_NAMES: Array<{ ar: string; en: string; sub: Array<[string, string]> }> = [
   { ar: 'العلاقات', en: 'Relationships', sub: [['الثقة', 'Trust'], ['الحب', 'Love'], ['التواصل', 'Communication'], ['الخلافات', 'Conflict'], ['الصداقة', 'Friendship']] },
   { ar: 'العمل', en: 'Work', sub: [['الضغوط', 'Pressure'], ['الطموح', 'Ambition']] },
@@ -107,7 +102,7 @@ function personalAt(tc: number, depthIndex: number) {
 // ── state ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 type Panel = { s: 'LOADING' } | { s: 'SERVED'; title: string; lines: string[]; meta: string } | { s: 'ABSENT' } | { s: 'UNAVAILABLE' };
 const S = {
-  world: 'PUBLIC' as WorldKind, lang: (new URLSearchParams(location.search).get('lang') === 'ar' ? 'ar' : 'en') as Lang, names: true, dense: false, fault: 'NONE' as Fault, reduce: matchMedia('(prefers-reduced-motion: reduce)').matches,
+  world: 'PUBLIC' as WorldKind, lang: (new URLSearchParams(location.search).get('lang') === 'ar' ? 'ar' : 'en') as Lang, names: new URLSearchParams(location.search).get('concept') === 'names', dense: false, fault: 'NONE' as Fault, reduce: matchMedia('(prefers-reduced-motion: reduce)').matches,
   status: 'LOADING' as 'LOADING' | 'READY' | 'UNAVAILABLE' | 'REFUSED',
   shown: [] as Entry[], worldIndex: null as Entry[] | null, rung: 0, focusId: null as string | null, panel: null as Panel | null, tc: LIVE_HEAD, pinned: false,
   list: null as Stage | null, held: null as boolean[] | null, related: [] as string[], motes: undefined as number | undefined,
@@ -131,10 +126,6 @@ function recompile(): void {
     S.list = compileStage(sharedScene(S.shown as never, S.focusId, rtl, ORIGIN, S.motes)); S.held = null;
   } else {
     S.list = compileStage(publicScene({ entries: S.shown as never, focusId: S.focusId, relatedIds: S.related, section: null, focusMotes: S.motes, rtl }, ORIGIN)); S.held = null;
-    // CONCEPT: a section's name at the centre of its entries in view, at FAR only. Position is presentation, not a fact.
-    const groups = new Map<string, { x: number; y: number; n: number }>();
-    for (const e of S.shown) { const key = (e as { section?: string }).section; if (!key) continue; const g = groups.get(key) ?? { x: 0, y: 0, n: 0 }; g.x += Number(e.address.x) / FAR_UNITS_PER_POINT; g.y += -Number(e.address.y) / FAR_UNITS_PER_POINT; g.n += 1; groups.set(key, g); }
-    for (const [key, g] of groups) (S.list.layers[0].labels as StageLabel[]).push({ id: `section:${key}`, text: SECTION_NAMES[key][S.lang], x: g.x / g.n, y: g.y / g.n - 13, emphasis: false, major: true, tint: -1 });
   }
   linePaths.clear(); wake();
 }
@@ -337,7 +328,8 @@ function draw(): void {
       const k = cam.scale / rungScale(r);
       for (const label of [...layer.labels].sort((x, y) => Number(y.emphasis) + Number(y.major) * 2 - Number(x.emphasis) - Number(x.major) * 2)) {
         const s = project(cam, v, label.x, label.y);
-        if (s.x < -80 || s.x > W + 80 || s.y < -20 || s.y > H + 20) continue;
+        // A label is drawn whole or not at all: one whose entity is at or past the edge is left out, never cut.
+        if (s.x < 24 || s.x > W - 24 || s.y < 96 || s.y > H - 40) continue;
         const size = label.major ? Math.max(15, Math.min(30, 23 * Math.pow(k, 0.6))) : Math.max(10.5, Math.min(17, 12.5 * Math.pow(k, 0.6)));
         const arabic = /[\u0600-\u06FF]/u.test(label.text);
         ctx.font = `${label.major ? 700 : 500} ${size}px ${arabic ? '"Tajawal","IBM Plex Sans Arabic","Geeza Pro",sans-serif' : '"Inter",system-ui,sans-serif'}`;
@@ -440,7 +432,7 @@ function ui(): void {
   const c = COPY[S.lang]; const root = document.documentElement;
   root.dir = S.lang === 'ar' ? 'rtl' : 'ltr'; root.lang = S.lang; root.dataset.world = S.world;
   $('tabs').innerHTML = (['PERSONAL', 'SHARED', 'PUBLIC'] as const).map((w) => `<button role="tab" aria-selected="${w === S.world}" data-world="${w}">${c[w]}</button>`).join('');
-  $('fixture').textContent = c.fixture + (S.world === 'PERSONAL' && S.names ? (S.lang === 'ar' ? ' · تصوّر: الأسماء تحتاج N4' : ' · concept: names need N4') : '');
+  $('fixture').textContent = c.fixture + (S.world === 'PERSONAL' && S.names ? (S.lang === 'ar' ? ' · تصوّر مستقبلي غير مصرّح: الأسماء' : ' · FUTURE CONCEPT, NOT AUTHORISED: names') : '');
   $('names').setAttribute('aria-pressed', String(S.names));
   const names = c.rungs[S.world];
   $('rail').innerHTML = names.map((n, i) => `<button class="bead${i === S.rung ? ' on' : ''}${i < S.rung ? ' past' : ''}" data-rung="${i}" aria-current="${i === S.rung ? 'step' : 'false'}" ${i > S.rung ? 'disabled' : ''}><i></i><span>${n}</span></button>`).join('');
