@@ -251,7 +251,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       {/* Below the host's top band: Back (the shallower rung, or the world's centre) at the left and Overview at the right, in both languages (U-1, U-9). */}
       <View pointerEvents="box-none" style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
         <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} style={[styles.press, atHome && styles.hidden]}>
-          <View style={styles.pill}><Text style={styles.pillText}>{backText}</Text></View>
+          <View style={styles.chip}><Text style={styles.pillText}>{backText}</Text></View>
         </Pressable>
         <View style={styles.spacer} />
         <Pressable testID={COSMOS_OVERVIEW_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.overview} accessibilityState={{ selected: overview }}
@@ -337,9 +337,9 @@ const styles = StyleSheet.create({
   hidden: { opacity: 0 },
   // T12-A95: every press target is at least 44 points; the accepted 40-point pill sits inside it.
   press: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
-  pill: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   pillText: { fontSize: 13, color: C.ink },
-  chip: { minHeight: 40, minWidth: 44, paddingHorizontal: 12, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
+  // ONE chip for Back and Overview (Product Owner, 2026-11-16: consistent proportions, spacing and touch targets in the one row).
+  chip: { minHeight: 40, minWidth: 44, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   chipOn: { borderColor: C.gold },
   goldText: { fontSize: 13, color: C.gold },
   rail: { position: 'absolute', top: '36%' },

@@ -2306,6 +2306,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -2377,7 +2378,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -2987,7 +2988,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -3016,6 +3018,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -5845,6 +5848,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -5916,7 +5920,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -6530,7 +6534,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -6559,6 +6564,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -9388,6 +9394,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -9459,7 +9466,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -10069,7 +10076,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -10098,6 +10106,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -12927,6 +12936,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -12998,7 +13008,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -13612,7 +13622,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -13641,6 +13652,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -16470,6 +16482,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -16541,7 +16554,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -17151,7 +17164,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -17180,6 +17194,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -20009,6 +20024,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -20080,7 +20096,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -20690,7 +20706,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -20719,6 +20736,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -23548,6 +23566,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -23619,7 +23638,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -24233,7 +24252,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -24262,6 +24282,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -27089,6 +27110,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -27160,7 +27182,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -27770,7 +27792,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": [
@@ -27783,7 +27806,8 @@
                   "flex": 1,
                   "height": 44,
                   "justifyContent": "center",
-                  "minWidth": 0
+                  "minWidth": 0,
+                  "overflow": "hidden"
                  },
                  "testID": "qandeel-cosmos-acts"
                 },
@@ -27802,7 +27826,10 @@
                    "keyboardShouldPersistTaps": "handled",
                    "showsHorizontalScrollIndicator": false,
                    "style": {
-                    "flexGrow": 0
+                    "alignSelf": "stretch",
+                    "flexGrow": 0,
+                    "flexShrink": 1,
+                    "minWidth": 0
                    }
                   },
                   "children": [
@@ -27903,6 +27930,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -30732,6 +30760,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -30803,7 +30832,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -31413,7 +31442,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -31442,6 +31472,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -34403,6 +34434,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -34474,7 +34506,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -35117,7 +35149,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": [
@@ -35130,7 +35163,8 @@
                   "flex": 1,
                   "height": 44,
                   "justifyContent": "center",
-                  "minWidth": 0
+                  "minWidth": 0,
+                  "overflow": "hidden"
                  },
                  "testID": "qandeel-cosmos-acts"
                 },
@@ -35149,7 +35183,10 @@
                    "keyboardShouldPersistTaps": "handled",
                    "showsHorizontalScrollIndicator": false,
                    "style": {
-                    "flexGrow": 0
+                    "alignSelf": "stretch",
+                    "flexGrow": 0,
+                    "flexShrink": 1,
+                    "minWidth": 0
                    }
                   },
                   "children": [
@@ -35311,6 +35348,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -38394,6 +38432,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -38465,7 +38504,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -39075,7 +39114,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": [
@@ -39088,7 +39128,8 @@
                   "flex": 1,
                   "height": 44,
                   "justifyContent": "center",
-                  "minWidth": 0
+                  "minWidth": 0,
+                  "overflow": "hidden"
                  },
                  "testID": "qandeel-cosmos-acts"
                 },
@@ -39107,7 +39148,10 @@
                    "keyboardShouldPersistTaps": "handled",
                    "showsHorizontalScrollIndicator": false,
                    "style": {
-                    "flexGrow": 0
+                    "alignSelf": "stretch",
+                    "flexGrow": 0,
+                    "flexShrink": 1,
+                    "minWidth": 0
                    }
                   },
                   "children": [
@@ -39231,6 +39275,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -41557,6 +41602,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -41628,7 +41674,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -42240,7 +42286,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": [
@@ -42253,7 +42300,8 @@
                   "flex": 1,
                   "height": 44,
                   "justifyContent": "center",
-                  "minWidth": 0
+                  "minWidth": 0,
+                  "overflow": "hidden"
                  },
                  "testID": "qandeel-cosmos-acts"
                 },
@@ -42272,7 +42320,10 @@
                    "keyboardShouldPersistTaps": "handled",
                    "showsHorizontalScrollIndicator": false,
                    "style": {
-                    "flexGrow": 0
+                    "alignSelf": "stretch",
+                    "flexGrow": 0,
+                    "flexShrink": 1,
+                    "minWidth": 0
                    }
                   },
                   "children": [
@@ -42373,6 +42424,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10
@@ -45202,6 +45254,7 @@
               "borderWidth": 0.5,
               "justifyContent": "center",
               "minHeight": 40,
+              "minWidth": 44,
               "paddingHorizontal": 14
              }
             },
@@ -45273,7 +45326,7 @@
                "justifyContent": "center",
                "minHeight": 40,
                "minWidth": 44,
-               "paddingHorizontal": 12
+               "paddingHorizontal": 14
               },
               false
              ]
@@ -45883,7 +45936,8 @@
                 "flex": 1,
                 "height": 44,
                 "justifyContent": "center",
-                "minWidth": 0
+                "minWidth": 0,
+                "overflow": "hidden"
                }
               },
               "children": []
@@ -45912,6 +45966,7 @@
                "onResponderTerminationRequest": "[fn]",
                "onStartShouldSetResponder": "[fn]",
                "style": {
+                "flexShrink": 0,
                 "justifyContent": "center",
                 "minHeight": 44,
                 "paddingHorizontal": 10

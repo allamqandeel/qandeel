@@ -211,8 +211,10 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
 const styles = StyleSheet.create({
   region: { gap: 4 },
   // The one-line layout fills its slot in the rail's words row (44 points tall) and never grows past it.
-  lineRegion: { flex: 1, minWidth: 0, height: 44, justifyContent: 'center' },
-  scroller: { flexGrow: 0 },
+  // The slot CLIPS the line (HONOR, 2026-11-16: without `overflow: hidden` and a shrinkable scroller the second chip ran
+  // under the Live words); what does not fit scrolls into view, nothing overlaps its neighbour.
+  lineRegion: { flex: 1, minWidth: 0, height: 44, justifyContent: 'center', overflow: 'hidden' },
+  scroller: { flexGrow: 0, flexShrink: 1, minWidth: 0, alignSelf: 'stretch' },
   line: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingEnd: 6 },
   // Identical in both languages (U-9): the row runs left → right; the words inside keep their own direction.
   chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },

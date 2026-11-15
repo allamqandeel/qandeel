@@ -32,7 +32,11 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
+// The Live words and the "…" marks are gesture-handler Pressables (HONOR, 2026-11-16): a bare-text React Native Pressable over
+// the stage's gesture surface lost its press on the device while every chip with a background took it — RNGH's Android
+// orchestrator lets a touch over a background-less view fall through to the stage's handlers, whose tap then cancels the
+// React Native press. A gesture-handler Pressable is itself a native handler, innermost, so the words always win the tap.
+import { GestureDetector, Pressable as GesturePressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 
 import { analysisCopy } from '../../../analysis-language';
@@ -215,25 +219,25 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
         </GestureDetector>
         {/* The "…" marks, after the row so they stand above its edge: earlier Moments at the START, later ones at the END. */}
         {start > 0 ? (
-          <Pressable testID={COSMOS_RAIL_EARLIER_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.trackContinues} accessibilityLanguage={language}
+          <GesturePressable testID={COSMOS_RAIL_EARLIER_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.trackContinues} accessibilityLanguage={language}
             onPress={() => presentation.page(-1)} style={[styles.more, styles.moreStart]}>
             <Text style={styles.moreText}>…</Text>
-          </Pressable>
+          </GesturePressable>
         ) : null}
         {start + shown < total ? (
-          <Pressable testID={COSMOS_RAIL_LATER_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.trackContinues} accessibilityLanguage={language}
+          <GesturePressable testID={COSMOS_RAIL_LATER_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.trackContinues} accessibilityLanguage={language}
             onPress={() => presentation.page(1)} style={[styles.more, styles.moreEnd]}>
             <Text style={styles.moreText}>…</Text>
-          </Pressable>
+          </GesturePressable>
         ) : null}
       </View>
       {/* The words row: the host's compact acts at the START (§16 A-3); the outboard Live edge, with T-06's words, at the END. Never a Moment. */}
       <View style={styles.words} pointerEvents="box-none">
         {acts === null ? <View style={styles.spacer} /> : <View style={styles.actsSlot} pointerEvents="box-none">{acts}</View>}
-        <Pressable testID={COSMOS_RAIL_LIVE_TEST_ID} accessibilityRole="button" accessibilityLabel={liveWords} accessibilityLanguage={language}
+        <GesturePressable testID={COSMOS_RAIL_LIVE_TEST_ID} accessibilityRole="button" accessibilityLabel={liveWords} accessibilityLanguage={language}
           accessibilityState={{ disabled: !liveAvailable, selected: following }} disabled={!liveAvailable} onPress={goLive} style={styles.liveAct}>
           <Text style={following ? styles.quietText : styles.goldText}>{liveWords}</Text>
-        </Pressable>
+        </GesturePressable>
       </View>
       {/* The non-drag routes, headless: present to assistive technology, not on the screen (C-5). */}
       <View testID={COSMOS_RAIL_HEADLESS_TEST_ID} style={styles.headless} accessibilityRole="none" pointerEvents="box-none">
@@ -271,8 +275,8 @@ const styles = StyleSheet.create({
   moreText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   words: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   spacer: { flex: 1 },
-  actsSlot: { flex: 1, minWidth: 0, height: RAIL_ROW_HEIGHT, justifyContent: 'center' },
-  liveAct: { minHeight: RAIL_ROW_HEIGHT, paddingHorizontal: 10, justifyContent: 'center' },
+  actsSlot: { flex: 1, minWidth: 0, height: RAIL_ROW_HEIGHT, justifyContent: 'center', overflow: 'hidden' },
+  liveAct: { minHeight: RAIL_ROW_HEIGHT, paddingHorizontal: 10, justifyContent: 'center', flexShrink: 0 },
   quietText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   goldText: { fontSize: 13, color: C.gold },
   headless: { position: 'absolute', left: 0, top: 0, width: 1, height: 1, overflow: 'hidden' },
