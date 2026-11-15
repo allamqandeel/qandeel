@@ -327,6 +327,10 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   // Gesture bookkeeping, on the UI thread.
   const active = useSharedValue(0);
   const pinched = useSharedValue(0);
+  /** 1 while two fingers are pinching (the pinch gesture is live); `pinched` stays 1 until the whole gesture ends. */
+  const pinching = useSharedValue(0);
+  const focalLastX = useSharedValue(0);
+  const focalLastY = useSharedValue(0);
   const lsAtGestureStart = useSharedValue(0);
   const lsAtPinchStart = useSharedValue(0);
   // The atmosphere's clock (seconds), advanced per frame while the drift is on.
@@ -533,15 +537,19 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
         scheduleOnRN(emitPinchEnd, stepForLs(ls.get() - lsAtGestureStart.get()), sx.get(), sy.get(), cx, cy, s);
       } else scheduleOnRN(emitPanEnd, cx, cy, s);
     };
-    const pan = Gesture.Pan().minDistance(8).maxPointers(2).averageTouches(true)
+    // The three gestures carry test identifiers so the headless pinch-focus tests can drive them (no runtime effect).
+    const pan = Gesture.Pan().withTestId('cosmos-pan').minDistance(8).maxPointers(2).averageTouches(true)
       .onStart(() => { 'worklet'; begin(); })
       .onChange((event) => {
         'worklet';
         if (pendingInput.get() === 0) pendingInput.set(uiNow());
+        // While two fingers pinch, the midpoint's travel comes from the pinch's own focal (below), event for event and
+        // from the first one; counting the pan's average here as well would move the world twice.
+        if (pinching.get() === 1) return;
         sx.set(sx.get() + event.changeX); sy.set(sy.get() + event.changeY);
       })
       .onEnd(() => { 'worklet'; finish(); });
-    const pinch = Gesture.Pinch()
+    const pinch = Gesture.Pinch().withTestId('cosmos-pinch')
       .onStart((event) => {
         'worklet';
         begin();
@@ -550,16 +558,26 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
         wx.set(wx.get() + (event.focalX - sx.get()) / s);
         wy.set(wy.get() + (event.focalY - sy.get()) / s);
         sx.set(event.focalX); sy.set(event.focalY);
-        pinched.set(1);
+        focalLastX.set(event.focalX); focalLastY.set(event.focalY);
+        pinched.set(1); pinching.set(1);
         lsAtPinchStart.set(ls.get());
       })
       .onChange((event) => {
         'worklet';
         if (pendingInput.get() === 0) pendingInput.set(uiNow());
+        // On Android the pinch handler stays active through the FIRST finger's lift and reports one more update whose
+        // focal is the one finger still down (RNGH PinchGestureHandler: focal = detector focus after POINTER_UP; it ends
+        // only on ACTION_UP). That is not a midpoint; following it would pan the world by half the fingers' distance
+        // at release (HONOR proof, 2026-11-15: a 420 px jump). Only a two-finger focal moves the anchor.
+        if (event.numberOfPointers < 2) return;
+        // The anchor follows the midpoint: the world point that was under the fingers stays under them as they move,
+        // and the scale changes about where they are now (PO finding, 2026-11-15: an off-centre pinch drifted).
+        sx.set(sx.get() + (event.focalX - focalLastX.get())); sy.set(sy.get() + (event.focalY - focalLastY.get()));
+        focalLastX.set(event.focalX); focalLastY.set(event.focalY);
         if (event.scale > 0) ls.set(clampLs(lsAtPinchStart.get() + Math.log(event.scale), rungs.get()));
       })
-      .onEnd(() => { 'worklet'; finish(); });
-    const tap = Gesture.Tap().maxDistance(8).maxDuration(400)
+      .onEnd(() => { 'worklet'; pinching.set(0); finish(); });
+    const tap = Gesture.Tap().withTestId('cosmos-tap').maxDistance(8).maxDuration(400)
       .onEnd((event, success) => {
         'worklet';
         if (!success) return;
@@ -568,7 +586,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       });
     // The first to activate wins: a drag or a pinch cancels the tap, and a completed tap never becomes a drag.
     return Gesture.Race(Gesture.Simultaneous(pan, pinch), tap);
-  }, [active, emitPanEnd, emitPinchEnd, emitTap, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
+  }, [active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
 
   // ── owned Skia resources ────────────────────────────────────────────────────────────────────────────────────────
   const prepared: PreparedStage = useMemo(() => prepareStage(stage), [stage]);

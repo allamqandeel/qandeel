@@ -22,12 +22,12 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { deviceProductLanguage } from '../../integration';
 import { absenceOf, type NasijAbsence } from '../core/absence';
-import type { NasijCamera, NasijView } from '../core/camera';
+import { zoomAbout, type NasijCamera, type NasijView } from '../core/camera';
 import { drawOpsAtRest, type WorldKind } from '../core/stage';
 import { CosmosCanvas, OVERDRAW_MODES, type CosmosCanvasHandle, type MotionKind, type OverdrawMode, type ProbeResult } from '../skia/CosmosCanvas';
 import { COSMOS_COPY, type CosmosCopy, type CosmosLanguage } from './copy';
 import { COSMOS_FAULTS, type CosmosFault } from './fixture-transports';
-import { parseProofLink, readJsHeap, type JsHeapReading, type ProofLink } from './measure';
+import { collectRuntime, parseProofLink, readJsHeap, type JsHeapReading, type ProofLink } from './measure';
 import { CARD_PEEK, createCosmosOwner, focusYOf, type CosmosCard, type CosmosTime, type CosmosWorldOwner, type CosmosWorldSnapshot } from './owners';
 
 const WORLDS: readonly WorldKind[] = ['PERSONAL', 'SHARED', 'PUBLIC'];
@@ -121,8 +121,11 @@ function CosmosProof() {
     noteOpen('readyMs');
   }, [snapshot.status, owner, noteOpen]);
   // OPEN TIME (b): to the first UI frame after a non-empty stage and its images were committed to the canvas.
+  /** MEASUREMENT ONLY (candidate lifecycle fix, `gcauto/on`): ask the UI runtime to collect once a world is drawn. */
+  const uiCollectPerOpen = useRef(false);
   const onFirstStageFrame = useCallback(() => {
     if (openOf.current?.owner === owner.it && !openOf.current.frame) { openOf.current.frame = true; noteOpen('frameMs'); }
+    if (uiCollectPerOpen.current) collectRuntime('ui');
     frameWaiter.current?.();
   }, [owner, noteOpen]);
 
@@ -184,13 +187,25 @@ function CosmosProof() {
     owner.it.pan(released);
     settleNow();
   }, [leaveOverview, owner, settleNow]);
+  // A pinch ends ABOUT THE FINGERS (PO finding, 2026-11-15: the scene drifted toward the screen centre after a pinch).
+  // `released` is the magnified camera at release; the world point under the fingers is what must not move:
+  //  - the pan part of the gesture is committed first, as the camera at the CURRENT rung's scale with that point still
+  //    under the fingers (`zoomAbout`), so a sub-threshold or refused pinch eases back about the fingers, not the centre;
+  //  - a step is then asked for with the fingers as its focal; the production step keeps its focal fixed, and because
+  //    the pan was committed first that focal is exactly the fingers (no fallback to an approximate fixed point);
+  //  - the settle keeps the anchor in every case. Nothing canonical is decided here: the authority may still refuse.
   const onPinchEnd = useCallback((direction: 'IN' | 'OUT' | null, fx: number, fy: number, released: NasijCamera) => {
     if (leaveOverview()) return;
-    if (direction === null) { owner.it.pan(released); settleNow(); return; }
-    const result = owner.it.step(direction, { x: fx, y: fy }, released);
-    // A pinch that asked for a step the authority refused (a boundary, nothing to focus) is still a completed drag.
-    if (!result.applied) owner.it.pan(released);
-    settleNow(result.aboutFingers);
+    const size = sizeRef.current;
+    const at = owner.it.getSnapshot();
+    const view: NasijView | null = size === null ? null : { width: size.width, height: size.height, focusX: size.width / 2, focusY: focusYOf(at, size.height) };
+    const atRung = view === null ? released : zoomAbout(released, view, fx, fy, at.camera.scale);
+    owner.it.pan(atRung);
+    if (direction === null) { settleNow(true); return; }
+    const result = owner.it.step(direction, { x: fx, y: fy }, atRung);
+    // A pinch that asked for a step the authority refused (a boundary, nothing to focus) is still a completed drag,
+    // already committed above; it eases back to the rung about the fingers.
+    settleNow(result.applied ? result.aboutFingers : true);
   }, [leaveOverview, owner, settleNow]);
   const lastTap = useRef(0);
   const onTap = useCallback((x: number, y: number, released: NasijCamera) => {
@@ -274,13 +289,21 @@ function CosmosProof() {
     else if (link.kind === 'drift') setDrift(link.on);
     else if (link.kind === 'surface') setOpaqueSurface(link.opaque);
     else if (link.kind === 'lang') setLanguage(link.language);
+    else if (link.kind === 'gc') collectRuntime(link.runtime);
+    else if (link.kind === 'gcauto') uiCollectPerOpen.current = link.on;
   }, [runCycle, stepBy, switchWorld]);
+  // ONE subscription for the life of the root, reading the LATEST handler through a ref. `follow` changes with every
+  // owner (through `stepBy`), and an effect keyed on it re-ran on each new owner, read the launch URL again and
+  // switched world again, so a process cold-started by a deep link never left "Reading…" (HONOR, 2026-11-15). The
+  // launch URL is applied once per process; later `url` events are still delivered to the current handler.
+  const followRef = useRef(follow);
+  useEffect(() => { followRef.current = follow; }, [follow]);
   useEffect(() => {
     let live = true;
-    void Linking.getInitialURL().then((url) => { if (live && url !== null) follow(parseProofLink(url)); }).catch(() => undefined);
-    const subscription = Linking.addEventListener('url', (event) => follow(parseProofLink(event.url)));
+    void Linking.getInitialURL().then((url) => { if (live && url !== null) followRef.current(parseProofLink(url)); }).catch(() => undefined);
+    const subscription = Linking.addEventListener('url', (event) => followRef.current(parseProofLink(event.url)));
     return () => { live = false; subscription.remove(); };
-  }, [follow]);
+  }, []);
 
   const view: NasijView | null = size === null ? null : { width: size.width, height: size.height, focusX: size.width / 2, focusY };
   const absence: NasijAbsence = view === null ? { kind: 'LOADING' }

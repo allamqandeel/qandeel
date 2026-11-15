@@ -12,6 +12,8 @@
 //   qandeel-cosmos-proof://surface/texture | surface             TextureView (default) or SurfaceView
 //   qandeel-cosmos-proof://lang/ar | en
 
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+
 import type { WorldKind } from '../core/stage';
 import type { OverdrawMode } from '../skia/CosmosCanvas';
 import type { CosmosLanguage } from './copy';
@@ -25,7 +27,11 @@ export type ProofLink =
   | { readonly kind: 'cycle'; readonly count: number }
   | { readonly kind: 'drift'; readonly on: boolean }
   | { readonly kind: 'surface'; readonly opaque: boolean }
-  | { readonly kind: 'lang'; readonly language: CosmosLanguage };
+  | { readonly kind: 'lang'; readonly language: CosmosLanguage }
+  /** MEASUREMENT ONLY: ask one runtime to collect (`gc/js` the React runtime, `gc/ui` the Reanimated UI runtime). */
+  | { readonly kind: 'gc'; readonly runtime: 'js' | 'ui' }
+  /** MEASUREMENT ONLY: collect the UI runtime after every world's first stage frame (a candidate lifecycle fix, off by default). */
+  | { readonly kind: 'gcauto'; readonly on: boolean };
 
 const WORLD_OF: Readonly<Record<string, WorldKind>> = { personal: 'PERSONAL', shared: 'SHARED', public: 'PUBLIC' };
 const MODE_OF: Readonly<Record<string, OverdrawMode>> = { full: 'FULL', 'no-bodies': 'NO_BODIES', plates: 'PLATES_ONLY' };
@@ -42,7 +48,33 @@ export function parseProofLink(url: string): ProofLink | null {
   if (verb === 'drift') return value === 'on' || value === 'off' ? { kind: 'drift', on: value === 'on' } : null;
   if (verb === 'surface') return value === 'texture' || value === 'surface' ? { kind: 'surface', opaque: value === 'surface' } : null;
   if (verb === 'lang') return value === 'ar' || value === 'en' ? { kind: 'lang', language: value } : null;
+  if (verb === 'gc') return value === 'js' || value === 'ui' ? { kind: 'gc', runtime: value } : null;
+  if (verb === 'gcauto') return value === 'on' || value === 'off' ? { kind: 'gcauto', on: value === 'on' } : null;
   return null;
+}
+
+const reportUiCollection = (collected: boolean): void => {
+  console.log(`[cosmos-proof] gc ${JSON.stringify({ runtime: 'ui', collected })}`);
+};
+
+/**
+ * MEASUREMENT ONLY: ask one runtime to collect, where it exposes `gc`. The Reanimated UI runtime's own heap holds very
+ * little, so it rarely collects by itself; the question (defect recovery, 2026-11-15) is what its garbage keeps alive
+ * natively (RN Skia's recorders, one per redraw, are captured by the worklets its container ships to that runtime).
+ */
+export function collectRuntime(runtime: 'js' | 'ui'): void {
+  if (runtime === 'js') {
+    const reading = readJsHeap(true);
+    console.log(`[cosmos-proof] gc ${JSON.stringify({ runtime, ...reading })}`);
+    return;
+  }
+  scheduleOnUI(() => {
+    'worklet';
+    const g = (globalThis as { gc?: () => void }).gc;
+    const collected = typeof g === 'function';
+    if (collected) { g(); g(); }
+    scheduleOnRN(reportUiCollection, collected);
+  });
 }
 
 export interface JsHeapReading {
