@@ -35,23 +35,26 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import { BackHandler, Keyboard, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { Control, typeStyle, usePalette, type ConversationPalette } from '../../conversation';
+import { CosmosWorldView, createPublicCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
 import { LivingAnalysisSurface } from '../../living-analysis';
+import { useSteadyEnvelope, type ViewportEnvelope } from '../../map/camera';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import { formatDay } from '../../settings/PrivacyDataSection';
 import type { PublicFieldExperience } from '../../runtime-entry';
 import { PUBLIC_TOPIC_SECTIONS, publicEntryLabel } from '../../runtime-entry';
 import { fillCompose, publicComposeCopy } from '../../public-compose/copy';
-import { nearestOf } from './public-field-camera';
+import { nearestOf, type PublicFieldCamera } from './public-field-camera';
 import { fillDiscussionCopy, publicDiscussionCopy } from './discussion-copy';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
 import { PublicDiscussion } from './PublicDiscussion';
 import { PublicTopicContent } from './PublicTopicContent';
 import { PUBLIC_SEARCH_QUERY_MAX, type PublicFieldController, type PublicFieldPanelState, type PublicFieldState } from './public-field-controller';
-import { PublicFieldView } from './PublicFieldView';
 
 export const PUBLIC_FIELD_TEST_ID = 'qandeel-public-field';
 export const PUBLIC_BAND_TEST_ID = 'qandeel-public-band';
+/** COSMOS-INT-01: the stage's own test id, the one the old field view's world carried. */
+export const PUBLIC_FIELD_WORLD_TEST_ID = 'qandeel-public-field-world';
 /** S8A-05 CP1: the most topics of the chosen section listed near the centre of the glass (WP1 §2.5 item 5). */
 const SECTION_NEAR_MAX = 3;
 /** The band's height before its first measurement: the heading's and the search field's minimum rows. */
@@ -72,6 +75,12 @@ export function PublicLivingAnalysis({ controller, language, insets, heading }: 
   const presentedIn = useMemo(() => ({ width: screen.width, height: screen.height }), [screen.width, screen.height]);
   const [bandHeight, setBandHeight] = useState(insets.top + BAND_SEED_HEIGHT);
   const [query, setQuery] = useState('');
+  // COSMOS-INT-01 Slice B: the COSMOS stage over THIS controller. One owner per (controller, language); it is the thin
+  // seam that relays the fingers to the controller and reads its answers back, and it is retired with the screen. It
+  // is made before the entry below, so the entry's own whole-world read is the evidence it keeps (Problem 7).
+  const [owner, setOwner] = useState(() => ({ controller, language, it: createPublicCosmosOwner(controller, language) }));
+  if (owner.controller !== controller || owner.language !== language) setOwner({ controller, language, it: createPublicCosmosOwner(controller, language) });
+  useEffect(() => () => owner.it.dispose(), [owner]);
 
   // Entering the field asks the server again; a previous visit is never kept (nothing is inherited, from anywhere).
   useEffect(() => {
@@ -103,11 +112,25 @@ export function PublicLivingAnalysis({ controller, language, insets, heading }: 
           ),
           height: bandHeight,
         }}
-        world={(envelope) => <PublicFieldView controller={controller} state={state} envelope={envelope} copy={copy} language={language} />}
+        // COSMOS-INT-01 (D-2): the Public field as the COSMOS stage under the composition.
+        stage={(glass) => <PublicStage owner={owner.it} glass={glass} camera={state.camera} copy={copy} language={language} />}
         timeline={null}
         chrome={(composition) => <FieldChrome controller={controller} state={state} copy={copy} language={language} bottomInset={composition.bottomInset} />}
       />
     </View>
+  );
+}
+
+/** The COSMOS stage of the Public field: the glass steadied by CA-O1, the approved field label and step words. */
+function PublicStage({ owner, glass, camera, copy, language }: {
+  readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly camera: PublicFieldCamera | null;
+  readonly copy: PublicFieldCopy; readonly language: ChromeLanguage;
+}) {
+  // MAP-CLOSE-01 CA-O1: once the reader has acted, the world stays where it is when only the band below it changes.
+  const steady = useSteadyEnvelope(glass, camera);
+  return (
+    <CosmosWorldView owner={owner} world="PUBLIC" language={language} glass={steady} worldLabel={copy.fieldLabel}
+      zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} testID={PUBLIC_FIELD_WORLD_TEST_ID} />
   );
 }
 

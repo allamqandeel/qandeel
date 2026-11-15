@@ -19,20 +19,23 @@
  * Members and QANDEEL are not drawn as objects in the World (D6): they stay in the conversation, with their attribution,
  * and in Manage World. Nothing here is a feed, a chat list or a ranking: no order of importance, no count, no line.
  */
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 
 import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, type ConversationPalette } from '../../conversation';
+import { CosmosWorldView, createSharedCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
 import { LivingAnalysisSurface } from '../../living-analysis';
+import { useSteadyEnvelope, type ViewportEnvelope } from '../../map/camera';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import type { SharedFieldPlace } from '../../runtime-entry';
 import { sharedFieldCopy, type SharedFieldCopy } from './field-copy';
 import type { SharedFieldController, SharedFieldPanelState, SharedFieldState } from './shared-field-controller';
-import { SharedFieldView } from './SharedFieldView';
 
 export const SHARED_FIELD_TEST_ID = 'qandeel-shared-field';
 export const SHARED_BAND_TEST_ID = 'qandeel-shared-band';
+/** COSMOS-INT-01: the stage's own test id, the one the old field view's world carried. */
+export const SHARED_FIELD_WORLD_TEST_ID = 'qandeel-shared-field-world';
 /** The band's height before its first measurement: the heading's and the controls' minimum rows. */
 const BAND_SEED_HEIGHT = 48 + MIN_TARGET + 6;
 
@@ -53,6 +56,11 @@ export function SharedLivingAnalysis({ controller, language, insets, title, onBa
   const screen = useWindowDimensions();
   const presentedIn = useMemo(() => ({ width: screen.width, height: screen.height }), [screen.width, screen.height]);
   const [bandHeight, setBandHeight] = useState(insets.top + BAND_SEED_HEIGHT);
+  // COSMOS-INT-01 Slice B: the COSMOS stage over THIS controller. One owner per (controller, language); it is the thin
+  // seam that relays the fingers to the controller and reads its answers back, and it is retired with the screen.
+  const [owner, setOwner] = useState(() => ({ controller, language, it: createSharedCosmosOwner(controller, language) }));
+  if (owner.controller !== controller || owner.language !== language) setOwner({ controller, language, it: createSharedCosmosOwner(controller, language) });
+  useEffect(() => () => owner.it.dispose(), [owner]);
 
   return (
     <View testID={SHARED_FIELD_TEST_ID} style={{ flex: 1 }}>
@@ -65,13 +73,28 @@ export function SharedLivingAnalysis({ controller, language, insets, title, onBa
             onBack={onBack} onConversation={onConversation} onManage={onManage} />,
           height: bandHeight,
         }}
-        world={(envelope) => (
-          <SharedFieldView key={state.worldId ?? 'none'} controller={controller} state={state} envelope={envelope} copy={copy} language={language} />
+        // COSMOS-INT-01 (D-2): the World's places as the COSMOS stage under the composition, keyed by the World so that
+        // nothing of one World's presentation can continue into another's.
+        stage={(glass) => (
+          <SharedStage key={state.worldId ?? 'none'} owner={owner.it} glass={glass} camera={state.camera} copy={copy} language={language} />
         )}
         timeline={null}
         chrome={(composition) => <FieldChrome controller={controller} state={state} copy={copy} language={language} bottomInset={composition.bottomInset} />}
       />
     </View>
+  );
+}
+
+/** The COSMOS stage of one World: the glass steadied by CA-O1, the approved field label and step words. */
+function SharedStage({ owner, glass, camera, copy, language }: {
+  readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly camera: SharedFieldState['camera'];
+  readonly copy: SharedFieldCopy; readonly language: ChromeLanguage;
+}) {
+  // MAP-CLOSE-01 CA-O1: once the reader has acted, the world stays where it is when only the band below it changes.
+  const steady = useSteadyEnvelope(glass, camera);
+  return (
+    <CosmosWorldView owner={owner} world="SHARED" language={language} glass={steady} worldLabel={copy.fieldLabel}
+      zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} testID={SHARED_FIELD_WORLD_TEST_ID} />
   );
 }
 

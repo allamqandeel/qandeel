@@ -444,6 +444,8 @@ const pack = (language: ChromeLanguage): LanguagePack => PACKS[language];
  * family, never the id.
  */
 export const inspectionSentence = (language: ChromeLanguage, render: InspectionRenderState): string => pack(language).inspection(render);
+/** COSMOS-INT-01: the one approved word for a semantic depth, for the stage's depth rail. Decides nothing. */
+export const semanticDepthWord = (language: ChromeLanguage, depth: SemanticDepth): string => pack(language).depth[depth];
 
 /** Where the reader stands in conversational time. A Session Position is reader-facing Product truth. */
 export const temporalSentence = (language: ChromeLanguage, temporal: TemporalChrome): string => pack(language).temporal(temporal);

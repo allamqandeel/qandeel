@@ -41,6 +41,10 @@ import {
 
 export type { OverdrawMode } from './parts';
 export const OVERDRAW_MODES: readonly OverdrawMode[] = ['FULL', 'NO_BODIES', 'PLATES_ONLY'];
+/** COSMOS-INT-01: the accessible gesture surface (the stage's semantic step) — the suffix the old world view used. */
+export const COSMOS_STEP_TEST_ID_SUFFIX = ':semantic-step';
+/** COSMOS-INT-01: one accessible mark (screen reader on): `${testID}${COSMOS_MARK_TEST_ID_INFIX}${entityId}`. */
+export const COSMOS_MARK_TEST_ID_INFIX = ':mark:';
 export type MotionKind = 'PAN' | 'ZOOM';
 
 /** One gesture and its settle, as the UI thread saw it. See the header: these are frame-callback intervals. */
@@ -106,6 +110,14 @@ export interface CosmosCanvasProps {
   readonly onZoomOut: () => void;
   readonly labelOf: (id: string) => string;
   readonly onActivate: (id: string) => void;
+  /**
+   * COSMOS-INT-01: false when the host lays a production accessibility layer over the stage (the Personal Map's, with
+   * its inspect / switch-context / direct-jump and viewport actions); the stage then offers no mark and no action of
+   * its own, so one object is never two nodes. Default true: the stage's own marks, as proven.
+   */
+  readonly accessibleMarks?: boolean;
+  /** COSMOS-INT-01: the host's test id; the accessible gesture surface is `${testID}:semantic-step`, a mark `${testID}:mark:${id}`. */
+  readonly testID?: string;
 }
 
 const FRAME_RING = 600;
@@ -627,8 +639,9 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
     const subscription = AccessibilityInfo.addEventListener('screenReaderChanged', setScreenReader);
     return () => { live = false; subscription.remove(); };
   }, []);
+  const standIn = props.accessibleMarks === false;
   const marks = useMemo(() => {
-    if (!screenReader || size === null) return [];
+    if (!screenReader || size === null || standIn) return [];
     const hits = stage.layers[rung]?.hits ?? [];
     const out: { id: string; left: number; top: number; side: number }[] = [];
     for (const hit of hits) {
@@ -640,7 +653,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       out.push({ id: hit.id, left: x - side / 2, top: y - side / 2, side });
     }
     return out;
-  }, [screenReader, stage, rung, settled, size]);
+  }, [screenReader, stage, rung, settled, size, standIn]);
 
   const onAccessibilityAction = useCallback((event: AccessibilityActionEvent) => {
     if (event.nativeEvent.actionName === 'zoom-in') host.props().onZoomIn();
@@ -655,10 +668,11 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
           style={styles.root}
           collapsable={false}
           onLayout={onLayout}
-          accessible
+          testID={props.testID === undefined ? undefined : `${props.testID}${COSMOS_STEP_TEST_ID_SUFFIX}`}
+          accessible={!standIn}
           accessibilityLabel={props.accessibilityLabel}
-          accessibilityActions={actions}
-          onAccessibilityAction={onAccessibilityAction}
+          accessibilityActions={standIn ? undefined : actions}
+          onAccessibilityAction={standIn ? undefined : onAccessibilityAction}
         >
           <Canvas style={StyleSheet.absoluteFill} opaque={props.opaqueSurface === true}>
             {/* (1) DEEP, opaque; until it has decoded, the void. */}
@@ -689,6 +703,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
           {marks.map((mark) => (
             <Pressable
               key={mark.id}
+              testID={props.testID === undefined ? undefined : `${props.testID}${COSMOS_MARK_TEST_ID_INFIX}${mark.id}`}
               accessibilityRole="button"
               accessibilityLabel={props.labelOf(mark.id)}
               onPress={() => props.onActivate(mark.id)}

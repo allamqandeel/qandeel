@@ -9,9 +9,9 @@
  * world and gives the same words more air, which is T-11's frozen decision and not a choice remade
  * here.
  *
- * Every surface below is the real frozen owner. `MapSurface` is T-04's, the temporal layer is T-06's
- * over T-05's own presentation controller, the chrome is T-08's. There is no duplicate, no test-only
- * stand-in and no second implementation of any of them anywhere in this tree.
+ * Every surface below is the real frozen owner. The temporal layer is T-06's over T-05's own presentation controller,
+ * the chrome is T-08's, the accessible Map is T-04's. There is no duplicate, no test-only stand-in and no second
+ * implementation of any of them anywhere in this tree.
  *
  * ## Truth convergence
  *
@@ -21,30 +21,43 @@
  * render pass. There is no path by which the Map paints one `TC` while the chrome names another: they
  * are not synchronized, they are the same read.
  *
- * ## Nothing here animates
+ * ## Motion
  *
- * Motion is T-10's, entirely. This composition adds no transition, no entrance, no stagger, no
- * layout animation and no press choreography of its own: the world's travel belongs to the
- * presentation camera and arrival belongs to the disclosure registry, both already frozen. The one
- * motion fact this layer contributes is the composite spatial CAUSE — which is not new motion at all,
- * only the evidence that lets T-10's existing plan hold its already-frozen beat.
+ * This composition adds no transition, no entrance, no stagger, no layout animation and no press choreography of its
+ * own. The one motion fact this layer contributes is the composite spatial CAUSE — the evidence of a composite act,
+ * bound to its destination and consumed by the next camera transition.
  *
  * ## S5-03B R1 — the Personal world on the ONE Living Analysis surface
  *
  * The screen itself — the Analysis place, the top band, T-11's responsive column, the measured world frame and the one
- * support band — is now `LivingAnalysisSurface`'s, so every world is analysed on the same screen. This file is the
+ * support band — is `LivingAnalysisSurface`'s, so every world is analysed on the same screen. This file is the
  * Personal world's use of it, and everything it ever owned stays here: the store and the one projection cache, the
- * Map (`MapSurface`), the Timeline (T-05 / T-06) with its temporal orientation line, the chrome (T-08) with Return and
- * Live, the journey and the composite spatial cause. The element tree is unchanged, and the screen golden proves it.
+ * Timeline (T-05 / T-06) with its temporal orientation line, the chrome (T-08) with Return and Live, the journey and
+ * the composite spatial cause.
+ *
+ * ## COSMOS-INT-01 Slice B — the Personal world as the COSMOS stage (Product Owner, 2026-11-15)
+ *
+ * The world is now drawn by the COSMOS stage (`cosmos/product`) in the surface's STAGE presentation (D-2): one
+ * full-surface cosmic stage under the same top band, the same Timeline and the same T-08 chrome. Its owner
+ * (`createPersonalCosmosOwner`) attaches to THIS runtime and dispatches exactly the acts `MapSurface` dispatched for the
+ * same gestures — `PAN`, `ZOOM_SEMANTIC` with its focal (CA-Z1), `INSPECT_OBJECT` through T-04's entitlement — and every
+ * outcome still passes through `observeMapOutcome`, so the journey sees the same step. T-04's accessible Map
+ * (`MapAccessibilityLayer`: inspect, switch context, direct jump, the viewport routes) is laid over the stage, through
+ * the same glass, so no accessible route the old Map offered is lost. The motion is COSMOS's (D-5): the composite
+ * spatial cause is still asked, with the destination, at each canonical camera change — consumed, not played.
+ * `MapSurface` itself is unchanged and still the Replay composite's renderer (G-5, REPLAY-COSMOS-01).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 
+import { analysisCopy } from '../../analysis-language';
+import { CosmosWorldView, createPersonalCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
-import { MapSurface, mapInspectionContext, mapProjectionRequest, type MapActionOutcome } from '../../map';
+import { MapAccessibilityLayer, decodeCameraIntent, mapInspectionContext, mapProjectionRequest, useSteadyEnvelope, type MapActionOutcome, type MapInspectionContext, type ViewportEnvelope } from '../../map';
 import { OrientationChrome, TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
 import { returnMapContext } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
+import type { CanonicalStore } from '../../state';
 import { TemporalTargetLayer } from '../../temporal-navigation';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import type { ProductLocale } from '../locale/product-locale';
@@ -67,6 +80,8 @@ export interface LivingAnalysisMapProps {
   readonly onComposed?: () => void;
   /** S5-03B R1 — the Analysis top band (the way back to the Conversation), drawn by the surface above the world. */
   readonly top?: LivingAnalysisTopBand | null;
+  /** COSMOS-INT-01: the stage's slow drift at rest is paused while a live call shares this surface (the call path is protected). */
+  readonly driftPaused?: boolean;
 }
 
 /** Reports its own first commit. It renders nothing; it only marks where the Map was composed. */
@@ -77,7 +92,7 @@ function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
   return null;
 }
 
-export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null }: LivingAnalysisMapProps) {
+export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null, driftPaused = false }: LivingAnalysisMapProps) {
   const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
@@ -184,15 +199,27 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   );
 
   /**
-   * The one question the Map asks of the composite binding, at the exact instant it travels.
+   * The one question the Map asks of the composite binding, at the exact instant the canonical camera moves.
    *
-   * It is asked with the destination the Map is actually travelling to, and asking consumes the
-   * binding whatever the answer — so an unrelated camera act retires it instead of borrowing it.
+   * It is asked with the destination the camera is actually moving to, and asking consumes the binding whatever the
+   * answer — so an unrelated camera act retires it instead of borrowing it. Under COSMOS (D-5) the answer steers no
+   * motion; the asking is what keeps the binding's lifecycle exactly as it was.
    */
   const takeSpatialCause = useCallback(
     (destination: Parameters<typeof spatialCause.take>[1]) => spatialCause.take(store, destination),
     [spatialCause, store],
   );
+
+  // COSMOS-INT-01: ONE owner per (runtime, language) — the seam between the stage and THIS runtime. It is created with
+  // the composition and retired with it; a replaced runtime is a new owner, never a re-aimed one.
+  const [owner, setOwner] = useState(() => ({
+    runtime, language: locale.language,
+    it: createPersonalCosmosOwner({ runtime, language: locale.language, onOutcome: observeMapOutcome, spatialCause: takeSpatialCause }),
+  }));
+  if (owner.runtime !== runtime || owner.language !== locale.language) {
+    setOwner({ runtime, language: locale.language, it: createPersonalCosmosOwner({ runtime, language: locale.language, onOutcome: observeMapOutcome, spatialCause: takeSpatialCause }) });
+  }
+  useEffect(() => () => owner.it.dispose(), [owner]);
 
   /**
    * The projection is SETTLED and still cannot be drawn: there is no viewpoint, it was refused, or it
@@ -207,29 +234,27 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
     request === null || fetchEndedUnanswered || (entry !== null && entry.status !== 'NOT_FETCHED' && (mapContext === null || !mapContext.ok));
 
   return (
-    // The ONE Living Analysis surface, with the Personal world's projection and capabilities: the Map in the measured
-    // frame, the disclosed Timeline with its orientation line, and the T-08 chrome with Return and Live.
+    // The ONE Living Analysis surface, with the Personal world's projection and capabilities: the COSMOS stage under the
+    // composition, the disclosed Timeline with its orientation line, and the T-08 chrome with Return and Live.
     <LivingAnalysisSurface
       insets={insets}
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       top={top}
-      world={(envelope) =>
-        // The Map is drawn only from T-04's own context; none is invented when it refuses.
-        mapContext === null || !mapContext.ok ? null : (
-          <>
-            <MapSurface
-              store={store}
-              context={mapContext.context}
-              envelope={envelope}
-              spatialCause={takeSpatialCause}
-              onOutcome={observeMapOutcome}
-              language={locale.language}
-            />
-            {onComposed === undefined ? null : <ComposedMark onComposed={onComposed} />}
-          </>
-        )
-      }
+      stage={(glass) => (
+        <PersonalStage
+          owner={owner.it}
+          glass={glass}
+          store={store}
+          // The accessible Map is offered only from T-04's own context; none is invented when it refuses.
+          context={mapContext !== null && mapContext.ok ? mapContext.context : null}
+          language={locale.language}
+          driftPaused={driftPaused}
+          onOutcome={observeMapOutcome}
+          // The stage is composed: the Map's real first state, when T-04's context exists to draw from.
+          composed={onComposed !== undefined && mapContext !== null && mapContext.ok ? <ComposedMark onComposed={onComposed} /> : null}
+        />
+      )}
       timeline={{
         line: <TemporalOrientationLine store={store} language={locale.language} preview={preview} />,
         layer: <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />,
@@ -256,5 +281,31 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
       }
       after={onComposed !== undefined && settledWithoutMap ? <ComposedMark onComposed={onComposed} /> : null}
     />
+  );
+}
+
+/**
+ * The Personal stage: the COSMOS world view over the owner, in the glass steadied by CA-O1, with T-04's accessible Map
+ * laid over it through the same glass (the stage's own marks stand down: one object is never two nodes).
+ */
+function PersonalStage({ owner, glass, store, context, language, driftPaused, onOutcome, composed }: {
+  readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly store: CanonicalStore;
+  readonly context: MapInspectionContext | null; readonly language: ProductLocale['language']; readonly driftPaused: boolean;
+  readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void; readonly composed: ReactNode;
+}) {
+  const state = useSyncExternalStore(store.subscribe, store.getState);
+  const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
+  const camera = decoded.ok ? decoded.camera : null;
+  // MAP-CLOSE-01 CA-O1: once the reader has acted, the world stays where it is when only the band below it changes.
+  const steady = useSteadyEnvelope(glass, camera);
+  const copy = analysisCopy(language);
+  return (
+    <CosmosWorldView owner={owner} world="PERSONAL" language={language} glass={steady} drift={!driftPaused}
+      worldLabel={copy.map} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}>
+      {context === null || camera === null ? null : (
+        <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={steady} onOutcome={onOutcome} language={language} />
+      )}
+      {composed}
+    </CosmosWorldView>
   );
 }
