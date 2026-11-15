@@ -6125,6 +6125,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -12349,6 +12351,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -18931,6 +18935,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -25513,6 +25519,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -31854,6 +31862,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -38078,6 +38088,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -44302,6 +44314,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -50526,6 +50540,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -50615,10 +50631,15 @@
                 "props": {
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
-                 "style": {
-                  "flexDirection": "column",
-                  "rowGap": 8
-                 },
+                 "style": [
+                  {
+                   "flexDirection": "column",
+                   "rowGap": 8
+                  },
+                  {
+                   "flexDirection": "column-reverse"
+                  }
+                 ],
                  "testID": "qandeel-return-controls"
                 },
                 "children": [
@@ -57100,6 +57121,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -63209,6 +63232,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -63298,10 +63323,15 @@
                 "props": {
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
-                 "style": {
-                  "flexDirection": "column",
-                  "rowGap": 8
-                 },
+                 "style": [
+                  {
+                   "flexDirection": "column",
+                   "rowGap": 8
+                  },
+                  {
+                   "flexDirection": "column-reverse"
+                  }
+                 ],
                  "testID": "qandeel-return-controls"
                 },
                 "children": [
@@ -69589,6 +69619,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -69723,10 +69755,15 @@
                 "props": {
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
-                 "style": {
-                  "flexDirection": "column",
-                  "rowGap": 8
-                 },
+                 "style": [
+                  {
+                   "flexDirection": "column",
+                   "rowGap": 8
+                  },
+                  {
+                   "flexDirection": "column-reverse"
+                  }
+                 ],
                  "testID": "qandeel-return-controls"
                 },
                 "children": [
@@ -71153,6 +71190,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1
@@ -71242,10 +71281,15 @@
                 "props": {
                  "accessibilityRole": "none",
                  "pointerEvents": "box-none",
-                 "style": {
-                  "flexDirection": "column",
-                  "rowGap": 8
-                 },
+                 "style": [
+                  {
+                   "flexDirection": "column",
+                   "rowGap": 8
+                  },
+                  {
+                   "flexDirection": "column-reverse"
+                  }
+                 ],
                  "testID": "qandeel-return-controls"
                 },
                 "children": [
@@ -77563,6 +77607,8 @@
          "contentContainerStyle": {
           "flexGrow": 1
          },
+         "onContentSizeChange": "[fn]",
+         "onLayout": "[fn]",
          "style": {
           "flexGrow": 0,
           "flexShrink": 1

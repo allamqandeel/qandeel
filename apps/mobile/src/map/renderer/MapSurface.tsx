@@ -62,7 +62,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { PresentationMotionCause } from '../../motion';
 import type { AnalysisLanguage } from '../../analysis-language';
 import type { CameraIntent, CanonicalStore } from '../../state';
-import { decodeCameraIntent, panByTranslation, zoomSemanticStep, type MapCamera, type SemanticZoomDirection, type ViewportEnvelope } from '../camera';
+import { decodeCameraIntent, panByTranslation, useSteadyEnvelope, zoomSemanticStep, type MapCamera, type ScreenPoint, type SemanticZoomDirection, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
@@ -95,13 +95,15 @@ export interface MapSurfaceProps {
   readonly language?: AnalysisLanguage;
 }
 
-export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause, language = 'en' }: MapSurfaceProps) {
+export function MapSurface({ store, context, envelope: frame, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause, language = 'en' }: MapSurfaceProps) {
   // Canonical state is READ, never held beside the store: the whole state, because the projection
   // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
   // supplied projection is still this Map.
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
   const camera = decoded.ok ? decoded.camera : null;
+  // MAP-CLOSE-01 CA-O1: once the reader has acted, the world stays where it is when only the band below it changes.
+  const envelope = useSteadyEnvelope(frame, camera);
   // The one shared rule, over the state this component subscribed to.
   const freshness = useMemo(() => mapContextFreshness(state, context), [state, context]);
   const usable = camera !== null && freshness.fresh;
@@ -128,7 +130,11 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
   // The Personal Map's two camera acts: one completed drag is one `PAN`, and one finished pinch is one `ZOOM_SEMANTIC`
   // along the frozen lineage — each dispatched into THIS store, the authority the view draws under.
   const pan = useCallback((translationX: number, translationY: number) => panByTranslation(store, translationX, translationY), [store]);
-  const step = useCallback((direction: SemanticZoomDirection) => zoomSemanticStep(store, direction), [store]);
+  // MAP-CLOSE-01 CA-Z1: a pinch's step keeps the world point under its fingers; the accessible step has none (the centre).
+  const step = useCallback(
+    (direction: SemanticZoomDirection, focal?: ScreenPoint | null) => zoomSemanticStep(store, direction, focal == null ? null : { envelope, point: focal }),
+    [envelope, store],
+  );
   // S5-03B R1 — the world view of the one Living Analysis surface: the presentation camera and its corridor, the
   // world's expression, the drag and the step, then the camera commit, culling and membership, in the order this
   // surface always ran them. The STORE is this surface's authority: a replaced store drops the residual, the drag

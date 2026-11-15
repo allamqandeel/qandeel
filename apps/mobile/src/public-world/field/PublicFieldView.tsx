@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { typeStyle, usePalette } from '../../conversation';
-import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
+import type { ScreenPoint, SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { publicEntryLabel } from '../../runtime-entry';
@@ -67,7 +67,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   );
   // The Public field's two camera acts, in ITS controller: one completed drag is one Public pan, one step is one rung.
   const pan = useCallback((translationX: number, translationY: number) => controller.pan(translationX, translationY), [controller]);
-  const step = useCallback((direction: SemanticZoomDirection) => controller.step(direction), [controller]);
+  const step = useCallback((direction: SemanticZoomDirection, focal?: ScreenPoint | null) => controller.step(direction, focal), [controller]);
   // A served Experience coming onto the glass because the glass moved is navigation, never meaning becoming known: the
   // Public field keeps no disclosure record, so nothing in it ever plays an arrival.
   const noCause = useCallback(() => null, []);

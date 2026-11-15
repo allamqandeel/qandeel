@@ -203,9 +203,13 @@ describe('T11 — the same truthful answer at every supported size', () => {
     expect(short).toEqual(portrait);
     expect(world.latestPlan().chrome.arrangement).toBe('PAIRED');
     // Two across, in the READING direction, at the platform minimum spacing — and still a column of
-    // rows, never a panel beside the world.
+    // rows, never a panel beside the world. MAP-CLOSE-01 CA-O2 CONTROLLED RE-ANCHOR (Product Owner, approved with conditions
+    // 2026-11-14; ported under COSMOS-INT-01 D-1, 2026-11-15): the rows wrap from the bottom up, so an act that appears is
+    // added above the acts already there and Back stays under the finger. Previous form: the group's style matched
+    // `{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8 }`; the spacing, the acts and their reading order
+    // are unchanged.
     const group = world.view.getByTestId(RETURN_CONTROLS_TEST_ID);
-    expect(group.props.style).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8 });
+    expect(flattenStyle(group.props.style)).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap-reverse', columnGap: 8, rowGap: 8 });
     for (const control of subtree(world.view, RETURN_CONTROLS_TEST_ID).filter(isPressTarget)) {
       const style = flattenStyle(((control.props ?? {}) as Record<string, unknown>).style);
       expect(style.minHeight).toBe(44);
@@ -216,7 +220,8 @@ describe('T11 — the same truthful answer at every supported size', () => {
     // and going back restores the column, with the same answer.
     await resize(world.view, 390, 844);
     expect(chromeAnswer(world.view)).toEqual(portrait);
-    expect(world.view.getByTestId(RETURN_CONTROLS_TEST_ID).props.style).toMatchObject({ flexDirection: 'column', rowGap: 8 });
+    // CA-O2 (see above): back in portrait the column is again filled from the bottom up. Previous form: `{ flexDirection: 'column', rowGap: 8 }`.
+    expect(flattenStyle(world.view.getByTestId(RETURN_CONTROLS_TEST_ID).props.style)).toMatchObject({ flexDirection: 'column-reverse', rowGap: 8 });
     await act(async () => {
       world.view.unmount();
     });

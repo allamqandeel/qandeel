@@ -17,7 +17,7 @@
  * wide and the Arabic wording runs longer than the English.
  */
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { sessionPosition, type CanonicalStore } from '../../state';
 import { MAP_SURFACE_PLANE_TEST_ID, MAP_SURFACE_TEST_ID, MapSurface, placeScene, decodeCameraIntent, type MapInspectionContext } from '../../map';
@@ -308,9 +308,12 @@ describe('R3-06B — a genuinely narrow surface changes presentation and nothing
     expect(store.getState()).toBe(canonicalBefore);
 
     // Controls stay stacked in a column with a gap, so they cannot overlap however long the Arabic
-    // runs, and each keeps the 44pt minimum target.
+    // runs, and each keeps the 44pt minimum target. MAP-CLOSE-01 CA-O2 CONTROLLED RE-ANCHOR (Product Owner, approved with
+    // conditions 2026-11-14; ported under COSMOS-INT-01 D-1, 2026-11-15): the column is filled from the bottom up, so an
+    // act that appears is added above the acts already there and Back stays under the finger. Previous form: the group's
+    // style matched `{ flexDirection: 'column', rowGap: 8 }`; the gap, the acts and their reading order are unchanged.
     const group = narrow.getByTestId(RETURN_CONTROLS_TEST_ID);
-    expect(group.props.style).toMatchObject({ flexDirection: 'column', rowGap: 8 });
+    expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexDirection: 'column-reverse', rowGap: 8 });
     for (const node of subtree(narrow, RETURN_CONTROLS_TEST_ID).filter(isPressTarget)) {
       const style = ((node.props ?? {}) as Record<string, unknown>).style as unknown[];
       expect(JSON.stringify(style)).toContain('"minHeight":44');

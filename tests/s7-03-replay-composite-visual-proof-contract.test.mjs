@@ -78,9 +78,17 @@ const ENGLISH_APPROVED = [
 
 /** Criterion 12: the frozen authority and privacy files, byte-identical to the branch base 3ad4e414 (LF-normalised). */
 const FROZEN = [
-  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '08687f8e87ff34a9c37ea69260041fc55cc3138ea42c272697763586a72407ab'],
-  ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
-  ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'f5ccf7583514109bb17b043510e215f922d1bd344a581e7f27244a1d7314cad7'],
+  // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15: controlled authority port of MAP-CLOSE-01 CA-Z1 / CA-O1 /
+  // CA-O2, approved 2026-11-14): a pinch's step carries where the fingers were (CA-Z1: MapSurface passes them with its envelope to
+  // the same ZOOM_SEMANTIC; the world view's step type gains the optional point); once the reader has acted, MapSurface holds its
+  // anchor when only the band below the world changes (CA-O1, useSteadyEnvelope, presentation only); the Personal chrome band keeps
+  // the end of its words in view so Back stays under the finger (CA-O2: LivingAnalysisSurface passes anchorEnd for a world with
+  // time; nothing hidden, every word still reachable by scrolling and by every accessible route). Replay's chrome, the projection, the Map, every
+  // act, word, route and refusal are unchanged. Previous pins: LivingAnalysisSurface 08687f8e, MapSurface 5f5d7551, WorldViewSurface
+  // f5ccf758.
+  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', 'c54a90d7903ec2342ddf5f773daa7463630c08aa37cab785d4716fd9ba965480'],
+  ['apps/mobile/src/map/renderer/MapSurface.tsx', 'fb623eea019299f6756ab0a3e192e9f035f1e757b58884101d319511f274adea'],
+  ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'acf84151abbf02663b569fe2105f8dd85c40062f21f5e9d78b075ab9e6e3c645'],
   ['apps/mobile/src/map/projection/map-scene.ts', '8ef371bdcbaacde1456e98ed58592ab71c3521fe835a097e5b418fd66e67211e'],
   ['apps/mobile/src/map/inspection/map-actions.ts', 'd2291a0399ab7389b014dc9daed32e59996311c1f01a52e7b1ba573451814957'],
   ['apps/mobile/src/map/inspection/entitlement.ts', '3c916840363d088ebe34cf12d501dc5717d25adfb261c3b493a72e165fb0f243'],

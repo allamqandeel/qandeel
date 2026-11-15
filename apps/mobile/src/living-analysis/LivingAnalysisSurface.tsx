@@ -148,7 +148,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                 </ResponsiveTimelineRow>
               )}
 
-              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined}>
+              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined} anchorEnd={timeline !== null}>
                 {chrome(plan.chrome)}
               </ResponsiveChromeBand>
             </ResponsiveSupportBand>

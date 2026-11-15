@@ -34,6 +34,9 @@ const PRODUCTION_FILES = [
   // boundary refusal all predate this file; what did not exist was any way for a reader to ask for
   // one, so the Map carried a pan and nothing else.
   'camera/useMapSemanticZoomGesture.ts',
+  // MAP-CLOSE-01 CA-O1 (Product Owner, 2026-11-14; ported under COSMOS-INT-01 D-1, 2026-11-15): once the reader has acted, the
+  // world's anchor is held when only the band below the world changes (presentation only; no camera moves).
+  'camera/useSteadyEnvelope.ts',
   'camera/viewport.ts',
   'camera/zoom.ts',
   'index.ts',
