@@ -293,7 +293,6 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
                     onMapOutcome={observeMapOutcome}
                     onReturnOutcome={observeReturnOutcome}
                     acts={RAIL_ACTS}
-                    layout="line"
                   />
                 )
               }

@@ -197,8 +197,12 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
     );
   }
 
+  // `collapsable={false}`: the rail's root must stay a native view that KEEPS its children (a stacking context). With only
+  // a testID, Fabric flattens it and hoists the segments, the marks and the Live words into the stage's own container,
+  // and on the HONOR the words' press was then lost in both languages (three builds: eecd954f, 73c77c4a, 8a7c04ba);
+  // with the root un-flattened the same press is reliable (two probe builds, and the fix build — Contract v1.4 §16.6).
   return (
-    <View testID={testID} style={styles.rail} pointerEvents="box-none">
+    <View testID={testID} collapsable={false} style={styles.rail} pointerEvents="box-none">
       {label === null ? null : (
         <View testID={COSMOS_RAIL_LABEL_TEST_ID} pointerEvents="none" style={styles.labelRow}>
           <Text accessibilityLabel={sentence ?? label} accessibilityLanguage={language} style={[styles.labelText, language === 'ar' ? styles.labelArabic : styles.labelEnglish]}>{label}</Text>
@@ -275,7 +279,8 @@ const styles = StyleSheet.create({
   moreText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   words: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   spacer: { flex: 1 },
-  actsSlot: { flex: 1, minWidth: 0, height: RAIL_ROW_HEIGHT, justifyContent: 'center', overflow: 'hidden' },
+  // The acts' slot grows only when their chips wrap (§16.6): never clipped, never under the Live words.
+  actsSlot: { flex: 1, minWidth: 0, minHeight: RAIL_ROW_HEIGHT, justifyContent: 'center' },
   liveAct: { minHeight: RAIL_ROW_HEIGHT, paddingHorizontal: 10, justifyContent: 'center', flexShrink: 0 },
   quietText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   goldText: { fontSize: 13, color: C.gold },

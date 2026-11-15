@@ -3,7 +3,7 @@
  * §15.3 B, §16 A-2 / A-3): the T-07 return acts and T-04's context choice that the old chrome band presented as text
  * blocks, as compact glass chips. The old sentences are not drawn; the acts are. The Product Owner's UX correction
  * (§16) places them: the historical and Live-focus acts in ONE scrollable line at the start of the rail's words row
- * (`layout="line"`, `acts` allow-list), and `RETURN_WORLD` at a deeper rung as the one companion chip under the
+ * (`acts` allow-list, the chips wrapping), and `RETURN_WORLD` at a deeper rung as the one companion chip under the
  * Overview chip while Overview is on (`acts={['RETURN_WORLD']}`, `extras={false}`). The upper screen holds no other
  * control (U-1).
  *
@@ -23,7 +23,7 @@
  *     sentence, as one quiet line under the chips, only while an inspection is requested (as the old band did).
  */
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { switchContext, type MapActionOutcome, type MapProjectionRequest } from '../../../map';
 import {
@@ -88,13 +88,12 @@ export interface CosmosContextualActsProps {
   /** T-04's context choice and the technical note belong to ONE instance (default true); the Overview companion draws neither. */
   readonly extras?: boolean;
   /** `wrap` (the default) wraps the chips; `line` is ONE horizontally scrollable row that never wraps and never grows (§16 A-3). */
-  readonly layout?: 'wrap' | 'line';
   readonly testID?: string;
 }
 
 const NOOP_UNSUBSCRIBE = () => undefined;
 
-export function CosmosContextualActs({ surface, language, projection, exactReturnOrigin, preview, liveContext, onReturnOutcome, onMapOutcome, acts: allowed, extras = true, layout = 'wrap', testID = COSMOS_ACTS_TEST_ID }: CosmosContextualActsProps) {
+export function CosmosContextualActs({ surface, language, projection, exactReturnOrigin, preview, liveContext, onReturnOutcome, onMapOutcome, acts: allowed, extras = true, testID = COSMOS_ACTS_TEST_ID }: CosmosContextualActsProps) {
   useSyncExternalStore(surface.store.subscribe, surface.store.getState);
   const subscribe = useCallback((listener: () => void) => (preview === null || preview === undefined ? NOOP_UNSUBSCRIBE : preview.subscribe(listener)), [preview]);
   const getSnapshot = useCallback(() => (preview === null || preview === undefined ? null : preview.getSnapshot()), [preview]);
@@ -188,13 +187,11 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
       );
 
   return (
-    <View testID={testID} style={layout === 'line' ? styles.lineRegion : styles.region} pointerEvents="box-none" accessibilityRole="none">
-      {chips === null ? null : layout === 'line' ? (
-        // ONE line: the chips scroll sideways when several acts are offered at once; nothing wraps, clips or overlaps (U-7).
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.scroller} contentContainerStyle={styles.line} accessibilityRole="none">
-          {chips}
-        </ScrollView>
-      ) : (
+    <View testID={testID} style={styles.region} pointerEvents="box-none" accessibilityRole="none">
+      {chips === null ? null : (
+        // The chips WRAP (U-7, §16.6): a chip that does not fit beside its neighbours starts the next line, whole; a long
+        // label wraps inside its own chip. Nothing is clipped and nothing scrolls out of sight (HONOR, 2026-11-16: the
+        // one-line scroller cut the second Arabic chip at the slot's edge).
         <View style={styles.chips} pointerEvents="box-none" accessibilityRole="none">
           {chips}
         </View>
@@ -210,19 +207,14 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
 
 const styles = StyleSheet.create({
   region: { gap: 4 },
-  // The one-line layout fills its slot in the rail's words row (44 points tall) and never grows past it.
-  // The slot CLIPS the line (HONOR, 2026-11-16: without `overflow: hidden` and a shrinkable scroller the second chip ran
-  // under the Live words); what does not fit scrolls into view, nothing overlaps its neighbour.
-  lineRegion: { flex: 1, minWidth: 0, height: 44, justifyContent: 'center', overflow: 'hidden' },
-  scroller: { flexGrow: 0, flexShrink: 1, minWidth: 0, alignSelf: 'stretch' },
-  line: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingEnd: 6 },
   // Identical in both languages (U-9): the row runs left → right; the words inside keep their own direction.
   chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
-  // T12-A95: every press target is at least 44 points; the compact 32-point chip sits inside it.
-  press: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
+  // T12-A95: every press target is at least 44 points; the compact 32-point chip sits inside it. A press target is never
+  // wider than its row (`maxWidth`), so a long label wraps inside the chip instead of leaving the row (§16.6).
+  press: { minHeight: 44, minWidth: 44, maxWidth: '100%', justifyContent: 'center' },
   chip: { minHeight: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   chipOn: { borderColor: C.gold },
-  chipText: { fontSize: 12, lineHeight: 18, color: C.ink },
+  chipText: { fontSize: 12, lineHeight: 18, color: C.ink, textAlign: 'center' },
   goldText: { color: C.gold },
   note: { fontSize: 12, lineHeight: 18, color: C.quiet },
 });
