@@ -233,15 +233,17 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
         </Pressable>
       </View>
 
-      {/* The depth rail: the current depth is the lit point; a shallower depth can be returned to. */}
-      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" style={[styles.rail, rtl ? { left: glass.insetLeft + 2 } : { right: glass.insetRight + 2 }]}>
-        <View style={[styles.railLine, rtl ? { left: 21.5 } : { right: 21.5 }]} />
+      {/* The depth rail: the current depth is the lit point; a shallower depth can be returned to. Product Owner override
+          (2026-11-15): the rail stays on the RIGHT in both languages — its side is never mirrored in RTL; its design,
+          labels, size and interactions are the accepted ones. The label sits inboard of its dot, as on the right rail. */}
+      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" style={[styles.rail, { right: glass.insetRight + 2 }]}>
+        <View style={[styles.railLine, { right: 21.5 }]} />
         {names.map((name, i) => {
           const on = i === snapshot.rung;
           const past = i < snapshot.rung;
           return (
             <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
-              onPress={() => toRung(i)} style={[styles.bead, rtl && styles.rowReverse]}>
+              onPress={() => toRung(i)} style={styles.bead}>
               {on ? <Text style={[styles.beadText, rtl && styles.beadTextArabic]}>{name}</Text> : null}
               <View style={styles.beadSlot}>
                 <View style={on ? styles.beadOn : [styles.beadDot, past && styles.beadPast]} />

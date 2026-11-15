@@ -1,7 +1,7 @@
 # COSMOS Production Integration Contract — v1.2 (Slice B delivered on the branch; Draft PR under PO review)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status:** `SLICE B — COSMOS RENDERER INSIDE THE REAL PRODUCT — DELIVERED ON THE BRANCH (commits 1/n … 7/n) — DRAFT PR — UNDER PO REVIEW — SLICE C NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
+**Status:** `SLICE B — COSMOS RENDERER INSIDE THE REAL PRODUCT — DELIVERED ON THE BRANCH — DRAFT PR #394 — UNDER PO REVIEW — PO SECOND BATCH RECORDED (B-1, B-11, RAIL OVERRIDE, COPY GATE CLOSED) — HONOR PROOF IN §13.10 — SLICE C NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2).
 
 **Change log v1.0 → v1.1.** The PO's message "COSMOS-INT-01 — PO Decisions: First Batch of Approvals" is applied verbatim to the eight entries it names (§1.1), and to every section that depended on them: §3.8 (Skia 2.7.0 direction), §4.1 S8, §4.2 P8 / P9, §4.3 T12, §4.6 C4 / C6, §5 (package.json, PR dispositions, fringe), §6.1, §6.3 Personal, §6.4, §7 (fringe), §8 R1 / R3 / R5 / R7, §9 Slice B, §10 (the eight entries marked APPROVED; the rest PENDING; the Slice B blockers listed in §10.3), new §11 (the QAN-INF-03 path for RN Skia 2.7.0, with the exact tests) and new §12 (follow-on items recorded, not authorised). Every other decision and gap keeps its PENDING status; no further approval is inferred. The PO-accepted COSMOS visual and interaction experience stays frozen.
@@ -548,7 +548,7 @@ Not blocking Slice B: D-3, D-7 (Slice C), D-8, G-3 (Slice D), D-4 (default kept 
 
 | ID | Decision |
 |---|---|
-| B-1 | The stage's Back (Personal) = one canonical `ZOOM_SEMANTIC` OUT; at the WORLD rung away from the origin, one `PAN` home. T-07's history Back keeps its one home in the T-08 Return controls (D-3 remains Slice C's). |
+| B-1 | The stage's Back (Personal) = one canonical `ZOOM_SEMANTIC` OUT; at the WORLD rung away from the origin, one `PAN` home. T-07's history Back keeps its one home in the T-08 Return controls (D-3 remains Slice C's). **APPROVED (PO, 2026-11-15, §13.9).** |
 | B-2 | The Personal owner reads the other four rungs once per viewpoint through the ONE cache (idempotent); the viewpoint's own depth stays the composition's read (QAN-BL-MOB-05). G-9 measured: four extra idempotent reads per viewpoint. |
 | B-3 | Public search results recede non-results on the stage; a result is activated from the existing compact list (FAR has no stage hit targets). |
 | B-4 | Overview is presentation-only, as accepted; its word is a Copy Gate row. |
@@ -558,7 +558,7 @@ Not blocking Slice B: D-3, D-7 (Slice C), D-8, G-3 (Slice D), D-4 (default kept 
 | B-8 | The composite spatial cause is asked with the destination at every canonical camera change and consumed, never played. |
 | B-9 | Double-tap = one canonical step IN at the point (D-9), the proof's canvas unchanged. |
 | B-10 | Increased contrast keeps the stage (D-4 pending). |
-| B-11 | A live call pauses the stage's drift; nothing else of the call path is touched. |
+| B-11 | A live call pauses the stage's drift; nothing else of the call path is touched — the map stays interactive (pan, pinch and the other controls). **APPROVED (PO, 2026-11-15, §13.9).** |
 | B-12 | Personal marks are named by T-08's family word alone (no N4); Shared / Public labels are the controllers' served labels. |
 
 ### 13.4 T-10 conflict audit (D-5) — outcome
@@ -569,9 +569,9 @@ No conflict requiring an alteration of the accepted COSMOS motion. Kept as funct
 
 Nothing closed, merged or labelled. Carried: #392's continuous world under transparent bands (as the STAGE composition); #393's CA-Z1 / CA-O1 / CA-O2 (ported, commit 1/n); #391's real-data / no-naming rule. Superseded by the accepted COSMOS visuals (paint only): #391's S3-R2 world, #393's candidate F paint, prepared-raster store, Treatment A labels and strata atlas. Superseded by B-2: #393's adjacent-depth prefetch. Not ported: #392's `details` toggle (D-2), #392's increased-contrast switch (D-4 pending), #393's Z-2 rows (they named the old rung chrome). Memory item 021 not reopened. The PRs' disposition is the PO's decision after this check.
 
-### 13.6 Copy Gate (`cosmos/product/copy.ts`, `COSMOS_PRODUCT_COPY_GATE`) — OPEN, 6 rows PROPOSED (ar + en)
+### 13.6 Copy Gate (`cosmos/product/copy.ts`, `COSMOS_PRODUCT_COPY_GATE`) — **CLOSED: 6 rows APPROVED (PO, 2026-11-15)**
 
-rungFar «بعيد» / Far · rungMid «متوسط» / Mid · rungNear «قريب» / Near (Shared / Public rail) · nearest «اذهب إلى الأقرب» / Go to the nearest · regionEmpty «لا شيء في هذه المنطقة.» / Nothing in this region. · overview «نظرة عامة» / Overview. Reused APPROVED words carry no row (T-08 depth and family words, `analysisCopy.moreDetail / lessDetail`, the field labels, the field copies' Back).
+rungFar «بعيد» / Far · rungMid «متوسط» / Mid · rungNear «قريب» / Near (Shared / Public rail) · nearest «اذهب إلى الأقرب» / Go to the nearest · regionEmpty «لا شيء في هذه المنطقة.» / Nothing in this region. · overview «نظرة عامة» / Overview — all six APPROVED exactly as documented here (the PO's message of 2026-11-15); `COSMOS_PRODUCT_COPY_GATE.status` says CLOSED, `proposed` is empty and `approved` lists the six keys. Reused APPROVED words carry no row (T-08 depth and family words, `analysisCopy.moreDetail / lessDetail`, the field labels, the field copies' Back).
 
 ### 13.7 Verification (local, on the committed tree)
 
@@ -582,6 +582,23 @@ Mobile jest 292 suites / 3 579 tests, failures = the known Arabic host-locale ba
 - Acceptance criterion (1) "real sign-in on the HONOR": no hosted backend exists (HOSTED-DEPLOY-01 not authorised), so the phone proof runs on the S4-01 proof ENTRY — ProductRoot over the labelled synthetic network under the production clients, controllers and runtime, the vehicle of every previous production map phone check. A genuine-account proof needs a hosted environment the PO provides. Reported, not hidden.
 - D-3, D-4, D-7 (Slice C), D-8 and G-3 (Slice D), D-6 (merge) unchanged. G-1 (long histories on the rail) is Slice C's.
 - Slice C and the merge are not authorised by this record.
+
+---
+
+### 13.9 The PO's second batch (2026-11-15, "PO Decisions Confirmed + HONOR Device Proof Authorization")
+
+| ID | PO decision (binding text, abridged only where marked) | Applied |
+|---|---|---|
+| B-1 | APPROVED: keep the COSMOS Back as implemented — one semantic zoom level OUT per press, with the existing WORLD-level return-to-centre; QANDEEL's other return-navigation capabilities preserved for Slice C. | no change; §13.3 |
+| Rail | **PO OVERRIDE:** the zoom-level rail stays on the RIGHT side of the screen in BOTH Arabic and English; its side is not mirrored in RTL; the accepted visual design, labels, size and interactions preserved. The only newly authorised visual correction. | `CosmosWorldView`: the rail and its line are always right-anchored; the bead keeps the right-rail layout (label inboard, then the dot) in both languages; focused tests (Arabic right + inboard label, English right) in `cosmos-world-view.test.tsx`; the APK rebuilt before device acceptance |
+| B-11 | APPROVED: pause the ambient cosmic drift while a live call is active, protecting live-call performance; the map stays interactive with normal pan, pinch and other controls. | no change; a focused headless assertion added to `s8b-06-cp3-call-composition.test.tsx` (the stage's canvas has `drift={false}` while CONNECTING / ACTIVE and its gesture surface stays mounted) |
+| Copy Gate | APPROVED: all six Arabic / English pairs exactly as documented in v1.2 §13.6. | `copy.ts` gate CLOSED (status, `approved`, per-row comments) |
+
+The same message authorised the HONOR device proof of Slice B on the integration APK (not the standalone COSMOS proof APK), with checksum and installed-build verification, and asked for the evidence to be appended to the report and PR #394 (§13.10). Not authorised by it: Slice C, Slice D, any change to the accepted COSMOS artwork, the timeline appearance, the nearest-topic indicator, the Overview, other navigation controls or production authority; any change to PRs #391–#393; any merge.
+
+### 13.10 HONOR device proof (integration APK)
+
+Recorded in the report §12 and summarised here once run (this subsection is filled by the docs-only commit that carries the evidence).
 
 ---
 

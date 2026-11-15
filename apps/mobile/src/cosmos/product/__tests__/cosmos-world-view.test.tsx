@@ -87,14 +87,28 @@ describe('CosmosWorldView — the stage over an owner', () => {
     expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityState).toEqual({ disabled: true });
   });
 
-  it('Arabic: the Back arrow points the other way and the rail is on the left', async () => {
+  it('Arabic: the Back arrow points the other way; the rail stays on the RIGHT (Product Owner override, 2026-11-15) with its label inboard', async () => {
     const { owner, set } = fakeOwner({});
     set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
     view = await mount(owner, 'ar');
     expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityLabel).toBe(`→ ${semanticDepthWord('ar', 'WORLD')}`);
+    const flat = (node: { props: { style: unknown } }) => Object.assign({}, ...[node.props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+    const style = flat(view.getByTestId(COSMOS_RAIL_TEST_ID));
+    expect(style.right).toBe(GLASS.insetRight + 2);
+    expect(style.left).toBeUndefined();
+    // The lit bead is laid out as on the right rail in English: the label, then the dot (never row-reverse).
+    const bead = view.getByLabelText(semanticDepthWord('ar', 'THREAD'));
+    expect(flat(bead).flexDirection).toBe('row');
+    expect(view.getByText(semanticDepthWord('ar', 'THREAD'))).toBeTruthy();
+  });
+
+  it('English: the rail is on the right as well', async () => {
+    const { owner, set } = fakeOwner({});
+    set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+    view = await mount(owner, 'en');
     const style = Object.assign({}, ...[view.getByTestId(COSMOS_RAIL_TEST_ID).props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
-    expect(style.left).toBe(GLASS.insetLeft + 2);
-    expect(style.right).toBeUndefined();
+    expect(style.right).toBe(GLASS.insetRight + 2);
+    expect(style.left).toBeUndefined();
   });
 
   it('Overview is presentation only: it toggles its own selected state and writes nothing to the owner', async () => {

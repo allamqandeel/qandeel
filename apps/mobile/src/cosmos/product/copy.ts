@@ -4,17 +4,19 @@
  * Reused, already APPROVED words are taken from their owners and never re-stated here: the Personal rung names are
  * T-08's semantic-depth words (`semanticDepthWord`), the zoom labels are the Analysis Map's «إظهار تفاصيل أكثر / أقل»,
  * the stage's own label is each world's approved field label, and the Personal family words are T-08's. The field
- * worlds' three rung names and the three stage-only phrases below are PROPOSED for the COSMOS-INT-01 Product Copy
- * Gate: they are the device proof's words, shown to the Product Owner on the HONOR, and they bind only once approved.
+ * worlds' three rung names and the three stage-only phrases below were PROPOSED for the COSMOS-INT-01 Product Copy
+ * Gate with the Slice B Draft PR and APPROVED by the Product Owner on 2026-11-15, exactly as documented in Contract v1.2
+ * §13.6 (six Arabic / English pairs). The gate is CLOSED; the words bind.
  */
 
 import { semanticDepthWord, type ChromeLanguage } from '../../orientation-chrome';
 import type { WorldKind } from '../core/stage';
 
 export const COSMOS_PRODUCT_COPY_GATE = Object.freeze({
-  status: 'COSMOS-INT-01 PRODUCT COPY GATE — OPEN — 6 rows PROPOSED (ar + en), presented with the Slice B Draft PR',
+  status: 'COSMOS-INT-01 PRODUCT COPY GATE — CLOSED — 6 rows APPROVED (ar + en) by the Product Owner, 2026-11-15 (Contract v1.2 §13.6)',
   reused: ['semanticDepthWord (T-08 depth words: the Personal rungs)', 'analysisCopy.moreDetail / lessDetail (zoom)', 'analysisCopy.map / fieldLabel (the stage label)', 'analysisCopy.family (the Personal marks and the register)', 'field copy back'],
-  proposed: ['rungFar', 'rungMid', 'rungNear', 'nearest', 'regionEmpty', 'overview'],
+  proposed: [],
+  approved: ['rungFar', 'rungMid', 'rungNear', 'nearest', 'regionEmpty', 'overview'],
 } as const);
 
 export interface CosmosProductCopy {
@@ -31,20 +33,20 @@ export interface CosmosProductCopy {
 }
 
 const FIELD_RUNGS = {
-  ar: ['بعيد', 'متوسط', 'قريب'], // PROPOSED — COSMOS-INT-01 Product Copy Gate (rungFar, rungMid, rungNear)
-  en: ['Far', 'Mid', 'Near'], // PROPOSED — COSMOS-INT-01 Product Copy Gate (rungFar, rungMid, rungNear)
+  ar: ['بعيد', 'متوسط', 'قريب'], // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate (rungFar, rungMid, rungNear)
+  en: ['Far', 'Mid', 'Near'], // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate (rungFar, rungMid, rungNear)
 } as const;
 
 const WORDS = {
   ar: {
-    nearest: 'اذهب إلى الأقرب', // PROPOSED — COSMOS-INT-01 Product Copy Gate
-    regionEmpty: 'لا شيء في هذه المنطقة.', // PROPOSED — COSMOS-INT-01 Product Copy Gate
-    overview: 'نظرة عامة', // PROPOSED — COSMOS-INT-01 Product Copy Gate
+    nearest: 'اذهب إلى الأقرب', // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate
+    regionEmpty: 'لا شيء في هذه المنطقة.', // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate
+    overview: 'نظرة عامة', // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate
   },
   en: {
-    nearest: 'Go to the nearest', // PROPOSED — COSMOS-INT-01 Product Copy Gate
-    regionEmpty: 'Nothing in this region.', // PROPOSED — COSMOS-INT-01 Product Copy Gate
-    overview: 'Overview', // PROPOSED — COSMOS-INT-01 Product Copy Gate
+    nearest: 'Go to the nearest', // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate
+    regionEmpty: 'Nothing in this region.', // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate
+    overview: 'Overview', // APPROVED 2026-11-15 — COSMOS-INT-01 Product Copy Gate
   },
 } as const;
 
