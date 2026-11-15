@@ -46,19 +46,30 @@
  * the same glass, so no accessible route the old Map offered is lost. The motion is COSMOS's (D-5): the composite
  * spatial cause is still asked, with the destination, at each canonical camera change — consumed, not played.
  * `MapSurface` itself is unchanged and still the Replay composite's renderer (G-5, REPLAY-COSMOS-01).
+ *
+ * ## COSMOS-INT-01 Slice C — the approved COSMOS chrome, timeline and navigation (Product Owner, 2026-11-15; Contract v1.3 §14, §15)
+ *
+ * The screen is the accepted COSMOS experience: the stage fills everything under the top band, and the Personal
+ * timeline is the approved bottom rail (`CosmosTimelineRail`) over the SAME T-05 presentation controller, T-06 preview
+ * controller and T-06 commit boundary, with the T-08 temporal orientation line directly above it and the T-05 / T-06
+ * navigators headless beside it. The old timeline row and the old chrome band are no longer brought to the surface —
+ * the composition brings no `timeline` and a chrome that measures nothing, so under the surface's own CHROME_ONLY rule
+ * the band is the bottom safe area and nothing else (C-6) — and the T-07 return acts and T-04's context choice the band
+ * presented as text blocks are the compact contextual chips under the top row (`CosmosContextualActs`), reached through
+ * the same executors and the same observers. The stage's Back chip at the first rung IS the canonical Return to World
+ * (`home`). No function is lost; no sentence is invented; nothing of T-05 / T-06 / T-07 / T-08 is edited.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { analysisCopy } from '../../analysis-language';
-import { CosmosWorldView, createPersonalCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
+import { CosmosContextualActs, CosmosTimelineRail, CosmosWorldView, createPersonalCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
 import { MapAccessibilityLayer, decodeCameraIntent, mapInspectionContext, mapProjectionRequest, useSteadyEnvelope, type MapActionOutcome, type MapInspectionContext, type ViewportEnvelope } from '../../map';
-import { OrientationChrome, TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
-import { returnMapContext } from '../../return-navigation';
+import { TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
+import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
 import type { CanonicalStore } from '../../state';
-import { TemporalTargetLayer } from '../../temporal-navigation';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import type { ProductLocale } from '../locale/product-locale';
 import { TIMELINE_TRACK_DEPTH, trackFromDisclosure } from '../timeline/disclosed-track-source';
@@ -233,9 +244,16 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   const settledWithoutMap =
     request === null || fetchEndedUnanswered || (entry !== null && entry.status !== 'NOT_FETCHED' && (mapContext === null || !mapContext.ok));
 
+  /** Slice C, D-3: the stage's Back chip at the first rung is T-07's canonical Return to World, observed like every return act. */
+  const home = useCallback(() => {
+    observeReturnOutcome('RETURN_WORLD', returnWorld(returnSurface));
+  }, [observeReturnOutcome, returnSurface]);
+
   return (
     // The ONE Living Analysis surface, with the Personal world's projection and capabilities: the COSMOS stage under the
-    // composition, the disclosed Timeline with its orientation line, and the T-08 chrome with Return and Live.
+    // top band, with the approved rail (the disclosed Timeline, the orientation line above it, the Live edge) and the
+    // compact contextual controls (the T-07 return acts, the context choice) in the stage's own chrome. The composition
+    // brings no timeline row and no chrome band: the stage occupies the reclaimed area (Contract v1.3 §14 C-6).
     <LivingAnalysisSurface
       insets={insets}
       fontScale={fontScale}
@@ -251,34 +269,37 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
           language={locale.language}
           driftPaused={driftPaused}
           onOutcome={observeMapOutcome}
+          home={home}
+          rail={
+            <CosmosTimelineRail
+              store={store}
+              preview={preview}
+              presentation={presentation}
+              language={locale.language}
+              // VPORT-02: the temporal line is said once, directly above the Timeline (now the rail).
+              line={<TemporalOrientationLine store={store} language={locale.language} preview={preview} />}
+            />
+          }
+          acts={
+            chrome === null ? null : (
+              <CosmosContextualActs
+                surface={returnSurface}
+                language={locale.language}
+                projection={chrome}
+                exactReturnOrigin={journey.origin()}
+                preview={preview}
+                liveContext={liveContext}
+                onMapOutcome={observeMapOutcome}
+                onReturnOutcome={observeReturnOutcome}
+              />
+            )
+          }
           // The stage is composed: the Map's real first state, when T-04's context exists to draw from.
           composed={onComposed !== undefined && mapContext !== null && mapContext.ok ? <ComposedMark onComposed={onComposed} /> : null}
         />
       )}
-      timeline={{
-        line: <TemporalOrientationLine store={store} language={locale.language} preview={preview} />,
-        layer: <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />,
-      }}
-      chrome={(composition) =>
-        chrome === null ? null : (
-          <OrientationChrome
-            surface={returnSurface}
-            language={locale.language}
-            projection={chrome}
-            exactReturnOrigin={journey.origin()}
-            preview={preview}
-            liveContext={liveContext}
-            onMapOutcome={observeMapOutcome}
-            onReturnOutcome={observeReturnOutcome}
-            bottomInset={composition.bottomInset}
-            returnArrangement={composition.arrangement}
-            // VPORT-02: the frozen production composition — the temporal line is said once, beside the Timeline;
-            // Return Live has one home, the Timeline's Live edge (G3 amendment §2; P2 §7).
-            temporalLine="WITH_TIMELINE"
-            returnLiveHome="LIVE_EDGE"
-          />
-        )
-      }
+      timeline={null}
+      chrome={() => null}
       after={onComposed !== undefined && settledWithoutMap ? <ComposedMark onComposed={onComposed} /> : null}
     />
   );
@@ -288,10 +309,11 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
  * The Personal stage: the COSMOS world view over the owner, in the glass steadied by CA-O1, with T-04's accessible Map
  * laid over it through the same glass (the stage's own marks stand down: one object is never two nodes).
  */
-function PersonalStage({ owner, glass, store, context, language, driftPaused, onOutcome, composed }: {
+function PersonalStage({ owner, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, acts }: {
   readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly store: CanonicalStore;
   readonly context: MapInspectionContext | null; readonly language: ProductLocale['language']; readonly driftPaused: boolean;
   readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void; readonly composed: ReactNode;
+  readonly home: () => void; readonly rail: ReactNode; readonly acts: ReactNode;
 }) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
@@ -301,7 +323,8 @@ function PersonalStage({ owner, glass, store, context, language, driftPaused, on
   const copy = analysisCopy(language);
   return (
     <CosmosWorldView owner={owner} world="PERSONAL" language={language} glass={steady} drift={!driftPaused}
-      worldLabel={copy.map} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}>
+      worldLabel={copy.map} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}
+      home={home} rail={rail} acts={acts}>
       {context === null || camera === null ? null : (
         <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={steady} onOutcome={onOutcome} language={language} />
       )}

@@ -4,6 +4,7 @@
  * nothing itself. The stage's words are the product copy's; the rail's Personal names are T-08's depth words.
  */
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { View } from 'react-native';
 
 import { viewportEnvelope } from '../../../map/camera';
 import { semanticDepthWord } from '../../../orientation-chrome';
@@ -163,5 +164,66 @@ describe('CosmosWorldView — the stage over an owner', () => {
     expect(view.getByTestId(`${COSMOS_REGISTER_TEST_ID}:READING:r9`).props.accessibilityState).toEqual({ selected: true });
     await act(async () => { set({ unplaced: [] }); });
     expect(view.queryByTestId(COSMOS_REGISTER_TEST_ID)).toBeNull();
+  });
+});
+
+describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)", () => {
+  const seams = async (owner: CosmosWorldOwner, over: { home?: () => void; rail?: React.ReactNode; acts?: React.ReactNode; language?: 'ar' | 'en' } = {}) => render(
+    <CosmosWorldView owner={owner} world="PERSONAL" language={over.language ?? 'en'} glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less"
+      home={over.home} rail={over.rail} acts={over.acts} />,
+  );
+  const flat = (node: { props: Record<string, unknown> }) => Object.assign({}, ...[node.props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+
+  it("D-3: at the first rung, away from the centre, Back is the host's canonical act (Return to World) and pans nothing itself; deeper, it is still one semantic step OUT", async () => {
+    const { owner, acts, set } = fakeOwner({});
+    set({ rung: 0, camera: { cx: 40, cy: -20, scale: 1 } });
+    const home = jest.fn();
+    view = await seams(owner, { home });
+    acts.length = 0;
+    await press(view, COSMOS_BACK_TEST_ID);
+    expect(home).toHaveBeenCalledTimes(1);
+    expect(acts.map((a) => a.kind)).toEqual(['back']);
+    expect(acts.some((a) => a.kind === 'goTo')).toBe(false);
+    // Deeper: the chip asks the owner for one step OUT and the host's act is not invoked.
+    await act(async () => { set({ rung: 1, camera: { cx: 40, cy: -20, scale: 8 } }); });
+    acts.length = 0;
+    await press(view, COSMOS_BACK_TEST_ID);
+    expect(home).toHaveBeenCalledTimes(1);
+    expect(acts.map((a) => a.kind)).toEqual(['back']);
+    expect(owner.getSnapshot().rung).toBe(0);
+  });
+
+  it("without a host act the first-rung Back pans to the centre, as before", async () => {
+    const { owner, acts, set } = fakeOwner({});
+    set({ rung: 0, camera: { cx: 40, cy: -20, scale: 1 } });
+    view = await seams(owner);
+    acts.length = 0;
+    await press(view, COSMOS_BACK_TEST_ID);
+    expect(acts.map((a) => a.kind)).toEqual(['back', 'goTo']);
+  });
+
+  it("the rail sits in the glass at the proof's place (bottom inset + 12, 18-point gutters), and the unplaced register stands above it", async () => {
+    const { owner, set } = fakeOwner({});
+    set({ unplaced: [{ id: 'READING:r9', family: 'READING' }] });
+    view = await seams(owner, { rail: <View testID="host-rail" /> });
+    const rail = view.getByTestId('host-rail').parent!;
+    const wrap = flat(rail as never);
+    expect(wrap).toMatchObject({ position: 'absolute', bottom: GLASS.insetBottom + 12, left: GLASS.insetLeft + 18, right: GLASS.insetRight + 18 });
+    const register = flat(view.getByTestId(COSMOS_REGISTER_TEST_ID));
+    expect(register.bottom).toBe(GLASS.insetBottom + 10 + 128);
+    // Without a rail the register keeps its Slice B place.
+    await act(async () => { await view!.rerender(<CosmosWorldView owner={owner} world="PERSONAL" language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />); });
+    expect(flat(view.getByTestId(COSMOS_REGISTER_TEST_ID)).bottom).toBe(GLASS.insetBottom + 10);
+  });
+
+  it("the contextual controls sit in a row under the top row, in the reading direction (reversed for Arabic)", async () => {
+    const { owner } = fakeOwner({});
+    view = await seams(owner, { acts: <View testID="host-acts" /> });
+    const row = flat(view.getByTestId('host-acts').parent as never);
+    expect(row).toMatchObject({ position: 'absolute', flexDirection: 'row', top: GLASS.insetTop + 6 + 48, left: GLASS.insetLeft + 12, right: GLASS.insetRight + 12 });
+    await act(async () => { view!.unmount(); });
+    const ar = fakeOwner({});
+    view = await seams(ar.owner, { acts: <View testID="host-acts" />, language: 'ar' });
+    expect(flat(view.getByTestId('host-acts').parent as never).flexDirection).toBe('row-reverse');
   });
 });

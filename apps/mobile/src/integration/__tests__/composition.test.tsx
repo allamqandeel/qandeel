@@ -6,23 +6,33 @@
  * cache. Nothing is a stand-in, and there is no second, hidden copy of anything: that is the whole
  * claim, and asserting it on a duplicate composition would prove nothing at all.
  */
-import { act, render, type RenderResult } from '@testing-library/react-native';
+import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 
 // COSMOS-INT-01 (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage on the ONE surface; the
 // world's node is the stage view (`MapSurface` stays the Replay composite's renderer, G-5).
-import { COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
+// COSMOS-INT-01 Slice C (Contract v1.3 §14 C-1…C-6, §15.5): the Timeline row and the chrome band are no longer composed
+// — the stage occupies their area — and the same functions are the stage's rail (T-05 / T-06, with the T-08 temporal
+// line) and its compact contextual controls (T-07 acts through T-08's model, T-04's context choice). The assertions
+// below name those surfaces; every claim they made (one of each, real owners, absent-not-disabled, 44-point targets,
+// every act at every text size and window) is kept.
+import { COSMOS_ACTS_TEST_ID, COSMOS_ACT_TEST_ID_PREFIX, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
 import { ORIENTATION_CHROME_TEST_ID, RETURN_CONTROLS_TEST_ID } from '../../orientation-chrome';
 import {
   RESPONSIVE_CHROME_BAND_TEST_ID,
+  RESPONSIVE_CHROME_MEASURE_TEST_ID,
   RESPONSIVE_MAP_FRAME_TEST_ID,
   RESPONSIVE_TIMELINE_ROW_TEST_ID,
 } from '../../responsive';
+
 import { RESPONSIVE_SURFACE_TEST_ID, isPressTarget, nodes, resize } from '../../responsive/__fixtures__/composition';
 import { panByTranslation } from '../../map';
 import { LivingAnalysisMap } from '../composition/LivingAnalysisMap';
 import { productLocale, type LayoutDirection } from '../locale/product-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 import type { ChromeLanguage } from '../../orientation-chrome';
+
+/** One return act's chip (not a context choice, not the note). */
+const ACT_CHIP = new RegExp(`^${COSMOS_ACT_TEST_ID_PREFIX}(?!context:|note$)`, 'u');
 
 async function composed(
   options: { language?: ChromeLanguage; direction?: LayoutDirection; fontScale?: number; width?: number; height?: number; withHistory?: boolean } = {},
@@ -57,21 +67,29 @@ async function composed(
 const pressTargets = (view: RenderResult) => nodes(view.toJSON()).filter(isPressTarget);
 
 describe('T12-A46…A55 — the real surfaces, in one composition, over one store', () => {
-  it('T12-A48, T12-A49, T12-A50, T12-A51 — the responsive root composes the Map, the Timeline row and the chrome', async () => {
+  it('T12-A48, T12-A49, T12-A50, T12-A51 — the responsive root composes the Map, the rail and the contextual controls; the old Timeline row and chrome band are not composed (Slice C, C-6)', async () => {
     const { h, view } = await composed();
     expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).toBeTruthy();
-    expect(view.getByTestId(RESPONSIVE_TIMELINE_ROW_TEST_ID)).toBeTruthy();
-    expect(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).toBeTruthy();
+    expect(view.queryByTestId(RESPONSIVE_TIMELINE_ROW_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(ORIENTATION_CHROME_TEST_ID)).toBeNull();
+    // The band is mounted unconditionally (T-11) but reserves nothing: with the chrome measured empty, the surface's own
+    // CHROME_ONLY rule makes it exactly the bottom safe area, and the stage occupies the reclaimed room (C-6).
+    await fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 0 } } });
+    const band = Object.assign({}, ...[view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID).props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+    expect(band.height).toBe(34);
+    expect(band.marginTop).toBe(0);
+    expect(view.queryAllByTestId(new RegExp(`^${RETURN_CONTROLS_TEST_ID}`, 'u'))).toHaveLength(0);
     // The REAL owners, not stand-ins.
     expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
-    expect(view.getByTestId(ORIENTATION_CHROME_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_ACTS_TEST_ID)).toBeTruthy();
     h.dispose();
   });
 
   it('T12-A54 — there is exactly ONE of each surface, and no hidden duplicate', async () => {
     const { h, view } = await composed();
-    for (const id of [RESPONSIVE_MAP_FRAME_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID, RESPONSIVE_CHROME_BAND_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, ORIENTATION_CHROME_TEST_ID]) {
+    for (const id of [RESPONSIVE_MAP_FRAME_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_ACTS_TEST_ID, 'qandeel-temporal-navigator', 'timeline-command']) {
       expect(view.queryAllByTestId(id)).toHaveLength(1);
     }
     h.dispose();
@@ -94,7 +112,7 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
 
   it('T12-A97 — the screen reader sees one copy of each return act', async () => {
     const { h, view } = await composed();
-    const offered = view.queryAllByTestId(/^qandeel-return-controls:/u).map((node) => node.props.testID as string);
+    const offered = view.queryAllByTestId(ACT_CHIP).map((node) => node.props.testID as string);
     expect(offered.length).toBeGreaterThan(0);
     expect(new Set(offered).size).toBe(offered.length);
     h.dispose();
@@ -105,12 +123,12 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
     // no history, no inspection journey. Every act is correctly absent — none is rendered disabled,
     // and none is offered as a promise the surface could not keep.
     const { h, view } = await composed({ withHistory: false });
-    expect(view.queryAllByTestId(/^qandeel-return-controls:/u)).toHaveLength(0);
-    // Absent, not disabled — T-08's rule, asserted over T-08's own subtree. The scope matters: T-06's
-    // non-drag temporal route DOES render disabled controls when there is no preview to commit or
-    // cancel, which is that owner's frozen decision about a persistent instrument and not something
-    // this composition reconciles or overrides.
-    expect(JSON.stringify(view.getByTestId(ORIENTATION_CHROME_TEST_ID))).not.toContain('"disabled":true');
+    expect(view.queryAllByTestId(ACT_CHIP)).toHaveLength(0);
+    // Absent, not disabled — T-08's rule, asserted over the contextual controls' own subtree: with nothing to offer
+    // the region is not there at all. The scope matters: T-06's non-drag temporal route DOES render disabled controls
+    // when there is no preview to commit or cancel, and the stage's own Back chip stands down at home (Slice B); both
+    // are those owners' frozen decisions and not something this composition reconciles or overrides.
+    expect(view.queryByTestId(COSMOS_ACTS_TEST_ID)).toBeNull();
     h.dispose();
   });
 
@@ -136,7 +154,8 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
     // `accessible` on a container makes the whole subtree ONE node on Android, which is exactly how
     // a container swallows its own buttons.
     expect(root.props.accessible).not.toBe(true);
-    expect(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID).props.accessible).not.toBe(true);
+    expect(view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID).props.accessible).not.toBe(true);
+    expect(view.getByTestId(COSMOS_ACTS_TEST_ID).props.accessible).not.toBe(true);
     h.dispose();
   });
 });
@@ -150,7 +169,8 @@ describe('T12-A91, T12-A92, T12-A99, T12-A103, T12-A104 — Arabic, direction, l
       ['en', 'RTL'],
     ] as const) {
       const { h, view } = await composed({ language, direction });
-      expect(view.getByTestId(ORIENTATION_CHROME_TEST_ID)).toBeTruthy();
+      expect(view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID)).toBeTruthy();
+      expect(view.getByTestId(COSMOS_ACTS_TEST_ID)).toBeTruthy();
       expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
       h.dispose();
     }
@@ -158,12 +178,12 @@ describe('T12-A91, T12-A92, T12-A99, T12-A103, T12-A104 — Arabic, direction, l
 
   it('T12-A99 — at 200 % text every act is still offered and nothing is dropped', async () => {
     const plain = await composed({ fontScale: 1 });
-    const offeredAtOne = plain.view.queryAllByTestId(/^qandeel-return-controls:/u).length;
+    const offeredAtOne = plain.view.queryAllByTestId(ACT_CHIP).length;
     plain.h.dispose();
 
     for (const fontScale of [2, 3.5]) {
       const large = await composed({ fontScale, width: 320, height: 568 });
-      const offered = large.view.queryAllByTestId(/^qandeel-return-controls:/u).length;
+      const offered = large.view.queryAllByTestId(ACT_CHIP).length;
       // Recompose density, never meaning: the same acts are offered at every text size.
       expect(offered).toBe(offeredAtOne);
       large.h.dispose();
@@ -172,14 +192,15 @@ describe('T12-A91, T12-A92, T12-A99, T12-A103, T12-A104 — Arabic, direction, l
 
   it('T12-A104, T12-A96 — a short landscape window hides no return act', async () => {
     const tall = await composed({ width: 390, height: 844 });
-    const offeredTall = tall.view.queryAllByTestId(/^qandeel-return-controls:/u).length;
+    const offeredTall = tall.view.queryAllByTestId(ACT_CHIP).length;
     tall.h.dispose();
 
     const short = await composed({ width: 568, height: 320 });
-    expect(short.view.queryAllByTestId(/^qandeel-return-controls:/u).length).toBe(offeredTall);
-    // The world never disappears to make room, and the chrome is still there to be reached.
+    expect(short.view.queryAllByTestId(ACT_CHIP).length).toBe(offeredTall);
+    // The world never disappears to make room, and the rail and the controls are still there to be reached.
     expect(short.view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).toBeTruthy();
-    expect(short.view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).toBeTruthy();
+    expect(short.view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID)).toBeTruthy();
+    expect(short.view.getByTestId(COSMOS_ACTS_TEST_ID)).toBeTruthy();
     short.h.dispose();
   });
 

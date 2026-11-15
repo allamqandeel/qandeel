@@ -234,10 +234,20 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   // Living Analysis surface's; the Personal Analysis hands it the line, the Timeline and the chrome. Both are asserted.
   const screen = code(`${MOBILE}/living-analysis/LivingAnalysisSurface.tsx`);
   assert.match(screen, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis paints its own dark ground');
-  assert.match(composition, /line: <TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>,/u);
+  // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.3 §14 C-1…C-6, §15.5): the Timeline is
+  // the stage's rail and the line is said ONCE, directly above it — the composition hands the line to the rail (previous form:
+  // `line: <TemporalOrientationLine … />,` in the surface's `timeline`). Return Live keeps ONE home, the rail's Live edge:
+  // the contextual controls never carry RETURN_LIVE_HEAD (previous form: `temporalLine="WITH_TIMELINE"` and
+  // `returnLiveHome="LIVE_EDGE"` on OrientationChrome). The surface itself is unchanged and still says the line in its
+  // Timeline row for any host that brings one.
+  assert.match(composition, /line=\{<TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>\}/u);
   assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
-  assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
-  assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
+  assert.doesNotMatch(composition, /<OrientationChrome\b|<TemporalTargetLayer\b|timeline=\{\{/u, 'the old row and band are not composed (C-6)');
+  assert.match(composition, /timeline=\{null\}/u);
+  const acts = code(`${MOBILE}/cosmos/product/chrome/CosmosContextualActs.tsx`);
+  assert.match(acts, /\.filter\(\(id\) => id !== 'RETURN_LIVE_HEAD' && !\(id === 'RETURN_WORLD' && model\.spatial\.depth === 'WORLD'\)\)/u, 'Return Live has one home, the rail');
+  const rail = code(`${MOBILE}/cosmos/product/chrome/CosmosTimelineRail.tsx`);
+  assert.match(rail, /onOutcome\?\.\(commitLiveEdgeIntent\(store, preview\)\);/u, 'the rail\'s Live words are T-06\'s Live edge intent');
   // SHARED-VIS-01 controlled re-anchor: the band also reports its content height, but only for a world with no track.
   // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; MAP-CLOSE-01 CA-O2, approved with conditions 2026-11-14): the
   // band also keeps its end in view for a world with time (Personal), so Back stays under the finger; the line's room is
