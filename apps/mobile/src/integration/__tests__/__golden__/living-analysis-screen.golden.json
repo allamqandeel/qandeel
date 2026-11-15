@@ -33,6 +33,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -2460,17 +2461,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -2543,17 +2541,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -2610,17 +2605,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -2677,17 +2669,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -2744,17 +2733,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -4239,6 +4225,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -6622,7 +6609,7 @@
            "top": "36%"
           },
           {
-           "left": 2
+           "right": 2
           }
          ],
          "testID": "qandeel-cosmos-rail"
@@ -6640,7 +6627,7 @@
              "width": 1
             },
             {
-             "left": 21.5
+             "right": 21.5
             }
            ]
           },
@@ -6668,19 +6655,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -6757,19 +6739,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -6826,19 +6803,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -6895,19 +6867,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -6964,19 +6931,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -8461,6 +8423,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -10888,17 +10851,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -10971,17 +10931,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -11038,17 +10995,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -11105,17 +11059,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -11172,17 +11123,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -12667,6 +12615,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -15050,7 +14999,7 @@
            "top": "36%"
           },
           {
-           "left": 2
+           "right": 2
           }
          ],
          "testID": "qandeel-cosmos-rail"
@@ -15068,7 +15017,7 @@
              "width": 1
             },
             {
-             "left": 21.5
+             "right": 21.5
             }
            ]
           },
@@ -15096,19 +15045,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -15185,19 +15129,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -15254,19 +15193,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -15323,19 +15257,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -15392,19 +15321,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -16889,6 +16813,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -19316,17 +19241,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -19399,17 +19321,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -19466,17 +19385,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -19533,17 +19449,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -19600,17 +19513,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -21096,6 +21006,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -23523,17 +23434,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -23606,17 +23514,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -23673,17 +23578,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -23740,17 +23642,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -23807,17 +23706,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -25302,6 +25198,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -27685,7 +27582,7 @@
            "top": "36%"
           },
           {
-           "left": 2
+           "right": 2
           }
          ],
          "testID": "qandeel-cosmos-rail"
@@ -27703,7 +27600,7 @@
              "width": 1
             },
             {
-             "left": 21.5
+             "right": 21.5
             }
            ]
           },
@@ -27731,19 +27628,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -27820,19 +27712,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -27889,19 +27776,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -27958,19 +27840,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -28027,19 +27904,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            {
-             "flexDirection": "row-reverse"
-            }
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -29524,6 +29396,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -31949,17 +31822,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -32032,17 +31902,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -32099,17 +31966,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -32166,17 +32030,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -32233,17 +32094,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -33919,6 +33777,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -36346,17 +36205,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -36429,17 +36285,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -36496,17 +36349,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -36563,17 +36413,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -36630,17 +36477,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -38289,6 +38133,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -40716,17 +40561,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -40799,17 +40641,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -40866,17 +40705,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -40933,17 +40769,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -41000,17 +40833,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -42571,6 +42401,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -45253,17 +45084,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -45336,17 +45164,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -45403,17 +45228,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -45470,17 +45292,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -45537,17 +45356,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -47182,6 +46998,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -49106,17 +48923,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -49175,17 +48989,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -49258,17 +49069,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -49325,17 +49133,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -49392,17 +49197,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -51078,6 +50880,7 @@
       "props": {
        "style": {
         "backgroundColor": "#05060f",
+        "direction": "ltr",
         "flex": 1
        },
        "testID": "qandeel-cosmos-world"
@@ -53505,17 +53308,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -53588,17 +53388,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -53655,17 +53452,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -53722,17 +53516,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
@@ -53789,17 +53580,14 @@
            "onResponderTerminate": "[fn]",
            "onResponderTerminationRequest": "[fn]",
            "onStartShouldSetResponder": "[fn]",
-           "style": [
-            {
-             "alignItems": "center",
-             "flexDirection": "row",
-             "gap": 8,
-             "justifyContent": "flex-end",
-             "minHeight": 44,
-             "minWidth": 44
-            },
-            false
-           ]
+           "style": {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "flex-end",
+            "minHeight": 44,
+            "minWidth": 44
+           }
           },
           "children": [
            {
