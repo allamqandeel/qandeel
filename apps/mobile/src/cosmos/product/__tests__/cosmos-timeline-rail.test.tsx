@@ -5,7 +5,7 @@
  * window authority for a long conversation, places its markers by T-06's one rule in both directions, and keeps the
  * non-drag navigators mounted while none of their text is on the screen.
  */
-import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 import { View } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
@@ -17,6 +17,7 @@ import { commitMoment, createTemporalPreviewController, temporalTargeting, type 
 import { temporalTestStore, trackOf } from '../../../temporal-navigation/__fixtures__/temporal';
 import { TIMELINE_STEP, createPresentationController } from '../../../timeline';
 import {
+  COSMOS_RAIL_ACTS_ROW_TEST_ID,
   COSMOS_RAIL_COMMITTED_TEST_ID,
   COSMOS_RAIL_EARLIER_TEST_ID,
   COSMOS_RAIL_HEADLESS_TEST_ID,
@@ -239,7 +240,7 @@ describe('CosmosTimelineRail — the disclosed Moments, T-06 commits, the Live e
   });
 
   // COSMOS-INT-01 Slice C (Product Owner, 2026-11-15, Contract v1.4 §16 U-3 / A-3): the host's acts at the START of the words row.
-  it('§16 A-3: the host\'s compact acts stand at the START of the words row and the Live words at its END; their slot grows only when the chips wrap (§16.6: never clipped)', async () => {
+  it('§16 A-3: the host\'s compact acts stand at the START of the words row and the Live words at its END; their own row stands ABOVE the label (§16.6: the rail grows upward only; nothing clipped)', async () => {
     const plain = harness(6);
     view = await mount(plain);
     const wordsRow = (v: RenderResult) => { let node = v.getByTestId(COSMOS_RAIL_LIVE_TEST_ID).parent; while (node !== null && flat(node.props.style).gap !== 6) node = node.parent; return node!; };
@@ -250,11 +251,13 @@ describe('CosmosTimelineRail — the disclosed Moments, T-06 commits, the Live e
     view = await mount(h);
     const row = wordsRow(view);
     expect(row.children).toHaveLength(2);
-    const slot = view.getByTestId('host-acts').parent!;
-    expect(row.children[0]).toBe(slot);
-    expect(flat(slot.props.style)).toMatchObject({ flex: 1, minWidth: 0, minHeight: 44 });
-    expect(flat(slot.props.style).overflow).toBeUndefined();
     expect(flat(row.props.style).flexDirection).toBe('row');
+    const actsRow = view.getByTestId(COSMOS_RAIL_ACTS_ROW_TEST_ID);
+    expect(actsRow.children[0]).toBe(view.getByTestId('host-acts'));
+    const rail = view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID);
+    expect(rail.children[0]).toBe(actsRow);
+    expect(flat(actsRow.props.style).overflow).toBeUndefined();
+    expect(within(row).queryByTestId('host-acts')).toBeNull();
   });
 
   it('keeps T-06 and T-05 non-drag routes mounted and reachable, headless', async () => {

@@ -2809,6 +2809,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -2984,12 +2996,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -6355,6 +6363,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -6530,12 +6550,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -9897,6 +9913,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -10072,12 +10100,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -13443,6 +13467,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -13618,12 +13654,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -16985,6 +17017,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -17160,12 +17204,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -20527,6 +20567,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -20702,12 +20754,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -24073,6 +24121,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -24248,12 +24308,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -27613,6 +27669,110 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "accessibilityRole": "none",
+               "pointerEvents": "box-none",
+               "style": {
+                "gap": 4
+               },
+               "testID": "qandeel-cosmos-acts"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityRole": "none",
+                 "pointerEvents": "box-none",
+                 "style": {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "flexWrap": "wrap",
+                  "gap": 6
+                 }
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                   "accessibilityLabel": "Back one step",
+                   "accessibilityLanguage": "en",
+                   "accessibilityRole": "button",
+                   "accessibilityState": {},
+                   "accessibilityValue": {},
+                   "accessible": true,
+                   "collapsable": false,
+                   "focusable": true,
+                   "onBlur": "[fn]",
+                   "onClick": "[fn]",
+                   "onFocus": "[fn]",
+                   "onResponderGrant": "[fn]",
+                   "onResponderMove": "[fn]",
+                   "onResponderRelease": "[fn]",
+                   "onResponderTerminate": "[fn]",
+                   "onResponderTerminationRequest": "[fn]",
+                   "onStartShouldSetResponder": "[fn]",
+                   "style": {
+                    "justifyContent": "center",
+                    "maxWidth": "100%",
+                    "minHeight": 44,
+                    "minWidth": 44
+                   },
+                   "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
+                  },
+                  "children": [
+                   {
+                    "type": "View",
+                    "props": {
+                     "style": {
+                      "alignItems": "center",
+                      "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                      "borderColor": "rgba(233, 234, 244, 0.16)",
+                      "borderRadius": 16,
+                      "borderWidth": 0.5,
+                      "justifyContent": "center",
+                      "minHeight": 32,
+                      "paddingHorizontal": 12
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": {
+                        "color": "#E9EAF4",
+                        "fontSize": 12,
+                        "lineHeight": 18,
+                        "textAlign": "center"
+                       }
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -27788,107 +27948,11 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
-              "children": [
-               {
-                "type": "View",
-                "props": {
-                 "accessibilityRole": "none",
-                 "pointerEvents": "box-none",
-                 "style": {
-                  "gap": 4
-                 },
-                 "testID": "qandeel-cosmos-acts"
-                },
-                "children": [
-                 {
-                  "type": "View",
-                  "props": {
-                   "accessibilityRole": "none",
-                   "pointerEvents": "box-none",
-                   "style": {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                    "flexWrap": "wrap",
-                    "gap": 6
-                   }
-                  },
-                  "children": [
-                   {
-                    "type": "View",
-                    "props": {
-                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                     "accessibilityLabel": "Back one step",
-                     "accessibilityLanguage": "en",
-                     "accessibilityRole": "button",
-                     "accessibilityState": {},
-                     "accessibilityValue": {},
-                     "accessible": true,
-                     "collapsable": false,
-                     "focusable": true,
-                     "onBlur": "[fn]",
-                     "onClick": "[fn]",
-                     "onFocus": "[fn]",
-                     "onResponderGrant": "[fn]",
-                     "onResponderMove": "[fn]",
-                     "onResponderRelease": "[fn]",
-                     "onResponderTerminate": "[fn]",
-                     "onResponderTerminationRequest": "[fn]",
-                     "onStartShouldSetResponder": "[fn]",
-                     "style": {
-                      "justifyContent": "center",
-                      "maxWidth": "100%",
-                      "minHeight": 44,
-                      "minWidth": 44
-                     },
-                     "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
-                    },
-                    "children": [
-                     {
-                      "type": "View",
-                      "props": {
-                       "style": {
-                        "alignItems": "center",
-                        "backgroundColor": "rgba(11, 13, 26, 0.62)",
-                        "borderColor": "rgba(233, 234, 244, 0.16)",
-                        "borderRadius": 16,
-                        "borderWidth": 0.5,
-                        "justifyContent": "center",
-                        "minHeight": 32,
-                        "paddingHorizontal": 12
-                       }
-                      },
-                      "children": [
-                       {
-                        "type": "Text",
-                        "props": {
-                         "style": {
-                          "color": "#E9EAF4",
-                          "fontSize": 12,
-                          "lineHeight": 18,
-                          "textAlign": "center"
-                         }
-                        },
-                        "children": [
-                         "Back one step"
-                        ]
-                       }
-                      ]
-                     }
-                    ]
-                   }
-                  ]
-                 }
-                ]
-               }
-              ]
+              "children": []
              },
              {
               "type": "View",
@@ -31247,6 +31311,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -31422,12 +31498,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []
@@ -34919,6 +34991,173 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "box-none",
+             "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "accessibilityRole": "none",
+               "pointerEvents": "box-none",
+               "style": {
+                "gap": 4
+               },
+               "testID": "qandeel-cosmos-acts"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityRole": "none",
+                 "pointerEvents": "box-none",
+                 "style": {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "flexWrap": "wrap",
+                  "gap": 6
+                 }
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                   "accessibilityLabel": "Back one step",
+                   "accessibilityLanguage": "en",
+                   "accessibilityRole": "button",
+                   "accessibilityState": {},
+                   "accessibilityValue": {},
+                   "accessible": true,
+                   "collapsable": false,
+                   "focusable": true,
+                   "onBlur": "[fn]",
+                   "onClick": "[fn]",
+                   "onFocus": "[fn]",
+                   "onResponderGrant": "[fn]",
+                   "onResponderMove": "[fn]",
+                   "onResponderRelease": "[fn]",
+                   "onResponderTerminate": "[fn]",
+                   "onResponderTerminationRequest": "[fn]",
+                   "onStartShouldSetResponder": "[fn]",
+                   "style": {
+                    "justifyContent": "center",
+                    "maxWidth": "100%",
+                    "minHeight": 44,
+                    "minWidth": 44
+                   },
+                   "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
+                  },
+                  "children": [
+                   {
+                    "type": "View",
+                    "props": {
+                     "style": {
+                      "alignItems": "center",
+                      "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                      "borderColor": "rgba(233, 234, 244, 0.16)",
+                      "borderRadius": 16,
+                      "borderWidth": 0.5,
+                      "justifyContent": "center",
+                      "minHeight": 32,
+                      "paddingHorizontal": 12
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": {
+                        "color": "#E9EAF4",
+                        "fontSize": 12,
+                        "lineHeight": 18,
+                        "textAlign": "center"
+                       }
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 {
+                  "type": "View",
+                  "props": {
+                   "accessibilityHint": "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step.",
+                   "accessibilityLabel": "Rejoin the conversation and move there",
+                   "accessibilityLanguage": "en",
+                   "accessibilityRole": "button",
+                   "accessibilityState": {},
+                   "accessibilityValue": {},
+                   "accessible": true,
+                   "collapsable": false,
+                   "focusable": true,
+                   "onBlur": "[fn]",
+                   "onClick": "[fn]",
+                   "onFocus": "[fn]",
+                   "onResponderGrant": "[fn]",
+                   "onResponderMove": "[fn]",
+                   "onResponderRelease": "[fn]",
+                   "onResponderTerminate": "[fn]",
+                   "onResponderTerminationRequest": "[fn]",
+                   "onStartShouldSetResponder": "[fn]",
+                   "style": {
+                    "justifyContent": "center",
+                    "maxWidth": "100%",
+                    "minHeight": 44,
+                    "minWidth": 44
+                   },
+                   "testID": "qandeel-cosmos-acts:GO_LIVE_AND_LOCATE"
+                  },
+                  "children": [
+                   {
+                    "type": "View",
+                    "props": {
+                     "style": {
+                      "alignItems": "center",
+                      "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                      "borderColor": "rgba(233, 234, 244, 0.16)",
+                      "borderRadius": 16,
+                      "borderWidth": 0.5,
+                      "justifyContent": "center",
+                      "minHeight": 32,
+                      "paddingHorizontal": 12
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": {
+                        "color": "#E9EAF4",
+                        "fontSize": 12,
+                        "lineHeight": 18,
+                        "textAlign": "center"
+                       }
+                      },
+                      "children": [
+                       "Rejoin the conversation and move there"
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
              "pointerEvents": "none",
              "style": {
               "paddingBottom": 2
@@ -35129,170 +35368,11 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
-              "children": [
-               {
-                "type": "View",
-                "props": {
-                 "accessibilityRole": "none",
-                 "pointerEvents": "box-none",
-                 "style": {
-                  "gap": 4
-                 },
-                 "testID": "qandeel-cosmos-acts"
-                },
-                "children": [
-                 {
-                  "type": "View",
-                  "props": {
-                   "accessibilityRole": "none",
-                   "pointerEvents": "box-none",
-                   "style": {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                    "flexWrap": "wrap",
-                    "gap": 6
-                   }
-                  },
-                  "children": [
-                   {
-                    "type": "View",
-                    "props": {
-                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                     "accessibilityLabel": "Back one step",
-                     "accessibilityLanguage": "en",
-                     "accessibilityRole": "button",
-                     "accessibilityState": {},
-                     "accessibilityValue": {},
-                     "accessible": true,
-                     "collapsable": false,
-                     "focusable": true,
-                     "onBlur": "[fn]",
-                     "onClick": "[fn]",
-                     "onFocus": "[fn]",
-                     "onResponderGrant": "[fn]",
-                     "onResponderMove": "[fn]",
-                     "onResponderRelease": "[fn]",
-                     "onResponderTerminate": "[fn]",
-                     "onResponderTerminationRequest": "[fn]",
-                     "onStartShouldSetResponder": "[fn]",
-                     "style": {
-                      "justifyContent": "center",
-                      "maxWidth": "100%",
-                      "minHeight": 44,
-                      "minWidth": 44
-                     },
-                     "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
-                    },
-                    "children": [
-                     {
-                      "type": "View",
-                      "props": {
-                       "style": {
-                        "alignItems": "center",
-                        "backgroundColor": "rgba(11, 13, 26, 0.62)",
-                        "borderColor": "rgba(233, 234, 244, 0.16)",
-                        "borderRadius": 16,
-                        "borderWidth": 0.5,
-                        "justifyContent": "center",
-                        "minHeight": 32,
-                        "paddingHorizontal": 12
-                       }
-                      },
-                      "children": [
-                       {
-                        "type": "Text",
-                        "props": {
-                         "style": {
-                          "color": "#E9EAF4",
-                          "fontSize": 12,
-                          "lineHeight": 18,
-                          "textAlign": "center"
-                         }
-                        },
-                        "children": [
-                         "Back one step"
-                        ]
-                       }
-                      ]
-                     }
-                    ]
-                   },
-                   {
-                    "type": "View",
-                    "props": {
-                     "accessibilityHint": "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step.",
-                     "accessibilityLabel": "Rejoin the conversation and move there",
-                     "accessibilityLanguage": "en",
-                     "accessibilityRole": "button",
-                     "accessibilityState": {},
-                     "accessibilityValue": {},
-                     "accessible": true,
-                     "collapsable": false,
-                     "focusable": true,
-                     "onBlur": "[fn]",
-                     "onClick": "[fn]",
-                     "onFocus": "[fn]",
-                     "onResponderGrant": "[fn]",
-                     "onResponderMove": "[fn]",
-                     "onResponderRelease": "[fn]",
-                     "onResponderTerminate": "[fn]",
-                     "onResponderTerminationRequest": "[fn]",
-                     "onStartShouldSetResponder": "[fn]",
-                     "style": {
-                      "justifyContent": "center",
-                      "maxWidth": "100%",
-                      "minHeight": 44,
-                      "minWidth": 44
-                     },
-                     "testID": "qandeel-cosmos-acts:GO_LIVE_AND_LOCATE"
-                    },
-                    "children": [
-                     {
-                      "type": "View",
-                      "props": {
-                       "style": {
-                        "alignItems": "center",
-                        "backgroundColor": "rgba(11, 13, 26, 0.62)",
-                        "borderColor": "rgba(233, 234, 244, 0.16)",
-                        "borderRadius": 16,
-                        "borderWidth": 0.5,
-                        "justifyContent": "center",
-                        "minHeight": 32,
-                        "paddingHorizontal": 12
-                       }
-                      },
-                      "children": [
-                       {
-                        "type": "Text",
-                        "props": {
-                         "style": {
-                          "color": "#E9EAF4",
-                          "fontSize": 12,
-                          "lineHeight": 18,
-                          "textAlign": "center"
-                         }
-                        },
-                        "children": [
-                         "Rejoin the conversation and move there"
-                        ]
-                       }
-                      ]
-                     }
-                    ]
-                   }
-                  ]
-                 }
-                ]
-               }
-              ]
+              "children": []
              },
              {
               "type": "View",
@@ -38905,6 +38985,133 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "accessibilityRole": "none",
+               "pointerEvents": "box-none",
+               "style": {
+                "gap": 4
+               },
+               "testID": "qandeel-cosmos-acts"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityRole": "none",
+                 "pointerEvents": "box-none",
+                 "style": {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "flexWrap": "wrap",
+                  "gap": 6
+                 }
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                   "accessibilityLabel": "Back one step",
+                   "accessibilityLanguage": "en",
+                   "accessibilityRole": "button",
+                   "accessibilityState": {},
+                   "accessibilityValue": {},
+                   "accessible": true,
+                   "collapsable": false,
+                   "focusable": true,
+                   "onBlur": "[fn]",
+                   "onClick": "[fn]",
+                   "onFocus": "[fn]",
+                   "onResponderGrant": "[fn]",
+                   "onResponderMove": "[fn]",
+                   "onResponderRelease": "[fn]",
+                   "onResponderTerminate": "[fn]",
+                   "onResponderTerminationRequest": "[fn]",
+                   "onStartShouldSetResponder": "[fn]",
+                   "style": {
+                    "justifyContent": "center",
+                    "maxWidth": "100%",
+                    "minHeight": 44,
+                    "minWidth": 44
+                   },
+                   "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
+                  },
+                  "children": [
+                   {
+                    "type": "View",
+                    "props": {
+                     "style": {
+                      "alignItems": "center",
+                      "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                      "borderColor": "rgba(233, 234, 244, 0.16)",
+                      "borderRadius": 16,
+                      "borderWidth": 0.5,
+                      "justifyContent": "center",
+                      "minHeight": 32,
+                      "paddingHorizontal": 12
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": {
+                        "color": "#E9EAF4",
+                        "fontSize": 12,
+                        "lineHeight": 18,
+                        "textAlign": "center"
+                       }
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               },
+               {
+                "type": "View",
+                "props": {
+                 "pointerEvents": "none"
+                },
+                "children": [
+                 {
+                  "type": "Text",
+                  "props": {
+                   "accessibilityLanguage": "en",
+                   "style": {
+                    "color": "#9A9DB4",
+                    "fontSize": 12,
+                    "lineHeight": 18
+                   },
+                   "testID": "qandeel-cosmos-acts:note"
+                  },
+                  "children": [
+                   "This view does not cover what you are inspecting."
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -39080,130 +39287,11 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
-              "children": [
-               {
-                "type": "View",
-                "props": {
-                 "accessibilityRole": "none",
-                 "pointerEvents": "box-none",
-                 "style": {
-                  "gap": 4
-                 },
-                 "testID": "qandeel-cosmos-acts"
-                },
-                "children": [
-                 {
-                  "type": "View",
-                  "props": {
-                   "accessibilityRole": "none",
-                   "pointerEvents": "box-none",
-                   "style": {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                    "flexWrap": "wrap",
-                    "gap": 6
-                   }
-                  },
-                  "children": [
-                   {
-                    "type": "View",
-                    "props": {
-                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                     "accessibilityLabel": "Back one step",
-                     "accessibilityLanguage": "en",
-                     "accessibilityRole": "button",
-                     "accessibilityState": {},
-                     "accessibilityValue": {},
-                     "accessible": true,
-                     "collapsable": false,
-                     "focusable": true,
-                     "onBlur": "[fn]",
-                     "onClick": "[fn]",
-                     "onFocus": "[fn]",
-                     "onResponderGrant": "[fn]",
-                     "onResponderMove": "[fn]",
-                     "onResponderRelease": "[fn]",
-                     "onResponderTerminate": "[fn]",
-                     "onResponderTerminationRequest": "[fn]",
-                     "onStartShouldSetResponder": "[fn]",
-                     "style": {
-                      "justifyContent": "center",
-                      "maxWidth": "100%",
-                      "minHeight": 44,
-                      "minWidth": 44
-                     },
-                     "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
-                    },
-                    "children": [
-                     {
-                      "type": "View",
-                      "props": {
-                       "style": {
-                        "alignItems": "center",
-                        "backgroundColor": "rgba(11, 13, 26, 0.62)",
-                        "borderColor": "rgba(233, 234, 244, 0.16)",
-                        "borderRadius": 16,
-                        "borderWidth": 0.5,
-                        "justifyContent": "center",
-                        "minHeight": 32,
-                        "paddingHorizontal": 12
-                       }
-                      },
-                      "children": [
-                       {
-                        "type": "Text",
-                        "props": {
-                         "style": {
-                          "color": "#E9EAF4",
-                          "fontSize": 12,
-                          "lineHeight": 18,
-                          "textAlign": "center"
-                         }
-                        },
-                        "children": [
-                         "Back one step"
-                        ]
-                       }
-                      ]
-                     }
-                    ]
-                   }
-                  ]
-                 },
-                 {
-                  "type": "View",
-                  "props": {
-                   "pointerEvents": "none"
-                  },
-                  "children": [
-                   {
-                    "type": "Text",
-                    "props": {
-                     "accessibilityLanguage": "en",
-                     "style": {
-                      "color": "#9A9DB4",
-                      "fontSize": 12,
-                      "lineHeight": 18
-                     },
-                     "testID": "qandeel-cosmos-acts:note"
-                    },
-                    "children": [
-                     "This view does not cover what you are inspecting."
-                    ]
-                   }
-                  ]
-                 }
-                ]
-               }
-              ]
+              "children": []
              },
              {
               "type": "View",
@@ -42061,6 +42149,110 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": [
+             {
+              "type": "View",
+              "props": {
+               "accessibilityRole": "none",
+               "pointerEvents": "box-none",
+               "style": {
+                "gap": 4
+               },
+               "testID": "qandeel-cosmos-acts"
+              },
+              "children": [
+               {
+                "type": "View",
+                "props": {
+                 "accessibilityRole": "none",
+                 "pointerEvents": "box-none",
+                 "style": {
+                  "alignItems": "center",
+                  "flexDirection": "row",
+                  "flexWrap": "wrap",
+                  "gap": 6
+                 }
+                },
+                "children": [
+                 {
+                  "type": "View",
+                  "props": {
+                   "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
+                   "accessibilityLabel": "Back one step",
+                   "accessibilityLanguage": "en",
+                   "accessibilityRole": "button",
+                   "accessibilityState": {},
+                   "accessibilityValue": {},
+                   "accessible": true,
+                   "collapsable": false,
+                   "focusable": true,
+                   "onBlur": "[fn]",
+                   "onClick": "[fn]",
+                   "onFocus": "[fn]",
+                   "onResponderGrant": "[fn]",
+                   "onResponderMove": "[fn]",
+                   "onResponderRelease": "[fn]",
+                   "onResponderTerminate": "[fn]",
+                   "onResponderTerminationRequest": "[fn]",
+                   "onStartShouldSetResponder": "[fn]",
+                   "style": {
+                    "justifyContent": "center",
+                    "maxWidth": "100%",
+                    "minHeight": 44,
+                    "minWidth": 44
+                   },
+                   "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
+                  },
+                  "children": [
+                   {
+                    "type": "View",
+                    "props": {
+                     "style": {
+                      "alignItems": "center",
+                      "backgroundColor": "rgba(11, 13, 26, 0.62)",
+                      "borderColor": "rgba(233, 234, 244, 0.16)",
+                      "borderRadius": 16,
+                      "borderWidth": 0.5,
+                      "justifyContent": "center",
+                      "minHeight": 32,
+                      "paddingHorizontal": 12
+                     }
+                    },
+                    "children": [
+                     {
+                      "type": "Text",
+                      "props": {
+                       "style": {
+                        "color": "#E9EAF4",
+                        "fontSize": 12,
+                        "lineHeight": 18,
+                        "textAlign": "center"
+                       }
+                      },
+                      "children": [
+                       "Back one step"
+                      ]
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -42236,107 +42428,11 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
-              "children": [
-               {
-                "type": "View",
-                "props": {
-                 "accessibilityRole": "none",
-                 "pointerEvents": "box-none",
-                 "style": {
-                  "gap": 4
-                 },
-                 "testID": "qandeel-cosmos-acts"
-                },
-                "children": [
-                 {
-                  "type": "View",
-                  "props": {
-                   "accessibilityRole": "none",
-                   "pointerEvents": "box-none",
-                   "style": {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                    "flexWrap": "wrap",
-                    "gap": 6
-                   }
-                  },
-                  "children": [
-                   {
-                    "type": "View",
-                    "props": {
-                     "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                     "accessibilityLabel": "Back one step",
-                     "accessibilityLanguage": "en",
-                     "accessibilityRole": "button",
-                     "accessibilityState": {},
-                     "accessibilityValue": {},
-                     "accessible": true,
-                     "collapsable": false,
-                     "focusable": true,
-                     "onBlur": "[fn]",
-                     "onClick": "[fn]",
-                     "onFocus": "[fn]",
-                     "onResponderGrant": "[fn]",
-                     "onResponderMove": "[fn]",
-                     "onResponderRelease": "[fn]",
-                     "onResponderTerminate": "[fn]",
-                     "onResponderTerminationRequest": "[fn]",
-                     "onStartShouldSetResponder": "[fn]",
-                     "style": {
-                      "justifyContent": "center",
-                      "maxWidth": "100%",
-                      "minHeight": 44,
-                      "minWidth": 44
-                     },
-                     "testID": "qandeel-cosmos-acts:BACK_ONE_STEP"
-                    },
-                    "children": [
-                     {
-                      "type": "View",
-                      "props": {
-                       "style": {
-                        "alignItems": "center",
-                        "backgroundColor": "rgba(11, 13, 26, 0.62)",
-                        "borderColor": "rgba(233, 234, 244, 0.16)",
-                        "borderRadius": 16,
-                        "borderWidth": 0.5,
-                        "justifyContent": "center",
-                        "minHeight": 32,
-                        "paddingHorizontal": 12
-                       }
-                      },
-                      "children": [
-                       {
-                        "type": "Text",
-                        "props": {
-                         "style": {
-                          "color": "#E9EAF4",
-                          "fontSize": 12,
-                          "lineHeight": 18,
-                          "textAlign": "center"
-                         }
-                        },
-                        "children": [
-                         "Back one step"
-                        ]
-                       }
-                      ]
-                     }
-                    ]
-                   }
-                  ]
-                 }
-                ]
-               }
-              ]
+              "children": []
              },
              {
               "type": "View",
@@ -45695,6 +45791,18 @@
             "props": {
              "pointerEvents": "box-none",
              "style": {
+              "alignItems": "flex-start",
+              "paddingBottom": 2
+             },
+             "testID": "qandeel-cosmos-timeline-rail:acts"
+            },
+            "children": []
+           },
+           {
+            "type": "View",
+            "props": {
+             "pointerEvents": "box-none",
+             "style": {
               "alignItems": "center",
               "flexDirection": "row"
              }
@@ -45870,12 +45978,8 @@
              {
               "type": "View",
               "props": {
-               "pointerEvents": "box-none",
                "style": {
-                "flex": 1,
-                "justifyContent": "center",
-                "minHeight": 44,
-                "minWidth": 0
+                "flex": 1
                }
               },
               "children": []

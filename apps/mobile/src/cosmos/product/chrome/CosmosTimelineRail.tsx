@@ -66,6 +66,7 @@ export const COSMOS_RAIL_EARLIER_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:earl
 export const COSMOS_RAIL_LATER_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:later`;
 export const COSMOS_RAIL_HEADLESS_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:headless`;
 /** The compact Moment label above the segments (§16 A-4). */
+export const COSMOS_RAIL_ACTS_ROW_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:acts`;
 export const COSMOS_RAIL_LABEL_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:label`;
 
 /** The narrowest pitch a segment is drawn at (a 1-point bar with room for the 7-point dot): beyond it the rail windows. */
@@ -203,6 +204,13 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
   // with the root un-flattened the same press is reliable (two probe builds, and the fix build — Contract v1.4 §16.6).
   return (
     <View testID={testID} collapsable={false} style={styles.rail} pointerEvents="box-none">
+      {/* The host's compact acts, ABOVE the label (§16 A-3 as corrected in §16.6): everything that appears and disappears
+          with the temporal state sits above the segments, so the rail grows and shrinks UPWARD and the segments — the
+          surface under the reader's finger — never move (HONOR, e64861ad: acts wrapping under the segments pushed them up
+          by a line the moment a Moment was committed). */}
+      {acts === null ? null : (
+        <View testID={COSMOS_RAIL_ACTS_ROW_TEST_ID} style={styles.actsRow} pointerEvents="box-none">{acts}</View>
+      )}
       {label === null ? null : (
         <View testID={COSMOS_RAIL_LABEL_TEST_ID} pointerEvents="none" style={styles.labelRow}>
           <Text accessibilityLabel={sentence ?? label} accessibilityLanguage={language} style={[styles.labelText, language === 'ar' ? styles.labelArabic : styles.labelEnglish]}>{label}</Text>
@@ -235,9 +243,9 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
           </GesturePressable>
         ) : null}
       </View>
-      {/* The words row: the host's compact acts at the START (§16 A-3); the outboard Live edge, with T-06's words, at the END. Never a Moment. */}
+      {/* The words row: the outboard Live edge, with T-06's words, at the END. Never a Moment; never an act. */}
       <View style={styles.words} pointerEvents="box-none">
-        {acts === null ? <View style={styles.spacer} /> : <View style={styles.actsSlot} pointerEvents="box-none">{acts}</View>}
+        <View style={styles.spacer} />
         <GesturePressable testID={COSMOS_RAIL_LIVE_TEST_ID} accessibilityRole="button" accessibilityLabel={liveWords} accessibilityLanguage={language}
           accessibilityState={{ disabled: !liveAvailable, selected: following }} disabled={!liveAvailable} onPress={goLive} style={styles.liveAct}>
           <Text style={following ? styles.quietText : styles.goldText}>{liveWords}</Text>
@@ -279,8 +287,8 @@ const styles = StyleSheet.create({
   moreText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   words: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   spacer: { flex: 1 },
-  // The acts' slot grows only when their chips wrap (§16.6): never clipped, never under the Live words.
-  actsSlot: { flex: 1, minWidth: 0, minHeight: RAIL_ROW_HEIGHT, justifyContent: 'center' },
+  // The acts' row above the label: the chips wrap (§16.6), nothing is clipped; it exists only while acts are offered.
+  actsRow: { alignItems: 'flex-start', paddingBottom: 2 },
   liveAct: { minHeight: RAIL_ROW_HEIGHT, paddingHorizontal: 10, justifyContent: 'center', flexShrink: 0 },
   quietText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   goldText: { fontSize: 13, color: C.gold },
