@@ -189,6 +189,10 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   const backText = snapshot.rung > 0 ? `${rtl ? '→' : '←'} ${names[snapshot.rung - 1]}` : copy.wholeWorld;
   const bearing = absence.kind === 'REGION_EMPTY' ? absence.bearing : null;
 
+  // The chrome's own `rtl` handling is the only mirroring: the root pins the layout direction so a host under native
+  // RTL mirroring (the Shared / Public fields; the Conversation surface already pins `ltr`) renders the same accepted
+  // layout — the rail's label inboard of its dot on the right, Back right / Overview left in Arabic — in every world.
+  // (HONOR proof, 2026-11-15: without this the Shared / Public rail label sat outboard and was clipped at the edge.)
   return (
     <View style={styles.root} testID={testID}>
       <CosmosCanvas
@@ -288,7 +292,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.void },
+  root: { flex: 1, backgroundColor: C.void, direction: 'ltr' },
   top: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 6 },
   rowReverse: { flexDirection: 'row-reverse' },
   spacer: { flex: 1 },

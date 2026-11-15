@@ -8,7 +8,7 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 import { viewportEnvelope } from '../../../map/camera';
 import { semanticDepthWord } from '../../../orientation-chrome';
 import { compileStage } from '../../core/stage';
-import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, CosmosWorldView, cosmosProductCopy, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
+import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
 
 const GLASS = viewportEnvelope(390, 844, { top: 104, bottom: 220 })!;
 
@@ -100,6 +100,14 @@ describe('CosmosWorldView — the stage over an owner', () => {
     const bead = view.getByLabelText(semanticDepthWord('ar', 'THREAD'));
     expect(flat(bead).flexDirection).toBe('row');
     expect(view.getByText(semanticDepthWord('ar', 'THREAD'))).toBeTruthy();
+  });
+
+  it('the root pins the layout direction, so a host under native RTL mirroring keeps the accepted chrome layout (rail label inboard)', async () => {
+    const { owner, set } = fakeOwner({});
+    set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+    view = await mount(owner, 'ar');
+    const root = Object.assign({}, ...[view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID).props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+    expect(root.direction).toBe('ltr');
   });
 
   it('English: the rail is on the right as well', async () => {
