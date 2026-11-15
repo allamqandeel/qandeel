@@ -15,8 +15,11 @@ import { act, fireEvent, render, type RenderResult } from '@testing-library/reac
 // line) and its compact contextual controls (T-07 acts through T-08's model, T-04's context choice). The assertions
 // below name those surfaces; every claim they made (one of each, real owners, absent-not-disabled, 44-point targets,
 // every act at every text size and window) is kept.
-import { COSMOS_ACTS_TEST_ID, COSMOS_ACT_TEST_ID_PREFIX, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
-import { ORIENTATION_CHROME_TEST_ID, RETURN_CONTROLS_TEST_ID } from '../../orientation-chrome';
+// COSMOS-INT-01 Slice C UX correction (Product Owner, 2026-11-15; Contract v1.4 §16): the contextual controls are ONE line
+// at the start of the rail's words row, Return to World is Overview's companion, and the T-08 line is the compact
+// Moment label's accessible label rather than a drawn sentence. The same assertions hold; one more names that shape.
+import { COSMOS_ACTS_TEST_ID, COSMOS_ACT_TEST_ID_PREFIX, COSMOS_OVERVIEW_COMPANION_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_LABEL_TEST_ID, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
+import { ORIENTATION_CHROME_TEST_ID, RETURN_CONTROLS_TEST_ID, TEMPORAL_ORIENTATION_LINE_TEST_ID } from '../../orientation-chrome';
 import {
   RESPONSIVE_CHROME_BAND_TEST_ID,
   RESPONSIVE_CHROME_MEASURE_TEST_ID,
@@ -84,6 +87,21 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
     expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(COSMOS_ACTS_TEST_ID)).toBeTruthy();
+    h.dispose();
+  });
+
+  it('COSMOS-INT-01 §16 — the controls live in the rail\'s words row, Return to World under Overview, and the T-08 line is not drawn', async () => {
+    const { h, view } = await composed();
+    const rail = view.getByTestId(COSMOS_TIMELINE_RAIL_TEST_ID);
+    const inside = (node: { parent: unknown } | null): boolean => { let at = node as { parent: { props?: { testID?: string }; parent: unknown } | null } | null; while (at !== null && at.parent !== null) { at = at.parent as never; if ((at as { props?: { testID?: string } }).props?.testID === COSMOS_TIMELINE_RAIL_TEST_ID) return true; } return false; };
+    expect(inside(view.getByTestId(COSMOS_ACTS_TEST_ID) as never)).toBe(true);
+    expect(rail).toBeTruthy();
+    // The T-08 line component is no longer composed; the rail says the Moment compactly (nothing while following Live).
+    expect(view.queryByTestId(TEMPORAL_ORIENTATION_LINE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(COSMOS_RAIL_LABEL_TEST_ID)).toBeNull();
+    // Overview's companion is not on the screen while Overview is off (its toggle is the stage view's own proof).
+    expect(view.queryByTestId(COSMOS_OVERVIEW_COMPANION_TEST_ID)).toBeNull();
+    expect(view.getByTestId(COSMOS_OVERVIEW_TEST_ID).props.accessibilityState).toEqual({ selected: false });
     h.dispose();
   });
 

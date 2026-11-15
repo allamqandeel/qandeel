@@ -1,7 +1,11 @@
 /**
- * COSMOS-INT-01 Slice C — the compact contextual controls of the Personal stage (Contract v1.3 §14 C-3 / C-4 / C-5,
- * §15.3 B): the T-07 return acts and T-04's context choice that the old chrome band presented as text blocks, as
- * compact glass chips under the stage's top row. The old sentences are not drawn; the acts are.
+ * COSMOS-INT-01 Slice C — the compact contextual controls of the Personal stage (Contract v1.4 §14 C-3 / C-4 / C-5,
+ * §15.3 B, §16 A-2 / A-3): the T-07 return acts and T-04's context choice that the old chrome band presented as text
+ * blocks, as compact glass chips. The old sentences are not drawn; the acts are. The Product Owner's UX correction
+ * (§16) places them: the historical and Live-focus acts in ONE scrollable line at the start of the rail's words row
+ * (`layout="line"`, `acts` allow-list), and `RETURN_WORLD` at a deeper rung as the one companion chip under the
+ * Overview chip while Overview is on (`acts={['RETURN_WORLD']}`, `extras={false}`). The upper screen holds no other
+ * control (U-1).
  *
  * The SEMANTICS are T-08's and T-07's, unchanged and reached through their own modules:
  *
@@ -19,7 +23,7 @@
  *     sentence, as one quiet line under the chips, only while an inspection is requested (as the old band did).
  */
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { switchContext, type MapActionOutcome, type MapProjectionRequest } from '../../../map';
 import {
@@ -49,6 +53,10 @@ import {
 } from '../../../return-navigation';
 
 export const COSMOS_ACTS_TEST_ID = 'qandeel-cosmos-acts';
+/** The Overview companion (§16 A-2): the same component, drawing `RETURN_WORLD` only, under the Overview chip. */
+export const COSMOS_OVERVIEW_ACT_TEST_ID = 'qandeel-cosmos-overview-act';
+/** The acts the rail's words row carries (§16 A-3): everything but Return Live (the Live words) and Return World (Overview's companion). */
+export const RAIL_ACTS: readonly ReturnOpportunityId[] = Object.freeze(['BACK_ONE_STEP', 'EXACT_RETURN', 'RETURN_LIVE_FOCUS', 'GO_LIVE_AND_LOCATE'] as const);
 /** One return act's chip: `${prefix}${ReturnOpportunityId}`. */
 export const COSMOS_ACT_TEST_ID_PREFIX = `${COSMOS_ACTS_TEST_ID}:`;
 /** One contextual appearance's chip: `${prefix}${ordinal}`. */
@@ -75,12 +83,18 @@ export interface CosmosContextualActsProps {
   readonly liveContext?: (request: MapProjectionRequest) => ReturnMapContext;
   readonly onReturnOutcome?: (id: ReturnOpportunityId, outcome: ReturnOutcome) => void;
   readonly onMapOutcome?: (outcome: MapActionOutcome) => void;
+  /** The acts this instance may draw, of those T-08 offers (default: every chip act). An act outside the list is another instance's. */
+  readonly acts?: readonly ReturnOpportunityId[];
+  /** T-04's context choice and the technical note belong to ONE instance (default true); the Overview companion draws neither. */
+  readonly extras?: boolean;
+  /** `wrap` (the default) wraps the chips; `line` is ONE horizontally scrollable row that never wraps and never grows (§16 A-3). */
+  readonly layout?: 'wrap' | 'line';
   readonly testID?: string;
 }
 
 const NOOP_UNSUBSCRIBE = () => undefined;
 
-export function CosmosContextualActs({ surface, language, projection, exactReturnOrigin, preview, liveContext, onReturnOutcome, onMapOutcome, testID = COSMOS_ACTS_TEST_ID }: CosmosContextualActsProps) {
+export function CosmosContextualActs({ surface, language, projection, exactReturnOrigin, preview, liveContext, onReturnOutcome, onMapOutcome, acts: allowed, extras = true, layout = 'wrap', testID = COSMOS_ACTS_TEST_ID }: CosmosContextualActsProps) {
   useSyncExternalStore(surface.store.subscribe, surface.store.getState);
   const subscribe = useCallback((listener: () => void) => (preview === null || preview === undefined ? NOOP_UNSUBSCRIBE : preview.subscribe(listener)), [preview]);
   const getSnapshot = useCallback(() => (preview === null || preview === undefined ? null : preview.getSnapshot()), [preview]);
@@ -92,7 +106,7 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
   const exactReturnTarget = exactReturnTargetFor(surface.store, origin);
   const model = orientationModel(surface.store, projection, { exactReturnOrigin: origin, preview: previewSnapshot, liveContextAvailable: liveContext !== undefined });
   const current = model.projection.status === 'CURRENT' && projection.held ? projection.context : null;
-  const acts = chipActs(model);
+  const acts = chipActs(model).filter((id) => allowed === undefined || allowed.includes(id));
 
   // Plain functions over the render-local model (the compiler memoises them; a manual list would name a local object).
   const run = (id: ReturnOpportunityId) => {
@@ -145,15 +159,13 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
     onMapOutcome?.(outcome);
   };
 
-  const note = model.inspection.requested && TECHNICAL.has(model.inspection.render.kind) ? inspectionSentence(language, model.inspection.render) : null;
-  const choices = model.context.choiceAvailable ? model.context.appearances : [];
+  const note = extras && model.inspection.requested && TECHNICAL.has(model.inspection.render.kind) ? inspectionSentence(language, model.inspection.render) : null;
+  const choices = extras && model.context.choiceAvailable ? model.context.appearances : [];
   if (acts.length === 0 && choices.length === 0 && note === null) return null;
   const choiceHint = `${contextChoiceTitle(language)} ${contextOrderingNote(language)}`;
 
-  return (
-    <View testID={testID} style={styles.region} pointerEvents="box-none" accessibilityRole="none">
-      {acts.length === 0 && choices.length === 0 ? null : (
-        <View style={styles.chips} pointerEvents="box-none" accessibilityRole="none">
+  const chips = acts.length === 0 && choices.length === 0 ? null : (
+        <>
           {acts.map((id) => {
             const words = returnActWords(language, id);
             return (
@@ -172,6 +184,19 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
               </Pressable>
             );
           })}
+        </>
+      );
+
+  return (
+    <View testID={testID} style={layout === 'line' ? styles.lineRegion : styles.region} pointerEvents="box-none" accessibilityRole="none">
+      {chips === null ? null : layout === 'line' ? (
+        // ONE line: the chips scroll sideways when several acts are offered at once; nothing wraps, clips or overlaps (U-7).
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.scroller} contentContainerStyle={styles.line} accessibilityRole="none">
+          {chips}
+        </ScrollView>
+      ) : (
+        <View style={styles.chips} pointerEvents="box-none" accessibilityRole="none">
+          {chips}
         </View>
       )}
       {note === null ? null : (
@@ -185,7 +210,11 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
 
 const styles = StyleSheet.create({
   region: { gap: 4 },
-  // `row` is the reading direction; the host reverses it for Arabic, as it does its own top row.
+  // The one-line layout fills its slot in the rail's words row (44 points tall) and never grows past it.
+  lineRegion: { flex: 1, minWidth: 0, height: 44, justifyContent: 'center' },
+  scroller: { flexGrow: 0 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingEnd: 6 },
+  // Identical in both languages (U-9): the row runs left → right; the words inside keep their own direction.
   chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   // T12-A95: every press target is at least 44 points; the compact 32-point chip sits inside it.
   press: { minHeight: 44, minWidth: 44, justifyContent: 'center' },

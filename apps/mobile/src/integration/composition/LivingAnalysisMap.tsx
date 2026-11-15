@@ -55,18 +55,21 @@
  * navigators headless beside it. The old timeline row and the old chrome band are no longer brought to the surface —
  * the composition brings no `timeline` and a chrome that measures nothing, so under the surface's own CHROME_ONLY rule
  * the band is the bottom safe area and nothing else (C-6) — and the T-07 return acts and T-04's context choice the band
- * presented as text blocks are the compact contextual chips under the top row (`CosmosContextualActs`), reached through
- * the same executors and the same observers. The stage's Back chip at the first rung IS the canonical Return to World
- * (`home`). No function is lost; no sentence is invented; nothing of T-05 / T-06 / T-07 / T-08 is edited.
+ * presented as text blocks are the compact contextual chips (`CosmosContextualActs`), reached through the same
+ * executors and the same observers. The Product Owner's UX correction (v1.4 §16) places them: the historical and
+ * Live-focus acts in one line at the start of the rail's words row; Return to World as the one companion chip under
+ * Overview at a deeper rung; and at the first rung the stage's Back chip IS the canonical Return to World (`home`).
+ * The T-08 temporal sentence is no longer drawn: the rail's compact Moment label carries it to assistive technology.
+ * No function is lost; no sentence is invented; nothing of T-05 / T-06 / T-07 / T-08 is edited.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { analysisCopy } from '../../analysis-language';
-import { CosmosContextualActs, CosmosTimelineRail, CosmosWorldView, createPersonalCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
+import { COSMOS_OVERVIEW_ACT_TEST_ID, CosmosContextualActs, CosmosTimelineRail, CosmosWorldView, RAIL_ACTS, createPersonalCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
 import { MapAccessibilityLayer, decodeCameraIntent, mapInspectionContext, mapProjectionRequest, useSteadyEnvelope, type MapActionOutcome, type MapInspectionContext, type ViewportEnvelope } from '../../map';
-import { TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
+import { chromeProjection } from '../../orientation-chrome';
 import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
 import type { CanonicalStore } from '../../state';
@@ -276,21 +279,38 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
               preview={preview}
               presentation={presentation}
               language={locale.language}
-              // VPORT-02: the temporal line is said once, directly above the Timeline (now the rail).
-              line={<TemporalOrientationLine store={store} language={locale.language} preview={preview} />}
+              // §16 A-3: the historical and Live-focus acts, T-04's context choice and the technical note, in ONE line at
+              // the start of the rail's words row; Return Live is the rail's own Live words (VPORT-02).
+              acts={
+                chrome === null ? null : (
+                  <CosmosContextualActs
+                    surface={returnSurface}
+                    language={locale.language}
+                    projection={chrome}
+                    exactReturnOrigin={journey.origin()}
+                    preview={preview}
+                    liveContext={liveContext}
+                    onMapOutcome={observeMapOutcome}
+                    onReturnOutcome={observeReturnOutcome}
+                    acts={RAIL_ACTS}
+                    layout="line"
+                  />
+                )
+              }
             />
           }
-          acts={
+          // §16 A-2: the canonical Return to World at a deeper rung, as Overview's one companion chip (at the first rung,
+          // away from the centre, the stage's Back chip is this act — `home`).
+          overviewAct={
             chrome === null ? null : (
               <CosmosContextualActs
                 surface={returnSurface}
                 language={locale.language}
                 projection={chrome}
-                exactReturnOrigin={journey.origin()}
-                preview={preview}
-                liveContext={liveContext}
-                onMapOutcome={observeMapOutcome}
                 onReturnOutcome={observeReturnOutcome}
+                acts={['RETURN_WORLD']}
+                extras={false}
+                testID={COSMOS_OVERVIEW_ACT_TEST_ID}
               />
             )
           }
@@ -309,11 +329,11 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
  * The Personal stage: the COSMOS world view over the owner, in the glass steadied by CA-O1, with T-04's accessible Map
  * laid over it through the same glass (the stage's own marks stand down: one object is never two nodes).
  */
-function PersonalStage({ owner, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, acts }: {
+function PersonalStage({ owner, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, overviewAct }: {
   readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly store: CanonicalStore;
   readonly context: MapInspectionContext | null; readonly language: ProductLocale['language']; readonly driftPaused: boolean;
   readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void; readonly composed: ReactNode;
-  readonly home: () => void; readonly rail: ReactNode; readonly acts: ReactNode;
+  readonly home: () => void; readonly rail: ReactNode; readonly overviewAct: ReactNode;
 }) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
@@ -324,7 +344,7 @@ function PersonalStage({ owner, glass, store, context, language, driftPaused, on
   return (
     <CosmosWorldView owner={owner} world="PERSONAL" language={language} glass={steady} drift={!driftPaused}
       worldLabel={copy.map} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}
-      home={home} rail={rail} acts={acts}>
+      home={home} rail={rail} overviewAct={overviewAct}>
       {context === null || camera === null ? null : (
         <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={steady} onOutcome={onOutcome} language={language} />
       )}

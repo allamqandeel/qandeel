@@ -17,13 +17,18 @@
  *     own offset (the controller's viewport is set to the rail's capacity in Track steps, so T-05's offset, maximum and
  *     position ARE the rail's window — one authority), the "…" discontinuity mark at either end pages it, and the
  *     window follows the committed Moment when it leaves the window;
- *   - the T-08 temporal orientation line stands directly above the rail (its host composes it), and T-06's and T-05's
- *     navigators are mounted beside it, headless: a 1 × 1 clipped host that hides nothing from assistive technology,
- *     so exact-Moment entry, forward continuation, commit / cancel, refine / widen / first / last and the command
- *     field all keep their routes while none of their text is on the screen (C-5).
+ *   - above the segments stands the COMPACT Moment label (Product Owner, §16 U-6 / A-4): T-05's own word for the
+ *     committed Moment («اللحظة 12» / "Moment 12"), drawn only while a Moment is committed — following Live draws
+ *     nothing, the Live words below carry that state — with T-08's temporal sentence as its accessible label, so the
+ *     T-08 meaning (and, during a preview, the preview sentence) stays with assistive technology while nothing
+ *     explanatory is drawn; T-06's and T-05's navigators are mounted headless: a 1 × 1 clipped host that hides
+ *     nothing from assistive technology, so exact-Moment entry, forward continuation, commit / cancel, refine / widen /
+ *     first / last and the command field all keep their routes while none of their text is on the screen (C-5);
+ *   - the words row carries, at its START, the host's compact contextual acts (§16 A-3), and at its END the Live words;
+ *   - the rail is laid out identically in both languages (§16 U-9): Moment 1 at the left, the Live edge at the right.
  *
  * Nothing here is a second temporal state: no cursor, no window of its own, no clock, no copy of `TC`, `LH` or `PTC`.
- * Every word is an already-approved T-05 / T-06 word.
+ * Every word is an already-approved T-05 / T-06 / T-08 word.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
@@ -31,7 +36,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 
 import { analysisCopy } from '../../../analysis-language';
-import type { ChromeLanguage } from '../../../orientation-chrome';
+import { temporalOrientationLine, type ChromeLanguage } from '../../../orientation-chrome';
 import type { CanonicalStore } from '../../../state';
 import {
   TemporalNavigator,
@@ -56,6 +61,8 @@ export const COSMOS_RAIL_LIVE_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:live`;
 export const COSMOS_RAIL_EARLIER_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:earlier`;
 export const COSMOS_RAIL_LATER_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:later`;
 export const COSMOS_RAIL_HEADLESS_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:headless`;
+/** The compact Moment label above the segments (§16 A-4). */
+export const COSMOS_RAIL_LABEL_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:label`;
 
 /** The narrowest pitch a segment is drawn at (a 1-point bar with room for the 7-point dot): beyond it the rail windows. */
 export const RAIL_MIN_PITCH = 8;
@@ -63,7 +70,7 @@ export const RAIL_MIN_PITCH = 8;
 export const RAIL_ROW_HEIGHT = 44;
 
 // The stage's own glass palette, as accepted on the device (the same constants as the world view's).
-const C = { gold: '#ECCC8A', goldDim: 'rgba(236, 204, 138, 0.38)', quiet: '#9A9DB4', hair: 'rgba(233, 234, 244, 0.16)' } as const;
+const C = { ink: '#E9EAF4', gold: '#ECCC8A', goldDim: 'rgba(236, 204, 138, 0.38)', quiet: '#9A9DB4', hair: 'rgba(233, 234, 244, 0.16)' } as const;
 
 export interface CosmosTimelineRailProps {
   readonly store: CanonicalStore;
@@ -71,8 +78,8 @@ export interface CosmosTimelineRailProps {
   /** T-05's presentation controller: the rail reads its window and asks it to move; it writes no Track. */
   readonly presentation: PresentationController;
   readonly language: ChromeLanguage;
-  /** The T-08 temporal orientation line, composed by the host directly above the segments (§7). */
-  readonly line?: ReactNode;
+  /** The host's compact contextual acts, at the START of the words row (§16 A-3). */
+  readonly acts?: ReactNode;
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
   readonly testID?: string;
 }
@@ -87,12 +94,13 @@ export function railWindow(width: number, total: number, offset: number): { read
   return { capacity, shown, start, pitch, windowed };
 }
 
-export function CosmosTimelineRail({ store, preview, presentation, language, line = null, onOutcome, testID = COSMOS_TIMELINE_RAIL_TEST_ID }: CosmosTimelineRailProps) {
+export function CosmosTimelineRail({ store, preview, presentation, language, acts = null, onOutcome, testID = COSMOS_TIMELINE_RAIL_TEST_ID }: CosmosTimelineRailProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const window = useSyncExternalStore(presentation.subscribe, presentation.getSnapshot);
   const copy = analysisCopy(language);
-  const rtl = language === 'ar';
+  // U-9: one geometry in both languages — the row runs left → right, Moment 1 first, the Live edge at the right.
+  const rtl = false;
 
   // Canonical bounds and disclosed availability together, exactly as T-06's own layer hands them out: no route here
   // can target a Moment nothing has disclosed. A replaced Session or a no-longer-disclosed target takes its preview.
@@ -164,6 +172,10 @@ export function CosmosTimelineRail({ store, preview, presentation, language, lin
   const following = motion.plan.temporalStance === 'FOLLOWING_LIVE';
   const liveAvailable = bounds.liveHead !== null;
   const liveWords = following ? copy.followingConversation : copy.rejoinConversation;
+  // §16 A-4: the drawn label is T-05's word for the COMMITTED Moment, from the canonical bounds; nothing while following
+  // Live (no Moment is invented). Its accessible label is T-08's own temporal sentence for this very state.
+  const label = committedPresent && bounds.committedTc !== null ? copy.timelinePoint(bounds.committedTc) : null;
+  const sentence = temporalOrientationLine(store, language, previewState);
 
   const segments: ReactNode[] = [];
   for (let i = 0; i < shown; i += 1) {
@@ -183,16 +195,20 @@ export function CosmosTimelineRail({ store, preview, presentation, language, lin
 
   return (
     <View testID={testID} style={styles.rail} pointerEvents="box-none">
-      {line}
+      {label === null ? null : (
+        <View testID={COSMOS_RAIL_LABEL_TEST_ID} pointerEvents="none" style={styles.labelRow}>
+          <Text accessibilityLabel={sentence ?? label} accessibilityLanguage={language} style={[styles.labelText, language === 'ar' ? styles.labelArabic : styles.labelEnglish]}>{label}</Text>
+        </View>
+      )}
       <View style={styles.row} pointerEvents="box-none">
         <GestureDetector gesture={gesture}>
           {/* The segment row is the temporal surface. `onLayout` is its width: the one measurement the rail makes. */}
-          <View testID={COSMOS_RAIL_SEGMENTS_TEST_ID} onLayout={onLayout} style={[styles.segments, rtl && styles.rowReverse]} accessible={false}>
+          <View testID={COSMOS_RAIL_SEGMENTS_TEST_ID} onLayout={onLayout} style={styles.segments} accessible={false}>
             {segments}
-            <Animated.View testID={COSMOS_RAIL_COMMITTED_TEST_ID} pointerEvents="none" style={[styles.marker, rtl ? styles.markerEnd : styles.markerStart, motion.committedStyle]}>
+            <Animated.View testID={COSMOS_RAIL_COMMITTED_TEST_ID} pointerEvents="none" style={[styles.marker, motion.committedStyle]}>
               <View style={styles.dot} />
             </Animated.View>
-            <Animated.View testID={COSMOS_RAIL_PREVIEW_TEST_ID} pointerEvents="none" style={[styles.marker, rtl ? styles.markerEnd : styles.markerStart, motion.cursorStyle]}>
+            <Animated.View testID={COSMOS_RAIL_PREVIEW_TEST_ID} pointerEvents="none" style={[styles.marker, motion.cursorStyle]}>
               <View style={styles.ring} />
             </Animated.View>
           </View>
@@ -200,20 +216,20 @@ export function CosmosTimelineRail({ store, preview, presentation, language, lin
         {/* The "…" marks, after the row so they stand above its edge: earlier Moments at the START, later ones at the END. */}
         {start > 0 ? (
           <Pressable testID={COSMOS_RAIL_EARLIER_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.trackContinues} accessibilityLanguage={language}
-            onPress={() => presentation.page(-1)} style={[styles.more, rtl ? styles.moreEnd : styles.moreStart]}>
+            onPress={() => presentation.page(-1)} style={[styles.more, styles.moreStart]}>
             <Text style={styles.moreText}>…</Text>
           </Pressable>
         ) : null}
         {start + shown < total ? (
           <Pressable testID={COSMOS_RAIL_LATER_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.trackContinues} accessibilityLanguage={language}
-            onPress={() => presentation.page(1)} style={[styles.more, rtl ? styles.moreStart : styles.moreEnd]}>
+            onPress={() => presentation.page(1)} style={[styles.more, styles.moreEnd]}>
             <Text style={styles.moreText}>…</Text>
           </Pressable>
         ) : null}
       </View>
-      {/* The words row: the outboard Live edge, with T-06's words, at the END of the rail. Never a Moment. */}
-      <View style={[styles.words, rtl && styles.rowReverse]} pointerEvents="box-none">
-        <View style={styles.spacer} />
+      {/* The words row: the host's compact acts at the START (§16 A-3); the outboard Live edge, with T-06's words, at the END. Never a Moment. */}
+      <View style={styles.words} pointerEvents="box-none">
+        {acts === null ? <View style={styles.spacer} /> : <View style={styles.actsSlot} pointerEvents="box-none">{acts}</View>}
         <Pressable testID={COSMOS_RAIL_LIVE_TEST_ID} accessibilityRole="button" accessibilityLabel={liveWords} accessibilityLanguage={language}
           accessibilityState={{ disabled: !liveAvailable, selected: following }} disabled={!liveAvailable} onPress={goLive} style={styles.liveAct}>
           <Text style={following ? styles.quietText : styles.goldText}>{liveWords}</Text>
@@ -230,20 +246,21 @@ export function CosmosTimelineRail({ store, preview, presentation, language, lin
 
 const styles = StyleSheet.create({
   rail: { gap: 2 },
+  // The compact label's own row: one supporting line, no explanatory text (U-6).
+  labelRow: { paddingBottom: 2 },
+  labelText: { fontSize: 13, lineHeight: 18, color: C.ink },
+  labelArabic: { textAlign: 'right', writingDirection: 'rtl' },
+  labelEnglish: { textAlign: 'left', writingDirection: 'ltr' },
   row: { flexDirection: 'row', alignItems: 'center' },
-  rowReverse: { flexDirection: 'row-reverse' },
   // The proof's `ticks`: a 44-point row, one flexed cell per Moment. Clipped, so a marker travelling to a Moment
   // outside the window is not painted over the "…" marks.
   segments: { flex: 1, flexDirection: 'row', height: RAIL_ROW_HEIGHT, overflow: 'hidden' },
   tick: { flex: 1, height: RAIL_ROW_HEIGHT, alignItems: 'center', justifyContent: 'center' },
   tickBar: { width: 1, height: 9, backgroundColor: C.hair },
   tickLit: { width: 1, height: 13, backgroundColor: C.goldDim },
-  // A marker is a point on the row's axis (zero width) anchored at the row's logical START — the left in English, the
-  // right in Arabic (the view root pins `ltr`, so the anchor side is chosen here) — and T-06's one translate rule
-  // places it at its Moment in both directions; the glyph hangs centred on the anchor.
-  marker: { position: 'absolute', top: 0, width: 0, height: RAIL_ROW_HEIGHT },
-  markerStart: { left: 0 },
-  markerEnd: { right: 0 },
+  // A marker is a point on the row's axis (zero width) anchored at the row's left edge in both languages (U-9), and
+  // T-06's one translate rule places it at its Moment; the glyph hangs centred on the anchor.
+  marker: { position: 'absolute', top: 0, left: 0, width: 0, height: RAIL_ROW_HEIGHT },
   dot: { position: 'absolute', top: (RAIL_ROW_HEIGHT - 7) / 2, left: -3.5, width: 7, height: 7, borderRadius: 4, backgroundColor: C.gold },
   ring: { position: 'absolute', top: (RAIL_ROW_HEIGHT - 9) / 2, left: -4.5, width: 9, height: 9, borderRadius: 5, borderWidth: 1, borderColor: C.gold },
   // The "…" discontinuity marks are drawn in the rail's own 18-point gutters (the host's inset); each is a 44-point
@@ -254,6 +271,7 @@ const styles = StyleSheet.create({
   moreText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   words: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   spacer: { flex: 1 },
+  actsSlot: { flex: 1, minWidth: 0, height: RAIL_ROW_HEIGHT, justifyContent: 'center' },
   liveAct: { minHeight: RAIL_ROW_HEIGHT, paddingHorizontal: 10, justifyContent: 'center' },
   quietText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   goldText: { fontSize: 13, color: C.gold },

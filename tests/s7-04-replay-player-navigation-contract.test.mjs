@@ -139,7 +139,7 @@ const FROZEN = [
   // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.3 §15.5): the Personal composition
   // brings the stage's rail and contextual controls instead of the Timeline row and the chrome band; the Replay composite
   // and `MapSurface` are untouched (G-5). Previous pin: 81f37f58b44ba1f4773b2b2c78df364bc497289261cb9b93b29915d6bc8791b1.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', 'bdb0854827fd233494bc8f7ace4e28ec82e386903e716ce97079bdd6e90f41f8'],
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '0530f3750fe53a2fd3f0867a664e024db9869bf7bb3cc1d495df8c561b8896e7'],
 ];
 
 const shipped = () => {

@@ -423,7 +423,10 @@ test('12 — R1: ONE Living Analysis SCREEN (not only one renderer); the Persona
   // choice as the stage's compact contextual controls; the old Timeline row and chrome band are no longer composed, so the
   // composition hands the surface no `timeline` and a chrome that measures nothing (CHROME_ONLY collapses to the safe
   // area). Previous form of this list: `'<TemporalTargetLayer', '<OrientationChrome'` in place of the rail and the controls.
-  for (const capability of ['stage={', '<CosmosWorldView', '<MapAccessibilityLayer', '<TemporalOrientationLine', '<CosmosTimelineRail', '<CosmosContextualActs', 'timeline={null}', 'chrome={() => null}']) {
+  // COSMOS-INT-01 Slice C UX correction CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.4 §16 A-3 / A-4): the
+  // T-08 line is the rail's compact label's accessible label, not a composed component, and the rail carries the acts.
+  // Previous form of this list: `'<TemporalOrientationLine'` in place of `'acts={RAIL_ACTS}'`.
+  for (const capability of ['stage={', '<CosmosWorldView', '<MapAccessibilityLayer', 'acts={RAIL_ACTS}', '<CosmosTimelineRail', '<CosmosContextualActs', 'timeline={null}', 'chrome={() => null}']) {
     assert.ok(personal.includes(capability), `the Personal world brings ${capability}`);
   }
   for (const retired of ['<TemporalTargetLayer', '<OrientationChrome', 'temporalLine="WITH_TIMELINE"', 'returnLiveHome="LIVE_EDGE"']) {

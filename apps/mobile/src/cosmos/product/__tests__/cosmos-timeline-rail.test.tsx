@@ -6,10 +6,12 @@
  * non-drag navigators mounted while none of their text is on the screen.
  */
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { View } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
 import { analysisCopy } from '../../../analysis-language';
+import { temporalOrientationLine } from '../../../orientation-chrome';
 import { sessionPosition } from '../../../state';
 import { commitMoment, createTemporalPreviewController, temporalTargeting, type TemporalOutcome } from '../../../temporal-navigation';
 import { temporalTestStore, trackOf } from '../../../temporal-navigation/__fixtures__/temporal';
@@ -18,6 +20,7 @@ import {
   COSMOS_RAIL_COMMITTED_TEST_ID,
   COSMOS_RAIL_EARLIER_TEST_ID,
   COSMOS_RAIL_HEADLESS_TEST_ID,
+  COSMOS_RAIL_LABEL_TEST_ID,
   COSMOS_RAIL_LATER_TEST_ID,
   COSMOS_RAIL_LIVE_TEST_ID,
   COSMOS_RAIL_MOMENT_TEST_ID_PREFIX,
@@ -38,13 +41,13 @@ const flat = (style: unknown): Record<string, unknown> =>
 const translateX = (style: unknown): number | undefined =>
   (flat(style).transform as readonly Record<string, number>[] | undefined)?.find((entry) => 'translateX' in entry)?.translateX;
 
-function harness(liveHead: number, language: 'ar' | 'en' = 'en') {
+function harness(liveHead: number, language: 'ar' | 'en' = 'en', acts: React.ReactNode = null) {
   const store = temporalTestStore({ liveHead });
   const preview = createTemporalPreviewController();
   const presentation = createPresentationController(trackOf('session-1', liveHead));
   const outcomes: TemporalOutcome[] = [];
   // A fresh element each time: React bails out of a rerender whose element is the very same object.
-  const element = () => <CosmosTimelineRail store={store} preview={preview} presentation={presentation} language={language} onOutcome={(outcome) => outcomes.push(outcome)} />;
+  const element = () => <CosmosTimelineRail store={store} preview={preview} presentation={presentation} language={language} acts={acts} onOutcome={(outcome) => outcomes.push(outcome)} />;
   return { store, preview, presentation, outcomes, language, element };
 }
 type Harness = ReturnType<typeof harness>;
@@ -71,6 +74,21 @@ const onScreen = (view: RenderResult): string => {
     return { ...record, children: (record.children ?? []).map(strip) };
   };
   return JSON.stringify(strip(view.toJSON()));
+};
+
+/** Every string the host tree draws (outside the headless host), in order: what a sighted reader reads. */
+const drawnText = (view: RenderResult): string[] => {
+  const out: string[] = [];
+  const walk = (node: unknown): void => {
+    if (typeof node === 'string') { out.push(node); return; }
+    if (node === null || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    const record = node as { props?: { testID?: string }; children?: unknown[] | null };
+    if (record.props?.testID === COSMOS_RAIL_HEADLESS_TEST_ID) return;
+    (record.children ?? []).forEach(walk);
+  };
+  walk(view.toJSON());
+  return out;
 };
 
 let view: RenderResult | null = null;
@@ -167,18 +185,75 @@ describe('CosmosTimelineRail — the disclosed Moments, T-06 commits, the Live e
     expect(h.outcomes.map((o) => o.outcome)).toEqual(['REJECTED']);
   });
 
-  it('Arabic: the first Moment is at the right, the markers are anchored at the right and placed by the same rule', async () => {
+  // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15, Contract v1.4 §16 U-9 / A-6): the rail is laid
+  // out identically in both languages — Moment 1 at the left, the Live edge at the right, the markers anchored at the
+  // left and placed by T-06's one rule — and only the words are Arabic. Previous form: a row-reversed segment row, the
+  // markers anchored at the right and T-06's rtl rule (`−logical`).
+  it('Arabic: the same geometry as English (U-9) — the first Moment at the left, the markers anchored at the left and placed by the same rule; the words are Arabic', async () => {
     const h = harness(6, 'ar');
     view = await mount(h);
-    expect(flat(view.getByTestId(COSMOS_RAIL_SEGMENTS_TEST_ID).props.style).flexDirection).toBe('row-reverse');
+    expect(flat(view.getByTestId(COSMOS_RAIL_SEGMENTS_TEST_ID).props.style).flexDirection).toBe('row');
     await press(view, `${COSMOS_RAIL_MOMENT_TEST_ID_PREFIX}3`);
     await settled(view, h);
     const committed = view.getByTestId(COSMOS_RAIL_COMMITTED_TEST_ID);
-    expect(flat(committed.props.style).right).toBe(0);
-    expect(flat(committed.props.style).left).toBeUndefined();
-    // T-06's `restingMarkerX` under rtl: (viewport − logical) − viewport = −logical.
-    expect(translateX(committed.props.style)).toBe(-(2 * 40 + 20));
+    expect(flat(committed.props.style).left).toBe(0);
+    expect(flat(committed.props.style).right).toBeUndefined();
+    expect(translateX(committed.props.style)).toBe(2 * 40 + 20);
     expect(view.getByTestId(`${COSMOS_RAIL_MOMENT_TEST_ID_PREFIX}3`).props.accessibilityLabel).toBe(analysisCopy('ar').timelinePoint(3));
+    expect(view.getByTestId(COSMOS_RAIL_LIVE_TEST_ID).props.accessibilityLabel).toBe(analysisCopy('ar').rejoinConversation);
+  });
+
+  // COSMOS-INT-01 Slice C (Product Owner, 2026-11-15, Contract v1.4 §16 U-6 / A-4 / A-5): the compact Moment label.
+  it('§16 A-4: above the segments stands only T-05\'s word for the COMMITTED Moment ("Moment 3" / «اللحظة 3»), nothing while following Live, with T-08\'s sentence as its accessible label; no "Reading at" is drawn', async () => {
+    for (const language of ['en', 'ar'] as const) {
+      const h = harness(6, language);
+      view = await mount(h);
+      const copy = analysisCopy(language);
+      // Following Live: no Moment is committed, so no number is invented — the Live words carry the state.
+      expect(view.queryByTestId(COSMOS_RAIL_LABEL_TEST_ID)).toBeNull();
+      await press(view, `${COSMOS_RAIL_MOMENT_TEST_ID_PREFIX}3`);
+      await settled(view, h);
+      const label = view.getByTestId(COSMOS_RAIL_LABEL_TEST_ID);
+      expect(view.getByText(copy.timelinePoint(3))).toBeTruthy();
+      expect(copy.timelinePoint(3)).toBe(language === 'ar' ? 'اللحظة 3' : 'Moment 3');
+      // The accessible label is T-08's own temporal sentence for this very state (the one the retired line said): the
+      // Moment, and that the conversation has continued since it.
+      const sentence = temporalOrientationLine(h.store, language, null);
+      expect(typeof sentence).toBe("string");
+      expect(sentence).toContain(copy.atMoment(3));
+      expect(view.getByLabelText(sentence as string)).toBeTruthy();
+      expect(label).toBeTruthy();
+      // Nothing explanatory is DRAWN (the sentence lives in the accessible label only): not the T-08 sentence, not a
+      // prefix, not a trailing full stop.
+      const drawn = JSON.stringify(drawnText(view));
+      expect(drawn).toContain(copy.timelinePoint(3));
+      expect(drawn).not.toContain(copy.atMoment(3));
+      expect(drawn).not.toContain('Reading at');
+      expect(drawn).not.toContain('القراءة عند');
+      expect(drawn).not.toContain(`${copy.timelinePoint(3)}.`);
+      // The label's text direction follows the language; the rail's geometry does not.
+      const text = view.getByText(copy.timelinePoint(3));
+      expect(flat(text.props.style)).toMatchObject(language === 'ar' ? { textAlign: 'right', writingDirection: 'rtl' } : { textAlign: 'left', writingDirection: 'ltr' });
+      await act(async () => { view!.unmount(); });
+    }
+  });
+
+  // COSMOS-INT-01 Slice C (Product Owner, 2026-11-15, Contract v1.4 §16 U-3 / A-3): the host's acts at the START of the words row.
+  it('§16 A-3: the host\'s compact acts stand at the START of the words row and the Live words at its END; the rail is no taller for them', async () => {
+    const plain = harness(6);
+    view = await mount(plain);
+    const wordsRow = (v: RenderResult) => { let node = v.getByTestId(COSMOS_RAIL_LIVE_TEST_ID).parent; while (node !== null && flat(node.props.style).gap !== 6) node = node.parent; return node!; };
+    const without = wordsRow(view);
+    expect(without.children).toHaveLength(2);
+    await act(async () => { view!.unmount(); });
+    const h = harness(6, 'en', <View testID="host-acts" />);
+    view = await mount(h);
+    const row = wordsRow(view);
+    expect(row.children).toHaveLength(2);
+    const slot = view.getByTestId('host-acts').parent!;
+    expect(row.children[0]).toBe(slot);
+    expect(flat(slot.props.style)).toMatchObject({ flex: 1, minWidth: 0, height: 44 });
+    expect(flat(row.props.style).flexDirection).toBe('row');
   });
 
   it('keeps T-06 and T-05 non-drag routes mounted and reachable, headless', async () => {
