@@ -9,7 +9,11 @@
 import { act, render, type RenderResult } from '@testing-library/react-native';
 
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
-import { MAP_SURFACE_TEST_ID, inspectObject, mapInspectionContext, mapProjectionRequest } from '../../map';
+// COSMOS-INT-01 (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage on the ONE surface; the
+// world's node is the stage view (`MapSurface` stays the Replay composite's renderer, G-5).
+import { COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
+import { LIVING_ANALYSIS_STAGE_TEST_ID } from '../../living-analysis';
+import { inspectObject, mapInspectionContext, mapProjectionRequest } from '../../map';
 import { ORIENTATION_CHROME_TEST_ID } from '../../orientation-chrome';
 import type { HistoricalSemanticDepth } from '../../projection';
 import { RESPONSIVE_CHROME_BAND_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID } from '../../responsive';
@@ -39,7 +43,7 @@ const projection: Responder = (request) => {
   };
 };
 
-const OWNERS = [MAP_SURFACE_TEST_ID, 'qandeel-map-surface-plane', 'qandeel-temporal-target-layer', RESPONSIVE_TIMELINE_ROW_TEST_ID, RESPONSIVE_CHROME_BAND_TEST_ID, ORIENTATION_CHROME_TEST_ID];
+const OWNERS = [LIVING_ANALYSIS_STAGE_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, 'qandeel-temporal-target-layer', RESPONSIVE_TIMELINE_ROW_TEST_ID, RESPONSIVE_CHROME_BAND_TEST_ID, ORIENTATION_CHROME_TEST_ID];
 const owners = (view: RenderResult) => OWNERS.map((id) => view.getByTestId(id));
 
 const element = (h: IntegrationHarness, language: 'en' | 'ar', width: number, height: number) => (

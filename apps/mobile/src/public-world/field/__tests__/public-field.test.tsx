@@ -11,13 +11,14 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { AccessibilityInfo, BackHandler } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
 import { typeStyle } from '../../../conversation';
 import { DEFAULT_MAP_SCALE, projectAddress, viewportEnvelope, type ViewportEnvelope } from '../../../map/camera';
-import { WORLD_VIEW_STEP_TEST_ID_SUFFIX } from '../../../map/renderer';
+import { COSMOS_MARK_TEST_ID_INFIX, COSMOS_RAIL_TEST_ID, COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
+import { LIVING_ANALYSIS_STAGE_TEST_ID } from '../../../living-analysis';
 import {
   RESPONSIVE_CHROME_BAND_TEST_ID,
   RESPONSIVE_MAP_FRAME_TEST_ID,
@@ -26,13 +27,10 @@ import {
   RESPONSIVE_TIMELINE_ROW_TEST_ID,
 } from '../../../responsive';
 import { resize, subtree } from '../../../responsive/__fixtures__/composition';
-import { approachOf, hsla } from '../../../map/visual';
-import { WORLD_VISUAL } from '../../../map/visual/world-visual.generated';
-import { worldChroma } from '../../../map/visual/world-chroma';
+import { approachOf } from '../../../map/visual';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
-import { PUBLIC_FIELD_PLANE_TEST_ID, PUBLIC_FIELD_SURFACE_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID, layoutFieldLabels } from '../PublicFieldView';
-import { PUBLIC_BAND_TEST_ID } from '../PublicLivingAnalysis';
-import { neutralCircle } from '../PublicExperienceMark';
+import { layoutFieldLabels } from '../PublicFieldView';
+import { PUBLIC_BAND_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID } from '../PublicLivingAnalysis';
 import {
   createPublicAuthoringController, type PublicAuthoringTransport, type PublicSemanticTransport, type PublicSpatialTransport,
 } from '../../../public-authoring/public-authoring-controller';
@@ -501,23 +499,22 @@ describe('S5-03B R2 — every navigation asks again for everything on display: t
     expect(ids(c.getState().entries)).not.toContain(E1.id);
   });
 
-  it('on the surface: a withdrawn search result is neither drawn nor focusable after a pan', async () => {
+
+  it('on the surface: a withdrawn search result is neither listed nor focusable after a pan', async () => {
     const server = liveServer([E1, E2, E3]);
     const { view, field } = await mountArea('en', [], undefined, server.t as unknown as ReturnType<typeof fieldTransport>);
     await act(async () => { field.openSearch(); field.search('hope'); });
     await flush();
     expect(view.getByTestId(`qandeel-public-search-result-${E3.id}`)).toBeTruthy();
-    expect(view.getByTestId(`qandeel-public-mark-${E3.id}`)).toBeTruthy();
     server.stop(E3);
     await act(async () => { field.pan(SIZE.width / 3, 0); });
     // In flight: the held result is not on display.
     expect(view.queryByTestId(`qandeel-public-search-result-${E3.id}`)).toBeNull();
-    expect(view.queryByTestId(`qandeel-public-mark-${E3.id}`)).toBeNull();
     await flush();
     expect(view.getByTestId(`qandeel-public-search-result-${E2.id}`)).toBeTruthy();
     expect(view.queryByTestId(`qandeel-public-search-result-${E3.id}`)).toBeNull();
-    expect(view.queryByTestId(`qandeel-public-mark-${E3.id}`)).toBeNull();
-    expect(bodyOf(view, field, E3).body).toBeUndefined();
+    // COSMOS-INT-01 (D-2): the stage draws exactly the entries the controller holds; a withdrawn one is not among them.
+    expect(field.getState().entries.map((e) => e.id)).not.toContain(E3.id);
     await act(async () => { field.focus(E3.id); });
     await flush();
     expect(field.getState().focus).toBeNull();
@@ -547,26 +544,23 @@ function skia(view: { toJSON: () => unknown }, kind: string): Record<string, unk
   walk(view.toJSON());
   return found;
 }
-const close = (a: unknown, b: number) => typeof a === 'number' && Math.abs(a - b) < 1e-6;
-/** The painted body of the place an Experience is drawn at, if any (a filled circle on its projected point). */
-function bodyOf(view: { toJSON: () => unknown }, field: { getState: () => { camera: PublicFieldCamera | null } }, e: PublicFieldEntry) {
-  const p = projectToField(field.getState().camera!, SIZE, e.address)!;
-  // The world's own mark material in the neutral Public shape: a filled circle on the projected point, at its tier's radius.
-  const body = [6, 3.2].flatMap((r) => skia(view, 'Path').filter((x) => x.path === neutralCircle(p.x, p.y, r) && x.style !== 'stroke')
-    .map((x) => ({ r, color: x.color })))[0];
-  const marker = skia(view, 'Circle').find((c) => close(c.cx, p.x) && close(c.cy, p.y) && c.style === 'stroke');
-  return { body, marker };
-}
-const MASS_COLOURS = WORLD_VISUAL.worldAtmosphere.stops.map(([, s, l, a]) => hsla(WORLD_VISUAL.worldHue, s, l, a));
+/** COSMOS-INT-01 (D-2): the Public world is the COSMOS stage. Its accessible gesture surface, and one accessible mark per place on the glass. */
+const STEP = `${PUBLIC_FIELD_WORLD_TEST_ID}${COSMOS_STEP_TEST_ID_SUFFIX}`;
+const markOf = (e: PublicFieldEntry) => `${PUBLIC_FIELD_WORLD_TEST_ID}${COSMOS_MARK_TEST_ID_INFIX}${e.id}`;
 
 async function mountArea(language: 'ar' | 'en', entries: PublicFieldEntry[], foreground?: ForegroundSignal, transport?: ReturnType<typeof fieldTransport>) {
   const t = transport ?? fieldTransport(entries);
   const field = createPublicFieldController({ transport: t as unknown as PublicFieldTransport, isCurrent: () => true, foreground });
   const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
   const seen = jest.spyOn(field, 'setEnvelope');
+  // COSMOS-INT-01: the stage's own marks exist only while a screen reader is on (they would take the gestures' touches).
+  jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
   const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);
   for (let n = 0; n < 4; n += 1) await flush();
   await resize(view, SIZE.width, SIZE.height, { mapHeight: SIZE.height });
+  await flush();
+  // The stage's own layout (the glass it measured).
+  await act(async () => { fireEvent(view.getByTestId(STEP), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: SIZE.width, height: SIZE.height } } }); });
   await flush();
   fieldGlass = seen.mock.calls[seen.mock.calls.length - 1][0];
   return { view, field, t, glass: (): ViewportEnvelope => seen.mock.calls[seen.mock.calls.length - 1][0] };
@@ -579,67 +573,37 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.queryByTestId(/qandeel-public-mark/u, { includeHiddenElements: true })).toBeNull();
   });
 
-  it('is painted by the ONE Living Analysis World renderer: ground, atmosphere, tone and veil, the place colour of served places only', async () => {
+
+  it('is painted by the ONE COSMOS stage (COSMOS-INT-01 D-2): under the composition, named by the field, with none of the old field view', async () => {
     const { view } = await mountArea('en', [E1, E2, E3]);
-    const world = view.getByTestId(PUBLIC_FIELD_WORLD_TEST_ID, { includeHiddenElements: true });
-    expect(world.props.pointerEvents).toBe('none');
-    // The generic world canvas the Personal Map paints through — never a second world style: the tone curve, the
-    // recorded atmosphere strata and the veil's grain.
-    expect(view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true })).toBeTruthy();
-    expect(skia(view, 'RuntimeShader')).toHaveLength(1);
-    expect(skia(view, 'Picture').length).toBeGreaterThan(0);
-    // LA-VIS-01 (controlled re-anchor of the paint structure): the veil's grain once, and each place's mass carries the
-    // same texture passes as every other place (no category, no weight).
-    const noise = skia(view, 'FractalNoise');
-    expect(noise.filter((n) => n.freqX === 0.9)).toHaveLength(1);
-    expect((noise.length - 1) % 3).toBe(0);
-    // FAR: one world-colour place atmosphere per served place, identical for every place (no category, no weight), at
-    // the Map's own world-anchored radius. LA-VIS-01 (closure re-anchor of the paint structure): the mass's material is a
-    // recorded picture, and its one plain-paint body is the calm wash about the place — the same share of the canonical
-    // radius for every place.
-    const radius = 750_000 / 8192;
-    const washes = skia(view, 'Circle').filter((c) => c.blendMode === 'screen');
-    expect(washes).toHaveLength(3);
-    const share = (washes[0].r as number) / radius;
-    expect(share).toBeGreaterThan(0);
-    expect(share).toBeLessThanOrEqual(1);
-    for (const wash of washes) expect(wash.r).toBe(washes[0].r);
-    const mass = skia(view, 'RadialGradient').filter((g) => g.r === washes[0].r);
-    expect(mass).toHaveLength(3);
-    // LA-VIS-01: a mass's colour is the world-space chroma at the served address and nothing else, so two places
-    // have different colours only where the field differs between their addresses (never by category or weight).
-    const chromaKeys = new Set([E1, E2, E3].map((e) => JSON.stringify(worldChroma(e.address))));
-    expect(new Set(mass.map((m) => JSON.stringify(m.colors))).size).toBe(chromaKeys.size);
-    expect(MASS_COLOURS).toHaveLength(WORLD_VISUAL.worldAtmosphere.stops.length);
-    // Every body is the neutral Public circle in the world's material, and a mass's micro-light is small discs: no
-    // Personal morphology, no line of any kind.
-    for (const path of skia(view, 'Path')) expect(path.path).toMatch(/^M -?[\d.e-]+ -?[\d.e-]+ (A |a [\d.e-]+ [\d.e-]+ 0 1 0 )/u);
-    expect(skia(view, 'Line')).toHaveLength(0);
+    // The Public world is the stage view in the surface's stage layer — the same view the Personal and Shared worlds use.
+    expect(within(view, LIVING_ANALYSIS_STAGE_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID)).toBe(true);
+    expect(within(view, RESPONSIVE_MAP_FRAME_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID)).toBe(false);
+    const steps = view.getByTestId(STEP);
+    expect(steps.props.accessibilityLabel.startsWith(publicFieldCopy('en').fieldLabel)).toBe(true);
+    // Nothing of the retired field view: no second canvas, plane or surface of Public's own.
+    expect(view.queryAllByTestId(/^qandeel-public-field-(canvas|plane|surface)/u, { includeHiddenElements: true })).toHaveLength(0);
+    expect(skia(view, 'RuntimeShader')).toHaveLength(0);
   });
 
-  it('FAR is mass (quiet bodies, no label, no target); MID makes each Experience legible; NEAR opens the compact panel', async () => {
+
+  it('FAR is mass (no meaning, no target); MID makes each Experience a legible, activatable place; NEAR opens the compact panel', async () => {
     const { view, field } = await mountArea('en', [E1, E2, E3]);
-    // FAR: a quiet minor-tier body inside the field's mass; nothing leads the reading.
-    expect(bodyOf(view, field, E1).body).toMatchObject({ r: 3.2 });
-    expect(view.queryByText('meaning 1')).toBeNull();
-    expect(view.queryByTestId(`qandeel-public-mark-${E1.id}`)).toBeNull();
+    // FAR: mass. No place is a target of its own (the MID meanings are laid out for the rung cross-fade and faded by it;
+    // they are not accessible there).
+    expect(view.queryByTestId(markOf(E1))).toBeNull();
     const far = field.getState().camera!;
     const p = projectToField(far, SIZE, E1.address)!;
     await act(async () => { field.tapField(p.x, p.y); });
     await flush();
-    expect(view.getByTestId(`qandeel-public-mark-${E1.id}`).props.accessibilityLabel).toBe('meaning 1');
-    // MID: the meaning in one line, as Public chrome beside the place (never painted into the world).
-    expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.children).toBe('meaning 1');
-    expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.numberOfLines).toBe(1);
-    // MID: a place each, at the major tier, in the canonical mark material.
-    expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6 });
-    expect(bodyOf(view, field, E1).marker).toBeUndefined();
-    await fireEvent.press(view.getByTestId(`qandeel-public-mark-${E1.id}`));
+    // MID: each Experience is one accessible place, named by its meaning and nothing else.
+    expect(field.getState().camera?.depth).toBe('MID');
+    expect(view.getByTestId(markOf(E1)).props.accessibilityLabel).toBe('meaning 1');
+    expect(view.getByTestId(markOf(E2)).props.accessibilityLabel).toBe('meaning 2');
+    await fireEvent.press(view.getByTestId(markOf(E1)));
     await flush();
-    // NEAR: the focused place is selected; its semantic neighbourhood stays quietly present.
-    expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6, color: WORLD_VISUAL.palettes.standard.selectedInk });
-    expect(bodyOf(view, field, E1).marker).toBeDefined();
-    expect(bodyOf(view, field, E2)).toMatchObject({ body: { r: 3.2 }, marker: undefined });
+    // NEAR: the focused place is the controller's focus; its panel stands in the chrome band.
+    expect(field.getState()).toMatchObject({ camera: { depth: 'NEAR' }, focus: { id: E1.id } });
     const copy = publicFieldCopy('en');
     expect(view.getByTestId('qandeel-public-panel-meaning').props.children).toBe('meaning 1');
     expect(view.getByText('Shared by nightlamp27')).toBeTruthy();
@@ -647,11 +611,13 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.getByText(copy.analysisItem)).toBeTruthy();
     expect(view.getByText(copy.nearHeading)).toBeTruthy();
     expect(view.getByTestId(`qandeel-public-nearby-${E2.id}`)).toBeTruthy();
-    expect(view.queryByText(/view|rank|popular|trending/iu)).toBeNull();
+    // No count, rank or popularity word (the stage's approved Overview chip is not a view count).
+    expect(view.queryByText(/\bviews?\b|rank|popular|trending/iu)).toBeNull();
     await fireEvent.press(view.getByTestId('qandeel-public-panel-back'));
     await flush();
     expect(view.queryByTestId('qandeel-public-panel')).toBeNull();
   });
+
 
   it('a return to the foreground reads again: an Experience withdrawn meanwhile is gone from the glass', async () => {
     // The runtime entry's ONE foreground signal (T-12P §2.7), driven by hand.
@@ -661,7 +627,7 @@ describe('S5-03B — the Public field surface', () => {
     await act(async () => { field.tapField(p.x, p.y); });
     await flush();
     // Before: both places are on the glass at MID.
-    expect(bodyOf(view, field, E2).body).toBeDefined();
+    expect(view.getByTestId(markOf(E2))).toBeTruthy();
     await flush();
     t.field.mockImplementation(async () => yes([E1, E3]));
     t.search.mockImplementation(async () => yes([E3]));
@@ -670,9 +636,8 @@ describe('S5-03B — the Public field surface', () => {
     await act(async () => { foreground.set('ACTIVE'); });
     await flush();
     expect(field.getState().entries.map((e) => e.id)).toEqual([E1.id, E3.id]);
-    expect(view.queryByTestId(`qandeel-public-mark-${E2.id}`)).toBeNull();
-    expect(bodyOf(view, field, E2).body).toBeUndefined();
-    expect(bodyOf(view, field, E1).body).toBeDefined();
+    expect(view.queryByTestId(markOf(E2))).toBeNull();
+    expect(view.getByTestId(markOf(E1))).toBeTruthy();
     // A retired controller no longer listens.
     field.retire();
     t.field.mockClear();
@@ -691,8 +656,9 @@ describe('S5-03B — the Public field surface', () => {
     spy.mockRestore();
   });
 
+
   it('search results are drawn in the same field and as a compact list — never a feed', async () => {
-    const { view } = await mountArea('en', [E1, E2]);
+    const { view, field } = await mountArea('en', [E1, E2]);
     await fireEvent(view.getByTestId('qandeel-public-search'), 'focus');
     await fireEvent.changeText(view.getByTestId('qandeel-public-search'), 'hope');
     await fireEvent(view.getByTestId('qandeel-public-search'), 'submitEditing');
@@ -700,7 +666,9 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.getByTestId(`qandeel-public-search-result-${E3.id}`)).toBeTruthy();
     await fireEvent.press(view.getByTestId(`qandeel-public-search-result-${E3.id}`));
     await flush();
-    expect(view.getByTestId(`qandeel-public-mark-${E3.id}`).props.accessibilityState).toEqual({ selected: true });
+    // The chosen result is the focused place of the same field (NEAR), and its panel opens.
+    expect(field.getState()).toMatchObject({ camera: { depth: 'NEAR' }, focus: { id: E3.id } });
+    expect(view.getByTestId(markOf(E3)).props.accessibilityLabel).toBe('meaning 3');
     expect(view.getByTestId('qandeel-public-panel-meaning').props.children).toBe('meaning 3');
   });
 
@@ -738,9 +706,10 @@ describe('S5-03B R2 — Public is analysed on the ONE Living Analysis surface', 
     const { view } = await mountArea(language, [E1, E2, E3]);
     // The shared screen and its T-11 owner — not a screen of Public's own.
     expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBeTruthy();
-    expect(within(view, RESPONSIVE_MAP_FRAME_TEST_ID, PUBLIC_FIELD_SURFACE_TEST_ID)).toBe(true);
-    expect(within(view, PUBLIC_FIELD_SURFACE_TEST_ID, PUBLIC_FIELD_PLANE_TEST_ID)).toBe(true);
-    expect(within(view, PUBLIC_FIELD_PLANE_TEST_ID, 'qandeel-public-field-canvas')).toBe(true);
+    // COSMOS-INT-01 (D-2): the world is the COSMOS stage under the composition; the measured frame is glass over it.
+    expect(within(view, LIVING_ANALYSIS_STAGE_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID)).toBe(true);
+    expect(within(view, RESPONSIVE_MAP_FRAME_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID)).toBe(false);
+    expect(view.getByTestId(STEP)).toBeTruthy();
     // No temporal track: no Timeline row, no Live, no Return.
     expect(view.queryByTestId(RESPONSIVE_TIMELINE_ROW_TEST_ID)).toBeNull();
     expect(view.queryByTestId(/live|return/iu)).toBeNull();
@@ -788,12 +757,15 @@ describe('S5-03B R2 — Public is analysed on the ONE Living Analysis surface', 
     expect(CANONICAL_VISUAL.palettes.LIGHT.standard.world).not.toBe(dark);
   });
 
-  it('has no visible zoom controls; the semantic step is the surface\'s accessible route', async () => {
+
+  it('the depth rail is the approved COSMOS chrome, with none of the old controls; the semantic step stays the surface\'s accessible route', async () => {
     const { view, field } = await mountArea('en', [E1, E2, E3]);
+    // COSMOS-INT-01 (Product Owner authorisation, 2026-11-15): the right zoom rail is preserved; the old controls are gone.
+    expect(view.getByTestId(COSMOS_RAIL_TEST_ID)).toBeTruthy();
     expect(view.queryByTestId(/qandeel-public-field-(closer|farther|whole)/u)).toBeNull();
     expect(view.queryByText(/^[+−○]$/u)).toBeNull();
-    const steps = view.getByTestId(`${PUBLIC_FIELD_SURFACE_TEST_ID}${WORLD_VIEW_STEP_TEST_ID_SUFFIX}`);
-    expect(steps.props.accessibilityLabel).toBe(publicFieldCopy('en').fieldLabel);
+    const steps = view.getByTestId(STEP);
+    expect(steps.props.accessibilityLabel.startsWith(publicFieldCopy('en').fieldLabel)).toBe(true);
     expect(steps.props.accessibilityActions).toEqual([
       { name: 'zoom-in', label: analysisCopy('en').moreDetail },
       { name: 'zoom-out', label: analysisCopy('en').lessDetail },
@@ -842,7 +814,7 @@ describe('S5-03B R2 — Public is analysed on the ONE Living Analysis surface', 
   it('the same surface instance carries the field across FAR → MID → NEAR and search (no remount)', async () => {
     const { view, field } = await mountArea('en', [E1, E2, E3]);
     const surface = view.getByTestId(RESPONSIVE_SURFACE_TEST_ID);
-    const plane = view.getByTestId(PUBLIC_FIELD_PLANE_TEST_ID);
+    const plane = view.getByTestId(PUBLIC_FIELD_WORLD_TEST_ID);
     const band = view.getByTestId(PUBLIC_BAND_TEST_ID);
     const p = projectToField(field.getState().camera!, SIZE, E1.address)!;
     await act(async () => { field.tapField(p.x, p.y); });
@@ -852,7 +824,7 @@ describe('S5-03B R2 — Public is analysed on the ONE Living Analysis surface', 
     await act(async () => { field.openSearch(); field.search('hope'); });
     await flush();
     expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBe(surface);
-    expect(view.getByTestId(PUBLIC_FIELD_PLANE_TEST_ID)).toBe(plane);
+    expect(view.getByTestId(PUBLIC_FIELD_WORLD_TEST_ID)).toBe(plane);
     expect(view.getByTestId(PUBLIC_BAND_TEST_ID)).toBe(band);
   });
 });

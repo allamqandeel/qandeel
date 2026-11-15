@@ -10,7 +10,9 @@ import { act, fireEvent, render, type RenderResult } from '@testing-library/reac
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
-import { MAP_SURFACE_TEST_ID } from '../../map';
+// COSMOS-INT-01 (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage on the ONE surface; the
+// world's node is the stage view (`MapSurface` stays the Replay composite's renderer, G-5).
+import { COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { DepthComposition } from '../composition/DepthComposition';
@@ -77,7 +79,7 @@ const INTERNAL = [/SOURCE_PROVENANCE|ANALYTICAL_OBJECT|THREAD_READING|FOLLOW_LIV
 describe('W1A-01 — the production Analysis depth speaks the reader’s language', () => {
   it('Arabic: no Latin-script Product word and no internal identifier anywhere in the Analysis depth', async () => {
     const { view, h } = await analysisIn('ar');
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     const strings = census(view);
     expect(strings.length).toBeGreaterThan(20);
     const latin = strings.filter(({ text }) => /[A-Za-z]/u.test(text));

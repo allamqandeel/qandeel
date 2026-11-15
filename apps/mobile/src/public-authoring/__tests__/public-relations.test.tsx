@@ -25,6 +25,8 @@ import { placePublicField } from '../../public-world/field/public-field-projecti
 import { explicitRelationSegments } from '../../public-world/field/PublicRelationLines';
 import { focusField, wholeWorldCamera, zoomField } from '../../public-world/field/public-field-camera';
 import { publicFieldCopy } from '../../public-world/field/field-copy';
+import { PUBLIC_FIELD_WORLD_TEST_ID } from '../../public-world/field/PublicLivingAnalysis';
+import { COSMOS_RELATION_TEST_ID_INFIX } from '../../cosmos/product';
 import {
   createPublicAuthoringController, type PublicAuthoringTransport, type PublicRelationSearchTransport, type PublicRelationTransport,
 } from '../public-authoring-controller';
@@ -278,18 +280,12 @@ describe('S5-03C — explicit relation lines in the ONE Public field', () => {
     await flush();
     return { view, field, transport };
   }
-  const tethers = (view: { toJSON: () => unknown }) => {
-    const found: Record<string, unknown>[] = [];
-    const walk = (node: unknown): void => {
-      if (node === null || typeof node !== 'object') return;
-      if (Array.isArray(node)) { node.forEach(walk); return; }
-      const record = node as { props?: Record<string, unknown>; children?: unknown[] };
-      if (record.props?.skiaElement === 'Path' && typeof record.props.path === 'string' && / L /u.test(record.props.path as string)) found.push(record.props);
-      for (const child of record.children ?? []) walk(child);
-    };
-    walk(view.toJSON());
-    return found;
-  };
+  // COSMOS-INT-01 (D-2): the relation's strand is drawn by the COSMOS stage at NEAR, for the focused Experience, from the
+  // served relations only (the stage compiles no strand from nearness: `cosmos/core/stage`); what the tree still carries is
+  // the relation's accessible name, one node per served relation, exactly where the old line's name was.
+  const relationId = (id: string) => `${PUBLIC_FIELD_WORLD_TEST_ID}${COSMOS_RELATION_TEST_ID_INFIX}${id}`;
+  const tethers = (view: { queryAllByTestId: (id: RegExp, options?: { includeHiddenElements?: boolean }) => unknown[] }) =>
+    view.queryAllByTestId(new RegExp(`^${PUBLIC_FIELD_WORLD_TEST_ID}${COSMOS_RELATION_TEST_ID_INFIX}`, 'u'), { includeHiddenElements: true });
 
   it('draws the selected Experience\'s explicit relation in the canonical connection style, accessible by the other\'s meaning', async () => {
     let relations = [{ relationId: RELATION, other: E3 }];
@@ -298,10 +294,9 @@ describe('S5-03C — explicit relation lines in the ONE Public field', () => {
     await act(async () => { field.focus(E1.id); });
     await flush();
     expect(field.getState()).toMatchObject({ camera: { depth: 'NEAR' }, focus: { id: E1.id, panel: { status: 'SERVED' } } });
-    // One relation, one straight line (the canonical tether: ground, body, glow, core — all along the same span).
-    const spans = new Set(tethers(view).map((p) => p.path));
-    expect(spans.size).toBe(1);
-    const line = view.getByTestId(`qandeel-public-explicit-relation-${RELATION}`, { includeHiddenElements: true });
+    // One relation, one accessible name.
+    expect(tethers(view)).toHaveLength(1);
+    const line = view.getByTestId(relationId(RELATION), { includeHiddenElements: true });
     expect(line.props.accessibilityLabel).toBe('Relation with meaning 3');
     expect(line.props.accessible).toBe(true);
     expect(line.props.accessibilityRole).toBeUndefined();
@@ -315,7 +310,7 @@ describe('S5-03C — explicit relation lines in the ONE Public field', () => {
     await act(async () => { field.revalidate(); });
     await flush();
     expect(tethers(view)).toHaveLength(0);
-    expect(view.queryByTestId(`qandeel-public-explicit-relation-${RELATION}`, { includeHiddenElements: true })).toBeNull();
+    expect(view.queryByTestId(relationId(RELATION), { includeHiddenElements: true })).toBeNull();
   });
 
   it('no line at FAR or MID, and none once the selection is released', async () => {
@@ -345,7 +340,7 @@ describe('S5-03C — explicit relation lines in the ONE Public field', () => {
     await act(async () => { field.revalidate(); });
     await flush();
     expect(tethers(view)).toHaveLength(0);
-    expect(view.queryByTestId(`qandeel-public-explicit-relation-${RELATION}`, { includeHiddenElements: true })).toBeNull();
+    expect(view.queryByTestId(relationId(RELATION), { includeHiddenElements: true })).toBeNull();
     // The decorative atmosphere is never announced as anything: the only accessible names in the world frame are the
     // places' own meanings and the field's own name.
     expect(view.queryAllByLabelText(/Relation with/u, { includeHiddenElements: true })).toHaveLength(0);
