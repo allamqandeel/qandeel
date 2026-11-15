@@ -10,9 +10,9 @@
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import type { ChromeLanguage } from '../../orientation-chrome/types';
 import type { PublicFieldTransport } from '../../public-world/field/public-field-controller';
-import { SharedWorldApiClient, type RuntimeHttpFetch } from '../../runtime-entry';
-// The Public field client is not on the runtime entry's barrel: a deep import the T-12P contract names (see the record).
-import { PublicFieldApiClient } from '../../runtime-entry/public-field-api';
+// The Public field client is reached the way the product reaches it: as the `field` member of the Public world client on
+// the runtime entry's barrel (T-12P: no consumer deep-imports the runtime entry).
+import { PublicWorldApiClient, SharedWorldApiClient, type RuntimeHttpFetch } from '../../runtime-entry';
 import type { SharedFieldTransport } from '../../shared-world/field/shared-field-controller';
 import { fixtureExperience, fixtureField, fixtureSearch } from '../../integration/__validation__/s503b-visual-field';
 import { SHARED_VIS_WORLD_A } from '../../integration/__validation__/shared-vis-proof-field';
@@ -62,7 +62,7 @@ export function createPublicFixtureTransport({ fault, latency = 1 }: FixtureNetw
     }
     return respond(404, {});
   };
-  return new PublicFieldApiClient({ baseUrl: BASE, fetch });
+  return new PublicWorldApiClient({ baseUrl: BASE, fetch }).field;
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────────────────────────────────────────

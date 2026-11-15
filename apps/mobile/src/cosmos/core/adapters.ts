@@ -8,8 +8,7 @@
 // rasteriser can load it.
 
 import type { MapScene } from '../../map/projection/map-scene';
-import type { PublicFieldEntry, PublicTopicSection } from '../../runtime-entry/public-field-api';
-import type { SharedFieldEntry } from '../../runtime-entry/shared-field-api';
+import type { PublicFieldEntry, PublicTopicSection, SharedFieldEntry } from '../../runtime-entry';
 import { compileStage, dyeOfId, type Entity, type SceneInput, type Stage, type StageLayer, type Tie } from './stage';
 
 /** Canonical world units per point at the first rung (the Map's frozen default scale). */
