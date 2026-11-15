@@ -92,7 +92,7 @@ describe('CosmosWorldView — the stage over an owner', () => {
     set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
     view = await mount(owner, 'ar');
     expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityLabel).toBe(`→ ${semanticDepthWord('ar', 'WORLD')}`);
-    const flat = (node: { props: { style: unknown } }) => Object.assign({}, ...[node.props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+    const flat = (node: { props: Record<string, unknown> }) => Object.assign({}, ...[node.props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
     const style = flat(view.getByTestId(COSMOS_RAIL_TEST_ID));
     expect(style.right).toBe(GLASS.insetRight + 2);
     expect(style.left).toBeUndefined();
