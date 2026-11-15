@@ -1,10 +1,12 @@
-# COSMOS Production Integration Contract — v1.1 (Slice A deliverable, first batch of PO decisions recorded)
+# COSMOS Production Integration Contract — v1.2 (Slice B delivered on the branch; Draft PR under PO review)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status:** `SLICE A — INTEGRATION INVENTORY AND CONTRACT — v1.1 RECORDS THE PO'S FIRST BATCH OF DECISIONS (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7) — SLICE B NOT AUTHORISED — NOTHING IMPLEMENTED IN THE PRODUCT — NO MERGE`.
-**Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1).
+**Status:** `SLICE B — COSMOS RENDERER INSIDE THE REAL PRODUCT — DELIVERED ON THE BRANCH (commits 1/n … 7/n) — DRAFT PR — UNDER PO REVIEW — SLICE C NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
+**Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2).
 
 **Change log v1.0 → v1.1.** The PO's message "COSMOS-INT-01 — PO Decisions: First Batch of Approvals" is applied verbatim to the eight entries it names (§1.1), and to every section that depended on them: §3.8 (Skia 2.7.0 direction), §4.1 S8, §4.2 P8 / P9, §4.3 T12, §4.6 C4 / C6, §5 (package.json, PR dispositions, fringe), §6.1, §6.3 Personal, §6.4, §7 (fringe), §8 R1 / R3 / R5 / R7, §9 Slice B, §10 (the eight entries marked APPROVED; the rest PENDING; the Slice B blockers listed in §10.3), new §11 (the QAN-INF-03 path for RN Skia 2.7.0, with the exact tests) and new §12 (follow-on items recorded, not authorised). Every other decision and gap keeps its PENDING status; no further approval is inferred. The PO-accepted COSMOS visual and interaction experience stays frozen.
+**Change log v1.1 → v1.2.** The PO's Slice B entry message is applied: D-2 (STAGE composition inside the ONE surface, no functionality lost), D-14 (the RN Skia 2.7.0 QAN-INF-03 amendment as a separately reviewable commit), D-9 (double-tap = one canonical step IN at the point), D-10 (proof tooling isolated, never in the release build), G-6 (EMERGING_FOCUS in the Personal stage) are marked APPROVED in §10 / §10.3; §13 records what Slice B delivered, the decisions engineering took inside that scope (B-1 … B-12, for the PO), the T-10 conflict audit (D-5), the #391 / #392 / #393 preservation check (D-1), the re-anchor register, the six Copy Gate rows (PROPOSED) and the verification. Every other decision keeps its status; no further approval is inferred. The accepted COSMOS visual and interaction experience stays frozen.
+
 **Branch / worktree for the project:** `cosmos/cosmos-production-integration` at `E:\cosmosint`, created from `origin/main` `5a21971d` (the base is itself decision D-1 below; nothing is committed on it yet). `E:\cosmosv5` (the proof, uncommitted), `E:\QANDEEL_APP` (branch `s8a/s8a-04-cp3`, only the register changed) and every `E:\map*` worktree are untouched.
 
 This document is the first deliverable the authorisation asks for: the audit, the preservation matrix, the migration plan, the detail-sheet and timeline mappings, the risk map, the slices, and the explicit gaps. It authorises nothing by itself; Slice B starts only on the PO's answers to §10.
@@ -438,7 +440,7 @@ Gaps (functional; nothing is implemented for them without the PO):
 | G-3 | Shared: navigate from a source (material) to its place in the conversation | No act exists (`loadOlder` only); would need a "scroll to material" contract and possibly a server cursor | PENDING. Recommendation: record as a new backlog item (QAN-BL-CW-08 candidate); the sheet offers "Open the conversation" only. |
 | G-4 | Public contribution in production: the entitlement seam answers NOT_EVALUATED (Stage 9 / CW2-08), so the composer is absent | Server-side; not this task | PENDING (statement only). The client is correct as is. |
 | G-5 | Replay composite renderer | Two renderers in the product during the staged integration | **APPROVED (PO, v1.1): temporary coexistence only; the "Replay on COSMOS" follow-on path is recorded in §12; Replay implementation does not start.** |
-| G-6 | EMERGING_FOCUS family in the Personal stage | `personalScene` emits THREAD / READING hits only; the old map inspects EMERGING_FOCUS too | PENDING — blocks Slice B (§10.3). Recommendation: add the family to the adapter (hit + family word), no new look. |
+| G-6 | EMERGING_FOCUS family in the Personal stage | `personalScene` emits THREAD / READING hits only; the old map inspects EMERGING_FOCUS too | **APPROVED (PO, Slice B entry):** the family is in the Personal stage with hit testing and the existing T-08 family word, no new look (§13; an emerging focus disclosed with no place is listed unplaced and stays inspectable). |
 | G-7 | Personal expanded detail content | No Thread / Reading / Session content surface exists in the product; the PO's requirement names "full conversation, session, analysis and any available original recording" | **APPROVED (PO, v1.1): V1 = the PEEK with the authorised Conversation entry and the available Replay entry; the full Personal detail surface is the follow-on item of §12 (PERSONAL-DETAIL-01 candidate); nothing fabricated or claimed implemented.** |
 | G-8 | Public "permitted audio / voice media" | Public is the text path only; VOICE_REPLY belongs to QAN-BL-VOICE-01 | None in this task; recorded. |
 | G-9 | Projection reads per viewpoint: the proof asks for all five Personal rungs at every viewpoint (so the rail / overview can hold them); the product reads the viewpoint + the track rung (+ adjacent rungs after CA-Z1's prefetch) | More server reads per temporal commit | Read the viewpoint + track rung first, the other rungs lazily on the first settle; measure the count in Slice B. |
@@ -448,23 +450,23 @@ Decisions (D-x). APPROVED = the PO's first batch (v1.1, §1.1); PENDING = still 
 | ID | Decision | Status / recommendation |
 |---|---|---|
 | D-1 | Base of the integration branch (R1) | **APPROVED (PO):** controlled authority port of CA-Z1 / CA-O1 / CA-O2 through separately reviewable changes; no old-renderer paint; PRs #391 / #392 / #393 not closed, merged or labelled superseded before a preservation check and explicit PO approval. |
-| D-2 | Screen composition: STAGE presentation inside the ONE surface (no support band; chrome overlaid); #392's `details` toggle not ported | PENDING — blocks Slice B. Recommendation: yes. |
+| D-2 | Screen composition: STAGE presentation inside the ONE surface; #392's `details` toggle not ported | **APPROVED (PO, Slice B entry):** the stage composes inside the ONE surface; the old support band / #392 details toggle need not be reproduced provided no existing product functionality is lost. Applied in §13 (the band stays as the carrier of the Timeline / chrome function until Slice C, drawn as glass over the stage). |
 | D-3 | Placement of the six return acts and the inspection orientation in the COSMOS chrome (§4.2 P6 / P7) | PENDING (Slice C). Recommendation: Back = BACK_ONE_STEP / EXACT_RETURN; the rail's Live mark = the three Live acts; RETURN_WORLD = the canonical act behind "Whole world" at the top rung (Overview stays presentation-only); the inspection statement + lineage + context acts = the sheet's PEEK. |
 | D-4 | Increased contrast: #392 switches the continuous world off; COSMOS has no "framed" look | PENDING (not blocking: Slice B keeps the stage under increased contrast until decided). Recommendation: keep the stage; raise the chrome's contrast only. |
 | D-5 | T-10 motion for the Personal map superseded by the COSMOS settle (controlled amendment) | **APPROVED (PO), conditional on functional preservation:** the T-10 conflict audit precedes any alteration of the accepted motion; no old animation for similarity. |
 | D-6 | Visual Source Registry entry for COSMOS; the VPORT-01 → S8B-06 F-G chain marked superseded on merge | PENDING (needed at merge, not for Slice B). Recommendation: yes, with the accepted HONOR captures as the source (hashes recorded). |
 | D-7 | The rail's ticks / dot replace the Temporal Spine + Aperture (P2 C) drawing for the Personal map | PENDING (Slice C). Recommendation: yes (the PO froze the rail's look). |
 | D-8 | Public: section list / search results / section-near shown in the sheet's PEEK when no Experience is focused (instead of the chrome band) | PENDING (Slice D). Recommendation: yes. |
-| D-9 | Keep the proof's double-tap = one step IN at the point | PENDING — blocks Slice B (gesture set). Recommendation: yes. |
-| D-10 | Keep a measurement build path (proof root) for future device measurement | PENDING — blocks Slice B (its removal scope). Recommendation: yes, validation-only, never bundled. |
+| D-9 | Keep the proof's double-tap = one step IN at the point | **APPROVED (PO, Slice B entry):** one canonical zoom-IN step at the tapped point. |
+| D-10 | Keep a measurement build path (proof root) for future device measurement | **APPROVED (PO, Slice B entry):** proof tooling isolated under `cosmos/__validation__` / `cosmos/__tests__`; no proof UI, synthetic fixtures, measurement controls or production-scheme collisions in the release build (§13.5). |
 | D-11 | EXPANDED sheet: the host's top band stays visible | **APPROVED (PO):** the sheet occupies the remaining usable area beneath the band. |
 | D-12 | Closing the sheet and the inspection / focus | **APPROVED (PO):** closing / collapsing is presentation-only (no `backOneStep`, no `IF_ref` clear, no camera move, no context discard); a deliberate Back keeps its canonical meaning. |
 | D-13 | RN Skia 2.7.0 | **APPROVED (PO):** the tested 2.7.0 direction is preserved; the QAN-INF-03 compliance and amendment path is §11; no gate bypassed, no merge without validation. |
-| D-14 | The vehicle for the QAN-INF-03 amendment (new, from D-13) | PENDING — blocks Slice B's CI. Recommendation: Slice B's Draft PR carries the amendment as its own commit (§11), reviewed by the PO at Slice B review; the offline gate stays mandatory in the same change. |
+| D-14 | The vehicle for the QAN-INF-03 amendment (new, from D-13) | **APPROVED (PO, Slice B entry):** Slice B's Draft PR carries the RN Skia 2.7.0 + QAN-INF-03 amendment as its own separately reviewable commit (ba4741a8); no gate bypassed or weakened; no silent downgrade. |
 
 ### 10.3 What still blocks Slice B (and nothing else)
 
-Only these five need an answer before Slice B starts; every other pending item belongs to Slice C or D, to the merge, or is a statement.
+**v1.2: all five were answered by the PO (APPROVED, Slice B entry) and Slice B was delivered (§13).** Kept as written for provenance. Only these five need an answer before Slice B starts; every other pending item belongs to Slice C or D, to the merge, or is a statement.
 
 | ID | Question | Recommendation (one line) |
 |---|---|---|
@@ -514,6 +516,72 @@ Not blocking Slice B: D-3, D-7 (Slice C), D-8, G-3 (Slice D), D-4 (default kept 
 | PERSONAL-DETAIL-01 | A full Personal detail surface for a Thread / Reading / Session: the linked conversation at the moment, the analysis, the original recording where it exists, reached from the sheet's PEEK | the historical projection's `inspectFamily` / `inspectId` read, the conversation session API, the Replay audio contracts, T-07 return, the no-fabrication rule | recorded by G-7 (PO, v1.1); needs a product contract; not started |
 | QAN-BL-CW-08 (candidate) | Shared: navigate from a place's source (material) to its position in the World's conversation | S4-02 conversation, SHARED-VIS-01 D3 visibility | proposed under G-3 (PENDING) |
 | QAN-INF-03 amendment record | The react-native-skia exception's standing record (return condition: Expo's bundled pin reaches 2.7.0) | QAN-INF-03 determinism | recorded by D-13; executed in Slice B (D-14 pending) |
+
+---
+
+## 13. Slice B delivery record (v1.2, 2026-11-15)
+
+**Report:** `E:\QANDEEL_REPORTS\COSMOS-V5\integration\COSMOS_INT_01_SLICE_B_REPORT.md` (the full §9 deliverable: capability matrix, T-10 audit, PR preservation check, re-anchor register, Copy Gate rows, verification, device proof). This section is its binding summary in the repository.
+
+### 13.1 Commits on `cosmos/cosmos-production-integration` (base `main` 5a21971d)
+
+| # | Commit | Content |
+|---|---|---|
+| 1/n | 167f8e6d | D-1 controlled authority port of CA-Z1 / CA-O1 / CA-O2 onto main, with tests; no old-renderer paint |
+| 2/n | ba4741a8 | D-13 / D-14: RN Skia 2.7.0 as the second declared QAN-INF-03 exception (§11 executed: manifest, lockfile, every pin re-anchored by name, CI step renamed, README); offline gate mandatory |
+| 3/n | 55b77bf5 | The COSMOS V5 sources as frozen by the proof (add-only) |
+| 4/n | 5b4bb686 | The frozen sources reach the runtime entry and T-12 through their barrels |
+| 5/n | 3c0d0c22 | The PO-accepted proof corrections (pinch about the fingers + Android-lift guard; deep link once), with tests |
+| 6/n | 096c1c53 | The production seam: `cosmos/product/*` (owner core, Personal / Shared / Public owners, `CosmosWorldView`, product copy), the STAGE presentation of `LivingAnalysisSurface`, `LivingAnalysisMap` / `SharedLivingAnalysis` / `PublicLivingAnalysis` rendering the stage, `DepthComposition` drift pause while a call is live, additive `CosmosCanvas` props |
+| 7/n | 186115f6 | Tests for the seam; the contractual re-anchors (D-2) of the old paint-structure proofs; golden regenerated; root-contract pins |
+| 8/n | this change | v1.2 (docs only) |
+
+### 13.2 What is in the product now
+
+- The three worlds (Personal Analysis, Shared field, Public field) are drawn by the ONE COSMOS stage view over the real runtime / controllers: the same acts (`PAN`, `ZOOM_SEMANTIC` with CA-Z1's focal, `INSPECT_OBJECT` through T-04; `controller.step / tapField / focus / back`), the same outcomes to the journey, the same ONE projection cache, the composite spatial cause consumed at each canonical camera change (D-5).
+- The STAGE presentation (D-2): the stage fills the surface under the host's top band; the frame reports the glass and takes no touch; the support band (Timeline + T-08 chrome for Personal; the field bands) is drawn as glass over the stage. The `world=` (FRAMED) path is byte-identical, so Replay keeps `MapSurface` (G-5).
+- The accepted chrome: right rung rail (left in RTL), Back pill, presentation-only Overview, the nearest-place note; 44-pt press targets; words from the app's locale (T-08 depth / family words reused; six new rows PROPOSED, §13.6).
+- G-6: EMERGING_FOCUS is in the Personal stage (unplaced list, inspectable, family word).
+- D-10: no proof tab bar, language toggle, fixtures, faults, probe, overdraw, `gc` links or fringe count (G-2) in the product bundle; T-12's barrel guard enumerates the proof's two fixture imports exactly.
+
+### 13.3 Decisions engineering took inside the approved scope (for the PO to confirm or redirect; none inferred as approved)
+
+| ID | Decision |
+|---|---|
+| B-1 | The stage's Back (Personal) = one canonical `ZOOM_SEMANTIC` OUT; at the WORLD rung away from the origin, one `PAN` home. T-07's history Back keeps its one home in the T-08 Return controls (D-3 remains Slice C's). |
+| B-2 | The Personal owner reads the other four rungs once per viewpoint through the ONE cache (idempotent); the viewpoint's own depth stays the composition's read (QAN-BL-MOB-05). G-9 measured: four extra idempotent reads per viewpoint. |
+| B-3 | Public search results recede non-results on the stage; a result is activated from the existing compact list (FAR has no stage hit targets). |
+| B-4 | Overview is presentation-only, as accepted; its word is a Copy Gate row. |
+| B-5 | The timeline rail's FUNCTION is not moved in Slice B: the T-05 / T-06 / T-08 band stays the carrier, drawn as glass over the stage; the accepted rail look is Slice C (D-3 / D-7). |
+| B-6 | No detail sheet (Slice D); the Shared / Public panels stay in their hosts' bands. |
+| B-7 | Personal keeps T-04's `MapAccessibilityLayer` over the stage (the stage's own marks off: one object is never two nodes); in the fields the stage's marks are accessible only under a screen reader, the step node and the relation nodes always. Headless only (the PO's 2026-11-08 accessibility scope). |
+| B-8 | The composite spatial cause is asked with the destination at every canonical camera change and consumed, never played. |
+| B-9 | Double-tap = one canonical step IN at the point (D-9), the proof's canvas unchanged. |
+| B-10 | Increased contrast keeps the stage (D-4 pending). |
+| B-11 | A live call pauses the stage's drift; nothing else of the call path is touched. |
+| B-12 | Personal marks are named by T-08's family word alone (no N4); Shared / Public labels are the controllers' served labels. |
+
+### 13.4 T-10 conflict audit (D-5) — outcome
+
+No conflict requiring an alteration of the accepted COSMOS motion. Kept as function: the travel-cause binding lifecycle (asked and consumed at each canonical camera change), reduced motion (settle 0 ms, drift off), return causality (same journey callbacks), the composition's "adds no motion of its own" rule, T-04's accessible tree. Presentation replaced by the accepted settle: arrival choreography, the drag corridor / rebase / culling. Not reproduced: the disclosure-arrival animation (P9) — its meaning (membership transition) stays in the authoritative projection and the accessible tree. `tests/t10-motion-contract.test.mjs` passes unchanged (its renderer pins describe `MapSurface`, which Replay still mounts).
+
+### 13.5 PR #391 / #392 / #393 preservation check (D-1) — outcome
+
+Nothing closed, merged or labelled. Carried: #392's continuous world under transparent bands (as the STAGE composition); #393's CA-Z1 / CA-O1 / CA-O2 (ported, commit 1/n); #391's real-data / no-naming rule. Superseded by the accepted COSMOS visuals (paint only): #391's S3-R2 world, #393's candidate F paint, prepared-raster store, Treatment A labels and strata atlas. Superseded by B-2: #393's adjacent-depth prefetch. Not ported: #392's `details` toggle (D-2), #392's increased-contrast switch (D-4 pending), #393's Z-2 rows (they named the old rung chrome). Memory item 021 not reopened. The PRs' disposition is the PO's decision after this check.
+
+### 13.6 Copy Gate (`cosmos/product/copy.ts`, `COSMOS_PRODUCT_COPY_GATE`) — OPEN, 6 rows PROPOSED (ar + en)
+
+rungFar «بعيد» / Far · rungMid «متوسط» / Mid · rungNear «قريب» / Near (Shared / Public rail) · nearest «اذهب إلى الأقرب» / Go to the nearest · regionEmpty «لا شيء في هذه المنطقة.» / Nothing in this region. · overview «نظرة عامة» / Overview. Reused APPROVED words carry no row (T-08 depth and family words, `analysisCopy.moreDetail / lessDetail`, the field labels, the field copies' Back).
+
+### 13.7 Verification (local, on the committed tree)
+
+Mobile jest 292 suites / 3 579 tests, failures = the known Arabic host-locale baseline only (6); root contracts 128 / 128 (forward-safety excluded locally as always); `tsc` 0; `expo lint` 0 errors. The QAN-INF-03 offline gate and the device proof are in the report §10 / §12; CI (mobile incl. the renamed QAN-INF-03 step, native-impact rebuild on 2.7.0) runs on the Draft PR.
+
+### 13.8 Gaps and open items carried out of Slice B
+
+- Acceptance criterion (1) "real sign-in on the HONOR": no hosted backend exists (HOSTED-DEPLOY-01 not authorised), so the phone proof runs on the S4-01 proof ENTRY — ProductRoot over the labelled synthetic network under the production clients, controllers and runtime, the vehicle of every previous production map phone check. A genuine-account proof needs a hosted environment the PO provides. Reported, not hidden.
+- D-3, D-4, D-7 (Slice C), D-8 and G-3 (Slice D), D-6 (merge) unchanged. G-1 (long histories on the rail) is Slice C's.
+- Slice C and the merge are not authorised by this record.
 
 ---
 
