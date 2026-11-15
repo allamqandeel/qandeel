@@ -34,6 +34,9 @@ const PRODUCTION_FILES = [
   // boundary refusal all predate this file; what did not exist was any way for a reader to ask for
   // one, so the Map carried a pan and nothing else.
   'camera/useMapSemanticZoomGesture.ts',
+  // MAP-CLOSE-01 CA-O1 (Product Owner, 2026-11-14; ported under COSMOS-INT-01 D-1, 2026-11-15): once the reader has acted, the
+  // world's anchor is held when only the band below the world changes (presentation only; no camera moves).
+  'camera/useSteadyEnvelope.ts',
   'camera/viewport.ts',
   'camera/zoom.ts',
   'index.ts',
@@ -190,10 +193,11 @@ test('the Map transitions write no temporal and no live field, and resolve no en
 
 test('the Map layer adds exactly one dependency, and no state, persistence or navigation library', async () => {
   const mobilePackage = await readJson('apps/mobile/package.json');
-  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0 (previous pin 2.6.2); the COSMOS renderer (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15) was accepted and proven on 2.7.0; Expo SDK 57 bundles 2.6.2, so the manifest declares the second QAN-INF-03 exception beside the TypeScript one and both offline gates keep running unchanged.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.7.0');
   const lock = await readJson('package-lock.json');
-  assert.equal(lock.packages['node_modules/@shopify/react-native-skia'].version, '2.6.2');
-  assert.equal(lock.packages['apps/mobile'].dependencies['@shopify/react-native-skia'], '2.6.2');
+  assert.equal(lock.packages['node_modules/@shopify/react-native-skia'].version, '2.7.0');
+  assert.equal(lock.packages['apps/mobile'].dependencies['@shopify/react-native-skia'], '2.7.0');
   assert.equal(existsSync(new URL('apps/mobile/package-lock.json', root)), false);
 
   const specifiers = new Set();

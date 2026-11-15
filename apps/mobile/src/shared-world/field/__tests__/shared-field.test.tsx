@@ -10,7 +10,7 @@ import { BackHandler } from 'react-native';
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
 import { DEFAULT_MAP_SCALE, projectAddress, viewportEnvelope } from '../../../map/camera';
-import { WORLD_VIEW_STEP_TEST_ID_SUFFIX } from '../../../map/renderer';
+import { COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
 import { RESPONSIVE_SURFACE_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID } from '../../../responsive';
 import { resize } from '../../../responsive/__fixtures__/composition';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
@@ -19,7 +19,7 @@ import { createSharedWorldController, type SharedWorldTransport } from '../../sh
 import { SharedWorldArea } from '../../SharedWorldArea';
 import { SHARED_FIELD_COPY_GATE, sharedFieldCopy } from '../field-copy';
 import { createSharedFieldController, type SharedFieldTransport } from '../shared-field-controller';
-import { SHARED_FIELD_SURFACE_TEST_ID } from '../SharedFieldView';
+import { SHARED_FIELD_WORLD_TEST_ID } from '../SharedLivingAnalysis';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
@@ -253,8 +253,9 @@ describe('SHARED-VIS-01 — the Shared World on the ONE Living Analysis surface'
     await press(view, `qandeel-shared-world-${WORLD_A}`);
     await resize(view, SIZE.width, SIZE.height, { mapHeight: SIZE.height });
     await flush();
-    const steps = view.getByTestId(`${SHARED_FIELD_SURFACE_TEST_ID}${WORLD_VIEW_STEP_TEST_ID_SUFFIX}`);
-    expect(steps.props.accessibilityLabel).toBe(sharedFieldCopy('en').fieldLabel);
+    // COSMOS-INT-01 (D-2): the World is the COSMOS stage; its accessible gesture surface names the field (and the rung it is at).
+    const steps = view.getByTestId(`${SHARED_FIELD_WORLD_TEST_ID}${COSMOS_STEP_TEST_ID_SUFFIX}`);
+    expect(steps.props.accessibilityLabel.startsWith(sharedFieldCopy('en').fieldLabel)).toBe(true);
     expect(steps.props.accessibilityActions).toEqual([
       { name: 'zoom-in', label: analysisCopy('en').moreDetail },
       { name: 'zoom-out', label: analysisCopy('en').lessDetail },

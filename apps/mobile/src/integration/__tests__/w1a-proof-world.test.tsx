@@ -79,7 +79,8 @@ it.each(['en', 'ar'] as const)('%s: the proof world walks through every captured
   await step(view, 'qandeel-depth-to-analysis');
   await resize(view, 412, 915, { insetTop: 104, insetBottom: 24 });
   expect(view.getByTestId('qandeel-depth-to-conversation')).toBeTruthy();
-  expect(view.getByTestId('qandeel-map-surface')).toBeTruthy();
+  // COSMOS-INT-01 (D-2): the Analysis world is the COSMOS stage.
+  expect(view.getByTestId('qandeel-cosmos-world')).toBeTruthy();
   await step(view, 'qandeel-depth-to-conversation');
   // The returning Conversation's first layout, as the platform reports it (until it is drawn it takes no touch).
   await act(async () => {

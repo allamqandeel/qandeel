@@ -78,9 +78,23 @@ const ENGLISH_APPROVED = [
 
 /** Criterion 12: the frozen authority and privacy files, byte-identical to the branch base 3ad4e414 (LF-normalised). */
 const FROZEN = [
-  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '08687f8e87ff34a9c37ea69260041fc55cc3138ea42c272697763586a72407ab'],
-  ['apps/mobile/src/map/renderer/MapSurface.tsx', '5f5d75518909c7df18694ad0d8847d5a3dabe35d7ee7db64b87f92fdeb85cf82'],
-  ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'f5ccf7583514109bb17b043510e215f922d1bd344a581e7f27244a1d7314cad7'],
+  // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15: controlled authority port of MAP-CLOSE-01 CA-Z1 / CA-O1 /
+  // CA-O2, approved 2026-11-14): a pinch's step carries where the fingers were (CA-Z1: MapSurface passes them with its envelope to
+  // the same ZOOM_SEMANTIC; the world view's step type gains the optional point); once the reader has acted, MapSurface holds its
+  // anchor when only the band below the world changes (CA-O1, useSteadyEnvelope, presentation only); the Personal chrome band keeps
+  // the end of its words in view so Back stays under the finger (CA-O2: LivingAnalysisSurface passes anchorEnd for a world with
+  // time; nothing hidden, every word still reachable by scrolling and by every accessible route). Replay's chrome, the projection, the Map, every
+  // act, word, route and refusal are unchanged. Previous pins: LivingAnalysisSurface 08687f8e, MapSurface 5f5d7551, WorldViewSurface
+  // f5ccf758.
+  // COSMOS-INT-01 CONTROLLED RE-ANCHOR (Product Owner D-2 / Slice B, 2026-11-15): the ONE Living Analysis surface gains the
+  // STAGE presentation (`stage=`: the world drawn full-surface UNDER the same top band, frame and support band, the frame
+  // reporting the glass), and the Personal composition draws the world through the COSMOS stage over the SAME runtime,
+  // store, projection cache, acts, journey and spatial cause. The `world=` presentation this composite and the player use
+  // is unchanged (G-5: Replay keeps MapSurface, REPLAY-COSMOS-01). Previous pins: LivingAnalysisSurface c54a90d7,
+  // LivingAnalysisMap 20679fd4.
+  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '20655e20a92d5cb997f8c90c28836810a1d98981e6ddadba0a7a97ae00b04db8'],
+  ['apps/mobile/src/map/renderer/MapSurface.tsx', 'fb623eea019299f6756ab0a3e192e9f035f1e757b58884101d319511f274adea'],
+  ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'acf84151abbf02663b569fe2105f8dd85c40062f21f5e9d78b075ab9e6e3c645'],
   ['apps/mobile/src/map/projection/map-scene.ts', '8ef371bdcbaacde1456e98ed58592ab71c3521fe835a097e5b418fd66e67211e'],
   ['apps/mobile/src/map/inspection/map-actions.ts', 'd2291a0399ab7389b014dc9daed32e59996311c1f01a52e7b1ba573451814957'],
   ['apps/mobile/src/map/inspection/entitlement.ts', '3c916840363d088ebe34cf12d501dc5717d25adfb261c3b493a72e165fb0f243'],
@@ -88,7 +102,7 @@ const FROZEN = [
   // answer (a failed read, a payload refused at the trust boundary, no credential) counts as settled, so the composition
   // reports its measured first state and the depth fades it in; before, the depth stayed half-crossed. The projection, its
   // cache, the Map, the chrome and every refusal are unchanged; a read still on its way is still not settled.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '20679fd47ad3a0c0ae52ff45ba30f233051f7040e8fbf3fd24bae699c659b0d3'],
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '81f37f58b44ba1f4773b2b2c78df364bc497289261cb9b93b29915d6bc8791b1'],
   ['apps/mobile/src/projection/historical-projection-wire.ts', '7bc8f628268b503d6c5f8a80b204138cc3dfe7db9d1b07ec81eae14d0069f451'],
   ['apps/mobile/src/state/store.ts', '3177b9b6a322dc506a5095018b4dd9b14dddacc21bcfd77297decd5dbe62fff3'],
   ['packages/runtime/src/historical-projection.d.ts', '17b9e91511d2cb47938e36dccd94e57dce6ca83d600509584792c33dc3d9b9b1'],

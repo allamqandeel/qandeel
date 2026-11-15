@@ -34,7 +34,7 @@
  * read as navigation, and a window is not a destination.
  */
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { SupportComposition } from './plan';
 
@@ -44,10 +44,12 @@ export interface ResponsiveSupportBandProps {
   /** The room the plan gave the two regions, and how they share it. */
   readonly support: SupportComposition;
   readonly children: ReactNode;
+  /** COSMOS-INT-01 (STAGE): the glass the band is drawn as over the stage; the band's geometry is still the plan's alone. */
+  readonly style?: StyleProp<ViewStyle>;
   readonly testID?: string;
 }
 
-export function ResponsiveSupportBand({ support, children, testID = RESPONSIVE_SUPPORT_BAND_TEST_ID }: ResponsiveSupportBandProps) {
+export function ResponsiveSupportBand({ support, children, style, testID = RESPONSIVE_SUPPORT_BAND_TEST_ID }: ResponsiveSupportBandProps) {
   const across = support.arrangement === 'SIDE_BY_SIDE';
   return (
     <View
@@ -59,6 +61,7 @@ export function ResponsiveSupportBand({ support, children, testID = RESPONSIVE_S
           marginTop: support.gapPoints,
           flexDirection: across ? 'row' : 'column',
         },
+        style,
       ]}
       // The band claims no touch of its own, exactly as the regions inside it do not: a press that
       // reaches neither a control nor a scroller belongs to whatever is underneath.

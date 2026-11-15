@@ -12,7 +12,10 @@ import * as Reanimated from 'react-native-reanimated';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import type { HistoricalSemanticDepth } from '@qandeel/runtime';
-import { MAP_SURFACE_TEST_ID } from '../../map';
+// COSMOS-INT-01 (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage on the ONE surface; the
+// world's node is the stage view (`MapSurface` stays the Replay composite's renderer, G-5).
+import { COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
+import { MAP_ACCESSIBILITY_TEST_ID } from '../../map';
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import type { Responder } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { DEPTH_CROSSFADE_MS } from '../../conversation';
@@ -148,7 +151,7 @@ describe('W1A-01 — after sign-in the reader lands in the Conversation of their
     const h = await signedIn();
     const view = await onRoute(h);
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeNull();
     const reads = h.http.matching('/turns');
     expect(reads).toHaveLength(1);
     expect(reads[0].method).toBe('GET');
@@ -242,7 +245,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     const stateBefore = runtime.store.getState();
 
     await openAnalysis(view);
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(view.getByTestId('qandeel-depth-to-conversation').props.accessibilityLabel).toBe('Conversation');
     expect(view.queryByTestId('qandeel-conversation')).toBeNull();
     // The SAME runtime generation, Session and store; switching depth wrote no canonical state.
@@ -252,7 +255,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
 
     await cross(view, 'qandeel-depth-to-conversation', 'conversation');
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeNull();
     expect(view.getByLabelText('You: fixture: earlier words')).toBeTruthy();
     expect(h.ready()).toBe(runtime);
     expect(runtime.store.getState()).toBe(stateBefore);
@@ -305,7 +308,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     const h = await signedIn();
     const view = await onRoute(h);
     await openAnalysis(view);
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(view.queryAllByTestId(/^qandeel-depth-(conversation|analysis)$/u)).toHaveLength(1);
     await press(view, 'qandeel-depth-to-conversation');
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
@@ -326,7 +329,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     // The depth's own first layout is a measuring pass with nothing drawn: still no clock.
     await laidOut(view, 'analysis');
     expect(fadesIn(timing)).toHaveLength(0);
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeNull();
     // The reader turns back before the world composed: the Conversation is still mounted, lays out no
     // more, and fades back at once — nothing is left waiting. (The undrawn Analysis takes no touch, QAN-BL-MOB-05, so
     // the way back while it waits is Back, as the depth owner states.)
@@ -342,7 +345,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     await act(async () => {
       await settle();
     });
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(fadesIn(timing)).toHaveLength(2);
     expect(layersMounted(view)).toBe(1);
     expect(view.queryByTestId('qandeel-conversation')).toBeNull();
@@ -388,7 +391,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     await act(async () => {
       await settle();
     });
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(fadesIn(timing)).toHaveLength(2);
     view.unmount();
     h.dispose();
@@ -403,13 +406,13 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     const runtime = h.ready();
     const stateBefore = runtime.store.getState();
     await openAnalysis(view);
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(back.live()).toHaveLength(1);
 
     expect(await back.press()).toBe(true);
     await laidOut(view, 'conversation');
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
-    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeNull();
     expect(view.getByLabelText('You: fixture: earlier words')).toBeTruthy();
     // The same F2 fade as the band's control, in both directions.
     expect(fadesIn(timing)).toHaveLength(2);
@@ -507,7 +510,8 @@ describe('QAN-BL-MOB-05 — an Analysis not yet drawn takes no touch, and one th
       h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })]) } : { status: 500, body: {} }));
       const view = await onRoute(h);
       await openAnalysis(view);
-      expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+      // No Map is invented when T-04's context refuses: the accessible Map is absent (the stage shows the void).
+      expect(view.queryByTestId(MAP_ACCESSIBILITY_TEST_ID)).toBeNull();
       // Before the fix the fade never began: the Analysis stayed invisible OVER the Conversation and took every touch.
       expect(fadesIn(timing)).toHaveLength(1);
       expect(layer(view, 'analysis').props.pointerEvents).toBe('auto');

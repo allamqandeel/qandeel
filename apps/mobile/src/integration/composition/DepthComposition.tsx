@@ -721,6 +721,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             runtime={runtime}
             locale={locale}
             insets={analysisInsets}
+            driftPaused={callLive}
             fontScale={fontScale}
             envelope={envelope}
             onComposed={current ? beginFade : undefined}

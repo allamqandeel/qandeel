@@ -570,7 +570,7 @@ purpose and declares the exception in `package.json` through Expo's documented
 dependency-validation exclusion, `expo.install.exclude`:
 
 ```json
-{ "expo": { "install": { "exclude": ["typescript"] } } }
+{ "expo": { "install": { "exclude": ["typescript", "@shopify/react-native-skia"] } } }
 ```
 
 Why: the repository holds exactly one TypeScript line. The API's root scripts invoke the
@@ -584,6 +584,36 @@ The exclusion is honoured by `expo start`, `expo-doctor` and `expo install --che
 `--fix`. Both `npm run deps:check` (`expo install --check`, non-mutating) and
 `npm run doctor` (`expo-doctor`) must pass with no unresolved TypeScript mismatch; the
 dependency version check is never skipped.
+
+
+## Intentional react-native-skia exception
+
+Expo SDK 57 bundles `@shopify/react-native-skia` 2.6.2. This workspace pins **2.7.0** on
+purpose and declares the exception beside the TypeScript one, through the same documented
+dependency-validation exclusion:
+
+```json
+{ "expo": { "install": { "exclude": ["typescript", "@shopify/react-native-skia"] } } }
+```
+
+Why: the COSMOS Living Analysis renderer (COSMOS-INT-01, Product Owner decisions D-13 and
+D-14, 2026-11-15) was accepted and proven on the HONOR device on 2.7.0. That version carries
+RN Skia PR #3932 (mapper stopped on unmount, view-registry tombstone), which on that device
+halved the native memory retained per Analysis open against 2.6.2 (COSMOS V5 Skia 2.7.0
+Experiment Report: 0.81 → 0.39 MB per open over opens 21–80; improved, not resolved — the
+remaining retention is the accepted register item 021). The Product Owner decided the tested
+direction is preserved rather than silently downgraded. 2.7.0 is a native dependency: the
+native-impact CI jobs rebuild the Android and iOS projects on the version change, and the
+pin is exact (never a range) for that reason.
+
+How the gate stays whole: `npm run deps:check` (`expo install --check`, offline) and
+`npm run doctor` (`expo-doctor`, offline) keep running in the mandatory Mobile CI step,
+now named `Expo dependency validation (intentional typescript and react-native-skia
+exclusions)`; nothing is skipped and nothing may fail. The exact pins live in
+`tests/mobile-foundation-toolchain-contract.test.mjs` and the renderer contracts, each
+re-anchored with this reason beside it. The non-blocking live-registry advisory workflow
+reports the drift; that is its purpose. Returning to the SDK's bundled version is a
+controlled change, never a side effect of `expo install --fix`.
 
 ## Continuous Native Generation policy
 

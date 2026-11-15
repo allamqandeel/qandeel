@@ -450,7 +450,7 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   // FORWARD-SAFE (R2-02): a whole-lockfile hash and an exhaustive root devDependency set both make
   // future authorized dependencies fail an old contract. The frozen fact is the renderer VERSION;
   // "T-03B2b2 added nothing" is a delivery fact, and its permanent half is the denylist below.
-  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.7.0', 'the authorized T-04 renderer version is locked exactly (QAN-INF-03 re-anchor, COSMOS-INT-01 D-13 / D-14)');
   assert.ok('pg' in rootPackage.devDependencies, 'the verifier database driver is still declared');
   for (const name of ['uuid', 'nanoid', 'zod', 'knex', 'prisma', 'pg-promise', 'postgres', 'kysely', 'drizzle-orm']) {
     assert.equal(name in (apiPackage.dependencies ?? {}) || name in (apiPackage.devDependencies ?? {}) || name in (mobilePackage.dependencies ?? {}), false, `${name} must not be introduced`);
@@ -476,7 +476,8 @@ test('the whole slice is production-inert: no grant, no wiring, no runtime reade
   assert.equal((mobileCiText.match(/needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/gu) ?? []).length,
     (mobileCiText.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
   // Likewise the mobile manifest: the frozen fact is the renderer VERSION T-04's architecture pins.
-  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0 (previous pin 2.6.2); the COSMOS renderer (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15) was accepted and proven on 2.7.0; Expo SDK 57 bundles 2.6.2, so the manifest declares the second QAN-INF-03 exception beside the TypeScript one and both offline gates keep running unchanged.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.7.0', 'the authorized T-04 renderer pin is exact');
 });
 
 test('the gates are registered at the root and in API CI, and the slice is documented', () => {

@@ -79,6 +79,7 @@ export {
   temporalLineSentence,
   returnActWords,
   returnControlsLabel,
+  semanticDepthWord,
   spatialSentence,
   temporalSentence,
 } from './product-copy';

@@ -174,7 +174,12 @@ export function ReturnControls({
   return (
     <View
       testID={RETURN_CONTROLS_TEST_ID}
-      style={arrangement === 'PAIRED' ? styles.pairedGroup : styles.group}
+      // MAP-CLOSE-01 CA-O2 (Product Owner, approved with conditions, 2026-11-14; ported under COSMOS-INT-01 D-1, 2026-11-15):
+      // the acts stack UP from the bottom, the first one lowest, so an act that appears (Go Live + Locate, once Back has
+      // pinned the time) is added ABOVE the acts already there and Back stays under the finger when pressed twice in the
+      // same place (with the Personal chrome band keeping the END of its words in view: ResponsiveChromeBand `anchorEnd`).
+      // Layout only: the children, and with them the reading order, are still in the frozen order.
+      style={[arrangement === 'PAIRED' ? styles.pairedGroup : styles.group, arrangement === 'PAIRED' ? styles.pairedBottomUp : styles.bottomUp]}
       // The group itself claims no touch: only the buttons inside it are targets, so every press
       // that misses a control reaches the world beneath rather than being swallowed here.
       //
@@ -251,6 +256,9 @@ const styles = StyleSheet.create({
   // keep their frozen order in both directions and neither the wrapping nor the order is mirrored
   // into a different meaning. Both gaps stay at the 8pt platform minimum between touch targets.
   pairedGroup: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8 },
+  // MAP-CLOSE-01 CA-O2: the same column and the same wrapping row, filled from the bottom up (see the group's style).
+  bottomUp: { flexDirection: 'column-reverse' },
+  pairedBottomUp: { flexWrap: 'wrap-reverse' },
   // `minHeight` rather than `height`, so the control still contains its label at the largest system
   // text size and under Arabic wording that runs longer than the English; 44 is the platform
   // minimum for a comfortable target. Growing downwards can never overlap a sibling, because the

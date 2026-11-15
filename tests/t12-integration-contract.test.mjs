@@ -528,6 +528,22 @@ test('the barrel is an allowlist, and the deep modules are not a second public s
     // loopback flag, which S8B-06 CP1's contract allows under voice-call/__validation__/ alone, and the layer may not name
     // the live call. It is never a Product entry (its selector refuses without S806_DEVICE_PROOF=1). Counter-test: it
     // reaches exactly the phase surface and the runtime, and every other file outside the layer still reaches the barrel only.
+    // RE-ANCHORED by COSMOS-INT-01 Slice B (Product Owner D-10, 2026-11-15: the COSMOS proof and measurement tooling is
+    // retained, isolated under cosmos/__validation__ and cosmos/__tests__, never on the release path — its entry selector
+    // refuses without COSMOS_PROOF=1). TWO proof-only files reach exactly the layer's labelled SYNTHETIC fixture worlds
+    // (the S5-03B visual field, the SHARED-VIS proof field, the VPORT-01 proof world) and nothing else of T-12: the
+    // fixture network the proof serves under the PRODUCTION clients, and the headless rasteriser test that draws the same
+    // fixtures. Counter-test: the lists are exact, so a third deep import from either file, or any deep import from the
+    // production COSMOS seam (cosmos/product/, cosmos/core/, cosmos/skia/), still fails here.
+    const COSMOS_PROOF_FIXTURES = {
+      'cosmos/__validation__/fixture-transports.ts': ['../../integration/__validation__/s503b-visual-field', '../../integration/__validation__/shared-vis-proof-field', '../../integration/__validation__/vport01-proof-world'],
+      'cosmos/__tests__/headless-pixels.test.tsx': ['../../integration/__validation__/s503b-visual-field', '../../integration/__validation__/shared-vis-proof-field'],
+    };
+    if (relative in COSMOS_PROOF_FIXTURES) {
+      const deep = [...stripComments(readFileSync(file, 'utf8')).matchAll(/from\s+'([^']*\/integration\/[^']+)'/gu)].map((m) => m[1]).sort();
+      assert.deepEqual(deep, COSMOS_PROOF_FIXTURES[relative], `${relative} reaches the labelled synthetic fixture worlds only`);
+      continue;
+    }
     if (relative === 'voice-call/__validation__/S806Cp3ProofRoot.tsx') {
       const deep = [...stripComments(readFileSync(file, 'utf8')).matchAll(/from\s+'([^']*\/integration\/[^']+)'/gu)].map((m) => m[1]).sort();
       assert.deepEqual(deep, ['../../integration/composition/ProductRoot', '../../integration/runtime/integration-runtime'],

@@ -415,7 +415,10 @@ test('12 — R1: ONE Living Analysis SCREEN (not only one renderer); the Persona
   // The Personal Analysis is composed ON the surface, with its own projection and capabilities and nothing else.
   const personal = code(`${MOBILE}/integration/composition/LivingAnalysisMap.tsx`);
   assert.match(personal, /<LivingAnalysisSurface\b/u);
-  for (const capability of ['<MapSurface', '<TemporalOrientationLine', '<TemporalTargetLayer', '<OrientationChrome']) {
+  // COSMOS-INT-01 CONTROLLED RE-ANCHOR (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage in the
+  // surface's STAGE presentation (`stage=`), with T-04's accessible Map laid over it; MapSurface stays the Replay composite's
+  // renderer (G-5). The Timeline, its orientation line and the T-08 chrome are brought exactly as before.
+  for (const capability of ['stage={', '<CosmosWorldView', '<MapAccessibilityLayer', '<TemporalOrientationLine', '<TemporalTargetLayer', '<OrientationChrome']) {
     assert.ok(personal.includes(capability), `the Personal world brings ${capability}`);
   }
   assert.doesNotMatch(personal, /<Responsive(Surface|MapFrame|SupportBand|TimelineRow|ChromeBand)\b/u, 'the Personal world builds no screen of its own');
@@ -447,7 +450,11 @@ test('13 — R2: Public is a consumer of the ONE Living Analysis surface — no 
   assert.ok(screen.includes('timeline={null}'), 'no Timeline, no Live, no Return-to-Live');
   assert.match(screen, /top=\{\{\s*content: \(\s*<PublicBand\b[\s\S]*?<SearchRow\b/u, 'the heading and the search stand in the top band');
   assert.match(screen, /chrome=\{\(composition\) => <FieldChrome\b/u, 'the field speaks in the chrome band');
-  assert.match(screen, /world=\{\(envelope\) => <PublicFieldView\b/u, 'the field is the world in the measured frame');
+  // COSMOS-INT-01 CONTROLLED RE-ANCHOR (Product Owner D-2, 2026-11-15): the field is the COSMOS stage under the composition
+  // (the surface's STAGE presentation), drawn by the same stage view as every world; PublicFieldView is retired from the screen.
+  assert.match(screen, /stage=\{\(glass\) => <PublicStage\b/u, 'the field is the stage under the composition');
+  assert.match(screen, /<CosmosWorldView owner=\{owner\} world="PUBLIC"/u, 'the Public stage is the ONE stage view');
+  assert.doesNotMatch(screen, /<PublicFieldView\b/u, 'the old field view is not on the screen');
   assert.doesNotMatch(screen, /<Responsive(Surface|MapFrame|SupportBand|TimelineRow|ChromeBand)\b|AnalysisAppearanceScope/u, 'Public builds no screen of its own');
   assert.doesNotMatch(screen, /PANEL_MAX|SEARCH_ROW|RESULTS_MAX|position: 'absolute'|maxHeight/u, 'no fixed full-screen geometry, no floating overlay panel');
   // The world view is the shared one: no recogniser, presentation camera or frame of Public's own.
@@ -460,7 +467,10 @@ test('13 — R2: Public is a consumer of the ONE Living Analysis surface — no 
   }
   // The acts the shared drag and step become are the Public controller's own, along the Public ladder.
   const controller = code(`${FIELD}/public-field-controller.ts`);
-  assert.match(controller, /step\(direction: SemanticZoomDirection\): PublicFieldOutcome;/u);
+  // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; MAP-CLOSE-01 CA-Z1, approved 2026-11-14): the step a pinch
+  // asks for carries where its fingers were; the accessible step passes none and stays the centre's. Previous form:
+  // `step(direction: SemanticZoomDirection): PublicFieldOutcome;`.
+  assert.match(controller, /step\(direction: SemanticZoomDirection, focal\?: ScreenPoint \| null\): PublicFieldOutcome;/u);
   assert.match(controller, /pan\(translationX: number, translationY: number\): PublicFieldOutcome;/u);
   assert.doesNotMatch(controller, /closer\(|farther\(|wholeWorld\(/u);
   // D3: no visible + / − / ○; the non-gesture semantic step is the generic surface's accessible route.

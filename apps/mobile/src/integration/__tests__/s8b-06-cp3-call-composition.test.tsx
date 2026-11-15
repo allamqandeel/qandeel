@@ -17,6 +17,16 @@ import { refuseConnection, socketRecorder, state, type FakeSocket } from '../../
 import { VOICE_CAPABILITY_ROUTE, currentConsentCapability } from '../../voice-note/__fixtures__/voice-capability';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
+import { COSMOS_STEP_TEST_ID_SUFFIX, COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
+
+// COSMOS-INT-01 B-11: the COSMOS canvas is the real one; this wrapper only records the `drift` each render of it was given.
+jest.mock('../../cosmos/skia/CosmosCanvas', () => {
+  const actual = jest.requireActual('../../cosmos/skia/CosmosCanvas');
+  const react = jest.requireActual('react');
+  const mockDrifts: boolean[] = [];
+  return { ...actual, mockDrifts, CosmosCanvas: (props: { drift?: boolean }) => { mockDrifts.push(props.drift !== false); return react.createElement(actual.CosmosCanvas, props); } };
+});
+const { mockDrifts } = jest.requireMock('../../cosmos/skia/CosmosCanvas') as { mockDrifts: boolean[] };
 
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 44, left: 0, right: 0, bottom: 34 } };
 
@@ -95,6 +105,7 @@ describe('S8B-06 CP3 — the call over DepthComposition', () => {
       await settle();
     });
     const server = serverOf(socket);
+    mockDrifts.length = 0;
     await act(async () => {
       server({ state: 'CONNECTING', epoch: 1 });
       await settle();
@@ -106,12 +117,18 @@ describe('S8B-06 CP3 — the call over DepthComposition', () => {
     expect(view.getByTestId('qandeel-analysis-call-box')).toBeTruthy();
     expect(view.getAllByTestId(CALL_LINE_TEST_ID).length).toBeGreaterThanOrEqual(1);
     expect(view.queryByTestId(CALL_ENTRY_TEST_ID)).toBeNull();
+    // COSMOS-INT-01 B-11 (Product Owner APPROVED 2026-11-15): while the call is live the COSMOS stage's ambient drift is
+    // paused (the call path is protected) and the stage stays interactive — its gesture surface is mounted as ever.
+    expect(mockDrifts.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(mockDrifts)).toEqual(new Set([false]));
+    expect(view.getByTestId(`${COSMOS_WORLD_VIEW_TEST_ID}${COSMOS_STEP_TEST_ID_SUFFIX}`)).toBeTruthy();
     await act(async () => {
       server({ state: 'ACTIVE', epoch: 1, startedAt: new Date().toISOString() });
       await settle();
     });
     expect(h.ready().call.getState().stage).toBe('ACTIVE');
     expect(view.getByTestId('qandeel-analysis-call-box')).toBeTruthy();
+    expect(new Set(mockDrifts)).toEqual(new Set([false]));
     h.dispose();
   });
 

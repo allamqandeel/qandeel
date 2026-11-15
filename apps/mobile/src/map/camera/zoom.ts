@@ -14,8 +14,9 @@
  * a different world, a different Home or a different object.
  */
 import { SEMANTIC_DEPTHS, type SemanticDepth, type ZoomIntent } from '../../state';
-import { scaleBy, scaleIntentRef, type MapScale } from '../world';
+import { canonicalWorldAddress, scaleBy, scaleIntentRef, worldAnchorRef, type CanonicalWorldAddress, type MapScale } from '../world';
 import type { MapCamera } from './camera';
+import { envelopeCenter, worldDeltaForPoints, type ScreenPoint, type ViewportEnvelope } from './viewport';
 
 export const SEMANTIC_ZOOM_DIRECTIONS = Object.freeze(['IN', 'OUT'] as const);
 export type SemanticZoomDirection = (typeof SEMANTIC_ZOOM_DIRECTIONS)[number];
@@ -45,18 +46,50 @@ export function reinforcedScale(scale: MapScale, direction: SemanticZoomDirectio
     : scaleBy(scale, SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR, SEMANTIC_ZOOM_REINFORCEMENT_NUMERATOR);
 }
 
+/**
+ * MAP-CLOSE-01 CA-Z1 (Product Owner, 2026-11-14): where a pinch's fingers were when it was recognised, in the points of
+ * the glass the world is measured in. Only a pinch has one; the named control and the accessible step have none.
+ */
+export interface SemanticZoomFocal {
+  readonly envelope: ViewportEnvelope;
+  readonly point: ScreenPoint;
+}
+
+/**
+ * CA-Z1: the anchor that keeps the world point under `point` exactly under it when the scale becomes `to`. Exact: the
+ * same rounded point-to-world deltas are added and removed, so IN then OUT at the same point returns the same anchor.
+ * `null` when the result would not be a canonical address; the caller then keeps the anchor, as without fingers.
+ */
+export function focalAnchor(camera: Pick<MapCamera, 'anchor' | 'scale'>, to: MapScale, focal: SemanticZoomFocal): CanonicalWorldAddress | null {
+  const { point, envelope } = focal;
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+  const center = envelopeCenter(envelope);
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  const after = { scale: to };
+  const moved = canonicalWorldAddress(
+    camera.anchor.x + worldDeltaForPoints(camera, dx) - worldDeltaForPoints(after, dx),
+    camera.anchor.y - worldDeltaForPoints(camera, dy) + worldDeltaForPoints(after, dy),
+  );
+  return moved.ok ? moved.address : null;
+}
+
 export type SemanticZoomResolution =
   | { readonly outcome: 'INTENT'; readonly depth: SemanticDepth; readonly to: ZoomIntent; readonly scale: MapScale }
   | { readonly outcome: 'AT_RUNG_BOUNDARY' };
 
 /**
- * Resolves one semantic-depth step. The focal anchor is deliberately not written: a depth change
- * discloses more or less about the same place, so the camera stays where the reader put it
- * unless an explicitly authorized act moves it.
+ * Resolves one semantic-depth step. Without fingers the focal anchor is deliberately not written: a depth change
+ * discloses more or less about the same place, so the camera stays where the reader put it.
+ *
+ * MAP-CLOSE-01 CA-Z1 (Product Owner, 2026-11-14): a pinch's step carries, in the SAME act, the anchor that keeps the
+ * world point under the fingers under them. `ZOOM_SEMANTIC`'s frozen authority already includes `MC.anchor`
+ * (EX02-03), so this is still one act, one checkpoint and no PAN; Back restores the whole captured camera.
  */
-export function semanticZoom(camera: MapCamera, direction: SemanticZoomDirection): SemanticZoomResolution {
+export function semanticZoom(camera: MapCamera, direction: SemanticZoomDirection, focal: SemanticZoomFocal | null = null): SemanticZoomResolution {
   const depth = adjacentDepth(camera.depth, direction);
   if (depth === null) return { outcome: 'AT_RUNG_BOUNDARY' };
   const scale = reinforcedScale(camera.scale, direction);
-  return { outcome: 'INTENT', depth, to: { scale: scaleIntentRef(scale) }, scale };
+  const anchor = focal === null ? null : focalAnchor(camera, scale, focal);
+  return { outcome: 'INTENT', depth, to: anchor === null ? { scale: scaleIntentRef(scale) } : { scale: scaleIntentRef(scale), anchor: worldAnchorRef(anchor) }, scale };
 }

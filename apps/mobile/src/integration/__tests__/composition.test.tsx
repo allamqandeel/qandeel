@@ -8,7 +8,9 @@
  */
 import { act, render, type RenderResult } from '@testing-library/react-native';
 
-import { MAP_SURFACE_TEST_ID } from '../../map';
+// COSMOS-INT-01 (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage on the ONE surface; the
+// world's node is the stage view (`MapSurface` stays the Replay composite's renderer, G-5).
+import { COSMOS_WORLD_VIEW_TEST_ID } from '../../cosmos/product';
 import { ORIENTATION_CHROME_TEST_ID, RETURN_CONTROLS_TEST_ID } from '../../orientation-chrome';
 import {
   RESPONSIVE_CHROME_BAND_TEST_ID,
@@ -62,14 +64,14 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
     expect(view.getByTestId(RESPONSIVE_TIMELINE_ROW_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).toBeTruthy();
     // The REAL owners, not stand-ins.
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     expect(view.getByTestId(ORIENTATION_CHROME_TEST_ID)).toBeTruthy();
     h.dispose();
   });
 
   it('T12-A54 — there is exactly ONE of each surface, and no hidden duplicate', async () => {
     const { h, view } = await composed();
-    for (const id of [RESPONSIVE_MAP_FRAME_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID, RESPONSIVE_CHROME_BAND_TEST_ID, MAP_SURFACE_TEST_ID, ORIENTATION_CHROME_TEST_ID]) {
+    for (const id of [RESPONSIVE_MAP_FRAME_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID, RESPONSIVE_CHROME_BAND_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, ORIENTATION_CHROME_TEST_ID]) {
       expect(view.queryAllByTestId(id)).toHaveLength(1);
     }
     h.dispose();
@@ -86,7 +88,7 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
     const state = runtime.store.getState();
     const held = runtime.bundle.projection.lookup(runtime.bundle.sessionId, state.live.LH as number, state.camera.depth);
     expect(held.status).toBe('FETCHED');
-    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
     h.dispose();
   });
 
@@ -149,7 +151,7 @@ describe('T12-A91, T12-A92, T12-A99, T12-A103, T12-A104 — Arabic, direction, l
     ] as const) {
       const { h, view } = await composed({ language, direction });
       expect(view.getByTestId(ORIENTATION_CHROME_TEST_ID)).toBeTruthy();
-      expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+      expect(view.getByTestId(COSMOS_WORLD_VIEW_TEST_ID)).toBeTruthy();
       h.dispose();
     }
   });

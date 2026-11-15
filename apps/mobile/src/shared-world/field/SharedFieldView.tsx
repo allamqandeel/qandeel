@@ -22,7 +22,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { typeStyle, usePalette } from '../../conversation';
-import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
+import type { ScreenPoint, SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { PublicExperienceMark } from '../../public-world/field/PublicExperienceMark';
@@ -60,7 +60,7 @@ export function SharedFieldView({ controller, state, envelope, copy, language }:
     [camera, envelope, focusId, state.entries],
   );
   const pan = useCallback((translationX: number, translationY: number) => controller.pan(translationX, translationY), [controller]);
-  const step = useCallback((direction: SemanticZoomDirection) => controller.step(direction), [controller]);
+  const step = useCallback((direction: SemanticZoomDirection, focal?: ScreenPoint | null) => controller.step(direction, focal), [controller]);
   // A place coming onto the glass because the glass moved is navigation, never meaning becoming known: no arrival plays.
   const noCause = useCallback(() => null, []);
   const view = useWorldView<SharedFieldCamera, SharedWorldNode, SharedFieldOutcome>({

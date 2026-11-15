@@ -19,7 +19,7 @@
     "prebuild:verify-voice-note": "node scripts/verify-voice-note-native.mjs"
   },
   "dependencies": {
-    "@shopify/react-native-skia": "2.6.2",
+    "@shopify/react-native-skia": "2.7.0",
     "@supabase/supabase-js": "2.116.0",
     "expo": "~57.0.21",
     "expo-audio": "~57.0.4",
@@ -66,7 +66,8 @@
   "expo": {
     "install": {
       "exclude": [
-        "typescript"
+        "typescript",
+        "@shopify/react-native-skia"
       ]
     }
   }

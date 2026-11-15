@@ -1,0 +1,322 @@
+/**
+ * COSMOS-INT-01 Slice B — the COSMOS stage as a world of the ONE Living Analysis surface.
+ *
+ * One full-surface cosmic stage (`CosmosCanvas`, the look and motion the Product Owner accepted on the HONOR) and, over
+ * it, the stage's own light chrome: the depth rail (right; left in RTL), the Back pill and the presentation-only
+ * Overview below the host's top band, the nearest-place note when a known world has nothing in this region, and the
+ * Personal register of objects the derivation disclosed with no place (G-6). Everything else the reader is told — the
+ * panel, the search, the T-08 orientation, Return, the Timeline, "nothing here yet", "could not be shown" — is the
+ * host's and the chrome band's, exactly as before: this view adds no sentence the production chrome already says.
+ *
+ * The authority is the owner's (`./owner-core`): this view only relays what the fingers did and eases the stage to the
+ * camera the authority answered with. It writes no canonical camera, no store, no controller.
+ *
+ * Overview (Product Owner authorisation, 2026-11-15: "top Overview" is preserved) is PRESENTATION ONLY: it eases the
+ * presentation camera out until every entity the client holds is in view; it dispatches NOTHING; entity taps are
+ * disabled while it is on; any tap, gesture end or Back returns to the canonical camera.
+ *
+ * Motion is COSMOS's (D-5): the settle, the pinch about the fingers and the drift. T-10's arrival choreography is not
+ * played here; the composite binding is still consumed by the Personal owner so no cause is ever borrowed.
+ */
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import type { ViewportEnvelope } from '../../map/camera';
+import type { ChromeLanguage } from '../../orientation-chrome';
+import { absenceOf, type NasijAbsence } from '../core/absence';
+import { zoomAbout, type NasijCamera } from '../core/camera';
+import type { WorldKind } from '../core/stage';
+import { CosmosCanvas, type CosmosCanvasHandle } from '../skia/CosmosCanvas';
+import { cosmosProductCopy } from './copy';
+import { viewOf, type CosmosWorldOwner } from './owner-core';
+
+export const COSMOS_WORLD_VIEW_TEST_ID = 'qandeel-cosmos-world';
+export const COSMOS_BACK_TEST_ID = 'qandeel-cosmos-back';
+export const COSMOS_OVERVIEW_TEST_ID = 'qandeel-cosmos-overview';
+export const COSMOS_RAIL_TEST_ID = 'qandeel-cosmos-rail';
+export const COSMOS_REGISTER_TEST_ID = 'qandeel-cosmos-register';
+export const COSMOS_NEAREST_TEST_ID = 'qandeel-cosmos-nearest';
+export { COSMOS_MARK_TEST_ID_INFIX, COSMOS_STEP_TEST_ID_SUFFIX } from '../skia/CosmosCanvas';
+/** One served relation's accessible name (S5-03C): `${testID}${COSMOS_RELATION_TEST_ID_INFIX}${relationId}`. */
+export const COSMOS_RELATION_TEST_ID_INFIX = ':relation:';
+
+/** D-9: a second tap within this window on nothing is one canonical zoom-IN step at the tapped point. */
+const DOUBLE_TAP_MS = 320;
+const now = (): number => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
+
+// The stage's own glass palette, as accepted on the device.
+const C = { void: '#05060f', ink: '#E9EAF4', quiet: '#9A9DB4', gold: '#ECCC8A', goldDim: 'rgba(236, 204, 138, 0.38)', glass: 'rgba(11, 13, 26, 0.62)', hair: 'rgba(233, 234, 244, 0.16)' } as const;
+
+export interface CosmosWorldViewProps {
+  readonly owner: CosmosWorldOwner;
+  readonly world: WorldKind;
+  readonly language: ChromeLanguage;
+  /** The glass the host measured and steadied (CA-O1): its bands are the insets; the stage fills it. */
+  readonly glass: ViewportEnvelope;
+  /** The slow drift of the atmosphere at rest; off while a live call shares the Analysis surface. */
+  readonly drift?: boolean;
+  /** The stage's accessible label: the world's approved field / map label. */
+  readonly worldLabel: string;
+  readonly zoomInLabel: string;
+  readonly zoomOutLabel: string;
+  /** False when a production accessibility layer (the Personal Map's) stands in for the stage's own marks and actions. */
+  readonly accessibleMarks?: boolean;
+  /** What the host lays over the stage (its accessibility layer, its composition mark). */
+  readonly children?: ReactNode;
+  readonly testID?: string;
+}
+
+export function CosmosWorldView({ owner, world, language, glass, drift = true, worldLabel, zoomInLabel, zoomOutLabel, accessibleMarks = true, children, testID = COSMOS_WORLD_VIEW_TEST_ID }: CosmosWorldViewProps) {
+  const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
+  const copy = useMemo(() => cosmosProductCopy(language), [language]);
+  const rtl = language === 'ar';
+  const canvas = useRef<CosmosCanvasHandle>(null);
+  const glassRef = useRef(glass);
+  // The authority projects through the glass the host measured, before anything is drawn against it.
+  useLayoutEffect(() => { glassRef.current = glass; owner.setGlass(glass); }, [owner, glass]);
+  const view = useMemo(() => viewOf(glass), [glass]);
+  const focusY = view.focusY;
+
+  // ── Overview: PRESENTATION ONLY (see the header). Nothing below this line writes a canonical camera. ─────────────
+  const [overviewOn, setOverviewOn] = useState(false);
+  const overviewRef = useRef(false);
+  const overview = overviewOn;
+
+  // A world's first READY stage: the camera is placed, not animated.
+  const placed = useRef<CosmosWorldOwner | null>(null);
+  useEffect(() => {
+    if (snapshot.status !== 'READY' || placed.current === owner) return;
+    placed.current = owner;
+    canvas.current?.jumpTo(snapshot.camera, focusY);
+  }, [snapshot, owner, focusY]);
+
+  // The canonical camera moved (an act just answered, a restore, a glass change): ease the stage to it.
+  const keepAnchor = useRef(false);
+  const { cx, cy, scale } = snapshot.camera;
+  useEffect(() => {
+    if (placed.current !== owner || overviewRef.current) return;
+    canvas.current?.settleTo({ cx, cy, scale }, focusY, { keepAnchor: keepAnchor.current });
+    keepAnchor.current = false;
+  }, [cx, cy, scale, focusY, owner]);
+
+  /** After an act: settle at once to whatever the authority now holds (also when the act moved nothing). */
+  const settleNow = useCallback((aboutFingers = false) => {
+    const at = owner.getSnapshot();
+    keepAnchor.current = aboutFingers;
+    canvas.current?.settleTo(at.camera, viewOf(glassRef.current).focusY, { keepAnchor: aboutFingers });
+  }, [owner]);
+
+  const leaveOverview = useCallback(() => {
+    if (!overviewRef.current) return false;
+    overviewRef.current = false;
+    setOverviewOn(false);
+    settleNow();
+    return true;
+  }, [settleNow]);
+  const enterOverview = useCallback(() => {
+    const at = owner.getSnapshot();
+    const v = viewOf(glassRef.current);
+    const bounds = at.list.bounds;
+    if (bounds === null || at.status !== 'READY') return;
+    const margin = 110; // points kept free around the entities, for their light and their titles
+    const fit = Math.min((v.width - margin) / Math.max(1, bounds.maxX - bounds.minX), (v.height - margin * 2.4) / Math.max(1, bounds.maxY - bounds.minY));
+    const framed: NasijCamera = { cx: (bounds.minX + bounds.maxX) / 2, cy: (bounds.minY + bounds.maxY) / 2, scale: Math.max(0.02, Math.min(at.camera.scale, fit)) };
+    overviewRef.current = true;
+    setOverviewOn(true);
+    canvas.current?.settleTo(framed, v.focusY);
+  }, [owner]);
+  // A new owner starts from its own camera: no overview is carried into it.
+  useEffect(() => () => { overviewRef.current = false; }, [owner]);
+
+  const onPanEnd = useCallback((released: NasijCamera) => {
+    if (leaveOverview()) return;
+    owner.pan(released);
+    settleNow();
+  }, [leaveOverview, owner, settleNow]);
+  // A pinch ends ABOUT THE FINGERS (Product Owner finding, 2026-11-15): the pan part of the gesture is committed first,
+  // at the current rung's scale with the fingers' point still under the fingers, then the step is asked for with the
+  // fingers as its focal; the settle keeps the anchor in every case. Nothing canonical is decided here.
+  const onPinchEnd = useCallback((direction: 'IN' | 'OUT' | null, fx: number, fy: number, released: NasijCamera) => {
+    if (leaveOverview()) return;
+    const at = owner.getSnapshot();
+    const atRung = zoomAbout(released, viewOf(glassRef.current), fx, fy, at.camera.scale);
+    owner.pan(atRung);
+    if (direction === null) { settleNow(true); return; }
+    const result = owner.step(direction, { x: fx, y: fy }, atRung);
+    settleNow(result.applied ? result.aboutFingers : true);
+  }, [leaveOverview, owner, settleNow]);
+  const lastTap = useRef(0);
+  const onTap = useCallback((x: number, y: number, released: NasijCamera) => {
+    if (leaveOverview()) return; // entity taps are disabled in the overview: the tap only returns
+    const result = owner.tap(x, y, released);
+    if (result === 'NONE') {
+      const at = now();
+      if (at - lastTap.current < DOUBLE_TAP_MS) { lastTap.current = 0; const stepped = owner.step('IN', { x, y }, released); settleNow(stepped.aboutFingers); return; }
+      lastTap.current = at;
+    } else lastTap.current = 0;
+    settleNow();
+  }, [leaveOverview, owner, settleNow]);
+
+  const stepBy = useCallback((direction: 'IN' | 'OUT') => { leaveOverview(); owner.step(direction, null, null); settleNow(); }, [leaveOverview, owner, settleNow]);
+  const zoomIn = useCallback(() => stepBy('IN'), [stepBy]);
+  const zoomOut = useCallback(() => stepBy('OUT'), [stepBy]);
+  const activate = useCallback((id: string) => { if (leaveOverview()) return; owner.focus(id); settleNow(); }, [leaveOverview, owner, settleNow]);
+  const labelOf = useCallback((id: string) => owner.labelOf(id), [owner]);
+  const back = useCallback(() => {
+    if (leaveOverview()) return;
+    const at = owner.getSnapshot();
+    if (!owner.back() && at.rung === 0) owner.goTo(0, 0);
+    settleNow();
+  }, [leaveOverview, owner, settleNow]);
+  const toRung = useCallback((rung: number) => {
+    leaveOverview();
+    let at = owner.getSnapshot().rung;
+    while (at > rung) {
+      const applied = owner.step('OUT', null, null).applied;
+      const next = owner.getSnapshot().rung;
+      if (!applied || next === at) break;
+      at = next;
+    }
+    settleNow();
+  }, [leaveOverview, owner, settleNow]);
+  const toNearest = useCallback((x: number, y: number) => { leaveOverview(); owner.goTo(x, y); settleNow(); }, [leaveOverview, owner, settleNow]);
+
+  const absence: NasijAbsence = absenceOf({ status: snapshot.status, shown: snapshot.shown, worldIndex: snapshot.worldIndex }, snapshot.camera, view);
+  const names = copy.rungs[snapshot.world];
+  // The pill names where it returns to: the shallower rung, or the world's centre at the first rung. It stands down at
+  // home, and in the overview (where the selected Overview chip, any tap or any gesture is the way back).
+  const atHome = overview || (snapshot.rung === 0 && snapshot.camera.cx === 0 && snapshot.camera.cy === 0);
+  const backText = snapshot.rung > 0 ? `${rtl ? '→' : '←'} ${names[snapshot.rung - 1]}` : copy.wholeWorld;
+  const bearing = absence.kind === 'REGION_EMPTY' ? absence.bearing : null;
+
+  // The chrome's own `rtl` handling is the only mirroring: the root pins the layout direction so a host under native
+  // RTL mirroring (the Shared / Public fields; the Conversation surface already pins `ltr`) renders the same accepted
+  // layout — the rail's label inboard of its dot on the right, Back right / Overview left in Arabic — in every world.
+  // (HONOR proof, 2026-11-15: without this the Shared / Public rail label sat outboard and was clipped at the edge.)
+  return (
+    <View style={styles.root} testID={testID}>
+      <CosmosCanvas
+        ref={canvas}
+        world={world}
+        stage={snapshot.list}
+        held={snapshot.held}
+        rung={snapshot.rung}
+        rtl={rtl}
+        initialCamera={snapshot.camera}
+        mode="FULL"
+        drift={drift}
+        onPanEnd={onPanEnd}
+        onPinchEnd={onPinchEnd}
+        onTap={onTap}
+        accessibilityLabel={`${worldLabel} · ${names[snapshot.rung] ?? ''}`}
+        zoomInLabel={zoomInLabel}
+        zoomOutLabel={zoomOutLabel}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        labelOf={labelOf}
+        onActivate={activate}
+        accessibleMarks={accessibleMarks}
+        testID={testID}
+      />
+      {children}
+
+      {/* S5-03C: the focused entity's served relations keep their accessible names (the strand itself is drawn in the stage). */}
+      {snapshot.relations.map((relation) => (
+        <View key={relation.id} testID={`${testID}${COSMOS_RELATION_TEST_ID_INFIX}${relation.id}`} accessible accessibilityLabel={relation.label} pointerEvents="none" style={styles.relation} />
+      ))}
+
+      {/* Below the host's top band: Back (the shallower rung, or the world's centre) and Overview. */}
+      <View pointerEvents="box-none" style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }, rtl && styles.rowReverse]}>
+        <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} style={[styles.press, atHome && styles.hidden]}>
+          <View style={styles.pill}><Text style={styles.pillText}>{backText}</Text></View>
+        </Pressable>
+        <View style={styles.spacer} />
+        <Pressable testID={COSMOS_OVERVIEW_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.overview} accessibilityState={{ selected: overview }}
+          onPress={() => { if (!leaveOverview()) enterOverview(); }} style={styles.press}>
+          <View style={[styles.chip, overview && styles.chipOn]}><Text style={[styles.pillText, overview && styles.goldText]}>{copy.overview}</Text></View>
+        </Pressable>
+      </View>
+
+      {/* The depth rail: the current depth is the lit point; a shallower depth can be returned to. Product Owner override
+          (2026-11-15): the rail stays on the RIGHT in both languages — its side is never mirrored in RTL; its design,
+          labels, size and interactions are the accepted ones. The label sits inboard of its dot, as on the right rail. */}
+      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" style={[styles.rail, { right: glass.insetRight + 2 }]}>
+        <View style={[styles.railLine, { right: 21.5 }]} />
+        {names.map((name, i) => {
+          const on = i === snapshot.rung;
+          const past = i < snapshot.rung;
+          return (
+            <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
+              onPress={() => toRung(i)} style={styles.bead}>
+              {on ? <Text style={[styles.beadText, rtl && styles.beadTextArabic]}>{name}</Text> : null}
+              <View style={styles.beadSlot}>
+                <View style={on ? styles.beadOn : [styles.beadDot, past && styles.beadPast]} />
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* A known world with nothing in this region: the one absence the production chrome does not say. */}
+      {absence.kind !== 'REGION_EMPTY' ? null : (
+        <View pointerEvents="box-none" style={styles.absenceWrap}>
+          <View accessibilityLiveRegion="polite" testID={COSMOS_NEAREST_TEST_ID} style={styles.absence}>
+            <Text style={styles.absenceText}>{copy.regionEmpty}</Text>
+            {bearing === null ? null : (
+              <Pressable accessibilityRole="button" accessibilityLabel={copy.nearest} onPress={() => toNearest(snapshot.camera.cx + bearing.dx, snapshot.camera.cy + bearing.dy)} style={styles.absenceAct}>
+                <Text style={[styles.goldText, { transform: [{ rotate: `${Math.atan2(bearing.dy, bearing.dx)}rad` }] }]}>➤</Text>
+                <Text style={styles.goldText}>{copy.nearest}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* G-6: the Personal objects disclosed with no place, at the start of the bottom edge, inspectable; no name is invented. */}
+      {snapshot.unplaced.length === 0 ? null : (
+        <View testID={COSMOS_REGISTER_TEST_ID} pointerEvents="box-none"
+          style={[styles.register, { bottom: glass.insetBottom + 10 }, rtl ? { right: glass.insetRight + 10 } : { left: glass.insetLeft + 10 }, rtl && styles.rowReverse]}>
+          {snapshot.unplaced.map((item) => {
+            const on = item.id === snapshot.inspectedId;
+            return (
+              <Pressable key={item.id} testID={`${COSMOS_REGISTER_TEST_ID}:${item.id}`} accessibilityRole="button" accessibilityLabel={owner.labelOf(item.id)}
+                accessibilityState={{ selected: on }} onPress={() => activate(item.id)} style={styles.beadSlot}>
+                <View style={on ? styles.beadOn : styles.beadDot} />
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.void, direction: 'ltr' },
+  top: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rowReverse: { flexDirection: 'row-reverse' },
+  spacer: { flex: 1 },
+  hidden: { opacity: 0 },
+  // T12-A95: every press target is at least 44 points; the accepted 40-point pill sits inside it.
+  press: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
+  pill: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
+  pillText: { fontSize: 13, color: C.ink },
+  chip: { minHeight: 40, minWidth: 44, paddingHorizontal: 12, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
+  chipOn: { borderColor: C.gold },
+  goldText: { fontSize: 13, color: C.gold },
+  rail: { position: 'absolute', top: '36%' },
+  railLine: { position: 'absolute', top: 22, bottom: 22, width: 1, backgroundColor: C.goldDim },
+  bead: { minHeight: 44, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
+  beadSlot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  beadDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.void, borderWidth: 1, borderColor: C.goldDim },
+  beadPast: { backgroundColor: C.goldDim },
+  beadOn: { width: 9, height: 9, borderRadius: 5, backgroundColor: C.gold, borderWidth: 4, borderColor: 'rgba(236, 204, 138, 0.3)' },
+  beadText: { fontSize: 10, letterSpacing: 1.8, color: C.gold, textShadowColor: C.void, textShadowRadius: 8, textTransform: 'uppercase' },
+  beadTextArabic: { fontSize: 13, letterSpacing: 0, textTransform: 'none' },
+  relation: { position: 'absolute', top: 0, left: 0, width: 1, height: 1, opacity: 0 },
+  absenceWrap: { position: 'absolute', left: 0, right: 0, top: '38%', alignItems: 'center' },
+  absence: { maxWidth: '76%', alignItems: 'center', backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 12 },
+  absenceText: { fontSize: 16, lineHeight: 24, color: C.ink, textAlign: 'center' },
+  absenceAct: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10 },
+  register: { position: 'absolute', flexDirection: 'row', flexWrap: 'wrap', maxWidth: '60%' },
+});
