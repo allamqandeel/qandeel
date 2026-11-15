@@ -29,9 +29,12 @@ const bootSmoke = await read('apps/mobile/.maestro/boot-smoke.yaml');
 
 const expectedDependencies = {
   // T-04: the authorized Living Analysis Map renderer, pinned exactly (not a range) because it
-  // is a native dependency whose generated projects the native smoke jobs build. It is the
-  // Expo SDK 57 recommended Skia version and `expo install --check` accepts it unchanged.
-  '@shopify/react-native-skia': '2.6.2',
+  // is a native dependency whose generated projects the native smoke jobs build. QAN-INF-03
+  // CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0, the
+  // version the COSMOS renderer was accepted and proven on; Expo SDK 57 bundles 2.6.2, so the
+  // manifest declares it as the second `expo.install.exclude` exception (asserted below) and
+  // both offline gates keep running unchanged. Previous pin: 2.6.2.
+  '@shopify/react-native-skia': '2.7.0',
   // T-12P §2.1: the authorized direct-Supabase mobile identity authority. The mobile app obtains
   // its own Supabase Auth session and forwards the access token to the existing API, which stays
   // the verifier. No backend-issued substitute token exists, and no secret key ships here.
@@ -156,7 +159,10 @@ test('the mobile workspace joins the root workspace and the root lockfile only',
 test('mobile dependency pins are exactly the authorized Expo SDK 57 foundation', () => {
   assert.deepEqual(mobilePackage.dependencies, expectedDependencies);
   assert.deepEqual(mobilePackage.devDependencies, expectedDevDependencies);
-  assert.deepEqual(mobilePackage.expo, { install: { exclude: ['typescript'] } });
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): exactly two declared exceptions —
+  // TypeScript (5.9 against the SDK's 6.x) and react-native-skia (2.7.0 against the SDK's bundled 2.6.2) — and nothing else.
+  assert.deepEqual(mobilePackage.expo, { install: { exclude: ['typescript', '@shopify/react-native-skia'] } });
+  assert.match(mobileReadme, /Intentional react-native-skia exception/u);
   assert.equal(mobilePackage.jest.preset, 'jest-expo');
   assert.match(mobileReadme, /install\.exclude/u);
   assert.match(mobileReadme, /typescript ~5\.9\.3/u);

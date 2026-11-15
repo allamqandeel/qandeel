@@ -522,7 +522,8 @@ test('the client ingests LF passively into the frozen T-02 kernel through the ON
   assert.equal((mobileCi.match(/needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/gu) ?? []).length,
     (mobileCi.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
   // Likewise the mobile manifest: the frozen fact is the renderer VERSION T-04's architecture pins.
-  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0 (previous pin 2.6.2); the COSMOS renderer (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15) was accepted and proven on 2.7.0; Expo SDK 57 bundles 2.6.2, so the manifest declares the second QAN-INF-03 exception beside the TypeScript one and both offline gates keep running unchanged.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.7.0', 'the authorized T-04 renderer pin is exact');
 });
 
 test('deterministic identities: RFC 4122 v5 over the documented URI, derived in TypeScript and re-derived by the database; payload exact', () => {
@@ -560,7 +561,7 @@ test('no T-03C, no Return-to-Live-Focus / Go Live + Locate, no visual UI, no LF 
   }
   // FORWARD-SAFE (R2-02): a whole-lockfile hash makes every future authorized dependency fail this
   // contract. The frozen fact is the renderer VERSION T-04 pins; the T-03D fact is the line below.
-  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.7.0', 'the authorized T-04 renderer version is locked exactly (QAN-INF-03 re-anchor, COSMOS-INT-01 D-13 / D-14)');
   assert.doesNotMatch(read('package-lock.json'), /live-focus|effective-live-focus/u, 'the lockfile knows nothing of T-03D');
   assert.doesNotMatch(stripComments(establishment), /liveFocus|LIVE_FOCUS|live-focus/u, 'the retired T-03A2 establishment service never learned about LF');
 });

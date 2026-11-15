@@ -308,7 +308,8 @@ test('the client seam is passive and typed: decode, fetch, hold; NOT_FETCHED / D
     (mobileCi.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
   // The mobile manifest is likewise not owned here. What IS frozen is the renderer version T-04's
   // architecture pins; a later task adding an unrelated dependency is not this contract's business.
-  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.6.2', 'the authorized T-04 renderer pin is exact');
+  // QAN-INF-03 CONTROLLED RE-ANCHOR (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15): 2.7.0 (previous pin 2.6.2); the COSMOS renderer (COSMOS-INT-01, Product Owner D-13 / D-14, 2026-11-15) was accepted and proven on 2.7.0; Expo SDK 57 bundles 2.6.2, so the manifest declares the second QAN-INF-03 exception beside the TypeScript one and both offline gates keep running unchanged.
+  assert.equal(mobilePackage.dependencies['@shopify/react-native-skia'], '2.7.0', 'the authorized T-04 renderer pin is exact');
 });
 
 test('R2: the production A-1 path is the canonical subject-grounding authority end to end - server-built universe, opaque handles, server authorization, atomic persistence, derived appearance - and nothing else writes an appearance or a grounding', () => {
@@ -417,7 +418,7 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   // FORWARD-SAFE (R2-02): a whole-lockfile hash makes every future authorized dependency fail this
   // contract. What is genuinely frozen is the renderer VERSION T-04 pins, which is asserted from the
   // lockfile itself; and what T-03C permanently owes is that IT pulled nothing in.
-  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
+  assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.7.0', 'the authorized T-04 renderer version is locked exactly (QAN-INF-03 re-anchor, COSMOS-INT-01 D-13 / D-14)');
   assert.doesNotMatch(read('package-lock.json'), /historical-projection/u, 'the lockfile knows nothing of T-03C');
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.

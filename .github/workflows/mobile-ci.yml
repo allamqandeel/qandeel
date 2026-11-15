@@ -172,7 +172,7 @@ jobs:
       # reason. Real dependency compatibility is still enforced: see
       # `.github/workflows/mobile-expo-dependency-drift-advisory.yml` for the live
       # signal this intentionally no longer gates merges.
-      - {name: Expo dependency validation (intentional typescript exclusion), run: npm run deps:check:mobile, env: {EXPO_OFFLINE: '1'}}
+      - {name: Expo dependency validation (intentional typescript and react-native-skia exclusions), run: npm run deps:check:mobile, env: {EXPO_OFFLINE: '1'}}
       - {name: Expo Doctor, run: npm run doctor:mobile, env: {EXPO_OFFLINE: '1', EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK: '0'}}
       - {name: Prebuild idempotency gate (CNG Level 2), run: npm run prebuild:mobile}
       # W2-02: the GENERATED Android + iOS projects carry the I-08B2.5 icon bytes unchanged and the World-only
