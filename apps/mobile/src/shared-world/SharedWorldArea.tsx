@@ -125,11 +125,16 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
   // S4-03: Back from Manage World returns to the World it manages; from an ended World, to the root.
   // SHARED-VIS-01: from the conversation, Back returns to the same World's field; inside the field, it first releases a
   // focused place; from the field's root, to the Shared root.
+  // COSMOS-INT-01 Slice D CP2 (§19.6, SD-5): this stays the ONE handler. While the World's field is shown, its open Detail
+  // Sheet is asked first (EXPANDED → PEEK → CLOSED, presentation only); only then does the order below run, unchanged.
   const placeKind = state.place.kind;
   const worldView = state.worldView;
+  const sheetBack = useRef<(() => boolean) | null>(null);
+  const registerSheetBack = useCallback((back: (() => boolean) | null) => { sheetBack.current = back; }, []);
   useEffect(() => {
     if (placeKind === 'ROOT') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (placeKind === 'WORLD' && worldView === 'MAP' && sheetBack.current?.() === true) return true;
       if (placeKind === 'MANAGE') controller.closeManage();
       else if (placeKind === 'WORLD' && controller.field !== null && worldView === 'CONVERSATION') controller.closeConversation();
       else if (placeKind === 'WORLD' && controller.field !== null && controller.field.back()) return true;
@@ -217,7 +222,8 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
       const world = state.entry.world;
       return frame(
         <SharedLivingAnalysis controller={controller.field} language={language} insets={insets} title={labelOfWorld(copy, world)}
-          onBack={() => controller.toRoot()} onConversation={() => controller.openConversation()} onManage={() => controller.openManage()} />,
+          onBack={() => controller.toRoot()} onConversation={() => controller.openConversation()} onManage={() => controller.openManage()}
+          registerSheetBack={registerSheetBack} />,
         'qandeel-shared-world-field',
         true,
       );
