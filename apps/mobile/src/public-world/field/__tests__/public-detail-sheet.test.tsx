@@ -10,8 +10,6 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 import { AccessibilityInfo, BackHandler } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
-// The mocked module object itself (the sheet reads its `withSpring` from it), so one test can hold a spring's completion.
-const Reanimated = jest.requireMock<typeof import('react-native-reanimated')>('react-native-reanimated');
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import {
@@ -31,6 +29,9 @@ import { PUBLIC_FIELD_WORLD_TEST_ID } from '../PublicLivingAnalysis';
 import { createPublicFieldController, type PublicFieldController, type PublicFieldTransport } from '../public-field-controller';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
+
+// The mocked module object itself (the sheet reads its `withSpring` from it), so one test can hold a spring's completion.
+const Reanimated = jest.requireMock<typeof import('react-native-reanimated')>('react-native-reanimated');
 
 const INSETS = { top: 44, right: 0, bottom: 0, left: 0 };
 const SIZE = { width: 400, height: 800 };
