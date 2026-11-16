@@ -8,6 +8,7 @@ import { AccessibilityInfo, FlatList, StyleSheet } from 'react-native';
 import { ConversationSurface, conversationCopy, createConversationController, type ConversationController } from '..';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { CANONICAL_VISUAL } from '../visual/canonical-visual.generated';
+import { typeStyle } from '../visual/theme';
 import { exchange, flush, page, scriptedTransport, type ScriptedTransport } from '../__fixtures__/conversation';
 
 const SESSION = '11111111-1111-4111-8111-111111111111';
@@ -131,15 +132,19 @@ describe('W1A-01 — the frozen roles: UTTERANCE is the committed turn, FIELD is
     expect(PALETTE.routes.field.startsWith('qandeel.role.field.fill')).toBe(true);
   });
 
-  it('text is set in the Estedad v8.5 static faces at the E3 roles, with no letter-spacing and no synthetic weight', async () => {
+  it('text is set in the Estedad v8.5 static faces at the refined E3 roles, with no letter-spacing and no synthetic weight', async () => {
     const { view, controller } = await mounted('ar');
     const [first] = controller.getState().exchanges;
     const [{ node: paragraph }] = texts(byTestId(view, `qandeel-utterance-${first.userTurn.id}`));
-    expect(style(paragraph)).toMatchObject({ fontFamily: 'Estedad-Regular', fontSize: 17, lineHeight: 30 });
+    // UI-POLISH-01 RE-ANCHOR (Product Owner, 2026-11-16, "App-Wide Typography & Premium UI Refinement"). The original
+    // protection was that a paragraph is the E3 body role in the Regular face (17 / 30) and the door is the action role in
+    // the Medium face (14 / 23). It still holds: the same roles, the same faces, read through `typeStyle`, now at the
+    // refined body 16 / 26 and action 14 / 22 (theme.ts). The exact numbers stay pinned, so no silent drift passes.
+    expect(style(paragraph)).toMatchObject({ ...typeStyle('body'), fontFamily: 'Estedad-Regular', fontSize: 16, lineHeight: 26 });
     expect(style(paragraph).letterSpacing).toBeUndefined();
     expect(style(paragraph).fontWeight).toBeUndefined();
     const door = view.getByText(conversationCopy('ar').doorLabel);
-    expect(style(door)).toMatchObject({ fontFamily: 'Estedad-Medium', fontSize: 14, lineHeight: 23 });
+    expect(style(door)).toMatchObject({ ...typeStyle('action'), fontFamily: 'Estedad-Medium', fontSize: 14, lineHeight: 22 });
   });
 });
 

@@ -3115,7 +3115,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -3149,9 +3149,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -3201,7 +3201,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -3251,7 +3251,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -3324,7 +3324,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -3345,7 +3345,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -3372,9 +3372,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -3421,7 +3421,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -6677,7 +6677,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -6711,9 +6711,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -6763,7 +6763,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -6813,7 +6813,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -6886,7 +6886,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -6907,7 +6907,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -6934,9 +6934,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -6983,7 +6983,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -10235,7 +10235,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -10269,9 +10269,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -10321,7 +10321,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -10371,7 +10371,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -10444,7 +10444,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -10465,7 +10465,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -10492,9 +10492,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -10541,7 +10541,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -13797,7 +13797,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -13831,9 +13831,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -13883,7 +13883,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -13933,7 +13933,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -14006,7 +14006,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -14027,7 +14027,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -14054,9 +14054,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -14103,7 +14103,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -17355,7 +17355,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -17389,9 +17389,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -17441,7 +17441,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -17491,7 +17491,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -17564,7 +17564,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -17585,7 +17585,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -17612,9 +17612,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -17661,7 +17661,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -20913,7 +20913,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -20947,9 +20947,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -20999,7 +20999,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -21049,7 +21049,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -21122,7 +21122,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -21143,7 +21143,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -21170,9 +21170,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -21219,7 +21219,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -24475,7 +24475,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -24509,9 +24509,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -24561,7 +24561,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -24611,7 +24611,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -24684,7 +24684,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -24705,7 +24705,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -24732,9 +24732,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -24781,7 +24781,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -28123,7 +28123,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -28157,9 +28157,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -28209,7 +28209,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -28259,7 +28259,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -28332,7 +28332,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -28353,7 +28353,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -28380,9 +28380,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -28429,7 +28429,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -31693,7 +31693,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -31713,7 +31713,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -31747,9 +31747,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -31799,7 +31799,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -31849,7 +31849,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -31899,7 +31899,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -31949,7 +31949,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -32022,7 +32022,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -32043,7 +32043,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -32070,9 +32070,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -32119,7 +32119,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -35558,7 +35558,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -35592,9 +35592,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -35644,7 +35644,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -35694,7 +35694,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -35767,7 +35767,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -35788,7 +35788,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -35815,9 +35815,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -35864,7 +35864,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -39486,7 +39486,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -39520,9 +39520,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -39572,7 +39572,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -39622,7 +39622,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -39695,7 +39695,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -39716,7 +39716,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -39743,9 +39743,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -39792,7 +39792,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -42635,7 +42635,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -42669,9 +42669,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -42721,7 +42721,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -42771,7 +42771,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -42844,7 +42844,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -42865,7 +42865,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -42892,9 +42892,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -42941,7 +42941,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -46193,7 +46193,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -46227,9 +46227,9 @@
                   },
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -46279,7 +46279,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -46329,7 +46329,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"
@@ -46402,7 +46402,7 @@
                      "fontFamily": "Estedad-Regular",
                      "fontSize": 12,
                      "includeFontPadding": false,
-                     "lineHeight": 20
+                     "lineHeight": 18
                     },
                     {
                      "color": "#afaca3"
@@ -46423,7 +46423,7 @@
                    "fontFamily": "Estedad-Regular",
                    "fontSize": 12,
                    "includeFontPadding": false,
-                   "lineHeight": 20
+                   "lineHeight": 18
                   },
                   {
                    "color": "#8b8982"
@@ -46450,9 +46450,9 @@
                  "style": [
                   {
                    "fontFamily": "Estedad-Regular",
-                   "fontSize": 15,
+                   "fontSize": 14,
                    "includeFontPadding": false,
-                   "lineHeight": 25
+                   "lineHeight": 22
                   },
                   {
                    "borderBottomWidth": 1,
@@ -46499,7 +46499,7 @@
                      "fontFamily": "Estedad-Medium",
                      "fontSize": 14,
                      "includeFontPadding": false,
-                     "lineHeight": 23
+                     "lineHeight": 22
                     },
                     {
                      "color": "#d8d5ca"

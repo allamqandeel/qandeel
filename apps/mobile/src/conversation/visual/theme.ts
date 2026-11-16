@@ -23,26 +23,48 @@ export const TYPEFACE = Object.freeze({ regular: 'Estedad-Regular', medium: 'Est
 export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONICAL_VISUAL.display;
 
 /**
- * UI-POLISH-01 (Product Owner, 2026-11-16: "a refined, cohesive typography scale across QANDEEL, not simply smaller
- * text"). The ONE display role every title in the app is drawn with is refined from E3's 32 / 50 to 26 / 41. That covers
- * the World titles, a Public or Shared meaning, «النقاش», and the account, first-use, sign-in, Settings, Activity and
- * Understanding titles. E3's leading ratio (50 / 32 ≈ 1.56) is kept for Arabic, and the Medium face is unchanged. The
- * running-text roles (body 17 / 30, supporting 15 / 25, action 14 / 23, metadata 12 / 20) are NOT touched. The frozen E3
- * source and the generated table stay as recorded; this is the single product-side refinement over them, read only
- * through `typeStyle`. Font scaling is untouched: no `allowFontScaling` / `maxFontSizeMultiplier` is set.
+ * UI-POLISH-01 (Product Owner, 2026-11-16) — the app-wide type refinement, the ONE product-side layer over the frozen E3
+ * roles. The frozen E3 source and the generated table stay as recorded; every role is read only through `typeStyle`, and
+ * the faces (Regular / Medium) are E3's own.
+ *
+ * - First direction ("a refined, cohesive typography scale ... not simply smaller text"): the display role every title is
+ *   drawn with goes from E3's 32 / 50 to 26 / 41.
+ * - Final direction ("App-Wide Typography & Premium UI Refinement": ordinary text, conversations and replies were still
+ *   oversized and vertically spacious). The running-text roles move to the Material 3 sizes: Body Large 16, Body Medium and
+ *   Label Large 14, Body Small 12.
+ *
+ * Their leadings are Arabic-first, not Latin-first. Estedad v8.5's own line box is 1.525 em (Regular) and 1.54 em (Medium),
+ * and its tallest ink, stacked marks included, spans 1.45 em. Every leading therefore stays at or above 1.5 em, where
+ * Material's Latin 24 / 20 / 16 would clip or crowd Arabic.
+ *
+ * | Role       | E3      | Refined |
+ * |------------|---------|---------|
+ * | body       | 17 / 30 | 16 / 26 |
+ * | supporting | 15 / 25 | 14 / 22 |
+ * | action     | 14 / 23 | 14 / 22 |
+ * | metadata   | 12 / 20 | 12 / 18 |
+ *
+ * Font scaling is untouched: no `allowFontScaling` / `maxFontSizeMultiplier` is set. Touch targets are carried by the
+ * controls' own minimum sizes, never by these leadings.
  */
 const STATEMENT = Object.freeze({ ...CANONICAL_VISUAL.display.statement, size: 26, leading: 41 });
+const RUNNING = Object.freeze({
+  body: Object.freeze({ ...CANONICAL_VISUAL.type.body, size: 16, leading: 26 }),
+  supporting: Object.freeze({ ...CANONICAL_VISUAL.type.supporting, size: 14, leading: 22 }),
+  action: Object.freeze({ ...CANONICAL_VISUAL.type.action, size: 14, leading: 22 }),
+  metadata: Object.freeze({ ...CANONICAL_VISUAL.type.metadata, size: 12, leading: 18 }),
+});
 
 /**
  * One E3 role as a React Native text style.
  *
  * The weight is carried by the FACE, never by `fontWeight`: a static instance already is its weight,
  * and asking a platform to embolden a named face again either does nothing or synthesizes a fake
- * bold. `letterSpacing` is never set, so Arabic stays connected, and the leading is E3's own.
+ * bold. `letterSpacing` is never set, so Arabic stays connected, and the leading is the refined one above.
  */
 export function typeStyle(role: TypeRole): { fontFamily: string; fontSize: number; lineHeight: number; includeFontPadding: false } {
   // W1B-01: the E3 display role (`statement`) sits beside the running-text roles.
-  const spec = role === 'statement' ? STATEMENT : CANONICAL_VISUAL.type[role];
+  const spec = role === 'statement' ? STATEMENT : RUNNING[role];
   return {
     fontFamily: spec.weight === 500 ? TYPEFACE.medium : TYPEFACE.regular,
     fontSize: spec.size,

@@ -20,6 +20,14 @@
  * compact contextual controls (T-07 acts, T-04's context choice). The golden was regenerated ONCE for that change, which
  * is an intended change of the screen, not a refactor. The screen is measured as the device measures it: the surface's
  * chrome band reports its (empty) content height, so the band is the bottom safe area and nothing else (C-6).
+ *
+ * UI-POLISH-01 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-16, "App-Wide Typography & Premium UI Refinement"; the
+ * refined running-text roles in conversation/visual/theme.ts): regenerated ONCE because the type roles were intentionally
+ * refined. Before it was rewritten, a structural diff of the old and new golden proved that the host tree is identical.
+ * That covers keys, array lengths, order, testIDs, handlers, accessibility and every non-type value. The ONLY differing
+ * leaves are 26 `fontSize` and 107 `lineHeight` values, each exactly a role's refinement: supporting 15 / 25 → 14 / 22
+ * (26 × 2), action 23 → 22 (41) and metadata 20 → 18 (40). The protection is unchanged: the screen is exactly the
+ * composition it was, now drawn at the refined roles.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
