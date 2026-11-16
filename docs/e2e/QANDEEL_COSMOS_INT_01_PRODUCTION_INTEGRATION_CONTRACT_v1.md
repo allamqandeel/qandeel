@@ -1,7 +1,7 @@
-# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED — FINAL HONOR REVIEW DONE, STOPPED FOR THE PO’S REVIEW (§19.14), CP2 – CP4 NOT authorised)
+# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED — FINAL HONOR REVIEW AND CLOSURE PASS DONE, STOPPED FOR THE PO’S REVIEW (§19.14), CP2 – CP4 NOT authorised)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — THE PO'S FINAL HONOR REVIEW RUN (§19.14, "Final HONOR review") — STOPPED FOR THE PO’S REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
+**Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — THE PO'S FINAL HONOR REVIEW RUN (§19.14, "Final HONOR review") — THE PO'S CLOSURE PASS RUN (§19.14, "Closure pass"; the one narrow §19.13 exception for PublicDiscussion visual hosting) — STOPPED FOR THE PO’S REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
 **Status (v1.4):** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — PERSONAL TARGET CENTRING AFTER A SEMANTIC ZOOM (PO AUTHORISATION 2026-11-16) — DELIVERED ON `cosmos/cosmos-int-01-personal-centring` (FROM 2f2dca46; ITS OWN DEPENDENT DRAFT PR; NOT ACCEPTED UNTIL THE PO REVIEWS THE HONOR RESULT — §18) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2), 2026-11-15 (v1.3), 2026-11-15 (v1.4).
 **Change log v1.4 → v1.5 (2026-11-16).** The PO's messages "COSMOS-INT-01 / Slice D — WP0 Authorization" and "COSMOS-INT-01 / Slice D — PO Approval and Execution Authorization — CP1 Only" are applied. The WP0 report and the proposed execution contract (outside the repository, `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\`) are APPROVED with the PO's amendments; new §19 is the binding Slice D execution contract with the PO decision register SD-1 … SD-12 (all APPROVED) and the three mandatory amendments (long lists stay reachable, disabled controls truly disabled, safe predictable gestures). §18 records the PO's acceptance of the Personal target centring (PR #396). The inherited contradictions with D-12 / B-1 in §4.4 H6, §6.2 and §6.4 are corrected in place (struck, not deleted) and §6.3 is marked refined; §10's D-8 and G-3 are marked APPROVED. Slices B and C are recorded as accepted (the PO's CP1 authorisation: "PR #395 — Slice C: accepted"). CP1 is the only authorised implementation; no other decision changes and no further approval is inferred.
@@ -1372,6 +1372,7 @@ A contract pin moves only with its reason written beside it (this section: D-8 /
 - T-04 … T-08 modules;
 - `LivingAnalysisSurface.tsx`, `responsive/*`;
 - `PublicDiscussion.tsx`, `PublicTopicContent.tsx`, `public-compose/*`;
+  - **One narrow exception (PO, 2026-11-16, closure pass, Issue C):** `PublicDiscussion.tsx` takes a host-supplied `surface?: 'card' | 'sheet'` prop (default `'card'`). On `'sheet'` it draws no card background or radius of its own, and its heading uses the section role (UI-POLISH-01). That is visual hosting only. Its data, navigation, scrolling, replies, retry, entitlement and composer are unchanged, and everywhere else it keeps its card exactly. No other frozen file is opened by this exception.
 - every controller and runtime-entry API; the server;
 - `SharedLivingAnalysis.tsx`, `SharedWorldArea.tsx`, `LivingAnalysisMap.tsx`, `DepthComposition.tsx` (CP2 / CP3, not authorised);
 - RN Skia 2.7.0 and the QAN-INF-03 exception;
@@ -1469,6 +1470,33 @@ The phone's Do Not Disturb was found OFF. The PO chose to proceed without it, wi
   - `zero-d3251613-*`;
   - `transitions-43348099-ar`;
   - `collapse-diag-43348099`, including the video and the Back-order capture.
+
+**Closure pass (PO decisions "Final Closure Task, COSMOS-INT-01 Slice D CP1 (#397) + UI-POLISH-01 (#398)", 2026-11-16).** The bottom navigation is accepted as it is and was not touched. On this branch, the CP1-specific corrections:
+
+- **Issue A, the EXPANDED → PEEK stall: one bounded diagnosis.** The method was `atrace` per collapse plus SurfaceFlinger intervals, every sample screenshot-validated as starting from EXPANDED.
+  - **Found and fixed in the sheet (`bf8f1b38`).** On `ff926115` the settle's commit re-parented the COSMOS canvas: Fabric `REMOVE 13` / `INSERT 13`, the TextureView's `disconnect` / `connect`, and a new SurfaceTexture. The reason: `CosmosSheetStage` is style-only while PEEK, so Fabric flattened it away, and it became a real view only when EXPANDED gave it `pointerEvents` / `importantForAccessibility`. The fix is `collapsable={false}`, so the stage is one native view in every phase. A jest test asserts it, and the test fails without the prop. The trace on `e2695ece` shows no REMOVE / INSERT and one SurfaceTexture throughout.
+  - **What remains is not the sheet's.** Measured under equal conditions (tap-expand, 5 rounds each, every sample validated), the long interval is the same before and after:
+    - slow collapse: 200 / 183 / 133 / 150 / 150 ms on `43348099`, against 133 / 150 / 167 / 166 / 166 ms on `e2695ece`;
+    - fast-down: 117 / 100 / 117 / 117 / 117 ms, against 117 / 117 / 83 / 117 / 100 ms.
+  - **The sheet's own travel is smooth on both builds.** In all 20 samples, the frames from the lift to rest show at most 2 frames over 17 ms, and none over 50 ms.
+  - **Where the interval falls.** It starts about 400 ms after the lift, after the 300 ms settle spring, when the sheet is at rest. It has two parts:
+    - about 50 ms with nothing to draw, while the host re-renders for the told phase;
+    - the first frames of the resumed drift (`drift={!expanded}`). The frozen COSMOS canvas draws them on the UI thread, at 27–38 ms of GPU-bound `eglSwapBuffers` each ("waiting for GPU completion" up to 36–39 ms, against 3–4 ms while EXPANDED with the drift off). They hold back the HWUI frame.
+  - **Not perceptible as motion.** The atmosphere drifts at most 2.6 pt/s (veil), and the clock is capped at 0.05 s per frame. The held frame therefore moves the scene by under 0.4 pt, on a screen where nothing else moves.
+  - **The exact change that would remove it is in the frozen renderer, so it is not implemented.** Either `cosmos/skia/CosmosCanvas.tsx` resumes the drift without the cold full-cost frames, or the scene's per-frame GPU cost on the HONOR comes down. Both need a PO decision under §19.13.
+  - **Reduce Motion:** the drift never resumes (`CosmosCanvas` ignores `drift` under Reduce Motion), and the sheet jumps without a spring. The sheet's Reduce Motion test passes.
+- **Issue C (`eeae30ee`), the §19.13 exception above.** `PublicLivingAnalysis.tsx` hosts the discussion as `surface="sheet"`. Jest checks both sides: no card in the sheet, with posts and composer kept (AR / EN); the card exactly as before outside it.
+- **Issue E, Arabic glyph clipping, needs no code change.** On the HONOR at rest in EXPANDED, the first text sits 62 px inside the scroller, in both languages. The dots seen earlier are the kasra / tanween of «كافٍ» leaving the scroller's top edge on a partial scroll: normal scroll departure, not stationary clipping.
+- **HONOR, plain Release `e2695ece`** (both branches' code; sha256 `b24462db…bcf75a`), in Arabic and English, guarded:
+  - the discussion EXPANDED has no nested card;
+  - its heading is 32 dp tall;
+  - Back order EXPANDED → PEEK → CLOSED → the panel;
+  - the composer appears in the fixture only. The fixture has no posts, so posts are proven headless.
+- **Tests:**
+  - focused jest 635/635 (conversation, public-world, cosmos/product, shared-world, introductions);
+  - goldens and analysis-visual consumers 69/69;
+  - `tsc` clean; eslint 0 errors, and all warnings predate this pass.
+- **Evidence** is in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\closure\`, with the report `CLOSURE_PASS_REPORT.md`.
 
 **Stop.** CP2 / CP3 / CP4, Slice E and Replay are not started. Not merged; merge only on «ادمج».
 
