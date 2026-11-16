@@ -1,6 +1,7 @@
-# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED — FINAL HONOR REVIEW AND CLOSURE PASS DONE, STOPPED FOR THE PO’S REVIEW (§19.14), CP2 – CP4 NOT authorised)
+# COSMOS Production Integration Contract — v1.6 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED AND ACCEPTED FOR CONTINUATION; CP2 (Shared World) DELIVERED, STOPPED FOR THE PO’S REVIEW (§19.15); CP3 – CP4 NOT authorised)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.6, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) ACCEPTED BY THE PO FOR CONTINUATION (2026-11-16) — CP2 (THE SHARED WORLD DETAIL SHEET) AUTHORISED BY THE CONTROLLED ADDENDUM §19.15 AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — HONOR PROOF RUN (§19.15, "CP2 delivery record") — STOPPED FOR THE PO’S REVIEW; CP3 / CP4 / SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.5 status below is kept for provenance.
 **Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — THE PO'S FINAL HONOR REVIEW RUN (§19.14, "Final HONOR review") — THE PO'S CLOSURE PASS RUN (§19.14, "Closure pass"; the one narrow §19.13 exception for PublicDiscussion visual hosting) — STOPPED FOR THE PO’S REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
 **Status (v1.4):** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — PERSONAL TARGET CENTRING AFTER A SEMANTIC ZOOM (PO AUTHORISATION 2026-11-16) — DELIVERED ON `cosmos/cosmos-int-01-personal-centring` (FROM 2f2dca46; ITS OWN DEPENDENT DRAFT PR; NOT ACCEPTED UNTIL THE PO REVIEWS THE HONOR RESULT — §18) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2), 2026-11-15 (v1.3), 2026-11-15 (v1.4).
@@ -1555,6 +1556,92 @@ Plus the HONOR proof: plain Release APK, ar + en, CLOSED / PEEK / EXPANDED / sou
 **Re-anchor (§19.12).** In `shared-field.test.tsx` D7, the restored focus now peeks, and the ONE Back handler dismisses that PEEK first (D-12 / SD-5). The protected order is asserted unchanged after it: focus release, then the Shared root. Two tests now measure the surface before reading the sheet's content, because the sheet lives in the measured stage. No assertion is weakened.
 
 **Stop.** CP2 stops for the PO's review. CP3, CP4, Slice E and Replay are not started. Merge only on «ادمج».
+
+#### CP2 delivery record (2026-11-17)
+
+**Commits.**
+- `2fb3666c` on `cosmos/cosmos-int-01-slice-d` (#397): the implementation and the tests.
+- The closing documentation commit that carries this record.
+- `cosmos/ui-polish-01` (#398) takes both by `--no-ff` merges. Neither PR's accepted work was rewritten.
+
+**What moved, and what was kept.**
+- The Shared field's chrome band content now lives in CP1's ONE sheet. There is no second sheet implementation.
+- The band keeps the World's own top band: title, the conversation and Manage acts, Back, Overview and the depth chrome.
+- The sheet's PEEK and EXPANDED carry the panel.
+- The following are preserved and still asserted by their existing suites:
+  - entry and membership, permissions and Manage;
+  - the conversation and sending;
+  - proposals and invitations (the area root is untouched);
+  - focus and navigation, attribution and Retry;
+  - per-World anchors and privacy (no new reads, no logging).
+- Not touched:
+  - controllers, API, server, copy, dependencies;
+  - the frozen renderer;
+  - `LivingAnalysisMap.tsx` and `DepthComposition.tsx`.
+
+**Local verification (committed tree).**
+- Shared, Public and `cosmos/product` suites: 344 / 344 on the slice-d commit. That includes the new `shared-detail-sheet.test.tsx` (23 tests) and the re-anchored `shared-field.test.tsx` (14 / 14).
+- On the ui-polish head: 673 / 673 across 35 suites (Shared, Public, `cosmos/product`, conversation, introductions, golden).
+- `tsc --noEmit` and ESLint (`src/shared-world`) are clean.
+- Root contracts all pass: s4-01 – s4-04, s5-03b, s5-04, s6-05, s6-07, s7-02, shared-vis-01, w1a-01, `living-analysis-map-runtime` (15 / 15) and `task-closure-governance` (24 / 24).
+- The new Back precedence test was proven to fail without the fix: the one sheet line was reverted in place, and the test failed.
+
+**HONOR proof.**
+- Release APK built from the ui-polish head `8f79ae0f`, arm64-v8a, sha256 `3563d7367cc5be5bc004c828dfeb620e6d3b11e5b8c5e0dfdd0acc456f252526`, installed with the checksum guard.
+- Scripts: `slice-d-cp2-proof.sh`, `slice-d-cp2-perf.sh`, `slice-d-cp2-perf-b.sh`, `slice-d-cp2-personal.sh`. Guarded on focus, no Back at a root, nothing outside the app.
+- Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-d/cp2/`.
+
+Proof results in ar-EG and en-US (both identical in outcome):
+- CLOSED field.
+- A focused place opens PEEK, showing the meaning and the themes, with the accent.
+- EXPANDED shows «مصادر هذا المعنى» / "Sources of this meaning". It lists both of the place's sources with "أنت / You" and the named peer, then the conversation act.
+- The act opens the World's conversation. Back returns to the same place in PEEK.
+- Back runs EXPANDED → PEEK → CLOSED, with the focus kept.
+- A tap on the focused place reopens PEEK on the same place.
+- Back then releases the focus, and the next Back reaches the World list, where the run stops.
+- The empty World shows «لم تتشكل معالم هذا العالم بعد.» / "This world's map is still taking shape." in PEEK.
+
+Performance and camera:
+- Shared FAR pan with the sheet CLOSED: 59.8 fps, p95 16.7 ms, 0 stalls. Baseline 59.4 fps.
+- FAR at rest: 60.0 fps.
+- PEEK at rest: 51.8 fps, p95 50 ms, no interval above 50 ms. The same focused place with the sheet CLOSED measures 51.8 – 54.0 fps. The NEAR scene sets this pace, not the sheet.
+- EXPANDED at rest presents no frames (drift off, SD-11).
+- The PEEK lift is presentation only. CLOSED shows the place back at the canonical centre.
+
+Regressions:
+- Public (the CP1 closure-pass script, ar): search field 44 dp; EXPANDED; the discussion with its «النقاش» heading at 32 dp; Back EXPANDED → PEEK → CLOSED → panel. Identical to the closure pass.
+- Personal: Conversation, then the door into the Analysis, then a pinch IN. At rest 60.0 fps.
+
+**Acceptance 1 – 17.**
+
+| # | Criterion | Result | Evidence |
+|---|---|---|---|
+| 1 | Selecting a place opens PEEK | PASS | jest (tap + accessible step); HONOR ar / en |
+| 2 | Meaning and themes shown | PASS | jest; HONOR |
+| 3 | EXPANDED shows all authorised sources | PASS | jest: 24 sources, in order, in the scroller; HONOR: 2 / 2 |
+| 4 | Attribution preserved | PASS | jest (SELF / HUMAN named / HUMAN unnamed / QANDEEL); HONOR content descriptions |
+| 5 | No unauthorised source | PASS | jest: an ABSENT place shows no source and no act |
+| 6 | Source rows do not pretend to navigate | PASS | jest: not pressable, no role |
+| 7 | Conversation opens through the existing act | PASS | jest: `openConversation` once; HONOR |
+| 8 | Return preserves the World anchor | PASS | jest: one field read and one place read on return; HONOR: same meaning |
+| 9 | EXPANDED → PEEK → CLOSED preserves the focus | PASS | jest; HONOR |
+| 10 | Hardware Back precedence | PASS | jest: sheet before conversation and Manage; HONOR sequence |
+| 11 | A focused place reopens the sheet | PASS | jest (mark); HONOR (tap) |
+| 12 | Same canvas instance in every phase | PASS | jest: stage identity and `collapsable={false}` |
+| 13 | No extra reads or canonical writes | PASS | jest read counters; the camera is unchanged by the phases |
+| 14 | Gestures independent | PASS | jest: flick vs deliberate drag; EXPANDED stage untouchable |
+| 15 | Loading / absent / unavailable / empty states | PASS | jest for all four, including Retry; HONOR empty only |
+| 16 | Arabic and English layouts | PASS | jest; HONOR ar / en |
+| 17 | Accessibility and Reduce Motion | PASS | jest only |
+
+**Limits stated, not hidden.**
+- The validation fixture's places carry at most two sources. On the HONOR the EXPANDED list therefore fits without scrolling, so a long source list's scrolling is proven in jest (24 sources) and not on the device.
+- Loading, absent and unavailable cannot be produced on the proof network without new fault links, so they are jest-proven only.
+- No TalkBack proof was run, per the PO's 2026-11-08 scope decision.
+
+**CI.** Recorded in the PR after the push.
+
+**Stopped for the PO's review.** CP3, CP4, Slice E and Replay were not started. Nothing is merged.
 
 ---
 
