@@ -4,11 +4,12 @@
  * nothing itself. The stage's words are the product copy's; the rail's Personal names are T-08's depth words.
  */
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { View } from 'react-native';
 
 import { viewportEnvelope } from '../../../map/camera';
 import { semanticDepthWord } from '../../../orientation-chrome';
 import { compileStage } from '../../core/stage';
-import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
+import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_COMPANION_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
 
 const GLASS = viewportEnvelope(390, 844, { top: 104, bottom: 220 })!;
 
@@ -87,12 +88,20 @@ describe('CosmosWorldView — the stage over an owner', () => {
     expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityState).toEqual({ disabled: true });
   });
 
-  it('Arabic: the Back arrow points the other way; the rail stays on the RIGHT (Product Owner override, 2026-11-15) with its label inboard', async () => {
+  // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15, Contract v1.4 §16 U-9 / A-6): the controls keep
+  // the same places in both languages — nothing is mirrored — so the Back chip stands at the left with the one arrow it
+  // leads with (previous form: `→` and a row-reversed top row in Arabic).
+  it('Arabic: the Back chip stands at the LEFT with the one arrow and the top row is not reversed (U-9); the rail stays on the RIGHT (Product Owner override, 2026-11-15) with its label inboard', async () => {
     const { owner, set } = fakeOwner({});
     set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
     view = await mount(owner, 'ar');
-    expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityLabel).toBe(`→ ${semanticDepthWord('ar', 'WORLD')}`);
+    expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityLabel).toBe(`← ${semanticDepthWord('ar', 'WORLD')}`);
     const flat = (node: { props: Record<string, unknown> }) => Object.assign({}, ...[node.props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+    // The top row (the one absolute row at the top inset) runs left → right in Arabic as in English.
+    let top = view.getByTestId(COSMOS_BACK_TEST_ID).parent;
+    while (top !== null && flat(top as never).top !== GLASS.insetTop + 6) top = top.parent;
+    expect(top).not.toBeNull();
+    expect(flat(top as never)).toMatchObject({ flexDirection: 'row', left: GLASS.insetLeft + 12, right: GLASS.insetRight + 12 });
     const style = flat(view.getByTestId(COSMOS_RAIL_TEST_ID));
     expect(style.right).toBe(GLASS.insetRight + 2);
     expect(style.left).toBeUndefined();
@@ -163,5 +172,81 @@ describe('CosmosWorldView — the stage over an owner', () => {
     expect(view.getByTestId(`${COSMOS_REGISTER_TEST_ID}:READING:r9`).props.accessibilityState).toEqual({ selected: true });
     await act(async () => { set({ unplaced: [] }); });
     expect(view.queryByTestId(COSMOS_REGISTER_TEST_ID)).toBeNull();
+  });
+});
+
+describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)", () => {
+  const seams = async (owner: CosmosWorldOwner, over: { home?: () => void; rail?: React.ReactNode; overviewAct?: React.ReactNode; language?: 'ar' | 'en' } = {}) => render(
+    <CosmosWorldView owner={owner} world="PERSONAL" language={over.language ?? 'en'} glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less"
+      home={over.home} rail={over.rail} overviewAct={over.overviewAct} />,
+  );
+  const flat = (node: { props: Record<string, unknown> }) => Object.assign({}, ...[node.props.style].flat(3).filter(Boolean)) as Record<string, unknown>;
+
+  it("D-3: at the first rung, away from the centre, Back is the host's canonical act (Return to World) and pans nothing itself; deeper, it is still one semantic step OUT", async () => {
+    const { owner, acts, set } = fakeOwner({});
+    set({ rung: 0, camera: { cx: 40, cy: -20, scale: 1 } });
+    const home = jest.fn();
+    view = await seams(owner, { home });
+    acts.length = 0;
+    await press(view, COSMOS_BACK_TEST_ID);
+    expect(home).toHaveBeenCalledTimes(1);
+    expect(acts.map((a) => a.kind)).toEqual(['back']);
+    expect(acts.some((a) => a.kind === 'goTo')).toBe(false);
+    // Deeper: the chip asks the owner for one step OUT and the host's act is not invoked.
+    await act(async () => { set({ rung: 1, camera: { cx: 40, cy: -20, scale: 8 } }); });
+    acts.length = 0;
+    await press(view, COSMOS_BACK_TEST_ID);
+    expect(home).toHaveBeenCalledTimes(1);
+    expect(acts.map((a) => a.kind)).toEqual(['back']);
+    expect(owner.getSnapshot().rung).toBe(0);
+  });
+
+  it("without a host act the first-rung Back pans to the centre, as before", async () => {
+    const { owner, acts, set } = fakeOwner({});
+    set({ rung: 0, camera: { cx: 40, cy: -20, scale: 1 } });
+    view = await seams(owner);
+    acts.length = 0;
+    await press(view, COSMOS_BACK_TEST_ID);
+    expect(acts.map((a) => a.kind)).toEqual(['back', 'goTo']);
+  });
+
+  it("the rail sits in the glass at the proof's place (bottom inset + 12, 18-point gutters), and the unplaced register stands above it", async () => {
+    const { owner, set } = fakeOwner({});
+    set({ unplaced: [{ id: 'READING:r9', family: 'READING' }] });
+    view = await seams(owner, { rail: <View testID="host-rail" /> });
+    const rail = view.getByTestId('host-rail').parent!;
+    const wrap = flat(rail as never);
+    expect(wrap).toMatchObject({ position: 'absolute', bottom: GLASS.insetBottom + 12, left: GLASS.insetLeft + 18, right: GLASS.insetRight + 18 });
+    const register = flat(view.getByTestId(COSMOS_REGISTER_TEST_ID));
+    expect(register.bottom).toBe(GLASS.insetBottom + 10 + 128);
+    // Without a rail the register keeps its Slice B place.
+    await act(async () => { await view!.rerender(<CosmosWorldView owner={owner} world="PERSONAL" language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />); });
+    expect(flat(view.getByTestId(COSMOS_REGISTER_TEST_ID)).bottom).toBe(GLASS.insetBottom + 10);
+  });
+
+  // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15, Contract v1.4 §16 U-1 / U-3 / A-2 / U-9): the
+  // row of contextual controls under the top row is retired (its acts moved into the rail's words row); the stage's one
+  // other upper seam is the Overview companion, drawn under the Overview chip only while Overview is on, at the right in
+  // both languages. Previous form: an `acts` seam in an absolute row at `top + 6 + 48`, row-reversed for Arabic.
+  it("§16 A-2: the host's Overview companion is drawn under the Overview chip only while Overview is on, at the right, in both languages; no row of controls stands under the top row", async () => {
+    for (const language of ['en', 'ar'] as const) {
+      const { owner, acts, set } = fakeOwner({});
+      set({ list: compileStage({ world: 'PERSONAL', rungs: 5, entities: [{ id: 'THREAD:a', kind: 'THREAD', x: 10, y: 10, dye: 1, label: null, fromRung: 0 }], focusId: null, rtl: false }) });
+      view = await seams(owner, { overviewAct: <View testID="host-overview-act" />, language });
+      expect(view.queryByTestId(COSMOS_OVERVIEW_COMPANION_TEST_ID)).toBeNull();
+      expect(view.queryByTestId('host-overview-act')).toBeNull();
+      acts.length = 0;
+      await press(view, COSMOS_OVERVIEW_TEST_ID);
+      const companion = flat(view.getByTestId(COSMOS_OVERVIEW_COMPANION_TEST_ID));
+      expect(companion).toMatchObject({ position: 'absolute', top: GLASS.insetTop + 6 + 48, right: GLASS.insetRight + 12, alignItems: 'flex-end' });
+      expect(companion.left).toBeUndefined();
+      expect(companion.flexDirection).toBeUndefined();
+      expect(view.getByTestId('host-overview-act')).toBeTruthy();
+      // Presentation only: Overview and its companion's slot write nothing to the owner.
+      expect(acts.filter((a) => a.kind !== 'setGlass')).toEqual([]);
+      await press(view, COSMOS_OVERVIEW_TEST_ID);
+      expect(view.queryByTestId(COSMOS_OVERVIEW_COMPANION_TEST_ID)).toBeNull();
+      await act(async () => { view!.unmount(); });
+    }
   });
 });

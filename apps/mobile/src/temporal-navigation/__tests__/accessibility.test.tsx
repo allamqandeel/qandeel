@@ -251,7 +251,8 @@ describe('W1A-01 — the temporal surface in Arabic', () => {
     expect(entry.props.accessibilityLabel).toBe('رقم اللحظة');
     expect(entry.props.accessibilityHint).toBe('يمكنك إدخال رقم من 1 إلى 8. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.');
     expect(view.getByRole('button', { name: 'نظرة مؤقتة على اللحظة التالية' })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'العودة لمتابعة المحادثة' })).toBeTruthy();
+    // COSMOS-INT-01 §17 (PO, 2026-11-16): RETURN_LIVE_HEAD's concise approved label.
+    expect(view.getByRole('button', { name: 'متابعة الآن' })).toBeTruthy();
 
     await act(async () => {
       fireEvent.changeText(entry, '٥');
@@ -391,7 +392,8 @@ describe('FCR-02 — native accessibility structure', () => {
 
     // Each control is a button of its own, with a state that tells the truth about availability.
     expect(view.getByRole('button', { name: 'Preview the next moment', disabled: false })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Rejoin the conversation', disabled: false })).toBeTruthy();
+    // COSMOS-INT-01 §17 (PO, 2026-11-16): RETURN_LIVE_HEAD's concise approved label.
+    expect(view.getByRole('button', { name: 'Follow live', disabled: false })).toBeTruthy();
     // Commit and cancel name a temporary look; with none, they are not offered at all.
     expect(view.queryByTestId(TEMPORAL_COMMIT_TEST_ID)).toBeNull();
     expect(view.queryByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:cancel`)).toBeNull();

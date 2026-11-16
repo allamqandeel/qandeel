@@ -86,7 +86,8 @@ const digits = (value: number): string => String(value);
 const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
   // Arabic amended by LANG-01 CA-19 (PC-01).
   followingConversation: 'متابعة المحادثة مفعّلة الآن',
-  rejoinConversation: 'العودة لمتابعة المحادثة',
+  // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate: RETURN_LIVE_HEAD's concise label (was «العودة لمتابعة المحادثة»).
+  rejoinConversation: 'متابعة الآن',
 
   temporalNavigation: 'التنقل الزمني',
   momentNumber: 'رقم اللحظة',
@@ -129,7 +130,8 @@ const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
 
 const EN: AnalysisCopy = Object.freeze<AnalysisCopy>({
   followingConversation: 'Following the conversation',
-  rejoinConversation: 'Rejoin the conversation',
+  // APPROVED 2026-11-16 — COSMOS-INT-01 Product Copy Gate: RETURN_LIVE_HEAD's concise label (was «Rejoin the conversation»).
+  rejoinConversation: 'Follow live',
 
   temporalNavigation: 'Temporal navigation',
   momentNumber: 'Moment number',

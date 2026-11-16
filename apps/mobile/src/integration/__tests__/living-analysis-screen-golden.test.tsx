@@ -13,16 +13,24 @@
  * refactor): the golden was regenerated ONCE because the paint itself was intentionally changed. Before it was rewritten,
  * a structural diff of the old and new golden proved that every case differs in Skia paint ONLY — the host tree (views,
  * testIDs, handlers, accessibility) and every mark anchor (origin, order, count) are identical in every case.
+ *
+ * COSMOS-INT-01 Slice C — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.3 §14 C-1…C-6, §15.5): the Personal
+ * screen is the approved COSMOS experience. The Timeline row and the T-08 chrome band are no longer composed — the stage
+ * occupies their area — and the same functions are the stage's rail (T-05 / T-06 with the T-08 temporal line) and its
+ * compact contextual controls (T-07 acts, T-04's context choice). The golden was regenerated ONCE for that change, which
+ * is an intended change of the screen, not a refactor. The screen is measured as the device measures it: the surface's
+ * chrome band reports its (empty) content height, so the band is the bottom safe area and nothing else (C-6).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { act, cleanup, render, type RenderResult } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
 import { disclosureFixture } from '../../map/__fixtures__/disclosure';
 import { inspectObject, mapInspectionContext, mapProjectionRequest, panByTranslation, zoomSemanticStep } from '../../map';
 import type { HistoricalSemanticDepth } from '../../projection';
+import { RESPONSIVE_CHROME_MEASURE_TEST_ID } from '../../responsive';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { sessionPosition } from '../../state';
 import { commitMoment, temporalTargeting } from '../../temporal-navigation';
@@ -127,6 +135,8 @@ async function screen(options: Screen = {}): Promise<RenderResult> {
     await settle();
   });
   await resize(view, width, height, { insetTop: insets.top, insetBottom: insets.bottom });
+  // Slice C: the chrome band measures its content, as on the device; the Personal composition brings none.
+  await fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width, height: 0 } } });
   await act(async () => {
     await settle();
   });
@@ -211,11 +221,24 @@ describe('S5-03B R1 — the Living Analysis screen is exactly what it was before
     expect(Object.keys(recorded).sort()).toEqual(Object.keys(cases).sort());
   });
 
-  it('every case records a distinct screen (each state is really reached)', () => {
+  /**
+   * Slice C (§15.6, for Product Owner review): the Personal screen's visible chrome is the approved COSMOS palette and does not
+   * vary with the platform's increased-contrast setting. Before Slice C the ONLY difference increased contrast made to this
+   * screen was the old Timeline row's position-rail border (one ink token), and that row is no longer composed; the headless
+   * navigators keep the Analysis ink hook. The case is kept — it records the screen under the setting — and the one pair it
+   * now coincides with is named here rather than hidden.
+   */
+  const KNOWN_IDENTICAL: readonly (readonly [string, string])[] = [['en-compact-following-live', 'increased-contrast']];
+
+  it('every case records a distinct screen (each state is really reached), except the one named pair', () => {
     const seen = new Map<string, string>();
     for (const [name, tree] of Object.entries(WRITE ? produced : recorded)) {
       const key = JSON.stringify(tree);
-      expect(seen.get(key)).toBeUndefined();
+      const earlier = seen.get(key);
+      if (earlier !== undefined) {
+        expect(KNOWN_IDENTICAL).toContainEqual([earlier, name]);
+        continue;
+      }
       seen.set(key, name);
     }
   });

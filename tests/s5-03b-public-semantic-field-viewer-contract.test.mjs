@@ -417,9 +417,20 @@ test('12 — R1: ONE Living Analysis SCREEN (not only one renderer); the Persona
   assert.match(personal, /<LivingAnalysisSurface\b/u);
   // COSMOS-INT-01 CONTROLLED RE-ANCHOR (Product Owner D-2, 2026-11-15): the Personal world is drawn by the COSMOS stage in the
   // surface's STAGE presentation (`stage=`), with T-04's accessible Map laid over it; MapSurface stays the Replay composite's
-  // renderer (G-5). The Timeline, its orientation line and the T-08 chrome are brought exactly as before.
-  for (const capability of ['stage={', '<CosmosWorldView', '<MapAccessibilityLayer', '<TemporalOrientationLine', '<TemporalTargetLayer', '<OrientationChrome']) {
+  // renderer (G-5).
+  // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.3 §14 C-1…C-6, §15.5): the Timeline
+  // (T-05 / T-06) and its T-08 orientation line are brought as the stage's rail, and the T-07 return acts and T-04's context
+  // choice as the stage's compact contextual controls; the old Timeline row and chrome band are no longer composed, so the
+  // composition hands the surface no `timeline` and a chrome that measures nothing (CHROME_ONLY collapses to the safe
+  // area). Previous form of this list: `'<TemporalTargetLayer', '<OrientationChrome'` in place of the rail and the controls.
+  // COSMOS-INT-01 Slice C UX correction CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.4 §16 A-3 / A-4): the
+  // T-08 line is the rail's compact label's accessible label, not a composed component, and the rail carries the acts.
+  // Previous form of this list: `'<TemporalOrientationLine'` in place of `'acts={RAIL_ACTS}'`.
+  for (const capability of ['stage={', '<CosmosWorldView', '<MapAccessibilityLayer', 'acts={RAIL_ACTS}', '<CosmosTimelineRail', '<CosmosContextualActs', 'timeline={null}', 'chrome={() => null}']) {
     assert.ok(personal.includes(capability), `the Personal world brings ${capability}`);
+  }
+  for (const retired of ['<TemporalTargetLayer', '<OrientationChrome', 'temporalLine="WITH_TIMELINE"', 'returnLiveHome="LIVE_EDGE"']) {
+    assert.ok(!personal.includes(retired), `the Personal world no longer composes ${retired} (Slice C)`);
   }
   assert.doesNotMatch(personal, /<Responsive(Surface|MapFrame|SupportBand|TimelineRow|ChromeBand)\b/u, 'the Personal world builds no screen of its own');
   const depth = code(`${MOBILE}/integration/composition/DepthComposition.tsx`);

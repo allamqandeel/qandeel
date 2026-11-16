@@ -27,8 +27,9 @@
  *
  * The words are the reader's language, from the W1A-01 Analysis copy (`analysis-language`): the
  * Product Owner's current-edge wording («متابعة المحادثة مفعّلة الآن» / "Following the conversation",
- * «العودة لمتابعة المحادثة» / "Rejoin the conversation") and T-08 / P4-C4's moment wording. "Live"
- * stays a runtime term; it is never said. Nothing here states an analytical fact about anything.
+ * «متابعة الآن» / "Follow live" — the concise label the PO approved on 2026-11-16, COSMOS-INT-01 §17) and T-08 /
+ * P4-C4's moment wording. Apart from that approved English label (and GO_LIVE_AND_LOCATE's "Live + locate"),
+ * "Live" stays a runtime term and is not said. Nothing here states an analytical fact about anything.
  */
 import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
 import type { SessionPosition } from '../../state';

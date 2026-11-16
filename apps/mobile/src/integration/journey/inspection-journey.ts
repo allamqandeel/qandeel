@@ -6,7 +6,7 @@
  *
  * The frozen bilingual copy is the specification, and it is exact in both languages:
  *
- *     "Return to the original inspection" / "العودة إلى المعاينة الأصلية"
+ *     "Original view" / "بداية المعاينة"   (the concise labels APPROVED on 2026-11-16, COSMOS-INT-01 §17)
  *     "Restores exactly the viewpoint this inspection started from."
  *     "يستعيد بالضبط الموضع الذي بدأت منه هذه المعاينة."
  *

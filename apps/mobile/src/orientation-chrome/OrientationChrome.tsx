@@ -133,7 +133,7 @@ export interface OrientationChromeProps {
   /**
    * VPORT-02 — where Return Live is presented. P2 §7 and the G3 amendment §2 item 5: Return Live keeps ONE canonical
    * home, the Live edge, with its words. `LIVE_EDGE` is that composition: the Timeline's outboard Live target, which
-   * carries the same words («العودة لمتابعة المحادثة» / "Rejoin the conversation"), is its home, and this surface does
+   * carries the same words («متابعة الآن» / "Follow live", COSMOS-INT-01 §17), is its home, and this surface does
    * not present it a second time. T-08's offered set, meanings, order and executors are unchanged — only where the act
    * is shown. `CHROME` (the default) is T-08's original presentation, for this surface standing alone.
    */

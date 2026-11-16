@@ -89,7 +89,8 @@ describe('W1A-01 — the production Analysis depth speaks the reader’s languag
     }
     // The Product Owner's current-edge wording is the one in use; the superseded wording is gone.
     const all = strings.map(({ text }) => text).join('\n');
-    expect(all).toMatch(/متابعة المحادثة مفعّلة الآن|العودة لمتابعة المحادثة/u);
+    // COSMOS-INT-01 §17 (PO, 2026-11-16): «متابعة الآن» is RETURN_LIVE_HEAD's concise approved label.
+    expect(all).toMatch(/متابعة المحادثة مفعّلة الآن|متابعة الآن/u);
     for (const old of ['أنت عند آخر المحادثة', 'العودة إلى المحادثة الجارية', 'مباشر']) expect(all).not.toContain(old);
     expect(all).toContain('خريطة تحليل المحادثة');
     view.unmount();

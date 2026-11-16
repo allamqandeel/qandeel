@@ -17,6 +17,11 @@
  *
  * Motion is COSMOS's (D-5): the settle, the pinch about the fingers and the drift. T-10's arrival choreography is not
  * played here; the composite binding is still consumed by the Personal owner so no cause is ever borrowed.
+ *
+ * Slice C (Contract v1.3 §15): the host brings the rest of the accepted chrome through three seams — `rail` (what lies
+ * along the bottom edge: the Personal timeline rail), `acts` (the compact contextual controls, in a row under the top
+ * row) and `home` (the canonical act behind the Back chip at the first rung, away from the centre: the Personal
+ * world's T-07 Return to World; without it the chip pans to the centre, as the fields do). The view decides nothing more.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -35,10 +40,15 @@ export const COSMOS_BACK_TEST_ID = 'qandeel-cosmos-back';
 export const COSMOS_OVERVIEW_TEST_ID = 'qandeel-cosmos-overview';
 export const COSMOS_RAIL_TEST_ID = 'qandeel-cosmos-rail';
 export const COSMOS_REGISTER_TEST_ID = 'qandeel-cosmos-register';
+/** §16 A-2: the slot under the Overview chip that holds the host's Return to World while Overview is on. */
+export const COSMOS_OVERVIEW_COMPANION_TEST_ID = 'qandeel-cosmos-overview-companion';
 export const COSMOS_NEAREST_TEST_ID = 'qandeel-cosmos-nearest';
 export { COSMOS_MARK_TEST_ID_INFIX, COSMOS_STEP_TEST_ID_SUFFIX } from '../skia/CosmosCanvas';
 /** One served relation's accessible name (S5-03C): `${testID}${COSMOS_RELATION_TEST_ID_INFIX}${relationId}`. */
 export const COSMOS_RELATION_TEST_ID_INFIX = ':relation:';
+
+/** Slice C: the register stands above the rail's rows (the line, the 44-point segments row, the 44-point words row). */
+const RAIL_CLEARANCE = 128;
 
 /** D-9: a second tap within this window on nothing is one canonical zoom-IN step at the tapped point. */
 const DOUBLE_TAP_MS = 320;
@@ -63,10 +73,16 @@ export interface CosmosWorldViewProps {
   readonly accessibleMarks?: boolean;
   /** What the host lays over the stage (its accessibility layer, its composition mark). */
   readonly children?: ReactNode;
+  /** Slice C: what the host lays along the bottom edge, in the glass (the Personal timeline rail). */
+  readonly rail?: ReactNode;
+  /** Slice C (§16 A-2): the host's canonical Return to World, drawn under the Overview chip while Overview is on (null when not offered). */
+  readonly overviewAct?: ReactNode;
+  /** Slice C: the canonical act behind the Back chip at the first rung, away from the centre (Personal: T-07 Return to World). */
+  readonly home?: () => void;
   readonly testID?: string;
 }
 
-export function CosmosWorldView({ owner, world, language, glass, drift = true, worldLabel, zoomInLabel, zoomOutLabel, accessibleMarks = true, children, testID = COSMOS_WORLD_VIEW_TEST_ID }: CosmosWorldViewProps) {
+export function CosmosWorldView({ owner, world, language, glass, drift = true, worldLabel, zoomInLabel, zoomOutLabel, accessibleMarks = true, children, rail = null, overviewAct = null, home, testID = COSMOS_WORLD_VIEW_TEST_ID }: CosmosWorldViewProps) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
   const copy = useMemo(() => cosmosProductCopy(language), [language]);
   const rtl = language === 'ar';
@@ -162,12 +178,17 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   const zoomOut = useCallback(() => stepBy('OUT'), [stepBy]);
   const activate = useCallback((id: string) => { if (leaveOverview()) return; owner.focus(id); settleNow(); }, [leaveOverview, owner, settleNow]);
   const labelOf = useCallback((id: string) => owner.labelOf(id), [owner]);
+  // At the first rung, away from the centre, the chip is the host's canonical act when it has one (Slice C, D-3: the
+  // Personal RETURN_WORLD, recorded and observed like every T-07 act); otherwise the pan to the centre.
   const back = useCallback(() => {
     if (leaveOverview()) return;
     const at = owner.getSnapshot();
-    if (!owner.back() && at.rung === 0) owner.goTo(0, 0);
+    if (!owner.back() && at.rung === 0) {
+      if (home !== undefined) home();
+      else owner.goTo(0, 0);
+    }
     settleNow();
-  }, [leaveOverview, owner, settleNow]);
+  }, [leaveOverview, owner, settleNow, home]);
   const toRung = useCallback((rung: number) => {
     leaveOverview();
     let at = owner.getSnapshot().rung;
@@ -186,13 +207,15 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   // The pill names where it returns to: the shallower rung, or the world's centre at the first rung. It stands down at
   // home, and in the overview (where the selected Overview chip, any tap or any gesture is the way back).
   const atHome = overview || (snapshot.rung === 0 && snapshot.camera.cx === 0 && snapshot.camera.cy === 0);
-  const backText = snapshot.rung > 0 ? `${rtl ? '→' : '←'} ${names[snapshot.rung - 1]}` : copy.wholeWorld;
+  // U-9: the Back chip stands at the left in both languages, so its arrow points the one way it leads.
+  const backText = snapshot.rung > 0 ? `← ${names[snapshot.rung - 1]}` : copy.wholeWorld;
   const bearing = absence.kind === 'REGION_EMPTY' ? absence.bearing : null;
 
-  // The chrome's own `rtl` handling is the only mirroring: the root pins the layout direction so a host under native
-  // RTL mirroring (the Shared / Public fields; the Conversation surface already pins `ltr`) renders the same accepted
-  // layout — the rail's label inboard of its dot on the right, Back right / Overview left in Arabic — in every world.
-  // (HONOR proof, 2026-11-15: without this the Shared / Public rail label sat outboard and was clipped at the edge.)
+  // Nothing here is mirrored by language (Product Owner, 2026-11-15, §16 U-9): Back left, Overview right (its
+  // companion under it), the depth rail right, the register left, in Arabic exactly as in English. The root pins the
+  // layout direction so a host under native RTL mirroring (the Shared / Public fields; the Conversation surface already
+  // pins `ltr`) renders the same accepted layout in every world. (HONOR proof, 2026-11-15: without this the Shared /
+  // Public rail label sat outboard and was clipped at the edge.) Arabic words keep their own reading direction.
   return (
     <View style={styles.root} testID={testID}>
       <CosmosCanvas
@@ -225,10 +248,10 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
         <View key={relation.id} testID={`${testID}${COSMOS_RELATION_TEST_ID_INFIX}${relation.id}`} accessible accessibilityLabel={relation.label} pointerEvents="none" style={styles.relation} />
       ))}
 
-      {/* Below the host's top band: Back (the shallower rung, or the world's centre) and Overview. */}
-      <View pointerEvents="box-none" style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }, rtl && styles.rowReverse]}>
+      {/* Below the host's top band: Back (the shallower rung, or the world's centre) at the left and Overview at the right, in both languages (U-1, U-9). */}
+      <View pointerEvents="box-none" style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
         <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} style={[styles.press, atHome && styles.hidden]}>
-          <View style={styles.pill}><Text style={styles.pillText}>{backText}</Text></View>
+          <View style={styles.chip}><Text style={styles.pillText}>{backText}</Text></View>
         </Pressable>
         <View style={styles.spacer} />
         <Pressable testID={COSMOS_OVERVIEW_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.overview} accessibilityState={{ selected: overview }}
@@ -236,6 +259,13 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
           <View style={[styles.chip, overview && styles.chipOn]}><Text style={[styles.pillText, overview && styles.goldText]}>{copy.overview}</Text></View>
         </Pressable>
       </View>
+
+      {/* §16 A-2: Overview's companion — the host's canonical Return to World — under the Overview chip, only while Overview is on. */}
+      {overview && overviewAct !== null ? (
+        <View testID={COSMOS_OVERVIEW_COMPANION_TEST_ID} pointerEvents="box-none" style={[styles.companion, { top: glass.insetTop + 6 + 48, right: glass.insetRight + 12 }]}>
+          {overviewAct}
+        </View>
+      ) : null}
 
       {/* The depth rail: the current depth is the lit point; a shallower depth can be returned to. Product Owner override
           (2026-11-15): the rail stays on the RIGHT in both languages — its side is never mirrored in RTL; its design,
@@ -275,7 +305,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       {/* G-6: the Personal objects disclosed with no place, at the start of the bottom edge, inspectable; no name is invented. */}
       {snapshot.unplaced.length === 0 ? null : (
         <View testID={COSMOS_REGISTER_TEST_ID} pointerEvents="box-none"
-          style={[styles.register, { bottom: glass.insetBottom + 10 }, rtl ? { right: glass.insetRight + 10 } : { left: glass.insetLeft + 10 }, rtl && styles.rowReverse]}>
+          style={[styles.register, { bottom: glass.insetBottom + 10 + (rail === null ? 0 : RAIL_CLEARANCE), left: glass.insetLeft + 10 }]}>
           {snapshot.unplaced.map((item) => {
             const on = item.id === snapshot.inspectedId;
             return (
@@ -287,6 +317,13 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
           })}
         </View>
       )}
+
+      {/* Slice C: the host's rail along the bottom edge, in the glass, at the proof's own place (`bottom = inset + 12`, 18-point gutters). */}
+      {rail === null ? null : (
+        <View pointerEvents="box-none" style={[styles.railWrap, { bottom: glass.insetBottom + 12, left: glass.insetLeft + 18, right: glass.insetRight + 18 }]}>
+          {rail}
+        </View>
+      )}
     </View>
   );
 }
@@ -294,14 +331,15 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.void, direction: 'ltr' },
   top: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rowReverse: { flexDirection: 'row-reverse' },
+  companion: { position: 'absolute', alignItems: 'flex-end' },
+  railWrap: { position: 'absolute' },
   spacer: { flex: 1 },
   hidden: { opacity: 0 },
   // T12-A95: every press target is at least 44 points; the accepted 40-point pill sits inside it.
   press: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
-  pill: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   pillText: { fontSize: 13, color: C.ink },
-  chip: { minHeight: 40, minWidth: 44, paddingHorizontal: 12, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
+  // ONE chip for Back and Overview (Product Owner, 2026-11-16: consistent proportions, spacing and touch targets in the one row).
+  chip: { minHeight: 40, minWidth: 44, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   chipOn: { borderColor: C.gold },
   goldText: { fontSize: 13, color: C.gold },
   rail: { position: 'absolute', top: '36%' },
