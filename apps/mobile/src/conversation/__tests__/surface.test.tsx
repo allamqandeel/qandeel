@@ -158,9 +158,11 @@ describe('W1A-01 — accessible names are the approved ones', () => {
     expect(door.props.accessibilityRole).toBe('button');
   });
 
+  // UI-POLISH-01 RE-ANCHOR (Product Owner, 2026-11-16): the Arabic composer placeholder is the approved «اكتب هنا» (was
+  // «كلامك هنا»); every other string, and the English 'Write here', is pinned exactly as before.
   it('the exact approved strings, both languages', () => {
     expect(conversationCopy('ar')).toMatchObject({
-      composerPlaceholder: 'كلامك هنا', composerName: 'رسالتك لقنديل', sendName: 'إرسال', waitingForReply: 'في انتظار رد قنديل',
+      composerPlaceholder: 'اكتب هنا', composerName: 'رسالتك لقنديل', sendName: 'إرسال', waitingForReply: 'في انتظار رد قنديل',
       sendUnconfirmed: 'تعذّر التأكد من إرسال الرسالة.', sendRefused: 'تعذّر إرسال الرسالة.', replyFailed: 'تعذّر إكمال رد قنديل.', historyUnavailable: 'تعذّر تحميل المحادثة.',
       tryAgain: 'إعادة المحاولة', doorLabel: 'تحليل المحادثة', doorName: 'تحليل المحادثة', backLabel: 'المحادثة', backName: 'المحادثة',
     });

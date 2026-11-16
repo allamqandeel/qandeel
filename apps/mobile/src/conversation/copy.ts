@@ -63,7 +63,7 @@ const AR: ConversationCopy = Object.freeze({
   doorName: 'تحليل المحادثة',
   tryAgain: 'إعادة المحاولة',
   product: 'قنديل',
-  composerPlaceholder: 'كلامك هنا',
+  composerPlaceholder: 'اكتب هنا', // REVISED — UI-POLISH-01 (Product Owner, 2026-11-16): «كلامك هنا» → «اكتب هنا»; English unchanged
   composerName: 'رسالتك لقنديل',
   sendName: 'إرسال',
   userTurnName: (text: string) => `كلامك: ${text}`,

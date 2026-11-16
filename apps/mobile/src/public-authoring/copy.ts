@@ -83,7 +83,7 @@ export interface PublicAuthoringCopy {
 }
 
 const AR = {
-  entry: 'مشاركة تجربة في العالم العام', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  entry: 'مشاركة تجربة', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06); REVISED — UI-POLISH-01 (Product Owner, 2026-11-16): shortened
   workspaceTitle: 'مسوداتك في العالم العام', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
   draftsHeading: 'المسودات', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
   noDrafts: 'لا توجد مسودات بعد.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
@@ -113,7 +113,7 @@ const AR = {
 } as const;
 
 const EN = {
-  entry: 'Share an experience in Public World', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  entry: 'Share an experience', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06); REVISED — UI-POLISH-01 (Product Owner, 2026-11-16): shortened
   workspaceTitle: 'Your Public World drafts', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
   draftsHeading: 'Drafts', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
   noDrafts: 'No drafts yet.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)

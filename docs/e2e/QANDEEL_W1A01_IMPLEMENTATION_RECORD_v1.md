@@ -43,7 +43,7 @@ added there.
 
 | Surface / state | Arabic | English |
 |---|---|---|
-| Composer placeholder | كلامك هنا | Write here |
+| Composer placeholder | كلامك هنا — revised to **اكتب هنا** by the Product Owner on 2026-11-16 (§11) | Write here |
 | Composer accessible name | رسالتك لقنديل | Your message to QANDEEL |
 | Send accessible name (icon-only control) | إرسال | Send |
 | User turn, assistive attribution | كلامك: {text} | You: {text} |
@@ -310,3 +310,17 @@ Locally, `integration/__tests__/analysis-language.test.tsx` censuses every visib
 production Analysis depth in both languages; `timeline/__tests__/language.test.tsx` covers the bilingual commands; the
 T-06 and T-04 suites carry the Arabic surface. The T-06 contract's T-05 byte pins are re-anchored for the four T-05
 files whose words moved, with their store-free authority asserted directly.
+
+## 11. Later Product Owner revision — the composer placeholder (UI-POLISH-01, 2026-11-16)
+
+The Product Owner’s message "QANDEEL — PO UI Polish Decisions" (2026-11-16, item 4) replaces the Arabic composer placeholder
+«كلامك هنا» with the approved «اكتب هنا». The English `Write here` is unchanged; it already says the same thing.
+
+- **Canonical source:** `apps/mobile/src/conversation/copy.ts` (`composerPlaceholder`), now «اكتب هنا».
+- **Reuse, not copy:** the Shared World conversation (`shared-world/conversation-copy.ts`), the Introduction World (which uses the
+  same `SharedComposer`) and the Public discussion with its replies (`public-world/field/discussion-copy.ts`) all reference this one row.
+  They therefore change with it, and no duplicate source can bring the old phrase back.
+- **Not touched:** search placeholders, authored message content and historical messages.
+- **Re-anchored pins:** `conversation/__tests__/surface.test.tsx` and this contract’s APPROVED table
+  (`tests/w1a-01-conversation-core-contract.test.mjs`). Each carries its reason, and the protection — exactly the approved strings, in
+  the one copy module — is unchanged.
