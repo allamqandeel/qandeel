@@ -27,6 +27,8 @@ import type { SharedLinkSource } from '../../shared-world';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
+import { COSMOS_SHEET_TEST_ID } from '../../cosmos/product';
+import { resize } from '../../responsive/__fixtures__/composition';
 
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -183,6 +185,17 @@ describe('S4-04 B — Direct Entry into the exact Shared World', () => {
     await deliver(() => t.tap(ITEM_A));
     expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     const live = handlers.filter((x) => !x.removed);
+    // RE-ANCHORED by COSMOS-INT-01 Slice D CP2 (PO, 2026-11-16, Contract v1.6 §19.15, D-12 / SD-5; validation only): this
+    // World's field is empty, and an empty field is said in the COSMOS Detail Sheet's PEEK. The area's ONE Back handler
+    // dismisses an open sheet first — presentation only, the World stays and no history is manufactured. The protection is
+    // unchanged and asserted after it: the next Back is the Shared local law (World → Shared root), never Activity.
+    await resize(view, 400, 800, { mapHeight: 800 });
+    expect(view.getByTestId('qandeel-shared-field-empty')).toBeTruthy();
+    await act(async () => { live[live.length - 1].handler({ type: 'hardwareBackPress', timeStamp: 0 } as never); await settle(); });
+    expect(view.getByTestId(COSMOS_SHEET_TEST_ID, { includeHiddenElements: true }).props.pointerEvents).toBe('none');
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-shared-root')).toBeNull();
+    expect(view.queryByTestId('qandeel-activity')).toBeNull();
     await act(async () => { live[live.length - 1].handler({ type: 'hardwareBackPress', timeStamp: 0 } as never); await settle(); });
     expect(view.getByTestId('qandeel-shared-root')).toBeTruthy();
     expect(view.queryByTestId('qandeel-activity')).toBeNull();
