@@ -1,7 +1,7 @@
-# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED — READY FOR THE PO’S REAL-DEVICE REVIEW (§19.14), CP2 – CP4 NOT authorised)
+# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED — FINAL HONOR REVIEW DONE, STOPPED FOR THE PO’S REVIEW (§19.14), CP2 – CP4 NOT authorised)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — STOPPED FOR THE PO’S REAL-DEVICE REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
+**Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — THE PO'S FINAL HONOR REVIEW RUN (§19.14, "Final HONOR review") — STOPPED FOR THE PO’S REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
 **Status (v1.4):** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — PERSONAL TARGET CENTRING AFTER A SEMANTIC ZOOM (PO AUTHORISATION 2026-11-16) — DELIVERED ON `cosmos/cosmos-int-01-personal-centring` (FROM 2f2dca46; ITS OWN DEPENDENT DRAFT PR; NOT ACCEPTED UNTIL THE PO REVIEWS THE HONOR RESULT — §18) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2), 2026-11-15 (v1.3), 2026-11-15 (v1.4).
 **Change log v1.4 → v1.5 (2026-11-16).** The PO's messages "COSMOS-INT-01 / Slice D — WP0 Authorization" and "COSMOS-INT-01 / Slice D — PO Approval and Execution Authorization — CP1 Only" are applied. The WP0 report and the proposed execution contract (outside the repository, `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\`) are APPROVED with the PO's amendments; new §19 is the binding Slice D execution contract with the PO decision register SD-1 … SD-12 (all APPROVED) and the three mandatory amendments (long lists stay reachable, disabled controls truly disabled, safe predictable gestures). §18 records the PO's acceptance of the Personal target centring (PR #396). The inherited contradictions with D-12 / B-1 in §4.4 H6, §6.2 and §6.4 are corrected in place (struck, not deleted) and §6.3 is marked refined; §10's D-8 and G-3 are marked APPROVED. Slices B and C are recorded as accepted (the PO's CP1 authorisation: "PR #395 — Slice C: accepted"). CP1 is the only authorised implementation; no other decision changes and no further approval is inferred.
@@ -1416,7 +1416,7 @@ No frozen file and no dependency changes.
 - an identical focus prefix gives the focused scene 54.0 fps at rest on both builds;
 - sheet transitions pace at that scene's rate (50–55 fps, p95 33.3 ms).
 
-**Recorded, not isolated:** one long frame (66–100 ms) at the end of a move into PEEK or CLOSED, and up to 216 ms under rapid repeated handle taps. It is offered for the PO's review with the videos. Its isolation is proposed as a sheet-internal follow-up.
+**Recorded, not isolated (at delivery):** one long frame (66–100 ms) at the end of a move into PEEK or CLOSED, and up to 216 ms under rapid repeated handle taps. It is offered for the PO's review with the videos. Its isolation is proposed as a sheet-internal follow-up. The final HONOR review below diagnosed it and moved it.
 
 **Evidence** is outside the repository, in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\`:
 - the CP1 report `COSMOS_INT_01_SLICE_D_CP1_REPORT.md`;
@@ -1428,6 +1428,47 @@ No frozen file and no dependency changes.
 - LOADING is not captured on the device;
 - the fixture discussion has no posts, so the long-discussion scroll is proven headless only;
 - the composer appears in the fixture only. No entitlement or real-account proof is claimed.
+
+**Final HONOR review (PO authorisation "Final HONOR Review Authorization, Slice D CP1 (#397) + App-Wide UI Polish (#398)", 2026-11-16).**
+
+The phone's Do Not Disturb was found OFF. The PO chose to proceed without it, with the top band protected: every tap above y 700 px waits for a quiet notification shade, and every interaction first checks that the app has the focus. No Android setting on the phone was changed.
+
+- **Sheet proof re-run** on plain Release APKs `c588616d` (Arabic, then English) and `43348099` (Arabic). PASS:
+  - PEEK on focus;
+  - slow, fast and reversed drags; the short flick ignored; rapid taps;
+  - Back order EXPANDED → PEEK → CLOSED → focus released; reopening by a tap;
+  - sections, search (5 rows in PEEK, 14 EXPANDED, 17 after a scroll), discussion EXPANDED;
+  - a tap on the sheet never reaching the field;
+  - the unavailable state; the pan above PEEK.
+- **Evidence correction (no results).** The CP1 capture of the no-results state was taken with a focus still held, so the sheet showed that focus's panel, not the state. It is re-proven with no focus on `d3251613` in both languages: «لا شيء في العالم العام يطابق هذا البحث.» / "Nothing in Public World matches this search."
+- **The long frame, diagnosed.**
+  - On `fd0f2b94` it appeared only on phase-changing moves into PEEK or CLOSED, at the finger's lift (collapse 83 / 100 ms, fast-down 83 ms, close 67 / 83 ms). It never appeared on an expand, a short flick, a reversed drag or PEEK at rest.
+  - Cause: the sheet told the host its new phase at `onEnd`. The host's re-render and commit therefore landed while the sheet was still in flight.
+- **Narrow correction `7bd4af73`, inside the sheet only.** The new phase reaches the host when the move SETTLES (the spring's `finished`), once per phase. Reduce Motion is unchanged. No scene, camera or gesture authority file is touched. A test proves that nothing is told mid-flight or on an interrupted spring.
+- **Retest on plain Release `43348099`** (sha256 `2e7f9694…fe507c`). It is clean: SurfaceFlinger, no dumps.
+
+  | Transition | `fd0f2b94` (stall at release) | `43348099` (stall at rest) |
+  |---|---|---|
+  | Collapse, round 1 | 83 ms | 117 + 83 ms at settle |
+  | Collapse, round 2 | 100 ms | 117 + 83 ms at settle |
+  | Close, round 1 | 67 ms | 83 ms |
+  | Close, round 2 | 83 ms | none |
+  | Fast-down, round 1 | 83 ms | none |
+  | Fast-down, round 2 | 83 ms | none |
+  | Rapid handle taps, round 1 | 217 ms | 100 ms |
+  | Rapid handle taps, round 2 | 133 ms | none |
+
+  A dedicated alternation, three slow collapses and three fast-downs, places the long frame of every EXPANDED → PEEK move about 400–470 ms after the lift. That is the settle, when the sheet is no longer moving: 100–183 ms on collapse, 0–100 ms on fast-down.
+- **Result.** The sheet's own motion from lift to rest is now free of the release-moment stall. The commit of EXPANDED → PEEK still costs one long frame, but it now lands when the sheet is at rest.
+
+  That commit also flips the stage: drift resumes, and touch and accessibility return to the world's marks (SD-11). Its cost is not separated between the sheet's content and the COSMOS scene. Separating it needs an instrumented build, and any change there would touch the frozen scene and stage, so it is offered for the PO's decision, not attempted.
+
+  After the run: memory 336.6 MB (`fd0f2b94`: 327.3 MB); PEEK at rest 60.1 fps (`fd0f2b94`: 51.7 fps).
+- **Evidence** is in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\final-review\`, with the report `FINAL_HONOR_REVIEW_REPORT.md`:
+  - `sheet-c588616d-*`;
+  - `zero-d3251613-*`;
+  - `transitions-43348099-ar`;
+  - `collapse-diag-43348099`, including the video and the Back-order capture.
 
 **Stop.** CP2 / CP3 / CP4, Slice E and Replay are not started. Not merged; merge only on «ادمج».
 
