@@ -23,6 +23,17 @@ export const TYPEFACE = Object.freeze({ regular: 'Estedad-Regular', medium: 'Est
 export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONICAL_VISUAL.display;
 
 /**
+ * UI-POLISH-01 (Product Owner, 2026-11-16: "a refined, cohesive typography scale across QANDEEL, not simply smaller
+ * text"). The ONE display role every title in the app is drawn with is refined from E3's 32 / 50 to 26 / 41. That covers
+ * the World titles, a Public or Shared meaning, «النقاش», and the account, first-use, sign-in, Settings, Activity and
+ * Understanding titles. E3's leading ratio (50 / 32 ≈ 1.56) is kept for Arabic, and the Medium face is unchanged. The
+ * running-text roles (body 17 / 30, supporting 15 / 25, action 14 / 23, metadata 12 / 20) are NOT touched. The frozen E3
+ * source and the generated table stay as recorded; this is the single product-side refinement over them, read only
+ * through `typeStyle`. Font scaling is untouched: no `allowFontScaling` / `maxFontSizeMultiplier` is set.
+ */
+const STATEMENT = Object.freeze({ ...CANONICAL_VISUAL.display.statement, size: 26, leading: 41 });
+
+/**
  * One E3 role as a React Native text style.
  *
  * The weight is carried by the FACE, never by `fontWeight`: a static instance already is its weight,
@@ -31,7 +42,7 @@ export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONIC
  */
 export function typeStyle(role: TypeRole): { fontFamily: string; fontSize: number; lineHeight: number; includeFontPadding: false } {
   // W1B-01: the E3 display role (`statement`) sits beside the running-text roles.
-  const spec = role === 'statement' ? CANONICAL_VISUAL.display.statement : CANONICAL_VISUAL.type[role];
+  const spec = role === 'statement' ? STATEMENT : CANONICAL_VISUAL.type[role];
   return {
     fontFamily: spec.weight === 500 ? TYPEFACE.medium : TYPEFACE.regular,
     fontSize: spec.size,
