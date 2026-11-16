@@ -126,7 +126,12 @@ export function CosmosDetailSheet({
   const live = useSharedValue<{ readonly phase: SheetPhase; readonly geometry: SheetGeometry; readonly allow: boolean; readonly reduced: boolean }>(
     { phase: shown, geometry: stopsGeometry, allow: allowExpanded, reduced },
   );
+  // The phase the host was last told (or set itself). A drag's new phase is told when its move SETTLES, so the host's
+  // re-render never lands while the sheet is still travelling. HONOR (2026-11-16, final review): told at release, the
+  // commit of EXPANDED → PEEK held one frame for 83–99 ms, with ~270 px of travel still to go.
+  const told = useSharedValue<SheetPhase>(shown);
   useLayoutEffect(() => {
+    told.set(shown);
     live.set({ phase: shown, geometry: stopsGeometry, allow: allowExpanded, reduced });
     const from = target.get();
     if (from === to) return;
@@ -140,7 +145,7 @@ export function CosmosDetailSheet({
     }
     surface.set(1);
     offset.set(withSpring(to, { ...SHEET_SETTLE, overshootClamping: true }));
-  }, [live, shown, stopsGeometry, allowExpanded, reduced, target, offset, surface, to, room]);
+  }, [told, live, shown, stopsGeometry, allowExpanded, reduced, target, offset, surface, to, room]);
 
   // A new subject brings its content in; the first subject rides in with the sheet itself.
   const lastSubject = useRef(subject);
@@ -173,19 +178,27 @@ export function CosmosDetailSheet({
       const next = snapPhase({ from: at.phase, travel: event.translationY, velocity: event.velocityY, geometry: at.geometry, stops });
       const end = sheetOffset(next, at.geometry);
       target.set(end);
+      // The UI runtime knows the new phase at once (a grab mid-flight snaps from it); the host is told when it settles.
+      if (next !== at.phase) live.set({ ...at, phase: next });
       // Momentum may settle into PEEK; it never passes the closed edge or the top beneath the band.
-      offset.set(at.reduced ? end : withSpring(end, { ...SHEET_RELEASE, velocity: event.velocityY, overshootClamping: next !== 'PEEK' }));
-      if (next !== at.phase) {
-        live.set({ ...at, phase: next });
-        scheduleOnRN(onSettle, next);
-      }
+      offset.set(at.reduced ? end : withSpring(end, { ...SHEET_RELEASE, velocity: event.velocityY, overshootClamping: next !== 'PEEK' }, (finished) => {
+        'worklet';
+        // An interrupted move tells nothing: the next drag's own settle tells the phase it ends in.
+        if (finished === true && told.get() !== next) { told.set(next); scheduleOnRN(onSettle, next); }
+      }));
+      if (at.reduced && told.get() !== next) { told.set(next); scheduleOnRN(onSettle, next); }
     })
     .onFinalize((_event, success) => {
       // A drag the system took away (or a touch that never became one) returns to where the phase is.
       if (success === true || offset.get() === target.get()) return;
       const at = live.get();
-      offset.set(at.reduced ? target.get() : withSpring(target.get(), { ...SHEET_SETTLE, overshootClamping: true }));
-    }), [begin, live, offset, onSettle, target]);
+      const settled = (finished?: boolean) => {
+        'worklet';
+        if (finished === true && told.get() !== at.phase) { told.set(at.phase); scheduleOnRN(onSettle, at.phase); }
+      };
+      if (at.reduced) { offset.set(target.get()); settled(true); return; }
+      offset.set(withSpring(target.get(), { ...SHEET_SETTLE, overshootClamping: true }, settled));
+    }), [begin, live, offset, onSettle, target, told]);
   // Gestures are memoised: rebuilding one per render can reattach the recogniser and drop a drag mid-flight.
   const handlePan = useMemo(() => drag(COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, shown !== 'CLOSED'), [drag, shown]);
   const bodyPan = useMemo(() => drag(COSMOS_SHEET_BODY_GESTURE_TEST_ID, shown === 'PEEK' && bodyDrags), [drag, shown, bodyDrags]);
