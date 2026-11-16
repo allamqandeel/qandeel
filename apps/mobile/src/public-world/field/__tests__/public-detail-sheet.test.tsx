@@ -10,6 +10,8 @@ import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-lib
 import { AccessibilityInfo, BackHandler } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+// The mocked module object itself (the sheet reads its `withSpring` from it), so one test can hold a spring's completion.
+const Reanimated = jest.requireMock<typeof import('react-native-reanimated')>('react-native-reanimated');
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import {
@@ -406,6 +408,31 @@ describe('Slice D — the drag (§19.7): bounded, distance-led, never the map', 
     expect(phaseOf(view)).toBe('CLOSED');
     expect(field.getState()).toBe(state);
     expect(reads(t)).toEqual(before);
+  });
+
+  it('a drag\'s new phase reaches the host when the move SETTLES, never mid-flight; an interrupted move tells nothing', async () => {
+    // Final HONOR review (2026-11-16): told at release, the host's commit of EXPANDED → PEEK held one frame for 83–99 ms
+    // while the sheet still travelled. The mock's springs finish at once; here their completions are held and released.
+    const held: ((finished?: boolean) => void)[] = [];
+    jest.spyOn(Reanimated, 'withSpring').mockImplementation(((toValue: number, _config: unknown, callback?: (finished?: boolean) => void) => {
+      if (callback !== undefined) held.push(callback);
+      return toValue;
+    }) as unknown as typeof Reanimated.withSpring);
+    const { view } = await mount();
+    await focusByResult(view, E3);
+    await measure(view, 2000);
+    await action(view, 'expand');
+    expect(phaseOf(view)).toBe('EXPANDED');
+    held.length = 0;
+    await drag(COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, 250, 300);
+    expect(held).toHaveLength(1);
+    expect(phaseOf(view)).toBe('EXPANDED'); // released, still travelling: the host is not told yet
+    await act(async () => { held[0](false); }); // interrupted (a new grab): nothing is told
+    await flush();
+    expect(phaseOf(view)).toBe('EXPANDED');
+    await act(async () => { held[0](true); }); // settled: told once
+    await flush();
+    expect(phaseOf(view)).toBe('PEEK');
   });
 
   it('Reduce Motion changes how it moves, never where it settles', async () => {
