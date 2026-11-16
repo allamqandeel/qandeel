@@ -889,8 +889,11 @@ export function ConversationSurface({
               ...typeStyle('body'),
               color: palette.primary,
               maxHeight: typeStyle('body').lineHeight * COMPOSER_MAX_LINES,
-              paddingTop: 7,
-              paddingBottom: 7,
+              // UI-POLISH-01: with the refined body leading (26) the field itself stays the 44-point target. 26 + 9 + 9 is
+              // 44; 7 + 7 measured 40.6 on the HONOR. The text stays centred.
+              minHeight: MIN_TARGET,
+              paddingTop: 9,
+              paddingBottom: 9,
               paddingHorizontal: 0,
               textAlign: composerDirection === 'rtl' ? 'right' : 'left',
               writingDirection: composerDirection,
