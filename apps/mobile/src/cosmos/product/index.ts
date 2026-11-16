@@ -9,7 +9,7 @@ export { createSharedCosmosOwner } from './owners/shared';
 export type { PersonalCosmosOwnerOptions } from './owners/personal';
 export { createPersonalCosmosOwner, inspectionRequestOf } from './owners/personal';
 export type { CosmosProductCopy } from './copy';
-export { COSMOS_PRODUCT_COPY_GATE, cosmosProductCopy } from './copy';
+export { COSMOS_ACT_LABELS_APPROVED, COSMOS_PRODUCT_COPY_GATE, cosmosProductCopy } from './copy';
 export type { CosmosWorldViewProps } from './CosmosWorldView';
 export {
   COSMOS_WORLD_VIEW_TEST_ID, COSMOS_BACK_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_NEAREST_TEST_ID,

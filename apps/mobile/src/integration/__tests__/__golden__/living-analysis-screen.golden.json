@@ -3081,7 +3081,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -3209,7 +3209,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -3251,7 +3251,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -6635,7 +6635,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "العودة لمتابعة المحادثة",
+                   "label": "متابعة الآن",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -6763,7 +6763,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "العودة لمتابعة المحادثة",
+                 "accessibilityLabel": "متابعة الآن",
                  "accessibilityLanguage": "ar",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -6805,7 +6805,7 @@
                    ]
                   },
                   "children": [
-                   "العودة لمتابعة المحادثة"
+                   "متابعة الآن"
                   ]
                  }
                 ]
@@ -10185,7 +10185,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -10313,7 +10313,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -10355,7 +10355,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -13739,7 +13739,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "العودة لمتابعة المحادثة",
+                   "label": "متابعة الآن",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -13867,7 +13867,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "العودة لمتابعة المحادثة",
+                 "accessibilityLabel": "متابعة الآن",
                  "accessibilityLanguage": "ar",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -13909,7 +13909,7 @@
                    ]
                   },
                   "children": [
-                   "العودة لمتابعة المحادثة"
+                   "متابعة الآن"
                   ]
                  }
                 ]
@@ -17289,7 +17289,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -17417,7 +17417,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -17459,7 +17459,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -20839,7 +20839,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -20967,7 +20967,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -21009,7 +21009,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -24393,7 +24393,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "العودة لمتابعة المحادثة",
+                   "label": "متابعة الآن",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -24521,7 +24521,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "العودة لمتابعة المحادثة",
+                 "accessibilityLabel": "متابعة الآن",
                  "accessibilityLanguage": "ar",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -24563,7 +24563,7 @@
                    ]
                   },
                   "children": [
-                   "العودة لمتابعة المحادثة"
+                   "متابعة الآن"
                   ]
                  }
                 ]
@@ -27703,7 +27703,7 @@
                   "type": "View",
                   "props": {
                    "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
+                   "accessibilityLabel": "Previous step",
                    "accessibilityLanguage": "en",
                    "accessibilityRole": "button",
                    "accessibilityState": {},
@@ -27755,7 +27755,7 @@
                        }
                       },
                       "children": [
-                       "Back one step"
+                       "Previous step"
                       ]
                      }
                     ]
@@ -28033,7 +28033,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -28161,7 +28161,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -28203,7 +28203,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -31595,7 +31595,7 @@
                    "name": "cancel-preview"
                   },
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -31843,7 +31843,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -31885,7 +31885,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -35027,7 +35027,7 @@
                   "type": "View",
                   "props": {
                    "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
+                   "accessibilityLabel": "Previous step",
                    "accessibilityLanguage": "en",
                    "accessibilityRole": "button",
                    "accessibilityState": {},
@@ -35079,7 +35079,7 @@
                        }
                       },
                       "children": [
-                       "Back one step"
+                       "Previous step"
                       ]
                      }
                     ]
@@ -35090,7 +35090,7 @@
                   "type": "View",
                   "props": {
                    "accessibilityHint": "Rejoins the conversation and, if its current attention can be located there, moves the view to it in the same step.",
-                   "accessibilityLabel": "Rejoin the conversation and move there",
+                   "accessibilityLabel": "Live + locate",
                    "accessibilityLanguage": "en",
                    "accessibilityRole": "button",
                    "accessibilityState": {},
@@ -35142,7 +35142,7 @@
                        }
                       },
                       "children": [
-                       "Rejoin the conversation and move there"
+                       "Live + locate"
                       ]
                      }
                     ]
@@ -35377,7 +35377,7 @@
              {
               "type": "View",
               "props": {
-               "accessibilityLabel": "Rejoin the conversation",
+               "accessibilityLabel": "Follow live",
                "accessibilityLanguage": "en",
                "accessibilityRole": "button",
                "accessibilityState": {
@@ -35415,7 +35415,7 @@
                  }
                 },
                 "children": [
-                 "Rejoin the conversation"
+                 "Follow live"
                 ]
                }
               ]
@@ -35452,7 +35452,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -35580,7 +35580,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -35622,7 +35622,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -39019,7 +39019,7 @@
                   "type": "View",
                   "props": {
                    "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
+                   "accessibilityLabel": "Previous step",
                    "accessibilityLanguage": "en",
                    "accessibilityRole": "button",
                    "accessibilityState": {},
@@ -39071,7 +39071,7 @@
                        }
                       },
                       "children": [
-                       "Back one step"
+                       "Previous step"
                       ]
                      }
                     ]
@@ -39372,7 +39372,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -39500,7 +39500,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -39542,7 +39542,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -42183,7 +42183,7 @@
                   "type": "View",
                   "props": {
                    "accessibilityHint": "Restores the viewpoint your most recent step came from. It does not rejoin the conversation.",
-                   "accessibilityLabel": "Back one step",
+                   "accessibilityLabel": "Previous step",
                    "accessibilityLanguage": "en",
                    "accessibilityRole": "button",
                    "accessibilityState": {},
@@ -42235,7 +42235,7 @@
                        }
                       },
                       "children": [
-                       "Back one step"
+                       "Previous step"
                       ]
                      }
                     ]
@@ -42513,7 +42513,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -42641,7 +42641,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -42683,7 +42683,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
@@ -46063,7 +46063,7 @@
                 "props": {
                  "accessibilityActions": [
                   {
-                   "label": "Rejoin the conversation",
+                   "label": "Follow live",
                    "name": "commit-live-edge"
                   }
                  ],
@@ -46191,7 +46191,7 @@
                {
                 "type": "View",
                 "props": {
-                 "accessibilityLabel": "Rejoin the conversation",
+                 "accessibilityLabel": "Follow live",
                  "accessibilityLanguage": "en",
                  "accessibilityRole": "button",
                  "accessibilityState": {
@@ -46233,7 +46233,7 @@
                    ]
                   },
                   "children": [
-                   "Rejoin the conversation"
+                   "Follow live"
                   ]
                  }
                 ]
