@@ -12,6 +12,9 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { viewportEnvelope } from '../../../map/camera';
+import { resize, subtree } from '../../../responsive/__fixtures__/composition';
+import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import { COSMOS_SHEET_BODY_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_TEST_ID, COSMOS_SHEET_TEST_ID } from '../../../cosmos/product';
 import { canonicalWorldAddress } from '../../../map/world';
 import type { PublicAuthoringAnswer, PublicDiscussionPage, PublicDiscussionPost, PublicFieldEntry, PublicFieldPanel } from '../../../runtime-entry';
 import { ActivityApiClient, PublicWorldApiClient } from '../../../runtime-entry';
@@ -225,6 +228,10 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
     const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);
     for (let n = 0; n < 4; n += 1) await flush();
+    // COSMOS-INT-01 Slice D RE-ANCHOR (PO, 2026-11-16, Contract v1.5 §19.3): the panel and the discussion are the Detail
+    // Sheet's content, in the STAGE, which the surface draws once it has measured its glass; the surface is laid out first.
+    // Previously the chrome band drew them without a layout. What these tests protect is unchanged and asserted below.
+    await resize(view, 400, 800, { mapHeight: 800 });
     field.setEnvelope(viewportEnvelope(400, 800)!);
     await act(async () => { field.focus(E1.id); });
     for (let n = 0; n < 3; n += 1) await flush();
@@ -238,7 +245,10 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     const entry = view.getByTestId('qandeel-public-panel-discussion');
     expect(entry.props.accessibilityLabel).toBe(copy.discussionWithCount.replace('{0}', '3'));
     expect(entry.props.accessibilityRole).toBe('button');
-    expect(JSON.stringify(view.toJSON())).not.toMatch(/popular|trending|important|qandeelResponseCount/iu);
+    // Slice D RE-ANCHOR: the laid-out stage and sheet carry React Native's `importantForAccessibility` PROP NAME (the
+    // stage hidden while the sheet is expanded); only that platform key is left out, every word and value is still read.
+    const tree = JSON.stringify(view.toJSON(), (key, value: unknown) => (key === 'importantForAccessibility' ? undefined : value));
+    expect(tree).not.toMatch(/popular|trending|important|qandeelResponseCount/iu);
   });
 
   it('the discussion: Public display, QANDEEL attributed truthfully and distinctly, Back returns to the same panel', async () => {
@@ -267,6 +277,34 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     for (let n = 0; n < 3; n += 1) await flush();
     expect(view.queryByTestId('qandeel-public-composer')).toBeNull();
     expect(view.getByTestId('qandeel-public-discussion-empty').props.children).toBe(copy.noPosts);
+  });
+
+  // COSMOS-INT-01 Slice D (Contract v1.5 §19.4 / §19.5 / §19.7): the discussion is read in the Detail Sheet, EXPANDED, in
+  // its own scroller; only the sheet's handle drags it, and collapsing or closing the sheet is presentation only.
+  it('Slice D: the discussion opens the sheet EXPANDED; only the handle drags; collapsing keeps the discussion, its posts and the composer', async () => {
+    const hidden = { includeHiddenElements: true } as const;
+    const { view, field, d } = await mount('en');
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    const sheet = () => view.getByTestId(COSMOS_SHEET_TEST_ID, hidden);
+    expect(sheet().props.accessibilityViewIsModal).toBe(true);
+    // The discussion keeps its own scroller in every phase: the sheet's body never drags over it.
+    expect((getByGestureTestId(COSMOS_SHEET_BODY_GESTURE_TEST_ID) as unknown as { config: { enabled: boolean } }).config.enabled).toBe(false);
+    expect((getByGestureTestId(COSMOS_SHEET_HANDLE_GESTURE_TEST_ID) as unknown as { config: { enabled: boolean } }).config.enabled).toBe(true);
+    // The fixture's reader may contribute: the composer is in the sheet (production stays NOT_EVALUATED: no composer).
+    expect(subtree(view, COSMOS_SHEET_TEST_ID).some((node) => (node.props as { testID?: string }).testID === 'qandeel-public-composer')).toBe(true);
+    const fieldState = field.getState();
+    const discussionState = d.getState();
+    await act(async () => { fireEvent(view.getByTestId(COSMOS_SHEET_HANDLE_TEST_ID), 'accessibilityAction', { nativeEvent: { actionName: 'collapse' } }); });
+    await flush();
+    expect(sheet().props.accessibilityViewIsModal).toBe(false);
+    expect(field.getState()).toBe(fieldState);
+    expect(d.getState()).toBe(discussionState);
+    expect(view.getByTestId(`qandeel-public-post-${ROOT.id}`)).toBeTruthy();
+    await act(async () => { fireEvent(view.getByTestId(COSMOS_SHEET_HANDLE_TEST_ID), 'accessibilityAction', { nativeEvent: { actionName: 'close' } }); });
+    await flush();
+    expect(sheet().props.pointerEvents).toBe('none');
+    expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: true });
   });
 });
 
@@ -358,6 +396,10 @@ describe('S5-04 — returning from the discussion reads the same panel again', (
     const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
     const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);
     for (let n = 0; n < 4; n += 1) await flush();
+    // COSMOS-INT-01 Slice D RE-ANCHOR (PO, 2026-11-16, Contract v1.5 §19.3): the panel and the discussion are the Detail
+    // Sheet's content, in the STAGE, which the surface draws once it has measured its glass; the surface is laid out first.
+    // Previously the chrome band drew them without a layout. What these tests protect is unchanged and asserted below.
+    await resize(view, 400, 800, { mapHeight: 800 });
     field.setEnvelope(viewportEnvelope(400, 800)!);
     await act(async () => { field.focus(E1.id); });
     for (let n = 0; n < 3; n += 1) await flush();

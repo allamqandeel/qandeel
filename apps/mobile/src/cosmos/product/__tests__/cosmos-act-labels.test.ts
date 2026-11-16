@@ -31,7 +31,11 @@ const HINTS = {
 
 describe('COSMOS-INT-01 — the six concise act labels (PO, 2026-11-16)', () => {
   it('the gate records all six as APPROVED and stays CLOSED', () => {
-    expect(COSMOS_PRODUCT_COPY_GATE.status).toMatch(/CLOSED — 12 rows APPROVED/u);
+    // Slice D RE-ANCHOR (PO, 2026-11-16, Contract v1.5 §19.9): the gate grew by three APPROVED accessibility-only rows and
+    // stays CLOSED. Previous form: `/CLOSED — 12 rows APPROVED/u`. The protection — every row APPROVED, none PROPOSED, the
+    // six act labels among them — is asserted unchanged below.
+    expect(COSMOS_PRODUCT_COPY_GATE.status).toMatch(/CLOSED — 15 rows APPROVED/u);
+    expect(COSMOS_PRODUCT_COPY_GATE.approved).toHaveLength(15);
     expect(COSMOS_PRODUCT_COPY_GATE.proposed).toEqual([]);
     for (const id of IDS) expect(COSMOS_PRODUCT_COPY_GATE.approved).toContain(id);
     expect(Object.keys(COSMOS_ACT_LABELS_APPROVED)).toEqual([...IDS]);

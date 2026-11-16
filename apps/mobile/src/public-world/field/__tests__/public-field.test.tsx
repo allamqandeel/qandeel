@@ -16,8 +16,8 @@ import { AccessibilityInfo, BackHandler } from 'react-native';
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
 import { typeStyle } from '../../../conversation';
-import { DEFAULT_MAP_SCALE, projectAddress, viewportEnvelope, type ViewportEnvelope } from '../../../map/camera';
-import { COSMOS_MARK_TEST_ID_INFIX, COSMOS_RAIL_TEST_ID, COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
+import { DEFAULT_MAP_SCALE, envelopeCenter, projectAddress, viewportEnvelope, type ViewportEnvelope } from '../../../map/camera';
+import { COSMOS_MARK_TEST_ID_INFIX, COSMOS_RAIL_TEST_ID, COSMOS_SHEET_TEST_ID, COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
 import { LIVING_ANALYSIS_STAGE_TEST_ID } from '../../../living-analysis';
 import {
   RESPONSIVE_CHROME_BAND_TEST_ID,
@@ -789,26 +789,35 @@ describe('S5-03B R2 — Public is analysed on the ONE Living Analysis surface', 
     expect(field.getState()).toMatchObject({ focus: null, camera: { depth: 'MID' } });
   });
 
-  it('the panel, the results and the field state stand in the chrome band — never over the world', async () => {
+  // COSMOS-INT-01 Slice D RE-ANCHOR (PO, 2026-11-16, Contract v1.5 §19.3 / §19.10, SD-1 / SD-10): the panel, the results
+  // and the field state are the Detail Sheet's content, in the stage under the top band, and no longer the chrome band's.
+  // Previous form: each stood `within` RESPONSIVE_CHROME_BAND_TEST_ID, and the glass was `toEqual` across the panel's
+  // close. The protections are kept: none of it is inside the world frame; the panel itself neither floats nor takes a
+  // fixed share of the screen (the sheet's geometry is its own); and the world does not move on screen when the panel
+  // gives way to the results — the anchor the camera is drawn at is held (CA-O1), whatever the sheet's height.
+  it('the panel, the results and the field state stand in the Detail Sheet — never inside the world frame', async () => {
     const { view, field, glass } = await mountArea('en', [E1, E2]);
     await fireEvent(view.getByTestId('qandeel-public-search'), 'focus');
     await fireEvent.changeText(view.getByTestId('qandeel-public-search'), 'hope');
     await fireEvent(view.getByTestId('qandeel-public-search'), 'submitEditing');
     await flush();
-    expect(within(view, RESPONSIVE_CHROME_BAND_TEST_ID, 'qandeel-public-search-results')).toBe(true);
+    expect(within(view, COSMOS_SHEET_TEST_ID, 'qandeel-public-search-results')).toBe(true);
+    expect(within(view, RESPONSIVE_CHROME_BAND_TEST_ID, 'qandeel-public-search-results')).toBe(false);
     expect(within(view, RESPONSIVE_MAP_FRAME_TEST_ID, 'qandeel-public-search-results')).toBe(false);
     await fireEvent.press(view.getByTestId(`qandeel-public-search-result-${E3.id}`));
     await flush();
-    expect(within(view, RESPONSIVE_CHROME_BAND_TEST_ID, 'qandeel-public-panel')).toBe(true);
+    expect(within(view, COSMOS_SHEET_TEST_ID, 'qandeel-public-panel')).toBe(true);
+    expect(within(view, RESPONSIVE_CHROME_BAND_TEST_ID, 'qandeel-public-panel')).toBe(false);
     expect(within(view, RESPONSIVE_MAP_FRAME_TEST_ID, 'qandeel-public-panel')).toBe(false);
-    // The panel takes the band's room from the plan: nothing of it is a fixed share of the screen or floats.
+    // The panel itself: nothing of it is a fixed share of the screen or floats.
     const panel = view.getByTestId('qandeel-public-panel');
     expect(JSON.stringify(panel.props.style)).not.toMatch(/absolute|maxHeight/u);
-    // The world frame is the same with and without the panel: the panel never reframes the field.
-    const before = glass();
+    // The world stays where it is on screen when the panel gives way: the camera's anchor is held.
+    const before = envelopeCenter(glass());
     await act(async () => { field.back(); });
     await flush();
-    expect(glass()).toEqual(before);
+    expect(within(view, COSMOS_SHEET_TEST_ID, 'qandeel-public-search-results')).toBe(true);
+    expect(envelopeCenter(glass())).toEqual(before);
   });
 
   it('the same surface instance carries the field across FAR → MID → NEAR and search (no remount)', async () => {
