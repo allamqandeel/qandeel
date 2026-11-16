@@ -31,7 +31,7 @@ import { PERSONAL_DEPTHS, personalDrawList, personalScene } from '../../core/ada
 import type { NasijView } from '../../core/camera';
 import { rungScale, type SceneInput, type Stage } from '../../core/stage';
 import {
-  EMPTY_LIST, HOME, ORIGIN, cosmosCameraOf, emitter, gestureFixedPoint, memo, nearestHit, viewOf,
+  EMPTY_LIST, HOME, ORIGIN, aimFixedPoint, cosmosCameraOf, emitter, gestureFixedPoint, memo, nearestHit, soleHit, viewOf,
   type CosmosPoint, type CosmosUnplaced, type CosmosWorldOwner, type CosmosWorldSnapshot,
 } from '../owner-core';
 
@@ -179,13 +179,22 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
       if (Math.abs(tx) < 0.5 && Math.abs(ty) < 0.5) return false;
       return report(panByTranslation(store, tx, ty));
     },
-    step(direction, focal, released) {
+    step(direction, focal, released, aim) {
       const s = current();
       const view = viewNow();
       const next = s.rung + (direction === 'IN' ? 1 : -1);
       let point: ScreenPoint | null = null;
       if (focal !== null && released !== null && view !== null && glass !== null && next >= 0 && next < PERSONAL_DEPTHS.length) {
         point = gestureFixedPoint(s.camera, released, view, focal, rungScale(s.rung), rungScale(next));
+        // Target centring (PO, 2026-11-16; contract §18): a pinch IN whose fingers rest on ONE disclosed mark takes the
+        // same one step about the point that brings that mark, where the next rung draws it, to the usable centre. No
+        // mark, two marks, a rung not held, a mark the next rung does not draw, OUT, a double tap or the accessible
+        // route: the step stays about the fingers, exactly as before.
+        if (direction === 'IN' && aim != null && s.status === 'READY' && s.held?.[next] === true) {
+          const id = soleHit(s.list, s.rung, released, view, focal.x, focal.y);
+          const there = id === null ? undefined : s.list.layers[next]?.hits.find((h) => h.id === id);
+          if (there !== undefined) point = aimFixedPoint(s.camera, view, there, aim, rungScale(s.rung), rungScale(next)) ?? point;
+        }
       }
       const applied = report(zoomSemanticStep(store, direction, point === null || glass === null ? null : { envelope: glass, point }));
       return { applied, aboutFingers: applied && point !== null };

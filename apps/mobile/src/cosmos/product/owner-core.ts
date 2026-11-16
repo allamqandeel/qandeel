@@ -15,6 +15,7 @@
  *
  * No React and no Skia here. The pure pieces (`cosmosCameraOf`, `gestureFixedPoint`, `nearestHit`) are the ones the
  * device proof was accepted with (`__validation__/owners.ts` keeps the proof's own fixture seam, unchanged).
+ * `soleHit` and `aimFixedPoint` serve the Personal target centring (PO, 2026-11-16; contract §18).
  */
 
 import { envelopeCenter, type ScreenPoint, type ViewportEnvelope } from '../../map/camera';
@@ -66,8 +67,12 @@ export interface CosmosWorldOwner {
   setGlass(glass: ViewportEnvelope): void;
   /** One completed drag that left the presentation camera at `released`. */
   pan(released: NasijCamera): boolean;
-  /** One semantic step; `focal` and `released` describe a pinch (or a double tap), and are null on the accessible route. */
-  step(direction: 'IN' | 'OUT', focal: ScreenPoint | null, released: NasijCamera | null): CosmosStepResult;
+  /**
+   * One semantic step; `focal` and `released` describe a pinch (or a double tap), and are null on the accessible route.
+   * `aim` is the usable centre of the glass, between the stage's top controls and the host's rail, handed with a pinch
+   * only. Only the Personal owner reads it (PO, 2026-11-16: target centring after a semantic zoom, Personal world only).
+   */
+  step(direction: 'IN' | 'OUT', focal: ScreenPoint | null, released: NasijCamera | null, aim?: ScreenPoint | null): CosmosStepResult;
   tap(x: number, y: number, released: NasijCamera): CosmosTapResult;
   focus(id: string): void;
   /** Local Back: true when it did something. */
@@ -109,6 +114,35 @@ export function gestureFixedPoint(canonical: NasijCamera, released: NasijCamera,
   const fixed = { x: view.focusX + (wanted.cx - canonical.cx) / g, y: view.focusY + (wanted.cy - canonical.cy) / g };
   const inside = Number.isFinite(fixed.x) && Number.isFinite(fixed.y) && fixed.x >= 0 && fixed.x <= view.width && fixed.y >= 0 && fixed.y <= view.height;
   return inside ? fixed : focal;
+}
+
+/**
+ * The screen point a canonical step must be taken about so that the world point `target` (FAR points) is drawn at `aim`
+ * once the step has landed at scale `to`: `gestureFixedPoint`'s algebra, with the wanted camera the one that draws
+ * `target` at `aim`. Null when the answer is not a finite point. It may lie outside the glass; the production focal
+ * anchor needs a finite point only.
+ */
+export function aimFixedPoint(canonical: NasijCamera, view: NasijView, target: { x: number; y: number }, aim: ScreenPoint, from: number, to: number): ScreenPoint | null {
+  const wanted = { cx: target.x - (aim.x - view.focusX) / to, cy: target.y - (aim.y - view.focusY) / to };
+  const g = 1 / from - 1 / to;
+  const fixed = { x: view.focusX + (wanted.cx - canonical.cx) / g, y: view.focusY + (wanted.cy - canonical.cy) / g };
+  return Number.isFinite(fixed.x) && Number.isFinite(fixed.y) ? fixed : null;
+}
+
+/**
+ * The ONE disclosed mark under a screen point: the hit of the draw list's `rung` layer that covers it (the same
+ * authorised hit geometry a tap reads), or null when none does or more than one does — an ambiguous point names no
+ * target.
+ */
+export function soleHit(list: Stage, rung: number, camera: NasijCamera, view: NasijView, x: number, y: number): string | null {
+  const w = unproject(camera, view, x, y);
+  let hit: string | null = null;
+  for (const h of list.layers[rung]?.hits ?? []) {
+    if (Math.hypot(h.x - w.x, h.y - w.y) * camera.scale > h.r) continue;
+    if (hit !== null && hit !== h.id) return null;
+    hit = h.id;
+  }
+  return hit;
 }
 
 export const EMPTY_LIST = (world: WorldKind, rungs: number, rtl: boolean): Stage => compileStage({ world, rungs, entities: [], focusId: null, rtl });
