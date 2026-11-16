@@ -1,7 +1,7 @@
-# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) AUTHORISED, CP2 – CP4 NOT authorised)
+# COSMOS Production Integration Contract — v1.5 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED — READY FOR THE PO’S REAL-DEVICE REVIEW (§19.14), CP2 – CP4 NOT authorised)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR); CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
+**Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — STOPPED FOR THE PO’S REAL-DEVICE REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
 **Status (v1.4):** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — PERSONAL TARGET CENTRING AFTER A SEMANTIC ZOOM (PO AUTHORISATION 2026-11-16) — DELIVERED ON `cosmos/cosmos-int-01-personal-centring` (FROM 2f2dca46; ITS OWN DEPENDENT DRAFT PR; NOT ACCEPTED UNTIL THE PO REVIEWS THE HONOR RESULT — §18) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2), 2026-11-15 (v1.3), 2026-11-15 (v1.4).
 **Change log v1.4 → v1.5 (2026-11-16).** The PO's messages "COSMOS-INT-01 / Slice D — WP0 Authorization" and "COSMOS-INT-01 / Slice D — PO Approval and Execution Authorization — CP1 Only" are applied. The WP0 report and the proposed execution contract (outside the repository, `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\`) are APPROVED with the PO's amendments; new §19 is the binding Slice D execution contract with the PO decision register SD-1 … SD-12 (all APPROVED) and the three mandatory amendments (long lists stay reachable, disabled controls truly disabled, safe predictable gestures). §18 records the PO's acceptance of the Personal target centring (PR #396). The inherited contradictions with D-12 / B-1 in §4.4 H6, §6.2 and §6.4 are corrected in place (struck, not deleted) and §6.3 is marked refined; §10's D-8 and G-3 are marked APPROVED. Slices B and C are recorded as accepted (the PO's CP1 authorisation: "PR #395 — Slice C: accepted"). CP1 is the only authorised implementation; no other decision changes and no further approval is inferred.
@@ -1377,6 +1377,59 @@ A contract pin moves only with its reason written beside it (this section: D-8 /
 - RN Skia 2.7.0 and the QAN-INF-03 exception;
 - item 021;
 - Replay.
+
+### 19.14 CP1 delivery record (2026-11-16) — DELIVERED, STOPPED FOR THE PO'S REAL-DEVICE REVIEW
+
+**Commits on `cosmos/cosmos-int-01-slice-d`:**
+- `3e706963` — this §19.
+- `ec740a31` — the sheet and the Public integration (§19.11 scope).
+- `d3708b9b` — `PublicDiscussion.tsx` restored byte-for-byte to `4b4f60da`. `ec740a31` had removed its card background, but the file is frozen by §19.13. The discussion keeps the card it draws for itself inside the sheet; de-carding it awaits the PO.
+- `fd0f2b94` — two HONOR review fixes:
+  - the sheet's night is opaque, because the 0.94 glass let the live canvas read through the text;
+  - within one Experience the phase is kept even when CLOSED (§19.4). Hardware Back from a discussion now releases the focus on the fourth press instead of re-showing the panel. The fix is asserted by test.
+- This record.
+
+**Delivered (§19.11):**
+- `cosmos/product/sheet/{sheet-geometry.ts, useDetailSheet.ts, CosmosDetailSheet.tsx}`;
+- the three Copy rows APPROVED (15 rows, gate CLOSED);
+- the Public wiring: FieldChrome's content in the sheet, in its existing priority; the ONE Back handler; SD-10; SD-12;
+- the PO's premium motion direction: a no-overshoot UI-thread settle, distance-led snaps with velocity only assisting, rubber-banding at the top stop, a 180 ms reveal from 0.35, Reduce Motion, and one gold hairline relating the sheet to the focused mark.
+
+No frozen file and no dependency changes.
+
+**Acceptance 1–13 (headless):**
+- the new suites (`sheet-geometry` 18, `public-detail-sheet` 21) and the discussion's Slice D test;
+- src/public-world + src/cosmos/product + s5-01: 208/208;
+- `tsc` clean; eslint 0 errors;
+- root contracts touching the changed files: `fail 0`;
+- `test:task-closure-governance-contract`: 24/24.
+
+**Baseline comparison for the full mobile suite:**
+- 4 known baseline failures (`proof-root-deep-link`, `proof-root`, `depth`, `w2-account-access`).
+- `proof-root-pinch` is a 5 s timing flake that also fails at `4b4f60da`. Interleaved runs: head 3/1/0 failing, base 2/0/0. It passes 4/4 at 60 s.
+
+**Acceptance 14 (HONOR ALI-NX1).** Plain release APK `fd0f2b94`, sha256 `44f4e636…92082`, in Arabic and English. Items 1–12 PASS in both languages. Item 13:
+- the seeded perf protocol is level with the accepted `17035da9` build:
+  - focus at rest 60.0 vs 60.0;
+  - focus pan 56.5 vs 56.0;
+  - memory 347.9 vs 348.1 MB;
+- an identical focus prefix gives the focused scene 54.0 fps at rest on both builds;
+- sheet transitions pace at that scene's rate (50–55 fps, p95 33.3 ms).
+
+**Recorded, not isolated:** one long frame (66–100 ms) at the end of a move into PEEK or CLOSED, and up to 216 ms under rapid repeated handle taps. It is offered for the PO's review with the videos. Its isolation is proposed as a sheet-internal follow-up.
+
+**Evidence** is outside the repository, in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\`:
+- the CP1 report `COSMOS_INT_01_SLICE_D_CP1_REPORT.md`;
+- `proof/` (captures, dumps, frame intervals, videos);
+- `review/` (Arabic and English contact sheets).
+
+**Limitations:**
+- no haptics or keyboard-controller, since neither is a dependency;
+- LOADING is not captured on the device;
+- the fixture discussion has no posts, so the long-discussion scroll is proven headless only;
+- the composer appears in the fixture only. No entitlement or real-account proof is claimed.
+
+**Stop.** CP2 / CP3 / CP4, Slice E and Replay are not started. Not merged; merge only on «ادمج».
 
 ---
 
