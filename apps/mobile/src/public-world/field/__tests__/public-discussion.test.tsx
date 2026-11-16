@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { viewportEnvelope } from '../../../map/camera';
@@ -23,6 +24,7 @@ import { PublicWorldArea } from '../../PublicWorldArea';
 import { PUBLIC_DISCUSSION_COPY_GATE, publicDiscussionCopy } from '../discussion-copy';
 import { createPublicDiscussionController, threadsOf, type PublicDiscussionTransport } from '../public-discussion-controller';
 import { createPublicFieldController, type PublicFieldTransport } from '../public-field-controller';
+import { PUBLIC_DISCUSSION_TEST_ID } from '../PublicDiscussion';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
@@ -312,7 +314,23 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: false });
     expect(sheet().props.pointerEvents).toBe('none');
   });
+
+  // Slice D closure pass (PO, 2026-11-16; the narrow §19.13 exception): hosted in the sheet, the discussion draws no card of
+  // its own; anywhere else it keeps its card exactly. Its posts, attribution and composer gating are untouched.
+  it.each(['ar', 'en'] as const)('Slice D: in the sheet the discussion is no card inside a card; its posts and composer stay (%s)', async (language) => {
+    const { view } = await mount(language);
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    const hosted = flat(view.getByTestId(PUBLIC_DISCUSSION_TEST_ID).props.style);
+    expect(hosted.backgroundColor).toBeUndefined();
+    expect(hosted.borderRadius).toBeUndefined();
+    expect(view.getByTestId(`qandeel-public-post-${ROOT.id}`)).toBeTruthy();
+    expect(view.getByTestId('qandeel-public-composer')).toBeTruthy();
+    // Its card outside the sheet: `public-discussion-threads.test.tsx`.
+  });
 });
+
+const flat = (style: unknown): Record<string, unknown> => StyleSheet.flatten(style as StyleProp<ViewStyle>) as Record<string, unknown>;
 
 describe('S5-04 — returning from the discussion reads the same panel again', () => {
   /** A field focused on E1 whose panel answers come from `experience`; returns the controller and its transport. */
