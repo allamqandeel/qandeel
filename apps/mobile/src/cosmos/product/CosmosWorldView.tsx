@@ -24,9 +24,9 @@
  * world's T-07 Return to World; without it the chip pans to the centre, as the fields do). The view decides nothing more.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
-import type { ViewportEnvelope } from '../../map/camera';
+import { envelopeCenter, type ScreenPoint, type ViewportEnvelope } from '../../map/camera';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { absenceOf, type NasijAbsence } from '../core/absence';
 import { zoomAbout, type NasijCamera } from '../core/camera';
@@ -52,6 +52,17 @@ const RAIL_CLEARANCE = 128;
 
 /** D-9: a second tap within this window on nothing is one canonical zoom-IN step at the tapped point. */
 const DOUBLE_TAP_MS = 320;
+/**
+ * The usable centre of the glass (PO, 2026-11-16; contract §18): across, the glass's own centre; down, midway between
+ * the bottom of the stage's top controls and the top of the host's rail as they are laid out now. A row not laid out
+ * yet (or not drawn) gives way to the glass's own band.
+ */
+export function usableCentre(glass: ViewportEnvelope, controlsBottom: number | null, railTop: number | null): ScreenPoint {
+  const top = controlsBottom ?? glass.insetTop;
+  const bottom = railTop ?? glass.height - glass.insetBottom;
+  return { x: envelopeCenter(glass).x, y: bottom > top ? (top + bottom) / 2 : envelopeCenter(glass).y };
+}
+
 const now = (): number => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
 
 // The stage's own glass palette, as accepted on the device.
@@ -152,13 +163,21 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   // A pinch ends ABOUT THE FINGERS (Product Owner finding, 2026-11-15): the pan part of the gesture is committed first,
   // at the current rung's scale with the fingers' point still under the fingers, then the step is asked for with the
   // fingers as its focal; the settle keeps the anchor in every case. Nothing canonical is decided here.
+  // Where the chrome is laid out, read by a pinch's end only (refs: a layout writes no state and renders nothing).
+  const controlsBottom = useRef<number | null>(null);
+  const railTop = useRef<number | null>(null);
+  const onControlsLayout = useCallback((event: LayoutChangeEvent) => { const { y, height } = event.nativeEvent.layout; controlsBottom.current = y + height; }, []);
+  const onRailLayout = useCallback((event: LayoutChangeEvent) => { railTop.current = event.nativeEvent.layout.y; }, []);
+  useEffect(() => { if (rail === null) railTop.current = null; }, [rail]);
   const onPinchEnd = useCallback((direction: 'IN' | 'OUT' | null, fx: number, fy: number, released: NasijCamera) => {
     if (leaveOverview()) return;
     const at = owner.getSnapshot();
     const atRung = zoomAbout(released, viewOf(glassRef.current), fx, fy, at.camera.scale);
     owner.pan(atRung);
     if (direction === null) { settleNow(true); return; }
-    const result = owner.step(direction, { x: fx, y: fy }, atRung);
+    // The usable centre goes with a pinch only; the owner decides whether a target is named (Personal: §18).
+    const aim = usableCentre(glassRef.current, controlsBottom.current, railTop.current);
+    const result = owner.step(direction, { x: fx, y: fy }, atRung, aim);
     settleNow(result.applied ? result.aboutFingers : true);
   }, [leaveOverview, owner, settleNow]);
   const lastTap = useRef(0);
@@ -249,7 +268,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       ))}
 
       {/* Below the host's top band: Back (the shallower rung, or the world's centre) at the left and Overview at the right, in both languages (U-1, U-9). */}
-      <View pointerEvents="box-none" style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
+      <View pointerEvents="box-none" onLayout={onControlsLayout} style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
         <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} style={[styles.press, atHome && styles.hidden]}>
           <View style={styles.chip}><Text style={styles.pillText}>{backText}</Text></View>
         </Pressable>
@@ -320,7 +339,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 
       {/* Slice C: the host's rail along the bottom edge, in the glass, at the proof's own place (`bottom = inset + 12`, 18-point gutters). */}
       {rail === null ? null : (
-        <View pointerEvents="box-none" style={[styles.railWrap, { bottom: glass.insetBottom + 12, left: glass.insetLeft + 18, right: glass.insetRight + 18 }]}>
+        <View pointerEvents="box-none" onLayout={onRailLayout} style={[styles.railWrap, { bottom: glass.insetBottom + 12, left: glass.insetLeft + 18, right: glass.insetRight + 18 }]}>
           {rail}
         </View>
       )}

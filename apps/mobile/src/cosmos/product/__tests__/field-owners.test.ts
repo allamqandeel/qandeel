@@ -128,6 +128,21 @@ describe('the Public owner over the production PublicFieldController', () => {
     controller.retire();
   });
 
+  it('PO 2026-11-16 (§18): the Personal-only usable-centre aim changes nothing here — a pinch IN on a place is the same act with or without it', async () => {
+    const cameras = [];
+    for (const aim of [null, { x: 200, y: 300 }]) {
+      const { owner, controller } = mount();
+      await flush();
+      const p = projectAddress(controller.getState().camera!, GLASS, E3.address)!;
+      expect(owner.step('IN', p, owner.getSnapshot().camera, aim).applied).toBe(true);
+      await flush();
+      cameras.push(controller.getState().camera);
+      owner.dispose();
+      controller.retire();
+    }
+    expect(cameras[1]).toEqual(cameras[0]);
+  });
+
   it('a place the server no longer serves leaves the stage at once; the whole-world evidence is what the entry read established', async () => {
     const { owner, controller, transport } = mount();
     await flush();
@@ -211,6 +226,21 @@ describe('the Shared owner over the production SharedFieldController', () => {
     expect(controller.getState()).toMatchObject({ camera: { depth: 'MID' }, focus: null });
     owner.dispose();
     controller.retire();
+  });
+
+  it('PO 2026-11-16 (§18): the Personal-only usable-centre aim changes nothing here — a pinch IN on a place is the same act with or without it', async () => {
+    const cameras = [];
+    for (const aim of [null, { x: 200, y: 300 }]) {
+      const { owner, controller } = mount();
+      await flush();
+      const p = projectAddress(controller.getState().camera!, GLASS, A3.address)!;
+      expect(owner.step('IN', p, owner.getSnapshot().camera, aim).applied).toBe(true);
+      await flush();
+      cameras.push(controller.getState().camera);
+      owner.dispose();
+      controller.retire();
+    }
+    expect(cameras[1]).toEqual(cameras[0]);
   });
 
   it('a closed World is nothing on the stage: LOADING, no entity, no evidence', async () => {

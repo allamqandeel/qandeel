@@ -9,7 +9,7 @@ import { View } from 'react-native';
 import { viewportEnvelope } from '../../../map/camera';
 import { semanticDepthWord } from '../../../orientation-chrome';
 import { compileStage } from '../../core/stage';
-import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_COMPANION_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
+import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_COMPANION_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, usableCentre, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
 
 const GLASS = viewportEnvelope(390, 844, { top: 104, bottom: 220 })!;
 
@@ -248,5 +248,13 @@ describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)"
       expect(view.queryByTestId(COSMOS_OVERVIEW_COMPANION_TEST_ID)).toBeNull();
       await act(async () => { view!.unmount(); });
     }
+  });
+
+  it('PO 2026-11-16 (§18): the usable centre is the glass centre across, and midway between the top controls and the rail down; an unmeasured row gives way to the glass band', () => {
+    expect(usableCentre(GLASS, 150, 600)).toEqual({ x: 195, y: 375 });
+    expect(usableCentre(GLASS, null, null)).toEqual({ x: 195, y: (104 + (844 - 220)) / 2 });
+    expect(usableCentre(GLASS, 150, null)).toEqual({ x: 195, y: (150 + 624) / 2 });
+    // A degenerate band (the rail above the controls) falls back to the camera's own centre.
+    expect(usableCentre(GLASS, 600, 150).y).toBe(104 + (844 - 104 - 220) / 2);
   });
 });
