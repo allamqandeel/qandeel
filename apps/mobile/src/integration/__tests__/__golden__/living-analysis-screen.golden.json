@@ -2473,22 +2473,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -6022,26 +6031,35 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              {
-               "fontSize": 13,
-               "letterSpacing": 0,
-               "textTransform": "none"
-              }
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "العالم كله"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                {
+                 "fontSize": 13,
+                 "letterSpacing": 0,
+                 "textTransform": "none"
+                }
+               ]
+              },
+              "children": [
+               "العالم كله"
+              ]
+             }
             ]
            },
            {
@@ -9575,22 +9593,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -13124,26 +13151,35 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              {
-               "fontSize": 13,
-               "letterSpacing": 0,
-               "textTransform": "none"
-              }
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "العالم كله"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                {
+                 "fontSize": 13,
+                 "letterSpacing": 0,
+                 "textTransform": "none"
+                }
+               ]
+              },
+              "children": [
+               "العالم كله"
+              ]
+             }
             ]
            },
            {
@@ -16677,22 +16713,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -20226,22 +20271,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -23775,26 +23829,35 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              {
-               "fontSize": 13,
-               "letterSpacing": 0,
-               "textTransform": "none"
-              }
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "العالم كله"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                {
+                 "fontSize": 13,
+                 "letterSpacing": 0,
+                 "textTransform": "none"
+                }
+               ]
+              },
+              "children": [
+               "العالم كله"
+              ]
+             }
             ]
            },
            {
@@ -27326,22 +27389,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -30967,22 +31039,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -34648,22 +34729,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -38639,22 +38729,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {
@@ -41866,22 +41965,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "threads"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "threads"
+              ]
+             }
             ]
            },
            {
@@ -45443,22 +45551,31 @@
           },
           "children": [
            {
-            "type": "Text",
+            "type": "View",
             "props": {
-             "style": [
-              {
-               "color": "#ECCC8A",
-               "fontSize": 10,
-               "letterSpacing": 1.8,
-               "textShadowColor": "#05060f",
-               "textShadowRadius": 8,
-               "textTransform": "uppercase"
-              },
-              false
-             ]
+             "collapsable": false,
+             "pointerEvents": "none"
             },
             "children": [
-             "the whole world"
+             {
+              "type": "Text",
+              "props": {
+               "style": [
+                {
+                 "color": "#ECCC8A",
+                 "fontSize": 10,
+                 "letterSpacing": 1.8,
+                 "textShadowColor": "#05060f",
+                 "textShadowRadius": 8,
+                 "textTransform": "uppercase"
+                },
+                false
+               ]
+              },
+              "children": [
+               "the whole world"
+              ]
+             }
             ]
            },
            {

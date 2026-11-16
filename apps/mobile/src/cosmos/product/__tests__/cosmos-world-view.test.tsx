@@ -257,4 +257,17 @@ describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)"
     // A degenerate band (the rail above the controls) falls back to the camera's own centre.
     expect(usableCentre(GLASS, 600, 150).y).toBe(104 + (844 - 104 - 220) / 2);
   });
+
+  it('PO 2026-11-16 (§18): in the Personal world the current depth word takes no touch, so a pinch finger on it reaches the stage; Shared keeps it as it was', async () => {
+    for (const [world, expected] of [['PERSONAL', 'none'], ['SHARED', 'auto']] as const) {
+      const { owner, set } = fakeOwner({ world, rungs: world === 'PERSONAL' ? 5 : 3 });
+      set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+      view = await render(<CosmosWorldView owner={owner} world={world} language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+      const word = view.getByText(cosmosProductCopy('en').rungs[world][1]);
+      let node = word.parent;
+      while (node !== null && node.props.pointerEvents === undefined) node = node.parent;
+      expect(node?.props.pointerEvents).toBe(expected);
+      await cleanup();
+    }
+  });
 });
