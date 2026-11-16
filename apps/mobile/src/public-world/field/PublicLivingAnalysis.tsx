@@ -334,7 +334,8 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
     );
   }
   if (content === null) return null;
-  // Slice D: one surface — the sheet is the panel; nothing inside it is a card of its own.
+  // Slice D: one surface — the sheet is the panel; this file's own content is no card of its own. The discussion keeps its own
+  // surface: PublicDiscussion.tsx is frozen by §19.13, so the card it draws for itself stays until the PO authorises otherwise.
   return <View style={{ paddingHorizontal: 4, paddingTop: 2, paddingBottom: bottomInset + 8 }}>{content}</View>;
 }
 

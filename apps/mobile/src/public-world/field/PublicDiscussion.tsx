@@ -59,7 +59,7 @@ export function PublicDiscussion({ controller, language, onBack }: PublicDiscuss
 
   return (
     <View testID={PUBLIC_DISCUSSION_TEST_ID} accessibilityLanguage={language}
-      style={{ paddingBottom: 12, maxHeight: Math.round(screen.height * 0.72) }}>
+      style={{ backgroundColor: palette.field, borderRadius: 20, paddingBottom: 12, maxHeight: Math.round(screen.height * 0.72) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, paddingHorizontal: 8, paddingTop: 6 }}>
         <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-public-discussion-back">
           <Text style={style('action', palette.restInk)}>{copy.back}</Text>
