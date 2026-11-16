@@ -73,13 +73,23 @@ export function GlobalSwitcher({ area, language, bottomInset, onSelect }: Global
                   if (!selected) onSelect(item.key);
                 }}
                 testID={`qandeel-switcher-${item.key.toLowerCase()}`}
-                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 0, paddingHorizontal: 6 }}
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 0, paddingHorizontal: 2 }}
               >
                 <NavGlyph name={item.glyph} color={palette.restInk} />
+                {/* UI-POLISH-01 (Product Owner, 2026-11-16: every destination word whole, never ellipsized). The HONOR showed
+                    the Shared word, and once the Personal word, cut to an ellipsis. The words fit their cells: Estedad
+                    at 14 sp measures the Shared word at 89 dp against a 111 dp cell, and the Personal word at 35 dp.
+                    Android under-measures a centred, shrink-wrapped Arabic label and then ellipsizes into its own box,
+                    so the word's box is the cell's whole width (alignSelf stretch). The cell's side padding is 2 dp, so
+                    the word still fits on a 320 dp screen. Only when even that cannot hold it, at large accessibility
+                    sizes on narrow screens, the word is fitted to the cell instead of cut. The switcher's 56-point band
+                    is reserved by the composition, so the word stays one line. */}
                 <Text
                   numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
                   // The word's weight is SELECTED's second channel: the medium face when selected, the regular one at rest.
-                  style={{ ...typeStyle('action'), fontFamily: selected ? typeStyle('action').fontFamily : typeStyle('body').fontFamily, color: palette.restInk, textAlign: 'center', writingDirection: writing }}
+                  style={{ ...typeStyle('action'), fontFamily: selected ? typeStyle('action').fontFamily : typeStyle('body').fontFamily, color: palette.restInk, textAlign: 'center', writingDirection: writing, alignSelf: 'stretch' }}
                 >
                   {item.word}
                 </Text>
