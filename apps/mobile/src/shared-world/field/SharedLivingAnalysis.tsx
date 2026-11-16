@@ -18,14 +18,24 @@
  *
  * Members and QANDEEL are not drawn as objects in the World (D6): they stay in the conversation, with their attribution,
  * and in Manage World. Nothing here is a feed, a chat list or a ranking: no order of importance, no count, no line.
+ *
+ * COSMOS-INT-01 Slice D CP2 (Contract v1.5 §19, the PO's CP2 authorisation 2026-11-16): what the chrome band held — the
+ * focused place's panel, the field's unavailable (+ Retry) and empty states — is now the COSMOS Detail Sheet's content
+ * (CP1's one sheet), in the stage, under the top band (D-11). Its PEEK shows the content's top (the meaning and the
+ * themes); EXPANDED shows it all: the exact sources under «مصادر هذا المعنى» (SD-6: no count), then the World's existing
+ * Conversation act (SD-2: the same `openConversation()`; no source opens a place in the conversation, QAN-BL-CW-08).
+ * PEEK / EXPANDED / CLOSED is presentation only (D-12): it releases no focus, writes no camera and reads nothing. The
+ * area's ONE hardware Back handler asks the sheet first (`registerSheetBack`), then runs its order, unchanged.
  */
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 
 import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, type ConversationPalette } from '../../conversation';
-import { CosmosWorldView, createSharedCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
+import {
+  CosmosDetailSheet, CosmosSheetStage, CosmosWorldView, createSharedCosmosOwner, reopeningOwner, useDetailSheet, type CosmosWorldOwner, type DetailSheet, type SheetContent,
+} from '../../cosmos/product';
 import { LivingAnalysisSurface } from '../../living-analysis';
-import { useSteadyEnvelope, type ViewportEnvelope } from '../../map/camera';
+import { useSteadyEnvelope, viewportEnvelope, type ViewportEnvelope } from '../../map/camera';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import type { SharedFieldPlace } from '../../runtime-entry';
@@ -48,9 +58,15 @@ export interface SharedLivingAnalysisProps {
   readonly onBack: () => void;
   readonly onConversation: () => void;
   readonly onManage: () => void;
+  /**
+   * Slice D (§19.6, SD-5): the sheet's step of the area's ONE hardware Back handler — handed to the area while this field
+   * is shown (`null` when it leaves). It answers `true` when it dismissed something (EXPANDED → PEEK → CLOSED, presentation
+   * only); the area then runs its own order, unchanged. No listener is registered here.
+   */
+  readonly registerSheetBack?: (back: (() => boolean) | null) => void;
 }
 
-export function SharedLivingAnalysis({ controller, language, insets, title, onBack, onConversation, onManage }: SharedLivingAnalysisProps) {
+export function SharedLivingAnalysis({ controller, language, insets, title, onBack, onConversation, onManage, registerSheetBack }: SharedLivingAnalysisProps) {
   const copy = sharedFieldCopy(language);
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const screen = useWindowDimensions();
@@ -61,6 +77,15 @@ export function SharedLivingAnalysis({ controller, language, insets, title, onBa
   const [owner, setOwner] = useState(() => ({ controller, language, it: createSharedCosmosOwner(controller, language) }));
   if (owner.controller !== controller || owner.language !== language) setOwner({ controller, language, it: createSharedCosmosOwner(controller, language) });
   useEffect(() => () => owner.it.dispose(), [owner]);
+
+  // Slice D: the Detail Sheet shows what the chrome band showed; how much of it is shown is presentation only (§19.4).
+  const content = sheetContentOf(state);
+  const sheet = useDetailSheet(content);
+  const sheetBack = sheet.back;
+  useEffect(() => {
+    registerSheetBack?.(sheetBack);
+    return () => registerSheetBack?.(null);
+  }, [registerSheetBack, sheetBack]);
 
   return (
     <View testID={SHARED_FIELD_TEST_ID} style={{ flex: 1 }}>
@@ -74,28 +99,66 @@ export function SharedLivingAnalysis({ controller, language, insets, title, onBa
           height: bandHeight,
         }}
         // COSMOS-INT-01 (D-2): the World's places as the COSMOS stage under the composition, keyed by the World so that
-        // nothing of one World's presentation can continue into another's.
+        // nothing of one World's presentation can continue into another's; Slice D: its Detail Sheet in it.
         stage={(glass) => (
-          <SharedStage key={state.worldId ?? 'none'} owner={owner.it} glass={glass} camera={state.camera} copy={copy} language={language} />
+          <SharedStage key={state.worldId ?? 'none'} owner={owner.it} glass={glass} camera={state.camera} copy={copy} language={language} sheet={sheet}
+            subject={content?.group ?? null} accent={state.focus !== null}
+            detail={<FieldChrome controller={controller} state={state} copy={copy} language={language} bottomInset={glass.insetBottom} onConversation={onConversation} />} />
         )}
         timeline={null}
-        chrome={(composition) => <FieldChrome controller={controller} state={state} copy={copy} language={language} bottomInset={composition.bottomInset} />}
+        // Slice D: the chrome band measures nothing (CHROME_ONLY collapses to the safe area); the field speaks in the sheet.
+        chrome={() => null}
       />
     </View>
   );
 }
 
-/** The COSMOS stage of one World: the glass steadied by CA-O1, the approved field label and step words. */
-function SharedStage({ owner, glass, camera, copy, language }: {
+/**
+ * The COSMOS stage of one World: the glass steadied by CA-O1, the approved field label and step words; and, in the same
+ * stage after it (Slice D, exactly as Public's), the Detail Sheet over the field's content. The world view and its canvas
+ * are never re-keyed by the sheet: while it is EXPANDED they stay mounted, take no touch, are hidden from accessibility
+ * and do not drift (SD-11); while it is open, its PEEK's visible height is the glass's bottom inset (SD-10) — presentation
+ * only: the Shared controller's `setEnvelope` records it and reads nothing.
+ */
+function SharedStage({ owner: seam, glass, camera, copy, language, sheet, subject, accent, detail }: {
   readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly camera: SharedFieldState['camera'];
-  readonly copy: SharedFieldCopy; readonly language: ChromeLanguage;
+  readonly copy: SharedFieldCopy; readonly language: ChromeLanguage; readonly sheet: DetailSheet;
+  readonly subject: string | null; readonly accent: boolean; readonly detail: ReactNode;
 }) {
+  // SD-12: a focus on the stage (a tap answered FOCUS, an accessible mark) shows a closed sheet again; the act is unchanged.
+  const reopen = sheet.open;
+  const owner = useMemo(() => reopeningOwner(seam, reopen), [seam, reopen]);
+  const [peek, setPeek] = useState(0);
+  const lifted = useMemo(() => (peek > glass.insetBottom
+    ? viewportEnvelope(glass.width, glass.height, { top: glass.insetTop, right: glass.insetRight, bottom: peek, left: glass.insetLeft }) ?? glass
+    : glass), [glass, peek]);
   // MAP-CLOSE-01 CA-O1: once the reader has acted, the world stays where it is when only the band below it changes.
-  const steady = useSteadyEnvelope(glass, camera);
+  const steady = useSteadyEnvelope(lifted, camera);
+  const expanded = sheet.phase === 'EXPANDED';
   return (
-    <CosmosWorldView owner={owner} world="SHARED" language={language} glass={steady} worldLabel={copy.fieldLabel}
-      zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} testID={SHARED_FIELD_WORLD_TEST_ID} />
+    <>
+      <CosmosSheetStage expanded={expanded}>
+        <CosmosWorldView owner={owner} world="SHARED" language={language} glass={steady} drift={!expanded} worldLabel={copy.fieldLabel}
+          zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} testID={SHARED_FIELD_WORLD_TEST_ID} />
+      </CosmosSheetStage>
+      <CosmosDetailSheet phase={sheet.phase} onSettle={sheet.settle} glass={glass} language={language} allowExpanded subject={subject} accent={accent} onPeek={setPeek}>
+        {detail}
+      </CosmosDetailSheet>
+    </>
   );
+}
+
+/**
+ * Slice D (§19.4): WHAT the sheet shows, in the chrome band's own priority (`FieldChrome`), as an identity: one focused
+ * place is one group (its panel loading, served or absent is the same subject); the field's unavailable and empty states
+ * are groups of their own. Nothing to say (the field loading, or a World at rest with no focus): no content, and the
+ * sheet closes.
+ */
+function sheetContentOf(state: SharedFieldState): SheetContent | null {
+  if (state.focus !== null) return { key: `FOCUS:${state.focus.id}`, group: `FOCUS:${state.focus.id}` };
+  if (state.status === 'UNAVAILABLE') return { key: 'UNAVAILABLE', group: 'UNAVAILABLE' };
+  if (state.status === 'READY' && state.entries.length === 0) return { key: 'EMPTY', group: 'EMPTY' };
+  return null;
 }
 
 /** The top band: the World's own chrome. It is measured, and its height is the world's top inset. */
@@ -132,16 +195,19 @@ function SharedBand({ insets, onHeight, copy, language, title, onBack, onConvers
   );
 }
 
-/** The chrome band's content: one thing the field says at a time — the focused place's panel, else the field's own state. */
-function FieldChrome({ controller, state, copy, language, bottomInset }: {
+/**
+ * The Detail Sheet's content (Slice D; before, the chrome band's): one thing the field says at a time — the focused
+ * place's panel, else the field's own state.
+ */
+function FieldChrome({ controller, state, copy, language, bottomInset, onConversation }: {
   readonly controller: SharedFieldController; readonly state: SharedFieldState; readonly copy: SharedFieldCopy;
-  readonly language: ChromeLanguage; readonly bottomInset: number;
+  readonly language: ChromeLanguage; readonly bottomInset: number; readonly onConversation: () => void;
 }) {
   const palette = usePalette();
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   let content: ReactNode = null;
   if (state.focus !== null) {
-    content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} />;
+    content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onConversation={onConversation} />;
   } else if (state.status === 'UNAVAILABLE') {
     content = (
       <View style={{ alignItems: 'center', rowGap: 12, paddingTop: 12 }}>
@@ -161,16 +227,17 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
     );
   }
   if (content === null) return null;
-  return <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: bottomInset + 8 }}>{content}</View>;
+  // Slice D: one surface. The sheet is the panel, so this content draws no card of its own (as Public's, CP1).
+  return <View style={{ paddingHorizontal: 4, paddingTop: 2, paddingBottom: bottomInset + 8 }}>{content}</View>;
 }
 
-function Panel({ copy, palette, language, panel, onBack }: {
+function Panel({ copy, palette, language, panel, onBack, onConversation }: {
   readonly copy: SharedFieldCopy; readonly palette: ConversationPalette; readonly language: ChromeLanguage;
-  readonly panel: SharedFieldPanelState; readonly onBack: () => void;
+  readonly panel: SharedFieldPanelState; readonly onBack: () => void; readonly onConversation: () => void;
 }) {
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   return (
-    <View testID="qandeel-shared-panel" accessibilityLanguage={language} style={{ backgroundColor: palette.field, borderRadius: 20, paddingBottom: 12 }}>
+    <View testID="qandeel-shared-panel" accessibilityLanguage={language} style={{ paddingBottom: 12 }}>
       <View style={{ flexDirection: 'row', paddingHorizontal: 8, paddingTop: 6 }}>
         <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-shared-panel-back">
           <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{copy.back}</Text>
@@ -178,7 +245,17 @@ function Panel({ copy, palette, language, panel, onBack }: {
       </View>
       <View style={{ paddingHorizontal: 20, rowGap: 10 }}>
         {panel.status === 'SERVED' ? (
-          <ServedPanel place={panel.place} copy={copy} palette={palette} language={language} />
+          <>
+            <ServedPanel place={panel.place} copy={copy} palette={palette} language={language} />
+            {/* SD-2 / G-3: the World's existing Conversation act, the same word and the same `openConversation()` as the
+                band's. It opens the conversation as it is; no source opens its own place in it (QAN-BL-CW-08). */}
+            <View style={{ flexDirection: 'row', paddingTop: 6 }}>
+              <Control palette={palette} language={language} accessibilityLabel={copy.conversation} onPress={onConversation} testID="qandeel-shared-panel-conversation"
+                style={{ minHeight: MIN_TARGET, paddingHorizontal: 14, justifyContent: 'center', backgroundColor: palette.field }}>
+                <Text style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{copy.conversation}</Text>
+              </Control>
+            </View>
+          </>
         ) : panel.status === 'LOADING' ? (
           <View accessible accessibilityState={{ busy: true }} style={{ minHeight: 48 }} />
         ) : (

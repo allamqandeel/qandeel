@@ -10,7 +10,7 @@ import { BackHandler } from 'react-native';
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
 import { DEFAULT_MAP_SCALE, projectAddress, viewportEnvelope } from '../../../map/camera';
-import { COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
+import { COSMOS_SHEET_TEST_ID, COSMOS_STEP_TEST_ID_SUFFIX } from '../../../cosmos/product';
 import { RESPONSIVE_SURFACE_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID } from '../../../responsive';
 import { resize } from '../../../responsive/__fixtures__/composition';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
@@ -244,6 +244,9 @@ describe('SHARED-VIS-01 — the Shared World on the ONE Living Analysis surface'
   it('an empty World is shown as empty, with nothing standing in for it', async () => {
     const { view } = await mountArea(fieldTransport({ [WORLD_A]: [] }));
     await press(view, `qandeel-shared-world-${WORLD_A}`);
+    // Slice D CP2: the field's states speak in the Detail Sheet, which lives in the measured stage.
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: SIZE.height });
+    await flush();
     expect(view.getByTestId('qandeel-shared-field-empty').props.children).toBe(sharedFieldCopy('en').empty);
     expect(view.queryByTestId(/qandeel-shared-mark/u, { includeHiddenElements: true })).toBeNull();
   });
@@ -271,6 +274,9 @@ describe('SHARED-VIS-01 — the Shared World on the ONE Living Analysis surface'
   it('the place panel shows its meaning, themes and exact sources, attributed as the conversation attributes them', async () => {
     const { view, controller } = await mountArea();
     await press(view, `qandeel-shared-world-${WORLD_A}`);
+    // Slice D CP2: the panel is the Detail Sheet's content, in the measured stage.
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: SIZE.height });
+    await flush();
     await act(async () => { controller.field?.focus(A1.id); });
     await flush();
     expect(view.getByTestId('qandeel-shared-panel-meaning').props.children).toBe(A1.meaning);
@@ -301,6 +307,17 @@ describe('SHARED-VIS-01 — the Shared World on the ONE Living Analysis surface'
     expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     expect(field.field.mock.calls.length).toBe(reads + 1);
     expect(controller.field?.getState()).toMatchObject({ worldId: WORLD_A, camera, focus: { id: A3.id } });
+    // RE-ANCHORED by COSMOS-INT-01 Slice D CP2 (D-12 / SD-5, Contract §19.6 / §19.12): the restored focus shows its place
+    // in the Detail Sheet's PEEK, and the ONE Back handler dismisses that PEEK first — presentation only, the focus and the
+    // camera kept. The protected order is asserted unchanged after it: the focus is released next, then the Shared root.
+    await resize(view, SIZE.width, SIZE.height, { mapHeight: SIZE.height });
+    await flush();
+    const sheet = () => view.getByTestId(COSMOS_SHEET_TEST_ID, { includeHiddenElements: true });
+    expect(sheet().props.pointerEvents).not.toBe('none');
+    const kept = controller.field?.getState();
+    await back();
+    expect(sheet().props.pointerEvents).toBe('none');
+    expect(controller.field?.getState()).toBe(kept);
     // Back inside the field releases the focus first, then leaves to the Shared root.
     await back();
     expect(controller.field?.getState().focus).toBeNull();

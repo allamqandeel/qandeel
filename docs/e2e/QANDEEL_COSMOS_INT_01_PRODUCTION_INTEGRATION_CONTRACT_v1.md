@@ -1375,6 +1375,7 @@ A contract pin moves only with its reason written beside it (this section: D-8 /
   - **One narrow exception (PO, 2026-11-16, closure pass, Issue C):** `PublicDiscussion.tsx` takes a host-supplied `surface?: 'card' | 'sheet'` prop (default `'card'`). On `'sheet'` it draws no card background or radius of its own, and its heading uses the section role (UI-POLISH-01). That is visual hosting only. Its data, navigation, scrolling, replies, retry, entitlement and composer are unchanged, and everywhere else it keeps its card exactly. No other frozen file is opened by this exception.
 - every controller and runtime-entry API; the server;
 - `SharedLivingAnalysis.tsx`, `SharedWorldArea.tsx`, `LivingAnalysisMap.tsx`, `DepthComposition.tsx` (CP2 / CP3, not authorised);
+  - **CP2 (PO, 2026-11-16, §19.15):** `SharedLivingAnalysis.tsx` and `SharedWorldArea.tsx` are opened for the Shared sheet integration only. `LivingAnalysisMap.tsx` and `DepthComposition.tsx` stay frozen (CP3).
 - RN Skia 2.7.0 and the QAN-INF-03 exception;
 - item 021;
 - Replay.
@@ -1499,6 +1500,61 @@ The phone's Do Not Disturb was found OFF. The PO chose to proceed without it, wi
 - **Evidence** is in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-d\closure\`, with the report `CLOSURE_PASS_REPORT.md`.
 
 **Stop.** CP2 / CP3 / CP4, Slice E and Replay are not started. Not merged; merge only on «ادمج».
+
+### 19.15 CP2 — the Shared World Detail Sheet (controlled addendum, PO authorisation 2026-11-16)
+
+**Source.** "COSMOS-INT-01 / Slice D — CP2 Execution Authorization — Shared World Detail Sheet — Stay on the Approved Project Roadmap" (PO, 2026-11-16).
+- The PO accepted the engineering outcome of CP1 and UI-POLISH-01, including the closure-pass findings, for continuation.
+- The renderer's drift-restart observation is accepted as non-blocking and is not investigated again.
+- A second message ("Unattended CP2 Execution", same day) lets CP2 run to completion unattended within this scope.
+
+**Authorised:** CP2 only. Not authorised: CP3 (Personal), CP4 (closure), Slice E, Replay, any merge, any new UI-polish or renderer task.
+
+**Branch.** It continues on `cosmos/cosmos-int-01-slice-d` (#397, base #396). `cosmos/ui-polish-01` (#398) is kept stacked on it by `--no-ff` merges. Neither PR's accepted work is rewritten.
+
+**Nothing of CP1 is reopened.** §19.2 – §19.10 bind unchanged, as do the typography scale, the bottom navigation, the Public discussion styling, the search field, COSMOS zoom and centring, and item 021.
+
+**Scope.**
+- `shared-world/field/SharedLivingAnalysis.tsx`: the chrome band's content moves into CP1's ONE sheet (`CosmosDetailSheet` / `useDetailSheet`, no second sheet). The stage composition is Public's (`CosmosSheetStage`, `reopeningOwner`, SD-10 lift, SD-11 drift).
+- `shared-world/SharedWorldArea.tsx`: the ONE hardware Back handler asks the sheet first.
+- Tests.
+- No other frozen file, no controller, API, server, copy or dependency change.
+
+**Content (§19.5 Shared row, made exact).**
+- **PEEK** is the content's top: the place's meaning (a header), then the primary and secondary themes. Within the same subject it also shows the panel's loading (busy, no words), absent and unavailable states, and, with no focus, the field's unavailable state with its existing Retry (`revalidate`) or its empty state. These are the chrome band's states, in its priority.
+- **EXPANDED** is all of it: every source the decoder served, in its order, under the APPROVED `sourcesHeading` «مصادر هذا المعنى» / "Sources of this meaning", with the conversation's attribution (SELF → you, HUMAN → the author's name or someone, QANDEEL → QANDEEL) and the exact text. It ends with the World's existing Conversation act: the same word `copy.conversation` and the same `openConversation()` as the band's.
+- **SD-6:** no count.
+- **SD-2 / G-3:** a source row is read as one text; it is never a button or a link, and no source opens a place in the conversation (QAN-BL-CW-08 is admitted at CP4).
+- **Nothing is invented:** no sessions, media, author metadata or locator.
+
+**Back (§19.6.4, SD-5).** `SharedLivingAnalysis` hands the sheet's `back` to the area (`registerSheetBack`) and registers no listener of its own. The area's ONE handler runs:
+1. while the World's field is shown (`WORLD`, `MAP`), the sheet: EXPANDED → PEEK → CLOSED, presentation only;
+2. then its order, unchanged: Manage › conversation › `field.back()` › root.
+
+**Acceptance (PO's CP2 list, 1 – 17).**
+1. Selecting a place opens PEEK.
+2. Its meaning and themes are shown.
+3. EXPANDED shows all authorised sources.
+4. Attribution is preserved.
+5. No unauthorised source appears.
+6. Source rows do not pretend to navigate.
+7. The conversation opens through the existing act.
+8. Returning preserves the World anchor.
+9. EXPANDED → PEEK → CLOSED preserves the focus.
+10. Hardware Back precedence holds.
+11. A focused place reopens the sheet.
+12. The same canvas instance survives every phase.
+13. No extra field reads or canonical writes.
+14. Sheet and map gestures stay independent.
+15. The loading, absent, unavailable and empty states are correct.
+16. Arabic and English layouts read correctly.
+17. Accessibility and Reduce Motion work.
+
+Plus the HONOR proof: plain Release APK, ar + en, CLOSED / PEEK / EXPANDED / source scrolling / conversation and return / Back sequence / reopening / reproducible states, with targeted Public and Personal regression checks.
+
+**Re-anchor (§19.12).** In `shared-field.test.tsx` D7, the restored focus now peeks, and the ONE Back handler dismisses that PEEK first (D-12 / SD-5). The protected order is asserted unchanged after it: focus release, then the Shared root. Two tests now measure the surface before reading the sheet's content, because the sheet lives in the measured stage. No assertion is weakened.
+
+**Stop.** CP2 stops for the PO's review. CP3, CP4, Slice E and Replay are not started. Merge only on «ادمج».
 
 ---
 
