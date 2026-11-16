@@ -42,14 +42,31 @@ export const PUBLIC_FIELD_COPY_GATE = {
   revisedByProductOwner: ['searchLabel', 'placeReady', 'fieldLabel', 'empty'],
 } as const;
 
+/**
+ * UI-POLISH-01 — the Public search field's VISIBLE placeholder, separated from its accessible name (Product Owner,
+ * 2026-11-16, closure pass Issue D). The full English `searchLabel` was clipped in the compact 44-point field. The field
+ * now shows the PO's shorter wording, and its accessible name stays the full `searchLabel`. The Arabic placeholder is
+ * the Arabic `searchLabel` itself (it fits, and is not changed); it is reused by reference, never written twice.
+ * The S5-03B gate above is untouched. This is its own one-row gate.
+ */
+export const PUBLIC_FIELD_PLACEHOLDER_COPY_GATE = {
+  status: 'UI-POLISH-01 PRODUCT COPY GATE — CLOSED — 1 row APPROVED (Product Owner, 2026-11-16)',
+  approved: ['searchPlaceholder'],
+  /** Arabic: the S5-03B `searchLabel`, reused byte-exact. */
+  reusedInArabic: ['searchLabel'],
+} as const;
+const SEARCH_PLACEHOLDER_EN = 'Experience, feeling, or meaning'; // APPROVED — UI-POLISH-01 Product Copy Gate (Product Owner, 2026-11-16)
+
 export interface PublicFieldCopy {
   /** The accessible name of the field itself. */
   readonly fieldLabel: string;
   /** Nothing is public yet: the field is empty by truth, and nothing stands in for it. */
   readonly empty: string;
   readonly fieldUnavailable: string;
-  /** The search field's label and placeholder. */
+  /** The search field's accessible name (and the Relations search's placeholder). */
   readonly searchLabel: string;
+  /** The Public search field's visible placeholder (UI-POLISH-01): shorter in English, the same words in Arabic. */
+  readonly searchPlaceholder: string;
   readonly noResults: string;
   /** The panel's very small nearby context: proximity in the field is similarity of meaning. */
   readonly nearHeading: string;
@@ -115,6 +132,7 @@ export function publicFieldCopy(language: ChromeLanguage): PublicFieldCopy {
   const own = language === 'ar' ? AR : EN;
   return Object.freeze({
     ...own,
+    searchPlaceholder: language === 'ar' ? AR.searchLabel : SEARCH_PLACEHOLDER_EN, // UI-POLISH-01 Product Copy Gate (Arabic REUSED)
     back: shared.back, // REUSED — S4-01 Product Copy Gate
     cancel: shared.cancel, // REUSED — S4-01 Product Copy Gate
     retry: shared.retry, // REUSED — S4-01 Product Copy Gate

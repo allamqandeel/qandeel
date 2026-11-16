@@ -223,7 +223,7 @@ function SearchRow({ controller, state, copy, language, query, setQuery, onShow 
       <TextInput testID="qandeel-public-search" value={search.open ? query : ''} onChangeText={setQuery}
         onFocus={() => { if (!search.open) setQuery(''); controller.openSearch(); }}
         onSubmitEditing={() => { controller.search(query); onShow(); }} returnKeyType="search" maxLength={PUBLIC_SEARCH_QUERY_MAX}
-        accessibilityLabel={copy.searchLabel} placeholder={copy.searchLabel} placeholderTextColor={palette.tertiary} accessibilityLanguage={language}
+        accessibilityLabel={copy.searchLabel} placeholder={copy.searchPlaceholder} placeholderTextColor={palette.tertiary} accessibilityLanguage={language}
         selectionColor={palette.primary} cursorColor={palette.primary}
         // UI-POLISH-01 (Product Owner, 2026-11-16): a compact field. Android's default vertical padding is removed, so the field
         // is the 44-point touch target itself (it measured ≈ 51 on the HONOR); the text, width and placement are unchanged.
