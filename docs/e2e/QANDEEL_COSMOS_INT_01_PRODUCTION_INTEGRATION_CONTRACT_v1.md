@@ -1,8 +1,9 @@
-# COSMOS Production Integration Contract — v1.4 (Slice B ACCEPTED by the PO; Slice C CLOSED / READY FOR PO REVIEW on a dependent Draft PR — §16 UX correction, §17 closure)
+# COSMOS Production Integration Contract — v1.4 (Slice B ACCEPTED by the PO; Slice C CLOSED / READY FOR PO REVIEW on a dependent Draft PR — §16 UX correction, §17 closure; §18 Personal target centring DELIVERED, awaiting the PO's device review)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status:** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
+**Status:** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — PERSONAL TARGET CENTRING AFTER A SEMANTIC ZOOM (PO AUTHORISATION 2026-11-16) — DELIVERED ON `cosmos/cosmos-int-01-personal-centring` (FROM 2f2dca46; ITS OWN DEPENDENT DRAFT PR; NOT ACCEPTED UNTIL THE PO REVIEWS THE HONOR RESULT — §18) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2), 2026-11-15 (v1.3), 2026-11-15 (v1.4).
+**Change log v1.4, centring addendum (2026-11-16).** The PO's message "COSMOS-INT-01 — PO Authorization: Personal Map Target Centering After Semantic Zoom" is applied. It narrowly reopens §17.1's closed zoom for the Personal world only. New §18 records the measured root cause (finger anchoring by design, compounded by the rung-relative Reading orbit; no coordinate defect), the correction (one `ZOOM_SEMANTIC` about the point that centres a sole disclosed target, `66d64885`), the depth-word touch fix the HONOR proof required (`17035da9`), the before/after proof A–F, performance, verification and open items. No other decision changes; no further approval is inferred.
 **Change log v1.4, closure addendum (2026-11-16).** The PO's message "COSMOS-INT-01 — Final PO Decisions: Slice C Closure" is applied. New §17 records its decisions, the six concise act labels APPROVED into the Copy Gate (deliverable A, §17.2–17.3), the cause and fix of the dead "Follow live" button found through a bounded diagnostic protocol (deliverable B, §17.4), the PO's mandatory HONOR acceptance test passing 20 / 20 on the plain release APK (§17.5), the verification (§17.6) and the closure status (§17.7). §16.6's fourth pass and §16.7's "NOT MET" for the Live words are superseded by §17.4. Zoom is closed and accepted; no other decision changes; no further approval is inferred.
 **Change log v1.3 → v1.4.** The PO's message "COSMOS-INT-01 — PO UX Decision: Simplify Navigation Chrome & Timeline Labels in Slice C" (2026-11-15, after reviewing the first Slice C HONOR captures) and the PO's follow-up on control positions are applied inside Slice C: new §16 records the decisions U-1 … U-9 verbatim in substance, how Slice C applies each (A-1 … A-8), the device observation the first Slice C proof raised and its probe (§16.4), what is recorded for the PO's review (§16.5, R-1 … R-9), the PO's polish of 2026-11-16 with the skills it was reviewed against (§16.6), the Live-words bisect of the same day with its disposition — NOT MET on the device, no unproven fix shipped (§16.6, fourth pass) — and the AFTER proof of the final head (§16.7). §15.3's matrix rows for the contextual acts and the temporal line are superseded by §16 where they differ. Every other decision keeps its status; no further approval is inferred; the accepted COSMOS visual and interaction experience stays frozen (C-9).
 **Change log v1.2 → v1.3.** The PO's message "COSMOS-INT-01 — PO Approval: Slice B Accepted, Start Slice C" (2026-11-15) is applied: Slice B is ACCEPTED (PR #394 stays a Draft, unmerged); Slice C is authorised under §14 C-1 … C-10 and §7, as a dependent branch of the Slice B head. New §15 is the concise implementation plan and the functional migration matrix for the old timeline and return controls the PO asked for first. §14's "NOT started" banner is superseded by §15.1. Every other decision keeps its status; no further approval is inferred; the accepted COSMOS visual and interaction experience stays frozen (C-9).
@@ -972,6 +973,169 @@ The full run of §17.3 also passes the Live-words step in both languages: `follo
   - no Slice D;
   - no change to item 021, PRs #391 / #392 / #393, or PR #394's branch.
 - **Proposed follow-up (not started, for the PO).** Make the rail's "…" marks gesture-handler `BaseButton`s, the component D-2 shows clean, or prove them on the device with the same acceptance protocol.
+
+## 18. Personal target centring after a semantic zoom (PO authorisation, 2026-11-16) — DELIVERED / AWAITING THE PO'S REVIEW OF THE DEVICE RESULT
+
+### 18.1 Source and standing
+
+The PO's message "COSMOS-INT-01 — PO Authorization: Personal Map Target Centering After Semantic Zoom" (2026-11-16) narrowly reopens one zoom behaviour that §17.1 had closed. It applies to the Personal world only.
+
+**Phase A — the fingers are on the glass.** Focal tracking, the Android pointer-lift correction, gesture continuity, scale response and performance are preserved, and nothing re-centres during the gesture.
+
+**Phase B — after a completed semantic step IN toward an identifiable, authorised element:**
+- the target is preserved and glides to the usable visual centre, which allows for the top controls, the bottom timeline and the glass;
+- there are no jumps and no snapping;
+- the user can zoom further into the same target with no manual pan;
+- with no unambiguous target, the finger-anchored step stays exactly as it was.
+
+**Not to be done:**
+- no second canonical camera;
+- no bypass of `zoomSemanticStep`;
+- no change to disclosure, privacy, entitlement or inspection;
+- no automatic inspection;
+- no target outside the disclosed, authorised geometry;
+- no change to the semantic depth levels;
+- no change to Back, Overview, temporal navigation or return history.
+
+**Other conditions.**
+- **Shared and Public** are unchanged.
+- **Proof.** It is mandatory on the HONOR with the plain release APK.
+- **Acceptance.** The correction is not accepted until the PO reviews the real-device result. Slice B, the Slice C labels and "Follow live" stay undisturbed.
+- **Excluded.** No Slice D, no change to PRs #391–#393, no merge of PRs #394 / #395, and no merge without the PO's explicit approval.
+
+### 18.2 Root cause — measured on the device before any code
+
+The positions were measured on the HONOR with the plain release APK of `db1d6e23`, the Slice C head, in `proof/centre-before/db1d6e23`.
+- **Measurement method.** Node cores were read from the captures (`nodes.mjs`: near-white cores, eroded so strands fall away, identity by halo hue). The usable centre was read from the dump: across, the glass centre; down, midway between the Overview chip's bottom and the rail's top.
+- **Usable centre on the HONOR.** It is (600, 1378) while following live at WORLD, and (600, 1307) once the rail's acts row shows "Previous step". The camera's own centre is (600, 1469), 91 to 162 px lower.
+
+| Candidate cause | Finding |
+|---|---|
+| **1. Correct finger anchoring without centring** | **The cause.** A pinch IN on the red Thread at (203, 1072) leaves it under the fingers at every rung. In ar and en it stays **1–10 px** from the fingers and **458–464 px** from the usable centre at THREAD, SESSION, ANALYTICAL_OBJECT and SOURCE_PROVENANCE. The purple Thread on the right behaves the same: 3–8 px from the fingers and 430–433 px from the centre. This is CA-Z1 working as designed. |
+| **2. Gesture-focal / released-camera / canonical-camera inconsistency** | **Not present at release.** Stationary pinches put the world point back under the fingers within ≤10 px after a ×8 step, so ≤2 px before it. A moving-midpoint pinch holds the target 14–29 px from the midpoint while the fingers hold. The ×8 step about the fingers then magnifies that by about 8 / 1.4, which gives the 72–197 px seen after release. That lag is a Phase A property. It measures the same on both builds under one protocol (§18.5 C) and is left untouched, as the PO ordered. |
+| **3. The semantic level transition** | **It compounds cause 1 for Readings.** A Reading orbits its Thread at a screen-constant radius (`orbitOf(...) * k`, with `k = 1 / rungScale(rung)`), so its world position changes from rung to rung while a Thread's does not. Pinching on an off-centre Reading therefore sends its Thread, and the Reading with it, off the glass at the next rung. On the device, the second pinch on the red's Reading at (258, 1352) gave "Nothing in this region" (`proof/centre-before/A-red-en`). |
+| **4. Another reproducible cause** | **Found during the proof of the correction (§18.4):** the current depth word on the right rail blocked a pinch finger. |
+
+**The smallest correct intervention** is therefore centring a sole target, measured where the next rung draws it, inside the one existing step. It is not a coordinate fix: no coordinate defect was found.
+
+### 18.3 The correction (commit `66d64885`)
+
+- **`owner-core.ts`.**
+  - `soleHit(list, rung, camera, view, x, y)` returns the ONE hit of the disclosed draw list's current layer that covers the point. It uses the same authorised hit geometry a tap reads, and gives null when no hit or more than one covers it.
+  - `aimFixedPoint(canonical, view, target, aim, from, to)` returns the screen point a step must be taken about to draw `target` at `aim`. It is `gestureFixedPoint`'s algebra with a different wanted camera, and gives null when not finite.
+  - `CosmosWorldOwner.step` gains an optional `aim`.
+- **`owners/personal.ts`.** For a pinch IN with fingers, a released camera and an aim, the step proceeds as follows.
+  - **Conditions.** The snapshot is READY, the next rung is held, the fingers rest on a `soleHit` mark, and the next rung's layer draws the same id.
+  - **The step.** The point handed to `zoomSemanticStep` is the one that lands that mark, at its next-rung position, on the aim. It is the same one `ZOOM_SEMANTIC`, through the same production authority, with the same focal anchor that CA-Z1 already writes into the act.
+  - **What it does not do.** No PAN, no second camera, no inspection, and no change to depth or disclosure.
+  - **Otherwise** the point is `gestureFixedPoint`'s, exactly as before. That covers no mark, two marks, a rung not held, a mark not drawn at the next rung, OUT, a double tap and the accessible route.
+- **`CosmosWorldView.tsx`.**
+  - `usableCentre(glass, controlsBottom, railTop)`: across, the glass centre; down, midway between the top row's bottom and the rail's top.
+  - The two edges come from `onLayout` into refs. A layout writes no state and renders nothing.
+  - The aim is handed with a pinch only; a double tap passes none.
+  - The settle keeps the gesture's anchor (`keepAnchor`), so the target glides on the UI thread while the scale eases, with no snap.
+- **Shared / Public.** `createFieldOwner` ignores `aim`; its code is unchanged.
+- **Canonical semantics.** The act, its checkpoint and Back are unchanged. For a targeted Personal pinch, only the choice of CA-Z1's anchor point changes, which is the behaviour the PO authorised. No broader camera redesign was needed.
+
+### 18.4 The depth word blocked a pinch finger (commit `17035da9`)
+
+The first HONOR run of the correction (`proof/centre-after/66d64885`) behaved differently by language.
+- **Arabic.** The red was centred to the deepest rung.
+- **English.** The third pinch was lost: the target was not stepped, and the 53 px shift that followed was a one-finger pan.
+
+**Cause.**
+- **Where the word sits.** The usable centre lies in the right rail's third row, and at SESSION the current depth word "THE CONVERSATION" is drawn there, across x ≈ 609–1030 px. A finger landing on that native Text never reached the stage, because the gesture handler treats the Text as a touch target.
+- **Control case.** A finger on an empty rail row passed through: A2's pinch at (600, 1378) worked.
+- **Arabic.** The shorter «المحادثة» stops short of the centre.
+
+**Fix.** The current depth's bead is `disabled`, so a touch on its word never did anything.
+- In the Personal world the word now sits in a `pointerEvents="none"`, `collapsable={false}` View.
+- Words, style, layout, accessibility and the beads' presses are unchanged.
+- Shared and Public keep the word as it was (§18.8).
+- The golden re-nests the 13 words in the wrapper and changes nothing else.
+
+### 18.5 HONOR proof — release APK of `17035da9`, sha256 `a9571cea…5443bf727`, plain build (`proof/centre-after/17035da9`)
+
+Offsets are measured from the usable centre. The BEFORE build is `db1d6e23` (`proof/centre-before/db1d6e23`).
+
+**A and B — off-centre targets and repeated zoom.**
+
+| Case | BEFORE | AFTER |
+|---|---|---|
+| **A left (red at (203, 1072)), first pinch IN, en / ar** | Stays under the fingers: 460 px off the centre | **(600, 1378)**: on the usable centre measured at the pinch; 71 px off the post-step centre once "Previous step" appears |
+| **A right (purple at (996, 1468)), en / ar** | 430 / 433 px | **(599, 1378)**, the same |
+| **B repeated pinches on the same target, no pan, to SOURCE_PROVENANCE, en / ar** | 458–464 px at every rung | **1 px** at SESSION, ANALYTICAL_OBJECT and SOURCE_PROVENANCE |
+| **B boundary (a pinch IN at the deepest rung)** | Refused; the target stays | Refused; the target stays at **1 px** |
+
+**C — moving midpoint, three repetitions on each build.** One protocol on both builds: purple, fingers drifting (−150, −200) while spreading, with a capture taken while held (`*-C` folders).
+
+| Measure | BEFORE | AFTER |
+|---|---|---|
+| Target distance from the moving midpoint while held | 14 / 29 / 18 px | 1 / 23 / 22 px — Phase A identical |
+| Target after release | 324–386 px off the centre | **(599, 1378)** in 3 / 3 |
+
+**D, E and F.**
+
+| Case | BEFORE | AFTER |
+|---|---|---|
+| **D empty space, 92 px below the green, outside every 78 px hit** | Green at (604, 832); finger-anchored prediction (599, 824) | **Identical: (604, 832)**. No target was invented. |
+| **E refused OUT at WORLD** | Refused; 1 px from the fingers | Identical |
+| **E OUT on an off-centre target at THREAD** | 0 px from the fingers | **0 px from the fingers**. No centring. |
+| **E Back** (one rung OUT, no focal) | Contracts toward the camera centre: (548, 1421) from (190, 1090) | Contracts the same way: (600, 1448) from (600, 1306). Unchanged. |
+| **F Arabic and English** | — | A, B and E-back in both languages, identical results |
+
+**On the E Back row.** In English the tracker could not see the Thread's core at (600, 1448), because the word "READINGS AND FINDINGS" covers it. `_back-crops.png` shows the Thread at the same place in both languages.
+
+**Recorded evidence.**
+- Recorded passes, three pinches IN on the red with no pan: `centre-en.mp4` and `centre-ar.mp4`.
+- Annotated strips, with the usable centre as a gold cross, the target as a cyan ring and the fingers as a white dot: `_before-red-en.png`, `_after-red-en.png`, `_after-red-ar.png`, `_label-blocker-66d64885.png`, `_right-moving-before-after.png` and `_empty-out-before-after.png`.
+- Every position is in `measured.txt`.
+
+### 18.6 Performance
+
+SurfaceFlinger frame intervals were measured on the app layer for each pinch and its settle, in both builds.
+
+| Pinch | BEFORE | AFTER |
+|---|---|---|
+| WORLD → THREAD → SESSION, SESSION → ANALYTICAL_OBJECT, A right, C, D, E (ar and en) | ≈ 60 fps, p95 16.7 ms, 0 stalls, 0 freezes | The same |
+| ANALYTICAL_OBJECT → SOURCE_PROVENANCE and the boundary pinch | 48.8–50.0 fps, p95 33.3 ms, 0 stalls | 46.8–47.2 fps, p95 33.3 ms, 0 stalls |
+
+The slower deep-rung frames are a pre-existing cost of the deep rungs. In the BEFORE build those steps ran with the target at the edge, and in the AFTER build with it centred.
+
+**No new per-frame work.**
+- The centring runs once per pinch end: one pass over one layer's hits, plus an algebraic point.
+- The two `onLayout` handlers write refs only.
+- The canvas, the worklets and the renderer are unchanged.
+- Item 021 is not reopened.
+
+### 18.7 Verification
+
+| Check | Result |
+|---|---|
+| `tsc` | 0 errors |
+| `eslint` (changed files) | 0 errors |
+| `cosmos-personal-centring.test.ts` | 11 / 11 |
+| Field-owner tests with and without the aim (Shared and Public) | Pass |
+| `usableCentre` and depth-word tests | Pass |
+| Product suites | 79 / 79 |
+| Root contracts reading these files (T-12, VPORT-02, S5-03B) | 54 / 54 |
+| Wider Jest run at 66d64885 (cosmos, integration, living-analysis, map) | 645 pass and 12 fail: the same four baseline suites as on 59feab9a (host Arabic locale and timeouts) |
+
+**What `cosmos-personal-centring.test.ts` covers** (11 tests, over the production runtime):
+- one applied `ZOOM_SEMANTIC` that lands the mark on the aim;
+- repeated zoom to the deepest rung with no pan, then the boundary refusal and Back;
+- a Reading centred at its next-rung position;
+- empty space, OUT, refused OUT and the accessible route each identical to the old step;
+- `aimFixedPoint` algebra, `gestureFixedPoint` unchanged, and `soleHit` naming nothing when no mark or two marks cover the point.
+
+### 18.8 Open items for the PO
+
+1. **The first step's landing.** The aim is measured from the layout at the pinch's end. The first step from following-live WORLD therefore lands on that centre, (600, 1378). That is 71 px below the centre after the step, because the step brings in the acts row ("Previous step"). Every later step lands within 1 px. Anticipating the acts row is possible but was not done without a decision.
+2. **The same depth-word blocking exists in Shared and Public.** It is unchanged there, because the authorisation is Personal only.
+3. **The English SESSION word is drawn across the centred target.** It is cosmetic (visible in `_after-red-en.png`), and the chrome layout is unchanged.
+4. **The moving-pinch lag** of 14–29 px while held is a Phase A property, unchanged as ordered.
+
+**Status.** DELIVERED on the dependent Draft PR, branch `cosmos/cosmos-int-01-personal-centring` from `2f2dca46`. **Not accepted until the PO reviews the device result. No merge without the PO's explicit approval.**
 
 ---
 
