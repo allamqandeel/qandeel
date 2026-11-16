@@ -286,10 +286,16 @@ const styles = StyleSheet.create({
 /**
  * The stage beneath the sheet: while the sheet is EXPANDED the stage stays mounted (the same canvas, the same camera)
  * but takes no touch and is hidden from accessibility (§19.3). Nothing is re-keyed by the phase.
+ *
+ * The stage is never flattened (`collapsable={false}`). Without that, it is a style-only view in PEEK, and Fabric
+ * flattens it away; the props of EXPANDED make it a real native view again. Every flip then re-parents the whole
+ * stage, so the canvas's TextureView loses its surface and draws a new one. On the HONOR (closure pass, 2026-11-16) a
+ * traced EXPANDED → PEEK commit showed exactly that: REMOVE 13 / INSERT 13, the SurfaceTexture disconnected and a new
+ * one connected, and a 58 ms frame with 48 ms of `Record View#draw`.
  */
 export function CosmosSheetStage({ expanded, children }: { readonly expanded: boolean; readonly children: ReactNode }) {
   return (
-    <View testID={COSMOS_SHEET_STAGE_TEST_ID} style={{ flex: 1 }} pointerEvents={expanded ? 'none' : 'auto'}
+    <View testID={COSMOS_SHEET_STAGE_TEST_ID} collapsable={false} style={{ flex: 1 }} pointerEvents={expanded ? 'none' : 'auto'}
       importantForAccessibility={expanded ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={expanded}>
       {children}
     </View>

@@ -207,6 +207,22 @@ describe('Slice D — the Public Detail Sheet: phases are presentation only (D-1
     expect(view.getByTestId(COSMOS_SHEET_SCROLL_TEST_ID).props.scrollEnabled).toBe(false);
   });
 
+  it('the stage is one native view in every phase: never flattened, so the canvas is never re-parented', async () => {
+    // Closure pass (2026-11-16): flattened in PEEK and real in EXPANDED, the stage re-parented the canvas on every flip,
+    // and its TextureView drew a new surface (a 58 ms frame on the HONOR).
+    const { view } = await mount();
+    await focusByResult(view, E3);
+    await measure(view, 2000);
+    const stage = () => view.getByTestId(COSMOS_SHEET_STAGE_TEST_ID, hidden);
+    const first = stage();
+    for (const act_ of ['expand', 'collapse', 'close'] as const) {
+      expect(stage().props.collapsable).toBe(false);
+      await action(view, act_);
+    }
+    expect(stage().props.collapsable).toBe(false);
+    expect(stage()).toBe(first);
+  });
+
   it('the accessibility escape steps EXPANDED → PEEK → CLOSED, presentation only', async () => {
     const { view, field } = await mount();
     await focusByResult(view, E3);

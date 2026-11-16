@@ -294,7 +294,7 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
   if (state.section.choosing) {
     content = <SectionList controller={controller} state={state} copy={copy} language={language} />;
   } else if (state.focus !== null && state.focus.discussion === true && controller.discussion !== null) {
-    content = <PublicDiscussion controller={controller.discussion} language={language} onBack={() => controller.closeDiscussion()} />;
+    content = <PublicDiscussion controller={controller.discussion} language={language} onBack={() => controller.closeDiscussion()} surface="sheet" />;
   } else if (state.focus !== null) {
     content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onFocus={(id) => controller.focus(id)}
       onDiscussion={controller.discussion !== null ? () => controller.openDiscussion() : null}
@@ -336,8 +336,8 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
     );
   }
   if (content === null) return null;
-  // Slice D: one surface — the sheet is the panel; this file's own content is no card of its own. The discussion keeps its own
-  // surface: PublicDiscussion.tsx is frozen by §19.13, so the card it draws for itself stays until the PO authorises otherwise.
+  // Slice D: one surface. The sheet is the panel, so this file's own content draws no card of its own. The discussion is
+  // hosted as `surface="sheet"` and draws no card inside it either; that is the PO's narrow §19.13 exception (2026-11-16).
   return <View style={{ paddingHorizontal: 4, paddingTop: 2, paddingBottom: bottomInset + 8 }}>{content}</View>;
 }
 
