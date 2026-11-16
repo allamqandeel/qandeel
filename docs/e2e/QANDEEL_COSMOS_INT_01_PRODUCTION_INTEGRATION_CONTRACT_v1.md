@@ -1555,6 +1555,11 @@ Plus the HONOR proof: plain Release APK, ar + en, CLOSED / PEEK / EXPANDED / sou
 
 **Re-anchor (§19.12).** In `shared-field.test.tsx` D7, the restored focus now peeks, and the ONE Back handler dismisses that PEEK first (D-12 / SD-5). The protected order is asserted unchanged after it: focus release, then the Shared root. Two tests now measure the surface before reading the sheet's content, because the sheet lives in the measured stage. No assertion is weakened.
 
+**Re-anchor (§19.12), found by CI on the first CP2 push.** Three integrated mobile suites were not in the local run; the fast mobile contract gate failed on them (3 of 3 697 tests; 296 / 299 suites passed).
+- `s4-01-shared-world.test.tsx` (Journey C) and `s4-04-shared-direct-entry.test.tsx` (B): the World's field is empty, and the empty state is said in the sheet's PEEK. The area's ONE Back handler dismisses the open sheet first (D-12 / SD-5): the World stays, no handler is added, and no Activity appears. The protected law is then asserted unchanged on the next Back: World → Shared root, the World's handler removed, never the Personal world.
+- `shared-vis-01-proof-field.test.tsx`: the surface is laid out before the panel is read, as the S5-01 Public test does. Every assertion is unchanged.
+- No assertion was weakened.
+
 **Stop.** CP2 stops for the PO's review. CP3, CP4, Slice E and Replay are not started. Merge only on «ادمج».
 
 #### CP2 delivery record (2026-11-17)
@@ -1639,7 +1644,9 @@ Regressions:
 - Loading, absent and unavailable cannot be produced on the proof network without new fault links, so they are jest-proven only.
 - No TalkBack proof was run, per the PO's 2026-11-08 scope decision.
 
-**CI.** Recorded in the PR after the push.
+**CI.**
+- First push (#397 `d2fd8898`, #398 `07225324`): the change-aware plan and the API contracts passed. The fast mobile contract gate FAILED on the three suites above, which are now re-anchored.
+- Second push: the final checks are recorded in the PRs and in the CP2 report.
 
 **Stopped for the PO's review.** CP3, CP4, Slice E and Replay were not started. Nothing is merged.
 
