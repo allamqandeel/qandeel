@@ -8,7 +8,7 @@
  *   - a content of a new GROUP (a new focus, the results, the section list, a field state) opens the PEEK, or EXPANDED
  *     when it asks for it (the Public discussion);
  *   - a new content within the SAME group (the discussion of the focused Experience, opened or closed) keeps the phase,
- *     except that entering a content that asks for EXPANDED expands;
+ *     a CLOSED one too, except that entering a content that asks for EXPANDED expands;
  *   - no content forces CLOSED;
  *   - an explicit reader act (`open`) shows a closed sheet again (SD-12: a tap on the focused item);
  *   - `back` is the sheet's share of the host's ONE hardware Back handler: EXPANDED → PEEK → CLOSED, and `false` once
@@ -47,7 +47,9 @@ function next(held: Held, content: SheetContent | null): Held {
   if (content === null) return held.key === null && held.phase === 'CLOSED' ? held : { phase: 'CLOSED', key: null, group: null };
   if (content.key === held.key) return held;
   const entering: SheetPhase = content.expanded === true ? 'EXPANDED' : 'PEEK';
-  if (content.group === held.group && held.phase !== 'CLOSED') {
+  // §19.4: within the same Experience the phase is kept, a CLOSED one too (the hardware Back that leaves the discussion
+  // once the sheet has closed must not show the panel again; the reader's next Back releases the focus).
+  if (content.group === held.group) {
     return { phase: content.expanded === true ? 'EXPANDED' : held.phase, key: content.key, group: content.group };
   }
   return { phase: entering, key: content.key, group: content.group };

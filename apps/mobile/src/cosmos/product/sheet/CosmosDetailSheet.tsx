@@ -62,8 +62,9 @@ const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 /** Where a new subject's content starts its reveal: never from nothing, so nothing flashes. */
 const REVEAL_FROM = 0.35;
 
-// The accepted COSMOS tokens (CosmosWorldView, the V5 card): the night glass, ink, the quiet grey, gold, the hairline.
-const C = { solid: 'rgba(11, 13, 26, 0.94)', ink: '#E9EAF4', quiet: '#9A9DB4', gold: '#ECCC8A', hair: 'rgba(233, 234, 244, 0.16)', lift: '0px -10px 28px rgba(0, 0, 0, 0.42)' } as const;
+// The accepted COSMOS tokens (CosmosWorldView, the V5 card): the night, ink, the quiet grey, gold, the hairline. The sheet's
+// night is OPAQUE (the V5 card's 0.94 glass let the live canvas's labels, chips and rings read through the text on the HONOR).
+const C = { solid: 'rgb(11, 13, 26)', ink: '#E9EAF4', quiet: '#9A9DB4', gold: '#ECCC8A', hair: 'rgba(233, 234, 244, 0.16)', lift: '0px -10px 28px rgba(0, 0, 0, 0.42)' } as const;
 const RADIUS = 24;
 const GRABBER = { width: 36, height: 4 } as const;
 

@@ -305,6 +305,12 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     await flush();
     expect(sheet().props.pointerEvents).toBe('none');
     expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: true });
+    // §19.4 "within the same Experience the current phase is kept": leaving the discussion once the sheet has closed (what
+    // the hardware Back's controller step does) returns to the panel WITHOUT showing the sheet again (HONOR, 2026-11-16).
+    await act(async () => { field.closeDiscussion(); });
+    await flush();
+    expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: false });
+    expect(sheet().props.pointerEvents).toBe('none');
   });
 });
 
