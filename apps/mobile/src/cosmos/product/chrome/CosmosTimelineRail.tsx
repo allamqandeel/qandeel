@@ -32,11 +32,12 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-// The Live words and the "…" marks are gesture-handler Pressables (HONOR, 2026-11-16): a bare-text React Native Pressable over
-// the stage's gesture surface lost its press on the device while every chip with a background took it — RNGH's Android
-// orchestrator lets a touch over a background-less view fall through to the stage's handlers, whose tap then cancels the
-// React Native press. A gesture-handler Pressable is itself a native handler, innermost, so the words always win the tap.
-import { GestureDetector, Pressable as GesturePressable } from 'react-native-gesture-handler';
+// The "…" marks are gesture-handler Pressables. The Live words are a gesture-handler BaseButton (Contract v1.4 §17.4):
+// on the HONOR (trace D-1, 2026-11-16) a gesture-handler Pressable's own press-in re-render could race its native handler
+// and drop a press (TOUCHES_CANCELLED before the handler's end); a BaseButton has no pressed state and no touch callbacks,
+// and trace D-2 shows its native handler BEGAN → ACTIVE → END and its press delivered on every tap. The words' defect
+// itself was in `goLive` (see there), not in the press component.
+import { BaseButton, GestureDetector, Pressable as GesturePressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 
 import { analysisCopy } from '../../../analysis-language';
@@ -169,8 +170,12 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
     },
     [preview, targeting, store, onOutcome, motion],
   );
+  // The act runs FIRST and the observer is told afterwards. `onOutcome?.(commitLiveEdgeIntent(…))` does not evaluate its
+  // argument when no observer is attached — and the product host attaches none — so the Live words committed nothing on
+  // every plain build (Contract v1.4 §17.4, trace D-2, 2026-11-16). ReturnControls states the same rule for its acts.
   const goLive = useCallback(() => {
-    onOutcome?.(commitLiveEdgeIntent(store, preview));
+    const outcome = commitLiveEdgeIntent(store, preview);
+    onOutcome?.(outcome);
   }, [store, preview, onOutcome]);
 
   const committedPresent = motion.plan.committedPresent;
@@ -246,10 +251,13 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
       {/* The words row: the outboard Live edge, with T-06's words, at the END. Never a Moment; never an act. */}
       <View style={styles.words} pointerEvents="box-none">
         <View style={styles.spacer} />
-        <GesturePressable testID={COSMOS_RAIL_LIVE_TEST_ID} accessibilityRole="button" accessibilityLabel={liveWords} accessibilityLanguage={language}
-          accessibilityState={{ disabled: !liveAvailable, selected: following }} disabled={!liveAvailable} onPress={goLive} style={styles.liveAct}>
-          <Text style={following ? styles.quietText : styles.goldText}>{liveWords}</Text>
-        </GesturePressable>
+        <BaseButton testID={COSMOS_RAIL_LIVE_TEST_ID} accessibilityRole="button" accessibilityLabel={liveWords} accessibilityLanguage={language}
+          accessibilityState={{ disabled: !liveAvailable, selected: following }} enabled={liveAvailable} onPress={goLive} rippleColor="transparent" style={styles.liveButton}>
+          {/* The 44-pt box is the button's only child, so the native button takes exactly its bounds. */}
+          <View style={styles.liveAct}>
+            <Text style={following ? styles.quietText : styles.goldText}>{liveWords}</Text>
+          </View>
+        </BaseButton>
       </View>
       {/* The non-drag routes, headless: present to assistive technology, not on the screen (C-5). */}
       <View testID={COSMOS_RAIL_HEADLESS_TEST_ID} style={styles.headless} accessibilityRole="none" pointerEvents="box-none">
@@ -289,6 +297,7 @@ const styles = StyleSheet.create({
   spacer: { flex: 1 },
   // The acts' row above the label: the chips wrap (§16.6), nothing is clipped; it exists only while acts are offered.
   actsRow: { alignItems: 'flex-start', paddingBottom: 2 },
+  liveButton: { flexShrink: 0 },
   liveAct: { minHeight: RAIL_ROW_HEIGHT, paddingHorizontal: 10, justifyContent: 'center', flexShrink: 0 },
   quietText: { fontSize: 11, letterSpacing: 0.8, color: C.quiet },
   goldText: { fontSize: 13, color: C.gold },

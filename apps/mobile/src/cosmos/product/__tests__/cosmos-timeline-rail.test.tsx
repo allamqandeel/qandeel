@@ -42,13 +42,13 @@ const flat = (style: unknown): Record<string, unknown> =>
 const translateX = (style: unknown): number | undefined =>
   (flat(style).transform as readonly Record<string, number>[] | undefined)?.find((entry) => 'translateX' in entry)?.translateX;
 
-function harness(liveHead: number, language: 'ar' | 'en' = 'en', acts: React.ReactNode = null) {
+function harness(liveHead: number, language: 'ar' | 'en' = 'en', acts: React.ReactNode = null, observed = true) {
   const store = temporalTestStore({ liveHead });
   const preview = createTemporalPreviewController();
   const presentation = createPresentationController(trackOf('session-1', liveHead));
   const outcomes: TemporalOutcome[] = [];
   // A fresh element each time: React bails out of a rerender whose element is the very same object.
-  const element = () => <CosmosTimelineRail store={store} preview={preview} presentation={presentation} language={language} acts={acts} onOutcome={(outcome) => outcomes.push(outcome)} />;
+  const element = () => <CosmosTimelineRail store={store} preview={preview} presentation={presentation} language={language} acts={acts} onOutcome={observed ? (outcome) => outcomes.push(outcome) : undefined} />;
   return { store, preview, presentation, outcomes, language, element };
 }
 type Harness = ReturnType<typeof harness>;
@@ -159,6 +159,21 @@ describe('CosmosTimelineRail — the disclosed Moments, T-06 commits, the Live e
     await press(view, COSMOS_RAIL_LIVE_TEST_ID);
     expect(h.store.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
     expect(h.outcomes.map((o) => o.outcome)).toEqual(['APPLIED', 'APPLIED']);
+  });
+
+  it.each(['en', 'ar'] as const)('%s: the Live words commit with NO outcome observer attached — the product host attaches none (§17.4, the HONOR defect)', async (language) => {
+    const h = harness(6, language, null, false);
+    view = await mount(h);
+    for (const at of [3, 1, 5]) {
+      await press(view, `${COSMOS_RAIL_MOMENT_TEST_ID_PREFIX}${at}`);
+      expect(h.store.getState().temporal).toEqual({ kind: 'PINNED', at: sessionPosition(at) });
+      await press(view, COSMOS_RAIL_LIVE_TEST_ID);
+      expect(h.store.getState().temporal).toEqual({ kind: 'FOLLOW_LIVE' });
+      await settled(view, h);
+      expect(view.queryByTestId(COSMOS_RAIL_LABEL_TEST_ID)).toBeNull();
+      expect(view.getByTestId(COSMOS_RAIL_LIVE_TEST_ID).props.accessibilityState).toMatchObject({ selected: true });
+    }
+    expect(h.outcomes).toEqual([]);
   });
 
   it('a preview held by the controller is the hollow ring; a pointer interaction that ends without a target of its own commits nothing and cancels only what it owns (T-06)', async () => {
