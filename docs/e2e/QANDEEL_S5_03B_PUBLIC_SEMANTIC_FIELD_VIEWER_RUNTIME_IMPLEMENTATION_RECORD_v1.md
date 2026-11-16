@@ -822,3 +822,11 @@ SHOWS in English. The full `searchLabel` was clipped at the field's end.
 - The field's accessible name stays the full `searchLabel` in both languages.
 - The S5-03B gate (13 rows APPROVED, §14), its census and the Relations search (S5-03C reuses `searchLabel`).
 - The search action, the field's height and its width.
+
+**Device proof (plain Release `e2695ece`):**
+- On the HONOR (411 dp at 1.0 font scale) the English placeholder shows in full in a 44.0 dp field. Arabic is unchanged.
+- On the emulator, with its own settings restored afterwards, the field stays 44 dp in every configuration:
+  - English fits at font scale 1.0 and 1.3 on a 411 dp screen, and at 1.0 on a 320 dp screen;
+  - at 1.3 on 320 dp, and at 2.0, its last letters are cut, as is the unchanged Arabic placeholder's;
+  - the full meaning stays the accessible name.
+- Widening or growing the field to fit was not authorised (the PO kept 44 dp and the width).
