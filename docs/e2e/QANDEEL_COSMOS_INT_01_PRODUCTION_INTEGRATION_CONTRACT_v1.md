@@ -1,8 +1,9 @@
-# COSMOS Production Integration Contract — v1.4 (Slice B ACCEPTED by the PO; Slice C in progress on a dependent branch; the PO's Slice C UX correction applied — §16)
+# COSMOS Production Integration Contract — v1.4 (Slice B ACCEPTED by the PO; Slice C CLOSED / READY FOR PO REVIEW on a dependent Draft PR — §16 UX correction, §17 closure)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
-**Status:** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — AUTHORISED AND IN PROGRESS ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
+**Status:** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
 **Author:** integration engineering (Claude), 2026-11-15 (v1.0), 2026-11-15 (v1.1), 2026-11-15 (v1.2), 2026-11-15 (v1.3), 2026-11-15 (v1.4).
+**Change log v1.4, closure addendum (2026-11-16).** The PO's message "COSMOS-INT-01 — Final PO Decisions: Slice C Closure" is applied. New §17 records its decisions, the six concise act labels APPROVED into the Copy Gate (deliverable A, §17.2–17.3), the cause and fix of the dead "Follow live" button found through a bounded diagnostic protocol (deliverable B, §17.4), the PO's mandatory HONOR acceptance test passing 20 / 20 on the plain release APK (§17.5), the verification (§17.6) and the closure status (§17.7). §16.6's fourth pass and §16.7's "NOT MET" for the Live words are superseded by §17.4. Zoom is closed and accepted; no other decision changes; no further approval is inferred.
 **Change log v1.3 → v1.4.** The PO's message "COSMOS-INT-01 — PO UX Decision: Simplify Navigation Chrome & Timeline Labels in Slice C" (2026-11-15, after reviewing the first Slice C HONOR captures) and the PO's follow-up on control positions are applied inside Slice C: new §16 records the decisions U-1 … U-9 verbatim in substance, how Slice C applies each (A-1 … A-8), the device observation the first Slice C proof raised and its probe (§16.4), what is recorded for the PO's review (§16.5, R-1 … R-9), the PO's polish of 2026-11-16 with the skills it was reviewed against (§16.6), the Live-words bisect of the same day with its disposition — NOT MET on the device, no unproven fix shipped (§16.6, fourth pass) — and the AFTER proof of the final head (§16.7). §15.3's matrix rows for the contextual acts and the temporal line are superseded by §16 where they differ. Every other decision keeps its status; no further approval is inferred; the accepted COSMOS visual and interaction experience stays frozen (C-9).
 **Change log v1.2 → v1.3.** The PO's message "COSMOS-INT-01 — PO Approval: Slice B Accepted, Start Slice C" (2026-11-15) is applied: Slice B is ACCEPTED (PR #394 stays a Draft, unmerged); Slice C is authorised under §14 C-1 … C-10 and §7, as a dependent branch of the Slice B head. New §15 is the concise implementation plan and the functional migration matrix for the old timeline and return controls the PO asked for first. §14's "NOT started" banner is superseded by §15.1. Every other decision keeps its status; no further approval is inferred; the accepted COSMOS visual and interaction experience stays frozen (C-9).
 
@@ -837,7 +838,140 @@ Re-anchors of the second pass: the §16 A-3 rail test (the slot's `minHeight`, n
 
 **Figures.** Still (Personal, ar): 60.1 fps, max 16.7 ms, stalls 0, freezes 0; still (en): 60.1 fps, max 16.6 ms, stalls 0, freezes 0; pan (ar): 60.1 fps, max 16.7 ms, stalls 0, freezes 0; pan (en): 60.1 fps, max 16.8 ms, stalls 0, freezes 0; pinch IN: 60.2 fps, max 16.7 ms, stalls 0, freezes 0 / 60.2 fps, max 16.7 ms, stalls 0, freezes 0; door → stage: 60.1 fps, max 16.7 ms, stalls 0, freezes 0; cold open (3): 354 / 292 / 295 ms; memory before → after 3 open / close cycles: 269.8 → 300.2 MB; Shared pinch IN 57.4 fps, max 33.3 ms, stalls 0, freezes 0; Public pinch IN 60.2 fps, max 16.7 ms, stalls 0, freezes 0.
 
-**The Live words.** **NOT MET on the device, ar + en** — `following=0 label=1` after one tap at the words' centre in both languages (expected ≥ 1 / 0), exactly as on every plain build before it; the bisect and the disposition are §16.6 (fourth pass). The function is not lost: the headless navigator's rejoin action (C-5, present in the same tree), T-07's `GO_LIVE_AND_LOCATE` act in the acts row and the accessible route reach Live on the same device. Recorded for the PO's decision; nothing is re-anchored to hide it — the proof script's expectation is unchanged and its line reads as a failure. Everything else in the table passed.
+**The Live words.** *(Superseded by §17.4–17.5, 2026-11-16: the cause was the optional call in `goLive`; the fixed plain build passes the PO's acceptance test 20 / 20.)* **NOT MET on the device, ar + en** — `following=0 label=1` after one tap at the words' centre in both languages (expected ≥ 1 / 0), exactly as on every plain build before it; the bisect and the disposition are §16.6 (fourth pass). The function is not lost: the headless navigator's rejoin action (C-5, present in the same tree), T-07's `GO_LIVE_AND_LOCATE` act in the acts row and the accessible route reach Live on the same device. Recorded for the PO's decision; nothing is re-anchored to hide it — the proof script's expectation is unchanged and its line reads as a failure. Everything else in the table passed.
+
+## 17. Slice C closure — the Product Owner's final decisions (2026-11-16) and their delivery
+
+### 17.1 Source and standing
+
+The PO's message "COSMOS-INT-01 — Final PO Decisions: Slice C Closure" (2026-11-16) authorises exactly two remaining deliverables: **A**, the six concise act labels it approves, and **B**, a visible "Follow live" button that works. Nothing else is authorised. In substance the message decides:
+
+- **Zoom is CLOSED AND ACCEPTED.** Nothing in the pinch engine, focal calculations, camera transforms, gestures, zoom levels or animation curves changes. No zoom investigation or test campaign runs.
+- **The six labels are APPROVED** (table in §17.2). They go into the existing Copy Gate through the canonical copy source. Every action keeps its executor, identity, availability, behaviour and detailed accessibility hint. No actions are combined, no control or row is added, and no broader copy redesign is authorised.
+- **The PO does not accept a visible control that looks enabled and does nothing.** The fix must be the smallest independently verified correction, found through a bounded diagnostic protocol. T-06's `commitLiveEdgeIntent` stays unchanged, and the timeline design, camera, zoom, renderer and other navigation systems stay untouched.
+- **A mandatory acceptance test** runs on the HONOR with the ordinary, non-instrumented release APK, in Arabic and English, over several cycles, including after a drag or scrub. Headless Jest success alone is insufficient.
+- **Preserved:** full-screen COSMOS, Back left and Overview right in one row, the right zoom rail, the segmented timeline, the Moment label, pinch, pan, double tap, semantic zoom, performance, and the privacy, authority and return contracts. Slice D is not begun, Future Improvements item 021 is not reopened, and no unrelated PR is modified. PR #395 stays a Draft, with no merge without the PO's explicit approval.
+
+### 17.2 Deliverable A — the six concise act labels (commit `ce56499e`)
+
+| Act | Arabic | English | Was (ar / en) |
+|---|---|---|---|
+| BACK_ONE_STEP | تراجع خطوة | Previous step | الرجوع خطوة واحدة / Back one step |
+| EXACT_RETURN | بداية المعاينة | Original view | العودة إلى المعاينة الأصلية / Return to the original inspection |
+| RETURN_LIVE_HEAD | متابعة الآن | Follow live | العودة لمتابعة المحادثة / Rejoin the conversation |
+| RETURN_LIVE_FOCUS | الاهتمام الآن | Current focus | الانتقال إلى موضع الاهتمام الآن / Move to where attention is now |
+| RETURN_WORLD | العالم كله | Whole world | العودة إلى العالم كله / Return to the whole world |
+| GO_LIVE_AND_LOCATE | متابعة + موضع | Live + locate | العودة إلى المحادثة والانتقال إلى موضعها / Rejoin the conversation and move there |
+
+- **Where the words live.** They are written in their owners. T-08's product copy holds the six return acts (`orientation-chrome/product-copy.ts`). T-06's `analysisCopy.rejoinConversation` is RETURN_LIVE_HEAD's visible twin, the rail's Live words, and carries the same pair so the act never has two names. The sentence shown while following (`followingConversation`, «متابعة المحادثة مفعّلة الآن» / "Following the conversation") is unchanged; the PO's table does not name it.
+- **Copy Gate.** `COSMOS_PRODUCT_COPY_GATE` is CLOSED with 12 rows APPROVED: the six of 2026-11-15 (§13.6) and these six. `COSMOS_ACT_LABELS_APPROVED` is the gate's record of the pairs.
+- **Tests.** `cosmos-act-labels.test.ts` asserts, in both languages, that each act's label equals the approved pair, that each hint equals the frozen detailed hint, that the six labels stay distinct, and that the rail's Live words equal RETURN_LIVE_HEAD's label.
+- **Re-anchors.** The accessibility test and the analysis-language test name the approved words. Comments that quoted the old words are updated. The screen golden changes in those words only.
+- **Executors, identities, availability, hints, chip style, touch targets and timeline geometry** are unchanged.
+
+### 17.3 Deliverable A on the HONOR (release APK of `db1d6e23`, `proof/db1d6e23`)
+
+The six labels render in both languages. Bounds are the phone's pixels (dp × 3); the "before" column is the a2b8f276 run (`proof/a2b8f276`) in the same state.
+
+| Element (state) | Before (a2b8f276) | After (db1d6e23) |
+|---|---|---|
+| en acts row (Moment 3 committed) | "Back one step" `[59,1930][401,2073]` and "Rejoin the conversation and move there" `[59,2093][871,2236]`: **two lines** | "Previous step" `[59,2093][387,2236]` and "Live + locate" `[407,2093][720,2236]`: **one line** |
+| ar acts row (Moment 3 committed) | «الرجوع خطوة واحدة» `[59,2093][436,2236]`, «العودة إلى المحادثة والانتقال إلى موضعها» `[456,2093][1127,2236]` | «تراجع خطوة» `[59,2093][314,2236]`, «متابعة + موضع» `[334,2093][634,2236]` |
+| Live words, pinned (en / ar) | "Rejoin the conversation" `[603,2470][1142,2613]` / «العودة لمتابعة المحادثة» `[710,2471][1142,2613]` | "Follow live" `[869,2471][1142,2613]` / «متابعة الآن» `[911,2471][1142,2613]` |
+| Overview companion, RETURN_WORLD (en / ar) | "Return to the whole world" `[603,462][1161,605]` / «العودة إلى العالم كله» `[786,462][1161,605]` | "Whole world" `[852,462][1161,605]` / «العالم كله» `[944,462][1161,605]` |
+
+- **Screenshots.** `proof/db1d6e23/_before-after-labels.png` shows ar before, ar after, en before and en after. `_closure-labels-live.png` shows, per language, a committed Moment with the acts and "Follow live", the same screen after the tap (following, no label), and Overview ON with its companion.
+- **Not seen on the device in these runs.** EXACT_RETURN («بداية المعاينة» / "Original view") and RETURN_LIVE_FOCUS («الاهتمام الآن» / "Current focus") are not offered in the proof's states. Their labels are asserted headlessly (§17.2) and are not device-proven.
+- **The rest of the run held.** Upper row, label, scrub, Back one step, Return to World, pinch IN and Back one level, Overview and its companion, and the Shared and Public rows all held. Frames: still 60.1 / 60.0 fps; pan 59.9 / 60.1 fps; pinch IN 59.7 to 60.2 fps; door to stage 60.1 fps; stalls 0 and freezes 0 in the Personal world. Shared pinch IN was 54.9 fps (57.4 at a2b8f276) with 0 stalls. Cold open was 267 / 256 / 266 ms. Memory before and after three cycles was 261.5 → 298.4 MB.
+- **One script line reads "companion-before=1 (expected 0)".** It counts every node whose text contains «العالم كله». The deep dump of a2b8f276 counts the same 1, from the right zoom rail's bead «العالم كله» `[908,955][1194,1098]`. The companion appears only with Overview ON. This is a weakness in the script's count, not a change in the product.
+
+### 17.4 Deliverable B — "Follow live" works (commit `db1d6e23`; re-anchor `edcdad63`)
+
+**The cause.** The rail's `goLive` was `onOutcome?.(commitLiveEdgeIntent(store, preview))`. A JavaScript optional call does not evaluate its arguments when the callee is `undefined`. The product host (`LivingAnalysisMap`) renders the rail without `onOutcome`, so the Live words never ran T-06's intent on any build of the product. `ReturnControls` already documents this exact trap for its acts.
+
+This explains every earlier observation without exception:
+
+- **Every plain build failed** (eecd954f, 73c77c4a, 8a7c04ba, e64861ad, a2b8f276, edbe1710), whatever the press component: React Native `Pressable`, gesture-handler `Pressable`, gesture-handler `BaseButton`.
+- **Every instrumented build passed.** Each probe computed the outcome first, in order to log or record it, and only then called `onOutcome`.
+- **Headless Jest passed** because its harness always attaches an observer.
+- **The X / Y / Z bisect (§16.6) failed** because it added listeners without touching `goLive`.
+
+**The fix.** The act runs first and the observer is told afterwards: `const outcome = commitLiveEdgeIntent(store, preview); onOutcome?.(outcome);`. `commitLiveEdgeIntent` is unchanged; the semantic command is the same.
+
+**The bounded diagnostic protocol that found it (2026-11-16).** Each step was decided before the next, and the device was observed from outside except in the two trace builds:
+
+| Step | What | Result |
+|---|---|---|
+| D-1 | Trace build (gesture-handler Pressable + in-memory trace + 500 ms dumper) | 3 / 4. In the failing cycle the Pressable's cancel path ran before its native handler finalised (a real press-in race of that component). Because the probe computed the outcome itself, it could not see the `goLive` defect. |
+| Fix build edbe1710 | Words as a gesture-handler `BaseButton`, on the D-1 hypothesis | **0 / 20** on the acceptance test: the hypothesis was refuted. |
+| B-2 (no rebuild) | `dumpsys activity top` with a held press; a tap above the bottom system-gesture inset | The native button is PRESSED while held (`...P....`), so the touch reaches it. The upper-edge tap fails the same way, so the system-gesture inset is not the cause. The earlier "Moment 11" failure was a protocol defect: after a scrub the rail windows to Moments 1–9. |
+| D-2 | Trace build: native state logs of the button's handler; an in-memory JS record printed only on a later Overview tap | 8 / 8. Natively the handler goes BEGAN → ACTIVE → END on every tap. In JS every event arrives and `onPress` → `goLive` → `APPLIED`. The record's own `goLive` computed the outcome first, exposing the short-circuit. |
+| Fix build db1d6e23 | The one-line correction above; no instrumentation | **20 / 20** on the acceptance test (§17.5). |
+
+**Why the words stay a `BaseButton`.** D-1 showed the gesture-handler `Pressable` dropping a press through its own press-in re-render. D-2 shows the `BaseButton` path clean on every tap. The `BaseButton` is therefore kept, but it is not the fix: its plain build without the correction failed 0 / 20.
+
+**Tests.**
+- **New regression test.** `cosmos-timeline-rail.test.tsx` mounts the rail with no observer, as the product does, and drives pin → "Follow live" three times in each language. It fails on the old `goLive` (2 of 2) and passes on the new one.
+- **VPORT-02 re-anchor.** `vport-02-temporal-orientation-p2-contract` pinned the defective text itself. It now requires the act to run before the observer and forbids the optional-call form. Its intent is unchanged: the Live words are T-06's Live edge intent.
+
+**Corrections to earlier records.** These hypotheses were wrong, and none was the cause:
+- the "race with the stage's tap" (§16.6, first pass);
+- Fabric flattening the rail's root (§16.6, second pass);
+- the "re-render race" (the edbe1710 commit message, never pushed and replaced by `ce56499e` + `db1d6e23`).
+
+`collapsable={false}` on the rail's root stays: it is harmless and outside this closure's two deliverables. §16.6's fourth pass and §16.7's "NOT MET" for the Live words are superseded by this section.
+
+**Latent risk, recorded and not changed.** The "…" marks are still gesture-handler `Pressable`s, the component D-1 caught dropping a press. Changing them is outside the two authorised deliverables. A follow-up is proposed in §17.7.
+
+### 17.5 The PO's mandatory acceptance test — PASS (release APK of `db1d6e23`, sha256 `f098dff6…52d5f76c3`)
+
+**Run.** `scripts/accept-follow-live.sh` (`proof/accept-db1d6e23/accept.log`) on the HONOR ALI-NX1. The app is the ordinary release APK, with no logging, probe, debug listener or instrumentation. Per language the run makes a cold open, then:
+- 5 cycles: tap a historical Moment, then tap "Follow live" with a quick tap;
+- 3 cycles: scrub from Moment 1 to 9, then tap "Follow live";
+- 2 cycles: tap a Moment, then press "Follow live" for 120 ms.
+
+A cycle passes only when the words read the following sentence with `selected="true"` (stance FOLLOWING_LIVE) and no Moment label is drawn.
+
+| Language | Tap cycles | Scrub cycles | 120 ms press cycles | Total |
+|---|---|---|---|---|
+| Arabic («متابعة الآن») | 5 / 5 | 3 / 3 | 2 / 2 | 10 / 10 |
+| English ("Follow live") | 5 / 5 | 3 / 3 | 2 / 2 | 10 / 10 |
+| **All** | | | | **20 / 20 PASS** |
+
+**For comparison**, the same protocol on the plain builds before the fix:
+
+| Build | Result | Evidence |
+|---|---|---|
+| a2b8f276 | 0 / 20 | `proof/accept-before-a2b8f276` |
+| edbe1710 | 0 / 20 | `proof/accept-edbe1710` |
+
+The full run of §17.3 also passes the Live-words step in both languages: `following=1 label=0`, against the expected ≥ 1 / 0. The commit after the APK, `edcdad63`, changes only a root contract test, so the APK is the release build of the PR head's app code.
+
+### 17.6 Verification
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | 0 errors |
+| `eslint` (changed files) | 0 errors |
+| Jest: cosmos, orientation-chrome, temporal-navigation, integration, analysis-language | 97 suites |
+| The 4 failing suites at the head | `w2-account-access` 3, `proof-root-deep-link` 2, `proof-root` 4, `depth` 3 |
+| The same 4 suites on the baseline sources of 59feab9a | Identical failures |
+| Root contracts (the 15 that read the composition) | 338 / 338 |
+| `test:task-closure-governance-contract` | 24 / 24 |
+
+- **Local Jest failures.** They are a local baseline: the product locale is read from the host's Arabic `Intl` locale, and some heavy suites time out at 5 s on this machine. CI runs on en-US runners and decides.
+- **CI.** CI on PR #395 at 59feab9a was all green, including `verify-api`. The pushed head's CI is recorded in the Slice C report.
+
+### 17.7 Closure status and what is not done
+
+- **Status.** Deliverable A is delivered and device-proven for the four labels the proof states show; all six are asserted headlessly. Deliverable B is delivered and passes the mandatory acceptance test. Slice C is **CLOSED / READY FOR PO REVIEW** on Draft PR #395. **No merge without the PO's explicit approval.**
+- **Not done, deliberately:**
+  - no zoom, camera, renderer, gesture, timeline-design or other navigation change;
+  - no new control, row or wording beyond the six approved pairs;
+  - no change to the "…" marks;
+  - no Slice D;
+  - no change to item 021, PRs #391 / #392 / #393, or PR #394's branch.
+- **Proposed follow-up (not started, for the PO).** Make the rail's "…" marks gesture-handler `BaseButton`s, the component D-2 shows clean, or prove them on the device with the same acceptance protocol.
 
 ---
 
