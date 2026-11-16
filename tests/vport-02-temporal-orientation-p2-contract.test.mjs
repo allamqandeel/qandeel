@@ -255,7 +255,12 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   assert.match(composition, /timeline=\{null\}/u);
   const acts = code(`${MOBILE}/cosmos/product/chrome/CosmosContextualActs.tsx`);
   assert.match(acts, /\.filter\(\(id\) => id !== 'RETURN_LIVE_HEAD' && !\(id === 'RETURN_WORLD' && model\.spatial\.depth === 'WORLD'\)\)/u, 'Return Live has one home, the rail');
-  assert.match(rail, /onOutcome\?\.\(commitLiveEdgeIntent\(store, preview\)\);/u, 'the rail\'s Live words are T-06\'s Live edge intent');
+  // COSMOS-INT-01 §17.4 CONTROLLED RE-ANCHOR (PO, 2026-11-16, deliverable B): the pinned form `onOutcome?.(commitLiveEdgeIntent(store, preview));`
+  // never ran the act when no observer was attached (an optional call does not evaluate its arguments), and the product host
+  // attaches none: the Live words were dead on the HONOR. The act now runs first and the observer is told afterwards; the old
+  // form is forbidden so it cannot return.
+  assert.match(rail, /const outcome = commitLiveEdgeIntent\(store, preview\);\s*onOutcome\?\.\(outcome\);/u, 'the rail\'s Live words are T-06\'s Live edge intent, run whether or not an observer is attached');
+  assert.doesNotMatch(rail, /onOutcome\?\.\(commitLiveEdgeIntent\(/u, 'no optional call may carry the Live edge intent as its argument');
   // SHARED-VIS-01 controlled re-anchor: the band also reports its content height, but only for a world with no track.
   // COSMOS-INT-01 D-1 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; MAP-CLOSE-01 CA-O2, approved with conditions 2026-11-14): the
   // band also keeps its end in view for a world with time (Personal), so Back stays under the finger; the line's room is
