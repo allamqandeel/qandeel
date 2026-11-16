@@ -20,7 +20,7 @@ export type ConversationPalette = Palettes[keyof Palettes]['standard'] | Palette
 /** The two static Estedad v8.5 instances the surface ships, by PostScript name (= file name). */
 export const TYPEFACE = Object.freeze({ regular: 'Estedad-Regular', medium: 'Estedad-Medium' });
 
-export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONICAL_VISUAL.display;
+export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONICAL_VISUAL.display | 'section';
 
 /**
  * UI-POLISH-01 (Product Owner, 2026-11-16) — the app-wide type refinement, the ONE product-side layer over the frozen E3
@@ -46,8 +46,15 @@ export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONIC
  *
  * Font scaling is untouched: no `allowFontScaling` / `maxFontSizeMultiplier` is set. Touch targets are carried by the
  * controls' own minimum sizes, never by these leadings.
+ *
+ * `section` (closure pass, Product Owner 2026-11-16; a controlled amendment recorded in the W1A-01 record §13) is the one
+ * role ADDED beside E3's. It is the heading of a section inside a secondary surface, where the 26 / 41 title is too
+ * large; its first use is «النقاش» / Discussion in the Public Detail Sheet. It is 20 / 32 in E3's display weight (Medium).
+ * The 32 is the F1R2 REV-05 production threshold (1.6) for `text.arabic-must-not-clip`, met without a measured
+ * exception; Estedad Medium's own line box at 20 is 30.8 and its tallest ink 29.
  */
 const STATEMENT = Object.freeze({ ...CANONICAL_VISUAL.display.statement, size: 26, leading: 41 });
+const SECTION = Object.freeze({ ...CANONICAL_VISUAL.display.statement, size: 20, leading: 32 });
 const RUNNING = Object.freeze({
   body: Object.freeze({ ...CANONICAL_VISUAL.type.body, size: 16, leading: 26 }),
   supporting: Object.freeze({ ...CANONICAL_VISUAL.type.supporting, size: 14, leading: 22 }),
@@ -64,7 +71,7 @@ const RUNNING = Object.freeze({
  */
 export function typeStyle(role: TypeRole): { fontFamily: string; fontSize: number; lineHeight: number; includeFontPadding: false } {
   // W1B-01: the E3 display role (`statement`) sits beside the running-text roles.
-  const spec = role === 'statement' ? STATEMENT : RUNNING[role];
+  const spec = role === 'statement' ? STATEMENT : role === 'section' ? SECTION : RUNNING[role];
   return {
     fontFamily: spec.weight === 500 ? TYPEFACE.medium : TYPEFACE.regular,
     fontSize: spec.size,
