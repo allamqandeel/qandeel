@@ -372,3 +372,32 @@ The frozen E3 source and `canonical-visual.generated.ts` are not edited. Every r
 **Device evidence** is outside the repository, in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\ui-polish\`, with the report `slice-d\final-review\FINAL_HONOR_REVIEW_REPORT.md`:
 - before and after on the HONOR in both languages;
 - an emulator check at font scale 1.0 / 1.3 / 2.0 and at 320 dp.
+
+## 13. Controlled amendment — the section-heading role (UI-POLISH-01 closure pass, 2026-11-16)
+
+The Product Owner's "Final Closure Task" (2026-11-16, Issue B) approves ONE controlled addition to the roles above: a
+**section heading**. It is for headings inside secondary surfaces, where the 26 / 41 title of §12 is too large.
+
+| Role | Size / leading | Face | Ratio |
+|---|---|---|---|
+| `section` (new) | **20 / 32** | E3's display weight: Estedad Medium | 1.6 |
+
+**Where it lives.** The role is added in the same product-side layer (`typeStyle()` in `conversation/visual/theme.ts`).
+The frozen E3 source and `canonical-visual.generated.ts` are not edited; `section` reuses E3's display weight.
+
+**Why 32.**
+- The PO's target was "approximately 20 / 30".
+- The F1R2 REV-05 contract `text.arabic-must-not-clip` keeps 1.6 as the current production threshold, and lowering it is
+  legitimate only as a measured result. 20 / 32 meets that threshold outright, with no measured exception.
+- At 20, Estedad Medium's own line box is 30.8 and its tallest ink is 29.
+- 32 is inside the PO's original 28–32 band. The references for comparison: Material 3 Title Large 22 / 28, Apple HIG Title 3 20 / 25, Fluent 2 Title 2 20 / 24; all are Latin leadings.
+
+**First and only use.** «النقاش» / Discussion, when `PublicDiscussion` is hosted in the COSMOS Detail Sheet.
+- Outside the sheet it keeps the 26 / 41 title.
+- Major screen titles keep 26 / 41.
+- Other candidates are identified but not changed: the Settings sub-section titles (Account security, Public ID, Shared ID, Introduction shares, Former shared material). Each would need its own justification.
+
+**Proof.**
+- `public-discussion.test.tsx`: in the sheet the heading is 20 / 32 Medium, still the one header (ar, en).
+- `public-discussion-threads.test.tsx`: outside the sheet it is 26 / 41.
+- HONOR: see the closure report.
