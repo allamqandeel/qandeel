@@ -100,7 +100,7 @@ jobs:
     needs: [build-proof]
     if: ${{ !cancelled() && (needs.build-proof.result == 'success' || needs.build-proof.result == 'skipped') }}
     runs-on: macos-26
-    timeout-minutes: 340
+    timeout-minutes: 330
     permissions:
       contents: read
       actions: read
@@ -110,12 +110,12 @@ jobs:
         # One simulator and ONE system language per job (run 44085259648: one job for both languages ran past its
         # evidence budget). The language is the simulator's own, set before the app is launched.
         include:
-          - {size: small, lang: en, langs: 'en-US:en_US', candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
-          - {size: small, lang: ar, langs: 'ar-EG:ar_EG', candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
-          - {size: medium, lang: en, langs: 'en-US:en_US', candidates: 'iPhone 17', passes: 'core landscape enlarged'}
-          - {size: medium, lang: ar, langs: 'ar-EG:ar_EG', candidates: 'iPhone 17', passes: 'core landscape enlarged'}
-          - {size: large, lang: en, langs: 'en-US:en_US', candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
-          - {size: large, lang: ar, langs: 'ar-EG:ar_EG', candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
+          - {size: small, lang: en, langtag: en-US, langloc: en_US, candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
+          - {size: small, lang: ar, langtag: ar-EG, langloc: ar_EG, candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
+          - {size: medium, lang: en, langtag: en-US, langloc: en_US, candidates: 'iPhone 17', passes: 'core landscape enlarged'}
+          - {size: medium, lang: ar, langtag: ar-EG, langloc: ar_EG, candidates: 'iPhone 17', passes: 'core landscape enlarged'}
+          - {size: large, lang: en, langtag: en-US, langloc: en_US, candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
+          - {size: large, lang: ar, langtag: ar-EG, langloc: ar_EG, candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
@@ -151,23 +151,79 @@ jobs:
           unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
           mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Run the audit (every step recorded; nothing retried)
-        timeout-minutes: 290
-        env: {LANGS: '${{ matrix.langs }}'}
-        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" "${{ matrix.passes }}"
-      - name: Summarize
-        if: always()
-        run: |
-          { echo "### ${{ matrix.size }}: $(cat "$RUNNER_TEMP/evidence/device.txt" 2>/dev/null)"; echo '```'; awk -F'\t' 'NR>1 {n++; if ($5!=0) f++} END {print n" steps, "f+0" non-zero"}' "$RUNNER_TEMP/evidence/steps.tsv" 2>/dev/null; cat "$RUNNER_TEMP/evidence/timings.tsv" 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-      - name: Pack the evidence into one archive
-        if: always()
-        run: |
-          du -sh "$RUNNER_TEMP/evidence" || true
-          tar -C "$RUNNER_TEMP" -cf "$RUNNER_TEMP/evidence.tar" evidence && ls -l "$RUNNER_TEMP/evidence.tar"
-      - name: Upload the evidence
+      # R3: one step per scene, each uploaded as soon as it ends (two runs lost whole jobs to one 10-22 GB archive).
+      # A scene step's failure is evidence: the next scene still runs; only a missing driver stops a scene (INFRASTRUCTURE).
+      - name: Set the simulator language (${{ matrix.langtag }}) and prove the driver
+        id: setup
+        timeout-minutes: 25
+        env: {LANGTAG: '${{ matrix.langtag }}', LANGLOC: '${{ matrix.langloc }}', LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" setup
+      - name: Scene personal
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        timeout-minutes: 40
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" personal
+      - name: Upload scene personal
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-personal', path: '${{ runner.temp }}/evidence/${{ matrix.lang }}/personal', if-no-files-found: warn, compression-level: 0}
+      - name: Scene shared
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        timeout-minutes: 40
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" shared
+      - name: Upload scene shared
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-shared', path: '${{ runner.temp }}/evidence/${{ matrix.lang }}/shared', if-no-files-found: warn, compression-level: 0}
+      - name: Scene public
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        timeout-minutes: 60
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" public
+      - name: Upload scene public
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-public', path: '${{ runner.temp }}/evidence/${{ matrix.lang }}/public', if-no-files-found: warn, compression-level: 0}
+      - name: Scene cross
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        timeout-minutes: 60
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" cross
+      - name: Upload scene cross
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-cross', path: '${{ runner.temp }}/evidence/${{ matrix.lang }}/cross', if-no-files-found: warn, compression-level: 0}
+      - name: Scene landscape
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && contains(matrix.passes, 'landscape') }}
+        timeout-minutes: 30
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" landscape
+      - name: Upload scene landscape
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && contains(matrix.passes, 'landscape') }}
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-landscape', path: '${{ runner.temp }}/evidence/${{ matrix.lang }}/landscape', if-no-files-found: warn, compression-level: 0}
+      - name: Scene enlarged
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && contains(matrix.passes, 'enlarged') }}
+        timeout-minutes: 45
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" enlarged
+      - name: Upload scene enlarged
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' && contains(matrix.passes, 'enlarged') }}
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-enlarged', path: '${{ runner.temp }}/evidence/${{ matrix.lang }}/enlarged', if-no-files-found: warn, compression-level: 0}
+      - name: Upload the run record (steps, timings, runner log, device, app identity)
         if: always()
         uses: actions/upload-artifact@v4
-        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}', path: '${{ runner.temp }}/evidence.tar', if-no-files-found: warn, compression-level: 1}
+        with:
+          name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}-record'
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/evidence/*.tsv
+            ${{ runner.temp }}/evidence/*.log
+            ${{ runner.temp }}/evidence/*.txt
+            ${{ runner.temp }}/evidence/*.json
+            ${{ runner.temp }}/evidence/watchdog
 
   product:
     name: iOS audit — the UNMODIFIED CI Product binary (iPhone 17)
@@ -218,7 +274,12 @@ jobs:
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run the Product-binary audit
         timeout-minutes: 70
-        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh product "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" iphone-17 product
+        run: |
+          for pair in en:en-US:en_US ar:ar-EG:ar_EG; do
+            IFS=: read -r lx tag loc <<< "$pair"
+            LANGX=$lx LANGTAG=$tag LANGLOC=$loc bash scripts/cosmos-slice-e-ios/run-ios-audit.sh product "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" iphone-17 setup &&
+              LANGX=$lx bash scripts/cosmos-slice-e-ios/run-ios-audit.sh product "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" iphone-17 product
+          done
       - name: Upload the evidence
         if: always()
         uses: actions/upload-artifact@v4

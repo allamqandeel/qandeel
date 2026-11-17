@@ -7,18 +7,21 @@
 # evidence (classified later as application, automation, infrastructure or access), not a reason to change anything.
 # The app binary is installed by the caller and never modified here.
 #
-# usage: run-ios-audit.sh <MODE proof|product> <OUT dir> <UDID> <DEVICE label> <PASSES e.g. "core landscape enlarged">
+# usage: run-ios-audit.sh <MODE proof|product> <OUT dir> <UDID> <DEVICE label> <UNIT> with LANGX=en|ar in the environment
+#   UNIT setup sets the simulator's system language (LANGTAG / LANGLOC) and proves the driver; every other UNIT is ONE
+#   scene (personal, shared, public, cross, landscape, enlarged, product) in its own directory <OUT>/<LANGX>/<scene>, so
+#   the workflow can upload each scene as soon as it ends (R3: runs 44085259648 and 44114444420 lost whole jobs).
 #   proof   — the S401 proof-entry build of the integrated head (the HONOR proofs' route): the three Worlds over the
 #             labelled SYNTHETIC proof network, reached with the proof network's own links.
 #   product — the CI Product binary (unconfigured: no API origin); it can only show what it shows at launch.
 
-MODE="$1"; OUT="$2"; UDID="$3"; DEVICE="$4"; PASSES="${5:-core}"
+MODE="$1"; OUT="$2"; UDID="$3"; DEVICE="$4"; UNIT="$5"; LANGX="${LANGX:-en}"
 HERE="$(cd "$(dirname "$0")" && pwd)"; F="$HERE/flows"; ROOT="$(cd "$HERE/../.." && pwd)"
 PORT="${MAESTRO_IOS_DRIVER_PORT:-22087}"
 mkdir -p "$OUT"
 STEPS="$OUT/steps.tsv"; TIM="$OUT/timings.tsv"; LOG="$OUT/runner.log"
-printf 'pass\tlang\tscene\tstep\texit\tms\n' > "$STEPS"; printf 'pass\tlang\tname\tms\n' > "$TIM"
-CUR="$OUT"; LANGX=-; SCENE=-; PASS=-; REC=
+[ -s "$STEPS" ] || printf 'pass\tlang\tscene\tstep\texit\tms\n' > "$STEPS"; [ -s "$TIM" ] || printf 'pass\tlang\tname\tms\n' > "$TIM"
+CUR="$OUT"; SCENE=-; PASS=-; REC=; RECW=
 
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 now() { perl -MTime::HiRes=time -e 'printf "%d\n", time*1000'; }
@@ -36,7 +39,7 @@ m() {
   cmd+=("$F/$flow" --no-reinstall-driver --driver-host-port "$PORT" --debug-output "$CUR/logs/$name.d")
   local t0 t1 rc
   t0=$(now)
-  BQ= B 240 "$PASS-$LANGX-$name" "${cmd[@]}" > "$CUR/logs/$name.log" 2>&1; rc=$?
+  BQ= B 150 "$PASS-$LANGX-$name" "${cmd[@]}" > "$CUR/logs/$name.log" 2>&1; rc=$?
   t1=$(now)
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$SCENE" "$name" "$rc" "$((t1 - t0))" >> "$STEPS"
   cat "$CUR/logs/$name.log" $(find "$CUR/logs/$name.d" -name 'maestro.log' 2>/dev/null) | grep -o 'TIMING [^ ]* [0-9]*' | sort -u | while read -r _ n ms; do printf '%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$n" "$ms" >> "$TIM"; done
@@ -56,24 +59,28 @@ trim_debug() {
 }
 shot() { xcrun simctl io "$UDID" screenshot "$CUR/$1.png" >/dev/null 2>&1 || say "  (screenshot $1 failed)"; }
 hier() {
-  curl --silent --show-error --max-time 60 -X POST -H 'Content-Type: application/json' \
+  curl --silent --show-error --max-time 30 -X POST -H 'Content-Type: application/json' \
     --data '{"appIds":["com.qandeel.mobile"],"excludeKeyboardElements":false}' \
     "http://127.0.0.1:$PORT/viewHierarchy" > "$CUR/$1.json" 2>>"$LOG"
   if ! grep -q '"' "$CUR/$1.json" 2>/dev/null; then
-    B 120 "hier-$1" maestro --device "$UDID" hierarchy --no-reinstall-driver > "$CUR/$1.json" 2>>"$LOG" || say "  (hierarchy $1 failed)"
+    B 60 "hier-$1" maestro --device "$UDID" hierarchy --no-reinstall-driver > "$CUR/$1.json" 2>>"$LOG" || say "  (hierarchy $1 failed)"
   fi
 }
 # S <step> <flow> [KEY=VALUE ...] — a step with its evidence: the flow, then a settle, a screenshot and the hierarchy.
 S() { local name="$1"; m "$@"; local rc=$?; sleep "${SETTLE:-2}"; shot "$name"; hier "$name"; return $rc; }
 has() { grep -q "\"$1" "$CUR/$2.json" 2>/dev/null; }   # an id (prefix) present in a step's hierarchy
-rec_start() { RECF="$CUR/$1.mp4"; xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$RECF" >/dev/null 2>&1 & REC=$!; sleep 1; }
+# R3: a recording is CAPPED at 10 minutes (run 44114444420: a Public scene recorded for 1.5 h, ~9 GB, filled the runner).
+rec_start() {
+  RECF="$CUR/$1.mp4"; xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$RECF" >/dev/null 2>&1 & REC=$!
+  ( sleep 600; kill -INT "$REC" 2>/dev/null ) & RECW=$!; sleep 1
+}
 # A recording of the ever-moving COSMOS canvas at the simulator's native size is ~1 GB per scene; each is transcoded to
-# 960x540 with macOS's own avconvert (the original is kept only if that fails and it is under 300 MB).
+# 640x480 with macOS's own avconvert (the original is kept only if that fails and it is under 300 MB).
 rec_stop() {
   [ -n "$REC" ] || return 0
-  kill -INT "$REC" 2>/dev/null; wait "$REC" 2>/dev/null; REC=
-  local v="$RECF" small="${RECF%.mp4}-960.mp4"
-  if avconvert --preset Preset960x540 --source "$v" --output "$small" --replace >/dev/null 2>&1 && [ -s "$small" ]; then
+  kill -INT "$REC" 2>/dev/null; wait "$REC" 2>/dev/null; REC=; kill "$RECW" 2>/dev/null; RECW=
+  local v="$RECF" small="${RECF%.mp4}-640.mp4"
+  if avconvert --preset Preset640x480 --source "$v" --output "$small" --replace >/dev/null 2>&1 && [ -s "$small" ]; then
     say "  recording $(basename "$small"): $(du -h "$small" | cut -f1) (original $(du -h "$v" | cut -f1) removed)"; rm -f "$v"
   elif [ "$(du -m "$v" | cut -f1)" -lt 300 ]; then say "  recording kept at native size ($(du -h "$v" | cut -f1))"
   else say "  recording dropped: $(du -h "$v" | cut -f1) and avconvert failed"; rm -f "$v"; fi
@@ -124,10 +131,15 @@ focus_object() {
   return 1
 }
 
+begin_scene() {
+  SCENE="$1"; PASS="$1"; CUR="$OUT/$LANGX/$1"; mkdir -p "$CUR"
+  say "== $LANGX $1 (disk: $(df -h "$OUT" | tail -1 | awk '{print $4" free of "$2}'))"
+}
+
 FIX='.*(Fixture Map World|عالم الخريطة الاختباري).*'
 
 personal() {
-  SCENE=personal; say "== $PASS $LANGX personal"
+  begin_scene personal
   rec_start personal
   S p01-launch launch.yaml NAME=personal-cold-launch
   S p02-to-analysis timed-id.yaml NAME=personal-door TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail
@@ -148,7 +160,7 @@ personal() {
 }
 
 shared() {
-  SCENE=shared; say "== $PASS $LANGX shared"
+  begin_scene shared
   S s00-launch launch.yaml NAME=shared-launch
   S s00-seed link.yaml URL=qandeel://s401-proof/shared-field/seed
   rec_start shared
@@ -176,7 +188,7 @@ shared() {
 }
 
 public() {
-  SCENE=public; say "== $PASS $LANGX public"
+  begin_scene public
   # Before the proof network seeds the field: the field's own state.
   S u00-launch launch.yaml NAME=public-unseeded-launch
   S u00-enter tap.yaml ID=qandeel-switcher-public_world IDX=0
@@ -216,7 +228,7 @@ public() {
 # Personal -> Shared -> Public -> Personal, three cycles, then the reverse twice: time to the visible destination, then
 # time to the destination's first interaction; evidence on every arrival (state kept or lost).
 cross() {
-  SCENE=cross; say "== $PASS $LANGX cross-world"
+  begin_scene cross
   S x00-launch launch.yaml NAME=cross-cold-launch
   S x00-seed1 link.yaml URL=qandeel://s401-proof/shared-field/seed
   S x00-seed2 link.yaml URL=qandeel://s401-proof/public/seed
@@ -251,7 +263,7 @@ cross() {
 }
 
 landscape() {
-  SCENE=landscape; say "== $PASS $LANGX landscape"
+  begin_scene landscape
   S l01-launch launch.yaml NAME=landscape-launch
   S l02-conv-land orient.yaml O=LANDSCAPE_LEFT
   S l03-analysis-land timed-id.yaml NAME=landscape-door TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail
@@ -264,7 +276,7 @@ landscape() {
 }
 
 enlarged() {
-  SCENE=enlarged; say "== $PASS $LANGX enlarged text"
+  begin_scene enlarged
   personal_short() {
     S e01-launch launch.yaml NAME=enlarged-launch
     S e02-analysis timed-id.yaml NAME=enlarged-door TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail
@@ -285,26 +297,32 @@ enlarged() {
 }
 
 product() {
-  SCENE=product; say "== $PASS $LANGX product binary"
+  say "== $PASS $LANGX product binary"
   SETTLE=6 S b01-launch launch-product.yaml NAME=product-launch
   sleep 10; shot b02-after-10s; hier b02-after-10s
   S b03-landscape orient.yaml O=LANDSCAPE_LEFT
   S b04-portrait orient.yaml O=PORTRAIT
 }
 
-say "audit: mode=$MODE device=$DEVICE udid=$UDID passes=[$PASSES]"
-xcrun simctl list devices "$UDID" >> "$LOG" 2>&1
-for LANGPAIR in ${LANGS:-en-US:en_US ar-EG:ar_EG}; do
-  tag="${LANGPAIR%%:*}"; loc="${LANGPAIR##*:}"; LANGX="${tag%%-*}"
-  set_lang "$tag" "$loc" || { say "INFRASTRUCTURE: no driver for $tag; this language is NOT TESTED"; continue; }
-  for PASS in $PASSES; do
-    CUR="$OUT/$PASS-$LANGX"; mkdir -p "$CUR"
-    case "$PASS" in
-      core) personal; shared; public; cross ;;
-      landscape) landscape ;;
-      enlarged) text_size accessibility-extra-large; enlarged; text_size large ;;
-      product) product; text_size accessibility-extra-large; PASS=product-enlarged; CUR="$OUT/$PASS-$LANGX"; mkdir -p "$CUR"; product; text_size large; PASS=product ;;
-    esac
-  done
-done
-say "done"
+trap rec_stop EXIT
+trap 'rec_stop; exit 130' INT TERM
+# A recording left by a step that timed out never outlives it into the next scene.
+pkill -INT -f 'simctl io .* recordVideo' 2>/dev/null || true
+say "audit: mode=$MODE device=$DEVICE udid=$UDID lang=$LANGX unit=$UNIT"
+case "$UNIT" in
+  setup)
+    xcrun simctl list devices "$UDID" >> "$LOG" 2>&1
+    set_lang "$LANGTAG" "$LANGLOC" || { say "INFRASTRUCTURE: no driver for $LANGTAG; this language is NOT TESTED"; exit 1; } ;;
+  personal|shared|public|cross|landscape)
+    ready "$UNIT" || { say "INFRASTRUCTURE: no driver before $UNIT; NOT TESTED"; exit 1; }
+    "$UNIT" ;;
+  enlarged)
+    ready "$UNIT" || { say "INFRASTRUCTURE: no driver before $UNIT; NOT TESTED"; exit 1; }
+    text_size accessibility-extra-large; enlarged; text_size large ;;
+  product)
+    ready "$UNIT" || exit 1
+    PASS=product; CUR="$OUT/$LANGX/product"; mkdir -p "$CUR"; product
+    text_size accessibility-extra-large; PASS=product-enlarged; CUR="$OUT/$LANGX/product-enlarged"; mkdir -p "$CUR"; product; text_size large ;;
+  *) say "unknown unit $UNIT"; exit 2 ;;
+esac
+say "done $UNIT"

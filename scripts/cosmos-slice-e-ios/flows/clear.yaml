@@ -5,6 +5,6 @@ appId: com.qandeel.mobile
     retryTapIfNoChange: false
     waitToSettleTimeoutMs: 1500
     id: "${ID}"
-- eraseText: 40
+- eraseText: 8
 - hideKeyboard:
     optional: true
