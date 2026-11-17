@@ -31,7 +31,13 @@ for d in "$IN"/cosmos-ios-audit-*; do
     [ -f "$l" ] || continue
     s="$(basename "$l" .log)"
     t="$(find "$d/logs/$s.d" -name '*.tail' 2>/dev/null | head -1)"
-    { tail -n 12 "$l"; [ -n "$t" ] && grep -E 'Exception|not found|Assertion|Unreachable|timed out|FAILED' "$t" | grep -v '^\s*at ' | tail -n 4; } > "$o/$s.flow" 2>/dev/null
+    { grep -v -E '^\s+at |^\s*$' "$l" | head -n 30
+      [ -n "$t" ] && grep -E 'Exception|not found|Assertion|Unreachable|timed out|FAILED|Error' "$t" | grep -v -E '^\s+at ' | tail -n 6
+    } > "$o/$s.flow" 2>/dev/null
+  done
+  # R4 check: what the node finder returns on each World's settled stage (integer points, 402-pt-wide device).
+  for f in "$d"/p02b-*.png "$d"/s02b-*.png "$d"/u01-field.png; do
+    [ -f "$f" ] && echo "$(basename "$f") $(node scripts/cosmos-slice-e-ios/nodes-r4.mjs --any "$f" 402)" >> "$o/finder.txt"
   done
   ls -l "$d"/*.mp4 2>/dev/null | awk '{print $5, $NF}' > "$o/recordings.txt"
 done

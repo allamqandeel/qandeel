@@ -23,6 +23,10 @@ jobs:
           path: ${{ runner.temp }}/in
           run-id: ${{ env.AUDIT_RUN_ID }}
           github-token: ${{ github.token }}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install the PNG reader (root lockfile), run: npm ci --ignore-scripts}
       - name: Tools
         run: command -v montage >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }; command -v jq
       - name: Digest
