@@ -32,11 +32,15 @@ env:
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
   BASELINE_COMMIT: 03d1b3ea1dd4fddbd4801ff322bed88385998e74
   PRODUCT_RUN_ID: '44069780051'
+  # The proof app built (from the same apps/ tree, refused otherwise) by run 44080247611; a push reuses it instead of
+  # rebuilding, and only a manual dispatch builds again. Its sha256.txt travels with it and is checked before install.
+  PROOF_RUN_ID: '44080247611'
   PRODUCT_SHA256: 156c9d56cb60a4157365808855ba9bb689601926ef9f3830f0662bf2f0e6ecd2
   IOS_RUNTIME_SUFFIX: iOS-26-5
 jobs:
   build-proof:
     name: iOS proof-entry Release simulator app of 03d1b3ea — BUILD
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: macos-26
     timeout-minutes: 120
     env:
@@ -94,8 +98,12 @@ jobs:
   audit:
     name: iOS audit — ${{ matrix.size }}
     needs: [build-proof]
+    if: ${{ !cancelled() && (needs.build-proof.result == 'success' || needs.build-proof.result == 'skipped') }}
     runs-on: macos-26
     timeout-minutes: 240
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -117,7 +125,11 @@ jobs:
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
       - uses: actions/download-artifact@v4
-        with: {name: cosmos-ios-proof-app, path: '${{ runner.temp }}/proof-app'}
+        with:
+          name: cosmos-ios-proof-app
+          path: ${{ runner.temp }}/proof-app
+          run-id: ${{ needs.build-proof.result == 'skipped' && env.PROOF_RUN_ID || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Choose, create if needed, and boot the ${{ matrix.size }} simulator
         env: {CANDIDATES: '${{ matrix.candidates }}'}
         run: bash scripts/cosmos-slice-e-ios/sim.sh "$CANDIDATES" "$RUNNER_TEMP/evidence"

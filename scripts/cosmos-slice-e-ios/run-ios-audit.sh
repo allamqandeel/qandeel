@@ -22,7 +22,8 @@ CUR="$OUT"; LANGX=-; SCENE=-; PASS=-; REC=
 
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 now() { perl -MTime::HiRes=time -e 'printf "%d\n", time*1000'; }
-B() { node "$ROOT/scripts/validation/bounded-run.mjs" --seconds "$1" --fail-fast maestro-xctest-device-info-500 --label "$2" --quiet --out "$OUT/watchdog" -- "${@:3}"; }
+# --quiet (the probes' mode) forwards NOTHING from the child's stdout; a flow step sets BQ= so its output reaches its log.
+B() { node "$ROOT/scripts/validation/bounded-run.mjs" --seconds "$1" --fail-fast maestro-xctest-device-info-500 --label "$2" ${BQ---quiet} --out "$OUT/watchdog" -- "${@:3}"; }
 
 # m <step> <flow> [KEY=VALUE ...] — one Maestro flow on the proven driver; its exit status, duration and TIMING lines.
 m() {
@@ -31,13 +32,14 @@ m() {
   mkdir -p "$CUR/logs"
   local cmd=(maestro --device "$UDID" test)
   for kv in "$@"; do cmd+=(-e "$kv"); done
-  cmd+=("$F/$flow" --no-reinstall-driver --driver-host-port "$PORT")
+  # The flow's own output and Maestro's debug output (maestro.log carries the scripts' console.log TIMING lines).
+  cmd+=("$F/$flow" --no-reinstall-driver --driver-host-port "$PORT" --debug-output "$CUR/logs/$name.d")
   local t0 t1 rc
   t0=$(now)
-  B 240 "$PASS-$LANGX-$name" "${cmd[@]}" > "$CUR/logs/$name.log" 2>&1; rc=$?
+  BQ= B 240 "$PASS-$LANGX-$name" "${cmd[@]}" > "$CUR/logs/$name.log" 2>&1; rc=$?
   t1=$(now)
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$SCENE" "$name" "$rc" "$((t1 - t0))" >> "$STEPS"
-  grep -o 'TIMING [^ ]* [0-9]*' "$CUR/logs/$name.log" | while read -r _ n ms; do printf '%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$n" "$ms" >> "$TIM"; done
+  cat "$CUR/logs/$name.log" $(find "$CUR/logs/$name.d" -name 'maestro.log' 2>/dev/null) | grep -o 'TIMING [^ ]* [0-9]*' | sort -u | while read -r _ n ms; do printf '%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$n" "$ms" >> "$TIM"; done
   [ "$rc" = 0 ] && say "  ok   $name ($((t1 - t0)) ms)" || say "  FAIL $name exit $rc ($((t1 - t0)) ms)"
   return $rc
 }
