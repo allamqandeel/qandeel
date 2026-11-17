@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.7 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED AND ACCEPTED FOR CONTINUATION; CP2 (Shared World) DELIVERED (§19.15); CP3 (Personal World, PEEK only) DELIVERED, STOPPED FOR THE PO’S REVIEW (§19.16); CP4 NOT authorised)
+# COSMOS Production Integration Contract — v1.8 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.8, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1, CP2 AND CP3 ACCEPTED FOR ROADMAP CONTINUATION — CP4 (THREE-WORLD CLOSURE) AUTHORISED AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — SLICE D CLOSED / READY FOR PO REVIEW (§19.17; A SLICE, NOT THE TASK'S CLOSURE) — FINDING F-1 UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE (§20) — E-1 AND E-2 RECORDED FOR SLICE E, NOT IMPLEMENTED (§20) — QAN-BL-CW-08 ADMITTED (OPEN — UNASSIGNED) — STOPPED FOR THE PO'S REVIEW; SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.7 status below is kept for provenance.
+**Change log v1.7 → v1.8 (2026-11-17).** The PO's message "QANDEEL — Slice D CP3 Review & CP4 Authorization" is applied. CP3's presentation and interaction are ACCEPTED for roadmap continuation; that acceptance is not acceptance of the missing inspection content. New §19.17 records CP4, the three-world closure of the Detail Sheet: the WP0 matrix walked row by row, the static closure test, the targeted and full regression, the HONOR protocol and CI. New §20 is the Slice E acceptance register: Finding F-1 (UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE), E-1 (visible speaker attribution) and E-2 (the PO's hands-on three-world pre-merge gate), none implemented, with §9's Slice E criteria. §19.16's suggested disposition for F-1 is superseded by the PO's decision (noted in place, not rewritten). §12's QAN-BL-CW-08 is admitted to the canonical backlog. The roadmap is: CP4 → Slice E (F-1, E-1, E-2) → S8B-07 Replay. No other decision changes and no further approval is inferred.
 **Status (v1.7, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1 ACCEPTED FOR CONTINUATION — CP2 (SHARED WORLD) DELIVERED (§19.15) — CP3 (THE PERSONAL WORLD DETAIL SHEET, PEEK ONLY) AUTHORISED BY THE CONTROLLED ADDENDUM §19.16 AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — HONOR PROOF RUN (§19.16, "CP3 delivery record") — FINDING F-1 REPORTED, NOT FIXED (§19.16) — STOPPED FOR THE PO’S REVIEW; CP4 / SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.6 status below is kept for provenance.
 **Change log v1.6 → v1.7 (2026-11-17).** The PO's message "COSMOS-INT-01 Slice D CP3 — Personal World Detail Sheet — Execution Authorization" is applied. New §19.16 records the CP3 scope, its implementation, the controlled re-anchors, the pre-existing Finding F-1 (production disclosures carry no inspection resolution) and the CP3 delivery record. §19.13 records what CP3 opens. §19.2 – §19.10 bind unchanged; no other decision changes and no further approval is inferred.
 **Status (v1.6, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) ACCEPTED BY THE PO FOR CONTINUATION (2026-11-16) — CP2 (THE SHARED WORLD DETAIL SHEET) AUTHORISED BY THE CONTROLLED ADDENDUM §19.15 AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — HONOR PROOF RUN (§19.15, "CP2 delivery record") — STOPPED FOR THE PO’S REVIEW; CP3 / CP4 / SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.5 status below is kept for provenance.
@@ -438,7 +440,7 @@ Every slice is one reviewable Draft PR on `cosmos/cosmos-production-integration`
 | **B** COSMOS renderer inside the real product | Commit 1: the D-1 authority port (CA-Z1 / CA-O1 / CA-O2 behaviour + tests, cited to the PO's 2026-11-14 approval). Commit 2: the D-13 RN Skia 2.7.0 amendment (§11). Then: `cosmos/product/owners/*` over the real runtime / controllers; `CosmosWorldView`; STAGE presentation; the three hosts render COSMOS; proof-only UI, probe, overdraw, fixtures, faults, language toggle, `gc` links and the fringe count (G-2) absent from the product bundle; the three pinch rules + tests; the T-10 conflict audit (D-5) in the report; the #391 / #392 / #393 preservation check (D-1) in the report | (1) each world draws its own server-authoritative data in the app (real sign-in on the HONOR, Personal session; a real Shared World; the Public field); (2) one canonical act per gesture (store / controller logs); (3) refusals ease back; (4) no fixture, fault or measurement symbol reachable from `ProductRoot` (static grep + bundle check); (5) opening speed and 60 fps on the HONOR not worse than the proof's rounds, on 2.7.0; (6) memory not re-measured (021); (7) the offline QAN-INF-03 gate passes with the declared exception; (8) the T-10 audit and the PR preservation check are in the report with no silent disposition | headless: owners (ported `proof-owners`), `pinch-focus`, `proof-root-pinch` re-targeted, cosmos core / worklet parity / headless pixels; mobile suites green; root `tests/*.mjs` green after the declared re-anchors of §5 and §11; `tsc`, `eslint`; CI mobile incl. the QAN-INF-03 step (renamed per §11) and the native-impact rebuild |
 | **C** Approved chrome and timeline function | Back (hierarchy), Overview, rail, nearest indicator, absence states, the timeline rail over T-05 / T-06 / T-08 (§7), the six return acts (D-3), Copy Gate table | (1) every return act reachable and runs its one executor; (2) commit / preview / live edge / horizon / beginning behave as T-06 on the HONOR (tap, drag, release, cancel); (3) no second temporal source (`temporal-navigation-layer-contract` green); (4) Arabic + English, RTL mirrored rail and chrome; (5) chrome identical to the accepted captures except product words | `temporal-navigation/__tests__` (13) green over the rail; `return-navigation`, `orientation-chrome` model tests; Copy Gate rows PROPOSED → the PO; device captures per state |
 | **D** Expandable detail surfaces | `CosmosDetailSheet` (§6) in all three worlds; Public panel + content + discussion; Shared panel + sources + conversation entry; Personal peek + the G-7 decision's content | (1) no canvas remount across open / expand / collapse (instrumented test: same canvas instance, camera unchanged); (2) sheet drags never pan / pinch the world; (3) nested scroll, keyboard, Back order per §6.4; (4) every action is an existing controller act; composer appears only when `canContribute`; (5) RTL / Arabic; (6) accessibility headless (modal, escape, hidden canvas) | `public-discussion*`, `public-topic-content`, `public-field`, `shared-field` suites green inside the sheet; new sheet tests (gesture arbitration with `fireGestureHandler`, Back precedence); HONOR captures for the three states per world |
-| **E** Integration validation | functional, authorization, privacy, a11y (headless), ar / en, navigation, media (Replay + call), screen lifecycle (background / resize / rotation / keyboard), real-device regression; #322 Exit Gate on COSMOS; live-call measurement; "nothing dropped" audit = this matrix re-walked row by row with evidence | (1) every WORKS / RECONNECT / ADAPT row has a passing check; every RETIRE row is confirmed superseded; every ABSENT / BACKEND row is unchanged and recorded; (2) call path: 60 fps during a live call on the Analysis, no frame work added by COSMOS beyond the drift gate; (3) #322 Exit Gate passed on the HONOR; (4) QAN-INF-03 untouched (2.6.2); (5) record closure per AGENTS.md §10 (BG-05/08/09, `test:task-closure-governance-contract`) | full CI; device report; PO review before any merge |
+| **E** Integration validation (binding additions: §20 — F-1, E-1, E-2) | functional, authorization, privacy, a11y (headless), ar / en, navigation, media (Replay + call), screen lifecycle (background / resize / rotation / keyboard), real-device regression; #322 Exit Gate on COSMOS; live-call measurement; "nothing dropped" audit = this matrix re-walked row by row with evidence | (1) every WORKS / RECONNECT / ADAPT row has a passing check; every RETIRE row is confirmed superseded; every ABSENT / BACKEND row is unchanged and recorded; (2) call path: 60 fps during a live call on the Analysis, no frame work added by COSMOS beyond the drift gate; (3) #322 Exit Gate passed on the HONOR; (4) QAN-INF-03 untouched (2.6.2); (5) record closure per AGENTS.md §10 (BG-05/08/09, `test:task-closure-governance-contract`) | full CI; device report; PO review before any merge |
 
 Order: B → C → D → E. C and D may be developed in parallel branches off B once B is reviewed; E only after D.
 
@@ -529,7 +531,7 @@ Not blocking Slice B: D-3, D-7 (Slice C), D-8, G-3 (Slice D), D-4 (default kept 
 |---|---|---|---|
 | REPLAY-COSMOS-01 | Render the Replay passage's Personal map at a moment with COSMOS, through `ReplayMomentComposite` (the governed projection adapter and viewpoint store unchanged), so the product has one renderer | S7-01 secure integration, S7-03 composite truth (the historical viewpoint, the honest states), S7-04 player navigation, the original-audio / transient-media contracts (`ReplayAudioViews`, presentation map, playback owner); Replay's own spine and moment controls | recorded by G-5 (PO, v1.1); not started; old renderer kept meanwhile |
 | PERSONAL-DETAIL-01 | A full Personal detail surface for a Thread / Reading / Session: the linked conversation at the moment, the analysis, the original recording where it exists, reached from the sheet's PEEK | the historical projection's `inspectFamily` / `inspectId` read, the conversation session API, the Replay audio contracts, T-07 return, the no-fabrication rule | recorded by G-7 (PO, v1.1); needs a product contract; not started |
-| QAN-BL-CW-08 (candidate) | Shared: navigate from a place's source (material) to its position in the World's conversation | S4-02 conversation, SHARED-VIS-01 D3 visibility | proposed under G-3 (PENDING) |
+| QAN-BL-CW-08 | Shared: navigate from a place's source (material) to its position in the World's conversation | S4-02 conversation, SHARED-VIS-01 D3 visibility | proposed under G-3; deferred to closure by SD-2 / G-3 (§19.2); **ADMITTED to the canonical backlog at Slice D CP4 (2026-11-17): `MEDIUM`, `OPEN — UNASSIGNED`** (§19.17) |
 | QAN-INF-03 amendment record | The react-native-skia exception's standing record (return condition: Expo's bundled pin reaches 2.7.0) | QAN-INF-03 determinism | recorded by D-13; executed in Slice B (D-14 pending) |
 
 ---
@@ -1704,6 +1706,7 @@ Overview's Back is unchanged (SD-9).
 - What production shows today: the family word, that sentence, and "Go to this place" where it applies.
 - The resolved content (statement, lineage, choice) is proven in jest by giving every held disclosure a server-like resolution.
 - Suggested disposition, for the PO: admit it to the backlog at CP4 (BG-06), owned by a runtime task (an inspection-aware disclosure request). It is not admitted silently here.
+- **Superseded by the PO (2026-11-17, v1.8).** F-1 is not admitted to the backlog and is not a Future Improvement. It is "UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE", recorded in the Slice E acceptance register (§20). The suggestion above is kept for provenance only.
 
 **Re-anchors (§19.12).** Each states the original protected behaviour and keeps asserting it.
 - `tests/w1a-01-conversation-core-contract.test.mjs`: the ONE Analysis Back handler now asks the sheet first (`if (sheetBack.current?.() === true) return true;`), then crosses to the Conversation exactly as before. Two new assertions: the sheet is asked in exactly one place, and `LivingAnalysisMap` has no `BackHandler`.
@@ -1758,6 +1761,224 @@ Results in ar-EG and en-US (identical in outcome):
 **CI.** All checks are green on #397 `ba9e9873` and #398 `c284fa1d`: the fast mobile gate, `verify-api`, the Android and iOS builds and smokes, and validation evidence. The two 0-second rows on #398 come from a duplicate run that concurrency cancelled.
 
 **Stopped for the PO's review.** CP4, Slice E and Replay were not started. Nothing is merged; merge only on «ادمج».
+
+### 19.17 CP4 — Slice D three-world closure (PO authorisation 2026-11-17)
+
+**Source.** "QANDEEL — Slice D CP3 Review & CP4 Authorization" (PO, 2026-11-17). CP3's presentation and interaction are ACCEPTED for roadmap continuation: the HONOR ar / en proof, the PEEK lifecycle, timeline preservation, camera continuity, Back and performance. The PO states that this "is NOT acceptance of missing inspection content" (F-1, §20). Baseline: #397 `faddf233`, #398 `aae101d5`.
+
+**Authorised:** CP4 only, using the approved contract and the existing CP1 – CP3 implementations. Not authorised: Slice E (including F-1, E-1 and E-2), Replay, any merge, any new branch of work, optional polish, and any reopening of the typography, navigation design, animations or renderer optimisation. The Arabic Go-chip placement follows U-9 (no new work). The enlarged-text in-PEEK scroll (§19.16) stays documented as an accessibility-only exception.
+
+**What CP4 changes.** No product code. One static closure test, the canonical backlog (QAN-BL-CW-08), this contract and the locators. The release APK of CP3 (`aadfb88e…`, from `c284fa1d`) is therefore the APK of CP4: `apps/` differs from `c284fa1d` only by the new test file.
+
+#### Three-world audit — one sheet, no missing or duplicated control
+
+`cosmos/product/__tests__/detail-sheet-three-worlds.test.ts` reads the shipped sources and pins the closure, so that a later change cannot quietly break it:
+1. There is ONE implementation (`cosmos/product/sheet/`), drawn by exactly the three World hosts: `LivingAnalysisMap` (Personal), `SharedLivingAnalysis` (Shared) and `PublicLivingAnalysis` (Public).
+2. G-7: Personal is PEEK only (`allowExpanded={false}`); Shared and Public may expand.
+3. SD-5: each host has ONE authoritative hardware Back handler, and it asks the sheet first:
+   - Personal: `DepthComposition`'s Analysis handler (`if (sheetBack.current?.() === true) return true; cross('CONVERSATION');`);
+   - Shared: `SharedWorldArea`'s handler;
+   - Public: `PublicLivingAnalysis`'s own (`sheetBack() || controller.back()`).
+   No sheet, and neither the Personal nor the Shared host component, registers a listener of its own.
+4. SD-4: the Personal context choice has ONE home. Of the three `CosmosContextualActs` instances (the rail, the PEEK's choice, Overview's companion), exactly one draws the choice: the PEEK's.
+5. SD-3 / G-7: the Personal PEEK holds no Conversation or Replay entry.
+
+Negative proof by in-place revert: with the rail's `choice={false}` removed, the test fails ("Expected length: 1, Received length: 2"). Restored, it passes.
+
+#### The WP0 §4 matrix, walked row by row
+
+Evidence key:
+- **J** — jest:
+  - `personal-detail-sheet`, `shared-detail-sheet`, `public-detail-sheet`;
+  - the field / discussion / content suites;
+  - the closure test (**CT**).
+- **D** — the CP4 HONOR protocol below. Its numbers are the proof scripts' own section numbers.
+
+**Personal (G-7: PEEK only).**
+
+| # | Function | Delivered | Evidence |
+|---|---|---|---|
+| P-1 | Inspect opens the PEEK | WORKS | J; D Personal 1 |
+| P-2 | Refused / stale inspection: no PEEK | WORKS | J |
+| P-3 | Family word | ADAPT, in the PEEK | J; D Personal 2 |
+| P-4 | Inspection statement | ADAPT. **Production shows T-08's `INSPECTION_NOT_RESOLVED` sentence (F-1).** The resolved statement is proven in jest only | J; D Personal 2 (the unresolved sentence) |
+| P-5 | Technical states | WORKS, unchanged in the rail | J |
+| P-6 | Lineage | ADAPT. **Not shown in production (F-1).** Proven in jest only | J only |
+| P-7 | Context choice | ADAPT, ONE home (the PEEK). **Not shown in production (F-1).** Proven in jest only | J; CT 4 |
+| P-8 | "Go to this place" | ADAPT, T-04's executor | J; D Personal 2 |
+| P-9 | Six T-07 acts | WORKS. Hidden and inert under the PEEK; restored on close | J; D Personal 3 |
+| P-10 | Open Conversation | WORKS, top band only | CT 5; D Personal 3, 6 |
+| P-11 | Replay entry | WORKS, top band only. Not offered by the proof world | CT 5; D Personal 3, 6 |
+| P-12 | Full Personal detail | ABSENT (deferred, PERSONAL-DETAIL-01, §12). No expand affordance | CT 2; J |
+| P-13 | Inspection survives dismissal | Presentation only | J; D Personal 4 |
+| P-14 | Inspection lifetime; no "clear" act | WORKS | J |
+| P-15 | #396 centring, pinch, Overview, rail | WORKS | D Personal 7b; Follow-live |
+
+**Shared.**
+
+| # | Function | Delivered | Evidence |
+|---|---|---|---|
+| H-1 | Focus a place opens the PEEK | WORKS | J; D Shared 2 |
+| H-2 | Meaning and themes | ADAPT, in the PEEK | J; D Shared 2 |
+| H-3 | Sources: the full authorised list | ADAPT, EXPANDED under «مصادر هذا المعنى» / "Sources of this meaning" | J; D Shared 3, 4 |
+| H-4 | Source count | ABSENT (SD-6: not shown) | J |
+| H-5 | Open the conversation | RECONNECT: the band button and the EXPANDED footer act | J; D Shared 4, 5 |
+| H-6 | Source → conversation position | ABSENT; no affordance. **QAN-BL-CW-08 admitted** (backlog, `OPEN — UNASSIGNED`) | J (rows not pressable) |
+| H-7 / H-8 | Sessions; audio / media | ABSENT | J (contract tests) |
+| H-9 | Loading / unavailable / empty / Retry | ADAPT, in the PEEK | J; D Shared 9 (the empty field) |
+| H-10 | Back: sheet first, then the area's order | ADAPT | CT 3; J; D Shared 6, 8 |
+| H-11 | Per-World anchor, D7 return | WORKS; the sheet state is not saved | J; D Shared 5, 7 |
+| H-12 | Ended World read-only map | ABSENT (QAN-BL-CW-06) | — |
+
+**Public.**
+
+| # | Function | Delivered | Evidence |
+|---|---|---|---|
+| U-1 | Experience header | ADAPT, in the PEEK | J; D Public 2 |
+| U-2 | `publisher.mode` | WORKS (as is; no new disclosure) | J |
+| U-3 | Themes; Discussion entry | ADAPT: PEEK → EXPANDED | J; D Public 4 |
+| U-4 / U-5 | Content pages; Nearby | RECONNECT, EXPANDED | J; D Public 3, 3b |
+| U-6 | Relations at NEAR | WORKS (stage only) | J |
+| U-7 | Section control, search | WORKS, in the top band | D Public 11; closure D |
+| U-8 | Sections, results, zero results (no Experience focused) | ADAPT, in the PEEK (D-8 / SD-1) | J; D Public 8, 8/9, 9b, states |
+| U-9 | Discussion | RECONNECT, EXPANDED, its own scroller | J; D Public 4; closure C / B |
+| U-10 | Composer / reply | RECONNECT (client) / BACKEND (G-4). Production answers `NOT_EVALUATED`, so the composer is absent. Keyboard proven with a fixture only | J |
+| U-11 | Voice / audio | BACKEND (VOICE-01) | — |
+| U-12 | Direct entry to the discussion | RECONNECT, EXPANDED | J |
+| U-13 | Loading / error / empty / denied | ADAPT; no new retry | J; D Public states |
+| U-14 | Back: sheet first, then `controller.back()` | ADAPT | CT 3; J; D Public 6; closure Back |
+| U-15 | PUB-REV-01 | BACKEND, untouched | — |
+
+**Disclosure boundaries.**
+- No CP1 – CP3 file adds a read, a request, a route or a server call (§19.13).
+- Every act in a sheet is an existing controller or executor act.
+- Shared sources keep the SHARED-VIS-01 decoder, order and attribution.
+- The Public composer stays gated on `SERVED && canContribute`.
+- Personal shows only T-08's own states. F-1 is a missing read, not a leak: nothing beyond what the disclosure serves is drawn.
+
+**RTL / LTR and accessibility.**
+- Arabic (RTL) and English (LTR) are proven in jest for all three sheets and on the HONOR in both locales.
+- The accessibility contracts are headless (§19.9): modal semantics, escape, the three SD-7 action names, and the hidden, inert rail under the Personal PEEK.
+- No TalkBack proof was run (PO scope, 2026-11-08).
+
+#### HONOR protocol (2026-11-17)
+
+**Setup.**
+- Release APK sha256 `aadfb88e9e58f0a19fd230dcec4ad383cec5994547c22feaff96dd63eea221dd` (from `c284fa1d`; unchanged by CP4), installed and checked by sha.
+- Driver: `slice-d-cp4-run.sh`. It runs the CP1 – CP3 proof scripts unchanged, in ar-EG then en-US, then the Slice C "Follow live" acceptance.
+- Every `adb shell input` and pinch injector passes `slice-d-cp4-guard.sh`:
+  - QANDEEL must hold the focus before and after the input, or the run aborts;
+  - a tap or swipe above 700 px waits for a quiet top band.
+- Maestro's own steps (launch, the World doors, typing in the search) are outside that guard.
+- No system setting was changed. Back is pressed only where the scripts state the app is not at a root.
+- The guard log is empty: nothing was skipped and nothing aborted.
+- Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-d/cp4/honor/`.
+
+**Results (ar-EG and en-US, identical in outcome):**
+
+| World | Checks | ar | en |
+|---|---|---|---|
+| Public — sheet (CP1 items) | 1 artwork, sheet CLOSED; 2 focus opens PEEK; 3 / 3b EXPANDED and scroll; 11 top band in EXPANDED; 5 collapse / close keep the focus; 7 tap reopens; 8b short flick / fast / reversed / rapid drags; 10 stage above the PEEK pans, sheet stays; 6 Back EXPANDED → PEEK → CLOSED → focus released; 8 long section list, last section chosen; 8/9 / 9b results, long list, result from EXPANDED; 4 discussion EXPANDED, Back; 12 no tap through the sheet; zero results; the field's unavailable state in a PEEK | PASS | PASS |
+| Public — closure items | the search field (44 dp); EXPANDED's first text 62 px under the scroller top; a stationary scroll; the discussion EXPANDED with its own scroll (its composer is present only because the proof world's `public/allow` seam grants contribution, as in every accepted run; production answers `NOT_EVALUATED`, U-10); Back from the discussion: PEEK → CLOSED → the discussion is left and the panel returns (3 presses, never at a root) | PASS | PASS |
+| Shared (CP2 items) | 1 field, CLOSED; 2 focus opens PEEK (meaning, no count — SD-6); 3 / 4 EXPANDED, «مصادر هذا المعنى» / "Sources of this meaning", every source with its attribution, the conversation act at the end; 5 conversation and back to the same place; 6 Back EXPANDED → PEEK → CLOSED; 7 tap reopens, same place; 8 Back to the World list (stops there); 9 the empty field: «لم تتشكل معالم هذا العالم بعد.» / "This world's map is still taking shape." | PASS | PASS |
+| Personal (CP3 checks) | 1 inspection opens PEEK; 2 words; 3 rail covered (PEEK top 2237 px, rail top 2308 px; rail out of the accessibility tree) and restored; 4 handle close keeps the level and the inspected node's pixel; 5 tap reopens, same statement; 6 Conversation in the same band place, Replay not offered; 7a Back closes the PEEK; 7b one pinch IN, whole world → threads, target 1 px from the usable centre (#396); 7c Back crosses to the Conversation | PASS (7b: see below) | PASS |
+| Slice C regression | "Follow live" (`accept-follow-live.sh`): taps, scrubs and short presses | 10 / 10 | 10 / 10 |
+
+**Personal words on the device** (read from the uiautomator dumps):
+- the family word «خيط» / "Thread";
+- T-08's unresolved sentence «لا يشمل هذا العرض معاينتك.» / "This view does not cover what you are inspecting.";
+- «الانتقال إلى هذا الموضع» / "Go to this place".
+
+No lineage and no context choice appear. That is F-1 (§20), unchanged by CP4.
+
+**7b in Arabic.**
+- In the first ar run, the proof script's red-node finder did not find the red Thread in the capture after 7a. 7b was therefore not executed. The capture shows the red with its inspection ring in place.
+- The Personal script was re-run in full in Arabic, under the same guard (`slice-d-cp4-personal-rerun.sh`). Its only change: 7b retries the capture up to 4 times. It found the red on the first capture, and 1 – 7c all PASS (7b: target 1 px from the usable centre, 60 fps).
+
+**Performance.** Measured as SurfaceFlinger presented-frame intervals; compared with the accepted CP1 – CP3 runs.
+- Personal: 60.0 fps everywhere (still, pan, PEEK still / pan, zoom IN), with 0 stalls over 50 ms. One 33 ms frame in one en pan.
+- Shared: CLOSED still and pan at 60.1 fps; PEEK still at 50.4 fps (p95 50 ms).
+- Public: the sheet transitions run at 50 – 60 fps, with p95 at 33.3 ms or less. Single frames of 83 – 217 ms occur at some collapses and fast drags, in the range of the accepted CP1 runs (up to 216 ms).
+- **The rapid handle taps.** One round per locale shows a single 1.2 – 1.4 s interval (ar both rounds; en one round, the other at 60 fps, max 16.7 ms). This is not a stall:
+  - with the sheet EXPANDED and still, the app posts no frame at all ("0 frames" over 4 s, here and in the accepted CP2 run `3563d736`);
+  - the guard's focus checks stretch the scripted 0.35 s spacing of these taps to about 1.7 s;
+  - so the measured interval is the time the EXPANDED sheet rests between two guarded taps.
+  At the original spacing, the accepted runs measured 100 – 216 ms. Every tap still lands in the expected phase (the round ends EXPANDED).
+- Memory at the end of the Public protocol: total PSS 324.9 MB (ar) and 339.9 MB (en).
+
+#### Tests (local, on the CP4 tree)
+
+**Targeted mobile jest: 66 / 66 suites, 815 tests.**
+- the three sheets;
+- the closure test;
+- `cosmos/product`;
+- orientation-chrome, temporal-navigation, return-navigation;
+- the golden, continuity and composition suites;
+- `public-field`, `public-discussion*`, `public-topic-content` and `shared-field`.
+
+**Full mobile jest: 297 / 301 suites, 3711 / 3723 tests.** The 4 failing suites are the known local-only baseline, which passes in CI: `depth` and `w2-account-access` (the Arabic host locale) and `proof-root` / `proof-root-deep-link`, which import no Slice D file. CP3 had 296 / 300; the added suite is the closure test.
+
+**Root contracts.** Every contract that reads the backlog, the locators or this contract: 32 files, 542 / 542. `forward-safety` is not run locally, because it hangs locally; CI runs it.
+
+**`test:task-closure-governance-contract`:** 24 / 24 (one of the 32 files above, also run on its own).
+
+#### CI
+
+**On the CP4 baseline heads**, with final results confirmed after the pending checks completed:
+- **#397 `faddf233`:** all green: Mobile and API contracts, validation evidence and the change-aware plans. The build and smoke jobs were skipped by path (docs-only head).
+- **#398 `aae101d5`:** all green: the fast mobile gate, the Android and iOS builds and boot smokes, `verify-api`, validation evidence and the plans. The one 0-second "fail" row belongs to the duplicate Mobile CI run that concurrency cancelled; every job in it is "cancelled", and the surviving run is green.
+
+**CP4's own heads:** reported in the PR bodies and the CP4 report.
+
+#### Closure status
+
+**Completed and proven (jest, and on the HONOR where stated):**
+- one Detail Sheet in three Worlds;
+- the presentation lifecycle (CLOSED → PEEK → EXPANDED where allowed → PEEK → CLOSED);
+- Back precedence (the sheet first, then each World's own order);
+- canvas continuity (no remount) and camera preservation;
+- World-specific content and acts within their disclosure boundaries;
+- RTL / LTR;
+- the headless accessibility contracts;
+- performance comparable with the accepted baselines.
+
+**Not proven, and not claimed:**
+- **Personal inspection content in production.** Because of F-1, the device shows the family word, T-08's unresolved sentence and "Go to this place". The resolved statement, the lineage and the context choice are proven in jest only. F-1 is "UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE" (§20).
+- Anything §20 holds for Slice E.
+
+**Backlog (BG-06 / BG-08).**
+- QAN-BL-CW-08 is admitted (`MEDIUM`, `OPEN — UNASSIGNED`).
+- F-1, E-1 and E-2 are active requirements of this task (BG-01) and are recorded in §20, not in the backlog.
+- REPLAY-COSMOS-01 and PERSONAL-DETAIL-01 (§12) stay with COSMOS-INT-01 until the task's own closure.
+
+**Slice D: CLOSED / READY FOR PO REVIEW** on Draft PRs #397 / #398. It is a slice, not the task's closure: COSMOS-INT-01 stays open for Slice E. Nothing is merged. Slice E and Replay are not started.
+
+---
+
+## 20. Slice E acceptance register (PO, 2026-11-17) — binding; NOT implemented
+
+**Source.** "QANDEEL — Slice D CP3 Review & CP4 Authorization" (PO, 2026-11-17).
+
+**Mandatory roadmap:** CP4 → Slice E (including F-1, E-1 and E-2) → S8B-07 Replay. There is no separate improvement project, and no additional branch of work.
+
+**Standing.**
+- These are Slice E's binding acceptance requirements, in addition to §9's Slice E criteria.
+- None is implemented. Slice E is not authorised.
+- They are active requirements of COSMOS-INT-01 (BG-01). They are not backlog items, and not Future Improvements.
+
+| ID | Requirement | State |
+|---|---|---|
+| **F-1** | **Inspection-aware disclosure.** The production projection request does not carry the inspected object (§19.16), so the lineage, the resolved inspection statement and the context choice cannot be shown in the production build. During Slice E, the inspection-aware runtime request must be implemented through the existing authoritative disclosure architecture, with appropriate privacy, caching and contract protections. The resolved content must be demonstrated on the HONOR before final acceptance. Not optional; not a Future Improvement. | **UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE** |
+| **E-1** | **Visible speaker attribution.** Personal, Shared and Public conversations clearly identify who authored each displayed message. Existing authoritative speaker information is used and privacy is preserved. The Shared World distinguishes individual participants, the reader and QANDEEL. The Public World keeps its Public Identity model. Mandatory for Slice E; not a CP4 design task. | **REQUIRED FOR SLICE E — NOT IMPLEMENTED** |
+| **E-2** | **The PO's hands-on three-world pre-merge gate.** Before the final COSMOS merge, an installable Android Release build holds the Personal World and its live analytical COSMOS map, the Shared World and its map, and the Public World and its map. The PO personally navigates all three Worlds on the HONOR, including empty-world states, inspects their screens, and repeatedly switches between them to judge real transition speed and responsiveness. Cold and warm World transitions and time to actual interactivity are measured. Screenshots, static mockups and Claude's automation do not substitute for the PO's hands-on acceptance. | **REQUIRED BEFORE THE FINAL COSMOS MERGE — NOT RUN** |
+
+**Merge gate.** The final COSMOS integration merge is BLOCKED until:
+- F-1 is resolved and demonstrated on the HONOR;
+- E-1 is delivered;
+- E-2 passes;
+- §9's Slice E criteria are met;
+- the PO explicitly says «ادمج».
+
 
 ---
 
