@@ -139,7 +139,12 @@ const FROZEN = [
   // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15; Contract v1.3 §15.5): the Personal composition
   // brings the stage's rail and contextual controls instead of the Timeline row and the chrome band; the Replay composite
   // and `MapSurface` are untouched (G-5). Previous pin: 81f37f58b44ba1f4773b2b2c78df364bc497289261cb9b93b29915d6bc8791b1.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '2eaa9efa532c90f46d47f722b9475df84007b636e287da45c440340f5b937e39'],
+  // COSMOS-INT-01 Slice D CP3 CONTROLLED RE-ANCHOR (Product Owner, 2026-11-17; Contract v1.7 §19.16): the Personal composition
+  // lays the COSMOS Detail Sheet (PEEK only) over the inspection in the same stage, holds the rail beneath an open PEEK (inert,
+  // never re-mounted) and gives T-04's context choice its one home in the PEEK. Protected and still asserted here: the Replay
+  // composite and the player keep `MapSurface` and the `world=` presentation (G-5), no Replay map, no new read, no new route;
+  // every other pin in this list is unchanged. Previous pin: 2eaa9efa532c90f46d47f722b9475df84007b636e287da45c440340f5b937e39.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '70651062b6325c743add8e2e613d0814ac11052fee45002448e373783caf4039'],
 ];
 
 const shipped = () => {

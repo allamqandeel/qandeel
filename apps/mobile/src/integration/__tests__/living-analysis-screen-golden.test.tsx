@@ -20,6 +20,13 @@
  * compact contextual controls (T-07 acts, T-04's context choice). The golden was regenerated ONCE for that change, which
  * is an intended change of the screen, not a refactor. The screen is measured as the device measures it: the surface's
  * chrome band reports its (empty) content height, so the band is the bottom safe area and nothing else (C-6).
+ *
+ * COSMOS-INT-01 Slice D CP3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-17; Contract v1.7 §19.16): the Personal stage
+ * now holds CP1's Detail Sheet (PEEK only). The golden was regenerated ONCE for that intended change. Before it was
+ * rewritten, a structural diff proved that in EVERY one of the 13 cases the new tree equals the old one exactly once three
+ * CP3 additions are taken out — the sheet stage wrapper (`cosmos-detail-sheet-stage`, unwrapped), the rail's holder
+ * (`qandeel-personal-rail-holder`, unwrapped) and the sheet's frame (removed) — and that the PEEK's content is present in
+ * the `inspection` case only. Nothing else of the screen moved: world, rail, acts, testIDs, handlers and accessibility.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

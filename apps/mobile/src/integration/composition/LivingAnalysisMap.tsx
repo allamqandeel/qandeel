@@ -61,15 +61,33 @@
  * Overview at a deeper rung; and at the first rung the stage's Back chip IS the canonical Return to World (`home`).
  * The T-08 temporal sentence is no longer drawn: the rail's compact Moment label carries it to assistive technology.
  * No function is lost; no sentence is invented; nothing of T-05 / T-06 / T-07 / T-08 is edited.
+ *
+ * ## COSMOS-INT-01 Slice D CP3 — the Personal Detail Sheet (Product Owner, 2026-11-17; Contract v1.7 §19.16)
+ *
+ * An inspection opens CP1's ONE Detail Sheet in PEEK, in the stage, after the world view — PEEK only, never EXPANDED
+ * (G-7). The PEEK holds only what already existed: the inspected object's family word, T-08's inspection statement and
+ * lineage (its own sentences), T-04's context choice (its ONE home: the rail no longer draws it, SD-4) and T-04's
+ * "Go to this place" (the same `directJump`, offered exactly where the accessible Map offers it: one locus). While it is
+ * open it covers the rail, which stays mounted and keeps its state, inert beneath it; closing it reveals the rail
+ * unchanged. Dismissal is presentation only (D-12): no act, no camera, no inspection and no history is written, and
+ * nothing is read. A tap on the inspected object shows it again (SD-12). The Analysis's ONE hardware Back handler
+ * (`DepthComposition`) asks it first (`registerSheetBack`, SD-5). Conversation and Replay stay in the top band.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { analysisCopy } from '../../analysis-language';
-import { COSMOS_OVERVIEW_ACT_TEST_ID, CosmosContextualActs, CosmosTimelineRail, CosmosWorldView, RAIL_ACTS, createPersonalCosmosOwner, type CosmosWorldOwner } from '../../cosmos/product';
+import {
+  COSMOS_OVERVIEW_ACT_TEST_ID, CosmosContextualActs, CosmosDetailSheet, CosmosPeekWords, CosmosSheetStage, CosmosTimelineRail, CosmosWorldView, RAIL_ACTS, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX, createPersonalCosmosOwner,
+  reopeningOwner, useDetailSheet, type CosmosWorldOwner, type SheetContent,
+} from '../../cosmos/product';
 import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
-import { MapAccessibilityLayer, decodeCameraIntent, mapInspectionContext, mapProjectionRequest, useSteadyEnvelope, type MapActionOutcome, type MapInspectionContext, type ViewportEnvelope } from '../../map';
-import { chromeProjection } from '../../orientation-chrome';
+import {
+  MapAccessibilityLayer, decodeCameraIntent, decodeInspectionRef, directJump, mapContextFreshness, mapInspectionContext, mapProjectionRequest, useSteadyEnvelope,
+  type MapActionOutcome, type MapInspectionContext, type ViewportEnvelope,
+} from '../../map';
+import { chromeProjection, contextPathSentence, inspectionSentence, orientationModel, type ChromeProjection } from '../../orientation-chrome';
 import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
 import type { CanonicalStore } from '../../state';
@@ -96,7 +114,25 @@ export interface LivingAnalysisMapProps {
   readonly top?: LivingAnalysisTopBand | null;
   /** COSMOS-INT-01: the stage's slow drift at rest is paused while a live call shares this surface (the call path is protected). */
   readonly driftPaused?: boolean;
+  /**
+   * Slice D CP3 (§19.6, SD-5): the Personal sheet's step of the Analysis's ONE hardware Back handler — handed to the host
+   * while this composition is mounted (`null` when it leaves). It answers `true` when it dismissed the PEEK (presentation
+   * only); the host then runs its own order, unchanged. No listener is registered here.
+   */
+  readonly registerSheetBack?: (back: (() => boolean) | null) => void;
 }
+
+/** Slice D CP3: the Personal PEEK's content and its parts. */
+export const PERSONAL_PEEK_TEST_ID = 'qandeel-personal-peek';
+export const PERSONAL_PEEK_FAMILY_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:family`;
+export const PERSONAL_PEEK_STATEMENT_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:statement`;
+export const PERSONAL_PEEK_LINEAGE_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:lineage`;
+export const PERSONAL_PEEK_CHOICE_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:choice`;
+export const PERSONAL_PEEK_GO_TEST_ID = `${PERSONAL_PEEK_TEST_ID}:go`;
+/** The rail's holder: the rail stays mounted in it, and is inert and hidden beneath an open PEEK. */
+export const PERSONAL_RAIL_HOLDER_TEST_ID = 'qandeel-personal-rail-holder';
+/** Where the host lays the rail: `bottom = inset + 12` (CosmosWorldView's `railWrap`). The PEEK reaches at least its top. */
+const RAIL_BOTTOM_GAP = 12;
 
 /** Reports its own first commit. It renders nothing; it only marks where the Map was composed. */
 function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
@@ -106,7 +142,7 @@ function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
   return null;
 }
 
-export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null, driftPaused = false }: LivingAnalysisMapProps) {
+export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null, driftPaused = false, registerSheetBack }: LivingAnalysisMapProps) {
   const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
@@ -279,8 +315,9 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
               preview={preview}
               presentation={presentation}
               language={locale.language}
-              // §16 A-3: the historical and Live-focus acts, T-04's context choice and the technical note, in ONE line at
-              // the start of the rail's words row; Return Live is the rail's own Live words (VPORT-02).
+              // §16 A-3: the historical and Live-focus acts and the technical note, in ONE line at the start of the rail's
+              // words row; Return Live is the rail's own Live words (VPORT-02). Slice D CP3 (SD-4): T-04's context choice
+              // is no longer here — its one home is the PEEK.
               acts={
                 chrome === null ? null : (
                   <CosmosContextualActs
@@ -293,11 +330,29 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
                     onMapOutcome={observeMapOutcome}
                     onReturnOutcome={observeReturnOutcome}
                     acts={RAIL_ACTS}
+                    choice={false}
                   />
                 )
               }
             />
           }
+          // Slice D CP3: T-04's context choice, in the PEEK — the same component and executor, with no act and no note.
+          choice={
+            chrome === null ? null : (
+              <CosmosContextualActs
+                surface={returnSurface}
+                language={locale.language}
+                projection={chrome}
+                preview={preview}
+                onMapOutcome={observeMapOutcome}
+                acts={[]}
+                note={false}
+                testID={PERSONAL_PEEK_CHOICE_TEST_ID}
+              />
+            )
+          }
+          chrome={chrome}
+          registerSheetBack={registerSheetBack}
           // §16 A-2: the canonical Return to World at a deeper rung, as Overview's one companion chip (at the first rung,
           // away from the centre, the stage's Back chip is this act — `home`).
           overviewAct={
@@ -327,12 +382,18 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
 /**
  * The Personal stage: the COSMOS world view over the owner, in the glass steadied by CA-O1, with T-04's accessible Map
  * laid over it through the same glass (the stage's own marks stand down: one object is never two nodes).
+ *
+ * Slice D CP3: and, in the same stage after it (exactly as Shared's and Public's), the Detail Sheet over the inspection —
+ * PEEK only. The world view and its canvas are never re-keyed by the sheet, and the glass is NOT lifted by the PEEK
+ * (no SD-10 lift here): the camera, the semantic zoom and #396's usable centre answer exactly as before.
  */
-function PersonalStage({ owner, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, overviewAct }: {
+function PersonalStage({ owner: seam, glass, store, context, language, driftPaused, onOutcome, composed, home, rail, overviewAct, choice, chrome, registerSheetBack }: {
   readonly owner: CosmosWorldOwner; readonly glass: ViewportEnvelope; readonly store: CanonicalStore;
   readonly context: MapInspectionContext | null; readonly language: ProductLocale['language']; readonly driftPaused: boolean;
   readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void; readonly composed: ReactNode;
   readonly home: () => void; readonly rail: ReactNode; readonly overviewAct: ReactNode;
+  readonly choice: ReactNode; readonly chrome: ChromeProjection | null;
+  readonly registerSheetBack?: (back: (() => boolean) | null) => void;
 }) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const decoded = useMemo(() => decodeCameraIntent(state.camera), [state.camera]);
@@ -340,14 +401,125 @@ function PersonalStage({ owner, glass, store, context, language, driftPaused, on
   // MAP-CLOSE-01 CA-O1: once the reader has acted, the world stays where it is when only the band below it changes.
   const steady = useSteadyEnvelope(glass, camera);
   const copy = analysisCopy(language);
+
+  // Slice D CP3: the sheet is about the inspection — one inspected object is one group, so a context switch or a jump
+  // keeps the phase and another object opens the PEEK again. No inspection: no content, and the sheet closes.
+  const content = personalSheetContent(state.inspection, chrome);
+  const sheet = useDetailSheet(content);
+  const sheetBack = sheet.back;
+  useEffect(() => {
+    registerSheetBack?.(sheetBack);
+    return () => registerSheetBack?.(null);
+  }, [registerSheetBack, sheetBack]);
+  // SD-12: a tap answered FOCUS (the inspected object, or another) shows a closed sheet again; the act is unchanged.
+  const reopen = sheet.open;
+  const owner = useMemo(() => reopeningOwner(seam, reopen), [seam, reopen]);
+  const open = sheet.phase !== 'CLOSED';
+
+  // The rail's height, measured where it is laid (its holder): the PEEK reaches at least the rail's top, so it covers it.
+  const [railHeight, setRailHeight] = useState(0);
+  // Larger text than the PEEK holds scrolls inside it; its body then leaves the vertical drag to that scroll (the handle drags).
+  const [overflows, setOverflows] = useState(false);
+  const onRailLayout = useCallback((event: LayoutChangeEvent) => setRailHeight(Math.round(event.nativeEvent.layout.height)), []);
+  const held = rail === null ? null : (
+    // The rail is never re-mounted by the sheet: the holder is always here; beneath an open PEEK it is hidden, takes no
+    // touch and is hidden from accessibility. Its layout (and the stage's usable centre read from it) is unchanged.
+    <View testID={PERSONAL_RAIL_HOLDER_TEST_ID} collapsable={false} onLayout={onRailLayout} pointerEvents={open ? 'none' : 'box-none'}
+      importantForAccessibility={open ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={open} style={open ? styles.inert : null}>
+      {rail}
+    </View>
+  );
+
   return (
-    <CosmosWorldView owner={owner} world="PERSONAL" language={language} glass={steady} drift={!driftPaused}
-      worldLabel={copy.map} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}
-      home={home} rail={rail} overviewAct={overviewAct}>
-      {context === null || camera === null ? null : (
-        <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={steady} onOutcome={onOutcome} language={language} />
-      )}
-      {composed}
-    </CosmosWorldView>
+    <>
+      <CosmosSheetStage expanded={false}>
+        <CosmosWorldView owner={owner} world="PERSONAL" language={language} glass={steady} drift={!driftPaused}
+          worldLabel={copy.map} zoomInLabel={copy.moreDetail} zoomOutLabel={copy.lessDetail} accessibleMarks={false}
+          home={home} rail={held} overviewAct={overviewAct}>
+          {context === null || camera === null ? null : (
+            <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={steady} onOutcome={onOutcome} language={language} />
+          )}
+          {composed}
+        </CosmosWorldView>
+      </CosmosSheetStage>
+      <CosmosDetailSheet phase={sheet.phase} onSettle={sheet.settle} glass={glass} language={language} allowExpanded={false}
+        bodyDrags={!overflows} subject={content?.group ?? null} accent>
+        {content === null || chrome === null ? null : (
+          <PersonalPeek store={store} chrome={chrome} context={context} language={language} bottomInset={glass.insetBottom}
+            cover={railHeight === 0 ? 0 : railHeight + RAIL_BOTTOM_GAP} choice={choice} onOutcome={onOutcome} onOverflow={setOverflows} />
+        )}
+      </CosmosDetailSheet>
+    </>
   );
 }
+
+/**
+ * Slice D CP3: WHAT the Personal sheet is about, as an identity. The key is the whole inspection (a context switch is new
+ * content of the same subject); the group is the inspected object. Nothing inspected, or no chrome to speak from: none.
+ */
+function personalSheetContent(inspection: ReturnType<CanonicalStore['getState']>['inspection'], chrome: ChromeProjection | null): SheetContent | null {
+  if (inspection === null || chrome === null) return null;
+  const decoded = decodeInspectionRef(inspection);
+  if (decoded === null) return { key: 'UNDECODED', group: 'UNDECODED' };
+  const binding = decoded.appearance?.kind === 'THREAD_READING' ? decoded.appearance.bindingId : '';
+  const group = `${decoded.family}:${decoded.id}`;
+  return { key: `${group}:${decoded.version ?? ''}:${binding}`, group };
+}
+
+/**
+ * Slice D CP3 (§19.16): the Personal PEEK. Only what already existed, each from its own owner: the family word
+ * (`analysisCopy`, the stage's own word for the inspected mark — never for an identity this moment does not know),
+ * T-08's inspection statement and lineage sentences, T-04's context choice, and T-04's "Go to this place" — the same
+ * `directJump` with the same request the accessible Map sends, offered exactly where it offers it (the inspected object
+ * has ONE locus in the current scene; never where a context would have to be elected). The typography is T-08's own
+ * roles (statement `supporting`, lineage `metadata`); the family word is the focused mark's gold.
+ *
+ * It fits the PEEK at the accepted size; where larger text would not, it scrolls inside the PEEK (the handle still drags),
+ * so nothing is cut off and no act becomes unreachable.
+ */
+function PersonalPeek({ store, chrome, context, language, bottomInset, cover, choice, onOutcome, onOverflow }: {
+  readonly store: CanonicalStore; readonly chrome: ChromeProjection; readonly context: MapInspectionContext | null;
+  readonly language: ProductLocale['language']; readonly bottomInset: number; readonly cover: number; readonly choice: ReactNode;
+  readonly onOutcome: (outcome: MapActionOutcome | { readonly outcome: string }) => void;
+  readonly onOverflow: (overflows: boolean) => void;
+}) {
+  // The most the PEEK shows under its handle (sheet-geometry's cap); a taller content scrolls inside it.
+  const room = SHEET_PEEK_MAX - SHEET_HANDLE_HEIGHT + bottomInset;
+  const [contentHeight, setContentHeight] = useState(0);
+  const overflows = contentHeight > room + 0.5;
+  useEffect(() => { onOverflow(overflows); }, [onOverflow, overflows]);
+  const state = useSyncExternalStore(store.subscribe, store.getState);
+  const copy = analysisCopy(language);
+  const model = orientationModel(store, chrome);
+  const render = model.inspection.render;
+  const lineage = contextPathSentence(language, model.context.lineage);
+  const inspected = decodeInspectionRef(state.inspection);
+  const fresh = context !== null && mapContextFreshness(state, context).fresh;
+  // The inspected object as the CURRENT scene discloses it (the very object the stage draws and labels), or none.
+  const object = inspected === null || context === null || !fresh
+    ? undefined
+    : context.scene.objects.find((candidate) => candidate.family === inspected.family && candidate.id === inspected.id);
+  // The family word is the approved Thread / Reading / Emerging focus word — the stage's own word for that mark — and only
+  // for an object this moment discloses: from T-08's render state where it carries the family, otherwise from the object in
+  // the current scene. An identity this moment does not know, or a family with no approved word, is never named.
+  const carried = render.kind === 'RENDERABLE' || render.kind === 'CONTEXT_UNAVAILABLE_AT_TC' || render.kind === 'DEPTH_WITHHELD'
+    ? render.family
+    : render.kind === 'IDENTITY_UNKNOWN_AT_TC' ? null : object?.family ?? null;
+  const family = carried === 'THREAD' || carried === 'READING' || carried === 'EMERGING_FOCUS' ? copy.family[carried] : null;
+  const go = context !== null && inspected !== null && object !== undefined && object.loci.length === 1
+    ? () => onOutcome(directJump(store, context, { family: inspected.family, id: inspected.id }))
+    : null;
+  // The PEEK reaches at least the rail's top (the handle's row is above the content).
+  const minHeight = cover === 0 ? 0 : Math.max(0, cover - SHEET_HANDLE_HEIGHT) + bottomInset;
+  return (
+    <ScrollView style={{ maxHeight: room }} scrollEnabled={overflows} nestedScrollEnabled showsVerticalScrollIndicator={overflows} indicatorStyle="white"
+      alwaysBounceVertical={false} onContentSizeChange={(_width: number, height: number) => setContentHeight(Math.round(height))}>
+      <CosmosPeekWords testID={PERSONAL_PEEK_TEST_ID} language={language} family={family} statement={inspectionSentence(language, render)}
+        lineage={lineage} choice={choice} go={go === null ? null : { label: copy.goToPlace, onPress: go }} minHeight={minHeight} bottomInset={bottomInset} />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  inert: { opacity: 0 },
+});
