@@ -2,8 +2,13 @@
 // runner can tap the map as a reader would. The HONOR finder (QANDEEL_REPORTS/COSMOS-V5/integration/scripts/nodes.mjs),
 // with the stage band given as a fraction of the screenshot height instead of HONOR pixels.
 // A node core is a compact WHITE blob; its identity is the hue of its halo ring.
-// usage: node nodes.mjs --hue <h> <png>   -> "x% y%" of the largest core whose halo hue is within 25° of h, or "none"
-//        node nodes.mjs --any <png>       -> "x% y%" of the largest core of any hue, or "none"
+// usage: node nodes.mjs --hue <h> <png> [widthPoints]  -> "x,y" (integer screen points) of the largest core whose halo hue
+//                                                           is within 25° of h, or "none"
+//        node nodes.mjs --any <png> [widthPoints]       -> the largest core of any hue, or "none"
+// Maestro accepts only INTEGER percentages or points (R3: "80.4%,54.3%" made every node tap fail), so the result is in
+// points: pixels x widthPoints / screenshot width. Without widthPoints it falls back to integer percentages.
+// A core is first a WHITE blob (min channel >= 228); if none is found, a BRIGHT one (min channel >= 170), for Worlds whose
+// cores render tinted.
 //        node nodes.mjs <png>             -> every core: "hue@x,y,size"
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -12,7 +17,8 @@ const { PNG } = require('pngjs');
 
 const load = (f) => PNG.sync.read(fs.readFileSync(f));
 const px = (p, x, y) => { const i = (y * p.width + x) * 4; return [p.data[i], p.data[i + 1], p.data[i + 2]]; };
-const white = (p, x, y) => { const [r, g, b] = px(p, x, y); return Math.min(r, g, b) >= 228 && Math.max(r, g, b) - Math.min(r, g, b) <= 26; };
+let MIN = 228, SPREAD = 26;
+const white = (p, x, y) => { const [r, g, b] = px(p, x, y); return Math.min(r, g, b) >= MIN && Math.max(r, g, b) - Math.min(r, g, b) <= SPREAD; };
 const hueOf = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mx === mn) return null; const d = mx - mn; if (d / mx < 0.25) return null; let h; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; return ((h * 60) + 360) % 360; };
 const hueDiff = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
 
@@ -61,13 +67,16 @@ function cores(p) {
   return out;
 }
 
-const pct = (p, c) => `${Math.round((c.x / p.width) * 1000) / 10}%,${Math.round((c.y / p.height) * 1000) / 10}%`;
-const [mode, a, b] = process.argv.slice(2);
+const [mode, a, b, c3] = process.argv.slice(2);
+const WPT = Number(mode === '--hue' ? c3 : b) || 0;
+const pct = (p, c) => (WPT ? `${Math.round((c.x * WPT) / p.width)},${Math.round((c.y * WPT) / p.width)}`
+  : `${Math.round((c.x / p.width) * 100)}%,${Math.round((c.y / p.height) * 100)}%`);
+const found = (p) => { let r = cores(p); if (!r.length) { MIN = 170; SPREAD = 90; r = cores(p); MIN = 228; SPREAD = 26; } return r; };
 if (mode === '--hue') {
-  const p = load(b); const m = cores(p).filter((c) => hueDiff(c.hue, Number(a)) <= 25).sort((x, y) => y.n - x.n)[0];
+  const p = load(b); const m = found(p).filter((c) => hueDiff(c.hue, Number(a)) <= 25).sort((x, y) => y.n - x.n)[0];
   console.log(m ? pct(p, m) : 'none');
 } else if (mode === '--any') {
-  const p = load(a); const m = cores(p).sort((x, y) => y.n - x.n)[0];
+  const p = load(a); const m = found(p).sort((x, y) => y.n - x.n)[0];
   console.log(m ? pct(p, m) : 'none');
 } else {
   const p = load(mode);

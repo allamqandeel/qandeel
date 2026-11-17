@@ -1,0 +1,10 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): one 450 ms swipe DOWN that starts on the element ID (e.g. the sheet
+# handle). The direction and duration are literals: Maestro parses it before ${} substitution (R3: "Parsing Failed" on every swipe).
+appId: com.qandeel.mobile
+---
+- swipe:
+    waitToSettleTimeoutMs: 1500
+    from:
+      id: "${ID}"
+    direction: DOWN
+    duration: 450

@@ -1,8 +1,9 @@
-# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): one swipe between two points in screen percentages.
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): one 600 ms swipe between two points in screen percentages.
+# The duration is a literal: Maestro parses it before ${} substitution (R3 evidence: "Parsing Failed" on every swipe).
 appId: com.qandeel.mobile
 ---
 - swipe:
     waitToSettleTimeoutMs: 1500
     start: "${S}"
     end: "${E}"
-    duration: ${D}
+    duration: 600
