@@ -242,6 +242,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MOB-05` | Live Call on HONOR: the Call Rail Takes Touches About 400 px Below Where It Is Drawn, and After the Call the Screen Takes No Touch Where It Is Drawn Until the App Restarts | `S8B-07 — Original Audio Replay, Media Rendering & Distribution (CP1-B)` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PRIV-06` | Protected-Human Analytical Subject-Authority Producer for Replay Distribution | `AUTH-SUBJ-01 — Protected-Human Analytical Subject-Authority Producer` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-12` | Hosted Replay Pool Isolation & Monitoring Proofs | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-08` | Shared World: No Navigation From a Semantic Place's Source to Its Position in the World's Conversation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -3845,6 +3846,34 @@ Admitted by `S8B-07` R-5 (the post-merge governance reconciliation, 2026-11-09) 
 canonical document: record §12.3, §12.4 P-2), at the Product Owner's decision of 2026-11-09. Nothing here authorizes
 implementation (BG-07).
 
+### `QAN-BL-CW-08` — Shared World: No Navigation From a Semantic Place's Source to Its Position in the World's Conversation
+
+- **Title / Finding:** the Shared World's Detail Sheet lists every source of a semantic place (its producer and its exact
+  text, under «مصادر هذا المعنى» / "Sources of this meaning"). A reader cannot go from a source to where it was said in the
+  World's conversation. No such act exists: the conversation has `loadOlder` only, and a source's `materialId` is used
+  only as a list key. A source row is therefore one text, never a button or a link, and nothing pretends the act exists.
+- **Source:** the [COSMOS Production Integration Contract](e2e/QANDEEL_COSMOS_INT_01_PRODUCTION_INTEGRATION_CONTRACT_v1.md)
+  §10 G-3 and §12; the Product Owner's decision SD-2 / G-3 (2026-11-16, §19.2): "the missing capability is recorded as
+  QAN-BL-CW-08 at closure"; §19.15 (CP2); its admission at Slice D CP4 (§19.17).
+- **Why not current work:** Slice D integrates existing acts into the COSMOS Detail Sheet and invents none (§19.5). The
+  jump needs a "scroll to material" contract for the Shared conversation, and possibly a server cursor, which no task
+  holds.
+- **Owner task:** `UNASSIGNED` — the Product Owner named no owner, and none is invented (BG-02).
+- **Severity:** `MEDIUM` — a missing navigation, not a broken or misleading one: the sources are shown in full, and the
+  World's existing Conversation act still opens the conversation.
+- **Reopen condition:** a roadmap or Architecture decision opens source-to-conversation navigation in the Shared World, or
+  any task makes a Shared source row pressable.
+- **Required future properties:** the conversation opens at the source's own message, and only where the reader is
+  allowed to see it now (membership, the S4-02 conversation visibility, the SHARED-VIS-01 D3 source visibility); no
+  other participant's private material is revealed; a source whose message is no longer visible says so instead of
+  jumping elsewhere; the Detail Sheet's Back order (§19.6) and the World's anchors are kept.
+- **Anti-duplication:** checked against all 108 earlier IDs and every tombstone. `QAN-BL-CW-06` (an ended World's read-only
+  map) and `QAN-BL-CW-07` (Shared temporal navigation) are different capabilities; no item held this one.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by `COSMOS-INT-01` Slice D CP4 (2026-11-17, Draft PR #397) under BG-06's second route (explicitly deferred by a
+canonical document: the Product Owner's SD-2 / G-3). Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -4722,14 +4751,14 @@ Tombstoned by `S8B-07` CP1-B under the Product Owner's order of 2026-11-08 (BG-0
 | --- | ---: |
 | `DEFERRED — OWNED` | 54 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 13 |
+| `OPEN — UNASSIGNED` | 14 |
 | `CLOSED — TOMBSTONE` | 37 |
-| **Total** | **108** |
+| **Total** | **109** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 63 |
-| `MEDIUM` | 42 |
+| `MEDIUM` | 43 |
 | `LOW` | 3 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -6319,6 +6348,20 @@ PR, not merged).**
   listed `QAN-BL-PROD-11` (§9).
 - **BG-09:** S8B-07 is not closed. The record and the locators carry `CP1-B MERGED` and the WP0 approval.
 - **Index after R-5: 108 items; 54 / 4 / 13 / 37 by status, 63 / 42 / 3 by severity.**
+
+**COSMOS-INT-01 Slice D CP4 — three-world closure of the Detail Sheet (2026-11-17; Draft PR #397, not merged).**
+
+- **Admitted (BG-06, second route):** `QAN-BL-CW-08` (`MEDIUM`, `OPEN — UNASSIGNED`), at the Product Owner's SD-2 / G-3,
+  which deferred it to this closure.
+- **Not admitted (BG-01):** Finding F-1, which is that production disclosures carry no inspection resolution, so the
+  Personal PEEK cannot show a resolved statement, lineage or context choice. It is an active blocker of COSMOS-INT-01 itself: the Product Owner recorded it as
+  "UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE" (2026-11-17). Its record is the contract's
+  Slice E acceptance register (§20), never this backlog. The same holds for the Product Owner's Slice E requirements
+  E-1 (visible speaker attribution) and E-2 (the hands-on three-world pre-merge gate).
+- **Not admitted yet:** `REPLAY-COSMOS-01` and `PERSONAL-DETAIL-01` (contract §12) stay with COSMOS-INT-01 until its own
+  closure (BG-08).
+- **BG-09:** COSMOS-INT-01 is not closed (Slice E remains). The contract and the locators carry Slice D's state.
+- **Index after Slice D CP4: 109 items; 54 / 4 / 14 / 37 by status, 63 / 43 / 3 by severity.**
 
 ## 8. What is deliberately not in this backlog
 
