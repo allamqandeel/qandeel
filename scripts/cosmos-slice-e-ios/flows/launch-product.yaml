@@ -1,0 +1,13 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): the UNMODIFIED CI Product binary, cold launch with a clean state.
+# It waits for the same text Mobile CI's boot smoke asserts, and records how long that took. It asserts nothing else:
+# the runner captures whatever the binary then shows.
+appId: com.qandeel.mobile
+---
+- evalScript: ${output.t0 = Date.now()}
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "QANDEEL"
+    timeout: 120000
+- evalScript: ${console.log('TIMING ' + NAME + ' ' + (Date.now() - output.t0))}

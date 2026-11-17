@@ -1,0 +1,13 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): send one labelled proof-network link to the running app.
+# iOS asks before a link from outside the app opens it; the flow confirms, as the A3-02 iOS legs do.
+appId: com.qandeel.mobile
+---
+- openLink: ${URL}
+- extendedWaitUntil:
+    visible:
+      text: "(Open|فتح)"
+    timeout: 10000
+    optional: true
+- tapOn:
+    text: "(Open|فتح)"
+    optional: true

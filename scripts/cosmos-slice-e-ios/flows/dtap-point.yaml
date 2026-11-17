@@ -1,0 +1,5 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): a double tap at a point in screen percentages (D-9: one step IN).
+appId: com.qandeel.mobile
+---
+- doubleTapOn:
+    point: "${P}"

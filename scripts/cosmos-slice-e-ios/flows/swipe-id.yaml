@@ -1,0 +1,8 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): one swipe that starts on the element ID (e.g. the sheet handle).
+appId: com.qandeel.mobile
+---
+- swipe:
+    from:
+      id: "${ID}"
+    direction: ${DIR}
+    duration: ${D}

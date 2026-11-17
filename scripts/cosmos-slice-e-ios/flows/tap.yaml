@@ -1,0 +1,6 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): tap the IDX-th element whose id matches the regex ID.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: "${ID}"
+    index: ${IDX}

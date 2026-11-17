@@ -1,0 +1,12 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): TIMING = tap on the text TAP issued -> an id matching WAIT visible.
+appId: com.qandeel.mobile
+---
+- evalScript: ${output.t0 = Date.now()}
+- tapOn:
+    text: "${TAP}"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "${WAIT}"
+    timeout: 60000
+- evalScript: ${console.log('TIMING ' + NAME + ' ' + (Date.now() - output.t0))}

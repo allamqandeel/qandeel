@@ -1,0 +1,7 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): one swipe between two points in screen percentages.
+appId: com.qandeel.mobile
+---
+- swipe:
+    start: "${S}"
+    end: "${E}"
+    duration: ${D}

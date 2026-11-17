@@ -1,0 +1,9 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): focus the field ID, clear it, type TEXT, then hide the keyboard.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: "${ID}"
+- eraseText: 40
+- inputText: "${TEXT}"
+- hideKeyboard:
+    optional: true

@@ -1,0 +1,200 @@
+name: COSMOS-INT-01 Slice E — unmodified iOS baseline audit
+# COSMOS-INT-01 Slice E, FIRST GATE (PO authorisation 2026-11-17): the read-only iOS baseline audit of the integrated head
+# 03d1b3ea (Draft PR #398). VALIDATION ONLY. Nothing here changes an application file or a PR.
+#
+#   build-proof ──► audit × {small, medium, large}
+#   product (no build)
+#
+# - build-proof: the S401 proof-entry build of 03d1b3ea — the route every COSMOS HONOR proof used: the production
+#   composition (ProductRoot) over the labelled SYNTHETIC proof network; one recorded change of the mobile manifest's
+#   `main`, in this ephemeral checkout only. It REFUSES unless apps/ is byte-identical to 03d1b3ea.
+# - audit: one simulator per job; English then Arabic (the simulator's own system language); the three Worlds,
+#   cross-world switching, and (per device) landscape and enlarged text. Every step's status, screenshot, hierarchy and
+#   a recording per scene are uploaded, pass or fail. Nothing retries a failed step.
+# - product: the UNMODIFIED CI Product binary of 03d1b3ea (Mobile CI run 44069780051, artifact sha256 156c9d56…),
+#   verified by checksum before install; it is unconfigured (no API origin), so it shows what it shows at launch.
+#
+# Scoped to the audit branch and manual dispatch; inert everywhere else.
+on:
+  push:
+    branches: ['cosmos/slice-e-ios-baseline-audit']
+  workflow_dispatch:
+concurrency:
+  group: cosmos-slice-e-ios-baseline-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  BASELINE_COMMIT: 03d1b3ea1dd4fddbd4801ff322bed88385998e74
+  PRODUCT_RUN_ID: '44069780051'
+  PRODUCT_SHA256: 156c9d56cb60a4157365808855ba9bb689601926ef9f3830f0662bf2f0e6ecd2
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  build-proof:
+    name: iOS proof-entry Release simulator app of 03d1b3ea — BUILD
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Refuse unless the application is byte-identical to the baseline commit
+        run: |
+          git diff --stat "$BASELINE_COMMIT" HEAD -- apps/ package.json package-lock.json | tee "$RUNNER_TEMP/app-diff.txt"
+          test ! -s "$RUNNER_TEMP/app-diff.txt"
+          echo "apps/, package.json and package-lock.json are identical to $BASELINE_COMMIT"
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the S401 proof entry (validation build only; the ONE recorded change)
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/entry-diff.txt"
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Record the generated Info.plist facts (orientations, localizations, bundle id)
+        run: |
+          plist="$(ls apps/mobile/ios/*/Info.plist | grep -v Pods | head -n 1)"
+          {
+            echo "plist=$plist"
+            for k in CFBundleIdentifier CFBundleDevelopmentRegion CFBundleLocalizations UISupportedInterfaceOrientations 'UISupportedInterfaceOrientations~ipad' UIRequiresFullScreen UILaunchStoryboardName; do
+              echo "== $k"; /usr/libexec/PlistBuddy -c "Print :$k" "$plist" 2>&1 || true
+            done
+          } | tee "$RUNNER_TEMP/info-plist.txt"
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the proof Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          mkdir -p "$RUNNER_TEMP/proof-app"
+          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/proof-app/qandeel-ios-proof.app.zip"
+          cp "$RUNNER_TEMP/info-plist.txt" "$RUNNER_TEMP/entry-diff.txt" "$RUNNER_TEMP/app-diff.txt" "$RUNNER_TEMP/proof-app/"
+          ( cd "$RUNNER_TEMP/proof-app" && shasum -a 256 qandeel-ios-proof.app.zip | tee sha256.txt )
+          { echo "baseline=$BASELINE_COMMIT"; echo "head=$(git rev-parse HEAD)"; echo "entry=src/integration/__validation__/s401-proof-entry.tsx"; xcodebuild -version; sw_vers; } > "$RUNNER_TEMP/proof-app/identity.txt"
+          echo "### proof app: \`$(cat "$RUNNER_TEMP/proof-app/sha256.txt")\`" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: {name: cosmos-ios-proof-app, path: '${{ runner.temp }}/proof-app', if-no-files-found: error}
+
+  audit:
+    name: iOS audit — ${{ matrix.size }}
+    needs: [build-proof]
+    runs-on: macos-26
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {size: small, candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
+          - {size: medium, candidates: 'iPhone 17', passes: 'core landscape enlarged'}
+          - {size: large, candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install the harness's PNG reader (root lockfile), run: npm ci --ignore-scripts}
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - uses: actions/download-artifact@v4
+        with: {name: cosmos-ios-proof-app, path: '${{ runner.temp }}/proof-app'}
+      - name: Choose, create if needed, and boot the ${{ matrix.size }} simulator
+        env: {CANDIDATES: '${{ matrix.candidates }}'}
+        run: bash scripts/cosmos-slice-e-ios/sim.sh "$CANDIDATES" "$RUNNER_TEMP/evidence"
+      - name: Install the proof app (checksum recorded)
+        run: |
+          cd "$RUNNER_TEMP/proof-app" && shasum -a 256 -c sha256.txt && ditto -x -k qandeel-ios-proof.app.zip .
+          app="$(find "$RUNNER_TEMP/proof-app" -maxdepth 1 -name '*.app' | head -n 1)"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+          cp "$RUNNER_TEMP/proof-app/"*.txt "$RUNNER_TEMP/evidence/"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Run the audit (every step recorded; nothing retried)
+        timeout-minutes: 220
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}" "${{ matrix.passes }}"
+      - name: Summarize
+        if: always()
+        run: |
+          { echo "### ${{ matrix.size }}: $(cat "$RUNNER_TEMP/evidence/device.txt" 2>/dev/null)"; echo '```'; awk -F'\t' 'NR>1 {n++; if ($5!=0) f++} END {print n" steps, "f+0" non-zero"}' "$RUNNER_TEMP/evidence/steps.tsv" 2>/dev/null; cat "$RUNNER_TEMP/evidence/timings.tsv" 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn, include-hidden-files: true}
+
+  product:
+    name: iOS audit — the UNMODIFIED CI Product binary (iPhone 17)
+    runs-on: macos-26
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Download the CI Product binary of 03d1b3ea (Mobile CI run ${{ env.PRODUCT_RUN_ID }})
+        uses: actions/download-artifact@v4
+        with:
+          name: qandeel-mobile-ios-simulator-app
+          path: ${{ runner.temp }}/product-app
+          run-id: ${{ env.PRODUCT_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Refuse unless it is the frozen binary
+        run: |
+          cd "$RUNNER_TEMP/product-app"
+          echo "$PRODUCT_SHA256  qandeel-ios-simulator.app.zip" | shasum -a 256 --check --strict
+          ditto -x -k qandeel-ios-simulator.app.zip .
+      - name: Boot iPhone 17
+        run: bash scripts/cosmos-slice-e-ios/sim.sh "iPhone 17" "$RUNNER_TEMP/evidence"
+      - name: Install the frozen Product binary
+        run: |
+          app="$(find "$RUNNER_TEMP/product-app" -maxdepth 1 -name '*.app' | head -n 1)"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+          cp "$RUNNER_TEMP/product-app/native-artifact-manifest.json" "$RUNNER_TEMP/evidence/"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Run the Product-binary audit
+        timeout-minutes: 70
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh product "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" iphone-17 product
+      - name: Upload the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: cosmos-ios-audit-product, path: '${{ runner.temp }}/evidence', if-no-files-found: warn, include-hidden-files: true}
