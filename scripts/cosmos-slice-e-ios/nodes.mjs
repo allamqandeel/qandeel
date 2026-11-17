@@ -7,7 +7,7 @@
 //        node nodes.mjs --any <png> [widthPoints]       -> the largest core of any hue, or "none"
 // Maestro accepts only INTEGER percentages or points (R3: "80.4%,54.3%" made every node tap fail), so the result is in
 // points: pixels x widthPoints / screenshot width. Without widthPoints it falls back to integer percentages.
-// A core is first a WHITE blob (min channel >= 228); if none is found, a BRIGHT one (min channel >= 170), for Worlds whose
+// A core is first a WHITE blob (min channel >= 228); if none is found, a BRIGHT one (min channel >= 170, thinner erosion: a 2x small iPhone draws smaller cores), for Worlds whose
 // cores render tinted.
 //        node nodes.mjs <png>             -> every core: "hue@x,y,size"
 import fs from 'node:fs';
@@ -17,7 +17,7 @@ const { PNG } = require('pngjs');
 
 const load = (f) => PNG.sync.read(fs.readFileSync(f));
 const px = (p, x, y) => { const i = (y * p.width + x) * 4; return [p.data[i], p.data[i + 1], p.data[i + 2]]; };
-let MIN = 228, SPREAD = 26;
+let MIN = 228, SPREAD = 26, ER = 2;
 const white = (p, x, y) => { const [r, g, b] = px(p, x, y); return Math.min(r, g, b) >= MIN && Math.max(r, g, b) - Math.min(r, g, b) <= SPREAD; };
 const hueOf = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mx === mn) return null; const d = mx - mn; if (d / mx < 0.25) return null; let h; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; return ((h * 60) + 360) % 360; };
 const hueDiff = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
@@ -39,7 +39,7 @@ function cores(p) {
   const w = x1 - x0 + 1, h = y1 - y0 + 1;
   const raw = new Uint8Array(w * h); const on = new Uint8Array(w * h);
   for (let y = y0; y <= y1; y += 1) for (let x = x0; x <= x1; x += 1) if (white(p, x, y)) raw[(y - y0) * w + (x - x0)] = 1;
-  const E = 2;
+  const E = ER;
   for (let y = E; y < h - E; y += 1) for (let x = E; x < w - E; x += 1) {
     let all = 1;
     for (let dy = -E; dy <= E && all; dy += 1) for (let dx = -E; dx <= E; dx += 1) if (!raw[(y + dy) * w + x + dx]) { all = 0; break; }
@@ -71,7 +71,7 @@ const [mode, a, b, c3] = process.argv.slice(2);
 const WPT = Number(mode === '--hue' ? c3 : b) || 0;
 const pct = (p, c) => (WPT ? `${Math.round((c.x * WPT) / p.width)},${Math.round((c.y * WPT) / p.width)}`
   : `${Math.round((c.x / p.width) * 100)}%,${Math.round((c.y / p.height) * 100)}%`);
-const found = (p) => { let r = cores(p); if (!r.length) { MIN = 170; SPREAD = 90; r = cores(p); MIN = 228; SPREAD = 26; } return r; };
+const found = (p) => { let r = cores(p); if (!r.length) { MIN = 170; SPREAD = 90; ER = 1; r = cores(p); MIN = 228; SPREAD = 26; ER = 2; } return r; };
 if (mode === '--hue') {
   const p = load(b); const m = found(p).filter((c) => hueDiff(c.hue, Number(a)) <= 25).sort((x, y) => y.n - x.n)[0];
   console.log(m ? pct(p, m) : 'none');

@@ -7,5 +7,6 @@ appId: com.qandeel.mobile
     id: "${ID}"
 - eraseText: 8
 - inputText: "${TEXT}"
-- hideKeyboard:
-    optional: true
+# R5: the reader's route off the keyboard is its own Search/return key (R3: Maestro's hideKeyboard left the iOS keyboard
+# up for the rest of the Public scene, covering the sheet). Whether that key closes the keyboard is itself evidence.
+- pressKey: Enter
