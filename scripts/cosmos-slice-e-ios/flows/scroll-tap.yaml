@@ -7,4 +7,6 @@ appId: com.qandeel.mobile
     direction: DOWN
     timeout: 20000
 - tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
     id: "${ID}"

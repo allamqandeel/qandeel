@@ -2,6 +2,7 @@
 appId: com.qandeel.mobile
 ---
 - swipe:
+    waitToSettleTimeoutMs: 1500
     from:
       id: "${ID}"
     direction: ${DIR}

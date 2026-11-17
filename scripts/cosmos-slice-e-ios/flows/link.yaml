@@ -9,5 +9,7 @@ appId: com.qandeel.mobile
     timeout: 10000
     optional: true
 - tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
     text: "(Open|فتح)"
     optional: true

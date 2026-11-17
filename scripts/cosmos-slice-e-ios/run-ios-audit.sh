@@ -40,8 +40,19 @@ m() {
   t1=$(now)
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$SCENE" "$name" "$rc" "$((t1 - t0))" >> "$STEPS"
   cat "$CUR/logs/$name.log" $(find "$CUR/logs/$name.d" -name 'maestro.log' 2>/dev/null) | grep -o 'TIMING [^ ]* [0-9]*' | sort -u | while read -r _ n ms; do printf '%s\t%s\t%s\t%s\n' "$PASS" "$LANGX" "$n" "$ms" >> "$TIM"; done
+  trim_debug "$CUR/logs/$name.d" "$rc"
   [ "$rc" = 0 ] && say "  ok   $name ($((t1 - t0)) ms)" || say "  FAIL $name exit $rc ($((t1 - t0)) ms)"
   return $rc
+}
+# Maestro's debug output is kept SMALL (run 44085259648 uploaded 3.8 GB and lost it all): the command timeline
+# (commands-*.json) always, the last 400 lines of each maestro.log, and Maestro's own screenshots only for a failed step.
+trim_debug() {
+  local d="$1" rc="$2" f
+  [ -d "$d" ] || return 0
+  find "$d" -name 'maestro.log' | while read -r f; do tail -n 400 "$f" > "$f.tail" && rm -f "$f"; done
+  find "$d" -type f -print0 | while IFS= read -r -d '' f; do
+    case "$f" in */commands*.json|*.tail|*/manifest.json) ;; *.png) [ "$rc" = 0 ] && rm -f "$f" ;; *) rm -f "$f" ;; esac
+  done
 }
 shot() { xcrun simctl io "$UDID" screenshot "$CUR/$1.png" >/dev/null 2>&1 || say "  (screenshot $1 failed)"; }
 hier() {
@@ -55,8 +66,18 @@ hier() {
 # S <step> <flow> [KEY=VALUE ...] — a step with its evidence: the flow, then a settle, a screenshot and the hierarchy.
 S() { local name="$1"; m "$@"; local rc=$?; sleep "${SETTLE:-2}"; shot "$name"; hier "$name"; return $rc; }
 has() { grep -q "\"$1" "$CUR/$2.json" 2>/dev/null; }   # an id (prefix) present in a step's hierarchy
-rec_start() { xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$CUR/$1.mp4" >/dev/null 2>&1 & REC=$!; sleep 1; }
-rec_stop() { [ -n "$REC" ] && { kill -INT "$REC" 2>/dev/null; wait "$REC" 2>/dev/null; REC=; }; }
+rec_start() { RECF="$CUR/$1.mp4"; xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$RECF" >/dev/null 2>&1 & REC=$!; sleep 1; }
+# A recording of the ever-moving COSMOS canvas at the simulator's native size is ~1 GB per scene; each is transcoded to
+# 960x540 with macOS's own avconvert (the original is kept only if that fails and it is under 300 MB).
+rec_stop() {
+  [ -n "$REC" ] || return 0
+  kill -INT "$REC" 2>/dev/null; wait "$REC" 2>/dev/null; REC=
+  local v="$RECF" small="${RECF%.mp4}-960.mp4"
+  if avconvert --preset Preset960x540 --source "$v" --output "$small" --replace >/dev/null 2>&1 && [ -s "$small" ]; then
+    say "  recording $(basename "$small"): $(du -h "$small" | cut -f1) (original $(du -h "$v" | cut -f1) removed)"; rm -f "$v"
+  elif [ "$(du -m "$v" | cut -f1)" -lt 300 ]; then say "  recording kept at native size ($(du -h "$v" | cut -f1))"
+  else say "  recording dropped: $(du -h "$v" | cut -f1) and avconvert failed"; rm -f "$v"; fi
+}
 
 driver_answers() {
   curl --fail --silent --max-time 10 "http://127.0.0.1:$PORT/status" >/dev/null || return 1
@@ -273,7 +294,7 @@ product() {
 
 say "audit: mode=$MODE device=$DEVICE udid=$UDID passes=[$PASSES]"
 xcrun simctl list devices "$UDID" >> "$LOG" 2>&1
-for LANGPAIR in "en-US:en_US" "ar-EG:ar_EG"; do
+for LANGPAIR in ${LANGS:-en-US:en_US ar-EG:ar_EG}; do
   tag="${LANGPAIR%%:*}"; loc="${LANGPAIR##*:}"; LANGX="${tag%%-*}"
   set_lang "$tag" "$loc" || { say "INFRASTRUCTURE: no driver for $tag; this language is NOT TESTED"; continue; }
   for PASS in $PASSES; do

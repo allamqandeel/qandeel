@@ -96,21 +96,26 @@ jobs:
         with: {name: cosmos-ios-proof-app, path: '${{ runner.temp }}/proof-app', if-no-files-found: error}
 
   audit:
-    name: iOS audit — ${{ matrix.size }}
+    name: iOS audit — ${{ matrix.size }} ${{ matrix.lang }}
     needs: [build-proof]
     if: ${{ !cancelled() && (needs.build-proof.result == 'success' || needs.build-proof.result == 'skipped') }}
     runs-on: macos-26
-    timeout-minutes: 240
+    timeout-minutes: 340
     permissions:
       contents: read
       actions: read
     strategy:
       fail-fast: false
       matrix:
+        # One simulator and ONE system language per job (run 44085259648: one job for both languages ran past its
+        # evidence budget). The language is the simulator's own, set before the app is launched.
         include:
-          - {size: small, candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
-          - {size: medium, candidates: 'iPhone 17', passes: 'core landscape enlarged'}
-          - {size: large, candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
+          - {size: small, lang: en, langs: 'en-US:en_US', candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
+          - {size: small, lang: ar, langs: 'ar-EG:ar_EG', candidates: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', passes: 'core enlarged'}
+          - {size: medium, lang: en, langs: 'en-US:en_US', candidates: 'iPhone 17', passes: 'core landscape enlarged'}
+          - {size: medium, lang: ar, langs: 'ar-EG:ar_EG', candidates: 'iPhone 17', passes: 'core landscape enlarged'}
+          - {size: large, lang: en, langs: 'en-US:en_US', candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
+          - {size: large, lang: ar, langs: 'ar-EG:ar_EG', candidates: 'iPhone 17 Pro Max|iPhone 16 Pro Max', passes: 'core'}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
@@ -147,19 +152,27 @@ jobs:
           mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Run the audit (every step recorded; nothing retried)
-        timeout-minutes: 220
-        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}" "${{ matrix.passes }}"
+        timeout-minutes: 290
+        env: {LANGS: '${{ matrix.langs }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" "${{ matrix.passes }}"
       - name: Summarize
         if: always()
         run: |
           { echo "### ${{ matrix.size }}: $(cat "$RUNNER_TEMP/evidence/device.txt" 2>/dev/null)"; echo '```'; awk -F'\t' 'NR>1 {n++; if ($5!=0) f++} END {print n" steps, "f+0" non-zero"}' "$RUNNER_TEMP/evidence/steps.tsv" 2>/dev/null; cat "$RUNNER_TEMP/evidence/timings.tsv" 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Pack the evidence into one archive
+        if: always()
+        run: |
+          du -sh "$RUNNER_TEMP/evidence" || true
+          tar -C "$RUNNER_TEMP" -cf "$RUNNER_TEMP/evidence.tar" evidence && ls -l "$RUNNER_TEMP/evidence.tar"
       - name: Upload the evidence
         if: always()
         uses: actions/upload-artifact@v4
-        with: {name: 'cosmos-ios-audit-${{ matrix.size }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn, include-hidden-files: true}
+        with: {name: 'cosmos-ios-audit-${{ matrix.size }}-${{ matrix.lang }}', path: '${{ runner.temp }}/evidence.tar', if-no-files-found: warn, compression-level: 1}
 
   product:
     name: iOS audit — the UNMODIFIED CI Product binary (iPhone 17)
+    # Recorded by run 44085259648 (success); a push does not repeat it, a manual dispatch does.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: macos-26
     timeout-minutes: 90
     permissions:

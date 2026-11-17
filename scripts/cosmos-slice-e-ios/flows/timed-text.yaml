@@ -3,6 +3,8 @@ appId: com.qandeel.mobile
 ---
 - evalScript: ${output.t0 = Date.now()}
 - tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
     id: "${TAP}"
 - extendedWaitUntil:
     visible:

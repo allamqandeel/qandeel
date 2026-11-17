@@ -2,6 +2,7 @@
 appId: com.qandeel.mobile
 ---
 - swipe:
+    waitToSettleTimeoutMs: 1500
     start: "${S}"
     end: "${E}"
     duration: ${D}

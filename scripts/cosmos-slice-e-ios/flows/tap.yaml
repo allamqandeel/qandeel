@@ -2,5 +2,7 @@
 appId: com.qandeel.mobile
 ---
 - tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
     id: "${ID}"
     index: ${IDX}

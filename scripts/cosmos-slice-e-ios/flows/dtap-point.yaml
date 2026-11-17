@@ -2,4 +2,5 @@
 appId: com.qandeel.mobile
 ---
 - doubleTapOn:
+    waitToSettleTimeoutMs: 1500
     point: "${P}"
