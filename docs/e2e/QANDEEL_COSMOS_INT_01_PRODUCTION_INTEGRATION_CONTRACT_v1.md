@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.6 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED AND ACCEPTED FOR CONTINUATION; CP2 (Shared World) DELIVERED, STOPPED FOR THE PO’S REVIEW (§19.15); CP3 – CP4 NOT authorised)
+# COSMOS Production Integration Contract — v1.7 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — binding execution contract, CP1 (sheet + Public) DELIVERED AND ACCEPTED FOR CONTINUATION; CP2 (Shared World) DELIVERED (§19.15); CP3 (Personal World, PEEK only) DELIVERED, STOPPED FOR THE PO’S REVIEW (§19.16); CP4 NOT authorised)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.7, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1 ACCEPTED FOR CONTINUATION — CP2 (SHARED WORLD) DELIVERED (§19.15) — CP3 (THE PERSONAL WORLD DETAIL SHEET, PEEK ONLY) AUTHORISED BY THE CONTROLLED ADDENDUM §19.16 AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — HONOR PROOF RUN (§19.16, "CP3 delivery record") — FINDING F-1 REPORTED, NOT FIXED (§19.16) — STOPPED FOR THE PO’S REVIEW; CP4 / SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.6 status below is kept for provenance.
+**Change log v1.6 → v1.7 (2026-11-17).** The PO's message "COSMOS-INT-01 Slice D CP3 — Personal World Detail Sheet — Execution Authorization" is applied. New §19.16 records the CP3 scope, its implementation, the controlled re-anchors, the pre-existing Finding F-1 (production disclosures carry no inspection resolution) and the CP3 delivery record. §19.13 records what CP3 opens. §19.2 – §19.10 bind unchanged; no other decision changes and no further approval is inferred.
 **Status (v1.6, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) ACCEPTED BY THE PO FOR CONTINUATION (2026-11-16) — CP2 (THE SHARED WORLD DETAIL SHEET) AUTHORISED BY THE CONTROLLED ADDENDUM §19.15 AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — HONOR PROOF RUN (§19.15, "CP2 delivery record") — STOPPED FOR THE PO’S REVIEW; CP3 / CP4 / SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.5 status below is kept for provenance.
 **Status (v1.5, 2026-11-16):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: WP0 AND THE §19 EXECUTION CONTRACT APPROVED WITH THE PO'S AMENDMENTS; CP1 (SHEET INFRASTRUCTURE + PUBLIC WORLD) AUTHORISED ON cosmos/cosmos-int-01-slice-d (FROM 4b4f60da; DEPENDENT DRAFT PR) AND DELIVERED (§19.14) — THE PO'S FINAL HONOR REVIEW RUN (§19.14, "Final HONOR review") — THE PO'S CLOSURE PASS RUN (§19.14, "Closure pass"; the one narrow §19.13 exception for PublicDiscussion visual hosting) — STOPPED FOR THE PO’S REVIEW; CP2 / CP3 / CP4 NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.4 status below is kept for provenance.
 **Status (v1.4):** `SLICE B — ACCEPTED BY THE PO (2026-11-15) ON DRAFT PR #394 (NOT MERGED) — SLICE C — APPROVED COSMOS CHROME, TIMELINE AND NAVIGATION INTEGRATION — CLOSED / READY FOR PO REVIEW ON `cosmos/cosmos-int-01-slice-c` (FROM 48e88a70; DEPENDENT DRAFT PR #395; THE PO'S TWO CLOSURE DELIVERABLES OF 2026-11-16 DELIVERED — §17; NO MERGE WITHOUT THE PO'S EXPLICIT APPROVAL) — PERSONAL TARGET CENTRING AFTER A SEMANTIC ZOOM (PO AUTHORISATION 2026-11-16) — DELIVERED ON `cosmos/cosmos-int-01-personal-centring` (FROM 2f2dca46; ITS OWN DEPENDENT DRAFT PR; NOT ACCEPTED UNTIL THE PO REVIEWS THE HONOR RESULT — §18) — BINDING DIRECTION §14 C-1 … C-10 + §7 — PLAN AND MIGRATION MATRIX §15 — SLICE D NOT AUTHORISED — PRs #391 / #392 / #393 UNTOUCHED — NO MERGE`. v1.1 recorded the PO's first batch (D-1, D-5, D-11, D-12, D-13, G-2, G-5, G-7); v1.2 records the Slice B entry decisions (D-2, D-14, D-9, D-10, G-6) and the Slice B delivery (§13).
@@ -1223,7 +1225,7 @@ The slower deep-rung frames are a pre-existing cost of the deep rungs. In the BE
 |---|---|---|
 | Public (CP1) | The top of the existing `FieldChrome` content, in its existing priority: the section list › the discussion › the focused Experience's panel (Back, title, section, publisher label, published day, Discussion entry with the human count, themes …) › search results / no results / unavailable › section-near › field unavailable + Retry › empty | The same content in full, scrollable — `ServedPanel` with `PublicTopicContent` (pages, roles), nearby; `PublicDiscussion` (read, load more, reply-to navigation, retries, the composer ONLY when `SERVED && canContribute`); the full section list; all results |
 | Shared (CP2, not authorised) | meaning, themes, the panel / field states | + all authorised sources under `sourcesHeading`, the existing Conversation act; no source navigation (SD-2), no count (SD-6) |
-| Personal (CP3, not authorised) | inspection statement, lineage, context choice (its one home, SD-4), "Go to this place" (SD-3) | — (G-7) |
+| Personal (CP3, delivered — §19.16) | inspection statement, lineage, context choice (its one home, SD-4), "Go to this place" (SD-3) | — (G-7) |
 
 **Long-list amendment (binding).**
 - No existing function, result, item or actionable entry may become unreachable because of the compact sheet.
@@ -1377,6 +1379,7 @@ A contract pin moves only with its reason written beside it (this section: D-8 /
 - every controller and runtime-entry API; the server;
 - `SharedLivingAnalysis.tsx`, `SharedWorldArea.tsx`, `LivingAnalysisMap.tsx`, `DepthComposition.tsx` (CP2 / CP3, not authorised);
   - **CP2 (PO, 2026-11-16, §19.15):** `SharedLivingAnalysis.tsx` and `SharedWorldArea.tsx` are opened for the Shared sheet integration only. `LivingAnalysisMap.tsx` and `DepthComposition.tsx` stay frozen (CP3).
+  - **CP3 (PO, 2026-11-17, §19.16):** `LivingAnalysisMap.tsx` is opened for the Personal sheet integration, and `DepthComposition.tsx` for its ONE Back handler to ask the sheet first. `CosmosContextualActs.tsx` takes one narrow, additive change: two optional props, `choice?` and `note?`. They default to `extras`, so every existing instance draws exactly what it drew before. They let the context choice have ONE home (the PEEK draws only the choice; the rail draws everything except it), as SD-4 requires. Its acts, words, executors and every other behaviour are unchanged. A new presentation file, `cosmos/product/sheet/CosmosPeekWords.tsx`, holds the PEEK's words and chips, because the integration layer names no colour (T-12). No other frozen file is opened.
 - RN Skia 2.7.0 and the QAN-INF-03 exception;
 - item 021;
 - Replay.
@@ -1649,6 +1652,69 @@ Regressions:
 - Second push: the final checks are recorded in the PRs and in the CP2 report.
 
 **Stopped for the PO's review.** CP3, CP4, Slice E and Replay were not started. Nothing is merged.
+
+### 19.16 CP3 — the Personal World Detail Sheet, PEEK only (controlled addendum, PO authorisation 2026-11-17)
+
+**Source.** "QANDEEL — COSMOS-INT-01 Slice D CP3 — Personal World Detail Sheet — Execution Authorization" (PO, 2026-11-17). Baseline: #397 `d3422d88`, #398 `bb8bcedc`.
+
+**Authorised:** CP3 only. Not authorised: CP4, Slice E, Replay, any merge, and any reopening of the typography, bottom navigation, CP1, CP2, renderer performance or cosmetics.
+
+**Branch.** It continues on `cosmos/cosmos-int-01-slice-d` (#397). `cosmos/ui-polish-01` (#398) is kept stacked on it by a `--no-ff` merge.
+
+**Scope.** Integrate CP1's `CosmosDetailSheet` into the Personal World, with PEEK only (no EXPANDED state).
+- `integration/composition/LivingAnalysisMap.tsx`: the Personal stage composes the sheet the way Public and Shared do (`CosmosSheetStage` with `expanded={false}`, `useDetailSheet`, `reopeningOwner`). There is no SD-10 lift: the glass, the camera, the semantic zoom and #396's usable centre are untouched.
+- `integration/composition/DepthComposition.tsx`: the ONE Analysis Back handler asks the sheet first.
+- `cosmos/product/chrome/CosmosContextualActs.tsx`: the narrow `choice?` / `note?` props (§19.13).
+- `cosmos/product/sheet/CosmosPeekWords.tsx`: new presentation of the PEEK's words and chips.
+- Tests.
+- No controller, runtime, API, server, copy or dependency change.
+
+**Content (SD-3, made exact).** The PEEK holds only these, each from its existing owner:
+1. **The family word.** The approved `analysisCopy` word: «خيط» / "Thread", «قراءة» / "Reading", or «تركيز ناشئ» / "Emerging focus". It is the stage's own word for the inspected mark. It is taken from T-08's render state where that carries a family, otherwise from the object in the current, fresh scene. An identity this moment does not know (`IDENTITY_UNKNOWN_AT_TC`) is never named.
+2. **T-08's inspection statement** (`inspectionSentence`), in role `supporting`.
+3. **T-08's lineage** (`contextPathSentence`), in role `metadata`, when there is one.
+4. **T-04's context choice.** The same `CosmosContextualActs` instance and executor (`switchContext`), with `acts={[]}` and `note={false}`. This is its ONE functional home: the rail's instance has `choice={false}` (SD-4).
+5. **"Go to this place"** («الانتقال إلى هذا الموضع»). It is T-04's `directJump`, with the same request the accessible Map's `direct-jump` sends. It is offered exactly where the Map offers it: the inspected object has ONE locus in the current scene. It is never offered where a context would have to be elected.
+
+Conversation and Replay stay in their top-band places (G-7). They are not drawn in the PEEK, and nothing in it is presented as the object's Replay. No new word, label, link or read.
+
+**Presentation.**
+- PEEK covers the timeline rail (SD-4): it reaches at least the rail's top. The rail is never re-mounted. Beneath an open PEEK it is kept in place, hidden, inert (`pointerEvents="none"`) and hidden from accessibility, so its layout and the stage's usable centre are unchanged. Closing reveals it exactly as it was.
+- Typography is T-08's roles; the family word is the focused mark's gold; the chips are the contextual chips' (32-point glass chip, 44-point target, U-9 row).
+- **Engineering note for the PO's review (not a new rule).** §19.3 says that PEEK never scrolls, and Personal has no EXPANDED state to drag into. So at an enlarged system text size where the PEEK's words exceed the 156-point cap, the words scroll inside the PEEK and the handle still drags. Otherwise text would be clipped and an act made unreachable, which the CP3 authorisation forbids. At the accepted size the PEEK does not scroll; this was measured on the HONOR, see the delivery record.
+
+**Lifecycle (§19.4, §19.6).**
+- An inspection opens PEEK.
+- A tap that answers FOCUS on the inspected object, or on another one, reopens it (SD-12).
+- PEEK → CLOSED by the handle, the drag or hardware Back is presentation only. It leaves the inspection, the selected context, the canonical camera and the history untouched, and reads nothing.
+- A context switch or a jump keeps the same subject, so the phase stays PEEK. Another object is a new subject.
+
+**Hardware Back (§19.6.4, SD-5).** `LivingAnalysisMap` registers no listener of its own. It hands the sheet's `back` to `DepthComposition` (`registerSheetBack`). The ONE Analysis handler runs in this order:
+1. the Replay player's own listener, while the player is shown (it is the most recent, so it runs first; unchanged);
+2. PEEK → CLOSED;
+3. `cross('CONVERSATION')`.
+
+Overview's Back is unchanged (SD-9).
+
+**Finding F-1 (pre-existing; reported, NOT fixed; outside CP3).**
+- `projection-coordinator.ts` fetches each disclosure as `client.fetchDisclosure(sessionId, { tc, depth })`, without the inspection, and `mapProjectionRequest` carries only (session, tc, depth). Production disclosures therefore carry `inspection: null`.
+- T-08 consequently renders every Personal inspection as `INSPECTION_NOT_RESOLVED`: «لا يشمل هذا العرض معاينتك.» / "This view does not cover what you are inspecting."
+- No lineage and no context choice can appear in production. This was already true of the rail before CP3, and the golden recorded before CP3 shows it.
+- CP3 does not change it. Fixing it needs an inspection-aware read: a runtime and request change, and new reads, which this authorisation excludes.
+- What production shows today: the family word, that sentence, and "Go to this place" where it applies.
+- The resolved content (statement, lineage, choice) is proven in jest by giving every held disclosure a server-like resolution.
+- Suggested disposition, for the PO: admit it to the backlog at CP4 (BG-06), owned by a runtime task (an inspection-aware disclosure request). It is not admitted silently here.
+
+**Re-anchors (§19.12).** Each states the original protected behaviour and keeps asserting it.
+- `tests/w1a-01-conversation-core-contract.test.mjs`: the ONE Analysis Back handler now asks the sheet first (`if (sheetBack.current?.() === true) return true;`), then crosses to the Conversation exactly as before. Two new assertions: the sheet is asked in exactly one place, and `LivingAnalysisMap` has no `BackHandler`.
+- `composition.test.tsx` T12-A95: the sheet handle is a 28-point row with an 8-point `hitSlop` above and below. Its target is measured as drawn size plus `hitSlop`, which is still at least 44 points. The 44-point floor is unchanged.
+- `living-analysis-screen-continuity.test.tsx`: the rail's owners are looked up including hidden elements, because the rail is kept mounted (hidden) under an open PEEK. The same owners and the same instance-continuity checks are asserted.
+- `living-analysis-screen-golden.test.tsx` and its golden: regenerated once. All 13 cases are identical to the pre-CP3 golden after stripping exactly the CP3 additions: the sheet stage wrapper, the rail holder and the sheet frame. PEEK content appears only in the `inspection` case. The proof is in `QANDEEL_REPORTS/COSMOS-V5/integration/slice-d/cp3/golden-reanchor-diff.json`.
+- `s7-03` and `s7-04` frozen pins of `LivingAnalysisMap.tsx`: previous pin `2eaa9efa…`. The Replay composite and player keep `MapSurface` and the `world=` presentation (G-5), with no new read or route; every other pin is unchanged.
+
+#### CP3 delivery record (2026-11-17)
+
+(Completed in the closing documentation commit.)
 
 ---
 
