@@ -1,0 +1,79 @@
+# COSMOS-INT-01 Slice E iOS baseline (VALIDATION ONLY, no PR): does a tap on a COSMOS node reach the app on iOS?
+# The baseline audit (run 44185138506) taps node cores with Maestro and sees no PEEK / detail sheet. This job taps the
+# same node through Maestro (XCTest) and through idb (HID touches), on the same checksummed proof build, so the report
+# can classify the finding as APPLICATION or TEST AUTOMATION. A separate branch, so it never cancels the audit run.
+name: cosmos-slice-e-ios-tap-probe
+on:
+  push:
+    branches: ['cosmos/slice-e-ios-baseline-probe']
+concurrency:
+  group: cosmos-slice-e-ios-tap-probe-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  actions: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  BASELINE_COMMIT: 03d1b3ea1dd4fddbd4801ff322bed88385998e74
+  PROOF_RUN_ID: '44080247611'
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  probe:
+    name: iOS tap probe — medium en
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Refuse unless the application is byte-identical to the baseline commit
+        run: |
+          git diff --stat "$BASELINE_COMMIT" HEAD -- apps/ package.json package-lock.json | tee "$RUNNER_TEMP/app-diff.txt"
+          test ! -s "$RUNNER_TEMP/app-diff.txt"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install the harness's PNG reader (root lockfile), run: npm ci --ignore-scripts}
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - uses: actions/download-artifact@v4
+        with: {name: cosmos-ios-proof-app, path: '${{ runner.temp }}/proof-app', run-id: '${{ env.PROOF_RUN_ID }}', github-token: '${{ github.token }}'}
+      - name: Boot the medium simulator
+        run: bash scripts/cosmos-slice-e-ios/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence"
+      - name: Install the proof app (checksum recorded)
+        run: |
+          cd "$RUNNER_TEMP/proof-app" && shasum -a 256 -c sha256.txt && ditto -x -k qandeel-ios-proof.app.zip .
+          app="$(find "$RUNNER_TEMP/proof-app" -maxdepth 1 -name '*.app' | head -n 1)"
+          xcrun simctl install "$IOS_SIM_UDID" "$app"
+          cp "$RUNNER_TEMP/proof-app/"*.txt "$RUNNER_TEMP/evidence/"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Install idb (second, independent touch route; a failure leaves route B NOT RUN)
+        continue-on-error: true
+        run: |
+          brew tap facebook/fb && brew install facebook/fb/idb-companion
+          python3 -m venv "$RUNNER_TEMP/idbenv" && "$RUNNER_TEMP/idbenv/bin/pip" install --quiet fb-idb
+          echo "$RUNNER_TEMP/idbenv/bin" >> "$GITHUB_PATH"
+      - name: Set the simulator language (en-US) and prove the driver
+        env: {LANGTAG: en-US, LANGLOC: en_US, LANGX: en}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-en setup
+      - name: Tap probe
+        timeout-minutes: 40
+        run: |
+          idb --version || true
+          bash scripts/cosmos-slice-e-ios/tap-probe.sh "$RUNNER_TEMP/evidence/probe" "$IOS_SIM_UDID"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
