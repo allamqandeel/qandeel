@@ -24,31 +24,32 @@ say "device widthPoints=$wpt"
 node_at() { (cd "$ROOT" && node "$HERE/nodes.mjs" --any "$OUT/$1.png" "$wpt"); }
 idbtap() { command -v idb >/dev/null || { say "  idb NOT AVAILABLE (tap $1 NOT RUN)"; return; }; idb ui tap --udid "$UDID" "${1%,*}" "${1#*,}" >> "$LOG" 2>&1; say "  idb tap $1 exit $?"; }
 
-probe() { # <world> <prefix>
-  local w="$1" p="$2" pt
-  ev "$p-0-rest"; pt="$(node_at "$p-0-rest")"; say "$w: node core at $pt (points)"
-  [ "$pt" = none ] && { say "$w: no node core found; probe NOT RUN"; return; }
-  mt "$p-A1" tap-point.yaml "P=$pt"; ev "$p-A1"
-  mt "$p-A2" tap-point.yaml "P=$pt"; ev "$p-A2"
+# R6 (small-en Shared) showed the first Maestro tap DOES reach the canvas (FAR -> MID); the audit's second tap reused the
+# pre-tap coordinates. Here every tap is aimed from the frame just before it, as a person looks again before tapping.
+probe() { # <world> <prefix> <route: A (Maestro) | B (idb)>
+  local w="$1" p="$2" r="$3" pt prev="$2-0-rest" i
+  ev "$prev"
+  for i in 1 2 3; do
+    pt="$(node_at "$prev")"; say "$w route $r tap $i: largest node core at $pt (points) in $prev"
+    [ "$pt" = none ] && { say "$w: no node core found; remaining taps NOT RUN"; return; }
+    if [ "$r" = A ]; then mt "$p-$r$i" tap-point.yaml "P=$pt"; else idbtap "$pt"; fi
+    ev "$p-$r$i"; prev="$p-$r$i"
+  done
 }
-probe_idb() {
-  local w="$1" p="$2" pt
-  ev "$p-0-rest"; pt="$(node_at "$p-0-rest")"; say "$w: node core at $pt (points)"
-  [ "$pt" = none ] && { say "$w: no node core found; probe NOT RUN"; return; }
-  idbtap "$pt"; ev "$p-B1"
-  idbtap "$pt"; ev "$p-B2"
-}
+probe_idb() { probe "$1" "$2" B; }
 
 say "== Personal, Maestro (XCTest) taps"
 mt p-launch launch.yaml NAME=probe-launch; mt p-door timed-id.yaml NAME=probe-door TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail
-sleep 5; probe personal pA
+sleep 5; probe personal pA A
 say "== Personal, idb (HID) taps, fresh launch"
 mt p-launch2 launch.yaml NAME=probe-launch2; mt p-door2 timed-id.yaml NAME=probe-door2 TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail
 sleep 5; probe_idb personal pB
 say "== Shared, Maestro (XCTest) taps"
 mt s-launch launch.yaml NAME=probe-s-launch; mt s-seed link.yaml URL=qandeel://s401-proof/shared-field/seed
 mt s-worlds timed-text.yaml NAME=probe-shared TAP=qandeel-switcher-shared_world "WAIT=$FIX"; mt s-world timed-tap-text.yaml NAME=probe-field "TAP=$FIX" WAIT=qandeel-shared-band
-sleep 5; probe shared sA
+sleep 5; probe shared sA A
+say "== Shared, Maestro tap on a visible place name (labels are drawn next to their place; MID after the first tap)"
+mt sA-label tap-text.yaml 'TEXT=.*(Fear of a hasty decision|Postponing|A fight starts|خوف|تأجيل|شجار).*' IDX=0; ev sA-label
 say "== Shared, idb (HID) taps, fresh launch"
 mt s-launch2 launch.yaml NAME=probe-s-launch2; mt s-seed2 link.yaml URL=qandeel://s401-proof/shared-field/seed
 mt s-worlds2 timed-text.yaml NAME=probe-shared2 TAP=qandeel-switcher-shared_world "WAIT=$FIX"; mt s-world2 timed-tap-text.yaml NAME=probe-field2 "TAP=$FIX" WAIT=qandeel-shared-band
