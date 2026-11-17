@@ -73,31 +73,33 @@ jobs:
       - name: Tap probe
         timeout-minutes: 40
         run: |
-          idb --version || true
-          bash scripts/cosmos-slice-e-ios/tap-probe.sh "$RUNNER_TEMP/evidence/probe" "$IOS_SIM_UDID"
+          command -v idb
+          bash scripts/cosmos-slice-e-ios/tap-probe-2.sh "$RUNNER_TEMP/evidence/probe" "$IOS_SIM_UDID"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
   sheet:
     # A contact sheet of a finished probe run (PROBE_RUN_ID), so the screenshots can be read over a slow link.
     name: Probe contact sheet
+    needs: [probe]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env: {PROBE_RUN_ID: '44193183438'}
     steps:
       - uses: actions/download-artifact@v4
-        with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/p', run-id: '${{ env.PROBE_RUN_ID }}', github-token: '${{ github.token }}'}
+        with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/p', run-id: "${{ needs.probe.result == 'skipped' && env.PROBE_RUN_ID || github.run_id }}", github-token: '${{ github.token }}'}
       - name: Build the sheets
         run: |
           sudo apt-get install -y -qq imagemagick > /dev/null
           cd "$RUNNER_TEMP/p/probe" && mkdir -p "$RUNNER_TEMP/out"
-          for w in p s; do
-            ls ${w}*-*.png | sort > "$RUNNER_TEMP/list"
+          for w in p s; do ls ${w}*.png >/dev/null 2>&1 || continue
+            ls ${w}*.png | sort > "$RUNNER_TEMP/list"
             args=(); while read -r f; do args+=(-label "${f%.png}" "$f"); done < "$RUNNER_TEMP/list"
             montage "${args[@]}" -geometry 300x+4+4 -tile 6x -pointsize 18 -quality 70 "$RUNNER_TEMP/out/sheet-$w.jpg"
           done
-          cp probe.log "$RUNNER_TEMP/out/" ; cp idb-describe-all.json "$RUNNER_TEMP/out/" 2>/dev/null || true
-          for j in pA-0-rest pB-B3 sA-A2 sB-B2; do jq -r '.. | objects | select(.attributes? != null) | .attributes | select((.["resource-id"]//"")!="") | "\(.["resource-id"]) \(.bounds//"")"' "$j.json" > "$RUNNER_TEMP/out/$j.ids" 2>/dev/null || true; done
+          cp probe.log "$RUNNER_TEMP/out/" ; cp *.point.json p0.idb.json p1.idb.json p-dtap.idb.json s-dtap.idb.json "$RUNNER_TEMP/out/" 2>/dev/null || true
+          for j in p0 p1 s0; do jq -r '.. | objects | select(.attributes? != null) | .attributes | select((.["resource-id"]//"")!="") | "\(.["resource-id"]) \(.bounds//"")"' "$j.json" > "$RUNNER_TEMP/out/$j.ids" 2>/dev/null || true; done
           ls -la "$RUNNER_TEMP/out"
       - uses: actions/upload-artifact@v4
         with: {name: cosmos-ios-tap-probe-sheet, path: '${{ runner.temp }}/out'}
