@@ -28,6 +28,13 @@
  * leaves are 26 `fontSize` and 107 `lineHeight` values, each exactly a role's refinement: supporting 15 / 25 → 14 / 22
  * (26 × 2), action 23 → 22 (41) and metadata 20 → 18 (40). The protection is unchanged: the screen is exactly the
  * composition it was, now drawn at the refined roles.
+ *
+ * COSMOS-INT-01 Slice D CP3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-17; Contract v1.7 §19.16): the Personal stage
+ * now holds CP1's Detail Sheet (PEEK only). The golden was regenerated ONCE for that intended change. Before it was
+ * rewritten, a structural diff proved that in EVERY one of the 13 cases the new tree equals the old one exactly once three
+ * CP3 additions are taken out — the sheet stage wrapper (`cosmos-detail-sheet-stage`, unwrapped), the rail's holder
+ * (`qandeel-personal-rail-holder`, unwrapped) and the sheet's frame (removed) — and that the PEEK's content is present in
+ * the `inspection` case only. Nothing else of the screen moved: world, rail, acts, testIDs, handlers and accessibility.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

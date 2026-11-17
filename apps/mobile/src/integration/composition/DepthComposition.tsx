@@ -265,11 +265,18 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     [beginFade, depth, fading, incoming, leaving, reduceMotion],
   );
 
+  // COSMOS-INT-01 Slice D CP3 (§19.6, SD-5): the Personal Detail Sheet's step of the ONE Back handler below. The
+  // composition hands it over while it is mounted; it answers `true` when it dismissed the PEEK (presentation only).
+  const sheetBack = useRef<(() => boolean) | null>(null);
+  const registerSheetBack = useCallback((back: (() => boolean) | null) => { sheetBack.current = back; }, []);
+
   // Android system Back at the Analysis depth is the return to the Conversation. Registered only
   // while Analysis is the depth, so at the Conversation Back reaches the platform exactly as before.
+  // Slice D CP3: an open PEEK is dismissed first (that Back is spent); otherwise the return, unchanged.
   useEffect(() => {
     if (depth !== 'ANALYSIS') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (sheetBack.current?.() === true) return true;
       cross('CONVERSATION');
       return true;
     });
@@ -725,6 +732,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             fontScale={fontScale}
             envelope={envelope}
             onComposed={current ? beginFade : undefined}
+            registerSheetBack={registerSheetBack}
             top={{
               content: (
                 <AnalysisReturnBar

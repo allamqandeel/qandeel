@@ -45,7 +45,10 @@ const projection: Responder = (request) => {
 };
 
 const OWNERS = [LIVING_ANALYSIS_STAGE_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, COSMOS_TIMELINE_RAIL_TEST_ID, COSMOS_RAIL_SEGMENTS_TEST_ID, 'qandeel-temporal-navigator', 'timeline-command'];
-const owners = (view: RenderResult) => OWNERS.map((id) => view.getByTestId(id));
+// COSMOS-INT-01 Slice D CP3 re-anchor (Contract v1.7 §19.16): the inspection below now opens the Personal PEEK, beneath
+// which the rail stays mounted but is hidden from accessibility (it is covered). The owners are therefore looked up with
+// hidden elements included; the protection is unchanged — each owner is the SAME instance before and after.
+const owners = (view: RenderResult) => OWNERS.map((id) => view.getByTestId(id, { includeHiddenElements: true }));
 
 const element = (h: IntegrationHarness, language: 'en' | 'ar', width: number, height: number) => (
   <LivingAnalysisMap
