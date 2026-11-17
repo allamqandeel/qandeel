@@ -157,8 +157,14 @@ describe('T12-A46…A55 — the real surfaces, in one composition, over one stor
       const props = (node.props ?? {}) as Record<string, unknown>;
       const raw = props.style;
       const style = (Array.isArray(raw) ? Object.assign({}, ...raw.filter(Boolean)) : (raw ?? {})) as Record<string, unknown>;
-      const height = style.minHeight ?? style.height;
-      const width = style.minWidth ?? style.width;
+      // COSMOS-INT-01 Slice D CP3 re-anchor (Contract v1.7 §19.16): the Personal tree now holds CP1's Detail Sheet, whose
+      // handle is a 28-point row with 8 points of `hitSlop` above and below — a 44-point TARGET. The protection is unchanged:
+      // every press TARGET is at least 44 points; the target is the drawn box plus its declared `hitSlop`, and nothing else.
+      const slop = (props.hitSlop ?? {}) as { top?: number; bottom?: number; left?: number; right?: number };
+      const drawnHeight = style.minHeight ?? style.height;
+      const drawnWidth = style.minWidth ?? style.width;
+      const height = typeof drawnHeight === 'number' ? drawnHeight + (slop.top ?? 0) + (slop.bottom ?? 0) : drawnHeight;
+      const width = typeof drawnWidth === 'number' ? drawnWidth + (slop.left ?? 0) + (slop.right ?? 0) : drawnWidth;
       if (typeof height === 'number' && height < 44) undersized.push(`${String(props.testID)} h=${height}`);
       if (typeof width === 'number' && width < 44) undersized.push(`${String(props.testID)} w=${width}`);
     }

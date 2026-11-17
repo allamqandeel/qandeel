@@ -460,7 +460,16 @@ test('13 — R2: Public is a consumer of the ONE Living Analysis surface — no 
   assert.match(screen, /<LivingAnalysisSurface\b/u);
   assert.ok(screen.includes('timeline={null}'), 'no Timeline, no Live, no Return-to-Live');
   assert.match(screen, /top=\{\{\s*content: \(\s*<PublicBand\b[\s\S]*?<SearchRow\b/u, 'the heading and the search stand in the top band');
-  assert.match(screen, /chrome=\{\(composition\) => <FieldChrome\b/u, 'the field speaks in the chrome band');
+  // COSMOS-INT-01 Slice D CONTROLLED RE-ANCHOR (Product Owner, 2026-11-16; Contract v1.5 §19.3 / §19.5, SD-1): the field's
+  // panel, results and states are the content of the shared COSMOS Detail Sheet, in the stage under the top band, and the
+  // chrome band measures nothing. Previous form: `chrome={(composition) => <FieldChrome`, 'the field speaks in the chrome
+  // band'. The protection is unchanged and asserted: what the field says is composed by a SHARED surface (the COSMOS
+  // sheet), never a floating overlay of Public's own — the field file still declares no absolute geometry, no fixed
+  // share of the screen, no gesture and no animation (asserted here and in test 9), and the sheet lives in COSMOS.
+  assert.ok(screen.includes('chrome={() => null}'), 'the chrome band measures nothing');
+  assert.match(screen, /<CosmosDetailSheet phase=\{sheet\.phase\} onSettle=\{sheet\.settle\} glass=\{glass\}/u, 'the field speaks in the shared Detail Sheet');
+  assert.match(screen, /detail=\{<FieldChrome\b/u, 'the same FieldChrome content, in its existing priority');
+  assert.ok(existsSync(new URL(`${MOBILE}/cosmos/product/sheet/CosmosDetailSheet.tsx`, root)), 'the sheet is COSMOS\'s, not Public\'s');
   // COSMOS-INT-01 CONTROLLED RE-ANCHOR (Product Owner D-2, 2026-11-15): the field is the COSMOS stage under the composition
   // (the surface's STAGE presentation), drawn by the same stage view as every world; PublicFieldView is retired from the screen.
   assert.match(screen, /stage=\{\(glass\) => <PublicStage\b/u, 'the field is the stage under the composition');

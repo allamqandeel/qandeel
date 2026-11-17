@@ -31,9 +31,17 @@ export interface PublicDiscussionProps {
   readonly controller: PublicDiscussionController;
   readonly language: ChromeLanguage;
   readonly onBack: () => void;
+  /**
+   * The surface the discussion sits on. `card` (the default) is its own rounded field surface. `sheet` is the COSMOS
+   * Detail Sheet, which already is the surface: no card of its own is drawn inside it.
+   *
+   * This is the Product Owner's narrow §19.13 exception (2026-11-16, Slice D closure pass). It covers only how the
+   * discussion is hosted visually; its data, scrolling, replies, retry, entitlement and composer are unchanged.
+   */
+  readonly surface?: 'card' | 'sheet';
 }
 
-export function PublicDiscussion({ controller, language, onBack }: PublicDiscussionProps) {
+export function PublicDiscussion({ controller, language, onBack, surface = 'card' }: PublicDiscussionProps) {
   const copy = publicDiscussionCopy(language);
   const authorship = publicAuthorshipCopy(language);
   const palette = usePalette();
@@ -59,7 +67,7 @@ export function PublicDiscussion({ controller, language, onBack }: PublicDiscuss
 
   return (
     <View testID={PUBLIC_DISCUSSION_TEST_ID} accessibilityLanguage={language}
-      style={{ backgroundColor: palette.field, borderRadius: 20, paddingBottom: 12, maxHeight: Math.round(screen.height * 0.72) }}>
+      style={{ ...(surface === 'card' ? { backgroundColor: palette.field, borderRadius: 20 } : null), paddingBottom: 12, maxHeight: Math.round(screen.height * 0.72) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, paddingHorizontal: 8, paddingTop: 6 }}>
         <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-public-discussion-back">
           <Text style={style('action', palette.restInk)}>{copy.back}</Text>

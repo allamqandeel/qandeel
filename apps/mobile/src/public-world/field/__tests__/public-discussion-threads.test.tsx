@@ -4,11 +4,12 @@
  * post when pressed; the CP4 Product Copy Gate census. Synthetic data only.
  */
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import type { PublicAuthoringAnswer, PublicDiscussionPage, PublicDiscussionPost } from '../../../runtime-entry';
 import { PublicWorldApiClient } from '../../../runtime-entry';
-import { PublicDiscussion } from '../PublicDiscussion';
+import { PublicDiscussion, PUBLIC_DISCUSSION_TEST_ID } from '../PublicDiscussion';
 import { createPublicDiscussionController, type PublicDiscussionTransport } from '../public-discussion-controller';
 import { PUBLIC_AUTHORSHIP_COPY_GATE, PUBLIC_AUTHORSHIP_COPY_ROWS, publicAuthorshipCopy } from '../../discussion-authorship-copy';
 
@@ -66,6 +67,15 @@ describe('S8A-05 CP4 — the thread surface', () => {
     await flush();
     return view;
   }
+
+  // Slice D closure pass (PO, 2026-11-16; the narrow §19.13 exception): only the Detail Sheet hosts the discussion without
+  // its card (`public-discussion.test.tsx`). Everywhere else, on the default surface, its card is exactly as before.
+  it.each(['ar', 'en'] as const)('outside the sheet the discussion keeps its own card exactly (%s)', async (language) => {
+    const view = await shown(language);
+    const card = StyleSheet.flatten(view.getByTestId(PUBLIC_DISCUSSION_TEST_ID).props.style as StyleProp<ViewStyle>);
+    expect(card.backgroundColor).toEqual(expect.any(String));
+    expect(card.borderRadius).toBe(20);
+  });
 
   it.each(['ar', 'en'] as const)('tags the topic author\'s post in words, read with the author (%s)', async (language) => {
     const copy = publicAuthorshipCopy(language);

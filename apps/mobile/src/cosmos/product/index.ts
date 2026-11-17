@@ -26,3 +26,18 @@ export type { RailScrubBinding, RailScrubGeometry, RailScrubOptions } from './ch
 export { RAIL_SCRUB_GESTURE_TEST_ID, railSegmentAt, useRailScrub } from './chrome/useRailScrub';
 export type { CosmosContextualActsProps } from './chrome/CosmosContextualActs';
 export { COSMOS_ACTS_NOTE_TEST_ID, COSMOS_ACTS_TEST_ID, COSMOS_ACT_TEST_ID_PREFIX, COSMOS_CONTEXT_TEST_ID_PREFIX, COSMOS_OVERVIEW_ACT_TEST_ID, CosmosContextualActs, RAIL_ACTS, chipActs } from './chrome/CosmosContextualActs';
+// Slice D (Contract v1.5 §19): the COSMOS Detail Sheet — its geometry and snap rule, its presentation state, the view.
+export type { SheetGeometry, SheetPhase, SnapInput } from './sheet/sheet-geometry';
+export {
+  SHEET_ADJACENT_SHARE, SHEET_ASSIST_MAX_SHARE, SHEET_ASSIST_SECONDS, SHEET_ASSIST_VELOCITY, SHEET_CLOSE_SHARE, SHEET_DELIBERATE_MIN, SHEET_HANDLE_HEIGHT, SHEET_PEEK_MAX,
+  clampOffset, dragOffset, keyboardOverlap, rubberband, sheetGeometry, sheetOffset, sheetStops, snapPhase,
+} from './sheet/sheet-geometry';
+export type { DetailSheet, SheetContent } from './sheet/useDetailSheet';
+export { useDetailSheet } from './sheet/useDetailSheet';
+export type { CosmosDetailSheetProps } from './sheet/CosmosDetailSheet';
+export type { CosmosPeekWordsProps } from './sheet/CosmosPeekWords';
+export { CosmosPeekWords } from './sheet/CosmosPeekWords';
+export {
+  COSMOS_SHEET_BODY_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_TEST_ID, COSMOS_SHEET_SCROLL_TEST_ID, COSMOS_SHEET_STAGE_TEST_ID, COSMOS_SHEET_TEST_ID,
+  COSMOS_SHEET_ACCENT_TEST_ID, SHEET_ACTIVE_OFFSET_Y, SHEET_FAIL_OFFSET_X, SHEET_REDUCED_FADE_MS, SHEET_RELEASE, SHEET_REVEAL_MS, SHEET_SETTLE, CosmosDetailSheet, CosmosSheetStage, reopeningOwner,
+} from './sheet/CosmosDetailSheet';

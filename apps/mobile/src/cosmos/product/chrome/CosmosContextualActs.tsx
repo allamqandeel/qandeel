@@ -21,6 +21,9 @@
  *     acts and read as two);
  *   - the technical inspection states ("not ready to show yet", "cannot be shown right now", "catching up") keep T-08's
  *     sentence, as one quiet line under the chips, only while an inspection is requested (as the old band did).
+ *
+ * Slice D CP3 (§19.16, SD-4): T-04's context choice has ONE home, the Personal Detail Sheet's PEEK — an instance with no
+ * act and no note (`acts={[]}`, `note={false}`); the rail's instance draws no choice (`choice={false}`). Same executor.
  */
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -87,13 +90,19 @@ export interface CosmosContextualActsProps {
   readonly acts?: readonly ReturnOpportunityId[];
   /** T-04's context choice and the technical note belong to ONE instance (default true); the Overview companion draws neither. */
   readonly extras?: boolean;
+  /**
+   * Slice D CP3 (§19.16, SD-4): the two extras, each on its own (both default to `extras`). The context choice's ONE home
+   * is the Personal PEEK (`choice` only); the rail keeps the technical note and draws no choice.
+   */
+  readonly choice?: boolean;
+  readonly note?: boolean;
   /** `wrap` (the default) wraps the chips; `line` is ONE horizontally scrollable row that never wraps and never grows (§16 A-3). */
   readonly testID?: string;
 }
 
 const NOOP_UNSUBSCRIBE = () => undefined;
 
-export function CosmosContextualActs({ surface, language, projection, exactReturnOrigin, preview, liveContext, onReturnOutcome, onMapOutcome, acts: allowed, extras = true, testID = COSMOS_ACTS_TEST_ID }: CosmosContextualActsProps) {
+export function CosmosContextualActs({ surface, language, projection, exactReturnOrigin, preview, liveContext, onReturnOutcome, onMapOutcome, acts: allowed, extras = true, choice: withChoice = extras, note: withNote = extras, testID = COSMOS_ACTS_TEST_ID }: CosmosContextualActsProps) {
   useSyncExternalStore(surface.store.subscribe, surface.store.getState);
   const subscribe = useCallback((listener: () => void) => (preview === null || preview === undefined ? NOOP_UNSUBSCRIBE : preview.subscribe(listener)), [preview]);
   const getSnapshot = useCallback(() => (preview === null || preview === undefined ? null : preview.getSnapshot()), [preview]);
@@ -158,8 +167,8 @@ export function CosmosContextualActs({ surface, language, projection, exactRetur
     onMapOutcome?.(outcome);
   };
 
-  const note = extras && model.inspection.requested && TECHNICAL.has(model.inspection.render.kind) ? inspectionSentence(language, model.inspection.render) : null;
-  const choices = extras && model.context.choiceAvailable ? model.context.appearances : [];
+  const note = withNote && model.inspection.requested && TECHNICAL.has(model.inspection.render.kind) ? inspectionSentence(language, model.inspection.render) : null;
+  const choices = withChoice && model.context.choiceAvailable ? model.context.appearances : [];
   if (acts.length === 0 && choices.length === 0 && note === null) return null;
   const choiceHint = `${contextChoiceTitle(language)} ${contextOrderingNote(language)}`;
 

@@ -19,6 +19,8 @@ import { publicCopy } from '../../public-world';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
+import { COSMOS_SHEET_TEST_ID } from '../../cosmos/product';
+import { resize } from '../../responsive/__fixtures__/composition';
 
 jest.mock('expo-status-bar', () => {
   const { createElement } = jest.requireActual<typeof import('react')>('react');
@@ -199,6 +201,22 @@ describe('S4-01 Journey C — My World ↔ Shared World', () => {
     await press(view, 'qandeel-switcher-shared_world');
     const atRoot = live().length;
     await press(view, `qandeel-shared-world-${WORLD}`);
+    expect(live().length).toBe(atRoot + 1);
+    // RE-ANCHORED by COSMOS-INT-01 Slice D CP2 (PO, 2026-11-16, Contract v1.6 §19.15, D-12 / SD-5; validation only): this
+    // World's field is empty, and an empty field is said in the COSMOS Detail Sheet's PEEK. The area's ONE Back handler
+    // (still the only listener the World adds) dismisses an open sheet first — presentation only, the World stays. The
+    // protection is unchanged and asserted after it: the next Back leaves the World for the Shared root, the World's handler
+    // is removed, and at the root nothing returns to the Personal world.
+    await resize(view, 400, 800, { mapHeight: 800 });
+    expect(view.getByTestId('qandeel-shared-field-empty')).toBeTruthy();
+    expect(view.getByTestId(COSMOS_SHEET_TEST_ID).props.pointerEvents).not.toBe('none');
+    await act(async () => {
+      live()[live().length - 1].handler({ type: 'hardwareBackPress', timeStamp: 0 } as never);
+      await settle();
+    });
+    expect(view.getByTestId(COSMOS_SHEET_TEST_ID, { includeHiddenElements: true }).props.pointerEvents).toBe('none');
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-shared-root')).toBeNull();
     expect(live().length).toBe(atRoot + 1);
     await act(async () => {
       live()[live().length - 1].handler({ type: 'hardwareBackPress', timeStamp: 0 } as never);
