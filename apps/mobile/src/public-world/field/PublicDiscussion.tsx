@@ -58,7 +58,7 @@ export function PublicDiscussion({ controller, language, onBack, surface = 'card
   const screen = useWindowDimensions();
   const [text, setText] = useState('');
   const writing = language === 'ar' ? 'rtl' : 'ltr';
-  const style = (role: 'body' | 'supporting' | 'metadata' | 'statement' | 'action', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
+  const style = (role: 'body' | 'supporting' | 'metadata' | 'statement' | 'section' | 'action', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
   const authorOf = (post: PublicDiscussionPost) => post.author.label ?? copy.someone;
 
   const send = () => {
@@ -72,7 +72,8 @@ export function PublicDiscussion({ controller, language, onBack, surface = 'card
         <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-public-discussion-back">
           <Text style={style('action', palette.restInk)}>{copy.back}</Text>
         </Control>
-        <Text accessibilityRole="header" style={style('statement', palette.primary)}>{copy.discussion}</Text>
+        {/* In the Detail Sheet the heading is a section of the sheet, not a screen title (the PO's section role, 2026-11-16). */}
+        <Text testID="qandeel-public-discussion-heading" accessibilityRole="header" style={style(surface === 'sheet' ? 'section' : 'statement', palette.primary)}>{copy.discussion}</Text>
       </View>
       <ScrollView ref={scroll} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, rowGap: 12, paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
         {state.status === 'LOADING' ? (

@@ -38,7 +38,7 @@ import { PublicPlacePreparation } from '../../../public-authoring/PublicPlacePre
 import { CANONICAL_VISUAL } from '../../../conversation/visual/canonical-visual.generated';
 import type { PublicAuthoringAnswer, PublicFieldEntry, PublicFieldPanel } from '../../../runtime-entry';
 import { PublicWorldApiClient, createManualForegroundSignal, type ForegroundSignal } from '../../../runtime-entry';
-import { PUBLIC_FIELD_COPY_GATE, publicFieldCopy } from '../field-copy';
+import { PUBLIC_FIELD_COPY_GATE, PUBLIC_FIELD_PLACEHOLDER_COPY_GATE, publicFieldCopy } from '../field-copy';
 import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
 import { focusField, panField, wholeWorldCamera, zoomField, type PublicFieldCamera } from '../public-field-camera';
@@ -972,5 +972,19 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     expect(publicFieldCopy('en').placeReady).toBe('Its place has been set.');
     expect(publicFieldCopy('ar').back).toBe('رجوع');
     expect(publicFieldCopy('en').analysisItem).toBe('QANDEEL analysis');
+  });
+
+  // UI-POLISH-01 closure pass, Issue D (Product Owner, 2026-11-16): the compact field shows a shorter English placeholder;
+  // its accessible name stays the full approved label; the Arabic is unchanged and written once.
+  it.each(['ar', 'en'] as const)('the search field shows the approved placeholder; its accessible name stays the full label (%s)', async (language) => {
+    expect(PUBLIC_FIELD_PLACEHOLDER_COPY_GATE.status).toBe('UI-POLISH-01 PRODUCT COPY GATE — CLOSED — 1 row APPROVED (Product Owner, 2026-11-16)');
+    const copy = publicFieldCopy(language);
+    expect(copy.searchPlaceholder).toBe(language === 'ar' ? copy.searchLabel : 'Experience, feeling, or meaning');
+    const source = readFileSync(join(dir, 'field-copy.ts'), 'utf8');
+    expect(source.split('البحث عن تجربة أو شعور أو معنى')).toHaveLength(2);
+    const { view } = await mountArea(language, [E1]);
+    const search = view.getByTestId('qandeel-public-search');
+    expect(search.props.placeholder).toBe(copy.searchPlaceholder);
+    expect(search.props.accessibilityLabel).toBe(copy.searchLabel);
   });
 });

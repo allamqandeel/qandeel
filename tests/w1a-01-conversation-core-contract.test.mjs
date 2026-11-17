@@ -39,8 +39,10 @@ const LAYER_PRODUCTION = listFiles(LAYER).filter((file) => /\.tsx?$/u.test(file)
 // §2 — Product copy: exactly the approved strings, in one place, and nothing invented
 // ---------------------------------------------------------------------------------------------
 
+// UI-POLISH-01 RE-ANCHOR (Product Owner, 2026-11-16): the composer placeholder «كلامك هنا» is replaced by the approved «اكتب هنا»
+// (English 'Write here' unchanged). The protection is the same: exactly the approved strings, in the one copy module.
 const APPROVED = {
-  ar: ['المحادثة', 'تحليل المحادثة', 'إعادة المحاولة', 'قنديل', 'كلامك هنا', 'رسالتك لقنديل', 'إرسال', 'كلامك: ${text}', 'قنديل: ${text}',
+  ar: ['المحادثة', 'تحليل المحادثة', 'إعادة المحاولة', 'قنديل', 'اكتب هنا', 'رسالتك لقنديل', 'إرسال', 'كلامك: ${text}', 'قنديل: ${text}',
     'في انتظار رد قنديل', 'تعذّر التأكد من إرسال الرسالة.', 'تعذّر إرسال الرسالة.', 'تعذّر إكمال رد قنديل.', 'تعذّر تحميل المحادثة.'],
   en: ['Conversation', 'Analysis', 'Analysis of this conversation', 'Try again', 'QANDEEL', 'Write here', 'Your message to QANDEEL', 'Send',
     'You: ${text}', 'QANDEEL: ${text}', "Waiting for QANDEEL's reply", "It couldn't be confirmed that the message was sent.", "The message wasn't sent.",

@@ -17,6 +17,7 @@ import { resize, subtree } from '../../../responsive/__fixtures__/composition';
 import { getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { COSMOS_SHEET_BODY_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_GESTURE_TEST_ID, COSMOS_SHEET_HANDLE_TEST_ID, COSMOS_SHEET_TEST_ID } from '../../../cosmos/product';
 import { canonicalWorldAddress } from '../../../map/world';
+import { typeStyle } from '../../../conversation';
 import type { PublicAuthoringAnswer, PublicDiscussionPage, PublicDiscussionPost, PublicFieldEntry, PublicFieldPanel } from '../../../runtime-entry';
 import { ActivityApiClient, PublicWorldApiClient } from '../../../runtime-entry';
 import { createPublicWorldController } from '../../public-world-controller';
@@ -327,6 +328,18 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
     expect(view.getByTestId(`qandeel-public-post-${ROOT.id}`)).toBeTruthy();
     expect(view.getByTestId('qandeel-public-composer')).toBeTruthy();
     // Its card outside the sheet: `public-discussion-threads.test.tsx`.
+  });
+
+  // UI-POLISH-01 closure pass (PO, 2026-11-16): in the sheet «النقاش» / Discussion is a SECTION heading (20 / 32, Medium),
+  // not the 26 / 41 screen title. It is still the one header, in the same words.
+  it.each(['ar', 'en'] as const)('in the sheet «النقاش» uses the section-heading role (%s)', async (language) => {
+    const { view } = await mount(language);
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    const heading = view.getByTestId('qandeel-public-discussion-heading');
+    expect(heading.props.children).toBe(publicDiscussionCopy(language).discussion);
+    expect(heading.props.accessibilityRole).toBe('header');
+    expect(flat(heading.props.style)).toMatchObject({ ...typeStyle('section'), fontFamily: 'Estedad-Medium', fontSize: 20, lineHeight: 32 });
   });
 });
 

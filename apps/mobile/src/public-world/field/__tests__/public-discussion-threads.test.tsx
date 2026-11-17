@@ -7,6 +7,7 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
+import { typeStyle } from '../../../conversation';
 import type { PublicAuthoringAnswer, PublicDiscussionPage, PublicDiscussionPost } from '../../../runtime-entry';
 import { PublicWorldApiClient } from '../../../runtime-entry';
 import { PublicDiscussion, PUBLIC_DISCUSSION_TEST_ID } from '../PublicDiscussion';
@@ -75,6 +76,9 @@ describe('S8A-05 CP4 — the thread surface', () => {
     const card = StyleSheet.flatten(view.getByTestId(PUBLIC_DISCUSSION_TEST_ID).props.style as StyleProp<ViewStyle>);
     expect(card.backgroundColor).toEqual(expect.any(String));
     expect(card.borderRadius).toBe(20);
+    // …and its heading stays the screen-title role there (the section role is the sheet's).
+    const heading = StyleSheet.flatten(view.getByTestId('qandeel-public-discussion-heading').props.style);
+    expect(heading).toMatchObject({ ...typeStyle('statement'), fontSize: 26, lineHeight: 41 });
   });
 
   it.each(['ar', 'en'] as const)('tags the topic author\'s post in words, read with the author (%s)', async (language) => {

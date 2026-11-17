@@ -807,3 +807,26 @@ NOT closed and NOT merged**: PR #317 stays unmerged (pause head `430118a`, then 
   `DEFERRED — OWNED`, unchanged. LA-VIS-01 inherits no item and admits none.
 - **Not performed.** No S5-03C or S5-04 work, no Shared visual integration and no merge. The S5-03B Copy Gate was closed afterwards, by the Product
   Owner's own decision (§14), not by LA-VIS-01.
+
+## 28. Later Product Owner revision — the search field's visible placeholder (UI-POLISH-01, 2026-11-16)
+
+The Product Owner's "Final Closure Task" (2026-11-16, Issue D) shortens what the compact 44-point Public search field
+SHOWS in English. The full `searchLabel` was clipped at the field's end.
+
+**`searchPlaceholder`** is a new, separate row in `public-world/field/field-copy.ts`, under its own one-row gate
+`PUBLIC_FIELD_PLACEHOLDER_COPY_GATE`: `UI-POLISH-01 PRODUCT COPY GATE — CLOSED — 1 row APPROVED (Product Owner, 2026-11-16)`.
+- English: "Experience, feeling, or meaning".
+- Arabic: the S5-03B `searchLabel` «البحث عن تجربة أو شعور أو معنى», unchanged. It is REUSED by reference and written once.
+
+**Unchanged:**
+- The field's accessible name stays the full `searchLabel` in both languages.
+- The S5-03B gate (13 rows APPROVED, §14), its census and the Relations search (S5-03C reuses `searchLabel`).
+- The search action, the field's height and its width.
+
+**Device proof (plain Release `e2695ece`):**
+- On the HONOR (411 dp at 1.0 font scale) the English placeholder shows in full in a 44.0 dp field. Arabic is unchanged.
+- On the emulator, with its own settings restored afterwards, the field stays 44 dp in every configuration:
+  - English fits at font scale 1.0 and 1.3 on a 411 dp screen, and at 1.0 on a 320 dp screen;
+  - at 1.3 on 320 dp, and at 2.0, its last letters are cut, as is the unchanged Arabic placeholder's;
+  - the full meaning stays the accessible name.
+- Widening or growing the field to fit was not authorised (the PO kept 44 dp and the width).
