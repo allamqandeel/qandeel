@@ -1714,7 +1714,50 @@ Overview's Back is unchanged (SD-9).
 
 #### CP3 delivery record (2026-11-17)
 
-(Completed in the closing documentation commit.)
+**Commits.**
+- `c96352b9` on `cosmos/cosmos-int-01-slice-d` (#397): the implementation and the tests.
+- `ba9e9873`: this §19.16 and the Current State locator.
+- The closing documentation commit that carries this record.
+- `cosmos/ui-polish-01` (#398) takes them by `--no-ff` merges (`c284fa1d` and the closing merge). There, the golden conflicted with UI-POLISH-01's typography re-anchor. Both notes are kept, and the golden was regenerated once: 13/13 cases are identical to `bb8bcedc` after stripping exactly the CP3 additions.
+
+**Local verification.**
+- `personal-detail-sheet.test.tsx`: 22 tests.
+- Negative proofs by in-place revert:
+  - without the sheet line in the Back handler, the PEEK is not closed by Back;
+  - with the rail's choice on, the chips are duplicated (4 instead of 2).
+- Focused suites (Personal, `cosmos/product`, orientation-chrome, temporal-navigation, golden, continuity, composition): 45 / 45 suites, 544 tests.
+- Return-navigation and the Shared and Public sheets: 18 suites.
+- Full mobile jest on the ui-polish merge: 296 / 300 suites. The 4 failing suites are the known local-only baseline: `depth` and `w2-account-access` (Arabic host locale) and `proof-root*`, which imports no CP3 file.
+- `tsc` and ESLint are clean.
+- All related root contracts and `task-closure-governance` pass.
+
+**HONOR proof.**
+- Release APK from the ui-polish head `c284fa1d`, arm64-v8a, sha256 `aadfb88e9e58f0a19fd230dcec4ad383cec5994547c22feaff96dd63eea221dd`, installed with the checksum guard.
+- Script `slice-d-cp3-proof.sh`: guarded on focus before and after every tap. It never swipes into the top band and presses Back only away from a root.
+- Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-d/cp3/honor-ar/` and `honor-en/`.
+
+Results in ar-EG and en-US (identical in outcome):
+
+| # | Check | Result |
+|---|---|---|
+| 1 | A tap on the red Thread inspects it and opens the PEEK | PASS |
+| 2 | The PEEK holds «خيط» / "Thread", T-08's sentence and «الانتقال إلى هذا الموضع» / "Go to this place". No lineage and no choice appear because of F-1 (production resolves no inspection). The resolved lineage and choice are jest-proven | PASS, within F-1 |
+| 3 | The PEEK's top is at 2237 px, above the rail's top at 2308 px, so it covers the rail. The rail leaves the accessibility tree while the PEEK is open. Closing restores the rail with its acts and the T-08 note | PASS |
+| 4 | Closing by a handle drag gives CLOSED with the same level and the inspected node at the same pixel (ar 213,1076; en 189,1062). The inspection ring stays lit | PASS |
+| 5 | A tap on the same node reopens the PEEK with the same statement | PASS |
+| 6 | Conversation keeps the same band bounds with the PEEK open and closed. Replay is not offered by this proof world, neither at rest nor open, so it cannot appear in the PEEK | PASS (Replay: nothing to place) |
+| 7 | Back takes PEEK to CLOSED and stays in the Analysis. One pinch IN on the target goes from the whole world to threads, centred 1 px from the usable centre (#396). The next Back crosses to the Conversation | PASS |
+| 8 | Frames: 60.0–60.1 fps everywhere (at rest still and pan, PEEK still and pan, zoom IN), with 0 stalls over 50 ms. One single 33 ms frame in one ar pan. No clipping or interaction conflict in the captures | PASS |
+
+**Limits stated, not hidden.**
+- F-1 means the device cannot show lineage, the context choice or a resolved statement. Those are proven in jest only.
+- In Arabic the Go chip sits at the row's start on the left, while the words are right-aligned. This follows U-9 (the contextual chips' row runs left → right in both languages). It is recorded for the PO's review and was not changed.
+- The enlarged-text in-PEEK scroll (the engineering note above) is jest-proven only.
+- No TalkBack proof was run (PO scope, 2026-11-08).
+
+**CI.** All checks are green on #397 `ba9e9873` and #398 `c284fa1d`: the fast mobile gate, `verify-api`, the Android and iOS builds and smokes, and validation evidence. The two 0-second rows on #398 come from a duplicate run that concurrency cancelled.
+
+**Stopped for the PO's review.** CP4, Slice E and Replay were not started. Nothing is merged; merge only on «ادمج».
 
 ---
 
