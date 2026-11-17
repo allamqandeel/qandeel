@@ -1,0 +1,10 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): one 600 ms swipe from 70%,50% to 30%,50% of the screen.
+# Every value is a literal: Maestro 2.10 resolves a swipe's start, end, direction and duration BEFORE ${} substitution
+# (R3/R5 evidence: "Parsing Failed" on every parameterised swipe).
+appId: com.qandeel.mobile
+---
+- swipe:
+    waitToSettleTimeoutMs: 1500
+    start: "70%,50%"
+    end: "30%,50%"
+    duration: 600

@@ -150,12 +150,12 @@ personal() {
   focus_object p05-reopen qandeel-personal-peek
   S p06-close swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S p07-double-tap dtap-point.yaml "P=50%,48%"
-  S p08-pan swipe.yaml "S=72%,48%" "E=28%,48%"
+  S p08-pan swipe-pan-48.yaml
   S p09-overview tap.yaml ID=qandeel-cosmos-overview IDX=0
   S p10-stage-back tap.yaml ID=qandeel-cosmos-back IDX=0
   S p11-moment tap.yaml "ID=qandeel-cosmos-timeline-rail:moment:.*" IDX=1
   S p12-follow-live tap.yaml ID=qandeel-cosmos-timeline-rail:live IDX=0
-  S p13-ios-edge-swipe swipe.yaml "S=1%,50%" "E=75%,50%"
+  S p13-ios-edge-swipe swipe-edge.yaml
   S p14-to-conversation timed-id.yaml NAME=personal-to-conversation TAP=qandeel-depth-to-conversation WAIT=qandeel-conversation-thread
   rec_stop
 }
@@ -170,13 +170,13 @@ shared() {
   sleep 3; shot s02b-field-settled
   focus_object s03-focus qandeel-shared-panel-meaning
   S s04-expand swipe-id-up.yaml ID=cosmos-detail-sheet-handle
-  S s05-scroll swipe.yaml "S=50%,82%" "E=50%,42%"
+  S s05-scroll swipe-scroll-82-42.yaml
   S s06-conversation scroll-tap.yaml ID=qandeel-shared-panel-conversation
   S s07-back-from-conversation tap.yaml ID=qandeel-shared-back IDX=0
   S s08-collapse swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S s09-close swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S s10-double-tap dtap-point.yaml "P=50%,50%"
-  S s11-pan swipe.yaml "S=70%,50%" "E=30%,50%"
+  S s11-pan swipe-pan-50.yaml
   S s12-back tap.yaml ID=qandeel-shared-back IDX=0
   S s13-back-again tap.yaml ID=qandeel-shared-back IDX=0
   rec_stop
@@ -203,26 +203,26 @@ public() {
   rec_start public
   S u02-sections tap.yaml ID=qandeel-public-section-control IDX=0
   S u03-sections-expanded swipe-id-up.yaml ID=cosmos-detail-sheet-handle
-  S u04-sections-scrolled swipe.yaml "S=50%,85%" "E=50%,35%"
+  S u04-sections-scrolled swipe-scroll-85-35.yaml
   S u05-section-chosen tap.yaml "ID=qandeel-public-section-[^c].*" IDX=3
   S u05b-close swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S u05c-close swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S u06-search type.yaml ID=qandeel-public-search "TEXT=ال"
   S u07-results-expanded swipe-id-up.yaml ID=cosmos-detail-sheet-handle
-  S u08-results-scrolled swipe.yaml "S=50%,85%" "E=50%,35%"
+  S u08-results-scrolled swipe-scroll-85-35.yaml
   S u09-result-selected tap.yaml "ID=qandeel-public-search-result-.*" IDX=0
   S u10-zero-results type.yaml ID=qandeel-public-search TEXT=zzzq
   S u10b-clear clear.yaml ID=qandeel-public-search
   focus_object u11-focus qandeel-public-panel
   S u12-expanded swipe-id-up.yaml ID=cosmos-detail-sheet-handle
-  S u13-content-scrolled swipe.yaml "S=50%,85%" "E=50%,40%"
+  S u13-content-scrolled swipe-scroll-85-40.yaml
   S u14-discussion scroll-tap.yaml ID=qandeel-public-panel-discussion
-  S u15-discussion-scrolled swipe.yaml "S=50%,80%" "E=50%,45%"
+  S u15-discussion-scrolled swipe-scroll-80-45.yaml
   S u16-discussion-back tap.yaml ID=qandeel-public-discussion-back IDX=0
   S u17-collapse swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S u18-close swipe-id-down.yaml ID=cosmos-detail-sheet-handle
   S u19-double-tap dtap-point.yaml "P=50%,55%"
-  S u20-pan swipe.yaml "S=70%,55%" "E=30%,55%"
+  S u20-pan swipe-pan-55.yaml
   rec_stop
 }
 

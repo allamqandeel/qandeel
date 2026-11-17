@@ -106,6 +106,8 @@ jobs:
       actions: read
     strategy:
       fail-fast: false
+      # R6: GitHub could not acquire macOS arm64 runners for 4 of 6 queued jobs in run 44174690317 ("not acquired by
+      # Runner of type hosted even after multiple attempts"); at most three at a time are queued.
       matrix:
         # One simulator and ONE system language per job (run 44085259648: one job for both languages ran past its
         # evidence budget). The language is the simulator's own, set before the app is launched.
