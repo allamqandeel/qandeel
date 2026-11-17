@@ -1,0 +1,31 @@
+name: COSMOS-INT-01 Slice E — iOS baseline audit digest
+# VALIDATION ONLY. Condenses the scene artifacts of one audit run (AUDIT_RUN_ID) into a small digest (contact sheets,
+# step tables, failure lines, accessibility ids) for review over a slow link. Reads artifacts; changes nothing.
+# Re-run by pushing to the digest branch.
+on:
+  push:
+    branches: ['cosmos/slice-e-ios-baseline-digest']
+permissions:
+  contents: read
+  actions: read
+env:
+  AUDIT_RUN_ID: '44156166267'
+jobs:
+  digest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Download every scene and record artifact of the audit run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cosmos-ios-audit-*
+          path: ${{ runner.temp }}/in
+          run-id: ${{ env.AUDIT_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Tools
+        run: command -v montage >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }; command -v jq
+      - name: Digest
+        run: bash scripts/cosmos-slice-e-ios/digest.sh "$RUNNER_TEMP/in" "$RUNNER_TEMP/digest"
+      - uses: actions/upload-artifact@v4
+        with: {name: 'cosmos-ios-audit-digest-${{ env.AUDIT_RUN_ID }}', path: '${{ runner.temp }}/digest'}
