@@ -127,6 +127,9 @@ focus_object() {
   [ "$p" = none ] && return 1
   S "$name-tap" tap-point.yaml "P=$p"
   has "$expect" "$name-tap" && { say "  focus: by a tap"; return 0; }
+  # Probe 5: re-aimed from the frame after the first tap (the canvas moved: FAR discloses, MID/NEAR focus).
+  p="$(cd "$ROOT" && node "$HERE/nodes.mjs" --any "$CUR/$name-tap.png" "$wpt")"; say "  focus: re-aimed node core at $p"
+  [ "$p" = none ] && return 1
   S "$name-tap2" tap-point.yaml "P=$p"
   has "$expect" "$name-tap2" && { say "  focus: by a second tap (FAR discloses, then focuses)"; return 0; }
   return 1
@@ -271,11 +274,20 @@ landscape() {
   S l02-conv-land orient.yaml O=LANDSCAPE_LEFT
   S l03-analysis-land timed-id.yaml NAME=landscape-door TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail
   S l04-portrait orient.yaml O=PORTRAIT
+  S l04r-return timed-id.yaml NAME=landscape-return TAP=qandeel-depth-to-conversation WAIT=qandeel-switcher-shared_world
   S l05-seed link.yaml URL=qandeel://s401-proof/shared-field/seed
   S l06-shared tap.yaml ID=qandeel-switcher-shared_world IDX=0
   S l07-world tap-text.yaml "TEXT=$FIX" IDX=0
   S l08-shared-land orient.yaml O=LANDSCAPE_LEFT
   S l09-portrait orient.yaml O=PORTRAIT
+  # Probe 5: Public, portrait and landscape.
+  S l10-public-seed link.yaml URL=qandeel://s401-proof/public/seed
+  S l11-public tap.yaml ID=qandeel-switcher-public_world IDX=0
+  S l12-public-allow link.yaml URL=qandeel://s401-proof/public/allow
+  SETTLE=4 S l13-public-field wait-id.yaml ID=qandeel-public-search T=30000
+  S l14-public-land orient.yaml O=LANDSCAPE_LEFT
+  S l15-public-sections tap.yaml ID=qandeel-public-section-control IDX=0
+  S l16-portrait orient.yaml O=PORTRAIT
 }
 
 enlarged() {
@@ -286,6 +298,8 @@ enlarged() {
     focus_object e03-peek qandeel-personal-peek
   }
   personal_short
+  # Probe 5: the Analysis depth is full-screen (no World switcher); a person returns to the Conversation first.
+  S e03r-return timed-id.yaml NAME=enlarged-return TAP=qandeel-depth-to-conversation WAIT=qandeel-switcher-shared_world
   S e04-seed link.yaml URL=qandeel://s401-proof/shared-field/seed
   S e05-shared tap.yaml ID=qandeel-switcher-shared_world IDX=0
   S e06-world tap-text.yaml "TEXT=$FIX" IDX=0

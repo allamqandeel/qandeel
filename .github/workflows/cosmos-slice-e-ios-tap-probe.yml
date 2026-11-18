@@ -5,7 +5,7 @@
 name: cosmos-slice-e-ios-tap-probe
 on:
   push:
-    branches: ['cosmos/slice-e-ios-baseline-probe']
+    branches: ['cosmos/slice-e-ios-baseline-probe', 'cosmos/slice-e-ios-baseline-probe5']
 concurrency:
   group: cosmos-slice-e-ios-tap-probe-${{ github.ref }}
   cancel-in-progress: true
@@ -24,9 +24,17 @@ env:
 jobs:
   probe:
     if: ${{ !contains(github.event.head_commit.message, '[sheet-only]') }}
-    name: iOS cross-world probe — medium en
+    name: iOS probe 5 — ${{ matrix.size }} ${{ matrix.lang }} ${{ matrix.unit }}
     runs-on: macos-26
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # Probe 5: the audit's enlarged and landscape scenes, with the harness fixes (return to the Conversation before a
+        # World switch; the second focus tap re-aimed; Public added to landscape). Same proof binary, same scripts otherwise.
+        include:
+          - {size: small, lang: ar, langtag: ar-EG, langloc: ar_EG, device: 'iPhone SE (3rd generation)|iPhone 16e|iPhone 13 mini', unit: enlarged}
+          - {size: medium, lang: en, langtag: en-US, langloc: en_US, device: 'iPhone 17', unit: landscape}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
@@ -46,8 +54,9 @@ jobs:
         with: {distribution: temurin, java-version: '17'}
       - uses: actions/download-artifact@v4
         with: {name: cosmos-ios-proof-app, path: '${{ runner.temp }}/proof-app', run-id: '${{ env.PROOF_RUN_ID }}', github-token: '${{ github.token }}'}
-      - name: Boot the medium simulator
-        run: bash scripts/cosmos-slice-e-ios/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence"
+      - name: Boot the simulator
+        env: {CANDIDATES: '${{ matrix.device }}'}
+        run: bash scripts/cosmos-slice-e-ios/sim.sh "$CANDIDATES" "$RUNNER_TEMP/evidence"
       - name: Install the proof app (checksum recorded)
         run: |
           cd "$RUNNER_TEMP/proof-app" && shasum -a 256 -c sha256.txt && ditto -x -k qandeel-ios-proof.app.zip .
@@ -61,45 +70,25 @@ jobs:
           unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
           mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Install idb (second, independent touch route; a failure leaves route B NOT RUN)
-        continue-on-error: true
+      - name: Set the simulator language and prove the driver
+        env: {LANGTAG: '${{ matrix.langtag }}', LANGLOC: '${{ matrix.langloc }}', LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" setup
+      - name: Scene
+        timeout-minutes: 50
+        env: {LANGX: '${{ matrix.lang }}'}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" "${{ matrix.size }}-${{ matrix.lang }}" "${{ matrix.unit }}" || true
+      - name: Contact sheet on the runner (screenshots only; the slow local link cannot take the raw evidence)
+        if: ${{ !cancelled() }}
         run: |
-          brew tap facebook/fb && brew install facebook/fb/idb-companion
-          python3 -m venv "$RUNNER_TEMP/idbenv" && "$RUNNER_TEMP/idbenv/bin/pip" install --quiet fb-idb
-          echo "$RUNNER_TEMP/idbenv/bin" >> "$GITHUB_PATH"
-      - name: Set the simulator language (en-US) and prove the driver
-        env: {LANGTAG: en-US, LANGLOC: en_US, LANGX: en}
-        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-en setup
-      - name: Tap probe
-        timeout-minutes: 40
-        run: |
-          command -v idb
-          LANGX=en bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-en cross || true
+          brew install imagemagick > /dev/null 2>&1 || true
+          d="$RUNNER_TEMP/evidence/${{ matrix.lang }}/${{ matrix.unit }}"; out="$RUNNER_TEMP/sheet"; mkdir -p "$out"
+          cp "$RUNNER_TEMP/evidence/"*.tsv "$RUNNER_TEMP/evidence/runner.log" "$out/" 2>/dev/null || true
+          cd "$d" && args=(); for f in $(ls *.png | sort); do args+=(-label "${f%.png}" "$f"); done
+          magick montage "${args[@]}" -geometry 300x+4+4 -tile 6x -pointsize 18 -quality 70 "$out/sheet.jpg" || montage "${args[@]}" -geometry 300x+4+4 -tile 6x -pointsize 18 -quality 70 "$out/sheet.jpg"
+          ls -la "$out"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
-        with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
-  sheet:
-    # A contact sheet of a finished probe run (PROBE_RUN_ID), so the screenshots can be read over a slow link.
-    name: Probe contact sheet
-    needs: [probe]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env: {PROBE_RUN_ID: '44193183438'}
-    steps:
-      - uses: actions/download-artifact@v4
-        with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/p', run-id: "${{ needs.probe.result == 'skipped' && env.PROBE_RUN_ID || github.run_id }}", github-token: '${{ github.token }}'}
-      - name: Build the sheets
-        run: |
-          sudo apt-get install -y -qq imagemagick > /dev/null
-          mkdir -p "$RUNNER_TEMP/out"; cp "$RUNNER_TEMP/p/"*.tsv "$RUNNER_TEMP/p/runner.log" "$RUNNER_TEMP/out/" 2>/dev/null || true; cd "$RUNNER_TEMP/p/en/cross"
-          for w in x; do ls ${w}*.png >/dev/null 2>&1 || continue
-            ls ${w}*.png | sort > "$RUNNER_TEMP/list"
-            args=(); while read -r f; do args+=(-label "${f%.png}" "$f"); done < "$RUNNER_TEMP/list"
-            montage "${args[@]}" -geometry 300x+4+4 -tile 6x -pointsize 18 -quality 70 "$RUNNER_TEMP/out/sheet-$w.jpg"
-          done
-          true; cp *.point.json p0.idb.json p1.idb.json p-dtap.idb.json s-dtap.idb.json "$RUNNER_TEMP/out/" 2>/dev/null || true
-          for j in u00-field; do jq -r '.. | objects | select(.attributes? != null) | .attributes | select((.["resource-id"]//"")!="") | "\(.["resource-id"]) \(.bounds//"")"' "$j.json" > "$RUNNER_TEMP/out/$j.ids" 2>/dev/null || true; done
-          ls -la "$RUNNER_TEMP/out"
+        with: {name: 'cosmos-ios-probe5-sheet-${{ matrix.size }}-${{ matrix.lang }}-${{ matrix.unit }}', path: '${{ runner.temp }}/sheet', if-no-files-found: warn}
       - uses: actions/upload-artifact@v4
-        with: {name: cosmos-ios-tap-probe-sheet, path: '${{ runner.temp }}/out'}
+        if: ${{ !cancelled() }}
+        with: {name: 'cosmos-ios-probe5-${{ matrix.size }}-${{ matrix.lang }}-${{ matrix.unit }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
