@@ -23,8 +23,8 @@ env:
   IOS_RUNTIME_SUFFIX: iOS-26-5
   # The run of THIS workflow whose app binary is reused (the app is unchanged: apps/mobile tree 1eff3991).
   REUSE_APP_RUN_ID: '44297426329'
-  # Pass 4 (PO review 2026-11-18, item 2): the Personal pinch / pan with the zoomed-in pan measured (X-PAN-ZOOMED).
-  # Nothing that passed is rerun except this one test, which carries the new measurement.
+  # Pass 5 (R7): the Personal pinch / pan only, with X-PAN-ZOOMED identified on node cores and a mark brought into view.
+  # This diagnostic tree also carries R4's runner-only add-uitest-target.rb (UITESTS_ONLY), which R7 removed from the PR.
   ONLY: >-
     testPersonalPinchStepsInAndThePanStillMovesTheWorld
 jobs:

@@ -8,7 +8,11 @@
 //   - X-PAN-AFTER-PINCH: the drag after the pinch round trip moves the world by the drag (`pan-p-before` / `pan-p-after`);
 //   - X-PAN-ZOOMED: the drag while the stage is zoomed in (one step IN) moves the world by the drag (`pan-z-before` /
 //     `pan-z-after`). A step IN magnifies eight times, so ONE mark is in view by construction: one matched core suffices
-//     there, but it must be unambiguous (the only core within 15° of its hue in both frames). Same tolerance as X-PAN.
+//     there, but its identity is checked on the cores found BEFORE the one-per-hue reduction (which would hide a rival):
+//     in each frame it must be the only in-band core within 20° of its hue (the reduction's own satellite radius), it
+//     must be a node core of at least 12 pixels (twice the detector's 6-pixel floor: recorded static specks and stars
+//     are 6 px, node cores 15-140 px, the zoomed mark core 20 px), and its size must agree between the frames (0.5x-2x);
+//     otherwise NOT TESTED. Same tolerance as X-PAN.
 // usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir> <widthPoints> <results.tsv>
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -54,12 +58,17 @@ const text = (name) => (files.has(name) ? fs.readFileSync(files.get(name), 'utf8
 const WPT = Number(wptArg) || 0;
 // Node cores inside the Personal stage only: below its control row and above its timeline rail (iPhone 17 points).
 const STAGE_TOP = 165, STAGE_BOTTOM = 730;
-const cores = (name) => {
+// Every in-band core, before the one-per-hue reduction in `cores`.
+const rawCores = (name) => {
   if (!files.has(name) || !WPT) return null;
   const out = execFileSync(process.execPath, [path.join(here, 'nodes.mjs'), '--all', files.get(name), String(WPT)], { encoding: 'utf8' }).trim();
   if (out === 'none') return [];
-  const all = out.split(/\s+/).map((s) => { const [h, rest] = s.split('@'); const [x, y, n] = rest.split(',').map(Number); return { h: Number(h), x, y, n }; })
+  return out.split(/\s+/).map((s) => { const [h, rest] = s.split('@'); const [x, y, n] = rest.split(',').map(Number); return { h: Number(h), x, y, n }; })
     .filter((c) => c.y >= STAGE_TOP && c.y <= STAGE_BOTTOM).sort((a, b) => b.n - a.n);
+};
+const cores = (name) => {
+  const all = rawCores(name);
+  if (all === null) return null;
   // One core per hue: the largest; a smaller core within 20° of a kept one is its satellite, never a second identity.
   const kept = [];
   for (const c of all) if (!kept.some((k) => hueDiff(k.h, c.h) <= 20)) kept.push(c);
@@ -77,9 +86,14 @@ const median = (v) => { const s = [...v].sort((p, q) => p - q); return s.length 
 const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unambiguous = false } = {}) => {
   const A = cores(before), B = cores(after);
   if (A === null || B === null) return result(id, 'NOT TESTED', `no ${A === null ? before : after} screenshot`);
-  // `unambiguous`: a pair counts only if its hue has no other core within 15° in either frame.
-  const alone = (S, h) => S.filter((c) => hueDiff(c.h, h) <= 15).length === 1;
-  const P = pairs(A, B).filter((p) => !unambiguous || (alone(A, p.a.h) && alone(B, p.b.h)));
+  // `unambiguous`: judged on the cores BEFORE the one-per-hue reduction. A pair counts only if each of its cores is the
+  // only core within 20° of its hue in its own frame, both are node cores (at least 12 pixels, not a 6-pixel speck), and
+  // the two cores' sizes agree (0.5x-2x pixels).
+  const RA = unambiguous ? rawCores(before) : null, RB = unambiguous ? rawCores(after) : null;
+  const alone = (S, c) => S.filter((o) => hueDiff(o.h, c.h) <= 20).length === 1;
+  const node = (p) => p.a.n >= 12 && p.b.n >= 12;
+  const sameSize = (p) => p.b.n >= 0.5 * p.a.n && p.b.n <= 2 * p.a.n;
+  const P = pairs(A, B).filter((p) => !unambiguous || (alone(RA, p.a) && alone(RB, p.b) && node(p) && sameSize(p)));
   const seen = P.map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ');
   if (P.length < minPairs) return result(id, 'NOT TESTED', `fewer than ${minPairs === 1 ? 'one' : 'two'} ${unambiguous ? 'unambiguous ' : ''}node cores matched by hue (${P.length}: ${seen || 'none'})`);
   const m = { dx: median(P.map((p) => p.dx)), dy: median(P.map((p) => p.dy)) };
