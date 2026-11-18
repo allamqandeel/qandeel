@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.9 (§21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.10 (§22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.10, 2026-11-18):** `D-1 TECHNICALLY CLOSED (EXACT-HEAD GATE 44336199775 16 / 16 PASS ON fc2e13c6; MOBILE CI 44336199826 AND API CI 44336199643 SUCCESS; §22.1) — D-3 CP1 (DIAGNOSIS ONLY) DELIVERED ON cosmos/cosmos-int-01-slice-e-d3 (DRAFT PR STACKED ON #399) FROM ONE DIAGNOSTIC BUILD (RUN 44364253792): SE-FU-1 NOT REPRODUCED, 12 / 12 TAPS OPENED, BOUNDED AND UNRESOLVED; SE-FU-2 PROVEN FOR THE DISABLED DEEPER BEADS AND THE EMPTY-REGION CARD; ENLARGED-TEXT BEFORE-MEASUREMENTS RECORDED; THRESHOLDS PROPOSED, NOT FINAL — CP2 – CP4 NOT STARTED — STOPPED FOR THE PO — PR #399 UNCHANGED — NO REPLAY — NO MERGE WITHOUT «ادمج»`. The v1.9 status below is kept for provenance.
+**Change log v1.9 → v1.10 (2026-11-18).** The PO's D-3 handoff and the decision on D-3 Execution Plan v2 (CP1 only; E-1 option (a); E-2 with two binding clarifications) are applied. New §22 records D-1's final result, the diagnostic build, SE-FU-1, SE-FU-2, the enlarged-text before-measurements, the recommended CP2 fixes, the proposed thresholds and the decisions for the PO. Nothing earlier is rewritten.
 **Status (v1.9, 2026-11-18):** `SLICES B, C AND THE PERSONAL TARGET CENTRING ACCEPTED (DRAFT PRs #394 – #396) — SLICE D CLOSED / READY FOR PO REVIEW (DRAFT PRs #397 / #398; §19.17) — SLICE E REMEDIATION AUTHORISED BY THE PO (2026-11-18; §21): THE iOS BASELINE REPORT KEPT AS AN AUDIT RECORD ONLY — D-1 (BLOCKING) ROOT CAUSE PROVEN BY NATIVE TOUCH-PATH EVIDENCE AND ITS FIRST CORRECTION PACKAGE DELIVERED ON cosmos/cosmos-int-01-slice-e (DEPENDENT DRAFT PR #399, STACKED ON #398) WITH ITS iOS SIMULATOR PROOF (§21.7) AND ANDROID VERIFICATION (§21.9) — D-1 NOT CLOSED — THE iOS WORLD GATE WITH ITS NATIVE XCUITest STEP ADDED (D-2) — THE GOLDEN CONTRACT RE-ANCHORED UNDER CONTROL (§21.8) — BG-10 MANDATORY iOS SIMULATOR VALIDATION RECORDED, ITS ENFORCEMENT PARTIAL (§21.2) — D-3 / O-1 / O-2 / THE COVERAGE ITEMS NOT STARTED — F-1, E-1, E-2 (§20) STILL OPEN AND MANDATORY — STOPPED FOR THE PO'S REVIEW — PRs #391 – #396 UNTOUCHED — NO REPLAY — NO MERGE WITHOUT «ادمج»`. The v1.8 status below is kept for provenance.
 **Change log v1.8 → v1.9 (2026-11-18).** The PO's messages "QANDEEL — Slice E: iOS Baseline Review and Remediation Authorization" and "PO Decision — Mandatory iOS Simulator Validation for All Future Implementation Work" are applied. New §21 records:
 - the dispositions D-1, D-2, D-3, O-1, O-2 and the coverage list;
@@ -2354,6 +2356,193 @@ Both stay open in COSMOS-INT-01 Slice E's register, alongside F-1 / E-1 / E-2 (�
   - No application code, no visual, no threshold and no case changes. Shared and Public entries are unchanged: they passed.
 - **What R9 is not.** It is not a fix and not evidence that an early tap works. SE-FU-1 stays open, owned by D-3 (§21.14.3).
 - **Acceptance.** One complete exact-head iOS World gate on R9's head, every case PASS. Its results go to the closure report (§21.12 item 8).
+
+## 22. Slice E D-3 — CP1 diagnosis (PO, 2026-11-18) — DELIVERED, STOPPED FOR THE PO
+
+D-3 runs on `cosmos/cosmos-int-01-slice-e-d3` (worktree `E:\cosmosd3`, from fc2e13c6). It is a Draft PR stacked on #399. PR #399 is not changed.
+
+### 22.1 What D-3 starts from
+- **D-1 is technically closed.** The PO's D-3 handoff (2026-11-18) confirmed the results on R9's head fc2e13c6:
+  - exact-head iOS World gate **44336199775: 16 / 16 PASS**. Its first attempt got no hosted macOS runner; only the failed job was rerun, with no new push.
+  - Mobile CI 44336199826: SUCCESS.
+  - API CI 44336199643: SUCCESS.
+  - These close §21.15's acceptance condition. The successful D-1 tests are not repeated without a new, demonstrated reason.
+- **The PO's decision on D-3 Execution Plan v2 (2026-11-18): CP1 ONLY.**
+  - **E-1, option (a):** the Back control at home, while it is visually hidden and disabled, must not intercept touch and must not be announced as an available control. When Back is visible and functional, its touch and accessibility behaviour stay intact.
+  - **E-2, the CP1 authorisation:**
+    - this Draft PR;
+    - one temporary diagnostic-only branch, never merged;
+    - one shared iOS diagnostic build for SE-FU-1 and SE-FU-2;
+    - the focused diagnostic and layout matrix;
+    - the evidence and root-cause report.
+  - **Binding clarification 1, SE-FU-1:** the first valid interaction is not defined by when XCUITest reports the door as hittable. Record when the door is first visibly presented, when it is natively hittable, and any gap between them, and test whether a tap in that gap can be lost.
+  - **Binding clarification 2:** use only the focused cases and the one build, stop when the cause is conclusive, and justify any expansion by a specific unresolved ambiguity.
+  - The thresholds for T-ack, T-ready, map share and title truncation are measured and proposed here. They are not final without PO review.
+  - The rest stays as it is:
+    - W1A-01's unrestricted text scaling;
+    - the frozen COSMOS artwork;
+    - every functional control;
+    - SE-FU-1 and SE-FU-2, tracked separately;
+    - every pending Slice E requirement (O-1, O-2, F-1, E-1, E-2 of §20, and the coverage items).
+
+### 22.2 The one diagnostic build
+- **Branch and build.**
+  - Branch `cosmos/slice-e-d3-diag`, commit 03bb51d7, never merged and with no PR.
+  - The application diff to fc2e13c6 is instrumentation only: counters, times, enums and frames on one accessibility board, published by the proof entry.
+  - It holds no content and no transcript. It is recorded in the run as `app-diff.patch`, and the package files are asserted unchanged.
+- **Run 44364253792** (workflow `cosmos-slice-e-d3-diag.yml`, macos-26, Xcode 26.6, iOS 26.5 simulators):
+  - one build-for-testing;
+  - every step succeeded;
+  - the artifact `d3-cp1-diag` is archived at `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/cp1-44364253792/`, with the parsed tables and the parsing tools.
+- **The tap layers recorded:**
+
+| Layer | Meaning | Recorded by |
+|---|---|---|
+| L0 | the touch reaches the root, the depth layer and the door | `onTouchStart` |
+| L1 | press in | `onPressIn` |
+| L1 (T-ack) | the pressed state committed | `useLayoutEffect` |
+| L2 | the press | `onPress` |
+| L3 | the handler | `cross('ANALYSIS')` |
+| L4 | the depth state | depth state |
+| L5 | the stage is ready | the Analysis timeline rail lays out, and the fade settles |
+
+### 22.3 SE-FU-1 — the cold-launch Analysis tap: NOT REPRODUCED; bounded, unresolved
+- **The matrix (iPhone 17, en, default text size).** Three cold rounds, each after a simulator reboot and with the app terminated before every case. Four tap timings, with the order rotated:
+
+| Timing | When the tap was issued | How |
+|---|---|---|
+| A | at the door's first visibly presented frame (screenshot pixels) | raw synthesized touch |
+| B | at the first native-hittable report | raw synthesized touch |
+| C | right after the thread appears | `XCUIElement.tap` |
+| D | 8 s after the thread appears | `XCUIElement.tap` |
+
+- **Result: 12 / 12 PASS.**
+  - Every tap reached L0 through L5 and the Analysis opened. No tap was lost at any layer.
+  - The depth layer was open (`pointerEvents` auto) at every tap. The DepthComposition `open` gate hypothesis is therefore **not supported** by this evidence. It is not refuted for the failure condition, which was not reproduced.
+- **Visible versus hittable (binding clarification 1).**
+  - The door was first visibly presented 4.5–5.9 s after `launch()` returned.
+  - Native-hittable was first reported 4.3–5.6 s after launch. The XCUITest query itself waits for app idle, so this has about 1 s of resolution. On that resolution the two moments coincide; no gap wider than the resolution was observed.
+  - The gap that matters is between pixels and JavaScript. In round 1 (the first launch after the reboot), the door was visibly presented 1.3 s before the JavaScript processed the door's layout.
+  - The timing-A tap in that round was issued 258 ms after the first visible frame, inside that gap. It was **queued, not lost**: it reached JavaScript 1041 ms after the tap and was acknowledged at 1051 ms.
+  - In rounds 2 and 3 the timing-A tap reached JavaScript in 31–37 ms.
+- **Measurements** (ms from the synthesized touch, timings A and B):
+
+| Measure | Rounds 2–3 | Round 1, timing B | Round 1, timing A (first cold launch) |
+|---|---|---|---|
+| T-ack | 27–212 | 40 | **1051** |
+| Analysis rail laid out | 198–361 | 204 | 1140 |
+| Fade settled | 688–902 | 736 | 2266 |
+
+  - The rows for timings C and D add the XCUITest's own idle-wait, lookup and interruption check (200–580 ms), so they are not app latencies.
+- **What stays unresolved, and its bound.**
+  - Two runs recorded the failure:
+    - 44305519293, an `XCUIElement.tap` on the very first launch on a fresh simulator, where `launch()` alone took about 43 s;
+    - 44321160183, a Maestro tap immediately after a cold launch.
+  - Neither condition was reproduced: this run's launches reached JavaScript in 3.6–5.7 s.
+  - The cause of those two failures is **not proven**, and no application fix is indicated by the evidence.
+  - Reproducing that first-launch-on-a-fresh-simulator condition would need a second diagnostic build, because the build's app is not retained. That is a PO decision (§22.8 D-a).
+
+### 22.4 SE-FU-2 — overlays on the stage (iOS): PROVEN for two overlays
+- **The probes.** In each World, each probe was a one-finger drag of 100–120 pt starting on the overlay. Its effect was read from:
+  - which view's `onTouchStart` saw it;
+  - whether the stage's gesture handlers began (`pan.begin` / `pan.start` / `tap.begin`);
+  - whether the camera moved.
+
+| Overlay | P | S | U | Verdict |
+|---|---|---|---|---|
+| Open stage (control) | pan, camera −108 | pan, camera −108 | probe point fell inside the Public band, so not a stage probe: **NOT TESTED**. The hidden-Back probe below shows the Public stage pans. | — |
+| **Disabled deeper beads** (1, 2, 3) | taken by the bead, no stage gesture, camera still | same | same | **TAKES THE STAGE'S TOUCH** |
+| **"Nothing in this region." card** (panel and text) | taken by the card, no stage gesture, camera still | not shown | not shown | **TAKES THE STAGE'S TOUCH** (the card is shared code) |
+| Rail line (1 pt, at the bead column's centre) | landed on bead 1 | same | same | The line lies wholly under the contiguous beads (44 pt each), so it is never the topmost view today. Once the deeper beads stop taking touch, it would become a 1 pt touch-taker. |
+| **Back at home** (opacity 0, disabled) | stage pan, camera −108; Back's `onTouchStart` never fired | same | same | **Does not take the touch on iOS**, consistent with UIKit hit-testing skipping views with alpha below 0.01. |
+| Back at home: accessibility | not in the accessibility tree | not in the tree (the Shared header's own `qandeel-shared-back` is a different control) | not in the tree | **Not exposed on iOS.** Android NOT TESTED in CP1. |
+
+- **Positive controls, all PASS:**
+  - Overview on and off;
+  - Back away from home, which restored the camera from −108 to 0;
+  - "Go to the nearest", which moved the camera;
+  - a past bead, which returned rung 1 to 0.
+
+### 22.5 Enlarged text — before-measurements (no change made)
+- **Configurations.** iPhone 17 (402 × 874 pt): en default, en AX3, ar AX3. iPhone SE 3rd generation (375 × 667 pt): en AX3, ar AX3, en AX5, ar AX5. They were set with `simctl ui content_size`, with the language set and the simulator rebooted.
+- **se-en-AX5: NOT REACHED.** The conversation thread never appeared. The header took the whole screen above the composer, and "Understanding" broke inside the word. The Worlds were not measured in that configuration.
+- **Clear map share** is the height between the bottom of the top controls (Back / Overview) and the top of the bottom chrome (the timeline rail in Personal, the switcher in Shared and Public), as a share of the screen height:
+
+| Configuration | Personal | Shared | Public |
+|---|---|---|---|
+| i17 en default | 65.7 % | 65.6 % | 54.6 % |
+| i17 en AX3 | 61.6 % | 50.3 % | **22.4 %** |
+| i17 ar AX3 | 64.5 % | 57.0 % | **34.8 %** |
+| SE en AX3 | 61.0 % | 46.2 % | **0.9 %** |
+| SE ar AX3 | 64.8 % | 46.2 % | **9.6 %** |
+| SE ar AX5 | 51.4 % | **32.1 %** | **0 %**: the band (657 pt) covers the stage and the switcher |
+
+- **Defects measured:**
+
+| Defect | Where | Measurement |
+|---|---|---|
+| The Public band covers the depth rail (rail at 36 % of the root) | i17 AX3, every SE configuration | rail `hittable=false` |
+| The Shared band covers the depth rail's top bead | SE, and i17 en AX3 | the top bead is covered |
+| The Public Overview chip overlaps the depth rail | **at the default size** (the handoff item) | 67 × 24 pt over the top bead and its "FAR" word |
+| The Overview chip overlaps the depth rail | Shared at AX3 | — |
+| The Overview chip runs off the right edge | en AX3 on both devices, SE ar AX5 | right edge at 451 / 402 pt and 453 / 375 pt |
+| The top row overflows | every World | the hidden Back keeps its width at home (261 pt at en AX3), and the top row does not wrap |
+| The Shared title truncates | AX3 on both devices | "Fixture Map World" (17 characters) whole at the default size; at AX3 it shows as "Fixture...". The board's `onTextLayout` reported "whole", which is wrong for ellipsised text. That is a **measurement defect**, so truncation was judged from the screenshots. |
+| The switcher words vanish | SE AX3 and AX5 | the word frames end below the screen (623 + 56 > 667 pt); the screenshots show icons only |
+| The unselected switcher words shrink to a small size | i17 AX3 | not diagnosed |
+| The Conversation header crowds out the thread | as the size grows | thread share of the screen: 64.5 % (i17 default) → 36.8 % (i17 en AX3) → 28.5 % (SE en AX3) → 21.3 % (SE ar AX5) → none (SE en AX5) |
+| The Analysis door is clipped at the left edge | SE ar AX5 | door at x = −41 pt |
+
+- The thread never sat under the header (no overlap), and no control lost hit-testing in the Conversation header.
+
+### 22.6 Recommended minimal fixes for CP2 (NOT implemented)
+1. **SE-FU-2, the deeper beads.** In `CosmosWorldView.tsx`, a bead takes touch only when it acts (`past`): `pointerEvents={past ? 'auto' : 'none'}`. This extends §21.4's current-bead rule. Its accessibility (button, disabled, selected) is unchanged, and that is proven in CP2, not assumed.
+2. **SE-FU-2, the card.** The card panel is `box-none` and its text sits in a `pointerEvents="none"` wrapper, so only "Go to the nearest" takes touch. The card's live region and its announced text are kept and proven in CP2.
+3. **SE-FU-2, the rail line.** The line gets `pointerEvents="none"`. It is decorative and not accessible.
+4. **E-1(a), Back at home.** Back at home becomes explicit and platform-independent:
+   - `pointerEvents='none'`;
+   - `accessibilityElementsHidden` on iOS;
+   - `importantForAccessibility='no-hide-descendants'` on Android.
+
+   Away from home, Back is unchanged. iOS already behaves this way through UIKit's alpha rule; Android must be proven.
+5. **The Overview chip and the rail.** The top row stops reserving Back's width at home, so Overview never leaves the screen. The rail and the Overview chip never overlap and never sit under the host band: the rail is placed below the top row and the band, not at a fixed 36 %. The rail stays on the right.
+6. **Enlarged text (CP3, responsive layout only):**
+   - the Public band and the Shared header collapse or scroll so the map keeps its threshold share;
+   - the top row wraps;
+   - the switcher keeps its words visible;
+   - the Conversation header wraps its actions so the thread keeps its share.
+
+   No font caps (W1A-01), no disappearing actions and no icon-only replacements. A conflict that cannot be resolved this way is escalated, not capped.
+7. **SE-FU-1.** No application change is indicated (§22.3). CP2 adds a permanent regression check: a cold-launch tap at the door's first visible frame opens the Analysis, with T-ack and T-ready measured and reported. Any further work waits for the PO's decision §22.8 D-a and D-b.
+
+### 22.7 Proposed acceptance thresholds (PROPOSED; not final without PO review)
+
+| Measure | Proposed | Measured now |
+|---|---|---|
+| **T-ack**: touch-down → the door's pressed state committed, for any tap at or after the door's first visible frame | ≤ 250 ms | 27–212 ms; **1051 ms on the first cold launch: FAIL**. The threshold keeps the original user-facing problem visible rather than hiding it behind a readiness condition. |
+| **T-ready**: touch-down → the Analysis stage interactive (its timeline rail laid out) | ≤ 500 ms | 198–361 ms; 1140 ms on the first cold launch |
+| **T-ready**: fade settled | ≤ 1000 ms | 688–902 ms; 2266 ms on the first cold launch |
+| **Clear map share**: every World, every measured configuration, both languages, up to AX5 | ≥ 40 % (the PO's candidate) | default 54.6–65.7 %; the Public band fails at every AX configuration. The PO decides 40 % against an alternative (§22.8 D-c). |
+| **Title truncation** (Shared title, AX3) | whole at the default size and at AX3 for titles up to 24 characters; beyond that, wrapping to at most two lines before any ellipsis | 17 characters truncate at AX3 today |
+| **Controls**: no control's frame leaves the screen; the rail never overlaps the Overview chip or sits under a band; the switcher's words stay visible | 0 violations | — |
+
+### 22.8 Decisions for the PO
+- **D-a (SE-FU-1).** Accept §22.3's bounded result, with the regression check of §22.6 item 7? Or authorise a second diagnostic build to reproduce the first-launch-on-a-fresh-simulator condition of 44305519293? Recommended: accept, with the regression check.
+- **D-b (SE-FU-1).** Is the first cold launch's 1051 ms T-ack in scope for D-3? It comes from a JavaScript long task of about 2.1 s between the typeface becoming ready and the door's layout. Bringing it into the threshold needs profiling the first launch. Recommended: record it as measured and decide after CP2.
+- **D-c (map share).** Approve the clear-map-share definition and its threshold. 40 % is the PO's candidate.
+- **D-d (enlarged text).** Approve how the Public band and the Shared header give way at enlarged text: collapsing, or scrolling with the stage. Both are responsive; neither caps the type.
+- **D-e (Android).** Approve the Android emulator as CP2's proof that E-1(a) and the SE-FU-2 fixes keep Back, the beads and the card accessible. CP1 did not test Android.
+
+### 22.9 Not done in CP1
+- **Not done:**
+  - no application change on this branch;
+  - no CP2 – CP4;
+  - no merge;
+  - no Replay;
+  - no change to PR #399, to the frozen artwork or to any threshold already accepted;
+  - no TalkBack or VoiceOver proof (PO policy, 2026-11-08).
+- **Still open, neither dropped nor started:** O-1, O-2, the coverage items, and F-1, E-1 and E-2 of §20.
+- **The diagnostic branch** `cosmos/slice-e-d3-diag` is never merged. It is deleted only on the PO's word.
 
 ---
 
