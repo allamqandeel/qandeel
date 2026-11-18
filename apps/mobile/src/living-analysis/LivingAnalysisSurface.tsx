@@ -36,7 +36,7 @@
  * fact of this composition (the glass), never a prediction.
  */
 import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAnalysisInk } from '../analysis-visual';
 import { AnalysisAppearanceScope } from '../appearance';
@@ -96,6 +96,20 @@ export function LivingAnalysisSurface(props: LivingAnalysisSurfaceProps) {
 
 export const LIVING_ANALYSIS_STAGE_TEST_ID = 'qandeel-living-analysis-stage';
 
+/**
+ * COSMOS-INT-01 Slice E D-3 (PO D-c / D-d, 2026-11-18): the most of the window a top band may hold. Below it the band is
+ * exactly as accepted; only past it (enlarged text, narrow screens) does the band stop growing and scroll its own
+ * content, in its own place above the world, so the map keeps its room and never competes with a scrolling overlay.
+ * Font scaling is untouched (W1A-01); every action of the band stays in it.
+ */
+export const TOP_BAND_MAX_SHARE = 0.4;
+
+/** The band's room: its measured height, up to the share above (whole points). */
+export function topBandRoom(measured: number, windowHeight: number): { readonly height: number; readonly scrolls: boolean } {
+  const cap = Math.floor(windowHeight * TOP_BAND_MAX_SHARE);
+  return measured > cap ? { height: cap, scrolls: true } : { height: measured, scrolls: false };
+}
+
 /** The frame's one job under a stage: to report the glass it measured. It renders nothing and decides nothing. */
 function GlassReporter({ glass, onGlass }: { readonly glass: ViewportEnvelope; readonly onGlass: (glass: ViewportEnvelope) => void }) {
   useLayoutEffect(() => { onGlass(glass); }, [glass, onGlass]);
@@ -118,7 +132,8 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
     setChromeContent((current) => (current === points ? current : points));
   }, []);
   const chromeOnly = timeline === null;
-  const topHeight = top === null ? null : top.height;
+  const room = top === null ? null : topBandRoom(top.height, surfaceEnvelope.height);
+  const topHeight = room === null ? null : room.height;
   const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
   // COSMOS-INT-01 (STAGE): the glass the frame measured, held by value so an equal measurement is never a relayout.
   const staged = stage !== undefined;
@@ -219,7 +234,13 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
         it exactly as it treats the status bar: the band's measured height is the world's top inset,
         so T-11 keeps everything the reader must see out from under it.
       */}
-      <View style={styles.band}>{top.content}</View>
+      <View style={styles.band}>
+        {/* Slice E D-3: ONE element at every size (no remount at the threshold); it scrolls only past the band's room. */}
+        <ScrollView style={[styles.bandScroll, room?.scrolls === true ? { maxHeight: room.height } : null]} scrollEnabled={room?.scrolls === true} bounces={false}
+          showsVerticalScrollIndicator={room?.scrolls === true} keyboardShouldPersistTaps="always">
+          {top.content}
+        </ScrollView>
+      </View>
       {surface}
     </>
   );
@@ -227,6 +248,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
 
 const styles = StyleSheet.create({
   band: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
+  bandScroll: { flexGrow: 0 },
   // COSMOS-INT-01 (STAGE): the frame is glass — it reports its measurement and takes no touch from the stage beneath.
   stageFrame: { pointerEvents: 'none' },
   // The support band's glass over the stage: the stage's own glass tone, so the band reads as one with its chrome.

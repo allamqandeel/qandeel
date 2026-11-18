@@ -32,12 +32,13 @@
  *
  * Every word comes from `copy.ts`, exactly as approved. A state with no approved word says nothing.
  */
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   FlatList,
   KeyboardAvoidingView,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -197,6 +198,12 @@ const HEADER_MIN_HEIGHT = 48;
 export const CONVERSATION_HEADER_MIN_HEIGHT = HEADER_MIN_HEIGHT;
 /** P4-C1 S-B proof geometry: the Personal row beneath the upper chrome, one 44 pt target high. */
 const PERSONAL_ROW_HEIGHT = 44;
+/**
+ * COSMOS-INT-01 Slice E D-3 (PO D-c, 2026-11-18): the most of the window Personal QANDEEL's own row may hold. Below it the
+ * row is exactly as accepted; past it (the largest text sizes on a small screen) the row scrolls its own entries, so the
+ * thread keeps its room and no entry is lost. Font scaling is untouched (W1A-01).
+ */
+const PERSONAL_ROW_MAX_SHARE = 0.3;
 const THREAD_GUTTER = 24;
 const SLAB_END_INSET = 40;
 const REPLY_END_INSET = 48;
@@ -499,7 +506,10 @@ export function ConversationSurface({
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
   const copy = conversationCopy(language);
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
+  const [personalRowContent, setPersonalRowContent] = useState(0);
+  const personalRowRoom = Math.floor(windowHeight * PERSONAL_ROW_MAX_SHARE);
+  const personalRowScrolls = personalRowContent > personalRowRoom;
   const mine = readerSide(language);
   const theirs = oppositeSide(mine);
   const endSide = theirs; // the end edge of the reader's line is the edge opposite their start
@@ -693,7 +703,8 @@ export function ConversationSurface({
         }}
       >
         {chromeStart === null ? null : <View testID="qandeel-chrome-start">{chromeStart}</View>}
-        <View style={{ flexDirection: endSide === 'right' ? 'row' : 'row-reverse', alignItems: 'center' }}>
+        {/* Slice E D-3 (PO D-c): the door may shrink and wrap its word, so it never leaves the screen at large text. */}
+        <View style={{ flexDirection: endSide === 'right' ? 'row' : 'row-reverse', alignItems: 'center', flexShrink: 1 }}>
         <Control
           palette={palette}
           language={language}
@@ -703,11 +714,11 @@ export function ConversationSurface({
           controlRef={(node) => {
             doorRef.current = node;
           }}
-          style={{ paddingHorizontal: 12 }}
+          style={{ paddingHorizontal: 12, flexShrink: 1 }}
         >
-          <View style={{ flexDirection: fallback === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: fallback === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', flexShrink: 1 }}>
             <Glyph name="depth" color={palette.restInk} direction={fallback} />
-            <Text style={{ ...typeStyle('action'), color: palette.restInk, ...(fallback === 'rtl' ? { marginRight: 6 } : { marginLeft: 6 }) }}>
+            <Text style={{ ...typeStyle('action'), color: palette.restInk, flexShrink: 1, ...(fallback === 'rtl' ? { marginRight: 6 } : { marginLeft: 6 }) }}>
               {copy.doorLabel}
             </Text>
           </View>
@@ -724,6 +735,10 @@ export function ConversationSurface({
         icon-only in the rest ink, and carries its approved name.
       */}
       {onOpenSettings === undefined ? null : (
+        // Slice E D-3: ONE element at every size (no remount at the threshold); it scrolls only past the row's room.
+        <ScrollView style={[{ flexGrow: 0 }, personalRowScrolls ? { maxHeight: personalRowRoom } : null]} scrollEnabled={personalRowScrolls}
+          bounces={false} showsVerticalScrollIndicator={personalRowScrolls} keyboardShouldPersistTaps="always"
+          onContentSizeChange={(_w, h) => setPersonalRowContent((current) => (current === Math.ceil(h) ? current : Math.ceil(h)))}>
         <View
           testID="qandeel-personal-row"
           pointerEvents={selection === null ? 'auto' : 'none'}
@@ -762,6 +777,7 @@ export function ConversationSurface({
             <Glyph name="settings" color={palette.restInk} direction={fallback} />
           </Control>
         </View>
+        </ScrollView>
       )}
 
       <FlatList

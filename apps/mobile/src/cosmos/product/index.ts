@@ -13,7 +13,7 @@ export { COSMOS_ACT_LABELS_APPROVED, COSMOS_PRODUCT_COPY_GATE, cosmosProductCopy
 export type { CosmosWorldViewProps } from './CosmosWorldView';
 export {
   COSMOS_WORLD_VIEW_TEST_ID, COSMOS_BACK_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_NEAREST_TEST_ID,
-  COSMOS_STEP_TEST_ID_SUFFIX, COSMOS_MARK_TEST_ID_INFIX, COSMOS_RELATION_TEST_ID_INFIX, COSMOS_OVERVIEW_COMPANION_TEST_ID, CosmosWorldView, usableCentre,
+  COSMOS_STEP_TEST_ID_SUFFIX, COSMOS_MARK_TEST_ID_INFIX, COSMOS_RELATION_TEST_ID_INFIX, COSMOS_OVERVIEW_COMPANION_TEST_ID, CosmosWorldView, railTopOf, usableCentre,
 } from './CosmosWorldView';
 // Slice C (Contract v1.3 §15): the accepted bottom rail and the compact contextual controls of the Personal stage.
 export type { CosmosTimelineRailProps } from './chrome/CosmosTimelineRail';

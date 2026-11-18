@@ -15,7 +15,9 @@
 //     No core inside a fixed overlay counts: the test records the overlays' frames next to each screenshot
 //     (`pan-z-overlays-before` / `-after`), and without them the case is NOT TESTED. Otherwise NOT TESTED. Same
 //     tolerance as X-PAN.
-// usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir> <widthPoints> <results.tsv>
+//   - D-3 (PO 2026-11-18, contract §24): the values the D-3 tests measure (`sefu1-timing`, `sefu2-card`,
+//     `layout-gate`) are appended to their test's row as recorded evidence; they are not judged here.
+// usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir[,dir…]> <widthPoints> <results.tsv>
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -46,17 +48,26 @@ for (const t of tests) {
 
 // ── the screenshots ───────────────────────────────────────────────────────────────────────────────────────────────
 const files = new Map();
-try {
-  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
-  for (const test of manifest) {
-    for (const a of test.attachments ?? []) {
-      // `suggestedHumanReadableName` is "<name>_<n>_<UUID>.<ext>"; the name given in the test is what is kept.
-      const name = String(a.suggestedHumanReadableName ?? '').replace(/_\d+_[0-9A-F-]{36}\.\w+$/i, '').replace(/\.\w+$/, '');
-      files.set(name, path.join(dir, a.exportedFileName));
+for (const d of String(dir).split(',').filter(Boolean)) {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(d, 'manifest.json'), 'utf8'));
+    for (const test of manifest) {
+      for (const a of test.attachments ?? []) {
+        // `suggestedHumanReadableName` is "<name>_<n>_<UUID>.<ext>"; the name given in the test is what is kept.
+        const name = String(a.suggestedHumanReadableName ?? '').replace(/_\d+_[0-9A-F-]{36}\.\w+$/i, '').replace(/\.\w+$/, '');
+        files.set(name, path.join(d, a.exportedFileName));
+      }
     }
-  }
-} catch { /* no attachments: the cases below are NOT TESTED */ }
+  } catch { /* no attachments there: the cases below that need them are NOT TESTED */ }
+}
 const text = (name) => (files.has(name) ? fs.readFileSync(files.get(name), 'utf8').trim() : null);
+// D-3: the measured values, appended to their test's row.
+for (const [t, name] of [['testFreshInstallFirstVisibleDoorTapOpensTheAnalysis', 'sefu1-timing'],
+  ['testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage', 'sefu2-card'], ['testLayoutAtTheReadersTextSize', 'layout-gate']]) {
+  const i = rows.findIndex((r) => r.startsWith(`X:${t}\t`));
+  const v = text(name);
+  if (i >= 0 && v !== null) rows[i] += `; ${v.replace(/[\t\n]+/g, ' ')}`;
+}
 const WPT = Number(wptArg) || 0;
 // Node cores inside the Personal stage only: below its control row and above its timeline rail (iPhone 17 points).
 const STAGE_TOP = 165, STAGE_BOTTOM = 730;

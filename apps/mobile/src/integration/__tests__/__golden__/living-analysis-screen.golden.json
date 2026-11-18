@@ -2278,6 +2278,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -2287,6 +2288,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -2296,11 +2298,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -2371,11 +2377,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -2425,11 +2436,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -2438,6 +2449,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -2566,6 +2578,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -2631,6 +2644,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -2696,6 +2710,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -2761,6 +2776,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -6024,6 +6040,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "العالم كله",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -6033,6 +6050,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -6042,11 +6060,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -6117,11 +6139,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -6171,11 +6198,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -6184,6 +6211,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -6316,6 +6344,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -6381,6 +6410,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -6446,6 +6476,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -6511,6 +6542,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -9774,6 +9806,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -9783,6 +9816,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -9792,11 +9826,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -9867,11 +9905,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -9921,11 +9964,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 295.2
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -9934,6 +9977,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -10062,6 +10106,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -10127,6 +10172,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -10192,6 +10238,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -10257,6 +10304,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -13520,6 +13568,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "العالم كله",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -13529,6 +13578,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -13538,11 +13588,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -13613,11 +13667,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -13667,11 +13726,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 295.2
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -13680,6 +13739,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -13812,6 +13872,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -13877,6 +13938,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -13942,6 +14004,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -14007,6 +14070,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -17270,6 +17334,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -17279,6 +17344,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -17288,11 +17354,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -17363,11 +17433,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -17417,11 +17492,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 140.4
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -17430,6 +17505,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -17558,6 +17634,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -17623,6 +17700,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -17688,6 +17766,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -17753,6 +17832,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -21016,6 +21096,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -21025,6 +21106,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -21034,11 +21116,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -21109,11 +21195,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -21163,11 +21254,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 204.48
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -21176,6 +21267,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -21304,6 +21396,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -21369,6 +21462,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -21434,6 +21528,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -21499,6 +21594,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -24762,6 +24858,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "العالم كله",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -24771,6 +24868,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -24780,11 +24878,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -24855,11 +24957,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -24909,11 +25016,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 204.48
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -24922,6 +25029,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -25054,6 +25162,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -25119,6 +25228,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -25184,6 +25294,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -25249,6 +25360,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -28512,6 +28624,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": false,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -28521,6 +28634,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "auto",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -28530,11 +28644,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "auto",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               false
              ],
@@ -28603,11 +28721,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -28657,11 +28780,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -28670,6 +28793,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -28798,6 +28922,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -28863,6 +28988,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -28928,6 +29054,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -28993,6 +29120,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -32348,6 +32476,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -32357,6 +32486,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -32366,11 +32496,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -32441,11 +32575,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -32495,11 +32634,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -32508,6 +32647,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -32636,6 +32776,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -32701,6 +32842,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -32766,6 +32908,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -32831,6 +32974,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -36226,6 +36370,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -36235,6 +36380,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -36244,11 +36390,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -36319,11 +36469,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -36373,11 +36528,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -36386,6 +36541,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -36514,6 +36670,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -36579,6 +36736,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -36644,6 +36802,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -36709,6 +36868,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -40414,6 +40574,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -40423,6 +40584,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -40432,11 +40594,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -40507,11 +40673,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -40561,11 +40732,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -40574,6 +40745,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -40702,6 +40874,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -40767,6 +40940,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -40832,6 +41006,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -40897,6 +41072,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -43950,6 +44126,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": false,
              "accessibilityLabel": "← the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -43959,6 +44136,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "auto",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -43968,11 +44146,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "auto",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               false
              ],
@@ -44041,11 +44223,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -44095,11 +44282,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -44108,6 +44295,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -44303,6 +44491,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -44368,6 +44557,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -44433,6 +44623,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -47788,6 +47979,7 @@
            {
             "type": "View",
             "props": {
+             "accessibilityElementsHidden": true,
              "accessibilityLabel": "the whole world",
              "accessibilityRole": "button",
              "accessibilityState": {
@@ -47797,6 +47989,7 @@
              "accessible": true,
              "collapsable": false,
              "focusable": true,
+             "importantForAccessibility": "no-hide-descendants",
              "onBlur": "[fn]",
              "onClick": "[fn]",
              "onFocus": "[fn]",
@@ -47806,11 +47999,15 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": [
               {
                "justifyContent": "center",
                "minHeight": 44,
                "minWidth": 44
+              },
+              {
+               "flexShrink": 1
               },
               {
                "opacity": 0
@@ -47881,11 +48078,16 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
-             "style": {
-              "justifyContent": "center",
-              "minHeight": 44,
-              "minWidth": 44
-             },
+             "style": [
+              {
+               "justifyContent": "center",
+               "minHeight": 44,
+               "minWidth": 44
+              },
+              {
+               "flexShrink": 0
+              }
+             ],
              "testID": "qandeel-cosmos-overview"
             },
             "children": [
@@ -47935,11 +48137,11 @@
            "pointerEvents": "box-none",
            "style": [
             {
-             "position": "absolute",
-             "top": "36%"
+             "position": "absolute"
             },
             {
-             "right": 2
+             "right": 2,
+             "top": 303.84
             }
            ],
            "testID": "qandeel-cosmos-rail"
@@ -47948,6 +48150,7 @@
            {
             "type": "View",
             "props": {
+             "pointerEvents": "none",
              "style": [
               {
                "backgroundColor": "rgba(236, 204, 138, 0.38)",
@@ -48076,6 +48279,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -48141,6 +48345,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -48206,6 +48411,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",
@@ -48271,6 +48477,7 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
               "alignSelf": "flex-end",

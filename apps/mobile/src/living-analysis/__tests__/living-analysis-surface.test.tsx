@@ -24,7 +24,7 @@ import {
   type ChromeComposition,
 } from '../../responsive';
 import { RESPONSIVE_SURFACE_TEST_ID, resize } from '../../responsive/__fixtures__/composition';
-import { LivingAnalysisSurface, type LivingAnalysisSurfaceProps } from '../LivingAnalysisSurface';
+import { LivingAnalysisSurface, topBandRoom, type LivingAnalysisSurfaceProps } from '../LivingAnalysisSurface';
 
 const seen: { envelopes: ViewportEnvelope[]; chrome: ChromeComposition[]; appearance: string[] } = { envelopes: [], chrome: [], appearance: [] };
 
@@ -183,6 +183,36 @@ describe('S5-03B R1 — the Living Analysis surface', () => {
     // frame resized mid-travel no longer strands the world (`map/__tests__/world-resize-race.test.tsx`).
     await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(0)); });
     expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(34);
+  });
+
+  it('COSMOS Slice E D-3 (PO D-c / D-d) — a top band holds at most 40 % of the window; below that it is exactly as accepted', () => {
+    expect(topBandRoom(104, 844)).toEqual({ height: 104, scrolls: false });
+    expect(topBandRoom(337, 844)).toEqual({ height: 337, scrolls: false });
+    expect(topBandRoom(338, 844)).toEqual({ height: 337, scrolls: true });
+    expect(topBandRoom(600, 667)).toEqual({ height: 266, scrolls: true });
+  });
+
+  it('COSMOS Slice E D-3 — within its room the band does not scroll and its height is the world’s top inset, as before', async () => {
+    const view = await composed(surface({ top: { content: <View testID="probe-top" />, height: 104 } }), 104);
+    // The band's one native scroller.
+    let scroller = view.getByTestId("probe-top").parent!;
+    while (scroller.props.scrollEnabled === undefined) scroller = scroller.parent!;
+    expect(scroller.props.scrollEnabled).toBe(false);
+    expect(styleOf(scroller).maxHeight).toBeUndefined();
+    expect(seen.envelopes.at(-1)?.insetTop).toBe(104);
+  });
+
+  it('COSMOS Slice E D-3 — past its room (enlarged text) the band scrolls its own content in its own place, and the world keeps the rest', async () => {
+    // The frame the platform would report under a capped band: the whole window below it.
+    const view = await render(surface({ top: { content: <View testID="probe-top" />, height: 500 } }));
+    await resize(view, 390, 844, { insetTop: Math.floor(844 * 0.4), insetBottom: 34, mapHeight: 844 - 34 });
+    let scroller = view.getByTestId("probe-top").parent!;
+    while (scroller.props.scrollEnabled === undefined) scroller = scroller.parent!;
+    expect(scroller.props.scrollEnabled).toBe(true);
+    expect(styleOf(scroller).maxHeight).toBe(Math.floor(844 * 0.4));
+    expect(seen.envelopes.at(-1)?.insetTop).toBe(Math.floor(844 * 0.4));
+    // Every action of the band is still there: its content is mounted whole, never cut.
+    expect(view.getByTestId('probe-top')).toBeTruthy();
   });
 
   it('mounts the composition observer after the band, outside the layout', async () => {

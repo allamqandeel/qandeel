@@ -9,7 +9,7 @@ import { View } from 'react-native';
 import { viewportEnvelope } from '../../../map/camera';
 import { semanticDepthWord } from '../../../orientation-chrome';
 import { compileStage } from '../../core/stage';
-import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_COMPANION_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, usableCentre, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
+import { COSMOS_BACK_TEST_ID, COSMOS_NEAREST_TEST_ID, COSMOS_OVERVIEW_COMPANION_TEST_ID, COSMOS_OVERVIEW_TEST_ID, COSMOS_RAIL_TEST_ID, COSMOS_REGISTER_TEST_ID, COSMOS_WORLD_VIEW_TEST_ID, CosmosWorldView, cosmosProductCopy, railTopOf, usableCentre, type CosmosWorldOwner, type CosmosWorldSnapshot } from '..';
 
 const GLASS = viewportEnvelope(390, 844, { top: 104, bottom: 220 })!;
 
@@ -84,8 +84,26 @@ describe('CosmosWorldView — the stage over an owner', () => {
     acts.length = 0;
     await press(view, COSMOS_BACK_TEST_ID);
     expect(acts.map((a) => a.kind)).toEqual(['back']);
-    // Home: the first rung at the origin.
-    expect(view.getByTestId(COSMOS_BACK_TEST_ID).props.accessibilityState).toEqual({ disabled: true });
+    // Home: the first rung at the origin. Slice E D-3, E-1 option (a) (PO 2026-11-18, contract §24): at home Back stands
+    // down on both platforms — it takes no touch and is hidden from assistive technology — instead of relying on UIKit's
+    // alpha rule (iOS only). Previous form: the disabled chip, which Android still hit-tested and exposed.
+    const home = view.getByTestId(COSMOS_BACK_TEST_ID, { includeHiddenElements: true });
+    expect(home.props.accessibilityState).toEqual({ disabled: true });
+    expect(home.props.pointerEvents).toBe('none');
+    expect(home.props.accessibilityElementsHidden).toBe(true);
+    expect(home.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(view.queryByTestId(COSMOS_BACK_TEST_ID)).toBeNull();
+  });
+
+  it('Slice E D-3 (E-1 (a)): away from home Back is an ordinary, announced chip that takes its touch', async () => {
+    const { owner, set } = fakeOwner({});
+    set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+    view = await mount(owner);
+    const back = view.getByTestId(COSMOS_BACK_TEST_ID);
+    expect(back.props.pointerEvents).toBe('auto');
+    expect(back.props.accessibilityElementsHidden).toBe(false);
+    expect(back.props.importantForAccessibility).toBe('auto');
+    expect(back.props.accessibilityRole).toBe('button');
   });
 
   // COSMOS-INT-01 Slice C CONTROLLED RE-ANCHOR (Product Owner, 2026-11-15, Contract v1.4 §16 U-9 / A-6): the controls keep
@@ -138,6 +156,22 @@ describe('CosmosWorldView — the stage over an owner', () => {
     await press(view, COSMOS_OVERVIEW_TEST_ID);
     expect(view.getByTestId(COSMOS_OVERVIEW_TEST_ID).props.accessibilityState).toEqual({ selected: false });
     expect(acts.filter((a) => a.kind !== 'setGlass')).toEqual([]);
+  });
+
+  it('Slice E D-3 (SE-FU-2): the absence card takes no touch of its own — only "Go to the nearest" does — and keeps its words', async () => {
+    const { owner, set } = fakeOwner({});
+    set({ worldIndex: [{ id: 'THREAD:far', x: 900, y: -300 }], shown: [] });
+    view = await mount(owner);
+    const copy = cosmosProductCopy('en');
+    // The words stand in a wrapper that takes no touch; every view between them and the stage passes touches through.
+    let node = view.getByText(copy.regionEmpty).parent;
+    const chain: (string | undefined)[] = [];
+    while (node !== null && node.props.testID !== COSMOS_WORLD_VIEW_TEST_ID) { if (typeof node.type === 'string') chain.push(node.props.pointerEvents); node = node.parent; }
+    expect(chain).toContain('none');
+    expect(chain.slice(chain.indexOf('none') + 1).every((p) => p === undefined || p === 'box-none')).toBe(true);
+    // The way to the nearest is still a button that acts.
+    const nearest = view.getByTestId(COSMOS_NEAREST_TEST_ID);
+    expect(nearest.props.accessibilityLabel ?? view.getByLabelText(copy.nearest)).toBeTruthy();
   });
 
   it('says only the one absence the chrome does not: a known world with nothing in this region, with the way to the nearest', async () => {
@@ -310,5 +344,41 @@ describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)"
       for (const bead of beads) expect(Object.assign({}, ...[bead.props.style].flat(3).filter(Boolean)).alignSelf).toBe('flex-end');
       await cleanup();
     }
+  });
+
+  it('Slice E D-3 (SE-FU-2, iOS diag run 44364253792): a deeper, disabled bead takes no touch either, and the rail line under the beads takes none; each bead keeps its accessibility', async () => {
+    for (const world of ['PERSONAL', 'SHARED', 'PUBLIC'] as const) {
+      const { owner, set } = fakeOwner({ world, rungs: world === 'PERSONAL' ? 5 : 3 });
+      set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+      view = await render(<CosmosWorldView owner={owner} world={world} language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+      const words = cosmosProductCopy('en').rungs[world];
+      for (const name of words.slice(2)) {
+        const deeper = view.getByRole('button', { name });
+        expect(deeper.props.pointerEvents).toBe('none');
+        expect(deeper.props.accessibilityState).toEqual({ selected: false, disabled: true });
+      }
+      const rail = view.getByTestId(COSMOS_RAIL_TEST_ID);
+      const line = rail.children.find((c) => typeof c !== 'string' && flat(c as never).width === 1);
+      expect(line).toBeDefined();
+      expect((line as { props: Record<string, unknown> }).props.pointerEvents).toBe('none');
+      await cleanup();
+    }
+  });
+
+  it('Slice E D-3: the rail keeps its accepted place (36 % of the glass) until the top controls reach it, then stands just below them; it never moves up', () => {
+    expect(railTopOf(844, null, false)).toBeCloseTo(844 * 0.36);
+    expect(railTopOf(844, 150, false)).toBeCloseTo(844 * 0.36);
+    expect(railTopOf(844, 150, true)).toBeCloseTo(844 * 0.36);
+    // The Overview companion takes 48 points under the chip; 8 points of air separate rail and controls.
+    expect(railTopOf(844, 300, false)).toBe(308);
+    expect(railTopOf(844, 300, true)).toBe(356);
+    expect(railTopOf(667, 400, false)).toBe(408);
+  });
+
+  it('Slice E D-3: at home the top row does not keep room for the hidden Back, and Overview never shrinks', async () => {
+    const { owner } = fakeOwner({});
+    view = await mount(owner);
+    expect(flat(view.getByTestId(COSMOS_BACK_TEST_ID, { includeHiddenElements: true })).flexShrink).toBe(1);
+    expect(flat(view.getByTestId(COSMOS_OVERVIEW_TEST_ID)).flexShrink).toBe(0);
   });
 });

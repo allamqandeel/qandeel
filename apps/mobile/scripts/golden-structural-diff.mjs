@@ -9,6 +9,18 @@
 //               gains `alignSelf: 'flex-end'` in its style;
 //   BEAD_TOUCH  a depth-rail bead's `pointerEvents` becomes 'none' when it is the selected (current) depth, and stays
 //               'auto' otherwise.
+//
+// Allowed (D-3 CP2/CP3, PO 2026-11-18: SE-FU-2, E-1 option (a), the rail below the top controls; contract §25):
+//   BEAD_TOUCH  extended: a bead's `pointerEvents` becomes 'none' whenever it is disabled (the current depth or a deeper
+//               one); a shallower bead, which acts, keeps its touch;
+//   RAIL_LINE   the rail's 1-point line gains `pointerEvents: 'none'`;
+//   RAIL_TOP    the rail's top moves from the style sheet's '36%' to a number in its own style (36 % of the glass, or
+//               just below the top controls when they reach it);
+//   BACK_HOME   Back at home (disabled) gains `pointerEvents: 'none'`, `accessibilityElementsHidden: true` and
+//               `importantForAccessibility: 'no-hide-descendants'`; Back's style gains `flexShrink: 1`;
+//   BACK_AWAY   away from home, the same three props are now written out at their defaults ('auto', false, 'auto'):
+//               no behaviour changes;
+//   OVERVIEW    Overview's style gains `flexShrink: 0`.
 // usage: node golden-structural-diff.mjs <old.json> <new.json>   (exit 0 only when every difference is allowed)
 import fs from 'node:fs';
 
@@ -60,22 +72,45 @@ for (const d of diffs) {
   let kind = null;
   if (bead && /\.props\.style(\[\d+\])*\.alignSelf$/.test(d.path) && d.a === undefined && d.b === 'flex-end') kind = 'BEAD_ALIGN';
   if (bead && /\.props\.pointerEvents$/.test(d.path)) {
-    const selected = d.hostB.props.accessibilityState?.selected === true;
-    if (selected && d.b === 'none') kind = 'BEAD_TOUCH';
+    const disabled = d.hostB.props.accessibilityState?.disabled === true;
+    if (disabled && d.b === 'none') kind = 'BEAD_TOUCH';
   }
+  const id = d.hostB?.props?.testID;
+  const sA = flatStyle(d.hostA?.props?.style), sB = flatStyle(d.hostB?.props?.style);
+  const sameBut = (key, value) => {
+    const expected = { ...sA, [key]: value };
+    return Object.keys(expected).length === Object.keys(sB).length && Object.entries(expected).every(([k, v]) => sB[k] === v);
+  };
+  const styleLeaf = /\.props\.style(\[\d+\])*(\.\w+)?$/.test(d.path);
+  if (id === undefined && sB.position === 'absolute' && sB.width === 1 && sB.top === 22 && sB.bottom === 22
+    && /\.props\.pointerEvents$/.test(d.path) && d.a === undefined && d.b === 'none') kind = 'RAIL_LINE';
+  if (id === 'qandeel-cosmos-rail' && ((/\.props\.style\[0\]\.top$/.test(d.path) && d.a === '36%' && d.b === undefined)
+    || (/\.props\.style\[1\]\.top$/.test(d.path) && d.a === undefined && typeof d.b === 'number' && d.b > 0))) kind = 'RAIL_TOP';
+  if (id === 'qandeel-cosmos-back') {
+    const home = d.hostB.props.accessibilityState?.disabled === true;
+    if (home && d.a === undefined && ((/\.props\.pointerEvents$/.test(d.path) && d.b === 'none')
+      || (/\.props\.accessibilityElementsHidden$/.test(d.path) && d.b === true)
+      || (/\.props\.importantForAccessibility$/.test(d.path) && d.b === 'no-hide-descendants'))) kind = 'BACK_HOME';
+    if (!home && d.a === undefined && ((/\.props\.pointerEvents$/.test(d.path) && d.b === 'auto')
+      || (/\.props\.accessibilityElementsHidden$/.test(d.path) && d.b === false)
+      || (/\.props\.importantForAccessibility$/.test(d.path) && d.b === 'auto'))) kind = 'BACK_AWAY';
+    if (styleLeaf && sameBut('flexShrink', 1)) kind = 'BACK_HOME';
+  }
+  if (id === 'qandeel-cosmos-overview' && styleLeaf && sameBut('flexShrink', 0)) kind = 'OVERVIEW';
   if (kind === null) disallowed.push(d);
   else tally[kind] = (tally[kind] ?? 0) + 1;
 }
 
-// Every bead in the NEW tree: its touch must follow its selection, and its style must carry the alignment.
+// Every bead in the NEW tree: its touch must follow whether it acts (D-3: only a shallower, enabled bead takes touch),
+// and its style must carry the alignment.
 let beads = 0, beadFaults = 0;
 const visit = (n) => {
   if (Array.isArray(n)) return n.forEach(visit);
   if (!isHost(n)) return;
   if (isBead(n)) {
     beads += 1;
-    const selected = n.props.accessibilityState?.selected === true;
-    if ((selected ? 'none' : 'auto') !== (n.props.pointerEvents ?? 'auto') || flatStyle(n.props.style).alignSelf !== 'flex-end') beadFaults += 1;
+    const disabled = n.props.accessibilityState?.disabled === true;
+    if ((disabled ? 'none' : 'auto') !== (n.props.pointerEvents ?? 'auto') || flatStyle(n.props.style).alignSelf !== 'flex-end') beadFaults += 1;
   }
   (n.children ?? []).forEach(visit);
 };

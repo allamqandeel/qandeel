@@ -63,6 +63,22 @@ export function usableCentre(glass: ViewportEnvelope, controlsBottom: number | n
   return { x: envelopeCenter(glass).x, y: bottom > top ? (top + bottom) / 2 : envelopeCenter(glass).y };
 }
 
+/** The rail's place at rest (36 % down the glass, as accepted). */
+const RAIL_TOP_SHARE = 0.36;
+/** The room under Overview's companion (§16 A-2: 48 points below the chip's row) and the gap kept above the rail. */
+const COMPANION_ROOM = 48;
+const RAIL_GAP = 8;
+/**
+ * Slice E D-3 (PO D-c / D-d, 2026-11-18): the depth rail's top. It keeps its accepted place unless the top controls (and
+ * Overview's companion, where the host offers one) reach it: then it stands just below them, on the same right edge.
+ * Before the controls are laid out, the accepted place.
+ */
+export function railTopOf(glassHeight: number, controlsEnd: number | null, companion: boolean): number {
+  const accepted = glassHeight * RAIL_TOP_SHARE;
+  if (controlsEnd === null) return accepted;
+  return Math.max(accepted, controlsEnd + (companion ? COMPANION_ROOM : 0) + RAIL_GAP);
+}
+
 const now = (): number => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
 
 // The stage's own glass palette, as accepted on the device.
@@ -166,7 +182,15 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   // Where the chrome is laid out, read by a pinch's end only (refs: a layout writes no state and renders nothing).
   const controlsBottom = useRef<number | null>(null);
   const railTop = useRef<number | null>(null);
-  const onControlsLayout = useCallback((event: LayoutChangeEvent) => { const { y, height } = event.nativeEvent.layout; controlsBottom.current = y + height; }, []);
+  // Slice E D-3 (PO D-c / D-d, 2026-11-18): the depth rail stands below the top controls (and Overview's companion), never
+  // under them or under the host's band. Whole points only, so sub-point noise is never a relayout.
+  const [controlsEnd, setControlsEnd] = useState<number | null>(null);
+  const onControlsLayout = useCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    controlsBottom.current = y + height;
+    const end = Math.ceil(y + height);
+    setControlsEnd((current) => (current === end ? current : end));
+  }, []);
   const onRailLayout = useCallback((event: LayoutChangeEvent) => { railTop.current = event.nativeEvent.layout.y; }, []);
   useEffect(() => { if (rail === null) railTop.current = null; }, [rail]);
   const onPinchEnd = useCallback((direction: 'IN' | 'OUT' | null, fx: number, fy: number, released: NasijCamera) => {
@@ -269,12 +293,17 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 
       {/* Below the host's top band: Back (the shallower rung, or the world's centre) at the left and Overview at the right, in both languages (U-1, U-9). */}
       <View pointerEvents="box-none" onLayout={onControlsLayout} style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
-        <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} style={[styles.press, atHome && styles.hidden]}>
+        {/* Slice E D-3, E-1 option (a) (PO, 2026-11-18): at home Back is hidden and disabled, so it takes no touch and is not
+            announced, on both platforms (iOS already skipped an invisible view; Android did not). Away from home it is
+            unchanged. It may shrink, its words wrapping, so Overview always keeps its own width on the screen. */}
+        <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back}
+          pointerEvents={atHome ? 'none' : 'auto'} accessibilityElementsHidden={atHome} importantForAccessibility={atHome ? 'no-hide-descendants' : 'auto'}
+          style={[styles.press, styles.backPress, atHome && styles.hidden]}>
           <View style={styles.chip}><Text style={styles.pillText}>{backText}</Text></View>
         </Pressable>
         <View style={styles.spacer} />
         <Pressable testID={COSMOS_OVERVIEW_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.overview} accessibilityState={{ selected: overview }}
-          onPress={() => { if (!leaveOverview()) enterOverview(); }} style={styles.press}>
+          onPress={() => { if (!leaveOverview()) enterOverview(); }} style={[styles.press, styles.overviewPress]}>
           <View style={[styles.chip, overview && styles.chipOn]}><Text style={[styles.pillText, overview && styles.goldText]}>{copy.overview}</Text></View>
         </Pressable>
       </View>
@@ -289,8 +318,9 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       {/* The depth rail: the current depth is the lit point; a shallower depth can be returned to. Product Owner override
           (2026-11-15): the rail stays on the RIGHT in both languages — its side is never mirrored in RTL; its design,
           labels, size and interactions are the accepted ones. The label sits inboard of its dot, as on the right rail. */}
-      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" style={[styles.rail, { right: glass.insetRight + 2 }]}>
-        <View style={[styles.railLine, { right: 21.5 }]} />
+      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" style={[styles.rail, { top: railTopOf(glass.height, controlsEnd, overviewAct !== null), right: glass.insetRight + 2 }]}>
+        {/* Slice E D-3 (SE-FU-2): the line is drawn, never touched. */}
+        <View pointerEvents="none" style={[styles.railLine, { right: 21.5 }]} />
         {names.map((name, i) => {
           const on = i === snapshot.rung;
           const past = i < snapshot.rung;
@@ -300,9 +330,10 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
             // view's recognizers and its ancestors' see it. The canvas detector is the bead's sibling, so a bead's own box,
             // which spans the word, would keep from the stage a touch it never acts on. Diag run 44255421709 proved this
             // for beads 3 and 2. The bead is disabled at the current depth, so it loses no act; a shallower bead keeps its
-            // touch. Its accessibility and its appearance are unchanged.
+            // touch. Its accessibility and its appearance are unchanged. Slice E D-3 (SE-FU-2; diag run 44364253792): a deeper
+            // bead, disabled too, took a drag meant for the stage in every World; it now takes no touch either.
             <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
-              onPress={() => toRung(i)} style={styles.bead} pointerEvents={on ? 'none' : undefined}>
+              onPress={() => toRung(i)} style={styles.bead} pointerEvents={past ? undefined : 'none'}>
               {/* §18 (PO, 2026-11-16; extended to Shared and Public by the PO, 2026-11-18): the current depth's word takes
                   no touch, so a finger of a pinch that lands on it still reaches the stage (a centred target sits in its
                   band; the bead is disabled at the current depth, so no touch on the word ever did anything). */}
@@ -322,8 +353,10 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       {/* A known world with nothing in this region: the one absence the production chrome does not say. */}
       {absence.kind !== 'REGION_EMPTY' ? null : (
         <View pointerEvents="box-none" style={styles.absenceWrap}>
-          <View accessibilityLiveRegion="polite" testID={COSMOS_NEAREST_TEST_ID} style={styles.absence}>
-            <Text style={styles.absenceText}>{copy.regionEmpty}</Text>
+          {/* Slice E D-3 (SE-FU-2; diag run 44364253792): the card and its words take no touch, so a drag that starts on
+              them still moves the stage; "Go to the nearest" keeps its own. Its live region and words are unchanged. */}
+          <View accessibilityLiveRegion="polite" testID={COSMOS_NEAREST_TEST_ID} pointerEvents="box-none" style={styles.absence}>
+            <View pointerEvents="none"><Text style={styles.absenceText}>{copy.regionEmpty}</Text></View>
             {bearing === null ? null : (
               <Pressable accessibilityRole="button" accessibilityLabel={copy.nearest} onPress={() => toNearest(snapshot.camera.cx + bearing.dx, snapshot.camera.cy + bearing.dy)} style={styles.absenceAct}>
                 <Text style={[styles.goldText, { transform: [{ rotate: `${Math.atan2(bearing.dy, bearing.dx)}rad` }] }]}>➤</Text>
@@ -369,12 +402,14 @@ const styles = StyleSheet.create({
   hidden: { opacity: 0 },
   // T12-A95: every press target is at least 44 points; the accepted 40-point pill sits inside it.
   press: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
+  backPress: { flexShrink: 1 },
+  overviewPress: { flexShrink: 0 },
   pillText: { fontSize: 13, color: C.ink },
   // ONE chip for Back and Overview (Product Owner, 2026-11-16: consistent proportions, spacing and touch targets in the one row).
   chip: { minHeight: 40, minWidth: 44, paddingHorizontal: 14, borderRadius: 20, backgroundColor: C.glass, borderWidth: StyleSheet.hairlineWidth, borderColor: C.hair, alignItems: 'center', justifyContent: 'center' },
   chipOn: { borderColor: C.gold },
   goldText: { fontSize: 13, color: C.gold },
-  rail: { position: 'absolute', top: '36%' },
+  rail: { position: 'absolute' },
   railLine: { position: 'absolute', top: 22, bottom: 22, width: 1, backgroundColor: C.goldDim },
   // Slice E D-1 (iOS): a bead is as wide as what it draws, at the rail's right edge (`alignSelf`), not stretched to the
   // widest bead. The pixels do not move: the content was already right-aligned. Stretched, every bead was a

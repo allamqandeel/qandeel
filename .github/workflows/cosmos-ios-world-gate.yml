@@ -108,22 +108,47 @@ jobs:
       - name: World gate (Personal, Shared, Public; real touch; assertions)
         timeout-minutes: 40
         run: bash scripts/cosmos-ios-world/run-world-gate.sh "$RUNNER_TEMP/evidence/gate" "$IOS_SIM_UDID"
-      - name: Native gestures (XCUITest; double tap, pinch, the current depth bead, focal anchoring, pan)
+      - name: Native gestures (XCUITest; double tap, pinch, the current depth bead, focal anchoring, pan; D-3 overlays and layout)
         # Runs even when a World gate case failed, so every case is classified. The same build's runner, no rebuild.
         if: ${{ !cancelled() && env.XCTESTRUN != '' }}
-        timeout-minutes: 30
+        timeout-minutes: 40
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
+          # The Maestro driver is an XCTest runner too; it is stopped so that one runner drives the simulator.
+          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
+          # D-3: the fresh-install case runs on its own, last (below), so that this run and the World gate keep the D-1 conditions.
+          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/gestures.xcresult" \
+            -skip-testing QandeelWorldUITests/CosmosWorldGestureUITests/testFreshInstallFirstVisibleDoorTapOpensTheAnalysis > "$X/xcodebuild.log" 2>&1 || true
+          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/xcodebuild.log" || true
+          xcrun xcresulttool export attachments --path "$X/gestures.xcresult" --output-path "$X/attachments" || true
+          # Compact evidence: the attachments and the log are kept; the result bundle (which repeats them) is not.
+          rm -rf "${X:?}/gestures.xcresult"
+      - name: SE-FU-1 fresh install (D-a; XCUITest; the door tapped once at its first visible frame, no settle, no retry)
+        # PO 2026-11-18 (contract §24.1 D-a / D-b): a freshly booted simulator and a fresh install of the same build, then the
+        # one test alone. Its cold and warm timings are recorded in its row; they are judged in the D-3 report, not here.
+        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        timeout-minutes: 20
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X"
+          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
+          xcrun simctl shutdown "$IOS_SIM_UDID" 2>/dev/null || true
+          xcrun simctl boot "$IOS_SIM_UDID"
+          node scripts/validation/bounded-run.mjs --seconds 300 --label ios-simulator-reboot -- xcrun simctl bootstatus "$IOS_SIM_UDID" -b > /dev/null
+          xcrun simctl uninstall "$IOS_SIM_UDID" com.qandeel.mobile 2>/dev/null || true
+          xcrun simctl install "$IOS_SIM_UDID" "$APP"
+          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/fresh.xcresult" \
+            -only-testing QandeelWorldUITests/CosmosWorldGestureUITests/testFreshInstallFirstVisibleDoorTapOpensTheAnalysis > "$X/fresh.log" 2>&1 || true
+          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/fresh.log" || true
+          xcrun xcresulttool export attachments --path "$X/fresh.xcresult" --output-path "$X/fresh-attachments" || true
+          rm -rf "${X:?}/fresh.xcresult"
+      - name: Classify the native runs
+        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
         run: |
           E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
           [ -f "$E/gate/results.tsv" ] || printf 'case\tresult\tdetail\n' > "$E/gate/results.tsv"
-          # The Maestro driver is an XCTest runner too; it is stopped so that one runner drives the simulator.
-          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
-          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/gestures.xcresult" > "$X/xcodebuild.log" 2>&1 || true
-          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/xcodebuild.log" || true
-          xcrun xcresulttool export attachments --path "$X/gestures.xcresult" --output-path "$X/attachments" || true
+          cat "$X/xcodebuild.log" "$X/fresh.log" > "$X/native.log" 2>/dev/null || true
           wpt="$(sed -n 's/.*device widthPoints=\([0-9]*\).*/\1/p' "$E/gate/gate.log" 2>/dev/null | head -n 1)"
-          node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/xcodebuild.log" "$X/attachments" "${wpt:-0}" "$E/gate/results.tsv"
-          # Compact evidence: the attachments and the log are kept; the result bundle (which repeats them) is not.
-          rm -rf "${X:?}/gestures.xcresult"
+          node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/native.log" "$X/attachments,$X/fresh-attachments" "${wpt:-0}" "$E/gate/results.tsv"
       - name: Results
         if: ${{ !cancelled() }}
         run: |
