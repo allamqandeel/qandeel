@@ -675,6 +675,9 @@ final class CosmosWorldGestureUITests: XCTestCase {
   /// "Near-zero" is taken as under 20 % of the screen; every share is recorded for the PO's tiers.
   func testLayoutAtTheReadersTextSize() {
     let tag = ProcessInfo.processInfo.environment["D3_TAG"] ?? "gate"
+    // Launch first: `screen` is the app's window. Run alone (validation 44397000717) the test found the app not running
+    // ("Failed to get matching snapshot"); in the gate it passed only because an earlier test had left the app open.
+    toConversation()
     let H = screen.height, W = screen.width
     var lines = ["screen \(Int(W))x\(Int(H))"]
     func box(_ e: XCUIElement) -> String { let f = e.frame; return "\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height))" }
@@ -703,7 +706,6 @@ final class CosmosWorldGestureUITests: XCTestCase {
       lines.append("\(w) band=\(box(band)) clear map share=\(Int((clear * 100).rounded())) %")
       XCTAssertGreaterThanOrEqual(clear, 0.20, "\(tag) \(w): the clear map is near zero (\(Int(clear * 100)) %)")
     }
-    toConversation()
     shot("layout-\(tag)-conversation")
     for id in ["qandeel-depth-to-analysis", "qandeel-settings-entry", "qandeel-switcher-my_world", "qandeel-switcher-shared_world", "qandeel-switcher-public_world"] { inside(id) }
     for id in ["qandeel-switcher-my_world", "qandeel-switcher-shared_world", "qandeel-switcher-public_world"] {
