@@ -41,6 +41,7 @@ import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import type { SharedFieldPlace } from '../../runtime-entry';
 import { sharedFieldCopy, type SharedFieldCopy } from './field-copy';
 import type { SharedFieldController, SharedFieldPanelState, SharedFieldState } from './shared-field-controller';
+import { diagTextLayout } from '../../cosmos/__diag__/trace';
 
 export const SHARED_FIELD_TEST_ID = 'qandeel-shared-field';
 export const SHARED_BAND_TEST_ID = 'qandeel-shared-band';
@@ -176,7 +177,7 @@ function SharedBand({ insets, onHeight, copy, language, title, onBack, onConvers
           style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}>
           <Glyph name="back" color={palette.restInk} direction={writing} />
         </Control>
-        <Text testID="qandeel-shared-title" accessibilityRole="header" accessibilityLanguage={language} numberOfLines={1}
+        <Text testID="qandeel-shared-title" accessibilityRole="header" accessibilityLanguage={language} numberOfLines={1} onTextLayout={diagTextLayout('sharedTitle', title)}
           style={{ ...typeStyle('statement'), color: palette.primary, flex: 1, paddingHorizontal: 2, writingDirection: writing }}>
           {title}
         </Text>

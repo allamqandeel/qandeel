@@ -1,0 +1,118 @@
+# COSMOS-INT-01 Slice E, D-3 CP1 — DIAGNOSTIC ONLY (branch cosmos/slice-e-d3-diag; no PR, never merged; PO 2026-11-18).
+# ONE instrumented S401 proof build (fc2e13c6 + counters/timers/frames only; the diff is recorded) and its diagnostic
+# XCUITests (scripts/cosmos-ios-world/xcuitest/CosmosD3DiagUITests.swift), run on one runner:
+#   SE-FU-1  3 rounds, each after a simulator reboot (cold), of four tap timings A/B/C/D, the order rotated;
+#   SE-FU-2  the overlays of the Personal, Shared and Public stages;
+#   layout   iPhone 17 (en default, en AX3, ar AX3) and iPhone SE 3rd generation (en/ar at AX3 and AX5).
+# Evidence only: nothing here is an acceptance gate, and no result is asserted.
+name: cosmos-slice-e-d3-diag
+on:
+  push:
+    branches: ['cosmos/slice-e-d3-diag']
+concurrency:
+  group: cosmos-slice-e-d3-diag-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  BASELINE_COMMIT: fc2e13c6d79a4df8f55722c39d485ef170677c4e
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  diag:
+    name: D-3 CP1 diagnostic — one instrumented build; SE-FU-1, SE-FU-2, layout
+    runs-on: macos-26
+    timeout-minutes: 240
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Record the application diff to fc2e13c6 (instrumentation only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          git diff --stat "$BASELINE_COMMIT" HEAD -- apps/ | tee "$RUNNER_TEMP/evidence/app-diff-stat.txt"
+          git diff "$BASELINE_COMMIT" HEAD -- apps/ > "$RUNNER_TEMP/evidence/app-diff.patch"
+          test -z "$(git diff --name-only "$BASELINE_COMMIT" HEAD -- package.json package-lock.json apps/mobile/package.json)"
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the S401 proof entry (this ephemeral checkout only)
+        env: {S401_SHARED_PROOF: '1'}
+        run: node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Add the diagnostic UI-test target
+        run: |
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosD3DiagUITests.swift
+      - name: Build the instrumented proof Release simulator app and its UI tests (one build)
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find apps/mobile/ios/build/Build/Products -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "baseline=$BASELINE_COMMIT"; echo "app=$(basename "$app")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Boot iPhone 17 and install the app
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+      - name: SE-FU-1 (three cold rounds, four tap timings each, rotated)
+        timeout-minutes: 90
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/sefu1"; mkdir -p "$E"
+          source scripts/cosmos-ios-world/d3-diag-lib.sh
+          set_lang "$U" en-US en_US; xcrun simctl ui "$U" content_size large
+          xcrun simctl install "$U" "$APP"
+          r=0
+          for order in "A B C D" "B C A D" "C A B D"; do
+            r=$((r + 1)); reboot_sim "$U"; xcrun simctl ui "$U" content_size large
+            for m in $order; do
+              case "$m" in A) t=test1A_tapAtFirstVisible ;; B) t=test1B_tapAtFirstHittable ;; C) t=test1C_elementTapRightAfterThread ;; D) t=test1D_elementTapEightSecondsAfterThread ;; esac
+              xcrun simctl terminate "$U" com.qandeel.mobile 2>/dev/null || true
+              run_test "$U" "$E" "r$r-$m" "$t" "r$r-$m"
+            done
+          done
+      - name: SE-FU-2 (the overlays of the three stages)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 45
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/sefu2"; mkdir -p "$E"
+          source scripts/cosmos-ios-world/d3-diag-lib.sh
+          for t in test2P_personalOverlays test2S_sharedOverlays test2U_publicOverlays; do run_test "$U" "$E" "$t" "$t" sefu2; done
+      - name: Layout on iPhone 17 (en default, en AX3, ar AX3)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 45
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/layout"; mkdir -p "$E"
+          source scripts/cosmos-ios-world/d3-diag-lib.sh
+          layout_pass "$U" "$E" i17-en-default en-US en_US large
+          layout_pass "$U" "$E" i17-en-AX3 en-US en_US accessibility-extra-large
+          layout_pass "$U" "$E" i17-ar-AX3 ar-EG ar_EG accessibility-extra-large
+          xcrun simctl shutdown "$U" || true
+      - name: Boot iPhone SE (3rd generation) and install the app
+        if: ${{ !cancelled() }}
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
+      - name: Layout on the small iPhone (en/ar at AX3 and AX5)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 50
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/layout"; mkdir -p "$E"
+          source scripts/cosmos-ios-world/d3-diag-lib.sh
+          xcrun simctl install "$U" "$APP"
+          layout_pass "$U" "$E" se-en-AX3 en-US en_US accessibility-extra-large
+          layout_pass "$U" "$E" se-ar-AX3 ar-EG ar_EG accessibility-extra-large
+          layout_pass "$U" "$E" se-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+          layout_pass "$U" "$E" se-ar-AX5 ar-EG ar_EG accessibility-extra-extra-extra-large
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: d3-cp1-diag, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

@@ -34,6 +34,7 @@ import type { WorldKind } from '../core/stage';
 import { CosmosCanvas, type CosmosCanvasHandle } from '../skia/CosmosCanvas';
 import { cosmosProductCopy } from './copy';
 import { viewOf, type CosmosWorldOwner } from './owner-core';
+import { diag, diagFrame, diagTextLayout } from '../__diag__/trace';
 
 export const COSMOS_WORLD_VIEW_TEST_ID = 'qandeel-cosmos-world';
 export const COSMOS_BACK_TEST_ID = 'qandeel-cosmos-back';
@@ -95,6 +96,10 @@ export interface CosmosWorldViewProps {
 
 export function CosmosWorldView({ owner, world, language, glass, drift = true, worldLabel, zoomInLabel, zoomOutLabel, accessibleMarks = true, children, rail = null, overviewAct = null, home, testID = COSMOS_WORLD_VIEW_TEST_ID }: CosmosWorldViewProps) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
+  // D-3 CP1 DIAGNOSTIC ONLY: where each touch on this stage stops (T.<w>.<view> counts), its frames and its camera.
+  const W = world === 'PERSONAL' ? 'P' : world === 'SHARED' ? 'S' : 'U';
+  const T = (view: string) => () => diag(`T.${W}.${view}`);
+  useEffect(() => diag(`S.${W}`, `r${snapshot.rung}/cam${Math.round(snapshot.camera.cx)},${Math.round(snapshot.camera.cy)},${snapshot.camera.scale.toFixed(3)}/glass${Math.round(glass.width)}x${Math.round(glass.height)}t${Math.round(glass.insetTop)}b${Math.round(glass.insetBottom)}`), [snapshot, glass, W]);
   const copy = useMemo(() => cosmosProductCopy(language), [language]);
   const rtl = language === 'ar';
   const canvas = useRef<CosmosCanvasHandle>(null);
@@ -236,7 +241,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   // pins `ltr`) renders the same accepted layout in every world. (HONOR proof, 2026-11-15: without this the Shared /
   // Public rail label sat outboard and was clipped at the edge.) Arabic words keep their own reading direction.
   return (
-    <View style={styles.root} testID={testID}>
+    <View style={styles.root} testID={testID} onTouchStart={T('root')} onLayout={diagFrame(`${W}.root`)}>
       <CosmosCanvas
         ref={canvas}
         world={world}
@@ -268,20 +273,20 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       ))}
 
       {/* Below the host's top band: Back (the shallower rung, or the world's centre) at the left and Overview at the right, in both languages (U-1, U-9). */}
-      <View pointerEvents="box-none" onLayout={onControlsLayout} style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
-        <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} style={[styles.press, atHome && styles.hidden]}>
+      <View pointerEvents="box-none" onTouchStart={T('topRow')} onLayout={(e) => { onControlsLayout(e); diagFrame(`${W}.topRow`)(e); }} style={[styles.top, { top: glass.insetTop + 6, left: glass.insetLeft + 12, right: glass.insetRight + 12 }]}>
+        <Pressable testID={COSMOS_BACK_TEST_ID} accessibilityRole="button" accessibilityLabel={backText} disabled={atHome} onPress={back} onTouchStart={T(atHome ? 'back.home' : 'back.away')} onLayout={diagFrame(`${W}.back`)} style={[styles.press, atHome && styles.hidden]}>
           <View style={styles.chip}><Text style={styles.pillText}>{backText}</Text></View>
         </Pressable>
         <View style={styles.spacer} />
         <Pressable testID={COSMOS_OVERVIEW_TEST_ID} accessibilityRole="button" accessibilityLabel={copy.overview} accessibilityState={{ selected: overview }}
-          onPress={() => { if (!leaveOverview()) enterOverview(); }} style={styles.press}>
-          <View style={[styles.chip, overview && styles.chipOn]}><Text style={[styles.pillText, overview && styles.goldText]}>{copy.overview}</Text></View>
+          onPress={() => { if (!leaveOverview()) enterOverview(); }} onTouchStart={T('overview')} onLayout={diagFrame(`${W}.overview`)} style={styles.press}>
+          <View style={[styles.chip, overview && styles.chipOn]}><Text onTextLayout={diagTextLayout(`${W}.overviewWord`, copy.overview)} style={[styles.pillText, overview && styles.goldText]}>{copy.overview}</Text></View>
         </Pressable>
       </View>
 
       {/* §16 A-2: Overview's companion — the host's canonical Return to World — under the Overview chip, only while Overview is on. */}
       {overview && overviewAct !== null ? (
-        <View testID={COSMOS_OVERVIEW_COMPANION_TEST_ID} pointerEvents="box-none" style={[styles.companion, { top: glass.insetTop + 6 + 48, right: glass.insetRight + 12 }]}>
+        <View testID={COSMOS_OVERVIEW_COMPANION_TEST_ID} pointerEvents="box-none" onTouchStart={T('companion')} style={[styles.companion, { top: glass.insetTop + 6 + 48, right: glass.insetRight + 12 }]}>
           {overviewAct}
         </View>
       ) : null}
@@ -289,8 +294,8 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
       {/* The depth rail: the current depth is the lit point; a shallower depth can be returned to. Product Owner override
           (2026-11-15): the rail stays on the RIGHT in both languages — its side is never mirrored in RTL; its design,
           labels, size and interactions are the accepted ones. The label sits inboard of its dot, as on the right rail. */}
-      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" style={[styles.rail, { right: glass.insetRight + 2 }]}>
-        <View style={[styles.railLine, { right: 21.5 }]} />
+      <View testID={COSMOS_RAIL_TEST_ID} pointerEvents="box-none" onTouchStart={T('rail')} onLayout={diagFrame(`${W}.rail`)} style={[styles.rail, { right: glass.insetRight + 2 }]}>
+        <View onTouchStart={T('railLine')} onLayout={diagFrame(`${W}.railLine`)} style={[styles.railLine, { right: 21.5 }]} />
         {names.map((name, i) => {
           const on = i === snapshot.rung;
           const past = i < snapshot.rung;
@@ -302,7 +307,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
             // for beads 3 and 2. The bead is disabled at the current depth, so it loses no act; a shallower bead keeps its
             // touch. Its accessibility and its appearance are unchanged.
             <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
-              onPress={() => toRung(i)} style={styles.bead} pointerEvents={on ? 'none' : undefined}>
+              onPress={() => toRung(i)} onTouchStart={T(`bead${i}.${on ? 'on' : past ? 'past' : 'deeper'}`)} onLayout={diagFrame(`${W}.bead${i}`)} style={styles.bead} pointerEvents={on ? 'none' : undefined}>
               {/* §18 (PO, 2026-11-16; extended to Shared and Public by the PO, 2026-11-18): the current depth's word takes
                   no touch, so a finger of a pinch that lands on it still reaches the stage (a centred target sits in its
                   band; the bead is disabled at the current depth, so no touch on the word ever did anything). */}
@@ -321,11 +326,11 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 
       {/* A known world with nothing in this region: the one absence the production chrome does not say. */}
       {absence.kind !== 'REGION_EMPTY' ? null : (
-        <View pointerEvents="box-none" style={styles.absenceWrap}>
-          <View accessibilityLiveRegion="polite" testID={COSMOS_NEAREST_TEST_ID} style={styles.absence}>
-            <Text style={styles.absenceText}>{copy.regionEmpty}</Text>
+        <View pointerEvents="box-none" onTouchStart={T('absenceWrap')} style={styles.absenceWrap}>
+          <View accessibilityLiveRegion="polite" testID={COSMOS_NEAREST_TEST_ID} onTouchStart={T('card')} onLayout={diagFrame(`${W}.card`)} style={styles.absence}>
+            <Text onLayout={diagFrame(`${W}.cardText`)} style={styles.absenceText}>{copy.regionEmpty}</Text>
             {bearing === null ? null : (
-              <Pressable accessibilityRole="button" accessibilityLabel={copy.nearest} onPress={() => toNearest(snapshot.camera.cx + bearing.dx, snapshot.camera.cy + bearing.dy)} style={styles.absenceAct}>
+              <Pressable accessibilityRole="button" accessibilityLabel={copy.nearest} onPress={() => toNearest(snapshot.camera.cx + bearing.dx, snapshot.camera.cy + bearing.dy)} onTouchStart={T('nearest')} onLayout={diagFrame(`${W}.nearest`)} style={styles.absenceAct}>
                 <Text style={[styles.goldText, { transform: [{ rotate: `${Math.atan2(bearing.dy, bearing.dx)}rad` }] }]}>➤</Text>
                 <Text style={styles.goldText}>{copy.nearest}</Text>
               </Pressable>
@@ -336,7 +341,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 
       {/* G-6: the Personal objects disclosed with no place, at the start of the bottom edge, inspectable; no name is invented. */}
       {snapshot.unplaced.length === 0 ? null : (
-        <View testID={COSMOS_REGISTER_TEST_ID} pointerEvents="box-none"
+        <View testID={COSMOS_REGISTER_TEST_ID} pointerEvents="box-none" onTouchStart={T('register')}
           style={[styles.register, { bottom: glass.insetBottom + 10 + (rail === null ? 0 : RAIL_CLEARANCE), left: glass.insetLeft + 10 }]}>
           {snapshot.unplaced.map((item) => {
             const on = item.id === snapshot.inspectedId;
@@ -352,7 +357,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
 
       {/* Slice C: the host's rail along the bottom edge, in the glass, at the proof's own place (`bottom = inset + 12`, 18-point gutters). */}
       {rail === null ? null : (
-        <View pointerEvents="box-none" onLayout={onRailLayout} style={[styles.railWrap, { bottom: glass.insetBottom + 12, left: glass.insetLeft + 18, right: glass.insetRight + 18 }]}>
+        <View pointerEvents="box-none" onTouchStart={T('timelineWrap')} onLayout={(e) => { onRailLayout(e); diagFrame(`${W}.timelineWrap`)(e); }} style={[styles.railWrap, { bottom: glass.insetBottom + 12, left: glass.insetLeft + 18, right: glass.insetRight + 18 }]}>
           {rail}
         </View>
       )}

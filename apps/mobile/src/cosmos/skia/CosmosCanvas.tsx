@@ -30,6 +30,7 @@ import Animated, {
   Easing, cancelAnimation, useAnimatedStyle, useDerivedValue, useFrameCallback, useReducedMotion, useSharedValue, withTiming, type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { diag } from '../__diag__/trace';
 
 import type { NasijCamera } from '../core/camera';
 import { rungScale, type Stage, type StageLabel, type WorldKind } from '../core/stage';
@@ -408,6 +409,8 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   const emitPanEnd = useCallback((cx: number, cy: number, scale: number) => host.props().onPanEnd({ cx, cy, scale }), [host]);
   const emitPinchEnd = useCallback((step: number, fx: number, fyAt: number, cx: number, cy: number, scale: number) =>
     host.props().onPinchEnd(step > 0 ? 'IN' : step < 0 ? 'OUT' : null, fx, fyAt, { cx, cy, scale }), [host]);
+  // D-3 CP1 DIAGNOSTIC ONLY: whether the stage's own gestures saw a touch (G.<w>.<gesture>.<phase> counts).
+  const mark = useCallback((key: string) => diag(`G.${props.world === 'PERSONAL' ? 'P' : props.world === 'SHARED' ? 'S' : 'U'}.${key}`), [props.world]);
   const emitTap = useCallback((x: number, y: number, cx: number, cy: number, scale: number) => host.props().onTap(x, y, { cx, cy, scale }), [host]);
   const emitProbe = useCallback((kind: number, count: number, mean: number, p50: number, p95: number, max: number, stalls: number, freezes: number, inputN: number, inputP50: number, inputP95: number) => {
     const now = host.props();
@@ -551,7 +554,8 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
     };
     // The three gestures carry test identifiers so the headless pinch-focus tests can drive them (no runtime effect).
     const pan = Gesture.Pan().withTestId('cosmos-pan').minDistance(8).maxPointers(2).averageTouches(true)
-      .onStart(() => { 'worklet'; begin(); })
+      .onBegin(() => { 'worklet'; scheduleOnRN(mark, 'pan.begin'); })
+      .onStart(() => { 'worklet'; scheduleOnRN(mark, 'pan.start'); begin(); })
       .onChange((event) => {
         'worklet';
         if (pendingInput.get() === 0) pendingInput.set(uiNow());
@@ -562,8 +566,10 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       })
       .onEnd(() => { 'worklet'; finish(); });
     const pinch = Gesture.Pinch().withTestId('cosmos-pinch')
+      .onBegin(() => { 'worklet'; scheduleOnRN(mark, 'pinch.begin'); })
       .onStart((event) => {
         'worklet';
+        scheduleOnRN(mark, 'pinch.start');
         begin();
         // Re-anchor to the world point under the fingers: from here the scale changes about exactly that point.
         const s = Math.exp(ls.get());
@@ -590,6 +596,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       })
       .onEnd(() => { 'worklet'; pinching.set(0); finish(); });
     const tap = Gesture.Tap().withTestId('cosmos-tap').maxDistance(8).maxDuration(400)
+      .onBegin(() => { 'worklet'; scheduleOnRN(mark, 'tap.begin'); })
       .onEnd((event, success) => {
         'worklet';
         if (!success) return;
@@ -598,7 +605,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       });
     // The first to activate wins: a drag or a pinch cancels the tap, and a completed tap never becomes a drag.
     return Gesture.Race(Gesture.Simultaneous(pan, pinch), tap);
-  }, [active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
+  }, [mark, active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
 
   // ── owned Skia resources ────────────────────────────────────────────────────────────────────────────────────────
   const prepared: PreparedStage = useMemo(() => prepareStage(stage), [stage]);

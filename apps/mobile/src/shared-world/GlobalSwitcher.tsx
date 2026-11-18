@@ -19,6 +19,7 @@ import { NavGlyph } from '../iconography';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { publicCopy } from '../public-world/copy';
 import { sharedCopy } from './copy';
+import { diagFrame, diagTextLayout } from '../cosmos/__diag__/trace';
 
 export type WorldArea = 'MY_WORLD' | 'SHARED_WORLD' | 'PUBLIC_WORLD';
 
@@ -85,6 +86,8 @@ export function GlobalSwitcher({ area, language, bottomInset, onSelect }: Global
                     sizes on narrow screens, the word is fitted to the cell instead of cut. The switcher's 56-point band
                     is reserved by the composition, so the word stays one line. */}
                 <Text
+                  onTextLayout={diagTextLayout(`switcher.${item.key}`, item.word)}
+                  onLayout={diagFrame(`switcher.${item.key}.word`)}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.6}
