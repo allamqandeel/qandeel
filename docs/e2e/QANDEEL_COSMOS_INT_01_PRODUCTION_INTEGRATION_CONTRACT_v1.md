@@ -2088,6 +2088,7 @@ Each failed with its fix reverted in place (for example "Expected 'none', Receiv
 - **What it is not.** Mobile CI's `verify-ios` boot smoke, whose purpose is unchanged.
 - **Why native.** Maestro's XCTest driver sends one touch per HTTP request (333–446 ms each in runs 44263732597 and 44272338098). It cannot deliver a double tap inside 320 ms or any two-finger gesture. Its P-DTAP / P-BACK cases are therefore NOT TESTED, never PASS or FAIL, and they moved to XCUITest.
 - **Results.** Every case is PASS, FAIL or NOT TESTED in one `results.tsv`. A case whose precondition failed is NOT TESTED, nothing retries, and the job fails unless every case passed.
+- **The Personal Maestro entry (R9, §21.15).** A cold launch into the Conversation, an 8 s settle (the native entry's, R5), then one tap on the Analysis door and its rail within 60 s. The settle is not product proof (SE-FU-1, §21.14). Maestro's own step output is kept in each step's log.
 
 | Case | Driver | Assertion |
 |---|---|---|
@@ -2208,6 +2209,7 @@ Every failure was diagnosed as the harness, not the app (§21.13; `…\d1\gate-4
 8. **The final acceptance gate** is one complete exact-head iOS World gate on the final harness commit. All cases, including X-PAN-ZOOMED, must PASS together, with the required Mobile CI and API CI. A targeted diagnostic run is not an acceptance gate.
    - The PO's closure directive (2026-11-18) authorised the push to PR #399 and that one validation. It did not authorise a merge.
    - Its results are not in this commit, which it validates. They go to the closure report, and into §21.7 only by a documentation-only follow-up the PO asks for.
+   - **Run 44321160183 on 746dc10b was that gate: 12 PASS, 4 NOT TESTED** (§21.15). The PO's correction (2026-11-18) authorised R9 and one more complete exact-head gate on its head. The same rule holds for that gate's results.
    - X-PAN-ZOOMED was added after the original D-1 acceptance cases (PO review, item 2). If it is not proven, its disposition is the PO's decision; it is not waived.
 
 ### 21.13 Diagnosis of run 44289175909 and the targeted diagnostic reruns (PO, 2026-11-18)
@@ -2292,6 +2294,7 @@ Every failure was diagnosed as the harness, not the app (§21.13; `…\d1\gate-4
   - In pass 1, also a cold first launch, the same tap 8 s after the thread appeared entered the Analysis.
 - **Status.** Not investigated and not reproduced on demand. It is unknown whether a real user's early tap is lost: no cause is claimed, in the app or in XCTest.
 - **The harness.** R5's 8 s settle lets the gate measure what it is for: stage gestures, not cold-launch responsiveness. **It is not evidence that the product behaves correctly**, and it hides this observation from the gate by design. It stays open for the PO.
+- **Seen again through Maestro (gate 44321160183, §21.15).** The Personal door was tapped as soon as the cold launch showed the thread, and the Analysis did not open. That is the same boundary. R9 gives the Maestro entry the same 8 s settle, on the same terms: it is not a fix and not proof.
 
 #### 21.14.2 Pinch interception by overlays on the stage (iOS)
 - **Mechanism.** It is §21.3's: UIKit gives a touch to the topmost view under the finger, and the canvas detector is the overlays' sibling. So a pinch finger that starts on an overlay which takes touches never reaches the stage.
@@ -2322,8 +2325,35 @@ Both stay open in COSMOS-INT-01 Slice E's register, alongside F-1 / E-1 / E-2 (�
 
 | Id | Issue | Evidence | Scope |
 |---|---|---|---|
-| SE-FU-1 | Cold-launch Analysis tap: one tap 1 s after the conversation first appeared, on a 46 s cold launch, had no effect for 60 s. Cause unknown (§21.14.1). | Run 44305519293: `…\d1\targeted-44305519293\` (xcodebuild.log activity at t = 50.8 s; UI hierarchy at the failure). Pass 1 (44297426329), tapped 8 s later, entered. | **Owner: D-3** (PO, 2026-11-18). Responsiveness at cold launch, iOS. First reproduce it on demand, on the simulator and on a device, then decide. The harness's 8 s settle is not product proof. |
+| SE-FU-1 | Cold-launch Analysis tap: one tap 1 s after the conversation first appeared, on a 46 s cold launch, had no effect for 60 s. Cause unknown (§21.14.1). | Run 44305519293: `…\d1\targeted-44305519293\` (xcodebuild.log activity at t = 50.8 s; UI hierarchy at the failure). Pass 1 (44297426329), tapped 8 s later, entered. Gate 44321160183 (Maestro p-door, §21.15): the same boundary, timing only. | **Owner: D-3** (PO, 2026-11-18). Responsiveness at cold launch, iOS. First reproduce it on demand, on the simulator and on a device, then decide. The harness's 8 s settle is not product proof. |
 | SE-FU-2 | Non-interactive overlays take touches on iOS: the absence card's panel, disabled deeper beads, the hidden disabled Back at home, the rail's line (§21.14.2). | Mechanism proven for D-1 (§21.3, diag run 44255421709). The card's frame was recorded on iOS (103,298,196,93 in Shared; about 103,331,196,95 in Personal). Classification by code (§21.14.2). | A product / interaction decision on which overlays pass touches to the stage, consistent across the three Worlds and checked on iOS and Android. No visual change. |
+
+
+### 21.15 The final exact-head gate 44321160183 and R9 (PO correction, 2026-11-18)
+- **Run 44321160183** (head 746dc10b, iPhone 17, en): **12 PASS, 4 NOT TESTED, 0 FAIL**, so the job failed. Mobile CI 44321160092 and API CI 44321160819 ran on the same head.
+
+| Case | Result |
+|---|---|
+| The six native XCUITests | PASS |
+| X-ANCHOR | PASS (0,35 for 0,35; 5 pairs) |
+| X-PAN-AFTER-PINCH | PASS (−106,0 for −120,0; worst 14 pt; 3 pairs) |
+| X-PAN-ZOOMED | PASS (−97,0 for −120,0; worst 23 pt, within 1.5 × 30 pt; one unambiguous node core) |
+| S-FAR-TAP, S-TAP, U-TAP | PASS |
+| P-TAP-RAIL, P-TAP, P-PAN, P-PAN-RAIL | **NOT TESTED**: "the Personal Analysis did not open" |
+
+- **The Personal entry boundary.** `p-launch` (`launch.yaml`) exited 0: the thread was visible. `p-door` (`timed-id.yaml`: one tap on `qandeel-depth-to-analysis`, then the rail `qandeel-cosmos-timeline-rail` within 60 s) exited 1 after 111 s. The door was tapped as soon as Maestro started, with no settle.
+- **What the evidence shows, and what it cannot.**
+  - The archived `p-door.log` is empty because the gate ran Maestro with `--quiet`, which discards its step output. That evidence was never recorded, so no step-level cause is claimed.
+  - The exit was Maestro's own: 111 s is below the 150 s bound.
+  - Timing only: the door steps that passed took 35 s and 40 s end to end (gates 44263732597, 44263748686). 111 s is about that plus the 60 s wait. A door that was never found would have failed at Maestro's element lookup, well before that.
+  - So the failure is **most consistent with the tap having been issued and the 60 s wait for the rail having expired**, the native signature of SE-FU-1 (§21.14.1). That is an inference from timing, not a proof.
+- **R9 (harness only; `run-world-gate.sh`):**
+  - The Personal Maestro entry waits 8 s after the thread appears, exactly as the native entry has since R5. It applies to every Personal entry, including P-PAN and P-PAN-RAIL's fresh launches.
+  - The door tap is still one tap, never retried, with the same 60 s wait.
+  - A failed door now records a screenshot and a hierarchy dump. Maestro's step output is kept in every step's log.
+  - No application code, no visual, no threshold and no case changes. Shared and Public entries are unchanged: they passed.
+- **What R9 is not.** It is not a fix and not evidence that an early tap works. SE-FU-1 stays open, owned by D-3 (§21.14.3).
+- **Acceptance.** One complete exact-head iOS World gate on R9's head, every case PASS. Its results go to the closure report (§21.12 item 8).
 
 ---
 

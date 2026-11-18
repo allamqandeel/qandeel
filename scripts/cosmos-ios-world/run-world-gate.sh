@@ -27,8 +27,10 @@ PORT="${MAESTRO_IOS_DRIVER_PORT:-22087}"; FIX='.*(Fixture Map World|عالم ا�
 mkdir -p "$OUT"; LOG="$OUT/gate.log"; RES="$OUT/results.tsv"; printf 'case\tresult\tdetail\n' > "$RES"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 result() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$RES"; say "RESULT $1 $2 — $3"; }
+# Maestro's own step output is kept in <OUT>/<name>.log (R9: with --quiet it was discarded, so gate 44321160183's failed
+# p-door left an empty log and could not show whether its tap or its wait failed).
 mt() { local n="$1" f="$2"; shift 2; local a=(); for kv in "$@"; do a+=(-e "$kv"); done
-  node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 150 --label "$n" --quiet -- \
+  node "$ROOT/scripts/validation/bounded-run.mjs" --seconds 150 --label "$n" -- \
     maestro --device "$UDID" test ${a[@]+"${a[@]}"} "$F/$f" --no-reinstall-driver --driver-host-port "$PORT" > "$OUT/$n.log" 2>&1; local rc=$?
   say "  maestro $n ($f) exit $rc"; return $rc; }
 shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
@@ -44,7 +46,17 @@ node_at() { (cd "$ROOT" && node "$HERE/nodes.mjs" --any "$OUT/$1.png" "$wpt"); }
 say "device widthPoints=${wpt:-UNKNOWN}"
 
 # ── Personal ───────────────────────────────────────────────────────────────────────────────────────────────────────
-enter() { mt "$1-launch" launch.yaml "NAME=gate-$1-launch" && mt "$1-door" timed-id.yaml "NAME=gate-$1-door" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail; }
+# enter <name>: a cold launch into the Conversation, an 8 s settle, then ONE tap on the Analysis door and its rail within
+# 60 s. The settle is the native XCUITest entry's (R5, `toConversation`), applied here in R9 after gate 44321160183's
+# p-door, tapped as soon as the thread appeared, did not reach the Analysis. It lets the gate measure what it is for, the
+# stage's gestures. It is NOT evidence that an early tap works: that cold-launch observation stays open as SE-FU-1,
+# owned by D-3 (contract §21.14). The tap is never retried; a failed door is recorded (screenshot and hierarchy).
+enter() {
+  mt "$1-launch" launch.yaml "NAME=gate-$1-launch" || return 1
+  sleep 8
+  mt "$1-door" timed-id.yaml "NAME=gate-$1-door" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail ||
+    { shot "$1-door-failed"; dump "$1-door-failed"; return 1; }
+}
 # tapcase <case> <name> <point>: one tap, then the PEEK within 6 s; the PEEK is closed by its handle afterwards
 tapcase() {
   mt "$2" tap-point.yaml "P=$3"; local a; a="$(poll "$2" 6 id qandeel-personal-peek)"; shot "$2"
