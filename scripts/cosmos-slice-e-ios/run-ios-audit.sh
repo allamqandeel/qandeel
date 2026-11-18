@@ -256,7 +256,9 @@ cross() {
         personal)
           S "x$i-personal" timed-id.yaml "NAME=to-personal-$i" TAP=qandeel-switcher-my_world "WAIT=(qandeel-conversation-thread|qandeel-cosmos-timeline-rail)"
           if has qandeel-conversation-thread "x$i-personal"; then
-            S "x$i-personal-act" timed-id.yaml "NAME=personal-door-$i" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail; fi ;;
+            S "x$i-personal-act" timed-id.yaml "NAME=personal-door-$i" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail; fi
+          # Probe 4: the Analysis depth is full-screen (no World switcher); a person returns to the Conversation first.
+          S "x$i-personal-return" timed-id.yaml "NAME=personal-return-$i" TAP=qandeel-depth-to-conversation WAIT=qandeel-switcher-shared_world ;;
       esac
     done
   done

@@ -24,7 +24,7 @@ env:
 jobs:
   probe:
     if: ${{ !contains(github.event.head_commit.message, '[sheet-only]') }}
-    name: iOS tap probe — medium ar (Public)
+    name: iOS cross-world probe — medium en
     runs-on: macos-26
     timeout-minutes: 90
     env:
@@ -67,14 +67,14 @@ jobs:
           brew tap facebook/fb && brew install facebook/fb/idb-companion
           python3 -m venv "$RUNNER_TEMP/idbenv" && "$RUNNER_TEMP/idbenv/bin/pip" install --quiet fb-idb
           echo "$RUNNER_TEMP/idbenv/bin" >> "$GITHUB_PATH"
-      - name: Set the simulator language (ar-EG) and prove the driver
-        env: {LANGTAG: ar-EG, LANGLOC: ar_EG, LANGX: ar}
-        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-ar setup
+      - name: Set the simulator language (en-US) and prove the driver
+        env: {LANGTAG: en-US, LANGLOC: en_US, LANGX: en}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-en setup
       - name: Tap probe
         timeout-minutes: 40
         run: |
           command -v idb
-          bash scripts/cosmos-slice-e-ios/tap-probe-3.sh "$RUNNER_TEMP/evidence/probe" "$IOS_SIM_UDID"
+          LANGX=en bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-en cross || true
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with: {name: cosmos-ios-tap-probe, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
@@ -92,13 +92,13 @@ jobs:
       - name: Build the sheets
         run: |
           sudo apt-get install -y -qq imagemagick > /dev/null
-          cd "$RUNNER_TEMP/p/probe" && mkdir -p "$RUNNER_TEMP/out"
-          for w in p s u; do ls ${w}*.png >/dev/null 2>&1 || continue
+          mkdir -p "$RUNNER_TEMP/out"; cp "$RUNNER_TEMP/p/"*.tsv "$RUNNER_TEMP/p/runner.log" "$RUNNER_TEMP/out/" 2>/dev/null || true; cd "$RUNNER_TEMP/p/en/cross"
+          for w in x; do ls ${w}*.png >/dev/null 2>&1 || continue
             ls ${w}*.png | sort > "$RUNNER_TEMP/list"
             args=(); while read -r f; do args+=(-label "${f%.png}" "$f"); done < "$RUNNER_TEMP/list"
             montage "${args[@]}" -geometry 300x+4+4 -tile 6x -pointsize 18 -quality 70 "$RUNNER_TEMP/out/sheet-$w.jpg"
           done
-          cp probe.log "$RUNNER_TEMP/out/" ; cp *.point.json p0.idb.json p1.idb.json p-dtap.idb.json s-dtap.idb.json "$RUNNER_TEMP/out/" 2>/dev/null || true
+          true; cp *.point.json p0.idb.json p1.idb.json p-dtap.idb.json s-dtap.idb.json "$RUNNER_TEMP/out/" 2>/dev/null || true
           for j in u00-field; do jq -r '.. | objects | select(.attributes? != null) | .attributes | select((.["resource-id"]//"")!="") | "\(.["resource-id"]) \(.bounds//"")"' "$j.json" > "$RUNNER_TEMP/out/$j.ids" 2>/dev/null || true; done
           ls -la "$RUNNER_TEMP/out"
       - uses: actions/upload-artifact@v4
