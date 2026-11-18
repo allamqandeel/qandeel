@@ -171,9 +171,14 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("\(tag)-link", "\(route) \(url): app pid \(before) -> \(pid())")
   }
 
+  /// The conversation, settled before the first touch. Targeted run 44305519293 (cold first launch, 46 s) tapped the
+  /// Analysis door 1 s after the thread appeared and the tap had no effect; pass 1 (44297426329) tapped it 8 s after
+  /// and it opened. Maestro's World gate always enters after separate launch and tap invocations, seconds apart. The
+  /// entry is not what the gate measures: it waits like Maestro, and never retries a touch.
   private func toConversation() {
     app.launch()
     waitFor("qandeel-conversation-thread", 180)
+    settle(8)
   }
 
   private func enterPersonal() -> XCUIElement {
