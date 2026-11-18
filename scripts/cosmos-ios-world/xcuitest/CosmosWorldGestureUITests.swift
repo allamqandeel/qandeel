@@ -272,10 +272,12 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("p-word-dtap-depths", "\(first) -> \(second) -> Back -> \(depth(personalStage))")
   }
 
-  /// A two-finger pinch opening steps IN; a drag there keeps the depth; a pinch closing returns to the first depth; Back
-  /// returns home; and a pan AFTER the pinches still moves the world by the drag. The pan is measured at the first depth
-  /// (`pan-p-before` / `pan-p-after`), where five or six node cores show: at the deeper depth targeted run 44297426329
-  /// found a single core (moved -106 for a -120 drag), fewer than the two the measurement requires, which stays strict.
+  /// A two-finger pinch opening steps IN; a drag there, while the stage is still zoomed in, keeps the depth and moves the
+  /// world by the drag (`pan-z-before` / `pan-z-after`, X-PAN-ZOOMED; PO review 2026-11-18, item 2); a pinch closing
+  /// returns to the first depth; Back returns home; and a pan AFTER the round trip still moves the world by the drag,
+  /// measured separately at the first depth (`pan-p-before` / `pan-p-after`, X-PAN-AFTER-PINCH, where five or six node
+  /// cores show). A step IN magnifies eight times, so at the deeper depth one mark is in view by construction (targeted
+  /// run 44297426329: one core, moved -106 for a -120 drag); X-PAN-ZOOMED measures that one core.
   func testPersonalPinchStepsInAndThePanStillMovesTheWorld() throws {
     _ = enterPersonal()
     let first = depth(personalStage)
@@ -287,9 +289,12 @@ final class CosmosWorldGestureUITests: XCTestCase {
     let second = depth(personalStage)
     XCTAssertNotEqual(second, first, "a native two-finger pinch opening did not step IN")
     XCTAssertTrue(backAvailable(), "Back is not available after the pinch's step")
-    // A drag on open stage at the deeper depth: it must not change the depth.
+    // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth.
+    note("pan-z-spec", "\(Int(to.x - from.x)),\(Int(to.y - from.y))")
+    shot("pan-z-before")
     at(from.x, from.y).press(forDuration: 0.05, thenDragTo: at(to.x, to.y))
     settle()
+    shot("pan-z-after")
     XCTAssertEqual(depth(personalStage), second, "the drag at the deeper depth changed the semantic depth")
     try pinch("pan-p-pinch-out", about: c, from: CGVector(dx: 90, dy: 0), to: CGVector(dx: 14, dy: 0))
     settle()
@@ -304,7 +309,7 @@ final class CosmosWorldGestureUITests: XCTestCase {
     shot("pan-p-after")
     XCTAssertEqual(depth(personalStage), first, "the pan changed the semantic depth")
     XCTAssertTrue(backAvailable(), "after the pan, Back is not available (the camera did not move)")
-    note("p-pinch-depths", "\(first) -> pinch opening -> \(second) -> drag -> pinch closing -> \(first) -> Back -> pan -> \(depth(personalStage))")
+    note("p-pinch-depths", "\(first) -> pinch opening -> \(second) -> pan (zoomed) -> pinch closing -> \(first) -> Back -> pan -> \(depth(personalStage))")
   }
 
   // ── Shared and Public: the current depth bead passes its touch to the stage (PO 2026-11-18, item 3) ──────────
