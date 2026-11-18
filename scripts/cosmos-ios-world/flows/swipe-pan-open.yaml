@@ -1,0 +1,10 @@
+# COSMOS-INT-01 Slice E — iOS World gate: one 600 ms pan from open stage, left of and above the depth rail
+# (20%,30% -> 60%,30%; on an iPhone 17, 80,262 -> 241,262, clear of the rail's frame at 221,315 179 x 220).
+# Every value is a literal: Maestro 2.10 resolves a swipe's start, end and duration BEFORE ${} substitution.
+appId: com.qandeel.mobile
+---
+- swipe:
+    waitToSettleTimeoutMs: 1500
+    start: "20%,30%"
+    end: "60%,30%"
+    duration: 600

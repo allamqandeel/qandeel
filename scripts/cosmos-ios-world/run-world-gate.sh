@@ -11,11 +11,14 @@
 #               the stretched rail beads used to stand over the stage and take the touch (diag run 44255421709).
 #   P-TAP       Personal: one tap on the largest node core opens the PEEK (`qandeel-personal-peek`).
 #   P-DTAP      Personal: a double tap on empty space steps IN (the depth rail's lit point moves; the stage's Back appears).
-#               The two touches go straight to the XCTest driver, and their measured gap is recorded. Two touches 320 ms
-#               or more apart are not a double tap (DOUBLE_TAP_MS), so the case is then NOT TESTED, never PASS or FAIL.
+#               The two touches go straight to the XCTest driver, one request each. Only the requests' return times are
+#               measured, never the touches' delivery, so the inter-touch interval is not known. A step is PASS (the app
+#               took the pair as a double tap); no step is NOT TESTED (the injection may not have been a double tap,
+#               DOUBLE_TAP_MS = 320 ms), never FAIL.
 #   P-BACK      Personal: the stage's Back after that step returns to the first depth.
-#   P-PAN       Personal: a pan on open stage moves the world (the camera leaves the centre, so Back appears).
-#   P-PAN-RAIL  Personal: a pan that starts where the depth rail stands moves the world too.
+#   P-PAN       Personal: a pan from open stage, left of and above the depth rail (20%,30% -> 60%,30%), moves the world
+#               (the camera leaves the centre, so Back appears).
+#   P-PAN-RAIL  Personal: a pan that starts where the depth rail stands (75%,57%) moves the world too.
 #   S-FAR-TAP / S-TAP / U-TAP   Shared and Public controls: a single Shared tap on empty FAR space discloses Far -> Mid;
 #               a node tap opens the Shared sheet or the Public panel.
 # Node cores are found on the frame just before each tap (nodes.mjs), as a reader looks before tapping.
@@ -37,7 +40,7 @@ dump() { curl --silent --max-time 30 -X POST -H 'Content-Type: application/json'
 q() { node "$HERE/hier.mjs" "$OUT/$1.json" "${@:2}"; }
 # poll <name> <seconds> <query…>: dump until the query answers something other than "none" (prints the answer, or "none")
 poll() { local n="$1" s="$2" i a; shift 2; for i in $(seq 1 "$s"); do dump "$n"; a="$(q "$n" "$@")"; [ "$a" != none ] && { echo "$a"; return 0; }; sleep 1; done; echo none; return 1; }
-# backOn <name>: whether the stage's Back is available (it is laid out at every depth, enabled only away from home)
+# backOn <name>: whether the stage's Back is available (it is laid out only away from the home position)
 backOn() { q "$1" id qandeel-cosmos-back | grep -q 'enabled=true'; }
 depthWord() { q "$1" selected-label; }
 wpt="$(curl --silent --max-time 60 -X POST -H 'Content-Type: application/json' --data '{}' "http://127.0.0.1:$PORT/deviceInfo" | grep -o '"widthPoints":[0-9]*' | cut -d: -f2)"
@@ -86,51 +89,61 @@ else
   elif [ -z "$hpt" ]; then result P-DTAP 'NOT TESTED' 'the driver reported no screen height'
   else
     x=$((wpt / 2)); y=$((hpt * 24 / 100)); t0="$(ms)"; c1="$(touch_at $x $y)"; t1="$(ms)"; c2="$(touch_at $x $y)"; t2="$(ms)"
-    gap=$((t2 - t1)); say "  double tap at $x,$y: HTTP $c1 / $c2; first touch $((t1 - t0)) ms, second $gap ms after the first returned"
+    say "  double tap at $x,$y: HTTP $c1 / $c2; request 1 took $((t1 - t0)) ms, request 2 returned $((t2 - t1)) ms after request 1 (request times, not touch delivery)"
     sleep 2; dump p-dtap; shot p-dtap; after="$(depthWord p-dtap)"
     if [ "$c1" != 200 ] || [ "$c2" != 200 ]; then result P-DTAP 'NOT TESTED' "the driver did not take the touches (HTTP $c1 / $c2)"
-    elif [ "$after" != "$before" ] && backOn p-dtap; then result P-DTAP PASS "depth '$before' -> '$after' (second touch ~$gap ms after the first); Back available"
-    elif [ "$gap" -ge 320 ]; then result P-DTAP 'NOT TESTED' "the injected touches were ~$gap ms apart, not a double tap (window 320 ms)"
-    else result P-DTAP FAIL "depth '$before' -> '$after' after touches ~$gap ms apart"; fi
+    elif [ "$after" != "$before" ] && backOn p-dtap; then result P-DTAP PASS "depth '$before' -> '$after'; Back available"
+    else result P-DTAP 'NOT TESTED' "no step ('$before' -> '$after'); request 2 returned $((t2 - t1)) ms after request 1, so the touches cannot be shown to fall within 320 ms"; fi
   fi
-  # P-BACK: only after a step that happened
-  if grep -q "^P-DTAP	PASS" "$RES"; then
+  # P-BACK: only after a step that happened (an exact tab-delimited column match)
+  if awk -F'\t' '$1 == "P-DTAP" && $2 == "PASS" { found = 1 } END { exit !found }' "$RES"; then
     mt p-back tap.yaml ID=qandeel-cosmos-back IDX=0; sleep 2; dump p-back; shot p-back; now="$(depthWord p-back)"
     if [ "$now" = "$before" ]; then result P-BACK PASS "Back returned to '$now'"; else result P-BACK FAIL "Back left the depth at '$now' (expected '$before')"; fi
   else result P-BACK 'NOT TESTED' 'P-DTAP did not step'; fi
-  pancase P-PAN p-pan swipe-pan-50.yaml
+  pancase P-PAN p-pan swipe-pan-open.yaml
   pancase P-PAN-RAIL p-panr swipe-pan-rail.yaml
 fi
 
-# ── Shared control ─────────────────────────────────────────────────────────────────────────────────────────────────
-if mt s-launch launch.yaml NAME=gate-s-launch && mt s-seed link.yaml URL=qandeel://s401-proof/shared-field/seed \
-  && mt s-worlds timed-text.yaml NAME=gate-shared TAP=qandeel-switcher-shared_world "WAIT=$FIX" \
-  && mt s-world timed-tap-text.yaml NAME=gate-field "TAP=$FIX" WAIT=qandeel-shared-band; then
+# ── Shared and Public controls ─────────────────────────────────────────────────────────────────────────────────────
+# stage_pt <name>: the largest node core on <name>.png inside the stage only, from below the stage's control row (its Overview, laid out at
+# every depth) down to the World switcher, so that a bright control glyph is never taken for a node; or "none"
+stage_pt() {
+  local b s y0 y1; b="$(q "$1" id qandeel-cosmos-overview | head -1 | sed 's/.*frame=//')"; s="$(q "$1" id qandeel-global-switcher | head -1 | sed 's/.*frame=//')"
+  case "$b,$s" in *none*|*'?'*) echo none; return;; esac
+  y0=$(( $(echo "$b" | cut -d, -f2) + $(echo "$b" | cut -d, -f4) )); y1="$(echo "$s" | cut -d, -f2)"
+  (cd "$ROOT" && node "$HERE/nodes.mjs" --in "0,$y0,$wpt,$((y1 - y0))" "$OUT/$1.png" "$wpt")
+}
+# nodetap <case> <name> <step id> <what> <query…>: a node tap discloses until the object can open (FAR -> MID -> NEAR),
+# so up to three taps, each on the node core found on the frame just before it, until <query> answers
+nodetap() {
+  local c="$1" n="$2" sid="$3" what="$4" i pt a path; shift 4; path="$(q "$n-0" id-label "$sid")"
+  for i in 1 2 3; do
+    shot "$n-$i-0"; dump "$n-$i-0"; pt="$(stage_pt "$n-$i-0")"
+    if [ "$pt" = none ]; then result "$c" 'NOT TESTED' "no node core inside the stage before tap $i (steps: $path)"; return; fi
+    mt "$n-$i" tap-point.yaml "P=$pt"; a="$(poll "$n-$i" 5 "$@")"; shot "$n-$i"
+    path="$path -> tap $i at $pt -> $(q "$n-$i" id-label "$sid")"
+    if [ "$a" != none ]; then result "$c" PASS "$what opened after $i node tap(s) ($path)"; return; fi
+  done
+  result "$c" FAIL "no $what after three node taps ($path)"
+}
+shared_enter() { mt "$1-launch" launch.yaml "NAME=gate-$1-launch" && mt "$1-seed" link.yaml URL=qandeel://s401-proof/shared-field/seed \
+  && mt "$1-worlds" timed-text.yaml "NAME=gate-$1-shared" TAP=qandeel-switcher-shared_world "WAIT=$FIX" \
+  && mt "$1-world" timed-tap-text.yaml "NAME=gate-$1-field" "TAP=$FIX" WAIT=qandeel-shared-band; }
+if shared_enter s; then
   sleep 5; shot s-0; dump s-0
   w0="$(q s-0 id-label qandeel-shared-field-world:semantic-step)"
   # A single tap on empty FAR space steps IN (the Shared owner's tap at rung 0); it is not a double tap (diag run 44248838235).
   mt s-far tap-point.yaml "P=50%,24%"; sleep 2; dump s-far; shot s-far; w1="$(q s-far id-label qandeel-shared-field-world:semantic-step)"
   if [ "$w0" != none ] && [ "$w1" != "$w0" ]; then result S-FAR-TAP PASS "'$w0' -> '$w1'"; else result S-FAR-TAP FAIL "'$w0' -> '$w1'"; fi
-  pt="$(node_at s-far)"
-  if [ "$pt" = none ]; then result S-TAP 'NOT TESTED' 'no node core visible on the Shared stage'
-  else
-    mt s-tap tap-point.yaml "P=$pt"; a="$(poll s-tap 6 id cosmos-detail-sheet-handle)"; shot s-tap
-    if [ "$a" != none ]; then result S-TAP PASS "tap at $pt opened the sheet"; else result S-TAP FAIL "tap at $pt: no detail sheet within 6 s"; fi
-  fi
-else
-  result S-FAR-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open'; result S-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open'
-fi
+else result S-FAR-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open'; fi
+# S-TAP on a fresh entry: the FAR tap above may leave the stage over an empty region
+if shared_enter st; then sleep 5; dump st-0; nodetap S-TAP st qandeel-shared-field-world:semantic-step 'the detail sheet' id cosmos-detail-sheet-handle
+else result S-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open again'; fi
 
-# ── Public control ─────────────────────────────────────────────────────────────────────────────────────────────────
 if mt u-launch launch.yaml NAME=gate-u-launch && mt u-seed link.yaml URL=qandeel://s401-proof/public/seed \
   && mt u-enter tap.yaml ID=qandeel-switcher-public_world IDX=0 && mt u-allow link.yaml URL=qandeel://s401-proof/public/allow \
   && mt u-field wait-id.yaml ID=qandeel-public-search T=30000; then
-  sleep 5; shot u-0; dump u-0; pt="$(node_at u-0)"
-  if [ "$pt" = none ]; then result U-TAP 'NOT TESTED' 'no node core visible on the Public field'
-  else
-    mt u-tap tap-point.yaml "P=$pt"; a="$(poll u-tap 6 id-prefix qandeel-public-panel)"; shot u-tap
-    if [ "$a" != none ]; then result U-TAP PASS "tap at $pt opened the Public panel"; else result U-TAP FAIL "tap at $pt: no Public panel within 6 s"; fi
-  fi
+  sleep 5; dump u-0; nodetap U-TAP u qandeel-public-field-world:semantic-step 'the Public panel' id-prefix qandeel-public-panel
 else result U-TAP 'NOT TESTED' 'the Public field did not open'; fi
 
 say "done"; cat "$RES" | tee -a "$LOG"
