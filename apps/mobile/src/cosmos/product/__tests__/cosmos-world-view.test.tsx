@@ -258,8 +258,8 @@ describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)"
     expect(usableCentre(GLASS, 600, 150).y).toBe(104 + (844 - 104 - 220) / 2);
   });
 
-  it('PO 2026-11-16 (§18): in the Personal world the current depth word takes no touch, so a pinch finger on it reaches the stage; Shared keeps it as it was', async () => {
-    for (const [world, expected] of [['PERSONAL', 'none'], ['SHARED', 'auto']] as const) {
+  it('PO 2026-11-16 (§18), extended to Shared and Public by the PO (2026-11-18): the current depth word takes no touch in any world, so a pinch finger on it reaches the stage', async () => {
+    for (const [world, expected] of [['PERSONAL', 'none'], ['SHARED', 'none'], ['PUBLIC', 'none']] as const) {
       const { owner, set } = fakeOwner({ world, rungs: world === 'PERSONAL' ? 5 : 3 });
       set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
       view = await render(<CosmosWorldView owner={owner} world={world} language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
@@ -267,6 +267,47 @@ describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)"
       let node = word.parent;
       while (node !== null && node.props.pointerEvents === undefined) node = node.parent;
       expect(node?.props.pointerEvents).toBe(expected);
+      await cleanup();
+    }
+  });
+
+  it('Slice E D-1 (iOS; PO 2026-11-18, every world): the current depth bead itself takes no touch, so a tap on the stage under it reaches the canvas; a shallower bead keeps its touch and the accessibility is unchanged', async () => {
+    // On iOS, UIKit hit-tests a touch to the topmost view under the finger, and only that view's (and its ancestors')
+    // recognizers see it. The canvas detector is the bead's sibling, so a bead whose own box covers the word keeps the
+    // touch from the stage (diag run 44255421709 proved the mechanism for the stretched deeper beads).
+    const beadOf = (label: string) => {
+      let node = view!.getByText(label).parent;
+      while (node !== null && node.props.accessibilityRole !== 'button') node = node.parent;
+      return node;
+    };
+    for (const world of ['PERSONAL', 'SHARED', 'PUBLIC'] as const) {
+      const { owner, set } = fakeOwner({ world, rungs: world === 'PERSONAL' ? 5 : 3 });
+      set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+      view = await render(<CosmosWorldView owner={owner} world={world} language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+      const words = cosmosProductCopy('en').rungs[world];
+      const current = beadOf(words[1]);
+      expect(current?.props.pointerEvents).toBe('none');
+      // The bead is still the same disabled, selected button to assistive technology.
+      expect(current?.props.accessibilityState).toEqual({ selected: true, disabled: true });
+      // A shallower depth stays a working way back.
+      const past = view!.getAllByRole('button', { name: words[0] })[0];
+      // It is left exactly as it was recorded: no pointerEvents of its own (the default, 'auto').
+      expect(past.props.pointerEvents).toBeUndefined();
+      expect(past.props.accessibilityState).toEqual({ selected: false, disabled: false });
+      await cleanup();
+    }
+  });
+
+  it('Slice E D-1 (iOS): every depth bead is as wide as what it draws, at the rail’s right edge, never stretched over the stage', async () => {
+    // Diag run 44255421709 (iPhone 17, Personal): stretched to the current word, each bead was a 179 x 44 box and the five
+    // stood as a 179 x 220 block over the stage. A node tap at 323,475 and a pan from 281,437 reached beads 3 and 2 and
+    // never the canvas.
+    for (const world of ['PERSONAL', 'SHARED', 'PUBLIC'] as const) {
+      const { owner, set } = fakeOwner({ world, rungs: world === 'PERSONAL' ? 5 : 3 });
+      set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+      view = await render(<CosmosWorldView owner={owner} world={world} language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+      const beads = cosmosProductCopy('en').rungs[world].map((name) => view!.getByRole('button', { name }));
+      for (const bead of beads) expect(Object.assign({}, ...[bead.props.style].flat(3).filter(Boolean)).alignSelf).toBe('flex-end');
       await cleanup();
     }
   });

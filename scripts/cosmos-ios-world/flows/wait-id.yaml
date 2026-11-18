@@ -1,0 +1,7 @@
+# COSMOS-INT-01 Slice E iOS World gate (first written for the baseline audit): wait until an element whose id matches ID is visible.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "${ID}"
+    timeout: ${T}

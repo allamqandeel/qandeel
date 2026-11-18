@@ -1,0 +1,8 @@
+# COSMOS-INT-01 Slice E — iOS World gate: wait (up to T ms) until NO element whose id matches ID is visible and enabled.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    notVisible:
+      id: "${ID}"
+      enabled: true
+    timeout: ${T}

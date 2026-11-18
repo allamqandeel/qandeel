@@ -128,6 +128,37 @@ authority for what the backlog must say at closure, and this document remains th
 adds no second register, no second lifecycle model and no new Product state. It governs only the
 agreement between a closed task's own banner and the closure the register already records.
 
+**BG-10 — Mandatory iOS simulator validation (PO decision, 2026-11-18; permanent).** Every code
+implementation checkpoint carries iOS simulator validation proportionate to its impact:
+- Real application interaction, with assertions on the affected journeys. A build-only or launch-only
+  smoke does not satisfy this rule.
+- Permanent iOS regression coverage for every platform defect found and corrected.
+- Arabic and English, and the responsive sizes, whenever UI, layout, navigation, gestures or
+  presentation are affected.
+- Recorded evidence, with each case classified explicitly as PASS, FAIL or NOT TESTED. A case that did
+  not run is NOT TESTED, never PASS.
+
+A green Android suite, Jest suite or iOS build does not replace iOS simulator interaction.
+
+A pure backend change records an iOS-facing contract-compatibility verification and an impact
+assessment. Simulator interaction is added whenever the change can affect mobile behaviour.
+
+A checkpoint whose required iOS validation is unexecuted or failing is neither closed nor
+merge-ready without the Product Owner's explicit approval.
+
+The rule is enforced by a change-aware CI gate, not by instruction alone. Existing tests are never
+weakened to pass it, and the gate is never bypassed silently. Approvals already given stand, and
+full-matrix reruns are not required where the change does not reach them.
+
+The gate's change-awareness is not limited to the mobile directories (PO, 2026-11-18): backend changes
+that can affect iOS behaviour — the API, the database and its migrations, shared packages and the
+contracts the iOS client reads — bring the same obligation, through iOS-facing contract verification
+and, where behaviour can change, simulator interaction. Until the gate reaches them, that coverage is
+recorded as not yet enforced, never claimed.
+
+It was recorded by COSMOS-INT-01 Slice E, whose iOS baseline found a Personal stage defect (D-1)
+that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in BG-01 – BG-09.
+
 ---
 
 ## 4. Index

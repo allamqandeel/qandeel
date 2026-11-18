@@ -1,0 +1,14 @@
+# COSMOS-INT-01 Slice E iOS World gate (first written for the baseline audit): TIMING = tap on TAP issued -> an element whose id matches WAIT
+# is visible. Resolution is Maestro's hierarchy polling on the simulator, so it is an upper bound on the app's time.
+appId: com.qandeel.mobile
+---
+- evalScript: ${output.t0 = Date.now()}
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    id: "${TAP}"
+- extendedWaitUntil:
+    visible:
+      id: "${WAIT}"
+    timeout: 60000
+- evalScript: ${console.log('TIMING ' + NAME + ' ' + (Date.now() - output.t0))}
