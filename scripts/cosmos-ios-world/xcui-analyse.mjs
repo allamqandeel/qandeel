@@ -11,8 +11,10 @@
 //     there, but its identity is checked on the cores found BEFORE the one-per-hue reduction (which would hide a rival):
 //     in each frame it must be the only in-band core within 20° of its hue (the reduction's own satellite radius), it
 //     must be a node core of at least 12 pixels (twice the detector's 6-pixel floor: recorded static specks and stars
-//     are 6 px, node cores 15-140 px, the zoomed mark core 20 px), and its size must agree between the frames (0.5x-2x);
-//     otherwise NOT TESTED. Same tolerance as X-PAN.
+//     are 6 px, node cores 15-140 px, the zoomed mark core 20 px), and its size must agree between the frames (0.5x-2x).
+//     No core inside a fixed overlay counts: the test records the overlays' frames next to each screenshot
+//     (`pan-z-overlays-before` / `-after`), and without them the case is NOT TESTED. Otherwise NOT TESTED. Same
+//     tolerance as X-PAN.
 // usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir> <widthPoints> <results.tsv>
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -58,16 +60,23 @@ const text = (name) => (files.has(name) ? fs.readFileSync(files.get(name), 'utf8
 const WPT = Number(wptArg) || 0;
 // Node cores inside the Personal stage only: below its control row and above its timeline rail (iPhone 17 points).
 const STAGE_TOP = 165, STAGE_BOTTOM = 730;
-// Every in-band core, before the one-per-hue reduction in `cores`.
-const rawCores = (name) => {
+// Fixed overlays recorded by the test ("id=x,y,w,h;…", points); a core within 6 pt of one (its halo) is not the world's.
+const overlaysOf = (name) => {
+  const t = text(name);
+  if (t === null) return null;
+  return t.split(';').filter(Boolean).map((s) => s.split('=').pop().split(',').map(Number)).filter((r) => r.length === 4 && r.every(Number.isFinite));
+};
+const outside = (rects) => (c) => !rects.some(([x, y, w, h]) => c.x >= x - 6 && c.x <= x + w + 6 && c.y >= y - 6 && c.y <= y + h + 6);
+// Every in-band core outside the given overlays, before the one-per-hue reduction in `cores`.
+const rawCores = (name, rects = []) => {
   if (!files.has(name) || !WPT) return null;
   const out = execFileSync(process.execPath, [path.join(here, 'nodes.mjs'), '--all', files.get(name), String(WPT)], { encoding: 'utf8' }).trim();
   if (out === 'none') return [];
   return out.split(/\s+/).map((s) => { const [h, rest] = s.split('@'); const [x, y, n] = rest.split(',').map(Number); return { h: Number(h), x, y, n }; })
-    .filter((c) => c.y >= STAGE_TOP && c.y <= STAGE_BOTTOM).sort((a, b) => b.n - a.n);
+    .filter((c) => c.y >= STAGE_TOP && c.y <= STAGE_BOTTOM).filter(outside(rects)).sort((a, b) => b.n - a.n);
 };
-const cores = (name) => {
-  const all = rawCores(name);
+const cores = (name, rects = []) => {
+  const all = rawCores(name, rects);
   if (all === null) return null;
   // One core per hue: the largest; a smaller core within 20° of a kept one is its satellite, never a second identity.
   const kept = [];
@@ -83,13 +92,14 @@ const pairs = (A, B) => A.flatMap((a) => {
   return back === a ? [{ a, b, dx: b.x - a.x, dy: b.y - a.y }] : [];
 });
 const median = (v) => { const s = [...v].sort((p, q) => p - q); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
-const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unambiguous = false } = {}) => {
-  const A = cores(before), B = cores(after);
+const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unambiguous = false, overlays = null } = {}) => {
+  const OA = overlays?.before ?? [], OB = overlays?.after ?? [];
+  const A = cores(before, OA), B = cores(after, OB);
   if (A === null || B === null) return result(id, 'NOT TESTED', `no ${A === null ? before : after} screenshot`);
   // `unambiguous`: judged on the cores BEFORE the one-per-hue reduction. A pair counts only if each of its cores is the
   // only core within 20° of its hue in its own frame, both are node cores (at least 12 pixels, not a 6-pixel speck), and
   // the two cores' sizes agree (0.5x-2x pixels).
-  const RA = unambiguous ? rawCores(before) : null, RB = unambiguous ? rawCores(after) : null;
+  const RA = unambiguous ? rawCores(before, OA) : null, RB = unambiguous ? rawCores(after, OB) : null;
   const alone = (S, c) => S.filter((o) => hueDiff(o.h, c.h) <= 20).length === 1;
   const node = (p) => p.a.n >= 12 && p.b.n >= 12;
   const sameSize = (p) => p.b.n >= 0.5 * p.a.n && p.b.n <= 2 * p.a.n;
@@ -119,7 +129,9 @@ const zoomed = text('pan-z-spec');
 if (zoomed === null) result('X-PAN-ZOOMED', 'NOT TESTED', 'the zoomed pan did not record its spec');
 else {
   const [dx, dy] = zoomed.split(',').map(Number);
-  shiftCase('X-PAN-ZOOMED', 'pan-z-before', 'pan-z-after', { dx, dy }, Math.max(20, 0.25 * Math.hypot(dx, dy)), { minPairs: 1, unambiguous: true });
+  const ob = overlaysOf('pan-z-overlays-before'), oa = overlaysOf('pan-z-overlays-after');
+  if (ob === null || oa === null) result('X-PAN-ZOOMED', 'NOT TESTED', "the fixed overlays' frames were not recorded, so no feature can be trusted as the world's");
+  else shiftCase('X-PAN-ZOOMED', 'pan-z-before', 'pan-z-after', { dx, dy }, Math.max(20, 0.25 * Math.hypot(dx, dy)), { minPairs: 1, unambiguous: true, overlays: { before: ob, after: oa } });
 }
 
 fs.appendFileSync(resultsFile, `${rows.join('\n')}\n`);

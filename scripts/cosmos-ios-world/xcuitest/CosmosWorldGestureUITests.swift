@@ -49,6 +49,21 @@ final class CosmosWorldGestureUITests: XCTestCase {
     add(attachment)
   }
 
+  /// The on-screen frames (points) of the stage's fixed overlays, as "id=x,y,w,h;…", recorded next to a measured screenshot
+  /// so that the analyser never takes a feature inside one of them (the 6-px speck inside "Nothing in this region." in
+  /// targeted run 44314026822) for the world.
+  private func overlayFrames() -> String {
+    let ids = ["qandeel-cosmos-nearest", "qandeel-cosmos-back", "qandeel-cosmos-overview", "qandeel-cosmos-overview-companion",
+               "qandeel-cosmos-rail", "qandeel-cosmos-register", "qandeel-cosmos-timeline-rail"]
+    return ids.flatMap { id in
+      app.descendants(matching: .any).matching(identifier: id).allElementsBoundByIndex.compactMap { e -> String? in
+        let f = e.frame
+        guard e.exists, !f.isEmpty else { return nil }
+        return "\(id)=\(Int(f.minX.rounded(.down))),\(Int(f.minY.rounded(.down))),\(Int(f.width.rounded(.up)) + 1),\(Int(f.height.rounded(.up)) + 1)"
+      }
+    }.joined(separator: ";")
+  }
+
   private func note(_ name: String, _ text: String) {
     let attachment = XCTAttachment(string: text)
     attachment.name = name
@@ -304,10 +319,12 @@ final class CosmosWorldGestureUITests: XCTestCase {
     }
     // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth.
     note("pan-z-spec", "\(Int(to.x - from.x)),\(Int(to.y - from.y))")
+    note("pan-z-overlays-before", overlayFrames())
     shot("pan-z-before")
     at(from.x, from.y).press(forDuration: 0.05, thenDragTo: at(to.x, to.y))
     settle()
     shot("pan-z-after")
+    note("pan-z-overlays-after", overlayFrames())
     XCTAssertEqual(depth(personalStage), second, "the drag at the deeper depth changed the semantic depth")
     try pinch("pan-p-pinch-out", about: c, from: CGVector(dx: 90, dy: 0), to: CGVector(dx: 14, dy: 0))
     settle()
