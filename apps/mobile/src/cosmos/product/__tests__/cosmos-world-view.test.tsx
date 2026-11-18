@@ -270,4 +270,47 @@ describe("COSMOS-INT-01 Slice C — the host's three seams (Contract v1.3 §15)"
       await cleanup();
     }
   });
+
+  it('Slice E D-1 (iOS): the current Personal depth bead itself takes no touch, so a tap on the stage under it reaches the canvas; a shallower bead and Shared are unchanged', async () => {
+    // On iOS, UIKit hit-tests a touch to the topmost view under the finger, and only that view's (and its ancestors')
+    // recognizers see it. The canvas detector is the bead's sibling, so a bead whose own box covers the word keeps the
+    // touch from the stage (diag run 44255421709 proved the mechanism for the stretched deeper beads).
+    const beadOf = (label: string) => {
+      let node = view!.getByText(label).parent;
+      while (node !== null && node.props.accessibilityRole !== 'button') node = node.parent;
+      return node;
+    };
+    const { owner, set } = fakeOwner({ world: 'PERSONAL', rungs: 5 });
+    set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+    view = await render(<CosmosWorldView owner={owner} world="PERSONAL" language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+    const words = cosmosProductCopy('en').rungs.PERSONAL;
+    const current = beadOf(words[1]);
+    expect(current?.props.pointerEvents).toBe('none');
+    // The bead is still the same disabled, selected button to assistive technology.
+    expect(current?.props.accessibilityState).toEqual({ selected: true, disabled: true });
+    // A shallower depth stays a working way back.
+    const past = view.getAllByRole('button', { name: words[0] })[0];
+    expect(past.props.pointerEvents).toBe('auto');
+    await cleanup();
+
+    const shared = fakeOwner({ world: 'SHARED', rungs: 3 });
+    shared.set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+    view = await render(<CosmosWorldView owner={shared.owner} world="SHARED" language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+    expect(beadOf(cosmosProductCopy('en').rungs.SHARED[1])?.props.pointerEvents).toBe('auto');
+    await cleanup();
+  });
+
+  it('Slice E D-1 (iOS): every depth bead is as wide as what it draws, at the rail’s right edge, never stretched over the stage', async () => {
+    // Diag run 44255421709 (iPhone 17, Personal): stretched to the current word, each bead was a 179 x 44 box and the five
+    // stood as a 179 x 220 block over the stage. A node tap at 323,475 and a pan from 281,437 reached beads 3 and 2 and
+    // never the canvas.
+    for (const world of ['PERSONAL', 'SHARED'] as const) {
+      const { owner, set } = fakeOwner({ world, rungs: world === 'PERSONAL' ? 5 : 3 });
+      set({ rung: 1, camera: { cx: 0, cy: 0, scale: 8 } });
+      view = await render(<CosmosWorldView owner={owner} world={world} language="en" glass={GLASS} worldLabel="Map" zoomInLabel="More" zoomOutLabel="Less" />);
+      const beads = cosmosProductCopy('en').rungs[world].map((name) => view!.getByRole('button', { name }));
+      for (const bead of beads) expect(Object.assign({}, ...[bead.props.style].flat(3).filter(Boolean)).alignSelf).toBe('flex-end');
+      await cleanup();
+    }
+  });
 });

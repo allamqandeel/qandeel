@@ -1,0 +1,9 @@
+# COSMOS-INT-01 Slice E — iOS World gate: wait (up to T ms) until an element whose id matches ID is visible and its enabled
+# state is EN ("true" | "false"). The gate's assertion primitive: a missing or wrong element fails the flow.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "${ID}"
+      enabled: ${EN}
+    timeout: ${T}

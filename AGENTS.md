@@ -62,6 +62,16 @@ Every implementation PR must include the smallest meaningful verification for it
 Run/build/test what the repository supports. Fix failures before proposing merge.
 Do not claim a check passed unless it actually ran successfully.
 
+Every code implementation checkpoint also carries iOS simulator validation (backlog BG-10, PO 2026-11-18):
+- real interaction with assertions on the affected journeys, never a build-only or launch-only smoke;
+- permanent iOS regression coverage for each platform defect that was fixed;
+- Arabic and English, and the responsive sizes, whenever UI, layout, navigation, gestures or presentation change;
+- recorded evidence, with every case classified PASS / FAIL / NOT TESTED.
+
+Green Android, Jest or iOS-build results never substitute for it. A pure backend change records an iOS-facing
+contract-compatibility check and an impact assessment. A checkpoint whose required iOS validation is unexecuted or
+failing is not closed or merge-ready without explicit PO approval. Never weaken a test or bypass the gate to get green.
+
 ## 8. Git / PR discipline
 - Work on a dedicated branch.
 - Keep each PR focused on one implementation objective.

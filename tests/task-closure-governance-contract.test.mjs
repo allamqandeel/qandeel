@@ -567,6 +567,24 @@ test('BG-09 states the closure-state synchronization invariant (complementing BG
     'the closure checklist must carry the BG-09 step, or the rule is never performed');
 });
 
+test('BG-10 keeps iOS simulator validation a closure and merge-readiness condition (PO, 2026-11-18)', () => {
+  assert.match(backlog, /\*\*BG-10 — Mandatory iOS simulator validation \(PO decision, 2026-11-18; permanent\)\.\*\*/u,
+    'BG-10 is the PO\'s permanent iOS simulator validation rule and may not be removed or renamed');
+  for (const [clause, what] of [
+    [/A build-only or launch-only smoke does not satisfy this rule/u, 'that a smoke is not interaction'],
+    [/Permanent iOS regression coverage for every platform defect found and corrected/u, 'permanent regression coverage'],
+    [/Arabic and English, and the responsive sizes/u, 'the language and size coverage'],
+    [/A case that did not run is NOT TESTED, never PASS/u, 'the honest classification'],
+    [/A green Android suite, Jest suite or iOS build does not replace iOS simulator interaction/u, 'that other suites do not substitute'],
+    [/neither closed nor merge-ready without the Product Owner's explicit approval/u, 'the closure and merge consequence'],
+    [/enforced by a change-aware CI gate/u, 'its enforcement'],
+  ]) {
+    assert.match(backlogProse, clause, `BG-10 no longer states ${what}`);
+  }
+  assert.match(agentsProse, /iOS simulator validation \(backlog BG-10, PO 2026-11-18\)/u,
+    'AGENTS.md must carry the BG-10 rule where an implementation agent will meet it');
+});
+
 test('the historical record of the missed reconciliations is preserved', () => {
   // The failure mode this guards is tidying: a later editor smoothing the register until every task
   // reads as though it closed cleanly. The misses are the evidence BG-09 exists for, and a rule

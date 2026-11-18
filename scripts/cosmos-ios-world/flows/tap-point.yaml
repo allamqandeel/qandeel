@@ -1,0 +1,7 @@
+# COSMOS-INT-01 Slice E iOS World gate (first written for the baseline audit): one tap at a point given in screen percentages ("x%,y%").
+appId: com.qandeel.mobile
+---
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    point: "${P}"
