@@ -1,0 +1,113 @@
+name: iOS XCUITest targeted (COSMOS Slice E D-1 diagnosis; never merged)
+# COSMOS-INT-01 Slice E D-1 (PO, 2026-11-18): diagnose and rerun ONLY the native XCUITest cases that failed or were not
+# proven in iOS World gate run 44289175909 (head f4ccc944), with `-only-testing`. The seven Maestro cases and the native
+# double tap on the current depth word, which passed there, are NOT rerun. This workflow lives on a diagnostic branch only
+# (cosmos/slice-e-d1-xcui-targeted; no PR, never merged); the app and test sources it builds are byte-identical to the
+# Slice E branch commit named in identity.txt.
+#
+# One build: build-for-testing (the S401 proof app and the UI-test runner together), uploaded as `xcui-build-products` so
+# a later pass whose app and test sources are unchanged reuses it (REUSE_RUN_ID) instead of building again.
+on:
+  push:
+    branches: [cosmos/slice-e-d1-xcui-targeted]
+concurrency:
+  group: cosmos-ios-xcui-targeted
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+  # Set to a previous run id of THIS workflow to reuse its build products (only when the app and the UI-test sources are unchanged).
+  REUSE_RUN_ID: ''
+  ONLY: >-
+    testPersonalDoubleTapAndPinchStepAboutTheirFingers
+    testPersonalPinchStepsInAndThePanStillMovesTheWorld
+    testSharedTapOnTheCurrentDepthWordReachesTheStage
+    testPublicTapOnTheCurrentDepthWordReachesTheStage
+    testSharedPinchStepsInAndOut
+jobs:
+  targeted:
+    name: XCUITest targeted — iPhone 17 en
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, if: env.REUSE_RUN_ID == '', run: npm ci}
+      - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
+        if: env.REUSE_RUN_ID == ''
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/evidence/entry-diff.txt"
+      - {name: Generate the iOS project (CNG), if: env.REUSE_RUN_ID == '', run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        if: env.REUSE_RUN_ID == ''
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Add the native UI-test target (this ephemeral checkout only)
+        if: env.REUSE_RUN_ID == ''
+        run: |
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+      - name: Build the proof Release simulator app and its native UI tests (one build)
+        if: env.REUSE_RUN_ID == ''
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          mkdir -p "$RUNNER_TEMP/products"
+          cp -R apps/mobile/ios/build/Build/Products/. "$RUNNER_TEMP/products/"
+      - uses: actions/upload-artifact@v4
+        if: env.REUSE_RUN_ID == ''
+        with: {name: xcui-build-products, path: '${{ runner.temp }}/products', if-no-files-found: error, retention-days: 7}
+      - uses: actions/download-artifact@v4
+        if: env.REUSE_RUN_ID != ''
+        with: {name: xcui-build-products, path: '${{ runner.temp }}/products', run-id: '${{ env.REUSE_RUN_ID }}', github-token: '${{ github.token }}'}
+      - name: Locate the build products
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          P="$RUNNER_TEMP/products"
+          app="$(find "$P/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find "$P" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "app+tests tree (apps/mobile, scripts/cosmos-ios-world)=$(git rev-parse HEAD:apps/mobile) $(git rev-parse HEAD:scripts/cosmos-ios-world)"; echo "build=${REUSE_RUN_ID:-this run}"; echo "app=$(basename "$app")"; echo "xctestrun=$(basename "$xctestrun")"; echo "selected=$ONLY"; xcodebuild -version; } | tee "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Boot the simulator and set its language (en; no Maestro in this run)
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh "iPhone 17" "$RUNNER_TEMP/evidence"
+          UDID="$(sed -n 's/^udid=//p' "$RUNNER_TEMP/evidence/device.txt")"
+          P="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/Preferences/.GlobalPreferences.plist"
+          xcrun simctl shutdown "$UDID"
+          plutil -replace AppleLanguages -json '["en-US"]' "$P" && plutil -replace AppleLocale -string en_US "$P"
+          xcrun simctl boot "$UDID"; xcrun simctl bootstatus "$UDID" -b > /dev/null
+          xcrun simctl install "$UDID" "$APP"
+      - name: Native gestures, the selected cases only (-only-testing)
+        timeout-minutes: 45
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X"; printf 'case\tresult\tdetail\n' > "$E/results.tsv"
+          only=(); for t in $ONLY; do only+=("-only-testing:QandeelWorldUITests/CosmosWorldGestureUITests/$t"); done
+          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" "${only[@]}" -resultBundlePath "$X/gestures.xcresult" > "$X/xcodebuild.log" 2>&1 || true
+          grep -E "Test [Cc]ase|error: -\[|skipped|\*\* TEST" "$X/xcodebuild.log" || true
+          xcrun xcresulttool export attachments --path "$X/gestures.xcresult" --output-path "$X/attachments" || true
+          XCUI_SELECTED="$ONLY" node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/xcodebuild.log" "$X/attachments" 402 "$E/results.tsv"
+          rm -rf "${X:?}/gestures.xcresult"
+      - name: Results
+        if: ${{ !cancelled() }}
+        run: |
+          f="$RUNNER_TEMP/evidence/results.tsv"
+          { echo '### XCUITest targeted'; echo; echo '| case | result | detail |'; echo '|---|---|---|'; tail -n +2 "$f" | awk -F'\t' '{print "| "$1" | "$2" | "$3" |"}'; } >> "$GITHUB_STEP_SUMMARY"; cat "$f"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: xcui-targeted-evidence, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
