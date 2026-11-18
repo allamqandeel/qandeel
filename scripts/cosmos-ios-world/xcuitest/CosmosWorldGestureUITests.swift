@@ -289,6 +289,19 @@ final class CosmosWorldGestureUITests: XCTestCase {
     let second = depth(personalStage)
     XCTAssertNotEqual(second, first, "a native two-finger pinch opening did not step IN")
     XCTAssertTrue(backAvailable(), "Back is not available after the pinch's step")
+    // The step may land in an empty region (targeted run 44314026822: "Nothing in this region.", no mark in view, so
+    // X-PAN-ZOOMED had nothing to measure). The product's own "Go to the nearest" then brings a mark into view at the
+    // same depth; which path was taken is recorded.
+    if element("qandeel-cosmos-nearest").exists {
+      let nearest = app.buttons.matching(NSPredicate(format: "label == 'Go to the nearest' OR label == 'اذهب إلى الأقرب'")).firstMatch
+      XCTAssertTrue(nearest.exists, "the step landed in an empty region and Go to the nearest is not offered")
+      nearest.tap()
+      settle()
+      XCTAssertEqual(depth(personalStage), second, "Go to the nearest changed the semantic depth")
+      note("pan-z-path", "the step landed in an empty region; Go to the nearest brought a mark into view at \(second)")
+    } else {
+      note("pan-z-path", "the step landed on content at \(second)")
+    }
     // A drag on open stage while the stage is zoomed in: it moves the world (measured) and keeps the depth.
     note("pan-z-spec", "\(Int(to.x - from.x)),\(Int(to.y - from.y))")
     shot("pan-z-before")
