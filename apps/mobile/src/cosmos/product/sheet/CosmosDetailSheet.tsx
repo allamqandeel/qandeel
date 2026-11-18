@@ -41,6 +41,7 @@ import type { ChromeLanguage } from '../../../orientation-chrome';
 import { cosmosProductCopy } from '../copy';
 import type { CosmosWorldOwner } from '../owner-core';
 import { SHEET_HANDLE_HEIGHT, dragOffset, keyboardOverlap, sheetGeometry, sheetOffset, sheetStops, snapPhase, type SheetGeometry, type SheetPhase } from './sheet-geometry';
+import { diag } from '../../__diag__/trace';
 
 export const COSMOS_SHEET_TEST_ID = 'cosmos-detail-sheet';
 export const COSMOS_SHEET_HANDLE_TEST_ID = 'cosmos-detail-sheet-handle';
@@ -243,7 +244,7 @@ export function CosmosDetailSheet({
   const expanded = shown === 'EXPANDED';
 
   return (
-    <View ref={frame} pointerEvents="box-none" style={[styles.frame, { top: glass.insetTop, height: room }]}>
+    <View ref={frame} pointerEvents="box-none" onTouchStart={() => diag('sheet.frame')} style={[styles.frame, { top: glass.insetTop, height: room }]}>
       <Animated.View testID={testID} pointerEvents={closed ? 'none' : 'auto'}
         importantForAccessibility={closed ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={closed}
         accessibilityViewIsModal={expanded} onAccessibilityEscape={() => run(expanded ? 'collapse' : 'close')}

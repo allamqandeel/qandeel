@@ -1,0 +1,102 @@
+# COSMOS-INT-01 Slice E, D-1 — DIAGNOSTIC ONLY (branch cosmos/slice-e-d1-diag; no PR, never merged).
+# The S401 proof-entry build of 03d1b3ea PLUS a counter board on the Personal touch path (the diff to 03d1b3ea is
+# recorded and is instrumentation only), built and probed on ONE runner: where does a Personal stage touch stop on iOS?
+name: cosmos-slice-e-d1-diag
+on:
+  push:
+    branches: ['cosmos/slice-e-d1-diag']
+concurrency:
+  group: cosmos-slice-e-d1-diag-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+  BASELINE_COMMIT: 03d1b3ea1dd4fddbd4801ff322bed88385998e74
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+jobs:
+  diag:
+    name: D-1 diagnostic — instrumented proof build + touch-path probe (iPhone 17, en)
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      MAESTRO_IOS_DRIVER_PORT: 22087
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Record the application diff to the baseline (instrumentation only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          git diff --stat "$BASELINE_COMMIT" HEAD -- apps/ package.json package-lock.json | tee "$RUNNER_TEMP/evidence/app-diff-stat.txt"
+          git diff "$BASELINE_COMMIT" HEAD -- apps/ > "$RUNNER_TEMP/evidence/app-diff.patch"
+          test -z "$(git diff --name-only "$BASELINE_COMMIT" HEAD -- package.json package-lock.json)"
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the S401 proof entry (validation build only)
+        env: {S401_SHARED_PROOF: '1'}
+        run: node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the instrumented proof Release simulator app
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"; echo "APP=$app" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "baseline=$BASELINE_COMMIT"; echo "DIAGNOSTIC instrumented proof build"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Setup Temurin JDK 17 (Maestro)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Boot the simulator
+        run: bash scripts/cosmos-slice-e-ios/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence"
+      - name: Install the instrumented app
+        run: xcrun simctl install "$IOS_SIM_UDID" "$APP"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro" && cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Install idb (independent HID touch route; a failure leaves the idb taps NOT RUN)
+        continue-on-error: true
+        run: |
+          brew tap facebook/fb && brew install facebook/fb/idb-companion
+          python3 -m venv "$RUNNER_TEMP/idbenv" && "$RUNNER_TEMP/idbenv/bin/pip" install --quiet fb-idb
+          echo "$RUNNER_TEMP/idbenv/bin" >> "$GITHUB_PATH"
+      - name: Set the simulator language (en-US) and prove the driver
+        env: {LANGTAG: en-US, LANGLOC: en_US, LANGX: en}
+        run: bash scripts/cosmos-slice-e-ios/run-ios-audit.sh proof "$RUNNER_TEMP/evidence" "$IOS_SIM_UDID" medium-en setup
+      - name: Touch-path probe
+        timeout-minutes: 30
+        run: bash scripts/cosmos-slice-e-ios/d1-probe.sh "$RUNNER_TEMP/evidence/d1" "$IOS_SIM_UDID" || true
+      - name: Compact evidence (boards, log, contact sheet)
+        if: ${{ !cancelled() }}
+        run: |
+          brew install imagemagick > /dev/null 2>&1 || true
+          d="$RUNNER_TEMP/evidence/d1"; out="$RUNNER_TEMP/compact"; mkdir -p "$out"
+          cp "$d"/probe.log "$d"/*.board.txt "$d"/*.point.json "$RUNNER_TEMP/evidence/"*.txt "$RUNNER_TEMP/evidence/app-diff.patch" "$out/" 2>/dev/null || true
+          cd "$d" && args=(); for f in $(ls *.png | sort); do args+=(-label "${f%.png}" "$f"); done
+          magick montage "${args[@]}" -geometry 300x+4+4 -tile 6x -pointsize 18 -quality 70 "$out/sheet.jpg" || true
+          ls -la "$out"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: cosmos-d1-diag-compact, path: '${{ runner.temp }}/compact', if-no-files-found: warn}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: cosmos-d1-diag-evidence, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

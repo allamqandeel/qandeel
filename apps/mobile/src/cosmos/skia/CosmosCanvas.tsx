@@ -38,6 +38,7 @@ import { disposePrepared, lightRgbOf, prepareStage, type PreparedRung, type Prep
 import {
   SETTLE_BEZIER, SETTLE_MS, clampLs, depthOfLs, layerAlphaAt, percentileOf, plateMotions, plateOffsetOf, stepForLs, uiNow, unheldMaskOf, type PlateMotion,
 } from './worklets';
+import { diag } from '../__diag__/trace';
 
 export type { OverdrawMode } from './parts';
 export const OVERDRAW_MODES: readonly OverdrawMode[] = ['FULL', 'NO_BODIES', 'PLATES_ONLY'];
@@ -408,7 +409,8 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   const emitPanEnd = useCallback((cx: number, cy: number, scale: number) => host.props().onPanEnd({ cx, cy, scale }), [host]);
   const emitPinchEnd = useCallback((step: number, fx: number, fyAt: number, cx: number, cy: number, scale: number) =>
     host.props().onPinchEnd(step > 0 ? 'IN' : step < 0 ? 'OUT' : null, fx, fyAt, { cx, cy, scale }), [host]);
-  const emitTap = useCallback((x: number, y: number, cx: number, cy: number, scale: number) => host.props().onTap(x, y, { cx, cy, scale }), [host]);
+  const emitTap = useCallback((x: number, y: number, cx: number, cy: number, scale: number) => { diag(`${props.world[1]}.js.emitTap`); diag(`${props.world[1]}.js.tapAt`, `${Math.round(x)},${Math.round(y)}`); host.props().onTap(x, y, { cx, cy, scale }); }, [host, props.world]);
+  const mark = useCallback((key: string) => diag(`${props.world[1]}.${key}`), [props.world]);
   const emitProbe = useCallback((kind: number, count: number, mean: number, p50: number, p95: number, max: number, stalls: number, freezes: number, inputN: number, inputP50: number, inputP95: number) => {
     const now = host.props();
     now.onProbe?.({
@@ -551,7 +553,9 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
     };
     // The three gestures carry test identifiers so the headless pinch-focus tests can drive them (no runtime effect).
     const pan = Gesture.Pan().withTestId('cosmos-pan').minDistance(8).maxPointers(2).averageTouches(true)
-      .onStart(() => { 'worklet'; begin(); })
+      .onStart(() => { 'worklet'; scheduleOnRN(mark, 'g.pan.start'); begin(); })
+      .onBegin(() => { 'worklet'; scheduleOnRN(mark, 'g.pan.begin'); })
+      .onFinalize((_e, ok) => { 'worklet'; scheduleOnRN(mark, ok ? 'g.pan.fin.ok' : 'g.pan.fin.fail'); })
       .onChange((event) => {
         'worklet';
         if (pendingInput.get() === 0) pendingInput.set(uiNow());
@@ -590,15 +594,22 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
       })
       .onEnd(() => { 'worklet'; pinching.set(0); finish(); });
     const tap = Gesture.Tap().withTestId('cosmos-tap').maxDistance(8).maxDuration(400)
+      .onTouchesDown(() => { 'worklet'; scheduleOnRN(mark, 'g.tap.down'); })
+      .onTouchesUp(() => { 'worklet'; scheduleOnRN(mark, 'g.tap.up'); })
+      .onTouchesCancelled(() => { 'worklet'; scheduleOnRN(mark, 'g.tap.tcancel'); })
+      .onBegin(() => { 'worklet'; scheduleOnRN(mark, 'g.tap.begin'); })
+      .onStart(() => { 'worklet'; scheduleOnRN(mark, 'g.tap.start'); })
+      .onFinalize((_e, ok) => { 'worklet'; scheduleOnRN(mark, ok ? 'g.tap.fin.ok' : 'g.tap.fin.fail'); })
       .onEnd((event, success) => {
         'worklet';
+        scheduleOnRN(mark, success ? 'g.tap.end.ok' : 'g.tap.end.fail');
         if (!success) return;
         const s = Math.exp(ls.get());
         scheduleOnRN(emitTap, event.x, event.y, wx.get() + (vw.get() / 2 - sx.get()) / s, wy.get() + (fyTarget.get() - sy.get()) / s, s);
       });
     // The first to activate wins: a drag or a pinch cancels the tap, and a completed tap never becomes a drag.
     return Gesture.Race(Gesture.Simultaneous(pan, pinch), tap);
-  }, [active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
+  }, [mark, active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
 
   // ── owned Skia resources ────────────────────────────────────────────────────────────────────────────────────────
   const prepared: PreparedStage = useMemo(() => prepareStage(stage), [stage]);
@@ -667,6 +678,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
         <View
           style={styles.root}
           collapsable={false}
+          onTouchStart={() => diag(`${props.world[1]}.ui.canvas`)}
           onLayout={onLayout}
           testID={props.testID === undefined ? undefined : `${props.testID}${COSMOS_STEP_TEST_ID_SUFFIX}`}
           accessible={!standIn}

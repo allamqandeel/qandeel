@@ -1,0 +1,12 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): scroll until the element ID is visible (as a reader would), then tap it.
+appId: com.qandeel.mobile
+---
+- scrollUntilVisible:
+    element:
+      id: "${ID}"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    id: "${ID}"

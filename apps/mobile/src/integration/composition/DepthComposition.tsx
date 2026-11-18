@@ -109,6 +109,7 @@ import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import { LivingAnalysisMap } from './LivingAnalysisMap';
+import { diag } from '../../cosmos/__diag__/trace';
 
 export type WorldDepth = 'CONVERSATION' | 'ANALYSIS';
 
@@ -795,6 +796,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
               pointerEvents={open ? 'auto' : 'none'}
+              onTouchStart={() => diag(`depth.${which.toLowerCase()}.touch.${open ? 'open' : 'closed'}`)}
               importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
               accessibilityElementsHidden={!open}
             >

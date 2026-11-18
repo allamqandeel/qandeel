@@ -34,6 +34,7 @@ import {
   EMPTY_LIST, HOME, ORIGIN, aimFixedPoint, cosmosCameraOf, emitter, gestureFixedPoint, memo, nearestHit, soleHit, viewOf,
   type CosmosPoint, type CosmosUnplaced, type CosmosWorldOwner, type CosmosWorldSnapshot,
 } from '../owner-core';
+import { diag } from '../../__diag__/trace';
 
 export interface PersonalCosmosOwnerOptions {
   readonly runtime: IntegrationSessionRuntime;
@@ -196,16 +197,18 @@ export function createPersonalCosmosOwner({ runtime, language, onOutcome, spatia
           if (there !== undefined) point = aimFixedPoint(s.camera, view, there, aim, rungScale(s.rung), rungScale(next)) ?? point;
         }
       }
-      const applied = report(zoomSemanticStep(store, direction, point === null || glass === null ? null : { envelope: glass, point }));
+      const outcome = zoomSemanticStep(store, direction, point === null || glass === null ? null : { envelope: glass, point });
+      diag('E.own.step', `${direction}:${(outcome as { outcome?: string }).outcome ?? '?'}`);
+      const applied = report(outcome);
       return { applied, aboutFingers: applied && point !== null };
     },
     tap(x, y, released) {
       const s = current();
       const view = viewNow();
-      if (view === null || s.status !== 'READY') return 'NONE';
+      if (view === null || s.status !== 'READY') { diag('E.own.tap.none', view === null ? 'noView' : `status:${s.status}`); return 'NONE'; }
       const hit = nearestHit(s.list, s.rung, released, view, x, y);
-      if (hit === null) return 'NONE';
-      inspect(hit);
+      if (hit === null) { diag('E.own.tap.none', 'noHit'); return 'NONE'; }
+      diag('E.own.tap.inspect', inspect(hit) ? 'ok' : 'refused');
       return 'FOCUS';
     },
     focus(id) { inspect(id); },

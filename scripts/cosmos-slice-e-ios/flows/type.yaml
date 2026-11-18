@@ -1,0 +1,12 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): focus the field ID, clear it, type TEXT, then hide the keyboard.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    id: "${ID}"
+- eraseText: 8
+- inputText: "${TEXT}"
+# R5: the reader's route off the keyboard is its own Search/return key (R3: Maestro's hideKeyboard left the iOS keyboard
+# up for the rest of the Public scene, covering the sheet). Whether that key closes the keyboard is itself evidence.
+- pressKey: Enter

@@ -42,6 +42,7 @@ import {
   type MapAccessibilityFocus,
   type MapAccessibilityNode,
 } from './map-accessibility';
+import { diag } from '../../cosmos/__diag__/trace';
 
 export const MAP_ACCESSIBILITY_TEST_ID = 'qandeel-map-accessibility';
 
@@ -147,6 +148,7 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
   return (
     <View
       testID={MAP_ACCESSIBILITY_TEST_ID}
+      onTouchStart={() => diag('E.ui.mapA11y')}
       style={StyleSheet.absoluteFill}
       // T-10 — the semantic layer covers the whole plane and must never take a touch from it. Its
       // own nodes stay independently reachable by assistive technology, which does not go through

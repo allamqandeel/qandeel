@@ -1,0 +1,12 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): a cold launch of the proof build into the Personal Conversation.
+# TIMING = launch command issued -> the Conversation thread is visible (Maestro's polling resolution).
+appId: com.qandeel.mobile
+---
+- stopApp
+- evalScript: ${output.t0 = Date.now()}
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- evalScript: ${console.log('TIMING ' + NAME + ' ' + (Date.now() - output.t0))}

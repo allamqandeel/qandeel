@@ -78,6 +78,8 @@ import { PRODUCT_ROOT_TEST_ID, RuntimePhaseSurface } from '../composition/Produc
 import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
+import { useSyncExternalStore } from 'react';
+import { diagSubscribe, diagText, diagVersion } from '../../cosmos/__diag__/trace';
 
 const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions|knowledge)\/(arrive|seed|grow|correct|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|topics|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete|enroll-closed|enroll-open|enroll-outdated|enroll-enrolled)$/u;
 
@@ -96,6 +98,12 @@ function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   });
   if (!built.ok) throw new Error(`the S4-01 proof runtime could not be built: ${built.phase.detail}`);
   return built.runtime;
+}
+
+// D-1 DIAGNOSTIC ONLY: the touch-path board, published as one accessibility label (no content, counts only).
+function DiagBoard() {
+  useSyncExternalStore(diagSubscribe, diagVersion);
+  return <View testID="qandeel-diag-trace" accessible accessibilityLabel={`DIAG ${diagText()}`} pointerEvents="none" style={{ position: 'absolute', left: 0, bottom: 0, width: 4, height: 4 }} />;
 }
 
 export function S401ProofRoot() {
@@ -172,6 +180,7 @@ export function S401ProofRoot() {
         <StatusBar style="auto" />
         <RuntimePhaseSurface runtime={runtime} />
       </View>
+      <DiagBoard />
     </GestureHandlerRootView>
   );
 }

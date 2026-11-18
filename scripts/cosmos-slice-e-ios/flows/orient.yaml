@@ -1,0 +1,4 @@
+# COSMOS-INT-01 Slice E iOS baseline audit (VALIDATION ONLY): set the simulator orientation (PORTRAIT / LANDSCAPE_LEFT).
+appId: com.qandeel.mobile
+---
+- setOrientation: ${O}

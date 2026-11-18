@@ -34,6 +34,7 @@ import type { WorldKind } from '../core/stage';
 import { CosmosCanvas, type CosmosCanvasHandle } from '../skia/CosmosCanvas';
 import { cosmosProductCopy } from './copy';
 import { viewOf, type CosmosWorldOwner } from './owner-core';
+import { diag } from '../__diag__/trace';
 
 export const COSMOS_WORLD_VIEW_TEST_ID = 'qandeel-cosmos-world';
 export const COSMOS_BACK_TEST_ID = 'qandeel-cosmos-back';
@@ -95,6 +96,7 @@ export interface CosmosWorldViewProps {
 
 export function CosmosWorldView({ owner, world, language, glass, drift = true, worldLabel, zoomInLabel, zoomOutLabel, accessibleMarks = true, children, rail = null, overviewAct = null, home, testID = COSMOS_WORLD_VIEW_TEST_ID }: CosmosWorldViewProps) {
   const snapshot = useSyncExternalStore(owner.subscribe, owner.getSnapshot);
+  useEffect(() => diag(`${world[1]}.snap`, `${snapshot.status}/r${snapshot.rung}/hits${snapshot.list.layers[snapshot.rung]?.hits.length ?? -1}/glass${Math.round(glass.width)}x${Math.round(glass.height)}t${Math.round(glass.insetTop)}b${Math.round(glass.insetBottom)}`), [snapshot, glass, world]);
   const copy = useMemo(() => cosmosProductCopy(language), [language]);
   const rtl = language === 'ar';
   const canvas = useRef<CosmosCanvasHandle>(null);
@@ -182,15 +184,19 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   }, [leaveOverview, owner, settleNow]);
   const lastTap = useRef(0);
   const onTap = useCallback((x: number, y: number, released: NasijCamera) => {
-    if (leaveOverview()) return; // entity taps are disabled in the overview: the tap only returns
+    const w = world[1];
+    diag(`${w}.js.onTap`);
+    if (leaveOverview()) { diag(`${w}.js.onTap.overview`); return; } // entity taps are disabled in the overview: the tap only returns
     const result = owner.tap(x, y, released);
+    diag(`${w}.js.tap.${result}`);
     if (result === 'NONE') {
       const at = now();
-      if (at - lastTap.current < DOUBLE_TAP_MS) { lastTap.current = 0; const stepped = owner.step('IN', { x, y }, released); settleNow(stepped.aboutFingers); return; }
+      diag(`${w}.js.tap.dt`, lastTap.current === 0 ? -1 : Math.round(at - lastTap.current));
+      if (at - lastTap.current < DOUBLE_TAP_MS) { lastTap.current = 0; const stepped = owner.step('IN', { x, y }, released); diag(`${w}.js.step.${stepped.applied ? 'applied' : 'refused'}`); settleNow(stepped.aboutFingers); return; }
       lastTap.current = at;
     } else lastTap.current = 0;
     settleNow();
-  }, [leaveOverview, owner, settleNow]);
+  }, [leaveOverview, owner, settleNow, world]);
 
   const stepBy = useCallback((direction: 'IN' | 'OUT') => { leaveOverview(); owner.step(direction, null, null); settleNow(); }, [leaveOverview, owner, settleNow]);
   const zoomIn = useCallback(() => stepBy('IN'), [stepBy]);
@@ -236,7 +242,7 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
   // pins `ltr`) renders the same accepted layout in every world. (HONOR proof, 2026-11-15: without this the Shared /
   // Public rail label sat outboard and was clipped at the edge.) Arabic words keep their own reading direction.
   return (
-    <View style={styles.root} testID={testID}>
+    <View style={styles.root} testID={testID} onTouchStart={() => diag(`${world[1]}.ui.worldView`)}>
       <CosmosCanvas
         ref={canvas}
         world={world}
