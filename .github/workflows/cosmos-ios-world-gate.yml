@@ -1,4 +1,5 @@
 name: iOS World gate (COSMOS stages, touch)
+# NEGATIVE CONTROL BRANCH ONLY (never merged): the D-1 fix is reverted, to show the gate catches the defect.
 # COSMOS-INT-01 Slice E (PO decisions D-1 / D-2, 2026-11-18; backlog BG-10): the iOS World-level integration gate.
 #
 # What it is NOT: Mobile CI's `verify-ios` boot smoke. That job installs the unconfigured Product binary and proves it
@@ -23,7 +24,7 @@ on:
       - 'scripts/validation/bounded-run.mjs'
       - '.github/workflows/cosmos-ios-world-gate.yml'
   push:
-    branches: [main]
+    branches: [main, cosmos/slice-e-d1-gate-negative]
   workflow_dispatch:
 concurrency:
   group: cosmos-ios-world-gate-${{ github.ref }}

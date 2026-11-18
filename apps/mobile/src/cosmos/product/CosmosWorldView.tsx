@@ -295,13 +295,8 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
           const on = i === snapshot.rung;
           const past = i < snapshot.rung;
           return (
-            // Slice E D-1 (iOS): in the Personal world the current depth's bead takes no touch as a whole, not only its
-            // word (§18). UIKit gives a touch to the topmost view under the finger, and only that view's recognizers and
-            // its ancestors' see it. The canvas detector is the bead's sibling, so a bead's own box, which spans the word,
-            // would keep from the stage the touch §18 gives it. Diag run 44255421709 proved this for beads 3 and 2. The
-            // bead is disabled at the current depth, so it loses no act. Its accessibility is unchanged.
             <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
-              onPress={() => toRung(i)} style={styles.bead} pointerEvents={world === 'PERSONAL' && on ? 'none' : 'auto'}>
+              onPress={() => toRung(i)} style={styles.bead}>
               {/* §18 (PO, 2026-11-16): in the Personal world the current depth's word takes no touch, so a finger of a pinch
                   that lands on it still reaches the stage (a centred target sits in its band; the bead is disabled at the
                   current depth, so no touch on the word ever did anything). Shared / Public are unchanged. */}
@@ -375,12 +370,7 @@ const styles = StyleSheet.create({
   goldText: { fontSize: 13, color: C.gold },
   rail: { position: 'absolute', top: '36%' },
   railLine: { position: 'absolute', top: 22, bottom: 22, width: 1, backgroundColor: C.goldDim },
-  // Slice E D-1 (iOS): a bead is as wide as what it draws, at the rail's right edge (`alignSelf`), not stretched to the
-  // widest bead. The pixels do not move: the content was already right-aligned. Stretched, every bead was a
-  // rail-wide box (Personal on an iPhone 17: 179 x 44 each, 179 x 220 together) standing over the stage. On iOS, UIKit
-  // gives a touch to that topmost box, and the canvas detector (its sibling) never sees it. Diag run 44255421709: a node
-  // tap at 323,475 and a pan from 281,437 reached beads 3 and 2 and not the canvas.
-  bead: { minHeight: 44, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, alignSelf: 'flex-end' },
+  bead: { minHeight: 44, minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   beadSlot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   beadDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.void, borderWidth: 1, borderColor: C.goldDim },
   beadPast: { backgroundColor: C.goldDim },
