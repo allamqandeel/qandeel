@@ -7,8 +7,9 @@ name: iOS World gate (COSMOS stages, touch)
 # What it is: the S401 proof build (the production composition, ProductRoot, over the labelled SYNTHETIC proof network;
 # one recorded change of the mobile manifest's `main` in this ephemeral checkout only), on an iOS simulator, with REAL
 # touch on the Personal, Shared and Public COSMOS stages and assertions on what each touch must do
-# (scripts/cosmos-ios-world/run-world-gate.sh). Every case is PASS / FAIL / NOT TESTED in results.tsv; the job fails
-# unless every case passed. Nothing retries a failed case.
+# (scripts/cosmos-ios-world/run-world-gate.sh), then the native XCUITest gestures Maestro cannot inject — a genuine
+# double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
+# is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
 #
 # Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the dependency
 # lock, or this gate; for a push to main; and on manual dispatch.
@@ -71,15 +72,21 @@ jobs:
       - name: Install CocoaPods dependencies
         working-directory: apps/mobile/ios
         run: pod install
-      - name: Build the proof Release simulator app
+      - name: Add the native UI-test target (this ephemeral checkout only)
+        # One XCUITest target and its shared scheme, added to the generated project (scripts/cosmos-ios-world/xcuitest).
+        # The xcodeproj gem ships with CocoaPods; it is installed for the user only if this Ruby cannot load it.
+        run: |
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+      - name: Build the proof Release simulator app and its native UI tests (one build)
         run: |
           set -o pipefail
           workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
-          scheme="$(basename "$workspace" .xcworkspace)"
-          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
-          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
-          test -n "$app"; echo "APP=$app" >> "$GITHUB_ENV"
-          { echo "head=$(git rev-parse HEAD)"; echo "entry=src/integration/__validation__/s401-proof-entry.tsx"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find apps/mobile/ios/build/Build/Products -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "head=$(git rev-parse HEAD)"; echo "entry=src/integration/__validation__/s401-proof-entry.tsx"; echo "app=$(basename "$app")"; echo "xctestrun=$(basename "$xctestrun")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
       - name: Setup Temurin JDK 17 (Maestro)
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
@@ -101,12 +108,30 @@ jobs:
       - name: World gate (Personal, Shared, Public; real touch; assertions)
         timeout-minutes: 40
         run: bash scripts/cosmos-ios-world/run-world-gate.sh "$RUNNER_TEMP/evidence/gate" "$IOS_SIM_UDID"
+      - name: Native gestures (XCUITest; double tap, pinch, the current depth bead, focal anchoring, pan)
+        # Runs even when a World gate case failed, so every case is classified. The same build's runner, no rebuild.
+        if: ${{ !cancelled() && env.XCTESTRUN != '' }}
+        timeout-minutes: 30
+        run: |
+          E="$RUNNER_TEMP/evidence"; X="$E/xcui"; mkdir -p "$X" "$E/gate"
+          [ -f "$E/gate/results.tsv" ] || printf 'case\tresult\tdetail\n' > "$E/gate/results.tsv"
+          # The Maestro driver is an XCTest runner too; it is stopped so that one runner drives the simulator.
+          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner 2>/dev/null || true
+          xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "id=$IOS_SIM_UDID" -resultBundlePath "$X/gestures.xcresult" > "$X/xcodebuild.log" 2>&1 || true
+          grep -E "Test [Cc]ase|error: -\[|\*\* TEST" "$X/xcodebuild.log" || true
+          xcrun xcresulttool export attachments --path "$X/gestures.xcresult" --output-path "$X/attachments" || true
+          wpt="$(sed -n 's/.*device widthPoints=\([0-9]*\).*/\1/p' "$E/gate/gate.log" 2>/dev/null | head -n 1)"
+          node scripts/cosmos-ios-world/xcui-analyse.mjs "$X/xcodebuild.log" "$X/attachments" "${wpt:-0}" "$E/gate/results.tsv"
+          # Compact evidence: the attachments and the log are kept; the result bundle (which repeats them) is not.
+          rm -rf "${X:?}/gestures.xcresult"
       - name: Results
         if: ${{ !cancelled() }}
         run: |
           f="$RUNNER_TEMP/evidence/gate/results.tsv"
           if [ -f "$f" ]; then { echo '### iOS World gate'; echo; echo '| case | result | detail |'; echo '|---|---|---|'; tail -n +2 "$f" | awk -F'\t' '{print "| "$1" | "$2" | "$3" |"}'; } >> "$GITHUB_STEP_SUMMARY"; cat "$f"
           else echo 'no results.tsv: every case NOT TESTED' | tee -a "$GITHUB_STEP_SUMMARY"; fi
+          # The job passes only when every case, the World gate's and the native ones, is PASS.
+          [ -f "$f" ] && ! tail -n +2 "$f" | awk -F'\t' '$2 != "PASS"' | grep -q .
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with: {name: 'ios-world-gate-${{ matrix.lang }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

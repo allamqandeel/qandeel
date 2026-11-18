@@ -2475,8 +2475,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -2566,6 +2568,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -2630,6 +2633,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -2694,6 +2698,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -2758,6 +2763,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -6215,8 +6221,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -6310,6 +6318,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -6374,6 +6383,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -6438,6 +6448,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -6502,6 +6513,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -9959,8 +9971,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -10050,6 +10064,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -10114,6 +10129,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -10178,6 +10194,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -10242,6 +10259,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -13699,8 +13717,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -13794,6 +13814,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -13858,6 +13879,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -13922,6 +13944,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -13986,6 +14009,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -17443,8 +17467,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -17534,6 +17560,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -17598,6 +17625,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -17662,6 +17690,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -17726,6 +17755,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -21183,8 +21213,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -21274,6 +21306,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -21338,6 +21371,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -21402,6 +21436,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -21466,6 +21501,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -24923,8 +24959,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -25018,6 +25056,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -25082,6 +25121,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -25146,6 +25186,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -25210,6 +25251,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -28665,8 +28707,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -28756,6 +28800,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -28820,6 +28865,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -28884,6 +28930,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -28948,6 +28995,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -32497,8 +32545,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -32588,6 +32638,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -32652,6 +32703,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -32716,6 +32768,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -32780,6 +32833,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -36369,8 +36423,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -36460,6 +36516,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -36524,6 +36581,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -36588,6 +36646,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -36652,6 +36711,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -40551,8 +40611,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -40642,6 +40704,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -40706,6 +40769,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -40770,6 +40834,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -40834,6 +40899,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -44081,6 +44147,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -44145,8 +44212,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -44236,6 +44305,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -44300,6 +44370,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -44364,6 +44435,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -47913,8 +47985,10 @@
              "onResponderTerminate": "[fn]",
              "onResponderTerminationRequest": "[fn]",
              "onStartShouldSetResponder": "[fn]",
+             "pointerEvents": "none",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -48004,6 +48078,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -48068,6 +48143,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -48132,6 +48208,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",
@@ -48196,6 +48273,7 @@
              "onStartShouldSetResponder": "[fn]",
              "style": {
               "alignItems": "center",
+              "alignSelf": "flex-end",
               "flexDirection": "row",
               "gap": 8,
               "justifyContent": "flex-end",

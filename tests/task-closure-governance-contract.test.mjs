@@ -578,6 +578,7 @@ test('BG-10 keeps iOS simulator validation a closure and merge-readiness conditi
     [/A green Android suite, Jest suite or iOS build does not replace iOS simulator interaction/u, 'that other suites do not substitute'],
     [/neither closed nor merge-ready without the Product Owner's explicit approval/u, 'the closure and merge consequence'],
     [/enforced by a change-aware CI gate/u, 'its enforcement'],
+    [/backend changes\s+that can affect iOS behaviour/u, 'that backend changes affecting iOS are in its scope'],
   ]) {
     assert.match(backlogProse, clause, `BG-10 no longer states ${what}`);
   }

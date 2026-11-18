@@ -6,6 +6,8 @@
 //                                                           is within 25° of h, or "none"
 //        node nodes.mjs --any <png> [widthPoints]       -> the largest core of any hue, or "none"
 //        node nodes.mjs --in x,y,w,h <png> widthPoints -> the largest core inside that rectangle (screen points), or "none"
+//        node nodes.mjs --all <png> [widthPoints]       -> every core at the bright threshold, same format as below
+//        node nodes.mjs <png> [widthPoints]               -> every core, as "<halo hue>@x,y,<pixels>" (points with widthPoints)
 // Maestro accepts only INTEGER percentages or points (R3: "80.4%,54.3%" made every node tap fail), so the result is in
 // points: pixels x widthPoints / screenshot width. Without widthPoints it falls back to integer percentages.
 // A core is first a WHITE blob (min channel >= 228); if none is found, a BRIGHT one (min channel >= 170, thinner erosion: a 2x small iPhone draws smaller cores), for Worlds whose
@@ -69,7 +71,7 @@ function cores(p) {
 }
 
 const [mode, a, b, c3] = process.argv.slice(2);
-const WPT = Number(mode === '--hue' || mode === '--in' ? c3 : b) || 0;
+const WPT = Number(mode === '--hue' || mode === '--in' ? c3 : mode === '--any' || mode === '--all' ? b : a) || 0;
 const pct = (p, c) => (WPT ? `${Math.round((c.x * WPT) / p.width)},${Math.round((c.y * WPT) / p.width)}`
   : `${Math.round((c.x / p.width) * 100)}%,${Math.round((c.y / p.height) * 100)}%`);
 const found = (p) => { let r = cores(p); if (!r.length) { MIN = 170; SPREAD = 90; ER = 1; r = cores(p); MIN = 228; SPREAD = 26; ER = 2; } return r; };
@@ -84,6 +86,10 @@ if (mode === '--hue') {
 } else if (mode === '--any') {
   const p = load(a); const m = found(p).sort((x, y) => y.n - x.n)[0];
   console.log(m ? pct(p, m) : 'none');
+} else if (mode === '--all') {
+  // --all <png> <widthPoints>: every core at the BRIGHT threshold (white and tinted alike), for comparing two frames.
+  const p = load(a); MIN = 170; SPREAD = 90; ER = 1;
+  console.log(cores(p).map((c) => `${c.hue.toFixed(0)}@${pct(p, c)},${c.n}`).join('  ') || 'none');
 } else {
   const p = load(mode);
   console.log(cores(p).map((c) => `${c.hue.toFixed(0)}@${pct(p, c)},${c.n}`).join('  ') || 'none');

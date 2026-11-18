@@ -1,6 +1,20 @@
-# COSMOS Production Integration Contract — v1.8 (Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.9 (§21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.9, 2026-11-18):** `SLICES B, C AND THE PERSONAL TARGET CENTRING ACCEPTED (DRAFT PRs #394 – #396) — SLICE D CLOSED / READY FOR PO REVIEW (DRAFT PRs #397 / #398; §19.17) — SLICE E REMEDIATION AUTHORISED BY THE PO (2026-11-18; §21): THE iOS BASELINE REPORT KEPT AS AN AUDIT RECORD ONLY — D-1 (BLOCKING) ROOT CAUSE PROVEN BY NATIVE TOUCH-PATH EVIDENCE AND ITS FIRST CORRECTION PACKAGE DELIVERED ON cosmos/cosmos-int-01-slice-e (DEPENDENT DRAFT PR #399, STACKED ON #398) WITH ITS iOS SIMULATOR PROOF (§21.7) AND ANDROID VERIFICATION (§21.9) — D-1 NOT CLOSED — THE iOS WORLD GATE WITH ITS NATIVE XCUITest STEP ADDED (D-2) — THE GOLDEN CONTRACT RE-ANCHORED UNDER CONTROL (§21.8) — BG-10 MANDATORY iOS SIMULATOR VALIDATION RECORDED, ITS ENFORCEMENT PARTIAL (§21.2) — D-3 / O-1 / O-2 / THE COVERAGE ITEMS NOT STARTED — F-1, E-1, E-2 (§20) STILL OPEN AND MANDATORY — STOPPED FOR THE PO'S REVIEW — PRs #391 – #396 UNTOUCHED — NO REPLAY — NO MERGE WITHOUT «ادمج»`. The v1.8 status below is kept for provenance.
+**Change log v1.8 → v1.9 (2026-11-18).** The PO's messages "QANDEEL — Slice E: iOS Baseline Review and Remediation Authorization" and "PO Decision — Mandatory iOS Simulator Validation for All Future Implementation Work" are applied. New §21 records:
+- the dispositions D-1, D-2, D-3, O-1, O-2 and the coverage list;
+- BG-10;
+- D-1's root cause, proven by three diagnostic runs;
+- the narrowest fix (extended to the three Worlds by the PO's item 3) and its permanent regressions;
+- the PO's decisions for the remaining D-1 coverage;
+- the iOS World gate, its native XCUITest step and its actual simulator results;
+- the controlled golden re-anchor;
+- the Android verification;
+- what later evidence corrects in the baseline report (which is not edited);
+- what stays open for the PO.
+
+§20 binds unchanged. No other decision changes and no further approval is inferred.
 **Status (v1.8, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1, CP2 AND CP3 ACCEPTED FOR ROADMAP CONTINUATION — CP4 (THREE-WORLD CLOSURE) AUTHORISED AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — SLICE D CLOSED / READY FOR PO REVIEW (§19.17; A SLICE, NOT THE TASK'S CLOSURE) — FINDING F-1 UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE (§20) — E-1 AND E-2 RECORDED FOR SLICE E, NOT IMPLEMENTED (§20) — QAN-BL-CW-08 ADMITTED (OPEN — UNASSIGNED) — STOPPED FOR THE PO'S REVIEW; SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.7 status below is kept for provenance.
 **Change log v1.7 → v1.8 (2026-11-17).** The PO's message "QANDEEL — Slice D CP3 Review & CP4 Authorization" is applied. CP3's presentation and interaction are ACCEPTED for roadmap continuation; that acceptance is not acceptance of the missing inspection content. New §19.17 records CP4, the three-world closure of the Detail Sheet: the WP0 matrix walked row by row, the static closure test, the targeted and full regression, the HONOR protocol and CI. New §20 is the Slice E acceptance register: Finding F-1 (UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE), E-1 (visible speaker attribution) and E-2 (the PO's hands-on three-world pre-merge gate), none implemented, with §9's Slice E criteria. §19.16's suggested disposition for F-1 is superseded by the PO's decision (noted in place, not rewritten). §12's QAN-BL-CW-08 is admitted to the canonical backlog. The roadmap is: CP4 → Slice E (F-1, E-1, E-2) → S8B-07 Replay. No other decision changes and no further approval is inferred.
 **Status (v1.7, 2026-11-17):** `SLICE B ACCEPTED (DRAFT PR #394) — SLICE C ACCEPTED (DRAFT PR #395) — PERSONAL TARGET CENTRING ACCEPTED (DRAFT PR #396, §18) — SLICE D DETAIL SHEET: CP1 ACCEPTED FOR CONTINUATION — CP2 (SHARED WORLD) DELIVERED (§19.15) — CP3 (THE PERSONAL WORLD DETAIL SHEET, PEEK ONLY) AUTHORISED BY THE CONTROLLED ADDENDUM §19.16 AND DELIVERED ON cosmos/cosmos-int-01-slice-d (DEPENDENT DRAFT PR #397; UI-POLISH-01 #398 KEPT STACKED) — HONOR PROOF RUN (§19.16, "CP3 delivery record") — FINDING F-1 REPORTED, NOT FIXED (§19.16) — STOPPED FOR THE PO’S REVIEW; CP4 / SLICE E / REPLAY NOT AUTHORISED — PRs #391 – #396 UNTOUCHED — NO MERGE WITHOUT «ادمج»`. The v1.6 status below is kept for provenance.
@@ -1979,6 +1993,201 @@ No lineage and no context choice appear. That is F-1 (§20), unchanged by CP4.
 - §9's Slice E criteria are met;
 - the PO explicitly says «ادمج».
 
+
+---
+
+## 21. Slice E remediation (PO, 2026-11-18) — dispositions, BG-10, and the first D-1 correction package
+
+**Sources (all PO, 2026-11-18).**
+- "QANDEEL — Slice E: iOS Baseline Review and Remediation Authorization".
+- "PO Decision — Mandatory iOS Simulator Validation for All Future Implementation Work".
+- "PO decisions for the remaining D-1 iOS coverage" (items 1–6, recorded in §21.5).
+- The PO's review of Mobile CI run 44272338091 (the golden contract, §21.8).
+
+**Standing.**
+- The iOS baseline report (`E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-e\ios-baseline\IOS_BASELINE_REPORT.md`) is an **audit record only**. It is preserved unchanged, with its screenshots, recordings, binary identities and outcomes. §21.11 records what later evidence corrects; the report itself is not edited.
+- These corrections belong to Slice E. F-1, E-1 and E-2 (§20), §9's Slice E criteria and the final HONOR hands-on PO gate stay mandatory.
+- No merge. No Replay. No change to the frozen artwork.
+- Work stops for the PO's review after this first D-1 correction package and its actual iOS simulator proof. No further product change is made before that review.
+- **D-1 is NOT closed, and BG-10 is NOT claimed fully enforced** (§21.2, §21.12).
+
+### 21.1 The PO's dispositions
+
+| ID | Disposition (PO, 2026-11-18) | State |
+|---|---|---|
+| **D-1** | **BLOCKING.** Personal stage taps and double taps must work on iOS. The root cause is established through native touch-path evidence, not assumed from the missing accessibility node. Then: the narrowest proven fix; a permanent native iOS regression for inspection / PEEK and double-tap semantic zoom; pan, Shared and Public verified. | **ROOT CAUSE PROVEN; FIX DELIVERED on Draft PR #399; simulator proof §21.7; NOT CLOSED, awaiting the PO's review** |
+| **D-2** | Keep the boot smoke's purpose explicit, and add a distinct iOS World-level integration gate. | **Gate added (§21.6), first device and language only; breadth after the PO's review** |
+| **D-3** | Fix the enlarged-text layout (header overlap, vanishing nav labels, map space, clipped controls), verified on small and medium iPhones in ar and en. | **NOT STARTED** |
+| **O-1** | NOT ACCEPTED as is. When a search starts while the section chooser is open, its results show at once. The chooser closes without changing the selected section or scope. Back and the search authority stay. | **NOT STARTED** |
+| **O-2** | NOT ACCEPTED as is. No black screen while Public entry is pending. World navigation and a minimal accessible loading indication stay. No protected data is exposed and no admission is implied before the authoritative response. | **NOT STARTED** |
+| **Coverage** | Before Slice E closes: Personal Back after semantic zoom; Shared EXPANDED sheet, sources and conversation entry; native iOS pinch (XCUITest); empty states; landscape sheets; enlarged text; cold and warm timings separated from automation overhead. No PASS is claimed for an unexecuted case. Real-account and physical-device coverage are recorded separately. | **OPEN.** Personal Back after semantic zoom and native pinch are in the native XCUITest target (§21.6); the rest NOT STARTED |
+
+### 21.2 BG-10 — mandatory iOS simulator validation (PO, 2026-11-18; permanent)
+- BG-10 is recorded in the canonical backlog, in `AGENTS.md` §7, and in `tests/task-closure-governance-contract.test.mjs`, which keeps the rule from silently disappearing.
+- Every future code implementation checkpoint carries real iOS simulator interaction with assertions. Build-only and launch-only smokes do not count.
+- It also carries:
+  - permanent iOS regression coverage for each platform defect found and corrected;
+  - ar / en and responsive sizes where the change touches UI, layout, navigation, gestures or presentation;
+  - recorded PASS / FAIL / NOT TESTED evidence.
+- Green Android, Jest or an iOS build does not substitute.
+- **Backend scope (PO, 2026-11-18).** Backend changes that can affect iOS behaviour carry the same obligation. That covers the API, the database and its migrations, shared packages and the contracts the iOS client reads. Their iOS-facing compatibility is verified, with an impact assessment.
+- A checkpoint whose required iOS cases did not run, or failed, is neither closed nor merge-ready without the PO's explicit approval.
+- **Enforcement today — partial, and recorded as such.**
+  - The iOS World gate (§21.6) runs for every pull request that changes the mobile application, its shared packages, the lockfile or the gate itself. It fails unless every case passed.
+  - **NOT yet enforced:**
+    - backend paths (the API, the database, migrations, the API contracts);
+    - the ar / responsive-size matrix (one device, en).
+  - Widening the gate to the full BG-10 scope is Slice E work after the PO's review. Existing tests are not weakened, and nothing bypasses the gate.
+
+### 21.3 D-1 — the root cause, from native touch-path evidence
+- **Diagnostic branch.** `cosmos/slice-e-d1-diag` is a diagnostic only, never merged, with no PR. Its counter board publishes, per touch:
+  - the UIKit `onTouchStart` of the stage's root and of each sibling over it;
+  - the RNGH tap and pan callbacks on the canvas, and `emitTap`;
+  - `CosmosWorldView.onTap`, and the Personal owner's outcome.
+- **Run 44243375725 (round 1).**
+  - A tap on a Personal node core at 323,475 (iPhone 17) reached the stage root's `onTouchStart` but **no** RNGH handler on the canvas.
+  - Taps on open stage went the whole way, to the owner (`NONE` / no hit).
+  - So a touch never reaches the canvas in one region. It is not a readiness, projection or owner fault.
+- **Run 44248838235 (round 2).** The accessibility element that idb named at that point was the current, disabled depth bead. Turning that bead's touch off changed nothing, which **disproved** that hypothesis. An accessibility element is not the hit-test view.
+- **Run 44255421709 (round 3).**
+  - Per-sibling counters show the node tap at 323,475 ending at **bead 3**.
+  - A pan from 281,437 ended at **bead 2**, and no pan began.
+- **Mechanism.**
+  - Each bead `Pressable` was stretched by its column to the rail's widest word. On an iPhone 17 the five Personal beads made a **179 × 220 pt block over the stage** at 221,315. A disabled bead still takes the hit test.
+  - UIKit gives a touch to the topmost hit-test view, and only that view's recognizers and its ancestors' see it. The canvas `GestureDetector` is the beads' sibling, not their ancestor.
+  - On Android, RNGH routes the touch to the canvas handler regardless, which is why the HONOR never showed the defect.
+
+### 21.4 The fix (narrowest proven) — `CosmosWorldView.tsx`
+1. Every depth bead is as wide as what it draws (`alignSelf: 'flex-end'`), in all three Worlds. The content was already right-aligned, so no pixel moves and the artwork is unchanged (§21.8 measures this).
+2. **The current depth's bead takes no touch (`pointerEvents: 'none'`) in all three Worlds.**
+   - This is PO item 3 of 2026-11-18, which extends §18 from Personal to Shared and Public.
+   - The bead was already disabled at the current depth, so it loses no action.
+   - Its accessibility (a selected, disabled button) and its appearance are unchanged.
+   - The shallower beads keep their touch and their action. The deeper beads keep their touch.
+
+**Permanent Jest regressions** (`cosmos-world-view.test.tsx`, each over PERSONAL, SHARED and PUBLIC):
+- the current bead's touch is `none` and its accessibility is `{ selected: true, disabled: true }`;
+- a shallower bead keeps its touch and `{ selected: false, disabled: false }`;
+- every bead is `alignSelf: 'flex-end'`.
+
+Each failed with its fix reverted in place (for example "Expected 'none', Received 'auto'"). `src/cosmos/product` passes 76 / 76.
+
+### 21.5 The PO's decisions for the remaining D-1 coverage (2026-11-18)
+1. **APPROVED:** one native XCUITest target for a genuine double tap and a genuine two-finger pinch. It reuses the simulator build, with no repeated full builds, and verifies semantic depth, Back, focal anchoring and preserved pan.
+2. **KEPT:** the 320 ms double-tap window. A change is proposed only if native testing shows a real usability problem.
+3. **APPROVED IN PRINCIPLE:** consistent current-depth touch handling across Personal, Shared and Public (§21.4 item 2). It must keep the shallower controls, accessibility and appearance, use the narrowest change, and be verified on iOS AND Android.
+4. Complete the running gate rerun without interruption and preserve the negative-control evidence. Correct the Shared / Public harness so each case validates the intended transition and the final result.
+5. One reviewable package; builds reused; compact evidence.
+6. Every case is reported PASS / FAIL / NOT TESTED. D-1 is not closed, BG-10 is not claimed fully enforced, and PR #399 is not merged until the native iOS tests pass and the PO reviews.
+
+### 21.6 The iOS World gate (D-2; BG-10)
+- **What it is.** `.github/workflows/cosmos-ios-world-gate.yml` and `scripts/cosmos-ios-world/`. One `xcodebuild build-for-testing` builds the S401 proof app and the native UI-test runner together. The app is the production composition (ProductRoot) over the labelled synthetic proof network.
+  - **Maestro step:** real touches, one assertion per case.
+  - **Native step:** `xcodebuild test-without-building` on the same build.
+- **The native UI-test target** `QandeelWorldUITests` is added to the CI's ephemeral generated project only, by `xcuitest/add-uitest-target.rb`. The repository has no committed `ios/` directory.
+- **What it is not.** Mobile CI's `verify-ios` boot smoke, whose purpose is unchanged.
+- **Why native.** Maestro's XCTest driver sends one touch per HTTP request (333–446 ms each in runs 44263732597 and 44272338098). It cannot deliver a double tap inside 320 ms or any two-finger gesture. Its P-DTAP / P-BACK cases are therefore NOT TESTED, never PASS or FAIL, and they moved to XCUITest.
+- **Results.** Every case is PASS, FAIL or NOT TESTED in one `results.tsv`. A case whose precondition failed is NOT TESTED, nothing retries, and the job fails unless every case passed.
+
+| Case | Driver | Assertion |
+|---|---|---|
+| P-TAP-RAIL | Maestro | A tap on a node core inside the depth rail's frame (the D-1 region) opens the Personal PEEK. |
+| P-TAP | Maestro | A tap on the largest node core opens the PEEK. |
+| P-PAN | Maestro | A pan on open stage (20%,30% → 60%,30%) moves the camera, so Back appears. |
+| P-PAN-RAIL | Maestro | A pan that starts where the rail stands moves the camera too. |
+| S-FAR-TAP | Maestro | A Shared tap on empty FAR space discloses Far → Mid, and Back appears. |
+| S-TAP | Maestro | Shared node taps (at most 3) open the detail sheet. Each tap must either open it or disclose a deeper depth. |
+| U-TAP | Maestro | Public node taps (at most 3) open the Public panel, on the same terms. |
+| X:testPersonalDoubleTapAndPinchStepAboutTheirFingers | XCUITest | A native double tap on open stage steps IN and Back appears. A pinch-out at the stage centre returns to the first depth. |
+| X-ANCHOR | analyser | That round trip keeps the world point under the fingers. Every first-depth node moves by (7/8)(c − f), within 20 pt. |
+| X:testPersonalDoubleTapOnTheCurrentDepthWordStepsInAndBackReturns | XCUITest | A native double tap on the current depth's word reaches the stage and steps IN. Back returns to the first depth. |
+| X:testPersonalPinchStepsInAndThePanStillMovesTheWorld | XCUITest | A native pinch-in steps IN. The drag after it moves the world. |
+| X-PAN-AFTER-PINCH | analyser | That drag moves the nodes by the drag, within max(20 pt, 25 %). |
+| X:testSharedTapOnTheCurrentDepthWordReachesTheStage | XCUITest | A tap on Shared's current depth word reaches the stage (Far → Mid), and Back returns. |
+| X:testPublicTapOnTheCurrentDepthWordReachesTheStage | XCUITest | The same for Public. |
+| X:testSharedPinchStepsInAndOut | XCUITest | A native pinch steps the Shared stage in and back out. |
+
+The first matrix entry is iPhone 17, en.
+
+### 21.7 The actual iOS simulator proof
+All runs are on iPhone 17 (iOS 26.5), en, with the S401 proof app. Evidence is in `E:\QANDEEL_REPORTS\COSMOS-V5\integration\slice-e\d1\`.
+
+| Case | Fix, run 44263732597 (8dc78c85) | **Negative control**, run 44263748686 (fix reverted in place; branch `cosmos/slice-e-d1-gate-negative`, never merged) | Fix + harness R1, run 44272338098 (5a11b205) |
+|---|---|---|---|
+| P-TAP-RAIL | PASS | **FAIL** (no PEEK) | PASS |
+| P-TAP | PASS | **FAIL** (no PEEK) | PASS |
+| P-PAN | PASS † | **FAIL** (Back never appears) | PASS (open stage) |
+| P-PAN-RAIL | PASS | **FAIL** (Back never appears) | PASS |
+| S-FAR-TAP | PASS | PASS | PASS (Far → Mid, Back available) |
+| S-TAP | FAIL ‡ | FAIL ‡ | PASS (Far → tap → Mid → tap → Near, sheet opened) |
+| U-TAP | FAIL ‡ | FAIL ‡ | PASS (Far → tap → Mid → tap → Near, panel opened) |
+| P-DTAP (Maestro) | NOT TESTED (333 ms between touches) | NOT TESTED | NOT TESTED (requests 388 / 355 ms); moved to XCUITest |
+| P-BACK (Maestro) | NOT TESTED | NOT TESTED | NOT TESTED; moved to XCUITest |
+
+- † Run 44263732597's P-PAN started inside the rail's frame, so it was really a second P-PAN-RAIL. Harness R1 moved it to open stage.
+- ‡ The harness, not the app (PO item 4):
+  - S-TAP tapped the "← Far" glyph.
+  - U-TAP expected a panel from a FAR tap, where the owner discloses instead.
+  - R1 limits node search to the stage band and accepts a tap only if it opens the target or discloses a deeper depth, at most three taps.
+- **The negative control is the discriminating evidence.** The same harness with the fix reverted fails exactly the four D-1 cases. Run 44272338098's job failed only because of the two Maestro NOT TESTED rows.
+
+**The exact-head run of this package** adds the native XCUITest cases, X-ANCHOR and X-PAN-AFTER-PINCH (§21.6). It was not yet run when this text was committed. Its results are recorded below by the follow-up documentation-only commit, which changes no code and triggers no workflow.
+
+**Exact-head results: PENDING.** No case of the native step is claimed until that run finishes.
+
+### 21.8 The golden contract — a controlled re-anchor (PO, 2026-11-18)
+- **The failure.** Mobile CI runs 44263732497 (8dc78c85) and 44272338091 (5a11b205) failed only in `living-analysis-screen-golden.test.tsx`: 13 failed, 3716 passed. The D-1 properties changed the recorded host tree.
+- **How it was handled.** The golden is not disabled, not broadly regenerated, and its comparisons are not weakened.
+- **The structural comparison.** `apps/mobile/scripts/golden-structural-diff.mjs` walks the old and new recordings in parallel. It fails on any added or removed host, a changed type or a changed child count. It classifies every differing leaf against an explicit allow-list.
+- **Results:**
+  - 13 cases;
+  - **0 structural differences**;
+  - 78 differing leaves, all allowed: 65 × `alignSelf: 'flex-end'` on a depth bead and 13 × `pointerEvents: 'none'` on the selected bead;
+  - 65 beads, 0 inconsistent;
+  - every other host, position, handler and accessibility value is byte-identical.
+- **Pixels.** The rails before and after the fix were compared from the simulator screenshots: Personal 0.995 overlap; Shared 905 / 905 identical; Public 0.94. In Public, the only fixed-only pixels are the drifting orange node core, not the rail.
+- **Recording.** The test file's header records the re-anchor. Old sha256 `bfad7d3c…`, new `34488cd3…`.
+- **Evidence.** In `…\slice-e\d1\golden-reanchor\`: `exact-diff.txt` (78 lines), `structural-diff.txt`, `sha256.txt`, `rail-pixels.txt` and the two side-by-side rail images.
+
+### 21.9 Android verification of §21.4 (PO item 3)
+- **Setup.** Local emulator only (`QANDEEL_API36`, 1080 × 2400, 420 dpi, en). The HONOR was not touched.
+- **Build.** The proof APK (`com.qandeel.mobile.cosmosint`, x86_64) was built from this package's working tree. The installed sha256 is `a8c10cdb…`, verified on the device. `apps/mobile/package.json` was restored and `apps/mobile/android` removed afterwards.
+- **Double tap.** It is a real one: one pointer, a 120 ms gap, injected through the input manager.
+- **Results** (`…\slice-e\d1\android\run2\`: `results.tsv`, step log, dumps and screenshots; script `emu-d1-item3.sh`):
+
+| Case | Result | What happened |
+|---|---|---|
+| A-S-WORD | **PASS** | A Shared tap on the current word "Far" reached the stage: Far → Mid. |
+| A-S-PAST | **PASS** | The shallower bead "Far" is still a control and returned the stage to Far. |
+| A-U-WORD | **PASS** | The same in Public: Far → Mid. |
+| A-U-PAST | **PASS** | Public's shallower bead returned the stage to Far. |
+| A-P-WORD | **PASS** | A genuine double tap on Personal's current word "the whole world" stepped IN to "threads", and Back became available. |
+| A-P-PAST | **PASS** | Personal's shallower bead returned the stage to "the whole world". |
+| A-P-TAP | **PASS** | A Personal node tap opened the PEEK. |
+| A-P-PAN | **PASS** | A pan on open stage moved the camera, and Back became available. |
+
+- **Limit.** These cases show that §21.4 keeps Android's behaviour and the shallower controls. They do not discriminate the fix on Android: RNGH already routed such touches to the canvas there (§21.3), so no Android negative control was built. An earlier attempt (run 1) stopped on a bug in the script's own wait, before any case ran, and recorded no outcome.
+
+### 21.10 Local checks on this package
+- Typecheck and lint are clean.
+- The golden and COSMOS product suites pass 91 / 91.
+- The governance contract passes 25 / 25. Its new clause, backend changes in BG-10's scope, fails as expected when removed.
+- **The Mobile CI fast contract gate, run locally (58 commands):** every command passed except `test:mobile`. Four suites failed locally, with 12 failed and 3717 passed: `proof-root-deep-link`, `proof-root`, `depth`, `w2-account-access`.
+  - The same four suites fail the same way (12 failed / 23 passed) with the pre-fix `CosmosWorldView.tsx` restored in place.
+  - They passed on Linux CI on 5a11b205.
+  - So they are this Windows machine's baseline, not this change. The exact-head CI is the authority.
+
+### 21.11 What later evidence corrects in the baseline report (the report is not edited)
+- **Shared double tap.** Probe 2 reported a Shared "double tap Far → Mid". That was a FAR **single** tap: the Shared owner's tap at rung 0 discloses. The double-tap path was never proven by Maestro.
+- **Maestro's touch timing.** `doubleTapOn` injects its taps about 350–400 ms apart. That is wider than `DOUBLE_TAP_MS` (320 ms), so Maestro cannot prove a double tap on any World. This is injection timing, not a JavaScript delay.
+- **The missing accessibility node under the Personal stage** is not the cause of D-1 (§21.3).
+
+### 21.12 Open for the PO (nothing is changed for these)
+1. **D-1 is not closed.** It closes only on the PO's review of §21.7.
+2. **BG-10 is partially enforced** (§21.2). Backend paths and the ar / size matrix are not yet in the gate.
+3. **The 320 ms double-tap window is kept** (§21.5 item 2). The native double tap is the measure.
+4. **An observation, not changed: Public's Overview chip overlaps the top of Public's rail.** On iPhone 17, en, the Overview frame (305,262,85,44) covers the first bead's upper part (rail 323,282,77,132). The native word tap therefore aims at 0.75 of the bead's height. The overlap predates this package and is presentation, so it belongs to D-3 / layout review, not to D-1.
+5. **Not started:** D-3, O-1, O-2, and the remaining coverage items.
 
 ---
 

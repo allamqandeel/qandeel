@@ -35,6 +35,19 @@
  * CP3 additions are taken out — the sheet stage wrapper (`cosmos-detail-sheet-stage`, unwrapped), the rail's holder
  * (`qandeel-personal-rail-holder`, unwrapped) and the sheet's frame (removed) — and that the PEEK's content is present in
  * the `inspection` case only. Nothing else of the screen moved: world, rail, acts, testIDs, handlers and accessibility.
+ *
+ * COSMOS-INT-01 Slice E D-1 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-18; Contract §21): on iOS the depth rail's
+ * stretched beads stood over the stage and took its touches. Two touch / layout properties of the rail's beads were
+ * changed, and nothing else. The golden was regenerated ONCE for them. Before it was rewritten, a structural comparison
+ * (apps/mobile/scripts/golden-structural-diff.mjs, old sha256 bfad7d3c…, new 34488cd3…) proved:
+ *   - no structural difference in any of the 13 cases: no host element added or removed, no type, order or child count
+ *     changed;
+ *   - exactly 78 differing leaves, 6 per case, each on a depth-rail bead and each on the allow-list:
+ *     - 65 `alignSelf: 'flex-end'` added to a bead's style. The bead is as wide as what it draws; its content was already
+ *       right-aligned, so nothing drawn moves.
+ *     - 13 `pointerEvents: 'none'` added to the selected (current, disabled) bead, one per case.
+ *   - every other bead is byte-identical to the recording (no pointerEvents of its own).
+ * Handlers, testIDs, accessibility (roles, labels, states) and every other value are unchanged.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

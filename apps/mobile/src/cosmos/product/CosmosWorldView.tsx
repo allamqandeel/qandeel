@@ -295,18 +295,19 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
           const on = i === snapshot.rung;
           const past = i < snapshot.rung;
           return (
-            // Slice E D-1 (iOS): in the Personal world the current depth's bead takes no touch as a whole, not only its
-            // word (§18). UIKit gives a touch to the topmost view under the finger, and only that view's recognizers and
-            // its ancestors' see it. The canvas detector is the bead's sibling, so a bead's own box, which spans the word,
-            // would keep from the stage the touch §18 gives it. Diag run 44255421709 proved this for beads 3 and 2. The
-            // bead is disabled at the current depth, so it loses no act. Its accessibility is unchanged.
+            // Slice E D-1 (iOS; PO 2026-11-18, consistent across the three worlds): the current depth's bead takes no touch
+            // as a whole, not only its word (§18). UIKit gives a touch to the topmost view under the finger, and only that
+            // view's recognizers and its ancestors' see it. The canvas detector is the bead's sibling, so a bead's own box,
+            // which spans the word, would keep from the stage a touch it never acts on. Diag run 44255421709 proved this
+            // for beads 3 and 2. The bead is disabled at the current depth, so it loses no act; a shallower bead keeps its
+            // touch. Its accessibility and its appearance are unchanged.
             <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
-              onPress={() => toRung(i)} style={styles.bead} pointerEvents={world === 'PERSONAL' && on ? 'none' : 'auto'}>
-              {/* §18 (PO, 2026-11-16): in the Personal world the current depth's word takes no touch, so a finger of a pinch
-                  that lands on it still reaches the stage (a centred target sits in its band; the bead is disabled at the
-                  current depth, so no touch on the word ever did anything). Shared / Public are unchanged. */}
+              onPress={() => toRung(i)} style={styles.bead} pointerEvents={on ? 'none' : undefined}>
+              {/* §18 (PO, 2026-11-16; extended to Shared and Public by the PO, 2026-11-18): the current depth's word takes
+                  no touch, so a finger of a pinch that lands on it still reaches the stage (a centred target sits in its
+                  band; the bead is disabled at the current depth, so no touch on the word ever did anything). */}
               {on ? (
-                <View collapsable={false} pointerEvents={world === 'PERSONAL' ? 'none' : 'auto'}>
+                <View collapsable={false} pointerEvents="none">
                   <Text style={[styles.beadText, rtl && styles.beadTextArabic]}>{name}</Text>
                 </View>
               ) : null}

@@ -150,6 +150,12 @@ The rule is enforced by a change-aware CI gate, not by instruction alone. Existi
 weakened to pass it, and the gate is never bypassed silently. Approvals already given stand, and
 full-matrix reruns are not required where the change does not reach them.
 
+The gate's change-awareness is not limited to the mobile directories (PO, 2026-11-18): backend changes
+that can affect iOS behaviour — the API, the database and its migrations, shared packages and the
+contracts the iOS client reads — bring the same obligation, through iOS-facing contract verification
+and, where behaviour can change, simulator interaction. Until the gate reaches them, that coverage is
+recorded as not yet enforced, never claimed.
+
 It was recorded by COSMOS-INT-01 Slice E, whose iOS baseline found a Personal stage defect (D-1)
 that Android, Jest and the iOS boot smoke had all passed. It relaxes nothing in BG-01 – BG-09.
 
