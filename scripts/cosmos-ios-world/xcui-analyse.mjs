@@ -5,7 +5,10 @@
 //   - X-ANCHOR: the double tap / pinch round trip (testPersonalDoubleTapAndPinchStepAboutTheirFingers). If both steps
 //     keep the world point under the fingers, every first-depth node moves by (7/8)(c - f); measured on node cores
 //     matched by halo hue on `trip-p-before` / `trip-p-after`;
-//   - X-PAN-AFTER-PINCH: the drag after a pinch moves the world by the drag (`pan-p-before` / `pan-p-after`).
+//   - X-PAN-AFTER-PINCH: the drag after the pinch round trip moves the world by the drag (`pan-p-before` / `pan-p-after`);
+//   - X-PAN-ZOOMED: the drag while the stage is zoomed in (one step IN) moves the world by the drag (`pan-z-before` /
+//     `pan-z-after`). A step IN magnifies eight times, so ONE mark is in view by construction: one matched core suffices
+//     there, but it must be unambiguous (the only core within 15° of its hue in both frames). Same tolerance as X-PAN.
 // usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir> <widthPoints> <results.tsv>
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -71,12 +74,14 @@ const pairs = (A, B) => A.flatMap((a) => {
   return back === a ? [{ a, b, dx: b.x - a.x, dy: b.y - a.y }] : [];
 });
 const median = (v) => { const s = [...v].sort((p, q) => p - q); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
-const shiftCase = (id, before, after, expected, tolerance) => {
+const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unambiguous = false } = {}) => {
   const A = cores(before), B = cores(after);
   if (A === null || B === null) return result(id, 'NOT TESTED', `no ${A === null ? before : after} screenshot`);
-  const P = pairs(A, B);
+  // `unambiguous`: a pair counts only if its hue has no other core within 15° in either frame.
+  const alone = (S, h) => S.filter((c) => hueDiff(c.h, h) <= 15).length === 1;
+  const P = pairs(A, B).filter((p) => !unambiguous || (alone(A, p.a.h) && alone(B, p.b.h)));
   const seen = P.map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ');
-  if (P.length < 2) return result(id, 'NOT TESTED', `fewer than two node cores matched by hue (${P.length}: ${seen || 'none'})`);
+  if (P.length < minPairs) return result(id, 'NOT TESTED', `fewer than ${minPairs === 1 ? 'one' : 'two'} ${unambiguous ? 'unambiguous ' : ''}node cores matched by hue (${P.length}: ${seen || 'none'})`);
   const m = { dx: median(P.map((p) => p.dx)), dy: median(P.map((p) => p.dy)) };
   const off = (p) => Math.hypot(p.dx - expected.dx, p.dy - expected.dy);
   const worst = Math.max(...P.map(off));
@@ -95,6 +100,12 @@ if (pan === null) result('X-PAN-AFTER-PINCH', 'NOT TESTED', 'the pan did not rec
 else {
   const [dx, dy] = pan.split(',').map(Number);
   shiftCase('X-PAN-AFTER-PINCH', 'pan-p-before', 'pan-p-after', { dx, dy }, Math.max(20, 0.25 * Math.hypot(dx, dy)));
+}
+const zoomed = text('pan-z-spec');
+if (zoomed === null) result('X-PAN-ZOOMED', 'NOT TESTED', 'the zoomed pan did not record its spec');
+else {
+  const [dx, dy] = zoomed.split(',').map(Number);
+  shiftCase('X-PAN-ZOOMED', 'pan-z-before', 'pan-z-after', { dx, dy }, Math.max(20, 0.25 * Math.hypot(dx, dy)), { minPairs: 1, unambiguous: true });
 }
 
 fs.appendFileSync(resultsFile, `${rows.join('\n')}\n`);
