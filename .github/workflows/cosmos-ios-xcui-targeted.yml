@@ -23,12 +23,10 @@ env:
   IOS_RUNTIME_SUFFIX: iOS-26-5
   # The run of THIS workflow whose app binary is reused (the app is unchanged: apps/mobile tree 1eff3991).
   REUSE_APP_RUN_ID: '44297426329'
-  # Pass 2: only the cases still FAIL / NOT TESTED after pass 1 (run 44297426329). The round trip, the Public word tap
-  # and X-ANCHOR passed there and are not rerun.
+  # Pass 3: only the case still not proven after pass 2 (run 44305519293: both Shared cases PASS; the Personal
+  # pinch / pan never entered the Analysis on a cold first launch). Nothing that passed is rerun.
   ONLY: >-
     testPersonalPinchStepsInAndThePanStillMovesTheWorld
-    testSharedTapOnTheCurrentDepthWordReachesTheStage
-    testSharedPinchStepsInAndOut
 jobs:
   targeted:
     name: XCUITest targeted — iPhone 17 en
