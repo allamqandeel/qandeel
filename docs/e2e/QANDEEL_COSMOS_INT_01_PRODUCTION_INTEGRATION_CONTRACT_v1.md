@@ -2203,7 +2203,7 @@ Every failure was diagnosed as the harness, not the app (§21.13; `…\d1\gate-4
 3. **The 320 ms double-tap window is kept** (§21.5 item 2). The native double tap is the measure.
 4. **An observation, not changed: Public's Overview chip overlaps the top of Public's rail.** On iPhone 17, en, the Overview frame (305,262,85,44) covers the first bead's upper part (rail 323,282,77,132). The native word tap therefore aims at 0.75 of the bead's height. The overlap predates this package and is presentation, so it belongs to D-3 / layout review, not to D-1.
 5. **Not started:** D-3, O-1, O-2, and the remaining coverage items.
-6. **Unresolved responsiveness observation: a cold-launch Analysis tap** (§21.14.1). It is not proven correct, and the harness's 8 s wait proves nothing about it.
+6. **Unresolved responsiveness observation: a cold-launch Analysis tap** (§21.14.1). It is not proven correct, and the harness's 8 s wait proves nothing about it. **Assigned to D-3 by the PO (2026-11-18)** as SE-FU-1 (§21.14.3).
 7. **Observation: informational overlays intercept a pinch finger on iOS** (§21.14.2). Recorded, not changed.
 8. **The final acceptance gate** is one complete exact-head iOS World gate on the final harness commit. All cases, including X-PAN-ZOOMED, must PASS together, with the required Mobile CI and API CI. A targeted diagnostic run is not an acceptance gate.
    - The PO's closure directive (2026-11-18) authorised the push to PR #399 and that one validation. It did not authorise a merge.
@@ -2318,11 +2318,11 @@ Neither issue invalidates a mandatory D-1 case:
 - The D-1 cases measure stage touches after the entry.
 - No D-1 case starts a gesture on an informational overlay. X-PAN-ZOOMED reaches content through the product's own "Go to the nearest".
 
-Both stay open in COSMOS-INT-01 Slice E's register, owned by Slice E, alongside F-1 / E-1 / E-2 (§20). They are reconciled at the task's closure under BG-08, and nothing is fixed in D-1.
+Both stay open in COSMOS-INT-01 Slice E's register, alongside F-1 / E-1 / E-2 (§20). **SE-FU-1 is assigned to D-3 by the PO's decision (2026-11-18).** SE-FU-2 is owned by Slice E. Both are reconciled at the task's closure under BG-08, and nothing is fixed in D-1.
 
 | Id | Issue | Evidence | Scope |
 |---|---|---|---|
-| SE-FU-1 | Cold-launch Analysis tap: one tap 1 s after the conversation first appeared, on a 46 s cold launch, had no effect for 60 s. Cause unknown (§21.14.1). | Run 44305519293: `…\d1\targeted-44305519293\` (xcodebuild.log activity at t = 50.8 s; UI hierarchy at the failure). Pass 1 (44297426329), tapped 8 s later, entered. | Responsiveness at cold launch, iOS. First reproduce it on demand, on the simulator and on a device, then decide. The harness's 8 s settle is not product proof. |
+| SE-FU-1 | Cold-launch Analysis tap: one tap 1 s after the conversation first appeared, on a 46 s cold launch, had no effect for 60 s. Cause unknown (§21.14.1). | Run 44305519293: `…\d1\targeted-44305519293\` (xcodebuild.log activity at t = 50.8 s; UI hierarchy at the failure). Pass 1 (44297426329), tapped 8 s later, entered. | **Owner: D-3** (PO, 2026-11-18). Responsiveness at cold launch, iOS. First reproduce it on demand, on the simulator and on a device, then decide. The harness's 8 s settle is not product proof. |
 | SE-FU-2 | Non-interactive overlays take touches on iOS: the absence card's panel, disabled deeper beads, the hidden disabled Back at home, the rail's line (§21.14.2). | Mechanism proven for D-1 (§21.3, diag run 44255421709). The card's frame was recorded on iOS (103,298,196,93 in Shared; about 103,331,196,95 in Personal). Classification by code (§21.14.2). | A product / interaction decision on which overlays pass touches to the stage, consistent across the three Worlds and checked on iOS and Android. No visual change. |
 
 ---
