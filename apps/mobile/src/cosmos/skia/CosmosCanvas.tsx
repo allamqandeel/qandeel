@@ -676,7 +676,7 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
   const actions = useMemo(() => [{ name: 'zoom-in', label: props.zoomInLabel }, { name: 'zoom-out', label: props.zoomOutLabel }], [props.zoomInLabel, props.zoomOutLabel]);
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={() => diag(`${props.world[1]}.ui.canvasOuter`)} onLayout={(e) => diag(`${props.world[1]}.lay.canvas`, `${Math.round(e.nativeEvent.layout.x)},${Math.round(e.nativeEvent.layout.y)},${Math.round(e.nativeEvent.layout.width)}x${Math.round(e.nativeEvent.layout.height)}`)}>
       <GestureDetector gesture={gesture}>
         <View
           style={styles.root}

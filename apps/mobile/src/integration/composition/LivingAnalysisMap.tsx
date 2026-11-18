@@ -93,6 +93,7 @@ import type { ResponsiveInsets } from '../../responsive';
 import type { CanonicalStore } from '../../state';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import type { ProductLocale } from '../locale/product-locale';
+import { diag } from '../../cosmos/__diag__/trace';
 import { TIMELINE_TRACK_DEPTH, trackFromDisclosure } from '../timeline/disclosed-track-source';
 
 export interface LivingAnalysisMapProps {
@@ -424,7 +425,7 @@ function PersonalStage({ owner: seam, glass, store, context, language, driftPaus
   const held = rail === null ? null : (
     // The rail is never re-mounted by the sheet: the holder is always here; beneath an open PEEK it is hidden, takes no
     // touch and is hidden from accessibility. Its layout (and the stage's usable centre read from it) is unchanged.
-    <View testID={PERSONAL_RAIL_HOLDER_TEST_ID} collapsable={false} onLayout={onRailLayout} pointerEvents={open ? 'none' : 'box-none'}
+    <View testID={PERSONAL_RAIL_HOLDER_TEST_ID} collapsable={false} onTouchStart={() => diag('E.ui.timelineHolder')} onLayout={onRailLayout} pointerEvents={open ? 'none' : 'box-none'}
       importantForAccessibility={open ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={open} style={open ? styles.inert : null}>
       {rail}
     </View>

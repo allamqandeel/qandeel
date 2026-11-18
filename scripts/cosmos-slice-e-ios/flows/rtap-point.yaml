@@ -1,0 +1,9 @@
+# COSMOS-INT-01 Slice E D-1 DIAGNOSTIC: two taps at a point (Maestro tapOn repeat), D ms apart.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    retryTapIfNoChange: false
+    waitToSettleTimeoutMs: 1500
+    point: "${P}"
+    repeat: 2
+    delay: ${D}

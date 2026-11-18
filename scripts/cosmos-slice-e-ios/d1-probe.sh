@@ -45,6 +45,8 @@ if [ "$pt" != none ]; then
 fi
 say "-- p3: one idb tap on empty space (201,180)"; point p3 "201,180"; idbtap "201,180"; ev p3
 say "-- p4: a Maestro double tap on empty space (50%,21%)"; mt p4 dtap-point.yaml "P=50%,21%"; ev p4
+say "-- p4b: Maestro tapOn repeat 2 delay 1 on empty space (50%,21%)"; mt p4b rtap-point.yaml "P=50%,21%" D=1; ev p4b
+say "-- p4c: Maestro tapOn repeat 2 delay 100 on empty space (50%,21%)"; mt p4c rtap-point.yaml "P=50%,21%" D=100; ev p4c
 say "-- p5: a Maestro pan (70%,50% -> 30%,50%)"; mt p5 swipe-pan-50.yaml; ev p5
 
 say "== Shared control (Fixture Map World)"
