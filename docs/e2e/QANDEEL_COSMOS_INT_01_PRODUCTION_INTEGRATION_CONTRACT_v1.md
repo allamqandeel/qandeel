@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.10 (§22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.11 (§23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.11, 2026-11-18):** `AS v1.10 — PLUS THE PO'S DECISION ON ANDROID PRESERVATION AND DEFERRED PHYSICAL ACCEPTANCE (§23): ANDROID IS A PROTECTED BASELINE, NO PO-OPERATED HONOR TESTING DURING D-3, ONE MANDATORY POST-IMPLEMENTATION CHECKPOINT ANDROID-COSMOS-ACCEPTANCE (E-2 / ANDROID REGRESSION & REPAIR) IN WHICH §20 E-2 IS RUN — ORDER: D-3 → REMAINING COSMOS IMPLEMENTATION → ANDROID-COSMOS-ACCEPTANCE → FINAL COSMOS ACCEPTANCE / PO-AUTHORISED MERGE → S8B-07 REPLAY — D-3 CP1 STOPPED FOR THE PO, CP2 NOT AUTHORISED — NO MERGE WITHOUT «ادمج»`. The v1.10 status below is kept for provenance.
+**Change log v1.10 → v1.11 (2026-11-18).** New §23 records the PO's decision "Android Preservation and Deferred Physical Acceptance" and reconciles it with §20 E-2 (§23.2). Nothing earlier is rewritten.
 **Status (v1.10, 2026-11-18):** `D-1 TECHNICALLY CLOSED (EXACT-HEAD GATE 44336199775 16 / 16 PASS ON fc2e13c6; MOBILE CI 44336199826 AND API CI 44336199643 SUCCESS; §22.1) — D-3 CP1 (DIAGNOSIS ONLY) DELIVERED ON cosmos/cosmos-int-01-slice-e-d3 (DRAFT PR STACKED ON #399) FROM ONE DIAGNOSTIC BUILD (RUN 44364253792): SE-FU-1 NOT REPRODUCED, 12 / 12 TAPS OPENED, BOUNDED AND UNRESOLVED; SE-FU-2 PROVEN FOR THE DISABLED DEEPER BEADS AND THE EMPTY-REGION CARD; ENLARGED-TEXT BEFORE-MEASUREMENTS RECORDED; THRESHOLDS PROPOSED, NOT FINAL — CP2 – CP4 NOT STARTED — STOPPED FOR THE PO — PR #399 UNCHANGED — NO REPLAY — NO MERGE WITHOUT «ادمج»`. The v1.9 status below is kept for provenance.
 **Change log v1.9 → v1.10 (2026-11-18).** The PO's D-3 handoff and the decision on D-3 Execution Plan v2 (CP1 only; E-1 option (a); E-2 with two binding clarifications) are applied. New §22 records D-1's final result, the diagnostic build, SE-FU-1, SE-FU-2, the enlarged-text before-measurements, the recommended CP2 fixes, the proposed thresholds and the decisions for the PO. Nothing earlier is rewritten.
 **Status (v1.9, 2026-11-18):** `SLICES B, C AND THE PERSONAL TARGET CENTRING ACCEPTED (DRAFT PRs #394 – #396) — SLICE D CLOSED / READY FOR PO REVIEW (DRAFT PRs #397 / #398; §19.17) — SLICE E REMEDIATION AUTHORISED BY THE PO (2026-11-18; §21): THE iOS BASELINE REPORT KEPT AS AN AUDIT RECORD ONLY — D-1 (BLOCKING) ROOT CAUSE PROVEN BY NATIVE TOUCH-PATH EVIDENCE AND ITS FIRST CORRECTION PACKAGE DELIVERED ON cosmos/cosmos-int-01-slice-e (DEPENDENT DRAFT PR #399, STACKED ON #398) WITH ITS iOS SIMULATOR PROOF (§21.7) AND ANDROID VERIFICATION (§21.9) — D-1 NOT CLOSED — THE iOS WORLD GATE WITH ITS NATIVE XCUITest STEP ADDED (D-2) — THE GOLDEN CONTRACT RE-ANCHORED UNDER CONTROL (§21.8) — BG-10 MANDATORY iOS SIMULATOR VALIDATION RECORDED, ITS ENFORCEMENT PARTIAL (§21.2) — D-3 / O-1 / O-2 / THE COVERAGE ITEMS NOT STARTED — F-1, E-1, E-2 (§20) STILL OPEN AND MANDATORY — STOPPED FOR THE PO'S REVIEW — PRs #391 – #396 UNTOUCHED — NO REPLAY — NO MERGE WITHOUT «ادمج»`. The v1.8 status below is kept for provenance.
@@ -2543,6 +2545,69 @@ D-3 runs on `cosmos/cosmos-int-01-slice-e-d3` (worktree `E:\cosmosd3`, from fc2e
   - no TalkBack or VoiceOver proof (PO policy, 2026-11-08).
 - **Still open, neither dropped nor started:** O-1, O-2, the coverage items, and F-1, E-1 and E-2 of §20.
 - **The diagnostic branch** `cosmos/slice-e-d3-diag` is never merged. It is deleted only on the PO's word.
+
+## 23. Android preservation and deferred physical acceptance (PO, 2026-11-18) — binding
+
+**Source.** "COSMOS-INT-01 — PO Decision: Android Preservation and Deferred Physical Acceptance" (PO, 2026-11-18). It changes no D-1 result, reopens nothing, and does not interrupt D-3.
+
+### 23.1 Android is a protected baseline during the remaining COSMOS work
+- The Android behaviour already accepted is a protected baseline: functionality, interaction, layout, performance and navigation. A D-3 change, or any later COSMOS change, must not knowingly regress it.
+- Android is protected with:
+  - the existing automated checks (Mobile CI's Android jobs);
+  - focused Android regression coverage where a change touches shared or Android code, for example the Android emulator.
+- No mandatory CI gate is weakened or bypassed.
+- **No PO-operated HONOR testing is required during D-3.** §22.8 D-e (the Android emulator as CP2's accessibility proof) is consistent with this: it is automated and needs no PO session.
+
+### 23.2 `ANDROID-COSMOS-ACCEPTANCE — E-2 / Android Regression & Repair`
+**What it is.**
+- One explicit checkpoint, scheduled after all remaining COSMOS implementation work.
+- It is mandatory before final COSMOS acceptance and the PO-authorised final merge.
+- It is not a parallel workstream and does not delay D-3.
+
+**Reconciliation with §20 E-2.** This checkpoint is where E-2 is run. E-2 is neither duplicated nor removed:
+- **What carries over unchanged.** E-2's requirements stay in force:
+  - an installable Android Release build;
+  - the PO's own hands-on navigation of the three Worlds on the HONOR, including empty-world states;
+  - cold and warm World transitions and time to actual interactivity, measured;
+  - automation, screenshots and mockups do not substitute.
+- **What the checkpoint adds:**
+  - the PO's regression coverage (§23.3);
+  - the Android-only repair loop (§23.4).
+- E-2 passes only when this checkpoint passes.
+- F-1's HONOR demonstration (§20) is unchanged. It remains its own requirement and is not merged into E-2.
+
+### 23.3 The PO's physical acceptance on the HONOR
+Each finding is recorded individually as PASS, FAIL or NOT TESTED:
+- the Personal, Shared and Public Worlds;
+- World navigation and transitions;
+- the map gestures: tap, pan, pinch and double tap;
+- depth navigation and the functional controls;
+- PEEK, the sheets, the panels and Back;
+- Arabic layout and normal text scaling;
+- responsiveness, startup and performance against the accepted Android baseline.
+
+### 23.4 Android-only regression repair
+If the PO finds a regression attributable to COSMOS changes:
+- it is diagnosed against the accepted Android baseline;
+- the smallest Android-specific correction is made, platform-isolated where technically appropriate;
+- the accepted iOS behaviour, artwork, layout, gestures and functionality are not altered;
+- focused Android validation runs, and iOS is confirmed unchanged.
+
+If a correction cannot be isolated from iOS, the work **stops for an explicit PO decision**. Shared behaviour is never changed silently.
+
+### 23.5 The order (replaces the §20 roadmap line for the remaining work; §20 is kept for provenance)
+D-3 → the remaining COSMOS implementation → `ANDROID-COSMOS-ACCEPTANCE` (the PO's physical acceptance and any Android-only repairs; E-2) → final COSMOS acceptance and the PO-authorised merge → S8B-07 Replay.
+
+- **The remaining COSMOS implementation:**
+  - D-3 CP2 – CP4;
+  - O-1 and O-2;
+  - the coverage items;
+  - F-1;
+  - §20 E-1.
+- §20's merge gate stands unchanged, with E-2 now run through §23.2.
+- The successful D-1 tests are not restarted without evidence of a relevant regression.
+- D-3 continues as approved: **CP1 is delivered and stopped at its PO review (§22.8). CP2 is not authorised.**
+- No merge without the PO's explicit approval.
 
 ---
 
