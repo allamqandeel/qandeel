@@ -411,6 +411,8 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
     host.props().onPinchEnd(step > 0 ? 'IN' : step < 0 ? 'OUT' : null, fx, fyAt, { cx, cy, scale }), [host]);
   const emitTap = useCallback((x: number, y: number, cx: number, cy: number, scale: number) => { diag(`${props.world[1]}.js.emitTap`); diag(`${props.world[1]}.js.tapAt`, `${Math.round(x)},${Math.round(y)}`); host.props().onTap(x, y, { cx, cy, scale }); }, [host, props.world]);
   const mark = useCallback((key: string) => diag(`${props.world[1]}.${key}`), [props.world]);
+  const lastUi = useRef(0);
+  const diagUi = useCallback((t: number) => { diag(`${props.world[1]}.ui.tapDt`, lastUi.current === 0 ? -1 : t - lastUi.current); lastUi.current = t; }, [props.world]);
   const emitProbe = useCallback((kind: number, count: number, mean: number, p50: number, p95: number, max: number, stalls: number, freezes: number, inputN: number, inputP50: number, inputP95: number) => {
     const now = host.props();
     now.onProbe?.({
@@ -604,12 +606,13 @@ export const CosmosCanvas = forwardRef<CosmosCanvasHandle, CosmosCanvasProps>(fu
         'worklet';
         scheduleOnRN(mark, success ? 'g.tap.end.ok' : 'g.tap.end.fail');
         if (!success) return;
+        scheduleOnRN(diagUi, Math.round(uiNow()));
         const s = Math.exp(ls.get());
         scheduleOnRN(emitTap, event.x, event.y, wx.get() + (vw.get() / 2 - sx.get()) / s, wy.get() + (fyTarget.get() - sy.get()) / s, s);
       });
     // The first to activate wins: a drag or a pinch cancels the tap, and a completed tap never becomes a drag.
     return Gesture.Race(Gesture.Simultaneous(pan, pinch), tap);
-  }, [mark, active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
+  }, [mark, diagUi, active, emitPanEnd, emitPinchEnd, emitTap, focalLastX, focalLastY, frameCount, fy, fyTarget, inputCount, interrupt, ls, lsAtGestureStart, lsAtPinchStart, pendingInput, pinched, pinching, probeKind, probeSkip, probing, rungs, settleT, sx, sy, vw, wx, wy]);
 
   // ── owned Skia resources ────────────────────────────────────────────────────────────────────────────────────────
   const prepared: PreparedStage = useMemo(() => prepareStage(stage), [stage]);

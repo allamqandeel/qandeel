@@ -302,7 +302,8 @@ export function CosmosWorldView({ owner, world, language, glass, drift = true, w
           const past = i < snapshot.rung;
           return (
             <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ selected: on, disabled: !past }} disabled={!past}
-              onPress={() => toRung(i)} style={styles.bead}>
+              onPress={() => toRung(i)} style={styles.bead}
+              pointerEvents={world === 'PERSONAL' && on ? 'none' : 'auto'}>
               {/* §18 (PO, 2026-11-16): in the Personal world the current depth's word takes no touch, so a finger of a pinch
                   that lands on it still reaches the stage (a centred target sits in its band; the bead is disabled at the
                   current depth, so no touch on the word ever did anything). Shared / Public are unchanged. */}

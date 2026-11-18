@@ -16,7 +16,7 @@ OUT="$1"; UDID="$2"; HERE="$(cd "$(dirname "$0")" && pwd)"; F="$HERE/flows"; ROO
 PORT="${MAESTRO_IOS_DRIVER_PORT:-22087}"; FIX='.*(Fixture Map World|عالم الخريطة الاختباري).*'; mkdir -p "$OUT"; LOG="$OUT/probe.log"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 mt() { local n="$1" f="$2"; shift 2; local a=(); for kv in "$@"; do a+=(-e "$kv"); done
-  maestro --device "$UDID" test "${a[@]}" "$F/$f" --no-reinstall-driver --driver-host-port "$PORT" > "$OUT/$n.log" 2>&1; local rc=$?
+  maestro --device "$UDID" test ${a[@]+"${a[@]}"} "$F/$f" --no-reinstall-driver --driver-host-port "$PORT" > "$OUT/$n.log" 2>&1; local rc=$?
   say "  maestro $n ($f) exit $rc"; return $rc; }
 shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
 tree() { curl --silent --max-time 30 -X POST -H 'Content-Type: application/json' \
