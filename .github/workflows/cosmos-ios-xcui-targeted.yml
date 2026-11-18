@@ -5,8 +5,9 @@ name: iOS XCUITest targeted (COSMOS Slice E D-1 diagnosis; never merged)
 # (cosmos/slice-e-d1-xcui-targeted; no PR, never merged); the app and test sources it builds are byte-identical to the
 # Slice E branch commit named in identity.txt.
 #
-# One build: build-for-testing (the S401 proof app and the UI-test runner together), uploaded as `xcui-build-products` so
-# a later pass whose app and test sources are unchanged reuses it (REUSE_RUN_ID) instead of building again.
+# Builds: pass 1 (run 44297426329) built the app and the runner once and uploaded them as `xcui-build-products`. A pass
+# whose APP is unchanged sets REUSE_APP_RUN_ID: it rebuilds only the UI-test runner (UITESTS_ONLY=1: the tests' scheme
+# does not build the app) and runs it against that run's app binary, copied into the products directory.
 on:
   push:
     branches: [cosmos/slice-e-d1-xcui-targeted]
@@ -20,13 +21,13 @@ env:
   CI: 1
   EXPO_NO_TELEMETRY: 1
   IOS_RUNTIME_SUFFIX: iOS-26-5
-  # Set to a previous run id of THIS workflow to reuse its build products (only when the app and the UI-test sources are unchanged).
-  REUSE_RUN_ID: ''
+  # The run of THIS workflow whose app binary is reused (the app is unchanged: apps/mobile tree 1eff3991).
+  REUSE_APP_RUN_ID: '44297426329'
+  # Pass 2: only the cases still FAIL / NOT TESTED after pass 1 (run 44297426329). The round trip, the Public word tap
+  # and X-ANCHOR passed there and are not rerun.
   ONLY: >-
-    testPersonalDoubleTapAndPinchStepAboutTheirFingers
     testPersonalPinchStepsInAndThePanStillMovesTheWorld
     testSharedTapOnTheCurrentDepthWordReachesTheStage
-    testPublicTapOnTheCurrentDepthWordReachesTheStage
     testSharedPinchStepsInAndOut
 jobs:
   targeted:
@@ -44,38 +45,42 @@ jobs:
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm}
-      - {name: Install dependencies from the root lockfile, if: env.REUSE_RUN_ID == '', run: npm ci}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
       - name: Select the S401 proof entry (this ephemeral checkout only; recorded)
-        if: env.REUSE_RUN_ID == ''
         env: {S401_SHARED_PROOF: '1'}
         run: |
           mkdir -p "$RUNNER_TEMP/evidence"
           node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
           git diff -- apps/mobile/package.json | tee "$RUNNER_TEMP/evidence/entry-diff.txt"
-      - {name: Generate the iOS project (CNG), if: env.REUSE_RUN_ID == '', run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
       - name: Install CocoaPods dependencies
-        if: env.REUSE_RUN_ID == ''
         working-directory: apps/mobile/ios
         run: pod install
       - name: Add the native UI-test target (this ephemeral checkout only)
-        if: env.REUSE_RUN_ID == ''
+        env: {UITESTS_ONLY: "${{ env.REUSE_APP_RUN_ID != '' && '1' || '0' }}"}
         run: |
           ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
           ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
-      - name: Build the proof Release simulator app and its native UI tests (one build)
-        if: env.REUSE_RUN_ID == ''
+      - uses: actions/download-artifact@v4
+        if: env.REUSE_APP_RUN_ID != ''
+        with: {name: xcui-build-products, path: '${{ runner.temp }}/reused', run-id: '${{ env.REUSE_APP_RUN_ID }}', github-token: '${{ github.token }}'}
+      - name: Build the native UI tests (and the app only when none is reused)
         run: |
           set -o pipefail
           workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
           xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          B=apps/mobile/ios/build/Build/Products
+          if [ -n "$REUSE_APP_RUN_ID" ]; then
+            reused="$(find "$RUNNER_TEMP/reused/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+            test -n "$reused"; mkdir -p "$B/Release-iphonesimulator"; rm -rf "$B/Release-iphonesimulator/$(basename "$reused")"
+            cp -R "$reused" "$B/Release-iphonesimulator/"
+            echo "app reused from run $REUSE_APP_RUN_ID: $(basename "$reused")"
+          fi
           mkdir -p "$RUNNER_TEMP/products"
-          cp -R apps/mobile/ios/build/Build/Products/. "$RUNNER_TEMP/products/"
+          cp -R "$B/." "$RUNNER_TEMP/products/"
+          plutil -p "$(find "$RUNNER_TEMP/products" -maxdepth 1 -name '*.xctestrun' | head -n 1)" | grep -E 'UITargetAppPath|TestHostPath' || true
       - uses: actions/upload-artifact@v4
-        if: env.REUSE_RUN_ID == ''
         with: {name: xcui-build-products, path: '${{ runner.temp }}/products', if-no-files-found: error, retention-days: 7}
-      - uses: actions/download-artifact@v4
-        if: env.REUSE_RUN_ID != ''
-        with: {name: xcui-build-products, path: '${{ runner.temp }}/products', run-id: '${{ env.REUSE_RUN_ID }}', github-token: '${{ github.token }}'}
       - name: Locate the build products
         run: |
           mkdir -p "$RUNNER_TEMP/evidence"
@@ -83,7 +88,7 @@ jobs:
           app="$(find "$P/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
           xctestrun="$(find "$P" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
           test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
-          { echo "head=$(git rev-parse HEAD)"; echo "app+tests tree (apps/mobile, scripts/cosmos-ios-world)=$(git rev-parse HEAD:apps/mobile) $(git rev-parse HEAD:scripts/cosmos-ios-world)"; echo "build=${REUSE_RUN_ID:-this run}"; echo "app=$(basename "$app")"; echo "xctestrun=$(basename "$xctestrun")"; echo "selected=$ONLY"; xcodebuild -version; } | tee "$RUNNER_TEMP/evidence/identity.txt"
+          { echo "head=$(git rev-parse HEAD)"; echo "app+tests tree (apps/mobile, scripts/cosmos-ios-world)=$(git rev-parse HEAD:apps/mobile) $(git rev-parse HEAD:scripts/cosmos-ios-world)"; echo "build=runner this run; app ${REUSE_APP_RUN_ID:+reused from run $REUSE_APP_RUN_ID}"; echo "app=$(basename "$app")"; echo "xctestrun=$(basename "$xctestrun")"; echo "selected=$ONLY"; xcodebuild -version; } | tee "$RUNNER_TEMP/evidence/identity.txt"
       - name: Boot the simulator and set its language (en; no Maestro in this run)
         run: |
           bash scripts/cosmos-ios-world/sim.sh "iPhone 17" "$RUNNER_TEMP/evidence"
