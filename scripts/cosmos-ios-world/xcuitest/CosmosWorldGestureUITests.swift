@@ -184,44 +184,38 @@ final class CosmosWorldGestureUITests: XCTestCase {
     return waitFor(personalStage, 10)
   }
 
-  /// The labelled Fixture Map World, seeded by its proof link. The system route (the one `simctl openurl` takes) goes
-  /// first; the app route is the run-44289175909 route, kept to record whether it ever seeds. The route that worked is noted.
+  /// The labelled Fixture Map World, seeded by its proof link over the system route. Targeted run 44297426329 proved the
+  /// routes: the app route relaunched the app (pid 68213 -> 68291, 73257 -> 73826; the seed lost), and the system route
+  /// kept the process (65600, 70633) and seeded the World. The list row is a BUTTON labelled with the World's name (the
+  /// R3 `staticTexts` query could never match it), so the row is found as any element with that exact label.
   private func enterShared(_ tag: String) -> XCUIElement? {
-    for route in ["system", "app"] {
-      toConversation()
-      openLink("qandeel://s401-proof/shared-field/seed", via: route, "\(tag)-\(route)-seed")
-      waitFor("qandeel-switcher-shared_world", 30).tap()
-      let fixture = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Fixture Map World' OR label CONTAINS 'عالم الخريطة الاختباري'")).firstMatch
-      if fixture.waitForExistence(timeout: 30) {
-        note("\(tag)-entry", "the Fixture Map World was listed after the \(route) route")
-        fixture.tap()
-        waitFor("qandeel-shared-band", 60)
-        settle(5)
-        return waitFor(sharedStage, 10)
-      }
-      shot("\(tag)-\(route)-not-listed")
-      note("\(tag)-entry-\(route)", "the \(route) route did not seed the Fixture Map World")
+    toConversation()
+    openLink("qandeel://s401-proof/shared-field/seed", via: "system", "\(tag)-seed")
+    waitFor("qandeel-switcher-shared_world", 30).tap()
+    let fixture = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Fixture Map World' OR label == 'عالم الخريطة الاختباري'")).firstMatch
+    guard fixture.waitForExistence(timeout: 30) else {
+      shot("\(tag)-not-listed")
+      XCTFail("the labelled Fixture Map World is not listed")
+      return nil
     }
-    XCTFail("the labelled Fixture Map World is not listed after either link route")
-    return nil
+    fixture.tap()
+    waitFor("qandeel-shared-band", 60)
+    settle(5)
+    return waitFor(sharedStage, 10)
   }
 
   private func enterPublic(_ tag: String) -> XCUIElement? {
-    for route in ["system", "app"] {
-      toConversation()
-      openLink("qandeel://s401-proof/public/seed", via: route, "\(tag)-\(route)-seed")
-      waitFor("qandeel-switcher-public_world", 30).tap()
-      openLink("qandeel://s401-proof/public/allow", via: route, "\(tag)-\(route)-allow")
-      if element("qandeel-public-search").waitForExistence(timeout: 45) {
-        note("\(tag)-entry", "the Public World opened after the \(route) route")
-        settle(5)
-        return waitFor(publicStage, 10)
-      }
-      shot("\(tag)-\(route)-not-open")
-      note("\(tag)-entry-\(route)", "the \(route) route did not open the Public World")
+    toConversation()
+    openLink("qandeel://s401-proof/public/seed", via: "system", "\(tag)-seed")
+    waitFor("qandeel-switcher-public_world", 30).tap()
+    openLink("qandeel://s401-proof/public/allow", via: "system", "\(tag)-allow")
+    guard element("qandeel-public-search").waitForExistence(timeout: 45) else {
+      shot("\(tag)-not-open")
+      XCTFail("the Public World did not open")
+      return nil
     }
-    XCTFail("the Public World did not open after either link route")
-    return nil
+    settle(5)
+    return waitFor(publicStage, 10)
   }
 
   private var screen: CGRect { app.windows.firstMatch.frame }
@@ -273,36 +267,39 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("p-word-dtap-depths", "\(first) -> \(second) -> Back -> \(depth(personalStage))")
   }
 
-  /// A two-finger pinch opening steps IN; a pan after it still moves the world (measured on `pan-p-before` /
-  /// `pan-p-after`, which must show node cores: if the step landed in an empty region, "Go to the nearest" — the
-  /// product's own control for exactly that — brings content before the pan); a pinch closing returns to the first depth.
+  /// A two-finger pinch opening steps IN; a drag there keeps the depth; a pinch closing returns to the first depth; Back
+  /// returns home; and a pan AFTER the pinches still moves the world by the drag. The pan is measured at the first depth
+  /// (`pan-p-before` / `pan-p-after`), where five or six node cores show: at the deeper depth targeted run 44297426329
+  /// found a single core (moved -106 for a -120 drag), fewer than the two the measurement requires, which stays strict.
   func testPersonalPinchStepsInAndThePanStillMovesTheWorld() throws {
     _ = enterPersonal()
     let first = depth(personalStage)
     let c = CGPoint(x: (screen.width * 0.40).rounded(), y: (screen.height * 0.68).rounded())
+    let from = CGPoint(x: (screen.width * 0.65).rounded(), y: (screen.height * 0.68).rounded())
+    let to = CGPoint(x: from.x - 120, y: from.y)
     try pinch("pan-p-pinch-in", about: c, from: CGVector(dx: 14, dy: 0), to: CGVector(dx: 90, dy: 0))
     settle()
     let second = depth(personalStage)
     XCTAssertNotEqual(second, first, "a native two-finger pinch opening did not step IN")
     XCTAssertTrue(backAvailable(), "Back is not available after the pinch's step")
-    if element("qandeel-cosmos-nearest").exists {
-      let nearest = app.buttons.matching(NSPredicate(format: "label == 'Go to the nearest' OR label == 'اذهب إلى الأقرب'")).firstMatch
-      if nearest.exists { nearest.tap(); settle(); note("pan-p-nearest", "the step landed in an empty region; Go to the nearest brought content") }
-    }
-    XCTAssertEqual(depth(personalStage), second, "Go to the nearest changed the semantic depth")
-    // A drag on open stage below the depth rail and above the timeline.
-    let from = CGPoint(x: (screen.width * 0.65).rounded(), y: (screen.height * 0.68).rounded())
-    let to = CGPoint(x: from.x - 120, y: from.y)
+    // A drag on open stage at the deeper depth: it must not change the depth.
+    at(from.x, from.y).press(forDuration: 0.05, thenDragTo: at(to.x, to.y))
+    settle()
+    XCTAssertEqual(depth(personalStage), second, "the drag at the deeper depth changed the semantic depth")
+    try pinch("pan-p-pinch-out", about: c, from: CGVector(dx: 90, dy: 0), to: CGVector(dx: 14, dy: 0))
+    settle()
+    XCTAssertEqual(depth(personalStage), first, "a native two-finger pinch closing did not step OUT to the first depth")
+    if backAvailable() { element("qandeel-cosmos-back").tap(); settle() }
+    XCTAssertFalse(backAvailable(), "Back did not return the first depth to its home position")
+    // The measured pan, after both pinches, at the first depth's home position.
     note("pan-p-spec", "\(Int(to.x - from.x)),\(Int(to.y - from.y))")
     shot("pan-p-before")
     at(from.x, from.y).press(forDuration: 0.05, thenDragTo: at(to.x, to.y))
     settle()
     shot("pan-p-after")
-    XCTAssertEqual(depth(personalStage), second, "the pan changed the semantic depth")
-    try pinch("pan-p-pinch-out", about: c, from: CGVector(dx: 90, dy: 0), to: CGVector(dx: 14, dy: 0))
-    settle()
-    note("p-pinch-depths", "\(first) -> pinch opening -> \(second) -> pan -> pinch closing -> \(depth(personalStage))")
-    XCTAssertEqual(depth(personalStage), first, "a native two-finger pinch closing did not step OUT to the first depth")
+    XCTAssertEqual(depth(personalStage), first, "the pan changed the semantic depth")
+    XCTAssertTrue(backAvailable(), "after the pan, Back is not available (the camera did not move)")
+    note("p-pinch-depths", "\(first) -> pinch opening -> \(second) -> drag -> pinch closing -> \(first) -> Back -> pan -> \(depth(personalStage))")
   }
 
   // ── Shared and Public: the current depth bead passes its touch to the stage (PO 2026-11-18, item 3) ──────────

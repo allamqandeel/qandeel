@@ -5,7 +5,10 @@
 # app and the tests together, so ONE `xcodebuild build-for-testing` yields both the app (installed for the Maestro
 # World gate) and the test runner (run by `test-without-building`): no second build of the app.
 #
-# usage: ruby add-uitest-target.rb <apps/mobile/ios> <CosmosWorldGestureUITests.swift>
+# UITESTS_ONLY=1: the target does not depend on the app and its scheme builds the tests alone, so a pass whose app is
+# unchanged rebuilds only the test runner and reuses an app built earlier (copied into the products directory).
+#
+# usage: [UITESTS_ONLY=1] ruby add-uitest-target.rb <apps/mobile/ios> <CosmosWorldGestureUITests.swift>
 require 'fileutils'
 require 'xcodeproj'
 
@@ -18,6 +21,7 @@ app = project.targets.find { |t| t.product_type == 'com.apple.product-type.appli
 abort 'no application target' if app.nil?
 
 name = 'QandeelWorldUITests'
+tests_only = ENV['UITESTS_ONLY'] == '1'
 abort "#{name} already exists" if project.targets.any? { |t| t.name == name }
 deployment = app.build_configurations.map { |c| c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] }.compact.first || '15.1'
 
@@ -28,7 +32,7 @@ FileUtils.cp(swift, File.join(dir, File.basename(swift)))
 target = project.new_target(:ui_test_bundle, name, :ios, deployment, nil, :swift)
 group = project.main_group.new_group(name, name)
 target.add_file_references([group.new_reference(File.basename(swift))])
-target.add_dependency(app)
+target.add_dependency(app) unless tests_only
 target.build_configurations.each do |config|
   s = config.build_settings
   s['TEST_TARGET_NAME'] = app.name
@@ -44,8 +48,8 @@ end
 project.save
 
 scheme = Xcodeproj::XCScheme.new
-scheme.add_build_target(app)
+scheme.add_build_target(app) unless tests_only
 scheme.add_test_target(target)
 scheme.set_launch_target(app)
 scheme.save_as(project_path, name, true)
-puts "#{name}: added to #{File.basename(project_path)} (app target #{app.name}, iOS #{deployment}); shared scheme #{name}"
+puts "#{name}#{tests_only ? ' (tests only)' : ''}: added to #{File.basename(project_path)} (app target #{app.name}, iOS #{deployment}); shared scheme #{name}"
