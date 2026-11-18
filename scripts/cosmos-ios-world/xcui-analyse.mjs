@@ -21,12 +21,17 @@ const result = (c, r, d) => rows.push(`${c}\t${r}\t${d.replace(/[\t\n]+/g, ' ')}
 const swift = fs.readFileSync(path.join(here, 'xcuitest', 'CosmosWorldGestureUITests.swift'), 'utf8');
 const tests = [...swift.matchAll(/func (test\w+)\(\)/g)].map((m) => m[1]);
 const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+// A targeted run (XCUI_SELECTED = space-separated test names) says which tests it left out on purpose.
+const selected = process.env.XCUI_SELECTED ? new Set(process.env.XCUI_SELECTED.split(/\s+/).filter(Boolean)) : null;
 for (const t of tests) {
   // both the classic `Test Case '-[Module.Class test]'` and the newer `Test case 'Class.test()'` log forms
-  const outcome = new RegExp(`Test [Cc]ase '(?:-\\[\\S+ ${t}\\]|\\S*\\.${t}\\(\\))' (passed|failed)`).exec(log)?.[1];
+  const outcome = new RegExp(`Test [Cc]ase '(?:-\\[\\S+ ${t}\\]|\\S*\\.${t}\\(\\))' (passed|failed|skipped)`).exec(log)?.[1];
   const why = new RegExp(`error: -\\[\\S+ ${t}\\] : ([^\\n]+)`).exec(log)?.[1] ?? '';
+  const skip = new RegExp(`-\\[\\S+ ${t}\\] : Test skipped[^\\n]*?- ([^\\n]+)`).exec(log)?.[1] ?? '';
   if (outcome === 'passed') result(`X:${t}`, 'PASS', 'native XCUITest passed');
   else if (outcome === 'failed') result(`X:${t}`, 'FAIL', why || 'native XCUITest failed');
+  else if (outcome === 'skipped') result(`X:${t}`, 'NOT TESTED', `skipped: ${skip || 'see the log'}`);
+  else if (selected && !selected.has(t)) result(`X:${t}`, 'NOT TESTED', 'not selected in this targeted run');
   else result(`X:${t}`, 'NOT TESTED', 'the test did not run');
 }
 
