@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.11 (§23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.12 (§24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.12, 2026-11-18):** `AS v1.11 — PLUS THE PO'S D-3 CP1 REVIEW (§24.1): CP1 ACCEPTED AS DIAGNOSTIC, SE-FU-1 NOT RESOLVED (FRESH-INSTALL FIRST-VISIBLE-TAP REGRESSION IN CP4, NO SETTLE, NO RETRY), FIRST-COLD 1051 ms T-ACK NOT A PASS (WARM AND FIRST-COLD RECORDED SEPARATELY, REASSESSED AT D-3 CLOSURE), NO UNIVERSAL 40 % MAP SHARE (DEFAULT / AX3 / AX5 TIERS), COMPACT OR SCROLLABLE UPPER CHROME WITHOUT GESTURE CONTENTION, ANDROID EMULATOR CHECKS — CP2 / CP3 AUTHORISED AS ONE PACKAGE, CP4 ONE EXACT-HEAD VALIDATION — THE PO'S PRESERVATION DIRECTIVE BINDS EVERY D-3 CHECKPOINT (§24.2 – §24.3) — NO MERGE WITHOUT «ادمج»`. The v1.11 status below is kept for provenance.
+**Change log v1.11 → v1.12 (2026-11-18).** New §24 records the PO's D-3 CP1 review and decisions D-a – D-e, and the PO directive "D-3 CP2/CP3: Mandatory Visual, Performance & Interaction Preservation" with the checkpoint acceptance criteria that reference it. It is recorded before any D-3 production fix is committed. §23.5's "CP2 is not authorised" is superseded by §24.1; nothing else earlier is rewritten.
 **Status (v1.11, 2026-11-18):** `AS v1.10 — PLUS THE PO'S DECISION ON ANDROID PRESERVATION AND DEFERRED PHYSICAL ACCEPTANCE (§23): ANDROID IS A PROTECTED BASELINE, NO PO-OPERATED HONOR TESTING DURING D-3, ONE MANDATORY POST-IMPLEMENTATION CHECKPOINT ANDROID-COSMOS-ACCEPTANCE (E-2 / ANDROID REGRESSION & REPAIR) IN WHICH §20 E-2 IS RUN — ORDER: D-3 → REMAINING COSMOS IMPLEMENTATION → ANDROID-COSMOS-ACCEPTANCE → FINAL COSMOS ACCEPTANCE / PO-AUTHORISED MERGE → S8B-07 REPLAY — D-3 CP1 STOPPED FOR THE PO, CP2 NOT AUTHORISED — NO MERGE WITHOUT «ادمج»`. The v1.10 status below is kept for provenance.
 **Change log v1.10 → v1.11 (2026-11-18).** New §23 records the PO's decision "Android Preservation and Deferred Physical Acceptance" and reconciles it with §20 E-2 (§23.2). Nothing earlier is rewritten.
 **Status (v1.10, 2026-11-18):** `D-1 TECHNICALLY CLOSED (EXACT-HEAD GATE 44336199775 16 / 16 PASS ON fc2e13c6; MOBILE CI 44336199826 AND API CI 44336199643 SUCCESS; §22.1) — D-3 CP1 (DIAGNOSIS ONLY) DELIVERED ON cosmos/cosmos-int-01-slice-e-d3 (DRAFT PR STACKED ON #399) FROM ONE DIAGNOSTIC BUILD (RUN 44364253792): SE-FU-1 NOT REPRODUCED, 12 / 12 TAPS OPENED, BOUNDED AND UNRESOLVED; SE-FU-2 PROVEN FOR THE DISABLED DEEPER BEADS AND THE EMPTY-REGION CARD; ENLARGED-TEXT BEFORE-MEASUREMENTS RECORDED; THRESHOLDS PROPOSED, NOT FINAL — CP2 – CP4 NOT STARTED — STOPPED FOR THE PO — PR #399 UNCHANGED — NO REPLAY — NO MERGE WITHOUT «ادمج»`. The v1.9 status below is kept for provenance.
@@ -2608,6 +2610,110 @@ D-3 → the remaining COSMOS implementation → `ANDROID-COSMOS-ACCEPTANCE` (the
 - The successful D-1 tests are not restarted without evidence of a relevant regression.
 - D-3 continues as approved: **CP1 is delivered and stopped at its PO review (§22.8). CP2 is not authorised.**
 - No merge without the PO's explicit approval.
+
+## 24. Slice E D-3 — the PO's CP1 review, the CP2 / CP3 authorisation and the binding preservation directive (PO, 2026-11-18)
+
+**Sources.** Two PO messages of 2026-11-18, recorded here before any D-3 production fix is committed:
+- "COSMOS-INT-01 — D-3 CP1 Review / PO Decisions for CP2 and CP3";
+- "COSMOS-INT-01 — D-3 CP2/CP3: Mandatory Visual, Performance & Interaction Preservation — PO DIRECTIVE — BINDING BEFORE IMPLEMENTATION".
+
+§23.5's line "CP2 is not authorised" is superseded by §24.1. Nothing else earlier is rewritten. D-1's result (§22.1) is unchanged, and no D-1 acceptance criterion is relaxed.
+
+### 24.1 CP1 review and the decisions D-a – D-e
+CP1 is **accepted as diagnostic**. SE-FU-1 is **not resolved**.
+
+- **D-a (SE-FU-1).** No second diagnostic build. SE-FU-1 stays open.
+  - The final D-3 validation (CP4) adds a **fresh-install, first-visible-tap regression**: the app is installed fresh, and the first tap lands at the door's first visible frame, with **no 8 s settle and no retry**.
+  - Its actual result is reported as found. If the failure recurs, it is investigated.
+- **D-b (first-cold responsiveness).** The first cold launch's 1051 ms T-ack is **not a PASS** against 250 ms.
+  - Warm and first-cold responsiveness are recorded **separately**.
+  - No JavaScript profiling project now.
+  - At D-3 closure the item is reassessed with evidence and a recommendation. It is **not deferred beyond COSMOS**.
+- **D-c (map share).** There is **no universal 40 % map share through AX5**. Instead:
+  - **default and common enlarged sizes:** premium layouts;
+  - **AX3:** the severe issues are resolved: a near-zero Public map, clipped controls and missing switcher labels;
+  - **AX5:** reflow and scrolling are allowed, but the essential controls and access to the map remain.
+  - No font caps (W1A-01). No functionality is removed.
+- **D-d (upper chrome).** In Shared and Public the upper chrome becomes compact, adaptive, collapsible or scrollable. Pan and pinch never compete with a scrolling overlay.
+  - The actions, the visual language, the right-side rail and the artwork are preserved.
+  - A material design conflict goes back to the PO.
+- **D-e (Android).** Focused Android emulator regression checks are approved for shared-component changes. No HONOR during D-3 (§23.1).
+
+**Execution.**
+- CP2 and CP3 may be **one coordinated package**: focused local checks, then **one final exact-head validation in CP4**.
+- The 16 D-1 regression cases, the mandatory CI, the accessibility properties and the design constraints are preserved.
+- The report covers the focused changes and the final evidence. No unrelated refactoring.
+
+### 24.2 The preservation directive (binding on CP2, CP3 and CP4)
+**What D-3 must not change.** D-3 fixes interaction blockers, accessibility and responsive layout only. It must not change, unless the PO approves it first:
+- the approved S3-R2 artwork and its rendering;
+- the camera, focal anchoring, semantic zoom and depth transitions;
+- the gestures and the composition;
+- the Skia engine, the world geometry, the materials, the camera mathematics and the assets.
+
+**No regression in:**
+- map opening speed and time to interactivity, cold and warm;
+- World switching;
+- depth moves;
+- PEEK and sheet responsiveness;
+- FPS and finger latency;
+- smoothness.
+
+**Implementation discipline.**
+- No expensive renders.
+- No per-frame layout.
+- No gesture contention.
+
+**Indirect regressions to rule out:**
+- a viewport change shifts the camera or the focal point unintentionally;
+- gestures fail to reach the world where no control is;
+- a control stops working;
+- World state is lost;
+- the default layouts drift.
+
+An intentional viewport change at enlarged text is distinguished from a camera regression, and is reported as such.
+
+**Verification.**
+- Existing evidence is reused.
+- Where possible, before and after are compared on the same configuration, and measured differences are recorded.
+- No figure is invented. FPS is never claimed from unit tests.
+- A material regression is fixed before acceptance.
+- Green CI alone is not proof.
+
+**Android** is protected by focused emulator checks (§23.1, D-e).
+
+**Not allowed:** new artwork, a renderer redesign, a merge or Replay.
+
+### 24.3 Acceptance criteria — every checkpoint references §24.2
+**CP2 / CP3 (one package; SE-FU-2, E-1(a), the top row and the rail, enlarged-text layout):** accepted only if:
+1. every change is interaction, accessibility or responsive layout outside the renderer: no file under `cosmos/core/*` or `cosmos/skia/*`, no geometry, material, camera or asset change;
+2. no new per-frame work: every layout value is derived from an `onLayout` measurement or the window, set only when it changes, never from an animation frame or gesture;
+3. no scroll container overlays the stage. A band scrolls only inside its own room above the world, and only when its content overflows that room. At the default size nothing scrolls, so no touch is delayed;
+4. accessibility properties are preserved and proven by tests:
+   - a bead stays a button with its disabled and selected states;
+   - the card keeps its live region and announced text;
+   - away from home, Back keeps its label and role;
+   - at home, Back is hidden from both platforms' accessibility trees, as E-1(a) requires;
+5. any golden change is a controlled re-anchor: a structural diff whose every difference is listed and allowed by category, with 0 structural changes (the §21.8 precedent);
+6. every default-size change is listed and justified as intentional, and nothing else moves at the default size.
+
+**CP4 (final exact-head validation):** the iOS World gate (the 16 D-1 cases plus the D-a fresh-install, first-visible-tap case), Mobile CI and API CI, all on the same head. The report states PASS, FAIL or NOT TESTED for each:
+- **P-1** visual preservation;
+- **P-2** map opening and time to interaction, cold and warm (recorded separately, D-b);
+- **P-3** World-switching responsiveness;
+- **P-4** pan / pinch FPS and finger latency;
+- **P-5** camera and focal anchoring, and the depth transitions;
+- **P-6** Android automated regression coverage.
+
+Thresholds carried forward from §22.7:
+- T-ack ≤ 250 ms (warm and first-cold reported separately, and the first-cold figure is not called a PASS unless it meets 250 ms);
+- T-ready as proposed;
+- the layout tiers of D-c in place of a universal map share;
+- the Shared title wraps before any ellipsis;
+- controls: 0 violations.
+
+### 24.4 Disclosure
+The CP2 / CP3 code was drafted **locally and left uncommitted** before the directive arrived. It is **reviewed against §24.2 before any commit**, and the review is recorded with the package (§25). This record is committed and pushed first, on its own.
 
 ---
 

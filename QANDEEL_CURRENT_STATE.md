@@ -26,7 +26,12 @@
 >     - **SE-FU-2:** proven on iOS. The disabled deeper beads and the "Nothing in this region." card take the stage's touch. Back at home neither takes a touch nor is exposed to accessibility.
 >     - **Enlarged text:** before-measurements across 7 configurations. The Public map falls to 0–35 % of the screen at AX3 / AX5, the Public band covers the depth rail, the Overview chip leaves the screen, the Shared title truncates, and the switcher words vanish on the small iPhone.
 >     - **Not started:** CP2 – CP4, O-1, O-2 and the coverage items. O-1 and O-2 are NOT ACCEPTED as they are.
->   - Stopped for the PO's review after D-3 CP1. No CP2, no merge, no Replay, no change to the frozen artwork.
+>   - **D-3 CP1 reviewed by the PO (2026-11-18; contract §24):** accepted as diagnostic; SE-FU-1 NOT resolved.
+>     - CP2 / CP3 are authorised as one package. CP4 is one exact-head validation, adding a fresh-install, first-visible-tap case with no settle and no retry.
+>     - The first-cold 1051 ms T-ack is not a PASS. Warm and first-cold are recorded separately and reassessed at D-3 closure, not deferred beyond COSMOS.
+>     - No universal 40 % map share: the default / AX3 / AX5 tiers apply (§24.1 D-c).
+>     - The PO's preservation directive (§24.2) binds every D-3 checkpoint: no change to the artwork, renderer, camera, gestures or assets; no regression in opening, switching, depth moves, PEEK / sheets, FPS or finger latency. The CP4 report states PASS / FAIL / NOT TESTED for P-1 – P-6 (§24.3).
+>   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.
 >   - A checkpoint with a required iOS case unexecuted or failing is neither closed nor merge-ready without the PO's explicit approval.
