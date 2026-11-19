@@ -792,3 +792,104 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("layout-\(tag)", lines.joined(separator: "\n"))
   }
 }
+
+/// COSMOS-INT-01 Slice E D-3 CP4 review (PO 2026-11-19): Replay contract protection. VALIDATION BRANCH ONLY
+/// (cosmos/validate/d3-cp4-closure; never merged). The S7-05 proof build (`journey`) of the accepted baseline and of the
+/// D-3 head run this SAME journey; every step's frames, words and outcome are recorded, so the two can be compared line by
+/// line: the `world=` presentation, navigation, the player, its controls, at the default size and at enlarged text.
+final class ReplayCompatUITests: XCTestCase {
+  private let app = XCUIApplication()
+  private var lines: [String] = []
+  private var tag: String { ProcessInfo.processInfo.environment["D3_TAG"] ?? "replay" }
+  private let ids = ["qandeel-replay-player-bar", "qandeel-replay-player-back", "qandeel-replay-player-title", "qandeel-replay-player-status",
+                     "qandeel-replay-player-sentence", "qandeel-replay-player-finalize", "qandeel-replay-player-reopen", "qandeel-replay-player-preview",
+                     "qandeel-replay-play", "qandeel-replay-spine", "qandeel-replay-transport", "qandeel-replay-position", "qandeel-replay-text",
+                     "qandeel-replay-moment-reading", "qandeel-map-surface", "qandeel-living-analysis-stage"]
+
+  override func setUp() { continueAfterFailure = true }
+
+  private func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+  private func box(_ e: XCUIElement) -> String { let f = e.frame; return "\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height))" }
+  private func shot(_ name: String) {
+    let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
+  }
+  private func record(_ step: String, _ list: [String]) {
+    for id in list {
+      let e = el(id)
+      lines.append("\(step) \(id) " + (e.exists ? "\(box(e)) hittable=\(e.isHittable)" : "absent"))
+    }
+    shot("replay-\(tag)-\(step)")
+  }
+  private func outcome(_ name: String, _ ok: Bool, _ detail: String = "") {
+    lines.append("STEP \(name) \(ok ? "PASS" : "FAIL") \(detail)")
+    XCTAssertTrue(ok, "\(tag): \(name) \(detail)")
+  }
+  /// Taps a control when it is on the screen and hittable; never scrolls (the comparison is of what the reader is given).
+  private func tap(_ id: String, _ wait: TimeInterval = 20) -> Bool {
+    let e = el(id)
+    guard e.waitForExistence(timeout: wait), e.isHittable else { lines.append("tap \(id): exists=\(e.exists) hittable=\(e.exists && e.isHittable)"); return false }
+    e.tap()
+    return true
+  }
+  private func settle(_ s: Double) { Thread.sleep(forTimeInterval: s) }
+
+  func testReplayJourneyCompatibility() {
+    app.launch()
+    let size = app.windows.firstMatch.frame
+    lines.append("tag=\(tag) window=\(Int(size.width))x\(Int(size.height))")
+    outcome("conversation", el("qandeel-replay-entry").waitForExistence(timeout: 90))
+    settle(2)
+    record("conversation", ["qandeel-replay-entry", "qandeel-conversation-input"])
+    outcome("entry menu", tap("qandeel-replay-entry") && el("qandeel-replay-choose-part").waitForExistence(timeout: 20))
+    record("menu", ["qandeel-replay-menu", "qandeel-replay-choose-whole", "qandeel-replay-choose-part"])
+    outcome("choose part", tap("qandeel-replay-choose-part") && el("qandeel-replay-selection-bar").waitForExistence(timeout: 20))
+    let selectable = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-selectable-'")).allElementsBoundByIndex.filter { $0.exists }
+    lines.append("selectable=\(selectable.count)")
+    var picked = 0
+    for i in [0, min(3, max(0, selectable.count - 1))] where i < selectable.count && selectable[i].isHittable {
+      selectable[i].tap(); picked += 1; settle(0.6)
+    }
+    record("selected", ["qandeel-replay-selection-bar", "qandeel-replay-selection-what", "qandeel-replay-save"])
+    outcome("select two messages", picked == 2, "picked=\(picked)")
+    outcome("save", tap("qandeel-replay-save") && el("qandeel-replay-preview").waitForExistence(timeout: 30))
+    record("saved", ["qandeel-replay-notice", "qandeel-replay-preview"])
+    outcome("preview opens the player", tap("qandeel-replay-preview") && el("qandeel-replay-player-bar").waitForExistence(timeout: 30))
+    settle(3)
+    record("player", ids)
+    let position = { () -> String in let e = self.el("qandeel-replay-position"); return e.exists ? e.label : "absent" }
+    let p0 = position()
+    let spine = el("qandeel-replay-spine")
+    if spine.exists && spine.isHittable {
+      spine.coordinate(withNormalizedOffset: CGVector(dx: 0.62, dy: 0.5)).tap()
+      settle(2)
+    }
+    let p1 = position()
+    lines.append("position before=\(p0) after spine tap=\(p1)")
+    outcome("spine tap moves the moment", p1 != p0 && p1 != "absent")
+    record("spine-tap", ["qandeel-replay-spine", "qandeel-replay-position"])
+    let played = tap("qandeel-replay-play", 5)
+    settle(4.5)
+    let p2 = position()
+    lines.append("position after play 4.5 s=\(p2)")
+    outcome("play advances the moment", played && p2 != p1)
+    record("playing", ["qandeel-replay-play", "qandeel-replay-position"])
+    if el("qandeel-replay-play").exists && el("qandeel-replay-play").isHittable { el("qandeel-replay-play").tap(); settle(1) }
+    outcome("finalize", tap("qandeel-replay-player-finalize") && el("qandeel-replay-player-reopen").waitForExistence(timeout: 30))
+    record("finalized", ids)
+    outcome("reopen", tap("qandeel-replay-player-reopen") && el("qandeel-replay-player-preview").waitForExistence(timeout: 30))
+    record("reopened", ids)
+    outcome("back to the conversation", tap("qandeel-replay-player-back") && el("qandeel-conversation-input").waitForExistence(timeout: 20)
+      && !el("qandeel-replay-player-bar").exists)
+    record("back", ["qandeel-replay-entry", "qandeel-conversation-input", "qandeel-depth-to-analysis"])
+    outcome("door to the Analysis", tap("qandeel-depth-to-analysis") && el("qandeel-replay-analysis-entry").waitForExistence(timeout: 60))
+    settle(3)
+    record("analysis", ["qandeel-replay-analysis-entry", "qandeel-depth-to-conversation"])
+    outcome("player from the Analysis", tap("qandeel-replay-analysis-entry") && el("qandeel-replay-player-bar").waitForExistence(timeout: 30))
+    settle(3)
+    record("player-from-analysis", ids)
+    outcome("back to the Analysis", tap("qandeel-replay-player-back") && el("qandeel-depth-to-conversation").waitForExistence(timeout: 20)
+      && !el("qandeel-replay-player-bar").exists)
+    record("analysis-again", ["qandeel-replay-analysis-entry", "qandeel-depth-to-conversation"])
+    let a = XCTAttachment(string: lines.joined(separator: "\n")); a.name = "replay-\(tag)"; a.lifetime = .keepAlways; add(a)
+  }
+}

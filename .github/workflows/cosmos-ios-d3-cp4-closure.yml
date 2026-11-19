@@ -1,0 +1,157 @@
+name: iOS D-3 CP4 closure validation (Replay compatibility, AX5 Public search)
+# COSMOS-INT-01 Slice E, D-3 CP4 review (PO 2026-11-19, "Replay Contract Protection and Final Bounded Closure").
+# VALIDATION BRANCH ONLY (cosmos/validate/d3-cp4-closure); never merged. One bounded run, nothing retried; evidence only:
+#   replay: the S7-05 proof build (`journey`) of the accepted baseline (fc2e13c6) and of the D-3 head, the SAME journey
+#           (ReplayCompatUITests) on each, at the iPhone 17 default size and AX5 and the small iPhone at AX5 (en);
+#   ax5:    the PR head's layout test on the small iPhone at en AX5: the approved inside() correction and the ONE
+#           focused interaction (the Public search below the band's fold reached by scrolling the band, then used).
+on:
+  push:
+    branches: ['cosmos/validate/d3-cp4-closure']
+concurrency:
+  group: cosmos-ios-d3-cp4-closure-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+  BASE_SHA: fc2e13c6d79a4df8f55722c39d485ef170677c4e
+jobs:
+  replay:
+    name: Replay compatibility — baseline vs head (S7-05 proof build)
+    runs-on: macos-26
+    timeout-minutes: 240
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout the head, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Build the head S7-05 proof app and the UI tests
+        env: {S705_DEVICE_PROOF: '1'}
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/evidence"
+          npm ci
+          node apps/mobile/scripts/select-s705-proof-entry.mjs --apply
+          npm run prebuild:ios --workspace @qandeel/mobile
+          (cd apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          xctestrun="$(find "$PWD/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$xctestrun"
+          echo "HEAD_XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          rm -rf apps/mobile/ios/build/Build/Intermediates.noindex
+          { echo "head=$(git rev-parse HEAD)"; echo "head surface sha256=$(shasum -a 256 apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx)"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      # After the head build, so that a second checkout inside the workspace is never in the head bundle's Metro crawl.
+      - name: Checkout the baseline (fc2e13c6)
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.BASE_SHA }}', path: base}
+      - name: Build the baseline S7-05 proof app (fc2e13c6) with the same UI tests
+        env: {S705_DEVICE_PROOF: '1'}
+        run: |
+          set -o pipefail
+          (cd base && npm ci && node apps/mobile/scripts/select-s705-proof-entry.mjs --apply && npm run prebuild:ios --workspace @qandeel/mobile)
+          (cd base/apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb base/apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+          workspace="$(ls -d base/apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath base/apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          xctestrun="$(find "$PWD/base/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$xctestrun"
+          echo "BASE_XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          rm -rf base/apps/mobile/ios/build/Build/Intermediates.noindex
+          { echo "base=$(git -C base rev-parse HEAD)"; echo "base surface sha256=$(shasum -a 256 base/apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx)"; } >> "$RUNNER_TEMP/evidence/identity.txt"
+      - name: iPhone 17 — boot
+        run: bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+      - name: Replay journey — iPhone 17 en default, then AX5 (baseline, head each)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 60
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/replay"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh; source scripts/cosmos-ios-world/d3-closure-lib.sh
+          set_lang "$U" en-US en_US
+          xcrun simctl ui "$U" content_size large
+          replay_run "$U" "$E" i17-en-default-base "$BASE_XCTESTRUN"
+          replay_run "$U" "$E" i17-en-default-head "$HEAD_XCTESTRUN"
+          xcrun simctl ui "$U" content_size accessibility-extra-extra-extra-large
+          replay_run "$U" "$E" i17-en-AX5-base "$BASE_XCTESTRUN"
+          replay_run "$U" "$E" i17-en-AX5-head "$HEAD_XCTESTRUN"
+          xcrun simctl shutdown "$U" || true
+      - name: The small iPhone — boot
+        if: ${{ !cancelled() }}
+        run: bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
+      - name: Replay journey — small iPhone en AX5 (baseline, head)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 40
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/replay"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh; source scripts/cosmos-ios-world/d3-closure-lib.sh
+          set_lang "$U" en-US en_US
+          xcrun simctl ui "$U" content_size accessibility-extra-extra-extra-large
+          replay_run "$U" "$E" se-en-AX5-base "$BASE_XCTESTRUN"
+          replay_run "$U" "$E" se-en-AX5-head "$HEAD_XCTESTRUN"
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          for f in "$RUNNER_TEMP"/evidence/*/summary.tsv; do [ -f "$f" ] && { echo "## $f"; cat "$f"; }; done | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'd3-cp4-closure-replay', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
+
+  ax5:
+    name: AX5 Public search — the PR head's layout test, small iPhone en AX5
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout the head, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Build the head proof app and the UI tests
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/evidence"
+          npm ci
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          npm run prebuild:ios --workspace @qandeel/mobile
+          (cd apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          xctestrun="$(find "$PWD/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$xctestrun"
+          echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          rm -rf apps/mobile/ios/build/Build/Intermediates.noindex
+          { echo "head=$(git rev-parse HEAD)"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: The small iPhone — boot
+        run: bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
+      - name: Layout — small iPhone en AX5 (inside() correction, Public search reached and used)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: |
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          layout_pass "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence/layout" se-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          for f in "$RUNNER_TEMP"/evidence/*/summary.tsv; do [ -f "$f" ] && { echo "## $f"; cat "$f"; }; done | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'd3-cp4-closure-ax5', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
