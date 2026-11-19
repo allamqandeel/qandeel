@@ -1,0 +1,134 @@
+name: iOS D-3 CP4 focused validation (U-TAP, P-2/P-3/P-4 baseline vs head, SE AX5)
+# COSMOS-INT-01 Slice E, D-3 CP4 (PO review 2026-11-19). VALIDATION BRANCH ONLY (cosmos/validate/d3-cp4-focus); never
+# merged. One bounded run, nothing retried; evidence only (the D-3 report judges it):
+#   1. the U-TAP discriminator (testD3ProbeUTapHold) on the head app and on the accepted baseline app (fc2e13c6);
+#   2. P-2 / P-3 / P-4 on the same runner, baseline / head / baseline / head, each on a fresh install with the screen
+#      recorded (testD3ProbeABPerf + d3-focus-frames.py);
+#   3. the harness fixes of the PR head (doorTap, visible band share, layout continues): the layout test on the iPhone 17
+#      at en AX5 and on the small iPhone at en AX3, en AX5 and ar AX5 (the outstanding AX5 Public case).
+on:
+  push:
+    branches: ['cosmos/validate/d3-cp4-focus']
+concurrency:
+  group: cosmos-ios-d3-cp4-focus-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+  BASE_SHA: fc2e13c6d79a4df8f55722c39d485ef170677c4e
+jobs:
+  focus:
+    name: D-3 CP4 focus — U-TAP, baseline vs head, SE AX5
+    runs-on: macos-26
+    timeout-minutes: 300
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout the head, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+          df -h / | tee "$RUNNER_TEMP/df-start.txt"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Python with OpenCV (frame analysis)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet opencv-python-headless numpy
+          echo "PY=$RUNNER_TEMP/venv/bin/python" >> "$GITHUB_ENV"
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+      - name: Build the head proof app and the UI tests
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/evidence"
+          npm ci
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          npm run prebuild:ios --workspace @qandeel/mobile
+          (cd apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find "$PWD/apps/mobile/ios/build/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find "$PWD/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"
+          echo "HEAD_APP=$app" >> "$GITHUB_ENV"; echo "HEAD_XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          rm -rf apps/mobile/ios/build/Build/Intermediates.noindex
+          { echo "head=$(git rev-parse HEAD)"; echo "head app=$(basename "$app")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+          df -h / | tee -a "$RUNNER_TEMP/evidence/identity.txt"
+      # After the head build, so that a second checkout inside the workspace is never in the head bundle's Metro crawl.
+      - name: Checkout the baseline (fc2e13c6)
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.BASE_SHA }}', path: base}
+      - name: Build the baseline proof app (fc2e13c6) with the same UI tests
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          set -o pipefail
+          (cd base && npm ci && node apps/mobile/scripts/select-s401-proof-entry.mjs --apply && npm run prebuild:ios --workspace @qandeel/mobile)
+          (cd base/apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb base/apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+          workspace="$(ls -d base/apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath base/apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find "$PWD/base/apps/mobile/ios/build/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find "$PWD/base/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"
+          echo "BASE_APP=$app" >> "$GITHUB_ENV"; echo "BASE_XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          rm -rf base/apps/mobile/ios/build/Build/Intermediates.noindex
+          { echo "base=$(git -C base rev-parse HEAD)"; echo "base app=$(basename "$app")"; } >> "$RUNNER_TEMP/evidence/identity.txt"
+          df -h / | tee -a "$RUNNER_TEMP/evidence/identity.txt"
+      - name: iPhone 17 — boot, English, default size
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          set_lang "$IOS_SIM_UDID" en-US en_US; xcrun simctl ui "$IOS_SIM_UDID" content_size large
+      - name: U-TAP discriminator — head, then baseline
+        if: ${{ !cancelled() }}
+        timeout-minutes: 40
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/utap"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh; source scripts/cosmos-ios-world/d3-focus-lib.sh
+          utap_run "$U" "$E" utap-head "$HEAD_XCTESTRUN"
+          utap_run "$U" "$E" utap-base "$BASE_XCTESTRUN"
+      - name: P-2 / P-3 / P-4 — baseline, head, baseline, head (fresh install each, screen recorded)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 60
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/ab"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh; source scripts/cosmos-ios-world/d3-focus-lib.sh
+          ab_run "$U" "$E" ab1-base "$BASE_XCTESTRUN" "$BASE_APP"
+          ab_run "$U" "$E" ab2-head "$HEAD_XCTESTRUN" "$HEAD_APP"
+          ab_run "$U" "$E" ab3-base "$BASE_XCTESTRUN" "$BASE_APP"
+          ab_run "$U" "$E" ab4-head "$HEAD_XCTESTRUN" "$HEAD_APP"
+      - name: Layout (head harness) — iPhone 17 en AX5
+        if: ${{ !cancelled() }}
+        timeout-minutes: 20
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/layout"; export XCTESTRUN="$HEAD_XCTESTRUN"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          layout_pass "$U" "$E" i17-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+          xcrun simctl shutdown "$U" || true
+      - name: The small iPhone — boot
+        if: ${{ !cancelled() }}
+        run: |
+          bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
+      - name: Layout (head harness) — small iPhone en AX3, en AX5, ar AX5
+        if: ${{ !cancelled() }}
+        timeout-minutes: 50
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/layout"; export XCTESTRUN="$HEAD_XCTESTRUN"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          layout_pass "$U" "$E" se-en-AX3 en-US en_US accessibility-extra-large
+          layout_pass "$U" "$E" se-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+          layout_pass "$U" "$E" se-ar-AX5 ar-EG ar_EG accessibility-extra-extra-extra-large
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          for f in "$RUNNER_TEMP"/evidence/*/summary.tsv; do [ -f "$f" ] && { echo "## $f"; cat "$f"; }; done | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: 'd3-cp4-focus', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

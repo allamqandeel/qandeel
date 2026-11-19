@@ -12,7 +12,7 @@ name: iOS D-3 validation (COSMOS enlarged text, before / after)
 # D-3 report judges the evidence (PASS / FAIL / NOT TESTED per case).
 on:
   push:
-    branches: ['cosmos/validate/**']
+    branches: ['cosmos/validate/**', '!cosmos/validate/d3-cp4-focus']
 concurrency:
   group: cosmos-ios-d3-validation-${{ github.ref }}
   cancel-in-progress: true

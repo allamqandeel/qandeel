@@ -752,3 +752,108 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("layout-\(tag)", lines.joined(separator: "\n"))
   }
 }
+
+// ── D-3 CP4 focused probes (PO review 2026-11-19). VALIDATION BRANCH ONLY (cosmos/validate/d3-cp4-focus); never merged. ─
+// Run by .github/workflows/cosmos-ios-d3-cp4-focus.yml on the D-3 head app and on the accepted baseline app (fc2e13c6)
+// built with this same file. Evidence only; nothing is retried.
+extension CosmosWorldGestureUITests {
+  /// U-TAP discriminator. The gate's U-TAP (Maestro) taps a node core in the Public field at FAR and polls 5 s for the
+  /// Public panel or a deeper depth. In gate 44411277402 attempt 1 its tap at 82,352 changed nothing, on a runner about
+  /// three times slower than usual. The stage's tap is `Gesture.Tap().maxDuration(400)`: a touch held longer is neither
+  /// a tap nor a pan. Each trial enters the Public World afresh, touches the same point for a known time, and records
+  /// what the gate would have seen. Short taps open or step on both apps and long holds change nothing, if the
+  /// attempt-1 signature is a held touch; a short tap that changes nothing would point at the app.
+  func testD3ProbeUTapHold() {
+    continueAfterFailure = true
+    let v = (ProcessInfo.processInfo.environment["D3_UTAP"] ?? "82,352").split(separator: ",").compactMap { Double($0) }
+    let p = v.count == 2 ? CGPoint(x: v[0], y: v[1]) : CGPoint(x: 82, y: 352)
+    let plan: [(String, Double)] = [("tap60", 0.06), ("tap60", 0.06), ("tap60", 0.06), ("hold350", 0.35), ("hold350", 0.35),
+                                    ("hold600", 0.6), ("hold600", 0.6), ("hold600", 0.6), ("tap60", 0.06), ("tap60", 0.06)]
+    var lines = ["point \(Int(p.x)),\(Int(p.y))"]
+    for (i, step) in plan.enumerated() {
+      guard enterPublic("utap-\(i)") != nil else { lines.append("\(i) \(step.0): the Public World did not open"); continue }
+      let before = depth(publicStage)
+      shot("utap-\(i)-before")
+      let r = synthesize("utap-\(i)", [[(p, 0), (p, step.1)]])
+      var outcome = "nothing"
+      let until = Date().addingTimeInterval(5)
+      while Date() < until {
+        if app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-public-panel'")).firstMatch.exists { outcome = "panel"; break }
+        let d = depth(publicStage)
+        if d != before { outcome = "depth \(before) -> \(d)"; break }
+        Thread.sleep(forTimeInterval: 0.25)
+      }
+      shot("utap-\(i)-after")
+      lines.append("\(i) \(step.0) held \(Int(step.1 * 1000) + 20) ms: synthesised=\(r.ok) (\(r.t1 - r.t0) ms) -> \(outcome); back=\(backAvailable())")
+    }
+    note("utap-probe", lines.joined(separator: "\n"))
+  }
+
+  /// P-2 / P-3 / P-4 on the same runner for both apps, while the host records the screen (simctl recordVideo). Every
+  /// touch is synthesised and its wall-clock time (epoch ms, the host's clock) recorded in `ab-events`, so the host's
+  /// frame analysis can find the app's answer in the video rather than in XCUITest's query time.
+  func testD3ProbeABPerf() throws {
+    continueAfterFailure = true
+    var ev: [String] = []
+    func mark(_ s: String) { ev.append("\(now()) \(s)") }
+    func touch(_ label: String, _ e: XCUIElement) -> Bool {
+      guard e.waitForExistence(timeout: 15) else { mark("\(label) missing"); return false }
+      let f = e.frame
+      let c = CGPoint(x: f.midX.rounded(), y: f.midY.rounded())
+      let r = synthesize("ab-\(label)", [[(c, 0), (c, 0.06)]])
+      mark("\(label) touch \(r.t0) \(r.t1) ok=\(r.ok) at \(Int(c.x)),\(Int(c.y))")
+      return r.ok
+    }
+    func reached(_ label: String, _ e: XCUIElement, _ seconds: TimeInterval = 30) {
+      mark("\(label) query \(e.waitForExistence(timeout: seconds))")
+    }
+    mark("launch")
+    app.launch()
+    reached("thread", element("qandeel-conversation-thread"), 180)
+    settle(8)
+    // P-2: the door to the Analysis.
+    if touch("door", element("qandeel-depth-to-analysis")) { reached("door-rail", element("qandeel-cosmos-timeline-rail"), 60) }
+    settle(4)
+    // P-4: drags and pinches on the Personal stage's open space (the D-1 gate's points).
+    let W = screen.width, H = screen.height
+    let from = CGPoint(x: (W * 0.65).rounded(), y: (H * 0.68).rounded())
+    for (i, d) in [CGVector(dx: -120, dy: 0), CGVector(dx: 120, dy: 0), CGVector(dx: 0, dy: -100), CGVector(dx: 0, dy: 100)].enumerated() {
+      mark("pan\(i) start")
+      drag("ab-pan\(i)", d.dx < 0 || d.dy < 0 ? from : CGPoint(x: from.x - (d.dx > 0 ? 120 : 0), y: from.y - (d.dy > 0 ? 100 : 0)), d)
+      mark("pan\(i) end")
+      settle(1.5)
+    }
+    let c = CGPoint(x: (W * 0.40).rounded(), y: (H * 0.68).rounded())
+    mark("pinch-in start")
+    try pinch("ab-pinch-in", about: c, from: CGVector(dx: 14, dy: 0), to: CGVector(dx: 90, dy: 0))
+    mark("pinch-in end \(depth(personalStage))")
+    settle(2)
+    mark("pinch-out start")
+    try pinch("ab-pinch-out", about: c, from: CGVector(dx: 90, dy: 0), to: CGVector(dx: 14, dy: 0))
+    mark("pinch-out end \(depth(personalStage))")
+    settle(2)
+    // P-3: between the Worlds, from the Conversation (the switcher's home). Both seeds first; the Public allow once.
+    app.launch()
+    reached("thread-2", element("qandeel-conversation-thread"), 180)
+    settle(8)
+    openLink("qandeel://s401-proof/shared-field/seed", via: "system", "ab-seed-shared")
+    openLink("qandeel://s401-proof/public/seed", via: "system", "ab-seed-public")
+    if touch("warm-public", element("qandeel-switcher-public_world")) {
+      openLink("qandeel://s401-proof/public/allow", via: "system", "ab-allow")
+      reached("warm-public-search", element("qandeel-public-search"), 45)
+    }
+    settle(4)
+    let fixture = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Fixture Map World' OR label == 'عالم الخريطة الاختباري'")).firstMatch
+    for round in 1...2 {
+      if touch("r\(round)-my", element("qandeel-switcher-my_world")) { reached("r\(round)-my-thread", element("qandeel-conversation-thread")) }
+      settle(3)
+      if touch("r\(round)-shared", element("qandeel-switcher-shared_world")) { reached("r\(round)-shared-list", fixture) }
+      settle(3)
+      if touch("r\(round)-fixture", fixture) { reached("r\(round)-shared-band", element("qandeel-shared-band"), 60) }
+      settle(4)
+      if touch("r\(round)-public", element("qandeel-switcher-public_world")) { reached("r\(round)-public-search", element("qandeel-public-search"), 45) }
+      settle(4)
+    }
+    note("ab-events", ev.joined(separator: "\n"))
+  }
+}
