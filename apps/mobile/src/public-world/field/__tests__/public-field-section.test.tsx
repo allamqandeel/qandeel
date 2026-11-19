@@ -108,6 +108,59 @@ describe('S8A-05 CP1 R2 — the section view in the controller', () => {
     expect(t.search).toHaveBeenLastCalledWith('المدرسة');
   });
 
+  // COSMOS-FINAL-01 O-1 (PO, 2026-11-19): a search executed while the list is open is never hidden behind it.
+  it('O-1: a search executed while the list is open closes it in the same step, keeps the section and its scope, and shows the answer', async () => {
+    const { c, t } = await enter();
+    c.chooseSection('parenting');
+    c.openSearch();
+    c.search('المدرسة');
+    await flush();
+    c.openSections();
+    expect(c.getState().section).toEqual({ key: 'parenting', choosing: true });
+    const seen: ReturnType<typeof c.getState>[] = [];
+    const stop = c.subscribe(() => { seen.push(c.getState()); });
+    c.search('النوم');
+    // The first state published is the list closed AND the new search started: no state between them, so no earlier answer
+    // is ever shown without the list.
+    expect(seen[0]?.section).toEqual({ key: 'parenting', choosing: false });
+    expect(seen[0]?.search.status).toBe('SEARCHING');
+    await flush();
+    stop();
+    expect(seen.every((s) => s.section.choosing === false && s.section.key === 'parenting')).toBe(true);
+    expect(t.search).toHaveBeenLastCalledWith('النوم', 'parenting');
+    expect(c.getState().search).toMatchObject({ open: true, status: 'RESULTS' });
+  });
+
+  it('O-1: unscoped, the list closes and the search asks every section; an empty query executes nothing and leaves the list open', async () => {
+    const { c, t } = await enter();
+    c.openSearch();
+    c.openSections();
+    const calls = t.search.mock.calls.length;
+    c.search('   ');
+    expect(t.search.mock.calls).toHaveLength(calls);
+    expect(c.getState().section).toEqual({ key: null, choosing: true });
+    c.search('البيت');
+    await flush();
+    expect(c.getState().section).toEqual({ key: null, choosing: false });
+    expect(t.search).toHaveBeenLastCalledWith('البيت');
+    expect(c.getState().search.status).toBe('RESULTS');
+  });
+
+  it('O-1: after the list closed for a search, Back keeps its order: the search, then the section, then nothing', async () => {
+    const { c } = await enter();
+    c.chooseSection('family');
+    c.openSearch();
+    c.openSections();
+    c.search('البيت');
+    await flush();
+    expect(c.back()).toBe(true);
+    expect(c.getState().search.open).toBe(false);
+    expect(c.getState().section).toEqual({ key: 'family', choosing: false });
+    expect(c.back()).toBe(true);
+    expect(c.getState().section.key).toBeNull();
+    expect(c.back()).toBe(false);
+  });
+
   it('Back closes the list first, then the search, then releases the section; a later entry starts from every section', async () => {
     const { c } = await enter();
     c.openSections();
@@ -187,6 +240,27 @@ describe.each(['ar', 'en'] as const)('S8A-05 CP1 R2 %s — the section view on t
     await act(async () => { field.chooseSection('love'); });
     await flush();
     expect(view.getByText(words.sectionNoneHere)).toBeTruthy();
+  });
+
+  it('O-1: a search submitted while the list is open shows its results at once, the list closed and the section kept', async () => {
+    const { view, field, t } = await mountArea(language);
+    await act(async () => { field.chooseSection('parenting'); });
+    await flush();
+    await fireEvent.press(view.getByTestId('qandeel-public-section-control'));
+    expect(view.getByTestId('qandeel-public-sections')).toBeTruthy();
+    const input = view.getByTestId('qandeel-public-search');
+    await fireEvent(input, 'focus');
+    await fireEvent.changeText(input, 'المدرسة');
+    // While the reader types, the list stays: only an executed search closes it.
+    expect(view.getByTestId('qandeel-public-sections')).toBeTruthy();
+    await fireEvent(input, 'submitEditing');
+    await flush();
+    expect(view.queryByTestId('qandeel-public-sections')).toBeNull();
+    expect(view.getByTestId('qandeel-public-search-results')).toBeTruthy();
+    expect(view.getByTestId(`qandeel-public-search-result-${P1.id}`)).toBeTruthy();
+    expect(t.search).toHaveBeenLastCalledWith('المدرسة', 'parenting');
+    expect(field.getState().section).toEqual({ key: 'parenting', choosing: false });
+    expect(view.getByText(fillCompose(words.inSection, words.section('parenting')))).toBeTruthy();
   });
 
   it('a search inside the section says where it searches, and one press searches every section again', async () => {

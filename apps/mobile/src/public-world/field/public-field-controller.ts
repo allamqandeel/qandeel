@@ -274,10 +274,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
   }
 
   /** One search read; its answer replaces the results outright (nothing from an earlier answer is kept). */
-  const runSearch = (q: string) => {
+  const runSearch = (q: string, alongside?: Partial<PublicFieldState>) => {
     if (!transport) return;
     const mine = ++searchTicket;
-    publish({ search: { open: true, status: 'SEARCHING', results: [] } });
+    publish({ ...alongside, search: { open: true, status: 'SEARCHING', results: [] } });
     const section = state.section.key ?? undefined;
     void (section === undefined ? transport.search(q) : transport.search(q, section)).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
       if (mine !== searchTicket) return;
@@ -465,7 +465,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
       const q = query.replace(/\s+/gu, ' ').trim();
       if (q.length === 0 || q.length > PUBLIC_SEARCH_QUERY_MAX || !transport) return;
       lastQuery = q;
-      runSearch(q);
+      // COSMOS-FINAL-01 O-1 (PO, 2026-11-19): a search executed while the section list is open closes the list in the same
+      // step as the search starts (never a state with the list closed and an earlier answer still shown). The section and
+      // its scope are kept, so the search asks inside the section shown; Back keeps its order.
+      runSearch(q, state.section.choosing ? { section: { key: state.section.key, choosing: false } } : undefined);
     },
     closeSearch() {
       searchTicket += 1;

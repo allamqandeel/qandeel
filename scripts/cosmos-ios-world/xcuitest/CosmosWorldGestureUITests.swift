@@ -676,6 +676,38 @@ final class CosmosWorldGestureUITests: XCTestCase {
     XCTAssertGreaterThan(viaCard, max(3 * idle, 0.4 * open), "a drag starting on the card's words did not reach the stage (SE-FU-2)")
   }
 
+  // ── Public (COSMOS-FINAL-01 O-1; PO 2026-11-19) ──────────────────────────────────────────────────────────────────
+
+  /// A search EXECUTED while the section list is open shows its answer at once: the list closes, the chosen section is
+  /// kept (its «في: …» scope row is shown) and nothing waits for a section to be chosen. Focusing and typing alone leave the
+  /// list open. The query is Latin, typed one key at a time (run 44491423054): XCTest cannot type Arabic on this keyboard,
+  /// so the synthetic Arabic fixture answers "no results", which the same results area shows (qandeel-public-search-results).
+  func testPublicSearchExecutedWhileTheSectionListIsOpenShowsItsAnswer() {
+    guard enterPublic("o1") != nil else { return }
+    waitFor("qandeel-public-section-control", 20).tap()
+    waitFor("qandeel-public-sections", 20)
+    waitFor("qandeel-public-section-family", 10).tap()
+    settle(2)
+    XCTAssertFalse(element("qandeel-public-sections").exists, "choosing a section did not close the list")
+    waitFor("qandeel-public-section-control", 10).tap()
+    waitFor("qandeel-public-sections", 20)
+    shot("o1-list-open")
+    let search = waitFor("qandeel-public-search", 10)
+    search.tap()
+    settle(1)
+    for key in ["z", "q"] { search.typeText(key); settle(0.6) }
+    XCTAssertTrue(element("qandeel-public-sections").exists, "the list closed before any search was executed")
+    shot("o1-typed")
+    search.typeText("\n")
+    let answer = element("qandeel-public-search-results")
+    XCTAssertTrue(answer.waitForExistence(timeout: 15), "the executed search's answer is not shown")
+    settle(1)
+    shot("o1-answer")
+    XCTAssertFalse(element("qandeel-public-sections").exists, "the section list still hides the executed search's answer")
+    XCTAssertTrue(element("qandeel-public-search-scope").exists, "the chosen section (its scope row) was not kept")
+    note("o1", "list open -> typed (list kept) -> executed: answer=\(answer.exists) list=\(element("qandeel-public-sections").exists) scope=\(element("qandeel-public-search-scope").exists)")
+  }
+
   /// Layout at the reader's text size (D-3, PO D-c / D-d): every World's controls inside the screen, the depth rail clear
   /// of the Overview chip, the switcher's three destinations on the screen, and the map's clear share recorded. Run at
   /// the default size in this gate and under enlarged sizes by the D-3 validation (D3_TAG names the configuration).
