@@ -10,6 +10,8 @@
 #   P-TAP-RAIL  Personal: one tap on a node core inside the depth rail's frame opens the PEEK. That is the region where
 #               the stretched rail beads used to stand over the stage and take the touch (diag run 44255421709).
 #   P-TAP       Personal: one tap on the largest node core opens the PEEK (`qandeel-personal-peek`).
+#   F1-RESOLVED COSMOS-FINAL-01 F-1: that PEEK states the server's answer about the inspected object, not T-08's
+#               technical "this view does not cover what you are inspecting" (the inspection-aware read).
 #   (The double tap and the Back after it are native XCUITest cases, run after this gate from the same build:
 #   scripts/cosmos-ios-world/xcuitest. Maestro's XCTest driver takes one touch per request, so it cannot deliver a
 #   genuine double tap inside DOUBLE_TAP_MS, nor a two-finger pinch; runs 44263732597 and 44272338098 showed it.)
@@ -57,11 +59,23 @@ enter() {
   mt "$1-door" timed-id.yaml "NAME=gate-$1-door" TAP=qandeel-depth-to-analysis WAIT=qandeel-cosmos-timeline-rail ||
     { shot "$1-door-failed"; dump "$1-door-failed"; return 1; }
 }
-# tapcase <case> <name> <point>: one tap, then the PEEK within 6 s; the PEEK is closed by its handle afterwards
+# tapcase <case> <name> <point> [f1]: one tap, then the PEEK within 6 s; the PEEK is closed by its handle afterwards.
+# With f1 (COSMOS-FINAL-01 F-1): the PEEK's statement is the server's answer about the inspected object, read within 6 s
+# of the PEEK opening. T-08's technical sentences for "no answer held" / "cannot be described" (either language) FAIL it.
+F1_TECHNICAL='^(This view does not cover what you are inspecting\.|What you are inspecting cannot be described here\.|لا يشمل هذا العرض معاينتك\.|لا يمكن وصف معاينتك هنا\.)$'
 tapcase() {
   mt "$2" tap-point.yaml "P=$3"; local a; a="$(poll "$2" 6 id qandeel-personal-peek)"; shot "$2"
-  if [ "$a" != none ]; then result "$1" PASS "tap at $3 opened the PEEK"; mt "$2-close" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2
-  else result "$1" FAIL "tap at $3: no qandeel-personal-peek within 6 s"; fi
+  if [ "$a" != none ]; then
+    result "$1" PASS "tap at $3 opened the PEEK"
+    if [ "${4:-}" = f1 ]; then
+      local s="" i; for i in 1 2 3 4 5 6; do dump "$2-f1"; s="$(q "$2-f1" id-label qandeel-personal-peek:statement)"
+        [ "$s" != none ] && ! printf '%s' "$s" | grep -Eq "$F1_TECHNICAL" && break; sleep 1; done; shot "$2-f1"
+      if [ "$s" = none ]; then result F1-RESOLVED 'NOT TESTED' 'the PEEK statement was not found'
+      elif printf '%s' "$s" | grep -Eq "$F1_TECHNICAL"; then result F1-RESOLVED FAIL "the PEEK still says the technical sentence: $s"
+      else result F1-RESOLVED PASS "the PEEK states the resolved inspection: $s"; fi
+    fi
+    mt "$2-close" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2
+  else result "$1" FAIL "tap at $3: no qandeel-personal-peek within 6 s"; [ "${4:-}" = f1 ] && result F1-RESOLVED 'NOT TESTED' 'the PEEK did not open'; fi
 }
 # pancase <case> <name> <flow>: from a fresh home stage, one pan, then Back available
 pancase() {
@@ -72,7 +86,7 @@ pancase() {
   if backOn "$2"; then result "$1" PASS "the pan ($3) moved the camera off the centre (Back available)"; else result "$1" FAIL "after the pan ($3), Back is not available"; fi
 }
 if ! enter p; then
-  for c in P-TAP-RAIL P-TAP P-PAN P-PAN-RAIL; do result "$c" 'NOT TESTED' 'the Personal Analysis did not open'; done
+  for c in P-TAP-RAIL P-TAP F1-RESOLVED P-PAN P-PAN-RAIL; do result "$c" 'NOT TESTED' 'the Personal Analysis did not open'; done
 else
   sleep 5; shot p-0; dump p-0
   rail="$(q p-0 id qandeel-cosmos-rail | head -1 | sed 's/.*frame=//')"; [ "$rail" = none ] && rail=
@@ -84,7 +98,7 @@ else
     if [ "$pt" = none ]; then result P-TAP-RAIL 'NOT TESTED' "no node core inside the depth rail's frame ($rail)"; else tapcase P-TAP-RAIL p-tap-rail "$pt"; fi
   fi
   shot p-1; pt="$(node_at p-1)"
-  if [ "$pt" = none ]; then result P-TAP 'NOT TESTED' 'no node core visible on the Personal stage'; else tapcase P-TAP p-tap "$pt"; fi
+  if [ "$pt" = none ]; then result P-TAP 'NOT TESTED' 'no node core visible on the Personal stage'; result F1-RESOLVED 'NOT TESTED' 'no node core to inspect'; else tapcase P-TAP p-tap "$pt" f1; fi
   pancase P-PAN p-pan swipe-pan-open.yaml
   pancase P-PAN-RAIL p-panr swipe-pan-rail.yaml
 fi

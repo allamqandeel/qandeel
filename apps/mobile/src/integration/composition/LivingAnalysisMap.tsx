@@ -91,6 +91,7 @@ import { chromeProjection, contextPathSentence, inspectionSentence, orientationM
 import { returnMapContext, returnWorld } from '../../return-navigation';
 import type { ResponsiveInsets } from '../../responsive';
 import type { CanonicalStore } from '../../state';
+import { heldContextEntry, inspectionRequestOf } from '../projection/projection-coordinator';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import type { ProductLocale } from '../locale/product-locale';
 import { TIMELINE_TRACK_DEPTH, trackFromDisclosure } from '../timeline/disclosed-track-source';
@@ -178,7 +179,26 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
     if (trackRequest !== null) void projection.ensure(trackRequest);
   }, [projection, trackRequest]);
 
+  /**
+   * COSMOS-FINAL-01 F-1 — the same viewpoint, asked about the inspection the reader holds (`IF_ref`, decoded from the
+   * canonical state alone): `V = Disclose(K(TC), depth, inspection)`. Nothing more is asked while nothing is inspected.
+   * Same coordinator, same one cache (its own key), same idempotence: an unchanged inspection issues nothing.
+   */
+  const inspectedRequest = useMemo(() => {
+    const inspection = request === null ? null : inspectionRequestOf(state.inspection);
+    return request === null || inspection === null ? null : { ...request, inspection };
+  }, [request, state.inspection]);
+  useEffect(() => {
+    if (inspectedRequest !== null) void projection.ensure(inspectedRequest);
+  }, [projection, inspectedRequest]);
+
   const entry = request === null ? null : bundle.projection.lookup(request.sessionId, request.tc, request.depth);
+  /**
+   * What T-04's context and T-08's chrome read (`heldContextEntry`, the one rule): the inspected V once it is held for
+   * the inspection held NOW, otherwise the plain V. Until it arrives, the plain V's missing answer is what T-08 already
+   * calls a technical gap (INSPECTION_NOT_RESOLVED), never a claim about the target.
+   */
+  const contextEntry = request === null ? null : heldContextEntry(bundle.projection, request, inspectedRequest?.inspection ?? null);
   const trackEntry = trackRequest === null ? null : bundle.projection.lookup(trackRequest.sessionId, trackRequest.tc, trackRequest.depth);
 
   // T-05 owns the Track and this hands it one. `replaceDisclosed` preserves geometry within a Session
@@ -194,13 +214,13 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
 
   /** T-04's own context derivation. There is no second one, and none is invented when it refuses. */
   const mapContext = useMemo(
-    () => (entry === null || request === null ? null : mapInspectionContext(entry, request)),
-    [entry, request],
+    () => (contextEntry === null || request === null ? null : mapInspectionContext(contextEntry, request)),
+    [contextEntry, request],
   );
   /** T-08's own projection state, carrying T-04's derivation so a refusal keeps its typed reason. */
   const chrome = useMemo(
-    () => (entry === null || request === null ? null : chromeProjection(entry, request)),
-    [entry, request],
+    () => (contextEntry === null || request === null ? null : chromeProjection(contextEntry, request)),
+    [contextEntry, request],
   );
 
   /**

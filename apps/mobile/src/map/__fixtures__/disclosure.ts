@@ -18,6 +18,9 @@ import type {
   DisclosedThreadReadingAppearance,
   DisclosedThreadRung,
   HistoricalDisclosure,
+  HistoricalFamily,
+  HistoricalInspectionRequest,
+  HistoricalInspectionResolution,
   HistoricalRung,
   HistoricalSemanticDepth,
   ThreadStateAtTc,
@@ -65,6 +68,58 @@ export interface DisclosureFixture {
   readonly focuses?: readonly FocusFixture[];
   readonly readings?: readonly ReadingFixture[];
   readonly materials?: readonly MaterialFixture[];
+  /**
+   * COSMOS-FINAL-01 F-1: the inspection the request carried. Answered over this fixture's world exactly as the server's
+   * `resolveInspection` answers it (apps/api/src/historical-projection/historical-disclosure.ts); absent, `inspection: null`.
+   */
+  readonly inspection?: HistoricalInspectionRequest;
+}
+
+/** The server's FAMILY_DEPTH (Reading is an analytical object, never a depth of its own). */
+const FAMILY_DEPTH: Readonly<Record<HistoricalFamily, HistoricalSemanticDepth>> = {
+  THREAD: 'WORLD', EMERGING_FOCUS: 'SESSION', MOMENT: 'SESSION', READING: 'ANALYTICAL_OBJECT', MATERIAL: 'ANALYTICAL_OBJECT',
+  GAP: 'ANALYTICAL_OBJECT', QUESTION: 'ANALYTICAL_OBJECT', CONFIDENCE: 'ANALYTICAL_OBJECT',
+};
+
+/** The server's `resolveInspection`, over a fixture world: knowledge, context and disclosure, three orthogonal answers. */
+export function fixtureInspectionResolution(fixture: DisclosureFixture, request: HistoricalInspectionRequest): HistoricalInspectionResolution {
+  const tc = fixture.tc ?? 4;
+  const id = request.id;
+  const known = ((): { readonly known: boolean; readonly version: number | null } => {
+    switch (request.family) {
+      case 'THREAD': return { known: (fixture.threads ?? []).some((each) => each.id === id), version: null };
+      case 'EMERGING_FOCUS': return { known: (fixture.focuses ?? []).some((each) => each.id === id), version: null };
+      case 'MOMENT': return { known: moments(tc).some((each) => each.id === id), version: null };
+      case 'READING': {
+        const found = (fixture.readings ?? []).find((each) => each.id === id);
+        return { known: found !== undefined, version: found === undefined ? null : found.versionAtTc ?? 1 };
+      }
+      case 'MATERIAL': {
+        const found = (fixture.materials ?? []).find((each) => each.id === id);
+        return { known: found !== undefined, version: found === undefined ? null : found.version ?? 1 };
+      }
+      default: return { known: false, version: null };
+    }
+  })();
+  if (!known.known) return { knowledge: 'UNKNOWN_AT_TC' };
+  const noncurrent = request.version !== undefined && known.version !== null && request.version !== known.version
+    ? (request.version > known.version ? 'PREVALID' as const : 'SUPERSEDED' as const) : null;
+  const appearance = request.appearance === undefined ? null : request.appearance.kind === 'THREAD_READING'
+    ? {
+      available: (fixture.appearances ?? []).some((each) => each.bindingId === request.appearance?.bindingId
+        && (request.family === 'THREAD' ? each.threadId === id : request.family === 'READING' ? each.readingId === id : false)),
+      depth: 'THREAD' as HistoricalSemanticDepth,
+    }
+    : { available: false, depth: 'SESSION' as HistoricalSemanticDepth };
+  const own = FAMILY_DEPTH[request.family];
+  const requiredDepth = appearance !== null && DEPTH_RANK[appearance.depth] > DEPTH_RANK[own] ? appearance.depth : own;
+  return {
+    knowledge: noncurrent === null ? 'KNOWN_AND_CURRENT_AT_TC' : 'KNOWN_NONCURRENT_AT_TC',
+    noncurrent,
+    context: appearance === null ? 'NOT_REQUESTED' : appearance.available ? 'CONTEXT_AVAILABLE_AT_TC' : 'CONTEXT_UNAVAILABLE_AT_TC',
+    disclosure: DEPTH_RANK[fixture.depth] >= DEPTH_RANK[requiredDepth] ? 'AVAILABLE_AND_RENDERABLE' : 'AVAILABLE_BUT_DEPTH_WITHHELD',
+    requiredDepth,
+  };
 }
 
 const DEPTH_RANK: Readonly<Record<HistoricalSemanticDepth, number>> = {
@@ -184,6 +239,25 @@ export function disclosureFixture(fixture: DisclosureFixture): HistoricalDisclos
     session: rank >= 2 ? disclosed(sessionRung) : withheld<DisclosedSessionRung>(),
     analyticalObject: rank >= 3 ? disclosed(analyticalRung) : withheld<DisclosedAnalyticalObjectRung>(),
     sourceProvenance: rank >= 4 ? disclosed(provenanceRung) : withheld<DisclosedSourceProvenanceRung>(),
-    inspection: null,
+    inspection: fixture.inspection === undefined ? null : fixtureInspectionResolution(fixture, fixture.inspection),
+  };
+}
+
+/**
+ * COSMOS-FINAL-01 F-1: the inspection a projection request's query carries, read exactly as the server's controller
+ * reads it (inspectFamily, inspectId, inspectVersion, appearanceKind + appearanceBindingId together); none, undefined.
+ */
+export function inspectionFromQuery(get: (name: string) => string | null): HistoricalInspectionRequest | undefined {
+  const family = get('inspectFamily');
+  const id = get('inspectId');
+  if (family === null || id === null) return undefined;
+  const version = get('inspectVersion');
+  const kind = get('appearanceKind');
+  const bindingId = get('appearanceBindingId');
+  return {
+    family: family as HistoricalFamily,
+    id,
+    ...(version === null ? {} : { version: Number(version) }),
+    ...(kind === null || bindingId === null ? {} : { appearance: { kind: kind as 'THREAD_READING' | 'QUESTION_TURN', bindingId } }),
   };
 }

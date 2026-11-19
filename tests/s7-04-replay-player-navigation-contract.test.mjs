@@ -151,7 +151,16 @@ const FROZEN = [
   // never re-mounted) and gives T-04's context choice its one home in the PEEK. Protected and still asserted here: the Replay
   // composite and the player keep `MapSurface` and the `world=` presentation (G-5), no Replay map, no new read, no new route;
   // every other pin in this list is unchanged. Previous pin: 2eaa9efa532c90f46d47f722b9475df84007b636e287da45c440340f5b937e39.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '70651062b6325c743add8e2e613d0814ac11052fee45002448e373783caf4039'],
+  // COSMOS-FINAL-01 F-1 CONTROLLED RE-ANCHOR (2026-11-19; the Product Owner's binding Slice E requirement F-1, contract §20:
+  // "the inspection-aware runtime request must be implemented through the existing authoritative disclosure architecture";
+  // presented for the PO's ratification with the COSMOS-FINAL-01 report): the Personal composition also asks the ONE
+  // coordinator for the current viewpoint's V WITH the inspection the reader holds (`V = Disclose(K(TC), depth, inspection)`,
+  // held under its own key in the same one cache), and T-04's context and T-08's chrome read that inspected V once it is held
+  // (`heldContextEntry`), the plain V otherwise. No Replay surface mounts or reads this composition (the composite and the
+  // player have their own frozen reads, unchanged), so Replay's chrome, acts, words, routes and refusals are unchanged; the
+  // frozen map authority files (map-scene, map-actions, entitlement), the wire and the store are untouched.
+  // Previous pin: LivingAnalysisMap 70651062.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '58c1adbfdac3e20929309183679b0d07749e61be906576ee297cf6e4594d3d91'],
 ];
 
 const shipped = () => {

@@ -19,10 +19,10 @@ import {
 import { project, type NasijCamera } from '../../cosmos/core/camera';
 import { CosmosCanvas } from '../../cosmos/skia/CosmosCanvas';
 import { MAP_ACCESSIBILITY_TEST_ID, inspectObject, mapInspectionContext, mapProjectionRequest, zoomSemanticStep, type MapInspectionContext } from '../../map';
-import { disclosureFixture } from '../../map/__fixtures__/disclosure';
+import { disclosureFixture, inspectionFromQuery } from '../../map/__fixtures__/disclosure';
 import { chromeProjection, contextPathSentence, inspectionSentence, orientationModel } from '../../orientation-chrome';
-import { known, unknownAtTc, withInspection } from '../../orientation-chrome/__fixtures__/chrome';
-import type { HistoricalInspectionResolution, HistoricalSemanticDepth } from '../../projection';
+import { unknownAtTc, withInspection } from '../../orientation-chrome/__fixtures__/chrome';
+import type { HistoricalSemanticDepth } from '../../projection';
 import { RESPONSIVE_MAP_FRAME_TEST_ID, RESPONSIVE_SURFACE_TEST_ID } from '../../responsive';
 import { resize } from '../../responsive/__fixtures__/composition';
 import type { Responder } from '../../runtime-entry/__fixtures__/runtime-entry';
@@ -32,6 +32,7 @@ import {
 } from '../composition/LivingAnalysisMap';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { productLocale } from '../locale/product-locale';
+import { heldContextEntry, inspectionRequestOf } from '../projection/projection-coordinator';
 import { harness, settle, SESSION_A, type IntegrationHarness } from '../__fixtures__/integration';
 
 jest.setTimeout(30000);
@@ -47,47 +48,34 @@ const APPEARANCES = [
 ];
 const READINGS = [{ id: 'reading-1' }, { id: 'reading-2' }];
 const FOCUSES = [{ id: 'focus-1', startedSp: 3 }];
-const LEVELS: readonly HistoricalSemanticDepth[] = ['WORLD', 'THREAD', 'SESSION', 'ANALYTICAL_OBJECT', 'SOURCE_PROVENANCE'];
-const FAMILY_DEPTH: Readonly<Record<string, HistoricalSemanticDepth>> = { THREAD: 'WORLD', EMERGING_FOCUS: 'SESSION', READING: 'ANALYTICAL_OBJECT' };
-/** What a disclosure answers about: the inspection a viewpoint carried (`V = Disclose(K, depth, inspection)`). */
-interface Answer { readonly family: 'THREAD' | 'READING' | 'EMERGING_FOCUS'; readonly id: string; readonly binding?: string }
 /**
- * FINDING F-1 (recorded in the CP3 delivery record): the integrated runtime asks for the Personal projection by
- * (Session, TC, depth) only — `projection-coordinator.ts` never sends the inspection — so in production every held
- * disclosure answers `inspection: null` and T-08 renders an inspection as INSPECTION_NOT_RESOLVED. The PEEK shows
- * exactly what T-08 says. To prove the PEEK also shows T-08's RENDERABLE words (lineage, the context choice) when a
- * resolution IS held, the fixture can answer the next fetched viewpoint as if it had carried the inspection, exactly as
- * the server's `resolveInspection` would (known / context / disclosure at that depth).
+ * COSMOS-FINAL-01 F-1 (re-anchored from the CP3 stand-in): the runtime now SENDS the inspection the reader holds
+ * (`V = Disclose(K, depth, inspection)`), and this fixture answers each request from its own query, exactly as the
+ * server's `resolveInspection` would (`fixtureInspectionResolution`). A plain request is answered with no resolution.
+ * `inspected`: 'ANSWER' answers the inspected read; 'HOLD' never answers it (the read still on its way); an id in
+ * `unknown` is answered UNKNOWN_AT_TC (an identity K(TC) does not hold), the one branch that may never name it.
  */
-let answer: Answer | null = null;
-function resolution(depth: HistoricalSemanticDepth): HistoricalInspectionResolution | null {
-  if (answer === null) return null;
-  const { family, id, binding } = answer;
-  const pool = family === 'THREAD' ? THREADS : family === 'READING' ? READINGS : FOCUSES;
-  if (!pool.some((each) => each.id === id)) return unknownAtTc();
-  const available = binding !== undefined && APPEARANCES.some((each) => each.bindingId === binding && (family === 'READING' ? each.readingId === id : family === 'THREAD' ? each.threadId === id : false));
-  const own = FAMILY_DEPTH[family];
-  const requiredDepth = binding === undefined || LEVELS.indexOf(own) >= LEVELS.indexOf('THREAD') ? own : 'THREAD';
-  return known({
-    context: binding === undefined ? 'NOT_REQUESTED' : available ? 'CONTEXT_AVAILABLE_AT_TC' : 'CONTEXT_UNAVAILABLE_AT_TC',
-    disclosure: LEVELS.indexOf(depth) >= LEVELS.indexOf(requiredDepth) ? 'AVAILABLE_AND_RENDERABLE' : 'AVAILABLE_BUT_DEPTH_WITHHELD',
-    requiredDepth,
-  });
-}
-const projection = (withhold: readonly HistoricalSemanticDepth[] = []): Responder => (request) => {
+interface Answering { readonly inspected?: 'ANSWER' | 'HOLD'; readonly unknown?: readonly string[] }
+const projection = (withhold: readonly HistoricalSemanticDepth[] = [], answering: Answering = {}): Responder => (request) => {
   const params = new URL(request.url).searchParams;
   const depth = (params.get('depth') ?? 'WORLD') as HistoricalSemanticDepth;
   if (withhold.includes(depth)) return new Promise(() => undefined);
+  const inspection = inspectionFromQuery((name) => params.get(name));
+  if (inspection !== undefined && answering.inspected === 'HOLD') return new Promise(() => undefined);
   const disclosure = disclosureFixture({
     depth, sessionId: SESSION_A, tc: Number(params.get('tc') ?? LIVE_HEAD), liveHead: LIVE_HEAD,
-    threads: THREADS, appearances: APPEARANCES, readings: READINGS, focuses: FOCUSES,
+    threads: THREADS, appearances: APPEARANCES, readings: READINGS, focuses: FOCUSES, inspection,
   });
-  return { status: 200, body: withInspection(disclosure, resolution(depth)) };
+  return { status: 200, body: inspection !== undefined && (answering.unknown ?? []).includes(inspection.id) ? withInspection(disclosure, unknownAtTc()) : disclosure };
 };
-/** Inspect what every held disclosure already answers about (`answer`, set before the mount). */
-async function inspectResolved(h: IntegrationHarness, family: Answer['family'], id: string, binding?: string) {
-  expect(answer).toMatchObject({ family, id });
+/** The reads that carried an inspection of this identity (F-1: the runtime asked the server about it). */
+const inspectedReads = (h: IntegrationHarness, family: string, id: string) =>
+  h.http.calls.filter((call) => call.url.includes('/historical-projection') && call.url.includes(`inspectFamily=${family}&inspectId=${encodeURIComponent(id)}`));
+/** Inspect, and let the runtime's own inspected read (F-1) land: the resolution held is the server-like answer to it. */
+async function inspectResolved(h: IntegrationHarness, family: 'THREAD' | 'READING' | 'EMERGING_FOCUS', id: string, binding?: string) {
   await inspect(h, family, id, binding);
+  await act(async () => { await settle(); });
+  expect(inspectedReads(h, family, id).length).toBeGreaterThan(0);
 }
 
 const hidden = { includeHiddenElements: true } as const;
@@ -97,7 +85,6 @@ afterEach(() => {
   cleanup();
   jest.restoreAllMocks();
   (globalThis as { __QANDEEL_TEST_REDUCED_MOTION__?: boolean }).__QANDEEL_TEST_REDUCED_MOTION__ = false;
-  answer = null;
   for (const h of harnesses.splice(0)) h.dispose();
 });
 
@@ -108,9 +95,8 @@ interface Mounted {
   readonly language: 'en' | 'ar';
 }
 
-async function mount(language: 'en' | 'ar' = 'en', withhold: readonly HistoricalSemanticDepth[] = [], resolved: Answer | null = null): Promise<Mounted> {
-  answer = resolved;
-  const h = await harness({ liveHead: LIVE_HEAD, projection: projection(withhold) });
+async function mount(language: 'en' | 'ar' = 'en', withhold: readonly HistoricalSemanticDepth[] = [], answering: Answering = { inspected: 'HOLD' }): Promise<Mounted> {
+  const h = await harness({ liveHead: LIVE_HEAD, projection: projection(withhold, answering) });
   harnesses.push(h);
   const register = jest.fn();
   const view = await render(
@@ -162,7 +148,8 @@ function model(h: IntegrationHarness) {
   const runtime = h.ready();
   const state = runtime.store.getState();
   const request = mapProjectionRequest(state)!;
-  return orientationModel(runtime.store, chromeProjection(runtime.bundle.projection.lookup(request.sessionId, request.tc, request.depth), request));
+  // The composition's own rule (F-1): the inspected V once held for the inspection held now, otherwise the plain V.
+  return orientationModel(runtime.store, chromeProjection(heldContextEntry(runtime.bundle.projection, request, inspectionRequestOf(state.inspection)), request));
 }
 const reads = (h: IntegrationHarness) => h.http.calls.length;
 /** The canvas's accessible container: a host node INSIDE `CosmosCanvas`, so its identity is the canvas's mount. */
@@ -219,12 +206,14 @@ describe('CP3 (1) — inspection opens the PEEK; nothing else does', () => {
 });
 
 describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
-  it.each(['en', 'ar'] as const)('%s, as production holds it today (F-1): a Thread — the stage\'s family word, T-08\'s own sentence, Go to this place', async (language) => {
+  it.each(['en', 'ar'] as const)('%s, while the inspected read has not answered (F-1): a Thread — the stage\'s family word, T-08\'s own sentence, Go to this place', async (language) => {
     const { h, view } = await mount(language);
     await inspect(h, 'THREAD', 'thread-a');
     const copy = analysisCopy(language);
     const render_ = model(h).inspection.render;
-    // F-1: no resolution is held, so T-08 says so — the same sentence the rail said before CP3 (the golden's record).
+    // F-1: the inspected read was sent and has not answered, so no resolution is held and T-08 says so — its own
+    // technical sentence (a gap in what the client holds, never a claim about the target).
+    expect(inspectedReads(h, 'THREAD', 'thread-a')).toHaveLength(1);
     expect(render_.kind).toBe('INSPECTION_NOT_RESOLVED');
     expect(words(view.getByTestId(PERSONAL_PEEK_FAMILY_TEST_ID))).toBe(copy.family.THREAD);
     expect(words(view.getByTestId(PERSONAL_PEEK_STATEMENT_TEST_ID))).toBe(inspectionSentence(language, render_));
@@ -238,7 +227,7 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
   });
 
   it.each(['en', 'ar'] as const)('%s, with a held resolution: a Thread — T-08\'s RENDERABLE statement, no lineage, Go to this place', async (language) => {
-    const { h, view } = await mount(language, [], { family: 'THREAD', id: 'thread-a' });
+    const { h, view } = await mount(language, [], { inspected: 'ANSWER' });
     await inspectResolved(h, 'THREAD', 'thread-a');
     const copy = analysisCopy(language);
     const render_ = model(h).inspection.render;
@@ -248,7 +237,7 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
   });
 
   it.each(['en', 'ar'] as const)('%s, with a held resolution: a Reading in two contexts — its lineage, and T-04\'s context choice in the PEEK (its ONE home), never in the rail', async (language) => {
-    const { h, view } = await mount(language, [], { family: 'READING', id: 'reading-1', binding: 'binding-1' });
+    const { h, view } = await mount(language, [], { inspected: 'ANSWER' });
     for (let n = 0; n < 3; n += 1) await stepIn(h);
     await inspectResolved(h, 'READING', 'reading-1', 'binding-1');
     const m = model(h);
@@ -272,7 +261,7 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
   });
 
   it('choosing the other context is T-04\'s switch: the inspection names it, and the PEEK stays open over the same object', async () => {
-    const { h, view } = await mount('en', [], { family: 'READING', id: 'reading-1', binding: 'binding-1' });
+    const { h, view } = await mount('en', [], { inspected: 'ANSWER' });
     for (let n = 0; n < 3; n += 1) await stepIn(h);
     await inspectResolved(h, 'READING', 'reading-1', 'binding-1');
     const other = model(h).context.appearances.find((option) => !option.current)!;
@@ -318,8 +307,8 @@ describe('CP3 (2) — the PEEK holds only the existing words and acts', () => {
   });
 
   it('an identity this moment does not know is never named, whatever the stage holds', async () => {
-    const { h, view } = await mount('en', [], { family: 'THREAD', id: 'thread-unknown' });
-    await inspect(h, 'THREAD', 'thread-a');
+    const { h, view } = await mount('en', [], { inspected: 'ANSWER', unknown: ['thread-a'] });
+    await inspectResolved(h, 'THREAD', 'thread-a');
     expect(model(h).inspection.render.kind).toBe('IDENTITY_UNKNOWN_AT_TC');
     expect(view.queryByTestId(PERSONAL_PEEK_FAMILY_TEST_ID)).toBeNull();
     expect(words(view.getByTestId(PERSONAL_PEEK_STATEMENT_TEST_ID))).toBe(inspectionSentence('en', model(h).inspection.render));
@@ -375,12 +364,21 @@ describe('CP3 (3, 4) — the PEEK covers the rail; dismissal is presentation onl
     expect(view.getByTestId(COSMOS_SHEET_STAGE_TEST_ID).props.pointerEvents).toBe('auto');
   });
 
-  it('opening reads nothing either: the PEEK speaks from the projection already held', async () => {
-    const { h, view } = await mount();
+  // COSMOS-FINAL-01 F-1 (re-anchored, the PO's F-1 requirement): an inspection now asks the server about itself, ONCE
+  // (the inspected V of the current viewpoint). The PEEK's presentation still reads nothing: closing it and reopening
+  // it over the same inspection issues no read at all.
+  it('an inspection asks the server about itself once; the PEEK\'s presentation reads nothing', async () => {
+    const { h, view } = await mount('en', [], { inspected: 'ANSWER' });
     const calls = reads(h);
-    await inspect(h, 'THREAD', 'thread-a');
+    await inspectResolved(h, 'THREAD', 'thread-a');
     expect(phaseOf(view)).toBe('PEEK');
-    expect(reads(h)).toBe(calls);
+    expect(reads(h)).toBe(calls + 1);
+    expect(inspectedReads(h, 'THREAD', 'thread-a')).toHaveLength(1);
+    await sheetAction(view, 'close');
+    await tapMark(view, 'THREAD:thread-a');
+    await act(async () => { await settle(); });
+    expect(phaseOf(view)).toBe('PEEK');
+    expect(reads(h)).toBe(calls + 1);
   });
 });
 

@@ -42,15 +42,52 @@
  * therefore built immediately before each request from the credential read at that instant — the same
  * rule T-12P's live driver follows, for the same reason — and a request whose credential belongs to a
  * replaced identity is never issued at all.
+ *
+ * ## The inspection (COSMOS-FINAL-01 F-1)
+ *
+ * `V = Disclose(K(TC), semanticDepth, inspectionContext)`. A request that carries the inspection the reader
+ * holds is sent with it, and its answer is held under its own key in the same one cache: (Session, TC, depth,
+ * the exact inspection). The server's resolution does not repeat the question, so it is bound to the question
+ * by the key and the epoch alone: an answer is only ever held under the exact inspection it was asked for, and
+ * a later inspection is a different key that never sees it. A plain request must come back with no resolution
+ * and an inspected one with one; a payload that disagrees answers a different question and is not held.
  */
 
 import {
   HistoricalTransportError,
+  inspectionKey,
   type HistoricalDisclosure,
   type HistoricalDisclosureCache,
+  type HistoricalInspectionRequest,
   type HistoricalProjectionApiClient,
 } from '../../projection';
-import type { MapProjectionRequest } from '../../map';
+import { decodeInspectionRef, type MapProjectionRequest } from '../../map';
+import type { InspectionRef } from '../../state';
+
+/**
+ * COSMOS-FINAL-01 F-1 — a Map projection request, optionally asked about the inspection the reader holds
+ * (`V = Disclose(K(TC), depth, inspection)`). Absent: the plain V, exactly as before. The Map's own request type is
+ * untouched; the inspection is composition's to add, from the canonical `IF_ref` alone (`inspectionRequestOf`).
+ */
+export interface ProjectionRequest extends MapProjectionRequest {
+  readonly inspection?: HistoricalInspectionRequest;
+}
+
+/**
+ * The inspection request a T-04 reference asks the server about: exactly the decoded identity, its version intent
+ * (absent: "the then-current one at TC") and its contextual appearance (absent: none requested). Nothing is added,
+ * guessed or widened; a reference that does not decode asks about nothing. It grants nothing: the server answers.
+ */
+export function inspectionRequestOf(ref: InspectionRef | null): HistoricalInspectionRequest | null {
+  const decoded = decodeInspectionRef(ref);
+  if (decoded === null) return null;
+  return Object.freeze({
+    family: decoded.family,
+    id: decoded.id,
+    ...(decoded.version === null ? {} : { version: decoded.version }),
+    ...(decoded.appearance === null ? {} : { appearance: Object.freeze({ kind: decoded.appearance.kind, bindingId: decoded.appearance.bindingId }) }),
+  });
+}
 
 /** The credential a request is authorized with, read fresh at every request boundary. */
 export interface ProjectionCredential {
@@ -89,9 +126,9 @@ export interface ProjectionCoordinator {
    * Idempotent per key: a key already held, or already being fetched, issues nothing. That is what
    * keeps a render loop from becoming a fetch loop.
    */
-  ensure(request: MapProjectionRequest): Promise<ProjectionFetchOutcome>;
+  ensure(request: ProjectionRequest): Promise<ProjectionFetchOutcome>;
   /** Re-fetch a key whose held value the cache has invalidated. Same gate, same identity proof. */
-  refresh(request: MapProjectionRequest): Promise<ProjectionFetchOutcome>;
+  refresh(request: ProjectionRequest): Promise<ProjectionFetchOutcome>;
   /**
    * Observe the moments the CACHE's contents actually changed.
    *
@@ -108,7 +145,8 @@ export interface ProjectionCoordinator {
   retire(): void;
 }
 
-const keyOf = (request: MapProjectionRequest): string => [request.sessionId, String(request.tc), request.depth].join(' ');
+const keyOf = (request: ProjectionRequest): string =>
+  [request.sessionId, String(request.tc), request.depth, ...(request.inspection === undefined ? [] : [inspectionKey(request.inspection)])].join(' ');
 
 /**
  * Whether a delivered disclosure IS the answer to the question that was asked.
@@ -116,8 +154,9 @@ const keyOf = (request: MapProjectionRequest): string => [request.sessionId, Str
  * A response is data, and a payload that names a different Session, position or rung is not this
  * viewpoint's truth however well-formed it is.
  */
-function answers(disclosure: HistoricalDisclosure, request: MapProjectionRequest): boolean {
-  return disclosure.sessionId === request.sessionId && disclosure.tc === request.tc && disclosure.depth === request.depth;
+function answers(disclosure: HistoricalDisclosure, request: ProjectionRequest): boolean {
+  return disclosure.sessionId === request.sessionId && disclosure.tc === request.tc && disclosure.depth === request.depth
+    && (request.inspection === undefined) === (disclosure.inspection === null);
 }
 
 export function createProjectionCoordinator(options: ProjectionCoordinatorOptions): ProjectionCoordinator {
@@ -135,7 +174,7 @@ export function createProjectionCoordinator(options: ProjectionCoordinatorOption
     for (const listener of Array.from(listeners)) listener();
   };
 
-  async function issue(request: MapProjectionRequest): Promise<ProjectionFetchOutcome> {
+  async function issue(request: ProjectionRequest): Promise<ProjectionFetchOutcome> {
     if (retired || !isCurrent()) return 'RETIRED';
     // A request for another Session cannot be built from this bundle at all: the Session is the
     // bundle's, not the caller's, so a foreign viewpoint is refused before a URL exists.
@@ -155,7 +194,8 @@ export function createProjectionCoordinator(options: ProjectionCoordinatorOption
 
     let disclosure: HistoricalDisclosure;
     try {
-      disclosure = await client.fetchDisclosure(request.sessionId, { tc: request.tc, depth: request.depth });
+      disclosure = await client.fetchDisclosure(request.sessionId,
+        request.inspection === undefined ? { tc: request.tc, depth: request.depth } : { tc: request.tc, depth: request.depth, inspection: request.inspection });
     } catch (cause) {
       // The gate applies to a refusal exactly as it does to a success: a typed refusal that lost the
       // race describes a viewpoint whose answer has already been superseded, and writing it would
@@ -164,7 +204,7 @@ export function createProjectionCoordinator(options: ProjectionCoordinatorOption
       if (latest.get(key) !== epoch) return 'STALE';
       latest.delete(key);
       if (cause instanceof HistoricalTransportError && cause.failure.kind === 'UNAVAILABLE') {
-        cache.holdUnavailable(request.sessionId, request.tc, request.depth, cause.failure.code);
+        cache.holdUnavailable(request.sessionId, request.tc, request.depth, cause.failure.code, request.inspection);
         changed();
         return 'UNAVAILABLE';
       }
@@ -180,7 +220,7 @@ export function createProjectionCoordinator(options: ProjectionCoordinatorOption
       return 'IDENTITY_MISMATCH';
     }
     latest.delete(key);
-    cache.hold(disclosure);
+    cache.hold(disclosure, request.inspection);
     changed();
     return 'FETCHED';
   }
@@ -194,7 +234,7 @@ export function createProjectionCoordinator(options: ProjectionCoordinatorOption
       // The cache is the one authority on what is already known. NOT_FETCHED is the only state that
       // warrants a request: a typed refusal is knowledge and is not re-asked on every render, and the
       // cache clears the two refusals that depend on the Live Head when a newer revision arrives.
-      if (cache.lookup(request.sessionId, request.tc, request.depth).status !== 'NOT_FETCHED') {
+      if (cache.lookup(request.sessionId, request.tc, request.depth, request.inspection).status !== 'NOT_FETCHED') {
         return Promise.resolve<ProjectionFetchOutcome>('ALREADY_HELD');
       }
       return issue(request);
@@ -222,4 +262,22 @@ export function createProjectionCoordinator(options: ProjectionCoordinatorOption
       listeners.clear();
     },
   };
+}
+
+/**
+ * COSMOS-FINAL-01 F-1 — the ONE rule for what a viewpoint's inspection-reading surfaces (T-04's context, T-08's chrome)
+ * read from the one cache: the inspected V when it is held for the inspection asked NOW (its key is that inspection,
+ * so an answer about an earlier one is never read), otherwise the plain V. Both are the same disclosure; the inspected
+ * one adds the server's answer about the inspection. Nothing is fetched here and nothing is merged.
+ */
+export function heldContextEntry(
+  cache: HistoricalDisclosureCache,
+  request: MapProjectionRequest,
+  inspection: HistoricalInspectionRequest | null | undefined,
+): ReturnType<HistoricalDisclosureCache['lookup']> {
+  if (inspection !== null && inspection !== undefined) {
+    const inspected = cache.lookup(request.sessionId, request.tc, request.depth, inspection);
+    if (inspected.status === 'FETCHED') return inspected;
+  }
+  return cache.lookup(request.sessionId, request.tc, request.depth);
 }
