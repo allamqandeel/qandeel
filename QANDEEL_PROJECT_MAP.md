@@ -1,6 +1,6 @@
 # QANDEEL — Project Map
 
-> **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION — SLICES B AND C ACCEPTED, PERSONAL TARGET CENTRING ACCEPTED, SLICE D CP1 – CP3 ACCEPTED FOR ROADMAP CONTINUATION, CP4 (THREE-WORLD CLOSURE) DELIVERED: SLICE D CLOSED / READY FOR PO REVIEW — SLICE E ACCEPTANCE REGISTER: F-1, E-1, E-2 RECORDED, NOT IMPLEMENTED — SLICE E REMEDIATION AUTHORISED (2026-11-18): D-1 ROOT CAUSE PROVEN, FIRST CORRECTION PACKAGE ON DRAFT PR #399 (D-1 NOT CLOSED), STOPPED FOR THE PO'S REVIEW — BG-10 MANDATORY iOS SIMULATOR VALIDATION (2026-11-18; current task; status only, no new task authority):** the accepted COSMOS stage draws the Personal, Shared and Public worlds in the product over the real runtime and controllers.
+> **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION — SLICES B AND C ACCEPTED, PERSONAL TARGET CENTRING ACCEPTED, SLICE D CP1 – CP3 ACCEPTED FOR ROADMAP CONTINUATION, CP4 (THREE-WORLD CLOSURE) DELIVERED: SLICE D CLOSED / READY FOR PO REVIEW — SLICE E ACCEPTANCE REGISTER: F-1, E-1, E-2 RECORDED, NOT IMPLEMENTED — SLICE E REMEDIATION AUTHORISED (2026-11-18): D-1 TECHNICALLY CLOSED (DRAFT PR #399); D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO, 2026-11-19; DRAFT PR #400) WITH SE-FU-1 OPEN AND BLOCKING FINAL COSMOS ACCEPTANCE; O-1 ENTRY REVIEW PREPARED, NOT AUTHORISED — STOPPED FOR THE PO — BG-10 MANDATORY iOS SIMULATOR VALIDATION (2026-11-18; current task; status only, no new task authority):** the accepted COSMOS stage draws the Personal, Shared and Public worlds in the product over the real runtime and controllers.
 > - **PRs.** All are accepted by the PO; none is merged.
 >   - Slice B: Draft PR #394 (`cosmos/cosmos-production-integration`, from `main` 5a21971d).
 >   - Slice C: dependent Draft PR #395.
@@ -63,6 +63,13 @@
 >       - The one reproduced difference (sheet-protocol graphics memory and the pan above PEEK) is explained by its input: the baseline's beads swallowed 2 of 6 pans. With equal input the two builds match.
 >       - NOT TESTED: HONOR enlarged text, finger latency, the Shared → Public switch.
 >       - The accepted APK and the device settings are restored. Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/android-gate/`.
+>   - **D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO decision "COSMOS Slice E D-3 CP4 Review and Conditional Closure", 2026-11-19; contract §28, v1.16).**
+>     - Accepted by the PO: the CP4 evidence, Replay preservation, the Android Preservation Gate and the final CI on `25f166c8` (iOS World gate 44581937636 19 / 19 PASS; Mobile CI 44581937691 and API CI 44581937590 success).
+>     - **SE-FU-1: OPEN, UNRESOLVED, BLOCKING FINAL COSMOS ACCEPTANCE.** Not PASS, FIXED or WAIVED: 1658 ms against 250 ms. It lives in the contract's Slice E register (BG-01), not in the backlog or the future-improvements log. Follow-up `SE-FU-1-LT` is the ~2.9 s JS long task only; target unchanged; execution not authorised. It must be resolved, or returned to the PO, before final COSMOS acceptance.
+>     - **NOT TESTED, carried (§28.3) to ANDROID-COSMOS-ACCEPTANCE / E-2, the Slice E coverage gate and the final COSMOS acceptance gate:** finger latency; Shared → Public; HONOR enlarged text (needs separate approval for the device setting); the detector case; sheet item 8b.
+>     - The accepted Android baseline (`aadfb88e`) and Replay behaviour are protected for every later shared-component change, with focused regressions only (§28.4).
+>     - **O-1:** scope and entry review prepared (§28.5): one controller line in `search()` closes the chooser and keeps the section. 3 PO questions. **Execution NOT authorised.**
+>     - COSMOS-INT-01 and Slice E are NOT closed. PR #400 and the stack stay Draft; no merge without «ادمج».
 >   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.
