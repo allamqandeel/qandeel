@@ -63,18 +63,22 @@ jobs:
       - name: iPhone 17 — boot
         run: bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
       - name: SE-FU-1 — freshly booted simulator, fresh install, ONE first launch, door tapped at its first visible frame
-        timeout-minutes: 30
+        timeout-minutes: 75
         run: |
           U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/sefu1"; mkdir -p "$E"
           source scripts/cosmos-ios-world/d3-diag-lib.sh
           set_lang "$U" en-US en_US
           xcrun simctl ui "$U" content_size large
-          xcrun simctl uninstall "$U" com.qandeel.mobile 2>/dev/null || true
-          xcrun simctl install "$U" "$APP"
-          reboot_sim "$U"
-          xcrun simctl ui "$U" content_size large
-          run_test "$U" "$E" first-launch-A test1A_tapAtFirstVisible first-launch-A
-          grep -h "BOARD\|tapKind\|tThread\|doorAfter\|mode=" "$E"/first-launch-A/*.txt 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY" || true
+          # SE-FU-1-LT bounded repeat (run 44623001508 did not reproduce the long task): exactly three more cold first
+          # launches, each a fresh install on a freshly rebooted simulator. Nothing is retried.
+          for i in 2 3 4; do
+            xcrun simctl uninstall "$U" com.qandeel.mobile 2>/dev/null || true
+            xcrun simctl install "$U" "$APP"
+            reboot_sim "$U"
+            xcrun simctl ui "$U" content_size large
+            run_test "$U" "$E" first-launch-A$i test1A_tapAtFirstVisible first-launch-A$i
+            grep -h "tapKind\|tThread\|mode=" "$E"/first-launch-A$i/*.txt 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY" || true
+          done
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with: {name: final-sefu1-lt, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
