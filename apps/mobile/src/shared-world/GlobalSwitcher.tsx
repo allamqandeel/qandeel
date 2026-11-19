@@ -12,6 +12,7 @@
  *   - switching ≠ pushing (I-08A4 §4): choosing a destination calls `onSelect` and nothing else — no route, no Back
  *     history, no Session, no canonical write. Choosing the current destination does nothing.
  */
+import { useDiagPhase } from '../cosmos/__diag__/trace';
 import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Control, typeStyle, usePalette } from '../conversation';
@@ -48,6 +49,7 @@ export interface GlobalSwitcherProps {
 }
 
 export function GlobalSwitcher({ area, language, bottomInset, onSelect }: GlobalSwitcherProps) {
+  useDiagPhase('switcher');
   const palette = usePalette();
   const { fontScale } = useWindowDimensions();
   const copy = sharedCopy(language);

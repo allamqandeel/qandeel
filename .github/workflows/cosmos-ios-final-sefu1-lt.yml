@@ -1,0 +1,80 @@
+name: iOS COSMOS-FINAL-01 SE-FU-1-LT (instrumented first launch, long-task attribution)
+# COSMOS-FINAL-01 SE-FU-1-LT (PO directive item 5): the same one instrumented first launch on the COSMOS-FINAL-01 head
+# (f6d9c9cd), with a JS-thread heartbeat (gaps over 100 ms), render / commit / effect marks of the launch tree and the proof
+# requests on the board, to attribute the ~2.9 s JS long task. VALIDATION BRANCH ONLY; never merged.
+# COSMOS-INT-01 Slice E, D-3 CP4 review (PO 2026-11-19): "complete the already committed single bounded instrumented
+# first-launch measurement". VALIDATION BRANCH ONLY (cosmos/validate/d3-cp4-sefu1); never merged. The D-3 head with the
+# CP1 diagnostic counters for the first launch only (trace.ts, the door's touch / press-in / pressed-commit, the
+# conversation's typeface and door layout, the depth crossing, the rail's first layout, the proof root's board); the
+# application diff to the head is recorded. ONE run: a freshly booted iPhone 17 (en, default size), a fresh install, the
+# door tapped once at its first visible frame (test1A). T-ack is read from the app's own clock on the board
+# (t.L1.door.pressedCommit - t.L0.door.touch), never from screenshot timing. Nothing is retried; nothing is asserted.
+on:
+  push:
+    branches: ['cosmos/validate/final-sefu1-lt']
+concurrency:
+  group: cosmos-ios-final-sefu1-lt-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  IOS_RUNTIME_SUFFIX: iOS-26-5
+  HEAD_COMMIT: f6d9c9cd
+jobs:
+  sefu1:
+    name: SE-FU-1 — one instrumented first launch on the D-3 head
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Record the application diff to the D-3 head (instrumentation only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          git diff --stat "$HEAD_COMMIT" HEAD -- apps/ | tee "$RUNNER_TEMP/evidence/app-diff-stat.txt"
+          git diff "$HEAD_COMMIT" HEAD -- apps/ > "$RUNNER_TEMP/evidence/app-diff.patch"
+          test -z "$(git diff --name-only "$HEAD_COMMIT" HEAD -- package.json package-lock.json apps/mobile/package.json)"
+      - name: Select Xcode 26.6 explicitly
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+          ruby -rxcodeproj -e 1 2>/dev/null || gem install --user-install --no-document xcodeproj
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Build the instrumented proof app and its UI tests (one build)
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          set -o pipefail
+          npm ci
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          npm run prebuild:ios --workspace @qandeel/mobile
+          (cd apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosD3DiagUITests.swift
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          app="$(find "$PWD/apps/mobile/ios/build/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' ! -name '*-Runner.app' | head -n 1)"
+          xctestrun="$(find "$PWD/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$app"; test -n "$xctestrun"; echo "APP=$app" >> "$GITHUB_ENV"; echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          { echo "branch head=$(git rev-parse HEAD)"; echo "D-3 head=$HEAD_COMMIT"; echo "app=$(basename "$app")"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: iPhone 17 — boot
+        run: bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+      - name: SE-FU-1 — freshly booted simulator, fresh install, ONE first launch, door tapped at its first visible frame
+        timeout-minutes: 30
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/sefu1"; mkdir -p "$E"
+          source scripts/cosmos-ios-world/d3-diag-lib.sh
+          set_lang "$U" en-US en_US
+          xcrun simctl ui "$U" content_size large
+          xcrun simctl uninstall "$U" com.qandeel.mobile 2>/dev/null || true
+          xcrun simctl install "$U" "$APP"
+          reboot_sim "$U"
+          xcrun simctl ui "$U" content_size large
+          run_test "$U" "$E" first-launch-A test1A_tapAtFirstVisible first-launch-A
+          grep -h "BOARD\|tapKind\|tThread\|doorAfter\|mode=" "$E"/first-launch-A/*.txt 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: {name: final-sefu1-lt, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

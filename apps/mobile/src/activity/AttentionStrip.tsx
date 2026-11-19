@@ -13,6 +13,7 @@
  *
  * P3-A's appear / hold / dismiss durations are reference CRAFT, not Product law (P3 §7, §16).
  */
+import { useDiagPhase } from '../cosmos/__diag__/trace';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, Text, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -66,6 +67,7 @@ export interface AttentionStripProps {
 }
 
 export function AttentionStrip({ item, language, top, insets, onEnter, onDismiss }: AttentionStripProps) {
+  useDiagPhase('strip');
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
   const screenReader = useScreenReader();

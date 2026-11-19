@@ -53,6 +53,7 @@
  * shell because the old technical shell is not rendered here at all, visibly or otherwise.
  */
 
+import { useDiagPhase } from '../../cosmos/__diag__/trace';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -177,6 +178,7 @@ export function ProductRoot() {
  * be given is an `IntegrationRuntime`, which only `createIntegrationRuntime` can produce.
  */
 export function RuntimePhaseSurface({ runtime }: { readonly runtime: IntegrationRuntime }) {
+  useDiagPhase('phase');
   const phase = useSyncExternalStore(runtime.subscribe, runtime.getPhase);
   // W3-01: every reader-facing phase paints in the ONE appearance authority's effective appearance. Only an
   // authenticated identity can have chosen one; signed out and unverifiable are the Dark default.

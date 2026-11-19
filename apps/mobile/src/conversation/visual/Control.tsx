@@ -8,10 +8,17 @@
  *     companion ring between it and the control, so it reads against any ground;
  *   - the accessible name is the control's own; its glyph is decorative.
  */
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { Pressable, View, type AccessibilityState, type StyleProp, type ViewStyle } from 'react-native';
 
 import { withAlpha, type ConversationPalette } from './theme';
+import { diagAt, diagSeq } from '../../cosmos/__diag__/trace';
+
+/** D-3 CP1 DIAGNOSTIC ONLY: the first commit of the door's pressed state (the visible acknowledgment, T-ack). */
+function DoorPressedMark() {
+  useLayoutEffect(() => { diagAt('L1.door.pressedCommit'); diagSeq('door.pressedCommit'); }, []);
+  return null;
+}
 
 export const MIN_TARGET = 44;
 const CONTROL_RADIUS = 12;
@@ -37,6 +44,8 @@ export interface ControlProps {
 
 export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef, accessibilityState, accessibilityRole = 'button' }: ControlProps) {
   const [focused, setFocused] = useState(false);
+  // D-3 CP1 DIAGNOSTIC ONLY: the Analysis door's press path (SE-FU-1).
+  const door = testID === 'qandeel-depth-to-analysis';
   const outer = palette.focusOffset + palette.focusThickness;
   return (
     <Pressable
@@ -45,7 +54,10 @@ export function Control({ palette, accessibilityLabel, onPress, children, style,
       accessibilityLabel={accessibilityLabel}
       accessibilityLanguage={language}
       accessibilityState={accessibilityState}
-      onPress={onPress}
+      onPress={door ? () => { diagAt('L2.door.press'); diagSeq('door.press'); onPress(); } : onPress}
+      onPressIn={door ? () => { diagAt('L1.door.pressIn'); diagSeq('door.pressIn'); } : undefined}
+      onPressOut={door ? () => { diagAt('L2.door.pressOut'); diagSeq('door.pressOut'); } : undefined}
+      onTouchStart={door ? () => { diagAt('L0.door.touch'); diagSeq('door.touch'); } : undefined}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       testID={testID}
@@ -53,6 +65,7 @@ export function Control({ palette, accessibilityLabel, onPress, children, style,
     >
       {({ pressed }) => (
         <>
+          {door && pressed ? <DoorPressedMark /> : null}
           {pressed ? (
             <View
               pointerEvents="none"

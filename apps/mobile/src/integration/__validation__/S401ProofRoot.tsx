@@ -66,7 +66,8 @@
  * S6-07 — the governed enrollment step and the three consents (the stand-in `s607-proof-enrollment.ts`):
  *   qandeel://s401-proof/introductions/enroll-closed | enroll-open | enroll-outdated | enroll-enrolled
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { diag, diagAt, diagMark, diagSeq, diagSubscribe, diagText, diagVersion, startHeartbeat, useDiagPhase } from '../../cosmos/__diag__/trace';
 import { Linking, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -85,7 +86,8 @@ function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
     config: world.config,
     authPort: world.auth,
-    httpFetch: world.fetch,
+    // SE-FU-1-LT DIAGNOSTIC ONLY: each proof request's start and answer (path only; fixture routes, no content).
+    httpFetch: async (input, init) => { const path = input.split('?')[0].replace(/^https?:\/\/[^/]+/, '').replace(/[0-9a-f-]{36}/g, ':id'); diagMark(`f>${init?.method ?? 'GET'} ${path}`); const r = await world.fetch(input, init); diagMark(`f<${path} ${r.status}`); return r; },
     foreground: createManualForegroundSignal('INACTIVE'),
     recoveryStorage: createEphemeralProductRecoveryStorage(),
     // S4-04: the first legitimate Shared entry offers the notification education (proven deterministically in Jest). These
@@ -98,11 +100,21 @@ function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   return built.runtime;
 }
 
+// D-3 CP1 DIAGNOSTIC ONLY: the board, published as one accessibility label (counts, times, enums and frames only).
+diagAt('L0.js.start');
+startHeartbeat();
+function DiagBoard() {
+  useSyncExternalStore(diagSubscribe, diagVersion);
+  return <View testID="qandeel-diag-trace" accessible accessibilityLabel={`DIAG ${diagText()}`} pointerEvents="none" style={{ position: 'absolute', left: 0, bottom: 0, width: 4, height: 4 }} />;
+}
+
 export function S401ProofRoot() {
   const [world] = useState(() => createS401ProofWorld(deviceProductLanguage()));
   const [runtime] = useState<IntegrationRuntime>(() => buildProofRuntime(world));
+  useDiagPhase('root');
   useEffect(() => {
-    void runtime.start();
+    diagMark('runtime.start>');
+    void runtime.start().then(() => diagMark('runtime.start<'));
     const subscription = Linking.addEventListener('url', ({ url }) => {
       const match = LINK.exec(url);
       if (match === null) return;
@@ -168,10 +180,11 @@ export function S401ProofRoot() {
   }, [runtime, world]);
   return (
     <GestureHandlerRootView style={styles.root}>
-      <View style={styles.root} testID={PRODUCT_ROOT_TEST_ID}>
+      <View style={styles.root} testID={PRODUCT_ROOT_TEST_ID} onTouchStart={(e) => { diagAt('L0.root.touch'); diagSeq(`root.touch@${Math.round(e.nativeEvent.pageX)},${Math.round(e.nativeEvent.pageY)}#${String(e.nativeEvent.target)}`); diag('L0.root.lastTarget', String(e.nativeEvent.target)); }}>
         <StatusBar style="auto" />
         <RuntimePhaseSurface runtime={runtime} />
       </View>
+      <DiagBoard />
     </GestureHandlerRootView>
   );
 }
