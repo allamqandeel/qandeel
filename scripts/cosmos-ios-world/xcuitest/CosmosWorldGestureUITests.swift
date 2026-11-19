@@ -775,7 +775,10 @@ final class CosmosWorldGestureUITests: XCTestCase {
         XCTAssertTrue(search.isHittable, "\(tag): the Public search below the fold was not reached by scrolling the band")
         if search.isHittable {
           search.tap()
-          search.typeText("ab")
+          // One key at a time, at a reader's pace: in run 44491423054 a burst typeText("ab") into the just-opened search
+          // kept only "a" (its cause is measured separately on the baseline and the head).
+          settle(1)
+          for key in ["a", "b"] { search.typeText(key); settle(0.6) }
           let typed = (search.value as? String) ?? ""
           let close = element("qandeel-public-search-close")
           let closeSeen = close.waitForExistence(timeout: 5)
