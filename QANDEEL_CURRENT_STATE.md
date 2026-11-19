@@ -68,8 +68,15 @@
 >     - **SE-FU-1: OPEN, UNRESOLVED, BLOCKING FINAL COSMOS ACCEPTANCE.** Not PASS, FIXED or WAIVED: 1658 ms against 250 ms. It lives in the contract's Slice E register (BG-01), not in the backlog or the future-improvements log. Follow-up `SE-FU-1-LT` is the ~2.9 s JS long task only; target unchanged; execution not authorised. It must be resolved, or returned to the PO, before final COSMOS acceptance.
 >     - **NOT TESTED, carried (§28.3) to ANDROID-COSMOS-ACCEPTANCE / E-2, the Slice E coverage gate and the final COSMOS acceptance gate:** finger latency; Shared → Public; HONOR enlarged text (needs separate approval for the device setting); the detector case; sheet item 8b.
 >     - The accepted Android baseline (`aadfb88e`) and Replay behaviour are protected for every later shared-component change, with focused regressions only (§28.4).
->     - **O-1:** scope and entry review prepared (§28.5): one controller line in `search()` closes the chooser and keeps the section. 3 PO questions. **Execution NOT authorised.**
+>     - **O-1:** scope and entry review prepared (§28.5): one controller line in `search()` closes the chooser and keeps the section. 3 PO questions. Execution later authorised by COSMOS-FINAL-01 (below).
 >     - COSMOS-INT-01 and Slice E are NOT closed. PR #400 and the stack stay Draft; no merge without «ادمج».
+>   - **COSMOS-FINAL-01 (PO final execution directive and parity addendum, 2026-11-19; contract §29, v1.17; Draft PR #401 on top of #400) — NOT CLOSED, STOPPED FOR THE PO BEFORE E-2.**
+>     - **Delivered and proven on iOS and Android:** O-1 (`43b20bc4`), O-2 (`77ac1695`) and F-1 (`f6d9c9cd`; the LivingAnalysisMap pin re-anchor 70651062 → 58c1adbf awaits ratification). The iOS World gate 44623392022 on `97dd8532`: 22 / 22 PASS. ar and small-iPhone coverage passes them. Android emulator en / ar PASS, with baseline negative controls.
+>     - **The PO's map-area observation:** the temporary chooser overlay, not a regression (identical measurements on the baseline and the head).
+>     - **SE-FU-1 stays OPEN / BLOCKING.** SE-FU-1-LT's heartbeat shows the `typeface → door.layout` interval (3118 / 1527 ms reproduced) is native, not a JS long task; T-ack 160–182 ms in 3 instrumented launches. Returned to the PO; next step proposed: a native Time Profiler trace.
+>     - **E-1 NOT IMPLEMENTED:** a conflict with the frozen G1.1 R3 canon (speaker = position + ground) and a Shared transport without participant identity. Returned to the PO with options.
+>     - **BG-10:** the gate now also runs for `apps/api/**` and `database/**`. The ar / size matrix is returned to the PO (it would fail on SE-FU-1).
+>     - **Release candidate for E-2:** `cosmosint-final-f1-f6d9c9cd.apk` (sha256 `e69d424c…`). E-2 and the HONOR are not started; no merge without «ادمج».
 >   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.

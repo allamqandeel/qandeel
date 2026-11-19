@@ -11,13 +11,17 @@ name: iOS World gate (COSMOS stages, touch)
 # double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
 # is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
 #
-# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the dependency
-# lock, or this gate; for a push to main; and on manual dispatch.
+# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the API, the
+# database, the dependency lock, or this gate; for a push to main; and on manual dispatch.
 on:
   pull_request:
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
+      # COSMOS-FINAL-01 (BG-10 backend scope, contract §21.2): the API, the database and its migrations — what the iOS
+      # client reads — run the same simulator interaction (the shared packages above carry the wire contracts).
+      - 'apps/api/**'
+      - 'database/**'
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/cosmos-ios-world/**'
