@@ -43,6 +43,15 @@
 >     - D-b: still NOT a PASS; the harness cannot resolve 250 ms.
 >     - P-1, P-2 (no regression), P-5 and P-6 PASS; P-3 and P-4 NOT TESTED as timings.
 >     - The exact-head iOS World gate is NOT clean. It had 19 / 19 on 5bb3f77d; on 0a6fd601, with the same application, attempt 1 had U-TAP FAIL and S-TAP NOT TESTED, and attempt 2 had four Personal Maestro cases NOT TESTED. PO decisions are in §25.7.
+>   - **D-3 bounded CP4 validation after the PO review (2026-11-19; contract §26): NOT CLOSED, STOPPED FOR THE PO.**
+>     - Harness-only corrections `2b0b6a53` for demonstrated faults: the analyser width fallback; hue-mismatch exclusion (X-* 12 / 12 on the four archived gates); the bounded door watch (the 22 s warm ready was a harness artifact); the share from the band's visible bottom (no production testID); the layout test measures every World.
+>     - The ONE exact-head iOS World gate 44471935834 on `2b0b6a53`: **19 / 19 PASS**; Mobile CI 44471935825 success.
+>     - Focused validation 44468744354 (`cosmos/validate/d3-cp4-focus`, never merged):
+>       - U-TAP: a touch held 620 ms reproduces the no-effect signature, identically on the baseline; short touches step 7 / 7 on both. The attempt-1 cause is unproven; no app defect is shown.
+>       - P-2, P-3 (My / Shared / Fixture) and P-4 cadence: no regression against the baseline on one runner (simulator, not device FPS). NOT TESTED: the P-3 Public leg and absolute finger latency. The first-cold T-ack is NOT proven.
+>       - SE AX5 Public share 44 % (en / ar). SE en AX5 fails only by a harness content-frame artifact; a one-line correction is proposed, not applied.
+>     - SE-FU-1 is OPEN, scheduled for one bounded instrumented measurement before final COSMOS acceptance.
+>     - Blocker: 3 / 240 root contract tests FAIL (S7-03, S7-04, S8B-07 CP1-A). They pin `LivingAnalysisSurface.tsx`, which `5bb3f77d` changed, and run only in API CI, which this PR does not trigger. A controlled re-anchor awaits the PO; it is not applied.
 >   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.

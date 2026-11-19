@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.13 (§25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.14 (§26 D-3 bounded CP4 validation after the PO review — the ONE exact-head iOS World gate 19 / 19 PASS on 2b0b6a53, no measured regression against the baseline, SE-FU-1 open and scheduled, D-3 NOT CLOSED, stopped for the PO; §25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.14, 2026-11-19):** `AS v1.13 — PLUS THE PO CP4 REVIEW (§26): HARNESS-ONLY CORRECTIONS 2b0b6a53 (DEMONSTRATED FAULTS) — THE ONE EXACT-HEAD iOS WORLD GATE 44471935834 ON 2b0b6a53: 19 / 19 PASS; MOBILE CI SUCCESS — U-TAP NO-EFFECT SIGNATURE REPRODUCED BY A TOUCH HELD > 400 ms, IDENTICAL ON THE BASELINE, CAUSE OF THE EPISODE UNPROVEN, NO APP DEFECT SHOWN — THE 22 s WARM READY WAS A HARNESS ARTIFACT — P-2 / P-3 (MY / SHARED / FIXTURE) / P-4 CADENCE: NO REGRESSION AGAINST THE BASELINE ON ONE RUNNER (SIMULATOR, NOT DEVICE FPS); P-3 PUBLIC LEG AND ABSOLUTE FINGER LATENCY NOT TESTED; FIRST-COLD T-ACK NOT PROVEN — SE AX5 PUBLIC SHARE 44 % (en / ar); SE en AX5 FAILS ONLY BY A HARNESS CONTENT-FRAME ARTIFACT — 3 / 240 ROOT CONTRACT TESTS FAIL ON THE REPLAY PINS OF THE CHANGED LivingAnalysisSurface.tsx (API CI, NOT TRIGGERED ON THIS PR; RE-ANCHOR AWAITS THE PO) — SE-FU-1 OPEN, SCHEDULED BEFORE FINAL COSMOS ACCEPTANCE — D-3 NOT CLOSED, STOPPED FOR THE PO — NO MERGE WITHOUT «ادمج»`. The v1.13 status below is kept for provenance.
+**Change log v1.13 → v1.14 (2026-11-19).** New §26 records the PO's CP4 review direction, the harness corrections, the one exact-head gate, the focused validation (U-TAP discriminator, P-2 / P-3 / P-4 baseline against head, the SE AX5 cells) and the closure table. §25.7 item 3 (a production testID) is withdrawn by §26.1. Nothing else earlier is rewritten.
 **Status (v1.13, 2026-11-19):** `AS v1.12 — PLUS D-3 CP2 / CP3 DELIVERED AS ONE PACKAGE (5bb3f77d; HARNESS FIX 0a6fd601) AND CP4 EXECUTED (§25) — THE §24.3 CP2 / CP3 CRITERIA MET; SE-FU-2 AND E-1(a) PROVEN ON iOS AND THE ANDROID EMULATOR WITH BASELINE NEGATIVE CONTROLS; EVERY CP1 LAYOUT DEFECT GONE AT DEFAULT / AX3 / AX5 (BASELINE 10 / 10 CELLS FAIL, HEAD 0 CONTROL VIOLATIONS) — D-a: 7 / 7 FRESH-INSTALL FIRST-VISIBLE DOOR TAPS OPENED THE ANALYSIS (NO SETTLE, NO RETRY); D-b: FIRST-COLD T-ACK STILL NOT A PASS (NOT MEASURABLE AT 250 ms BY THE CP4 HARNESS; NO REGRESSION AGAINST THE BASELINE ON THE SAME HARNESS) — THE EXACT-HEAD iOS WORLD GATE IS NOT CLEAN: 19 / 19 PASS ON 5bb3f77d, BUT ON 0a6fd601 (SAME APPLICATION) ATTEMPT 1 U-TAP FAIL + S-TAP NOT TESTED, ATTEMPT 2 FOUR PERSONAL MAESTRO CASES NOT TESTED — D-3 NOT CLOSED, STOPPED FOR THE PO (BG-10) — NO MERGE WITHOUT «ادمج»`. The v1.12 status below is kept for provenance.
 **Change log v1.12 → v1.13 (2026-11-19).** New §25 records D-3 CP2 / CP3 (the code package, its review against §24.2 and the §24.3 criteria) and CP4 (the exact-head gate, the before / after validation on the same harness, the Android emulator before / after, P-1 – P-6, D-a, D-b and the decisions for the PO). Nothing earlier is rewritten.
 **Status (v1.12, 2026-11-18):** `AS v1.11 — PLUS THE PO'S D-3 CP1 REVIEW (§24.1): CP1 ACCEPTED AS DIAGNOSTIC, SE-FU-1 NOT RESOLVED (FRESH-INSTALL FIRST-VISIBLE-TAP REGRESSION IN CP4, NO SETTLE, NO RETRY), FIRST-COLD 1051 ms T-ACK NOT A PASS (WARM AND FIRST-COLD RECORDED SEPARATELY, REASSESSED AT D-3 CLOSURE), NO UNIVERSAL 40 % MAP SHARE (DEFAULT / AX3 / AX5 TIERS), COMPACT OR SCROLLABLE UPPER CHROME WITHOUT GESTURE CONTENTION, ANDROID EMULATOR CHECKS — CP2 / CP3 AUTHORISED AS ONE PACKAGE, CP4 ONE EXACT-HEAD VALIDATION — THE PO'S PRESERVATION DIRECTIVE BINDS EVERY D-3 CHECKPOINT (§24.2 – §24.3) — NO MERGE WITHOUT «ادمج»`. The v1.11 status below is kept for provenance.
@@ -2879,6 +2881,153 @@ The default-size Personal frame is the same: bead bounds match within ±1 px.
 - No HONOR testing (§23.1); no TalkBack or VoiceOver proof (PO policy, 2026-11-08).
 - No retry of any case to obtain a PASS. The single rerun of the failed gate job is diagnostic and is reported with both attempts.
 - **Still open:** O-1, O-2, the coverage items, F-1 and E-2 of §20; SE-FU-1 (bounded); D-b. The validation branches and `cosmos/slice-e-d3-diag` are never merged and are deleted only on the PO's word.
+
+---
+
+## 26. Slice E D-3 — the bounded CP4 validation after the PO's review (2026-11-19) — NOT CLOSED, STOPPED FOR THE PO
+
+**PO direction (2026-11-19, "D-3 CP2/CP3/CP4 Review"):**
+- CP2 / CP3 are accepted for continued validation. D-3 closure is not approved, and there is no merge.
+- Correct only demonstrated harness faults, then run ONE complete exact-head iOS World gate. If it fails, preserve the evidence and stop.
+- Measure P-3 and P-4 comparably; never relabel them PASS.
+- Investigate the 22 s warm readiness.
+- Confirm the SE AX5 Public case.
+- Keep SE-FU-1 open and scheduled.
+- Android stays at E-2.
+- Update PR #400's title and description.
+
+Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/cp23/ci/` (gate-44471935834, focus-44468744354, tools/).
+
+### 26.1 Harness corrections (`2b0b6a53`, test and analysis code only; no application change)
+| Fault (demonstrated) | Correction |
+|---|---|
+| Gate 44430083077: the Maestro driver never became ready, so the analyser received width 0 and X-ANCHOR / X-PAN-AFTER-PINCH / X-PAN-ZOOMED were NOT TESTED although their screenshots existed. | Without a width argument, `xcui-analyse.mjs` takes the width from the layout test's note (`screen WxH`). |
+| Gate 44430083077, X-PAN-AFTER-PINCH: the pair `16@115,515->339,353` (hue 16; an earlier note's "score 16" was wrong) shifted +224,−162 against −106,0 for the three other pairs. A red core leaving the frame was matched to another entering it. | In the hue-only shift cases with ≥ 3 pairs, a pair more than 3 tolerances from the median of the OTHER pairs is a hue mismatch. It is reported and excluded; the minimum pairs and the tolerances are unchanged. Re-analysing the four archived gates (44396934402, 44411277402 attempts 1 and 2, 44430083077) gives X-* 12 / 12 PASS. The only verdict that changes is the excluded mismatch. |
+| Warm "ready" of 21.6–22.1 s (baseline and head alike) was the 20 s screenshot watch running whenever the stage test did not fire; it was 2.3–3.8 s when the stage was seen. | `doorTap` stops watching 3 s after the response and records when the readiness query started. |
+| The clear-map share read the band's CONTENT frame (its testID sits inside the capped ScrollView): the false "near-zero" shares of validation 44411274594. | The share is measured from the band's visible bottom: the smallest ScrollView holding it, never below the band's own bottom. No production testID and no golden re-anchor (§25.7 item 3 is withdrawn). |
+| A failed Shared check stopped the layout test, so the SE AX5 Public case was never measured and the frames note was lost (44411274594). | The layout test measures and records every World (`continueAfterFailure = true`); any failed check still fails the test. |
+
+The head build of focus run 44468744354 compiled this Swift before it was pushed.
+
+### 26.2 The ONE exact-head iOS World gate — run 44471935834 on `2b0b6a53`: **19 / 19 PASS**
+| Group | Result |
+|---|---|
+| Maestro: P-TAP-RAIL, P-TAP, P-PAN, P-PAN-RAIL, S-FAR-TAP, S-TAP, U-TAP | **PASS** (U-TAP: tap 1 at 82,352 Far → Mid, tap 2 Mid → Near, then the Public panel opened) |
+| Native XCUITest: 9 cases (double tap, pinch, depth word P / S / U, Shared pinch, D-a fresh install, SE-FU-2, layout) | **PASS** |
+| X-ANCHOR / X-PAN-AFTER-PINCH / X-PAN-ZOOMED | **PASS**: 0 pt off; median −106,0, worst 14 pt; −106,0. No pair excluded. |
+
+- Mobile CI 44471935825 succeeded. API CI is not triggered by its path filter: **NOT APPLICABLE**, not passed.
+- **D-a (fresh install, first visible frame):** opened.
+  - Cold: response 1370 ms, stage 2901 ms, ready 4166 ms (query started at 3005 ms).
+  - Warm: response 673 ms, stage 1020 ms, ready 2152 ms (query started at 1088 ms).
+  - Screenshot interval 306 ms, so the figures are coarse. The 22 s artifact is gone.
+- **Default-size share:** Shared 71 %, Public 60 %. Unchanged, and now measured from the visible bottom.
+- With §25.3, this closes the §25.7 item 1 question for the gate: on the final code head the gate is clean. The earlier non-PASS episodes stay recorded.
+
+### 26.3 Focused validation — run 44468744354 on `cosmos/validate/d3-cp4-focus` (305ee586 = 2b0b6a53 + probes; NEVER merged)
+**Setup:**
+- One runner built the head app and the accepted baseline app (fc2e13c6), both with the same probe tests.
+- Its "iPhone 17 boot" step failed after the boot. The cause is a workflow defect: it read `$IOS_SIM_UDID` in the step that exports it. The device stayed at its default language and size.
+- The later steps ran on that device. English is confirmed by the recorded depth words.
+
+**U-TAP discriminator (`testD3ProbeUTapHold`).** The gate's point 82,352 in the Public field at Far; each trial is a fresh entry:
+
+| Touch held | Head | Baseline fc2e13c6 |
+|---|---|---|
+| 80 ms (×5) | 5 / 5 Far → Mid | 5 / 5 Far → Mid |
+| 370 ms (×2) | 2 / 2 Far → Mid | 2 / 2 Far → Mid |
+| 620 ms (×3) | 3 / 3 **nothing** (no step, no Back) | 3 / 3 **nothing** |
+
+- **Reading.** Gate 44411277402 attempt 1 showed the same no-effect signature. Here it is reproduced exactly, on both apps alike, by a touch held beyond the stage tap's 400 ms limit (`Gesture.Tap().maxDuration(400)`, unchanged since D-1).
+- At the same point, the head answers every short touch exactly as the baseline does.
+- **No D-3 application defect is shown.** Attempt 1's actual touch duration cannot be recovered, so its cause stays **unproven**. A held touch on that runner (about 2× slower than usual) is a sufficient, reproduced explanation. It is recorded as such, not as infrastructure.
+
+**P-2 / P-3 / P-4 (`testD3ProbeABPerf`):**
+- Four fresh installs on one runner: baseline, head, baseline, head.
+- The screen was recorded (`simctl io recordVideo`), and the frame-by-frame bands and stage shift were computed (`d3-focus-frames.py`).
+- The status-bar clock markers left no trace in the video. So the video clock of each run is calibrated from its four pans (k = median pan onset − 50 ms: 331 / 327 / 369 / 381 ms).
+
+| Measure | Baseline (ab1 / ab3) | Head (ab2 / ab4) |
+|---|---|---|
+| P-2 door: touch → rail element (XCUITest) | 1415 / 1795 ms | 1401 / 1367 ms |
+| P-3 → My World (2 rounds) | 1133, 1122 / 1098, 1132 ms | 1097, 1119 / 1057, 1112 ms |
+| P-3 → Shared list | 1177, 1608 / 1131, 1896 ms | 1122, 1866 / 1222, 1531 ms |
+| P-3 → the Fixture World's band | 1618, 1526 / 1300, 1130 ms | 1165, 1112 / 1489, 1158 ms |
+| P-3 first visible response after the touch (video, calibrated; all switches) | 24–146 ms | 6–213 ms |
+| P-3 → Public from the Shared field | **not reached on either app** (45 s) | **not reached on either app** (45 s) |
+| P-4 pans (4 per run): frame interval median / intervals > 50 ms | 6.7–16.6 ms / 5 and 1 | 15.0–16.7 ms / 1 and 1 |
+| P-4 pans: stage onset on the uncalibrated recording clock | 346–650 / 405–445 ms | 357–391 / 401–433 ms |
+| P-4 pinch in + out: interval median / > 50 ms / max | 13.3–15.0 ms / 5 and 7 / 443 and 175 ms | 11.7–16.6 ms / 5 and 6 / 178 and 125 ms |
+
+- Simulator video cadence on a CI runner, **not device FPS**. The XCUITest times include the query's own overhead (about 1 s floor). They are compared between the two apps, never read as the app's own time.
+- **Reading.** On the same runner, the head is indistinguishable from the baseline in door opening, World switching, pan / pinch frame cadence and pan onset. No regression is measured.
+- The Public leg is NOT TESTED: the probe's own flow did not reach the Public search from the Shared field on EITHER app. That was not investigated further (bounded).
+- Absolute finger latency is not measured, because the pans calibrate the clock.
+
+**Enlarged text (head harness, the corrected share).** The visible band bottom equals the 40 % cap in every cell (349 / 874; 266 / 667):
+
+| Cell | Shared share | Public share | Test |
+|---|---|---|---|
+| iPhone 17 en AX5 | 44 % | 44 % | **PASS** |
+| SE en AX3 | 47 % | 47 % | **PASS** (the pixel method gave 47 %, which validates the correction) |
+| SE en AX5 | 44 % | **44 %** | **FAIL, harness artifact**: "qandeel-public-band leaves the screen (0,0,375,735)". The `inside()` check still reads the band's content frame (735 pt of content in a 266 pt visible band). The screenshot shows the band ending at about 266 pt and nothing off screen: map, Overview and switcher words visible. |
+| SE ar AX5 | 44 % | **44 %** | **PASS** (the band content is 657 pt, inside the screen) |
+
+- The **SE AX5 Public case is now measured: 44 % in en and ar.** The controls are on screen and the switcher words are present.
+- The Public search lies below the fold inside the band at AX5 (`hittable=false`; reached by scrolling the band). Reaching it by an actual scroll was **NOT TESTED** in CP4.
+- The remaining fault is in the harness only. The proposed one-line correction is for `inside()` to use the same visible bottom for the two band ids. It is **not applied**, so the gate-verified code stays unchanged. It is proposed to the PO.
+
+### 26.4 Closure table (PASS / FAIL / NOT TESTED)
+| Item | Result |
+|---|---|
+| Exact-head iOS World gate (19 cases) on the final code head 2b0b6a53 | **PASS 19 / 19** |
+| Mobile CI on 2b0b6a53 | **PASS** |
+| API CI | NOT APPLICABLE (not triggered) |
+| U-TAP attempt-1 episode | explained by a reproduced held-touch signature, identical on the baseline; cause **unproven**, no app defect shown |
+| P-1 visual preservation | **PASS** (§25.6, unchanged) |
+| P-2 opening, no regression | **PASS** (same-runner head vs baseline) |
+| P-2 first-cold T-ack ≤ 250 ms (D-b) | **NOT PROVEN** (coarse harness; not a PASS) |
+| P-3 World switching: My / Shared / Fixture | **PASS, no regression** (same-runner head vs baseline; simulator) |
+| P-3 switching to Public from the Shared field | **NOT TESTED** (not reached on either app) |
+| P-4 pan / pinch fluidity (frame cadence) | **PASS, no regression** (simulator video cadence, not device FPS) |
+| P-4 absolute finger latency | **NOT TESTED** (used as the clock calibration) |
+| P-5 camera / anchoring | **PASS** (X-ANCHOR 0 pt on 2b0b6a53) |
+| P-6 Android automated coverage | **PASS** (§25.5; Mobile CI) |
+| Enlarged text: default / i17 AX5 / SE en AX3 / SE ar AX5 | **PASS** |
+| Enlarged text: SE en AX5 | **FAIL by a harness artifact** (content-frame `inside()`); visually on screen; share 44 % |
+| Public search reached by a band scroll at AX5 | **NOT TESTED** |
+| SE-FU-1 | **OPEN**, scheduled: one bounded instrumented first-launch measurement on the D-3 head before final COSMOS acceptance (not beyond COSMOS) |
+| SE-FU-2, E-1(a) | **PASS** (§25; gate on 2b0b6a53) |
+| Android HONOR acceptance | deferred to ANDROID-COSMOS-ACCEPTANCE / E-2 (§23); no D-3 device checkpoint |
+| Root contract tests that read the locators (14 files; they run in API CI, which PR #400's path filter does not trigger) | **FAIL 3 / 240**. S7-03, S7-04 and S8B-07 CP1-A pin `living-analysis/LivingAnalysisSurface.tsx` by sha256 (`20655e20…`), and the D-3 package `5bb3f77d` changed that file (the band ScrollView, §25.1). They pass 112 / 112 at fc2e13c6 and fail identically at `2b0b6a53` without this record. §25's verification did not run them; that omission is corrected here. |
+
+### 26.5 Remaining blockers and the recommendation
+**Blockers to D-3 closure:**
+1. **SE-FU-1 / D-b:** the first-cold T-ack is not proven ≤ 250 ms. The scheduled instrumented measurement is still to run.
+2. **SE en AX5:** the harness `inside()` artifact. It needs the PO's word on the one-line harness correction, or acceptance of the screenshot evidence.
+3. **The Replay contract pins (§26.4):** three root contract tests fail on the changed `LivingAnalysisSurface.tsx`. They would first fail in API CI on main after a merge. They need a controlled re-anchor of the pin, as done before (the tests list the previous pins 08687f8e and c54a90d7). The justification: the change is a band cap that is behaviour-identical at the default size, and Replay is unchanged. The alternative is moving the cap out of the shared surface. This is NOT applied: it touches Replay contract tests, so it is the PO's decision.
+4. **Not tested:**
+   - the Public switch from the Shared field (P-3);
+   - absolute finger latency (P-4);
+   - reaching the AX5 Public search by scrolling the band.
+
+   The PO decides whether any is required before closure.
+
+**Recommendation:**
+- Accept the CP2 / CP3 code as validated: a clean exact-head gate, no measured regression against the baseline, and every CP1 layout defect gone.
+- Approve the one-line `inside()` harness correction and the controlled re-anchor of the three Replay contract pins. Verify both by the root contract tests and a triggered API CI.
+- Run the SE-FU-1 instrumented measurement as the last D-3 step. Close D-3 on its result.
+- No merge until then.
+
+### 26.6 Not done
+- No merge.
+- No Replay.
+- No change to PR #399, PRs #391 – #396, the frozen artwork, the renderer or the camera.
+- No HONOR testing.
+- No TalkBack / VoiceOver proof.
+- No retry of any case. The one exact-head gate was run once.
+- This record's own push re-runs the gate and Mobile CI through the path filters. That run is reported to the PO with this record and is not recorded here.
+- The validation branches are never merged and are deleted only on the PO's word.
 
 ---
 
