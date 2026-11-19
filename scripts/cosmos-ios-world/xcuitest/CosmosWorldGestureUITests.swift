@@ -895,4 +895,80 @@ final class ReplayCompatUITests: XCTestCase {
     record("analysis-again", ["qandeel-replay-analysis-entry", "qandeel-depth-to-conversation"])
     let a = XCTAttachment(string: lines.joined(separator: "\n")); a.name = "replay-\(tag)"; a.lifetime = .keepAlways; add(a)
   }
+
+  /// D-3 CP4 closure R2 (validation only). At AX5 neither build lets a message be selected (run 44491423054: the S7-02
+  /// selection bar wraps one letter per line on both), so the player is opened at the default size and the host then
+  /// switches the simulator to the enlarged size LIVE (marker files in a host directory, D3_MARKERS). The
+  /// player's frames and words are recorded at the enlarged size and its controls used there; baseline and head compared.
+  func testReplayPlayerAtLiveEnlargedText() {
+    app.launch()
+    lines.append("tag=\(tag) window=\(Int(app.windows.firstMatch.frame.width))x\(Int(app.windows.firstMatch.frame.height))")
+    outcome("conversation", el("qandeel-replay-entry").waitForExistence(timeout: 90))
+    settle(2)
+    outcome("entry menu", tap("qandeel-replay-entry") && el("qandeel-replay-choose-part").waitForExistence(timeout: 20))
+    outcome("choose part", tap("qandeel-replay-choose-part") && el("qandeel-replay-selection-bar").waitForExistence(timeout: 20))
+    let selectable = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-selectable-'")).allElementsBoundByIndex.filter { $0.exists }
+    var picked = 0
+    for i in [0, min(3, max(0, selectable.count - 1))] where i < selectable.count && selectable[i].isHittable { selectable[i].tap(); picked += 1; settle(0.6) }
+    outcome("select two messages", picked == 2, "picked=\(picked)")
+    outcome("save", tap("qandeel-replay-save") && el("qandeel-replay-preview").waitForExistence(timeout: 30))
+    outcome("preview opens the player", tap("qandeel-replay-preview") && el("qandeel-replay-player-bar").waitForExistence(timeout: 30))
+    settle(3)
+    record("player-default", ids)
+    // The host switches the size once it sees `ready`, then writes `switched`.
+    let dir = ProcessInfo.processInfo.environment["D3_MARKERS"] ?? "/tmp"
+    let ready = "\(dir)/ready-\(tag)", switched = "\(dir)/switched-\(tag)"
+    FileManager.default.createFile(atPath: ready, contents: Data("ready".utf8))
+    var waited = 0.0
+    while !FileManager.default.fileExists(atPath: switched) && waited < 120 { settle(1); waited += 1 }
+    let didSwitch = FileManager.default.fileExists(atPath: switched)
+    lines.append("live switch: \(didSwitch ? "seen after \(Int(waited)) s" : "NOT seen in 120 s")")
+    outcome("the size switched live", didSwitch)
+    settle(5)
+    record("player-enlarged", ids)
+    let position = { () -> String in let e = self.el("qandeel-replay-position"); return e.exists ? e.label : "absent" }
+    let p0 = position()
+    let spine = el("qandeel-replay-spine")
+    if spine.exists && spine.isHittable { spine.coordinate(withNormalizedOffset: CGVector(dx: 0.62, dy: 0.5)).tap(); settle(2) }
+    let p1 = position()
+    lines.append("enlarged: position before=\(p0) after spine tap=\(p1)")
+    outcome("enlarged: spine tap moves the moment", p1 != p0 && p1 != "absent")
+    let played = tap("qandeel-replay-play", 5)
+    settle(4.5)
+    let p2 = position()
+    outcome("enlarged: play advances the moment", played && p2 != p1, "after=\(p2)")
+    if el("qandeel-replay-play").exists && el("qandeel-replay-play").isHittable { el("qandeel-replay-play").tap(); settle(1) }
+    outcome("enlarged: finalize", tap("qandeel-replay-player-finalize") && el("qandeel-replay-player-reopen").waitForExistence(timeout: 30))
+    record("enlarged-finalized", ids)
+    outcome("enlarged: reopen", tap("qandeel-replay-player-reopen") && el("qandeel-replay-player-preview").waitForExistence(timeout: 30))
+    record("enlarged-reopened", ids)
+    outcome("enlarged: back to the conversation", tap("qandeel-replay-player-back") && el("qandeel-conversation-input").waitForExistence(timeout: 20)
+      && !el("qandeel-replay-player-bar").exists)
+    record("enlarged-back", ["qandeel-replay-entry", "qandeel-conversation-input", "qandeel-depth-to-analysis"])
+    let a = XCTAttachment(string: lines.joined(separator: "\n")); a.name = "replay-live-\(tag)"; a.lifetime = .keepAlways; add(a)
+  }
+}
+
+/// D-3 CP4 closure R2 (validation only): the discriminator for the burst-typing loss of run 44491423054. At the default
+/// size (no band scroll), the Public search is opened and typeText("ab") is sent in one burst, on the baseline and the head.
+extension CosmosWorldGestureUITests {
+  func testD3ProbePublicSearchBurstTyping() {
+    let tag = ProcessInfo.processInfo.environment["D3_TAG"] ?? "burst"
+    guard enterPublic("burst-\(tag)") != nil else { return }
+    let search = element("qandeel-public-search")
+    var lines = ["tag=\(tag) search=\(search.frame) hittable=\(search.isHittable)"]
+    search.tap()
+    search.typeText("ab")
+    settle(1)
+    lines.append("burst value='\((search.value as? String) ?? "")'")
+    shot("burst-\(tag)-typed")
+    let close = element("qandeel-public-search-close")
+    if close.exists && close.isHittable { close.tap(); settle(1) }
+    search.tap()
+    settle(1)
+    for key in ["a", "b"] { search.typeText(key); settle(0.6) }
+    lines.append("paced value='\((search.value as? String) ?? "")'")
+    shot("burst-\(tag)-paced")
+    note("burst-\(tag)", lines.joined(separator: "\n"))
+  }
 }

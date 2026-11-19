@@ -5,6 +5,11 @@ name: iOS D-3 CP4 closure validation (Replay compatibility, AX5 Public search)
 #           (ReplayCompatUITests) on each, at the iPhone 17 default size and AX5 and the small iPhone at AX5 (en);
 #   ax5:    the PR head's layout test on the small iPhone at en AX5: the approved inside() correction and the ONE
 #           focused interaction (the Public search below the band's fold reached by scrolling the band, then used).
+# R2 (after run 44491423054: the default-size journey PASSED identically on both; at AX5 neither build lets a message be
+# selected, so the player was not reached; a burst typeText kept one key): the default journey is NOT repeated. replay:
+# the player opened at the default size and the simulator switched LIVE to AX5, baseline and head, iPhone 17 and the small
+# iPhone. ax5: the head's paced interaction at SE en AX5, and the burst-typing discriminator at the iPhone 17 default size
+# on the baseline and the head (testD3ProbePublicSearchBurstTyping).
 on:
   push:
     branches: ['cosmos/validate/d3-cp4-closure']
@@ -72,33 +77,28 @@ jobs:
           { echo "base=$(git -C base rev-parse HEAD)"; echo "base surface sha256=$(shasum -a 256 base/apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx)"; } >> "$RUNNER_TEMP/evidence/identity.txt"
       - name: iPhone 17 — boot
         run: bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
-      - name: Replay journey — iPhone 17 en default, then AX5 (baseline, head each)
+      - name: Replay player, live switch to AX5 — iPhone 17 en (baseline, head)
         if: ${{ !cancelled() }}
-        timeout-minutes: 60
+        timeout-minutes: 50
         run: |
           U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/replay"
           source scripts/cosmos-ios-world/d3-validate-lib.sh; source scripts/cosmos-ios-world/d3-closure-lib.sh
           set_lang "$U" en-US en_US
-          xcrun simctl ui "$U" content_size large
-          replay_run "$U" "$E" i17-en-default-base "$BASE_XCTESTRUN"
-          replay_run "$U" "$E" i17-en-default-head "$HEAD_XCTESTRUN"
-          xcrun simctl ui "$U" content_size accessibility-extra-extra-extra-large
-          replay_run "$U" "$E" i17-en-AX5-base "$BASE_XCTESTRUN"
-          replay_run "$U" "$E" i17-en-AX5-head "$HEAD_XCTESTRUN"
+          replay_live_run "$U" "$E" i17-en-live-AX5-base "$BASE_XCTESTRUN" accessibility-extra-extra-extra-large
+          replay_live_run "$U" "$E" i17-en-live-AX5-head "$HEAD_XCTESTRUN" accessibility-extra-extra-extra-large
           xcrun simctl shutdown "$U" || true
       - name: The small iPhone — boot
         if: ${{ !cancelled() }}
         run: bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
-      - name: Replay journey — small iPhone en AX5 (baseline, head)
+      - name: Replay player, live switch to AX5 — small iPhone en (baseline, head)
         if: ${{ !cancelled() }}
-        timeout-minutes: 40
+        timeout-minutes: 50
         run: |
           U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/replay"
           source scripts/cosmos-ios-world/d3-validate-lib.sh; source scripts/cosmos-ios-world/d3-closure-lib.sh
           set_lang "$U" en-US en_US
-          xcrun simctl ui "$U" content_size accessibility-extra-extra-extra-large
-          replay_run "$U" "$E" se-en-AX5-base "$BASE_XCTESTRUN"
-          replay_run "$U" "$E" se-en-AX5-head "$HEAD_XCTESTRUN"
+          replay_live_run "$U" "$E" se-en-live-AX5-base "$BASE_XCTESTRUN" accessibility-extra-extra-extra-large
+          replay_live_run "$U" "$E" se-en-live-AX5-head "$HEAD_XCTESTRUN" accessibility-extra-extra-extra-large
       - name: Summary
         if: ${{ !cancelled() }}
         run: |
@@ -110,7 +110,7 @@ jobs:
   ax5:
     name: AX5 Public search — the PR head's layout test, small iPhone en AX5
     runs-on: macos-26
-    timeout-minutes: 120
+    timeout-minutes: 200
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
@@ -140,14 +140,45 @@ jobs:
           echo "XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
           rm -rf apps/mobile/ios/build/Build/Intermediates.noindex
           { echo "head=$(git rev-parse HEAD)"; xcodebuild -version; } > "$RUNNER_TEMP/evidence/identity.txt"
+      - name: Checkout the baseline (fc2e13c6)
+        uses: actions/checkout@v4
+        with: {ref: '${{ env.BASE_SHA }}', path: base}
+      - name: Build the baseline proof app (fc2e13c6) with the same UI tests
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          set -o pipefail
+          (cd base && npm ci && node apps/mobile/scripts/select-s401-proof-entry.mjs --apply && npm run prebuild:ios --workspace @qandeel/mobile)
+          (cd base/apps/mobile/ios && pod install)
+          ruby scripts/cosmos-ios-world/xcuitest/add-uitest-target.rb base/apps/mobile/ios scripts/cosmos-ios-world/xcuitest/CosmosWorldGestureUITests.swift
+          workspace="$(ls -d base/apps/mobile/ios/*.xcworkspace | head -n 1)"
+          xcodebuild -quiet -workspace "$workspace" -scheme QandeelWorldUITests -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath base/apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build-for-testing
+          xctestrun="$(find "$PWD/base/apps/mobile/ios/build/Build/Products" -maxdepth 1 -name '*.xctestrun' | head -n 1)"
+          test -n "$xctestrun"
+          echo "BASE_XCTESTRUN=$xctestrun" >> "$GITHUB_ENV"
+          rm -rf base/apps/mobile/ios/build/Build/Intermediates.noindex
+          echo "base=$(git -C base rev-parse HEAD)" >> "$RUNNER_TEMP/evidence/identity.txt"
       - name: The small iPhone — boot
         run: bash scripts/cosmos-ios-world/sim.sh 'iPhone SE (3rd generation)|iPhone 16e' "$RUNNER_TEMP/evidence/small"
-      - name: Layout — small iPhone en AX5 (inside() correction, Public search reached and used)
+      - name: Layout — small iPhone en AX5 (inside() correction, Public search reached and used at a reader's pace)
         if: ${{ !cancelled() }}
         timeout-minutes: 30
         run: |
           source scripts/cosmos-ios-world/d3-validate-lib.sh
           layout_pass "$IOS_SIM_UDID" "$RUNNER_TEMP/evidence/layout" se-en-AX5 en-US en_US accessibility-extra-extra-extra-large
+          xcrun simctl shutdown "$IOS_SIM_UDID" || true
+      - name: iPhone 17 — boot
+        if: ${{ !cancelled() }}
+        run: bash scripts/cosmos-ios-world/sim.sh 'iPhone 17' "$RUNNER_TEMP/evidence/iphone17"
+      - name: Burst-typing discriminator — iPhone 17 en default, baseline then head
+        if: ${{ !cancelled() }}
+        timeout-minutes: 30
+        run: |
+          U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/burst"
+          source scripts/cosmos-ios-world/d3-validate-lib.sh
+          set_lang "$U" en-US en_US
+          xcrun simctl ui "$U" content_size large
+          XCTESTRUN="$BASE_XCTESTRUN" run_test "$U" "$E" burst-base testD3ProbePublicSearchBurstTyping burst-base
+          run_test "$U" "$E" burst-head testD3ProbePublicSearchBurstTyping burst-head
       - name: Summary
         if: ${{ !cancelled() }}
         run: |
