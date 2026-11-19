@@ -24,7 +24,7 @@ on:
       - 'scripts/validation/bounded-run.mjs'
       - '.github/workflows/cosmos-ios-world-gate.yml'
   push:
-    branches: [main]
+    branches: [main, 'cosmos/validate/final-coverage']
   workflow_dispatch:
 concurrency:
   group: cosmos-ios-world-gate-${{ github.ref }}
@@ -47,7 +47,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          # COSMOS-FINAL-01 coverage VALIDATION ONLY (branch cosmos/validate/final-coverage; never merged): the same gate on
+          # the PR #401 head 97dd8532, for the two cells the binding gate does not run — Arabic, and the small iPhone.
+          - {device: 'iPhone 17', lang: ar, langtag: ar-EG, langloc: ar_EG}
+          - {device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
