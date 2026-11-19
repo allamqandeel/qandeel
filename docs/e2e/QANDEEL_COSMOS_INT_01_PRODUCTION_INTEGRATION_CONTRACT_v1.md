@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.14 (§26 D-3 bounded CP4 validation after the PO review — the ONE exact-head iOS World gate 19 / 19 PASS on 2b0b6a53, no measured regression against the baseline, SE-FU-1 open and scheduled, D-3 NOT CLOSED, stopped for the PO; §25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.15 (§27 D-3 CP4 review — Replay protected (the `world=` cap regression fixed at its cause, pins re-anchored), the AX5 Public search PASS, SE-FU-1 instrumented FAIL 1658 ms and OPEN, the exact-head iOS World gate 19 / 19 PASS on df73e9ec, the Android Preservation Gate (emulator + HONOR) with no NEW REGRESSION, D-3 NOT CLOSED, stopped for the PO before O-1; §26 D-3 bounded CP4 validation after the PO review — the ONE exact-head iOS World gate 19 / 19 PASS on 2b0b6a53, no measured regression against the baseline, SE-FU-1 open and scheduled, D-3 NOT CLOSED, stopped for the PO; §25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.15, 2026-11-19):** `AS v1.14 — PLUS THE PO CP4 REVIEW "REPLAY CONTRACT PROTECTION AND FINAL BOUNDED CLOSURE" (§27): A PROVEN REPLAY PRESERVATION REGRESSION (THE 40 % BAND CAP REACHED THE world= PRESENTATION) FIXED AT ITS CAUSE 1c7c6a84, THEN THE S7-03 / S7-04 PINS RE-ANCHORED (20655e20 → 7f697ab7; ROOT TESTS 240 / 240; API CI PASS) — REPLAY iOS DEFAULT PASS, AX5 LIVE 4 / 4 PASS — THE AX5 PUBLIC SEARCH PASS — SE-FU-1 INSTRUMENTED T-ACK 1658 ms: FAIL, OPEN, NOT RESOLVED — THE EXACT-HEAD iOS WORLD GATE 44521781956 ON df73e9ec 19 / 19 PASS, MOBILE CI AND API CI PASS — THE ANDROID PRESERVATION GATE (EMULATOR AND HONOR, BASELINE aadfb88e VS HEAD): NO NEW REGRESSION, 2 FIXED DEFECTS, 1 PRE-EXISTING STALL, THE ONE REPRODUCED DIFFERENCE EXPLAINED BY ITS INPUT, THE ACCEPTED APK AND DEVICE SETTINGS RESTORED — D-3 NOT CLOSED, STOPPED FOR THE PO BEFORE O-1; NO MERGE.`
+**Change log v1.14 → v1.15 (2026-11-19).** New §27 records the PO's CP4 review direction, the Android Preservation Gate and "Prevent Cross-Platform Regression Loops" directives, the Replay compatibility finding and its fix, the AX5 search interaction, the SE-FU-1 measurement, the exact-head CI and the Android emulator and HONOR comparison with its classification. Nothing earlier is rewritten.
 **Status (v1.14, 2026-11-19):** `AS v1.13 — PLUS THE PO CP4 REVIEW (§26): HARNESS-ONLY CORRECTIONS 2b0b6a53 (DEMONSTRATED FAULTS) — THE ONE EXACT-HEAD iOS WORLD GATE 44471935834 ON 2b0b6a53: 19 / 19 PASS; MOBILE CI SUCCESS — U-TAP NO-EFFECT SIGNATURE REPRODUCED BY A TOUCH HELD > 400 ms, IDENTICAL ON THE BASELINE, CAUSE OF THE EPISODE UNPROVEN, NO APP DEFECT SHOWN — THE 22 s WARM READY WAS A HARNESS ARTIFACT — P-2 / P-3 (MY / SHARED / FIXTURE) / P-4 CADENCE: NO REGRESSION AGAINST THE BASELINE ON ONE RUNNER (SIMULATOR, NOT DEVICE FPS); P-3 PUBLIC LEG AND ABSOLUTE FINGER LATENCY NOT TESTED; FIRST-COLD T-ACK NOT PROVEN — SE AX5 PUBLIC SHARE 44 % (en / ar); SE en AX5 FAILS ONLY BY A HARNESS CONTENT-FRAME ARTIFACT — 3 / 240 ROOT CONTRACT TESTS FAIL ON THE REPLAY PINS OF THE CHANGED LivingAnalysisSurface.tsx (API CI, NOT TRIGGERED ON THIS PR; RE-ANCHOR AWAITS THE PO) — SE-FU-1 OPEN, SCHEDULED BEFORE FINAL COSMOS ACCEPTANCE — D-3 NOT CLOSED, STOPPED FOR THE PO — NO MERGE WITHOUT «ادمج»`. The v1.13 status below is kept for provenance.
 **Change log v1.13 → v1.14 (2026-11-19).** New §26 records the PO's CP4 review direction, the harness corrections, the one exact-head gate, the focused validation (U-TAP discriminator, P-2 / P-3 / P-4 baseline against head, the SE AX5 cells) and the closure table. §25.7 item 3 (a production testID) is withdrawn by §26.1. Nothing else earlier is rewritten.
 **Status (v1.13, 2026-11-19):** `AS v1.12 — PLUS D-3 CP2 / CP3 DELIVERED AS ONE PACKAGE (5bb3f77d; HARNESS FIX 0a6fd601) AND CP4 EXECUTED (§25) — THE §24.3 CP2 / CP3 CRITERIA MET; SE-FU-2 AND E-1(a) PROVEN ON iOS AND THE ANDROID EMULATOR WITH BASELINE NEGATIVE CONTROLS; EVERY CP1 LAYOUT DEFECT GONE AT DEFAULT / AX3 / AX5 (BASELINE 10 / 10 CELLS FAIL, HEAD 0 CONTROL VIOLATIONS) — D-a: 7 / 7 FRESH-INSTALL FIRST-VISIBLE DOOR TAPS OPENED THE ANALYSIS (NO SETTLE, NO RETRY); D-b: FIRST-COLD T-ACK STILL NOT A PASS (NOT MEASURABLE AT 250 ms BY THE CP4 HARNESS; NO REGRESSION AGAINST THE BASELINE ON THE SAME HARNESS) — THE EXACT-HEAD iOS WORLD GATE IS NOT CLEAN: 19 / 19 PASS ON 5bb3f77d, BUT ON 0a6fd601 (SAME APPLICATION) ATTEMPT 1 U-TAP FAIL + S-TAP NOT TESTED, ATTEMPT 2 FOUR PERSONAL MAESTRO CASES NOT TESTED — D-3 NOT CLOSED, STOPPED FOR THE PO (BG-10) — NO MERGE WITHOUT «ادمج»`. The v1.12 status below is kept for provenance.
@@ -3028,6 +3030,161 @@ The head build of focus run 44468744354 compiled this Swift before it was pushed
 - No retry of any case. The one exact-head gate was run once.
 - This record's own push re-runs the gate and Mobile CI through the path filters. That run is reported to the PO with this record and is not recorded here.
 - The validation branches are never merged and are deleted only on the PO's word.
+
+## 27. Slice E D-3 — CP4 review: Replay contract protection, the bounded closure work and the Android Preservation Gate (2026-11-19) — NOT CLOSED, STOPPED FOR THE PO BEFORE O-1
+
+**PO direction (2026-11-19, "D-3 CP4 Review: Replay Contract Protection and Final Bounded Closure"):**
+1. Verify Replay compatibility before any re-anchor. Re-anchor only if compatible. If there is a regression, fix its proven cause.
+2. The one-line `inside()` correction is approved, plus ONE focused interaction: the AX5 Public search below the fold. No layout redesign.
+3. Performance and U-TAP stay as recorded. Absolute finger latency and the Shared → Public switch stay NOT TESTED.
+4. SE-FU-1: the one bounded instrumented first-launch measurement. No 250 ms claim from screenshot timing.
+5. Final validation on the exact head, then STOP before O-1.
+
+**Further PO directives the same day:**
+- **"Android Preservation Gate" (mandatory).** The last HONOR-accepted Android build is the baseline. Compare by focused automated checks, visual evidence and HONOR validation of the affected critical interactions. Classify every difference. iOS and Replay compatibility are not sufficient for closure without Android preservation.
+- **The HONOR run is approved** ("baseline `aadfb88e` vs head `df73e9ec`, identical device test protocols").
+- **"Prevent Cross-Platform Regression Loops".** No code change before the head result. A baseline failure that the head passes is a FIXED DEFECT. Every finding is classified as PRE-EXISTING DEFECT / FIXED DEFECT / NEW REGRESSION / NOT TESTED.
+
+Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/cp23/ci/{closure-44491423054, closure-44508146968, sefu1-44491734500, gate-44521781956}` and `slice-e/d3/android-gate/`.
+
+### 27.1 Replay compatibility — a proven Replay preservation regression, fixed at its cause (`1c7c6a84`)
+- **The finding.** `5bb3f77d` capped the upper band at 40 % of the window inside the shared `LivingAnalysisSurface`, for EVERY caller. That includes the `world=` presentation used by Replay's player and composite. A Replay bar taller than 40 % of the window, which happens at enlarged text, would have been capped and scrolled. That changes the accepted Replay layout.
+  - Proof: two new surface tests (`it.each([104, 400])`: no scroller; band at `top: 0`; map frame `flexBasis` = (844 − band − 34) / 2). Against the previous surface they fail 2 / 17; with the fix they pass 17 / 17.
+  - Classification: **functional defect (Replay enlarged-text preservation)**, found by mechanism and test before any device showed it.
+- **The fix.** The cap and its scroller apply to the COSMOS `stage=` presentation only. `world=` gets back its pre-D-3 band: the measured height, a plain View, no cap and no scroller.
+- **The authorised re-anchor**, only after compatibility was shown. The S7-03 and S7-04 FROZEN pins re-anchor exactly the `LivingAnalysisSurface.tsx` entry (`20655e20` → `7f697ab7`), with a dated comment block naming the previous pin. No other pin changed.
+  - The 14 locator-reading root tests: 240 / 240 (3 failed before).
+  - S7-03 + S7-04: 94 / 94.
+  - API CI 44521782016 on `df73e9ec`: **success**.
+- **Replay functional regressions on iOS** (S7-05 proof build, baseline fc2e13c6 vs head, same runner):
+  - **Default size** (R1, run 44491423054): the full journey on both builds — entry, choose a part, select, save, preview, player, spine 1 → 5 of 6, play → 6 of 6, finalize, reopen, back, then Analysis entry → player → back. Both records identical except the tag line (102 lines). **PASS**.
+  - **AX5 by setting the size before launch** (R1): on BOTH builds the journey stops at selection. The S7-02 selection bar wraps one letter per line at AX5. **Pre-existing (S7-02), not D-3**; recorded, not repaired.
+  - **AX5 live** (R2, run 44508146968): the player opened at the default size, then the simulator switched live to AX5. Runs on iPhone 17 and the small iPhone, baseline and head: **4 / 4 PASS**. Every player frame (bar, back, title, status, transport, position, map surface) is identical before and after the switch, and the controls work at AX5 (spine, play, finalize, reopen, back).
+  - Differences, each classified:
+    - On the iPhone 17 after Finalize, the baseline shows moment 1 and the head moment 6. **Harness defect**: the test taps Play once more to pause, but on the baseline playback had already ended, so the tap meant "Play from the start" (`ReplayPlayer.tsx` is unchanged).
+    - After Back, the Conversation at AX5: on the baseline the input is clipped and the switcher labels are lost; on the head the input is whole and the labels are visible. This is the **intended D-3 enlarged-text change** (header cap, switcher height).
+    - Both builds draw partly re-laid-out glyphs right after a live size switch. **Pre-existing.**
+
+### 27.2 The AX5 Public search (`1c7c6a84`, `df73e9ec`)
+- The approved `inside()` correction is applied: a band is judged by its visible, capped bottom.
+- The ONE focused interaction (small iPhone, en, AX5; R2) **PASS**:
+  - the search is below the band's fold (hittable = false);
+  - ONE band drag brings it to y 238 (hittable);
+  - it is opened, "ab" is typed one key at a time, the value contains it, and close is shown.
+- The R1 burst `typeText("ab")` kept only "a". The R2 discriminator (iPhone 17, default size): burst on the baseline 'a', on the head 'ab'; paced 'ab' on both. **Harness defect** (the input synthesiser), not D-3.
+
+### 27.3 SE-FU-1 — the one bounded instrumented first-launch measurement (run 44491734500): **FAIL**
+- Setup: a freshly booted iPhone 17, a fresh install, en, default size, the door tapped once at its first visible frame.
+- The app's own clock on the board: `L0.door.touch` at +1638 ms after the synthesised tap; `pressedCommit` at +1658 ms. **T-ack 1658 ms > 250 ms: FAIL.**
+- The tap was queued, not lost: the Analysis opened (rail layout +1892 ms, fade settled +3388 ms).
+- `typefaceReady` → `door.layout` shows a JS long task of about 2.9 s.
+- Not comparable with CP1's 1051 ms (reboot-cold, not fresh install), so no regression claim either way.
+- **SE-FU-1 remains OPEN and is not resolved.**
+
+### 27.4 Exact-head CI on `df73e9ec`
+| Check | Result |
+|---|---|
+| iOS World gate 44521781956 (19 cases, iPhone 17 en) | **PASS 19 / 19** |
+| Mobile CI 44521782178 | **PASS** |
+| API CI 44521782016 (triggered by the pin files) | **PASS** |
+| The docs-push gate 44487678149 on `f4c3927c` (before this record) | **infrastructure FAIL**: Maestro 7 / 7 PASS and fresh-install PASS, but every other native XCUITest NOT TESTED ("request denied by service delegate (SpringBoard)"); superseded by 44521781956 |
+
+### 27.5 Android Preservation Gate
+**Mandatory, PO directive. Full record: `slice-e/d3/android-gate/ANDROID_PRESERVATION.md`.**
+
+**Baseline:** the last HONOR-accepted build, `cosmosint-cp3-c284fa1d.apk` (sha256 `aadfb88e…`, the APK of the 2026-11-17 CP4 HONOR run). For the emulator, the same commit was rebuilt by the same recipe (x86_64).
+
+**Head:** `cosmosint-d3head-df73e9ec.apk` (sha256 `1310c253…`).
+
+**Emulator** (QANDEEL_API36; same script, baseline then head) — **no regression**:
+- en / ar across all three Worlds: home, pan, Back, a real double tap, real pinches IN and OUT, the Detail Sheet PEEK and system Back. Identical.
+- The Public search at font 2.0: identical.
+- Cold start and memory: within noise.
+- Every layout difference is an intended D-3 change:
+  - the Public rail below Overview;
+  - the switcher plate: 147 → 150 px at font 1.3, 147 → 189 px at font 2.0.
+- FIXED DEFECTS: the deeper-bead pan; the rail over Overview (including "FAR" over "Overview" at font 2.0).
+- The emulator's frame figures are software rendering, **not device FPS**.
+
+**HONOR** (the PO's phone):
+- DND and airplane mode were set by the PO. No system setting was changed.
+- Every input was guarded. Identical protocols on both builds, in the same session.
+- The archived Slice D evidence is untouched.
+
+| Area | Baseline `aadfb88e` | Head | Classification |
+|---|---|---|---|
+| Pan started on a deeper bead (en, ar) | FAIL | PASS | **FIXED DEFECT** (SE-FU-2) |
+| Public rail vs Overview (en, ar) | FAIL | PASS | **FIXED DEFECT** |
+| Back away from home; the shallower bead after one pinch IN; Back absent at home; the switcher; the Shared title | PASS | PASS | same |
+| Personal pan (SurfaceFlinger) | 60.0 fps, p95 16.7 ms | 60.0–60.1 fps, p95 16.7 ms | same |
+| Cold start `am start -W` | 246–303 ms | 250–338 ms | noise (the first launch after an install is the slowest on both) |
+| Memory at rest, Personal / Public | 231–235 / 228–232 MB | 225–227 / 221–224 MB | same (within noise) |
+| Slice D CP4 three-World protocol, ARCHIVED vs BASE vs HEAD: Public close (ar, en), Shared (ar; en after one bounded rerun after an adb daemon crash), Personal (en; ar except one harness detector check), Follow live 20 / 20 on all three | identical steps | identical steps | same |
+| Sheet transitions, Shared and Personal frames; memory after the transitions (324.9–338.9 MB) | equivalent | equivalent | same |
+| ~1 s stall on rapid reversed handle taps | present (also ARCHIVED) | present | **PRE-EXISTING DEFECT** |
+| Injected 140 ms sheet flick (CP4 item 8b) | 3 / 5 | 3 / 5 | harness limitation (non-deterministic on both) |
+| Sheet protocol without 8b (en): steps | — | identical | same |
+| Sheet protocol: graphics memory at the end / pan above PEEK | 143–165 MB / 54.7–55.2 fps | 195–198 MB / 50.0–50.3 fps (reproduced) | **explained by its input, not a regression** (below) |
+
+**The one reproduced difference, explained by its input:**
+- Two of item 10's six pans start at x 960. On the baseline that is inside the deeper beads' boxes, which swallow those touches: the fixed SE-FU-2 defect. On every baseline run, including the ARCHIVED accepted run, the field therefore ends displaced by (+436, −156) px. On the head all six pans reach the stage and cancel out.
+- With the pans moved clear of every bead box on both builds (`honor-sheet-d10left.sh`, one run each), the two builds match:
+
+  | | Graphics | Total PSS | Pan | Steps |
+  |---|---|---|---|---|
+  | Baseline | 191.6 MB | 381.8 MB | 49.0 fps | identical |
+  | Head | 186.7 MB | 374.1 MB | 49.1 fps | identical |
+
+- **No NEW REGRESSION. No code change.** This follows the "Prevent Cross-Platform Regression Loops" directive.
+- On the same interaction on iOS, the exact-head World gate 44521781956 passes the deeper-bead pass-through, tap and pan, rail, double tap, pinch and the depth words (19 / 19).
+
+**NOT TESTED on the HONOR:**
+- enlarged text (emulator only);
+- absolute finger latency;
+- the Shared → Public switch;
+- the head's ar-personal check 7b (harness detector);
+- base ar-shared-perf PEEK / EXPANDED frames (compared ARCHIVED vs HEAD instead).
+
+**Restored and verified after every phase:**
+- the installed APK `aadfb88e`;
+- zen 1, airplane 1, nav 106, font 1.0;
+- app locales `[]` (`honor/device-after.txt`).
+
+**Outstanding Android risks:**
+- One Android device only.
+- Enlarged text is proven on the emulator only.
+- The pre-existing ~1 s rapid-reversal stall and the ~49–50 fps pan above PEEK are recorded, not repaired.
+
+### 27.6 Closure table (PASS / FAIL / NOT TESTED) and what remains
+| Item | Result |
+|---|---|
+| Replay compatibility, default size (iOS, R1) | **PASS**, identical journeys |
+| Replay at AX5, live switch (iOS, R2, 4 runs) | **PASS 4 / 4** |
+| The Replay `world=` band cap regression | **FIXED** at its cause (`1c7c6a84`); functional defect |
+| The S7-03 / S7-04 pin re-anchor | authorised, applied after compatibility; root tests 240 / 240; API CI **PASS** |
+| Replay AX5 selection bar (set before launch) | **PRE-EXISTING (S7-02)**, both builds; not repaired |
+| AX5 Public search below the fold (iOS) | **PASS** (the approved `inside()` correction + one interaction) |
+| SE-FU-1 first-launch T-ack ≤ 250 ms | **FAIL** (1658 ms instrumented); **OPEN, not resolved** |
+| Exact-head iOS World gate on `df73e9ec` | **PASS 19 / 19** |
+| Mobile CI / API CI on `df73e9ec` | **PASS / PASS** |
+| Android emulator preservation | **PASS**, no regression; 2 FIXED DEFECTS |
+| Android HONOR preservation | **PASS**, no NEW REGRESSION; 2 FIXED DEFECTS; 1 PRE-EXISTING stall; the one reproduced difference explained by its input |
+| Absolute finger latency; Shared → Public switch | **NOT TESTED** (iOS and HONOR) |
+| Enlarged text on the HONOR | **NOT TESTED** (emulator only) |
+| U-TAP attempt-1 episode | cause **unproven**; no app defect shown (§26) |
+
+**What remains, for the PO:**
+1. **SE-FU-1 is OPEN.** The instrumented measurement FAILS the 250 ms target (1658 ms, a ~2.9 s JS long task between `typefaceReady` and `door.layout`). The PO decides whether D-3 may close with SE-FU-1 open and carried, or whether a bounded diagnosis of that long task comes first.
+2. **The NOT TESTED items above.** The PO decides whether any is required.
+3. **O-1** is not started. **STOPPED FOR THE PO.**
+
+**Not done:**
+- No merge.
+- No Replay feature work: the one Replay change is the protection fix.
+- No change to PR #399, PRs #391 – #396, the frozen artwork, the renderer, the camera or the gestures.
+- No TalkBack / VoiceOver proof.
+- No system setting changed on the HONOR.
+- No production code change from the Android gate.
 
 ---
 

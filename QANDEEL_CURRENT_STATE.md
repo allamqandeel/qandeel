@@ -52,6 +52,17 @@
 >       - SE AX5 Public share 44 % (en / ar). SE en AX5 fails only by a harness content-frame artifact; a one-line correction is proposed, not applied.
 >     - SE-FU-1 is OPEN, scheduled for one bounded instrumented measurement before final COSMOS acceptance.
 >     - Blocker: 3 / 240 root contract tests FAIL (S7-03, S7-04, S8B-07 CP1-A). They pin `LivingAnalysisSurface.tsx`, which `5bb3f77d` changed, and run only in API CI, which this PR does not trigger. A controlled re-anchor awaits the PO; it is not applied.
+>   - **D-3 CP4 review — Replay contract protection, final bounded closure work and the Android Preservation Gate (2026-11-19; contract §27, v1.15): NOT CLOSED, STOPPED FOR THE PO BEFORE O-1.**
+>     - Replay: the 40 % band cap reached the `world=` presentation. This proven Replay preservation regression was fixed at its cause in `1c7c6a84` (the cap is COSMOS-stage only). The S7-03 / S7-04 pins were then re-anchored (`20655e20` → `7f697ab7`). The §26 blocker is resolved: root tests 240 / 240, API CI 44521782016 PASS. iOS Replay: default PASS; AX5 live 4 / 4 PASS. The AX5 selection bar is PRE-EXISTING (S7-02).
+>     - The AX5 Public search below the fold PASS (the approved `inside()` correction + one interaction; `df73e9ec` paces the typing).
+>     - SE-FU-1 instrumented first-launch T-ack 1658 ms: **FAIL; OPEN, not resolved.**
+>     - Exact-head iOS World gate 44521781956 on `df73e9ec`: 19 / 19 PASS; Mobile CI 44521782178 PASS.
+>     - The Android Preservation Gate (baseline `aadfb88e`, the last HONOR-accepted APK, vs the head; emulator + HONOR): **no NEW REGRESSION.**
+>       - FIXED DEFECTS: the deeper-bead pan (SE-FU-2) and the rail over Overview.
+>       - PRE-EXISTING: the ~1 s rapid-reversal stall.
+>       - The one reproduced difference (sheet-protocol graphics memory and the pan above PEEK) is explained by its input: the baseline's beads swallowed 2 of 6 pans. With equal input the two builds match.
+>       - NOT TESTED: HONOR enlarged text, finger latency, the Shared → Public switch.
+>       - The accepted APK and the device settings are restored. Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/android-gate/`.
 >   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.
