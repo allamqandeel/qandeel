@@ -708,6 +708,35 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("o1", "list open -> typed (list kept) -> executed: answer=\(answer.exists) list=\(element("qandeel-public-sections").exists) scope=\(element("qandeel-public-search-scope").exists)")
   }
 
+  /// COSMOS-FINAL-01 O-2 (PO): while the Public entry waits for its authoritative answer, the screen is not a blank frame.
+  /// A visible loading indication is drawn at the pending shell's centre (an empty frame measures a luminance spread of 0
+  /// there), the World navigation stays usable, and nothing of the destination (its name, search or field) is shown
+  /// before the entry is allowed. The proof network holds the entry until `public/allow`.
+  func testPublicPendingEntryShowsALoadingIndicationAndKeepsTheWorldNavigation() {
+    toConversation()
+    openLink("qandeel://s401-proof/public/seed", via: "system", "o2-seed")
+    waitFor("qandeel-switcher-public_world", 30).tap()
+    let pending = waitFor("qandeel-public-transition", 30)
+    settle(2)
+    let s = XCUIScreen.main.screenshot()
+    let f = pending.frame
+    let spread = stats(s, CGRect(x: f.midX - 40, y: f.midY - 40, width: 80, height: 80))
+    shot("o2-pending", s)
+    let personal = element("qandeel-switcher-my_world")
+    let usable = personal.exists && personal.isHittable
+    note("o2", "pending frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)) named=\(!pending.label.isEmpty) centre mean=\(Int(spread.mean)) std=\(String(format: "%.1f", spread.std)) navigation=\(usable) title=\(element("qandeel-public-title").exists) search=\(element("qandeel-public-search").exists)")
+    XCTAssertGreaterThan(spread.std, 4, "the pending Public entry is a blank frame: nothing is drawn at its centre")
+    XCTAssertFalse(pending.label.isEmpty, "the pending shell has no accessible name")
+    XCTAssertTrue(usable, "the World navigation is not usable while the entry is pending")
+    XCTAssertFalse(element("qandeel-public-title").exists, "the destination's name is shown before the entry is allowed")
+    XCTAssertFalse(element("qandeel-public-search").exists, "the destination's search is shown before the entry is allowed")
+    openLink("qandeel://s401-proof/public/allow", via: "system", "o2-allow")
+    XCTAssertTrue(element("qandeel-public-search").waitForExistence(timeout: 45), "the Public World did not open after ALLOW")
+    XCTAssertFalse(element("qandeel-public-transition").exists, "the pending shell stays after ALLOW")
+    settle(2)
+    shot("o2-allowed")
+  }
+
   /// Layout at the reader's text size (D-3, PO D-c / D-d): every World's controls inside the screen, the depth rail clear
   /// of the Overview chip, the switcher's three destinations on the screen, and the map's clear share recorded. Run at
   /// the default size in this gate and under enlarged sizes by the D-3 validation (D3_TAG names the configuration).

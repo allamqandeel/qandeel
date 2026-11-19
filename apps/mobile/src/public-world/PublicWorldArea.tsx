@@ -24,7 +24,7 @@
  * passed in, so none can transfer.
  */
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { ActivityEntry, type ActivityAttentionController } from '../activity';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../appearance';
@@ -79,10 +79,14 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
   );
 
   if (!ready || entry === 'NONE' || entry === 'RESOLVING') {
-    // The pre-authority shell: the area's ground, and nothing of the destination.
+    // The pre-authority shell: the area's ground, and nothing of the destination. COSMOS-FINAL-01 O-2 (PO): never a blank
+    // frame while the entry waits. One platform loading indication, wordless (the shell keeps its approved accessible
+    // name), over the World navigation, which stays. It says nothing of the answer and implies no admission.
     return frame('qandeel-public-resolving', (
       <View testID="qandeel-public-transition" accessible accessibilityLabel={copy.opening} accessibilityState={{ busy: true }}
-        accessibilityLanguage={language} style={{ flex: 1, paddingTop: insets.top }} />
+        accessibilityLanguage={language} style={{ flex: 1, paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator testID="qandeel-public-opening-indicator" color={palette.secondary} />
+      </View>
     ));
   }
 

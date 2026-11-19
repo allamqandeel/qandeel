@@ -118,6 +118,9 @@ describe('S5-01 A — the third Global Area', () => {
     expect(view.queryByTestId('qandeel-public-title')).toBeNull();
     expect(view.queryByTestId('qandeel-public-field')).toBeNull();
     expect(view.getByTestId('qandeel-switcher-public_world').props.accessibilityState).toMatchObject({ selected: true });
+    // COSMOS-FINAL-01 O-2: the pending shell draws a loading indication, and the World navigation stays usable over it.
+    expect(within(view.getByTestId('qandeel-public-transition')).getByTestId('qandeel-public-opening-indicator')).toBeTruthy();
+    expect(view.getByTestId('qandeel-switcher-my_world')).toBeTruthy();
 
     await act(async () => { release?.(); await settle(); });
     expect(view.getByTestId('qandeel-public-root')).toBeTruthy();
