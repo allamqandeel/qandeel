@@ -66,7 +66,8 @@
  * S6-07 — the governed enrollment step and the three consents (the stand-in `s607-proof-enrollment.ts`):
  *   qandeel://s401-proof/introductions/enroll-closed | enroll-open | enroll-outdated | enroll-enrolled
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { diag, diagAt, diagSeq, diagSubscribe, diagText, diagVersion } from '../../cosmos/__diag__/trace';
 import { Linking, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -96,6 +97,13 @@ function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   });
   if (!built.ok) throw new Error(`the S4-01 proof runtime could not be built: ${built.phase.detail}`);
   return built.runtime;
+}
+
+// D-3 CP1 DIAGNOSTIC ONLY: the board, published as one accessibility label (counts, times, enums and frames only).
+diagAt('L0.js.start');
+function DiagBoard() {
+  useSyncExternalStore(diagSubscribe, diagVersion);
+  return <View testID="qandeel-diag-trace" accessible accessibilityLabel={`DIAG ${diagText()}`} pointerEvents="none" style={{ position: 'absolute', left: 0, bottom: 0, width: 4, height: 4 }} />;
 }
 
 export function S401ProofRoot() {
@@ -168,10 +176,11 @@ export function S401ProofRoot() {
   }, [runtime, world]);
   return (
     <GestureHandlerRootView style={styles.root}>
-      <View style={styles.root} testID={PRODUCT_ROOT_TEST_ID}>
+      <View style={styles.root} testID={PRODUCT_ROOT_TEST_ID} onTouchStart={(e) => { diagAt('L0.root.touch'); diagSeq(`root.touch@${Math.round(e.nativeEvent.pageX)},${Math.round(e.nativeEvent.pageY)}#${String(e.nativeEvent.target)}`); diag('L0.root.lastTarget', String(e.nativeEvent.target)); }}>
         <StatusBar style="auto" />
         <RuntimePhaseSurface runtime={runtime} />
       </View>
+      <DiagBoard />
     </GestureHandlerRootView>
   );
 }

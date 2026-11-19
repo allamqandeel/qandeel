@@ -59,6 +59,7 @@ import { useConversationTypeface } from './visual/fonts';
 import { Glyph } from './visual/Glyph';
 import { useReduceMotion } from './visual/reduce-motion';
 import { typeStyle, usePalette, type ConversationPalette } from './visual/theme';
+import { diagAt, diagFrame, diagSeq } from '../cosmos/__diag__/trace';
 
 export const CONVERSATION_SURFACE_TEST_ID = 'qandeel-conversation';
 
@@ -620,6 +621,8 @@ export function ConversationSurface({
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
   }, [focusSettingsEntry, ready]);
 
+  // D-3 CP1 DIAGNOSTIC ONLY: when the bundled faces registered (the surface draws nothing else before).
+  useEffect(() => { if (ready) diagAt('Lp.conversation.typefaceReady'); }, [ready]);
   if (!ready) {
     // The faces are bundled and register in a moment; until then the World shows and nothing else.
     return <View style={{ flex: 1, backgroundColor: palette.world }} testID={CONVERSATION_SURFACE_TEST_ID} />;
@@ -716,7 +719,7 @@ export function ConversationSurface({
           }}
           style={{ paddingHorizontal: 12, flexShrink: 1 }}
         >
-          <View style={{ flexDirection: fallback === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', flexShrink: 1 }}>
+          <View onLayout={(e) => { diagAt('Lp.door.layout'); diagSeq('door.layout'); diagFrame('doorContent')(e); }} style={{ flexDirection: fallback === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', flexShrink: 1 }}>
             <Glyph name="depth" color={palette.restInk} direction={fallback} />
             <Text style={{ ...typeStyle('action'), color: palette.restInk, flexShrink: 1, ...(fallback === 'rtl' ? { marginRight: 6 } : { marginLeft: 6 }) }}>
               {copy.doorLabel}

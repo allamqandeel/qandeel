@@ -109,6 +109,7 @@ import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import { LivingAnalysisMap } from './LivingAnalysisMap';
+import { diagAt, diagSeq } from '../../cosmos/__diag__/trace';
 
 export type WorldDepth = 'CONVERSATION' | 'ANALYSIS';
 
@@ -190,7 +191,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const incoming = useSharedValue(1);
   const incomingStyle = useAnimatedStyle(() => ({ opacity: incoming.get() }));
 
-  const settle = useCallback(() => setLeaving(null), []);
+  const settle = useCallback(() => { diagAt('L5.fadeSettled'); diagSeq('fadeSettled'); setLeaving(null); }, []);
 
   // The incoming depth is mounted by the switch itself, and mounting it (the whole Analysis world, or
   // the Conversation's history) can take longer than the fade. Started at the press, the fade's clock
@@ -205,6 +206,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // takes no touch and is hidden from assistive technology until its fade begins: nothing the reader cannot see answers
   // a tap, and no tap lands on a control drawn somewhere else (found on HONOR: the call rail answered 400 px below).
   const [awaitingDraw, setAwaitingDraw] = useState(false);
+  // D-3 CP1 DIAGNOSTIC ONLY: every change of what decides whether a depth takes touch, and each depth commit.
+  useEffect(() => { diagAt(`L4.depth.${depth}`); diagSeq(`depth=${depth} leaving=${leaving} awaitingDraw=${awaitingDraw} area=${area} settings=${settingsShown} understanding=${understandingShown} activity=${activityShown} introductions=${introductionsShown} player=${playerOpen}`); }, [depth, leaving, awaitingDraw, area, settingsShown, understandingShown, activityShown, introductionsShown, playerOpen]);
   // The running fade's duration; zero when no fade is running. Read on the UI runtime per frame.
   const fading = useSharedValue(0);
   // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
@@ -226,6 +229,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   }, [fadeFrames, leaving]);
   const beginFade = useCallback(() => {
     const duration = pendingFade.current;
+    diagAt(`L5.beginFade.${duration === null ? 'none' : 'armed'}`); diagSeq(`beginFade.${duration === null ? 'none' : 'armed'}`);
     if (duration === null) return;
     pendingFade.current = null;
     setAwaitingDraw(false);
@@ -235,7 +239,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   const cross = useCallback(
     (to: WorldDepth) => {
-      if (to === depth) return;
+      diagAt(`L3.cross.${to}.enter`); diagSeq(`cross.${to}.enter.from.${depth}`);
+      if (to === depth) { diagAt(`L3.cross.${to}.same`); return; }
       setCrossed(true);
       setReturnedFromSettings(false);
       setReturnedFromUnderstanding(false);
@@ -679,7 +684,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         controller={runtime.conversation}
         language={locale.language}
         insets={conversationInsets}
-        onOpenAnalysis={() => cross('ANALYSIS')}
+        onOpenAnalysis={() => { diagAt('L3.onOpenAnalysis'); diagSeq('onOpenAnalysis'); cross('ANALYSIS'); }}
         focusDepthControl={crossed && current}
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
         onOpenSettings={onSignOut === undefined ? undefined : openSettings}
@@ -796,6 +801,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
               pointerEvents={open ? 'auto' : 'none'}
+              onTouchStart={() => { diagAt(`L0.layer.${which}.touch`); diagSeq(`layer.${which}.touch.${open ? 'open' : 'closed'}`); }}
               importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
               accessibilityElementsHidden={!open}
             >

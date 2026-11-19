@@ -55,6 +55,7 @@ import {
 } from '../../../temporal-navigation';
 import { PresentationNavigator, TIMELINE_STEP, type PresentationController } from '../../../timeline';
 import { useRailScrub } from './useRailScrub';
+import { diagAt, diagFrame, diagSeq } from '../../__diag__/trace';
 
 export const COSMOS_TIMELINE_RAIL_TEST_ID = 'qandeel-cosmos-timeline-rail';
 export const COSMOS_RAIL_SEGMENTS_TEST_ID = `${COSMOS_TIMELINE_RAIL_TEST_ID}:segments`;
@@ -208,7 +209,7 @@ export function CosmosTimelineRail({ store, preview, presentation, language, act
   // and on the HONOR the words' press was then lost in both languages (three builds: eecd954f, 73c77c4a, 8a7c04ba);
   // with the root un-flattened the same press is reliable (two probe builds, and the fix build — Contract v1.4 §16.6).
   return (
-    <View testID={testID} collapsable={false} style={styles.rail} pointerEvents="box-none">
+    <View testID={testID} collapsable={false} style={styles.rail} pointerEvents="box-none" onLayout={(e) => { diagAt('L5.timelineRail.layout'); diagSeq('timelineRail.layout'); diagFrame('timelineRail')(e); }}>
       {/* The host's compact acts, ABOVE the label (§16 A-3 as corrected in §16.6): everything that appears and disappears
           with the temporal state sits above the segments, so the rail grows and shrinks UPWARD and the segments — the
           surface under the reader's finger — never move (HONOR, e64861ad: acts wrapping under the segments pushed them up
