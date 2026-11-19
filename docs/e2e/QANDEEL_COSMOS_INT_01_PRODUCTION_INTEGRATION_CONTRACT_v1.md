@@ -1,6 +1,8 @@
-# COSMOS Production Integration Contract — v1.12 (§24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.13 (§25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.13, 2026-11-19):** `AS v1.12 — PLUS D-3 CP2 / CP3 DELIVERED AS ONE PACKAGE (5bb3f77d; HARNESS FIX 0a6fd601) AND CP4 EXECUTED (§25) — THE §24.3 CP2 / CP3 CRITERIA MET; SE-FU-2 AND E-1(a) PROVEN ON iOS AND THE ANDROID EMULATOR WITH BASELINE NEGATIVE CONTROLS; EVERY CP1 LAYOUT DEFECT GONE AT DEFAULT / AX3 / AX5 (BASELINE 10 / 10 CELLS FAIL, HEAD 0 CONTROL VIOLATIONS) — D-a: 7 / 7 FRESH-INSTALL FIRST-VISIBLE DOOR TAPS OPENED THE ANALYSIS (NO SETTLE, NO RETRY); D-b: FIRST-COLD T-ACK STILL NOT A PASS (NOT MEASURABLE AT 250 ms BY THE CP4 HARNESS; NO REGRESSION AGAINST THE BASELINE ON THE SAME HARNESS) — THE EXACT-HEAD iOS WORLD GATE IS NOT CLEAN: 19 / 19 PASS ON 5bb3f77d, BUT ON 0a6fd601 (SAME APPLICATION) ATTEMPT 1 U-TAP FAIL + S-TAP NOT TESTED, ATTEMPT 2 FOUR PERSONAL MAESTRO CASES NOT TESTED — D-3 NOT CLOSED, STOPPED FOR THE PO (BG-10) — NO MERGE WITHOUT «ادمج»`. The v1.12 status below is kept for provenance.
+**Change log v1.12 → v1.13 (2026-11-19).** New §25 records D-3 CP2 / CP3 (the code package, its review against §24.2 and the §24.3 criteria) and CP4 (the exact-head gate, the before / after validation on the same harness, the Android emulator before / after, P-1 – P-6, D-a, D-b and the decisions for the PO). Nothing earlier is rewritten.
 **Status (v1.12, 2026-11-18):** `AS v1.11 — PLUS THE PO'S D-3 CP1 REVIEW (§24.1): CP1 ACCEPTED AS DIAGNOSTIC, SE-FU-1 NOT RESOLVED (FRESH-INSTALL FIRST-VISIBLE-TAP REGRESSION IN CP4, NO SETTLE, NO RETRY), FIRST-COLD 1051 ms T-ACK NOT A PASS (WARM AND FIRST-COLD RECORDED SEPARATELY, REASSESSED AT D-3 CLOSURE), NO UNIVERSAL 40 % MAP SHARE (DEFAULT / AX3 / AX5 TIERS), COMPACT OR SCROLLABLE UPPER CHROME WITHOUT GESTURE CONTENTION, ANDROID EMULATOR CHECKS — CP2 / CP3 AUTHORISED AS ONE PACKAGE, CP4 ONE EXACT-HEAD VALIDATION — THE PO'S PRESERVATION DIRECTIVE BINDS EVERY D-3 CHECKPOINT (§24.2 – §24.3) — NO MERGE WITHOUT «ادمج»`. The v1.11 status below is kept for provenance.
 **Change log v1.11 → v1.12 (2026-11-18).** New §24 records the PO's D-3 CP1 review and decisions D-a – D-e, and the PO directive "D-3 CP2/CP3: Mandatory Visual, Performance & Interaction Preservation" with the checkpoint acceptance criteria that reference it. It is recorded before any D-3 production fix is committed. §23.5's "CP2 is not authorised" is superseded by §24.1; nothing else earlier is rewritten.
 **Status (v1.11, 2026-11-18):** `AS v1.10 — PLUS THE PO'S DECISION ON ANDROID PRESERVATION AND DEFERRED PHYSICAL ACCEPTANCE (§23): ANDROID IS A PROTECTED BASELINE, NO PO-OPERATED HONOR TESTING DURING D-3, ONE MANDATORY POST-IMPLEMENTATION CHECKPOINT ANDROID-COSMOS-ACCEPTANCE (E-2 / ANDROID REGRESSION & REPAIR) IN WHICH §20 E-2 IS RUN — ORDER: D-3 → REMAINING COSMOS IMPLEMENTATION → ANDROID-COSMOS-ACCEPTANCE → FINAL COSMOS ACCEPTANCE / PO-AUTHORISED MERGE → S8B-07 REPLAY — D-3 CP1 STOPPED FOR THE PO, CP2 NOT AUTHORISED — NO MERGE WITHOUT «ادمج»`. The v1.10 status below is kept for provenance.
@@ -2714,6 +2716,169 @@ Thresholds carried forward from §22.7:
 
 ### 24.4 Disclosure
 The CP2 / CP3 code was drafted **locally and left uncommitted** before the directive arrived. It is **reviewed against §24.2 before any commit**, and the review is recorded with the package (§25). This record is committed and pushed first, on its own.
+
+## 25. Slice E D-3 — CP2 / CP3 delivered, CP4 executed (2026-11-19) — NOT CLOSED, STOPPED FOR THE PO
+
+**Commits on `cosmos/cosmos-int-01-slice-e-d3` (Draft PR #400, stacked on #399; PR #399 untouched at fc2e13c6):**
+- `1dd7a109` — §24, before any code;
+- `5bb3f77d` — the CP2 / CP3 package and its harness;
+- `0a6fd601` — a harness-only fix (§25.4);
+- this record.
+
+The application is identical at `5bb3f77d` and `0a6fd601`. Evidence is archived at `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/cp23/`.
+
+### 25.1 What changed (interaction, accessibility and responsive layout only)
+| Item | Change | File |
+|---|---|---|
+| SE-FU-2, the deeper beads | a bead takes touch only when it acts: `pointerEvents={past ? undefined : 'none'}`. Its role, disabled and selected states are unchanged. | `cosmos/product/CosmosWorldView.tsx` |
+| SE-FU-2, the rail line | `pointerEvents="none"` (decorative) | same |
+| SE-FU-2, the card | the panel is `box-none` and its words sit in a `pointerEvents="none"` wrapper. Only "Go to the nearest" takes touch; the live region and the announced text are kept. | same |
+| E-1(a), Back at home | `pointerEvents='none'`, `accessibilityElementsHidden` (iOS), `importantForAccessibility='no-hide-descendants'` (Android) and `flexShrink: 1`. Away from home, Back is unchanged. Overview gets `flexShrink: 0`. | same |
+| The rail and the Overview chip | `railTopOf(glassHeight, controlsEnd, companion)`: the rail starts at 36 % of the stage **or** below the measured top controls (`onLayout`, set only on change), whichever is lower. The camera's `usableCentre` reads the bottom host rail, not the depth rail, so the camera is unaffected. | same; `cosmos/product/index.ts` |
+| The upper band (Shared / Public) | the band content sits in a `ScrollView` capped at 40 % of the window (`topBandRoom`). It scrolls **only** when its content overflows that room (`scrollEnabled` and `maxHeight` only then). It is one element at every size, never over the stage. At the default size nothing scrolls. | `living-analysis/LivingAnalysisSurface.tsx` |
+| The Conversation header row (Personal) | wrapped in a `ScrollView` capped at 30 % of the window and sized by `onContentSizeChange`. The door gets `flexShrink`. | `ConversationSurface.tsx` |
+| The switcher | `globalSwitcherHeight(fontScale) = max(56, ceil(28 + 22 × max(1, fontScale)))`: 56 pt up to iOS xxxL, growing with the words beyond it, so they stay visible. The depth composition reserves that height. | `shared-world/GlobalSwitcher.tsx`, `DepthComposition.tsx` |
+| The Shared title | `numberOfLines={2}`, so it wraps before any ellipsis | `SharedLivingAnalysis.tsx` |
+
+- No file under `cosmos/core/*` or `cosmos/skia/*` was touched, and no geometry, material, camera, gesture or asset changed. No font cap was added.
+- **Golden:** a controlled re-anchor (sha256 34488cd3… → ddf12cfa…). There are 155 leaves, every one in an allowed category (BEAD_TOUCH 51, RAIL_TOP 26, RAIL_LINE 13, BACK_HOME 46, BACK_AWAY 6, OVERVIEW 13), and 0 structural changes. `golden-structural-diff.mjs` exits 0.
+- **Disclosure:**
+  - `LivingAnalysisSurface` is shared with the Replay surfaces. At the default size its behaviour is identical (nothing scrolls). Replay itself was not touched.
+  - The code was drafted before the directive (§24.4) and reviewed against §24.2 before the commit.
+
+### 25.2 The §24.3 CP2 / CP3 criteria
+| # | Criterion | Result |
+|---|---|---|
+| 1 | outside the renderer; no geometry, material, camera or asset change | **PASS** (the diff touches no `cosmos/core/*` or `cosmos/skia/*` file) |
+| 2 | no new per-frame work | **PASS**: every layout value comes from `onLayout`, `onContentSizeChange` or the window, and is set only on change |
+| 3 | no scroll container over the stage; a band scrolls only when it overflows | **PASS**: unit tests (`living-analysis-surface.test.tsx`: 104 → no scroll; 338 → room 337, scrolls) and the default-size screenshots |
+| 4 | accessibility preserved and proven | **PASS**: `cosmos-world-view.test.tsx` (22 tests, using `includeHiddenElements`); Android uiautomator (§25.5) |
+| 5 | golden change is a controlled re-anchor | **PASS** (§25.1) |
+| 6 | every default-size change listed and justified | **PASS**. The only visible default-size change is in **Public**: the depth rail now starts below the Overview chip instead of under it, which was the CP1 handoff defect (§22.5). Personal and Shared are unchanged on iOS (gate screenshots, D-1 fc2e13c6 against D-3 5bb3f77d: the band-mean difference is ≤ 1.5 outside the animated stage). The Back and bead changes are invisible (touch and accessibility only). |
+
+- **Local checks:** jest has the same 12 local-environment failures as fc2e13c6; tsc and lint are clean; the mobile contract scripts pass except for the baseline-environment ones.
+
+### 25.3 CP4 — the exact-head iOS World gate
+| Run | Head | Result |
+|---|---|---|
+| 44396934402 | 5bb3f77d | **19 / 19 PASS**: the 16 D-1 cases + D-a fresh install + SE-FU-2 + layout (default size) |
+| 44411277402 attempt 1 | 0a6fd601 | 17 PASS; **U-TAP FAIL**: tap 1 at 82,352 left Public at Far, and the screenshot shows the stage unchanged; **S-TAP NOT TESTED**: the Maestro `st-world` flow completed every step but its process outlived the 150 s bound, so the harness marks it as INFRASTRUCTURE. The runner was about 2× slower than in the passing run (`u-field` 139 s against 47 s). |
+| 44411277402 attempt 2 (diagnostic rerun of the failed job, same head) | 0a6fd601 | U-TAP and S-TAP **PASS**; the four Personal Maestro cases **NOT TESTED**: the Maestro tap on the Analysis door (after the 8 s settle) failed as a step. The hierarchy dump taken at the failure is **empty (0 bytes)**, while the screenshot shows the idle Conversation with the door drawn. Every native case PASS. |
+
+- Mobile CI: 44396929261 (5bb3f77d) and 44411277373 (0a6fd601) **success**. API CI is not triggered: no path of its filter changed. It is **NOT APPLICABLE**, not passed.
+- **Reading.** The application is the same in all three gate runs. Every native XCUITest case passed in all three. Both non-PASS episodes are Maestro-driven:
+  - one hang after a completed flow;
+  - one failed lookup with an empty hierarchy, the same symptom class as D-1's gate 44321160183;
+  - one Public tap with no effect.
+
+  The tap with no effect is the only episode not explained by infrastructure. Code review found no D-3 change on its touch path: the band ends at 256 pt, the rail is at the right edge, and Back at home is `pointerEvents` none. **That is reasoning, not proof.**
+- **Under BG-10 and §24.3, CP4 is not clean, and D-3 is NOT CLOSED.** No further rerun was made to reach a green result.
+- This record's own push re-runs the gate and Mobile CI, because their `pull_request` path filters see the whole PR diff. That run is reported to the PO with this record. It is not recorded here.
+
+### 25.4 Before / after validation on the same harness (iOS, push-only `cosmos-ios-d3-validation.yml`)
+**Branches (NEVER merged):**
+- `cosmos/validate/d3-baseline`: ea01eb42 → f9efbafd (fc2e13c6 + this harness only; worktree `E:\cosmosd3val`);
+- `cosmos/validate/d3-head`: 5bb3f77d → 0a6fd601.
+
+**Runs:**
+- baseline 44396990958 and 44413555209;
+- head 44397000717 and 44411274594.
+
+**Harness defects found and corrected or recorded:**
+- The layout test read the window before launching the app. Run alone, every cell failed with "Application … is not running". This was fixed in `0a6fd601`; in the gate the test had passed only because an earlier test left the app open.
+- **The clear-map-share assertion reads the band element's frame.** With the band now in a `ScrollView`, that frame is the scrolled content, not the visible band. So the head's five share "failures" are measurement artifacts: i17 en AX5 Public 11 %, SE en AX3 Public 3 %, SE ar AX3 Public 12 %, and SE en / ar AX5 Shared 12 %. The share is therefore measured from the screenshots' pixels: a stage row is one where at least half its pixels are blue-violet, and chrome rows are neutral grey. This method gives the same values as XCUITest wherever XCUITest is valid (default size: Shared 71 %, Public 60 %).
+- A proper harness measure needs an identifier on the band's visible container, which is an application change. It is left to the PO.
+
+**Layout matrix:**
+- The **baseline** fails **10 / 10** cells on real CP1 defects:
+  - the bead overlaps Overview even at the default size (i17 en / ar, SE en);
+  - Overview leaves the screen (i17 en AX3 / AX5, SE en AX3);
+  - the bead overlaps Overview in Shared at ar AX3;
+  - the Conversation never appears (SE en AX5);
+  - the door is at x = −41 (SE ar AX5).
+- The **head** has **0 control violations** in every cell reached: controls on screen, switcher words present, no bead over Overview, Back hidden at home. The SE en AX5 Conversation now appears.
+
+**Visible map share (head; pixels):**
+
+| Configuration | Shared | Public | Baseline (CP1 §22.5 / pixels) |
+|---|---|---|---|
+| i17 en / ar default | 71 % | 60 % | 71 % / 60 %: unchanged |
+| SE en default | 74 % | 59 % | 74 % / 59 %: unchanged |
+| i17 en AX3 / ar AX3 | 46 % / 47 % | 46 % / 46 % | Public 22.4 % / 34.8 % |
+| i17 en AX5 | 44 % | 44 % | not reached |
+| SE en AX3 / ar AX3 | 47 % / 47 % | 47 % / 47 % | Public **0.9 %** / **9.6 %** |
+| SE en / ar AX5 | 44 % / 44 % | **NOT TESTED** (the false Shared assertion stopped the test first) | Public **0 %** (ar AX5) |
+
+- At AX3 and AX5 the band scrolls inside its room (its later actions are below the fold, reached by scrolling the band), and the map, Overview, the rail and the switcher stay reachable. The Shared title wraps on two lines.
+
+**D-a (fresh install, first visible frame, one tap, no settle, no retry):**
+- head **7 / 7 opened**: gate × 3, validation × 4;
+- baseline **3 / 3 opened**; a fourth baseline round had an Xcode launch timeout before the app ran, so it is NOT TESTED.
+
+The two original failure conditions (§22.3) were not reproduced. SE-FU-1 stays bounded, as before.
+
+**D-b (responsiveness).** The CP4 harness times the first screenshot that changes. Its screenshots are 220–560 ms apart, so its "response" is a coarse upper bound that **cannot resolve 250 ms**. It is **not comparable** with CP1's in-app L1 timing (27–212 ms warm, 1051 ms first cold). Its "ready" is an XCUITest query time, not an app time.
+
+| Build | Cold response (ms) | Warm response (ms) |
+|---|---|---|
+| head (7 samples) | 524 – 1478 (median 621) | 729 – 1906 (median 890) |
+| baseline (3 samples) | 685 – 1689 | 802 – 1207 |
+
+No regression is measured on the same harness. The first-cold T-ack is **still not a PASS** (§24.1 D-b).
+
+**SE-FU-2 (iOS):**
+- baseline **FAIL** twice: the drag from the deeper bead's dot did not reach the stage (the negative control);
+- head **PASS** four times (beads + card);
+- in one head validation run the card's region step landed on a mark: beads PASS, card NOT TESTED (`XCTSkip`).
+
+### 25.5 Android emulator before / after (D-e; HONOR untouched)
+- **Setup.** API 36 emulator, 1080 × 2400. The baseline APK is the accepted fc2e13c6 line (a8c10cdb…); the D-3 APK was built from 5bb3f77d. The same script was used for both (`cp23/android/emu-d3.sh`, report `ANDROID_RESULTS.md`).
+- **Harness defect.** Under gestural navigation, the deeper-bead pan began inside the system's back-gesture edge zone, and the system closed the Analysis on both APKs. That run is void. It was rerun on three-button navigation (`emu-d3-nav3.sh`), and gestural navigation and font 1.0 were restored.
+
+| Case | Baseline | D-3 |
+|---|---|---|
+| Back at home not in the accessibility tree | PASS | PASS |
+| a pan from Back's home place reaches the stage | PASS | PASS |
+| Back away from home: exposed, enabled, named, returns home | PASS | PASS |
+| deeper beads exposed and disabled | PASS | PASS |
+| **a pan from a deeper bead's dot reaches the stage (SE-FU-2)** | **FAIL** | **PASS** |
+| **no bead over the Overview chip** | **FAIL** | **PASS** |
+| font 2.0: switcher words on screen / Public band share | PASS / 31 % | PASS / 31 % |
+| cold start, `am start -W` (ms) | 454 449 393; 523 465 498 | 460 430 423; 494 463 521 |
+| pan frames, gfxinfo (software rendering, **not a device FPS**) | 239 frames, 95.8 % janky; 248, 95.6 % | 251, 94.4 %; 246, 98.4 % |
+
+The default-size Personal frame is the same: bead bounds match within ±1 px.
+
+### 25.6 P-1 – P-6 (§24.3)
+| Item | Result | Evidence |
+|---|---|---|
+| **P-1** visual preservation | **PASS** | At the default size, iOS (all three Worlds) and Android are unchanged except the listed Public rail position. The golden has 0 structural changes. Enlarged sizes change by intent (D-c / D-d). |
+| **P-2** map opening and time to interaction, cold and warm | **PASS for no regression; T-ack 250 ms NOT MET / NOT PROVEN** | Same-harness head against baseline (§25.4 D-b); Android cold start unchanged. The first cold launch is recorded separately and is not called a PASS. |
+| **P-3** World switching | **NOT TESTED as a timing** | Every gate and layout run switched Worlds through the switcher, and every entry opened, but no switching time was measured: Maestro's TIMING lines are not captured. No figure is claimed. |
+| **P-4** pan / pinch FPS and finger latency | **NOT TESTED** (no device FPS) | Pan tracking is unchanged on iOS. For a −120 pt drag, the measured median shift was:
+- D-1 gate 44336199775: X-PAN-AFTER-PINCH −106, X-PAN-ZOOMED −97;
+- the three D-3 gate runs: X-PAN-AFTER-PINCH −106, X-PAN-ZOOMED −97 to −106. No per-frame work was added (§25.2 item 2). The emulator frame figures do not differ, but they are not FPS. |
+| **P-5** camera, focal anchoring, depth transitions | **PASS** | X-ANCHOR 0 pt off in all three gate runs; the double-tap, pinch and depth-word native cases PASS; the camera's centre input is unchanged (§25.1). |
+| **P-6** Android automated regression coverage | **PASS** | §25.5 before / after; Mobile CI's Android Release APK and API 36 emulator boot smoke succeeded on both heads. |
+
+### 25.7 Decisions for the PO
+1. **The exact-head gate (§25.3).** Options:
+   - accept the evidence as it stands;
+   - order one more gate run on the final head (the run this push triggers is reported with this record);
+   - order a Maestro-stability investigation before closure.
+
+   **Recommended:** judge the run this push triggers. If it is not clean, run a focused investigation of the U-TAP no-effect tap before D-3 closes.
+2. **D-b.**
+   - The first-cold T-ack stays NOT PASS, and the CP4 harness cannot measure 250 ms.
+   - **Recommended, before final COSMOS acceptance (not beyond COSMOS):** one instrumented first-launch measurement on the D-3 head, reusing CP1's L1 hooks on a diagnostic branch. If it confirms more than 250 ms, a targeted fix of the about 2.1 s JavaScript long task between the typeface becoming ready and the door's layout (§22.3, §22.8).
+3. **The share measurement.** Approve an identifier on the band's visible container (an application change, testID only, with a golden re-anchor), so that XCUITest measures the visible band at enlarged sizes. Otherwise the pixel method stays the measure.
+4. **The visual result at AX3 / AX5.** The band scrolls in its room, with its later actions below the fold. That is a §24.1 D-d choice ("compact or scrollable"). It is reported for the PO's design review.
+
+### 25.8 Not done
+- No merge, no Replay, no change to PR #399, to the frozen artwork or to any threshold already accepted.
+- No HONOR testing (§23.1); no TalkBack or VoiceOver proof (PO policy, 2026-11-08).
+- No retry of any case to obtain a PASS. The single rerun of the failed gate job is diagnostic and is reported with both attempts.
+- **Still open:** O-1, O-2, the coverage items, F-1 and E-2 of §20; SE-FU-1 (bounded); D-b. The validation branches and `cosmos/slice-e-d3-diag` are never merged and are deleted only on the PO's word.
 
 ---
 

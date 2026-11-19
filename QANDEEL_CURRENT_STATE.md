@@ -31,6 +31,18 @@
 >     - The first-cold 1051 ms T-ack is not a PASS. Warm and first-cold are recorded separately and reassessed at D-3 closure, not deferred beyond COSMOS.
 >     - No universal 40 % map share: the default / AX3 / AX5 tiers apply (§24.1 D-c).
 >     - The PO's preservation directive (§24.2) binds every D-3 checkpoint: no change to the artwork, renderer, camera, gestures or assets; no regression in opening, switching, depth moves, PEEK / sheets, FPS or finger latency. The CP4 report states PASS / FAIL / NOT TESTED for P-1 – P-6 (§24.3).
+>   - **D-3 CP2 / CP3 delivered, CP4 executed (2026-11-19; contract §25): NOT CLOSED, STOPPED FOR THE PO.**
+>     - Package `5bb3f77d` plus harness-only fix `0a6fd601`:
+>       - SE-FU-2: the deeper beads, the rail line and the card pass touch to the stage;
+>       - E-1(a): Back at home is hidden and pointerEvents none;
+>       - the rail sits below the top controls;
+>       - the band scrolls in a 40 % room; the Personal row is capped at 30 %; the switcher grows with its words; the Shared title wraps on two lines;
+>       - golden re-anchor, 0 structural changes.
+>     - Proven against baseline negative controls on iOS and the Android emulator. All 10 baseline layout cells fail; the head has 0 control violations.
+>     - D-a: 7 / 7 fresh-install first-visible taps opened.
+>     - D-b: still NOT a PASS; the harness cannot resolve 250 ms.
+>     - P-1, P-2 (no regression), P-5 and P-6 PASS; P-3 and P-4 NOT TESTED as timings.
+>     - The exact-head iOS World gate is NOT clean. It had 19 / 19 on 5bb3f77d; on 0a6fd601, with the same application, attempt 1 had U-TAP FAIL and S-TAP NOT TESTED, and attempt 2 had four Personal Maestro cases NOT TESTED. PO decisions are in §25.7.
 >   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.
