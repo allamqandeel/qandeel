@@ -692,11 +692,23 @@ final class CosmosWorldGestureUITests: XCTestCase {
     let H = screen.height, W = screen.width
     var lines = ["screen \(Int(W))x\(Int(H))"]
     func box(_ e: XCUIElement) -> String { let f = e.frame; return "\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height))" }
+    // D-3 CP4 (PO 2026-11-19): a band's testID is on the CONTENT inside its capped ScrollView, so its frame is the
+    // content's (taller than the screen at large text). Its visible bottom is the bottom of the smallest ScrollView that
+    // holds it, never below its own bottom.
+    func holder(_ bandId: String) -> XCUIElement? {
+      app.scrollViews.containing(.any, identifier: bandId).allElementsBoundByIndex.filter { $0.exists }.min(by: { $0.frame.height < $1.frame.height })
+    }
+    func visibleBottom(_ bandId: String) -> CGFloat {
+      let band = element(bandId)
+      return min(band.frame.maxY, holder(bandId)?.frame.maxY ?? band.frame.maxY)
+    }
     func inside(_ id: String) {
       for e in app.descendants(matching: .any).matching(identifier: id).allElementsBoundByIndex where e.exists {
         let f = e.frame
         lines.append("\(id)=\(box(e)) hittable=\(e.isHittable)")
-        XCTAssertTrue(f.minX >= -0.5 && f.maxX <= W + 0.5 && f.minY >= -0.5 && f.maxY <= H + 0.5, "\(tag): \(id) leaves the screen (\(box(e)))")
+        // The approved correction (PO 2026-11-19): a band is judged by its visible capped bottom, not its content frame.
+        let maxY = id.hasSuffix("-band") ? visibleBottom(id) : f.maxY
+        XCTAssertTrue(f.minX >= -0.5 && f.maxX <= W + 0.5 && f.minY >= -0.5 && maxY <= H + 0.5, "\(tag): \(id) leaves the screen (\(box(e)), visible bottom \(Int(maxY)))")
       }
     }
     func railClearOfOverview(_ w: String) {
@@ -707,14 +719,11 @@ final class CosmosWorldGestureUITests: XCTestCase {
         XCTFail("\(tag) \(w): the depth bead '\(b.label)' (\(box(b))) overlaps the Overview chip (\(box(overview)))")
       }
     }
-    // D-3 CP4 (PO 2026-11-19): the band's testID is on the content inside its capped ScrollView, so its frame is the
-    // CONTENT's (taller than the screen at large text) and the old share read near zero where the screen showed 47 %.
-    // The band's visible bottom is the bottom of the smallest ScrollView that holds it, never below its own bottom.
+    // D-3 CP4: the old share read the content frame, near zero where the screen showed 47 %; it reads the visible bottom.
     func share(_ w: String, _ bandId: String) {
       let band = element(bandId)
       guard band.exists else { return }
-      let holders = app.scrollViews.containing(.any, identifier: bandId).allElementsBoundByIndex.filter { $0.exists }
-      let visible = min(band.frame.maxY, holders.min(by: { $0.frame.height < $1.frame.height })?.frame.maxY ?? band.frame.maxY)
+      let visible = visibleBottom(bandId)
       let bottoms = ["qandeel-global-switcher", "qandeel-cosmos-timeline-rail", "qandeel-cosmos-register"].compactMap { id -> CGFloat? in
         let e = element(id); return e.exists && e.frame.minY > visible ? e.frame.minY : nil
       }
@@ -748,6 +757,37 @@ final class CosmosWorldGestureUITests: XCTestCase {
       for id in ["qandeel-public-band", "qandeel-public-search", "qandeel-cosmos-overview"] { inside(id) }
       railClearOfOverview("public")
       share("public", "qandeel-public-band")
+      // D-3 CP4 (PO 2026-11-19): ONE focused interaction. A search below the band's fold must be reachable by scrolling the
+      // band, and usable once reached: typed into, and closed by its own control. Nothing is done when it is already in view.
+      let search = element("qandeel-public-search")
+      if search.exists && !search.isHittable, let band = holder("qandeel-public-band") {
+        var drags = 0
+        while !search.isHittable && drags < 4 {
+          let f = band.frame
+          let from = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: f.midX, dy: f.minY + f.height * 0.8))
+          let to = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: f.midX, dy: f.minY + f.height * 0.2))
+          from.press(forDuration: 0.05, thenDragTo: to)
+          drags += 1
+          settle(1)
+        }
+        lines.append("public search below the fold: \(drags) band drag(s) -> \(box(search)) hittable=\(search.isHittable) visible bottom=\(Int(visibleBottom("qandeel-public-band")))")
+        shot("layout-\(tag)-public-search-reached")
+        XCTAssertTrue(search.isHittable, "\(tag): the Public search below the fold was not reached by scrolling the band")
+        if search.isHittable {
+          search.tap()
+          search.typeText("ab")
+          let typed = (search.value as? String) ?? ""
+          let close = element("qandeel-public-search-close")
+          let closeSeen = close.waitForExistence(timeout: 5)
+          lines.append("public search used: value=\(typed.contains("ab") ? "contains the typed text" : "'\(typed)'") close=\(closeSeen) hittable=\(closeSeen && close.isHittable)")
+          shot("layout-\(tag)-public-search-used")
+          XCTAssertTrue(typed.contains("ab"), "\(tag): the reached Public search did not take the typed text")
+          XCTAssertTrue(closeSeen, "\(tag): the opened Public search shows no close control")
+          if closeSeen && close.isHittable { close.tap(); settle(1) }
+        }
+      } else {
+        lines.append("public search in view without scrolling: exists=\(search.exists) hittable=\(search.exists && search.isHittable)")
+      }
     }
     note("layout-\(tag)", lines.joined(separator: "\n"))
   }

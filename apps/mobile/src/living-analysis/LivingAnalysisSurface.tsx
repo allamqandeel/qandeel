@@ -132,11 +132,13 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
     setChromeContent((current) => (current === points ? current : points));
   }, []);
   const chromeOnly = timeline === null;
-  const room = top === null ? null : topBandRoom(top.height, surfaceEnvelope.height);
-  const topHeight = room === null ? null : room.height;
-  const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
   // COSMOS-INT-01 (STAGE): the glass the frame measured, held by value so an equal measurement is never a relayout.
   const staged = stage !== undefined;
+  // Slice E D-3 (CP4 review, Replay contract protection): the cap is the COSMOS stage's only. The `world=` presentation
+  // (Replay's player and composite) keeps its band exactly as accepted: its measured height, unscrolled, at every size.
+  const room = top === null ? null : staged ? topBandRoom(top.height, surfaceEnvelope.height) : { height: top.height, scrolls: false };
+  const topHeight = room === null ? null : room.height;
+  const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
   const [glass, setGlass] = useState<ViewportEnvelope | null>(null);
   const onGlass = useCallback((next: ViewportEnvelope) => {
     setGlass((current) => (current !== null && envelopeEquals(current, next) ? current : next));
@@ -234,13 +236,17 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
         it exactly as it treats the status bar: the band's measured height is the world's top inset,
         so T-11 keeps everything the reader must see out from under it.
       */}
-      <View style={styles.band}>
-        {/* Slice E D-3: ONE element at every size (no remount at the threshold); it scrolls only past the band's room. */}
-        <ScrollView style={[styles.bandScroll, room?.scrolls === true ? { maxHeight: room.height } : null]} scrollEnabled={room?.scrolls === true} bounces={false}
-          showsVerticalScrollIndicator={room?.scrolls === true} keyboardShouldPersistTaps="always">
-          {top.content}
-        </ScrollView>
-      </View>
+      {staged ? (
+        <View style={styles.band}>
+          {/* Slice E D-3: ONE element at every size (no remount at the threshold); it scrolls only past the band's room. */}
+          <ScrollView style={[styles.bandScroll, room?.scrolls === true ? { maxHeight: room.height } : null]} scrollEnabled={room?.scrolls === true} bounces={false}
+            showsVerticalScrollIndicator={room?.scrolls === true} keyboardShouldPersistTaps="always">
+            {top.content}
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={styles.band}>{top.content}</View>
+      )}
       {surface}
     </>
   );
