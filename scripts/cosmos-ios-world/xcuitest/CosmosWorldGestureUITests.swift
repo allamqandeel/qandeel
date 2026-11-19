@@ -550,6 +550,10 @@ final class CosmosWorldGestureUITests: XCTestCase {
   ///   response  the first screenshot in which the door's own pixels changed (its pressed state, or the Analysis);
   ///   stage     the first screenshot in which the screen below the door changed as a whole (the Analysis drawn);
   ///   ready     the Analysis's timeline rail in the accessibility tree (XCUITest's query, about 1 s resolution).
+  /// D-3 CP4 (PO 2026-11-19): when the stage test never fires (a dark Analysis can look like the Conversation below the
+  /// door), the screenshot watch used to run on for its whole 20 s and "ready" then reported that watch, not the app
+  /// (warm ready 21.6–22.1 s in every such run, 2.3–3.8 s when the stage was seen). The watch now stops 3 s after the
+  /// response, and the line records when the query started, so "ready" is never read as the app's time.
   private func doorTap(_ phase: String, _ visibleShot: XCUIScreenshot) -> (opened: Bool, line: String) {
     let door = doorFrame
     let below = CGRect(x: 0, y: door.maxY + 50, width: pts.width, height: 200)
@@ -559,19 +563,22 @@ final class CosmosWorldGestureUITests: XCTestCase {
     var gaps: [Int64] = []
     var last = tap.t1
     let until = Date().addingTimeInterval(20)
+    var responded: Date? = nil
     while Date() < until && (tResponse == 0 || tStage == 0) {
+      if let r = responded, Date().timeIntervalSince(r) > 3 { break }
       let s = XCUIScreen.main.screenshot()
       let t = now()
       shots += 1; gaps.append(t - last); last = t
       let d = stats(s, door), b = stats(s, below)
-      if tResponse == 0 && (abs(d.mean - d0.mean) > 6 || abs(d.std - d0.std) > 6) { tResponse = t; shot("sefu1-\(phase)-first-response", s) }
+      if tResponse == 0 && (abs(d.mean - d0.mean) > 6 || abs(d.std - d0.std) > 6) { tResponse = t; responded = Date(); shot("sefu1-\(phase)-first-response", s) }
       if tStage == 0 && abs(b.mean - b0.mean) > 20 { tStage = t; shot("sefu1-\(phase)-stage", s) }
     }
+    let tQuery = now()
     let opened = element("qandeel-cosmos-timeline-rail").waitForExistence(timeout: 30)
     let tReady = opened ? now() : 0
     let gap = gaps.isEmpty ? 0 : gaps.reduce(0, +) / Int64(gaps.count)
     let ms = { (t: Int64) -> String in t == 0 ? "none" : "\(t - tap.t0)" }
-    return (opened, "\(phase): tap=\(tap.ok) \(tap.info); response=\(ms(tResponse)) ms; stage=\(ms(tStage)) ms; ready=\(ms(tReady)) ms (query); screenshots=\(shots), mean interval \(gap) ms")
+    return (opened, "\(phase): tap=\(tap.ok) \(tap.info); response=\(ms(tResponse)) ms; stage=\(ms(tStage)) ms; ready=\(ms(tReady)) ms (query, started at \(ms(tQuery)) ms); screenshots=\(shots), mean interval \(gap) ms")
   }
 
   /// D-a / D-b (PO 2026-11-18): right after a FRESH install (the workflow installs the app anew before this test alone),
@@ -675,6 +682,10 @@ final class CosmosWorldGestureUITests: XCTestCase {
   /// "Near-zero" is taken as under 20 % of the screen; every share is recorded for the PO's tiers.
   func testLayoutAtTheReadersTextSize() {
     let tag = ProcessInfo.processInfo.environment["D3_TAG"] ?? "gate"
+    // D-3 CP4 (PO 2026-11-19): a measurement of every World. In validation 44411274594 a Shared share failure stopped the
+    // test, so the small iPhone's AX5 Public was never measured and the recorded frames (`layout-…`) were lost. Every
+    // World is now measured and recorded; any failed check still fails the test.
+    continueAfterFailure = true
     // Launch first: `screen` is the app's window. Run alone (validation 44397000717) the test found the app not running
     // ("Failed to get matching snapshot"); in the gate it passed only because an earlier test had left the app open.
     toConversation()
@@ -696,14 +707,19 @@ final class CosmosWorldGestureUITests: XCTestCase {
         XCTFail("\(tag) \(w): the depth bead '\(b.label)' (\(box(b))) overlaps the Overview chip (\(box(overview)))")
       }
     }
+    // D-3 CP4 (PO 2026-11-19): the band's testID is on the content inside its capped ScrollView, so its frame is the
+    // CONTENT's (taller than the screen at large text) and the old share read near zero where the screen showed 47 %.
+    // The band's visible bottom is the bottom of the smallest ScrollView that holds it, never below its own bottom.
     func share(_ w: String, _ bandId: String) {
       let band = element(bandId)
       guard band.exists else { return }
+      let holders = app.scrollViews.containing(.any, identifier: bandId).allElementsBoundByIndex.filter { $0.exists }
+      let visible = min(band.frame.maxY, holders.min(by: { $0.frame.height < $1.frame.height })?.frame.maxY ?? band.frame.maxY)
       let bottoms = ["qandeel-global-switcher", "qandeel-cosmos-timeline-rail", "qandeel-cosmos-register"].compactMap { id -> CGFloat? in
-        let e = element(id); return e.exists && e.frame.minY > band.frame.maxY ? e.frame.minY : nil
+        let e = element(id); return e.exists && e.frame.minY > visible ? e.frame.minY : nil
       }
-      let clear = ((bottoms.min() ?? H) - band.frame.maxY) / H
-      lines.append("\(w) band=\(box(band)) clear map share=\(Int((clear * 100).rounded())) %")
+      let clear = ((bottoms.min() ?? H) - visible) / H
+      lines.append("\(w) band=\(box(band)) visible bottom=\(Int(visible)) clear map share=\(Int((clear * 100).rounded())) %")
       XCTAssertGreaterThanOrEqual(clear, 0.20, "\(tag) \(w): the clear map is near zero (\(Int(clear * 100)) %)")
     }
     shot("layout-\(tag)-conversation")
