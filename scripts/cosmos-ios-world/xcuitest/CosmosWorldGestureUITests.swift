@@ -464,9 +464,13 @@ final class CosmosWorldGestureUITests: XCTestCase {
   }
 
   /// Luminance mean and standard deviation (0-255) of a rectangle given in points.
-  private func stats(_ s: XCUIScreenshot, _ r: CGRect) -> (mean: Double, std: Double) {
+  /// `widthPoints`: the width, in points, the screenshot spans. Default `pts` (the runner's screen bounds, as every D-1 / D-3
+  /// measurement was taken). COSMOS-FINAL-01 O-2 passes the app window's own width: on gate 44610727889 the pending
+  /// spinner was drawn at the shell's centre (attached `o2-pending`) yet the crop measured a flat 0, i.e. it was cut
+  /// elsewhere; the note now records both widths.
+  private func stats(_ s: XCUIScreenshot, _ r: CGRect, widthPoints: CGFloat? = nil) -> (mean: Double, std: Double) {
     guard let cg = s.image.cgImage else { return (-1, -1) }
-    let k = CGFloat(cg.width) / pts.width
+    let k = CGFloat(cg.width) / (widthPoints ?? pts.width)
     let px = CGRect(x: r.minX * k, y: r.minY * k, width: r.width * k, height: r.height * k).integral
     guard let crop = cg.cropping(to: px) else { return (-1, -1) }
     let w = crop.width, h = crop.height
@@ -686,7 +690,15 @@ final class CosmosWorldGestureUITests: XCTestCase {
     guard enterPublic("o1") != nil else { return }
     waitFor("qandeel-public-section-control", 20).tap()
     waitFor("qandeel-public-sections", 20)
-    waitFor("qandeel-public-section-family", 10).tap()
+    settle(1)
+    shot("o1-list-first")
+    guard let row = reachableSection() else {
+      shot("o1-no-row")
+      XCTFail("no topic section row could be reached above the World switcher")
+      return
+    }
+    note("o1-row", "\(row.identifier) at \(Int(row.frame.minY))-\(Int(row.frame.maxY))")
+    row.tap()
     settle(2)
     XCTAssertFalse(element("qandeel-public-sections").exists, "choosing a section did not close the list")
     waitFor("qandeel-public-section-control", 10).tap()
@@ -708,6 +720,26 @@ final class CosmosWorldGestureUITests: XCTestCase {
     note("o1", "list open -> typed (list kept) -> executed: answer=\(answer.exists) list=\(element("qandeel-public-sections").exists) scope=\(element("qandeel-public-search-scope").exists)")
   }
 
+  /// A topic section row a reader can reach. The list opens in the sheet's PEEK, where its lower rows lie under the World
+  /// switcher, so a tap at their centre reaches the switcher and not the row (gate 44610727889 on 77ac1695 tapped
+  /// `family` there; the Android emulator journey met the same). The first keyed row wholly above the switcher is chosen;
+  /// when none is, the sheet is first expanded by a swipe up on its handle, as a reader would. Nothing in the app changes.
+  private func reachableSection() -> XCUIElement? {
+    func find() -> XCUIElement? {
+      let switcher = element("qandeel-switcher-my_world")
+      let limit = switcher.exists ? switcher.frame.minY : screen.height
+      for key in ["love", "marriage", "family", "parenting", "people", "work_money"] {
+        let row = element("qandeel-public-section-\(key)")
+        if row.exists && row.frame.minY > 0 && row.frame.maxY <= limit { return row }
+      }
+      return nil
+    }
+    if let row = find() { return row }
+    let handle = element("cosmos-detail-sheet-handle")
+    if handle.exists { handle.swipeUp(); settle(1.5) }
+    return find()
+  }
+
   /// COSMOS-FINAL-01 O-2 (PO): while the Public entry waits for its authoritative answer, the screen is not a blank frame.
   /// A visible loading indication is drawn at the pending shell's centre (an empty frame measures a luminance spread of 0
   /// there), the World navigation stays usable, and nothing of the destination (its name, search or field) is shown
@@ -720,11 +752,12 @@ final class CosmosWorldGestureUITests: XCTestCase {
     settle(2)
     let s = XCUIScreen.main.screenshot()
     let f = pending.frame
-    let spread = stats(s, CGRect(x: f.midX - 40, y: f.midY - 40, width: 80, height: 80))
+    let window = screen
+    let spread = stats(s, CGRect(x: f.midX - 40, y: f.midY - 40, width: 80, height: 80), widthPoints: window.width)
     shot("o2-pending", s)
     let personal = element("qandeel-switcher-my_world")
     let usable = personal.exists && personal.isHittable
-    note("o2", "pending frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)) named=\(!pending.label.isEmpty) centre mean=\(Int(spread.mean)) std=\(String(format: "%.1f", spread.std)) navigation=\(usable) title=\(element("qandeel-public-title").exists) search=\(element("qandeel-public-search").exists)")
+    note("o2", "pending frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)) named=\(!pending.label.isEmpty) centre mean=\(Int(spread.mean)) std=\(String(format: "%.1f", spread.std)) window=\(Int(window.width)) runnerScreen=\(Int(pts.width)) image=\(s.image.cgImage?.width ?? 0) navigation=\(usable) title=\(element("qandeel-public-title").exists) search=\(element("qandeel-public-search").exists)")
     XCTAssertGreaterThan(spread.std, 4, "the pending Public entry is a blank frame: nothing is drawn at its centre")
     XCTAssertFalse(pending.label.isEmpty, "the pending shell has no accessible name")
     XCTAssertTrue(usable, "the World navigation is not usable while the entry is pending")
