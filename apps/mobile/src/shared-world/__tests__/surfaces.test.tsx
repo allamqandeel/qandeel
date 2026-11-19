@@ -11,7 +11,7 @@ import { P2_NAV_GLYPHS } from '../../iconography';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { SharedEntryResult, SharedRootResult } from '../../runtime-entry';
 import { SharedIdPage } from '../../settings/SharedIdSection';
-import { GlobalSwitcher } from '../GlobalSwitcher';
+import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, globalSwitcherHeight } from '../GlobalSwitcher';
 import { SharedWorldArea } from '../SharedWorldArea';
 import { SHARED_COPY_GATE, fill, sharedCopy, worldLabel } from '../copy';
 import { publicCopy } from '../../public-world/copy';
@@ -236,5 +236,14 @@ describe('S4-01 copy', () => {
     expect(P2_NAV_GLYPHS.navPublic.strokes).toHaveLength(1);
     expect(P2_NAV_GLYPHS.navPublic.dots).toHaveLength(4);
     expect(P2_NAV_GLYPHS.navPublic.strokes[0].d).not.toBe(P2_NAV_GLYPHS.navMine.strokes[0].d);
+  });
+});
+
+describe('COSMOS-INT-01 Slice E D-3 — the switcher plate at the reader’s text size (PO D-c)', () => {
+  it('is the accepted 56 points at the default size and up to iOS xxxL, and grows with the word’s line only at accessibility sizes', () => {
+    for (const scale of [0.823, 1, 1.118, 1.235]) expect(globalSwitcherHeight(scale)).toBe(GLOBAL_SWITCHER_HEIGHT);
+    expect(globalSwitcherHeight(1.353)).toBe(58);
+    expect(globalSwitcherHeight(2.353)).toBe(80);
+    expect(globalSwitcherHeight(3.118)).toBe(97);
   });
 });

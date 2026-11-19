@@ -99,7 +99,7 @@ import { ActivityEntry, ActivitySurface, AttentionStrip, CallSafeStrip, type Pro
 import { CallLine, useCallSurface, type CallRecordCompanion } from '../../call';
 import { CallRecordListening, createReplayAudioSurface, useVoicePassageSelection } from '../../original-audio';
 import { PermissionEducationSheet } from '../../push';
-import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
+import { GlobalSwitcher, globalSwitcherHeight, SharedWorldArea, type WorldArea } from '../../shared-world';
 import { PublicWorldArea } from '../../public-world';
 import { PublicShareEntry, usePublicShareSelection } from '../../public-share';
 import { ReplayEntryControl, ReplayEntryMenu, ReplayNoticeLine, useReplaySelection } from '../../replay-entry';
@@ -584,7 +584,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // S4-01 — the switcher's band is reserved at the Conversation depth whenever the world can switch, so opening and
   // closing an overlay never re-lays the Conversation out.
-  const switcherBand = onSignOut === undefined ? 0 : GLOBAL_SWITCHER_HEIGHT + 1;
+  // Slice E D-3: the band follows the plate's height at the reader's text size (the accepted 56 up to iOS xxxL).
+  const switcherBand = onSignOut === undefined ? 0 : globalSwitcherHeight(fontScale) + 1;
   const conversationInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + switcherBand }), [edges, switcherBand]);
   const shared = runtime.sharedWorld;
   // S7-02 — the Personal Replay entry: an action on THIS conversation, in the Personal world only, beside the depth control.

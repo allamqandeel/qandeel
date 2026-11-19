@@ -6394,6 +6394,17 @@ PR, not merged).**
 - **BG-09:** COSMOS-INT-01 is not closed (Slice E remains). The contract and the locators carry Slice D's state.
 - **Index after Slice D CP4: 109 items; 54 / 4 / 14 / 37 by status, 63 / 43 / 3 by severity.**
 
+**COSMOS-INT-01 Slice E D-3 — administrative closure of the completed D-3 scope (PO, 2026-11-19; Draft PR #400, not merged).**
+
+- **Inherited:** none. No backlog item names COSMOS-INT-01 or Slice E as its owner (BG-05).
+- **Not admitted (BG-01):**
+  - **SE-FU-1** (the first-cold T-ack: 1658 ms instrumented against 250 ms) is an active blocker of COSMOS-INT-01 itself. The Product Owner carried it as an "unresolved mandatory COSMOS acceptance blocker", with the narrowly scoped follow-up `SE-FU-1-LT`.
+  - **The NOT TESTED cases** carried to COSMOS's own acceptance gates: finger latency, Shared → Public, HONOR enlarged text, the detector case and sheet item 8b.
+  - The record of both is the contract's Slice E register (§28), never this backlog. The same holds for F-1, E-1 and E-2 (Slice D CP4 above).
+- **Not admitted (BG-06):** the Replay AX5 selection bar, which wraps one letter per line when the text size is set before launch. It was observed on both builds during D-3's Replay compatibility check (contract §27.1) and is pre-existing from S7-02. No canonical document defers it, and no Architecture designation exists. It is recorded in §27.1 and reported to the Product Owner for designation.
+- **BG-09:** COSMOS-INT-01 is not closed (Slice E remains). The contract (v1.16) and the locators carry D-3's administrative closure.
+- **Index unchanged: 109 items; 54 / 4 / 14 / 37 by status, 63 / 43 / 3 by severity.**
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

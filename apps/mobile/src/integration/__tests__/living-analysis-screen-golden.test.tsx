@@ -48,6 +48,22 @@
  *     - 13 `pointerEvents: 'none'` added to the selected (current, disabled) bead, one per case.
  *   - every other bead is byte-identical to the recording (no pointerEvents of its own).
  * Handlers, testIDs, accessibility (roles, labels, states) and every other value are unchanged.
+ *
+ * COSMOS-INT-01 Slice E D-3 — CONTROLLED RE-ANCHOR (Product Owner, 2026-11-18; Contract §24 – §25): SE-FU-2, E-1 option
+ * (a) and the rail below the top controls changed touch, accessibility and layout properties of the stage's chrome, and
+ * nothing else. The golden was regenerated ONCE for them. Before it was rewritten, the same structural comparison (its
+ * allow-list extended for D-3; old sha256 34488cd3…, new ddf12cfa…) proved:
+ *   - no structural difference in any of the 13 cases;
+ *   - exactly 155 differing leaves (12 per case, 11 in stale-projection), each on the allow-list:
+ *     - 51 BEAD_TOUCH: `pointerEvents: 'none'` on every disabled (deeper) bead, as on the current one since D-1;
+ *     - 26 RAIL_TOP: the rail's top moves from the style sheet's '36%' to the same 36 % as a number in its own style
+ *       (the recorded window has no control reaching the rail, so the place is unchanged);
+ *     - 13 RAIL_LINE: `pointerEvents: 'none'` on the rail's decorative line;
+ *     - 46 BACK_HOME: Back at home takes no touch and is hidden from assistive technology on both platforms, and its
+ *       style gains `flexShrink: 1`; 6 BACK_AWAY: away from home the same three properties at their defaults;
+ *     - 13 OVERVIEW: the Overview chip's style gains `flexShrink: 0`;
+ *   - every bead's touch follows whether it acts (65 beads, 0 inconsistent).
+ * Handlers, testIDs, roles, labels, states, the artwork and every other value are unchanged.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -15,7 +15,19 @@
 //     No core inside a fixed overlay counts: the test records the overlays' frames next to each screenshot
 //     (`pan-z-overlays-before` / `-after`), and without them the case is NOT TESTED. Otherwise NOT TESTED. Same
 //     tolerance as X-PAN.
-// usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir> <widthPoints> <results.tsv>
+//   - D-3 (PO 2026-11-18, contract §24): the values the D-3 tests measure (`sefu1-timing`, `sefu2-card`,
+//     `layout-gate`) are appended to their test's row as recorded evidence; they are not judged here.
+//   - D-3 CP4 (PO review 2026-11-19, contract §26), two demonstrated harness faults:
+//       * the screen width (points) comes from the World gate's Maestro step. In gate 44430083077 the Maestro driver
+//         never became ready, so the width was 0 and the three shift cases were NOT TESTED although their screenshots
+//         existed. Without a width argument, the width that the layout test recorded (`layout-gate`: "screen WxH") is used.
+//       * the shift cases match node cores by hue, and a pan or anchor step moves the world rigidly. In gate 44430083077
+//         X-PAN-AFTER-PINCH paired a red core leaving the frame with a different red core entering it (+224,-162 against
+//         -106,0 for the three other pairs). In the hue-only cases, with three or more pairs, a pair whose shift is more
+//         than three tolerances from the median of the OTHER pairs is a hue mismatch. It is reported and excluded, and
+//         at least the case's minimum of consistent pairs must remain. The tolerances and the verdict are unchanged. A
+//         world that does not move rigidly cannot pass this way: the median of the remaining pairs is still judged.
+// usage: node xcui-analyse.mjs <xcodebuild.log> <exported attachments dir[,dir…]> <widthPoints> <results.tsv>
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -46,18 +58,27 @@ for (const t of tests) {
 
 // ── the screenshots ───────────────────────────────────────────────────────────────────────────────────────────────
 const files = new Map();
-try {
-  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
-  for (const test of manifest) {
-    for (const a of test.attachments ?? []) {
-      // `suggestedHumanReadableName` is "<name>_<n>_<UUID>.<ext>"; the name given in the test is what is kept.
-      const name = String(a.suggestedHumanReadableName ?? '').replace(/_\d+_[0-9A-F-]{36}\.\w+$/i, '').replace(/\.\w+$/, '');
-      files.set(name, path.join(dir, a.exportedFileName));
+for (const d of String(dir).split(',').filter(Boolean)) {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(d, 'manifest.json'), 'utf8'));
+    for (const test of manifest) {
+      for (const a of test.attachments ?? []) {
+        // `suggestedHumanReadableName` is "<name>_<n>_<UUID>.<ext>"; the name given in the test is what is kept.
+        const name = String(a.suggestedHumanReadableName ?? '').replace(/_\d+_[0-9A-F-]{36}\.\w+$/i, '').replace(/\.\w+$/, '');
+        files.set(name, path.join(d, a.exportedFileName));
+      }
     }
-  }
-} catch { /* no attachments: the cases below are NOT TESTED */ }
+  } catch { /* no attachments there: the cases below that need them are NOT TESTED */ }
+}
 const text = (name) => (files.has(name) ? fs.readFileSync(files.get(name), 'utf8').trim() : null);
-const WPT = Number(wptArg) || 0;
+// D-3: the measured values, appended to their test's row.
+for (const [t, name] of [['testFreshInstallFirstVisibleDoorTapOpensTheAnalysis', 'sefu1-timing'],
+  ['testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage', 'sefu2-card'], ['testLayoutAtTheReadersTextSize', 'layout-gate']]) {
+  const i = rows.findIndex((r) => r.startsWith(`X:${t}\t`));
+  const v = text(name);
+  if (i >= 0 && v !== null) rows[i] += `; ${v.replace(/[\t\n]+/g, ' ')}`;
+}
+const WPT = Number(wptArg) || Number(/^screen (\d+)x\d+/m.exec(text('layout-gate') ?? '')?.[1]) || 0;
 // Node cores inside the Personal stage only: below its control row and above its timeline rail (iPhone 17 points).
 const STAGE_TOP = 165, STAGE_BOTTOM = 730;
 // Fixed overlays recorded by the test ("id=x,y,w,h;…", points); a core within 6 pt of one (its halo) is not the world's.
@@ -103,8 +124,13 @@ const shiftCase = (id, before, after, expected, tolerance, { minPairs = 2, unamb
   const alone = (S, c) => S.filter((o) => hueDiff(o.h, c.h) <= 20).length === 1;
   const node = (p) => p.a.n >= 12 && p.b.n >= 12;
   const sameSize = (p) => p.b.n >= 0.5 * p.a.n && p.b.n <= 2 * p.a.n;
-  const P = pairs(A, B).filter((p) => !unambiguous || (alone(RA, p.a) && alone(RB, p.b) && node(p) && sameSize(p)));
-  const seen = P.map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ');
+  const all = pairs(A, B).filter((p) => !unambiguous || (alone(RA, p.a) && alone(RB, p.b) && node(p) && sameSize(p)));
+  // Hue mismatches (hue-only cases): a pair far from the rigid shift of the others is not one world point.
+  const others = (p) => ({ dx: median(all.filter((o) => o !== p).map((o) => o.dx)), dy: median(all.filter((o) => o !== p).map((o) => o.dy)) });
+  const mismatch = (p) => !unambiguous && all.length >= 3 && Math.hypot(p.dx - others(p).dx, p.dy - others(p).dy) > 3 * tolerance;
+  const P = all.filter((p) => !mismatch(p));
+  const dropped = all.filter(mismatch).map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ');
+  const seen = P.map((p) => `${p.a.h}@${p.a.x},${p.a.y}->${p.b.x},${p.b.y}`).join(' ') + (dropped ? `; excluded as hue mismatches: ${dropped}` : '');
   if (P.length < minPairs) return result(id, 'NOT TESTED', `fewer than ${minPairs === 1 ? 'one' : 'two'} ${unambiguous ? 'unambiguous ' : ''}node cores matched by hue (${P.length}: ${seen || 'none'})`);
   const m = { dx: median(P.map((p) => p.dx)), dy: median(P.map((p) => p.dy)) };
   const off = (p) => Math.hypot(p.dx - expected.dx, p.dy - expected.dy);

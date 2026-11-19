@@ -1,6 +1,6 @@
 # QANDEEL — Project Map
 
-> **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION — SLICES B AND C ACCEPTED, PERSONAL TARGET CENTRING ACCEPTED, SLICE D CP1 – CP3 ACCEPTED FOR ROADMAP CONTINUATION, CP4 (THREE-WORLD CLOSURE) DELIVERED: SLICE D CLOSED / READY FOR PO REVIEW — SLICE E ACCEPTANCE REGISTER: F-1, E-1, E-2 RECORDED, NOT IMPLEMENTED — SLICE E REMEDIATION AUTHORISED (2026-11-18): D-1 ROOT CAUSE PROVEN, FIRST CORRECTION PACKAGE ON DRAFT PR #399 (D-1 NOT CLOSED), STOPPED FOR THE PO'S REVIEW — BG-10 MANDATORY iOS SIMULATOR VALIDATION (2026-11-18; current task; status only, no new task authority):** the accepted COSMOS stage draws the Personal, Shared and Public worlds in the product over the real runtime and controllers.
+> **COSMOS-INT-01 — COSMOS V5 PRODUCTION INTEGRATION — SLICES B AND C ACCEPTED, PERSONAL TARGET CENTRING ACCEPTED, SLICE D CP1 – CP3 ACCEPTED FOR ROADMAP CONTINUATION, CP4 (THREE-WORLD CLOSURE) DELIVERED: SLICE D CLOSED / READY FOR PO REVIEW — SLICE E ACCEPTANCE REGISTER: F-1, E-1, E-2 RECORDED, NOT IMPLEMENTED — SLICE E REMEDIATION AUTHORISED (2026-11-18): D-1 TECHNICALLY CLOSED (DRAFT PR #399); D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO, 2026-11-19; DRAFT PR #400) WITH SE-FU-1 OPEN AND BLOCKING FINAL COSMOS ACCEPTANCE; O-1 ENTRY REVIEW PREPARED, NOT AUTHORISED — STOPPED FOR THE PO — BG-10 MANDATORY iOS SIMULATOR VALIDATION (2026-11-18; current task; status only, no new task authority):** the accepted COSMOS stage draws the Personal, Shared and Public worlds in the product over the real runtime and controllers.
 > - **PRs.** All are accepted by the PO; none is merged.
 >   - Slice B: Draft PR #394 (`cosmos/cosmos-production-integration`, from `main` 5a21971d).
 >   - Slice C: dependent Draft PR #395.
@@ -12,7 +12,7 @@
 > - **Slice E acceptance register (contract §20; binding; NOT implemented; Slice E remediation authorised 2026-11-18, contract §21):**
 >   - **F-1** — production disclosures carry no inspection resolution, so the Personal PEEK cannot show the resolved statement, lineage or context choice. **UNRESOLVED — SLICE E REQUIRED FIX — BLOCKING FINAL COSMOS ACCEPTANCE.** Personal inspection content is **not** proven in production; it is proven in jest only.
 >   - **E-1** — visible speaker attribution in Personal, Shared and Public conversations. **REQUIRED FOR SLICE E — NOT IMPLEMENTED.**
->   - **E-2** — the PO's hands-on three-world pre-merge gate on an installable Android Release build, with cold and warm transitions and time to interactivity measured. Automation does not substitute for it. **NOT RUN.** The final COSMOS merge is blocked until it passes and the PO says «ادمج».
+>   - **E-2** — the PO's hands-on three-world pre-merge gate on an installable Android Release build, with cold and warm transitions and time to interactivity measured. Automation does not substitute for it. **NOT RUN.** It is run in the one post-implementation checkpoint `ANDROID-COSMOS-ACCEPTANCE — E-2 / Android Regression & Repair` (contract §23, PO 2026-11-18): the PO's HONOR acceptance of the three Worlds, recorded as PASS / FAIL / NOT TESTED, and Android-only repairs that never alter iOS (a correction that cannot be isolated stops for the PO). The final COSMOS merge is blocked until it passes and the PO says «ادمج».
 > - **Slice E remediation (contract §21; PO, 2026-11-18).** It runs on `cosmos/cosmos-int-01-slice-e` (worktree `E:\cosmosslicee`, from 03d1b3ea; Draft PR #399, stacked on #398). The iOS baseline report is an audit record only and is preserved unchanged.
 >   - **D-1 (BLOCKING): Personal stage taps on iOS.**
 >     - Root cause, proven by native touch-path counters (diagnostic runs 44243375725, 44248838235 and 44255421709 on `cosmos/slice-e-d1-diag`, never merged): the depth-rail beads stretched to the rail's widest word and stood as a 179 × 220 pt block over the stage (iPhone 17). On iOS that block took the hit test, so the canvas never saw the touch.
@@ -20,14 +20,63 @@
 >     - Android (local emulator): 8 / 8 PASS for the current-word taps, the shallower beads, the Personal double tap, the PEEK and the pan (contract §21.9).
 >     - iOS simulator proof: the D-1 cases (P-TAP-RAIL, P-TAP, P-PAN, P-PAN-RAIL) PASS with the fix (runs 44263732597, 44272338098) and FAIL with it reverted (negative control 44263748686); Shared and Public node taps PASS after harness R1 (44272338098); the double tap, Back and pinch are native XCUITest cases. Their exact-head gate run 44289175909 (f4ccc944) FAILED: 8 PASS, 5 FAIL, 2 NOT TESTED (contract §21.7), all diagnosed as the harness. Targeted diagnostic reruns, which are not acceptance, passed every failed and unproven case of that run on harness R3–R5 (§21.13). The added X-PAN-ZOOMED (R6–R8) recorded FAIL in pass 4: it matched a speck inside the fixed "Nothing in this region." card. That is a measurement defect, and no application defect is inferred. Its R8 diagnostic rerun (run 44319350531) PASSED. The final exact-head gate 44321160183 (746dc10b) had 12 PASS and 4 NOT TESTED: the four Personal Maestro cases, because the door tapped right after the cold launch did not open the Analysis, the SE-FU-1 boundary. Harness R9 gives that entry the native 8 s settle; it is not a fix. One more complete exact-head gate on R9 decides (§21.15). Follow-up issues: SE-FU-1 (a cold-launch Analysis tap) is assigned to D-3 by the PO; SE-FU-2 (non-interactive overlays take touches) stays in the Slice E register (§21.14.3).
 >   - **D-2:** the iOS World gate (`cosmos-ios-world-gate.yml`) is added beside the unchanged `verify-ios` boot smoke. It runs Maestro touch cases plus a native XCUITest step on the same build: a genuine double tap, a two-finger pinch, focal anchoring, and a pan after the pinch.
->   - **Not started:** D-3, O-1, O-2 and the coverage items. O-1 and O-2 are NOT ACCEPTED as they are.
->   - Stopped for the PO's review after this package. No merge, no Replay, no change to the frozen artwork.
+>   - **D-1 technically closed (PO D-3 handoff, 2026-11-18):** exact-head gate 44336199775 on R9's head fc2e13c6 had 16 / 16 PASS; Mobile CI 44336199826 and API CI 44336199643 passed (contract §22.1). PR #399 stays unchanged at fc2e13c6.
+>   - **D-3 (contract §22): CP1 DIAGNOSIS DELIVERED, STOPPED FOR THE PO.** Branch `cosmos/cosmos-int-01-slice-e-d3` (worktree `E:\cosmosd3`), Draft PR stacked on #399. CP1 ran one instrumented diagnostic build on `cosmos/slice-e-d3-diag` (never merged; run 44364253792). The PO approved CP1 only.
+>     - **SE-FU-1:** not reproduced. 12 / 12 cold-launch door taps opened the Analysis, at four timings, including taps at the door's first visible frame. No tap was lost at any layer. On the first cold launch the tap was queued, not dropped: it was acknowledged after 1051 ms. The cause of the two recorded failures stays bounded and unresolved.
+>     - **SE-FU-2:** proven on iOS. The disabled deeper beads and the "Nothing in this region." card take the stage's touch. Back at home neither takes a touch nor is exposed to accessibility.
+>     - **Enlarged text:** before-measurements across 7 configurations. The Public map falls to 0–35 % of the screen at AX3 / AX5, the Public band covers the depth rail, the Overview chip leaves the screen, the Shared title truncates, and the switcher words vanish on the small iPhone.
+>     - **Not started:** CP2 – CP4, O-1, O-2 and the coverage items. O-1 and O-2 are NOT ACCEPTED as they are.
+>   - **D-3 CP1 reviewed by the PO (2026-11-18; contract §24):** accepted as diagnostic; SE-FU-1 NOT resolved.
+>     - CP2 / CP3 are authorised as one package. CP4 is one exact-head validation, adding a fresh-install, first-visible-tap case with no settle and no retry.
+>     - The first-cold 1051 ms T-ack is not a PASS. Warm and first-cold are recorded separately and reassessed at D-3 closure, not deferred beyond COSMOS.
+>     - No universal 40 % map share: the default / AX3 / AX5 tiers apply (§24.1 D-c).
+>     - The PO's preservation directive (§24.2) binds every D-3 checkpoint: no change to the artwork, renderer, camera, gestures or assets; no regression in opening, switching, depth moves, PEEK / sheets, FPS or finger latency. The CP4 report states PASS / FAIL / NOT TESTED for P-1 – P-6 (§24.3).
+>   - **D-3 CP2 / CP3 delivered, CP4 executed (2026-11-19; contract §25): NOT CLOSED, STOPPED FOR THE PO.**
+>     - Package `5bb3f77d` plus harness-only fix `0a6fd601`:
+>       - SE-FU-2: the deeper beads, the rail line and the card pass touch to the stage;
+>       - E-1(a): Back at home is hidden and pointerEvents none;
+>       - the rail sits below the top controls;
+>       - the band scrolls in a 40 % room; the Personal row is capped at 30 %; the switcher grows with its words; the Shared title wraps on two lines;
+>       - golden re-anchor, 0 structural changes.
+>     - Proven against baseline negative controls on iOS and the Android emulator. All 10 baseline layout cells fail; the head has 0 control violations.
+>     - D-a: 7 / 7 fresh-install first-visible taps opened.
+>     - D-b: still NOT a PASS; the harness cannot resolve 250 ms.
+>     - P-1, P-2 (no regression), P-5 and P-6 PASS; P-3 and P-4 NOT TESTED as timings.
+>     - The exact-head iOS World gate is NOT clean. It had 19 / 19 on 5bb3f77d; on 0a6fd601, with the same application, attempt 1 had U-TAP FAIL and S-TAP NOT TESTED, and attempt 2 had four Personal Maestro cases NOT TESTED. PO decisions are in §25.7.
+>   - **D-3 bounded CP4 validation after the PO review (2026-11-19; contract §26): NOT CLOSED, STOPPED FOR THE PO.**
+>     - Harness-only corrections `2b0b6a53` for demonstrated faults: the analyser width fallback; hue-mismatch exclusion (X-* 12 / 12 on the four archived gates); the bounded door watch (the 22 s warm ready was a harness artifact); the share from the band's visible bottom (no production testID); the layout test measures every World.
+>     - The ONE exact-head iOS World gate 44471935834 on `2b0b6a53`: **19 / 19 PASS**; Mobile CI 44471935825 success.
+>     - Focused validation 44468744354 (`cosmos/validate/d3-cp4-focus`, never merged):
+>       - U-TAP: a touch held 620 ms reproduces the no-effect signature, identically on the baseline; short touches step 7 / 7 on both. The attempt-1 cause is unproven; no app defect is shown.
+>       - P-2, P-3 (My / Shared / Fixture) and P-4 cadence: no regression against the baseline on one runner (simulator, not device FPS). NOT TESTED: the P-3 Public leg and absolute finger latency. The first-cold T-ack is NOT proven.
+>       - SE AX5 Public share 44 % (en / ar). SE en AX5 fails only by a harness content-frame artifact; a one-line correction is proposed, not applied.
+>     - SE-FU-1 is OPEN, scheduled for one bounded instrumented measurement before final COSMOS acceptance.
+>     - Blocker: 3 / 240 root contract tests FAIL (S7-03, S7-04, S8B-07 CP1-A). They pin `LivingAnalysisSurface.tsx`, which `5bb3f77d` changed, and run only in API CI, which this PR does not trigger. A controlled re-anchor awaits the PO; it is not applied.
+>   - **D-3 CP4 review — Replay contract protection, final bounded closure work and the Android Preservation Gate (2026-11-19; contract §27, v1.15): NOT CLOSED, STOPPED FOR THE PO BEFORE O-1.**
+>     - Replay: the 40 % band cap reached the `world=` presentation. This proven Replay preservation regression was fixed at its cause in `1c7c6a84` (the cap is COSMOS-stage only). The S7-03 / S7-04 pins were then re-anchored (`20655e20` → `7f697ab7`). The §26 blocker is resolved: root tests 240 / 240, API CI 44521782016 PASS. iOS Replay: default PASS; AX5 live 4 / 4 PASS. The AX5 selection bar is PRE-EXISTING (S7-02).
+>     - The AX5 Public search below the fold PASS (the approved `inside()` correction + one interaction; `df73e9ec` paces the typing).
+>     - SE-FU-1 instrumented first-launch T-ack 1658 ms: **FAIL; OPEN, not resolved.**
+>     - Exact-head iOS World gate 44521781956 on `df73e9ec`: 19 / 19 PASS; Mobile CI 44521782178 PASS.
+>     - The Android Preservation Gate (baseline `aadfb88e`, the last HONOR-accepted APK, vs the head; emulator + HONOR): **no NEW REGRESSION.**
+>       - FIXED DEFECTS: the deeper-bead pan (SE-FU-2) and the rail over Overview.
+>       - PRE-EXISTING: the ~1 s rapid-reversal stall.
+>       - The one reproduced difference (sheet-protocol graphics memory and the pan above PEEK) is explained by its input: the baseline's beads swallowed 2 of 6 pans. With equal input the two builds match.
+>       - NOT TESTED: HONOR enlarged text, finger latency, the Shared → Public switch.
+>       - The accepted APK and the device settings are restored. Evidence: `QANDEEL_REPORTS/COSMOS-V5/integration/slice-e/d3/android-gate/`.
+>   - **D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO decision "COSMOS Slice E D-3 CP4 Review and Conditional Closure", 2026-11-19; contract §28, v1.16).**
+>     - Accepted by the PO: the CP4 evidence, Replay preservation, the Android Preservation Gate and the final CI on `25f166c8` (iOS World gate 44581937636 19 / 19 PASS; Mobile CI 44581937691 and API CI 44581937590 success).
+>     - **SE-FU-1: OPEN, UNRESOLVED, BLOCKING FINAL COSMOS ACCEPTANCE.** Not PASS, FIXED or WAIVED: 1658 ms against 250 ms. It lives in the contract's Slice E register (BG-01), not in the backlog or the future-improvements log. Follow-up `SE-FU-1-LT` is the ~2.9 s JS long task only; target unchanged; execution not authorised. It must be resolved, or returned to the PO, before final COSMOS acceptance.
+>     - **NOT TESTED, carried (§28.3) to ANDROID-COSMOS-ACCEPTANCE / E-2, the Slice E coverage gate and the final COSMOS acceptance gate:** finger latency; Shared → Public; HONOR enlarged text (needs separate approval for the device setting); the detector case; sheet item 8b.
+>     - The accepted Android baseline (`aadfb88e`) and Replay behaviour are protected for every later shared-component change, with focused regressions only (§28.4).
+>     - **O-1:** scope and entry review prepared (§28.5): one controller line in `search()` closes the chooser and keeps the section. 3 PO questions. **Execution NOT authorised.**
+>     - COSMOS-INT-01 and Slice E are NOT closed. PR #400 and the stack stay Draft; no merge without «ادمج».
+>   - No merge, no Replay, no change to the frozen artwork.
 > - **BG-10 (PO, 2026-11-18; permanent).**
 >   - Every code implementation checkpoint carries real iOS simulator interaction with assertions and recorded PASS / FAIL / NOT TESTED evidence. Green Android, Jest or an iOS build does not substitute.
 >   - A checkpoint with a required iOS case unexecuted or failing is neither closed nor merge-ready without the PO's explicit approval.
 >   - Backend changes that can affect iOS are in scope (PO, 2026-11-18). Enforcement is PARTIAL. The gate covers the mobile paths on one device, in en. Backend paths and the ar / size matrix are NOT yet enforced.
 >   - See backlog BG-10 and `AGENTS.md` §7.
-> - **Mandatory roadmap:** CP4 → Slice E (F-1, E-1, E-2) → S8B-07 Replay.
+> - **Mandatory roadmap (PO, 2026-11-18; contract §23.5):** D-3 → the remaining COSMOS implementation (D-3 CP2 – CP4, O-1, O-2, the coverage items, F-1, E-1) → `ANDROID-COSMOS-ACCEPTANCE` (E-2) → final COSMOS acceptance and the PO-authorised merge → S8B-07 Replay. Android is a protected baseline meanwhile: existing automated checks and focused regression coverage, no CI gate weakened, no PO-operated HONOR testing during D-3.
 > - **Other constraints.** RN Skia 2.7.0 enters only through the declared QAN-INF-03 exception (contract §11, PO D-13 / D-14). Replay keeps the old renderer (G-5). PRs #391 / #392 / #393 are untouched (D-1). **Not merged; merge only on «ادمج».**
 
 > **MAP-CLOSE-01 STEP 2 — LIVING ANALYSIS MAP VISUAL SOURCE OF TRUTH — 2026-11-10 (current task; status only, documentation only, no new task authority):** a Draft PR on the clean branch `map/map-close-01-visual-registry-clean`, from `main` at `bd80c755`, where MAP-CLOSE-01 Step 1 is merged through PR #388. It replaces Draft PR #389 under the PO's decision B-3. **Not merged; merge only on «ادمج».**

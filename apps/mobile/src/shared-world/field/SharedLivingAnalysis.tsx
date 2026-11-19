@@ -176,7 +176,8 @@ function SharedBand({ insets, onHeight, copy, language, title, onBack, onConvers
           style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}>
           <Glyph name="back" color={palette.restInk} direction={writing} />
         </Control>
-        <Text testID="qandeel-shared-title" accessibilityRole="header" accessibilityLanguage={language} numberOfLines={1}
+        {/* Slice E D-3 (PO D-c): at enlarged sizes the title wraps to a second line before anything is cut. */}
+        <Text testID="qandeel-shared-title" accessibilityRole="header" accessibilityLanguage={language} numberOfLines={2}
           style={{ ...typeStyle('statement'), color: palette.primary, flex: 1, paddingHorizontal: 2, writingDirection: writing }}>
           {title}
         </Text>

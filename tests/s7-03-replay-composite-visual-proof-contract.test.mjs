@@ -92,7 +92,14 @@ const FROZEN = [
   // store, projection cache, acts, journey and spatial cause. The `world=` presentation this composite and the player use
   // is unchanged (G-5: Replay keeps MapSurface, REPLAY-COSMOS-01). Previous pins: LivingAnalysisSurface c54a90d7,
   // LivingAnalysisMap 20679fd4.
-  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '20655e20a92d5cb997f8c90c28836810a1d98981e6ddadba0a7a97ae00b04db8'],
+  // COSMOS-INT-01 Slice E D-3 CONTROLLED RE-ANCHOR (Product Owner CP4 review, 2026-11-19: "a controlled, narrowly documented
+  // re-anchor of exactly the affected pins" once compatibility is shown): the COSMOS `stage=` presentation's top band is capped
+  // at 40 % of the window and scrolls its own content past it (D-3, PO D-c / D-d). The cap is the stage's ONLY: the `world=`
+  // presentation this composite and the player use keeps its band exactly as before D-3 (measured height, the same plain
+  // band View, no scroller, no cap; proven by the surface tests, which fail on the uncapped-scope draft, and by the Replay
+  // suites and the iOS Replay journey, contract §27). Replay's chrome, acts, words, routes and refusals are unchanged.
+  // Previous pin: LivingAnalysisSurface 20655e20.
+  ['apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', '7f697ab75a8bffba0072875095282864432a95c69e7907941056bb276bf6705e'],
   ['apps/mobile/src/map/renderer/MapSurface.tsx', 'fb623eea019299f6756ab0a3e192e9f035f1e757b58884101d319511f274adea'],
   ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'acf84151abbf02663b569fe2105f8dd85c40062f21f5e9d78b075ab9e6e3c645'],
   ['apps/mobile/src/map/projection/map-scene.ts', '8ef371bdcbaacde1456e98ed58592ab71c3521fe835a097e5b418fd66e67211e'],
