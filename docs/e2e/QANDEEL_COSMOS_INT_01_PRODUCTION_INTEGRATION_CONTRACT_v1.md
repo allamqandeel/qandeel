@@ -3480,7 +3480,7 @@ The validation branch `cosmos/validate/final-sefu1-prof` (E:\cosmossefult, never
 |---|---|---|---|
 | O-1, O-2, F-1 | accepted (§29) | accepted (§29) | **ACCEPTED by the PO** (2026-11-20); not repeated |
 | **SE-FU-1** | **FAIL**: 1658 ms (§27), 1100 / 1142 / 1094 ms with corrected detection (§30.6); target 250 ms | NOT TESTED (no first-launch instrumentation on Android) | **DEFERRED — ACCEPTED V1 LIMITATION — NON-BLOCKING FOR V1 COSMOS ACCEPTANCE, BY EXPLICIT PO EXCEPTION.** Not PASS, not FIXED. Future Improvements **item 022** |
-| **E-1** | Personal demonstration test in the gate (§30.4) | Personal: **PASS** en / ar | **Personal: G1.1 R3 demonstrated. Shared / Public: amendment, Copy Gate and privacy review PROPOSED, awaiting the PO (E-A / E-B / E-C); NOT IMPLEMENTED** |
+| **E-1** | speaker badge tests **PASS** in all three cells (gate 44707574152) | `P-BADGE` / `S-BADGE` **PASS** en / ar | **Speaker badge ACCEPTED by the PO (2026-11-20)**: Personal + Shared; Public verified, unchanged. The participant ordinal (E1(b) – E1(c)) is **NOT PURSUED** (PO, 2026-11-20): the scope relies on the visible Names, initials and stable colours (§30.10) |
 | Slice E coverage | gate cases in every cell (§30.5, §30.7) | **PASS** 18 / 18 (en / ar) + timings | **DELIVERED** (§30.5) |
 | BG-10 matrix | iPhone 17 en, iPhone 17 ar, small iPhone en | — | **ENFORCED** by the gate (§30.7) |
 | Replay re-anchor | — | — | **RATIFIED** (§30.2) |
@@ -3609,10 +3609,10 @@ New gate cases (`e2e4d770`; iOS Maestro), each with an Android emulator counterp
 | Shared → Public journey (§28.3) | switching Shared → Public → Shared keeps each World's state and never shows a blank frame |
 | Landscape sheets on a phone | with a sheet open, turning the phone keeps the sheet's handle on screen and the sheet usable; turning back restores it |
 | First-launch tap (SE-FU-1, accepted V1 limitation) | observed only: on a fresh install, the first door tap opens the Analysis and is never lost. A delay is recorded, not failed (exception §30.6) |
-| E-1 on the phone | after E-1's approval and implementation: every displayed message in the three Worlds identifies its author as the amendment states |
+| E-1 on the phone | Personal and Shared rows carry their speaker badge (`QA`, the reader's and the others' initials, one tone each); every Public post and reply shows its author's Public display |
 
 ### 30.9 The Release candidate and what was not done
-- **Release candidate:** `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/apk/cosmosint-final-e2e4d770.apk`, sha256 `c589acf577f3fc9b37120ae1a205ef245f8df0670d0fa64f129446a151c958d6`.
+- **Release candidate:** `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/apk/cosmosint-final-cbe6a7f4.apk`, sha256 `973d0be29622f4d5cdbba6c4306e2abd2d4037e2f943cf6870d4fa169c4002c6` (with the E-1 speaker badge). It supersedes `cosmosint-final-e2e4d770.apk` (`c589acf5…`).
   - Package `com.qandeel.mobile.cosmosint`; Release; arm64-v8a + x86_64; the S401 proof entry over the production composition.
   - Its application tree is the PR head's: every later commit changes only the iOS harness, the gate workflow or docs. It supersedes `e69d424c…` (§29.9) only by the validation-only proof link `public/seed-empty`.
   - Not installed on the HONOR.
@@ -3621,7 +3621,33 @@ New gate cases (`e2e4d770`; iOS Maestro), each with an Android emulator counterp
   - no E-2, and no HONOR use;
   - no change to the frozen artwork, renderer, camera, gestures, semantic zoom, timeline, Detail Sheet, navigation or performance;
   - no Replay change;
-  - E-1's Shared / Public implementation awaits the PO's E-A / E-B / E-C.
+  - the E-1 participant ordinal and any backend identity work are not pursued (PO, 2026-11-20).
+
+### 30.10 Final COSMOS implementation status (PO decision after the evidence review, 2026-11-20)
+**Implementation CLOSED. Stopped for the PO's final decision before E-2. PR #401 Draft, unmerged; no merge without «ادمج».**
+
+- **iOS gate 44707574152 on `2412ddd9`: FAIL, preserved as it ran.**
+  - i17-en: 24 / 5 / 3. i17-ar: 32 / 0 / 0. small-en: 26 / 0 / 6 (PASS / FAIL / NOT TESTED).
+  - Mobile CI and API CI: success. Artifacts: `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/gate-44707574152/`.
+- **Evidence review (no rerun), ACCEPTED by the PO:** `gate-44707574152/EVIDENCE_REVIEW.md`.
+  - The i17-en World gate step hit its 40-minute timeout at 10:21:53, but its script was not stopped.
+  - The script went on relaunching and tapping the app until 10:41:53, on the same simulator as the native XCUITest step and the start of the SE-FU-1 step.
+  - All 8 i17-en non-PASS rows fall inside that overlap. No application failure is demonstrated.
+- **Harness correction:** UNVERIFIED (not executed). It is not pushed in this change. `.github/workflows/cosmos-ios-world-gate.yml`:
+  - **World gate step: 40 → 60 minutes.** i17-ar needed 38.5 minutes; i17-en was cut at 40 with four cases left.
+  - **Job limit: kept at 120 minutes.** The worst case from the logs fits: setup ≤ 38.5 + gate 60 + clean native step 14.4 + fresh install 3.7 ≈ 116.8 minutes.
+  - **Before XCUITest:** the Native step freezes a surviving `run-world-gate.sh`, kills it with every descendant, then kills any re-parented Maestro CLI.
+  - **Red result:** a stopped gate appends `GATE-DEADLINE  NOT TESTED`, so the cell stays red. Incomplete evidence is never PASS.
+
+| Class | Item | State |
+|---|---|---|
+| **Release blocker** | **E-2**: the Android physical-device acceptance on the HONOR (§30.8, ANDROID-COSMOS-ACCEPTANCE) | NOT RUN; separate PO authorisation |
+| **Release blocker** | **A green iOS World gate on the final head.** No three-cell gate has passed since BG-10 (44694686720 and 44707574152 both FAIL), and the correction above is UNVERIFIED | Open. It needs one gate run, which only the PO can authorise. The PO may instead accept the evidence review in place of a green gate |
+| Accepted V1 limitation | SE-FU-1: the first-launch door delay, 1100 / 1142 / 1094 ms against 250 ms (§30.6) | DEFERRED by explicit PO exception; Future Improvements item 022; not PASS, not FIXED |
+| Accepted V1 limitation | E-1: same-label participants are told apart only by their visible Name, initials and colour; no ordinal | PO scope decision (2026-11-20) |
+| Harness uncertainty | small-en `p-door`: the door was visible, but the Maestro driver returned no hierarchy; five Personal cases NOT TESTED. The native Personal tests passed there | NOT TESTED preserved; no correction (the gate never retries) |
+| Harness uncertainty | small-en X-PAN-ZOOMED: every core in the zoomed region is one hue family (129–153°), so the hue detector has no unambiguous pair. It is the same in both gates | NOT TESTED preserved; the detector is not changed |
+| Harness uncertainty | i17-en: why its Maestro steps ran slower than i17-ar's before the timeout | No cause in the evidence |
 
 ---
 
