@@ -910,4 +910,43 @@ final class CosmosWorldGestureUITests: XCTestCase {
     }
     note("layout-\(tag)", lines.joined(separator: "\n"))
   }
+
+  // ── E-1 Personal demonstration (PO 2026-11-20, item 2; E-1 package §5) ─────────────────────────────────────────
+
+  /// G1.1 R3 is preserved only if its speaker distinction satisfies E-1: every displayed Personal turn says who wrote it.
+  /// In the seeded conversation (two exchanges, either language) every turn the reader wrote announces «كلامك: » /
+  /// "You: " before its words and every reply «قنديل: » / "QANDEEL: " (W1A-01), no turn is unattributed, the reader's
+  /// turns all lie on one edge and QANDEEL's on the other. Only identifiers, prefixes and frames are recorded, never the
+  /// turns' words. Nothing is sent: the proof network answers no send.
+  func testPersonalConversationAttributesEveryTurn() {
+    continueAfterFailure = true
+    toConversation()
+    let W = screen.width
+    let turns = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-utterance-' OR identifier BEGINSWITH 'qandeel-reply-'"))
+      .allElementsBoundByIndex.filter { $0.exists }
+    // Status lines (waiting, failed) and the reply companion carry no words of a speaker; every other turn must.
+    let spoken = turns.filter { e in !["qandeel-reply-companion-", "qandeel-reply-pending-", "qandeel-reply-failed-"].contains { e.identifier.hasPrefix($0) } }
+    let reader = ["كلامك: ", "You: "], qandeel = ["قنديل: ", "QANDEEL: "]
+    var lines = ["window width \(Int(W)), \(spoken.count) turn(s)"]
+    var readerEdges = Set<String>(), qandeelEdges = Set<String>()
+    var readerCount = 0, qandeelCount = 0
+    for e in spoken {
+      let f = e.frame
+      // A turn's edge is the window edge it lies nearer to (the reader's slab bleeds to its edge).
+      let edge = f.minX <= W - f.maxX ? "left" : "right"
+      let isReader = e.identifier.hasPrefix("qandeel-utterance-")
+      let expected = isReader ? reader : qandeel
+      let prefix = expected.first { e.label.hasPrefix($0) }
+      lines.append("\(isReader ? "reader" : "qandeel") edge=\(edge) frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)) prefix=\(prefix.map { "'\($0)'" } ?? "NONE")")
+      XCTAssertNotNil(prefix, "E-1: a \(isReader ? "reader" : "QANDEEL") turn (\(e.identifier)) does not announce its speaker")
+      if isReader { readerEdges.insert(edge); readerCount += 1 } else { qandeelEdges.insert(edge); qandeelCount += 1 }
+    }
+    shot("e1-personal-conversation")
+    note("e1-personal", lines.joined(separator: "\n"))
+    XCTAssertGreaterThanOrEqual(readerCount, 2, "E-1: the seeded conversation shows fewer than two reader turns")
+    XCTAssertGreaterThanOrEqual(qandeelCount, 2, "E-1: the seeded conversation shows fewer than two QANDEEL turns")
+    XCTAssertEqual(readerEdges.count, 1, "E-1: the reader's turns are not all on one edge (\(readerEdges.sorted()))")
+    XCTAssertEqual(qandeelEdges.count, 1, "E-1: QANDEEL's turns are not all on one edge (\(qandeelEdges.sorted()))")
+    XCTAssertTrue(readerEdges.isDisjoint(with: qandeelEdges), "E-1: the reader and QANDEEL share an edge")
+  }
 }
