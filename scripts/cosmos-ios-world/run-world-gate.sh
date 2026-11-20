@@ -119,15 +119,18 @@ nodetap() {
   local c="$1" n="$2" sid="$3" what="$4" i pt a path was now; shift 4; was="$(q "$n-0" id-label "$sid")"; path="$was"
   for i in 1 2 3; do
     shot "$n-$i-0"; dump "$n-$i-0"; pt="$(stage_pt "$n-$i-0")"
-    if [ "$pt" = none ]; then result "$c" 'NOT TESTED' "no node core inside the stage before tap $i (steps: $path)"; return; fi
+    if [ "$pt" = none ]; then nt_result "$c" 'NOT TESTED' "no node core inside the stage before tap $i (steps: $path)"; return; fi
     mt "$n-$i" tap-point.yaml "P=$pt"; a="$(poll "$n-$i" 5 "$@")"; shot "$n-$i"; now="$(q "$n-$i" id-label "$sid")"
     path="$path -> tap $i at $pt -> $now"
-    if [ "$a" != none ]; then result "$c" PASS "$what opened after $i node tap(s) ($path)"; return; fi
-    if [ "$now" = "$was" ] || [ "$now" = none ]; then result "$c" FAIL "tap $i neither opened $what nor disclosed a deeper depth ($path)"; return; fi
+    if [ "$a" != none ]; then nt_result "$c" PASS "$what opened after $i node tap(s) ($path)"; return; fi
+    if [ "$now" = "$was" ] || [ "$now" = none ]; then nt_result "$c" FAIL "tap $i neither opened $what nor disclosed a deeper depth ($path)"; return; fi
     was="$now"
   done
-  result "$c" FAIL "no $what after three node taps ($path)"
+  nt_result "$c" FAIL "no $what after three node taps ($path)"
 }
+# nt_result: nodetap's verdict, recorded as its case's result unless NT_QUIET is set (a coverage case that only needs the
+# sheet open records its own verdict); NT_LAST / NT_DETAIL keep it for the caller.
+nt_result() { NT_LAST="$2"; NT_DETAIL="$3"; [ -n "${NT_QUIET:-}" ] || result "$@"; }
 shared_enter() { mt "$1-launch" launch.yaml "NAME=gate-$1-launch" && mt "$1-seed" link.yaml URL=qandeel://s401-proof/shared-field/seed \
   && mt "$1-worlds" timed-text.yaml "NAME=gate-$1-shared" TAP=qandeel-switcher-shared_world "WAIT=$FIX" \
   && mt "$1-world" timed-tap-text.yaml "NAME=gate-$1-field" "TAP=$FIX" WAIT=qandeel-shared-band; }
@@ -144,11 +147,101 @@ else result S-FAR-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open'; 
 if shared_enter st; then sleep 5; dump st-0; nodetap S-TAP st qandeel-shared-field-world:semantic-step 'the detail sheet' id cosmos-detail-sheet-handle
 else result S-TAP 'NOT TESTED' 'the Shared Fixture Map World did not open again'; fi
 
+# ── COSMOS-FINAL-01 coverage (PO decision 2026-11-20; contract §21.1 "Coverage") ─────────────────────────────────────
+# S-EXPANDED    the Shared sheet S-TAP opened: its handle (offering "Show full details" because the content overflows
+#               the PEEK) expands it — the sheet's top rises at least 40 pt and the handle then offers collapse.
+# S-SOURCES     in that sheet the place's sources are listed, at least one, each with its attribution ("who: line").
+# S-CONV-ENTRY  the panel's Conversation act opens the World's conversation (qandeel-shared-thread), SD-2.
+# S-EMPTY / U-EMPTY  a Shared World with no places (knowledge/seed: a named World and its conversation only), and the
+#               Public World whose served field holds no Experience (public/seed-empty, validation only), show
+#               their empty field.
+# P-LAND / S-LAND / U-LAND  with a sheet open in portrait the device turns to landscape: the app follows (its window
+#               turns wider than tall), the sheet's handle stays on screen (Shared: EXPANDED fits too), and back in
+#               portrait the sheet's handle is still on screen.
+SHEET_EXPAND='^(Show full details|عرض التفاصيل كاملة)$'
+SHEET_COLLAPSE='^(Show fewer details|تصغير التفاصيل)$'
+SUMMER='.*(Fixture summer trip|رحلة الصيف الاختبارية).*'
+y_of() { q "$1" id "$2" | head -1 | sed 's/.*frame=//' | cut -d, -f2; }
+if grep -q $'^S-TAP\tPASS' "$RES"; then
+  dump sx-0; shot sx-0; h0="$(q sx-0 id-label cosmos-detail-sheet-handle)"; t0="$(y_of sx-0 cosmos-detail-sheet)"; sd=sx-0
+  if ! printf '%s' "$h0" | grep -Eq "$SHEET_EXPAND"; then
+    result S-EXPANDED 'NOT TESTED' "the opened sheet offers no expansion (handle: '$h0'): its content does not overflow the PEEK"
+  else
+    mt sx-expand tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2; dump sx-1; shot sx-1
+    h1="$(q sx-1 id-label cosmos-detail-sheet-handle)"; t1="$(y_of sx-1 cosmos-detail-sheet)"
+    if printf '%s' "$h1" | grep -Eq "$SHEET_COLLAPSE" && [ -n "$t0" ] && [ -n "$t1" ] && [ "$t1" != none ] && [ $((t0 - t1)) -ge 40 ]; then
+      result S-EXPANDED PASS "sheet top $t0 -> $t1 pt; handle '$h0' -> '$h1'"; sd=sx-1
+    else result S-EXPANDED FAIL "sheet top $t0 -> $t1 pt; handle '$h0' -> '$h1'"; fi
+  fi
+  src="$(q "$sd" id-prefix qandeel-shared-source-)"
+  if [ "$src" = none ]; then result S-SOURCES FAIL "no source row in the opened sheet ($sd)"
+  else
+    n="$(printf '%s\n' "$src" | wc -l | tr -d ' ')"; first="$(printf '%s\n' "$src" | head -1 | cut -d' ' -f1)"
+    who="$(q "$sd" id-label "$first" | head -1 | cut -d: -f1)"
+    if [ -n "$who" ] && [ "$who" != none ]; then result S-SOURCES PASS "$n source row(s); the first attributed to '$who'"
+    else result S-SOURCES FAIL "$n source row(s); the first carries no attribution"; fi
+  fi
+  if [ "$(q "$sd" id qandeel-shared-panel-conversation)" = none ]; then result S-CONV-ENTRY FAIL "the panel shows no Conversation act ($sd)"
+  else
+    mt sx-conv scroll-to-id.yaml ID=qandeel-shared-panel-conversation; a="$(poll sx-conv 10 id qandeel-shared-thread)"; shot sx-conv
+    if [ "$a" != none ]; then result S-CONV-ENTRY PASS "the panel's Conversation act opened the World's conversation"
+    else result S-CONV-ENTRY FAIL "no qandeel-shared-thread within 10 s of the panel's Conversation act"; fi
+  fi
+else for c in S-EXPANDED S-SOURCES S-CONV-ENTRY; do result "$c" 'NOT TESTED' 'the Shared sheet did not open (S-TAP)'; done; fi
+
+# landcase <case> <name> <expand?>: the sheet is open in portrait; turn to landscape and back.
+landcase() {
+  local c="$1" n="$2" r w h hin back ok=1 x="" xl xin
+  if ! mt "$n-l" orient.yaml O=LANDSCAPE_LEFT; then result "$c" 'NOT TESTED' 'the simulator could not be turned (Maestro setOrientation)'; return; fi
+  sleep 3; dump "$n-l"; shot "$n-l"; r="$(q "$n-l" root)"; w="$(echo "$r" | cut -d, -f3)"; h="$(echo "$r" | cut -d, -f4)"
+  hin="$(q "$n-l" inside cosmos-detail-sheet-handle | head -1)"; [ "$hin" = inside ] || ok=0
+  if [ "${3:-}" = expand ] && q "$n-l" id-label cosmos-detail-sheet-handle | grep -Eq "$SHEET_EXPAND"; then
+    mt "$n-lx" tap.yaml ID=cosmos-detail-sheet-handle IDX=0; sleep 2; dump "$n-lx"; shot "$n-lx"
+    xl="$(q "$n-lx" id-label cosmos-detail-sheet-handle | head -1)"; xin="$(q "$n-lx" inside cosmos-detail-sheet-handle | head -1)"
+    x="expanded in landscape: handle '$xl' $xin; "
+    { printf '%s' "$xl" | grep -Eq "$SHEET_COLLAPSE" && [ "$xin" = inside ]; } || ok=0
+  fi
+  mt "$n-p" orient.yaml O=PORTRAIT; sleep 3; dump "$n-p"; shot "$n-p"; back="$(q "$n-p" inside cosmos-detail-sheet-handle | head -1)"
+  [ "$back" = inside ] || ok=0
+  if [ "$r" = none ] || [ -z "$w" ] || [ -z "$h" ] || [ "$w" -le "$h" ]; then result "$c" FAIL "the app did not turn to landscape (window $r)"
+  elif [ "$ok" = 1 ]; then result "$c" PASS "landscape window $r: handle inside; ${x}portrait again: handle inside"
+  else result "$c" FAIL "landscape window $r: handle $hin; ${x}portrait again: handle $back"; fi
+}
+NT_QUIET=1
+if shared_enter sl; then sleep 5; dump sl-0; nodetap S-LAND sl qandeel-shared-field-world:semantic-step 'the detail sheet' id cosmos-detail-sheet-handle
+  if [ "$NT_LAST" = PASS ]; then landcase S-LAND sl expand; else result S-LAND 'NOT TESTED' "the Shared sheet did not open: $NT_DETAIL"; fi
+else result S-LAND 'NOT TESTED' 'the Shared Fixture Map World did not open'; fi
+unset NT_QUIET
+
 if mt u-launch launch.yaml NAME=gate-u-launch && mt u-seed link.yaml URL=qandeel://s401-proof/public/seed \
   && mt u-enter tap.yaml ID=qandeel-switcher-public_world IDX=0 && mt u-allow link.yaml URL=qandeel://s401-proof/public/allow \
   && mt u-field wait-id.yaml ID=qandeel-public-search T=30000; then
   sleep 5; dump u-0; nodetap U-TAP u qandeel-public-field-world:semantic-step 'the Public panel' id-prefix qandeel-public-panel
-else result U-TAP 'NOT TESTED' 'the Public field did not open'; fi
+  if grep -q $'^U-TAP\tPASS' "$RES"; then landcase U-LAND u; else result U-LAND 'NOT TESTED' 'the Public panel did not open (U-TAP)'; fi
+else result U-TAP 'NOT TESTED' 'the Public field did not open'; result U-LAND 'NOT TESTED' 'the Public field did not open'; fi
+
+if mt se-launch launch.yaml NAME=gate-se-launch && mt se-seed link.yaml URL=qandeel://s401-proof/knowledge/seed \
+  && mt se-worlds timed-text.yaml NAME=gate-se-shared TAP=qandeel-switcher-shared_world "WAIT=$SUMMER" \
+  && mt se-world timed-tap-text.yaml NAME=gate-se-field "TAP=$SUMMER" WAIT=qandeel-shared-band; then
+  a="$(poll se 15 id qandeel-shared-field-empty)"; shot se
+  if [ "$a" != none ]; then result S-EMPTY PASS "a Shared World with no places shows its empty field: '$(q se id-label qandeel-shared-field-empty | head -1)'"
+  else result S-EMPTY FAIL "no qandeel-shared-field-empty within 15 s in a World with no places"; fi
+else result S-EMPTY 'NOT TESTED' 'the World with no places did not open'; fi
+if mt ue-launch launch.yaml NAME=gate-ue-launch && mt ue-seed link.yaml URL=qandeel://s401-proof/public/seed-empty \
+  && mt ue-enter tap.yaml ID=qandeel-switcher-public_world IDX=0 && mt ue-allow link.yaml URL=qandeel://s401-proof/public/allow \
+  && mt ue-field wait-id.yaml ID=qandeel-public-search T=30000; then
+  a="$(poll ue 15 id qandeel-public-field-empty)"; shot ue
+  if [ "$a" != none ]; then result U-EMPTY PASS "a served Public field with no Experience shows its empty field: '$(q ue id-label qandeel-public-field-empty | head -1)'"
+  else result U-EMPTY FAIL "no qandeel-public-field-empty within 15 s of a served field with no Experience"; fi
+else result U-EMPTY 'NOT TESTED' 'the Public World did not open'; fi
+if enter pl; then
+  sleep 5; shot pl-0; dump pl-0; pt="$(node_at pl-0)"
+  if [ "$pt" = none ]; then result P-LAND 'NOT TESTED' 'no node core visible on the Personal stage'
+  else
+    mt pl-tap tap-point.yaml "P=$pt"; a="$(poll pl-tap 6 id qandeel-personal-peek)"
+    if [ "$a" = none ]; then result P-LAND 'NOT TESTED' "tap at $pt opened no PEEK"; else landcase P-LAND pl; fi
+  fi
+else result P-LAND 'NOT TESTED' 'the Personal Analysis did not open'; fi
 
 say "done"; cat "$RES" | tee -a "$LOG"
 ! grep -qv -e $'\tPASS\t' -e '^case' "$RES"

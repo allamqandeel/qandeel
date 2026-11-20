@@ -29,6 +29,7 @@ final class CosmosWorldGestureUITests: XCTestCase {
   override func setUp() {
     super.setUp()
     continueAfterFailure = false
+    _ = pts
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -395,8 +396,18 @@ final class CosmosWorldGestureUITests: XCTestCase {
   // The helpers below are the CP1 diagnostic's (run 44364253792, branch cosmos/slice-e-d3-diag), without its in-app
   // board: the production build is measured from the outside only (screenshots, the accessibility tree, the clock).
   private func now() -> Int64 { Int64((Date().timeIntervalSince1970 * 1000).rounded()) }
-  /// The device's screen in points, read in the runner (no query of the app, so timing loops never wait for it to idle).
-  private var pts: CGRect { UIScreen.main.bounds }
+  /// The device's screen in points, never read from the app (so timing loops never wait for it to idle). COSMOS-FINAL-01
+  /// harness correction (PO 2026-11-20, §29.7): the UI-test runner is a compatibility-scaled app whose `UIScreen.main.bounds`
+  /// is 320 pt wide on every simulator, so every crop scaled by it was cut in the wrong place (gate 44623392022: window 402,
+  /// runner 320, image 1206). The springboard's frame is read once, in setUp, before any timing loop.
+  private static var deviceScreen: CGRect?
+  private var pts: CGRect {
+    if let s = Self.deviceScreen { return s }
+    let f = XCUIApplication(bundleIdentifier: "com.apple.springboard").frame
+    let s = f.width > 0 ? f : UIScreen.main.bounds
+    Self.deviceScreen = s
+    return s
+  }
   private func shot(_ name: String, _ s: XCUIScreenshot) {
     let a = XCTAttachment(screenshot: s)
     a.name = name
@@ -464,10 +475,9 @@ final class CosmosWorldGestureUITests: XCTestCase {
   }
 
   /// Luminance mean and standard deviation (0-255) of a rectangle given in points.
-  /// `widthPoints`: the width, in points, the screenshot spans. Default `pts` (the runner's screen bounds, as every D-1 / D-3
-  /// measurement was taken). COSMOS-FINAL-01 O-2 passes the app window's own width: on gate 44610727889 the pending
-  /// spinner was drawn at the shell's centre (attached `o2-pending`) yet the crop measured a flat 0, i.e. it was cut
-  /// elsewhere; the note now records both widths.
+  /// `widthPoints`: the width, in points, the screenshot spans. Default `pts`, the device's screen. Until the COSMOS-FINAL-01
+  /// correction `pts` was the runner's 320 pt compatibility screen, so every D-1 / D-3 crop before it was mis-scaled (§30).
+  /// O-2 passes the app window's own width (gate 44610727889: the spinner drawn at the shell's centre measured a flat 0).
   private func stats(_ s: XCUIScreenshot, _ r: CGRect, widthPoints: CGFloat? = nil) -> (mean: Double, std: Double) {
     guard let cg = s.image.cgImage else { return (-1, -1) }
     let k = CGFloat(cg.width) / (widthPoints ?? pts.width)
@@ -542,11 +552,23 @@ final class CosmosWorldGestureUITests: XCTestCase {
     return r.ok
   }
 
-  /// The Conversation door's frame in points before it is in the accessibility tree (iPhone 17, en: the CP1 diagnostic's
-  /// value, from the failure hierarchy of run 44305519293). Overridable with D3_DOOR="x,y,w,h".
+  /// The Conversation door's frame in points before it is in the accessibility tree, per device width and layout
+  /// direction. It is laid out by the app, so it is recorded, not computed: iPhone 17 en is the CP1 diagnostic's value
+  /// (run 44305519293); iPhone 17 ar and the small iPhone en are the layout test's (coverage run 44623629977:
+  /// `qandeel-depth-to-analysis=14,64,139,44` and `257,22,104,44`). Before COSMOS-FINAL-01 every cell used the iPhone 17
+  /// en frame, so the ar and small-iPhone fresh-install taps of that coverage run missed the door (§30). Overridable
+  /// with D3_DOOR="x,y,w,h".
   private var doorFrame: CGRect {
-    let v = (ProcessInfo.processInfo.environment["D3_DOOR"] ?? "284,64,104,44").split(separator: ",").compactMap { Double($0) }
-    return v.count == 4 ? CGRect(x: v[0], y: v[1], width: v[2], height: v[3]) : CGRect(x: 284, y: 64, width: 104, height: 44)
+    if let v = ProcessInfo.processInfo.environment["D3_DOOR"]?.split(separator: ",").compactMap({ Double($0) }), v.count == 4 {
+      return CGRect(x: v[0], y: v[1], width: v[2], height: v[3])
+    }
+    let rtl = Locale.preferredLanguages.first?.hasPrefix("ar") == true
+    switch (Int(pts.width), rtl) {
+    case (375, false): return CGRect(x: 257, y: 22, width: 104, height: 44)
+    case (375, true): return CGRect(x: 14, y: 22, width: 104, height: 44)
+    case (402, true): return CGRect(x: 14, y: 64, width: 139, height: 44)
+    default: return CGRect(x: 284, y: 64, width: 104, height: 44)
+    }
   }
 
   /// One tap on the door the moment it is visibly drawn, never retried, and how long the app took to answer it, read from
