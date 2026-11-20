@@ -16,7 +16,12 @@ let root;
 try { root = JSON.parse(fs.readFileSync(file, 'utf8')).axElement; } catch { console.log('none'); process.exit(0); }
 const out = [];
 const frame = (f) => (f === undefined ? '?' : [f.X, f.Y, f.Width, f.Height].map((n) => Math.round(n)).join(','));
-if (mode === 'root') { console.log(root?.frame === undefined ? 'none' : frame(root.frame)); process.exit(0); }
+// The app's window. Gate 44679589607: the dump's top node is a synthetic container whose frame is always 0,0,0,0 (in
+// portrait and in landscape); the application element is its child (874x402 turned, 402x874 upright). So the window is
+// the largest frame among the top node and its direct children.
+const area = (f) => (f === undefined ? 0 : f.Width * f.Height);
+const win = [root, ...(root?.children ?? [])].map((n) => n?.frame).reduce((a, f) => (area(f) > area(a) ? f : a), undefined);
+if (mode === 'root') { console.log(win === undefined || area(win) === 0 ? 'none' : frame(win)); process.exit(0); }
 const visit = (node) => {
   if (node === null || typeof node !== 'object') return;
   const id = node.identifier ?? '';
@@ -26,8 +31,8 @@ const visit = (node) => {
   if (mode === 'id-label' && id === arg) out.push(String(node.label ?? ''));
   // The depth rail's lit point is the one selected button among the stage's controls (Overview is selected only while on).
   if (mode === 'selected-label' && node.selected === true && typeof node.label === 'string' && node.label !== '') out.push(node.label);
-  if (mode === 'inside' && id === arg && node.frame !== undefined && root.frame !== undefined) {
-    const f = node.frame, r = root.frame;
+  if (mode === 'inside' && id === arg && node.frame !== undefined && area(win) > 0) {
+    const f = node.frame, r = win;
     const within = f.Width > 0 && f.Height > 0 && f.X >= r.X - 1 && f.Y >= r.Y - 1
       && f.X + f.Width <= r.X + r.Width + 1 && f.Y + f.Height <= r.Y + r.Height + 1;
     out.push(within ? 'inside' : `outside frame=${frame(f)} root=${frame(r)}`);
