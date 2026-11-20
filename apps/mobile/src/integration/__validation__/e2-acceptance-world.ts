@@ -372,7 +372,14 @@ export function createE2AcceptanceWorld(language: ChromeLanguage): E2AcceptanceW
     if (path === '/conversation/sessions' && method === 'GET') return respond(200, catalog());
     if (path === '/conversation/sessions' && method === 'POST') {
       const body = JSON.parse(init?.body ?? '{}') as { clientRequestId?: string };
-      const key = body.clientRequestId ?? `anonymous-${minted.size + 1}`;
+      // The LAUNCH (a FRESH bootstrap) asks for its Session WITHOUT a request id. As in every earlier proof world, the
+      // synthetic launch opens the reader's seeded current conversation; only New Chat (which always carries a request id)
+      // makes a new one. (HONOR acceptance 2026-11-20: minting here opened an empty conversation at every launch.)
+      if (body.clientRequestId === undefined) {
+        const current = conversations.get(SESSION)!;
+        return respond(201, { id: SESSION, status: 'ACTIVE', channel: 'TEXT', created_at: current.createdAt, updated_at: current.createdAt, last_activity_at: current.lastTurnAt ?? current.createdAt, closed_at: null });
+      }
+      const key = body.clientRequestId;
       let id = minted.get(key);
       if (id === undefined) {
         id = `${NEW_SESSION_PREFIX}${String(minted.size + 1).padStart(2, '0')}`;

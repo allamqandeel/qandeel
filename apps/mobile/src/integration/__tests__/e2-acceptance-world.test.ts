@@ -80,6 +80,10 @@ describe.each(['en', 'ar'] as const)('the E-2 acceptance world (%s)', (language)
   });
 
   test('Personal (E-2 corrections): New Chat mints ONE conversation per client request id; it starts empty, is listed newest, sees the whole world once it has a Moment; rename is bounded', async () => {
+    // The launch (no request id) opens the seeded current conversation and mints nothing.
+    const launch = await get('/conversation/sessions', { method: 'POST' });
+    expect(launch.id).toBe(E2_SESSION_IDS.current);
+    expect((await get('/conversation/sessions')).map((row: { id: string }) => row.id).sort()).toEqual([E2_SESSION_IDS.current, E2_SESSION_IDS.earlier].sort());
     const first = await get('/conversation/sessions', { method: 'POST', body: JSON.stringify({ clientRequestId: 'req-1' }) });
     const again = await get('/conversation/sessions', { method: 'POST', body: JSON.stringify({ clientRequestId: 'req-1' }) });
     expect(again.id).toBe(first.id);
