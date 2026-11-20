@@ -69,6 +69,45 @@ describe('ConversationRepository write authority', () => {
     expect(Object.keys(body)).toEqual(['p_id']);
   });
 
+  // COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): the catalog commands of migration 0197.
+  it('creates a session for a client request through the idempotent 0197 command, sending the UUID and the request identity only', async () => {
+    const session = {
+      id: 'session-1', status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now',
+      last_activity_at: 'now', closed_at: null, client_request_id: 'request-1',
+    };
+    const dataApi = { request: jest.fn().mockResolvedValue([session]) } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const repository = new ConversationRepository(dataApi, serviceApiMock(), new CorrelationService());
+    await expect(repository.createSessionForRequest('user-token', 'session-1', 'request-1')).resolves.toEqual(session);
+    const [token, path, init] = dataApi.request.mock.calls[0];
+    expect(token).toBe('user-token');
+    expect(path).toBe('rpc/create_conversation_session_v2');
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body).toEqual({ p_id: 'session-1', p_client_request_id: 'request-1' });
+    expect(Object.keys(body)).toEqual(['p_id', 'p_client_request_id']);
+  });
+
+  it('lists the caller’s own catalog through the 0197 read with the bounded limit and nothing else', async () => {
+    const dataApi = { request: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const repository = new ConversationRepository(dataApi, serviceApiMock(), new CorrelationService());
+    await expect(repository.listSessions('user-token', 25)).resolves.toEqual([]);
+    const [token, path, init] = dataApi.request.mock.calls[0];
+    expect(token).toBe('user-token');
+    // Never a direct table read: owner scope is auth.uid() inside the definer, so no user id travels in the request.
+    expect(path).toBe('rpc/list_conversation_sessions_v1');
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ p_limit: 25 });
+  });
+
+  it('appends a manual title through the 0197 command with the session id and the title only', async () => {
+    const row = { session_id: 'session-1', title: 'Renamed', created_at: 'now' };
+    const dataApi = { request: jest.fn().mockResolvedValue([row]) } as unknown as jest.Mocked<SupabaseDataApiService>;
+    const repository = new ConversationRepository(dataApi, serviceApiMock(), new CorrelationService());
+    await expect(repository.setSessionTitle('user-token', 'session-1', 'Renamed')).resolves.toEqual(row);
+    const [token, path, init] = dataApi.request.mock.calls[0];
+    expect(token).toBe('user-token');
+    expect(path).toBe('rpc/set_conversation_session_title_v1');
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ p_session_id: 'session-1', p_title: 'Renamed' });
+  });
+
   it('creates a user turn through the narrow authenticated command and never supplies server-owned columns', async () => {
     const created: ConversationTurn = {
       id: 'turn-1', session_id: 'session-1', role: 'USER', status: 'RECEIVED', content: 'hello',

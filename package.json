@@ -314,6 +314,8 @@
     "verify:intel-04-lifecycle-relation:integration": "node --env-file-if-exists=.env database/verify-migration-0194.mjs",
     "verify:s8b-07-replay-audio-source-truth:integration": "node --env-file-if-exists=.env database/verify-migration-0195.mjs",
     "verify:s8b-07-transient-media:integration": "node --env-file-if-exists=.env database/verify-migration-0196.mjs",
+    "verify:conversation-catalog:integration": "node --env-file-if-exists=.env database/verify-migration-0197.mjs",
+    "test:cosmos-e2-conversation-catalog-contract": "node --test database/tests/cosmos-e2-conversation-catalog-v1.test.mjs",
     "prove:s8b-07-media-worker:integration": "node --env-file-if-exists=.env database/prove-0196-media-worker.mjs",
     "prove:s8b-07-media-service:integration": "node --env-file-if-exists=.env database/prove-0196-media-service.mjs",
     "prove:s8b-07-first-audio-isolation:integration": "node --env-file-if-exists=.env database/prove-0196-first-audio-isolation.mjs",

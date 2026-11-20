@@ -54,6 +54,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
 
   // Conversation and its projections: the foreground poll lives here. AI cost is the database's (PROD-SEC-02, 0131).
   'POST /conversation/sessions': 'CONVERSATION',
+  // COSMOS E-2 corrections, Slice B (PO D-2, 2026-11-20): the Personal conversation catalog and the durable manual rename.
+  'GET /conversation/sessions': 'CONVERSATION',
+  'PATCH /conversation/sessions/:sessionId/title': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/turns': 'CONVERSATION',
   'POST /conversation/sessions/:sessionId/turns': 'CONVERSATION',

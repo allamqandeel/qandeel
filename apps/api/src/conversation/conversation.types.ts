@@ -15,6 +15,27 @@ export interface ConversationSession {
   closed_at: string | null;
 }
 
+/**
+ * COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): one row of the person's own conversation catalog
+ * (migration 0197, `list_conversation_sessions_v1`). `title` is the current MANUAL title or null; `opening` is the
+ * person's own first message, excerpted (at most 120 characters), the only "suggested title" - never an AI name.
+ */
+export interface ConversationSessionCatalogEntry extends ConversationSession {
+  client_request_id: string | null;
+  title: string | null;
+  title_at: string | null;
+  opening: string | null;
+  last_turn_at: string | null;
+  turn_count: number;
+}
+
+/** The appended manual title of one owned Session (migration 0197, `set_conversation_session_title_v1`). */
+export interface ConversationSessionTitle {
+  session_id: string;
+  title: string;
+  created_at: string;
+}
+
 export interface ConversationTurn {
   id: string;
   session_id: string;

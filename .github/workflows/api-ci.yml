@@ -1430,6 +1430,13 @@ jobs:
       # media byte, no gate opened, no provider.
       - name: Verify S8B-07 CP1-B transient media authority (0196) against real PostgreSQL
         run: npm run verify:s8b-07-transient-media:integration
+      # COSMOS E-2 corrections, Slice B (the Product Owner's D-2, 2026-11-20): migration 0197 (the Personal conversation
+      # catalog) - idempotent Session creation per (person, client request identity), the owner's catalog ordered by the
+      # newest activity with the first-message opening and the current manual title, the append-only title ledger, the
+      # per-person isolation and the three definers reachable by the person only. Rows only - no provider, no hosted
+      # database.
+      - name: Verify COSMOS E-2 Slice B conversation catalog (0197) against real PostgreSQL
+        run: npm run verify:conversation-catalog:integration
       # S8B-07 CP1-B (D-06.6): the Replay pool's ffmpeg - BtbN's 9.0.2 LGPL build, from its own release asset at a pinned
       # autobuild tag, refused unless its sha256 is the one pinned here (the rclone and PostgREST pattern: no registry, no
       # image, no package manager). FFMPEG_BIN / FFPROBE_BIN name it for the media proofs; nothing else uses it.
