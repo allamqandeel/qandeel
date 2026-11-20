@@ -29,6 +29,9 @@ final class CosmosWorldGestureUITests: XCTestCase {
   override func setUp() {
     super.setUp()
     continueAfterFailure = false
+    // Gate 44694686720 (14965963, i17-en): a landscape case's return to portrait did not take, and the native tests that
+    // followed ran on an 874 × 402 screen. Every native test starts upright.
+    XCUIDevice.shared.orientation = .portrait
     _ = pts
   }
 

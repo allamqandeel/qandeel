@@ -202,6 +202,10 @@ landcase() {
     { printf '%s' "$xl" | grep -Eq "$SHEET_COLLAPSE" && [ "$xin" = inside ]; } || ok=0
   fi
   mt "$n-p" orient.yaml O=PORTRAIT; sleep 3; dump "$n-p"; shot "$n-p"; back="$(q "$n-p" inside cosmos-detail-sheet-handle | head -1)"
+  # Gate 44694686720: a return to portrait that did not take left every later case on a landscape screen. One more
+  # attempt when the window is still wider than tall; the case's own verdict is unchanged by it.
+  local pr; pr="$(q "$n-p" root)"
+  if [ "$pr" != none ] && [ "$(echo "$pr" | cut -d, -f3)" -gt "$(echo "$pr" | cut -d, -f4)" ]; then say "  $n: still landscape ($pr); turning upright again"; mt "$n-p2" orient.yaml O=PORTRAIT; sleep 3; fi
   [ "$back" = inside ] || ok=0
   if [ "$r" = none ] || [ -z "$w" ] || [ -z "$h" ] || [ "$w" -le "$h" ]; then result "$c" FAIL "the app did not turn to landscape (window $r)"
   elif [ "$ok" = 1 ]; then result "$c" PASS "landscape window $r: handle inside; ${x}portrait again: handle inside"
