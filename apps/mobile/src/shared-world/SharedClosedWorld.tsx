@@ -18,10 +18,12 @@ const ROW_START = 24;
 const ROW_END = 20;
 const BUSY_OPACITY = 0.6;
 
-export function SharedClosedWorld({ controller, language, palette }: {
+export function SharedClosedWorld({ controller, language, palette, readerName = null }: {
   readonly controller: SharedWorldController;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
+  /** COSMOS-FINAL-01 E-1: the reader's own account Name, for the reader's own speaker badge. */
+  readonly readerName?: string | null;
 }) {
   const copy = sharedLifecycleCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
@@ -57,7 +59,7 @@ export function SharedClosedWorld({ controller, language, palette }: {
             <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.olderMessages}</Text>
           </Control>
         ) : null}
-        {world.materials.map((material) => <SharedReadOnlyMaterial key={material.materialId} material={material} language={language} palette={palette} />)}
+        {world.materials.map((material) => <SharedReadOnlyMaterial key={material.materialId} material={material} language={language} palette={palette} readerName={readerName} />)}
       </View>
     </View>
   );

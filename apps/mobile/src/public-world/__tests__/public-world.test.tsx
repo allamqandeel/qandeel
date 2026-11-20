@@ -120,6 +120,30 @@ describe('S5-01 Public World area', () => {
     expect(view.getByTestId('qandeel-public-title')).toBeTruthy();
   });
 
+  it.each(['ar', 'en'] as const)('%s: COSMOS-FINAL-01 O-2 — a pending entry draws a loading indication, never a blank frame, and nothing of the destination', async (language) => {
+    const words = publicCopy(language);
+    const answer = deferred<PublicEntryResult>();
+    const transport = { entry: jest.fn<Promise<PublicEntryResult>, []>(() => answer.promise) };
+    const controller = createPublicWorldController({ transport, isCurrent: () => true });
+    const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);
+    await flush();
+    expect(controller.getState().entry).toBe('RESOLVING');
+    const shell = view.getByTestId('qandeel-public-transition');
+    expect(shell.props.accessibilityLabel).toBe(words.opening);
+    expect(shell.props.accessibilityState).toMatchObject({ busy: true });
+    // The indication is drawn inside the shell, wordless: no text, no destination name, no way in.
+    expect(view.getByTestId('qandeel-public-opening-indicator')).toBeTruthy();
+    expect(view.queryByText(words.opening)).toBeNull();
+    expect(view.queryByText(words.publicWorld)).toBeNull();
+    for (const id of ['qandeel-public-title', 'qandeel-public-field', 'qandeel-public-authoring-entry', 'qandeel-public-compose-entry', 'qandeel-public-retry']) {
+      expect(view.queryByTestId(id)).toBeNull();
+    }
+    answer.resolve({ kind: 'ALLOW' });
+    await flush();
+    expect(view.queryByTestId('qandeel-public-opening-indicator')).toBeNull();
+    expect(view.getByTestId('qandeel-public-title')).toBeTruthy();
+  });
+
   it('the copy gate names its PROPOSED rows; the area name is CANON', () => {
     expect(PUBLIC_COPY_GATE.approved).toEqual(['switcherLabel', 'displayHeading']);
     expect(PUBLIC_COPY_GATE.proposed).toEqual([]);

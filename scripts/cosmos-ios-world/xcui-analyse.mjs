@@ -71,9 +71,11 @@ for (const d of String(dir).split(',').filter(Boolean)) {
   } catch { /* no attachments there: the cases below that need them are NOT TESTED */ }
 }
 const text = (name) => (files.has(name) ? fs.readFileSync(files.get(name), 'utf8').trim() : null);
-// D-3: the measured values, appended to their test's row.
+// D-3 (and COSMOS-FINAL-01 O-1, O-2): the measured values, appended to their test's row.
 for (const [t, name] of [['testFreshInstallFirstVisibleDoorTapOpensTheAnalysis', 'sefu1-timing'],
-  ['testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage', 'sefu2-card'], ['testLayoutAtTheReadersTextSize', 'layout-gate']]) {
+  ['testPersonalDeeperBeadsTheRailLineAndTheCardPassTheirTouchToTheStage', 'sefu2-card'], ['testLayoutAtTheReadersTextSize', 'layout-gate'],
+  ['testPublicSearchExecutedWhileTheSectionListIsOpenShowsItsAnswer', 'o1'],
+  ['testPublicPendingEntryShowsALoadingIndicationAndKeepsTheWorldNavigation', 'o2']]) {
   const i = rows.findIndex((r) => r.startsWith(`X:${t}\t`));
   const v = text(name);
   if (i >= 0 && v !== null) rows[i] += `; ${v.replace(/[\t\n]+/g, ' ')}`;

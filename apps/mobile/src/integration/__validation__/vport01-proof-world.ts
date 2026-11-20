@@ -22,7 +22,7 @@
 import type { HistoricalSemanticDepth } from '@qandeel/runtime';
 
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
-import { disclosureFixture, type AppearanceFixture } from '../../map/__fixtures__/disclosure';
+import { disclosureFixture, inspectionFromQuery, type AppearanceFixture } from '../../map/__fixtures__/disclosure';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { ConversationExchangeView, MobilePublicConfig, RuntimeHttpFetch, SupabaseAuthPort } from '../../runtime-entry';
 
@@ -106,12 +106,14 @@ export function createVport01ProofWorld(language: ChromeLanguage): Vport01ProofW
       return respond(503, { statusCode: 503 }); // the proof sends nothing
     }
     if (path.endsWith('/historical-projection')) {
-      const params = Object.fromEntries(query.split('&').filter(Boolean).map((pair) => pair.split('=') as [string, string]));
+      const params = Object.fromEntries(query.split('&').filter(Boolean).map((pair) => pair.split('=').map(decodeURIComponent) as [string, string]));
       const tc = Number(params.tc ?? LIVE_HEAD);
       const depth = (params.depth ?? 'WORLD') as HistoricalSemanticDepth;
+      // COSMOS-FINAL-01 F-1: the inspection the request carried is answered as the server's resolveInspection answers it.
+      const inspection = inspectionFromQuery((name) => params[name] ?? null);
       return respond(
         200,
-        disclosureFixture({ depth, sessionId: SESSION, tc, liveHead: LIVE_HEAD, threads: THREADS, appearances: APPEARANCES, readings: READINGS, focuses: FOCUSES }),
+        disclosureFixture({ depth, sessionId: SESSION, tc, liveHead: LIVE_HEAD, threads: THREADS, appearances: APPEARANCES, readings: READINGS, focuses: FOCUSES, inspection }),
       );
     }
     if (path.endsWith('/temporal/events') || path.endsWith('/temporal/live-focus-events')) {
@@ -124,7 +126,8 @@ export function createVport01ProofWorld(language: ChromeLanguage): Vport01ProofW
       return respond(201, { id: SESSION, status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now', last_activity_at: 'now', closed_at: null });
     }
     if (path.endsWith('/account/first-use')) {
-      return respond(200, { displayName: null, welcomePending: false, firstConversationOpening: false });
+      // COSMOS-FINAL-01 E-1: a fictional reader Name, so the reader's speaker badge shows its initials (Arabic letters apart).
+      return respond(200, { displayName: language === 'ar' ? 'منى عادل' : 'Mona Adel', welcomePending: false, firstConversationOpening: false });
     }
     return respond(404, {});
   };

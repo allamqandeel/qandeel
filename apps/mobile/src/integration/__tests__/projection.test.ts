@@ -11,7 +11,7 @@ import { HistoricalProjectionApiClient } from '../../projection';
 import type { MapProjectionRequest } from '../../map';
 import { sessionPosition } from '../../state';
 import { SESSION_A, SESSION_B, httpDouble, worldDisclosure } from '../__fixtures__/integration';
-import { createProjectionCoordinator, type ProjectionCoordinator } from '../projection/projection-coordinator';
+import { createProjectionCoordinator, heldContextEntry, type ProjectionCoordinator } from '../projection/projection-coordinator';
 
 const WORLD_AT_1: MapProjectionRequest = { sessionId: SESSION_A, tc: sessionPosition(1), depth: 'WORLD' };
 
@@ -177,5 +177,70 @@ describe('T12-A31…A45 — one cache, one epoch per key, and identity proven ag
     for (const forbidden of ['dispatch', 'getState', 'CanonicalState', 'setState']) {
       expect(source.includes(forbidden)).toBe(false);
     }
+  });
+});
+
+describe('COSMOS-FINAL-01 F-1 — the inspection-aware request, through the same coordinator and the same one cache', () => {
+  const READING_1 = { family: 'READING' as const, id: 'reading-1', appearance: { kind: 'THREAD_READING' as const, bindingId: 'binding-1' } };
+  const READING_2 = { family: 'READING' as const, id: 'reading-2' };
+  const resolved = { knowledge: 'KNOWN_AND_CURRENT_AT_TC', noncurrent: null, context: 'CONTEXT_AVAILABLE_AT_TC', disclosure: 'AVAILABLE_AND_RENDERABLE', requiredDepth: 'ANALYTICAL_OBJECT' };
+  const answering = (http: ReturnType<typeof coordinator>['http'], urls: string[]) =>
+    http.on('/historical-projection', (request) => {
+      urls.push(request.url);
+      const inspected = request.url.includes('inspectFamily=');
+      return { status: 200, body: { ...worldDisclosure(SESSION_A, 1, 1), inspection: inspected ? resolved : null } };
+    });
+
+  it('sends the exact inspection, and holds its answer under its own key; the plain V is untouched', async () => {
+    const { http, cache, projection } = coordinator();
+    const urls: string[] = [];
+    answering(http, urls);
+    expect(await projection.ensure(WORLD_AT_1)).toBe('FETCHED');
+    expect(await projection.ensure({ ...WORLD_AT_1, inspection: READING_1 })).toBe('FETCHED');
+    expect(urls[1]).toContain('inspectFamily=READING&inspectId=reading-1&appearanceKind=THREAD_READING&appearanceBindingId=binding-1');
+    expect(urls[0]).not.toContain('inspect');
+    const plain = cache.lookup(SESSION_A, 1, 'WORLD');
+    const inspected = cache.lookup(SESSION_A, 1, 'WORLD', READING_1);
+    expect(plain.status === 'FETCHED' && plain.value.inspection).toBeNull();
+    expect(inspected.status === 'FETCHED' && inspected.value.inspection).toEqual(resolved);
+    // Another inspection is another key: an answer about READING_1 is never READING_2's.
+    expect(cache.lookup(SESSION_A, 1, 'WORLD', READING_2).status).toBe('NOT_FETCHED');
+    // Idempotent per key, the inspection included.
+    expect(await projection.ensure({ ...WORLD_AT_1, inspection: READING_1 })).toBe('ALREADY_HELD');
+    expect(urls).toHaveLength(2);
+  });
+
+  it('a payload whose resolution disagrees with the question is not held: a plain request answered with one, an inspected one without', async () => {
+    const plainAnswered = coordinator();
+    plainAnswered.http.on('/historical-projection', () => ({ status: 200, body: { ...worldDisclosure(SESSION_A, 1, 1), inspection: resolved } }));
+    expect(await plainAnswered.projection.ensure(WORLD_AT_1)).toBe('IDENTITY_MISMATCH');
+    expect(plainAnswered.cache.lookup(SESSION_A, 1, 'WORLD').status).toBe('NOT_FETCHED');
+
+    const inspectedUnanswered = coordinator();
+    inspectedUnanswered.http.on('/historical-projection', () => ({ status: 200, body: worldDisclosure(SESSION_A, 1, 1) }));
+    expect(await inspectedUnanswered.projection.ensure({ ...WORLD_AT_1, inspection: READING_1 })).toBe('IDENTITY_MISMATCH');
+    expect(inspectedUnanswered.cache.lookup(SESSION_A, 1, 'WORLD', READING_1).status).toBe('NOT_FETCHED');
+  });
+
+  it('heldContextEntry reads the inspected V only when it is held for the inspection asked, otherwise the plain V', async () => {
+    const { http, cache, projection } = coordinator();
+    answering(http, []);
+    await projection.ensure(WORLD_AT_1);
+    expect(heldContextEntry(cache, WORLD_AT_1, READING_1)).toBe(cache.lookup(SESSION_A, 1, 'WORLD'));
+    await projection.ensure({ ...WORLD_AT_1, inspection: READING_1 });
+    expect(heldContextEntry(cache, WORLD_AT_1, READING_1)).toBe(cache.lookup(SESSION_A, 1, 'WORLD', READING_1));
+    expect(heldContextEntry(cache, WORLD_AT_1, READING_2)).toBe(cache.lookup(SESSION_A, 1, 'WORLD'));
+    expect(heldContextEntry(cache, WORLD_AT_1, null)).toBe(cache.lookup(SESSION_A, 1, 'WORLD'));
+  });
+
+  it('an inspected open-head V is dropped on a newer revision and forgotten with its Session, exactly like the plain one', async () => {
+    const { http, cache, projection } = coordinator();
+    answering(http, []);
+    await projection.ensure({ ...WORLD_AT_1, inspection: READING_1 });
+    cache.observeRevision(SESSION_A, { liveHead: 1, worldVersion: 2, pendingExpiries: 0 });
+    expect(cache.lookup(SESSION_A, 1, 'WORLD', READING_1).status).toBe('NOT_FETCHED');
+    await projection.ensure({ ...WORLD_AT_1, inspection: READING_1 });
+    cache.forgetSession(SESSION_A);
+    expect(cache.lookup(SESSION_A, 1, 'WORLD', READING_1).status).toBe('NOT_FETCHED');
   });
 });

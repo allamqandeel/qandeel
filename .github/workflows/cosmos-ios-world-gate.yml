@@ -11,13 +11,17 @@ name: iOS World gate (COSMOS stages, touch)
 # double tap, a two-finger pinch — from the SAME build (scripts/cosmos-ios-world/xcuitest; PO, 2026-11-18). Every case
 # is PASS / FAIL / NOT TESTED in results.tsv; the job fails unless every case passed. Nothing retries a failed case.
 #
-# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the dependency
-# lock, or this gate; for a push to main; and on manual dispatch.
+# Change-aware: it runs for a pull request that changes the mobile application, its shared packages, the API, the
+# database, the dependency lock, or this gate; for a push to main; and on manual dispatch.
 on:
   pull_request:
     paths:
       - 'apps/mobile/**'
       - 'packages/**'
+      # COSMOS-FINAL-01 (BG-10 backend scope, contract §21.2): the API, the database and its migrations — what the iOS
+      # client reads — run the same simulator interaction (the shared packages above carry the wire contracts).
+      - 'apps/api/**'
+      - 'database/**'
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/cosmos-ios-world/**'
@@ -46,8 +50,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # BG-10's permanent language / size matrix (PO, COSMOS-FINAL-01 continuation, 2026-11-20, item 4; contract §30.7):
+        # the reference cell, Arabic (right-to-left), and the small iPhone. Every cell runs every case; none is weakened.
         include:
-          - {device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          - {cell: i17-en, device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          - {cell: i17-ar, device: 'iPhone 17', lang: ar, langtag: ar-EG, langloc: ar_EG}
+          - {cell: small-en, device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
@@ -159,4 +167,4 @@ jobs:
           [ -f "$f" ] && ! tail -n +2 "$f" | awk -F'\t' '$2 != "PASS"' | grep -q .
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
-        with: {name: 'ios-world-gate-${{ matrix.lang }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
+        with: {name: 'ios-world-gate-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}

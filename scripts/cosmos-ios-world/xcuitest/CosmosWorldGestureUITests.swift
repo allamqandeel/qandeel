@@ -29,6 +29,10 @@ final class CosmosWorldGestureUITests: XCTestCase {
   override func setUp() {
     super.setUp()
     continueAfterFailure = false
+    // Gate 44694686720 (14965963, i17-en): a landscape case's return to portrait did not take, and the native tests that
+    // followed ran on an 874 × 402 screen. Every native test starts upright.
+    XCUIDevice.shared.orientation = .portrait
+    _ = pts
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -395,8 +399,18 @@ final class CosmosWorldGestureUITests: XCTestCase {
   // The helpers below are the CP1 diagnostic's (run 44364253792, branch cosmos/slice-e-d3-diag), without its in-app
   // board: the production build is measured from the outside only (screenshots, the accessibility tree, the clock).
   private func now() -> Int64 { Int64((Date().timeIntervalSince1970 * 1000).rounded()) }
-  /// The device's screen in points, read in the runner (no query of the app, so timing loops never wait for it to idle).
-  private var pts: CGRect { UIScreen.main.bounds }
+  /// The device's screen in points, never read from the app (so timing loops never wait for it to idle). COSMOS-FINAL-01
+  /// harness correction (PO 2026-11-20, §29.7): the UI-test runner is a compatibility-scaled app whose `UIScreen.main.bounds`
+  /// is 320 pt wide on every simulator, so every crop scaled by it was cut in the wrong place (gate 44623392022: window 402,
+  /// runner 320, image 1206). The springboard's frame is read once, in setUp, before any timing loop.
+  private static var deviceScreen: CGRect?
+  private var pts: CGRect {
+    if let s = Self.deviceScreen { return s }
+    let f = XCUIApplication(bundleIdentifier: "com.apple.springboard").frame
+    let s = f.width > 0 ? f : UIScreen.main.bounds
+    Self.deviceScreen = s
+    return s
+  }
   private func shot(_ name: String, _ s: XCUIScreenshot) {
     let a = XCTAttachment(screenshot: s)
     a.name = name
@@ -464,9 +478,12 @@ final class CosmosWorldGestureUITests: XCTestCase {
   }
 
   /// Luminance mean and standard deviation (0-255) of a rectangle given in points.
-  private func stats(_ s: XCUIScreenshot, _ r: CGRect) -> (mean: Double, std: Double) {
+  /// `widthPoints`: the width, in points, the screenshot spans. Default `pts`, the device's screen. Until the COSMOS-FINAL-01
+  /// correction `pts` was the runner's 320 pt compatibility screen, so every D-1 / D-3 crop before it was mis-scaled (§30).
+  /// O-2 passes the app window's own width (gate 44610727889: the spinner drawn at the shell's centre measured a flat 0).
+  private func stats(_ s: XCUIScreenshot, _ r: CGRect, widthPoints: CGFloat? = nil) -> (mean: Double, std: Double) {
     guard let cg = s.image.cgImage else { return (-1, -1) }
-    let k = CGFloat(cg.width) / pts.width
+    let k = CGFloat(cg.width) / (widthPoints ?? pts.width)
     let px = CGRect(x: r.minX * k, y: r.minY * k, width: r.width * k, height: r.height * k).integral
     guard let crop = cg.cropping(to: px) else { return (-1, -1) }
     let w = crop.width, h = crop.height
@@ -538,11 +555,23 @@ final class CosmosWorldGestureUITests: XCTestCase {
     return r.ok
   }
 
-  /// The Conversation door's frame in points before it is in the accessibility tree (iPhone 17, en: the CP1 diagnostic's
-  /// value, from the failure hierarchy of run 44305519293). Overridable with D3_DOOR="x,y,w,h".
+  /// The Conversation door's frame in points before it is in the accessibility tree, per device width and layout
+  /// direction. It is laid out by the app, so it is recorded, not computed: iPhone 17 en is the CP1 diagnostic's value
+  /// (run 44305519293); iPhone 17 ar and the small iPhone en are the layout test's (coverage run 44623629977:
+  /// `qandeel-depth-to-analysis=14,64,139,44` and `257,22,104,44`). Before COSMOS-FINAL-01 every cell used the iPhone 17
+  /// en frame, so the ar and small-iPhone fresh-install taps of that coverage run missed the door (§30). Overridable
+  /// with D3_DOOR="x,y,w,h".
   private var doorFrame: CGRect {
-    let v = (ProcessInfo.processInfo.environment["D3_DOOR"] ?? "284,64,104,44").split(separator: ",").compactMap { Double($0) }
-    return v.count == 4 ? CGRect(x: v[0], y: v[1], width: v[2], height: v[3]) : CGRect(x: 284, y: 64, width: 104, height: 44)
+    if let v = ProcessInfo.processInfo.environment["D3_DOOR"]?.split(separator: ",").compactMap({ Double($0) }), v.count == 4 {
+      return CGRect(x: v[0], y: v[1], width: v[2], height: v[3])
+    }
+    let rtl = Locale.preferredLanguages.first?.hasPrefix("ar") == true
+    switch (Int(pts.width), rtl) {
+    case (375, false): return CGRect(x: 257, y: 22, width: 104, height: 44)
+    case (375, true): return CGRect(x: 14, y: 22, width: 104, height: 44)
+    case (402, true): return CGRect(x: 14, y: 64, width: 139, height: 44)
+    default: return CGRect(x: 284, y: 64, width: 104, height: 44)
+    }
   }
 
   /// One tap on the door the moment it is visibly drawn, never retried, and how long the app took to answer it, read from
@@ -676,6 +705,96 @@ final class CosmosWorldGestureUITests: XCTestCase {
     XCTAssertGreaterThan(viaCard, max(3 * idle, 0.4 * open), "a drag starting on the card's words did not reach the stage (SE-FU-2)")
   }
 
+  // ── Public (COSMOS-FINAL-01 O-1; PO 2026-11-19) ──────────────────────────────────────────────────────────────────
+
+  /// A search EXECUTED while the section list is open shows its answer at once: the list closes, the chosen section is
+  /// kept (its «في: …» scope row is shown) and nothing waits for a section to be chosen. Focusing and typing alone leave the
+  /// list open. The query is Latin, typed one key at a time (run 44491423054): XCTest cannot type Arabic on this keyboard,
+  /// so the synthetic Arabic fixture answers "no results", which the same results area shows (qandeel-public-search-results).
+  func testPublicSearchExecutedWhileTheSectionListIsOpenShowsItsAnswer() {
+    guard enterPublic("o1") != nil else { return }
+    waitFor("qandeel-public-section-control", 20).tap()
+    waitFor("qandeel-public-sections", 20)
+    settle(1)
+    shot("o1-list-first")
+    guard let row = reachableSection() else {
+      shot("o1-no-row")
+      XCTFail("no topic section row could be reached above the World switcher")
+      return
+    }
+    note("o1-row", "\(row.identifier) at \(Int(row.frame.minY))-\(Int(row.frame.maxY))")
+    row.tap()
+    settle(2)
+    XCTAssertFalse(element("qandeel-public-sections").exists, "choosing a section did not close the list")
+    waitFor("qandeel-public-section-control", 10).tap()
+    waitFor("qandeel-public-sections", 20)
+    shot("o1-list-open")
+    let search = waitFor("qandeel-public-search", 10)
+    search.tap()
+    settle(1)
+    for key in ["z", "q"] { search.typeText(key); settle(0.6) }
+    XCTAssertTrue(element("qandeel-public-sections").exists, "the list closed before any search was executed")
+    shot("o1-typed")
+    search.typeText("\n")
+    let answer = element("qandeel-public-search-results")
+    XCTAssertTrue(answer.waitForExistence(timeout: 15), "the executed search's answer is not shown")
+    settle(1)
+    shot("o1-answer")
+    XCTAssertFalse(element("qandeel-public-sections").exists, "the section list still hides the executed search's answer")
+    XCTAssertTrue(element("qandeel-public-search-scope").exists, "the chosen section (its scope row) was not kept")
+    note("o1", "list open -> typed (list kept) -> executed: answer=\(answer.exists) list=\(element("qandeel-public-sections").exists) scope=\(element("qandeel-public-search-scope").exists)")
+  }
+
+  /// A topic section row a reader can reach. The list opens in the sheet's PEEK, where its lower rows lie under the World
+  /// switcher, so a tap at their centre reaches the switcher and not the row (gate 44610727889 on 77ac1695 tapped
+  /// `family` there; the Android emulator journey met the same). The first keyed row wholly above the switcher is chosen;
+  /// when none is, the sheet is first expanded by a swipe up on its handle, as a reader would. Nothing in the app changes.
+  private func reachableSection() -> XCUIElement? {
+    func find() -> XCUIElement? {
+      let switcher = element("qandeel-switcher-my_world")
+      let limit = switcher.exists ? switcher.frame.minY : screen.height
+      for key in ["love", "marriage", "family", "parenting", "people", "work_money"] {
+        let row = element("qandeel-public-section-\(key)")
+        if row.exists && row.frame.minY > 0 && row.frame.maxY <= limit { return row }
+      }
+      return nil
+    }
+    if let row = find() { return row }
+    let handle = element("cosmos-detail-sheet-handle")
+    if handle.exists { handle.swipeUp(); settle(1.5) }
+    return find()
+  }
+
+  /// COSMOS-FINAL-01 O-2 (PO): while the Public entry waits for its authoritative answer, the screen is not a blank frame.
+  /// A visible loading indication is drawn at the pending shell's centre (an empty frame measures a luminance spread of 0
+  /// there), the World navigation stays usable, and nothing of the destination (its name, search or field) is shown
+  /// before the entry is allowed. The proof network holds the entry until `public/allow`.
+  func testPublicPendingEntryShowsALoadingIndicationAndKeepsTheWorldNavigation() {
+    toConversation()
+    openLink("qandeel://s401-proof/public/seed", via: "system", "o2-seed")
+    waitFor("qandeel-switcher-public_world", 30).tap()
+    let pending = waitFor("qandeel-public-transition", 30)
+    settle(2)
+    let s = XCUIScreen.main.screenshot()
+    let f = pending.frame
+    let window = screen
+    let spread = stats(s, CGRect(x: f.midX - 40, y: f.midY - 40, width: 80, height: 80), widthPoints: window.width)
+    shot("o2-pending", s)
+    let personal = element("qandeel-switcher-my_world")
+    let usable = personal.exists && personal.isHittable
+    note("o2", "pending frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)) named=\(!pending.label.isEmpty) centre mean=\(Int(spread.mean)) std=\(String(format: "%.1f", spread.std)) window=\(Int(window.width)) runnerScreen=\(Int(pts.width)) image=\(s.image.cgImage?.width ?? 0) navigation=\(usable) title=\(element("qandeel-public-title").exists) search=\(element("qandeel-public-search").exists)")
+    XCTAssertGreaterThan(spread.std, 4, "the pending Public entry is a blank frame: nothing is drawn at its centre")
+    XCTAssertFalse(pending.label.isEmpty, "the pending shell has no accessible name")
+    XCTAssertTrue(usable, "the World navigation is not usable while the entry is pending")
+    XCTAssertFalse(element("qandeel-public-title").exists, "the destination's name is shown before the entry is allowed")
+    XCTAssertFalse(element("qandeel-public-search").exists, "the destination's search is shown before the entry is allowed")
+    openLink("qandeel://s401-proof/public/allow", via: "system", "o2-allow")
+    XCTAssertTrue(element("qandeel-public-search").waitForExistence(timeout: 45), "the Public World did not open after ALLOW")
+    XCTAssertFalse(element("qandeel-public-transition").exists, "the pending shell stays after ALLOW")
+    settle(2)
+    shot("o2-allowed")
+  }
+
   /// Layout at the reader's text size (D-3, PO D-c / D-d): every World's controls inside the screen, the depth rail clear
   /// of the Overview chip, the switcher's three destinations on the screen, and the map's clear share recorded. Run at
   /// the default size in this gate and under enlarged sizes by the D-3 validation (D3_TAG names the configuration).
@@ -793,5 +912,125 @@ final class CosmosWorldGestureUITests: XCTestCase {
       }
     }
     note("layout-\(tag)", lines.joined(separator: "\n"))
+  }
+
+  // ── E-1 Personal demonstration (PO 2026-11-20, item 2; E-1 package §5) ─────────────────────────────────────────
+
+  /// G1.1 R3 is preserved only if its speaker distinction satisfies E-1: every displayed Personal turn says who wrote it.
+  /// In the seeded conversation (two exchanges, either language) every turn the reader wrote announces «كلامك: » /
+  /// "You: " before its words and every reply «قنديل: » / "QANDEEL: " (W1A-01), no turn is unattributed, the reader's
+  /// turns all lie on one edge and QANDEEL's on the other. Only identifiers, prefixes and frames are recorded, never the
+  /// turns' words. Nothing is sent: the proof network answers no send.
+  func testPersonalConversationAttributesEveryTurn() {
+    continueAfterFailure = true
+    toConversation()
+    let W = screen.width
+    let turns = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-utterance-' OR identifier BEGINSWITH 'qandeel-reply-'"))
+      .allElementsBoundByIndex.filter { $0.exists }
+    // Status lines (waiting, failed) and the reply companion carry no words of a speaker; every other turn must.
+    let spoken = turns.filter { e in !["qandeel-reply-companion-", "qandeel-reply-pending-", "qandeel-reply-failed-"].contains { e.identifier.hasPrefix($0) } }
+    let reader = ["كلامك: ", "You: "], qandeel = ["قنديل: ", "QANDEEL: "]
+    var lines = ["window width \(Int(W)), \(spoken.count) turn(s)"]
+    var readerEdges = Set<String>(), qandeelEdges = Set<String>()
+    var readerCount = 0, qandeelCount = 0
+    for e in spoken {
+      let f = e.frame
+      // A turn's edge is the window edge it lies nearer to (the reader's slab bleeds to its edge).
+      let edge = f.minX <= W - f.maxX ? "left" : "right"
+      let isReader = e.identifier.hasPrefix("qandeel-utterance-")
+      let expected = isReader ? reader : qandeel
+      let prefix = expected.first { e.label.hasPrefix($0) }
+      lines.append("\(isReader ? "reader" : "qandeel") edge=\(edge) frame=\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)) prefix=\(prefix.map { "'\($0)'" } ?? "NONE")")
+      XCTAssertNotNil(prefix, "E-1: a \(isReader ? "reader" : "QANDEEL") turn (\(e.identifier)) does not announce its speaker")
+      if isReader { readerEdges.insert(edge); readerCount += 1 } else { qandeelEdges.insert(edge); qandeelCount += 1 }
+    }
+    // E-1 UI polish (PO addendum, 2026-11-20): every turn's badge is drawn at the turn's own edge, level with its first line,
+    // on its speaker's one tone (Dark: the reader #243040, QANDEEL #3b3324). The badge is hidden from assistive technology,
+    // so its fill is read from the screen, just inside the circle's top, clear of the initials.
+    let image = XCUIScreen.main.screenshot().image
+    var readerFills: [(Int, Int, Int)] = [], qandeelFills: [(Int, Int, Int)] = []
+    for e in spoken {
+      let f = e.frame, isReader = e.identifier.hasPrefix("qandeel-utterance-")
+      let left = f.minX <= W - f.maxX
+      // The reader's slab bleeds to its edge behind a 24-pt gutter; QANDEEL's words have no surface. 11 = the badge radius.
+      let inset: CGFloat = isReader ? 24 + 11 : 11
+      // The reader's slab is drawn to the window edge whatever frame is reported (Android reports it clipped to the gutter).
+      let (e0, e1) = isReader ? (CGFloat(0), W) : (f.minX, f.maxX)
+      let centre = CGPoint(x: left ? e0 + inset : e1 - inset, y: f.minY + (isReader ? 8 : 0) + 13)
+      guard let rgb = pixel(image, CGPoint(x: centre.x, y: centre.y - 8.5), width: W) else { XCTFail("E-1: no pixel under \(e.identifier)'s badge"); continue }
+      lines.append("\(isReader ? "reader" : "qandeel") badge at \(Int(centre.x)),\(Int(centre.y)) rgb=\(rgb.0),\(rgb.1),\(rgb.2)")
+      if isReader { readerFills.append(rgb) } else { qandeelFills.append(rgb) }
+    }
+    let near = { (a: (Int, Int, Int), b: (Int, Int, Int)) in abs(a.0 - b.0) <= 14 && abs(a.1 - b.1) <= 14 && abs(a.2 - b.2) <= 14 }
+    for rgb in readerFills { XCTAssertTrue(near(rgb, (0x24, 0x30, 0x40)), "E-1: a reader badge is not on the reader's tone (\(rgb))") }
+    for rgb in qandeelFills { XCTAssertTrue(near(rgb, (0x3b, 0x33, 0x24)), "E-1: a QANDEEL badge is not on QANDEEL's tone (\(rgb))") }
+    shot("e1-personal-conversation")
+    note("e1-personal", lines.joined(separator: "\n"))
+    XCTAssertGreaterThanOrEqual(readerCount, 2, "E-1: the seeded conversation shows fewer than two reader turns")
+    XCTAssertGreaterThanOrEqual(qandeelCount, 2, "E-1: the seeded conversation shows fewer than two QANDEEL turns")
+    XCTAssertEqual(readerEdges.count, 1, "E-1: the reader's turns are not all on one edge (\(readerEdges.sorted()))")
+    XCTAssertEqual(qandeelEdges.count, 1, "E-1: QANDEEL's turns are not all on one edge (\(qandeelEdges.sorted()))")
+    XCTAssertTrue(readerEdges.isDisjoint(with: qandeelEdges), "E-1: the reader and QANDEEL share an edge")
+  }
+
+  /// E-1 UI polish (PO addendum, 2026-11-20): in a Shared conversation every row's badge stands at the row's own outer edge
+  /// on its speaker's one tone — the reader's, the other person's (from the Name only: «هدير الاختبار» PLUM, "Fixture Hadir"
+  /// SAGE), QANDEEL's. Entered as S4-02 Journey A does (the proof world's conversation seed). Fills are read from the screen.
+  func testSharedConversationBadgesKeepOneTonePerSpeaker() {
+    continueAfterFailure = true
+    toConversation()
+    openLink("qandeel://s401-proof/conversation/seed", via: "system", "e1-shared-seed")
+    waitFor("qandeel-switcher-shared_world", 30).tap()
+    let world = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-shared-world-5401'")).firstMatch
+    guard world.waitForExistence(timeout: 30) else { shot("e1-shared-not-listed"); XCTFail("E-1: the seeded Shared World is not listed"); return }
+    world.tap()
+    // A World opens on its field; its conversation is one act away (the Android check, run 1 on d02cabe2).
+    waitFor("qandeel-shared-conversation-open", 30).tap()
+    waitFor("qandeel-shared-thread", 30)
+    settle(4)
+    let W = screen.width
+    let rows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-shared-material-'"))
+      .allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 24 && $0.frame.minY >= 0 && $0.frame.maxY <= screen.height }
+    let image = XCUIScreen.main.screenshot().image
+    let arabic = rows.contains { $0.label.hasPrefix("هدير الاختبار") }
+    let tones: [String: (Int, Int, Int)] = ["self": (0x24, 0x30, 0x40), "qandeel": (0x3b, 0x33, 0x24), "human": arabic ? (0x31, 0x29, 0x3b) : (0x26, 0x33, 0x29)]
+    var lines = ["window width \(Int(W)), \(rows.count) row(s), \(arabic ? "ar" : "en")"], seen: [String: Int] = [:]
+    for e in rows {
+      let kind = ["self", "human", "qandeel"].first { e.identifier.hasPrefix("qandeel-shared-material-\($0)-") } ?? "?"
+      guard let want = tones[kind] else { continue }
+      let f = e.frame, left = f.minX <= W - f.maxX
+      // Badge centre: inside the bubble's 12-pt padding (QANDEEL: after its 20-pt end padding), radius 11; level with the
+      // first line (the reader's body line, or the Name / QANDEEL line above a person's words).
+      let inset: CGFloat = kind == "qandeel" ? 20 + 11 : 12 + 11
+      let cy: CGFloat = kind == "qandeel" ? 11 : kind == "self" ? 8 + 13 : 8 + 11
+      let p = CGPoint(x: left ? f.minX + inset : f.maxX - inset, y: f.minY + cy - 8.5)
+      guard let rgb = pixel(image, p, width: W) else { XCTFail("E-1: no pixel under \(e.identifier)'s badge"); continue }
+      let ok = abs(rgb.0 - want.0) <= 14 && abs(rgb.1 - want.1) <= 14 && abs(rgb.2 - want.2) <= 14
+      lines.append("\(kind) \(left ? "left" : "right") badge @\(Int(p.x)),\(Int(p.y)) rgb=\(rgb.0),\(rgb.1),\(rgb.2) \(ok ? "ok" : "OFF")")
+      XCTAssertTrue(ok, "E-1: a \(kind) badge is not on its speaker's tone (\(rgb))")
+      seen[kind, default: 0] += 1
+    }
+    shot("e1-shared-conversation")
+    note("e1-shared", lines.joined(separator: "\n"))
+    for kind in ["self", "human", "qandeel"] { XCTAssertGreaterThanOrEqual(seen[kind] ?? 0, 1, "E-1: no \(kind) row was on screen") }
+  }
+
+  /** One screen pixel at a point (in points of a window `width` wide), as sRGB 0–255. */
+  private func pixel(_ image: UIImage, _ p: CGPoint, width: CGFloat) -> (Int, Int, Int)? {
+    guard let cg = image.cgImage, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+    // The scale is measured from the screenshot itself, never assumed.
+    let scale = CGFloat(cg.width) / width
+    let x = Int((p.x * scale).rounded()), y = Int((p.y * scale).rounded())
+    guard x >= 0, y >= 0, x < cg.width, y < cg.height else { return nil }
+    var buf = [UInt8](repeating: 0, count: 4)
+    let drawn: Bool = buf.withUnsafeMutableBytes { raw in
+      guard let ctx = CGContext(data: raw.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+      // The context's origin is bottom-left: move the wanted pixel onto (0, 0).
+      ctx.translateBy(x: CGFloat(-x), y: CGFloat(y - cg.height + 1))
+      ctx.draw(cg, in: CGRect(x: 0, y: 0, width: cg.width, height: cg.height))
+      return true
+    }
+    return drawn ? (Int(buf[0]), Int(buf[1]), Int(buf[2])) : nil
   }
 }

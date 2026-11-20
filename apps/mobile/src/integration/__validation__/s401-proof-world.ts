@@ -252,6 +252,8 @@ export interface S401ProofWorld {
   publicAllow(): void;
   /** S5-03B: the Public field answers from the SYNTHETIC visual-review fixture (`s503b-visual-field.ts`). */
   publicSeed(): void;
+  /** COSMOS-FINAL-01 coverage: the Public field is served and answers no Experience at all (its empty state). */
+  publicSeedEmpty(): void;
   /** S6-01: the Introductions preparation opens with the N, K or C synthetic scenario, or its gates close. */
   introductions(action: 'seed-new' | 'seed-known' | 'seed-mixed' | 'seed-portrait' | 'close'): void;
   /** S6-04: four SYNTHETIC private proposals delivered to the reader (`s604-proof-proposals.ts`). */
@@ -294,6 +296,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   let publicMode: 'PSEUDONYM' | 'REAL_NAME' = 'PSEUDONYM';
   // S5-03B: off until public/seed, so every earlier leg meets the field exactly as before.
   let publicField = false;
+  // COSMOS-FINAL-01 coverage: after public/seed-empty the served field holds no Experience.
+  let publicEmpty = false;
   // S5-03C smoke: explicit relations the reader requested from their own fixture Experience (and their synthetic acceptance).
   let relations: { relationId: string; own: string; other: string; state: 'REQUEST_SENT' | 'ACTIVE' }[] = [];
   // S5-04 smoke: every fixture Experience's discussion posts, and the reader's Public Activity items (newest first).
@@ -808,6 +812,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     if (publicField && method === 'GET' && (path === '/public/field' || path.startsWith('/public/field/'))) {
       const query = input.includes('?') ? input.slice(input.indexOf('?') + 1) : '';
       // S8A-05 CP1: after public/topics, the four titled fixture Experiences carry their SYNTHETIC title and section.
+      if (path === '/public/field' && publicEmpty) return json(200, { experiences: [] });
       if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, { experiences: answer.experiences.map(compose.titled) }) : json(400, {}); }
       if (path === '/public/field/search') {
         const param = (name: string) => decodeURIComponent((new RegExp(`(?:^|&)${name}=([^&]*)`, 'u').exec(query)?.[1] ?? '').replace(/\+/gu, ' '));
@@ -862,6 +867,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     },
     revoke: () => { for (const world of worlds) world.current = false; },
     publicSeed: () => { publicField = true; },
+    publicSeedEmpty: () => { publicField = true; publicEmpty = true; },
     topics: () => { compose.seed(); },
     relationAccept: () => { relations = relations.map((r) => ({ ...r, state: 'ACTIVE' as const })); },
     peerReply: () => {

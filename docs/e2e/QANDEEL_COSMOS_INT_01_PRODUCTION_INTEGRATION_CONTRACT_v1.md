@@ -1,6 +1,10 @@
-# COSMOS Production Integration Contract — v1.16 (§28 D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO, 2026-11-19) — SE-FU-1 CARRIED AS AN UNRESOLVED MANDATORY COSMOS ACCEPTANCE BLOCKER (1658 ms vs 250 ms; follow-up SE-FU-1-LT registered), the NOT TESTED cases carried to their acceptance gates, Android baseline and Replay protected, the O-1 entry review prepared, O-1 NOT authorised, stopped for the PO; §27 D-3 CP4 review — Replay protected (the `world=` cap regression fixed at its cause, pins re-anchored), the AX5 Public search PASS, SE-FU-1 instrumented FAIL 1658 ms and OPEN, the exact-head iOS World gate 19 / 19 PASS on df73e9ec, the Android Preservation Gate (emulator + HONOR) with no NEW REGRESSION, D-3 NOT CLOSED, stopped for the PO before O-1; §26 D-3 bounded CP4 validation after the PO review — the ONE exact-head iOS World gate 19 / 19 PASS on 2b0b6a53, no measured regression against the baseline, SE-FU-1 open and scheduled, D-3 NOT CLOSED, stopped for the PO; §25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
+# COSMOS Production Integration Contract — v1.18 (§30 COSMOS-FINAL-01 CONTINUATION (PO, 2026-11-20): SE-FU-1 DEFERRED — ACCEPTED V1 LIMITATION BY EXPLICIT PO EXCEPTION (FUTURE IMPROVEMENTS ITEM 022; NOT PASS, NOT FIXED); E-1 SPEAKER BADGE IMPLEMENTED (PO UI-POLISH ADDENDUM), PARTICIPANT ORDINAL PREPARED FOR APPROVAL, PERSONAL DEMONSTRATED; HARNESS SCALE CORRECTION; BG-10 MATRIX ENFORCED; SLICE E COVERAGE — NOT CLOSED, STOPPED BEFORE E-2) — v1.17 (§29 COSMOS-FINAL-01 (PO, 2026-11-19): O-1, O-2 AND F-1 DELIVERED AND PROVEN ON iOS AND ANDROID; SE-FU-1-LT — THE INTERVAL IS NATIVE, NOT A JS LONG TASK, RETURNED TO THE PO; BG-10 BACKEND SCOPE ENFORCED; E-1 RETURNED TO THE PO AS A CANON CONFLICT — NOT CLOSED, STOPPED BEFORE E-2) — v1.16 (§28 D-3 CLOSED — ADMINISTRATIVE, COMPLETED SCOPE (PO, 2026-11-19) — SE-FU-1 CARRIED AS AN UNRESOLVED MANDATORY COSMOS ACCEPTANCE BLOCKER (1658 ms vs 250 ms; follow-up SE-FU-1-LT registered), the NOT TESTED cases carried to their acceptance gates, Android baseline and Replay protected, the O-1 entry review prepared, O-1 NOT authorised, stopped for the PO; §27 D-3 CP4 review — Replay protected (the `world=` cap regression fixed at its cause, pins re-anchored), the AX5 Public search PASS, SE-FU-1 instrumented FAIL 1658 ms and OPEN, the exact-head iOS World gate 19 / 19 PASS on df73e9ec, the Android Preservation Gate (emulator + HONOR) with no NEW REGRESSION, D-3 NOT CLOSED, stopped for the PO before O-1; §26 D-3 bounded CP4 validation after the PO review — the ONE exact-head iOS World gate 19 / 19 PASS on 2b0b6a53, no measured regression against the baseline, SE-FU-1 open and scheduled, D-3 NOT CLOSED, stopped for the PO; §25 D-3 CP2 / CP3 delivered and CP4 executed — the exact-head iOS World gate is NOT clean, D-3 NOT CLOSED, stopped for the PO; §24 D-3 CP1 accepted as diagnostic; CP2 / CP3 authorised as one package under the PO's binding visual, performance and interaction preservation directive; §23 Android preservation and deferred physical acceptance — ANDROID-COSMOS-ACCEPTANCE runs E-2; §22 Slice E D-3 CP1 — diagnosis delivered, stopped for the PO; D-1 technically closed; §21 Slice E remediation — PO dispositions, BG-10, the D-1 root cause and its first correction package; Slice B ACCEPTED; Slice C ACCEPTED; §18 Personal target centring ACCEPTED; §19 Slice D Detail Sheet — CP1, CP2 and CP3 ACCEPTED FOR ROADMAP CONTINUATION; CP4 three-world closure DELIVERED (§19.17): SLICE D CLOSED / READY FOR PO REVIEW; §20 Slice E acceptance register — F-1, E-1, E-2 recorded, NOT implemented)
 
 **Task:** COSMOS V5 Production Integration & Living Analysis Map Replacement (PO authorisation of 2026-11-15).
+**Status (v1.18, 2026-11-20):** `AS v1.17 — PLUS THE PO CONTINUATION AFTER THE §29 REVIEW AND THE PO FINAL DECISION ON SE-FU-1 (§30): O-1, O-2 AND F-1 ACCEPTED; THE REPLAY PIN RE-ANCHOR RATIFIED; THE HARNESS SCALE CORRECTION APPLIED AND THE AFFECTED HISTORY SUPERSEDED (THE §29.7 ar / SMALL-iPHONE FRESH-INSTALL FAILS WERE A HARNESS FAULT); SE-FU-1 — NATIVE PROFILING COULD NOT NAME THE WORK IN THE WINDOW, NO CORRECTION PROVEN, CORRECTED MEASUREMENTS 1100 / 1142 / 1094 ms FAIL — DEFERRED, ACCEPTED V1 LIMITATION, NON-BLOCKING FOR V1 BY EXPLICIT PO EXCEPTION (FUTURE IMPROVEMENTS ITEM 022), NOT PASS, NOT FIXED; E-1 — PERSONAL DEMONSTRATED (ANDROID PASS en / ar), SHARED / PUBLIC AMENDMENT, COPY GATE AND PRIVACY REVIEW PROPOSED, NOT IMPLEMENTED; SLICE E COVERAGE DELIVERED (ANDROID 18 / 18); BG-10 MATRIX ENFORCED; RELEASE CANDIDATE c589acf5; NOT CLOSED, NO MERGE, STOPPED BEFORE E-2`
+**Change log v1.17 → v1.18 (2026-11-20).** (Also: §30.4 R1 — the PO UI-Polish Addendum's speaker badge, implemented in `d02cabe2` / `cbe6a7f4`.) New §30 records the PO continuation after §29, the PO final decision on SE-FU-1 and its clarification, the harness correction and its superseded measurements, SE-FU-1 deferred by exception, E-1 prepared, the coverage, the BG-10 matrix, the E-2 acceptance criteria and the Release candidate. §29.1 / §29.7 attribution of the ar / small-iPhone FAIL to SE-FU-1 is withdrawn by §30.3; nothing earlier is rewritten.
+**Status (v1.17, 2026-11-19):** `AS v1.16 — PLUS COSMOS-FINAL-01 (§29): O-1 (43b20bc4), O-2 (77ac1695) AND F-1 (f6d9c9cd) DELIVERED ON DRAFT PR #401, PROVEN ON iOS (GATE 44623392022 ON 97dd8532: 22 / 22 PASS; ar AND SMALL-IPHONE COVERAGE) AND ON THE ANDROID EMULATOR (en / ar, BASELINE NEGATIVE CONTROLS); SE-FU-1 STILL OPEN — SE-FU-1-LT FOUND NO JS LONG TASK (THE INTERVAL IS NATIVE) AND RETURNS IT TO THE PO; E-1 NOT IMPLEMENTED — A CONFLICT WITH THE FROZEN G1.1 R3 CANON, RETURNED TO THE PO; BG-10 BACKEND PATHS ADDED TO THE GATE, THE ar / SIZE MATRIX RETURNED TO THE PO; RELEASE CANDIDATE e69d424c PREPARED; NOT CLOSED, NO MERGE, STOPPED BEFORE E-2`
+**Change log v1.16 → v1.17 (2026-11-19).** New §29 records the COSMOS-FINAL-01 consolidated execution: the register after it, O-1, O-2, F-1 (with the LivingAnalysisMap pin re-anchor for ratification), the PO's map-area observation, SE-FU-1-LT, coverage and BG-10 (the gate's backend trigger paths), E-1's return to the PO, the Release candidate and what was not done. No earlier section is edited.
 **Status (v1.16, 2026-11-19):** `AS v1.15 — PLUS THE PO DECISION "COSMOS SLICE E D-3 CP4 REVIEW AND CONDITIONAL CLOSURE" (§28): THE CP4 EVIDENCE, REPLAY PRESERVATION, THE ANDROID PRESERVATION GATE AND THE FINAL CI ON 25f166c8 (iOS WORLD GATE 44581937636 19 / 19 PASS; MOBILE CI AND API CI SUCCESS) ACCEPTED — D-3 CLOSED (ADMINISTRATIVE, COMPLETED SCOPE) — SE-FU-1 OPEN, UNRESOLVED, BLOCKING FINAL COSMOS ACCEPTANCE (NOT PASS / FIXED / WAIVED; 1658 ms vs 250 ms), FOLLOW-UP SE-FU-1-LT REGISTERED (THE ~2.9 s JS LONG TASK ONLY; EXECUTION NOT AUTHORISED) — FINGER LATENCY, SHARED → PUBLIC, HONOR ENLARGED TEXT, THE DETECTOR CASE AND SHEET ITEM 8b CARRIED AS NOT TESTED TO NAMED GATES — THE ANDROID BASELINE AND REPLAY PROTECTED — THE O-1 SCOPE AND ENTRY REVIEW PREPARED (3 PO QUESTIONS), O-1 NOT AUTHORISED — COSMOS-INT-01 AND SLICE E NOT CLOSED; NO MERGE; STOPPED FOR THE PO.`
 **Change log v1.15 → v1.16 (2026-11-19).** New §28 records the PO's conditional closure decision, D-3's administrative closure, SE-FU-1 carried with its narrowly scoped follow-up SE-FU-1-LT, the NOT TESTED cases carried to their gates with owners and evidence requirements, the standing Android / Replay protection, and the O-1 scope and entry review. Nothing earlier is rewritten.
 **Status (v1.15, 2026-11-19):** `AS v1.14 — PLUS THE PO CP4 REVIEW "REPLAY CONTRACT PROTECTION AND FINAL BOUNDED CLOSURE" (§27): A PROVEN REPLAY PRESERVATION REGRESSION (THE 40 % BAND CAP REACHED THE world= PRESENTATION) FIXED AT ITS CAUSE 1c7c6a84, THEN THE S7-03 / S7-04 PINS RE-ANCHORED (20655e20 → 7f697ab7; ROOT TESTS 240 / 240; API CI PASS) — REPLAY iOS DEFAULT PASS, AX5 LIVE 4 / 4 PASS — THE AX5 PUBLIC SEARCH PASS — SE-FU-1 INSTRUMENTED T-ACK 1658 ms: FAIL, OPEN, NOT RESOLVED — THE EXACT-HEAD iOS WORLD GATE 44521781956 ON df73e9ec 19 / 19 PASS, MOBILE CI AND API CI PASS — THE ANDROID PRESERVATION GATE (EMULATOR AND HONOR, BASELINE aadfb88e VS HEAD): NO NEW REGRESSION, 2 FIXED DEFECTS, 1 PRE-EXISTING STALL, THE ONE REPRODUCED DIFFERENCE EXPLAINED BY ITS INPUT, THE ACCEPTED APK AND DEVICE SETTINGS RESTORED — D-3 NOT CLOSED, STOPPED FOR THE PO BEFORE O-1; NO MERGE.`
@@ -3280,6 +3284,344 @@ These join, and do not replace, Slice E's still-open requirements: O-1, O-2, F-1
 - No new device or simulator run.
 - No change to PR #399, PRs #391 – #396, the frozen artwork, the renderer, the camera or the gestures.
 - This record's own push re-runs the PR's CI through the path filters. Those runs are reported to the PO with this record and are not recorded here.
+
+---
+
+## 29. COSMOS-FINAL-01 — the consolidated execution (PO, 2026-11-19): O-1, O-2 and F-1 delivered on both platforms; SE-FU-1-LT diagnosed; BG-10 widened; E-1 returned to the PO as a canon conflict — NOT CLOSED, STOPPED FOR THE PO BEFORE E-2
+
+**Sources (PO, 2026-11-19).**
+- "PO FINAL EXECUTION DIRECTIVE — COSMOS-FINAL-01": one consolidated execution covering O-1, O-2, F-1, E-1, SE-FU-1-LT, the outstanding Slice E coverage (iOS language and device size, backend impact, BG-10 enforcement) and any remaining mandatory register item. It continues between internal checkpoints and stops only for a material architectural conflict, a scope change, a security or privacy authority concern, an unavoidable cross-platform regression or an unmeetable requirement. It ends with the consolidated validation report and a stable Release candidate, then STOPS before E-2.
+- "PO Addendum — Mandatory Android & iOS Parity and Preservation": every item on both platforms, PASS / FAIL / NOT TESTED recorded per platform; Android work and the S3-R2 visuals preserved; Replay compatible on both; never fix one platform by breaking the other.
+- "PO Visual Observation — Public World Map Area During O-1" (§29.5).
+
+**Branch.**
+- Draft PR #401: branch `cosmos/cosmos-int-01-slice-e-o1`, stacked on PR #400 (`64c77123`).
+- Commits:
+  - `43b20bc4` O-1;
+  - `77ac1695` O-2;
+  - `f6d9c9cd` F-1;
+  - `97dd8532` gate harness;
+  - this record's commit (docs and the BG-10 gate trigger).
+- Validation branches (never merged): `cosmos/validate/final-sefu1-lt` and `cosmos/validate/final-coverage`.
+- **Evidence:** `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/`. The consolidated report is `COSMOS_FINAL_01_REPORT.md`.
+
+### 29.1 Register — state after COSMOS-FINAL-01
+| ID | iOS | Android (emulator) | State |
+|---|---|---|---|
+| **O-1** | PASS (en, ar, small en) | PASS (en, ar) | **DELIVERED** (`43b20bc4`) |
+| **O-2** | PASS (en, ar, small en) | PASS (en, ar) | **DELIVERED** (`77ac1695`) |
+| **F-1** | PASS (en, ar, small en) | PASS (en, ar); negative control FAIL as expected | **DELIVERED** (`f6d9c9cd`). The HONOR demonstration is NOT TESTED (E-2). The pin re-anchor awaits ratification. |
+| **E-1** | — | — | **NOT IMPLEMENTED — RETURNED TO THE PO** (a canon conflict, §29.8) |
+| **SE-FU-1** | T-ack 160 / 182 / 168 ms in 3 instrumented launches; the fresh-install gate test FAILs in 2 coverage cells | NOT TESTED (E-2) | **OPEN — UNRESOLVED — BLOCKING.** SE-FU-1-LT attributed it to the native side and returned it to the PO (§29.6). |
+| **E-2** | — | NOT RUN | **REQUIRED BEFORE THE FINAL MERGE.** Release candidate prepared (§29.9). |
+| **Coverage / BG-10** | gate ar + small iPhone run | — | **PARTIAL** (§29.7) |
+
+Every NOT TESTED of §28.3 stays carried. None is converted.
+
+### 29.2 O-1 — a search executed while the section list is open shows its answer (`43b20bc4`)
+- **The change.** It is the one entry-reviewed line (§28.5). The controller's `search()` closes the chooser and keeps `section.key`, so the answer is no longer hidden behind the list. The scope row stays. Back and the search authority are unchanged: Back 1 dismisses the keyboard; Back 2 closes the search.
+- **Android.** On the baseline (the D-3 head APK), en and ar: the answer → the list stays, and the results are hidden until two Backs. On the head, en and ar: the answer → the list closes, the results are shown and the scope is kept. Then Back 1 keeps the results; Back 2 closes the search and keeps Public.
+- **iOS.** The native XCUITest `testPublicSearchExecutedWhileTheSectionListIsOpenShowsItsAnswer` is in the gate.
+  - Gate 44610727889 (`77ac1695`): FAIL, a **harness** fault. The test tapped the `family` row, which the list's PEEK places under the World switcher.
+  - Correction `97dd8532`: the first keyed row wholly above the switcher is chosen. When there is none, the sheet is expanded first, as a reader would.
+  - Result: **PASS** on gate 44623392022 (`97dd8532`, iPhone 17 en), and on the coverage gate 44623629977 (iPhone 17 ar; small iPhone en).
+
+### 29.3 O-2 — no blank frame while the Public entry is pending (`77ac1695`)
+- **The change.** The pre-authority shell keeps its approved accessible name, `copy.opening` (S4-01; accessible name only, so there is no new visible copy and no Copy Gate). It is marked busy, and it draws one wordless platform `ActivityIndicator` at its centre. The World navigation stays above it.
+- **Nothing is exposed.**
+  - No destination name, search or field before ALLOW.
+  - Admission authority unchanged: the entry verdict is still asked on every entry, and a previous ALLOW is never kept.
+- **Jest.** The ar / en O-2 test passes. Its negative control (the indicator removed in place) fails 3 / 17.
+- **Android, en and ar.**
+  - Baseline: the shell is drawn with no ProgressBar.
+  - Head: a ProgressBar inside the shell, the switcher present, no title, no search. The label is "Opening, busy" / «جارٍ الفتح, مشغول». After ALLOW the shell is gone and the search shows.
+- **iOS.**
+  - Gate 44610727889: the attached screenshot shows the spinner drawn at the shell's centre, but the crop measured a flat 0. That is a **harness** fault: the crop's scale came from the runner's screen bounds.
+  - Correction `97dd8532`: the app window's width now gives the scale, and the note records both widths.
+  - Result: **PASS** on gate 44623392022: std 10.3 at the shell centre; window 402 pt, runner screen 320 pt. Also PASS on the coverage gate (ar 9.4; small iPhone 9.9).
+
+### 29.4 F-1 — inspection-aware disclosure through the existing architecture (`f6d9c9cd`)
+- **The change.** The Personal composition asks the ONE projection coordinator for the current viewpoint's V *with* the inspection the reader holds, `V = Disclose(K(TC), depth, inspection)`.
+  - The request carries the server's existing query parameters: `inspectFamily`, `inspectId`, `inspectVersion`, `appearanceKind`, `appearanceBindingId`. They are resolved by `resolveInspection` (no backend change).
+  - The answer is held under its own key in the one `HistoricalDisclosureCache`, keyed `inspectionKey`.
+  - T-04's context and T-08's chrome read the inspected V once it is held (`heldContextEntry`), and the plain V before that.
+- **Protections.**
+  - An answer is accepted only for the request that asked for it, in both directions (`answers()`).
+  - The plain key is unchanged for every caller that sends no inspection: bootstrap, preview and Replay.
+  - Open-head invalidation and `forgetSession` cover the inspected entries.
+  - The fixture world answers exactly as `resolveInspection` does.
+- **Frozen files.** The map authority files (`map-scene`, `map-actions`, `entitlement`, `map/inspection`), the wire and the store are untouched.
+- **Controlled re-anchor (for the PO's ratification).** The S7-03 / S7-04 pin of `LivingAnalysisMap.tsx` changes `70651062…` → `58c1adbf…`. No Replay surface mounts that composition.
+- **Jest.**
+  - The focused suites: 546 / 546.
+  - The negative control (no inspection sent): 11 / 37 fail.
+  - The full suite: 3739 pass; 12 failures, identical to the untouched D-3 head's local baseline (Mobile CI passes them).
+  - The Replay suites: 158 / 158. S7-03 31 / 31; S7-04 63 / 63.
+- **Android (the gate's method, `emu-f1.sh`).**
+  - Negative control (`43b20bc4`, no F-1): "This view does not cover what you are inspecting." — FAIL as expected.
+  - Head: "You are inspecting a thread." / «قيد المعاينة: خيط.» — **PASS en / ar**.
+- **iOS.** Gate case `F1-RESOLVED`: **PASS** on gate 44623392022 ("You are inspecting a thread."); coverage gate ar «قيد المعاينة: خيط.» PASS; small iPhone en PASS.
+- **The HONOR demonstration** that §20 requires: **NOT TESTED**. It is carried to the PO / E-2.
+
+### 29.5 The PO's visual observation — the Public map area
+- **Answer:** it is the expected temporary overlay of the open chooser, **not a regression**.
+- **Measured** from the uiautomator dumps, not from a screenshot, on one emulator, viewport and font scale (`final-01/o1/MAP_AREA_OBSERVATION.md`):
+  - the canvas `[0,0][1080,2187]` and the chrome bottom (645 px) are identical on the baseline, `43b20bc4` and `f6d9c9cd` in every state;
+  - chooser CLOSED: 70.5 % of the canvas visible on both;
+  - chooser OPEN (sheet PEEK top 1778): 51.8 % on both.
+- **O-1 returns map area.** An executed search now shows 58.5 % (the list closed) against 51.8 % on the baseline (the list kept over the answer).
+- **Observation, unchanged and pre-existing:** the list's lower rows lie under the switcher while it is in PEEK.
+
+### 29.6 SE-FU-1-LT — the first-launch long task
+- **Method.** It is the same as run 44491734500: a fresh install on a freshly booted iPhone 17 (en), the door tapped once at its first visible frame, and T-ack read from the app's own clock.
+  - The instrumentation adds, on the validation branch `cosmos/validate/final-sefu1-lt` (never merged):
+    - a JS-thread heartbeat (a 16 ms timer chain; every gap over 100 ms recorded);
+    - render, commit and effect marks of the launch tree;
+    - each proof request's start and answer.
+  - The runs: 44623001508 (A1) and 44627532878 (A2–A4, a bounded repeat of exactly three, nothing retried).
+  - Evidence: `final-01/sefu1-lt-*`; summary `sefu1-lt-summary.tsv` (tool `sefu1-board.cjs`).
+
+| Launch | JS start → typeface | typeface → door.layout | JS gaps > 100 ms | tap → touch | **T-ack** (tap → pressedCommit) |
+|---|---|---|---|---|---|
+| A1 | 263 ms | 7 ms | 218 ms at +23 (bundle start); 112 / 129 ms after the tap | 159 ms | **160 ms** |
+| A2 | — | — | — | — | **NOT TESTED** (Xcode timed out launching the app) |
+| A3 | 301 ms | **3118 ms** | 245 ms at +38 (bundle start); 164 ms after the tap — **none inside the 3118 ms** | 181 ms | **182 ms** |
+| A4 | 299 ms | **1527 ms** | 230 ms at +25 (bundle start); 131 ms after the tap — **none inside the 1527 ms** | 167 ms | **168 ms** |
+
+- **Attribution.**
+  - **The interval between `typefaceReady` and `door.layout` is not a JavaScript long task.** It reproduced (3118 ms and 1527 ms), and in both cases the JS thread ran its heartbeat throughout, with no gap over 100 ms.
+  - In those launches the launch tree's own JS work (renders, commits, effects, every proof request) completes within about 320 ms of the bundle starting.
+  - The time is therefore spent on the native side, between React's commit (the effect that records `typefaceReady` runs after it) and the native layout event reaching JS: the Fabric mount and the UI thread.
+  - Run 44491734500's "~2.9 s JS long task" was inferred without a heartbeat. This evidence corrects that reading.
+- **The 1658 ms.** In run 44491734500 the door was drawn before the native pipeline delivered its layout, and the tap landed inside that window, so its touch reached JS only when the window ended. In A1, A3 and A4 the door became visible only after the window, and T-ack was 160–182 ms.
+- **State: SE-FU-1 is NOT claimed resolved.** Its failure depends on whether the first tap lands inside the native window, and that window still occurs (A3, A4). **SE-FU-1-LT exits by its second route: returned to the PO with the evidence.**
+  - No JS correction is justified, because the JS thread is not the cause.
+  - A correction on the native side (mount or startup) is outside SE-FU-1-LT's stated scope ("no new loading or startup architecture").
+- **Proposed next bounded step (for the PO's authorisation):** one native Time Profiler trace (`xctrace`) of the same first launch, to name the native work in the window. The target is unchanged: 250 ms.
+
+### 29.7 Coverage and BG-10
+- **The exact-head gate on `97dd8532`** (44623392022, iPhone 17 en): **22 / 22 PASS**. These are the 19 rows of D-3 plus the native O-1 and O-2 tests and `F1-RESOLVED`.
+- **Mobile CI** 44623392003:
+  - attempt 1 failed in the Android build producer: Maven Central answered "Could not find org.jetbrains.kotlin:kotlin-stdlib:2.2.21", an infrastructure fault, with the same Android build green on `77ac1695`;
+  - attempt 2 (one bounded rerun of the failed jobs) was superseded by this record's push. The final head's Mobile CI is reported with the consolidated report..
+- **API CI** 44623392069: success. It includes the re-anchored S7-03 / S7-04 pins.
+- **Language and device size: the coverage gate** 44623629977 (validation branch `cosmos/validate/final-coverage`, the same gate on `97dd8532`).
+  - **iPhone 17 ar:** 21 PASS / 1 FAIL.
+  - **Small iPhone en** (375 × 667): 20 PASS / 1 FAIL / 1 NOT TESTED.
+  - The FAIL in both cells is `testFreshInstallFirstVisibleDoorTapOpensTheAnalysis` = **SE-FU-1** (§29.6).
+  - The NOT TESTED is X-PAN-ZOOMED: no node core was matched by hue on the small screen, a harness limit.
+  - O-1, O-2 and F-1 PASS in both cells. Rows: `final-01/coverage-44623629977/rows.txt`.
+- **Enlarged text:** the D-3 validation workflow ran on the coverage branch, 44623629072 (iPhone 17 and the small iPhone; en and ar; default, AX3 and AX5). It was still running at this record's commit; its result is reported with the consolidated report..
+- **BG-10 enforcement.**
+  - **Backend scope, done in this record's commit.** The iOS World gate now also runs for pull requests that change `apps/api/**` or `database/**`. The shared packages, which carry the wire contracts, were already covered.
+  - **The ar / size matrix: NOT widened, returned to the PO.** Adding the two cells to the binding gate makes every COSMOS pull request fail on SE-FU-1, an open blocker the PO carries. Weakening that test is not permitted. Widening the matrix is therefore the PO's sequencing decision: widen now and accept a red gate until SE-FU-1 resolves, or widen with SE-FU-1's resolution.
+- **The backend impact of COSMOS-FINAL-01: none.** F-1 sends the query parameters the API already accepts (`conversation-historical-projection.controller.ts`, `resolveInspection`). No API, database, migration or wire change. API CI is green.
+- **Harness finding (correction to earlier evidence; nothing changed in this record).** The XCUITest runner reports a **320 pt compatibility screen** (`runnerScreen=320`) where the app's window is 402 pt (375 pt on the small iPhone). The runner-scale pixel helpers (`stats` and `change` by default) therefore cropped at k = 3.77 instead of 3. This affects SE-FU-2's `idle / open / card` change values and the screenshot-based "visible / stage" detection of the coarse fresh-install timings (§25–§27); those regions were mis-placed. The asserted gate cases, the instrumented SE-FU-1 method and every PASS that rests on accessibility queries are unaffected. O-2 now passes the window's width. Re-scaling the other helpers would re-measure accepted SE-FU-2 evidence, so it is proposed to the PO, not applied.
+- **The other §21.1 coverage items:** NOT TESTED in this execution. They are Shared EXPANDED sheet / sources / conversation entry, empty states, landscape sheets, and cold / warm timings separated from automation overhead.
+
+### 29.8 E-1 — returned to the PO (a material conflict with frozen canon; not implemented)
+- **E-1 (§20):** "Personal, Shared and Public conversations clearly identify who authored each displayed message … The Shared World distinguishes individual participants, the reader and QANDEEL. The Public World keeps its Public Identity model." E-1(a), Back at home, was delivered in D-3. E-1's attribution itself is not implemented.
+- **What blocks it.** The investigation found three conflicts with frozen authority. The directive names this as a stop condition (a material architectural conflict, plus a privacy authority concern), so implementation does not proceed against the canon.
+  1. **Personal.** The frozen G1.1 R3 conversation canon (`docs/design/canonical-artifacts/product-proofs/g1.1-r3/G1.1_R3_FINAL_REPORT.md`) decides speaker identity by *position plus ground*: the reader is on the slab tone at their own edge, and QANDEEL is on the World. "Neither speaker has a colour or an avatar". The speaker labels «كلامك» / «قنديل» are assistive only, and W1A-01 forbids new visible conversation copy outside a Copy Gate. A visible label is therefore a controlled amendment of G1.1 R3, not an implementation detail.
+  2. **Shared.** The reader's own rows carry no visible label; the approved «أنت» / "You" exists (S4-01), but not as a visible row label. Other members show their display names. Two members with the same display name, or with none, cannot be told apart, because the Shared conversation transport carries no participant identity, and the S8A-02 collision label is model-only. Distinguishing them needs a new wire field from the server, which is a backend contract change with a privacy dimension (participant identifiers reaching other readers).
+  3. **Public.** The reader's own posts carry no visible self marker, and any marker must follow the Public Identity model's naming (its copy).
+- **Options for the PO.**
+  - **(A) Recommended.**
+    - Personal: confirm that G1.1 R3's position plus ground satisfies E-1, with no change.
+    - Shared: show the approved «أنت» / "You" visibly on the reader's rows (a Copy Gate for its visible use); for members, a server-assigned, per-World, non-identifying participant ordinal under a controlled amendment with a privacy review.
+    - Public: a self marker drawn from the Public Identity copy (Copy Gate).
+  - **(B)** A controlled amendment of G1.1 R3 adding visible speaker labels in all three Worlds, with the Copy Gate in ar and en. S3-R2 and COSMOS are unaffected.
+  - **(C)** Keep E-1 open as a §20 blocker and sequence it after E-2.
+- **State:** **REQUIRED FOR SLICE E — NOT IMPLEMENTED — RETURNED TO THE PO (canon conflict).**
+
+### 29.9 The Release candidate for E-2
+- `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/apk/cosmosint-final-f1-f6d9c9cd.apk`, sha256 `e69d424c90b2ef4635c7c27c525b6b4517e227df32f6e080c625233db63b8232`.
+- Package `com.qandeel.mobile.cosmosint` ("QANDEEL Cosmos Int"); arm64-v8a + x86_64; Release; the S401 proof entry over the production composition.
+- Its application tree equals the PR head's: `97dd8532` and this record change only the iOS harness, the gate trigger and docs.
+- It is not installed on the HONOR. E-2 is not started.
+
+### 29.10 Not done
+- No merge. PR #399 stays at `fc2e13c6`; PRs #391–#396 are untouched.
+- No change to the frozen artwork, renderer, camera, gestures, semantic zoom or navigation. No layout change.
+- No Replay feature work.
+- No HONOR use, and no device setting changed.
+- E-2 is not started.
+- This record's push re-runs the PR's CI. Those runs are reported to the PO with the consolidated report.
+
+## 30. COSMOS-FINAL-01 continuation after the §29 review (PO, 2026-11-20): SE-FU-1 DEFERRED FOR V1 BY THE PO'S EXPLICIT EXCEPTION (Future Improvements item 022); E-1 Option A prepared for approval; the harness scale correction; BG-10 matrix; Slice E coverage — NOT CLOSED, STOPPED FOR THE PO BEFORE E-2
+
+**Second source (PO, 2026-11-20), "PO FINAL DECISION — SE-FU-1 Minimal Fix or Accepted V1 Deferral", and its binding clarification "SE-FU-1 Future Improvements Destination".** These amend item 1 below.
+- Reuse the profiling already completed or under way; do not restart investigations. Apply the smallest safe correction only if the native cause and the correction are sufficiently proven. No startup-architecture redesign, no broad optimisation, no speculative change. The target stays 250 ms.
+- If no safe minimal fix is available, SE-FU-1 is deferred to Future Improvements and its limitation accepted in V1, by explicit PO exception, provided that the Analysis stays accessible, the tap is not permanently lost, and no crash, data loss or critical functional failure is demonstrated. It is classified as an accepted V1 limitation, never PASS or FIXED. The 250 ms test and its recorded result are not weakened or changed.
+- The destination is the existing Word document in `E:\QANDEEL_APP\docs\future-improvements`. SE-FU-1 is not turned into a backlog task, a new development task or a remaining V1 release blocker. This contract and the Project Map reference the Word entry and the exception. No investigation or correction continues after the narrow stop condition.
+- The exception covers SE-FU-1 only. It does not waive E-1, the other mandatory coverage, or the privacy and safety requirements.
+
+**Source (PO, 2026-11-20), "COSMOS-FINAL-01 Continuation After §29 Review".**
+- O-1, O-2 and F-1 are accepted and are not repeated. COSMOS-FINAL-01 stays the single implementation task. E-2 is a separate hands-on PO gate.
+- **Item 1, SE-FU-1:** one focused native Time Profiler investigation with the established fresh-install protocol. The 250 ms first-tap acknowledgment criterion is kept. No speculative renderer, camera, gesture or startup-architecture change. A narrow, safe correction is implemented with focused Android and iOS regression coverage; a correction that needs frozen architecture or material scope stops for the PO. SE-FU-1 stays OPEN until its full acceptance condition is demonstrated.
+- **Item 2, E-1:** Option A approved as the design direction, not as a waiver of privacy or contract controls. The narrow canonical amendment, the Copy Gate and the privacy / wire-contract review are prepared. No unreviewed identity exposure. No Option B. Not deferred past E-2.
+- **Item 3:** the S7-03 / S7-04 pin re-anchor of `LivingAnalysisMap.tsx` (`70651062…` → `58c1adbf…`) is ratified. No further Replay change.
+- **Item 4, BG-10 and coverage:** the ar / small-iPhone evidence is preserved. After SE-FU-1 is resolved, the permanent iOS language / size matrix is completed without weakening tests. Slice E coverage continues. Physical-device-only checks are carried to E-2 with explicit acceptance criteria.
+- **Item 5, the harness:** the narrow runner / window-scale correction is authorised. Affected historical numerical measurements are identified and superseded, with the original evidence preserved. The six-hour HONOR protocol and the full D-3 validation are not repeated without demonstrated impact.
+- **Item 6:** E-2 is excluded. When implementation is ready: a stable Release APK, a consolidated report and explicit PASS / FAIL / NOT TESTED records, then STOP for E-2 authorisation.
+
+**Branch.** Draft PR #401 (`cosmos/cosmos-int-01-slice-e-o1`), commits after §29:
+- `e2e4d770`: the harness scale correction and the Slice E coverage cases (§30.3, §30.5);
+- `2cd2899a`: the E-1 amendment, package and the Personal demonstration test (§30.4);
+- `df5954a3`: the gate's window reader (the landscape cases, §30.5);
+- `14965963`: BG-10's permanent matrix (§30.7);
+- no SE-FU-1 commit: no correction was proven (§30.6);
+- this record's commit.
+
+The validation branch `cosmos/validate/final-sefu1-prof` (E:\cosmossefult, never merged) carries the native profiling workflow.
+
+### 30.1 Register — state after this continuation
+| ID | iOS | Android (emulator) | State |
+|---|---|---|---|
+| O-1, O-2, F-1 | accepted (§29) | accepted (§29) | **ACCEPTED by the PO** (2026-11-20); not repeated |
+| **SE-FU-1** | **FAIL**: 1658 ms (§27), 1100 / 1142 / 1094 ms with corrected detection (§30.6); target 250 ms | NOT TESTED (no first-launch instrumentation on Android) | **DEFERRED — ACCEPTED V1 LIMITATION — NON-BLOCKING FOR V1 COSMOS ACCEPTANCE, BY EXPLICIT PO EXCEPTION.** Not PASS, not FIXED. Future Improvements **item 022** |
+| **E-1** | Personal demonstration test in the gate (§30.4) | Personal: **PASS** en / ar | **Personal: G1.1 R3 demonstrated. Shared / Public: amendment, Copy Gate and privacy review PROPOSED, awaiting the PO (E-A / E-B / E-C); NOT IMPLEMENTED** |
+| Slice E coverage | gate cases in every cell (§30.5, §30.7) | **PASS** 18 / 18 (en / ar) + timings | **DELIVERED** (§30.5) |
+| BG-10 matrix | iPhone 17 en, iPhone 17 ar, small iPhone en | — | **ENFORCED** by the gate (§30.7) |
+| Replay re-anchor | — | — | **RATIFIED** (§30.2) |
+| **E-2** | — | NOT RUN | **REQUIRED BEFORE THE FINAL MERGE; separate PO gate** (§30.8) |
+
+### 30.2 The Replay re-anchor — RATIFIED (item 3)
+The S7-03 / S7-04 pin of `LivingAnalysisMap.tsx`, `70651062…` → `58c1adbf…` (§29.4, `f6d9c9cd`), is **ratified by the PO on 2026-11-20**. No Replay file, Replay pin or Replay behaviour changed after it.
+
+### 30.3 The harness scale correction (item 5) — applied, and the affected history superseded
+- **The fault (§29.7).** The XCUITest runner process reports `UIScreen.main.bounds` as a 320 pt compatibility screen. The app's window is 402 pt (iPhone 17) or 375 pt (small iPhone), and screenshots are 1206 / 750 px wide. Every helper that converted points to screenshot pixels with the runner's width cropped at k = 3.77 instead of 3 (iPhone 17) and placed its regions wrongly.
+- **The correction (`e2e4d770`, harness only).** The device's points come from SpringBoard's frame (`XCUIApplication(bundleIdentifier: "com.apple.springboard").frame`), read once per run and cached. The runner's bounds remain only as a fallback. One property, `pts`, now feeds every pixel helper: `stats`, `change`, the door's "below" region and the fresh-install visibility test.
+- **The door's frame per cell.** The fresh-install test taps the Conversation door before it is in the accessibility tree, at a frame chosen per device width and layout direction: iPhone 17 en 284,64,104,44; iPhone 17 ar 14,64,139,44; small iPhone en 257,22,104,44; small iPhone ar 14,22,104,44 (`D3_DOOR` overrides it).
+- **What it corrects in §29.7.** The coverage gate's fresh-install FAIL in the **iPhone 17 ar** and **small iPhone en** cells is **not SE-FU-1 evidence**: the test tapped at the iPhone 17 **en** door's coordinates in both cells, which in ar is empty space and on the small iPhone lies below the door. It was a harness fault. §29.1 and §29.7 attributed it to SE-FU-1; that attribution is withdrawn here. The original results stay preserved in `final-01/coverage-44623629977/`.
+- **Historical numerical measurements superseded (originals preserved, verdicts unchanged).**
+
+| Where | Measurement | Why superseded | Verdict impact |
+|---|---|---|---|
+| §25.4, §26.2, §27 (D-a, the gate's fresh-install test) | cold / warm "response / stage / ready" ms (e.g. §26.2 cold 1370 / 2901 / 4166, warm 673 / 1020 / 2152) | the first-visible and stage regions were cropped at the runner's scale | none: "opened" rests on the accessibility tree; the timings were already marked coarse |
+| §25.4, §26, §27 (SE-FU-2 card test) | the `idle / open / card` change values and the region choice | `change` cropped at the runner's scale | none: PASS / FAIL rests on Back being available (accessibility) |
+| §22 (D-3 CP1 diagnosis) | frame statistics of the diag screenshots | same helper | none: §22 was diagnostic, and its conclusions rest on hit-test records |
+| §29.6 SE-FU-1-LT | the moment the door counted as "first visible" | the visibility crop was mis-placed | T-ack is measured on the app's clock and is unaffected; §30.6 re-measures with the corrected detection |
+| §29.3 O-2 | — | already measured at the window's scale (`97dd8532`) | none |
+
+- **Not repeated** (item 5): the six-hour HONOR protocol and the full D-3 validation. No affected measurement carried an acceptance verdict, so there is no demonstrated impact that would require them.
+
+### 30.4 E-1 — the speaker badge implemented (PO-directed); the participant ordinal prepared, not implemented
+- **The amendment:** `docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_COSMOS_FINAL_01_E1_MESSAGE_ATTRIBUTION_CONTROLLED_AMENDMENT_v1.0.md`, **PROPOSED, not in force** (E1(h) excepted, below). Its R0 text, E1(a)–E1(g) — R1 below revises (a), withdraws (f) and revises (g):
+  - the reader's own Shared rows show the approved «أنت» / "You";
+  - a server-assigned, per-World, non-identifying participant ordinal, shown only when a label is not unique for that reader or equals QANDEEL's word;
+  - the same rule in the closed World, the Introduction World and place sources;
+  - QANDEEL unchanged;
+  - a reader-only Public self tag «أنت» / "You" in A-5(b)'s place and form, from the existing `own`;
+  - no colour or avatar; S8A-02 §5.3 and 0140's handles unchanged.
+- **The package:** `docs/e2e/QANDEEL_COSMOS_FINAL_01_E1_ATTRIBUTION_PACKAGE_v1.md`:
+  - the Copy Gate (E1-01 – E1-03, **3 rows PROPOSED**, no new word);
+  - the privacy / wire-contract review (P-1 – P-10; one new field `authorOrdinal: number | null`; storage `shared_private.shared_world_participant_ordinals`, migration 0197);
+  - **decision E-P1**, numbering by join order (recommended) or by first visible message;
+  - the implementation plan.
+- **Personal (G1.1 R3 preserved, subject to its demonstration).** The native iOS test `testPersonalConversationAttributesEveryTurn` and the Android emulator case `E1-PERSONAL` read every seeded turn: each must announce its speaker («كلامك: » / "You: ", «قنديل: » / "QANDEEL: "), with the reader's turns on one edge and QANDEEL's on the other. Results:
+  - **Android `E1-PERSONAL`: PASS en and ar** (run 3 and run 4 on `cosmosint-final-e2e4d770.apk`). en: 2 reader turns, all «You: », on the left; 2 QANDEEL turns, all "QANDEEL: ", on the right. ar: «كلامك: » on the right, «قنديل: » on the left.
+  - **iOS `testPersonalConversationAttributesEveryTurn`: PASS in all three cells** (i17-en, i17-ar, small-en) of gate run 44694686720 on `14965963`, before the badge.
+- **R1 — the PO UI-Polish Addendum (2026-11-20), implemented (`d02cabe2`).** One treatment, chosen and built directly: a small circular badge (22 pt) merged into every Personal and Shared row at the row's own outer edge, level with its first line.
+  - Letters: QANDEEL `QA`; the reader the initials of their own account Name (shown to the reader only); another person the initials of the Name the reader already sees. Arabic initials are separate letters (`م ع`), Latin capitals together (`MA`); no Name, no letters.
+  - Tone: one restrained tone per speaker, stable for the conversation, Dark and Light; another person's chosen from four by the visible Name only, never QANDEEL's or the reader's.
+  - Geometry: Personal rows 28 → 22 and 16 → 12 pt above; the slab 11 / 12 → 8 / 9 pt vertical, 18 → 14 inner. Shared rows 20 → 14 and 16 → 12; the bubble 10 / 11 → 8 / 9 vertical, 16 → 12 horizontal.
+  - Unchanged: edges, the reader's slab, QANDEEL's open words, Names, every accessible name (the badge is hidden from assistive technology), Public (verified: every post and reply shows its author's Public display; no Public file changed; Public Jest 149/149), Replay, Voice Note slabs, the map.
+  - The amendment and package are revised to R1: E1(h) added, E1(a) attributes the reader's Shared rows by the badge, E1(f) withdrawn, E1(g) revised; Copy Gate E1-01 / E1-03 WITHDRAWN, E1-04 `QA` and E1-05 initials PO-DIRECTED, E1-02 still PROPOSED.
+  - Checks: Jest (initials, tones, geometry, hidden badge; Personal 29/29, Shared + Introduction + Conversation suites 458/458); root contracts 561/561 (the S4-01 prop pin re-anchored for the reader Name); **Android `P-BADGE` / `S-BADGE`: PASS en and ar** (`emu/e1polish-d02cabe2-run2` on `cosmosint-final-d02cabe2.apk`; run 1 VOID: harness faults); every badge read exactly on its speaker's tone (reader 36,48,64; QANDEEL 59,51,36; Fixture Hadir SAGE 38,51,41 en, «هدير الاختبار» PLUM 49,41,59 ar); letters checked on the captures (`MA`, `م ع`, `QA`, `FH`, `ه ا`). iOS `testPersonalConversationAttributesEveryTurn` (badge fills) and `testSharedConversationBadgesKeepOneTonePerSpeaker`: the gate on the pushed head (§30.7).
+- **Still open:** the participant ordinal (E1(b) – E1(c), migration 0197) awaits E-A / E-B (row E1-02) / E-C (with E-P1). It is not implemented.
+
+### 30.5 Slice E coverage (item 4)
+New gate cases (`e2e4d770`; iOS Maestro), each with an Android emulator counterpart (`final-01/emu-coverage.sh`):
+- **S-EXPANDED:** the Shared sheet's handle offers expansion; tapped, the sheet top rises and the handle offers collapse.
+- **S-SOURCES:** the place's sources are listed, the first with its attribution.
+- **S-CONV-ENTRY:** the panel's Conversation act opens the World's conversation.
+- **S-EMPTY:** a Shared World with no places shows its empty field.
+- **U-EMPTY:** a served Public field with no Experience shows its empty field, through a validation-only proof link `public/seed-empty`.
+- **S-LAND / U-LAND / P-LAND:** with a sheet open, the device turns to landscape and back, and the sheet's handle stays on screen (Shared: expanded in landscape too).
+- **COLD / WARM (Android):** `am start -W` TotalTime, the system's launch clock, with no automation inside the interval.
+
+**iOS, gate 44679589607 on `e2e4d770` (iPhone 17 en): 26 / 29 PASS.**
+- S-EXPANDED (sheet top 627 → 160 pt), S-SOURCES (first source attributed "You"), S-CONV-ENTRY, S-EMPTY ("This world's map is still taking shape.") and U-EMPTY ("Nothing is in Public World yet.") all PASS, with every earlier case.
+- S-LAND / U-LAND / P-LAND FAILed with window `0,0,0,0`. That is a **harness** fault. The hierarchy dump's top node is a synthetic container whose frame is always zero; the application element is its child. Read again from that run's own dumps with the corrected reader (`df5954a3`), every landscape state reads: window 874 × 402 turned and 402 × 874 upright, handle inside, and the Shared sheet expanded in landscape. Gate 44694686720 (`14965963`): **S-LAND PASS** in i17-en and small-en (expanded in landscape too), NOT TESTED in i17-ar (the Shared sheet did not open); **U-LAND PASS** in all three cells; **P-LAND PASS** in small-en, **FAIL** in i17-en (no window read in landscape) and NOT TESTED in i17-ar (no PEEK). In i17-en the return to portrait did not take, and the native test that followed ran on an 874 × 402 screen; the harness now verifies the return and every native test starts upright (§30.7).
+
+**Android emulator** (`final-01/emu-coverage.sh`; `cosmosint-final-e2e4d770.apk`, sha256 `c589acf5…`).
+- Runs 1 and 2 are **VOID**, preserved with a `VOID.txt` each:
+  - Run 1: the sheet-open criterion matched the handle, which on Android stays mounted at rest behind the switcher, disabled. An open sheet now requires an enabled handle.
+  - Run 2: run 1's script survived its stop and wrote into the same folder, on the same emulator.
+- **Run 3: 16 / 18 PASS, P-LAND NOT TESTED (en, ar).** The Personal Analysis has no World switcher, so the stage had no lower bound. The timeline rail's top now bounds it, as in `emu-f1.sh`.
+- **Run 4 (complete, alone): 18 / 18 PASS.** In both en and ar: E1-PERSONAL, S-EXPANDED (sheet top 1777 → 394 px), S-SOURCES ("You" / «أنت»), S-CONV-ENTRY, S-LAND (window 2400 × 1080, expanded in landscape), U-LAND, P-LAND, S-EMPTY and U-EMPTY.
+- The emulator's rotation settings were read first and restored after each run.
+- **Cold / warm launch, `am start -W` TotalTime** (the system clock; software-GPU emulator, not device timing), run 4:
+  - en: cold 837 / 851 / 759 ms, warm 369 / 227 / 219 ms;
+  - ar: cold 836 / 914 / 819 ms, warm 238 / 134 / 212 ms.
+- **The iOS cold / warm separation:** the instrumented app clock (`tLaunch0`, `t.L0.js.start`, `t.L1.door.pressedCommit`) is the only iOS launch timing free of automation overhead. It is reported for SE-FU-1 in §30.6. The coarse screenshot timings stay superseded (§30.3).
+
+### 30.6 SE-FU-1 — DEFERRED FOR V1 BY EXPLICIT PO EXCEPTION (item 1 and the second source)
+- **The native profiling that was approved and under way, reused and not restarted:**
+  - **Runs 44678217014 and 44682183706 (`xctrace record`, Time Profiler).** No recording finalised on the CI runner: the 3 s preflight recordings hit their 120 s bound in both device and host modes, and the three launch traces held 52 KB with no samples. The board marks of 44682183706 are valid (the app's own clock).
+  - **Run 44689756548 (macOS `sample`, attached to the simulator app's host process).** It attached, but recorded an empty call graph in all three launches, and its attach slowed the launch itself (JavaScript start at +14 to +36 s).
+- **The measurements, all of the same fresh-install protocol** (fresh install, freshly booted iPhone 17 en, the door tapped once at its first visible frame, T-ack = `t.L1.door.pressedCommit` − `tTap0` on the app clock):
+
+| Run | Detection | `typefaceReady → door.layout` | Tap inside that window | **T-ack** |
+|---|---|---|---|---|
+| 44491734500 (§27) | runner-scaled | — | yes | **1658 ms FAIL** |
+| 44623001508 / 44627532878 (SE-FU-1-LT, §29.6) | runner-scaled (superseded, §30.3) | 3118 / 1527 ms reproduced | no (the door counted as visible too late) | 160 / 182 / 168 ms |
+| 44682183706 (under xctrace) | **corrected** | 1894 / 1825 / 1652 ms | **yes, 3 / 3** | **1100 / 1142 / 1094 ms FAIL** |
+| 44689756548 (under `sample`, launch slowed by the tool) | corrected | 1946 / 2858 / 2906 ms | no | 200 / 593 / 410 ms |
+
+- **What is established.** The delay is an intermittent native window between the font's readiness and the door's layout event, with no JavaScript stall over 100 ms inside it (§29.6). A first tap that lands inside the window is acknowledged only after it ends. With corrected first-visible detection, a tap at the door's first visible frame lands inside the window every time. SE-FU-1-LT's passing values reflected mis-scaled detection, not a fix.
+- **What is not established.** The native work inside the window is **not named**: neither profiler produced stacks on the runner. So no correction is "sufficiently proven", and none is applied. No renderer, camera, gesture, startup or performance change was made.
+- **The exception's conditions hold, from the evidence above:**
+  - the Analysis stays accessible: every profiled launch reached `L3.cross.ANALYSIS.enter`, and every gate fresh-install test opened it;
+  - the tap is never lost: `pressedCommit` arrived in every launch;
+  - no crash, no data loss, and no critical functional failure appeared in any run.
+- **Decision applied: SE-FU-1 is DEFERRED — ACCEPTED V1 LIMITATION — NON-BLOCKING FOR V1 COSMOS ACCEPTANCE, by the PO's explicit exception of 2026-11-20.**
+  - It is **not PASS and not FIXED**. The 250 ms criterion, the instrumented FAIL results above and §27's 1658 ms stay recorded unchanged. No test was weakened.
+  - It is no longer a V1 blocker, by that exception only. E-1, the mandatory coverage and the privacy and safety requirements are not waived.
+  - **Future Improvements item 022** «SE-FU-1 — COSMOS — First-Tap Acknowledgment During the iOS First-Launch Native Window» was added to the authoritative Word document `E:\QANDEEL_APP\docs\future-improvements\QANDEEL_FUTURE_IMPROVEMENTS.docx`.
+    - It records the measurements, the user impact, the technical evidence, the proposed future native investigation and narrow correction, the reopen triggers, and the PO's decision.
+    - Items 001–021 are byte-identical. A backup was taken first (`final-01/fi-backup/`), and the file was verified by opening it in Word and rendering it to a PDF.
+  - It is **not** a backlog item, not a new development task and not a remaining V1 release blocker. Recording it authorises no implementation.
+- **Stop condition reached.** No further investigation or correction of SE-FU-1 is made in COSMOS-FINAL-01.
+
+### 30.7 BG-10 — the permanent language / size matrix (item 4)
+- **Done in `14965963`.** With SE-FU-1 resolved by the exception, the binding iOS World gate runs every case, Maestro and native, in three cells:
+  - iPhone 17 en;
+  - iPhone 17 ar;
+  - the small iPhone en (iPhone SE 3rd generation, or iPhone 16e).
+- Artifacts are named per cell. No case was weakened; a NOT TESTED still fails its cell.
+- The fresh-install gate test asserts that the first-visible door tap opens the Analysis. The 250 ms T-ack is the instrumented SE-FU-1 measurement of §30.6, not a gate case. The ar / small-iPhone FAILs of §29.7 were the door-coordinate harness fault (§30.3).
+- **Result on `14965963` (run 44694686720): FAIL.**
+  | Cell | PASS | FAIL | NOT TESTED | Not PASS |
+  |---|---|---|---|---|
+  | i17-en (iPhone 17, en) | 29 | 2 | 0 | P-LAND (no window in landscape); `testLayoutAtTheReadersTextSize` (ran on an 874 × 402 screen: the portrait return had not taken) |
+  | i17-ar (iPhone 17, ar) | 25 | 3 | 3 | S-FAR-TAP (the Far depth did not change); `testPersonalDeeperBeads…` (the Analysis door did not appear in 30 s); `testLayoutAtTheReadersTextSize` (lost connection to the app); S-LAND / P-LAND / U-EMPTY NOT TESTED |
+  | small-en (iPhone SE 3 / 16e, en) | 30 | 0 | 1 | X-PAN-ZOOMED NOT TESTED (no unambiguous node core by hue) |
+- The orientation leak is fixed in the harness (a verified return to portrait; `XCUIDevice.orientation = .portrait` before every native test). The i17-ar FAILs are reported as they are; they are not explained away and nothing was retried. The verdict on the pushed head is recorded in the report (P2.4).
+
+### 30.8 Carried to E-2 (physical device only), with acceptance criteria
+| Check | Acceptance criterion at E-2 |
+|---|---|
+| F-1 on the HONOR (§20) | Personal PEEK on a node states the resolved inspection ("You are inspecting …"), never a technical sentence, en and ar |
+| Finger latency and real-touch feel (§28.3) | a tap, drag, pinch and double tap on each World's stage respond without a perceptible delay or a lost touch, and the camera follows the finger |
+| HONOR enlarged text (§28.3) | at the phone's largest font, every World's controls stay on screen and reachable, and the Public search is usable |
+| Shared → Public journey (§28.3) | switching Shared → Public → Shared keeps each World's state and never shows a blank frame |
+| Landscape sheets on a phone | with a sheet open, turning the phone keeps the sheet's handle on screen and the sheet usable; turning back restores it |
+| First-launch tap (SE-FU-1, accepted V1 limitation) | observed only: on a fresh install, the first door tap opens the Analysis and is never lost. A delay is recorded, not failed (exception §30.6) |
+| E-1 on the phone | after E-1's approval and implementation: every displayed message in the three Worlds identifies its author as the amendment states |
+
+### 30.9 The Release candidate and what was not done
+- **Release candidate:** `QANDEEL_REPORTS/COSMOS-V5/integration/final-01/apk/cosmosint-final-e2e4d770.apk`, sha256 `c589acf577f3fc9b37120ae1a205ef245f8df0670d0fa64f129446a151c958d6`.
+  - Package `com.qandeel.mobile.cosmosint`; Release; arm64-v8a + x86_64; the S401 proof entry over the production composition.
+  - Its application tree is the PR head's: every later commit changes only the iOS harness, the gate workflow or docs. It supersedes `e69d424c…` (§29.9) only by the validation-only proof link `public/seed-empty`.
+  - Not installed on the HONOR.
+- **Not done:**
+  - no merge (PR #399 stays at `fc2e13c6`; PRs #391–#396 untouched);
+  - no E-2, and no HONOR use;
+  - no change to the frozen artwork, renderer, camera, gestures, semantic zoom, timeline, Detail Sheet, navigation or performance;
+  - no Replay change;
+  - E-1's Shared / Public implementation awaits the PO's E-A / E-B / E-C.
 
 ---
 

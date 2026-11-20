@@ -20,6 +20,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Text, TextInput, View } from 'react-native';
 
+import { QANDEEL_INITIALS, SPEAKER_BADGE_GAP, SpeakerBadge, otherSpeakerTone, speakerInitials } from '../attribution';
 import {
   Control, Glyph, MIN_TARGET, directedParagraphs, typeStyle, withDirectionMark, type ConversationPalette,
 } from '../conversation';
@@ -35,6 +36,27 @@ const FIELD_MIN_HEIGHT = 44;
 const FIELD_RADIUS = 12;
 const INPUT_MAX_LINES = 5;
 const BUSY_OPACITY = 0.6;
+/** COSMOS-FINAL-01 E-1 (PO UI-Polish Addendum, 2026-11-20): the space above a person's words and above QANDEEL's, slightly tighter. */
+const MATERIAL_GAP = 14;
+const QANDEEL_GAP = 12;
+const BODY_LINE = typeStyle('body').lineHeight;
+const NAME_LINE = typeStyle('metadata').lineHeight;
+
+/**
+ * COSMOS-FINAL-01 E-1: the speaker's badge for one material, at that material's own edge. The reader's initials come from
+ * the reader's own account Name; another person's from the Name this reader is already shown for them; QANDEEL is `QA`.
+ */
+function MaterialBadge({ material, readerName }: { readonly material: SharedMaterial; readonly readerName: string | null }) {
+  if (material.producer === 'QANDEEL') return <SpeakerBadge initials={QANDEEL_INITIALS} tone="QANDEEL" lineHeight={NAME_LINE} testID={`qandeel-speaker-${material.materialId}`} />;
+  if (material.producer === 'SELF') return <SpeakerBadge initials={speakerInitials(readerName)} tone="READER" lineHeight={BODY_LINE} testID={`qandeel-speaker-${material.materialId}`} />;
+  return <SpeakerBadge initials={speakerInitials(material.authorName)} tone={otherSpeakerTone(material.authorName)} lineHeight={NAME_LINE} testID={`qandeel-speaker-${material.materialId}`} />;
+}
+
+/** A person's bubble: close around its words, the speaker's badge inside it at the material's own edge. */
+const bubbleStyle = (mine: boolean, palette: ConversationPalette) => ({
+  backgroundColor: mine ? palette.utterance : palette.field, paddingTop: 8, paddingBottom: 9, paddingHorizontal: 12, borderRadius: 18,
+  flexDirection: mine ? 'row' : 'row-reverse', columnGap: SPEAKER_BADGE_GAP,
+} as const);
 
 function Words({ text, fallback, palette }: { readonly text: string; readonly fallback: 'rtl' | 'ltr'; readonly palette: ConversationPalette }) {
   const paragraphs = useMemo(() => directedParagraphs(text, fallback), [text, fallback]);
@@ -65,10 +87,12 @@ const noticeText = (copy: SharedConversationCopy, notice: SharedThreadNotice): s
  * One material that is not the reader's to delete — QANDEEL's words, another person's, or (S4-03) anything in an ended
  * World, which is read-only by entitlement. The same three treatments as the live thread; nothing here is actionable.
  */
-export function SharedReadOnlyMaterial({ material, language, palette }: {
+export function SharedReadOnlyMaterial({ material, language, palette, readerName = null }: {
   readonly material: SharedMaterial;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
+  /** COSMOS-FINAL-01 E-1: the reader's own account Name, for the reader's own badge (shown to the reader only). */
+  readonly readerName?: string | null;
 }) {
   const copy = sharedConversationCopy(language);
   const fallback = language === 'ar' ? 'rtl' : 'ltr';
@@ -77,9 +101,12 @@ export function SharedReadOnlyMaterial({ material, language, palette }: {
     return (
       <View testID={`qandeel-shared-material-qandeel-${material.materialId}`} accessible
         accessibilityLabel={copy.qandeelTurnName(material.text)} accessibilityLanguage={language}
-        style={{ alignSelf: 'flex-end', marginTop: 16, maxWidth: '88%', paddingEnd: GUTTER - 4, rowGap: 2, marginStart: QANDEEL_END_INSET }}>
-        <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{copy.qandeel}</Text>
-        <Words text={material.text} fallback={fallback} palette={palette} />
+        style={{ alignSelf: 'flex-end', marginTop: QANDEEL_GAP, maxWidth: '88%', paddingEnd: GUTTER - 4, marginStart: QANDEEL_END_INSET, flexDirection: 'row-reverse', columnGap: SPEAKER_BADGE_GAP }}>
+        <MaterialBadge material={material} readerName={readerName} />
+        <View style={{ flexShrink: 1, rowGap: 2 }}>
+          <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{copy.qandeel}</Text>
+          <Words text={material.text} fallback={fallback} palette={palette} />
+        </View>
       </View>
     );
   }
@@ -88,10 +115,13 @@ export function SharedReadOnlyMaterial({ material, language, palette }: {
   return (
     <View testID={`qandeel-shared-material-${mine ? 'self' : 'human'}-${material.materialId}`} accessible
       accessibilityLabel={mine ? copy.selfTurnName(material.text) : copy.otherTurnName(name, material.text)} accessibilityLanguage={language}
-      style={{ alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: 20, maxWidth: '88%', marginHorizontal: GUTTER - 8, marginEnd: SLAB_END_INSET }}>
-      <View style={{ backgroundColor: mine ? palette.utterance : palette.field, paddingTop: 10, paddingBottom: 11, paddingHorizontal: 16, borderRadius: 18, rowGap: 2 }}>
-        {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
-        <Words text={material.text} fallback={fallback} palette={palette} />
+      style={{ alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: MATERIAL_GAP, maxWidth: '88%', marginHorizontal: GUTTER - 8, marginEnd: SLAB_END_INSET }}>
+      <View style={bubbleStyle(mine, palette)}>
+        <MaterialBadge material={material} readerName={readerName} />
+        <View style={{ flexShrink: 1, rowGap: 2 }}>
+          {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
+          <Words text={material.text} fallback={fallback} palette={palette} />
+        </View>
       </View>
     </View>
   );
@@ -101,8 +131,10 @@ export function SharedReadOnlyMaterial({ material, language, palette }: {
  * One material the reader may delete — their own words — behind the calm confirmation that states what deletion does.
  * Reused as it is by the S6-05 Introduction World (R-5): the selection and the deletion itself belong to the caller.
  */
-export function SharedOwnMaterial({ material, language, palette, open, confirming, busy, onToggle, onAsk, onKeep, onDelete }: {
+export function SharedOwnMaterial({ material, language, palette, open, confirming, busy, onToggle, onAsk, onKeep, onDelete, readerName = null }: {
   readonly material: SharedMaterial;
+  /** COSMOS-FINAL-01 E-1: the reader's own account Name, for the reader's own badge (shown to the reader only). */
+  readonly readerName?: string | null;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
   /** The Delete action is offered under the words. */
@@ -121,14 +153,17 @@ export function SharedOwnMaterial({ material, language, palette, open, confirmin
   const mine = material.producer === 'SELF';
   const name = material.authorName ?? copy.someone;
   const slab = (
-    <View style={{ backgroundColor: mine ? palette.utterance : palette.field, paddingTop: 10, paddingBottom: 11, paddingHorizontal: 16, borderRadius: 18, rowGap: 2 }}>
-      {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
-      <Words text={material.text} fallback={fallback} palette={palette} />
+    <View style={bubbleStyle(mine, palette)}>
+      <MaterialBadge material={material} readerName={readerName} />
+      <View style={{ flexShrink: 1, rowGap: 2 }}>
+        {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
+        <Words text={material.text} fallback={fallback} palette={palette} />
+      </View>
     </View>
   );
   const label = mine ? copy.selfTurnName(material.text) : copy.otherTurnName(name, material.text);
   const testID = `qandeel-shared-material-${mine ? 'self' : 'human'}-${material.materialId}`;
-  const place = { alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: 20, maxWidth: '88%', marginHorizontal: GUTTER - 8 } as const;
+  const place = { alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: MATERIAL_GAP, maxWidth: '88%', marginHorizontal: GUTTER - 8 } as const;
   return (
     <View style={{ ...place, marginEnd: SLAB_END_INSET, rowGap: 6, opacity: busy ? BUSY_OPACITY : 1 }}>
       <Control palette={palette} language={language} accessibilityLabel={label} onPress={onToggle}
@@ -163,10 +198,12 @@ export function SharedOwnMaterial({ material, language, palette, open, confirmin
 }
 
 /** The World's visible material, oldest first, with the reader's own words deletable behind a confirmation. */
-export function SharedThread({ controller, language, palette }: {
+export function SharedThread({ controller, language, palette, readerName = null }: {
   readonly controller: SharedWorldController;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
+  /** COSMOS-FINAL-01 E-1: the reader's own account Name, for the reader's own badge (shown to the reader only). */
+  readonly readerName?: string | null;
 }) {
   const copy = sharedConversationCopy(language);
   const fallback = language === 'ar' ? 'rtl' : 'ltr';
@@ -181,11 +218,11 @@ export function SharedThread({ controller, language, palette }: {
 
   const row = (material: SharedMaterial) => {
     if (material.producer === 'QANDEEL' || !material.canDelete) {
-      return <SharedReadOnlyMaterial key={material.materialId} material={material} language={language} palette={palette} />;
+      return <SharedReadOnlyMaterial key={material.materialId} material={material} language={language} palette={palette} readerName={readerName} />;
     }
     const open = selected === material.materialId;
     return (
-      <SharedOwnMaterial key={material.materialId} material={material} language={language} palette={palette}
+      <SharedOwnMaterial key={material.materialId} material={material} language={language} palette={palette} readerName={readerName}
         open={open} confirming={confirming === material.materialId} busy={thread.deleting === material.materialId}
         onToggle={() => { setSelected(open ? null : material.materialId); setConfirming(null); }}
         onAsk={() => setConfirming(material.materialId)}
