@@ -429,8 +429,10 @@ function FocusSheet({ controller, focus, copy, palette, language }: {
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const discussion = controller.discussion;
   const chosen: FocusTab = focus.discussion === true && discussion !== null ? 'DISCUSSION' : 'INFORMATION';
-  const count = focus.panel.status === 'SERVED' ? focus.panel.experience.discussionCount : 0;
-  const discussionLabel = count > 0 ? fillSheetTabsCopy(tabs.discussionWithCount, String(count)) : tabs.discussion;
+  // The S5-04 human discussion count only, and only once it is known and above zero (the S5-04 root contract pins this form).
+  const experience = focus.panel.status === 'SERVED' ? focus.panel.experience : null;
+  const discussionLabel = experience !== null && experience.discussionCount > 0
+    ? fillSheetTabsCopy(tabs.discussionWithCount, String(experience.discussionCount)) : tabs.discussion;
   const tab = (key: FocusTab, label: string, testID: string, choose: () => void) => {
     const selected = key === chosen;
     return (
