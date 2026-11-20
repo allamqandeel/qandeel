@@ -50,8 +50,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # BG-10's permanent language / size matrix (PO, COSMOS-FINAL-01 continuation, 2026-11-20, item 4; contract §30.7):
+        # the reference cell, Arabic (right-to-left), and the small iPhone. Every cell runs every case; none is weakened.
         include:
-          - {device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          - {cell: i17-en, device: 'iPhone 17', lang: en, langtag: en-US, langloc: en_US}
+          - {cell: i17-ar, device: 'iPhone 17', lang: ar, langtag: ar-EG, langloc: ar_EG}
+          - {cell: small-en, device: 'iPhone SE (3rd generation)|iPhone 16e', lang: en, langtag: en-US, langloc: en_US}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
@@ -163,4 +167,4 @@ jobs:
           [ -f "$f" ] && ! tail -n +2 "$f" | awk -F'\t' '$2 != "PASS"' | grep -q .
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
-        with: {name: 'ios-world-gate-${{ matrix.lang }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
+        with: {name: 'ios-world-gate-${{ matrix.cell }}', path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
