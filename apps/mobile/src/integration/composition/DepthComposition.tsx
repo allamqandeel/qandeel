@@ -605,6 +605,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // crossing depths, opening the Analysis or another surface re-reads it and never reopens or ends anything.
   const callOwner = onSignOut === undefined ? null : runtime.call;
   const { exchanges, calls } = useSyncExternalStore(runtime.conversation.subscribe, runtime.conversation.getState);
+  // COSMOS-FINAL-01 E-1: the reader's own account Name, whose initials mark the reader's own turns (shown to the reader only).
+  const readerName = useSyncExternalStore(runtime.account.subscribe, () => runtime.account.getState().displayName);
   // S8B-07 CP1-B (Sheet A): a finished call's recording player beside its record, in the Personal world only; leaving the
   // conversation (a depth, a destination, a selection) releases whatever plays and lets its file go.
   const callListening = onSignOut === undefined ? null : runtime.callListening;
@@ -682,6 +684,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         onOpenAnalysis={() => cross('ANALYSIS')}
         focusDepthControl={crossed && current}
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
+        readerName={readerName}
         onOpenSettings={onSignOut === undefined ? undefined : openSettings}
         focusSettingsEntry={returnedFromSettings && !settingsShown}
         personalEntry={onSignOut === undefined ? null : (
@@ -822,6 +825,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               introductions={runtime.introductionWorlds}
               introductionSharing={runtime.introductionSharing}
               introductionEntry={introductionEntry}
+              readerName={readerName}
             />
           </View>
         ) : null}

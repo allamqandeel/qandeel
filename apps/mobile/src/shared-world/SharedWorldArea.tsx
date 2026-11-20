@@ -82,9 +82,11 @@ export interface SharedWorldAreaProps {
    * opens that World's own surface, which reads the server again before drawing anything.
    */
   readonly introductionEntry?: { readonly worldId: string; readonly n: number } | null;
+  /** COSMOS-FINAL-01 E-1: the reader's own account Name, for the reader's own speaker badge (shown to the reader only). */
+  readonly readerName?: string | null;
 }
 
-export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing, introductionEntry }: SharedWorldAreaProps) {
+export function SharedWorldArea({ controller, language, insets, activity, introductions, introductionSharing, introductionEntry, readerName = null }: SharedWorldAreaProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = sharedCopy(language);
@@ -209,7 +211,7 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
       <>
         {header(ended === null ? null : labelOfWorld(copy, ended), true)}
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingLeft: insets.left, paddingRight: insets.right }}>
-          <SharedClosedWorld controller={controller} language={language} palette={palette} />
+          <SharedClosedWorld controller={controller} language={language} palette={palette} readerName={readerName} />
         </ScrollView>
       </>,
       'qandeel-shared-ended-world',
@@ -267,7 +269,7 @@ export function SharedWorldArea({ controller, language, insets, activity, introd
                 <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{lifecycle.manageWorld}</Text>
               </Control>
             </View>
-            <SharedThread key={world.worldId} controller={controller} language={language} palette={palette} />
+            <SharedThread key={world.worldId} controller={controller} language={language} palette={palette} readerName={readerName} />
           </ScrollView>
           <SharedSendBar key={`send-${world.worldId}`} controller={controller} language={language} palette={palette} bottomInset={insets.bottom} />
         </KeyboardAvoidingView>,

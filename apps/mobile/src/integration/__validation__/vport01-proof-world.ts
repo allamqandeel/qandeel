@@ -126,7 +126,8 @@ export function createVport01ProofWorld(language: ChromeLanguage): Vport01ProofW
       return respond(201, { id: SESSION, status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now', last_activity_at: 'now', closed_at: null });
     }
     if (path.endsWith('/account/first-use')) {
-      return respond(200, { displayName: null, welcomePending: false, firstConversationOpening: false });
+      // COSMOS-FINAL-01 E-1: a fictional reader Name, so the reader's speaker badge shows its initials (Arabic letters apart).
+      return respond(200, { displayName: language === 'ar' ? 'منى عادل' : 'Mona Adel', welcomePending: false, firstConversationOpening: false });
     }
     return respond(404, {});
   };
