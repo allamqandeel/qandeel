@@ -172,7 +172,9 @@ const FROZEN = [
   // inspected viewpoint, so it shows the new name; no Replay surface reads this composition. Previous pin: b32e6877.
   // RE-ANCHORED again by the COSMOS E-2 HONOR acceptance DEFECT-4 fix (PO decision 2026-11-20): the Personal PEEK's
   // scroller keeps handled taps, so Save works while the keyboard is open; no Replay surface reads it. Previous: d6b64a32.
-  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '3f0a063356b27985986214e6b303659f7493d3f285f95169ca35d1d59e291841'],
+  // RE-ANCHORED once more by the DEFECT-4 R2 fix (HONOR re-check, 2026-11-20): closing the topic-name editor also closes
+  // the keyboard; no Replay surface reads it. Previous: 3f0a0633.
+  ['apps/mobile/src/integration/composition/LivingAnalysisMap.tsx', '10c4a08ca91c2bf4d35b68382e718d38f2d7b3833c54175c1a4ac68c29fb8200'],
 ];
 
 const shipped = () => {

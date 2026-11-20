@@ -9,6 +9,7 @@
  * conversation. The sheet still writes nothing on its own; nothing here fabricates a name.
  */
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 
 import { analysisCopy } from '../../analysis-language';
 import { inspectObject, mapInspectionContext, mapProjectionRequest, type MapInspectionContext } from '../../map';
@@ -164,6 +165,29 @@ describe('Slice A (D-3 / D-4) — the Personal PEEK names the Thread from the wi
     }
     expect(scrollers.length).toBeGreaterThan(0);
     expect(scrollers.every((value) => value === 'handled' || value === 'always')).toBe(true);
+  });
+
+  it('HONOR acceptance (DEFECT-4, R2): closing the editor closes the keyboard — after a kept Save and after Cancel, never after a refusal', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    try {
+      const { h, view, onAlias } = await mount('en');
+      onAlias.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      await inspectThread(h, 'thread-a');
+      await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-edit`, hidden)); });
+      await act(async () => { fireEvent.changeText(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-field`, hidden), 'Mama'); });
+      await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-save`, hidden)); });
+      await flush();
+      expect(dismiss).not.toHaveBeenCalled(); // refused: the editor stays open, so does the keyboard
+      await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-save`, hidden)); });
+      await flush();
+      expect(view.queryByTestId(`${PERSONAL_PEEK_TEST_ID}:name-field`, hidden)).toBeNull();
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-edit`, hidden)); });
+      await act(async () => { fireEvent.press(view.getByTestId(`${PERSONAL_PEEK_TEST_ID}:name-cancel`, hidden)); });
+      expect(dismiss).toHaveBeenCalledTimes(2);
+    } finally {
+      dismiss.mockRestore();
+    }
   });
 
   it('HONOR acceptance: once the server holds the alias, the PEEK itself shows it (the inspected viewpoint is re-read too)', async () => {

@@ -75,7 +75,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 
 import { analysisCopy } from '../../analysis-language';
 import {
@@ -736,13 +736,16 @@ function TopicNameActs({ current, language, onAlias, onOpenSource }: {
   const [failed, setFailed] = useState(false);
   const rtl = language === 'ar';
   const words = { writingDirection: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left' } as const;
+  // HONOR acceptance (DEFECT-4, R2): the field unmounts while focused, and Android then keeps an empty keyboard over the
+  // PEEK; closing the editor (a kept Save or Cancel) also closes the keyboard.
+  const close = () => { Keyboard.dismiss(); setEditing(false); };
   const save = async () => {
     if (onAlias === null || busy || draft.trim() === '') return;
     setBusy(true);
     const kept = await onAlias(draft);
     setBusy(false);
     setFailed(!kept);
-    if (kept) setEditing(false);
+    if (kept) close();
   };
   return (
     <View testID={`${PERSONAL_PEEK_TEST_ID}:name-acts`} style={peekStyles.acts} pointerEvents="box-none">
@@ -753,7 +756,7 @@ function TopicNameActs({ current, language, onAlias, onOpenSource }: {
           <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:name-save`} accessibilityRole="button" accessibilityLabel={copy.saveName} disabled={busy || draft.trim() === ''} onPress={() => { void save(); }} style={peekStyles.press}>
             <View style={peekStyles.chip}><Text style={peekStyles.chipText}>{copy.saveName}</Text></View>
           </Pressable>
-          <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:name-cancel`} accessibilityRole="button" accessibilityLabel={copy.cancelName} disabled={busy} onPress={() => { setEditing(false); setFailed(false); setDraft(current ?? ''); }} style={peekStyles.press}>
+          <Pressable testID={`${PERSONAL_PEEK_TEST_ID}:name-cancel`} accessibilityRole="button" accessibilityLabel={copy.cancelName} disabled={busy} onPress={() => { close(); setFailed(false); setDraft(current ?? ''); }} style={peekStyles.press}>
             <View style={peekStyles.chip}><Text style={peekStyles.chipText}>{copy.cancelName}</Text></View>
           </Pressable>
         </View>
