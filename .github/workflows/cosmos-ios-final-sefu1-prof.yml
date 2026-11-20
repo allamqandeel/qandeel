@@ -69,13 +69,21 @@ jobs:
           U="$IOS_SIM_UDID"; E="$RUNNER_TEMP/evidence/preflight"; mkdir -p "$E"
           xcrun xctrace version | tee "$E/version.txt"
           xcrun xctrace list devices > "$E/devices.txt" 2>&1 || true
+          # Run 44678217014: both modes judged failed, and the step aborted on the root-owned host trace before printing
+          # either log, though host.trace held a completed Trace1.run. Each mode's exit status and log are now kept, the
+          # host trace is chowned, and a mode counts when its trace holds a recorded run (*.run), whatever the exit code.
           mode=none
-          if node scripts/validation/bounded-run.mjs --seconds 120 --label xctrace-preflight-device -- xcrun xctrace record --template 'Time Profiler' --device "$U" --all-processes --time-limit 3s --output "$E/device.trace" > "$E/device.log" 2>&1 && [ -d "$E/device.trace" ]; then mode=device
-          elif node scripts/validation/bounded-run.mjs --seconds 120 --label xctrace-preflight-host -- sudo -E xcrun xctrace record --template 'Time Profiler' --all-processes --time-limit 3s --output "$E/host.trace" > "$E/host.log" 2>&1 && [ -d "$E/host.trace" ]; then mode=host
-          fi
+          set +e
+          node scripts/validation/bounded-run.mjs --seconds 120 --label xctrace-preflight-device -- xcrun xctrace record --template 'Time Profiler' --device "$U" --all-processes --time-limit 3s --output "$E/device.trace" > "$E/device.log" 2>&1
+          echo "device exit=$?" | tee -a "$E/exit.txt"
+          node scripts/validation/bounded-run.mjs --seconds 120 --label xctrace-preflight-host -- sudo -E xcrun xctrace record --template 'Time Profiler' --all-processes --time-limit 3s --output "$E/host.trace" > "$E/host.log" 2>&1
+          echo "host exit=$?" | tee -a "$E/exit.txt"
+          sudo chown -R "$(id -un)" "$E" 2>/dev/null
+          set -e
+          for m in device host; do echo "── $m.log"; tail -n 15 "$E/$m.log" || true; ls -d "$E/$m.trace"/*.run 2>/dev/null || echo "($m: no recorded run)"; done
+          if ls -d "$E/device.trace"/*.run >/dev/null 2>&1; then mode=device; elif ls -d "$E/host.trace"/*.run >/dev/null 2>&1; then mode=host; fi
           echo "XT_MODE=$mode" >> "$GITHUB_ENV"; echo "mode=$mode" | tee "$E/mode.txt"
-          rm -rf "$E"/*.trace
-          tail -n 5 "$E"/*.log || true
+          rm -rf "$E"/*.trace || true
           test "$mode" != none
       - name: SE-FU-1 — three profiled fresh-install first launches, the door tapped at its first visible frame
         timeout-minutes: 75
@@ -126,9 +134,13 @@ jobs:
             NODE_OPTIONS=--max-old-space-size=6144 node scripts/cosmos-ios-world/xctrace-analyse.mjs --tp "$E/P$i-tp.xml" --toc "$E/P$i-toc.xml" \
               --process "$APP_EXE" --board "${board:-none}" --started "$(cat "$E/P$i-started.txt")" --out "$E/P$i" || echo "P$i: analysis failed" | tee -a "$E/run.log"
             { echo "### P$i"; echo '```'; head -n 60 "$E/P$i-summary.txt" 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            sudo chown -R "$(id -un)" "$E" 2>/dev/null || true
             gzip -f "$E/P$i-tp.xml" 2>/dev/null || true
             (cd "$E" && zip -qry "P$i.trace.zip" "P$i.trace" && rm -rf "P$i.trace") || true
           done
+      - name: Make every evidence file readable for the upload (root-owned host traces)
+        if: ${{ !cancelled() }}
+        run: sudo chown -R "$(id -un)" "$RUNNER_TEMP/evidence" || true
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with: {name: final-sefu1-prof, path: '${{ runner.temp }}/evidence', if-no-files-found: warn}
