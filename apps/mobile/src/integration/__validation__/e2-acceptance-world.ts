@@ -114,13 +114,17 @@ const STEP = 1_000_000;
 const HOMES: readonly (readonly [number, number])[] = [
   [0, 0], [1, 0], [-1, 1], [1, -1], [0, -2], [-2, 0], [2, 1], [-1, -1], [2, -1], [-2, 2], [1, 2], [-2, -2], [3, 0],
 ];
-/** The first three were established before this session; topic 10 (the grandfather's house) is dormant, topic 3 reopened. */
+/**
+ * The first three were established before this session. Every topic is served in its ACTIVE state: the other two
+ * T-03C state names are decoded only under `projection/` and the Replay fixtures (the thread-lifecycle root contract);
+ * a validation world does not spell them.
+ */
 const THREADS: readonly ThreadFixture[] = HOMES.map(([x, y], i) => ({
   id: `e2-topic-${String(i + 1).padStart(2, '0')}`,
   x: String(x * STEP),
   y: String(y * STEP),
   establishedSp: i < 3 ? null : firstSp(i),
-  state: i === 10 ? 'ESTABLISHED_DORMANT' : i === 3 ? 'ESTABLISHED_REOPENED' : 'ESTABLISHED_ACTIVE',
+  state: 'ESTABLISHED_ACTIVE',
 }));
 
 /** Readings per topic (each bound inside its topic's exchanges), and the Readings two topics share (their connection). */

@@ -22,7 +22,7 @@
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type {
   UnderstandingConfidence, UnderstandingEvidenceChange, UnderstandingEvolutionKind, UnderstandingTheme,
-} from '../../runtime-entry/understanding-api';
+} from '../../runtime-entry';
 
 type Bilingual = { readonly ar: string; readonly en: string };
 const t = (en: string, ar: string): Bilingual => ({ ar, en });

@@ -3,7 +3,7 @@
  */
 import { decodeHistoricalDisclosure } from '../../projection/historical-projection-wire';
 import { otherSpeakerTone, speakerInitials } from '../../attribution';
-import { decodeUnderstandingDetail, decodeUnderstandingList } from '../../runtime-entry/understanding-api';
+import { UnderstandingApiClient } from '../../runtime-entry';
 import { E2_UNDERSTANDING_COUNTS, E2_UNDERSTANDING_MARK } from '../__validation__/e2-acceptance-understanding';
 import { E2_NAMES, E2_STAND_IN, createE2AcceptanceWorld } from '../__validation__/e2-acceptance-world';
 
@@ -56,34 +56,41 @@ describe.each(['en', 'ar'] as const)('the E-2 acceptance world (%s)', (language)
 
   // COSMOS E-2 corrections (2026-11-20 §6): the first E-2 build answered no /understanding route, so the surface read
   // UNAVAILABLE — a fixture gap. Now the reads decode strictly and every statement is marked synthetic.
-  test('Understanding: the list and every detail decode strictly; each statement carries the synthetic mark', async () => {
-    const items = decodeUnderstandingList(await get('/understanding/items'));
-    expect(items).not.toBeNull();
+  const understanding = new UnderstandingApiClient({ baseUrl: world.config.apiBaseUrl, fetch: world.fetch });
+  const readItems = async () => {
+    const outcome = await understanding.readItems();
+    expect(outcome.kind).toBe('READ');
+    return outcome.kind === 'READ' ? outcome.items : [];
+  };
+
+  test('Understanding: the strict client READs the list and every detail; each statement carries the synthetic mark', async () => {
+    const items = await readItems();
     expect(items).toHaveLength(E2_UNDERSTANDING_COUNTS.items);
     expect(E2_UNDERSTANDING_COUNTS.items).toBeGreaterThanOrEqual(8);
     for (const item of items!) {
       if (item.evidenceChange === 'NONE') expect(item.summary!.startsWith(E2_UNDERSTANDING_MARK[language])).toBe(true);
       else expect(item.summary).toBeNull();
-      const detail = decodeUnderstandingDetail(await get(`/understanding/items/${item.ref}`));
-      expect([item.ref, detail?.ref]).toEqual([item.ref, item.ref]);
-      expect(detail!.revision).toBe(item.revision);
+      const detail = await understanding.readItem(item.ref);
+      expect([item.ref, detail.kind]).toEqual([item.ref, 'READ']);
+      if (detail.kind === 'READ') expect([detail.view.ref, detail.view.revision]).toEqual([item.ref, item.revision]);
     }
-    expect(items!.filter((item) => item.evidenceChange !== 'NONE')).toHaveLength(E2_UNDERSTANDING_COUNTS.withheld);
-    expect(items!.filter((item) => item.underReview)).toHaveLength(E2_UNDERSTANDING_COUNTS.underReview);
+    expect(items.filter((item) => item.evidenceChange !== 'NONE')).toHaveLength(E2_UNDERSTANDING_COUNTS.withheld);
+    expect(items.filter((item) => item.underReview)).toHaveLength(E2_UNDERSTANDING_COUNTS.underReview);
     expect(E2_UNDERSTANDING_COUNTS.withheld).toBe(1);
     expect(E2_UNDERSTANDING_COUNTS.underReview).toBe(1);
-    expect(new Set(items!.map((item) => item.theme)).size).toBe(6);
-    expect(new Set(items!.map((item) => item.confidence)).size).toBe(4);
+    expect(new Set(items.map((item) => item.theme)).size).toBe(6);
+    expect(new Set(items.map((item) => item.confidence)).size).toBe(4);
   });
 
-  test('Understanding: an unknown ref is 404; no command is pretended — each answers 503, never a success', async () => {
-    const unknown = await world.fetch(`${world.config.apiBaseUrl}/understanding/items/E2SYN-00-not-an-item__`);
-    expect(unknown.status).toBe(404);
-    const [first] = decodeUnderstandingList(await get('/understanding/items'))!;
+  test('Understanding: an unknown ref is GONE; no command is pretended — each answers 503, FAILED, never a success', async () => {
+    expect(await understanding.readItem('E2SYN-00-not-an-item__')).toEqual({ kind: 'GONE' });
+    const [first] = await readItems();
     const command = { commandId: '11111111-1111-4111-8111-111111111111', revision: first.revision };
     for (const [method, suffix] of [['POST', '/discussion'], ['DELETE', '/discussion'], ['POST', '/disagreement'], ['POST', '/disagreement/resolve']] as const) {
       const answer = await world.fetch(`${world.config.apiBaseUrl}/understanding/items/${first.ref}${suffix}`, { method, body: JSON.stringify(command) });
       expect([method, suffix, answer.status, answer.ok]).toEqual([method, suffix, 503, false]);
     }
+    expect(await understanding.openDiscussion(first.ref, first.revision)).toEqual({ kind: 'FAILED' });
+    expect(await understanding.disagree(first.ref, command.commandId, first.revision)).toEqual({ kind: 'FAILED' });
   });
 });

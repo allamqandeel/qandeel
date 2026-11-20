@@ -536,7 +536,7 @@ export function createS401ProofWorld(language: ChromeLanguage, options: S401Proo
       const mine = say(worldId, 'SELF', content);
       sent.set(commandId, mine.materialId);
       // VALIDATION-ONLY deterministic provider seam: one fixed reply per human command.
-      say(worldId, 'QANDEEL', (options.sharedReply ?? S402_PROOF_LINES.reply)[language]);
+      say(worldId, 'QANDEEL', options.sharedReply?.[language] ?? S402_PROOF_LINES.reply[language]);
       return json(200, { outcome: 'COMMITTED', materialId: mine.materialId, qandeel: 'COMMITTED' });
     }
     const removal = /^\/shared\/worlds\/([0-9a-f-]+)\/materials\/([0-9a-f-]+)\/delete$/u.exec(path);
