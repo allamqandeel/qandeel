@@ -1,13 +1,16 @@
 # QANDEEL — Connected Worlds v2
 ## COSMOS-FINAL-01 E-1 — Message Attribution in the Shared and Public Conversations — Narrow Controlled Amendment v1.0
 
-**Status:** `PROPOSED — PREPARED FOR THE PRODUCT OWNER'S REVIEW (2026-11-20). NOT IN FORCE. NOTHING BELOW IS IMPLEMENTED.`
+**Status:** `PROPOSED R1 — REVISED UNDER THE PRODUCT OWNER'S UI-POLISH ADDENDUM (2026-11-20). E1(h) — THE SPEAKER BADGE — IS PO-DIRECTED AND IMPLEMENTED ON DRAFT PR #401 (d02cabe2). EVERY OTHER RULE IS NOT IN FORCE AND NOT IMPLEMENTED.`
+R1 (2026-11-20, *PO UI-Polish Addendum — Chat Attribution Must Also Look Good*): adds E1(h); E1(a) now attributes the reader's
+own Shared rows by the reader's badge; E1(f) is withdrawn (Public verified, unchanged); E1(g) is revised; §2 now names the one
+change the Personal conversation takes. The R0 text is in git history (2cd2899a).  
 It binds only after the Product Owner approves this text, its Copy Gate and its privacy / wire-contract review
 ([E-1 package](../../../e2e/QANDEEL_COSMOS_FINAL_01_E1_ATTRIBUTION_PACKAGE_v1.md)), and from the merge of the pull request
 that implements it.  
 **Scope:** who wrote each displayed message in a Shared World conversation (and the conversations that reuse its thread:
 the closed World's read and the Introduction World), in a Shared place's source list, and in a Public discussion — as the
-reader sees it. Nothing else: the Personal conversation is not amended (§2); QANDEEL's own attribution, the model's input,
+reader sees it, and — by E1(h) only — the Personal conversation (§2). Nothing else: QANDEEL's own attribution, the model's input,
 Replay, Voice, the Manage page, Matching and every World's data are outside it.  
 **Amends, narrowly and only in that scope:** S4-02's displayed Shared thread attribution (approved as implemented, record
 lines 193–195); S4-02's read contract (record line 93, "adds only each human author's Name and whether THIS reader may
@@ -42,7 +45,7 @@ deliver that in two places (§29.8):
 3. **Public — the reader's own posts carry no self marker.** They show the reader's own Public display, as anyone else
    sees it; `own` is on the wire but used only for Retry.
 
-## 2. The Personal conversation is not amended
+## 2. The Personal conversation takes the speaker badge only
 
 G1.1 R3, frozen by `docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md`, attributes the Personal
 conversation's two speakers by position plus ground ("the reader is always on the slab tone at their own edge, and QANDEEL
@@ -52,11 +55,18 @@ unambiguously. The Product Owner directs that it be preserved "provided its exis
 satisfy E-1"; the demonstration is the package §5 (a native iOS check and an Android check, with the existing W1A-01 pins).
 If the demonstration failed, the amendment would return to the Product Owner, not change G1.1 R3.
 
+**R1.** The Product Owner's UI-Polish Addendum (2026-11-20) then directed one visible speaker mark in the Personal
+conversation as well ("Keep the new speaker attribution for Personal and Shared"). The Personal conversation therefore takes
+E1(h) and nothing else: its two edges, the reader's slab, QANDEEL's open words, the paragraph directions and every accessible
+name stay as G1.1 R3 fixes them; the row spacing and the slab padding are tightened as the addendum directs (items 5 – 6).
+From this record's effect, E1(h) binds over G1.1 R3's "neither speaker has a colour or an avatar", and over nothing else.
+
 ## 3. The text of the amendment (binds once effective)
 
-**E1(a) — the reader in a Shared conversation.** Each of the reader's own rows shows the approved word «أنت» / "You"
-(S4-01 `you`, REUSED, never copied) as its visible attribution, in the same metadata role and edge position the row's
-side already uses. Its accessible label is unchanged (W1A-01 «كلامك: …» / "You: …"). Position and surface are unchanged.
+**E1(a) — the reader in a Shared conversation (R1).** Each of the reader's own rows is attributed visibly by the reader's
+speaker badge (E1(h)): the initials of the reader's own account Name on the reader's tone. The R0 word «أنت» / "You" is not
+added (the addendum: one treatment). Its accessible label is unchanged (W1A-01 «كلامك: …» / "You: …"). Position and surface
+are unchanged.
 
 **E1(b) — the per-World participant ordinal.** The authoritative server assigns each human participant of a Shared World a
 **participant ordinal**: a positive integer, unique within that World, given once when the person's first membership
@@ -82,16 +92,44 @@ and a Shared place's source list (which already shows «أنت» / "You" for the
 **E1(e) — QANDEEL.** QANDEEL's rows keep their visible «قنديل» / "QANDEEL" label, edge and absence of surface. No human row
 can carry QANDEEL's word without an ordinal (E1(c)).
 
-**E1(f) — the Public self marker.** In a Public discussion a post the reader wrote (`own`, already on the wire) shows the
+**E1(f) — the Public self marker — WITHDRAWN (R1).** The addendum, item 12: "If the existing Public ID already identifies
+each post clearly, do not add anything." Every Public post already shows its author's Public display (CW2-04 §9 – §10), the
+reader's own included, so nothing is added and the Public Identity behaviour is preserved as it is. The R0 text follows for
+the record only: ~~ In a Public discussion a post the reader wrote (`own`, already on the wire) shows the
 approved word «أنت» / "You" (S4-01 `you`, REUSED) as a tag beside the reader's Public display, in the place and form of
 the topic-author tag (A-5(b)), visible to the reader only — the post's author display for everyone else is unchanged. It
-adds no identifier and no new wire field. The Public Identity model (CW2-04 §9 – §10) is unchanged.
+adds no identifier and no new wire field. The Public Identity model (CW2-04 §9 – §10) is unchanged.~~
 
-**E1(g) — what does not change.** No colour or avatar is added anywhere; no row is attributed by colour alone. The model's
+**E1(g) — what does not change (R1).** No picture, photo or avatar image is added anywhere; the only mark is E1(h)'s badge,
+and no row is attributed by colour alone (the badge carries letters; every Name label and accessible name stays). The model's
 per-request numbering (S8A-02 §5.3 rule 4) is unchanged and is not the participant ordinal: the ordinal is never sent to a
 model by this amendment. The Manage page's member handles (0140) are unchanged and never shown in a conversation.
 
+**E1(h) — the speaker badge (R1; PO-directed, 2026-11-20).** Every message row of the Personal conversation and of a Shared
+conversation (the live thread, the closed World's read, and the Introduction World that reuses its bubbles) carries one
+small circular badge (22 pt), merged into the row at the row's own outer edge — inside the reader's slab or a person's
+bubble, beside QANDEEL's open words — and level with the row's first line.
+- **Letters.** QANDEEL: `QA`, always. The reader: the initials of the reader's own account Name (W1B-01), shown to the reader
+  only. Another person: the initials of the Name this reader is already shown for them (S4-02 `authorName`; the
+  Introduction World's first name). Initials are the first letter of the first word and, with more words, of the last (an Arabic word's article «ال» passed over: `محمد الفايد` is `م ف`); Latin
+  letters are capitals written together (`MA`); Arabic letters are written apart (`م ع`) so they never join. No Name, no
+  letters: the badge is the tone alone; a Name is never invented. The Introduction World passes no reader Name (its own rule:
+  never an account Name), so the reader's badge there is the tone alone.
+- **Tone.** One restrained, low-chroma tone per speaker, the same throughout the conversation, in Dark and Light: QANDEEL's
+  and the reader's are their own; another person's is chosen from four others by the visible Name alone, so it carries
+  nothing the Name does not, and is never QANDEEL's or the reader's.
+- **Nothing new is exposed.** The badge is derived only from what the same reader already sees (or, for the reader, their own
+  Name); no identifier, account, member handle or wire field is read or added. It is hidden from assistive technology; every
+  accessible name is unchanged.
+- **Geometry (addendum items 5 – 6).** Personal: 22 pt above the reader's turn, 12 above QANDEEL's (were 28 / 16); the slab
+  8 / 9 pt vertical, 14 inner (were 11 / 12, 18). Shared: 14 above a person's words, 12 above QANDEEL's (were 20 / 16); the
+  bubble 8 / 9 vertical, 12 horizontal (were 10 / 11, 16).
+- **Not in scope.** Public (E1(f) withdrawn); a Voice Note's own slab (its body is drawn by the Voice Note surface and is
+  unchanged); Replay's player and composite.
+
 ## 4. Not in force until
+
+E1(h) is implemented on Draft PR #401 by the Product Owner's direct addendum and takes effect only with item 4 (the merge). For the rest:
 
 1. The Product Owner approves this text.
 2. The Product Owner approves the Copy Gate rows E1-01 – E1-03 (package §3).

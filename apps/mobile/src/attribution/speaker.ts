@@ -12,7 +12,8 @@
  *     same visible Name, so it is stable wherever that Name is, and carries nothing the Name does not.
  *   - With no Name there are no letters: the badge is the tone alone. A Name is never invented (W1B-01).
  *
- * Initials: the first letter of the first word and, when there are more words, of the last. Latin letters are capitals
+ * Initials: the first letter of the first word and, when there are more words, of the last (an Arabic word's article «ال»
+ * is passed over). Latin letters are capitals
  * written together (`MA`); Arabic letters are written apart (`م ع`), so each stands as its own letter and never joins.
  */
 
@@ -52,9 +53,14 @@ const isArabicLetter = (code: number) =>
 /** A letter in a cased script (Latin, Greek, Cyrillic, …) changes under case mapping; marks, digits and signs do not. */
 const isCasedLetter = (ch: string) => ch.toLowerCase() !== ch.toUpperCase();
 
+/** The Arabic definite article, which an initial passes over (`محمد الفايد` is `م ف`, not `م ا`). */
+const ARTICLE = 'ال';
+
 /** A word's first letter, or null when it has none (digits and signs alone are not a letter). */
 function firstLetter(word: string): string | null {
-  for (const ch of Array.from(word)) {
+  const letters = Array.from(word);
+  const bare = word.startsWith(ARTICLE) && letters.length > 3 ? letters.slice(2) : letters;
+  for (const ch of bare) {
     const code = ch.codePointAt(0) ?? 0;
     if (isArabicLetter(code) || isCasedLetter(ch)) return ch;
   }

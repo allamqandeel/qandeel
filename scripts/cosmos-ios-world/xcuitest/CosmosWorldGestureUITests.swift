@@ -941,6 +941,26 @@ final class CosmosWorldGestureUITests: XCTestCase {
       XCTAssertNotNil(prefix, "E-1: a \(isReader ? "reader" : "QANDEEL") turn (\(e.identifier)) does not announce its speaker")
       if isReader { readerEdges.insert(edge); readerCount += 1 } else { qandeelEdges.insert(edge); qandeelCount += 1 }
     }
+    // E-1 UI polish (PO addendum, 2026-11-20): every turn's badge is drawn at the turn's own edge, level with its first line,
+    // on its speaker's one tone (Dark: the reader #243040, QANDEEL #3b3324). The badge is hidden from assistive technology,
+    // so its fill is read from the screen, just inside the circle's top, clear of the initials.
+    let image = XCUIScreen.main.screenshot().image
+    var readerFills: [(Int, Int, Int)] = [], qandeelFills: [(Int, Int, Int)] = []
+    for e in spoken {
+      let f = e.frame, isReader = e.identifier.hasPrefix("qandeel-utterance-")
+      let left = f.minX <= W - f.maxX
+      // The reader's slab bleeds to its edge behind a 24-pt gutter; QANDEEL's words have no surface. 11 = the badge radius.
+      let inset: CGFloat = isReader ? 24 + 11 : 11
+      // The reader's slab is drawn to the window edge whatever frame is reported (Android reports it clipped to the gutter).
+      let (e0, e1) = isReader ? (CGFloat(0), W) : (f.minX, f.maxX)
+      let centre = CGPoint(x: left ? e0 + inset : e1 - inset, y: f.minY + (isReader ? 8 : 0) + 13)
+      guard let rgb = pixel(image, CGPoint(x: centre.x, y: centre.y - 8.5), width: W) else { XCTFail("E-1: no pixel under \(e.identifier)'s badge"); continue }
+      lines.append("\(isReader ? "reader" : "qandeel") badge at \(Int(centre.x)),\(Int(centre.y)) rgb=\(rgb.0),\(rgb.1),\(rgb.2)")
+      if isReader { readerFills.append(rgb) } else { qandeelFills.append(rgb) }
+    }
+    let near = { (a: (Int, Int, Int), b: (Int, Int, Int)) in abs(a.0 - b.0) <= 14 && abs(a.1 - b.1) <= 14 && abs(a.2 - b.2) <= 14 }
+    for rgb in readerFills { XCTAssertTrue(near(rgb, (0x24, 0x30, 0x40)), "E-1: a reader badge is not on the reader's tone (\(rgb))") }
+    for rgb in qandeelFills { XCTAssertTrue(near(rgb, (0x3b, 0x33, 0x24)), "E-1: a QANDEEL badge is not on QANDEEL's tone (\(rgb))") }
     shot("e1-personal-conversation")
     note("e1-personal", lines.joined(separator: "\n"))
     XCTAssertGreaterThanOrEqual(readerCount, 2, "E-1: the seeded conversation shows fewer than two reader turns")
@@ -948,5 +968,66 @@ final class CosmosWorldGestureUITests: XCTestCase {
     XCTAssertEqual(readerEdges.count, 1, "E-1: the reader's turns are not all on one edge (\(readerEdges.sorted()))")
     XCTAssertEqual(qandeelEdges.count, 1, "E-1: QANDEEL's turns are not all on one edge (\(qandeelEdges.sorted()))")
     XCTAssertTrue(readerEdges.isDisjoint(with: qandeelEdges), "E-1: the reader and QANDEEL share an edge")
+  }
+
+  /// E-1 UI polish (PO addendum, 2026-11-20): in a Shared conversation every row's badge stands at the row's own outer edge
+  /// on its speaker's one tone — the reader's, the other person's (from the Name only: «هدير الاختبار» PLUM, "Fixture Hadir"
+  /// SAGE), QANDEEL's. Entered as S4-02 Journey A does (the proof world's conversation seed). Fills are read from the screen.
+  func testSharedConversationBadgesKeepOneTonePerSpeaker() {
+    continueAfterFailure = true
+    toConversation()
+    openLink("qandeel://s401-proof/conversation/seed", via: "system", "e1-shared-seed")
+    waitFor("qandeel-switcher-shared_world", 30).tap()
+    let world = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-shared-world-5401'")).firstMatch
+    guard world.waitForExistence(timeout: 30) else { shot("e1-shared-not-listed"); XCTFail("E-1: the seeded Shared World is not listed"); return }
+    world.tap()
+    // A World opens on its field; its conversation is one act away (the Android check, run 1 on d02cabe2).
+    waitFor("qandeel-shared-conversation-open", 30).tap()
+    waitFor("qandeel-shared-thread", 30)
+    settle(4)
+    let W = screen.width
+    let rows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'qandeel-shared-material-'"))
+      .allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 24 && $0.frame.minY >= 0 && $0.frame.maxY <= screen.height }
+    let image = XCUIScreen.main.screenshot().image
+    let arabic = rows.contains { $0.label.hasPrefix("هدير الاختبار") }
+    let tones: [String: (Int, Int, Int)] = ["self": (0x24, 0x30, 0x40), "qandeel": (0x3b, 0x33, 0x24), "human": arabic ? (0x31, 0x29, 0x3b) : (0x26, 0x33, 0x29)]
+    var lines = ["window width \(Int(W)), \(rows.count) row(s), \(arabic ? "ar" : "en")"], seen: [String: Int] = [:]
+    for e in rows {
+      let kind = ["self", "human", "qandeel"].first { e.identifier.hasPrefix("qandeel-shared-material-\($0)-") } ?? "?"
+      guard let want = tones[kind] else { continue }
+      let f = e.frame, left = f.minX <= W - f.maxX
+      // Badge centre: inside the bubble's 12-pt padding (QANDEEL: after its 20-pt end padding), radius 11; level with the
+      // first line (the reader's body line, or the Name / QANDEEL line above a person's words).
+      let inset: CGFloat = kind == "qandeel" ? 20 + 11 : 12 + 11
+      let cy: CGFloat = kind == "qandeel" ? 11 : kind == "self" ? 8 + 13 : 8 + 11
+      let p = CGPoint(x: left ? f.minX + inset : f.maxX - inset, y: f.minY + cy - 8.5)
+      guard let rgb = pixel(image, p, width: W) else { XCTFail("E-1: no pixel under \(e.identifier)'s badge"); continue }
+      let ok = abs(rgb.0 - want.0) <= 14 && abs(rgb.1 - want.1) <= 14 && abs(rgb.2 - want.2) <= 14
+      lines.append("\(kind) \(left ? "left" : "right") badge @\(Int(p.x)),\(Int(p.y)) rgb=\(rgb.0),\(rgb.1),\(rgb.2) \(ok ? "ok" : "OFF")")
+      XCTAssertTrue(ok, "E-1: a \(kind) badge is not on its speaker's tone (\(rgb))")
+      seen[kind, default: 0] += 1
+    }
+    shot("e1-shared-conversation")
+    note("e1-shared", lines.joined(separator: "\n"))
+    for kind in ["self", "human", "qandeel"] { XCTAssertGreaterThanOrEqual(seen[kind] ?? 0, 1, "E-1: no \(kind) row was on screen") }
+  }
+
+  /** One screen pixel at a point (in points of a window `width` wide), as sRGB 0–255. */
+  private func pixel(_ image: UIImage, _ p: CGPoint, width: CGFloat) -> (Int, Int, Int)? {
+    guard let cg = image.cgImage, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+    // The scale is measured from the screenshot itself, never assumed.
+    let scale = CGFloat(cg.width) / width
+    let x = Int((p.x * scale).rounded()), y = Int((p.y * scale).rounded())
+    guard x >= 0, y >= 0, x < cg.width, y < cg.height else { return nil }
+    var buf = [UInt8](repeating: 0, count: 4)
+    let drawn: Bool = buf.withUnsafeMutableBytes { raw in
+      guard let ctx = CGContext(data: raw.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+      // The context's origin is bottom-left: move the wanted pixel onto (0, 0).
+      ctx.translateBy(x: CGFloat(-x), y: CGFloat(y - cg.height + 1))
+      ctx.draw(cg, in: CGRect(x: 0, y: 0, width: cg.width, height: cg.height))
+      return true
+    }
+    return drawn ? (Int(buf[0]), Int(buf[1]), Int(buf[2])) : nil
   }
 }

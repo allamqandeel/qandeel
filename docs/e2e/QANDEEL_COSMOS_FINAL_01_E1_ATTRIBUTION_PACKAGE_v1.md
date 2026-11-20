@@ -1,6 +1,8 @@
 # COSMOS-FINAL-01 E-1 — Message Attribution: Amendment, Copy Gate and Privacy / Wire-Contract Review v1
 
-**Status:** `PROPOSED — FOR THE PRODUCT OWNER'S REVIEW (2026-11-20). NOT IMPLEMENTED. COPY GATE OPEN (3 ROWS PROPOSED).`  
+**Status:** `PROPOSED R1 — REVISED UNDER THE PO UI-POLISH ADDENDUM (2026-11-20). THE SPEAKER BADGE (E1(h)) IS PO-DIRECTED AND IMPLEMENTED ON DRAFT PR #401 (d02cabe2); THE PARTICIPANT ORDINAL (E1(b) – E1(c)) IS NOT IMPLEMENTED. COPY GATE OPEN: E1-02 PROPOSED; E1-04 / E1-05 PO-DIRECTED; E1-01 / E1-03 WITHDRAWN.`  
+**R1:** *PO UI-Polish Addendum — Chat Attribution Must Also Look Good* (2026-11-20): one integrated speaker badge for Personal and
+Shared, `QA` for QANDEEL, Arabic initials apart, a stable tone per speaker, tighter rows and slabs, Public verified only.  
 **Authority:** the Product Owner, *COSMOS-FINAL-01 Continuation After §29 Review* (2026-11-20), item 2 (Option A).  
 **Canonical text:** [the E-1 controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_COSMOS_FINAL_01_E1_MESSAGE_ATTRIBUTION_CONTROLLED_AMENDMENT_v1.0.md) (PROPOSED).  
 **Register:** COSMOS-INT-01 contract §20 E-1; §29.8 (the conflict); §30 (this continuation).
@@ -9,10 +11,10 @@
 
 | World | Reader's own message | Another person's message | QANDEEL |
 |---|---|---|---|
-| Personal | unchanged: own edge, slab tone; announced «كلامك» / "You" | — (no other person) | unchanged: on the World; announced «قنديل» / "QANDEEL" |
-| Shared (live, closed, Introduction World) | **new:** visible «أنت» / "You" (E1(a)) | their Name, or «شخص ما» / "Someone"; **new:** `Name (2)` only when that label is not unique for this reader (E1(c)) | unchanged: visible «قنديل» / "QANDEEL" |
+| Personal | own edge, slab tone, announced «كلامك» / "You"; **new (R1):** the reader's badge — own initials (`م ع` / `MA`) on the reader's tone (E1(h)) | — (no other person) | on the World, announced «قنديل» / "QANDEEL"; **new (R1):** badge `QA` on QANDEEL's tone |
+| Shared (live, closed, Introduction World) | **new (R1):** the reader's badge (E1(a), E1(h)); the Introduction World passes no reader Name, so there it is the tone alone | their Name, or «شخص ما» / "Someone"; **new (R1):** a badge of that Name's initials on the Name's tone; **proposed:** `Name (2)` only when that label is not unique for this reader (E1(c)) | visible «قنديل» / "QANDEEL"; **new (R1):** badge `QA` |
 | Shared place sources | unchanged: «أنت» / "You" (already shown) | as in the conversation, the same ordinal rule | unchanged |
-| Public discussion | **new:** their Public display followed by the tag «أنت» / "You", seen by the reader only (E1(f)) | unchanged: the author's Public display (+ «صاحب الموضوع» / "Topic author" when A-5(b) applies) | unchanged |
+| Public discussion | **unchanged (R1, E1(f) withdrawn):** the reader's own Public display, which already identifies the post | unchanged: the author's Public display (+ «صاحب الموضوع» / "Topic author" when A-5(b) applies) | unchanged |
 
 ## 2. The passages narrowed (quoted; they stay byte-identical in their records)
 
@@ -28,7 +30,7 @@
   not shown to anyone by the server, and not stable between requests", stays exactly as it is and is not the ordinal); CW2-04
   §9 – §10 (Public identity); 0140's member handles.
 
-## 3. Product Copy Gate — COSMOS-FINAL-01 E-1 (OPEN; 3 rows PROPOSED)
+## 3. Product Copy Gate — COSMOS-FINAL-01 E-1 (OPEN; R1)
 
 No new word is proposed. All three rows place approved words in a new visible position, or join them in a new visible form,
 so each needs the Product Owner's approval of that use. The accessible labels follow from the visible text (W1A-01's own-row
@@ -36,11 +38,14 @@ label «كلامك: …» stays as it is).
 
 | Row | Key / placement | Arabic | English | Source | Status |
 |---|---|---|---|---|---|
-| E1-01 | The reader's own row in a Shared conversation (live, closed, Introduction World): visible attribution, metadata role, the row's own edge | «أنت» | "You" | S4-01 `you` (APPROVED), REUSED | **PROPOSED** (visible placement) |
+| E1-01 | ~~The reader's own row in a Shared conversation: visible «أنت» / "You"~~ | — | — | — | **WITHDRAWN (R1)** — the reader's badge attributes the row (one treatment) |
 | E1-02 | Another participant whose label is not unique for this reader: `{label} ({n})`, `{n}` the participant ordinal in Western digits (as `digits()` does across the app); `{label}` is the Name or «شخص ما» / "Someone" (S4-01 `someone`, APPROVED, REUSED). Accessible label `{label} ({n}): {text}` through S4-02's `otherTurnName` | «{label} ({n})» | "{label} ({n})" | new form; words REUSED | **PROPOSED** (form) |
-| E1-03 | The reader's own Public post: a tag beside the reader's Public display, in A-5(b)'s place and form; accessible label `{display} · أنت: {text}` / `{display} · You: {text}` | «أنت» | "You" | S4-01 `you` (APPROVED), REUSED | **PROPOSED** (visible placement) |
+| E1-03 | ~~The reader's own Public post: a «أنت» / "You" tag~~ | — | — | — | **WITHDRAWN (R1)** — addendum item 12: Public unchanged |
+| E1-04 | QANDEEL's speaker badge (Personal and Shared), both languages; not an accessible label | `QA` | `QA` | the PO addendum, item 9 ("Qandeel must use QA") | **PO-DIRECTED** (verbatim) |
+| E1-05 | A person's speaker badge: initials of a visible Name — first letter of the first word and, with more words, of the last; Arabic letters apart (`م ع`), Latin capitals together (`MA`); no letters without a Name. Not an accessible label | `م ع` | `MA` | the PO addendum, item 8 ("separated letters, e.g. م ع"); a form, no new word | **PO-DIRECTED** (form) |
 
-Copy rule: rows are imported from their owner modules (`shared-world/copy.ts`), never copied; the new form E1-02 lives in one
+E1-04 / E1-05 live in `apps/mobile/src/attribution/speaker.ts` (`QANDEEL_INITIALS`, `speakerInitials`); they are hidden from
+assistive technology, so no accessible label changes. Copy rule: rows are imported from their owner modules (`shared-world/copy.ts`), never copied; the new form E1-02 lives in one
 module under one `COSMOS_FINAL_01_E1_COPY_GATE` with per-row `status` / `enStatus`, pinned by a root contract test.
 
 ## 4. Privacy and wire-contract review
@@ -68,8 +73,9 @@ The field is named `authorOrdinal`; S4-02's pin (`tests/s4-02-shared-conversatio
 | P-6 | A member whose Name equals QANDEEL's word | Treated as a collision: the human row always carries its ordinal, so it never reads as QANDEEL; QANDEEL's own rows also keep their edge and no surface. | E1(c), E1(e); a test |
 | P-7 | Account deletion (ACCT-DEL-01/02) and erasure | The ordinal is World data of that person and is erased with it; it is never reused, so no later person inherits it. | E1(b); the erasure pin extended to the ordinal table |
 | P-8 | Logging | No log line, metric or trace carries an ordinal with a World or user. | The existing no-log contract; a grep pin |
-| P-9 | Public self tag | It uses `own`, already on the wire and per viewer; nothing new crosses, and others never see it. | E1(f) |
+| P-9 | Public self tag | Withdrawn (R1). Nothing changes in Public. | — |
 | P-10 | The model | The ordinal is not sent to any model; S8A-02 §5.3 is unchanged. | E1(g); the S8A-02 provider-request pins unchanged |
+| P-11 | The speaker badge (R1) | It is computed in the app only from what the same reader already sees: another person's displayed Name (`authorName`, or the Introduction first name), and for the reader their own account Name, shown to them alone (it already appears in their Settings). Its tone is a function of that visible Name only, so it carries nothing the Name does not; no identifier, account, handle or wire field is read or added. The Introduction World passes no reader Name. It is hidden from assistive technology. | E1(h); Jest (`attribution/__tests__/speaker.test.ts`, the Personal and Shared surface tests); the S4-01 prop pin admits only the account Name |
 
 ### 4.3 Wire-compatibility note
 The app's decoders accept exactly the keys they know (`MATERIAL_KEYS` in `runtime-entry/shared-world-api.ts`, and the field
@@ -83,7 +89,7 @@ existing World-birth and join paths), with a one-time backfill in join order for
 collision per reader and return the ordinal through the existing `SECURITY DEFINER` functions; no new route. Migration
 `0197` (the next number on this branch).
 
-## 5. Personal: the demonstration that G1.1 R3 satisfies E-1
+## 5. Personal: the demonstration that G1.1 R3 satisfies E-1 (R1: with the speaker badge)
 
 E-1 asks that every displayed Personal message identify its author. The Personal conversation has two speakers; G1.1 R3 gives
 each a fixed edge and ground and announces each turn's speaker. The demonstration, without changing anything:
@@ -92,8 +98,11 @@ each a fixed edge and ground and announces each turn's speaker. The demonstratio
   QANDEEL's on the other, and no turn is unattributed.
 - **Android (emulator):** the same reading from the accessibility tree (uiautomator), en and ar.
 - **Existing pins:** `tests/w1a-01-conversation-core-contract.test.mjs` (the labels) and the G1.1 Jest golden tests.
+- **R1 (the badge):** the iOS test also reads each turn's badge fill from the screen (the reader's tone on every reader turn,
+  QANDEEL's on every QANDEEL turn); the Android check reads the same from a screen capture; Jest proves the letters
+  (`م ع`, `MA`, `QA`) and the tones in Dark and Light.
 
-## 6. Implementation plan (after approval; nothing is implemented now)
+## 6. Implementation plan for the ordinal (after approval; not implemented)
 
 1. Migration `0197`: the ordinal table, assignment in the join and birth paths, backfill, the collision-aware projection in
    `list_own_shared_world_material_v1` (and its closed-World and field-source reads), the erasure extension, and a verifier.
@@ -105,8 +114,8 @@ each a fixed edge and ground and announces each turn's speaker. The demonstratio
 
 ## 7. Decisions for the Product Owner
 
-- **E-A:** approve the amendment text (E1(a) – E1(g)).
-- **E-B:** approve Copy Gate rows E1-01 – E1-03 (ar and en).
+- **E-A:** approve the amendment text R1 (E1(a) – E1(h); E1(f) withdrawn).
+- **E-B:** approve Copy Gate row E1-02 (ar and en), and confirm the PO-directed E1-04 / E1-05 as implemented.
 - **E-C:** accept the privacy / wire-contract review, including **E-P1** (P-4): number by join order (recommended; stable;
   the relative join order of two same-label participants is visible when, and only when, their labels collide), or by first
   visible message (nothing new revealed; the number can change).

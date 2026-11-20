@@ -6,6 +6,11 @@ describe('speaker initials', () => {
     expect(speakerInitials('منى عادل')).toBe('م ع');
     expect(speakerInitials('أحمد علي حسن')).toBe('أ ح');
     expect(speakerInitials('محمد')).toBe('م');
+    // The article «ال» is passed over; a word of three letters or fewer keeps its own first letter.
+    expect(speakerInitials('محمد الفايد')).toBe('م ف');
+    expect(speakerInitials('هدير الاختبار')).toBe('ه ا');
+    expect(speakerInitials('الأمل')).toBe('أ');
+    expect(speakerInitials('سارة الي')).toBe('س ا');
     expect(speakerInitials('Mona Adel')).toBe('MA');
     expect(speakerInitials('mona b. adel')).toBe('MA');
     expect(speakerInitials('Mona')).toBe('M');
