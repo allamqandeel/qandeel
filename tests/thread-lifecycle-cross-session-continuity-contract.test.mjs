@@ -493,7 +493,9 @@ test('the continuity provider is lazy and strict, and no Thread, Home, binding o
   // types (DisclosedThreadName, DisclosedThreadOrigin, ThreadNameSource); every earlier export is unchanged and the index
   // is re-pinned at that shape. Previous blob b6bd6c3b.)
   for (const [file, blob] of [
-    ['packages/runtime/src/index.d.ts', '535efa528bb877b1a656df2fbb8727ce91a68358'],
+    // RE-ANCHORED by COSMOS E-2 Slice C (PO D-5, Option U): index.d.ts gains the additive `CurrentPersonalThread` /
+    // `CurrentPersonalWorld` export (current-personal-world.d.ts); the Thread lifecycle wire it re-exports is unchanged.
+    ['packages/runtime/src/index.d.ts', '92d13ffa566e39a77ebd878d60e6cf7a7dbaf151'],
     ['packages/runtime/src/temporal.d.ts', '9d945e6f2d65bdefbc334b0bc5ac884789f21a89'],
     ['packages/runtime/package.json', '932b837629f23b5cb765eda196fb659418d07916'],
   ]) {

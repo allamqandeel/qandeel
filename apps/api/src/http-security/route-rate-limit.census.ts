@@ -67,6 +67,8 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /conversation/sessions/:sessionId/temporal/events': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/temporal/live-focus-events': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/historical-projection': 'CONVERSATION',
+  // COSMOS E-2 corrections, Slice C (PO D-5, Option U): the user-level CURRENT Personal World, owner-scoped (0199).
+  'GET /conversation/personal-world': 'CONVERSATION',
   'PUT /conversation/sessions/:sessionId/context-bindings/:contextKind': 'CONVERSATION',
   'DELETE /conversation/sessions/:sessionId/context-bindings/:contextKind': 'CONVERSATION',
   'GET /conversation/sessions/:sessionId/context-bindings': 'CONVERSATION',

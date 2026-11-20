@@ -31,6 +31,8 @@ import type {
   LiveFocusWireValue,
   ReadingLineageStepKind,
   ThreadStateAtTc,
+  CurrentPersonalThread,
+  CurrentPersonalWorld,
 } from '@qandeel/runtime';
 import { HistoricalProjectionIntegrityError, type HistoricalKnowledge } from './historical-projection.types';
 
@@ -475,4 +477,38 @@ function mapFamilies<M extends DisclosedMaterialAtTc>(row: Row, tc: number, mapM
     emergingFocuses, liveFocus, threads, threadReadingAppearances,
     readings, readingRelations, evidenceParticipations, materials, gaps, questions, questionAppearances, confidences,
   };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// COSMOS E-2 corrections, Slice C (PO D-5, Option U; migration 0199): the user-level CURRENT Personal World row. The
+// same trust boundary as the Session-bound row: exact keys, typed values, a coherent name, a positive origin position.
+// No Session Position, Live Head, lifecycle or appearance is accepted here — the current world carries none.
+// ---------------------------------------------------------------------------------------------------------------------
+const CURRENT_WORLD_ROW_KEYS = ['as_of', 'threads'] as const;
+const CURRENT_THREAD_KEYS = ['id', 'home', 'name', 'origin'] as const;
+
+function mapCurrentThread(raw: unknown, index: number): CurrentPersonalThread {
+  const path = `threads[${index}]`;
+  const row = record(raw, path, CURRENT_THREAD_KEYS);
+  const home = record(row.home, `${path}.home`, ['x', 'y']);
+  return {
+    id: text(row.id, `${path}.id`),
+    home: { x: integerText(home.x, `${path}.home.x`), y: integerText(home.y, `${path}.home.y`) },
+    name: mapThreadName(row.name, `${path}.name`),
+    // Not established "in this Session": there is no Session here, so only the positive-position law applies.
+    origin: mapThreadOrigin(row.origin, `${path}.origin`, false, null),
+  };
+}
+
+export function mapCurrentPersonalWorldRow(raw: unknown): CurrentPersonalWorld {
+  const row = record(raw, 'row', CURRENT_WORLD_ROW_KEYS);
+  const asOf = text(row.as_of, 'row.as_of');
+  if (Number.isNaN(Date.parse(asOf))) return incoherent('row.as_of: the instant of the read is not a date');
+  const threads = list(row.threads, 'row.threads').map((thread, index) => mapCurrentThread(thread, index));
+  const ids = new Set<string>();
+  for (const thread of threads) {
+    if (ids.has(thread.id)) return incoherent(`threads: ${thread.id} appears twice`);
+    ids.add(thread.id);
+  }
+  return { asOf, threads };
 }

@@ -47,12 +47,17 @@ test('0194 is forward-only, followed only by 0195, and replaces exactly one pred
   // (verify-migration-0197).
   // RE-ANCHORED by COSMOS E-2 corrections, Slice A (the Product Owner's decisions D-3 / D-4 of 2026-11-20, a declared
   // re-anchor): exactly 0198, Personal topic identity, follows 0197 and nothing else does (verify-migration-0198).
-  assert.equal(migrations.at(-1), '0198_cosmos_e2_thread_names_v1.sql', 'exactly 0198 follows 0197');
-  assert.equal(migrations.at(-2), '0197_cosmos_e2_conversation_catalog_v1.sql', 'exactly 0197 follows 0196');
-  assert.equal(migrations.at(-3), '0196_s8b_07_transient_media_v1.sql', 'exactly 0196 follows 0195');
-  assert.equal(migrations.at(-4), '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
-  assert.equal(migrations.at(-5), M0194, '0194 is followed only by 0195');
-  assert.equal(migrations.at(-6), '0193_s8b_06_session_finished_calls_read_v1.sql', '0194 directly follows 0193');
+  // RE-ANCHORED by COSMOS E-2 Slice C (0199, the current Personal World): the three places are pinned by index, not as the
+  // end of the list — the order 0195 → 0196 → 0197 → 0198 is unchanged, and 0199 follows 0198.
+  const at0198 = migrations.indexOf('0198_cosmos_e2_thread_names_v1.sql');
+  assert.notEqual(at0198, -1, '0198 is applied');
+  assert.equal(migrations[at0198 - 1], '0197_cosmos_e2_conversation_catalog_v1.sql', 'exactly 0198 follows 0197');
+  assert.equal(migrations[at0198 - 2], '0196_s8b_07_transient_media_v1.sql', 'exactly 0197 follows 0196');
+  assert.equal(migrations[at0198 - 3], '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0196 follows 0195');
+  assert.equal(migrations[at0198 + 1], '0199_cosmos_e2_current_personal_world_v1.sql', 'exactly 0199 follows 0198');
+  assert.equal(migrations[at0198 - 3], '0195_s8b_07_replay_original_audio_source_truth_v1.sql', 'exactly 0195 follows 0194');
+  assert.equal(migrations[at0198 - 4], M0194, '0194 is followed only by 0195');
+  assert.equal(migrations[at0198 - 5], '0193_s8b_06_session_finished_calls_read_v1.sql', '0194 directly follows 0193');
   const sql = read(`database/migrations/${M0194}`);
   const code = codeOnly(sql);
   assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);

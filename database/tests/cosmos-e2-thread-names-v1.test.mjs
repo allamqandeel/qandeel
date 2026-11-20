@@ -28,8 +28,11 @@ const v2 = section('CREATE FUNCTION public.get_session_historical_projection_v2'
 
 test('0198 is the last migration, forward-only, one transaction, and replaces nothing: V1 (0072) stays byte-identical', () => {
   const migrations = readdirSync(new URL('../migrations/', import.meta.url)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), MIGRATION, 'exactly 0198 follows 0197');
-  assert.equal(migrations.at(-2), '0197_cosmos_e2_conversation_catalog_v1.sql');
+  // RE-ANCHORED by COSMOS E-2 Slice C (migration 0199, the current Personal World): 0198 is no longer the last migration;
+  // what this pins is its place — immediately after 0197 — which is unchanged.
+  const at = migrations.indexOf(MIGRATION);
+  assert.notEqual(at, -1, '0198 is applied');
+  assert.equal(migrations[at - 1], '0197_cosmos_e2_conversation_catalog_v1.sql', 'exactly 0198 follows 0197');
   assert.equal(migrations.filter((name) => name.startsWith('0198_')).length, 1);
   assert.equal((code.match(/^BEGIN;$/gmu) ?? []).length, 1);
   assert.equal((code.match(/^COMMIT;$/gmu) ?? []).length, 1);
@@ -118,7 +121,9 @@ test('the API reaches V2 and the alias through the two 0198 commands only, owner
   const projectionRepository = api('historical-projection/historical-projection.repository.ts');
   assert.match(projectionRepository, /'rpc\/get_session_historical_projection_v2'/u, 'ONE owner-scoped read: V2');
   assert.doesNotMatch(projectionRepository, /get_session_historical_projection_v1/u, 'the API no longer calls V1 directly (V2 wraps it)');
-  assert.equal((projectionRepository.match(/'rpc\//gu) ?? []).length, 1, 'still exactly ONE RPC');
+  // RE-ANCHORED by COSMOS E-2 Slice C: the repository reads TWO RPCs — the Session-bound V2 projection pinned here, and
+  // the user-level current Personal World (0199, pinned by cosmos-e2-current-personal-world-v1.test.mjs). No third.
+  assert.equal((projectionRepository.match(/'rpc\//gu) ?? []).length, 2, 'exactly the V2 projection RPC and the 0199 current-world RPC');
   const mapper = api('historical-projection/historical-projection-mapper.ts');
   assert.match(mapper, /const THREAD_KEYS = \['id', 'establishmentPath', 'establishedInSession', 'establishedSp', 'groundingEmergingFocusId', 'home', 'sessionLifecycle', 'name', 'origin'\] as const;/u);
   assert.match(mapper, /const THREAD_NAME_SOURCES = \['USER_ALIAS', 'GROUNDING_WORDING', 'NONE'\] as const;/u);
